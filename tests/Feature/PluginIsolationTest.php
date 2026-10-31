@@ -83,7 +83,7 @@ final class PluginIsolationTest extends TestCase
                 $state = $queue[$label];
                 unset($queue[$label]);
                 $site = $this->root.'/'.md5($label);
-                $files->copyDirectory($seed, $site);
+                (new Process(['cp', '-a', $seed, $site]))->mustRun(); // Keeps the plugin links as links.
                 Yaml::write($site.'/config/plugins.yaml', $state);
                 $running[$label] = ['site' => $site, 'step' => 'check', 'process' => $this->probe($site, 'check', start: true)];
             }
