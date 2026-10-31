@@ -1,0 +1,22 @@
+{
+    "name": "letterncms/globals",
+    "description": "Global sets: site-wide values such as contact details or a footer, with their own fields.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Globals\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Globals",
+            "icon": "globe",
+            "provider": "Cms\\Modules\\Globals\\GlobalsModule"
+        }
+    }
+}

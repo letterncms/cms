@@ -1,0 +1,24 @@
+{
+    "name": "letterncms/packages",
+    "description": "Turns plugins, themes and modules on and off.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*",
+        "letterncms/license": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Packages\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Modules",
+            "icon": "plugin",
+            "provider": "Cms\\Modules\\Packages\\PackagesModule",
+            "required": true
+        }
+    }
+}

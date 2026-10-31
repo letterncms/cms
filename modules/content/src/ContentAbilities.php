@@ -1,0 +1,472 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Cms\Modules\Content;
+
+use Cms\Abilities\AbilityContext;
+use Cms\Abilities\AbilityException;
+use Cms\Abilities\AbilityRegistry;
+use Cms\Content\Collections\Collection;
+use Cms\Content\Entries\Entry;
+use Cms\Cms;
+use Cms\Support\RecordTimestamps;
+use Cms\Users\User;
+
+/** Collections (read), entries, search and field types. */
+final class ContentAbilities
+{
+    private const array ID = ['type' => 'string', 'format' => 'ulid', 'description' => 'Entry id (ULID).'];
+
+    private const array VERSION = ['type' => 'string', 'pattern' => '^[a-f0-9]{64}$'];
+
+    private const array HANDLE = ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,63}$'];
+
+    private const array LIST_FIELDS = ['type' => 'array', 'items' => ['type' => 'string', 'pattern' => '^[a-z][a-z0-9_]{0,63}$'], 'maxItems' => 30, 'description' => 'Data fields to include per entry under `values` (relations come with their titles and names).'];
+
+    public function __construct(private readonly Cms $cms) {}
+
+    public function register(AbilityRegistry $abilities): void
+    {
+        $this->collections($abilities);
+        $this->entries($abilities);
+    }
+
+    private function collections(AbilityRegistry $a): void
+    {
+        $a->register('collections/list', [
+            'label' => 'List Collections',
+            'description' => 'All content collections (content types) with their routes and structure.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'handler' => fn () => array_values(array_map(fn (Collection $c) => [
+                ...RecordTimestamps::api($c->extra),
+                'handle' => $c->handle, 'title' => $c->title, 'singular' => $c->singular, 'icon' => $c->icon,
+                'description' => $c->description, 'driver' => $c->driver, 'structure' => $c->structure, 'route' => $c->route, 'defaultView' => $c->defaultView,
+                'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
+            ], $this->cms->collections()->all())),
+        ]);
+
+        $a->register('collections/options', [
+            'label' => 'Collection Options',
+            'description' => 'Initial collection definition defaults and settings from the active plugins. Apply defaults before explicit creation settings; without the blocks plugin a new collection can contain fields only.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'handler' => fn () => [
+                'defaults' => $this->cms->collections()->defaults(),
+                'settings' => app(\Cms\Admin\Translations::class)->fields($this->cms->collections()->settingsFields()),
+            ],
+        ]);
+
+        $a->register('collections/get', [
+            'label' => 'Get Collection',
+            'description' => 'A collection definition with its fields, the JSON schema entry data must follow, and its settings as fields.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
+            'handler' => function (array $in) {
+                $c = $this->cms->collections()->find($in['handle']) ?? throw new AbilityException('Collection not found.', 'not_found');
+
+                $t = app(\Cms\Admin\Translations::class);
+                $collection = $c->toArray();
+
+                // Field labels in the user's language (built-in collections' blueprints are written in English).
+                return [...$collection, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(), 'deletable' => $c->deletable(), 'resolvedFields' => $t->fields($collection['resolvedFields']), 'schema' => $c->blueprint()->schema(), 'settings' => $t->fields($this->cms->collections()->settingsFields($c))];
+            },
+        ]);
+
+        $a->register('fields/types', [
+            'label' => 'List Field Types',
+            'description' => 'Available field types and their options, for building blueprints.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'handler' => fn () => array_values(array_map(static fn ($t) => $t->toArray(), $this->cms->fields()->all())),
+        ]);
+    }
+
+    private function entries(AbilityRegistry $a): void
+    {
+        $collectionPermission = fn (string $action) => fn (?User $user, array $in) => $this->allowed($user, (string) ($in['collection'] ?? ''), $action);
+        $entryPermission = fn (string $action) => fn (?User $user, array $in) => $this->allowed($user, $this->collectionOf((string) ($in['id'] ?? '')), $action);
+
+        $a->register('entries/list', [
+            'label' => 'List Entries',
+            'description' => 'Query entries of a collection with filters, search, sorting and pagination.',
+            'permission' => $collectionPermission('view'),
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'collection' => self::HANDLE,
+                'locale' => ['type' => 'string'],
+                'status' => ['type' => 'string', 'enum' => ['any', 'published', 'draft', 'live'], 'default' => 'any'],
+                'search' => ['type' => 'string', 'maxLength' => 200],
+                'parentId' => ['type' => ['string', 'null'], 'description' => 'Tree collections: children of this entry; null for top level.'],
+                'sort' => ['type' => 'string', 'pattern' => '^-?[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$', 'description' => 'Field to sort by: title, slug, uri, status, locale, published_at, updated_at, created_at, position, author_id (by the author’s name) or a data field. Prefix with - for descending, e.g. -published_at. Empty values sort last.'],
+                'direction' => ['type' => 'string', 'enum' => ['asc', 'desc'], 'description' => 'Sort direction; overrides a - prefix on sort.'],
+                'fields' => self::LIST_FIELDS,
+                'filters' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'field' => ['type' => 'string'], 'operator' => ['type' => 'string', 'default' => '='], 'value' => ['description' => 'Value to compare against; any type.'],
+                ], 'required' => ['field']]],
+                'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
+                'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 25],
+            ], 'required' => ['collection']],
+            'handler' => function (array $in) {
+                $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
+                $query = $this->cms->entries()->query()->working()->ungated()->collection($collection->handle)->status($in['status'])->search($in['search'] ?? null);
+
+                if (isset($in['locale'])) {
+                    $query->locale($in['locale']);
+                }
+
+                if (array_key_exists('parentId', $in)) {
+                    $query->parent($in['parentId']);
+                }
+
+                foreach ($in['filters'] ?? [] as $filter) {
+                    $query->where($filter['field'], $filter['operator'] ?? '=', $filter['value'] ?? null);
+                }
+
+                $sort = ($in['sort'] ?? '') !== '' ? $in['sort'] : $collection->sort;
+                $query->orderBy(ltrim($sort, '-'), $in['direction'] ?? (str_starts_with($sort, '-') ? 'desc' : 'asc'));
+
+                // Ties (same status, same author, no date) keep a stable, readable order.
+                if (ltrim($sort, '-') !== 'title') {
+                    $query->orderBy('title');
+                }
+
+                $page = $query->paginate($in['perPage'], $in['page']);
+
+                return [...$page, 'items' => $this->listItems($collection, $page['items'], $in['fields'] ?? [])];
+            },
+        ]);
+
+        $a->register('entries/tree', [
+            'label' => 'Entry Tree',
+            'description' => 'All entries of a tree collection (e.g. pages) nested by parent.',
+            'permission' => $collectionPermission('view'),
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['collection' => self::HANDLE, 'locale' => ['type' => 'string'], 'fields' => self::LIST_FIELDS], 'required' => ['collection']],
+            'handler' => function (array $in) {
+                $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
+                $entries = $this->cms->entries()->query()->working()->collection($collection->handle)->locale($in['locale'] ?? $this->cms->defaultLocale())->orderBy('position')->get();
+                $items = array_combine(array_map(static fn (Entry $e) => $e->id, $entries), $this->listItems($collection, $entries, $in['fields'] ?? []));
+                $byParent = [];
+
+                foreach ($entries as $entry) {
+                    $byParent[$entry->parentId ?? ''][] = $entry->id;
+                }
+
+                $build = function (string $parent) use (&$build, $byParent, $items): array {
+                    return array_map(static fn (string $id) => [...$items[$id], 'children' => $build($id)], $byParent[$parent] ?? []);
+                };
+
+                return $build('');
+            },
+        ]);
+
+        $a->register('entries/get', [
+            'label' => 'Get Entry',
+            'description' => 'One entry with its working copy (draft changes included) and data fields.',
+            'permission' => $entryPermission('view'),
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
+            'handler' => function (array $in) {
+                $entry = $this->cms->entries()->findOrFail($in['id']);
+                $translations = [];
+
+                if (count($this->cms->locales()) > 1) {
+                    $origin = $entry->originId ?? $entry->id;
+
+                    foreach ($this->cms->entries()->query()->collection($entry->collection)->where('origin_id', $origin)->get() as $t) {
+                        $translations[$t->locale] = $t->id;
+                    }
+
+                    $translations[$entry->locale] = $entry->id;
+
+                    if ($entry->originId && ($o = $this->cms->entries()->find($entry->originId))) {
+                        $translations[$o->locale] = $o->id;
+                    }
+                }
+
+                return [...$entry->toArray(), 'translations' => $translations ?: (object) []];
+            },
+        ]);
+
+        $a->register('entries/create', [
+            'label' => 'Create Entry',
+            'description' => 'Create an entry. `data` keys are the collection\'s field handles (see collections/get for the schema). Created as a draft unless status is "published".',
+            'permission' => function (?User $user, array $in) {
+                $ok = $this->allowed($user, (string) $in['collection'], 'create');
+
+                return $ok && (($in['status'] ?? 'draft') !== 'published' || $this->allowed($user, (string) $in['collection'], 'publish'));
+            },
+            'input' => ['type' => 'object', 'properties' => [
+                'collection' => self::HANDLE,
+                'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 500],
+                'slug' => ['type' => 'string', 'maxLength' => 191],
+                'data' => ['type' => 'object', 'default' => []],
+                'locale' => ['type' => 'string'],
+                'parentId' => ['type' => ['string', 'null']],
+                'originId' => ['type' => ['string', 'null'], 'description' => 'For translations: the entry this one translates.'],
+                'status' => ['type' => 'string', 'enum' => ['draft', 'published'], 'default' => 'draft'],
+                'authorId' => ['type' => ['string', 'null'], 'format' => 'ulid'],
+                'at' => ['type' => 'string', 'format' => 'date-time', 'description' => 'Publication time; requires status published.'],
+            ], 'required' => ['collection', 'title']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->create($in['collection'], $in, $ctx->user)->toArray(),
+        ]);
+
+        $a->register('entries/update', [
+            'label' => 'Update Entry',
+            'description' => 'Change an entry. `data` is merged into existing data. For published entries changes are saved as a draft until published (or pass publish: true).',
+            'permission' => function (?User $user, array $in) {
+                $collection = $this->collectionOf((string) $in['id']);
+
+                return $this->allowed($user, $collection, 'edit') && (! ($in['publish'] ?? false) || $this->allowed($user, $collection, 'publish'));
+            },
+            'annotations' => ['idempotent' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'id' => self::ID,
+                'title' => ['type' => 'string', 'maxLength' => 500],
+                'slug' => ['type' => 'string', 'maxLength' => 191],
+                'data' => ['type' => 'object'],
+                'authorId' => ['type' => ['string', 'null'], 'format' => 'ulid'],
+                'at' => ['type' => 'string', 'format' => 'date-time', 'description' => 'Publication time; requires publish true.'],
+                'publish' => ['type' => 'boolean', 'default' => false],
+                'expectedVersion' => self::VERSION,
+            ], 'required' => ['id']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish'])->toArray(),
+        ]);
+
+        $a->register('entries/publish', [
+            'label' => 'Publish Entry',
+            'description' => 'Publish an entry (applying its draft). Pass `at` to schedule.',
+            'permission' => $entryPermission('publish'),
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'at' => ['type' => 'string', 'format' => 'date-time'], 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null)->toArray(),
+        ]);
+
+        $a->register('entries/unpublish', [
+            'label' => 'Unpublish Entry',
+            'description' => 'Take an entry offline (it becomes a draft).',
+            'permission' => $entryPermission('publish'),
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+        ]);
+
+        $a->register('entries/discard-draft', [
+            'label' => 'Discard Changes',
+            'description' => 'Throw away unpublished changes of a published entry.',
+            'permission' => $entryPermission('edit'),
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+        ]);
+
+        $a->register('entries/delete', [
+            'label' => 'Delete Entry',
+            'description' => 'Permanently delete an entry. Children of tree entries move up one level.',
+            'permission' => $entryPermission('delete'),
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $this->cms->content()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
+
+                return ['deleted' => $in['id']];
+            },
+        ]);
+
+        $a->register('entries/duplicate', [
+            'label' => 'Duplicate Entry',
+            'description' => 'Copy an entry (as a draft).',
+            'permission' => $entryPermission('create'),
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+        ]);
+
+        $a->register('entries/move', [
+            'label' => 'Move Entry',
+            'description' => 'Move an entry immediately without publishing its draft. Moving published content requires publishing permission.',
+            'permission' => $entryPermission('edit'),
+            'input' => ['type' => 'object', 'properties' => [
+                'id' => self::ID, 'parentId' => ['type' => ['string', 'null']],
+                'position' => ['type' => 'integer', 'minimum' => 0], 'expectedVersion' => self::VERSION,
+            ], 'required' => ['id', 'parentId']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->move($in['id'], $in['parentId'], $in['position'] ?? null, $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+        ]);
+
+        $a->register('entries/reorder', [
+            'label' => 'Reorder Entries',
+            'description' => 'Set the order of sibling entries (and move them under parentId for trees).',
+            'permission' => $collectionPermission('edit'),
+            'annotations' => ['idempotent' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'collection' => self::HANDLE,
+                'ids' => ['type' => 'array', 'items' => self::ID, 'maxItems' => 1000],
+                'parentId' => ['type' => ['string', 'null'], 'default' => null],
+                'versions' => ['type' => 'object', 'additionalProperties' => self::VERSION],
+            ], 'required' => ['collection', 'ids']],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $this->cms->content()->reorder($in['collection'], $in['ids'], $in['parentId'], $ctx->user, $in['versions'] ?? []);
+
+                return ['ok' => true];
+            },
+        ]);
+
+        $a->register('entries/revisions', [
+            'label' => 'Entry History',
+            'description' => 'Revisions of an entry, newest first.',
+            'permission' => $entryPermission('view'),
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
+            'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->list($in['id']),
+        ]);
+
+        $a->register('entries/revision', [
+            'label' => 'Get Revision',
+            'description' => 'A single revision snapshot.',
+            'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['id'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'view'),
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
+            'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->find($in['id']) ?? throw new AbilityException('Revision not found.', 'not_found'),
+        ]);
+
+        $a->register('entries/restore', [
+            'label' => 'Restore Revision',
+            'description' => 'Restore an entry to a previous revision (as a draft for published entries).',
+            'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['revisionId'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'edit'),
+            'input' => ['type' => 'object', 'properties' => ['revisionId' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['revisionId']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+        ]);
+
+        $a->register('entries/lookup', [
+            'label' => 'Look Up Entries',
+            'description' => 'Summaries for a list of entry ids (any collection you can view), in the given order.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['ids' => ['type' => 'array', 'items' => ['type' => 'string'], 'maxItems' => 200]], 'required' => ['ids']],
+            'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_map(
+                static fn (Entry $e) => $e->toSummary(),
+                array_filter($this->cms->entries()->findMany($in['ids']), fn (Entry $e) => $ctx->system || $this->allowed($ctx->user, $e->collection, 'view'))
+            )),
+        ]);
+
+        $a->register('content/recent', [
+            'label' => 'Recently Edited',
+            'description' => 'The most recently changed entries across collections you can view.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10]]],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $handles = array_values(array_filter(array_keys($this->cms->collections()->all()), fn ($h) => $ctx->system || $this->allowed($ctx->user, $h, 'view')));
+
+                return $handles === [] ? [] : array_map(static fn (Entry $e) => $e->toSummary(), $this->cms->entries()->query()->working()->collection(...$handles)->orderBy('-updated_at')->limit($in['limit'])->get());
+            },
+        ]);
+
+        $a->register('content/search', [
+            'label' => 'Search Content',
+            'description' => 'Find entries across collections, ranking title and slug matches before content matches.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'query' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 200],
+                'collections' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10],
+            ], 'required' => ['query']],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $handles = array_values(array_filter(
+                    $in['collections'] ?? array_keys($this->cms->collections()->all()),
+                    fn ($h) => $this->allowed($ctx->user, $h, 'view') || $ctx->system
+                ));
+
+                if ($handles === []) {
+                    return [];
+                }
+
+                return array_map(static fn (Entry $e) => $e->toSummary(), $this->cms->entries()->query()->working()->collection(...$handles)->search($in['query'])->orderByRelevance()->orderBy('-updated_at')->orderBy('title')->limit($in['limit'])->get());
+            },
+        ]);
+    }
+
+    /**
+     * Summaries for list screens: each with its author, the languages it is translated
+     * into (multilingual sites) and the requested data `fields` under `values` — entry
+     * and user relations resolved to titles and names so a table can show them as is.
+     *
+     * @param  list<Entry>  $entries
+     * @param  list<string>  $fields
+     * @return list<array<string, mixed>>
+     */
+    private function listItems(Collection $collection, array $entries, array $fields): array
+    {
+        $fields = array_values(array_filter(array_map(static fn (string $handle) => $collection->blueprint()->field($handle), array_unique($fields))));
+        $data = array_map(static fn (Entry $e) => (array) ($e->working()['data'] ?? []), $entries);
+        $ids = static fn (mixed $value) => array_values(array_filter((array) $value, static fn ($id) => is_string($id) && $id !== ''));
+
+        // Every user and entry the page refers to, in two queries.
+        $userIds = array_map(static fn (Entry $e) => $e->working()['authorId'], $entries);
+        $entryIds = [];
+
+        foreach ($fields as $field) {
+            foreach ($data as $values) {
+                if ($field->type === 'users') {
+                    array_push($userIds, ...$ids($values[$field->handle] ?? null));
+                } elseif ($field->type === 'entries') {
+                    array_push($entryIds, ...$ids($values[$field->handle] ?? null));
+                }
+            }
+        }
+
+        $userIds = array_values(array_unique(array_filter($userIds)));
+        $users = $userIds === [] ? [] : User::query()->whereIn('id', $userIds)->get()->mapWithKeys(static fn (User $u) => [$u->id => $u->toPerson()])->all();
+        $related = [];
+
+        foreach ($this->cms->entries()->findMany(array_values(array_unique($entryIds))) as $entry) {
+            $related[$entry->id] = ['id' => $entry->id, 'collection' => $entry->collection, 'title' => (string) ($entry->working()['title'] ?? $entry->title)];
+        }
+
+        $translations = [];
+
+        if (count($this->cms->locales()) > 1 && $entries !== []) {
+            $origins = array_values(array_unique(array_map(static fn (Entry $e) => $e->originId ?? $e->id, $entries)));
+            $siblings = [
+                ...$this->cms->entries()->query()->collection($collection->handle)->where('origin_id', 'in', $origins)->get(),
+                ...$this->cms->entries()->query()->collection($collection->handle)->where('id', 'in', $origins)->get(),
+            ];
+
+            foreach ([...$entries, ...$siblings] as $entry) {
+                $translations[$entry->originId ?? $entry->id][$entry->locale] = true;
+            }
+        }
+
+        return array_map(function (Entry $entry, array $values) use ($fields, $users, $related, $translations, $ids): array {
+            $item = [...$entry->toSummary(false), 'author' => $users[$entry->working()['authorId']] ?? null];
+
+            if ($translations !== []) {
+                $item['translations'] = array_keys($translations[$entry->originId ?? $entry->id] ?? [$entry->locale => true]);
+            }
+
+            if ($fields !== []) {
+                $item['values'] = (object) array_combine(
+                    array_map(static fn ($f) => $f->handle, $fields),
+                    array_map(static fn ($f) => match ($f->type) {
+                        'users' => array_values(array_filter(array_map(static fn ($id) => $users[$id] ?? null, $ids($values[$f->handle] ?? null)))),
+                        'entries' => array_values(array_filter(array_map(static fn ($id) => $related[strtolower($id)] ?? null, $ids($values[$f->handle] ?? null)))),
+                        default => $values[$f->handle] ?? null,
+                    }, $fields),
+                );
+            }
+
+            return $item;
+        }, $entries, $data);
+    }
+
+    private function allowed(?User $user, string $collection, string $action): bool
+    {
+        return $user !== null && $collection !== '' && $user->hasPermission("entries.{$collection}.{$action}");
+    }
+
+    private function collectionOf(string $id): string
+    {
+        return $this->cms->entries()->find($id)?->collection ?? '';
+    }
+}

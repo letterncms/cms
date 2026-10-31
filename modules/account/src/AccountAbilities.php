@@ -1,0 +1,194 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Cms\Modules\Account;
+
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator as LaravelValidator;
+use Cms\Abilities\AbilityContext;
+use Cms\Abilities\AbilityException;
+use Cms\Abilities\AbilityRegistry;
+use Cms\Cms;
+use Cms\Users\ApiToken;
+use Cms\Users\Passwords;
+use Cms\Users\Totp;
+use Cms\Users\User;
+use Cms\Users\UserFields;
+
+/** The signed-in person's own account and API tokens. */
+final class AccountAbilities
+{
+    public function __construct(private readonly Cms $cms) {}
+
+    public function register(AbilityRegistry $a): void
+    {
+        $this->account($a);
+        $this->tokens($a);
+    }
+
+    private function account(AbilityRegistry $a): void
+    {
+        $signedIn = static fn (?User $user) => $user !== null;
+
+        $a->register('account/get', [
+            'label' => 'My Account',
+            'description' => 'The signed-in user.',
+            'permission' => $signedIn,
+            'annotations' => ['readOnly' => true],
+            'handler' => fn (array $in, AbilityContext $ctx) => [...$ctx->user->toPublic(), 'preferences' => $ctx->user->preferences ?? (object) []],
+        ]);
+
+        $a->register('account/update', [
+            'label' => 'Update My Account',
+            'description' => 'Change name, email, locale, preferences, profile fields (data) or password (password changes need the current password).',
+            'permission' => $signedIn,
+            'expose' => ['mcp' => false, 'assistant' => false],
+            'input' => ['type' => 'object', 'properties' => [
+                'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
+                'email' => ['type' => 'string', 'format' => 'email'],
+                'locale' => ['type' => ['string', 'null']],
+                'avatar' => ['type' => ['string', 'null'], 'maxLength' => 512],
+                'preferences' => ['type' => 'object'],
+                'data' => ['type' => 'object', 'description' => 'Profile fields (see users/fields).'],
+                'currentPassword' => ['type' => 'string'],
+                'password' => ['type' => 'string'],
+            ]],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $user = $ctx->user;
+
+                if (isset($in['password']) || (isset($in['email']) && strtolower($in['email']) !== $user->email)) {
+                    if (! Hash::check((string) ($in['currentPassword'] ?? ''), $user->password)) {
+                        throw AbilityException::invalid('Your current password is not correct.', ['currentPassword' => __('Is incorrect.')]);
+                    }
+                }
+
+                if (isset($in['password'])) {
+                    LaravelValidator::make($in, ['password' => Passwords::rules()])->validate();
+                    $user->password = $in['password'];
+                }
+
+                if (isset($in['email'])) {
+                    $email = strtolower($in['email']);
+
+                    if (User::query()->where('email', $email)->where('id', '!=', $user->id)->exists()) {
+                        throw AbilityException::conflict('That email address is already used.');
+                    }
+
+                    $user->email = $email;
+                }
+
+                foreach (['name', 'locale', 'avatar'] as $key) {
+                    if (array_key_exists($key, $in)) {
+                        $user->{$key} = $in[$key];
+                    }
+                }
+
+                if (isset($in['preferences'])) {
+                    $user->preferences = array_replace((array) ($user->preferences ?? []), $in['preferences']);
+                }
+
+                if (isset($in['data'])) {
+                    $this->cms->app()->make(UserFields::class)->fill($user, $in['data']);
+                }
+
+                $user->save();
+
+                return $user->toPublic();
+            },
+        ]);
+
+        $a->register('account/two-factor-setup', [
+            'label' => 'Start Two-Factor Setup',
+            'description' => 'Generate a TOTP secret. Confirm with account/two-factor-confirm.',
+            'permission' => $signedIn,
+            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $secret = Totp::secret();
+                $ctx->user->forceFill(['two_factor_secret' => $secret, 'two_factor_confirmed_at' => null])->save();
+
+                return ['secret' => $secret, 'uri' => Totp::uri($secret, $ctx->user->email, (string) config('app.name'))];
+            },
+        ]);
+
+        $a->register('account/two-factor-confirm', [
+            'label' => 'Confirm Two-Factor',
+            'description' => 'Verify a code from the authenticator app and enable two-factor sign-in.',
+            'permission' => $signedIn,
+            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'input' => ['type' => 'object', 'properties' => ['code' => ['type' => 'string', 'maxLength' => 12]], 'required' => ['code']],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $user = $ctx->user;
+
+                if (! $user->two_factor_secret || ! Totp::verify($user->two_factor_secret, $in['code'])) {
+                    throw AbilityException::invalid('That code is not valid. Check the time on your device and try again.');
+                }
+
+                $codes = Totp::recoveryCodes();
+                $user->forceFill(['two_factor_confirmed_at' => now(), 'two_factor_recovery_codes' => $codes])->save();
+
+                return ['enabled' => true, 'recoveryCodes' => $codes];
+            },
+        ]);
+
+        $a->register('account/two-factor-disable', [
+            'label' => 'Disable Two-Factor',
+            'description' => 'Turn off two-factor sign-in (needs your password).',
+            'permission' => $signedIn,
+            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'input' => ['type' => 'object', 'properties' => ['password' => ['type' => 'string']], 'required' => ['password']],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                if (! Hash::check($in['password'], $ctx->user->password)) {
+                    throw AbilityException::invalid('Your password is not correct.');
+                }
+
+                $ctx->user->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null, 'two_factor_recovery_codes' => null])->save();
+
+                return ['enabled' => false];
+            },
+        ]);
+    }
+
+    private function tokens(AbilityRegistry $a): void
+    {
+        $a->register('tokens/list', [
+            'label' => 'My API Tokens',
+            'permission' => 'tokens.manage',
+            'description' => 'Personal access tokens for the REST API and MCP.',
+            'annotations' => ['readOnly' => true],
+            'expose' => ['mcp' => false, 'assistant' => false],
+            'handler' => fn (array $in, AbilityContext $ctx) => $ctx->user->tokens()->latest()->get()->map(static fn (ApiToken $t) => $t->toPublic())->all(),
+        ]);
+
+        $a->register('tokens/create', [
+            'label' => 'Create API Token',
+            'permission' => 'tokens.manage',
+            'description' => 'Create a personal access token. Scopes are ability patterns (e.g. "entries/*", "read" for all read-only abilities, "*" for everything). The token is shown once.',
+            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'input' => ['type' => 'object', 'properties' => [
+                'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
+                'scopes' => ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 120], 'default' => ['*']],
+                'expiresInDays' => ['type' => ['integer', 'null'], 'minimum' => 1, 'maximum' => 3650],
+            ], 'required' => ['name']],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                [$token, $plain] = ApiToken::issue($ctx->user, $in['name'], $in['scopes'], isset($in['expiresInDays']) ? now()->addDays($in['expiresInDays']) : null);
+
+                return [...$token->toPublic(), 'token' => $plain];
+            },
+        ]);
+
+        $a->register('tokens/revoke', [
+            'label' => 'Revoke API Token',
+            'permission' => 'tokens.manage',
+            'description' => 'Delete one of your tokens.',
+            'expose' => ['mcp' => false, 'assistant' => false],
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $ctx->user->tokens()->whereKey($in['id'])->delete();
+
+                return ['revoked' => $in['id']];
+            },
+        ]);
+    }
+}

@@ -1,0 +1,90 @@
+import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { can, t, useManifest, type NavItem } from '@letterncms/sdk'
+import { Button, Dialog, Icon, Switch, cn } from '../ui'
+import { isPinned, reorder, resetToDefault, saveForEveryone, setPinned } from './sidebarStore'
+
+/**
+ * Every item of the sidebar, section by section: pin or unpin, drag to
+ * reorder. Changes apply as they are made; the sidebar behind follows.
+ */
+export function CustomizeSidebar({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const manifest = useManifest()
+  const layout = manifest.sidebar
+  const items = new Map(manifest.nav.map((n) => [n.id, n]))
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('Customize Sidebar')}
+      footer={
+        <>
+          {layout.personal && <Button variant="ghost" icon="undo" onClick={() => void resetToDefault()}>{t('Reset to Default')}</Button>}
+          {can('settings.manage') && <Button variant="ghost" onClick={() => void saveForEveryone()}>{t('Save as Default')}</Button>}
+          <Button variant="primary" className="ml-auto" onClick={() => onOpenChange(false)}>{t('Done')}</Button>
+        </>
+      }
+    >
+      {layout.sections.map((section) => {
+        const ids = section.items.filter((id) => items.has(id))
+        if (!ids.length) return null
+        return (
+          <section key={section.id} className="mb-4 last:mb-1">
+            <h3 className="cms-caps m-0 mb-1 px-2">{section.label || t('Main')}</h3>
+            <Items section={section.id} ids={ids} all={section.items} items={items} pinned={(id) => isPinned(layout, id)} />
+          </section>
+        )
+      })}
+    </Dialog>
+  )
+}
+
+function Items({ section, ids, all, items, pinned }: { section: string; ids: string[]; all: string[]; items: Map<string, NavItem>; pinned: (id: string) => boolean }) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))
+
+  const end = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return
+    // Items this person may not open keep their place among the others.
+    const moved = arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)))
+    let next = 0
+    reorder(section, all.map((id) => (items.has(id) ? moved[next++] : id)))
+  }
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={end}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <ul className="m-0 list-none space-y-px p-0">
+          {ids.map((id) => <Item key={id} item={items.get(id)!} pinned={pinned(id)} />)}
+        </ul>
+      </SortableContext>
+    </DndContext>
+  )
+}
+
+function Item({ item, pinned }: { item: NavItem; pinned: boolean }) {
+  const { setNodeRef, setActivatorNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: item.id })
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform && { ...transform, x: 0 }), transition }}
+      className={cn('flex h-9 items-center gap-2 rounded-md px-1 hover:bg-hover', isDragging && 'relative z-10 bg-bg shadow-pop')}
+    >
+      <button
+        ref={setActivatorNodeRef}
+        type="button"
+        {...attributes}
+        {...listeners}
+        aria-label={t('Reorder {label}', { label: item.label })}
+        className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-xs text-faint outline-offset-[-2px] hover:text-text active:cursor-grabbing"
+      >
+        <Icon name="drag" size={14} />
+      </button>
+      <Icon name={item.icon} size={16} className={cn('shrink-0', pinned ? 'text-text' : 'text-faint')} />
+      <span className={cn('min-w-0 flex-1 truncate text-sm', pinned ? 'text-text' : 'text-muted')}>{item.label}</span>
+      <Switch size="sm" checked={pinned} onChange={(on) => setPinned(item.id, on)} aria-label={t('Pin {label}', { label: item.label })} />
+    </li>
+  )
+}

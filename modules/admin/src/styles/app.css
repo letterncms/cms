@@ -1,0 +1,392 @@
+/*
+ * Modules put their utilities in the "plugins" layer. Variants of every stylesheet
+ * (md:, hover:, dark:…) move to "variants" at build time (vite.plugin.mjs), so a
+ * module's responsive class beats a plain utility of the theme and the other way round.
+ */
+@layer theme, base, components, plugins, utilities, variants;
+
+@import "tailwindcss";
+@import "./theme.css";
+@import "./tokens.css";
+
+@source "../";
+
+
+@font-face {
+  font-family: "Geist";
+  src: url("../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--cms-bg);
+    color: var(--cms-text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  #cms {
+    min-height: 100%;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--cms-focus) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--cms-focus);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  button {
+    cursor: default;
+  }
+
+  input, textarea, select, button {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* Thin, quiet scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--cms-border-strong) transparent;
+  }
+}
+
+@layer components {
+  .cms-slideover {
+    position: fixed;
+    z-index: 50;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    width: min(460px, calc(100vw - 24px));
+    height: calc(100dvh - 24px);
+    overflow: hidden;
+    border: 1px solid var(--cms-border-float);
+    border-radius: var(--radius-lg);
+    background: var(--cms-bg);
+    box-shadow: var(--cms-shadow-dialog);
+    outline: none;
+    transition: transform 200ms var(--ease-out), opacity 160ms var(--ease-out);
+  }
+
+  .cms-slideover[hidden] { display: none; }
+
+  .cms-slideover[data-workspace] {
+    position: absolute;
+    width: min(460px, calc(100% - 24px));
+    height: calc(100% - 24px);
+  }
+
+  .cms-slideover[data-expanded] {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .cms-slideover[data-workspace][data-expanded] {
+    width: 100%;
+    height: 100%;
+  }
+
+  .cms-slideover[data-starting-style],
+  .cms-slideover[data-ending-style] {
+    opacity: 0;
+    transform: translateX(calc(100% + 12px));
+  }
+
+  .cms-slideover-header {
+    display: flex;
+    min-height: 48px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 8px 18px;
+    border-bottom: 1px solid var(--cms-border);
+  }
+
+  @media (max-width: 639px) {
+    .cms-slideover {
+      inset: 0;
+      width: 100%;
+      height: 100dvh;
+      border: 0;
+      border-radius: 0;
+    }
+    .cms-slideover[data-workspace] {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cms-slideover { transition: opacity 120ms linear; }
+    .cms-slideover[data-starting-style],
+    .cms-slideover[data-ending-style] { transform: none; }
+  }
+
+  .cms-focus-ring {
+    outline: none;
+  }
+  .cms-focus-ring:focus-visible,
+  .cms-focus-ring[data-focus] {
+    border-color: var(--cms-focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 22%, transparent);
+  }
+
+  .cms-pop {
+    background: var(--cms-bg);
+    border: 1px solid var(--cms-border-float);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--cms-shadow-pop);
+    transform-origin: var(--transform-origin);
+    transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .cms-pop[data-starting-style],
+  .cms-pop[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  /* Range slider (number fields with display: slider): a hairline track, an ink fill from
+     --cms-range-from to --cms-range-to, and a white thumb with a hairline ring. */
+  .cms-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 16px;
+    margin: 0;
+    background: transparent;
+    cursor: default;
+    --cms-range-track: linear-gradient(to right, var(--cms-border-strong) var(--cms-range-from, 0%), var(--cms-ink) var(--cms-range-from, 0%), var(--cms-ink) var(--cms-range-to, 0%), var(--cms-border-strong) var(--cms-range-to, 0%));
+  }
+  .cms-range:focus-visible {
+    outline: none;
+  }
+  .cms-range::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: 999px;
+    background: var(--cms-range-track);
+  }
+  .cms-range::-moz-range-track {
+    height: 3px;
+    border-radius: 999px;
+    background: var(--cms-range-track);
+  }
+  .cms-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    margin-top: -4.5px;
+    border-radius: 999px;
+    border: 0;
+    background: var(--cms-bg);
+    box-shadow: 0 0 0 1px var(--cms-border-strong), 0 1px 3px rgb(0 0 0 / 0.16);
+    transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .cms-range::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 0;
+    background: var(--cms-bg);
+    box-shadow: 0 0 0 1px var(--cms-border-strong), 0 1px 3px rgb(0 0 0 / 0.16);
+  }
+  .cms-range:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 1px var(--cms-muted), 0 1px 3px rgb(0 0 0 / 0.2);
+  }
+  .cms-range:active::-webkit-slider-thumb {
+    transform: scale(1.1);
+  }
+  .cms-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 22%, transparent);
+  }
+  .cms-range:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 22%, transparent);
+  }
+  .cms-range:disabled {
+    opacity: 0.5;
+  }
+  [data-theme="dark"] .cms-range::-webkit-slider-thumb {
+    background: var(--cms-text);
+  }
+  [data-theme="dark"] .cms-range::-moz-range-thumb {
+    background: var(--cms-text);
+  }
+
+  .cms-prose {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .cms-prose :where(p) { margin: 0 0 0.75em; }
+  .cms-prose :where(h2) { font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: -0.015em; margin: 1.4em 0 0.4em; }
+  .cms-prose :where(h3) { font-size: 18px; line-height: 1.35; font-weight: 600; margin: 1.2em 0 0.3em; }
+  .cms-prose :where(a) { color: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--cms-border-strong); }
+  .cms-prose :where(code) { font-family: var(--font-mono); font-size: 0.88em; background: var(--cms-sunken); padding: 0.1em 0.3em; border-radius: 4px; }
+  .cms-prose :where(ul, ol) { padding-left: 1.4em; margin: 0 0 0.75em; }
+  .cms-prose :where(blockquote) { border-left: 2px solid var(--cms-border-strong); padding-left: 1em; color: var(--cms-muted); margin: 0 0 0.75em; }
+}
+
+/* Shell: the next screen is on its way (shown only when it takes long enough to notice). */
+@layer components {
+  .cms-progress {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 30;
+    height: 2px;
+    overflow: hidden;
+    pointer-events: none;
+    animation: cms-appear 160ms var(--ease-out, ease-out) 180ms both;
+  }
+  .cms-progress::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    background: var(--cms-muted);
+    opacity: 0.6;
+    animation: cms-progress 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .cms-appear-late {
+    animation: cms-appear 240ms var(--ease-out, ease-out) 600ms both;
+  }
+
+  /* The sidebar switching between the main list and settings: settings come in from the side they lead to, the main list returns from the other. */
+  @media (prefers-reduced-motion: no-preference) {
+    .cms-sidebar-mode[data-mode='settings'] { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; --cms-sidebar-from: 12px; }
+    .cms-sidebar-mode[data-mode='main'] { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; --cms-sidebar-from: -12px; }
+  }
+
+  /* Loading placeholders stay out of sight for loads too quick to notice, so a screen never flickers gray. */
+  .cms-skeleton {
+    animation: cms-appear 160ms var(--ease-out, ease-out) 160ms both, cms-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 320ms infinite;
+  }
+}
+
+@keyframes cms-pulse {
+  50% { opacity: 0.5; }
+}
+
+@keyframes cms-appear {
+  from { opacity: 0; }
+}
+
+@keyframes cms-sidebar-in {
+  from { opacity: 0; transform: translateX(var(--cms-sidebar-from, 0)); }
+}
+
+@keyframes cms-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .cms-sidebar-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding-inline: 8px;
+    border-radius: var(--radius-md);
+    color: var(--cms-muted);
+    cursor: pointer;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .cms-sidebar-row:hover, .cms-sidebar-row:focus-within, .cms-sidebar-row[data-popup-open] {
+    background: var(--cms-hover);
+    color: var(--cms-text);
+  }
+  .cms-sidebar-row-active, .cms-sidebar-row-active:hover, .cms-sidebar-row-active:focus-within, .cms-sidebar-row-active[data-popup-open] {
+    background: var(--cms-active);
+    color: var(--cms-ink);
+  }
+  .cms-sidebar-row[data-collapsed] { justify-content: center; padding-inline: 0; }
+  .cms-sidebar-row-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: stretch;
+    min-width: 0;
+    flex: 1;
+    font-size: var(--text-sm);
+    text-align: start;
+    text-decoration: none;
+    outline-offset: -2px;
+    cursor: pointer;
+  }
+  .cms-sidebar-row[data-collapsed] .cms-sidebar-row-main { justify-content: center; }
+  .cms-sidebar-row-main::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+  .cms-sidebar-row-status { display: inline-flex; flex-shrink: 0; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--cms-muted); }
+  .cms-sidebar-row-badge { flex-shrink: 0; font-size: var(--text-xs); font-variant-numeric: tabular-nums; color: var(--cms-faint); }
+  .cms-sidebar-row-dot { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 9999px; background: var(--cms-signal); }
+  .cms-sidebar-row-shortcut { flex-shrink: 0; opacity: 0; }
+  .cms-sidebar-row:hover .cms-sidebar-row-shortcut, .cms-sidebar-row-main:focus-visible .cms-sidebar-row-shortcut { opacity: 1; }
+  /* Quick actions show on hover and focus; on touch, long-press opens the menu that holds them. */
+  .cms-sidebar-row-actions { position: relative; display: none; flex-shrink: 0; align-items: center; }
+  /* Sidebar actions use icon contrast rather than a second hover surface. */
+  .cms-sidebar-row-actions button {
+    background: transparent !important;
+    color: var(--cms-faint) !important;
+  }
+  .cms-sidebar-row-actions button:not(:disabled) { cursor: pointer; }
+  .cms-sidebar-row-actions button:is(:hover, :focus-visible) { color: var(--cms-ink) !important; }
+  .cms-marquee { display: block; min-width: 0; width: 100%; overflow: hidden; }
+  .cms-marquee[data-overflow] { mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 16px), transparent); }
+  .cms-marquee-track { display: flex; width: max-content; white-space: nowrap; }
+  .cms-marquee-track > span { flex-shrink: 0; }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cms-sidebar-row:hover .cms-sidebar-row-actions,
+    .cms-sidebar-row:focus-within .cms-sidebar-row-actions,
+    .cms-sidebar-row[data-popup-open] .cms-sidebar-row-actions { display: flex; }
+    .cms-sidebar-row:hover .cms-marquee[data-overflow] { mask-image: linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 16px), transparent); }
+  }
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .cms-marquee-track { transition: none; }
+    .cms-sidebar-row:hover .cms-marquee[data-overflow] .cms-marquee-track {
+      transform: translateX(calc(-1 * var(--marquee-distance)));
+      transition: transform var(--marquee-duration) linear 400ms;
+    }
+  }
+}

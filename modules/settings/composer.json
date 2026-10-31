@@ -1,0 +1,23 @@
+{
+    "name": "letterncms/settings",
+    "description": "The settings screen every module and plugin configures itself through, and the sidebar editor.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Settings\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Settings",
+            "icon": "settings",
+            "provider": "Cms\\Modules\\Settings\\SettingsModule",
+            "required": true
+        }
+    }
+}

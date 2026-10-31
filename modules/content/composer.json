@@ -1,0 +1,23 @@
+{
+    "name": "letterncms/content",
+    "description": "Entries in every collection: lists, the entry editor, drafts, publishing, history and search.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Content\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Content",
+            "icon": "file",
+            "provider": "Cms\\Modules\\Content\\ContentModule",
+            "required": true
+        }
+    }
+}

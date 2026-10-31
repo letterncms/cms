@@ -1,0 +1,40 @@
+{
+    "name": "letterncms/cms",
+    "description": "The kernel \u2014 plugins, abilities, content, users and APIs.",
+    "type": "library",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "anthropic-ai/sdk": "^1.3",
+        "composer/semver": "^3.4",
+        "laravel/framework": "^13.0",
+        "league/commonmark": "^2.6",
+        "letterncms/composer-plugin": ">=0.1 <1",
+        "symfony/yaml": "^7.0|^8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\": "src/",
+            "Cms\\Modules\\Account\\": "modules/account/src/",
+            "Cms\\Modules\\Audit\\": "modules/audit/src/",
+            "Cms\\Modules\\Collections\\": "modules/collections/src/",
+            "Cms\\Modules\\Content\\": "modules/content/src/",
+            "Cms\\Modules\\Dashboard\\": "modules/dashboard/src/",
+            "Cms\\Modules\\Globals\\": "modules/globals/src/",
+            "Cms\\Modules\\License\\": "modules/license/src/",
+            "Cms\\Modules\\Packages\\": "modules/packages/src/",
+            "Cms\\Modules\\Settings\\": "modules/settings/src/",
+            "Cms\\Modules\\Users\\": "modules/users/src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Cms\\Tests\\": "tests/"
+        }
+    },
+    "homepage": "https://github.com/letterncms/cms"
+}

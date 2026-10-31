@@ -1,0 +1,22 @@
+{
+    "name": "letterncms/audit",
+    "description": "Records every change made through abilities — who, what, when and from where.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Audit\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Audit Log",
+            "icon": "activity",
+            "provider": "Cms\\Modules\\Audit\\AuditModule"
+        }
+    }
+}

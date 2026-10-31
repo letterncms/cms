@@ -1,0 +1,70 @@
+/* The admin's design tokens as Tailwind names, shared with plugin admin modules (import "@letterncms/admin/theme.css").
+   Their values live in tokens.css, defined once by the admin theme, so a module never overrides them. */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-2xs: 11px;
+  --text-2xs--line-height: 16px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 22px;
+  --text-lg: 16px;
+  --text-lg--line-height: 24px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 32px;
+  --text-3xl: 32px;
+  --text-3xl--line-height: 40px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  --color-bg: var(--cms-bg);
+  --color-surface: var(--cms-surface);
+  --color-sunken: var(--cms-sunken);
+  --color-hover: var(--cms-hover);
+  --color-active: var(--cms-active);
+  --color-border: var(--cms-border);
+  --color-border-strong: var(--cms-border-strong);
+  --color-border-float: var(--cms-border-float);
+  --color-border-modal: var(--cms-border-modal);
+  --color-ink: var(--cms-ink);
+  --color-ink-contrast: var(--cms-ink-contrast);
+  --color-text: var(--cms-text);
+  --color-muted: var(--cms-muted);
+  --color-faint: var(--cms-faint);
+  --color-signal: var(--cms-signal);
+  --color-signal-ink: var(--cms-signal-ink);
+  --color-focus: var(--cms-focus);
+  --color-success: var(--cms-success);
+  --color-warning: var(--cms-warning);
+  --color-danger: var(--cms-danger);
+  --color-overlay: var(--cms-overlay);
+
+  --shadow-pop: var(--cms-shadow-pop);
+  --shadow-dialog: var(--cms-shadow-dialog);
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.32, 1.25, 0.5, 1);
+}
+
+@utility cms-caps {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cms-muted);
+}
+

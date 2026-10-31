@@ -1,0 +1,23 @@
+{
+    "name": "letterncms/account",
+    "description": "Each person's own profile, password, two-factor sign-in, appearance and API tokens.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Account\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Account",
+            "icon": "user",
+            "provider": "Cms\\Modules\\Account\\AccountModule",
+            "required": true
+        }
+    }
+}

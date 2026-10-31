@@ -1,0 +1,7 @@
+/node_modules/
+/vendor/
+/composer.lock
+/admin-sdk/node_modules/
+/modules/*/node_modules/
+/modules/*/dist/
+.DS_Store

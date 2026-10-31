@@ -1,0 +1,23 @@
+{
+    "name": "letterncms/collections",
+    "description": "Create collections and change their fields in the admin. Without it, collections are defined in content/collections/*.yaml.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*",
+        "letterncms/content": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Collections\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Collections",
+            "icon": "collection",
+            "provider": "Cms\\Modules\\Collections\\CollectionsModule"
+        }
+    }
+}

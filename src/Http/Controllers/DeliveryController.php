@@ -1,0 +1,83 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Cms\Http\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Cms\Content\Collections\Collection;
+use Cms\Content\Entries\EntryQuery;
+use Cms\Cms;
+
+/**
+ * Public, read-only content API for headless use and dynamic front-end features.
+ * Only live entries of collections with `api: true` (or routable ones) are served.
+ */
+final class DeliveryController
+{
+    public function __construct(private readonly Cms $cms) {}
+
+    public function index(Request $request, string $collection): JsonResponse
+    {
+        $collection = $this->collection($collection);
+        $locale = $this->locale($request);
+
+        $query = $this->cms->entries()->query()->collection($collection->handle)->locale($locale)->live()->search($request->query('q'));
+        $sort = ltrim((string) $request->query('sort', $collection->sort), '-');
+
+        // Searching, filtering or sorting on withheld text would reveal it one guess at a time.
+        if ($request->filled('q') || $request->query('filter') || ! EntryQuery::isColumn($sort)) {
+            ($teasers = $this->cms->entries()->gate()->teaserIds()) && $query->where('id', 'not in', $teasers);
+        }
+
+        foreach ((array) $request->query('filter', []) as $field => $value) {
+            if (is_string($field) && is_scalar($value)) {
+                $query->where($field, (string) $value);
+            }
+        }
+
+        $query->orderBy((string) $request->query('sort', $collection->sort));
+        $page = $query->paginate((int) $request->query('limit', $collection->perPage), (int) $request->query('page', 1));
+
+        return response()->json([
+            'data' => array_map(fn ($e) => $this->present($e), $page['items']),
+            'meta' => array_diff_key($page, ['items' => 1]),
+        ])->setPublic()->setMaxAge(60);
+    }
+
+    public function show(Request $request, string $collection, string $slug): JsonResponse
+    {
+        $collection = $this->collection($collection);
+        $entry = $this->cms->entries()->query()->collection($collection->handle)->locale($this->locale($request))->live()->where('slug', $slug)->first();
+
+        abort_if($entry === null, 404);
+
+        return response()->json(['data' => $this->present($entry)])->setPublic()->setMaxAge(60);
+    }
+
+    private function collection(string $handle): Collection
+    {
+        $collection = $this->cms->collections()->find($handle);
+
+        abort_if($collection === null || ! ($collection->get('api', $collection->routable())), 404);
+
+        return $collection;
+    }
+
+    private function locale(Request $request): string
+    {
+        $locale = (string) $request->query('locale', $this->cms->defaultLocale());
+
+        return in_array($locale, $this->cms->locales(), true) ? $locale : $this->cms->defaultLocale();
+    }
+
+    private function present($entry): array
+    {
+        $public = $entry->toArray(withDraft: false);
+
+        $present = array_intersect_key($public, array_flip(['id', 'collection', 'locale', 'title', 'slug', 'uri', 'data', 'parentId', 'publishedAt', 'updatedAt']));
+
+        return $entry->gated === 'teaser' ? [...$present, 'gated' => true] : $present;
+    }
+}

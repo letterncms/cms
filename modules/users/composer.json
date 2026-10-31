@@ -1,0 +1,22 @@
+{
+    "name": "letterncms/users",
+    "description": "People, their roles and profile fields; invitations by email.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Users\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Users",
+            "icon": "users",
+            "provider": "Cms\\Modules\\Users\\UsersModule"
+        }
+    }
+}

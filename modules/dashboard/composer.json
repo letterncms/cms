@@ -1,0 +1,22 @@
+{
+    "name": "letterncms/dashboard",
+    "description": "The home screen: widgets from every module in two columns, arranged by admins.",
+    "type": "cms-plugin",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Dashboard\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Dashboard",
+            "icon": "grid",
+            "provider": "Cms\\Modules\\Dashboard\\DashboardModule"
+        }
+    }
+}
