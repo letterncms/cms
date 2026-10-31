@@ -40,9 +40,8 @@ const STATE_TEXT = (state: string) =>
 
 const MANAGED_TEXT = (reason: string) =>
   ({
-    checkout: t('This site runs from a checkout. Update it through your deploy.'),
-    git: t('This site runs from a checkout. Update it through your deploy.'),
-    deployed: t('This site is deployed. Update it through your deploy.'),
+    composer: t('This site is managed with Composer. Update it with composer update.'),
+    git: t('This site is managed with Composer. Update it with composer update.'),
     lockdown: t('This site is locked. Update it through your deploy.'),
     file_mods: t('This site does not change its own files. Update it through your deploy.'),
   })[reason] ?? reason
