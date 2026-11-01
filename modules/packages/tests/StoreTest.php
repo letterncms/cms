@@ -283,13 +283,19 @@ final class StoreTest extends TestCase
         $this->assertLessThan(500, $this->get('/')->getStatusCode());
     }
 
-    public function test_a_development_trust_file_is_refused_in_production(): void
+    public function test_production_never_believes_the_development_keys(): void
     {
         $this->app['env'] = 'production';
-        $store = new \Cms\Trust\TrustRegistry($this->app);
 
-        $this->assertNull($store->default()->current());
-        $this->assertSame('dev_trust', $store->default()->problem());
+        // Asking for them changes nothing: the switch only counts on a local or test site.
+        $default = (new \Cms\Trust\TrustRegistry($this->app))->default()->current();
+        $this->assertNotNull($default);
+        $this->assertFalse($default->dev());
+
+        Files::put($this->site.'/dev-anchor.json', DevKeys::trust());
+        $store = new \Cms\Trust\TrustStore($this->site.'/dev-anchor.json', $this->site.'/storage/other-trust', 'other', allowDev: false);
+        $this->assertNull($store->current());
+        $this->assertSame('dev_trust', $store->problem());
     }
 
     public function test_case_85_a_paid_plugin_on_a_local_host_needs_its_author_to_allow_it(): void

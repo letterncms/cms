@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Trust;
 
 use Cms\Foundation\Application;
+use Cms\Support\Files;
 
 /** The trust store of the default store, and of each store a site added (its anchor pinned when it was added). */
 final class TrustRegistry
@@ -16,7 +17,7 @@ final class TrustRegistry
 
     public function default(): TrustStore
     {
-        return $this->stores['default'] ??= new TrustStore($this->app->cmsPath('resources/trust/trust.json'), $this->directory(), 'default', $this->allowDev());
+        return $this->stores['default'] ??= new TrustStore($this->anchor(), $this->directory(), 'default', $this->allowDev());
     }
 
     public function store(string $id): TrustStore
@@ -46,6 +47,25 @@ final class TrustRegistry
     public function forget(string $id): void
     {
         unset($this->stores[$id]);
+    }
+
+    /**
+     * What this release trusts. A local or test site can ask for the public development keys instead,
+     * to work against a stand-in store: only there, because those keys sign anything for anyone.
+     */
+    private function anchor(): string
+    {
+        if (! $this->allowDev() || ! filter_var(env('CMS_DEV_TRUST', false), FILTER_VALIDATE_BOOLEAN)) {
+            return $this->app->cmsPath('resources/trust/trust.json');
+        }
+
+        $file = $this->directory().'/development.json';
+
+        if (! is_file($file)) {
+            Files::put($file, DevKeys::trust());
+        }
+
+        return $file;
     }
 
     private function directory(): string
