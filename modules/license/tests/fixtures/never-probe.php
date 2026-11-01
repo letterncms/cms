@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 
-require (getenv('CMS_TEST_VENDOR') ?: dirname(__DIR__, 6).'/sandbox/vendor').'/autoload.php';
+require (getenv('CMS_TEST_VENDOR') ?: dirname(__DIR__, 4).'/vendor').'/autoload.php';
 
 [, $site] = $argv;
 

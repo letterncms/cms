@@ -16,3 +16,7 @@
 /.gitignore export-ignore
 /.gitattributes export-ignore
 /.github export-ignore
+/phpunit.xml export-ignore
+/package.json export-ignore
+/pnpm-workspace.yaml export-ignore
+/tsconfig.base.json export-ignore

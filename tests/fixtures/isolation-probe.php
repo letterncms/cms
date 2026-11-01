@@ -22,7 +22,7 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
-require (getenv('CMS_TEST_VENDOR') ?: dirname(__DIR__, 4).'/sandbox/vendor').'/autoload.php';
+require (getenv('CMS_TEST_VENDOR') ?: dirname(__DIR__, 2).'/vendor').'/autoload.php';
 
 [, $site, $action] = $argv;
 $app = Bootstrap::create(dirname(__DIR__, 2), $site);

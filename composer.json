@@ -13,6 +13,9 @@
         "letterncms/composer-plugin": ">=0.1 <1",
         "symfony/yaml": "^7.0|^8.0"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^12.0"
+    },
     "autoload": {
         "psr-4": {
             "Cms\\": "src/",
@@ -33,8 +36,21 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Cms\\Tests\\": "tests/"
+            "Cms\\Tests\\": "tests/",
+            "Cms\\Modules\\Admin\\Tests\\": "modules/admin/tests/",
+            "Cms\\Modules\\License\\Tests\\": "modules/license/tests/",
+            "Cms\\Modules\\Packages\\Tests\\": "modules/packages/tests/",
+            "Cms\\Modules\\Users\\Tests\\": "modules/users/tests/"
         }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "allow-plugins": {
+            "letterncms/composer-plugin": true
+        },
+        "sort-packages": true
     },
     "homepage": "https://github.com/letterncms/cms"
 }

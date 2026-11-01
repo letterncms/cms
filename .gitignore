@@ -5,3 +5,5 @@
 /modules/*/node_modules/
 /modules/*/dist/
 .DS_Store
+/.phpunit.cache/
+/pnpm-lock.yaml

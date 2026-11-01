@@ -1,4 +1,4 @@
-// Build first, then run `node cms/themes/admin/tests/navigation.mjs` and open
+// Build first, then run `node modules/admin/tests/navigation.mjs` and open
 // the printed URL. Tests use the real built shell, SDK and modules with delayed
 // fixture abilities. No account, database, browser dependency or site writes.
 import { createServer } from 'node:http'
@@ -6,8 +6,8 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, extname, sep } from 'node:path'
 
-const root = fileURLToPath(new URL('../../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'cms/themes/admin/dist/admin.json'), 'utf8'))
+const root = fileURLToPath(new URL('../../..', import.meta.url))
+const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
 const assetBase = '/_cms/assets/cms-admin/'
 const grants = { create: true, edit: true, publish: true, delete: true }
 const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel: 'New Post', icon: 'article', structure: 'list', driver: 'files', editor: 'document', can: grants, routable: false }
@@ -190,7 +190,7 @@ const server = createServer(async (req, res) => {
     }
     const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin|settings|content|collections)\/(.+)$/)
     if (asset) {
-      const dir = resolve(root, asset[1] === 'admin' ? 'cms/themes/admin/dist' : `cms/modules/${asset[1]}/dist`)
+      const dir = resolve(root, asset[1] === 'admin' ? 'modules/admin/dist' : `modules/${asset[1]}/dist`)
       const path = resolve(dir, asset[2])
       if (!path.startsWith(dir + sep)) { res.writeHead(403); res.end(); return }
       const mime = { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream'

@@ -1,12 +1,12 @@
-// Build admin, then run `node cms/themes/admin/tests/command-palette.mjs`
+// Build admin, then run `node modules/admin/tests/command-palette.mjs`
 // and open the printed URL. Uses the real shell with delayed search fixtures.
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, extname, sep } from 'node:path'
 
-const root = fileURLToPath(new URL('../../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'cms/themes/admin/dist/admin.json'), 'utf8'))
+const root = fileURLToPath(new URL('../../..', import.meta.url))
+const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
 const assetBase = '/_cms/assets/cms-admin/'
 const nav = [
   ['dashboard', 'Dashboard', '/', 'grid', 'main'], ['analytics', 'Analytics', '/analytics', 'chart', 'main'],
@@ -131,7 +131,7 @@ const server = createServer(async (req, res) => {
     }
     const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin)\/(.+)$/)
     if (asset) {
-      const dir = resolve(root, 'cms/themes/admin/dist'), path = resolve(dir, asset[2])
+      const dir = resolve(root, 'modules/admin/dist'), path = resolve(dir, asset[2])
       if (!path.startsWith(dir + sep)) { res.writeHead(403); return res.end() }
       res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(await readFile(path))
     }

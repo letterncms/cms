@@ -1,6 +1,6 @@
 // Build first: ./dev pnpm build
-// node cms/themes/admin/tests/content-workflow.mjs --preview
-// node cms/themes/admin/tests/content-workflow.mjs --site=/absolute/site (real rendering, in-memory edits)
+// node modules/admin/tests/content-workflow.mjs --preview
+// node modules/admin/tests/content-workflow.mjs --site=/absolute/site (real rendering, in-memory edits)
 // The printed URL runs the real bundles against isolated in-memory APIs, with no site writes.
 import { createServer } from 'node:http'
 import { readFile, realpath } from 'node:fs/promises'
@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { resolve, extname, sep } from 'node:path'
 
-const root = fileURLToPath(new URL('../../../..', import.meta.url))
+const root = fileURLToPath(new URL('../../..', import.meta.url))
 const siteArgument = process.argv.find((argument) => argument.startsWith('--site='))?.slice('--site='.length)
 const realSite = siteArgument ? await realpath(resolve(siteArgument)) : null
 const realPublic = realSite ? await realpath(resolve(realSite, 'public')) : null
@@ -16,7 +16,7 @@ const realPublic = realSite ? await realpath(resolve(realSite, 'public')) : null
 let siteQueue = Promise.resolve()
 const siteRequest = (input) => {
   const result = siteQueue.then(() => new Promise((resolveResult, reject) => {
-    const child = spawn('php', [resolve(root, 'cms/themes/admin/tests/render-site.php'), `--site=${realSite}`], { stdio: ['pipe', 'pipe', 'pipe'] })
+    const child = spawn('php', [resolve(root, 'modules/admin/tests/render-site.php'), `--site=${realSite}`], { stdio: ['pipe', 'pipe', 'pipe'] })
     let output = '', errors = ''
     child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8')
     child.stdout.on('data', (chunk) => { output += chunk }); child.stderr.on('data', (chunk) => { errors += chunk })
@@ -41,7 +41,7 @@ const realSources = realSite ? [
 ] : []
 if (realSite && realSources.some((source) => !source.entry)) throw new Error('The real-site preview requires pages/home and a blog entry.')
 const realEntries = new Set(realSources.map((source) => source.entry.id))
-const admin = JSON.parse(await readFile(resolve(root, 'cms/themes/admin/dist/admin.json'), 'utf8'))
+const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
 const assetBase = '/_cms/assets/cms-admin/'
 const modules = ['content']
 const plugins = ['blocks', 'seo', 'site']
@@ -682,7 +682,7 @@ const server = createServer(async (req, res) => {
     }
     const asset = url.pathname.match(/^\/_cms\/assets\/cms-([^/]+)\/(.+)$/)
     if (asset) {
-      const folder = asset[1] === 'admin' ? 'cms/themes/admin' : modules.includes(asset[1]) ? `cms/modules/${asset[1]}` : `cms/plugins/${asset[1]}`
+      const folder = asset[1] === 'admin' ? 'modules/admin' : modules.includes(asset[1]) ? `modules/${asset[1]}` : `../plugins-public/${asset[1]}`
       const directory = resolve(root, folder, 'dist'), path = resolve(directory, asset[2])
       if (!path.startsWith(directory + sep)) return json(res, 403, {})
       const assetContent = await readFile(path)
