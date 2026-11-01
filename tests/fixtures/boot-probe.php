@@ -5,7 +5,7 @@
 
 declare(strict_types=1);
 
-require (getenv('CMS_TEST_VENDOR') ?: dirname(__DIR__, 4).'/sandbox/vendor').'/autoload.php';
+require (getenv('CMS_TEST_VENDOR') ?: dirname(__DIR__, 2).'/vendor').'/autoload.php';
 
 $app = Cms\Foundation\Bootstrap::create(dirname(__DIR__, 2), $argv[1]);
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();

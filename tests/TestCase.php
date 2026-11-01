@@ -42,6 +42,12 @@ abstract class TestCase extends BaseTestCase
 
     public function createApplication()
     {
+        // A stand-in until the admin is built: the tests never run its JavaScript, so they don't need Node.
+        if (! is_file($manifest = dirname(__DIR__).'/modules/admin/dist/admin.json')) {
+            @mkdir(dirname($manifest), 0o777, true);
+            file_put_contents($manifest, '{"entry":"main.js","css":[],"fonts":[],"imports":{},"preload":[]}');
+        }
+
         $this->site = sys_get_temp_dir().'/cms-test-'.bin2hex(random_bytes(6));
 
         Yaml::write($this->site.'/config/site.yaml', ['name' => 'Test site', 'url' => 'http://localhost', 'locale' => 'en', 'locales' => ['en', 'de']]);
@@ -51,12 +57,15 @@ abstract class TestCase extends BaseTestCase
             Yaml::write($this->site."/content/collections/{$handle}.yaml", $definition);
         }
 
-        // The plugins this test turns on, from the workspace's sandbox. Only those: a link to the rest would let a test's own files write through it.
+        // The plugins this test turns on, and only those: a link to the rest would let a test's own files write through it.
         @mkdir($this->site.'/plugins', 0o777, true);
+        $plugins = getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins';
 
         foreach ($this->plugins() as $name) {
-            if (is_dir($plugin = getenv('CMS_TEST_PLUGINS').'/'.basename($name))) {
+            if (is_dir($plugin = $plugins.'/'.basename($name))) {
                 symlink($plugin, $this->site.'/plugins/'.basename($name));
+            } elseif (str_starts_with($name, 'letterncms/')) {
+                $this->markTestSkipped("Needs {$name}, which isn't installed here.");
             }
         }
 

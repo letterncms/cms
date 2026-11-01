@@ -1,0 +1,15 @@
+{
+  "name": "cms",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "node --experimental-vm-modules --test modules/admin/tests/calendar.mjs modules/admin/tests/dateTime.mjs modules/admin/tests/entryActions.mjs modules/admin/tests/fieldIdentity.mjs modules/content/tests/entrySession.mjs modules/content/tests/listPrefs.mjs"
+  },
+  "packageManager": "pnpm@11.12.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

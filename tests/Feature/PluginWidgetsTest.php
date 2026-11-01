@@ -15,7 +15,15 @@ final class PluginWidgetsTest extends TestCase
     /** @return list<string> plugin folders */
     private static function folders(): array
     {
-        return array_values(array_filter(glob(getenv('CMS_TEST_PLUGINS').'/*', GLOB_ONLYDIR) ?: [], static fn ($dir) => is_file($dir.'/composer.json')));
+        return array_values(array_filter(glob((getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins').'/*', GLOB_ONLYDIR) ?: [], static fn ($dir) => is_file($dir.'/composer.json')));
+    }
+
+    public function createApplication()
+    {
+        $app = parent::createApplication();
+        self::folders() === [] && $this->markTestSkipped("Needs every plugin, which aren't installed here.");
+
+        return $app;
     }
 
     protected function plugins(): array

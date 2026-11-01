@@ -1,0 +1,8 @@
+linkWorkspacePackages: true
+packages:
+  - admin-sdk
+  - modules/*
+  - modules/admin/src/ui
+minimumReleaseAgeExclude:
+  - '@tanstack/query-core@5.105.0'
+  - '@tanstack/react-query@5.105.0'

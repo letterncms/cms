@@ -1,4 +1,4 @@
-// node --test cms/themes/admin/tests/calendar.mjs
+// node --test modules/admin/tests/calendar.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { calendarDayKey, calendarRange } from '../src/ui/calendar.ts'

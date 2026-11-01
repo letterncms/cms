@@ -1,4 +1,4 @@
-// Build first, then run `node cms/themes/admin/tests/overviews.mjs` and open the
+// Build first, then run `node modules/admin/tests/overviews.mjs` and open the
 // printed URL. Uses real admin/module bundles with isolated fixture APIs; no site writes.
 // Run with --preview and add ?preview=1 to inspect fixture screens without running checks.
 import { createServer } from 'node:http'
@@ -6,8 +6,8 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, extname, sep } from 'node:path'
 
-const root = fileURLToPath(new URL('../../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'cms/themes/admin/dist/admin.json'), 'utf8'))
+const root = fileURLToPath(new URL('../../..', import.meta.url))
+const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
 const assetBase = '/_cms/assets/cms-admin/'
 const modules = ['content', 'collections', 'globals', 'users', 'packages', 'audit']
 const plugins = ['blocks', 'media', 'forms', 'navigation', 'seo', 'i18n']
@@ -448,7 +448,7 @@ const server = createServer(async (req, res) => {
     }
     const asset = url.pathname.match(/^\/_cms\/assets\/cms-([^/]+)\/(.+)$/)
     if (asset) {
-      const folder = asset[1] === 'admin' ? 'cms/themes/admin' : modules.includes(asset[1]) ? `cms/modules/${asset[1]}` : `cms/plugins/${asset[1]}`
+      const folder = asset[1] === 'admin' ? 'modules/admin' : modules.includes(asset[1]) ? `modules/${asset[1]}` : `../plugins-public/${asset[1]}`
       const dir = resolve(root, folder, 'dist'), path = resolve(dir, asset[2])
       if (!path.startsWith(dir + sep)) return json(res, 403, {})
       res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(await readFile(path))

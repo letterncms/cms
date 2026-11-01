@@ -5,10 +5,10 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, extname, sep } from 'node:path'
 
-const root = fileURLToPath(new URL('../../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'cms/themes/admin/dist/admin.json'), 'utf8'))
+const root = fileURLToPath(new URL('../../..', import.meta.url))
+const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
 const imports = Object.fromEntries(Object.entries(admin.imports).map(([name, path]) => [name, '/assets/admin/' + path]))
-const translations = Object.assign({}, ...await Promise.all(['cms/themes/admin/lang/nl.json', 'cms/plugins/blocks/lang/nl.json'].map(async (path) => JSON.parse(await readFile(resolve(root, path), 'utf8')))))
+const translations = Object.assign({}, ...await Promise.all(['modules/admin/lang/nl.json', '../plugins-public/blocks/lang/nl.json'].map(async (path) => JSON.parse(await readFile(resolve(root, path), 'utf8')))))
 const runner = `
 import React from 'react'
 import { createRoot } from 'react-dom/client'
@@ -122,7 +122,7 @@ const server = createServer(async (req, res) => {
     }
     const asset = url.pathname.match(/^\/assets\/(admin|blocks)\/(.+)$/)
     if (asset) {
-      const dir = resolve(root, asset[1] === 'admin' ? 'cms/themes/admin/dist' : 'cms/plugins/blocks/dist')
+      const dir = resolve(root, asset[1] === 'admin' ? 'modules/admin/dist' : '../plugins-public/blocks/dist')
       const path = resolve(dir, asset[2])
       if (!path.startsWith(dir + sep)) { res.writeHead(403); res.end(); return }
       res.setHeader('Content-Type', { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream')

@@ -1,0 +1,12 @@
+{
+  "name": "@letterncms/ui",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The admin's UI kit, for typechecking plugins against this checkout. npm gets its declarations.",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  }
+}

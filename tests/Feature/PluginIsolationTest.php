@@ -36,6 +36,7 @@ final class PluginIsolationTest extends TestCase
     public function test_every_plugin_can_be_off_alone_and_in_combination(): void
     {
         $all = $this->plugins();
+        $all === [] && $this->markTestSkipped("Needs every plugin, which aren't installed here.");
         $this->assertContains('letterncms/site', array_keys($all));
 
         $seed = $this->root.'/seed';
@@ -141,7 +142,7 @@ final class PluginIsolationTest extends TestCase
         touch($site.'/db.sqlite');
         @mkdir($site.'/plugins', 0o777, true);
 
-        foreach (glob(getenv('CMS_TEST_PLUGINS').'/*', GLOB_ONLYDIR) ?: [] as $plugin) {
+        foreach (glob((getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins').'/*', GLOB_ONLYDIR) ?: [] as $plugin) {
             symlink($plugin, $site.'/plugins/'.basename($plugin));
         }
     }
@@ -151,7 +152,7 @@ final class PluginIsolationTest extends TestCase
     {
         $out = [];
 
-        foreach (glob(getenv('CMS_TEST_PLUGINS').'/*/composer.json') as $file) {
+        foreach ((glob((getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins').'/*/composer.json') ?: []) as $file) {
             $composer = json_decode((string) file_get_contents($file), true);
             $out[$composer['name']] = array_values(array_filter(array_keys($composer['require'] ?? []), static fn (string $dep) => str_starts_with($dep, 'cms/') && $dep !== 'letterncms/cms'));
         }

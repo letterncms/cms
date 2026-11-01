@@ -1,4 +1,4 @@
-// node --experimental-vm-modules --test cms/modules/content/tests/listPrefs.mjs
+// node --experimental-vm-modules --test modules/content/tests/listPrefs.mjs
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
@@ -23,7 +23,7 @@ async function setup(preferences = {}, defaultView = 'grid') {
     this.setExport('useState', (initial) => [typeof initial === 'function' ? initial() : initial, () => {}])
   }, { context })
   const module = new SourceTextModule(source, { context })
-  const ui = new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL('../../../themes/admin/src/ui/viewPrefs.ts', import.meta.url), 'utf8')), { context })
+  const ui = new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL('../../admin/src/ui/viewPrefs.ts', import.meta.url), 'utf8')), { context })
   await ui.link((name) => name === '@letterncms/sdk' ? sdk : react)
   await module.link((name) => name === '@letterncms/sdk' ? sdk : ui)
   await module.evaluate()
