@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security
+
+- The update list can be kept fresh by a key that can only do that: it can't sign a release, so it never has to sit beside the keys that can.
+
 ## 0.1.1 (2026-11-01)
 
 ### Changed
