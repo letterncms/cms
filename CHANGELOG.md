@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- New installs lock to commits that stay available, after a tidy-up of this repository's history.
+
 ## 0.1.2 (2026-11-01)
 
 ### Security
