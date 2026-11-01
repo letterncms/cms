@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.3 (2026-11-01)
+
 ### Changed
 
 - New installs lock to commits that stay available, after a tidy-up of this repository's history.
