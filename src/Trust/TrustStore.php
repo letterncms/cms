@@ -134,8 +134,11 @@ final class TrustStore
             return null;
         }
 
-        $opened = Envelope::open($json, $type, static function (string $kid) use ($trust) {
-            $key = $trust->key($kid, 'release', 'preview');
+        // A feed key only keeps the update list fresh. The releases in it carry their own signatures, from a key it isn't.
+        $roles = $type === 'cms-updates' ? ['release', 'preview', 'feed'] : ['release', 'preview'];
+
+        $opened = Envelope::open($json, $type, static function (string $kid) use ($trust, $roles) {
+            $key = $trust->key($kid, ...$roles);
 
             return $key && ! $trust->revocation($kid) ? $key['pub'] : null;
         });
@@ -149,7 +152,7 @@ final class TrustStore
         $issued = (int) strtotime((string) ($payload['issued'] ?? ''));
         $state = $this->state();
         $seen = $state['feeds'][$type] ?? ['version' => 0, 'issued' => 0];
-        $key = (array) $trust->key($opened['kid'], 'release', 'preview');
+        $key = (array) $trust->key($opened['kid'], ...$roles);
 
         // A preview key can't reach a paying customer: it counts only for a client on 0.x.
         if ($key['role'] === 'preview' && ! str_starts_with($this->clientVersion, '0.')) {
