@@ -144,7 +144,7 @@ class CoreUpdate
             if ($reason = $this->layout->managed()) {
                 throw new RuntimeException($reason === 'composer' || $reason === 'git'
                     ? __('This site is managed with Composer. Update it with composer update.')
-                    : __('This site is locked. Update it through your deploy.'));
+                    : __('This site does not change its own files. Update it through your deploy.'));
             }
 
             $freshness = $this->feed->freshness();
