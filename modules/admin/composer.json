@@ -2,7 +2,7 @@
     "name": "letterncms/admin",
     "description": "The admin's screens, controls and colors. Modules and plugins add to it through the manifest, the SDK and the UI kit.",
     "type": "cms-plugin",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "license": "MIT",
     "extra": {
         "cms": {
