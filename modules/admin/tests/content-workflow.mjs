@@ -69,6 +69,7 @@ const initialEntries = () => realSite ? new Map(realSources.map((source) => [sou
 let entries = initialEntries()
 const revisions = (entry) => [0, 1].map((index) => ({ id: `${entry.id}-revision-${index}`, action: index ? 'create' : 'save', title: entry.title, user: people[0], createdAt: index ? entry.createdAt : entry.updatedAt, message: null }))
 const nav = collections.map((collection) => ({ id: collection.handle, label: collection.title, path: `/content/${collection.handle}`, icon: collection.icon, section: 'content' }))
+const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const manifest = {
   cms: { version: 'fixture', lockedDown: false, debug: false },
   site: realSources[0]?.site ?? { name: 'Content workflow verification', url: 'https://fixture.example', locales: ['en'], defaultLocale: 'en', timezone: 'Europe/Brussels' },
@@ -77,9 +78,10 @@ const manifest = {
   modules: [...modules, ...plugins].map((name) => ({ id: `cms/${name}`, url: `/_cms/assets/cms-${name}/admin.js`, package: `cms/${name}` })),
   styles: [...modules, ...plugins].map((name) => `/_cms/assets/cms-${name}/admin.css`),
   settings: [], collections, globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [], config: { content: { autosave: 0, perPage: 50 } }, nav,
-  sidebar: [{ id: 'content', label: 'Content', items: nav.map((item) => item.id) }],
+  sidebar: { sections: [{ id: 'content', label: 'Content', items: nav.map((item) => item.id) }], hidden: [], personal: false },
+  settingsNav: [], brand,
 }
-const boot = { base: '/admin', api: '/api/admin', version: 'fixture', theme: { name: 'cms/admin', version: 'fixture' }, site: manifest.site, locale: 'en', messages: {}, manifest }
+const boot = { brand, base: '/admin', api: '/api/admin', version: 'fixture', theme: { name: 'cms/admin', version: 'fixture' }, site: manifest.site, locale: 'en', messages: {}, manifest }
 const imports = { ...Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path])), '@letterncms/blocks': '/_cms/assets/cms-blocks/admin.js' }
 const fixtureNonce = 'fixture-preview-scripts'
 const editorToken = 'fixture-editor-document'
@@ -122,7 +124,7 @@ const details = async () => {
 }
 const open = async (path, title) => {
   navigate(path)
-  await wait(() => location.pathname === '/admin' + path && document.querySelector('header nav')?.textContent.includes(title), 'Failed to open ' + path)
+  await wait(() => location.pathname === '/admin' + path && document.querySelector('header')?.textContent.includes(title), 'Failed to open ' + path)
   await rendered()
 }
 const typeText = (target, text) => {
@@ -276,7 +278,7 @@ try {
       await frameTick()
     }
     assert(nodeCount() === count, 'A click created a block')
-    await persist()
+    assert(document.querySelector('header [role="status"]')?.textContent !== 'Unsaved', 'A click counted as an edit')
     assert(JSON.stringify((await state()).entries['page-1'].data.body) === original, 'A click changed the content')
     await selectRendered('block-text')
     liveDoc().body.dispatchEvent(new (liveDoc().defaultView.MouseEvent)('click', { clientX: 4, clientY: 4, bubbles: true, cancelable: true }))
@@ -392,11 +394,14 @@ try {
   })
   await test('A selected block scrolled out of view leaves no floating toolbar at the viewport edge', async () => {
     await selectRendered('block-heading')
+    // Room to scroll whatever the window's height: the fixture page is short.
+    liveDoc().body.style.paddingBottom = '300vh'
     liveDoc().defaultView.scrollTo(0, liveDoc().documentElement.scrollHeight)
-    await wait(() => source('block-heading').getBoundingClientRect().bottom < 0, 'Fixture does not have enough content to scroll the selected heading out of view')
+    await wait(() => source('block-heading').getBoundingClientRect().bottom < 0, 'The selected heading did not scroll out of view')
     await wait(() => !controls('block-heading'), 'An offscreen selected block leaves a floating toolbar')
     source('block-heading').scrollIntoView({ block: 'center' })
     await wait(() => controls('block-heading'), 'Selected block controls did not return when its anchor became visible')
+    liveDoc().body.style.paddingBottom = ''
     await details()
   })
   await test('Inline edits preserve the source DOM and slash insertion replaces the exact nested slot', async () => {
