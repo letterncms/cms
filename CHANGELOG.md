@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Pick any icon for a collection or a global set: a searchable list of all 1,500 Phosphor icons, found by name or by what they are for ("email" finds the envelope).
+
+### Fixed
+
+- A collection whose icon is named after a Phosphor icon, like `handshake` or `book`, now shows it in the sidebar and lists instead of a plain circle.
+
 ## 0.1.3 (2026-11-01)
 
 ### Changed
