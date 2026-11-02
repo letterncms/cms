@@ -148,6 +148,6 @@ final class Navigation extends Arranged
             }
         }
 
-        return ['id' => $item['id'], 'label' => $item['label'], 'path' => $item['path'], 'icon' => $item['icon'], 'section' => $item['section'], 'shortcut' => $item['shortcut'], 'badge' => $value, 'placement' => $item['placement'] ?? null];
+        return ['id' => $item['id'], 'label' => $item['label'], 'path' => $item['path'], 'icon' => $item['icon'], 'section' => $item['section'], 'shortcut' => $item['shortcut'], 'badge' => $value, 'command' => $item['command'] ?? null];
     }
 }

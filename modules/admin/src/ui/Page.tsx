@@ -15,7 +15,7 @@ export function Topbar({ crumbs = [], actions, children, className }: { crumbs?:
   const last = crumbs[crumbs.length - 1]
   useScreenContext({ title: typeof last?.label === 'string' ? last.label : undefined, icon: last?.icon ?? crumbs[0]?.icon })
   return (
-    <header className={cn('sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur-md', className)}>
+    <header className={cn('sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-bg/85 pl-[calc(1rem+var(--cms-sidebar-toggle,0px))] pr-4 backdrop-blur-md', className)}>
       <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1 overflow-hidden text-sm">
         {crumbs.map((c, i) => (
           <Fragment key={i}>

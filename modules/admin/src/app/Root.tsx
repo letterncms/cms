@@ -3,7 +3,7 @@ import { boot, loadManifest, navigate, onManifest, onUnauthorized, queryClient, 
 import { useCallback, useEffect, useState } from 'react'
 import { registerCoreFields } from '../fields'
 import { AuthScreen } from '../screens/auth/AuthScreen'
-import { Button, Icon, Spinner, Toaster, TooltipProvider, cn } from '../ui'
+import { Button, Icon, Spinner, Toaster, TooltipProvider } from '../ui'
 import { App, screenReady } from './App'
 import { followManifest, reportFailed, syncModules } from './modules'
 
@@ -95,10 +95,10 @@ export function Root() {
  */
 function Booting() {
   const signedIn = !!boot.manifest
-  const collapsed = localStorage.getItem('cms.sidebar') === 'collapsed'
+  const sidebar = localStorage.getItem('cms.sidebar') !== 'collapsed' && window.matchMedia('(min-width: 768px)').matches
   return (
     <div className="flex h-screen bg-bg">
-      {signedIn && <div className={cn('shrink-0 border-r border-border bg-surface', collapsed ? 'w-[52px]' : 'w-[248px]')} />}
+      {signedIn && sidebar && <div className="w-[248px] shrink-0 border-r border-border bg-surface" />}
       <div className="cms-appear-late grid flex-1 place-items-center text-faint">
         <Spinner size={18} />
       </div>

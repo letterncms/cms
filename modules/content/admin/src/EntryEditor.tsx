@@ -87,8 +87,6 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const manifest = useManifest()
   const { query } = useLocation()
   const autosave = useConfig<{ autosave: number }>('content').autosave ?? 1200
-  // Writing gets the room: the admin sidebar folds to its rail while an entry is open.
-  useEffect(() => { events.emit('shell.compact', true); return () => events.emit('shell.compact', false) }, [])
   const contentLocale = initial?.locale
     ?? (manifest.site.locales.includes(query.locale ?? '') ? query.locale! : manifest.site.defaultLocale)
   const listPath = `/content/${collection.handle}${contentLocale !== manifest.site.defaultLocale ? `?locale=${contentLocale}` : ''}`

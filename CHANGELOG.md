@@ -5,16 +5,19 @@
 ### Added
 
 - Pick any icon for a collection or a global set: a searchable list of all 1,500 Phosphor icons, found by name or by what they are for ("email" finds the envelope).
-- Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`, and the `sidebar.footer` slot. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
+- Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`. A nav item can run a command instead of leading to a screen, and a `nav.<id>` panel can show its status beside its label. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
 - Screens can say what they show with `useScreenContext`, for whatever works alongside them. An open entry shows changes made from outside as they happen, and `events.emit('content.changed')` asks it to look.
 
 ### Changed
 
 - The inspector and outline in an editor dock when the workspace has room for them, rather than the window.
 
+- The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way on every screen until you change it. It no longer folds to a row of icons, and opening an entry no longer changes it.
+- On a phone the sidebar opens from that button instead of keeping a row of icons down the side, so screens get the full width.
+
 ### Removed
 
-- **Breaking.** The `sidebar.history` slot. Use `sidebar.footer`.
+- **Breaking.** The `sidebar.history` slot, and `shell.compact`: a screen no longer changes the sidebar.
 
 ### Fixed
 
