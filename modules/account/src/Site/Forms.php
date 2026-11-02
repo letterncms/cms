@@ -224,12 +224,16 @@ final class Forms
         $locale = $this->locale();
         $here = '/'.ltrim(request()->path(), '/');
         $links = '';
-        $screens = array_filter($this->screens->all(), static fn (array $screen) => ! empty($screen['nav']));
-        uasort($screens, static fn (array $a, array $b) => ($a['order'] ?? 100) <=> ($b['order'] ?? 100));
+        $user = $this->cms->accounts()->current();
 
-        foreach ($screens as $handle => $screen) {
+        foreach ($this->screens->menu($user) as $handle => $screen) {
             $url = $this->screens->url($handle, $locale);
             $links .= '<a href="'.e($url).'"'.($url === $here ? ' aria-current="page"' : '').'>'.e(__($screen['nav_label'] ?? $screen['label'])).'</a>';
+        }
+
+        // The team's profile, password and data are in the admin.
+        if ($user && ! $this->cms->accounts()->isVisitor($user)) {
+            $links .= '<a href="/admin/account">'.e(__('Profile and password')).'</a>';
         }
 
         return '<nav class="cms-account-nav" data-layout="'.e($layout).'" aria-label="'.e(__('Account')).'">'.$links.'</nav>';

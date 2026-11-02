@@ -25,6 +25,9 @@ use Cms\Site\Rendering\Renderer;
  *
  * Plugins add screens through the `account.screens` filter:
  *   'invoices' => [path: '/account/invoices', auth: 'user', nav: true, order: 30, seed: fn () => [...nodes]] and a label
+ *
+ * Everyone signed in has these pages, the team too: what they bought is here, like anyone's. A
+ * screen with `admin: true` is one the team has in the admin instead, where it asks for more.
  */
 final class Screens
 {
@@ -94,14 +97,14 @@ final class Screens
         $auth = $this->get($handle)['auth'] ?? 'any';
 
         if ($auth === 'guest' && $user) {
-            return redirect()->to($accounts->isVisitor($user) ? $this->home($locale) : '/admin');
+            return redirect()->to($this->home($locale));
         }
 
         if ($auth === 'user' && ! $user) {
             return redirect()->to((string) $accounts->signInUrl($this->prefix($locale).$this->get($handle)['path'], $locale));
         }
 
-        if ($auth === 'user' && ! $accounts->isVisitor($user)) {
+        if ($auth === 'user' && ! empty($this->get($handle)['admin']) && ! $accounts->isVisitor($user)) {
             return redirect()->to('/admin/account');
         }
 
@@ -175,6 +178,16 @@ final class Screens
         }
     }
 
+    /** @return array<string, array> The screens in the account's own menu, in order, for this person. */
+    public function menu(?\Cms\Users\User $user): array
+    {
+        $team = $user && ! $this->cms->accounts()->isVisitor($user);
+        $screens = array_filter($this->all(), static fn (array $screen) => ! empty($screen['nav']) && ! ($team && ! empty($screen['admin'])));
+        uasort($screens, static fn (array $a, array $b) => ($a['order'] ?? 100) <=> ($b['order'] ?? 100));
+
+        return $screens;
+    }
+
     public function home(string $locale): string
     {
         $next = (string) $this->cms->settings('accounts', 'after_sign_in', '/account');
@@ -199,9 +212,9 @@ final class Screens
             'reset' => $screen(['label' => 'Choose a new password', 'path' => '/reset/new', 'auth' => 'token'], ['reset']),
             'confirm-email' => $screen(['label' => 'Confirm your email address', 'path' => '/confirm-email', 'auth' => 'token'], ['confirm-email']),
             'account' => $screen(['label' => 'Your account', 'nav_label' => 'Overview', 'path' => '/account', 'auth' => 'user', 'nav' => true, 'order' => 0], ['overview', 'sign-out']),
-            'profile' => $screen(['label' => 'Profile', 'path' => '/account/profile', 'auth' => 'user', 'nav' => true, 'order' => 60], ['profile']),
-            'security' => $screen(['label' => 'Email and password', 'path' => '/account/security', 'auth' => 'user', 'nav' => true, 'order' => 70], [['label' => 'Change your email address'], 'email', ['label' => 'Change your password'], 'password']),
-            'privacy' => $screen(['label' => 'Your data', 'path' => '/account/privacy', 'auth' => 'user', 'nav' => true, 'order' => 80], [['label' => 'Download your data'], 'export', ['label' => 'Delete your account'], 'delete']),
+            'profile' => $screen(['label' => 'Profile', 'path' => '/account/profile', 'auth' => 'user', 'admin' => true, 'nav' => true, 'order' => 60], ['profile']),
+            'security' => $screen(['label' => 'Email and password', 'path' => '/account/security', 'auth' => 'user', 'admin' => true, 'nav' => true, 'order' => 70], [['label' => 'Change your email address'], 'email', ['label' => 'Change your password'], 'password']),
+            'privacy' => $screen(['label' => 'Your data', 'path' => '/account/privacy', 'auth' => 'user', 'admin' => true, 'nav' => true, 'order' => 80], [['label' => 'Download your data'], 'export', ['label' => 'Delete your account'], 'delete']),
             'deleted' => $screen(['label' => 'Your account is gone', 'description' => 'We deleted your account and the data that belongs to it.', 'path' => '/account/deleted', 'auth' => 'any']),
             'denied' => $screen(['label' => 'You don’t have access to this page', 'path' => null, 'auth' => 'any'], ['gate-notice']),
             'teaser-notice' => ['label' => 'Teaser Notice', 'path' => null, 'auth' => 'any', 'seed' => static fn () => [['type' => 'account/gate-notice', 'id' => 'teasernotice', 'props' => []]]],

@@ -8,6 +8,7 @@ use Cms\Contracts\MailMessage;
 use Cms\Contracts\Mailer;
 use Cms\Support\Yaml;
 use Cms\Tests\TestCase;
+use Cms\Users\AccountInBrowser;
 use Cms\Users\AccountToken;
 use Cms\Users\Accounts;
 use Cms\Users\User;
@@ -403,11 +404,54 @@ final class PublicAccountsTest extends TestCase
         $this->assertNotNull($user->fresh());
     }
 
-    public function test_the_team_is_not_sent_through_the_public_pages(): void
+    public function test_the_team_has_the_account_pages_and_keeps_profile_password_and_data_in_the_admin(): void
     {
         $this->actingAs($this->admin());
-        $this->get('/account')->assertRedirect('/admin/account');
+        $this->get('/account')->assertOk()->assertSee('href="/admin/account"', false)->assertDontSee('href="/account/profile"', false);
+        $this->get('/account/profile')->assertRedirect('/admin/account');
+        $this->get('/account/privacy')->assertRedirect('/admin/account');
+        $this->get('/sign-in')->assertRedirect('/account');
         $this->post('/_cms/account/delete', ['current' => 'x', 'confirm' => 1])->assertRedirect('/admin/account');
+    }
+
+    public function test_a_cookie_says_only_that_someone_is_signed_in_for_as_long_as_the_session(): void
+    {
+        $this->member();
+        $cookie = static fn ($response) => collect($response->headers->getCookies())->first(static fn ($c) => $c->getName() === AccountInBrowser::COOKIE);
+
+        $in = $cookie($this->post('/_cms/account/sign-in', ['email' => 'ada@example.com', 'password' => 'correct-horse-1']));
+        $this->assertSame(['1', false, 0], [$in->getValue(), $in->isHttpOnly(), $in->getExpiresTime()], 'Readable by the page, gone with the browser session');
+        $this->assertNull($cookie($this->get('/account')), 'Set once');
+
+        $out = $cookie($this->post('/_cms/account/sign-out'));
+        $this->assertLessThan(time(), $out->getExpiresTime());
+
+        $kept = $cookie($this->post('/_cms/account/sign-in', ['email' => 'ada@example.com', 'password' => 'correct-horse-1', 'remember' => '1']));
+        $this->assertGreaterThan(time() + 300 * 86400, $kept->getExpiresTime(), 'As long as "keep me signed in"');
+    }
+
+    public function test_a_page_everyone_may_get_the_same_copy_of_leaves_sign_in_or_my_account_to_the_browser(): void
+    {
+        $id = cms()->abilities()->execute('accounts/screen-customise', ['handle' => 'deleted'], \Cms\Abilities\AbilityContext::forUser($this->admin()))['id'];
+        cms()->content()->update($id, ['data' => ['blocks' => [
+            ['type' => 'link', 'id' => 'mine', 'props' => ['label' => '', 'url' => '/'], 'bind' => ['label' => 'accounts.account.label', 'url' => 'accounts.account.url', 'visible' => 'account']],
+            ['type' => 'link', 'id' => 'door', 'props' => ['label' => '', 'url' => '/'], 'bind' => ['label' => 'accounts.sign_in.label', 'url' => 'accounts.sign_in.url', 'hidden' => 'account']],
+        ]]]);
+        cms()->content()->publish($id);
+
+        $shared = (string) $this->get('/account/deleted')->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('#<a [^>]*href="/account"[^>]*data-cms-account="in"|<a [^>]*data-cms-account="in"[^>]*href="/account"#', $shared);
+        $this->assertMatchesRegularExpression('#<a [^>]*href="/sign-in"[^>]*data-cms-account="out"|<a [^>]*data-cms-account="out"[^>]*href="/sign-in"#', $shared);
+        $this->assertStringContainsString(AccountInBrowser::COOKIE, $shared, 'The page tells them apart before it\'s painted');
+        $this->assertStringContainsString('My account', $shared);
+
+        // Signed in, the page is theirs alone, and only what's for them is on it.
+        $this->member();
+        $this->post('/_cms/account/sign-in', ['email' => 'ada@example.com', 'password' => 'correct-horse-1']);
+        $own = (string) $this->get('/account/deleted')->assertOk()->getContent();
+        $this->assertStringContainsString('href="/account"', $own);
+        $this->assertStringNotContainsString('href="/sign-in"', $own);
+        $this->assertStringNotContainsString('data-cms-account', $own);
     }
 
     public function test_sign_up_closed_or_without_mail(): void

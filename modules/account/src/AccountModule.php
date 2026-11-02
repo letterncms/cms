@@ -9,8 +9,10 @@ use Cms\Blocks\BlockRegistry;
 use Cms\Content\Collections\Collection;
 use Cms\Modules\Account\Site\Forms;
 use Cms\Modules\Account\Site\Screens;
+use Cms\Modules\Account\Site\SignedInCookie;
 use Cms\Packages\Plugin;
 use Cms\Site\Rendering\PageContext;
+use Cms\Users\AccountInBrowser;
 use Cms\Users\AccountToken;
 use Cms\Users\Accounts;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -87,6 +89,7 @@ final class AccountModule extends Plugin
         $this->screenBlocks();
         $this->screenAbilities();
         $this->adminPages();
+        $this->app->make(\Illuminate\Contracts\Http\Kernel::class)->appendMiddlewareToGroup('web', SignedInCookie::class);
 
         // After every plugin has had the chance to add screens, before the site's catch-all.
         $this->app->booted(fn () => $screens()->routes());
@@ -95,11 +98,25 @@ final class AccountModule extends Plugin
             return ($context->entry ?? null)?->collection === Screens::COLLECTION ? [...$head, '<meta name="robots" content="noindex">'] : $head;
         });
 
-        $hooks->addFilter('site.scope', function (array $scope, $context = null) {
-            $user = $context instanceof PageContext && $context->mode === PageContext::REQUEST ? $this->cms()->accounts()->current() : null;
-            $sample = $context instanceof PageContext && $context->editor ? ['id' => '', 'name' => 'Ada Lovelace', 'email' => 'ada@example.com', 'roles' => []] : null;
+        // `account` is who's signed in. A page anyone may get the same copy of leaves that to the
+        // browser. `accounts` has the sign-in and account pages, in the page's language.
+        $hooks->addFilter('site.scope', function (array $scope, $context = null) use ($screens) {
+            $page = $context instanceof PageContext;
+            $user = $page && in_array($context->mode, [PageContext::REQUEST, PageContext::PREVIEW], true) ? $this->cms()->accounts()->current() : null;
+            $account = match (true) {
+                $user !== null => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'roles' => (array) $user->roles, 'fields' => (array) ($user->data ?? [])],
+                $page && $context->editor => ['id' => '', 'name' => 'Ada Lovelace', 'email' => 'ada@example.com', 'roles' => []],
+                $page && in_array($context->mode, [PageContext::REQUEST, PageContext::BUILD], true) => new AccountInBrowser,
+                default => null,
+            };
+            $locale = $page ? $context->locale() : $this->cms()->defaultLocale();
+            $link = static fn (string $screen, string $label) => ['url' => $screens()->url($screen, $locale), 'label' => $label];
 
-            return [...$scope, 'account' => $user ? ['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'roles' => (array) $user->roles, 'fields' => (array) ($user->data ?? [])] : $sample];
+            return [...$scope, 'account' => $account, 'accounts' => [
+                'sign_in' => $link('sign-in', __('Sign in')),
+                'sign_up' => $link('sign-up', __('Create an account')),
+                'account' => $link('account', __('My account')),
+            ]];
         });
 
         // These pages are answered on request, so a build's link check won't find them as files.
