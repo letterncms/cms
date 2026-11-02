@@ -193,6 +193,8 @@ final class ContentAbilities
 
         $a->register('entries/create', [
             'label' => 'Create Entry',
+            // Unless a call publishes or schedules it, what this changes isn't live and stays in the history.
+            'annotations' => ['draft' => true],
             'description' => 'Create an entry. `data` keys are the collection\'s field handles (see collections/get for the schema). Created as a draft unless status is "published".',
             'permission' => function (?User $user, array $in) {
                 $ok = $this->allowed($user, (string) $in['collection'], 'create');
@@ -216,6 +218,7 @@ final class ContentAbilities
 
         $a->register('entries/update', [
             'label' => 'Update Entry',
+            'annotations' => ['draft' => true],
             'description' => 'Change an entry. `data` is merged into existing data. For published entries changes are saved as a draft until published (or pass publish: true).',
             'permission' => function (?User $user, array $in) {
                 $collection = $this->collectionOf((string) $in['id']);

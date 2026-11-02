@@ -8,6 +8,7 @@
 - Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`. A nav item can run a command instead of leading to a screen, and a `nav.<id>` panel can show its status beside its label. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
 - Skills: ready-made ways of working for agents, registered with `cms()->skills()`. Every agent gets them: the assistant's `/`, and MCP clients as prompts.
 - Plugins can add to what `@` and `/` offer in a chat with `registry.composer`, and offer things from a screen with `useScreenContext({ items })`. All of it is one thing, a `ContextItem`.
+- Abilities can mark a change that stays a draft (`annotations: ['draft' => true]`), for agents to treat as safe to undo unless a call publishes it. `entries/create` and `entries/update` do.
 - Screens can say what they show with `useScreenContext`, for whatever works alongside them. An open entry shows changes made from outside as they happen, and `events.emit('content.changed')` asks it to look.
 
 ### Changed
