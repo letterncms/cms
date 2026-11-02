@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- The store, the licence service and the website are at lettern.org, and the docs at docs.lettern.org. Sites find the store there from this version on.
+
 ## 0.2.1 (2026-11-02)
 
 ### Fixed
