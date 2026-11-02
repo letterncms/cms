@@ -16,6 +16,7 @@ use Cms\Content\Fields\FieldTypeRegistry;
 use Cms\Content\Fields\Fieldsets;
 use Cms\Content\Globals\GlobalRepository;
 use Cms\Context\ContextRegistry;
+use Cms\Context\SkillRegistry;
 use Cms\Extend\Hooks;
 use Cms\Foundation\Application;
 use Cms\Packages\PackageManager;
@@ -165,6 +166,11 @@ final class Cms
     public function context(): ContextRegistry
     {
         return $this->app->make(ContextRegistry::class);
+    }
+
+    public function skills(): SkillRegistry
+    {
+        return $this->app->make(SkillRegistry::class);
     }
 
     public function settingsRegistry(): SettingsRegistry

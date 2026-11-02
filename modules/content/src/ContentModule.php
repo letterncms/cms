@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Content;
 
 use Cms\Admin\Translations;
+use Cms\Cms;
 use Cms\Packages\Plugin;
 use Cms\Users\User;
 
@@ -37,6 +38,7 @@ final class ContentModule extends Plugin
         });
 
         $this->app->make(ContentAbilities::class)->register($cms->abilities());
+        $this->skills($cms);
 
         $cms->settingsRegistry()->register('content', 'Content', [
             ['handle' => 'per_page', 'type' => 'number', 'label' => 'Entries per Page', 'default' => 50, 'min' => 10, 'max' => 100, 'required' => true, 'width' => 'half'],
@@ -112,5 +114,61 @@ final class ContentModule extends Plugin
         $item = __($singular);
 
         return $phrases[strtolower($singular)] ?? __('New :item', ['item' => app(Translations::class)->current() === Translations::SOURCE ? $item : mb_strtolower($item)]);
+    }
+
+    /** How agents work with content: `/proofread` in the assistant's chat, a prompt for MCP clients. */
+    private function skills(Cms $cms): void
+    {
+        $skills = $cms->skills();
+
+        $skills->register('proofread', [
+            'label' => 'Proofread',
+            'description' => 'Fix mistakes and tighten the copy of a page.',
+            'icon' => 'text',
+            'prompt' => 'Proofread the page in question: fix mistakes, tighten the copy and improve its SEO description. Keep what it says and how it sounds. Say what you changed.',
+        ]);
+        $skills->register('build-page', [
+            'label' => 'Build a Page',
+            'description' => 'Design a complete page from a brief, with the design tokens, blocks and patterns.',
+            'icon' => 'blocks',
+            'arguments' => [
+                ['name' => 'brief', 'description' => 'What the page is for and what it should say', 'required' => true],
+                ['name' => 'collection', 'description' => 'Collection to create it in (default: pages)'],
+            ],
+            'prompt' => <<<'TXT'
+            Build a page for this brief: {brief}
+
+            1. Read cms://site/design, cms://blocks and cms://collections. Check patterns/list for components and sections, templates/list for page templates.
+            2. Plan the sections (hero, proof, features, FAQ, call to action…) before writing. Lead with the answer; keep paragraphs short.
+            3. Create the entry with entries.create in collection "{collection}" (pages if empty), body as blocks: top-level `section` blocks, styles only with tokens.
+            4. Give every image alt text; write an SEO description (seo.description) of 70–160 characters.
+            5. Run seo.analyze on the new entry and fix warnings, then publish with entries.publish and report the URL.
+            TXT,
+        ]);
+        $skills->register('write-post', [
+            'label' => 'Write a Blog Post',
+            'description' => 'Draft a well-structured, citable article for review.',
+            'icon' => 'file-text',
+            'arguments' => [
+                ['name' => 'topic', 'description' => 'Topic or working title', 'required' => true],
+                ['name' => 'audience', 'description' => 'Who it is for'],
+            ],
+            'prompt' => <<<'TXT'
+            Write a blog post about: {topic}
+            Audience: {audience}
+
+            Open with a 2–3 sentence answer to the main question. Use question-style H2 headings, short paragraphs, one comparison table if useful, and an FAQ accordion with 3–5 questions at the end.
+            Find the posts collection with collections.list, then create a draft with entries.create (do not publish). Fill excerpt and SEO fields. Reply with a summary and the draft's id.
+            TXT,
+        ]);
+        $skills->register('audit-site', [
+            'label' => 'Audit the Site',
+            'description' => 'Check every published page for SEO, GEO and accessibility problems and propose fixes.',
+            'icon' => 'shield',
+            'prompt' => <<<'TXT'
+            Audit this site. For each collection in collections.list, list published entries (entries.list with status "live") and run seo.analyze on each.
+            Summarize the biggest problems first (missing alt text, thin pages, missing descriptions, no question headings), then propose concrete fixes. Do not change anything until I confirm.
+            TXT,
+        ]);
     }
 }
