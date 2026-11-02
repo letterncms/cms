@@ -29,6 +29,8 @@ export const WorkspaceContext = createContext<{
     setOpen: (open: boolean) => void
     /** Say so while mounted; returns how to stop. */
     claim: (state: { title: string; backTo: string; backLabel: string }) => () => void
+    /** A screen has said so. */
+    claimed: boolean
   }
 } | null>(null)
 
