@@ -1,7 +1,7 @@
 import { fieldControlId } from '../ui/fieldIdentity'
 import { t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Checkbox, IconButton, Input, Segmented, Select, Switch, Textarea, cn } from '../ui'
+import { Checkbox, IconPicker, Input, Segmented, Select, Switch, Textarea, cn } from '../ui'
 import { slugify } from '../ui/slugify'
 import { formatDateTimeInZone, parseDateTimeInZone } from '../ui/dateTime'
 
@@ -233,19 +233,9 @@ export function SelectField({ field, value, onChange, error, disabled }: FieldPr
   )
 }
 
-const ICONS = ['page', 'article', 'collection', 'file-text', 'newspaper', 'image', 'users', 'building', 'tag', 'calendar', 'star', 'box', 'map-pin', 'megaphone', 'chat', 'globe', 'layout', 'code', 'phone', 'share']
-
-/** An icon name, picked from `options` or a common set. */
-export function IconField({ field, value, onChange, disabled }: FieldProps<string | null>) {
-  const choices = Array.isArray(field.options) ? (field.options as string[]) : ICONS
-  const icons = value && !choices.includes(value) ? [value, ...choices] : choices
-  return (
-    <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={field.label}>
-      {icons.map((i) => (
-        <IconButton key={i} icon={i} label={i} size="sm" role="radio" aria-checked={value === i} variant={value === i ? 'secondary' : 'ghost'} active={value === i} disabled={disabled} onClick={() => onChange(i)} />
-      ))}
-    </div>
-  )
+/** An icon name, picked from `options` or from every icon the admin can draw. */
+export function IconField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
+  return <IconPicker id={fieldControlId(field)} aria-label={field.label || undefined} aria-describedby={field.describedBy as string | undefined} value={value} onChange={onChange} choices={Array.isArray(field.options) ? (field.options as string[]) : undefined} invalid={!!error} disabled={disabled} />
 }
 
 export function DateField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
