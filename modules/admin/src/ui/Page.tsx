@@ -1,5 +1,5 @@
-import { Link, t, useScreenContext } from '@letterncms/sdk'
-import { Fragment, type ReactNode } from 'react'
+import { Link, panelsFor, registry, t, useScreenContext } from '@letterncms/sdk'
+import { Fragment, useSyncExternalStore, type ReactNode } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
 
@@ -14,6 +14,9 @@ export function Topbar({ crumbs = [], actions, children, className }: { crumbs?:
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
   useScreenContext({ title: typeof last?.label === 'string' ? last.label : undefined, icon: last?.icon ?? crumbs[0]?.icon })
+  // At the far end of every screen's bar, in the same place: the way to what's docked at that edge.
+  useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
+  const ends = panelsFor('topbar.end', {})
   return (
     <header className={cn('sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-bg/85 pl-[calc(1rem+var(--cms-sidebar-toggle,0px))] pr-4 backdrop-blur-md', className)}>
       <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1 overflow-hidden text-sm">
@@ -35,7 +38,12 @@ export function Topbar({ crumbs = [], actions, children, className }: { crumbs?:
         ))}
       </nav>
       {children}
-      {actions && <div className="ml-auto flex shrink-0 items-center gap-1.5">{actions}</div>}
+      {(actions || ends.length > 0) && (
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {actions}
+          {ends.map(({ id, component: End }) => <End key={id} />)}
+        </div>
+      )}
     </header>
   )
 }

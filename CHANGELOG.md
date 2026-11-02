@@ -5,7 +5,7 @@
 ### Added
 
 - Pick any icon for a collection or a global set: a searchable list of all 1,500 Phosphor icons, found by name or by what they are for ("email" finds the envelope).
-- Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`. A nav item can run a command instead of leading to a screen, and a `nav.<id>` panel can show its status beside its label. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
+- Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`. A `topbar.end` panel sits at the far end of every screen's bar, and an editor's own tools go in that bar through `toolbar` in `EntryEditorProps`. A nav item can run a command instead of leading to a screen, and a `nav.<id>` panel can show its status beside its label. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
 - Skills: ready-made ways of working for agents, registered with `cms()->skills()`. Every agent gets them: the assistant's `/`, and MCP clients as prompts.
 - Plugins can add to what `@` and `/` offer in a chat with `registry.composer`, and offer things from a screen with `useScreenContext({ items })`. All of it is one thing, a `ContextItem`.
 - Abilities can mark a change that stays a draft (`annotations: ['draft' => true]`), for agents to treat as safe to undo unless a call publishes it. `entries/create` and `entries/update` do.
@@ -13,14 +13,14 @@
 
 ### Changed
 
-- The inspector and outline in an editor dock when the workspace has room for them, rather than the window.
+- There are never more than two side panels: one on the left and one on the right. The panel docked at the right edge takes the inspector's place, and it's back when that goes.
 
-- The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way on every screen until you change it. It no longer folds to a row of icons, and opening an entry no longer changes it.
+- The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way until you change it. It no longer folds to a row of icons. A screen can put its own in that place with `ScreenSidebar` from `@letterncms/ui`, folded away to start with.
 - On a phone the sidebar opens from that button instead of keeping a row of icons down the side, so screens get the full width.
 
 ### Removed
 
-- **Breaking.** The `sidebar.history` slot, and `shell.compact`: a screen no longer changes the sidebar.
+- **Breaking.** The `sidebar.history` slot, and `shell.compact`. Use `ScreenSidebar`.
 
 ### Fixed
 

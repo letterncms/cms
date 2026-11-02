@@ -1,5 +1,5 @@
 import { events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useManifest, useScreenContext, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
-import { Suspense, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { NotFound } from '../screens/NotFound'
 import { cn, IconButton, Tooltip } from '../ui'
 import { CommandPalette } from './CommandPalette'
@@ -77,7 +77,7 @@ export function App() {
   if (!over) under.current = live
   const location = over && under.current ? under.current : live
   const { route, params } = resolve(location.path)
-  // It stays as it is left: there or hidden, on every screen, until someone changes it.
+  // The left panel stays as it is left: there or hidden, on every screen, until someone changes it.
   const [hidden, setHidden] = useState(() => localStorage.getItem('cms.sidebar') === 'collapsed')
   const [palette, setPalette] = useState(false)
   const [customizing, setCustomizing] = useState(false)
@@ -88,13 +88,31 @@ export function App() {
   const content = useRef<HTMLDivElement>(null)
   const [workspace, setWorkspace] = useState<HTMLDivElement | null>(null)
   const [dock, setDock] = useState<DockState>({ open: false, full: false })
+  // A screen can put its own in the left panel (the builder's outline). It starts folded away, so the screen has the room.
+  const [own, setOwn] = useState<string | null>(null)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const [ownShown, setOwnShown] = useState(false)
+  const [sidebarHost, setSidebarHost] = useState<HTMLElement | null>(null)
+  const claimSidebar = useCallback((title: string) => {
+    setOwn(title)
+    return () => {
+      setOwn(null)
+      setOwnShown(false)
+    }
+  }, [])
   const scrolls = useRef(new Map<string, number>())
 
   useLayoutEffect(() => {
     setDock(dockState())
     return events.on<DockState>('shell.dock', setDock)
   }, [])
-  const toggleSidebar = () => (narrow ? setExpanded((e) => !e) : setHidden((h) => !h))
+  const toggleSidebar = () => {
+    if (narrow) setExpanded((e) => !e)
+    else if (own) setOwnOpen((o) => !o)
+    else setHidden((h) => !h)
+  }
+  // What it shows while it folds away stays until it's out of sight.
+  useEffect(() => { if (ownOpen && own) setOwnShown(true) }, [ownOpen, own])
 
   useEffect(() => localStorage.setItem('cms.sidebar', hidden ? 'collapsed' : 'open'), [hidden])
   useShortcut('mod+k', () => setPalette((p) => !p))
@@ -144,7 +162,13 @@ export function App() {
   const banners = panelsFor('shell.banner', { full })
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', { full })
-  const sidebarShown = !full && !narrow && !hidden
+  const sidebarShown = !full && !narrow && (own ? ownOpen : !hidden)
+  const showOwn = !!own && (narrow || ownOpen || ownShown)
+  const leftPanel = (onHide: () => void, onNavigate?: () => void) => <>
+    <div ref={setSidebarHost} hidden={!showOwn} className="h-full" />
+    {!showOwn && <Sidebar onHide={onHide} onSearch={() => setPalette(true)} onNavigate={onNavigate} />}
+  </>
+  const shownLabel = own ? t('Show {name}', { name: own }) : t('Show Sidebar')
 
   return (
     <div
@@ -156,23 +180,23 @@ export function App() {
           <>
             <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setExpanded(false)} aria-hidden="true" />
             <div className="fixed inset-y-0 left-0 z-50 flex border-r border-border-modal shadow-pop">
-              <Sidebar onHide={() => setExpanded(false)} onSearch={() => setPalette(true)} onNavigate={() => setExpanded(false)} />
+              {leftPanel(() => setExpanded(false), () => setExpanded(false))}
             </div>
           </>
         )
       ) : (
-        <div className="cms-shell-sidebar" data-hidden={hidden || undefined} inert={hidden}>
-          <Sidebar onHide={toggleSidebar} onSearch={() => setPalette(true)} />
+        <div className="cms-shell-sidebar" data-hidden={!sidebarShown || undefined} inert={!sidebarShown}>
+          {leftPanel(toggleSidebar)}
         </div>
       ))}
       {!full && !sidebarShown && !(dock.open && narrow) && (
         <div className="absolute left-2 top-2.5 z-30">
-          <Tooltip content={t('Show Sidebar')} shortcut="mod+\\" side="bottom">
-            <IconButton icon="sidebar" label={t('Show Sidebar')} title={undefined} size="sm" onClick={toggleSidebar} />
+          <Tooltip content={shownLabel} shortcut="mod+\\" side="bottom">
+            <IconButton icon="sidebar" label={shownLabel} title={undefined} size="sm" onClick={toggleSidebar} />
           </Tooltip>
         </div>
       )}
-      <WorkspaceContext value={{ host: workspace, content, dock }}>
+      <WorkspaceContext value={{ host: workspace, content, dock, sidebar: { host: sidebarHost, open: narrow ? expanded : ownOpen, setOpen: narrow ? setExpanded : setOwnOpen, claim: claimSidebar } }}>
         <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} className={cn('relative isolate min-w-0 flex-1', sidebarShown && 'border-l border-border')}>
           {pending && <div className="cms-progress" role="progressbar" aria-label={t('Loading…')} />}
           <div ref={content} data-cms-screen className="h-full overflow-y-auto" onScroll={(e) => scrolls.current.set(key, e.currentTarget.scrollTop)}>

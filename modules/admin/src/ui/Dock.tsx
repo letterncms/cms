@@ -1,6 +1,7 @@
 import { events, t } from '@letterncms/sdk'
-import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { cn } from './cn'
+import { WorkspaceContext } from './Slideover'
 
 export interface DockState {
   open: boolean
@@ -12,6 +13,14 @@ let current: DockState = { open: false, full: false }
 /** For the shell, which learns of it after the dock first draws: a dock that opens with the admin takes its place before anything is painted. */
 export const dockState = () => current
 
+/** Make way: something else is to have the right edge. The dock's own state decides what's kept. */
+export const closeDock = () => events.emit('shell.dock.close')
+
+/** Whether a panel is docked at the right edge, for what shares it with the dock. */
+export function useDock(): DockState {
+  return useContext(WorkspaceContext)?.dock ?? current
+}
+
 const KEY = 'cms.dock.width'
 const MIN = 320
 const MAX = 640
@@ -20,11 +29,12 @@ const clamp = (width: number) => Math.min(MAX, Math.max(MIN, Math.round(width)))
 
 /**
  * A column at the right edge of the window, for a `shell.dock` panel: the page
- * stays open and live next to it. It can be dragged wider. `full` grows it over
- * the workspace, which stays as it is underneath; on small screens it opens over
- * the page. It keeps its children mounted while closed.
+ * stays open and live next to it. It has that edge to itself: an inspector makes way
+ * for it and comes back after it. It can be dragged wider. `full` grows it over the
+ * workspace, which stays as it is underneath; in a small window it opens over the
+ * page. It keeps its children mounted while closed.
  */
-export function Dock({ open, full, label, className, children }: { open: boolean; full: boolean; label: string; className?: string; children: ReactNode }) {
+export function Dock({ open, full, label, onClose, className, children }: { open: boolean; full: boolean; label: string; onClose: () => void; className?: string; children: ReactNode }) {
   const [width, setWidth] = useState(() => {
     try { return clamp(Number(localStorage.getItem(KEY)) || DEFAULT) } catch { return DEFAULT }
   })
@@ -39,6 +49,8 @@ export function Dock({ open, full, label, className, children }: { open: boolean
       events.emit<DockState>('shell.dock', current)
     }
   }, [open, full])
+
+  useEffect(() => events.on('shell.dock.close', onClose), [onClose])
 
   const resize = (next: number) => {
     const value = clamp(next)
