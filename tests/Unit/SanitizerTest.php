@@ -47,6 +47,18 @@ final class SanitizerTest extends TestCase
         $this->assertSame('Title <em>yes</em>', Sanitizer::inline('<h1>Title</h1> <em>yes</em>'));
     }
 
+    public function test_cleaning_twice_changes_nothing(): void
+    {
+        foreach (['Kunsthal<br>Noord', '<p>One<br>two</p><hr><p>Three</p>'] as $html) {
+            $once = Sanitizer::clean($html);
+
+            $this->assertSame($html, $once);
+            $this->assertSame($once, Sanitizer::clean($once));
+        }
+
+        $this->assertSame('a<br>b', Sanitizer::inline(Sanitizer::inline('a<br/>b')));
+    }
+
     public function test_plain_text_is_escaped(): void
     {
         $this->assertSame('a &lt; b &amp; c', Sanitizer::clean('a < b & c'));

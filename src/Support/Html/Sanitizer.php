@@ -40,7 +40,7 @@ final class Sanitizer
             return htmlspecialchars($html, ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8');
         }
 
-        $doc = HTMLDocument::createFromString('<!doctype html><html><body><div id="__k">'.$html.'</div></body></html>', LIBXML_NOERROR | \Dom\HTML_NO_DEFAULT_NS);
+        $doc = HTMLDocument::createFromString('<!doctype html><html><body><div id="__k">'.$html.'</div></body></html>', LIBXML_NOERROR);
         $root = $doc->getElementById('__k');
 
         if (! $root) {

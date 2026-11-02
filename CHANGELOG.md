@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- A line break in rich text no longer turns into two each time it's saved.
+
 ## 0.2.0 (2026-11-02)
 
 ### Added
