@@ -9,6 +9,10 @@ export interface RouteDef {
   load?: (params: Record<string, string>, location: Location) => Promise<unknown>
   /** "default" renders inside the shell; "full" takes the whole window (editors). */
   layout?: 'default' | 'full'
+  /** Drawn over the screen it was opened from, which stays open underneath. */
+  overlay?: boolean
+  /** What this screen shows stays on it: the assistant's chat gets neither its title nor its text. */
+  private?: boolean
   title?: string
 }
 

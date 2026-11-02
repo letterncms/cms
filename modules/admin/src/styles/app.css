@@ -258,6 +258,81 @@
   .cms-prose :where(blockquote) { border-left: 2px solid var(--cms-border-strong); padding-left: 1em; color: var(--cms-muted); margin: 0 0 0.75em; }
 }
 
+/* A column docked beside the rail: the page stays next to it. It grows from its edge, its content keeping its width,
+   and taking the whole window it pushes the workspace out rather than squeezing it. Small windows: over the workspace. */
+@layer components {
+  .cms-dock {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: none;
+    width: 0;
+    overflow: hidden;
+    visibility: hidden;
+    background: var(--cms-surface);
+    box-shadow: inset 1px 0 var(--cms-border);
+    transition: width 240ms var(--ease-out), visibility 0s linear 240ms;
+  }
+  .cms-dock[data-open] {
+    width: var(--cms-dock-width);
+    visibility: visible;
+    transition: width 240ms var(--ease-out);
+  }
+  .cms-dock[data-open][data-full] { width: calc(100vw - var(--cms-rail, 52px)); }
+  .cms-dock[data-resizing] { transition: none; }
+  .cms-dock-inner {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: var(--cms-dock-width);
+    min-height: 0;
+  }
+  .cms-dock-handle {
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    width: 7px;
+    cursor: col-resize;
+    touch-action: none;
+    outline-offset: -2px;
+  }
+  .cms-dock-handle::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    width: 2px;
+    background: var(--cms-focus);
+    opacity: 0;
+    transition: opacity 120ms var(--ease-out) 80ms;
+  }
+  .cms-dock-handle:hover::after, .cms-dock[data-resizing] .cms-dock-handle::after { opacity: 1; }
+
+  @media (max-width: 899px) {
+    .cms-dock {
+      position: absolute;
+      inset-block: 0;
+      left: var(--cms-rail, 52px);
+      z-index: 40;
+      box-shadow: inset 1px 0 var(--cms-border), var(--cms-shadow-dialog);
+    }
+    .cms-dock:not([data-open]) { box-shadow: none; }
+    .cms-dock[data-open] { width: min(var(--cms-dock-width), calc(100vw - var(--cms-rail, 52px))); }
+    .cms-dock-handle { display: none; }
+  }
+  @media (max-width: 767px) {
+    .cms-dock {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 50;
+      height: 100dvh;
+      box-shadow: none;
+    }
+    .cms-dock[data-open], .cms-dock[data-open][data-full] { width: 100vw; }
+    .cms-dock-inner { min-width: 100vw; }
+  }
+}
+
 /* Shell: the next screen is on its way (shown only when it takes long enough to notice). */
 @layer components {
   .cms-progress {

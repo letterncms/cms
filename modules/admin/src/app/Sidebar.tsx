@@ -23,8 +23,7 @@ const customize = () => events.emit('sidebar.customize')
 
 /**
  * The admin's sidebar, in one of two states that follow the screen on view:
- * the main sidebar (what each person pinned, More for the rest, then chats)
- * and, on a settings page, the settings sidebar with a way back. Same frame,
+ * the main sidebar (what each person pinned, More for the rest) and, on a settings page, the settings sidebar with a way back. Same frame,
  * same rows, same footer — only the list changes.
  */
 export function Sidebar({ collapsed, onToggle, onSearch, onNavigate }: SidebarProps) {
@@ -46,6 +45,7 @@ export function Sidebar({ collapsed, onToggle, onSearch, onNavigate }: SidebarPr
           ? <SettingsSidebar collapsed={collapsed} onToggle={onToggle} onNavigate={onNavigate} active={active} />
           : <MainSidebar collapsed={collapsed} onToggle={onToggle} onSearch={onSearch} onNavigate={onNavigate} active={active} />}
       </div>
+      {panelsFor('sidebar.footer', { collapsed, onNavigate }).map(({ id, component: Part }) => <Part key={id} collapsed={collapsed} onNavigate={onNavigate} />)}
       <Footer collapsed={collapsed} settings={settings} onNavigate={onNavigate} />
     </aside>
   )
@@ -76,14 +76,13 @@ function SectionLabel({ children }: { children: ReactNode }) {
   return <div className="flex h-7 items-center px-2 text-xs font-medium text-muted">{children}</div>
 }
 
-/** Pinned items, section by section, More after the first section, then what plugins add (the assistant's chats). */
+/** Pinned items, section by section, More after the first section. */
 function MainSidebar({ collapsed, onToggle, onSearch, onNavigate, active }: { collapsed: boolean; onToggle: () => void; onSearch: () => void; onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
   const layout = manifest.sidebar
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
-  const sections = layout.sections.map((s) => ({ ...s, items: s.items.filter((id) => items.has(id) && isPinned(layout, id)) }))
+  const sections = layout.sections.map((s) => ({ ...s, items: s.items.filter((id) => items.has(id) && isPinned(layout, id) && !items.get(id)!.placement) }))
   const more = layout.sections.map((s) => ({ ...s, items: s.items.filter((id) => items.has(id) && !isPinned(layout, id)) })).filter((s) => s.items.length > 0)
-  const history = panelsFor('sidebar.history', { collapsed, onExpand: onToggle, onNavigate })
 
   return (
     <>
@@ -138,11 +137,6 @@ function MainSidebar({ collapsed, onToggle, onSearch, onNavigate, active }: { co
             {index === 0 && <More groups={more} items={items} active={active} collapsed={collapsed} onNavigate={onNavigate} />}
           </div>
         ))}
-        {history.length > 0 && (
-          <div className={cn('empty:hidden', collapsed ? 'mt-3 border-t border-border pt-3' : 'mt-4')}>
-            {history.map(({ id, component: History }) => <History key={id} collapsed={collapsed} onExpand={onToggle} onNavigate={onNavigate} />)}
-          </div>
-        )}
       </nav>
     </>
   )

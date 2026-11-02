@@ -22,6 +22,8 @@ interface SlideoverProps {
 export const WorkspaceContext = createContext<{
   host: HTMLDivElement | null
   content: RefObject<HTMLDivElement | null>
+  /** The panel docked beside the workspace (see `Dock`). */
+  dock: { open: boolean; full: boolean }
 } | null>(null)
 
 /** A persistent workspace overlay. Expansion leaves global navigation available. */

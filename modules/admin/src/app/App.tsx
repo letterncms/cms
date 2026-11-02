@@ -1,14 +1,15 @@
-import { events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useManifest, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
-import { Suspense, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useManifest, useScreenContext, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { NotFound } from '../screens/NotFound'
 import { cn } from '../ui'
 import { CommandPalette } from './CommandPalette'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Sidebar } from './Sidebar'
-import { inSettings, leaveSettings, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
+import { inSettings, itemAt, leaveSettings, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/Slideover'
+import { dockState, type DockState } from '../ui/Dock'
 
 function specificity(path: string): number {
   return path.split('/').filter(Boolean).reduce((score, seg) => score + (seg === '*' ? 0 : seg.startsWith(':') ? 1 : 3), 0)
@@ -68,8 +69,13 @@ function useMedia(query: string): boolean {
 
 export function App() {
   // The screen stays on view until the next one is ready: no loading flash between screens.
-  const { location, pending } = useScreenLocation(prepareScreen)
+  const { location: live, pending } = useScreenLocation(prepareScreen)
   const routesVersion = useSyncExternalStore(registry.routes.subscribe, registry.routes.version)
+  // A route drawn over the screen it was opened from leaves that screen on, untouched underneath.
+  const under = useRef<Location | null>(null)
+  const over = resolve(live.path).route?.overlay === true
+  if (!over) under.current = live
+  const location = over && under.current ? under.current : live
   const { route, params } = resolve(location.path)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('cms.sidebar') === 'collapsed')
   const [palette, setPalette] = useState(false)
@@ -83,10 +89,23 @@ export function App() {
   const full = route?.layout === 'full'
   const content = useRef<HTMLDivElement>(null)
   const [workspace, setWorkspace] = useState<HTMLDivElement | null>(null)
+  // A panel docked beside the rail. Taking the whole window, it pushes the workspace out at the size it has, so nothing on it reflows.
+  const [dock, setDock] = useState<DockState>({ open: false, full: false })
+  const [pushed, setPushed] = useState<number | undefined>()
   const scrolls = useRef(new Map<string, number>())
 
   useEffect(() => events.on<boolean>('shell.compact', (on) => { setCompact(!!on); setPeek(false) }), [])
-  const toggleSidebar = () => (compact ? setPeek((p) => !p) : setCollapsed((c) => !c))
+  useLayoutEffect(() => {
+    setDock(dockState())
+    return events.on<DockState>('shell.dock', (next) => {
+      setPushed(next.full ? workspace?.offsetWidth : undefined)
+      setDock(next)
+      setPeek(false)
+    })
+  }, [workspace])
+  // Beside a docked panel, as in an editor, the sidebar keeps to its rail unless asked.
+  const railed = compact || dock.open
+  const toggleSidebar = () => (railed ? setPeek((p) => !p) : setCollapsed((c) => !c))
 
   useEffect(() => localStorage.setItem('cms.sidebar', collapsed ? 'collapsed' : 'open'), [collapsed])
   useShortcut('mod+k', () => setPalette((p) => !p))
@@ -103,7 +122,7 @@ export function App() {
 
   // A new screen starts at the top; back and forward return to where you were.
   const key = location.path + location.search
-  useEffect(() => setExpanded(false), [location.path, narrow])
+  useEffect(() => setExpanded(false), [live.path, narrow])
   useShortcut('escape', () => setExpanded(false), narrow && expanded)
   useLayoutEffect(() => {
     const el = content.current
@@ -113,13 +132,15 @@ export function App() {
 
   // Without a home screen (letterncms/dashboard off) the admin opens on the first pinned item of the sidebar.
   const manifest = useManifest()
+  const screenItem = itemAt(manifest.nav, location.path)
+  useScreenContext({ title: screenItem?.label, icon: screenItem?.icon, private: route?.private === true }, { fallback: true })
   const pinned = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => !manifest.sidebar.hidden.includes(id))
   const first = manifest.nav.find((n) => n.id === pinned)?.path
 
   // Esc leaves settings, unless something on top of the screen takes it (a dialog, a menu, a field).
   const settings = inSettings(manifest, location.path)
   useShortcut('escape', (e) => {
-    if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable], [role="dialog"], [role="menu"], [role="listbox"]')) return
+    if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable], [role="dialog"], [role="menu"], [role="listbox"], .cms-dock')) return
     if (!document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) leaveSettings()
   }, settings && !palette && !customizing && !(narrow && expanded))
   useEffect(() => {
@@ -132,9 +153,12 @@ export function App() {
   const asides = panelsFor('shell.aside', { full })
   // A line across the top of the workspace for what its module needs someone to see.
   const banners = panelsFor('shell.banner', { full })
+  // A column of its own between the sidebar and the workspace; `Dock` from the UI kit draws it and reports its state.
+  const docks = panelsFor('shell.dock', { full })
+  const sidebarOpen = !narrow && !(railed ? !peek : collapsed)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg">
+    <div className="relative flex h-screen overflow-hidden bg-bg" style={{ '--cms-rail': full ? '0px' : sidebarOpen ? '248px' : '52px' } as CSSProperties}>
       {!full &&
         (narrow ? (
           // Narrow screens: the rail holds its place; the expanded sidebar opens over the screen.
@@ -145,12 +169,17 @@ export function App() {
             </div>
           </div>
         ) : (
-          <Sidebar collapsed={compact ? !peek : collapsed} onToggle={toggleSidebar} onSearch={() => setPalette(true)} />
+          <Sidebar collapsed={railed ? !peek : collapsed} onToggle={toggleSidebar} onSearch={() => setPalette(true)} />
         ))}
-      <WorkspaceContext value={{ host: workspace, content }}>
-        <div ref={setWorkspace} className={cn('relative isolate min-w-0 flex-1', !full && 'border-l border-border')}>
+      {docks.map(({ id, component: Dock }) => (
+        <ErrorBoundary key={id}>
+          <Dock full={full} />
+        </ErrorBoundary>
+      ))}
+      <WorkspaceContext value={{ host: workspace, content, dock }}>
+        <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} style={pushed ? { minWidth: pushed, flexShrink: 0 } : undefined} className={cn('relative isolate min-w-0 flex-1', !full && 'border-l border-border')}>
           {pending && <div className="cms-progress" role="progressbar" aria-label={t('Loading…')} />}
-          <div ref={content} className="h-full overflow-y-auto" onScroll={(e) => scrolls.current.set(key, e.currentTarget.scrollTop)}>
+          <div ref={content} data-cms-screen className="h-full overflow-y-auto" onScroll={(e) => scrolls.current.set(key, e.currentTarget.scrollTop)}>
             {!full && banners.map(({ id, component: Banner }) => (
               <ErrorBoundary key={id}>
                 <Banner full={full} />

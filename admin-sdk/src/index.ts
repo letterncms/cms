@@ -10,6 +10,8 @@ export { loadManifest, setManifest, onManifest, getManifest, useManifest, useMan
 export { registry, panelsFor, registerAs, unregister, reregister } from './registry'
 export type { RouteDef, PanelDef, CommandDef, Registrations } from './registry'
 export { events } from './events'
+export { screenContext, screenText, useScreen, useScreenContext } from './screen'
+export type { ScreenContext, ScreenSelection } from './screen'
 export { t, plural, locale, languages, setLocale } from './i18n'
 
 /** Human-readable relative time ("3 min ago"). */
