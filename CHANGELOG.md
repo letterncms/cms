@@ -25,6 +25,7 @@
 
 ### Fixed
 
+- An entry only saves when something in it changed. A field reporting the value it already had could rewrite the page's file, and changing something back no longer counts as unsaved.
 - A collection whose icon is named after a Phosphor icon, like `handshake` or `book`, now shows it in the sidebar and lists instead of a plain circle.
 
 ## 0.1.3 (2026-11-01)
