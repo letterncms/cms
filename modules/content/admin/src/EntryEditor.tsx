@@ -266,6 +266,8 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
     save: savePanel, reload, editable: editable && !replacing, can, errors,
   }
   const toolbar = panelsFor('entry.toolbar', panelProps)
+  useSyncExternalStore(registry.entryActions.subscribe, registry.entryActions.version)
+  const entryActions = registry.entryActions.all().filter((action) => action.when?.(panelProps) ?? true).sort((a, b) => (a.order ?? 50) - (b.order ?? 50))
   const sidebarPanels = panelsFor('entry.sidebar', panelProps)
   const bodyPanels = panelsFor('entry.body', panelProps)
   const bodyHandle = collection.body
@@ -412,9 +414,25 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
             <Tooltip content={t('Entry details')} shortcut="mod+.">
               <IconButton icon="sidebar" label={t('Entry details')} title={undefined} active={sidebarOpen} onClick={toggleSidebar} className="[&_svg]:-scale-x-100" />
             </Tooltip>
+            {/* One control says where it stands and what's next: the button while there's something to publish, its state when there isn't. */}
+            {actions.publish ? (
+              upToDate ? (
+                <StatusDot status={status} className="h-8 px-2 text-sm" />
+              ) : (
+                <Button variant="publish" size="md" disabled={!working.title.trim()} loading={sending} onClick={() => { void publish() }}>
+                  <span className="max-sm:hidden">{status === 'scheduled' ? t('Publish now') : live ? t('Publish Changes') : t('Publish')}</span>
+                  <span className="sm:hidden">{t('Publish')}</span>
+                </Button>
+              )
+            ) : editable && (
+              <Button variant="primary" size="md" disabled={!dirty || busy} loading={busy} onClick={() => { void save() }}>
+                {t('Save Draft')}
+              </Button>
+            )}
             <Menu
               trigger={<IconButton icon="more" label={t('More Actions')} />}
               items={[
+                ...entryActions.map((action) => ({ label: action.label, icon: action.icon, onSelect: () => action.perform(panelProps) })),
                 entry && live && entry.uri ? {
                   label: t('View on Site'), icon: 'external',
                   onSelect: () => { window.open(entry.uri!, '_blank', 'noopener') },
@@ -440,21 +458,6 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
                 entry && actions.delete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: remove },
               ]}
             />
-            {/* One control says where it stands and what's next: the button while there's something to publish, its state when there isn't. */}
-            {actions.publish ? (
-              upToDate ? (
-                <StatusDot status={status} className="ml-1 h-8 px-2 text-sm" />
-              ) : (
-                <Button variant="publish" size="md" className="ml-1" disabled={!working.title.trim()} loading={sending} onClick={() => { void publish() }}>
-                  <span className="max-sm:hidden">{status === 'scheduled' ? t('Publish now') : live ? t('Publish Changes') : t('Publish')}</span>
-                  <span className="sm:hidden">{t('Publish')}</span>
-                </Button>
-              )
-            ) : editable && (
-              <Button variant="primary" size="md" className="ml-1" disabled={!dirty || busy} loading={busy} onClick={() => { void save() }}>
-                {t('Save Draft')}
-              </Button>
-            )}
           </>
         }
       />

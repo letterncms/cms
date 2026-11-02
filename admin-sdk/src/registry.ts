@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import type { FieldProps, SurfaceComponentProps } from './types'
+import type { EntryPanelProps, FieldProps, SurfaceComponentProps } from './types'
 import type { Location } from './router'
 import type { ComposerSource } from './composer'
 
@@ -40,6 +40,16 @@ export interface CommandDef {
   /** When true the palette offers this command for any typed text and passes it in (e.g. "Ask the CMS …"). */
   acceptsQuery?: boolean
   perform: (query?: string) => void | Promise<void>
+}
+
+/** A line in the entry editor's More menu. */
+export interface EntryActionDef {
+  id: string
+  label: string
+  icon?: string
+  order?: number
+  when?: (props: EntryPanelProps) => boolean
+  perform: (props: EntryPanelProps) => void
 }
 
 type Listener = () => void
@@ -125,6 +135,7 @@ export const registry = {
   widgets: store<ComponentType<{ id: string }>>(),
   components: store<ComponentType<SurfaceComponentProps<any>>>(),
   commands: store<CommandDef>(),
+  entryActions: store<EntryActionDef>(),
   /** Where `@` and `/` look in a message. */
   composer: store<ComposerSource>(),
   icons: store<string>(),

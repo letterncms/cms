@@ -12,7 +12,7 @@ export interface Crumb {
 /**
  * Sticky 48px bar at the top of every screen: where you are on the left (breadcrumbs,
  * or `back` and the `title` in the middle, for a screen about one thing), what can be
- * done on the right, with the screen's main action last.
+ * done on the right.
  */
 export function Topbar({ crumbs = [], back, title, actions, children, className }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string }) {
   // The last crumb names the screen, for whatever works alongside it.
@@ -23,7 +23,7 @@ export function Topbar({ crumbs = [], back, title, actions, children, className 
   const ends = panelsFor('topbar.end', {})
   return (
     <header className={cn('sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-bg/85 pl-[calc(1rem+var(--cms-sidebar-toggle,0px))] pr-3 backdrop-blur-md', className)}>
-      <div className={cn('flex min-w-0 items-center gap-3', !!title && 'flex-1')}>
+      <div className="flex min-w-0 items-center gap-3">
         {back && (
           <Link to={back.to} aria-label={t('Back to {label}', { label: back.label })} className="flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text">
             <Icon name="chevron-left" size={14} className="shrink-0" />
@@ -52,9 +52,10 @@ export function Topbar({ crumbs = [], back, title, actions, children, className 
         )}
         {children}
       </div>
-      {title && <div className="min-w-0 max-w-[40%] truncate text-sm font-medium text-ink max-lg:hidden">{title}</div>}
+      {/* In the middle of the window, whatever is beside it: the bar itself starts after the sidebar. */}
+      {title && <div className="absolute left-[calc(50%-var(--cms-sidebar-width,0px)/2)] max-w-[28%] -translate-x-1/2 truncate text-sm font-medium text-ink max-lg:hidden">{title}</div>}
       {(actions || ends.length > 0) && (
-        <div className={cn('flex shrink-0 items-center justify-end gap-1', title ? 'flex-1' : 'ml-auto')}>
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-1">
           {ends.map(({ id, component: End }) => <End key={id} />)}
           {actions}
         </div>
