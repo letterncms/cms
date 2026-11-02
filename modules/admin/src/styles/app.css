@@ -331,22 +331,21 @@
     .cms-dock-inner { min-width: 100vw; }
   }
 
-  /* Detached: a card over the page, which doesn't move. It stays on the left of the canvas until dragged, clear of an inspector. */
+  /* Detached: a card over the page, which doesn't move. It stays at the right of the canvas until dragged, clear of an inspector. */
+  .cms-shell:has([data-cms-inspector]) { --cms-dock-inset: var(--cms-inspector-width); }
   @media (min-width: 768px) {
     .cms-dock[data-floating], .cms-dock[data-floating][data-open] { z-index: 40; width: 0; }
     .cms-dock[data-floating] .cms-dock-panel {
       position: fixed;
-      inset: auto auto 16px calc(var(--cms-sidebar-width, 0px) + 16px);
+      inset: auto calc(var(--cms-dock-inset, 0px) + 16px) 16px auto;
       width: min(var(--cms-dock-width), calc(100vw - 32px));
-      /* As tall as what's in it, up to what fits above where it was dragged to. */
-      height: auto;
-      max-height: min(600px, calc(100dvh - 32px + var(--cms-dock-y, 0px)));
+      height: min(760px, calc(100dvh - 80px));
       border: 1px solid var(--cms-border-float);
       border-radius: var(--radius-lg);
       box-shadow: var(--cms-shadow-dialog);
       opacity: 0;
       translate: var(--cms-dock-x, 0) var(--cms-dock-y, 0);
-      transition: opacity 140ms var(--ease-out);
+      transition: opacity 140ms var(--ease-out), right 200ms var(--ease-out);
     }
     .cms-dock[data-floating][data-open] .cms-dock-panel { width: min(var(--cms-dock-width), calc(100vw - 32px)); box-shadow: var(--cms-shadow-dialog); opacity: 1; }
     .cms-dock[data-floating] .cms-dock-handle { display: none; }

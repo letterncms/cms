@@ -258,13 +258,13 @@ try {
     await details()
   })
   await test('Outline keyboard activation inspects the same rendered source block', async () => {
-    button('Outline').click()
+    button('Show Outline').click()
     await wait(() => document.querySelector('[data-layer="block-text"]'), 'Outline did not open')
     const layer = document.querySelector('[data-layer="block-text"]'); layer.focus()
     layer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
     await wait(() => document.querySelector('fieldset[role="tabpanel"]'), 'Keyboard selection did not inspect the block')
     if (innerWidth >= 1024) assert(document.activeElement === layer, 'Outline activation moved focus into text')
-    button('Close outline')?.click()
+    button('Hide Sidebar')?.click()
     await details()
   })
   await test('Clicking blank space selects or clears, and never creates a block', async () => {
@@ -524,7 +524,7 @@ try {
     await wait(() => document.querySelector('#entry-sidebar-history-panel')?.textContent.includes('Created'), 'History retry did not recover')
   })
   await test('Publication scheduling uses the site timezone and guarded version', async () => {
-    await details(); button('Publication options').click()
+    await details(); button('More Actions').click()
     await wait(() => [...document.querySelectorAll('[role="menuitem"]')].some(item => item.textContent.trim() === 'Schedule…'), 'Schedule action missing'); [...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent.trim() === 'Schedule…').click()
     await wait(() => document.querySelector('#f-at'), 'Publication dialog missing')
     assert(document.querySelector('[role="dialog"]').textContent.includes('Europe/Brussels'), 'Site timezone is hidden')
@@ -539,8 +539,8 @@ try {
   await test('Read-only block workspace remains inspectable without mutation controls or keyboard writes', async () => {
     await open('/content/viewer/view-1', 'A read-only page'); await details()
     assert(document.querySelector('#f-title').disabled, 'Read-only title is editable')
-    assert(!button('Publication options'), 'Read-only workspace offers publishing')
-    assert(!button('Insert block', document.querySelector('[data-block-workspace]')), 'Read-only workspace offers insertion')
+    assert(!button('Publish'), 'Read-only workspace offers publishing')
+    assert(!button('Insert block'), 'Read-only workspace offers insertion')
     assert(!liveDoc().querySelector('[contenteditable="true"]'), 'Read-only iframe contains editable source text')
     const componentText = liveDoc().querySelector('[data-cms-instance-node="block-instance"][data-cms-instance-prop="title"] [data-cms-inline]')
     assert(componentText?.getAttribute('aria-readonly') === 'true' && componentText.getAttribute('contenteditable') === 'false', 'Read-only component instance exposes editable text')
