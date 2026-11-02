@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- A URL that names a folder in the site's root no longer redirects through `http://` when a proxy in front of the site handles HTTPS. New sites get this in `.htaccess`. On an existing site, add `DirectorySlash Off` below `DirectoryIndex index.php`, and `RewriteOptions AllowNoSlash` below `RewriteEngine On`.
+
 ## 0.2.2 (2026-11-02)
 
 ### Changed
