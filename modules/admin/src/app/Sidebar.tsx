@@ -1,7 +1,7 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, can, events, navigate, panelsFor, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
+import { boot, can, events, navigate, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, MenuButton, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
 import { BrandMark } from './Brand'
@@ -53,7 +53,7 @@ export function Sidebar({ own, onOwnHost, onHide, onSearch, onNavigate }: Sideba
       <div key={state} data-mode={switched.current ? state : undefined} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
         {own ? (
           <>
-            <StateHeader title={own.title} backLabel={t('Back to {label}', { label: own.backLabel })} onBack={() => { navigate(own.backTo); onNavigate?.() }} onHide={onHide} />
+            <StateHeader title={own.title} back={own.backLabel} onBack={() => { navigate(own.backTo); onNavigate?.() }} onHide={onHide} />
             <div ref={onOwnHost} className="min-h-0 flex-1 overflow-y-auto" />
           </>
         ) : settings
@@ -65,26 +65,17 @@ export function Sidebar({ own, onOwnHost, onHide, onSearch, onNavigate }: Sideba
   )
 }
 
-/** A nav item as a sidebar row: what it is, where it leads, what can be done with it. An item with a `command` runs it instead of leading anywhere. */
+/** A nav item as a sidebar row: what it is, where it leads, what can be done with it. */
 function Row({ item, active, sortable, actions, onNavigate }: { item: NavItem; active: boolean; sortable?: boolean; actions?: (SidebarRowAction | false)[]; onNavigate?: () => void }) {
-  const status = panelsFor(`nav.${item.id}`, {})
   return (
     <SidebarRow
       label={item.label}
       icon={item.icon}
       to={item.path}
-      onClick={(event) => {
-        const command = item.command ? registry.commands.get(item.command) : undefined
-        if (command && !event.metaKey && !event.ctrlKey) {
-          event.preventDefault()
-          void command.perform()
-        }
-        onNavigate?.()
-      }}
+      onClick={() => onNavigate?.()}
       active={active}
       badge={item.badge || undefined}
       shortcut={item.shortcut}
-      status={status.length > 0 ? status.map(({ id, component: Part }) => <Part key={id} />) : undefined}
       actions={actions}
       sortable={sortable}
     />
@@ -257,18 +248,23 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
   )
 }
 
-/** The top of a state of the sidebar other than the main one: a way back and what it is. */
-function StateHeader({ title, backLabel, shortcut, onBack, onHide }: { title: string; backLabel: string; shortcut?: string; onBack: () => void; onHide: () => void }) {
+/** The top of a state of the sidebar other than the main one: a way back that says where to, then what this state is. */
+function StateHeader({ title, back, shortcut, onBack, onHide }: { title: string; back: string; shortcut?: string; onBack: () => void; onHide: () => void }) {
   return (
-    <div className="flex h-12 shrink-0 items-center gap-1 px-3">
-      <Tooltip content={backLabel} shortcut={shortcut} side="bottom">
-        <IconButton icon="arrow-left" label={backLabel} title={undefined} size="sm" onClick={onBack} className="-ml-1" />
-      </Tooltip>
-      <h2 className="m-0 min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-ink">{title}</h2>
-      <Tooltip content={t('Hide Sidebar')} shortcut="mod+\\" side="bottom">
-        <IconButton icon="sidebar" label={t('Hide Sidebar')} title={undefined} size="sm" onClick={onHide} className="-mr-1" />
-      </Tooltip>
-    </div>
+    <>
+      <div className="flex h-12 shrink-0 items-center justify-between gap-1 px-3">
+        <Tooltip content={t('Back to {label}', { label: back })} shortcut={shortcut} side="bottom">
+          <button type="button" onClick={onBack} className="-ml-1 flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text">
+            <Icon name="chevron-left" size={14} className="shrink-0" />
+            <span className="truncate">{back}</span>
+          </button>
+        </Tooltip>
+        <Tooltip content={t('Hide Sidebar')} shortcut="mod+\\" side="bottom">
+          <IconButton icon="sidebar" label={t('Hide Sidebar')} title={undefined} size="sm" onClick={onHide} className="-mr-1" />
+        </Tooltip>
+      </div>
+      <h2 className="m-0 shrink-0 truncate px-5 pb-2 text-sm font-semibold tracking-[-0.01em] text-ink">{title}</h2>
+    </>
   )
 }
 
@@ -280,7 +276,7 @@ function SettingsSidebar({ onHide, onNavigate, active }: { onHide: () => void; o
 
   return (
     <>
-      <StateHeader title={t('Settings')} backLabel={back ? t('Back to {label}', { label: back }) : t('Back')} shortcut="esc" onBack={() => { leaveSettings(); onNavigate?.() }} onHide={onHide} />
+      <StateHeader title={t('Settings')} back={back ?? t('Back')} shortcut="esc" onBack={() => { leaveSettings(); onNavigate?.() }} onHide={onHide} />
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label={t('Settings')}>
         {manifest.settingsNav.map((section, index) => (

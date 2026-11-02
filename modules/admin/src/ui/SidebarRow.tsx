@@ -1,5 +1,5 @@
 import { boot, Link, t } from '@letterncms/sdk'
-import type { MouseEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { IconButton } from './Button'
 import { cn } from './cn'
 import { Icon } from './Icon'
@@ -17,7 +17,7 @@ export interface SidebarRowProps {
   label: string
   icon?: string
   to?: string
-  onClick?: (event: MouseEvent) => void
+  onClick?: () => void
   active?: boolean
   title?: string
   /** A count. */

@@ -5,7 +5,7 @@
 ### Added
 
 - Pick any icon for a collection or a global set: a searchable list of all 1,500 Phosphor icons, found by name or by what they are for ("email" finds the envelope).
-- Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`. A `topbar.end` panel sits at the far end of every screen's bar, and an editor's own tools go in that bar through `toolbar` in `EntryEditorProps`. A nav item can run a command instead of leading to a screen, and a `nav.<id>` panel can show its status beside its label. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
+- Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`. A `topbar.end` panel sits in every screen's bar, an editor's own tools go in that bar through `toolbar` in `EntryEditorProps`, and `registry.entryActions` adds lines to the editor's **More** menu. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
 - Skills: ready-made ways of working for agents, registered with `cms()->skills()`. Every agent gets them: the assistant's `/`, and MCP clients as prompts.
 - Plugins can add to what `@` and `/` offer in a chat with `registry.composer`, and offer things from a screen with `useScreenContext({ items })`. All of it is one thing, a `ContextItem`.
 - Abilities can mark a change that stays a draft (`annotations: ['draft' => true]`), for agents to treat as safe to undo unless a call publishes it. `entries/create` and `entries/update` do.
@@ -13,7 +13,8 @@
 
 ### Changed
 
-- A calmer top bar in the editor. A way back and tools on the left, the page's title in the middle, actions on the right. Publishing is one control that also says where things stand: the button when there's something to publish, a quiet "Published" when there isn't. Scheduling moved into the **More** menu. Plugins can use it with `back` and `title` on `Topbar`.
+- A calmer top bar in the editor. A way back and tools on the left, the page's title in the middle, actions on the right. Publishing is one control that also says where things stand: the button when there's something to publish, a quiet "Published" when there isn't. Scheduling moved into **More**, the last thing in the bar. Plugins can use it with `back` and `title` on `Topbar`.
+- The way back in the settings and outline sidebars says where it goes, and the sidebar's name sits below it, so it can't be mistaken for closing the sidebar.
 - There are never more than two side panels: one on the left and one on the right. A screen that uses the right edge says so with `useScreenContext({ rightEdge: true })`, and a `Dock` then gets `floating`, a card over the page.
 
 - The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way until you change it. It no longer folds to a row of icons. A screen can bring a state of its own to it with `ScreenSidebar` from `@letterncms/ui`, like the settings one, with a way back, and folded away to start with.

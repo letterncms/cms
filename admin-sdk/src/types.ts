@@ -135,8 +135,6 @@ export interface NavItem {
   /** A keyboard shortcut that opens it, shown with its label (e.g. `mod+j`). */
   shortcut?: string | null
   badge?: string | number | null
-  /** A registered command the item runs instead of leading to `path`, which stays for opening it in a new tab. */
-  command?: string | null
 }
 
 /** The main sidebar as arranged for this user: items in sections; hidden ones are under More. `personal` when they pinned their own. */
