@@ -1,7 +1,6 @@
 import { Dialog as Base } from '@base-ui/react/dialog'
-import { useContext, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { cn } from './cn'
-import { WorkspaceContext } from './Slideover'
 
 /** A workspace inspector docks on desktop and becomes a focus-managed sheet on smaller screens. */
 export function useWideInspector() {
@@ -16,12 +15,9 @@ export function useWideInspector() {
 }
 
 export function InspectorPanel({ open, onOpenChange, title, children, className, docked = true }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; children: ReactNode; className?: string; docked?: boolean }) {
-  const dock = useContext(WorkspaceContext)?.dock
   const wide = useWideInspector() && docked
-  // One panel at the right edge: a docked one takes the inspector's place, and it's back when that goes.
-  const shown = open && !(docked && dock?.open && !dock.full)
-  if (wide) return shown ? <aside aria-label={title} className={cn('flex w-[var(--cms-inspector-width)] shrink-0 flex-col border-l border-border bg-bg', className)}>{children}</aside> : null
-  return <Base.Root open={shown} onOpenChange={onOpenChange}>
+  if (wide) return open ? <aside aria-label={title} className={cn('flex w-[var(--cms-inspector-width)] shrink-0 flex-col border-l border-border bg-bg', className)}>{children}</aside> : null
+  return <Base.Root open={open} onOpenChange={onOpenChange}>
     <Base.Portal>
       <Base.Backdrop className="fixed inset-0 z-50 bg-overlay" />
       <Base.Popup className={cn('fixed inset-y-0 right-0 z-50 flex w-[min(100vw,var(--cms-inspector-width))] flex-col border-l border-border-modal bg-bg shadow-dialog outline-none', className)}>

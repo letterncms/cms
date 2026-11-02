@@ -13,9 +13,9 @@
 
 ### Changed
 
-- There are never more than two side panels: one on the left and one on the right. The panel docked at the right edge takes the inspector's place, and it's back when that goes.
+- There are never more than two side panels: one on the left and one on the right. A screen that uses the right edge says so with `useScreenContext({ rightEdge: true })`, and a `Dock` then gets `floating`, a card over the page.
 
-- The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way until you change it. It no longer folds to a row of icons. A screen can put its own in that place with `ScreenSidebar` from `@letterncms/ui`, folded away to start with.
+- The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way until you change it. It no longer folds to a row of icons. A screen can bring a state of its own to it with `ScreenSidebar` from `@letterncms/ui`, like the settings one, with a way back, and folded away to start with.
 - On a phone the sidebar opens from that button instead of keeping a row of icons down the side, so screens get the full width.
 
 ### Removed

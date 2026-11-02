@@ -18,6 +18,8 @@ export interface ScreenContext {
   items?: ContextItem[]
   /** Bring what is on view up to date, for someone about to read or change it: an editor saves. */
   flush?: () => Promise<unknown>
+  /** It uses the right edge itself, as an editor's inspector does: a panel that would dock there floats instead. */
+  rightEdge?: boolean
   /** Nothing on it leaves this screen (see `RouteDef.private`). */
   private?: boolean
 }
@@ -50,13 +52,13 @@ export function useScreenContext(context: ScreenContext, { fallback = false }: {
   const key = useRef({}).current
   const latest = useRef(context)
   latest.current = context
-  const { title, icon, kind, items, private: secret } = context
+  const { title, icon, kind, items, rightEdge, private: secret } = context
   const itemKey = items?.map((item) => `${item.id}:${item.label}:${item.icon}`).join('|')
   const hasData = !!context.data
   const hasFlush = !!context.flush
   useEffect(() => {
     store.set(key, {
-      title, icon, kind, private: secret,
+      title, icon, kind, rightEdge, private: secret,
       data: hasData ? () => latest.current.data?.() : undefined,
       flush: hasFlush ? async () => latest.current.flush?.() : undefined,
       items: items?.map((item) => ({ ...item, read: () => latest.current.items?.find((current) => current.id === item.id)?.read?.() })),
@@ -66,7 +68,7 @@ export function useScreenContext(context: ScreenContext, { fallback = false }: {
       store.delete(key)
       changed()
     }
-  }, [store, key, title, icon, kind, secret, hasData, hasFlush, itemKey])
+  }, [store, key, title, icon, kind, rightEdge, secret, hasData, hasFlush, itemKey])
 }
 
 /** The screen's text, as far as it goes. Field values are not part of it. */

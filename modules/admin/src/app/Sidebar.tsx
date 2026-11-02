@@ -8,7 +8,17 @@ import { BrandMark } from './Brand'
 import { getThemePreference, setThemePreference, type ThemePreference } from '../ui/theme'
 import { inSettings, isPinned, itemAt, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
 
+/** A screen's own state of the sidebar (see `ScreenSidebar`). */
+export interface OwnSidebar {
+  title: string
+  backTo: string
+  backLabel: string
+}
+
 interface SidebarProps {
+  /** On a screen with a state of its own: what to call it, and where its list goes. */
+  own?: OwnSidebar | null
+  onOwnHost?: (element: HTMLElement | null) => void
   onHide: () => void
   onSearch: () => void
   /** Called when a link is followed (the overlay sidebar on narrow screens closes). */
@@ -25,22 +35,28 @@ const customize = () => events.emit('sidebar.customize')
  * the main sidebar (what each person pinned, More for the rest) and, on a settings page, the settings sidebar with a way back. Same frame,
  * same rows, same footer — only the list changes.
  */
-export function Sidebar({ onHide, onSearch, onNavigate }: SidebarProps) {
+export function Sidebar({ own, onOwnHost, onHide, onSearch, onNavigate }: SidebarProps) {
   const manifest = useManifest()
   const { path, search } = useLocation()
   const settings = inSettings(manifest, path)
+  const state = own ? 'screen' : settings ? 'settings' : 'main'
   const active = itemAt(manifest.nav, path)?.id
 
   useEffect(() => remember(manifest, path, search), [manifest, path, search])
   // Switching states moves the list; the admin opening does not.
-  const initial = useRef(settings)
+  const initial = useRef(state)
   const switched = useRef(false)
-  if (settings !== initial.current) switched.current = true
+  if (state !== initial.current) switched.current = true
 
   return (
     <aside className="flex h-full w-[248px] shrink-0 flex-col bg-surface">
-      <div key={settings ? 'settings' : 'main'} data-mode={switched.current ? (settings ? 'settings' : 'main') : undefined} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
-        {settings
+      <div key={state} data-mode={switched.current ? state : undefined} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
+        {own ? (
+          <>
+            <StateHeader title={own.title} backLabel={t('Back to {label}', { label: own.backLabel })} onBack={() => { navigate(own.backTo); onNavigate?.() }} onHide={onHide} />
+            <div ref={onOwnHost} className="min-h-0 flex-1 overflow-y-auto" />
+          </>
+        ) : settings
           ? <SettingsSidebar onHide={onHide} onNavigate={onNavigate} active={active} />
           : <MainSidebar onHide={onHide} onSearch={onSearch} onNavigate={onNavigate} active={active} />}
       </div>
@@ -241,6 +257,21 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
   )
 }
 
+/** The top of a state of the sidebar other than the main one: a way back and what it is. */
+function StateHeader({ title, backLabel, shortcut, onBack, onHide }: { title: string; backLabel: string; shortcut?: string; onBack: () => void; onHide: () => void }) {
+  return (
+    <div className="flex h-12 shrink-0 items-center gap-1 px-3">
+      <Tooltip content={backLabel} shortcut={shortcut} side="bottom">
+        <IconButton icon="arrow-left" label={backLabel} title={undefined} size="sm" onClick={onBack} className="-ml-1" />
+      </Tooltip>
+      <h2 className="m-0 min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-ink">{title}</h2>
+      <Tooltip content={t('Hide Sidebar')} shortcut="mod+\\" side="bottom">
+        <IconButton icon="sidebar" label={t('Hide Sidebar')} title={undefined} size="sm" onClick={onHide} className="-mr-1" />
+      </Tooltip>
+    </div>
+  )
+}
+
 /** Settings pages, section by section, under a way back to where you were. */
 function SettingsSidebar({ onHide, onNavigate, active }: { onHide: () => void; onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
@@ -249,15 +280,7 @@ function SettingsSidebar({ onHide, onNavigate, active }: { onHide: () => void; o
 
   return (
     <>
-      <div className="flex h-12 shrink-0 items-center gap-1 px-3">
-        <Tooltip content={back ? t('Back to {label}', { label: back }) : t('Back')} shortcut="esc" side="bottom">
-          <IconButton icon="arrow-left" label={t('Back')} title={undefined} size="sm" onClick={() => { leaveSettings(); onNavigate?.() }} className="-ml-1" />
-        </Tooltip>
-        <h2 className="m-0 min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-ink">{t('Settings')}</h2>
-        <Tooltip content={t('Hide Sidebar')} shortcut="mod+\\" side="bottom">
-          <IconButton icon="sidebar" label={t('Hide Sidebar')} title={undefined} size="sm" onClick={onHide} className="-mr-1" />
-        </Tooltip>
-      </div>
+      <StateHeader title={t('Settings')} backLabel={back ? t('Back to {label}', { label: back }) : t('Back')} shortcut="esc" onBack={() => { leaveSettings(); onNavigate?.() }} onHide={onHide} />
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label={t('Settings')}>
         {manifest.settingsNav.map((section, index) => (

@@ -338,4 +338,6 @@ export interface EntryEditorProps extends EntryPanelProps {
   setSidebarOpen: (open: boolean) => void
   /** A place in the screen's top bar for the editor's own few tools, to `createPortal` into. */
   toolbar: Element | null
+  /** The list of entries this editor came from. */
+  listPath: string
 }

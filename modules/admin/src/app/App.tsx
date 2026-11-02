@@ -5,7 +5,7 @@ import { cn, IconButton, Tooltip } from '../ui'
 import { CommandPalette } from './CommandPalette'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
-import { Sidebar } from './Sidebar'
+import { Sidebar, type OwnSidebar } from './Sidebar'
 import { inSettings, itemAt, leaveSettings, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/Slideover'
@@ -88,17 +88,13 @@ export function App() {
   const content = useRef<HTMLDivElement>(null)
   const [workspace, setWorkspace] = useState<HTMLDivElement | null>(null)
   const [dock, setDock] = useState<DockState>({ open: false, full: false })
-  // A screen can put its own in the left panel (the builder's outline). It starts folded away, so the screen has the room.
-  const [own, setOwn] = useState<string | null>(null)
+  // A screen can bring a state of its own to the sidebar (the builder's outline), folded away to start with, so the screen has the room.
+  const [own, setOwn] = useState<OwnSidebar | null>(null)
   const [ownOpen, setOwnOpen] = useState(false)
-  const [ownShown, setOwnShown] = useState(false)
-  const [sidebarHost, setSidebarHost] = useState<HTMLElement | null>(null)
-  const claimSidebar = useCallback((title: string) => {
-    setOwn(title)
-    return () => {
-      setOwn(null)
-      setOwnShown(false)
-    }
+  const [ownHost, setOwnHost] = useState<HTMLElement | null>(null)
+  const claimSidebar = useCallback((state: OwnSidebar) => {
+    setOwn(state)
+    return () => setOwn(null)
   }, [])
   const scrolls = useRef(new Map<string, number>())
 
@@ -111,8 +107,6 @@ export function App() {
     else if (own) setOwnOpen((o) => !o)
     else setHidden((h) => !h)
   }
-  // What it shows while it folds away stays until it's out of sight.
-  useEffect(() => { if (ownOpen && own) setOwnShown(true) }, [ownOpen, own])
 
   useEffect(() => localStorage.setItem('cms.sidebar', hidden ? 'collapsed' : 'open'), [hidden])
   useShortcut('mod+k', () => setPalette((p) => !p))
@@ -163,12 +157,8 @@ export function App() {
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', { full })
   const sidebarShown = !full && !narrow && (own ? ownOpen : !hidden)
-  const showOwn = !!own && (narrow || ownOpen || ownShown)
-  const leftPanel = (onHide: () => void, onNavigate?: () => void) => <>
-    <div ref={setSidebarHost} hidden={!showOwn} className="h-full" />
-    {!showOwn && <Sidebar onHide={onHide} onSearch={() => setPalette(true)} onNavigate={onNavigate} />}
-  </>
-  const shownLabel = own ? t('Show {name}', { name: own }) : t('Show Sidebar')
+  const sidebar = (onHide: () => void, onNavigate?: () => void) => <Sidebar own={own} onOwnHost={setOwnHost} onHide={onHide} onSearch={() => setPalette(true)} onNavigate={onNavigate} />
+  const showLabel = own ? t('Show {name}', { name: own.title }) : t('Show Sidebar')
 
   return (
     <div
@@ -180,23 +170,23 @@ export function App() {
           <>
             <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setExpanded(false)} aria-hidden="true" />
             <div className="fixed inset-y-0 left-0 z-50 flex border-r border-border-modal shadow-pop">
-              {leftPanel(() => setExpanded(false), () => setExpanded(false))}
+              {sidebar(() => setExpanded(false), () => setExpanded(false))}
             </div>
           </>
         )
       ) : (
         <div className="cms-shell-sidebar" data-hidden={!sidebarShown || undefined} inert={!sidebarShown}>
-          {leftPanel(toggleSidebar)}
+          {sidebar(toggleSidebar)}
         </div>
       ))}
       {!full && !sidebarShown && !(dock.open && narrow) && (
         <div className="absolute left-2 top-2.5 z-30">
-          <Tooltip content={shownLabel} shortcut="mod+\\" side="bottom">
-            <IconButton icon="sidebar" label={shownLabel} title={undefined} size="sm" onClick={toggleSidebar} />
+          <Tooltip content={showLabel} shortcut="mod+\\" side="bottom">
+            <IconButton icon="sidebar" label={showLabel} title={undefined} size="sm" onClick={toggleSidebar} />
           </Tooltip>
         </div>
       )}
-      <WorkspaceContext value={{ host: workspace, content, dock, sidebar: { host: sidebarHost, open: narrow ? expanded : ownOpen, setOpen: narrow ? setExpanded : setOwnOpen, claim: claimSidebar } }}>
+      <WorkspaceContext value={{ host: workspace, content, sidebar: { host: ownHost, open: narrow ? expanded : ownOpen, setOpen: narrow ? setExpanded : setOwnOpen, claim: claimSidebar } }}>
         <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} className={cn('relative isolate min-w-0 flex-1', sidebarShown && 'border-l border-border')}>
           {pending && <div className="cms-progress" role="progressbar" aria-label={t('Loading…')} />}
           <div ref={content} data-cms-screen className="h-full overflow-y-auto" onScroll={(e) => scrolls.current.set(key, e.currentTarget.scrollTop)}>
