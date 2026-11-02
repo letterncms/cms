@@ -18,7 +18,7 @@ final class Ability
      * @param  array<string, mixed>|null  $output  JSON schema for the result
      * @param  string|Closure|null  $permission  Permission name (supports {placeholders} from input) or fn(?User, array $input): bool
      * @param  Closure|string|array  $handler  fn(array $input, AbilityContext $ctx): mixed, "Class@method", invokable class, or [Class, method]
-     * @param  array{readOnly?: bool, destructive?: bool, idempotent?: bool, openWorld?: bool, trustedOutput?: bool}  $annotations
+     * @param  array{readOnly?: bool, destructive?: bool, idempotent?: bool, openWorld?: bool, trustedOutput?: bool, draft?: bool}  $annotations
      * @param  array{rest?: bool, mcp?: bool, cli?: bool, assistant?: bool}  $expose
      */
     public function __construct(
