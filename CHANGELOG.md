@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- A block can be shown only to people signed in, by binding `visible` to `account`, or only to people signed out, with `hidden`, on every page: on one built in advance, the browser shows the right one before it's painted, from a cookie that says only that someone is signed in. The data `accounts` has the sign-in, sign-up and account pages' addresses and words in the page's language, while public accounts are on.
+
+### Changed
+
+- The team has the site's account pages too, with what they bought there like anyone: signing in at `/admin` and going to `/account` no longer leads back to the admin. Their profile, password and data stay in the admin, and the account menu links there. A signed-in team member who opens `/sign-in` goes to their account.
+
 ## 0.2.3 (2026-11-02)
 
 ### Fixed

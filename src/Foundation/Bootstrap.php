@@ -42,7 +42,7 @@ final class Bootstrap
                 // JSON bodies are structured content: keep whitespace (code, Markdown) and empty strings as sent.
                 $middleware->trimStrings(except: [static fn (Request $request) => $request->isJson()]);
                 $middleware->convertEmptyStringsToNull(except: [static fn (Request $request) => $request->isJson()]);
-                $middleware->encryptCookies(except: ['cms_theme', 'cms_staff']);
+                $middleware->encryptCookies(except: ['cms_theme', 'cms_staff', \Cms\Users\AccountInBrowser::COOKIE]);
                 $middleware->trustProxies(at: env('TRUSTED_PROXIES') ? explode(',', (string) env('TRUSTED_PROXIES')) : null);
             })
             ->withExceptions(static function (Exceptions $exceptions): void {
