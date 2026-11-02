@@ -186,9 +186,8 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
           </>
         )}
       </div>
-      <div className="flex h-8 items-center justify-between gap-3 border-t border-border px-3 text-xs text-faint">
+      <div className="flex h-8 items-center border-t border-border px-3 text-xs">
         <span className="truncate text-muted">{hovered ?? selected ?? (choices ? value : null) ?? ''}</span>
-        {!loading && <span className="shrink-0 tabular-nums">{found.length}</span>}
       </div>
     </div>
   )
