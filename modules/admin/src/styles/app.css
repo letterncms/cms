@@ -331,6 +331,30 @@
     .cms-dock-inner { min-width: 100vw; }
   }
 
+  /* Detached: a card over the page, which doesn't move. It stays on the left of the canvas until dragged, clear of an inspector. */
+  @media (min-width: 768px) {
+    .cms-dock[data-floating], .cms-dock[data-floating][data-open] { z-index: 40; width: 0; }
+    .cms-dock[data-floating] .cms-dock-panel {
+      position: fixed;
+      inset: auto auto 16px calc(var(--cms-sidebar-width, 0px) + 16px);
+      width: min(var(--cms-dock-width), calc(100vw - 32px));
+      /* As tall as what's in it, up to what fits above where it was dragged to. */
+      height: auto;
+      max-height: min(600px, calc(100dvh - 32px + var(--cms-dock-y, 0px)));
+      border: 1px solid var(--cms-border-float);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--cms-shadow-dialog);
+      opacity: 0;
+      translate: var(--cms-dock-x, 0) var(--cms-dock-y, 0);
+      transition: opacity 140ms var(--ease-out);
+    }
+    .cms-dock[data-floating][data-open] .cms-dock-panel { width: min(var(--cms-dock-width), calc(100vw - 32px)); box-shadow: var(--cms-shadow-dialog); opacity: 1; }
+    .cms-dock[data-floating] .cms-dock-handle { display: none; }
+    .cms-dock[data-floating] .cms-dock-inner { min-width: 0; }
+    .cms-dock[data-floating] [data-dock-drag] { cursor: grab; touch-action: none; }
+    .cms-dock[data-dragging] [data-dock-drag] { cursor: grabbing; }
+  }
+
   /* The sidebar is there or it isn't. Its content keeps its width as it goes. */
   .cms-shell-sidebar {
     flex: none;
@@ -368,7 +392,7 @@
 
   /* The sidebar switching between the main list and settings: settings come in from the side they lead to, the main list returns from the other. */
   @media (prefers-reduced-motion: no-preference) {
-    .cms-sidebar-mode[data-mode='settings'] { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; --cms-sidebar-from: 12px; }
+    .cms-sidebar-mode:is([data-mode='settings'], [data-mode='screen']) { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; --cms-sidebar-from: 12px; }
     .cms-sidebar-mode[data-mode='main'] { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; --cms-sidebar-from: -12px; }
   }
 

@@ -6,8 +6,8 @@ import {
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import {
   Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, Page, QueryError,
-  Spinner, StatusDot, Tabs, Tooltip, Topbar, closeDock, confirm, cn, entryActionAvailability,
-  fieldControlId, toast, useDock, useShortcut, useWideInspector,
+  Spinner, StatusDot, Tabs, Tooltip, Topbar, confirm, cn, entryActionAvailability,
+  fieldControlId, toast, useShortcut, useWideInspector,
 } from '@letterncms/ui'
 import { useCollection, type CollectionDef } from './useCollection'
 import { useEntrySession } from './useEntrySession'
@@ -103,7 +103,6 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const actions = entryActionAvailability(can, entry)
   const wide = useWideInspector()
   const [sidebarOpen, setSidebarOpen] = useState(() => wide)
-  const dock = useDock()
   const [toolHost, setToolHost] = useState<HTMLElement | null>(null)
   const panelKey = `cms.entry.panel.${collection.handle}`
   const [selectedPanel, setSelectedPanel] = useState(() => localStorage.getItem(panelKey) || 'details')
@@ -118,6 +117,7 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   useScreenContext({
     kind: 'entry',
     icon: collection.icon,
+    rightEdge: true,
     data: () => {
       const { entry: saved, working: current, dirty: unsaved } = session.get()
       return { collection: collection.handle, id: saved?.id ?? null, status: saved?.displayStatus ?? 'draft', unsaved, title: current.title, slug: current.slug, url: saved?.uri ?? null, locale: contentLocale, fields: current.data }
@@ -279,12 +279,9 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
     setSelectedPanel(value)
     localStorage.setItem(panelKey, value)
   }
-  // It shares the right edge with whatever is docked there: asking for it, it takes its turn.
-  const covered = dock.open && !dock.full
   const toggleSidebar = () => {
     if (!sidebarOpen) selectPanel('details')
-    setSidebarOpen(covered || !sidebarOpen)
-    if (covered) closeDock()
+    setSidebarOpen(!sidebarOpen)
   }
   const properties = placement.document.filter((field) => !WIDE_FIELDS.includes(field.type))
   const mainFields = placement.document.filter((field) => WIDE_FIELDS.includes(field.type))
@@ -356,7 +353,7 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
     </>
   )
   const editorProps: EntryEditorProps | null = bodyField
-    ? { ...panelProps, footer: <>{bodyPanels.map((panel) => <panel.component key={panel.id} {...panelProps} />)}</>, bodyField, setTitle: (title) => update({ title }), sidebar, sidebarOpen, setSidebarOpen, toolbar: toolHost }
+    ? { ...panelProps, footer: <>{bodyPanels.map((panel) => <panel.component key={panel.id} {...panelProps} />)}</>, bodyField, setTitle: (title) => update({ title }), sidebar, sidebarOpen, setSidebarOpen, toolbar: toolHost, listPath }
     : null
   const workspace = editorProps ? panelsFor('entry.editor', editorProps)[0] : null
   const status = entry?.displayStatus ?? 'draft'
@@ -409,7 +406,7 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
             <StatusDot status={dirty && live ? 'changed' : status} />
             {toolbar.map((panel) => <panel.component key={panel.id} {...panelProps} />)}
             <Tooltip content={t('Entry details')} shortcut="mod+.">
-              <IconButton icon="sidebar" label={t('Entry details')} active={sidebarOpen && !covered} onClick={toggleSidebar} />
+              <IconButton icon="sidebar" label={t('Entry details')} active={sidebarOpen} onClick={toggleSidebar} />
             </Tooltip>
             {entry && (
               <Menu

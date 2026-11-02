@@ -22,15 +22,13 @@ interface SlideoverProps {
 export const WorkspaceContext = createContext<{
   host: HTMLDivElement | null
   content: RefObject<HTMLDivElement | null>
-  /** The panel docked at the right edge (see `Dock`). */
-  dock: { open: boolean; full: boolean }
-  /** The left panel, when a screen puts its own there (see `ScreenSidebar`). */
+  /** The sidebar, for a screen with a state of its own there (see `ScreenSidebar`). */
   sidebar: {
     host: HTMLElement | null
     open: boolean
     setOpen: (open: boolean) => void
     /** Say so while mounted; returns how to stop. */
-    claim: (title: string) => () => void
+    claim: (state: { title: string; backTo: string; backLabel: string }) => () => void
   }
 } | null>(null)
 
