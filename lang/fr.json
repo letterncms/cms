@@ -295,6 +295,7 @@
   "This release needs :what on this host.": "Cette version nécessite :what sur cet hébergeur.",
   "This reset link is invalid or has expired.": "Ce lien de réinitialisation n’est pas valide ou a expiré.",
   "This server's clock looks wrong. Updates are paused. The public site is not affected.": "L’horloge de ce serveur semble fausse. Les mises à jour sont suspendues. Le site public n’est pas touché.",
+  "This site does not change its own files. Update it through your deploy.": "Ce site ne modifie pas ses propres fichiers. Mettez-le à jour par votre déploiement.",
   "This site is managed with Composer. Add plugins with: composer require letterncms/site": "Ce site est géré avec Composer. Ajoutez des plugins avec : composer require letterncms/site",
   "This site is managed with Composer. Run: composer require :package": "Ce site est géré avec Composer. Lancez : composer require :package",
   "This site is managed with Composer. Update it with composer update.": "Ce site est géré avec Composer. Mettez-le à jour avec composer update.",
