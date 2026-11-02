@@ -1,13 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
-
-export interface ScreenSelection {
-  /** Tells one selected thing from the next. */
-  id: string
-  label: string
-  icon?: string
-  /** Facts about it, read only when they are needed. */
-  data?: () => unknown
-}
+import type { ContextItem } from './composer'
 
 /**
  * What the screen on view is about, for whatever works alongside it (the
@@ -22,8 +14,8 @@ export interface ScreenContext {
   kind?: string
   /** Facts about it, read only when they are needed. They take the place of the screen's text. */
   data?: () => unknown
-  /** The part of it in focus. */
-  selection?: ScreenSelection | null
+  /** What it has to offer besides: the block selected on it, the date range set on it. */
+  items?: ContextItem[]
   /** Bring what is on view up to date, for someone about to read or change it: an editor saves. */
   flush?: () => Promise<unknown>
   /** Nothing on it leaves this screen (see `RouteDef.private`). */
@@ -39,7 +31,7 @@ let merged: ScreenContext = {}
 function changed() {
   merged = {}
   for (const layer of [...defaults.values(), ...layers.values()]) {
-    for (const [key, value] of Object.entries(layer)) if (value !== undefined) (merged as Record<string, unknown>)[key] = value
+    for (const [key, value] of Object.entries(layer)) if (value !== undefined) (merged as Record<string, unknown>)[key] = key === 'items' ? [...(merged.items ?? []), ...(value as ContextItem[])] : value
   }
   listeners.forEach((listener) => listener())
 }
@@ -58,7 +50,8 @@ export function useScreenContext(context: ScreenContext, { fallback = false }: {
   const key = useRef({}).current
   const latest = useRef(context)
   latest.current = context
-  const { title, icon, kind, selection, private: secret } = context
+  const { title, icon, kind, items, private: secret } = context
+  const itemKey = items?.map((item) => `${item.id}:${item.label}:${item.icon}`).join('|')
   const hasData = !!context.data
   const hasFlush = !!context.flush
   useEffect(() => {
@@ -66,14 +59,14 @@ export function useScreenContext(context: ScreenContext, { fallback = false }: {
       title, icon, kind, private: secret,
       data: hasData ? () => latest.current.data?.() : undefined,
       flush: hasFlush ? async () => latest.current.flush?.() : undefined,
-      selection: selection === undefined ? undefined : selection && { ...selection, data: () => latest.current.selection?.data?.() },
+      items: items?.map((item) => ({ ...item, read: () => latest.current.items?.find((current) => current.id === item.id)?.read?.() })),
     })
     changed()
     return () => {
       store.delete(key)
       changed()
     }
-  }, [store, key, title, icon, kind, secret, hasData, hasFlush, selection === undefined, selection?.id, selection?.label, selection?.icon])
+  }, [store, key, title, icon, kind, secret, hasData, hasFlush, itemKey])
 }
 
 /** The screen's text, as far as it goes. Field values are not part of it. */

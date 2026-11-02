@@ -11,7 +11,8 @@ export { registry, panelsFor, registerAs, unregister, reregister } from './regis
 export type { RouteDef, PanelDef, CommandDef, Registrations } from './registry'
 export { events } from './events'
 export { screenContext, screenText, useScreen, useScreenContext } from './screen'
-export type { ScreenContext, ScreenSelection } from './screen'
+export type { ScreenContext } from './screen'
+export type { ComposerOption, ComposerSource, ContextItem } from './composer'
 export { t, plural, locale, languages, setLocale } from './i18n'
 
 /** Human-readable relative time ("3 min ago"). */

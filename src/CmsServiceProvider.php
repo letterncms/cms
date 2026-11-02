@@ -31,6 +31,7 @@ use Cms\Content\Fields\Types;
 use Cms\Content\Globals\GlobalRepository;
 use Cms\Content\Revisions\Revisions;
 use Cms\Context\ContextRegistry;
+use Cms\Context\SkillRegistry;
 use Cms\Contracts;
 use Cms\Extend\Hooks;
 use Cms\Http\Middleware\AdminAccess;
@@ -73,6 +74,7 @@ final class CmsServiceProvider extends ServiceProvider
         Admin\Translations::class => Admin\Translations::class,
         Navigation::class => Navigation::class,
         ContextRegistry::class => ContextRegistry::class,
+        SkillRegistry::class => SkillRegistry::class,
         SettingsRegistry::class => SettingsRegistry::class,
         PackageRepository::class => PackageRepository::class,
         Psr4Loader::class => Psr4Loader::class,

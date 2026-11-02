@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import type { FieldProps, SurfaceComponentProps } from './types'
 import type { Location } from './router'
+import type { ComposerSource } from './composer'
 
 export interface RouteDef {
   path: string
@@ -124,6 +125,8 @@ export const registry = {
   widgets: store<ComponentType<{ id: string }>>(),
   components: store<ComponentType<SurfaceComponentProps<any>>>(),
   commands: store<CommandDef>(),
+  /** Where `@` and `/` look in a message. */
+  composer: store<ComposerSource>(),
   icons: store<string>(),
 }
 
