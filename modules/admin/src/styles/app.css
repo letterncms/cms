@@ -316,7 +316,7 @@
   }
   .cms-dock-handle:hover::after, .cms-dock[data-resizing] .cms-dock-handle::after { opacity: 1; }
 
-  @media (max-width: 899px) {
+  @media (max-width: 1099px) {
     .cms-dock[data-open] { width: 0; }
     .cms-dock { z-index: 40; }
     .cms-dock-panel { width: 0; }

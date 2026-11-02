@@ -6,8 +6,8 @@ import {
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import {
   Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, Page, QueryError,
-  Spinner, StatusDot, Tabs, Tooltip, Topbar, confirm, cn, entryActionAvailability,
-  fieldControlId, toast, useShortcut, useWideInspector,
+  Spinner, StatusDot, Tabs, Tooltip, Topbar, closeDock, confirm, cn, entryActionAvailability,
+  fieldControlId, toast, useDock, useShortcut, useWideInspector,
 } from '@letterncms/ui'
 import { useCollection, type CollectionDef } from './useCollection'
 import { useEntrySession } from './useEntrySession'
@@ -103,12 +103,8 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const actions = entryActionAvailability(can, entry)
   const wide = useWideInspector()
   const [sidebarOpen, setSidebarOpen] = useState(() => wide)
-  // Out of room (a panel docked beside the workspace): the side panel steps away, and comes back with the room.
-  const stepped = useRef(false)
-  useEffect(() => {
-    if (!wide && sidebarOpen) { stepped.current = true; setSidebarOpen(false) }
-    else if (wide && stepped.current) { stepped.current = false; setSidebarOpen(true) }
-  }, [wide])
+  const dock = useDock()
+  const [toolHost, setToolHost] = useState<HTMLElement | null>(null)
   const panelKey = `cms.entry.panel.${collection.handle}`
   const [selectedPanel, setSelectedPanel] = useState(() => localStorage.getItem(panelKey) || 'details')
   const [publishing, setPublishing] = useState(false)
@@ -283,9 +279,12 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
     setSelectedPanel(value)
     localStorage.setItem(panelKey, value)
   }
+  // It shares the right edge with whatever is docked there: asking for it, it takes its turn.
+  const covered = dock.open && !dock.full
   const toggleSidebar = () => {
     if (!sidebarOpen) selectPanel('details')
-    setSidebarOpen(!sidebarOpen)
+    setSidebarOpen(covered || !sidebarOpen)
+    if (covered) closeDock()
   }
   const properties = placement.document.filter((field) => !WIDE_FIELDS.includes(field.type))
   const mainFields = placement.document.filter((field) => WIDE_FIELDS.includes(field.type))
@@ -357,7 +356,7 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
     </>
   )
   const editorProps: EntryEditorProps | null = bodyField
-    ? { ...panelProps, footer: <>{bodyPanels.map((panel) => <panel.component key={panel.id} {...panelProps} />)}</>, bodyField, setTitle: (title) => update({ title }), sidebar, sidebarOpen, setSidebarOpen }
+    ? { ...panelProps, footer: <>{bodyPanels.map((panel) => <panel.component key={panel.id} {...panelProps} />)}</>, bodyField, setTitle: (title) => update({ title }), sidebar, sidebarOpen, setSidebarOpen, toolbar: toolHost }
     : null
   const workspace = editorProps ? panelsFor('entry.editor', editorProps)[0] : null
   const status = entry?.displayStatus ?? 'draft'
@@ -398,19 +397,19 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
           { label: collection.title, to: listPath, icon: collection.icon },
           { label: working.title || t('Untitled') },
         ]}
+        children={workspace ? <div ref={setToolHost} className="flex shrink-0 items-center gap-0.5" /> : undefined}
         actions={
           <>
             <span role="status" className={cn('text-xs', phase === 'error' ? 'text-danger' : 'text-faint')}>
               {phase === 'error' ? t('Couldn’t save')
                 : busy ? t('Saving…')
                 : titleError ? t('Add a title to save')
-                : dirty ? t('Unsaved')
-                : entry ? t('Saved') : ''}
+                : dirty ? t('Unsaved') : ''}
             </span>
             <StatusDot status={dirty && live ? 'changed' : status} />
             {toolbar.map((panel) => <panel.component key={panel.id} {...panelProps} />)}
             <Tooltip content={t('Entry details')} shortcut="mod+.">
-              <IconButton icon="sidebar" label={t('Entry details')} active={sidebarOpen} onClick={toggleSidebar} />
+              <IconButton icon="sidebar" label={t('Entry details')} active={sidebarOpen && !covered} onClick={toggleSidebar} />
             </Tooltip>
             {entry && (
               <Menu
