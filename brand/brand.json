@@ -1,8 +1,8 @@
 {
     "name": "Lettern",
-    "domain": "lettern.eu",
-    "product_url": "https://lettern.eu",
-    "docs_url": "https://docs.lettern.eu",
+    "domain": "lettern.org",
+    "product_url": "https://lettern.org",
+    "docs_url": "https://docs.lettern.org",
     "github_url": "https://github.com/letterncms/lettern",
-    "support_email": "support@lettern.eu"
+    "support_email": "support@lettern.org"
 }
