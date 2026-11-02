@@ -16,6 +16,24 @@ test('an in-flight save cannot acknowledge later typing or reuse a stale version
   await queued; assert.equal(calls[1].current.version, 'v2'); assert.equal(calls[1].working.title, 'Later edit'); assert.equal(session.get().dirty, false)
 })
 
+test('an update that changes nothing leaves nothing to save', async () => {
+  const calls = []
+  // In another key order, as the editor passes them.
+  const working = { title: 'Original', slug: 'original', authorId: null, data: { body: 'Text' } }
+  const session = new EntrySession(entry, working, async (_, values) => { calls.push(values); return { ...entry, ...values, version: 'v2' } })
+  session.update({ title: 'Original' }); assert.equal(session.get().dirty, false)
+  session.update({ data: { body: 'Text' } }); assert.equal(session.get().dirty, false)
+  await session.save(); assert.equal(calls.length, 0)
+})
+
+test('changing something back leaves nothing to save, and a new entry always has', () => {
+  const session = new EntrySession(entry, values, async () => entry)
+  session.update({ title: 'Changed' }); assert.equal(session.get().dirty, true)
+  session.update({ title: 'Original' }); assert.equal(session.get().dirty, false)
+  const fresh = new EntrySession(null, values, async () => entry)
+  fresh.update({ title: 'Original' }); assert.equal(fresh.get().dirty, true)
+})
+
 test('queued saves create only once', async () => {
   const calls = []
   const session = new EntrySession(null, values, async (current, working) => { calls.push(current); return { ...entry, ...working } })

@@ -14,6 +14,8 @@ export interface SessionState {
 
 export const entryContent = (entry: Entry): EntryContent => ({ title: entry.title, slug: entry.slug, data: entry.data, authorId: entry.authorId })
 
+const sameContent = (a: EntryContent, b: EntryContent) => a.title === b.title && a.slug === b.slug && a.authorId === b.authorId && JSON.stringify(a.data) === JSON.stringify(b.data)
+
 /** One working-copy owner. Requests serialize and acknowledge only the edits they captured. */
 export class EntrySession {
   private state: SessionState
@@ -37,7 +39,10 @@ export class EntrySession {
 
   update(patch: Partial<EntryContent>) {
     this.edit++
-    this.emit({ working: { ...this.state.working, ...patch }, dirty: true, phase: this.state.phase === 'saving' ? 'saving' : this.state.error ? 'error' : 'idle' })
+    const working = { ...this.state.working, ...patch }
+    // Back to what's saved, or nothing changed at all: there's nothing to save, whatever asked.
+    const dirty = !this.state.entry || !sameContent(working, entryContent(this.state.entry))
+    this.emit({ working, dirty, phase: this.state.phase === 'saving' ? 'saving' : this.state.error ? 'error' : 'idle' })
   }
 
   private enqueue<T>(work: () => Promise<T>): Promise<T> {
