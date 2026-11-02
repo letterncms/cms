@@ -101,6 +101,7 @@
   "Grid": "Grille",
   "Handle": "Identifiant",
   "Heading": "Titre",
+  "Hide {name}": "Masquer {name}",
   "Hide Sidebar": "Masquer la barre latérale",
   "https://… or /page": "https://… ou /page",
   "If an account exists for {email}, a reset link is on its way. It expires in 30 minutes.": "Si un compte existe pour {email}, un lien de réinitialisation est en route. Il expire dans 30 minutes.",

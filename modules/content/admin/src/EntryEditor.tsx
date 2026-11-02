@@ -7,7 +7,7 @@ import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type React
 import {
   Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, Page, QueryError,
   Spinner, StatusDot, Tabs, Tooltip, Topbar, confirm, cn, entryActionAvailability,
-  fieldControlId, toast, useScreenSidebar, useShortcut, useWideInspector,
+  fieldControlId, toast, useShortcut, useWideInspector,
 } from '@letterncms/ui'
 import { useCollection, type CollectionDef } from './useCollection'
 import { useEntrySession } from './useEntrySession'
@@ -105,7 +105,6 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const [sidebarOpen, setSidebarOpen] = useState(() => wide)
   const [toolHost, setToolHost] = useState<HTMLElement | null>(null)
   const [sending, setSending] = useState(false)
-  const screenSidebar = useScreenSidebar()
   const panelKey = `cms.entry.panel.${collection.handle}`
   const [selectedPanel, setSelectedPanel] = useState(() => localStorage.getItem(panelKey) || 'details')
   const [publishing, setPublishing] = useState(false)
@@ -397,7 +396,7 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        back={screenSidebar.open ? null : { to: listPath, label: collection.title }}
+        back={{ to: listPath, label: collection.title }}
         title={working.title || t('Untitled')}
         children={workspace ? <div ref={setToolHost} className="flex shrink-0 items-center gap-0.5" /> : undefined}
         actions={

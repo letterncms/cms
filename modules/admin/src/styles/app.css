@@ -261,18 +261,21 @@
 /* A column docked at the right edge: the page stays next to it, and nothing to its left moves but the page's own width.
    At full size the panel grows over the workspace, which keeps its size, so nothing on it reflows. Small windows: over the workspace. */
 @layer components {
+  /* Everything at the sides of the workspace moves at this speed. */
+  .cms-shell { --cms-panel-speed: 180ms; }
+
   .cms-dock {
     position: relative;
     z-index: 20;
     flex: none;
     width: 0;
     visibility: hidden;
-    transition: width 240ms var(--ease-out), visibility 0s linear 240ms;
+    transition: width var(--cms-panel-speed) var(--ease-out), visibility 0s linear var(--cms-panel-speed);
   }
   .cms-dock[data-open] {
     width: var(--cms-dock-width);
     visibility: visible;
-    transition: width 240ms var(--ease-out);
+    transition: width var(--cms-panel-speed) var(--ease-out);
   }
   .cms-dock-panel {
     position: absolute;
@@ -283,7 +286,7 @@
     overflow: hidden;
     background: var(--cms-surface);
     box-shadow: inset 1px 0 var(--cms-border);
-    transition: width 240ms var(--ease-out);
+    transition: width var(--cms-panel-speed) var(--ease-out);
   }
   .cms-dock[data-full] .cms-dock-panel { width: calc(100vw - var(--cms-sidebar-width, 0px)); }
   .cms-dock[data-resizing], .cms-dock[data-resizing] .cms-dock-panel { transition: none; }
@@ -345,7 +348,7 @@
       box-shadow: var(--cms-shadow-dialog);
       opacity: 0;
       translate: var(--cms-dock-x, 0) var(--cms-dock-y, 0);
-      transition: opacity 140ms var(--ease-out), right 200ms var(--ease-out);
+      transition: opacity var(--cms-panel-speed) var(--ease-out), right var(--cms-panel-speed) var(--ease-out);
     }
     .cms-dock[data-floating][data-open] .cms-dock-panel { width: min(var(--cms-dock-width), calc(100vw - 32px)); box-shadow: var(--cms-shadow-dialog); opacity: 1; }
     .cms-dock[data-floating] .cms-dock-handle { display: none; }
@@ -354,14 +357,24 @@
     .cms-dock[data-dragging] [data-dock-drag] { cursor: grabbing; }
   }
 
-  /* The sidebar is there or it isn't. Its content keeps its width as it goes. */
-  .cms-shell-sidebar {
+  /* A panel at the side of the workspace, left or right: it comes and goes the same way, its content keeping its width. */
+  .cms-side-panel {
     flex: none;
-    width: 248px;
+    width: var(--cms-side-panel-width);
     overflow: hidden;
-    transition: width 200ms var(--ease-out);
+    transition: width var(--cms-panel-speed) var(--ease-out);
   }
-  .cms-shell-sidebar[data-hidden] { width: 0; }
+  .cms-side-panel[data-hidden] { width: 0; }
+
+  /* The top bar moves with the sidebar, frame for frame; its title stays in the middle of the window. */
+  .cms-topbar {
+    padding-left: calc(1rem + var(--cms-sidebar-toggle, 0px));
+    transition: padding-left var(--cms-panel-speed) var(--ease-out);
+  }
+  .cms-topbar-title {
+    left: calc(50% - var(--cms-sidebar-width, 0px) / 2);
+    transition: left var(--cms-panel-speed) var(--ease-out);
+  }
 }
 
 /* Shell: the next screen is on its way (shown only when it takes long enough to notice). */

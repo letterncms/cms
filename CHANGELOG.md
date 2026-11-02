@@ -17,7 +17,7 @@
 - The way back in the settings and outline sidebars says where it goes, and the sidebar's name sits below it, so it can't be mistaken for closing the sidebar.
 - There are never more than two side panels: one on the left and one on the right. A screen that uses the right edge says so with `useScreenContext({ rightEdge: true })`, and a `Dock` then gets `floating`, a card over the page.
 
-- The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way until you change it. It no longer folds to a row of icons. A screen can bring a state of its own to it with `ScreenSidebar` from `@letterncms/ui`, like the settings one, with a way back, and folded away to start with.
+- The sidebar is there or it isn't, with one button at the top left and `⌘\`. That button and the way back beside it never move, the top bar slides along with the sidebar, and its title stays in the middle. Left and right panels come and go with the same quick animation. It stays that way until you change it. It no longer folds to a row of icons. A screen can bring a state of its own to it with `ScreenSidebar` from `@letterncms/ui`, like the settings one, with a way back, and folded away to start with.
 - On a phone the sidebar opens from that button instead of keeping a row of icons down the side, so screens get the full width.
 
 ### Removed

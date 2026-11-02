@@ -264,7 +264,7 @@ try {
     layer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
     await wait(() => document.querySelector('fieldset[role="tabpanel"]'), 'Keyboard selection did not inspect the block')
     if (innerWidth >= 1024) assert(document.activeElement === layer, 'Outline activation moved focus into text')
-    button('Hide Sidebar')?.click()
+    button('Hide Outline')?.click()
     await details()
   })
   await test('Clicking blank space selects or clears, and never creates a block', async () => {

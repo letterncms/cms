@@ -1,5 +1,5 @@
 import { Dialog as Base } from '@base-ui/react/dialog'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { cn } from './cn'
 
 /** A workspace inspector docks on desktop and becomes a focus-managed sheet on smaller screens. */
@@ -16,7 +16,21 @@ export function useWideInspector() {
 
 export function InspectorPanel({ open, onOpenChange, title, children, className, docked = true }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; children: ReactNode; className?: string; docked?: boolean }) {
   const wide = useWideInspector() && docked
-  if (wide) return open ? <aside data-cms-inspector aria-label={title} className={cn('flex w-[var(--cms-inspector-width)] shrink-0 flex-col border-l border-border bg-bg', className)}>{children}</aside> : null
+  // Stays on until it has moved out of sight.
+  const [mounted, setMounted] = useState(open)
+  useEffect(() => { if (open) setMounted(true) }, [open])
+  if (wide) return (
+    <div
+      className="cms-side-panel"
+      style={{ '--cms-side-panel-width': 'var(--cms-inspector-width)' } as CSSProperties}
+      data-cms-inspector={open || undefined}
+      data-hidden={!open || undefined}
+      inert={!open}
+      onTransitionEnd={(e) => { if (e.target === e.currentTarget && !open) setMounted(false) }}
+    >
+      {(open || mounted) && <aside aria-label={title} className={cn('flex h-full w-[var(--cms-inspector-width)] flex-col border-l border-border bg-bg', className)}>{children}</aside>}
+    </div>
+  )
   return <Base.Root open={open} onOpenChange={onOpenChange}>
     <Base.Portal>
       <Base.Backdrop className="fixed inset-0 z-50 bg-overlay" />

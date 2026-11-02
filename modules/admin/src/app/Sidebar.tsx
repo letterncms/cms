@@ -19,7 +19,6 @@ interface SidebarProps {
   /** On a screen with a state of its own: what to call it, and where its list goes. */
   own?: OwnSidebar | null
   onOwnHost?: (element: HTMLElement | null) => void
-  onHide: () => void
   onSearch: () => void
   /** Called when a link is followed (the overlay sidebar on narrow screens closes). */
   onNavigate?: () => void
@@ -35,7 +34,7 @@ const customize = () => events.emit('sidebar.customize')
  * the main sidebar (what each person pinned, More for the rest) and, on a settings page, the settings sidebar with a way back. Same frame,
  * same rows, same footer — only the list changes.
  */
-export function Sidebar({ own, onOwnHost, onHide, onSearch, onNavigate }: SidebarProps) {
+export function Sidebar({ own, onOwnHost, onSearch, onNavigate }: SidebarProps) {
   const manifest = useManifest()
   const { path, search } = useLocation()
   const settings = inSettings(manifest, path)
@@ -53,12 +52,12 @@ export function Sidebar({ own, onOwnHost, onHide, onSearch, onNavigate }: Sideba
       <div key={state} data-mode={switched.current ? state : undefined} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
         {own ? (
           <>
-            <StateHeader title={own.title} back={own.backLabel} onBack={() => { navigate(own.backTo); onNavigate?.() }} onHide={onHide} />
+            <StateTitle>{own.title}</StateTitle>
             <div ref={onOwnHost} className="min-h-0 flex-1 overflow-y-auto" />
           </>
         ) : settings
-          ? <SettingsSidebar onHide={onHide} onNavigate={onNavigate} active={active} />
-          : <MainSidebar onHide={onHide} onSearch={onSearch} onNavigate={onNavigate} active={active} />}
+          ? <SettingsSidebar onNavigate={onNavigate} active={active} />
+          : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} />}
       </div>
       <Footer settings={settings} onNavigate={onNavigate} />
     </aside>
@@ -90,7 +89,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 }
 
 /** Pinned items, section by section, More after the first section. */
-function MainSidebar({ onHide, onSearch, onNavigate, active }: { onHide: () => void; onSearch: () => void; onNavigate?: () => void; active?: string }) {
+function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
   const layout = manifest.sidebar
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
@@ -99,11 +98,12 @@ function MainSidebar({ onHide, onSearch, onNavigate, active }: { onHide: () => v
 
   return (
     <>
-      <div className="flex h-12 shrink-0 items-center gap-1 px-3">
+      {/* The shell's sidebar button holds the first place in the row, in every state. */}
+      <div className="flex h-12 shrink-0 items-center gap-1 pl-10 pr-2">
         <Menu
           align="start"
           trigger={
-            <button type="button" aria-label={manifest.site.name} className="-ml-1 flex h-8 min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-hover">
+            <button type="button" aria-label={manifest.site.name} className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-hover">
               <BrandMark size={22} />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-ink">{manifest.site.name}</span>
               <Icon name="chevrons-up-down" size={12} className="shrink-0 text-faint" />
@@ -117,9 +117,6 @@ function MainSidebar({ onHide, onSearch, onNavigate, active }: { onHide: () => v
         />
         <Tooltip content={t('Search')} shortcut="mod+k" side="bottom">
           <IconButton icon="search" label={t('Search')} title={undefined} size="sm" onClick={onSearch} />
-        </Tooltip>
-        <Tooltip content={t('Hide Sidebar')} shortcut="mod+\\" side="bottom">
-          <IconButton icon="sidebar" label={t('Hide Sidebar')} title={undefined} size="sm" onClick={onHide} className="-mr-1" />
         </Tooltip>
       </div>
 
@@ -248,35 +245,40 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
   )
 }
 
-/** The top of a state of the sidebar other than the main one: a way back that says where to, then what this state is. */
-function StateHeader({ title, back, shortcut, onBack, onHide }: { title: string; back: string; shortcut?: string; onBack: () => void; onHide: () => void }) {
+/** What a state of the sidebar other than the main one is, under the row with the sidebar button and the way back. */
+function StateTitle({ children }: { children: ReactNode }) {
+  return <h2 className="m-0 shrink-0 truncate px-5 pb-2 pt-12 text-sm font-semibold tracking-[-0.01em] text-ink">{children}</h2>
+}
+
+/** The way back from a state of the sidebar. It sits by the sidebar button, in the same place with the sidebar in or out, where the main state has the site's name. */
+export function StateBack({ own, onNavigate }: Pick<SidebarProps, 'own' | 'onNavigate'>) {
+  const manifest = useManifest()
+  const { path } = useLocation()
+  if (!own && !inSettings(manifest, path)) return null
+  const label = own ? own.backLabel : itemAt(manifest.nav, lastApp().split('?')[0])?.label ?? t('Back')
+  const back = () => {
+    if (own) navigate(own.backTo)
+    else leaveSettings()
+    onNavigate?.()
+  }
   return (
-    <>
-      <div className="flex h-12 shrink-0 items-center justify-between gap-1 px-3">
-        <Tooltip content={t('Back to {label}', { label: back })} shortcut={shortcut} side="bottom">
-          <button type="button" onClick={onBack} className="-ml-1 flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text">
-            <Icon name="chevron-left" size={14} className="shrink-0" />
-            <span className="truncate">{back}</span>
-          </button>
-        </Tooltip>
-        <Tooltip content={t('Hide Sidebar')} shortcut="mod+\\" side="bottom">
-          <IconButton icon="sidebar" label={t('Hide Sidebar')} title={undefined} size="sm" onClick={onHide} className="-mr-1" />
-        </Tooltip>
-      </div>
-      <h2 className="m-0 shrink-0 truncate px-5 pb-2 text-sm font-semibold tracking-[-0.01em] text-ink">{title}</h2>
-    </>
+    <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
+      <button type="button" aria-label={t('Back to {label}', { label })} onClick={back} className="flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text">
+        <Icon name="chevron-left" size={14} className="shrink-0" />
+        <span className="truncate max-sm:hidden">{label}</span>
+      </button>
+    </Tooltip>
   )
 }
 
 /** Settings pages, section by section, under a way back to where you were. */
-function SettingsSidebar({ onHide, onNavigate, active }: { onHide: () => void; onNavigate?: () => void; active?: string }) {
+function SettingsSidebar({ onNavigate, active }: { onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
-  const back = itemAt(manifest.nav, lastApp().split('?')[0])?.label
 
   return (
     <>
-      <StateHeader title={t('Settings')} back={back ?? t('Back')} shortcut="esc" onBack={() => { leaveSettings(); onNavigate?.() }} onHide={onHide} />
+      <StateTitle>{t('Settings')}</StateTitle>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label={t('Settings')}>
         {manifest.settingsNav.map((section, index) => (
