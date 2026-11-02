@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.1 (2026-11-02)
+
 ### Fixed
 
 - Starting an update on a site with `CMS_ALLOW_FILE_MODS=false` says it doesn't change its own files, in the admin's language, instead of calling the site locked.

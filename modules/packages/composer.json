@@ -2,7 +2,7 @@
     "name": "letterncms/packages",
     "description": "Turns plugins and modules on and off.",
     "type": "cms-plugin",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*",
