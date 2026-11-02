@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- The admin's tab bars no longer scroll up and down by a pixel when you scroll over them.
+
 ## 0.3.1 (2026-11-02)
 
 ### Fixed

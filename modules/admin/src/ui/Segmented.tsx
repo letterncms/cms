@@ -56,8 +56,8 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
 
 export function Tabs<T extends string>({ value, onChange, tabs, className, id, bordered = true, size = 'sm' }: { value: T; onChange: (v: T) => void; tabs: { value: T; label: string; count?: number; indicator?: boolean }[]; className?: string; id?: string; bordered?: boolean; size?: 'xs' | 'sm' }) {
   return (
-    // Many plugin tabs scroll sideways rather than wrapping their labels.
-    <div role="tablist" className={cn('flex min-h-9 items-stretch gap-4 overflow-x-auto [scrollbar-width:none]', bordered && 'border-b border-border', className)}>
+    // Many plugin tabs scroll sideways rather than wrapping their labels. The rule is an inset shadow the active underline covers, so nothing overflows vertically.
+    <div role="tablist" className={cn('flex min-h-9 items-stretch gap-4 overflow-x-auto overflow-y-hidden [scrollbar-width:none]', bordered && 'shadow-[inset_0_-1px_0_var(--cms-border)]', className)}>
       {tabs.map((t, index) => (
         <button
           key={t.value}
@@ -77,7 +77,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
             onChange(tabs[next].value)
             e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus()
           }}
-          className={cn('flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 font-medium transition-colors', bordered && '-mb-px', size === 'xs' ? 'text-xs' : 'text-sm', value === t.value ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-text')}
+          className={cn('flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 font-medium transition-colors', size === 'xs' ? 'text-xs' : 'text-sm', value === t.value ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-text')}
         >
           {t.label}
           {t.indicator && <span className="size-1.5 shrink-0 rounded-full bg-focus" aria-hidden />}
