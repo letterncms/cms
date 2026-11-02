@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 (2026-11-02)
+
 ### Added
 
 - A block can be shown only to people signed in, by binding `visible` to `account`, or only to people signed out, with `hidden`, on every page: on one built in advance, the browser shows the right one before it's painted, from a cookie that says only that someone is signed in. The data `accounts` has the sign-in, sign-up and account pages' addresses and words in the page's language, while public accounts are on.
