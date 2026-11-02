@@ -5,6 +5,16 @@
 ### Added
 
 - Pick any icon for a collection or a global set: a searchable list of all 1,500 Phosphor icons, found by name or by what they are for ("email" finds the envelope).
+- Plugins can dock a column beside the page on every screen: the `shell.dock` slot with `Dock` from `@letterncms/ui`, and the `sidebar.footer` slot. Routes can open over the screen they came from (`overlay`) and keep what they show private (`private`).
+- Screens can say what they show with `useScreenContext`, for whatever works alongside them. An open entry shows changes made from outside as they happen, and `events.emit('content.changed')` asks it to look.
+
+### Changed
+
+- The inspector and outline in an editor dock when the workspace has room for them, rather than the window.
+
+### Removed
+
+- **Breaking.** The `sidebar.history` slot. Use `sidebar.footer`.
 
 ### Fixed
 

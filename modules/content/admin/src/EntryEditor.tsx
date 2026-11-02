@@ -1,6 +1,6 @@
 import {
   events, invalidate, navigate, panelsFor, plural, registry, run, t, useAbility, useConfig,
-  useLocation, useManifest, type Entry, type EntryEditorProps, type EntryPanelProps,
+  useLocation, useManifest, useScreenContext, type Entry, type EntryEditorProps, type EntryPanelProps,
   type FieldContext, type FieldDef,
 } from '@letterncms/sdk'
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
@@ -105,6 +105,12 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const actions = entryActionAvailability(can, entry)
   const wide = useWideInspector()
   const [sidebarOpen, setSidebarOpen] = useState(() => wide)
+  // Out of room (a panel docked beside the workspace): the side panel steps away, and comes back with the room.
+  const stepped = useRef(false)
+  useEffect(() => {
+    if (!wide && sidebarOpen) { stepped.current = true; setSidebarOpen(false) }
+    else if (wide && stepped.current) { stepped.current = false; setSidebarOpen(true) }
+  }, [wide])
   const panelKey = `cms.entry.panel.${collection.handle}`
   const [selectedPanel, setSelectedPanel] = useState(() => localStorage.getItem(panelKey) || 'details')
   const [publishing, setPublishing] = useState(false)
@@ -114,6 +120,30 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const lastSave = useRef<{ publish?: boolean; at?: string }>({})
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const busy = phase === 'saving'
+
+  useScreenContext({
+    kind: 'entry',
+    icon: collection.icon,
+    data: () => {
+      const { entry: saved, working: current, dirty: unsaved } = session.get()
+      return { collection: collection.handle, id: saved?.id ?? null, status: saved?.displayStatus ?? 'draft', unsaved, title: current.title, slug: current.slug, url: saved?.uri ?? null, locale: contentLocale, fields: current.data }
+    },
+    // Someone about to read or change this entry gets it as it stands here.
+    flush: async () => {
+      const current = session.get()
+      if (editable && current.dirty && current.working.title.trim()) await control.save().catch(() => {})
+    },
+  })
+  // Changed by someone working alongside (the assistant): it shows here at once. Unsaved edits are never replaced; saving them reports the conflict.
+  useEffect(() => events.on('content.changed', () => {
+    const id = session.get().entry?.id
+    if (!id) return
+    void run<Entry>('entries/get', { id }).then((fresh) => {
+      const current = session.get()
+      if (current.dirty || current.phase === 'saving' || fresh.version === current.entry?.version) return
+      void session.command(async () => fresh)
+    }).catch(() => {})
+  }), [session])
 
   const setValue = (handle: string, value: unknown) => {
     update({ data: { ...session.get().working.data, [handle]: value } })

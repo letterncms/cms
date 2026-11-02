@@ -1,4 +1,4 @@
-import { Link, t } from '@letterncms/sdk'
+import { Link, t, useScreenContext } from '@letterncms/sdk'
 import { Fragment, type ReactNode } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
@@ -11,6 +11,9 @@ export interface Crumb {
 
 /** Sticky 48px bar at the top of every screen: breadcrumbs left, actions right. */
 export function Topbar({ crumbs = [], actions, children, className }: { crumbs?: Crumb[]; actions?: ReactNode; children?: ReactNode; className?: string }) {
+  // The last crumb names the screen, for whatever works alongside it.
+  const last = crumbs[crumbs.length - 1]
+  useScreenContext({ title: typeof last?.label === 'string' ? last.label : undefined, icon: last?.icon ?? crumbs[0]?.icon })
   return (
     <header className={cn('sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur-md', className)}>
       <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1 overflow-hidden text-sm">

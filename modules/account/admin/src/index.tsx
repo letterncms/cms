@@ -2,7 +2,7 @@ import './styles.css'
 import { prefetchAbility, registry } from '@letterncms/sdk'
 import { lazy } from 'react'
 
-registry.routes.set('/account', { path: '/account', component: lazy(() => import('./Account')), load: () => Promise.all([prefetchAbility('users/fields'), prefetchAbility('tokens/list')]) })
+registry.routes.set('/account', { path: '/account', private: true, component: lazy(() => import('./Account')), load: () => Promise.all([prefetchAbility('users/fields'), prefetchAbility('tokens/list')]) })
 
 // The screen is composed from the `account.sections` slot; plugins add theirs the same way (letterncms/mcp).
 const section = (name: 'Profile' | 'Password' | 'TwoFactor' | 'Appearance' | 'Tokens') => lazy(() => import('./Account').then((m) => ({ default: m[name] })))

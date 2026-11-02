@@ -61,12 +61,13 @@ function blocked(): boolean {
   return false
 }
 
-export function navigate(to: string, options: { replace?: boolean } = {}) {
+/** `overlay`: to or from a route drawn over the screen on view. Nothing is being left, so nothing needs to ask. */
+export function navigate(to: string, options: { replace?: boolean; overlay?: boolean } = {}) {
   if (/^https?:\/\//.test(to)) {
     window.location.href = to
     return
   }
-  if (blocked()) return
+  if (!options.overlay && blocked()) return
   const url = boot.base + (to === '/' ? '' : to)
   if (options.replace) window.history.replaceState(null, '', url)
   else window.history.pushState(null, '', url)

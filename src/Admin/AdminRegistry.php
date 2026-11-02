@@ -67,7 +67,7 @@ final class AdminRegistry
      * keep it for screens people open every week. `visible` decides per user
      * beyond the permission (the assistant shows only once it can work).
      *
-     * @param  array{label: string, path: string, icon?: string, section?: string, order?: int, pinned?: bool, shortcut?: ?string, permission?: ?string, visible?: ?callable(User): bool, badge?: ?callable}  $item
+     * @param  array{label: string, path: string, icon?: string, section?: string, order?: int, pinned?: bool, shortcut?: ?string, placement?: ?string, permission?: ?string, visible?: ?callable(User): bool, badge?: ?callable}  $item
      */
     public function nav(string $id, array $item): void
     {
