@@ -42,7 +42,6 @@ const MANAGED_TEXT = (reason: string) =>
   ({
     composer: t('This site is managed with Composer. Update it with composer update.'),
     git: t('This site is managed with Composer. Update it with composer update.'),
-    lockdown: t('This site is locked. Update it through your deploy.'),
     file_mods: t('This site does not change its own files. Update it through your deploy.'),
   })[reason] ?? reason
 

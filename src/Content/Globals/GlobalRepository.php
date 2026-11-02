@@ -81,8 +81,6 @@ final class GlobalRepository
 
     public function save(GlobalSet $set): void
     {
-        cms()->guardConfigWrites();
-
         if (! Files::isHandle($set->handle)) {
             throw new InvalidArgumentException(__('Invalid handle.'));
         }
@@ -96,8 +94,6 @@ final class GlobalRepository
 
     public function delete(string $handle): void
     {
-        cms()->guardConfigWrites();
-
         if (Files::isHandle($handle)) {
             @unlink(content_path("globals/{$handle}.yaml"));
         }

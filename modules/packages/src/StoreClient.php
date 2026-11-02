@@ -67,7 +67,6 @@ final class StoreClient
      */
     public function addStore(string $url, ?string $confirm = null): array
     {
-        $this->cms->guardConfigWrites();
         $base = rtrim($url, '/');
 
         if (! preg_match('#^https?://#i', $base)) {
@@ -106,7 +105,6 @@ final class StoreClient
 
     public function removeStore(string $id): void
     {
-        $this->cms->guardConfigWrites();
         $stores = $this->added();
 
         if (! isset($stores[$id])) {

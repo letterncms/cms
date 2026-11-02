@@ -10,6 +10,10 @@
 
 - The team has the site's account pages too, with what they bought there like anyone: signing in at `/admin` and going to `/account` no longer leads back to the admin. Their profile, password and data stay in the admin, and the account menu links there. A signed-in team member who opens `/sign-in` goes to their account.
 
+### Removed
+
+- **Breaking.** `CMS_LOCKDOWN` is gone. Collections, settings, roles, the design system and plugins can always be changed in the admin, by the people whose role allows it. A site that sets it can drop the line. `CMS_ALLOW_FILE_MODS=false` still stops plugin files changing from the web. For plugins: `Cms::lockedDown()`, `Cms::guardConfigWrites()` and `cms.lockedDown` in the admin's manifest are gone with it.
+
 ## 0.2.3 (2026-11-02)
 
 ### Fixed

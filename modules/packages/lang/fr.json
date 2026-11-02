@@ -183,7 +183,6 @@
   "This server's clock looks wrong. Installs are paused. The public site is not affected.": "L’horloge de ce serveur semble fausse. Les installations sont suspendues. Le site public n’est pas touché.",
   "This site does not change its own files. Update it through your deploy.": "Ce site ne modifie pas ses propres fichiers. Mettez-le à jour par votre déploiement.",
   "This site has no valid list of signing keys, so it cannot trust a store. Download packages and upload them instead.": "Ce site n’a pas de liste valide de clés de signature : il ne peut faire confiance à aucune boutique. Téléchargez les paquets et envoyez-les vous-même.",
-  "This site is locked. Update it through your deploy.": "Ce site est verrouillé. Mettez-le à jour par votre déploiement.",
   "This site is managed with Composer. Run: composer remove :package": "Ce site est géré avec Composer. Lancez : composer remove :package",
   "This site is managed with Composer. Update it with composer update.": "Ce site est géré avec Composer. Mettez-le à jour avec composer update.",
   "This version of :package is blocked by the store for security reasons.": "Cette version de :package est bloquée par la boutique pour des raisons de sécurité.",

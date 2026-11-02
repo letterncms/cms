@@ -37,7 +37,6 @@ final class SystemAbilities
                 'php' => PHP_VERSION,
                 'database' => DB::connection()->getDriverName(),
                 'environment' => app()->environment(),
-                'lockedDown' => $this->cms->lockedDown(),
                 'packages' => array_map(static fn (PackageManifest $p) => ['name' => $p->name, 'version' => $p->version], array_values($this->cms->packages()->active())),
                 'pending' => $this->cms->packages()->pending(),
             ],

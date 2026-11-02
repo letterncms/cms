@@ -26,7 +26,7 @@ final class Manifest
         }
 
         $manifest = [
-            'cms' => ['version' => Cms::VERSION, 'lockedDown' => $this->cms->lockedDown(), 'debug' => (bool) config('app.debug')],
+            'cms' => ['version' => Cms::VERSION, 'debug' => (bool) config('app.debug')],
             'brand' => Brand::all(),
             'site' => [
                 'name' => config('app.name'),

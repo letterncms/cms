@@ -58,7 +58,6 @@ final class Fieldsets
 
     public function save(string $handle, string $title, array $fields): void
     {
-        cms()->guardConfigWrites();
         Blueprint::make($fields); // validates handles/types structure
         Yaml::write(Files::within(content_path('fieldsets'), "{$handle}.yaml"), ['title' => $title, 'fields' => array_values($fields)]);
     }

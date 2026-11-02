@@ -16,7 +16,7 @@ const nav = [
 ].map(([id, label, path, icon, section]) => ({ id, label, path, icon, section }))
 const manifest = {
   components: [{ id: 'fixture/context', label: 'Context component', description: 'A fixture', props: { type: 'object' }, children: false }],
-  cms: { version: 'test', lockedDown: false, debug: false },
+  cms: { version: 'test', debug: false },
   brand: { name: 'Acme', domain: '', product_url: '', docs_url: '', support_email: '', mark: '', wordmark: '' }, site: { name: 'Acme', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Alex Morgan', email: 'alex@example.invalid', initials: 'AM', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
   packages: { active: ['cms/admin', 'letterncms/assistant', 'fixture'], pending: {} },
