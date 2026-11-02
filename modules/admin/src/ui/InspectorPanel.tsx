@@ -16,7 +16,7 @@ export function useWideInspector() {
 
 export function InspectorPanel({ open, onOpenChange, title, children, className, docked = true }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; children: ReactNode; className?: string; docked?: boolean }) {
   const wide = useWideInspector() && docked
-  if (wide) return open ? <aside aria-label={title} className={cn('flex w-[var(--cms-inspector-width)] shrink-0 flex-col border-l border-border bg-bg', className)}>{children}</aside> : null
+  if (wide) return open ? <aside data-cms-inspector aria-label={title} className={cn('flex w-[var(--cms-inspector-width)] shrink-0 flex-col border-l border-border bg-bg', className)}>{children}</aside> : null
   return <Base.Root open={open} onOpenChange={onOpenChange}>
     <Base.Portal>
       <Base.Backdrop className="fixed inset-0 z-50 bg-overlay" />

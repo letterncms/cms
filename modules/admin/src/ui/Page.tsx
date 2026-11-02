@@ -9,39 +9,54 @@ export interface Crumb {
   icon?: string
 }
 
-/** Sticky 48px bar at the top of every screen: breadcrumbs left, actions right. */
-export function Topbar({ crumbs = [], actions, children, className }: { crumbs?: Crumb[]; actions?: ReactNode; children?: ReactNode; className?: string }) {
+/**
+ * Sticky 48px bar at the top of every screen: where you are on the left (breadcrumbs,
+ * or `back` and the `title` in the middle, for a screen about one thing), what can be
+ * done on the right, with the screen's main action last.
+ */
+export function Topbar({ crumbs = [], back, title, actions, children, className }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string }) {
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
   useScreenContext({ title: typeof last?.label === 'string' ? last.label : undefined, icon: last?.icon ?? crumbs[0]?.icon })
-  // At the far end of every screen's bar, in the same place: the way to what's docked at that edge.
+  // What every screen's bar has, before the screen's own actions.
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const ends = panelsFor('topbar.end', {})
   return (
-    <header className={cn('sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-bg/85 pl-[calc(1rem+var(--cms-sidebar-toggle,0px))] pr-4 backdrop-blur-md', className)}>
-      <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1 overflow-hidden text-sm">
-        {crumbs.map((c, i) => (
-          <Fragment key={i}>
-            {i > 0 && <Icon name="chevron-right" size={12} className="shrink-0 text-faint" />}
-            {c.to && i < crumbs.length - 1 ? (
-              <Link to={c.to} className="flex min-w-0 items-center gap-1.5 truncate rounded-xs px-1 py-0.5 text-muted no-underline hover:bg-hover hover:text-text">
-                {c.icon && <Icon name={c.icon} size={14} />}
-                {c.label}
-              </Link>
-            ) : (
-              <span className="flex min-w-0 items-center gap-1.5 truncate px-1 font-medium text-ink">
-                {c.icon && <Icon name={c.icon} size={14} className="text-muted" />}
-                {c.label}
-              </span>
-            )}
-          </Fragment>
-        ))}
-      </nav>
-      {children}
+    <header className={cn('sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-bg/85 pl-[calc(1rem+var(--cms-sidebar-toggle,0px))] pr-3 backdrop-blur-md', className)}>
+      <div className={cn('flex min-w-0 items-center gap-3', !!title && 'flex-1')}>
+        {back && (
+          <Link to={back.to} aria-label={t('Back to {label}', { label: back.label })} className="flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text">
+            <Icon name="chevron-left" size={14} className="shrink-0" />
+            <span className="truncate max-sm:hidden">{back.label}</span>
+          </Link>
+        )}
+        {crumbs.length > 0 && (
+          <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1 overflow-hidden text-sm">
+            {crumbs.map((c, i) => (
+              <Fragment key={i}>
+                {i > 0 && <Icon name="chevron-right" size={12} className="shrink-0 text-faint" />}
+                {c.to && i < crumbs.length - 1 ? (
+                  <Link to={c.to} className="flex min-w-0 items-center gap-1.5 truncate rounded-xs px-1 py-0.5 text-muted no-underline hover:bg-hover hover:text-text">
+                    {c.icon && <Icon name={c.icon} size={14} />}
+                    {c.label}
+                  </Link>
+                ) : (
+                  <span className="flex min-w-0 items-center gap-1.5 truncate px-1 font-medium text-ink">
+                    {c.icon && <Icon name={c.icon} size={14} className="text-muted" />}
+                    {c.label}
+                  </span>
+                )}
+              </Fragment>
+            ))}
+          </nav>
+        )}
+        {children}
+      </div>
+      {title && <div className="min-w-0 max-w-[40%] truncate text-sm font-medium text-ink max-lg:hidden">{title}</div>}
       {(actions || ends.length > 0) && (
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {actions}
+        <div className={cn('flex shrink-0 items-center justify-end gap-1', title ? 'flex-1' : 'ml-auto')}>
           {ends.map(({ id, component: End }) => <End key={id} />)}
+          {actions}
         </div>
       )}
     </header>

@@ -7,7 +7,7 @@ import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type React
 import {
   Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, Page, QueryError,
   Spinner, StatusDot, Tabs, Tooltip, Topbar, confirm, cn, entryActionAvailability,
-  fieldControlId, toast, useShortcut, useWideInspector,
+  fieldControlId, toast, useScreenSidebar, useShortcut, useWideInspector,
 } from '@letterncms/ui'
 import { useCollection, type CollectionDef } from './useCollection'
 import { useEntrySession } from './useEntrySession'
@@ -104,6 +104,8 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const wide = useWideInspector()
   const [sidebarOpen, setSidebarOpen] = useState(() => wide)
   const [toolHost, setToolHost] = useState<HTMLElement | null>(null)
+  const [sending, setSending] = useState(false)
+  const screenSidebar = useScreenSidebar()
   const panelKey = `cms.entry.panel.${collection.handle}`
   const [selectedPanel, setSelectedPanel] = useState(() => localStorage.getItem(panelKey) || 'details')
   const [publishing, setPublishing] = useState(false)
@@ -168,7 +170,9 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   }
   const publish = async (at?: string): Promise<boolean> => {
     if (!actions.publish) return false
+    setSending(true)
     const result = await save({ publish: true, ...(at ? { at } : {}) })
+    setSending(false)
     if (!result) return false
     toast.success(result.displayStatus === 'scheduled' ? t('Scheduled') : t('Published'))
     return true
@@ -358,11 +362,12 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   const workspace = editorProps ? panelsFor('entry.editor', editorProps)[0] : null
   const status = entry?.displayStatus ?? 'draft'
   const live = entry?.status === 'published' && status !== 'scheduled'
-  const publishDisabled = busy || !working.title.trim() || (live && !dirty && !entry?.hasDraft)
+  // Saving and publishing queue up, so publishing never has to wait for an autosave.
+  const upToDate = live && !dirty && !entry?.hasDraft
   const titleError = !entry && dirty && !working.title.trim()
 
   useShortcut('mod+s', () => { if (editable) void save() })
-  useShortcut('mod+shift+p', () => { if (actions.publish && !publishDisabled) void publish() })
+  useShortcut('mod+shift+p', () => { if (actions.publish && !upToDate && working.title.trim()) void publish() })
   useShortcut('mod+.', toggleSidebar)
   useEffect(() => {
     const first = Object.keys(errors)[0]
@@ -390,64 +395,63 @@ function Editor({ collection, initial, can, loadError, retryLoad }: EditorProps)
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        crumbs={[
-          { label: collection.title, to: listPath, icon: collection.icon },
-          { label: working.title || t('Untitled') },
-        ]}
+        back={screenSidebar.open ? null : { to: listPath, label: collection.title }}
+        title={working.title || t('Untitled')}
         children={workspace ? <div ref={setToolHost} className="flex shrink-0 items-center gap-0.5" /> : undefined}
         actions={
           <>
-            <span role="status" className={cn('text-xs', phase === 'error' ? 'text-danger' : 'text-faint')}>
+            {/* Saving goes without saying on screen; it's still said to a screen reader. */}
+            <span role="status" className={cn('mr-1 text-xs', phase === 'error' ? 'text-danger' : 'text-faint', phase !== 'error' && !titleError && !busy && !dirty && 'sr-only')}>
               {phase === 'error' ? t('Couldn’t save')
-                : busy ? t('Saving…')
                 : titleError ? t('Add a title to save')
-                : dirty ? t('Unsaved') : ''}
+                : busy ? t('Saving…')
+                : dirty ? t('Unsaved')
+                : entry ? t('Saved') : ''}
             </span>
-            <StatusDot status={dirty && live ? 'changed' : status} />
             {toolbar.map((panel) => <panel.component key={panel.id} {...panelProps} />)}
             <Tooltip content={t('Entry details')} shortcut="mod+.">
-              <IconButton icon="sidebar" label={t('Entry details')} active={sidebarOpen} onClick={toggleSidebar} />
+              <IconButton icon="sidebar" label={t('Entry details')} title={undefined} active={sidebarOpen} onClick={toggleSidebar} className="[&_svg]:-scale-x-100" />
             </Tooltip>
-            {entry && (
-              <Menu
-                trigger={<IconButton icon="more" label={t('More Actions')} />}
-                items={[
-                  live && entry.uri ? {
-                    label: t('View on Site'), icon: 'external',
-                    onSelect: () => { window.open(entry.uri!, '_blank', 'noopener') },
-                  } : null,
-                  actions.duplicate && {
-                    label: t('Duplicate'), icon: 'copy', disabled: busy || dirty,
-                    description: busy || dirty ? t('Save changes before duplicating') : undefined,
-                    onSelect: () => { void duplicate() },
-                  },
-                  actions.discard && entry.hasDraft && {
-                    label: t('Discard Unpublished Changes'), icon: 'undo',
-                    onSelect: () => { void replace('entries/discard-draft') },
-                  },
-                  actions.unpublish && {
-                    label: t('Unpublish'), icon: 'eye-off',
-                    onSelect: () => { void replace('entries/unpublish') },
-                  },
-                  actions.delete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: remove },
-                ]}
-              />
-            )}
+            <Menu
+              trigger={<IconButton icon="more" label={t('More Actions')} />}
+              items={[
+                entry && live && entry.uri ? {
+                  label: t('View on Site'), icon: 'external',
+                  onSelect: () => { window.open(entry.uri!, '_blank', 'noopener') },
+                } : null,
+                actions.publish && {
+                  label: status === 'scheduled' ? t('Change schedule') : live ? t('Publication date…') : t('Schedule…'),
+                  icon: 'calendar',
+                  onSelect: () => setPublishing(true),
+                },
+                entry && actions.duplicate && {
+                  label: t('Duplicate'), icon: 'copy', disabled: busy || dirty,
+                  description: busy || dirty ? t('Save changes before duplicating') : undefined,
+                  onSelect: () => { void duplicate() },
+                },
+                entry && actions.discard && entry.hasDraft && {
+                  label: t('Discard Unpublished Changes'), icon: 'undo',
+                  onSelect: () => { void replace('entries/discard-draft') },
+                },
+                entry && actions.unpublish && {
+                  label: t('Unpublish'), icon: 'eye-off',
+                  onSelect: () => { void replace('entries/unpublish') },
+                },
+                entry && actions.delete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: remove },
+              ]}
+            />
+            {/* One control says where it stands and what's next: the button while there's something to publish, its state when there isn't. */}
             {actions.publish ? (
-              <>
-                <Button variant="publish" disabled={publishDisabled} loading={busy} onClick={() => { void publish() }}>
-                  {status === 'scheduled' ? t('Publish now') : live ? t('Publish Changes') : t('Publish')}
+              upToDate ? (
+                <StatusDot status={status} className="ml-1 h-8 px-2 text-sm" />
+              ) : (
+                <Button variant="publish" size="md" className="ml-1" disabled={!working.title.trim()} loading={sending} onClick={() => { void publish() }}>
+                  <span className="max-sm:hidden">{status === 'scheduled' ? t('Publish now') : live ? t('Publish Changes') : t('Publish')}</span>
+                  <span className="sm:hidden">{t('Publish')}</span>
                 </Button>
-                <Menu
-                  trigger={<IconButton icon="chevron-down" label={t('Publication options')} disabled={busy} />}
-                  items={[{
-                    label: status === 'scheduled' ? t('Change schedule') : live ? t('Publication date…') : t('Schedule…'),
-                    onSelect: () => setPublishing(true),
-                  }]}
-                />
-              </>
+              )
             ) : editable && (
-              <Button variant="primary" disabled={!dirty || busy} loading={busy} onClick={() => { void save() }}>
+              <Button variant="primary" size="md" className="ml-1" disabled={!dirty || busy} loading={busy} onClick={() => { void save() }}>
                 {t('Save Draft')}
               </Button>
             )}

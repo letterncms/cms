@@ -162,7 +162,7 @@ export function App() {
 
   return (
     <div
-      className="relative flex h-screen overflow-hidden bg-bg"
+      className="cms-shell relative flex h-screen overflow-hidden bg-bg"
       style={{ '--cms-sidebar-width': sidebarShown ? '248px' : '0px', '--cms-sidebar-toggle': !full && !sidebarShown ? '32px' : '0px' } as CSSProperties}
     >
       {!full && (narrow ? (

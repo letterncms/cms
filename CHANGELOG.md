@@ -13,6 +13,7 @@
 
 ### Changed
 
+- A calmer top bar in the editor. A way back and tools on the left, the page's title in the middle, actions on the right. Publishing is one control that also says where things stand: the button when there's something to publish, a quiet "Published" when there isn't. Scheduling moved into the **More** menu. Plugins can use it with `back` and `title` on `Topbar`.
 - There are never more than two side panels: one on the left and one on the right. A screen that uses the right edge says so with `useScreenContext({ rightEdge: true })`, and a `Dock` then gets `floating`, a card over the page.
 
 - The sidebar is there or it isn't: hide it and it's gone, with a button at the top left and `⌘\` to bring it back. It stays that way until you change it. It no longer folds to a row of icons. A screen can bring a state of its own to it with `ScreenSidebar` from `@letterncms/ui`, like the settings one, with a way back, and folded away to start with.
