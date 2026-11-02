@@ -1,0 +1,2571 @@
+import { invalidate as e, languages as t, loadManifest as n, locale as r, panelsFor as i, plural as a, registry as o, run as s, t as c, timeAgo as l, useAbility as u, useAction as d, useManifest as f } from "@letterncms/sdk";
+import { useState as p, useSyncExternalStore as m } from "react";
+import { Avatar as h, Badge as g, Button as _, Dialog as v, Fields as y, Page as b, Section as x, confirm as S, getThemePreference as C, setThemePreference as w, toast as T } from "@letterncms/ui";
+import { jsx as E, jsxs as D } from "react/jsx-runtime";
+// ../../../workspace/node_modules/.pnpm/qrcode-generator@2.0.4/node_modules/qrcode-generator/dist/qrcode.mjs
+var O = function(e, t) {
+	let n = e, r = A[t], i = null, a = 0, o = null, s = [], c = {}, l = function(e, t) {
+		a = n * 4 + 17, i = function(e) {
+			let t = Array(e);
+			for (let n = 0; n < e; n += 1) {
+				t[n] = Array(e);
+				for (let r = 0; r < e; r += 1) t[n][r] = null;
+			}
+			return t;
+		}(a), u(0, 0), u(a - 7, 0), u(0, a - 7), p(), f(), h(e, t), n >= 7 && m(e), o ??= v(n, r, s), g(o, t);
+	}, u = function(e, t) {
+		for (let n = -1; n <= 7; n += 1) if (!(e + n <= -1 || a <= e + n)) for (let r = -1; r <= 7; r += 1) t + r <= -1 || a <= t + r || (0 <= n && n <= 6 && (r == 0 || r == 6) || 0 <= r && r <= 6 && (n == 0 || n == 6) || 2 <= n && n <= 4 && 2 <= r && r <= 4 ? i[e + n][t + r] = !0 : i[e + n][t + r] = !1);
+	}, d = function() {
+		let e = 0, t = 0;
+		for (let n = 0; n < 8; n += 1) {
+			l(!0, n);
+			let r = M.getLostPoint(c);
+			(n == 0 || e > r) && (e = r, t = n);
+		}
+		return t;
+	}, f = function() {
+		for (let e = 8; e < a - 8; e += 1) i[e][6] ?? (i[e][6] = e % 2 == 0);
+		for (let e = 8; e < a - 8; e += 1) i[6][e] ?? (i[6][e] = e % 2 == 0);
+	}, p = function() {
+		let e = M.getPatternPosition(n);
+		for (let t = 0; t < e.length; t += 1) for (let n = 0; n < e.length; n += 1) {
+			let r = e[t], a = e[n];
+			if (i[r][a] == null) for (let e = -2; e <= 2; e += 1) for (let t = -2; t <= 2; t += 1) e == -2 || e == 2 || t == -2 || t == 2 || e == 0 && t == 0 ? i[r + e][a + t] = !0 : i[r + e][a + t] = !1;
+		}
+	}, m = function(e) {
+		let t = M.getBCHTypeNumber(n);
+		for (let n = 0; n < 18; n += 1) {
+			let r = !e && (t >> n & 1) == 1;
+			i[Math.floor(n / 3)][n % 3 + a - 8 - 3] = r;
+		}
+		for (let n = 0; n < 18; n += 1) {
+			let r = !e && (t >> n & 1) == 1;
+			i[n % 3 + a - 8 - 3][Math.floor(n / 3)] = r;
+		}
+	}, h = function(e, t) {
+		let n = r << 3 | t, o = M.getBCHTypeInfo(n);
+		for (let t = 0; t < 15; t += 1) {
+			let n = !e && (o >> t & 1) == 1;
+			t < 6 ? i[t][8] = n : t < 8 ? i[t + 1][8] = n : i[a - 15 + t][8] = n;
+		}
+		for (let t = 0; t < 15; t += 1) {
+			let n = !e && (o >> t & 1) == 1;
+			t < 8 ? i[8][a - t - 1] = n : t < 9 ? i[8][15 - t - 1 + 1] = n : i[8][15 - t - 1] = n;
+		}
+		i[a - 8][8] = !e;
+	}, g = function(e, t) {
+		let n = -1, r = a - 1, o = 7, s = 0, c = M.getMaskFunction(t);
+		for (let t = a - 1; t > 0; t -= 2) for (t == 6 && --t;;) {
+			for (let n = 0; n < 2; n += 1) if (i[r][t - n] == null) {
+				let a = !1;
+				s < e.length && (a = (e[s] >>> o & 1) == 1), c(r, t - n) && (a = !a), i[r][t - n] = a, --o, o == -1 && (s += 1, o = 7);
+			}
+			if (r += n, r < 0 || a <= r) {
+				r -= n, n = -n;
+				break;
+			}
+		}
+	}, _ = function(e, t) {
+		let n = 0, r = 0, i = 0, a = Array(t.length), o = Array(t.length);
+		for (let s = 0; s < t.length; s += 1) {
+			let c = t[s].dataCount, l = t[s].totalCount - c;
+			r = Math.max(r, c), i = Math.max(i, l), a[s] = Array(c);
+			for (let t = 0; t < a[s].length; t += 1) a[s][t] = 255 & e.getBuffer()[t + n];
+			n += c;
+			let u = M.getErrorCorrectPolynomial(l), d = P(a[s], u.getLength() - 1).mod(u);
+			o[s] = Array(u.getLength() - 1);
+			for (let e = 0; e < o[s].length; e += 1) {
+				let t = e + d.getLength() - o[s].length;
+				o[s][e] = t >= 0 ? d.getAt(t) : 0;
+			}
+		}
+		let s = 0;
+		for (let e = 0; e < t.length; e += 1) s += t[e].totalCount;
+		let c = Array(s), l = 0;
+		for (let e = 0; e < r; e += 1) for (let n = 0; n < t.length; n += 1) e < a[n].length && (c[l] = a[n][e], l += 1);
+		for (let e = 0; e < i; e += 1) for (let n = 0; n < t.length; n += 1) e < o[n].length && (c[l] = o[n][e], l += 1);
+		return c;
+	}, v = function(e, t, n) {
+		let r = F.getRSBlocks(e, t), i = I();
+		for (let t = 0; t < n.length; t += 1) {
+			let r = n[t];
+			i.put(r.getMode(), 4), i.put(r.getLength(), M.getLengthInBits(r.getMode(), e)), r.write(i);
+		}
+		let a = 0;
+		for (let e = 0; e < r.length; e += 1) a += r[e].dataCount;
+		if (i.getLengthInBits() > a * 8) throw "code length overflow. (" + i.getLengthInBits() + ">" + a * 8 + ")";
+		for (i.getLengthInBits() + 4 <= a * 8 && i.put(0, 4); i.getLengthInBits() % 8 != 0;) i.putBit(!1);
+		for (; !(i.getLengthInBits() >= a * 8 || (i.put(236, 8), i.getLengthInBits() >= a * 8));) i.put(17, 8);
+		return _(i, r);
+	};
+	c.addData = function(e, t) {
+		t ||= "Byte";
+		let n = null;
+		switch (t) {
+			case "Numeric":
+				n = L(e);
+				break;
+			case "Alphanumeric":
+				n = R(e);
+				break;
+			case "Byte":
+				n = z(e);
+				break;
+			case "Kanji":
+				n = B(e);
+				break;
+			default: throw "mode:" + t;
+		}
+		s.push(n), o = null;
+	}, c.isDark = function(e, t) {
+		if (e < 0 || a <= e || t < 0 || a <= t) throw e + "," + t;
+		return i[e][t];
+	}, c.getModuleCount = function() {
+		return a;
+	}, c.make = function() {
+		if (n < 1) {
+			let e = 1;
+			for (; e < 40; e++) {
+				let t = F.getRSBlocks(e, r), n = I();
+				for (let t = 0; t < s.length; t++) {
+					let r = s[t];
+					n.put(r.getMode(), 4), n.put(r.getLength(), M.getLengthInBits(r.getMode(), e)), r.write(n);
+				}
+				let i = 0;
+				for (let e = 0; e < t.length; e++) i += t[e].dataCount;
+				if (n.getLengthInBits() <= i * 8) break;
+			}
+			n = e;
+		}
+		l(!1, d());
+	}, c.createTableTag = function(e, t) {
+		e ||= 2, t = t === void 0 ? e * 4 : t;
+		let n = "";
+		n += "<table style=\"", n += " border-width: 0px; border-style: none;", n += " border-collapse: collapse;", n += " padding: 0px; margin: " + t + "px;", n += "\">", n += "<tbody>";
+		for (let t = 0; t < c.getModuleCount(); t += 1) {
+			n += "<tr>";
+			for (let r = 0; r < c.getModuleCount(); r += 1) n += "<td style=\"", n += " border-width: 0px; border-style: none;", n += " border-collapse: collapse;", n += " padding: 0px; margin: 0px;", n += " width: " + e + "px;", n += " height: " + e + "px;", n += " background-color: ", n += c.isDark(t, r) ? "#000000" : "#ffffff", n += ";", n += "\"/>";
+			n += "</tr>";
+		}
+		return n += "</tbody>", n += "</table>", n;
+	}, c.createSvgTag = function(e, t, n, r) {
+		let i = {};
+		typeof arguments[0] == "object" && (i = arguments[0], e = i.cellSize, t = i.margin, n = i.alt, r = i.title), e ||= 2, t = t === void 0 ? e * 4 : t, n = typeof n == "string" ? { text: n } : n || {}, n.text = n.text || null, n.id = n.text ? n.id || "qrcode-description" : null, r = typeof r == "string" ? { text: r } : r || {}, r.text = r.text || null, r.id = r.text ? r.id || "qrcode-title" : null;
+		let a = c.getModuleCount() * e + t * 2, o, s, l, u, d = "", f;
+		for (f = "l" + e + ",0 0," + e + " -" + e + ",0 0,-" + e + "z ", d += "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"", d += i.scalable ? "" : " width=\"" + a + "px\" height=\"" + a + "px\"", d += " viewBox=\"0 0 " + a + " " + a + "\" ", d += " preserveAspectRatio=\"xMinYMin meet\"", d += r.text || n.text ? " role=\"img\" aria-labelledby=\"" + y([r.id, n.id].join(" ").trim()) + "\"" : "", d += ">", d += r.text ? "<title id=\"" + y(r.id) + "\">" + y(r.text) + "</title>" : "", d += n.text ? "<description id=\"" + y(n.id) + "\">" + y(n.text) + "</description>" : "", d += "<rect width=\"100%\" height=\"100%\" fill=\"white\" cx=\"0\" cy=\"0\"/>", d += "<path d=\"", l = 0; l < c.getModuleCount(); l += 1) for (u = l * e + t, o = 0; o < c.getModuleCount(); o += 1) c.isDark(l, o) && (s = o * e + t, d += "M" + s + "," + u + f);
+		return d += "\" stroke=\"transparent\" fill=\"black\"/>", d += "</svg>", d;
+	}, c.createDataURL = function(e, t) {
+		e ||= 2, t = t === void 0 ? e * 4 : t;
+		let n = c.getModuleCount() * e + t * 2, r = t, i = n - t;
+		return G(n, n, function(t, n) {
+			if (r <= t && t < i && r <= n && n < i) {
+				let i = Math.floor((t - r) / e), a = Math.floor((n - r) / e);
+				return +!c.isDark(a, i);
+			}
+			return 1;
+		});
+	}, c.createImgTag = function(e, t, n) {
+		e ||= 2, t = t === void 0 ? e * 4 : t;
+		let r = c.getModuleCount() * e + t * 2, i = "";
+		return i += "<img", i += " src=\"", i += c.createDataURL(e, t), i += "\"", i += " width=\"", i += r, i += "\"", i += " height=\"", i += r, i += "\"", n && (i += " alt=\"", i += y(n), i += "\""), i += "/>", i;
+	};
+	let y = function(e) {
+		let t = "";
+		for (let n = 0; n < e.length; n += 1) {
+			let r = e.charAt(n);
+			switch (r) {
+				case "<":
+					t += "&lt;";
+					break;
+				case ">":
+					t += "&gt;";
+					break;
+				case "&":
+					t += "&amp;";
+					break;
+				case "\"":
+					t += "&quot;";
+					break;
+				default: t += r;
+			}
+		}
+		return t;
+	}, b = function(e) {
+		e = e === void 0 ? 2 : e;
+		let t = c.getModuleCount() * 1 + e * 2, n = e, r = t - e, i, a, o, s, l, u = {
+			"██": "█",
+			"█ ": "▀",
+			" █": "▄",
+			"  ": " "
+		}, d = {
+			"██": "▀",
+			"█ ": "▀",
+			" █": " ",
+			"  ": " "
+		}, f = "";
+		for (i = 0; i < t; i += 2) {
+			for (o = Math.floor((i - n) / 1), s = Math.floor((i + 1 - n) / 1), a = 0; a < t; a += 1) l = "█", n <= a && a < r && n <= i && i < r && c.isDark(o, Math.floor((a - n) / 1)) && (l = " "), n <= a && a < r && n <= i + 1 && i + 1 < r && c.isDark(s, Math.floor((a - n) / 1)) ? l += " " : l += "█", f += e < 1 && i + 1 >= r ? d[l] : u[l];
+			f += "\n";
+		}
+		return t % 2 && e > 0 ? f.substring(0, f.length - t - 1) + Array(t + 1).join("▀") : f.substring(0, f.length - 1);
+	};
+	return c.createASCII = function(e, t) {
+		if (e ||= 1, e < 2) return b(t);
+		--e, t = t === void 0 ? e * 2 : t;
+		let n = c.getModuleCount() * e + t * 2, r = t, i = n - t, a, o, s, l, u = Array(e + 1).join("██"), d = Array(e + 1).join("  "), f = "", p = "";
+		for (a = 0; a < n; a += 1) {
+			for (s = Math.floor((a - r) / e), p = "", o = 0; o < n; o += 1) l = 1, r <= o && o < i && r <= a && a < i && c.isDark(s, Math.floor((o - r) / e)) && (l = 0), p += l ? u : d;
+			for (s = 0; s < e; s += 1) f += p + "\n";
+		}
+		return f.substring(0, f.length - 1);
+	}, c.renderTo2dContext = function(e, t) {
+		t ||= 2;
+		let n = c.getModuleCount();
+		for (let r = 0; r < n; r++) for (let i = 0; i < n; i++) e.fillStyle = c.isDark(r, i) ? "black" : "white", e.fillRect(i * t, r * t, t, t);
+	}, c;
+};
+O.stringToBytes = function(e) {
+	let t = [];
+	for (let n = 0; n < e.length; n += 1) {
+		let r = e.charCodeAt(n);
+		t.push(r & 255);
+	}
+	return t;
+}, O.createStringToBytes = function(e, t) {
+	let n = function() {
+		let n = U(e), r = function() {
+			let e = n.read();
+			if (e == -1) throw "eof";
+			return e;
+		}, i = 0, a = {};
+		for (;;) {
+			let e = n.read();
+			if (e == -1) break;
+			let t = r(), o = r(), s = r(), c = String.fromCharCode(e << 8 | t);
+			a[c] = o << 8 | s, i += 1;
+		}
+		if (i != t) throw i + " != " + t;
+		return a;
+	}();
+	return function(e) {
+		let t = [];
+		for (let r = 0; r < e.length; r += 1) {
+			let i = e.charCodeAt(r);
+			if (i < 128) t.push(i);
+			else {
+				let i = n[e.charAt(r)];
+				typeof i == "number" ? (i & 255) == i ? t.push(i) : (t.push(i >>> 8), t.push(i & 255)) : t.push(63);
+			}
+		}
+		return t;
+	};
+};
+var k = {
+	MODE_NUMBER: 1,
+	MODE_ALPHA_NUM: 2,
+	MODE_8BIT_BYTE: 4,
+	MODE_KANJI: 8
+}, A = {
+	L: 1,
+	M: 0,
+	Q: 3,
+	H: 2
+}, j = {
+	PATTERN000: 0,
+	PATTERN001: 1,
+	PATTERN010: 2,
+	PATTERN011: 3,
+	PATTERN100: 4,
+	PATTERN101: 5,
+	PATTERN110: 6,
+	PATTERN111: 7
+}, M = function() {
+	let e = [
+		[],
+		[6, 18],
+		[6, 22],
+		[6, 26],
+		[6, 30],
+		[6, 34],
+		[
+			6,
+			22,
+			38
+		],
+		[
+			6,
+			24,
+			42
+		],
+		[
+			6,
+			26,
+			46
+		],
+		[
+			6,
+			28,
+			50
+		],
+		[
+			6,
+			30,
+			54
+		],
+		[
+			6,
+			32,
+			58
+		],
+		[
+			6,
+			34,
+			62
+		],
+		[
+			6,
+			26,
+			46,
+			66
+		],
+		[
+			6,
+			26,
+			48,
+			70
+		],
+		[
+			6,
+			26,
+			50,
+			74
+		],
+		[
+			6,
+			30,
+			54,
+			78
+		],
+		[
+			6,
+			30,
+			56,
+			82
+		],
+		[
+			6,
+			30,
+			58,
+			86
+		],
+		[
+			6,
+			34,
+			62,
+			90
+		],
+		[
+			6,
+			28,
+			50,
+			72,
+			94
+		],
+		[
+			6,
+			26,
+			50,
+			74,
+			98
+		],
+		[
+			6,
+			30,
+			54,
+			78,
+			102
+		],
+		[
+			6,
+			28,
+			54,
+			80,
+			106
+		],
+		[
+			6,
+			32,
+			58,
+			84,
+			110
+		],
+		[
+			6,
+			30,
+			58,
+			86,
+			114
+		],
+		[
+			6,
+			34,
+			62,
+			90,
+			118
+		],
+		[
+			6,
+			26,
+			50,
+			74,
+			98,
+			122
+		],
+		[
+			6,
+			30,
+			54,
+			78,
+			102,
+			126
+		],
+		[
+			6,
+			26,
+			52,
+			78,
+			104,
+			130
+		],
+		[
+			6,
+			30,
+			56,
+			82,
+			108,
+			134
+		],
+		[
+			6,
+			34,
+			60,
+			86,
+			112,
+			138
+		],
+		[
+			6,
+			30,
+			58,
+			86,
+			114,
+			142
+		],
+		[
+			6,
+			34,
+			62,
+			90,
+			118,
+			146
+		],
+		[
+			6,
+			30,
+			54,
+			78,
+			102,
+			126,
+			150
+		],
+		[
+			6,
+			24,
+			50,
+			76,
+			102,
+			128,
+			154
+		],
+		[
+			6,
+			28,
+			54,
+			80,
+			106,
+			132,
+			158
+		],
+		[
+			6,
+			32,
+			58,
+			84,
+			110,
+			136,
+			162
+		],
+		[
+			6,
+			26,
+			54,
+			82,
+			110,
+			138,
+			166
+		],
+		[
+			6,
+			30,
+			58,
+			86,
+			114,
+			142,
+			170
+		]
+	], t = 1335, n = 7973, r = {}, i = function(e) {
+		let t = 0;
+		for (; e != 0;) t += 1, e >>>= 1;
+		return t;
+	};
+	return r.getBCHTypeInfo = function(e) {
+		let n = e << 10;
+		for (; i(n) - i(t) >= 0;) n ^= t << i(n) - i(t);
+		return (e << 10 | n) ^ 21522;
+	}, r.getBCHTypeNumber = function(e) {
+		let t = e << 12;
+		for (; i(t) - i(n) >= 0;) t ^= n << i(t) - i(n);
+		return e << 12 | t;
+	}, r.getPatternPosition = function(t) {
+		return e[t - 1];
+	}, r.getMaskFunction = function(e) {
+		switch (e) {
+			case j.PATTERN000: return function(e, t) {
+				return (e + t) % 2 == 0;
+			};
+			case j.PATTERN001: return function(e, t) {
+				return e % 2 == 0;
+			};
+			case j.PATTERN010: return function(e, t) {
+				return t % 3 == 0;
+			};
+			case j.PATTERN011: return function(e, t) {
+				return (e + t) % 3 == 0;
+			};
+			case j.PATTERN100: return function(e, t) {
+				return (Math.floor(e / 2) + Math.floor(t / 3)) % 2 == 0;
+			};
+			case j.PATTERN101: return function(e, t) {
+				return e * t % 2 + e * t % 3 == 0;
+			};
+			case j.PATTERN110: return function(e, t) {
+				return (e * t % 2 + e * t % 3) % 2 == 0;
+			};
+			case j.PATTERN111: return function(e, t) {
+				return (e * t % 3 + (e + t) % 2) % 2 == 0;
+			};
+			default: throw "bad maskPattern:" + e;
+		}
+	}, r.getErrorCorrectPolynomial = function(e) {
+		let t = P([1], 0);
+		for (let n = 0; n < e; n += 1) t = t.multiply(P([1, N.gexp(n)], 0));
+		return t;
+	}, r.getLengthInBits = function(e, t) {
+		if (1 <= t && t < 10) switch (e) {
+			case k.MODE_NUMBER: return 10;
+			case k.MODE_ALPHA_NUM: return 9;
+			case k.MODE_8BIT_BYTE: return 8;
+			case k.MODE_KANJI: return 8;
+			default: throw "mode:" + e;
+		}
+		else if (t < 27) switch (e) {
+			case k.MODE_NUMBER: return 12;
+			case k.MODE_ALPHA_NUM: return 11;
+			case k.MODE_8BIT_BYTE: return 16;
+			case k.MODE_KANJI: return 10;
+			default: throw "mode:" + e;
+		}
+		else if (t < 41) switch (e) {
+			case k.MODE_NUMBER: return 14;
+			case k.MODE_ALPHA_NUM: return 13;
+			case k.MODE_8BIT_BYTE: return 16;
+			case k.MODE_KANJI: return 12;
+			default: throw "mode:" + e;
+		}
+		else throw "type:" + t;
+	}, r.getLostPoint = function(e) {
+		let t = e.getModuleCount(), n = 0;
+		for (let r = 0; r < t; r += 1) for (let i = 0; i < t; i += 1) {
+			let a = 0, o = e.isDark(r, i);
+			for (let n = -1; n <= 1; n += 1) if (!(r + n < 0 || t <= r + n)) for (let s = -1; s <= 1; s += 1) i + s < 0 || t <= i + s || (n != 0 || s != 0) && o == e.isDark(r + n, i + s) && (a += 1);
+			a > 5 && (n += 3 + a - 5);
+		}
+		for (let r = 0; r < t - 1; r += 1) for (let i = 0; i < t - 1; i += 1) {
+			let t = 0;
+			e.isDark(r, i) && (t += 1), e.isDark(r + 1, i) && (t += 1), e.isDark(r, i + 1) && (t += 1), e.isDark(r + 1, i + 1) && (t += 1), (t == 0 || t == 4) && (n += 3);
+		}
+		for (let r = 0; r < t; r += 1) for (let i = 0; i < t - 6; i += 1) e.isDark(r, i) && !e.isDark(r, i + 1) && e.isDark(r, i + 2) && e.isDark(r, i + 3) && e.isDark(r, i + 4) && !e.isDark(r, i + 5) && e.isDark(r, i + 6) && (n += 40);
+		for (let r = 0; r < t; r += 1) for (let i = 0; i < t - 6; i += 1) e.isDark(i, r) && !e.isDark(i + 1, r) && e.isDark(i + 2, r) && e.isDark(i + 3, r) && e.isDark(i + 4, r) && !e.isDark(i + 5, r) && e.isDark(i + 6, r) && (n += 40);
+		let r = 0;
+		for (let n = 0; n < t; n += 1) for (let i = 0; i < t; i += 1) e.isDark(i, n) && (r += 1);
+		let i = Math.abs(100 * r / t / t - 50) / 5;
+		return n += i * 10, n;
+	}, r;
+}(), N = function() {
+	let e = Array(256), t = Array(256);
+	for (let t = 0; t < 8; t += 1) e[t] = 1 << t;
+	for (let t = 8; t < 256; t += 1) e[t] = e[t - 4] ^ e[t - 5] ^ e[t - 6] ^ e[t - 8];
+	for (let n = 0; n < 255; n += 1) t[e[n]] = n;
+	let n = {};
+	return n.glog = function(e) {
+		if (e < 1) throw "glog(" + e + ")";
+		return t[e];
+	}, n.gexp = function(t) {
+		for (; t < 0;) t += 255;
+		for (; t >= 256;) t -= 255;
+		return e[t];
+	}, n;
+}(), P = function(e, t) {
+	if (e.length === void 0) throw e.length + "/" + t;
+	let n = function() {
+		let n = 0;
+		for (; n < e.length && e[n] == 0;) n += 1;
+		let r = Array(e.length - n + t);
+		for (let t = 0; t < e.length - n; t += 1) r[t] = e[t + n];
+		return r;
+	}(), r = {};
+	return r.getAt = function(e) {
+		return n[e];
+	}, r.getLength = function() {
+		return n.length;
+	}, r.multiply = function(e) {
+		let t = Array(r.getLength() + e.getLength() - 1);
+		for (let n = 0; n < r.getLength(); n += 1) for (let i = 0; i < e.getLength(); i += 1) t[n + i] ^= N.gexp(N.glog(r.getAt(n)) + N.glog(e.getAt(i)));
+		return P(t, 0);
+	}, r.mod = function(e) {
+		if (r.getLength() - e.getLength() < 0) return r;
+		let t = N.glog(r.getAt(0)) - N.glog(e.getAt(0)), n = Array(r.getLength());
+		for (let e = 0; e < r.getLength(); e += 1) n[e] = r.getAt(e);
+		for (let r = 0; r < e.getLength(); r += 1) n[r] ^= N.gexp(N.glog(e.getAt(r)) + t);
+		return P(n, 0).mod(e);
+	}, r;
+}, F = function() {
+	let e = [
+		[
+			1,
+			26,
+			19
+		],
+		[
+			1,
+			26,
+			16
+		],
+		[
+			1,
+			26,
+			13
+		],
+		[
+			1,
+			26,
+			9
+		],
+		[
+			1,
+			44,
+			34
+		],
+		[
+			1,
+			44,
+			28
+		],
+		[
+			1,
+			44,
+			22
+		],
+		[
+			1,
+			44,
+			16
+		],
+		[
+			1,
+			70,
+			55
+		],
+		[
+			1,
+			70,
+			44
+		],
+		[
+			2,
+			35,
+			17
+		],
+		[
+			2,
+			35,
+			13
+		],
+		[
+			1,
+			100,
+			80
+		],
+		[
+			2,
+			50,
+			32
+		],
+		[
+			2,
+			50,
+			24
+		],
+		[
+			4,
+			25,
+			9
+		],
+		[
+			1,
+			134,
+			108
+		],
+		[
+			2,
+			67,
+			43
+		],
+		[
+			2,
+			33,
+			15,
+			2,
+			34,
+			16
+		],
+		[
+			2,
+			33,
+			11,
+			2,
+			34,
+			12
+		],
+		[
+			2,
+			86,
+			68
+		],
+		[
+			4,
+			43,
+			27
+		],
+		[
+			4,
+			43,
+			19
+		],
+		[
+			4,
+			43,
+			15
+		],
+		[
+			2,
+			98,
+			78
+		],
+		[
+			4,
+			49,
+			31
+		],
+		[
+			2,
+			32,
+			14,
+			4,
+			33,
+			15
+		],
+		[
+			4,
+			39,
+			13,
+			1,
+			40,
+			14
+		],
+		[
+			2,
+			121,
+			97
+		],
+		[
+			2,
+			60,
+			38,
+			2,
+			61,
+			39
+		],
+		[
+			4,
+			40,
+			18,
+			2,
+			41,
+			19
+		],
+		[
+			4,
+			40,
+			14,
+			2,
+			41,
+			15
+		],
+		[
+			2,
+			146,
+			116
+		],
+		[
+			3,
+			58,
+			36,
+			2,
+			59,
+			37
+		],
+		[
+			4,
+			36,
+			16,
+			4,
+			37,
+			17
+		],
+		[
+			4,
+			36,
+			12,
+			4,
+			37,
+			13
+		],
+		[
+			2,
+			86,
+			68,
+			2,
+			87,
+			69
+		],
+		[
+			4,
+			69,
+			43,
+			1,
+			70,
+			44
+		],
+		[
+			6,
+			43,
+			19,
+			2,
+			44,
+			20
+		],
+		[
+			6,
+			43,
+			15,
+			2,
+			44,
+			16
+		],
+		[
+			4,
+			101,
+			81
+		],
+		[
+			1,
+			80,
+			50,
+			4,
+			81,
+			51
+		],
+		[
+			4,
+			50,
+			22,
+			4,
+			51,
+			23
+		],
+		[
+			3,
+			36,
+			12,
+			8,
+			37,
+			13
+		],
+		[
+			2,
+			116,
+			92,
+			2,
+			117,
+			93
+		],
+		[
+			6,
+			58,
+			36,
+			2,
+			59,
+			37
+		],
+		[
+			4,
+			46,
+			20,
+			6,
+			47,
+			21
+		],
+		[
+			7,
+			42,
+			14,
+			4,
+			43,
+			15
+		],
+		[
+			4,
+			133,
+			107
+		],
+		[
+			8,
+			59,
+			37,
+			1,
+			60,
+			38
+		],
+		[
+			8,
+			44,
+			20,
+			4,
+			45,
+			21
+		],
+		[
+			12,
+			33,
+			11,
+			4,
+			34,
+			12
+		],
+		[
+			3,
+			145,
+			115,
+			1,
+			146,
+			116
+		],
+		[
+			4,
+			64,
+			40,
+			5,
+			65,
+			41
+		],
+		[
+			11,
+			36,
+			16,
+			5,
+			37,
+			17
+		],
+		[
+			11,
+			36,
+			12,
+			5,
+			37,
+			13
+		],
+		[
+			5,
+			109,
+			87,
+			1,
+			110,
+			88
+		],
+		[
+			5,
+			65,
+			41,
+			5,
+			66,
+			42
+		],
+		[
+			5,
+			54,
+			24,
+			7,
+			55,
+			25
+		],
+		[
+			11,
+			36,
+			12,
+			7,
+			37,
+			13
+		],
+		[
+			5,
+			122,
+			98,
+			1,
+			123,
+			99
+		],
+		[
+			7,
+			73,
+			45,
+			3,
+			74,
+			46
+		],
+		[
+			15,
+			43,
+			19,
+			2,
+			44,
+			20
+		],
+		[
+			3,
+			45,
+			15,
+			13,
+			46,
+			16
+		],
+		[
+			1,
+			135,
+			107,
+			5,
+			136,
+			108
+		],
+		[
+			10,
+			74,
+			46,
+			1,
+			75,
+			47
+		],
+		[
+			1,
+			50,
+			22,
+			15,
+			51,
+			23
+		],
+		[
+			2,
+			42,
+			14,
+			17,
+			43,
+			15
+		],
+		[
+			5,
+			150,
+			120,
+			1,
+			151,
+			121
+		],
+		[
+			9,
+			69,
+			43,
+			4,
+			70,
+			44
+		],
+		[
+			17,
+			50,
+			22,
+			1,
+			51,
+			23
+		],
+		[
+			2,
+			42,
+			14,
+			19,
+			43,
+			15
+		],
+		[
+			3,
+			141,
+			113,
+			4,
+			142,
+			114
+		],
+		[
+			3,
+			70,
+			44,
+			11,
+			71,
+			45
+		],
+		[
+			17,
+			47,
+			21,
+			4,
+			48,
+			22
+		],
+		[
+			9,
+			39,
+			13,
+			16,
+			40,
+			14
+		],
+		[
+			3,
+			135,
+			107,
+			5,
+			136,
+			108
+		],
+		[
+			3,
+			67,
+			41,
+			13,
+			68,
+			42
+		],
+		[
+			15,
+			54,
+			24,
+			5,
+			55,
+			25
+		],
+		[
+			15,
+			43,
+			15,
+			10,
+			44,
+			16
+		],
+		[
+			4,
+			144,
+			116,
+			4,
+			145,
+			117
+		],
+		[
+			17,
+			68,
+			42
+		],
+		[
+			17,
+			50,
+			22,
+			6,
+			51,
+			23
+		],
+		[
+			19,
+			46,
+			16,
+			6,
+			47,
+			17
+		],
+		[
+			2,
+			139,
+			111,
+			7,
+			140,
+			112
+		],
+		[
+			17,
+			74,
+			46
+		],
+		[
+			7,
+			54,
+			24,
+			16,
+			55,
+			25
+		],
+		[
+			34,
+			37,
+			13
+		],
+		[
+			4,
+			151,
+			121,
+			5,
+			152,
+			122
+		],
+		[
+			4,
+			75,
+			47,
+			14,
+			76,
+			48
+		],
+		[
+			11,
+			54,
+			24,
+			14,
+			55,
+			25
+		],
+		[
+			16,
+			45,
+			15,
+			14,
+			46,
+			16
+		],
+		[
+			6,
+			147,
+			117,
+			4,
+			148,
+			118
+		],
+		[
+			6,
+			73,
+			45,
+			14,
+			74,
+			46
+		],
+		[
+			11,
+			54,
+			24,
+			16,
+			55,
+			25
+		],
+		[
+			30,
+			46,
+			16,
+			2,
+			47,
+			17
+		],
+		[
+			8,
+			132,
+			106,
+			4,
+			133,
+			107
+		],
+		[
+			8,
+			75,
+			47,
+			13,
+			76,
+			48
+		],
+		[
+			7,
+			54,
+			24,
+			22,
+			55,
+			25
+		],
+		[
+			22,
+			45,
+			15,
+			13,
+			46,
+			16
+		],
+		[
+			10,
+			142,
+			114,
+			2,
+			143,
+			115
+		],
+		[
+			19,
+			74,
+			46,
+			4,
+			75,
+			47
+		],
+		[
+			28,
+			50,
+			22,
+			6,
+			51,
+			23
+		],
+		[
+			33,
+			46,
+			16,
+			4,
+			47,
+			17
+		],
+		[
+			8,
+			152,
+			122,
+			4,
+			153,
+			123
+		],
+		[
+			22,
+			73,
+			45,
+			3,
+			74,
+			46
+		],
+		[
+			8,
+			53,
+			23,
+			26,
+			54,
+			24
+		],
+		[
+			12,
+			45,
+			15,
+			28,
+			46,
+			16
+		],
+		[
+			3,
+			147,
+			117,
+			10,
+			148,
+			118
+		],
+		[
+			3,
+			73,
+			45,
+			23,
+			74,
+			46
+		],
+		[
+			4,
+			54,
+			24,
+			31,
+			55,
+			25
+		],
+		[
+			11,
+			45,
+			15,
+			31,
+			46,
+			16
+		],
+		[
+			7,
+			146,
+			116,
+			7,
+			147,
+			117
+		],
+		[
+			21,
+			73,
+			45,
+			7,
+			74,
+			46
+		],
+		[
+			1,
+			53,
+			23,
+			37,
+			54,
+			24
+		],
+		[
+			19,
+			45,
+			15,
+			26,
+			46,
+			16
+		],
+		[
+			5,
+			145,
+			115,
+			10,
+			146,
+			116
+		],
+		[
+			19,
+			75,
+			47,
+			10,
+			76,
+			48
+		],
+		[
+			15,
+			54,
+			24,
+			25,
+			55,
+			25
+		],
+		[
+			23,
+			45,
+			15,
+			25,
+			46,
+			16
+		],
+		[
+			13,
+			145,
+			115,
+			3,
+			146,
+			116
+		],
+		[
+			2,
+			74,
+			46,
+			29,
+			75,
+			47
+		],
+		[
+			42,
+			54,
+			24,
+			1,
+			55,
+			25
+		],
+		[
+			23,
+			45,
+			15,
+			28,
+			46,
+			16
+		],
+		[
+			17,
+			145,
+			115
+		],
+		[
+			10,
+			74,
+			46,
+			23,
+			75,
+			47
+		],
+		[
+			10,
+			54,
+			24,
+			35,
+			55,
+			25
+		],
+		[
+			19,
+			45,
+			15,
+			35,
+			46,
+			16
+		],
+		[
+			17,
+			145,
+			115,
+			1,
+			146,
+			116
+		],
+		[
+			14,
+			74,
+			46,
+			21,
+			75,
+			47
+		],
+		[
+			29,
+			54,
+			24,
+			19,
+			55,
+			25
+		],
+		[
+			11,
+			45,
+			15,
+			46,
+			46,
+			16
+		],
+		[
+			13,
+			145,
+			115,
+			6,
+			146,
+			116
+		],
+		[
+			14,
+			74,
+			46,
+			23,
+			75,
+			47
+		],
+		[
+			44,
+			54,
+			24,
+			7,
+			55,
+			25
+		],
+		[
+			59,
+			46,
+			16,
+			1,
+			47,
+			17
+		],
+		[
+			12,
+			151,
+			121,
+			7,
+			152,
+			122
+		],
+		[
+			12,
+			75,
+			47,
+			26,
+			76,
+			48
+		],
+		[
+			39,
+			54,
+			24,
+			14,
+			55,
+			25
+		],
+		[
+			22,
+			45,
+			15,
+			41,
+			46,
+			16
+		],
+		[
+			6,
+			151,
+			121,
+			14,
+			152,
+			122
+		],
+		[
+			6,
+			75,
+			47,
+			34,
+			76,
+			48
+		],
+		[
+			46,
+			54,
+			24,
+			10,
+			55,
+			25
+		],
+		[
+			2,
+			45,
+			15,
+			64,
+			46,
+			16
+		],
+		[
+			17,
+			152,
+			122,
+			4,
+			153,
+			123
+		],
+		[
+			29,
+			74,
+			46,
+			14,
+			75,
+			47
+		],
+		[
+			49,
+			54,
+			24,
+			10,
+			55,
+			25
+		],
+		[
+			24,
+			45,
+			15,
+			46,
+			46,
+			16
+		],
+		[
+			4,
+			152,
+			122,
+			18,
+			153,
+			123
+		],
+		[
+			13,
+			74,
+			46,
+			32,
+			75,
+			47
+		],
+		[
+			48,
+			54,
+			24,
+			14,
+			55,
+			25
+		],
+		[
+			42,
+			45,
+			15,
+			32,
+			46,
+			16
+		],
+		[
+			20,
+			147,
+			117,
+			4,
+			148,
+			118
+		],
+		[
+			40,
+			75,
+			47,
+			7,
+			76,
+			48
+		],
+		[
+			43,
+			54,
+			24,
+			22,
+			55,
+			25
+		],
+		[
+			10,
+			45,
+			15,
+			67,
+			46,
+			16
+		],
+		[
+			19,
+			148,
+			118,
+			6,
+			149,
+			119
+		],
+		[
+			18,
+			75,
+			47,
+			31,
+			76,
+			48
+		],
+		[
+			34,
+			54,
+			24,
+			34,
+			55,
+			25
+		],
+		[
+			20,
+			45,
+			15,
+			61,
+			46,
+			16
+		]
+	], t = function(e, t) {
+		let n = {};
+		return n.totalCount = e, n.dataCount = t, n;
+	}, n = {}, r = function(t, n) {
+		switch (n) {
+			case A.L: return e[(t - 1) * 4 + 0];
+			case A.M: return e[(t - 1) * 4 + 1];
+			case A.Q: return e[(t - 1) * 4 + 2];
+			case A.H: return e[(t - 1) * 4 + 3];
+			default: return;
+		}
+	};
+	return n.getRSBlocks = function(e, n) {
+		let i = r(e, n);
+		if (i === void 0) throw "bad rs block @ typeNumber:" + e + "/errorCorrectionLevel:" + n;
+		let a = i.length / 3, o = [];
+		for (let e = 0; e < a; e += 1) {
+			let n = i[e * 3 + 0], r = i[e * 3 + 1], a = i[e * 3 + 2];
+			for (let e = 0; e < n; e += 1) o.push(t(r, a));
+		}
+		return o;
+	}, n;
+}(), I = function() {
+	let e = [], t = 0, n = {};
+	return n.getBuffer = function() {
+		return e;
+	}, n.getAt = function(t) {
+		let n = Math.floor(t / 8);
+		return (e[n] >>> 7 - t % 8 & 1) == 1;
+	}, n.put = function(e, t) {
+		for (let r = 0; r < t; r += 1) n.putBit((e >>> t - r - 1 & 1) == 1);
+	}, n.getLengthInBits = function() {
+		return t;
+	}, n.putBit = function(n) {
+		let r = Math.floor(t / 8);
+		e.length <= r && e.push(0), n && (e[r] |= 128 >>> t % 8), t += 1;
+	}, n;
+}, L = function(e) {
+	let t = k.MODE_NUMBER, n = e, r = {};
+	r.getMode = function() {
+		return t;
+	}, r.getLength = function(e) {
+		return n.length;
+	}, r.write = function(e) {
+		let t = n, r = 0;
+		for (; r + 2 < t.length;) e.put(i(t.substring(r, r + 3)), 10), r += 3;
+		r < t.length && (t.length - r == 1 ? e.put(i(t.substring(r, r + 1)), 4) : t.length - r == 2 && e.put(i(t.substring(r, r + 2)), 7));
+	};
+	let i = function(e) {
+		let t = 0;
+		for (let n = 0; n < e.length; n += 1) t = t * 10 + a(e.charAt(n));
+		return t;
+	}, a = function(e) {
+		if ("0" <= e && e <= "9") return e.charCodeAt(0) - 48;
+		throw "illegal char :" + e;
+	};
+	return r;
+}, R = function(e) {
+	let t = k.MODE_ALPHA_NUM, n = e, r = {};
+	r.getMode = function() {
+		return t;
+	}, r.getLength = function(e) {
+		return n.length;
+	}, r.write = function(e) {
+		let t = n, r = 0;
+		for (; r + 1 < t.length;) e.put(i(t.charAt(r)) * 45 + i(t.charAt(r + 1)), 11), r += 2;
+		r < t.length && e.put(i(t.charAt(r)), 6);
+	};
+	let i = function(e) {
+		if ("0" <= e && e <= "9") return e.charCodeAt(0) - 48;
+		if ("A" <= e && e <= "Z") return e.charCodeAt(0) - 65 + 10;
+		switch (e) {
+			case " ": return 36;
+			case "$": return 37;
+			case "%": return 38;
+			case "*": return 39;
+			case "+": return 40;
+			case "-": return 41;
+			case ".": return 42;
+			case "/": return 43;
+			case ":": return 44;
+			default: throw "illegal char :" + e;
+		}
+	};
+	return r;
+}, z = function(e) {
+	let t = k.MODE_8BIT_BYTE, n = O.stringToBytes(e), r = {};
+	return r.getMode = function() {
+		return t;
+	}, r.getLength = function(e) {
+		return n.length;
+	}, r.write = function(e) {
+		for (let t = 0; t < n.length; t += 1) e.put(n[t], 8);
+	}, r;
+}, B = function(e) {
+	let t = k.MODE_KANJI, n = O.stringToBytes;
+	(function(e, t) {
+		let r = n(e);
+		if (r.length != 2 || (r[0] << 8 | r[1]) != t) throw "sjis not supported.";
+	})("友", 38726);
+	let r = n(e), i = {};
+	return i.getMode = function() {
+		return t;
+	}, i.getLength = function(e) {
+		return ~~(r.length / 2);
+	}, i.write = function(e) {
+		let t = r, n = 0;
+		for (; n + 1 < t.length;) {
+			let r = (255 & t[n]) << 8 | 255 & t[n + 1];
+			if (33088 <= r && r <= 40956) r -= 33088;
+			else if (57408 <= r && r <= 60351) r -= 49472;
+			else throw "illegal char at " + (n + 1) + "/" + r;
+			r = (r >>> 8 & 255) * 192 + (r & 255), e.put(r, 13), n += 2;
+		}
+		if (n < t.length) throw "illegal char at " + (n + 1);
+	}, i;
+}, V = function() {
+	let e = [], t = {};
+	return t.writeByte = function(t) {
+		e.push(t & 255);
+	}, t.writeShort = function(e) {
+		t.writeByte(e), t.writeByte(e >>> 8);
+	}, t.writeBytes = function(e, n, r) {
+		n ||= 0, r ||= e.length;
+		for (let i = 0; i < r; i += 1) t.writeByte(e[i + n]);
+	}, t.writeString = function(e) {
+		for (let n = 0; n < e.length; n += 1) t.writeByte(e.charCodeAt(n));
+	}, t.toByteArray = function() {
+		return e;
+	}, t.toString = function() {
+		let t = "";
+		t += "[";
+		for (let n = 0; n < e.length; n += 1) n > 0 && (t += ","), t += e[n];
+		return t += "]", t;
+	}, t;
+}, H = function() {
+	let e = 0, t = 0, n = 0, r = "", i = {}, a = function(e) {
+		r += String.fromCharCode(o(e & 63));
+	}, o = function(e) {
+		if (e < 0) throw "n:" + e;
+		if (e < 26) return 65 + e;
+		if (e < 52) return 97 + (e - 26);
+		if (e < 62) return 48 + (e - 52);
+		if (e == 62) return 43;
+		if (e == 63) return 47;
+		throw "n:" + e;
+	};
+	return i.writeByte = function(r) {
+		for (e = e << 8 | r & 255, t += 8, n += 1; t >= 6;) a(e >>> t - 6), t -= 6;
+	}, i.flush = function() {
+		if (t > 0 && (a(e << 6 - t), e = 0, t = 0), n % 3 != 0) {
+			let e = 3 - n % 3;
+			for (let t = 0; t < e; t += 1) r += "=";
+		}
+	}, i.toString = function() {
+		return r;
+	}, i;
+}, U = function(e) {
+	let t = e, n = 0, r = 0, i = 0, a = {};
+	a.read = function() {
+		for (; i < 8;) {
+			if (n >= t.length) {
+				if (i == 0) return -1;
+				throw "unexpected end of file./" + i;
+			}
+			let e = t.charAt(n);
+			if (n += 1, e == "=") return i = 0, -1;
+			e.match(/^\s$/) || (r = r << 6 | o(e.charCodeAt(0)), i += 6);
+		}
+		let e = r >>> i - 8 & 255;
+		return i -= 8, e;
+	};
+	let o = function(e) {
+		if (65 <= e && e <= 90) return e - 65;
+		if (97 <= e && e <= 122) return e - 97 + 26;
+		if (48 <= e && e <= 57) return e - 48 + 52;
+		if (e == 43) return 62;
+		if (e == 47) return 63;
+		throw "c:" + e;
+	};
+	return a;
+}, W = function(e, t) {
+	let n = e, r = t, i = Array(e * t), a = {};
+	a.setPixel = function(e, t, r) {
+		i[t * n + e] = r;
+	}, a.write = function(e) {
+		e.writeString("GIF87a"), e.writeShort(n), e.writeShort(r), e.writeByte(128), e.writeByte(0), e.writeByte(0), e.writeByte(0), e.writeByte(0), e.writeByte(0), e.writeByte(255), e.writeByte(255), e.writeByte(255), e.writeString(","), e.writeShort(0), e.writeShort(0), e.writeShort(n), e.writeShort(r), e.writeByte(0);
+		let t = s(2);
+		e.writeByte(2);
+		let i = 0;
+		for (; t.length - i > 255;) e.writeByte(255), e.writeBytes(t, i, 255), i += 255;
+		e.writeByte(t.length - i), e.writeBytes(t, i, t.length - i), e.writeByte(0), e.writeString(";");
+	};
+	let o = function(e) {
+		let t = e, n = 0, r = 0, i = {};
+		return i.write = function(e, i) {
+			if (e >>> i) throw "length over";
+			for (; n + i >= 8;) t.writeByte(255 & (e << n | r)), i -= 8 - n, e >>>= 8 - n, r = 0, n = 0;
+			r = e << n | r, n += i;
+		}, i.flush = function() {
+			n > 0 && t.writeByte(r);
+		}, i;
+	}, s = function(e) {
+		let t = 1 << e, n = (1 << e) + 1, r = e + 1, a = c();
+		for (let e = 0; e < t; e += 1) a.add(String.fromCharCode(e));
+		a.add(String.fromCharCode(t)), a.add(String.fromCharCode(n));
+		let s = V(), l = o(s);
+		l.write(t, r);
+		let u = 0, d = String.fromCharCode(i[u]);
+		for (u += 1; u < i.length;) {
+			let e = String.fromCharCode(i[u]);
+			u += 1, a.contains(d + e) ? d += e : (l.write(a.indexOf(d), r), a.size() < 4095 && (a.size() == 1 << r && (r += 1), a.add(d + e)), d = e);
+		}
+		return l.write(a.indexOf(d), r), l.write(n, r), l.flush(), s.toByteArray();
+	}, c = function() {
+		let e = {}, t = 0, n = {};
+		return n.add = function(r) {
+			if (n.contains(r)) throw "dup key:" + r;
+			e[r] = t, t += 1;
+		}, n.size = function() {
+			return t;
+		}, n.indexOf = function(t) {
+			return e[t];
+		}, n.contains = function(t) {
+			return e[t] !== void 0;
+		}, n;
+	};
+	return a;
+}, G = function(e, t, n) {
+	let r = W(e, t);
+	for (let i = 0; i < t; i += 1) for (let t = 0; t < e; t += 1) r.setPixel(t, i, n(t, i));
+	let i = V();
+	r.write(i);
+	let a = H(), o = i.toByteArray();
+	for (let e = 0; e < o.length; e += 1) a.writeByte(o[e]);
+	return a.flush(), "data:image/gif;base64," + a;
+};
+O.stringToBytes;
+// admin/src/Account.tsx
+function K() {
+	let e = f().user;
+	return m(o.panels.subscribe, o.panels.version), /* @__PURE__ */ D(b, {
+		width: "narrow",
+		crumbs: [{
+			label: c("Account"),
+			icon: "user"
+		}],
+		children: [/* @__PURE__ */ D("div", {
+			className: "mb-10 flex items-center gap-4",
+			children: [/* @__PURE__ */ E(h, {
+				name: e.name,
+				initials: e.initials,
+				src: e.avatar,
+				size: 56
+			}), /* @__PURE__ */ D("div", { children: [/* @__PURE__ */ E("h1", {
+				className: "m-0 text-2xl font-semibold tracking-[-0.02em] text-ink",
+				children: e.name
+			}), /* @__PURE__ */ E("p", {
+				className: "m-0 text-sm text-muted",
+				children: e.email
+			})] })]
+		}), i("account.sections", {}).map(({ id: e, component: t }) => /* @__PURE__ */ E(t, {}, e))]
+	});
+}
+function q() {
+	let { user: e } = f(), t = u("users/fields"), [r, i] = p({
+		name: e.name,
+		email: e.email,
+		currentPassword: ""
+	}), [a, o] = p(null), [l, d] = p(!1), m = r.email !== e.email, h = [
+		{
+			handle: "name",
+			type: "text",
+			label: c("Name"),
+			required: !0,
+			width: "half"
+		},
+		{
+			handle: "email",
+			type: "email",
+			label: c("Email"),
+			required: !0,
+			width: "half"
+		},
+		...m ? [{
+			handle: "currentPassword",
+			type: "text",
+			label: c("Current Password"),
+			secret: !0,
+			width: "half",
+			instructions: c("Needed to change your email.")
+		}] : []
+	];
+	return /* @__PURE__ */ D(x, {
+		title: c("Profile"),
+		children: [
+			/* @__PURE__ */ E(y, {
+				className: "pt-2",
+				fields: h,
+				values: r,
+				onChange: (e, t) => i({
+					...r,
+					[e]: t
+				})
+			}),
+			(t.data?.resolvedFields ?? []).length > 0 && /* @__PURE__ */ E(y, {
+				className: "mt-5",
+				fields: t.data.resolvedFields,
+				values: a ?? e.data ?? {},
+				onChange: (t, n) => o({
+					...a ?? e.data ?? {},
+					[t]: n
+				})
+			}),
+			/* @__PURE__ */ E("div", {
+				className: "mt-4",
+				children: /* @__PURE__ */ E(_, {
+					variant: "primary",
+					disabled: r.name === e.name && !m && !a,
+					loading: l,
+					onClick: async () => {
+						d(!0);
+						try {
+							await s("account/update", {
+								name: r.name,
+								email: r.email,
+								...a ? { data: a } : {},
+								...m ? { currentPassword: r.currentPassword } : {}
+							}), await n(), o(null), i((e) => ({
+								...e,
+								currentPassword: ""
+							})), T.success(c("Profile saved"));
+						} catch (e) {
+							T.error(e);
+						} finally {
+							d(!1);
+						}
+					},
+					children: c("Save Profile")
+				})
+			})
+		]
+	});
+}
+function J() {
+	let e = [{
+		handle: "currentPassword",
+		type: "text",
+		label: c("Current Password"),
+		secret: !0,
+		width: "half"
+	}, {
+		handle: "password",
+		type: "text",
+		label: c("New Password"),
+		secret: !0,
+		width: "half",
+		instructions: c("At least 10 characters, with letters and numbers.")
+	}], [t, n] = p({
+		currentPassword: "",
+		password: ""
+	}), [r, i] = p(!1);
+	return /* @__PURE__ */ D(x, {
+		title: c("Password"),
+		children: [/* @__PURE__ */ E(y, {
+			className: "pt-2",
+			fields: e,
+			values: t,
+			onChange: (e, r) => n({
+				...t,
+				[e]: r
+			})
+		}), /* @__PURE__ */ E("div", {
+			className: "mt-4",
+			children: /* @__PURE__ */ E(_, {
+				variant: "primary",
+				disabled: !t.currentPassword || t.password.length < 10,
+				loading: r,
+				onClick: async () => {
+					i(!0);
+					try {
+						await s("account/update", t), n({
+							currentPassword: "",
+							password: ""
+						}), T.success(c("Password changed"));
+					} catch (e) {
+						T.error(e);
+					} finally {
+						i(!1);
+					}
+				},
+				children: c("Change Password")
+			})
+		})]
+	});
+}
+function Y() {
+	let e = f().user.twoFactor, [t, r] = p(null), [i, a] = p(""), [o, l] = p(null), [u, d] = p(!1), [m, h] = p(""), [b, S] = p(!1), C = (() => {
+		if (!t) return "";
+		let e = O(0, "M");
+		return e.addData(t.uri), e.make(), e.createSvgTag({
+			cellSize: 4,
+			margin: 0,
+			scalable: !0
+		});
+	})();
+	return /* @__PURE__ */ D(x, {
+		title: c("Two-Factor Authentication"),
+		description: c("Sign-in also asks for a code from an authenticator app."),
+		actions: e ? /* @__PURE__ */ E(g, {
+			tone: "success",
+			children: c("On")
+		}) : /* @__PURE__ */ E(g, { children: c("Off") }),
+		children: [
+			e ? /* @__PURE__ */ E(_, {
+				className: "mt-2",
+				onClick: () => d(!0),
+				children: c("Turn Off")
+			}) : /* @__PURE__ */ E(_, {
+				className: "mt-2",
+				icon: "shield",
+				onClick: async () => r(await s("account/two-factor-setup")),
+				children: c("Set Up Two-Factor")
+			}),
+			/* @__PURE__ */ E(v, {
+				open: !!t && !o,
+				onOpenChange: (e) => !e && r(null),
+				title: c("Scan with Your Authenticator App"),
+				description: c("Then enter the 6-digit code it shows."),
+				size: "sm",
+				footer: /* @__PURE__ */ E(_, {
+					variant: "primary",
+					loading: b,
+					disabled: i.replace(/\D/g, "").length !== 6,
+					onClick: async () => {
+						S(!0);
+						try {
+							let e = await s("account/two-factor-confirm", { code: i });
+							l(e.recoveryCodes), await n();
+						} catch (e) {
+							T.error(e);
+						} finally {
+							S(!1);
+						}
+					},
+					children: c("Verify and Turn On")
+				}),
+				children: /* @__PURE__ */ D("div", {
+					className: "space-y-4",
+					children: [
+						/* @__PURE__ */ E("div", {
+							className: "mx-auto size-44 rounded-lg bg-white p-3 [&_svg]:size-full",
+							dangerouslySetInnerHTML: { __html: C }
+						}),
+						/* @__PURE__ */ E("p", {
+							className: "m-0 break-all text-center font-mono text-xs text-faint",
+							children: t?.secret
+						}),
+						/* @__PURE__ */ E(y, {
+							bare: !0,
+							fields: [{
+								handle: "code",
+								type: "text",
+								label: c("Code"),
+								placeholder: "123 456",
+								max: 7
+							}],
+							values: { code: i },
+							onChange: (e, t) => a(t ?? "")
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ E(v, {
+				open: u,
+				onOpenChange: (e) => {
+					d(e), h("");
+				},
+				title: c("Turn off two-factor authentication?"),
+				size: "sm",
+				footer: /* @__PURE__ */ E(_, {
+					variant: "primary",
+					loading: b,
+					disabled: !m,
+					onClick: async () => {
+						S(!0);
+						try {
+							await s("account/two-factor-disable", { password: m }), await n(), d(!1), h(""), T.success(c("Two-factor authentication is off"));
+						} catch (e) {
+							T.error(e);
+						} finally {
+							S(!1);
+						}
+					},
+					children: c("Turn Off")
+				}),
+				children: /* @__PURE__ */ E(y, {
+					fields: [{
+						handle: "password",
+						type: "text",
+						label: c("Your Password"),
+						secret: !0
+					}],
+					values: { password: m },
+					onChange: (e, t) => h(t ?? "")
+				})
+			}),
+			/* @__PURE__ */ E(v, {
+				open: !!o,
+				onOpenChange: () => {
+					l(null), r(null);
+				},
+				title: c("Save Your Recovery Codes"),
+				description: c("Each works once if you lose your device. They are not shown again."),
+				size: "sm",
+				footer: /* @__PURE__ */ E(_, {
+					variant: "primary",
+					onClick: () => {
+						l(null), r(null);
+					},
+					children: c("I saved them")
+				}),
+				children: /* @__PURE__ */ E("div", {
+					className: "grid grid-cols-2 gap-2 rounded-lg bg-sunken p-4 font-mono text-sm",
+					children: o?.map((e) => /* @__PURE__ */ E("span", { children: e }, e))
+				})
+			})
+		]
+	});
+}
+function X() {
+	let [e, n] = p(C()), r = f(), i = d("account/update", {
+		onSuccess: () => window.location.reload(),
+		onError: T.error
+	}), a = [{
+		value: "",
+		label: c("Admin Default")
+	}, ...Object.entries(t()).map(([e, t]) => ({
+		value: e,
+		label: t
+	}))];
+	return /* @__PURE__ */ E(x, {
+		title: c("Appearance"),
+		children: /* @__PURE__ */ E(y, {
+			className: "pt-2",
+			fields: [{
+				handle: "theme",
+				type: "select",
+				label: c("Theme"),
+				display: "segmented",
+				required: !0,
+				options: {
+					system: c("System"),
+					light: c("Light"),
+					dark: c("Dark")
+				}
+			}, {
+				handle: "locale",
+				type: "select",
+				label: c("Language"),
+				required: !0,
+				options: a,
+				width: "half"
+			}],
+			values: {
+				theme: e,
+				locale: r.user.locale ?? ""
+			},
+			onChange: (e, t) => {
+				if (e === "locale") return i.mutate({ locale: t || null });
+				w(t), n(t);
+			}
+		})
+	});
+}
+var Z = () => ({
+	"*": c("Everything you can do"),
+	read: c("Read Only"),
+	"entries/*": c("Content Only")
+}), Q = () => [
+	{
+		handle: "name",
+		type: "text",
+		label: c("Name"),
+		required: !0,
+		placeholder: "Claude Desktop"
+	},
+	{
+		handle: "scopes",
+		type: "select",
+		label: c("Access"),
+		multiple: !0,
+		options: Z()
+	},
+	{
+		handle: "expires",
+		type: "select",
+		label: c("Expires"),
+		display: "segmented",
+		required: !0,
+		options: {
+			30: a(30, "{count} day", "{count} days"),
+			90: a(90, "{count} day", "{count} days"),
+			365: c("1 year"),
+			never: c("Never")
+		}
+	}
+], $ = {
+	name: "",
+	scopes: ["*"],
+	expires: "90"
+};
+function ee() {
+	let t = u("tokens/list"), [n, i] = p(!1), [a, o] = p($), [d, f] = p(null);
+	return /* @__PURE__ */ D(x, {
+		title: c("API Tokens"),
+		description: c("For the REST API, MCP clients and scripts. A token acts as you."),
+		actions: /* @__PURE__ */ E(_, {
+			size: "sm",
+			icon: "plus",
+			onClick: () => i(!0),
+			children: c("New Token")
+		}),
+		children: [t.isLoading ? null : (t.data ?? []).length === 0 ? /* @__PURE__ */ E("p", {
+			className: "m-0 py-3 text-sm text-faint",
+			children: c("No tokens yet")
+		}) : /* @__PURE__ */ E("div", {
+			className: "divide-y divide-border",
+			children: (t.data ?? []).map((t) => /* @__PURE__ */ D("div", {
+				className: "flex items-center gap-3 py-2.5",
+				children: [/* @__PURE__ */ D("div", {
+					className: "min-w-0 flex-1",
+					children: [/* @__PURE__ */ E("div", {
+						className: "text-sm font-medium",
+						children: t.name
+					}), /* @__PURE__ */ E("div", {
+						className: "text-xs text-faint",
+						children: [
+							t.scopes.map((e) => Z()[e] ?? e).join(", "),
+							t.lastUsedAt ? c("Used {time}", { time: l(t.lastUsedAt) }) : c("Never used"),
+							t.expiresAt && c("Expires {date}", { date: new Date(t.expiresAt).toLocaleDateString(r(), { dateStyle: "medium" }) })
+						].filter(Boolean).join(" · ")
+					})]
+				}), /* @__PURE__ */ E(_, {
+					size: "sm",
+					variant: "ghost",
+					className: "text-danger",
+					onClick: async () => {
+						await S({
+							title: c("Revoke “{name}”?", { name: t.name }),
+							description: c("Anything using it stops working immediately."),
+							confirm: c("Revoke"),
+							danger: !0
+						}) && s("tokens/revoke", { id: t.id }).then(() => e("tokens/"), T.error);
+					},
+					children: c("Revoke")
+				})]
+			}, t.id))
+		}), /* @__PURE__ */ E(v, {
+			open: n,
+			onOpenChange: (e) => {
+				i(e), e || (f(null), o($));
+			},
+			title: c(d ? "Copy Your Token" : "New API Token"),
+			description: d ? c("It is shown only once.") : void 0,
+			footer: d ? /* @__PURE__ */ E(_, {
+				variant: "primary",
+				onClick: () => {
+					i(!1), f(null), o($);
+				},
+				children: c("Done")
+			}) : /* @__PURE__ */ E(_, {
+				variant: "primary",
+				disabled: !a.name || a.scopes.length === 0,
+				onClick: async () => {
+					try {
+						let t = await s("tokens/create", {
+							name: a.name,
+							scopes: a.scopes,
+							expiresInDays: a.expires === "never" ? null : Number(a.expires)
+						});
+						f(t.token), e("tokens/");
+					} catch (e) {
+						T.error(e);
+					}
+				},
+				children: c("Create Token")
+			}),
+			children: d ? /* @__PURE__ */ D("div", {
+				className: "space-y-4",
+				children: [/* @__PURE__ */ D("div", {
+					className: "flex items-center gap-2 rounded-sm bg-sunken p-3 font-mono text-xs",
+					children: [/* @__PURE__ */ E("span", {
+						className: "flex-1 break-all",
+						children: d
+					}), /* @__PURE__ */ E(_, {
+						size: "xs",
+						icon: "copy",
+						onClick: () => navigator.clipboard.writeText(d).then(() => T.success(c("Copied"))),
+						children: c("Copy")
+					})]
+				}), /* @__PURE__ */ D("dl", {
+					className: "m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs",
+					children: [
+						/* @__PURE__ */ E("dt", {
+							className: "text-muted",
+							children: c("Header")
+						}),
+						/* @__PURE__ */ E("dd", {
+							className: "m-0 truncate font-mono text-text",
+							children: "Authorization: Bearer …"
+						}),
+						/* @__PURE__ */ E("dt", {
+							className: "text-muted",
+							children: "MCP"
+						}),
+						/* @__PURE__ */ D("dd", {
+							className: "m-0 truncate font-mono text-text",
+							children: [window.location.origin, "/mcp"]
+						})
+					]
+				})]
+			}) : /* @__PURE__ */ E(y, {
+				fields: Q(),
+				values: a,
+				onChange: (e, t) => o({
+					...a,
+					[e]: t
+				})
+			})
+		})]
+	});
+}
+export { X as Appearance, J as Password, q as Profile, ee as Tokens, Y as TwoFactor, K as default };
