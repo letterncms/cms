@@ -258,19 +258,15 @@
   .cms-prose :where(blockquote) { border-left: 2px solid var(--cms-border-strong); padding-left: 1em; color: var(--cms-muted); margin: 0 0 0.75em; }
 }
 
-/* A column docked beside the rail: the page stays next to it. It grows from its edge, its content keeping its width,
-   and taking the whole window it pushes the workspace out rather than squeezing it. Small windows: over the workspace. */
+/* A column docked at the right edge: the page stays next to it, and nothing to its left moves but the page's own width.
+   At full size the panel grows over the workspace, which keeps its size, so nothing on it reflows. Small windows: over the workspace. */
 @layer components {
   .cms-dock {
     position: relative;
-    z-index: 1;
-    display: flex;
+    z-index: 20;
     flex: none;
     width: 0;
-    overflow: hidden;
     visibility: hidden;
-    background: var(--cms-surface);
-    box-shadow: inset 1px 0 var(--cms-border);
     transition: width 240ms var(--ease-out), visibility 0s linear 240ms;
   }
   .cms-dock[data-open] {
@@ -278,8 +274,19 @@
     visibility: visible;
     transition: width 240ms var(--ease-out);
   }
-  .cms-dock[data-open][data-full] { width: calc(100vw - var(--cms-rail, 52px)); }
-  .cms-dock[data-resizing] { transition: none; }
+  .cms-dock-panel {
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    display: flex;
+    width: 100%;
+    overflow: hidden;
+    background: var(--cms-surface);
+    box-shadow: inset 1px 0 var(--cms-border);
+    transition: width 240ms var(--ease-out);
+  }
+  .cms-dock[data-full] .cms-dock-panel { width: calc(100vw - var(--cms-sidebar-width, 0px)); }
+  .cms-dock[data-resizing], .cms-dock[data-resizing] .cms-dock-panel { transition: none; }
   .cms-dock-inner {
     display: flex;
     flex: 1;
@@ -290,7 +297,8 @@
   .cms-dock-handle {
     position: absolute;
     inset-block: 0;
-    right: 0;
+    left: 0;
+    z-index: 1;
     width: 7px;
     cursor: col-resize;
     touch-action: none;
@@ -300,7 +308,7 @@
     content: "";
     position: absolute;
     inset-block: 0;
-    right: 0;
+    left: 0;
     width: 2px;
     background: var(--cms-focus);
     opacity: 0;
@@ -309,28 +317,28 @@
   .cms-dock-handle:hover::after, .cms-dock[data-resizing] .cms-dock-handle::after { opacity: 1; }
 
   @media (max-width: 899px) {
-    .cms-dock {
-      position: absolute;
-      inset-block: 0;
-      left: var(--cms-rail, 52px);
-      z-index: 40;
-      box-shadow: inset 1px 0 var(--cms-border), var(--cms-shadow-dialog);
-    }
-    .cms-dock:not([data-open]) { box-shadow: none; }
-    .cms-dock[data-open] { width: min(var(--cms-dock-width), calc(100vw - var(--cms-rail, 52px))); }
+    .cms-dock[data-open] { width: 0; }
+    .cms-dock { z-index: 40; }
+    .cms-dock-panel { width: 0; }
+    .cms-dock[data-open] .cms-dock-panel { width: min(var(--cms-dock-width), 100vw); box-shadow: inset 1px 0 var(--cms-border), var(--cms-shadow-dialog); }
+    .cms-dock[data-full] .cms-dock-panel { width: calc(100vw - var(--cms-sidebar-width, 0px)); }
     .cms-dock-handle { display: none; }
   }
   @media (max-width: 767px) {
-    .cms-dock {
-      position: fixed;
-      inset: 0 auto 0 0;
-      z-index: 50;
-      height: 100dvh;
-      box-shadow: none;
-    }
-    .cms-dock[data-open], .cms-dock[data-open][data-full] { width: 100vw; }
+    .cms-dock { z-index: 50; }
+    .cms-dock-panel { position: fixed; inset-block: 0; right: 0; height: 100dvh; }
+    .cms-dock[data-open] .cms-dock-panel, .cms-dock[data-full] .cms-dock-panel { width: 100vw; box-shadow: none; }
     .cms-dock-inner { min-width: 100vw; }
   }
+
+  /* The sidebar is there or it isn't. Its content keeps its width as it goes. */
+  .cms-shell-sidebar {
+    flex: none;
+    width: 248px;
+    overflow: hidden;
+    transition: width 200ms var(--ease-out);
+  }
+  .cms-shell-sidebar[data-hidden] { width: 0; }
 }
 
 /* Shell: the next screen is on its way (shown only when it takes long enough to notice). */
@@ -416,7 +424,6 @@
     background: var(--cms-active);
     color: var(--cms-ink);
   }
-  .cms-sidebar-row[data-collapsed] { justify-content: center; padding-inline: 0; }
   .cms-sidebar-row-main {
     display: flex;
     align-items: center;
@@ -430,11 +437,9 @@
     outline-offset: -2px;
     cursor: pointer;
   }
-  .cms-sidebar-row[data-collapsed] .cms-sidebar-row-main { justify-content: center; }
   .cms-sidebar-row-main::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
   .cms-sidebar-row-status { display: inline-flex; flex-shrink: 0; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--cms-muted); }
   .cms-sidebar-row-badge { flex-shrink: 0; font-size: var(--text-xs); font-variant-numeric: tabular-nums; color: var(--cms-faint); }
-  .cms-sidebar-row-dot { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 9999px; background: var(--cms-signal); }
   .cms-sidebar-row-shortcut { flex-shrink: 0; opacity: 0; }
   .cms-sidebar-row:hover .cms-sidebar-row-shortcut, .cms-sidebar-row-main:focus-visible .cms-sidebar-row-shortcut { opacity: 1; }
   /* Quick actions show on hover and focus; on touch, long-press opens the menu that holds them. */

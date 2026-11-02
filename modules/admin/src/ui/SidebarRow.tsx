@@ -1,5 +1,5 @@
 import { boot, Link, t } from '@letterncms/sdk'
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { IconButton } from './Button'
 import { cn } from './cn'
 import { Icon } from './Icon'
@@ -17,12 +17,10 @@ export interface SidebarRowProps {
   label: string
   icon?: string
   to?: string
-  onClick?: () => void
+  onClick?: (event: MouseEvent) => void
   active?: boolean
-  /** The rail: the icon alone, its label in a tooltip. */
-  collapsed?: boolean
   title?: string
-  /** A count, or a dot in the rail. */
+  /** A count. */
   badge?: ReactNode
   shortcut?: string | null
   status?: ReactNode
@@ -38,7 +36,7 @@ export interface SidebarRowProps {
  * (or long-press) after Open in New Tab. Navigation and actions are siblings so
  * buttons never live inside a link.
  */
-export function SidebarRow({ label, icon, to, onClick, active, collapsed, title, badge, shortcut, status, actions = [], sortable }: SidebarRowProps) {
+export function SidebarRow({ label, icon, to, onClick, active, title, badge, shortcut, status, actions = [], sortable }: SidebarRowProps) {
   const own = actions.filter((a): a is SidebarRowAction => !!a)
   const quick = own.filter((a) => a.quick && a.icon)
   const menu: (MenuItemDef | false)[] = [
@@ -51,24 +49,24 @@ export function SidebarRow({ label, icon, to, onClick, active, collapsed, title,
     className: 'cms-sidebar-row-main',
     onClick,
     draggable: sortable ? false : undefined,
-    title: collapsed ? undefined : title ?? label,
+    title: title ?? label,
     'aria-label': label,
     'aria-current': active ? 'page' as const : undefined,
     children: <>
       {icon && <Icon name={icon} size={16} className="shrink-0" />}
-      {!collapsed && <Marquee>{label}</Marquee>}
-      {!collapsed && status && <span className="cms-sidebar-row-status">{status}</span>}
+      <Marquee>{label}</Marquee>
+      {status && <span className="cms-sidebar-row-status">{status}</span>}
       {badge
-        ? collapsed ? <span className="cms-sidebar-row-dot" aria-hidden="true" /> : <span className="cms-sidebar-row-badge">{badge}</span>
-        : !collapsed && shortcut ? <Kbd keys={shortcut} className="cms-sidebar-row-shortcut" /> : null}
+        ? <span className="cms-sidebar-row-badge">{badge}</span>
+        : shortcut ? <Kbd keys={shortcut} className="cms-sidebar-row-shortcut" /> : null}
     </>,
   }
   const link = to !== undefined ? <Link to={to} {...main} /> : <button type="button" {...main} />
 
   const row = (
-    <div className={cn('cms-sidebar-row', active && 'cms-sidebar-row-active')} data-collapsed={collapsed || undefined}>
-      {collapsed ? <Tooltip content={label} shortcut={shortcut ?? undefined} side="right">{link}</Tooltip> : link}
-      {!collapsed && quick.length > 0 && (
+    <div className={cn('cms-sidebar-row', active && 'cms-sidebar-row-active')}>
+      {link}
+      {quick.length > 0 && (
         // The group names the row, so "Unpin" is heard as Unpin Pages.
         <div className="cms-sidebar-row-actions" role="group" aria-label={label}>
           {quick.map((action) => (

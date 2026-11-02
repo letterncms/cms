@@ -1,7 +1,7 @@
 import { events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useManifest, useScreenContext, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { NotFound } from '../screens/NotFound'
-import { cn } from '../ui'
+import { cn, IconButton, Tooltip } from '../ui'
 import { CommandPalette } from './CommandPalette'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -77,43 +77,32 @@ export function App() {
   if (!over) under.current = live
   const location = over && under.current ? under.current : live
   const { route, params } = resolve(location.path)
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('cms.sidebar') === 'collapsed')
+  // It stays as it is left: there or hidden, on every screen, until someone changes it.
+  const [hidden, setHidden] = useState(() => localStorage.getItem('cms.sidebar') === 'collapsed')
   const [palette, setPalette] = useState(false)
   const [customizing, setCustomizing] = useState(false)
-  // Editors ask for a compact sidebar while they are open; opening it there lasts until the editor closes.
-  const [compact, setCompact] = useState(false)
-  const [peek, setPeek] = useState(false)
-  // Below tablet width the sidebar keeps to its rail; expanding it there lasts until the next screen.
+  // Below tablet width it opens over the screen and goes again with the next screen.
   const narrow = useMedia('(max-width: 767px)')
   const [expanded, setExpanded] = useState(false)
   const full = route?.layout === 'full'
   const content = useRef<HTMLDivElement>(null)
   const [workspace, setWorkspace] = useState<HTMLDivElement | null>(null)
-  // A panel docked beside the rail. Taking the whole window, it pushes the workspace out at the size it has, so nothing on it reflows.
   const [dock, setDock] = useState<DockState>({ open: false, full: false })
-  const [pushed, setPushed] = useState<number | undefined>()
   const scrolls = useRef(new Map<string, number>())
 
-  useEffect(() => events.on<boolean>('shell.compact', (on) => { setCompact(!!on); setPeek(false) }), [])
   useLayoutEffect(() => {
     setDock(dockState())
-    return events.on<DockState>('shell.dock', (next) => {
-      setPushed(next.full ? workspace?.offsetWidth : undefined)
-      setDock(next)
-      setPeek(false)
-    })
-  }, [workspace])
-  // Beside a docked panel, as in an editor, the sidebar keeps to its rail unless asked.
-  const railed = compact || dock.open
-  const toggleSidebar = () => (railed ? setPeek((p) => !p) : setCollapsed((c) => !c))
+    return events.on<DockState>('shell.dock', setDock)
+  }, [])
+  const toggleSidebar = () => (narrow ? setExpanded((e) => !e) : setHidden((h) => !h))
 
-  useEffect(() => localStorage.setItem('cms.sidebar', collapsed ? 'collapsed' : 'open'), [collapsed])
+  useEffect(() => localStorage.setItem('cms.sidebar', hidden ? 'collapsed' : 'open'), [hidden])
   useShortcut('mod+k', () => setPalette((p) => !p))
   useShortcut(SETTINGS_SHORTCUT, toggleSettings)
   useEffect(() => events.on('sidebar.customize', () => setCustomizing(true)), [])
   // Modules pin and unpin their own items (the assistant's setup offers to put New Chat away).
   useEffect(() => events.on<{ id: string; pinned: boolean }>('sidebar.pin', ({ id, pinned }) => (pinned ? setPinned(id, true) : unpin(id))), [])
-  useShortcut('mod+\\', () => (narrow ? setExpanded((e) => !e) : toggleSidebar()))
+  useShortcut('mod+\\', toggleSidebar)
 
   // Every screen's code, fetched while the admin is idle.
   useEffect(() => {
@@ -153,31 +142,38 @@ export function App() {
   const asides = panelsFor('shell.aside', { full })
   // A line across the top of the workspace for what its module needs someone to see.
   const banners = panelsFor('shell.banner', { full })
-  // A column of its own between the sidebar and the workspace; `Dock` from the UI kit draws it and reports its state.
+  // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', { full })
-  const sidebarOpen = !narrow && !(railed ? !peek : collapsed)
+  const sidebarShown = !full && !narrow && !hidden
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-bg" style={{ '--cms-rail': full ? '0px' : sidebarOpen ? '248px' : '52px' } as CSSProperties}>
-      {!full &&
-        (narrow ? (
-          // Narrow screens: the rail holds its place; the expanded sidebar opens over the screen.
-          <div className="relative flex w-[52px] shrink-0">
-            {expanded && <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setExpanded(false)} aria-hidden="true" />}
-            <div className={cn('flex h-full', expanded && 'fixed inset-y-0 left-0 z-50 border-r border-border-modal shadow-pop')}>
-              <Sidebar collapsed={!expanded} onToggle={() => setExpanded((e) => !e)} onSearch={() => setPalette(true)} onNavigate={() => setExpanded(false)} />
+    <div
+      className="relative flex h-screen overflow-hidden bg-bg"
+      style={{ '--cms-sidebar-width': sidebarShown ? '248px' : '0px', '--cms-sidebar-toggle': !full && !sidebarShown ? '32px' : '0px' } as CSSProperties}
+    >
+      {!full && (narrow ? (
+        expanded && (
+          <>
+            <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setExpanded(false)} aria-hidden="true" />
+            <div className="fixed inset-y-0 left-0 z-50 flex border-r border-border-modal shadow-pop">
+              <Sidebar onHide={() => setExpanded(false)} onSearch={() => setPalette(true)} onNavigate={() => setExpanded(false)} />
             </div>
-          </div>
-        ) : (
-          <Sidebar collapsed={railed ? !peek : collapsed} onToggle={toggleSidebar} onSearch={() => setPalette(true)} />
-        ))}
-      {docks.map(({ id, component: Dock }) => (
-        <ErrorBoundary key={id}>
-          <Dock full={full} />
-        </ErrorBoundary>
+          </>
+        )
+      ) : (
+        <div className="cms-shell-sidebar" data-hidden={hidden || undefined} inert={hidden}>
+          <Sidebar onHide={toggleSidebar} onSearch={() => setPalette(true)} />
+        </div>
       ))}
+      {!full && !sidebarShown && !(dock.open && narrow) && (
+        <div className="absolute left-2 top-2.5 z-30">
+          <Tooltip content={t('Show Sidebar')} shortcut="mod+\\" side="bottom">
+            <IconButton icon="sidebar" label={t('Show Sidebar')} title={undefined} size="sm" onClick={toggleSidebar} />
+          </Tooltip>
+        </div>
+      )}
       <WorkspaceContext value={{ host: workspace, content, dock }}>
-        <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} style={pushed ? { minWidth: pushed, flexShrink: 0 } : undefined} className={cn('relative isolate min-w-0 flex-1', !full && 'border-l border-border')}>
+        <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} className={cn('relative isolate min-w-0 flex-1', sidebarShown && 'border-l border-border')}>
           {pending && <div className="cms-progress" role="progressbar" aria-label={t('Loading…')} />}
           <div ref={content} data-cms-screen className="h-full overflow-y-auto" onScroll={(e) => scrolls.current.set(key, e.currentTarget.scrollTop)}>
             {!full && banners.map(({ id, component: Banner }) => (
@@ -201,6 +197,11 @@ export function App() {
           ))}
         </div>
       </WorkspaceContext>
+      {docks.map(({ id, component: Dock }) => (
+        <ErrorBoundary key={id}>
+          <Dock full={full} />
+        </ErrorBoundary>
+      ))}
       <CommandPalette open={palette} onOpenChange={setPalette} />
       <CustomizeSidebar open={customizing} onOpenChange={setCustomizing} />
     </div>

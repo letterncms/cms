@@ -4,15 +4,20 @@ import { cn } from './cn'
 import { WorkspaceContext } from './Slideover'
 
 /** A workspace inspector docks while the workspace has room for it and becomes a focus-managed sheet when it does not. */
-export function useWideInspector(room = 840) {
-  const host = useContext(WorkspaceContext)?.host
-  const [wide, setWide] = useState(() => (host?.clientWidth ?? window.innerWidth - 52) >= room)
+export function useWideInspector(room = 760) {
+  const workspace = useContext(WorkspaceContext)
+  const host = workspace?.host
+  // In a small window a docked panel opens over the workspace, so it takes the room without changing its size.
+  const over = workspace?.dock.open && window.innerWidth < 900 ? (workspace.dock.full ? Infinity : 380) : 0
+  const [wide, setWide] = useState(() => (host?.clientWidth ?? window.innerWidth) - over >= room)
   useEffect(() => {
     if (!host) return
-    const observer = new ResizeObserver(() => setWide(host.clientWidth >= room))
+    const measure = () => setWide(host.clientWidth - over >= room)
+    measure()
+    const observer = new ResizeObserver(measure)
     observer.observe(host)
     return () => observer.disconnect()
-  }, [host, room])
+  }, [host, room, over])
   return wide
 }
 

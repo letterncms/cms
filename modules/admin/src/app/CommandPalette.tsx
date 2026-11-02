@@ -55,8 +55,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   const pages = useMemo(
     () => [
-      ...manifest.nav.map((n) => ({ id: n.id, label: n.label, icon: n.icon, path: n.path })),
-      ...manifest.globals.map((g) => ({ id: `g-${g.handle}`, label: g.title, icon: g.icon, path: `/globals/${g.handle}` })),
+      ...manifest.nav.map((n) => ({ id: n.id, label: n.label, icon: n.icon, path: n.path, command: n.command })),
+      ...manifest.globals.map((g) => ({ id: `g-${g.handle}`, label: g.title, icon: g.icon, path: `/globals/${g.handle}`, command: null })),
     ],
     [manifest],
   )
@@ -69,7 +69,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   type Group = { heading: string; items: Item[] }
   const localGroups: Group[] = [
     { heading: t('Jump To'), items: pages.map((p) => ({
-      value: `go ${p.label}`, icon: p.icon, label: p.label, path: p.path, perform: () => navigate(p.path),
+      value: `go ${p.label}`, icon: p.icon, label: p.label, path: p.path, perform: () => { const command = p.command ? registry.commands.get(p.command) : undefined; if (command) void command.perform(); else navigate(p.path) },
     })) },
     { heading: t('Create'), items: manifest.collections.filter((c) => c.can.create).map((c) => ({
       value: `new ${c.singular} create`, icon: 'plus', label: c.newLabel, perform: () => navigate(`/content/${c.handle}/new`),

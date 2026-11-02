@@ -19,10 +19,10 @@ const DEFAULT = 380
 const clamp = (width: number) => Math.min(MAX, Math.max(MIN, Math.round(width)))
 
 /**
- * A column between the sidebar's rail and the workspace, for a `shell.dock`
- * panel: the page stays open and live next to it. Dragged wider, or `full`,
- * it takes over the workspace; on small screens it opens over it.
- * It keeps its children mounted while closed.
+ * A column at the right edge of the window, for a `shell.dock` panel: the page
+ * stays open and live next to it. It can be dragged wider. `full` grows it over
+ * the workspace, which stays as it is underneath; on small screens it opens over
+ * the page. It keeps its children mounted while closed.
  */
 export function Dock({ open, full, label, className, children }: { open: boolean; full: boolean; label: string; className?: string; children: ReactNode }) {
   const [width, setWidth] = useState(() => {
@@ -50,10 +50,10 @@ export function Dock({ open, full, label, className, children }: { open: boolean
     e.preventDefault()
     const handle = e.currentTarget
     const pointer = e.pointerId
-    const left = element.current?.getBoundingClientRect().left ?? 0
+    const right = element.current?.getBoundingClientRect().right ?? window.innerWidth
     handle.setPointerCapture(pointer)
     setResizing(true)
-    const move = (event: globalThis.PointerEvent) => resize(event.clientX - left)
+    const move = (event: globalThis.PointerEvent) => resize(right - event.clientX)
     const stop = () => {
       handle.removeEventListener('pointermove', move)
       handle.removeEventListener('pointerup', stop)
@@ -65,7 +65,7 @@ export function Dock({ open, full, label, className, children }: { open: boolean
     handle.addEventListener('pointercancel', stop)
   }
   const nudge = (e: KeyboardEvent<HTMLDivElement>) => {
-    const step = { ArrowLeft: -24, ArrowRight: 24 }[e.key]
+    const step = { ArrowLeft: 24, ArrowRight: -24 }[e.key]
     if (!step) return
     e.preventDefault()
     resize(width + step)
@@ -82,22 +82,24 @@ export function Dock({ open, full, label, className, children }: { open: boolean
       style={{ '--cms-dock-width': `${width}px` } as CSSProperties}
       className={cn('cms-dock', className)}
     >
-      <div className="cms-dock-inner">{children}</div>
-      {open && !full && (
-        <div
-          role="separator"
-          tabIndex={0}
-          aria-orientation="vertical"
-          aria-label={t('Resize Panel')}
-          aria-valuemin={MIN}
-          aria-valuemax={MAX}
-          aria-valuenow={width}
-          onPointerDown={drag}
-          onDoubleClick={() => resize(DEFAULT)}
-          onKeyDown={nudge}
-          className="cms-dock-handle"
-        />
-      )}
+      <div className="cms-dock-panel">
+        {open && !full && (
+          <div
+            role="separator"
+            tabIndex={0}
+            aria-orientation="vertical"
+            aria-label={t('Resize Panel')}
+            aria-valuemin={MIN}
+            aria-valuemax={MAX}
+            aria-valuenow={width}
+            onPointerDown={drag}
+            onDoubleClick={() => resize(DEFAULT)}
+            onKeyDown={nudge}
+            className="cms-dock-handle"
+          />
+        )}
+        <div className="cms-dock-inner">{children}</div>
+      </div>
     </aside>
   )
 }
