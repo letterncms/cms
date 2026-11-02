@@ -97,7 +97,6 @@ final class CollectionRepository
 
     public function save(Collection $collection): void
     {
-        cms()->guardConfigWrites();
         $existing = $this->find($collection->handle);
         $collection->blueprint()->schema(); // throws on invalid field definitions
         Yaml::write($this->file($collection->handle), [...$collection->toYaml(), ...RecordTimestamps::saved($existing?->toYaml())]);
@@ -107,7 +106,6 @@ final class CollectionRepository
 
     public function delete(string $handle): void
     {
-        cms()->guardConfigWrites();
         @unlink($this->file($handle));
         $this->collections = null;
         $this->hooks->dispatch('collection.deleted', $handle);

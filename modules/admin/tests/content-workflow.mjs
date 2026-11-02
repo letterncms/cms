@@ -71,7 +71,7 @@ const revisions = (entry) => [0, 1].map((index) => ({ id: `${entry.id}-revision-
 const nav = collections.map((collection) => ({ id: collection.handle, label: collection.title, path: `/content/${collection.handle}`, icon: collection.icon, section: 'content' }))
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const manifest = {
-  cms: { version: 'fixture', lockedDown: false, debug: false },
+  cms: { version: 'fixture', debug: false },
   site: realSources[0]?.site ?? { name: 'Content workflow verification', url: 'https://fixture.example', locales: ['en'], defaultLocale: 'en', timezone: 'Europe/Brussels' },
   user: { ...people[0], email: 'ada@example.invalid', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
   packages: { active: ['cms/admin', ...modules.map((name) => `cms/${name}`), ...plugins.map((name) => `cms/${name}`)], pending: {} },

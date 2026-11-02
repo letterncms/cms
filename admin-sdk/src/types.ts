@@ -171,7 +171,7 @@ export interface WidgetInfo {
 export interface Manifest {
   /** Trusted components for declarative, contextual admin surfaces. */
   components?: SurfaceComponentInfo[]
-  cms: { version: string; lockedDown: boolean; debug: boolean }
+  cms: { version: string; debug: boolean }
   brand: BrandInfo
   site: { name: string; url: string; locales: string[]; defaultLocale: string; timezone: string }
   user: User & { grants: string[]; preferences: Record<string, unknown> }

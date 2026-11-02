@@ -25,7 +25,7 @@ const media = Array.from({ length: 61 }, (_, i) => ({ id: `file-${i}`, name: i =
 const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true }
 const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['modules', 'Modules', '/modules', 'plugin'], ['languages', 'Languages', '/languages', 'translate'], ['redirects', 'Redirects', '/redirects', 'arrow-up-right'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
 const manifest = {
-  cms: { version: 'test', lockedDown: false, debug: false },
+  cms: { version: 'test', debug: false },
   site: { name: 'Overview regression test', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Test User', email: 'test@example.invalid', initials: 'TU', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
   packages: { active: ['cms/admin', ...modules.map((n) => `cms/${n}`), ...plugins.map((n) => `cms/${n}`)], pending: {} },

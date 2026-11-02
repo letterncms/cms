@@ -100,8 +100,6 @@ final class SettingsRegistry
      */
     public function save(string $namespace, array $values): array
     {
-        cms()->guardConfigWrites();
-
         if (! Files::isHandle($namespace)) {
             throw AbilityException::invalid(__('Invalid settings namespace.'));
         }

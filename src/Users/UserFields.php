@@ -39,8 +39,6 @@ final class UserFields
 
     public function save(array $fields): void
     {
-        cms()->guardConfigWrites();
-
         try {
             Blueprint::validate($fields);
         } catch (InvalidArgumentException $e) {

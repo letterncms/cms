@@ -235,23 +235,8 @@ final class Cms
         return $this->packages()->isActive($package);
     }
 
-    /** True when the site may not be changed from the web (CMS_LOCKDOWN=true). */
-    public function lockedDown(): bool
-    {
-        return (bool) env('CMS_LOCKDOWN', false) && ! $this->app->runningInConsole();
-    }
-
-    public function guardConfigWrites(): void
-    {
-        if ($this->lockedDown()) {
-            throw new RuntimeException(__('This site is locked down: configuration changes must be made in code and deployed.'));
-        }
-    }
-
     public function guardFileMods(): void
     {
-        $this->guardConfigWrites();
-
         if (! (bool) env('CMS_ALLOW_FILE_MODS', true) && ! $this->app->runningInConsole()) {
             throw new RuntimeException(__('Installing or removing package files is disabled on this site.'));
         }

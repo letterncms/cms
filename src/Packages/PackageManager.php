@@ -806,7 +806,6 @@ final class PackageManager
     /** Plugins are written as `enabled`, core modules that are off as `disabled`. */
     private function writeEnabled(array $names): void
     {
-        $this->cms()->guardConfigWrites();
         $names = array_values(array_unique($names));
         $modules = $this->modules();
         $plugins = array_values(array_filter($names, static fn (string $n) => ! isset($modules[$n])));

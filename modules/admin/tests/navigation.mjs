@@ -14,7 +14,7 @@ const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel
 const entry = { id: 'entry-1', collection: 'posts', locale: 'en', title: 'Original title', slug: 'original', uri: null, status: 'draft', displayStatus: 'draft', data: {}, hasDraft: false, parentId: null, position: 0, originId: null, authorId: null, createdAt: null, updatedAt: null, publishedAt: null }
 const namespaces = ['site', 'mail', 'admin', 'broken']
 const manifest = {
-  cms: { version: 'test', lockedDown: false, debug: false },
+  cms: { version: 'test', debug: false },
   site: { name: 'Navigation regression test', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Test User', email: 'test@example.invalid', initials: 'TU', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
   packages: { active: ['cms/admin', 'letterncms/settings', 'letterncms/content', 'letterncms/collections'], pending: {} },

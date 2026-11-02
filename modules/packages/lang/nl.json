@@ -183,7 +183,6 @@
   "This server's clock looks wrong. Installs are paused. The public site is not affected.": "De klok van deze server lijkt niet te kloppen. Installaties zijn gepauzeerd. De openbare site merkt er niets van.",
   "This site does not change its own files. Update it through your deploy.": "Deze site wijzigt zijn eigen bestanden niet. Werk hem bij via je deploy.",
   "This site has no valid list of signing keys, so it cannot trust a store. Download packages and upload them instead.": "Deze site heeft geen geldige lijst met ondertekeningssleutels, dus hij kan geen store vertrouwen. Download pakketten en upload ze zelf.",
-  "This site is locked. Update it through your deploy.": "Deze site is vergrendeld. Werk hem bij via je deploy.",
   "This site is managed with Composer. Run: composer remove :package": "Deze site wordt beheerd met Composer. Voer uit: composer remove :package",
   "This site is managed with Composer. Update it with composer update.": "Deze site wordt beheerd met Composer. Werk hem bij met composer update.",
   "This version of :package is blocked by the store for security reasons.": "Deze versie van :package is om veiligheidsredenen geblokkeerd door de store.",

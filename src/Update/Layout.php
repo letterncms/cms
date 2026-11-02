@@ -66,7 +66,6 @@ class Layout
         return match (true) {
             ! is_file($this->pointer()) => 'composer',
             is_dir($this->root().'/.git') => 'git',
-            (bool) env('CMS_LOCKDOWN', false) => 'lockdown',
             ! (bool) env('CMS_ALLOW_FILE_MODS', true) => 'file_mods',
             default => null,
         };
