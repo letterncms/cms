@@ -7,7 +7,6 @@
   "Checks the keys of paid plugins. Does nothing on a site without one, and never touches the public site.": "Vérifie les clés des plugins payants. Ne fait rien sur un site qui n’en a pas et ne touche jamais au site public.",
   "Covers {count} domain, with its subdomains:": "Couvre {count} domaine, avec ses sous-domaines :",
   "Covers {count} domains, with their subdomains:": "Couvre {count} domaines, avec leurs sous-domaines :",
-  "Dismiss": "Masquer",
   "Fine": "Correct",
   "Key": "Clé",
   "Licence": "Licence",

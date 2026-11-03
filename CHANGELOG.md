@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- The licence and update notices no longer sit under the sidebar button and the way back, which covered their icon and text. They are a strip across the top of the window, above everything else, so nothing under them moves, and they stay readable on a phone.
 - The admin's tab bars no longer scroll up and down by a pixel when you scroll over them.
 
 ## 0.3.1 (2026-11-02)
