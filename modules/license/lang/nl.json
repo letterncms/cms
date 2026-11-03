@@ -7,7 +7,6 @@
   "Checks the keys of paid plugins. Does nothing on a site without one, and never touches the public site.": "Controleert de sleutels van betaalde plugins. Doet niets op een site zonder, en raakt de openbare site nooit.",
   "Covers {count} domain, with its subdomains:": "Geldt voor {count} domein, met subdomeinen:",
   "Covers {count} domains, with their subdomains:": "Geldt voor {count} domeinen, met subdomeinen:",
-  "Dismiss": "Verbergen",
   "Fine": "In orde",
   "Key": "Sleutel",
   "Licence": "Licentie",

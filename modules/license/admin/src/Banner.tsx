@@ -1,5 +1,5 @@
-import { Link, run, t, useConfig } from '@letterncms/sdk'
-import { Button, Icon } from '@letterncms/ui'
+import { run, t, useConfig } from '@letterncms/sdk'
+import { Banner } from '@letterncms/ui'
 import { useEffect, useState } from 'react'
 import { reasonText } from './reasons'
 
@@ -19,7 +19,7 @@ const dismissedAt = (): number => {
 }
 
 /**
- * The most any licence state ever does: a line at the top of the admin, for the people who can
+ * The most any licence state ever does: a line across the top of the admin, for the people who can
  * act on it. It also asks for a refresh in the background, so no page waits on the licence server.
  */
 export function LicenseBanner() {
@@ -36,27 +36,19 @@ export function LicenseBanner() {
   const worst = Object.values(license.items ?? {}).sort((a, b) => b.level - a.level)[0]
 
   return (
-    <div role="status" className="flex items-center gap-3 border-b border-border bg-surface px-4 py-2 text-sm text-text">
-      <Icon name="warning" size={16} className="shrink-0 text-warning" />
-      <span className="min-w-0 flex-1">{worst ? reasonText(worst.reason, license.host ?? '') : ''}</span>
-      <Link to="/license" className="shrink-0 font-medium text-text underline">{t('See Licence')}</Link>
-      {level === 2 && (
-        <Button
-          size="xs"
-          variant="ghost"
-          onClick={() => {
-            const now = Date.now()
-            setDismissed(now)
-            try {
-              localStorage.setItem(KEY, String(now))
-            } catch {
-              // Private window: it stays hidden until the page reloads.
-            }
-          }}
-        >
-          {t('Dismiss')}
-        </Button>
-      )}
-    </div>
+    <Banner
+      action={{ to: '/license', label: t('See Licence') }}
+      onDismiss={level === 2 ? () => {
+        const now = Date.now()
+        setDismissed(now)
+        try {
+          localStorage.setItem(KEY, String(now))
+        } catch {
+          // Private window: it stays hidden until the page reloads.
+        }
+      } : undefined}
+    >
+      {worst ? reasonText(worst.reason, license.host ?? '') : ''}
+    </Banner>
   )
 }

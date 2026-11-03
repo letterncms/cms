@@ -162,7 +162,7 @@ export function App() {
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   // Workspace panels decide their own placement and visibility (e.g. the assistant overlay).
   const asides = panelsFor('shell.aside', { full })
-  // A line across the top of the workspace for what its module needs someone to see.
+  // A line across the top of the whole window for what its module needs someone to see: its own row, so it never sits over a screen.
   const banners = panelsFor('shell.banner', { full })
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', { full })
@@ -174,65 +174,67 @@ export function App() {
     : sidebarOut ? t('Hide Sidebar') : t('Show Sidebar')
 
   return (
-    <div
-      className="cms-shell relative flex h-screen overflow-hidden bg-bg"
-      style={{ '--cms-sidebar-width': sidebarShown ? '248px' : '0px', '--cms-sidebar-toggle': !full && !sidebarShown ? `${leadingWidth + 4}px` : '0px' } as CSSProperties}
-    >
-      {!full && (narrow ? (
-        expanded && (
-          <>
-            <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setExpanded(false)} aria-hidden="true" />
-            <div className="fixed inset-y-0 left-0 z-50 flex border-r border-border-modal shadow-pop">
-              {sidebar(() => setExpanded(false))}
-            </div>
-          </>
-        )
-      ) : (
-        <div className="cms-side-panel" style={{ '--cms-side-panel-width': '248px' } as CSSProperties} data-hidden={!sidebarShown || undefined} inert={!sidebarShown}>
-          {sidebar()}
-        </div>
-      ))}
-      {/* One place, above whatever is there: the sidebar coming and going never moves these. */}
-      {!full && !(dock.open && narrow) && (
-        <div ref={setLeading} className={cn('absolute left-2 top-2.5 flex max-w-[232px] items-center gap-1', narrow && expanded ? 'z-[51]' : 'z-30')}>
-          <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
-            <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
-          </Tooltip>
-          {!dock.full && <StateBack own={own} onNavigate={() => setExpanded(false)} />}
-        </div>
-      )}
-      <WorkspaceContext value={{ host: workspace, content, sidebar: { host: ownHost, open: narrow ? expanded : ownOpen, setOpen: narrow ? setExpanded : setOwnOpen, claim: claimSidebar, claimed: own !== null } }}>
-        <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} className="relative isolate min-w-0 flex-1 shadow-[-1px_0_0_var(--cms-border)]">
-          {pending && <div className="cms-progress" role="progressbar" aria-label={t('Loading…')} />}
-          <div ref={content} data-cms-screen className="h-full overflow-y-auto" onScroll={(e) => scrolls.current.set(key, e.currentTarget.scrollTop)}>
-            {!full && banners.map(({ id, component: Banner }) => (
-              <ErrorBoundary key={id}>
-                <Banner full={full} />
-              </ErrorBoundary>
-            ))}
-            <ScreenLocation location={location}>
-              {/* Only the very first screen can show this; later ones wait in the background (see useScreenLocation). */}
-              <Suspense fallback={null}>
-                <ErrorBoundary key={route?.path + JSON.stringify(params)}>
-                  <Screen params={params} />
-                </ErrorBoundary>
-              </Suspense>
-            </ScreenLocation>
-          </div>
-          {asides.map(({ id, component: Aside }) => (
-            <ErrorBoundary key={id}>
-              <Aside full={full} />
-            </ErrorBoundary>
-          ))}
-        </div>
-      </WorkspaceContext>
-      {docks.map(({ id, component: Dock }) => (
+    <div className="flex h-screen flex-col bg-bg">
+      {!full && banners.map(({ id, component: Banner }) => (
         <ErrorBoundary key={id}>
-          <Dock full={full} />
+          <Banner full={full} />
         </ErrorBoundary>
       ))}
-      <CommandPalette open={palette} onOpenChange={setPalette} />
-      <CustomizeSidebar open={customizing} onOpenChange={setCustomizing} />
+      <div
+        className="cms-shell relative flex min-h-0 flex-1 overflow-hidden bg-bg"
+        style={{ '--cms-sidebar-width': sidebarShown ? '248px' : '0px', '--cms-sidebar-toggle': !full && !sidebarShown ? `${leadingWidth + 4}px` : '0px' } as CSSProperties}
+      >
+        {!full && (narrow ? (
+          expanded && (
+            <>
+              <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setExpanded(false)} aria-hidden="true" />
+              <div className="fixed inset-y-0 left-0 z-50 flex border-r border-border-modal shadow-pop">
+                {sidebar(() => setExpanded(false))}
+              </div>
+            </>
+          )
+        ) : (
+          <div className="cms-side-panel" style={{ '--cms-side-panel-width': '248px' } as CSSProperties} data-hidden={!sidebarShown || undefined} inert={!sidebarShown}>
+            {sidebar()}
+          </div>
+        ))}
+        {/* One place, above whatever is there: the sidebar coming and going never moves these. */}
+        {!full && !(dock.open && narrow) && (
+          <div ref={setLeading} className={cn('absolute left-2 top-2.5 flex max-w-[232px] items-center gap-1', narrow && expanded ? 'z-[51]' : 'z-30')}>
+            <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
+              <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
+            </Tooltip>
+            {!dock.full && <StateBack own={own} onNavigate={() => setExpanded(false)} />}
+          </div>
+        )}
+        <WorkspaceContext value={{ host: workspace, content, sidebar: { host: ownHost, open: narrow ? expanded : ownOpen, setOpen: narrow ? setExpanded : setOwnOpen, claim: claimSidebar, claimed: own !== null } }}>
+          <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} className="relative isolate min-w-0 flex-1 shadow-[-1px_0_0_var(--cms-border)]">
+            {pending && <div className="cms-progress" role="progressbar" aria-label={t('Loading…')} />}
+            <div ref={content} data-cms-screen className="h-full overflow-y-auto" onScroll={(e) => scrolls.current.set(key, e.currentTarget.scrollTop)}>
+              <ScreenLocation location={location}>
+                {/* Only the very first screen can show this; later ones wait in the background (see useScreenLocation). */}
+                <Suspense fallback={null}>
+                  <ErrorBoundary key={route?.path + JSON.stringify(params)}>
+                    <Screen params={params} />
+                  </ErrorBoundary>
+                </Suspense>
+              </ScreenLocation>
+            </div>
+            {asides.map(({ id, component: Aside }) => (
+              <ErrorBoundary key={id}>
+                <Aside full={full} />
+              </ErrorBoundary>
+            ))}
+          </div>
+        </WorkspaceContext>
+        {docks.map(({ id, component: Dock }) => (
+          <ErrorBoundary key={id}>
+            <Dock full={full} />
+          </ErrorBoundary>
+        ))}
+        <CommandPalette open={palette} onOpenChange={setPalette} />
+        <CustomizeSidebar open={customizing} onOpenChange={setCustomizing} />
+      </div>
     </div>
   )
 }
