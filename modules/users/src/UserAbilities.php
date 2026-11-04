@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Validator as LaravelValidator;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
-use Cms\Contracts\MailMessage;
-use Cms\Contracts\Mailer;
+use Cms\Modules\Email\Message;
+use Cms\Modules\Email\Mailer;
 use Cms\Cms;
 use Cms\Modules\Workspace\Answers;
 use Cms\Users\Accounts;
@@ -364,7 +364,7 @@ final class UserAbilities
         $locale = app(\Cms\Admin\Translations::class)->locale($user);
         $invited = __(':name invited you to edit :site.', ['name' => $from, 'site' => $site], $locale);
 
-        app(Mailer::class)->send(new MailMessage(
+        app(Mailer::class)->send(new Message(
             to: $user->email,
             subject: __('You’re invited to :site', ['site' => $site], $locale),
             html: '<p>'.e($invited).'</p><p><a href="'.e($link).'">'.e(__('Set your password', [], $locale)).'</a></p><p>'.e(__('The link is valid for 7 days.', [], $locale)).'</p>',

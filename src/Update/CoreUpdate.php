@@ -6,8 +6,8 @@ namespace Cms\Update;
 
 use Cms\Admin\Manifest;
 use Cms\Cms;
-use Cms\Contracts\MailMessage;
-use Cms\Contracts\Mailer;
+use Cms\Modules\Email\Message;
+use Cms\Modules\Email\Mailer;
 use Cms\Contracts\SiteBuilder;
 use Cms\Foundation\Application;
 use Cms\Packages\PackageManifest;
@@ -868,7 +868,7 @@ class CoreUpdate
 
             foreach (User::query()->get() as $user) {
                 if ($user->hasPermission('packages.manage')) {
-                    $mailer->send(new MailMessage(to: (string) $user->email, subject: $subject, text: $body));
+                    $mailer->send(new Message(to: (string) $user->email, subject: $subject, text: $body));
                 }
             }
         } catch (Throwable $e) {

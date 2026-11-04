@@ -1,4 +1,4 @@
-import { brand, t, useAbility, useManifest } from '@letterncms/sdk'
+import { brand, t, useAbility } from '@letterncms/sdk'
 import { Icon, Meter, Widget, WidgetRow, cn } from '@letterncms/ui'
 
 interface Item {
@@ -10,11 +10,9 @@ interface Item {
 
 /** Home-screen widget: what the site still needs before it goes live, each item linking to where it is set. */
 export default function WidgetSetup() {
-  const manifest = useManifest()
-  const hasMail = manifest.settings.some((s) => s.namespace === 'mail')
   const site = useAbility<{ values: Record<string, any> }>('settings/get', { namespace: 'site' })
-  const mail = useAbility<{ values: Record<string, any> }>('settings/get', { namespace: 'mail' }, { enabled: hasMail })
-  const loading = site.isLoading || (hasMail && mail.isLoading)
+  const email = useAbility<{ values: Record<string, any> }>('settings/get', { namespace: 'email' })
+  const loading = site.isLoading || email.isLoading
 
   const items: Item[] = []
   if (site.data) {
@@ -30,9 +28,9 @@ export default function WidgetSetup() {
       { label: t('Timezone'), done: timezone !== 'UTC', value: timezone, to: '/settings/site' },
     )
   }
-  if (hasMail && mail.data) {
-    const from = String(mail.data.values.from_address ?? '').trim()
-    items.push({ label: t('Email Sender'), done: from !== '', value: from || t('Not set'), to: '/settings/mail' })
+  if (email.data) {
+    const from = String(email.data.values.from_address ?? '').trim()
+    items.push({ label: t('Email Sender'), done: from !== '', value: from || t('Not set'), to: '/settings/email' })
   }
 
   const done = items.filter((i) => i.done).length

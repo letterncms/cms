@@ -151,7 +151,7 @@ final class ContentAbilities
 
         $a->register('collections/options', [
             'label' => 'Collection Options',
-            'description' => 'Initial collection definition defaults and settings from the active plugins. Apply defaults before explicit creation settings; without the blocks plugin a new collection can contain fields only.',
+            'description' => 'Initial collection definition defaults and settings from the active plugins. Apply defaults before explicit creation settings; with Blocks off a new collection can contain fields only.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'handler' => fn () => [

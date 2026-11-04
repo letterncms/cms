@@ -1,0 +1,22 @@
+{
+    "name": "letterncms/collaboration",
+    "description": "Comments with @mentions and email notifications, who is viewing or editing a page, and an inbox of what needs you.",
+    "type": "cms-plugin",
+    "version": "0.7.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Collaboration\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Collaboration",
+            "icon": "users",
+            "provider": "Cms\\Modules\\Collaboration\\CollaborationModule"
+        }
+    }
+}

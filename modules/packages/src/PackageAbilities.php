@@ -34,7 +34,7 @@ final class PackageAbilities
             'description' => 'Installed packages with status and their settings namespaces. core marks the modules the admin is made of; required ones cannot be disabled.',
             'permission' => 'packages.manage',
             'annotations' => ['readOnly' => true],
-            'input' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['module', 'plugin', 'all'], 'default' => 'all']]],
+            'input' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['module', 'plugin', 'all'], 'default' => 'all'], 'optional' => ['type' => 'boolean', 'default' => false, 'description' => 'Only what can be switched off: no required modules.']]],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $manager = $this->cms->packages();
                 $timestamps = $manager->timestamps();
@@ -52,6 +52,11 @@ final class PackageAbilities
                     $type = $package->core ? 'module' : 'plugin';
 
                     if ($in['type'] !== 'all' && $in['type'] !== $type) {
+                        continue;
+                    }
+
+                    // Only what can be switched off: not what is required, or held on by something that is.
+                    if (($in['optional'] ?? false) && ($package->required || array_filter($manager->dependents($package->name), static fn ($d) => $manager->repository()->find($d)?->required))) {
                         continue;
                     }
 

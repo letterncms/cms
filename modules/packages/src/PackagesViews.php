@@ -10,7 +10,8 @@ use Cms\Users\User;
 /**
  * Plugins as data: the site's plugins, on or off, with their settings a click away; the store and
  * updates (catalog components: they install and update step by step); and whatever else belongs here,
- * added with the `view.plugins` filter (the license module's Licenses). The CMS's own modules are not listed.
+ * added with the `view.plugins` filter (the license module's Licenses). Of the CMS's own modules, those that can be
+ * switched off are listed under Built In; the required ones are not.
  */
 final class PackagesViews
 {
@@ -38,9 +39,30 @@ final class PackagesViews
                     // What the repository couldn't read, as it says it (data, not words of this view).
                     ...array_map(static fn (string $error) => ['type' => 'ui/notice', 'props' => ['tone' => 'danger', 'title' => $error]], $packages->repository()->errors()),
                 ]],
+                ['type' => 'ui/tab', 'props' => ['id' => 'built-in', 'label' => __('Built In')], 'children' => [self::builtIn()]],
                 ['type' => 'ui/tab', 'props' => ['id' => 'store', 'label' => __('Store')], 'children' => [['type' => 'packages/store']]],
                 ['type' => 'ui/tab', 'props' => ['id' => 'updates', 'label' => __('Updates')], 'children' => [['type' => 'packages/updates']]],
             ]],
+        ]];
+    }
+
+    /** What comes with the CMS and can be switched off, by name: no versions of their own, nothing to uninstall. */
+    private static function builtIn(): array
+    {
+        return ['type' => 'ui/records', 'props' => [
+            'id' => 'packages.modules', 'label' => __('Built In'), 'key' => 'name',
+            'source' => ['ability' => 'packages/list', 'input' => ['type' => 'module', 'optional' => true]],
+            'columns' => [
+                ['key' => 'label', 'label' => __('Name'), 'width' => 'minmax(160px,1fr)', 'icon' => 'icon', 'muted' => 'note', 'warning' => 'problem'],
+                ['key' => 'enabled', 'label' => __('On'), 'width' => '48px', 'format' => 'switch', 'ariaLabel' => __('{row.label} on'), 'disabled' => 'locked', 'action' => [
+                    'label' => __('On'), 'ability' => 'packages/switch', 'input' => ['name' => '{row.name}', 'on' => '{value}'], 'success' => '{result.message}', 'then' => 'manifest',
+                ]],
+                ['key' => 'name', 'label' => __('Package'), 'format' => 'code', 'hidden' => true],
+            ],
+            'open' => ['label' => __('Open'), 'to' => '{row.to}', 'when' => '{row.to}'],
+            'actions' => [
+                ['label' => __('Settings'), 'icon' => 'settings', 'to' => '{row.settingsTo}', 'when' => '{row.settingsTo}'],
+            ],
         ]];
     }
 

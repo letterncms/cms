@@ -10,8 +10,8 @@ import { mounted, viewResponse } from './views.mjs'
 const root = fileURLToPath(new URL('../../..', import.meta.url))
 const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
 const assetBase = '/_cms/assets/cms-admin/'
-const modules = ['content', 'collections', 'globals', 'users', 'packages', 'audit', 'settings']
-const plugins = ['blocks', 'media', 'forms', 'navigation', 'seo', 'i18n']
+const modules = ['content', 'collections', 'globals', 'users', 'packages', 'audit', 'settings', 'blocks', 'media', 'navigation', 'languages']
+const plugins = ['forms', 'seo']
 const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel: 'New Post', icon: 'article', structure: 'list', driver: 'database', editor: 'document', defaultView: 'table', can: { create: true, edit: true, publish: true, delete: true }, routable: false }
 // A media field gives the posts pictures, so they can be shown as cards.
 const blueprintFields = [{ handle: 'category', label: 'Category', type: 'select', options: { news: 'News' } }, { handle: 'cover', label: 'Cover', type: 'media', max: 1 }, { handle: 'body', label: 'Body', type: 'markdown' }]
@@ -26,7 +26,7 @@ const forms = [{ publishedAt: null, updatedAt: null, handle: 'contact', title: '
 const media = Array.from({ length: 61 }, (_, i) => ({ id: `file-${i}`, name: i === 0 ? 'A very long image name to check truncation and action controls' : `Project image ${String(i).padStart(2, '0')}`, filename: `project-${i}.jpg`, kind: 'image', mime: 'image/jpeg', url: '/fixture.svg', thumb: '/fixture.svg', alt: i % 2 ? 'Project image' : '', size: (i + 1) * 1200, folder: i % 2 ? 'Projects' : '', width: 1200, height: 800, focal: { x: 50, y: 50 }, caption: '', publishedAt: null, updatedAt: '2026-10-27T13:00:00Z', createdAt: new Date(Date.UTC(2026, 9, 27, 0, i)).toISOString() }))
 const plugin = (name, label) => ({ name: `letterncms/${name}`, type: 'plugin', themeKind: null, version: '0.1.0', installedVersion: '0.1.0', label, description: `The ${label} plugin.`, icon: 'plugin', firstParty: true, builtIn: true, core: false, required: false, enabled: true, active: true, problem: null, dependents: [], provides: [], settings: [] })
 // More than a screenful at a glance: the plugin list gets search and a display menu.
-const packages = [['media', 'Media'], ['forms', 'Forms'], ['seo', 'SEO'], ['navigation', 'Navigation'], ['i18n', 'Languages'], ['blocks', 'Blocks'], ['sync', 'Sync'], ['search', 'Search'], ['redirects', 'Redirects'], ['commerce', 'Commerce']].map(([name, label]) => plugin(name, label))
+const packages = [['forms', 'Forms'], ['seo', 'SEO'], ['site', 'Site'], ['assistant', 'Assistant'], ['analytics', 'Analytics'], ['brevo', 'Brevo'], ['sync', 'Sync'], ['search', 'Search'], ['redirects', 'Redirects'], ['commerce', 'Commerce']].map(([name, label]) => plugin(name, label))
 const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true }
 // Records that happen on a day: the one kind of overview that offers a calendar.
 const eventsCollection = { ...collection, handle: 'events', title: 'Events', singular: 'Event', newLabel: 'New Event', icon: 'calendar', structure: 'dated' }
@@ -492,7 +492,7 @@ const server = createServer(async (req, res) => {
       else if (ability === 'audit/list') data = { ...page([{ id: 'audit-1', ability: 'entries/publish', label: 'Publish Entry', subject: 'Alpha post', to: '/content/posts/alpha', transport: 'rest', user: { id: 'ada', name: 'Ada Example' }, createdAt: '2026-10-27T12:00:00Z', input: {} }]), filters: { people: [{ id: 'ada', name: 'Ada Example' }], actions: [{ value: 'entries/publish', label: 'Publish Entry' }] } }
       else if (ability === 'redirects/list') data = [{ from: '/old', to: '/new', status: 301 }]
       else if (ability === 'settings/get') data = { label: 'SEO', description: '', icon: 'seo', fields: [], values: {} }
-      else if (ability === 'packages/list') data = { items: [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type !== 'plugin' || !p.core).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
+      else if (ability === 'packages/list') data = { items: [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type === 'module' ? p.core && !p.required : input.type !== 'plugin' || !p.core).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
       else throw new Error('Unexpected ability: ' + ability)
       return json(res, 200, { data })
     }

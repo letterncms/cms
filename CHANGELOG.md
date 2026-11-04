@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Added
+
+- The Plugins screen lists what comes with the CMS and can be switched off, under **Built In**, each with its switch.
+- A plugin that builds on an optional module says so in `composer.json` under `extra.cms.modules` (`["letterncms/blocks"]`): it starts only while that module is on, and the module stays on while the plugin needs it.
+- The `render.page` filter tells a module which page is being rendered (`entry`, `uri`, `locale`), when a plugin such as Site renders one.
+
+### Changed
+
+- **Breaking.** Blocks, Email, Collaboration, Languages, MCP, Media and Navigation are part of the CMS: core modules instead of plugins, in every site, never installed from the store. Email, Media and Navigation are always on; Blocks, Collaboration, Languages and MCP are on unless you switch them off under Plugins → **Built In**. The Email and Media settings and the Languages screen sit in the first group of the settings sidebar. A Composer site takes it by dropping those seven from its `composer.json` and running `composer update`.
+- **Breaking.** Names now read like the other modules': the packages `letterncms/email` (was `letterncms/mail`), `letterncms/collaboration` (was `letterncms/collab`) and `letterncms/languages` (was `letterncms/i18n`); the namespaces `Cms\Modules\Blocks\`, `Cms\Modules\Email\`, `Cms\Modules\Collaboration\`, `Cms\Modules\Languages\`, `Cms\Modules\Mcp\`, `Cms\Modules\Media\` and `Cms\Modules\Navigation\`; the settings `email` (`config/email.yaml`, `CMS_EMAIL_*`) and `languages`; the abilities `email/test`, `email/status`, `email/log` and `collaboration/presence`; the table `email_log`; the hooks `email.colors` and `languages.translator`; the admin imports `@letterncms/collaboration` and `@letterncms/languages`. A plugin built on any of them needs the CMS 0.7 and these names, and no longer requires them in `composer.json`.
+- **Breaking.** Email is sent with `Cms\Modules\Email\Mailer`, a `Cms\Modules\Email\Message` and `Cms\Modules\Email\Body`. `Cms\Contracts\Mailer`, `Cms\Contracts\MailMessage`, `Cms\Contracts\Defaults\LogMailer` and `Cms\Support\MailBody` are gone: a plugin adds a way to send through `Cms\Modules\Email\Transports`, as Brevo does.
+- `media.url` and `media.img` adjust the address and markup Media works out (`$url, $image` and `$html, $image, $alt, $options`), instead of being how they're worked out. `blocks.svg` is gone: an Icon block's own SVG is cleaned like an upload.
+- The installer recommends Site, SEO, Forms and Assistant: the rest comes with the CMS.
+- A site needs PHP's GD extension, for Media.
+
+### Fixed
+
+- Saving hand-written Block Markdown with an image keeps it as Markdown's own `![alt](/image.png)`.
+
 ## 0.6.0 (2026-11-04)
 
 ### Added

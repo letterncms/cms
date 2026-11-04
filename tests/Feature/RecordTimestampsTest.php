@@ -8,8 +8,8 @@ use Carbon\CarbonImmutable;
 use Cms\Abilities\AbilityContext;
 use Cms\Content\Collections\Collection;
 use Cms\Forms\Submission;
-use Cms\Media\MediaItem;
-use Cms\Navigation\Menus;
+use Cms\Modules\Media\MediaItem;
+use Cms\Modules\Navigation\Menus;
 use Cms\Seo\Redirects;
 use Cms\Support\RecordTimestamps;
 use Cms\Support\Yaml;
@@ -19,7 +19,7 @@ final class RecordTimestampsTest extends TestCase
 {
     protected function plugins(): array
     {
-        return ['letterncms/blocks', 'letterncms/forms', 'letterncms/media', 'letterncms/navigation', 'letterncms/seo', 'letterncms/i18n'];
+        return ['letterncms/blocks', 'letterncms/forms', 'letterncms/media', 'letterncms/navigation', 'letterncms/seo', 'letterncms/languages'];
     }
 
     protected function tearDown(): void

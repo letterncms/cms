@@ -1,0 +1,23 @@
+{
+    "name": "letterncms/email",
+    "description": "Email delivery for the CMS and its plugins: SMTP, sendmail or log, provider plugins, branded templates and a delivery log.",
+    "type": "cms-plugin",
+    "version": "0.7.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Email\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Email",
+            "icon": "mail",
+            "provider": "Cms\\Modules\\Email\\EmailModule",
+            "required": true
+        }
+    }
+}
