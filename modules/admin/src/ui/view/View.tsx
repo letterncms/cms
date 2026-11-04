@@ -4,20 +4,26 @@ import { Button } from '../Button'
 import { EmptyState } from '../EmptyState'
 import { Page } from '../Page'
 import { Spinner } from '../Spinner'
-import { useActions } from './actions'
+import { useActions, type ActionAsker, type ActionRunner } from './actions'
 import { ViewContext } from './context'
 import { ViewNodeView } from './render'
 import { fill, input, type Scope } from './scope'
 
-/** Draws a view's tree for the person looking: its lists and forms load through their abilities, its buttons run theirs. */
-export function View({ root, params = {} }: { root: ViewNode; params?: Record<string, string> }) {
-  const { query } = useLocation()
+/**
+ * Draws a view's tree for the person looking: its lists and forms load through their abilities, its buttons run theirs.
+ * `embedded`: drawn inside something else (a thread's answer), not as the place on view: the address is the page's.
+ * `run`: how its buttons run their abilities, when not directly (a thread runs them as turns of its own);
+ * `ask`: how a button's `form` asks, in place of a dialog.
+ */
+export function View({ root, params = {}, embedded = false, run, ask }: { root: ViewNode; params?: Record<string, string>; embedded?: boolean; run?: ActionRunner; ask?: ActionAsker }) {
+  const { query: address, path } = useLocation()
+  const query = embedded ? NONE : address
   const manifest = useManifest()
   const scope: Scope = useMemo(() => ({ params, query, user: manifest.user }), [params, query, manifest.user])
   const refresh = useCallback(() => {}, [])
-  const { act, layer } = useActions(scope, refresh)
+  const { act, layer } = useActions(scope, refresh, run, ask)
   // `?do=<name>` opens one of the place's named actions, once: a link to "New Form" from elsewhere.
-  const wanted = query.do
+  const wanted = embedded ? undefined : query.do
   useEffect(() => {
     if (!wanted) return
     const action = named(root, wanted)
@@ -25,12 +31,14 @@ export function View({ root, params = {} }: { root: ViewNode; params?: Record<st
     if (action) void act(action, {}).catch(() => {})
   }, [wanted, root, act])
   return (
-    <ViewContext.Provider value={{ scope, refresh, act, disabled: false }}>
+    <ViewContext.Provider value={{ scope, refresh, act, disabled: false, at: embedded ? path : undefined }}>
       <ViewNodeView node={root} path="root" />
       {layer}
     </ViewContext.Provider>
   )
 }
+
+const NONE: Record<string, string> = {}
 
 /** The action of a view with this `name`: in the page's bar, a tab's, a section's, or a row of buttons. */
 function named(node: ViewNode, name: string): ViewAction | undefined {
@@ -81,7 +89,7 @@ export function viewRoute(id: string, path: string, options: { private?: boolean
         const own: [string, Record<string, unknown>][] = []
         if (node.type === 'ui/settings') own.push(['settings/get', { namespace: String(fill(p.namespace, scope)) }])
         if (node.type === 'ui/form' && p.source) own.push([p.source.ability, input(p.source.input, scope)])
-        if (node.type === 'ui/records') own.push([p.source.ability, { ...input(p.source.input, scope), ...(p.paged ? { page: 1, perPage: p.paged.perPage ?? 100 } : {}) }])
+        if (node.type === 'ui/records' && p.source) own.push([p.source.ability, { ...input(p.source.input, scope), ...(p.paged ? { page: 1, perPage: p.paged.perPage ?? 100 } : {}) }])
         if (node.type === 'ui/page' && p.count) own.push([p.count.source.ability, input(p.count.source.input, scope)])
         // Of a page's tabs, only the one that opens.
         const children = node.type === 'ui/tabs' ? [(node.children ?? []).find((c) => c.props.id === tab) ?? node.children?.[0]].filter((c): c is ViewNode => !!c) : node.children ?? []

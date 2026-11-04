@@ -83,6 +83,7 @@ export { Surface } from './SurfaceHost'
 
 // Views: the admin's places as data (see Cms\Admin\Views), and the pieces they are drawn with.
 export { View, viewRoute } from './view/View'
+export type { ActionAsker, ActionRunner } from './view/actions'
 export { Records } from './view/Records'
 export type { RecordsProps } from './view/Records'
 export { Form, SettingsView } from './view/Form'

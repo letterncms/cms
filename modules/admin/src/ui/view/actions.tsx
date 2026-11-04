@@ -15,7 +15,13 @@ type Open = { kind: 'dialog' | 'component'; action: ViewAction; scope: Scope } |
  * Runs actions for a view, and holds what an action opens (a dialog of nodes, a component).
  * After an ability changed something, every list and form of the view loads again.
  */
-export function useActions(scope: Scope, refresh: () => void): { act: (action: ViewAction, scope: Scope, busy?: (on: boolean) => void) => Promise<void>; layer: ReactNode } {
+/** Runs an ability for an action, in place of calling it directly: a thread runs it as a turn of its own. */
+export type ActionRunner = (ability: string, input: Record<string, unknown>, action: ViewAction) => Promise<unknown>
+
+/** Asks for an action's `form` in place of the dialog: a thread asks in its composer. */
+export type ActionAsker = (action: ViewAction, scope: Scope) => void
+
+export function useActions(scope: Scope, refresh: () => void, runner?: ActionRunner, ask?: ActionAsker): { act: (action: ViewAction, scope: Scope, busy?: (on: boolean) => void) => Promise<void>; layer: ReactNode } {
   const [open, setOpen] = useState<Open | null>(null)
   const close = useCallback(() => setOpen(null), [])
 
@@ -23,9 +29,11 @@ export function useActions(scope: Scope, refresh: () => void): { act: (action: V
   const perform = useCallback(async (action: ViewAction, here: Scope, values: Record<string, unknown> | null) => {
     const own = input(action.input, { ...here, values })
     // A form's values are the input unless the action names what goes in it.
-    const result = await run(action.ability!, values && Object.keys(own).length === 0 ? values : own)
+    const given = values && Object.keys(own).length === 0 ? values : own
+    const result = runner ? await runner(action.ability!, given, action) : await run(action.ability!, given)
     const after = { ...here, values, result }
-    if (action.success) toast.success(fill(action.success, after))
+    // A thread says what happened in the turn it adds; anywhere else, a toast does.
+    if (action.success && !runner) toast.success(fill(action.success, after))
     const then = Array.isArray(action.then) ? action.then : action.then ? [action.then] : []
     if (then.includes('manifest')) await loadManifest()
     // Whatever the change touched shows it now, here and on every other screen.
@@ -33,7 +41,7 @@ export function useActions(scope: Scope, refresh: () => void): { act: (action: V
     refresh()
     if (then.includes('back')) window.history.back()
     if (then.includes('open') && action.to) navigate(place(fill(action.to, after)))
-  }, [refresh])
+  }, [refresh, runner])
 
   const act = useCallback(async (action: ViewAction, local: Scope, busy?: (on: boolean) => void) => {
     const here = { ...scope, ...local }
@@ -53,6 +61,7 @@ export function useActions(scope: Scope, refresh: () => void): { act: (action: V
       if (url) window.open(url, '_blank', 'noopener')
       return
     }
+    if (action.ability && action.form && ask) return ask(action, here)
     if (action.ability && action.form) {
       // Asks first, in a dialog that stays open with what was wrong until it worked or was put away.
       await new Promise<void>((done) => setOpen({ kind: 'form', action, scope: here, done }))
@@ -64,7 +73,8 @@ export function useActions(scope: Scope, refresh: () => void): { act: (action: V
       try {
         await perform(action, here, null)
       } catch (e) {
-        toast.error(e)
+        // A thread says what went wrong itself, once.
+        if (!runner) toast.error(e)
         throw e
       } finally {
         busy?.(false)
@@ -72,7 +82,7 @@ export function useActions(scope: Scope, refresh: () => void): { act: (action: V
       return
     }
     if (action.to) navigate(place(fill(action.to, here)))
-  }, [scope, perform])
+  }, [scope, perform, runner, ask])
 
   const layer = open && (
     open.kind === 'dialog' ? <ActionDialog action={open.action} scope={open.scope} onClose={close} act={act} refresh={refresh} />
@@ -158,11 +168,14 @@ function ActionComponent({ action, scope, onClose }: { action: ViewAction; scope
 /** A button bound to an action. `after` runs once it succeeded (a dialog closing). */
 export function ActionButton({ action, variant, size, after, scope: local = {}, compact }: { action: ViewAction; variant?: ViewAction['variant']; size?: 'sm' | 'md'; after?: () => void; scope?: Scope; compact?: boolean }) {
   // Run with where the button is drawn: in a dialog, the row it was opened for.
-  const { act, disabled, scope: here } = useView()
+  const { act, disabled, scope: here, at } = useView()
   const [busy, setBusy] = useState(false)
+  // A way to where it is drawn already adds nothing (Open in an answer, beside the page it opens).
+  const away = action.to && !action.ability && !action.dialog && !action.component && at !== undefined ? place(String(fill(action.to, { ...here, ...local }))) : null
   const style = variant ?? action.variant ?? 'default'
   // Shown but not yet possible: Go Live while a check is open.
   const blocked = action.disabled !== undefined && holds(action.disabled, { ...here, ...local })
+  if (away !== null && away === at) return null
   const click = async () => {
     try {
       await act(action, { ...here, ...local }, setBusy)

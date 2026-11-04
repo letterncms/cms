@@ -12,6 +12,7 @@ use Cms\Abilities\AbilityRegistry;
 use Cms\Contracts\MailMessage;
 use Cms\Contracts\Mailer;
 use Cms\Cms;
+use Cms\Modules\Workspace\Answers;
 use Cms\Users\Accounts;
 use Cms\Users\Passwords;
 use Cms\Users\User;
@@ -29,7 +30,9 @@ final class UserAbilities
 
     private function users(AbilityRegistry $a): void
     {
-        $roleSchema = ['type' => 'array', 'items' => ['type' => 'string'], 'uniqueItems' => true];
+        // The roles there are, so a form can offer them (assertRoles says so in words when one is not).
+        $roles = $this->cms->roles()->all();
+        $roleSchema = ['type' => 'array', 'items' => ['type' => 'string', ...($roles ? ['enum' => array_keys($roles), 'x-labels' => array_map(static fn ($role) => (string) ($role['label'] ?? ''), $roles)] : [])], 'uniqueItems' => true];
 
         $a->register('users/recent', [
             'label' => 'Recent Sign-Ins',
@@ -68,9 +71,20 @@ final class UserAbilities
                 'email' => ['type' => 'string', 'format' => 'email'],
                 'password' => ['type' => 'string'],
                 'roles' => $roleSchema,
-                'super' => ['type' => 'boolean', 'default' => false],
+                'super' => ['type' => 'boolean', 'default' => false, 'title' => __('Super Admin')],
                 'data' => ['type' => 'object', 'description' => 'Profile fields (see users/fields).'],
             ], 'required' => ['name', 'email', 'roles']],
+            // Invited, or added with a password: who they are, with a way to them and a way back.
+            'answer' => static fn (array $person, array $in) => Answers::done(
+                isset($in['password']) ? __('Added :name', ['name' => $person['name']]) : __('Invited :name', ['name' => $person['name']]),
+                $person['email'],
+                [
+                    ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/users/'.$person['id']],
+                    ...(isset($in['password']) ? [] : [['label' => __('Resend Invitation'), 'icon' => 'mail', 'ability' => 'users/invite', 'input' => ['id' => $person['id']], 'success' => __('Invitation sent')]]),
+                    ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'ghost', 'ability' => 'users/delete', 'input' => ['id' => $person['id']],
+                        'confirm' => ['title' => Answers::literal(__('Delete :name?', ['name' => $person['name']])), 'confirm' => __('Delete'), 'danger' => true], 'success' => __('User deleted')],
+                ],
+            ),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $email = strtolower($in['email']);
 
@@ -116,7 +130,7 @@ final class UserAbilities
                 'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
                 'email' => ['type' => 'string', 'format' => 'email'],
                 'roles' => $roleSchema,
-                'super' => ['type' => 'boolean'],
+                'super' => ['type' => 'boolean', 'title' => __('Super Admin')],
                 'data' => ['type' => 'object', 'description' => 'Profile fields (see users/fields), merged into the current values.'],
                 'suspended' => ['type' => 'boolean', 'description' => 'A suspended account cannot sign in, and is signed out at its next request.'],
             ], 'required' => ['id']],
@@ -251,6 +265,7 @@ final class UserAbilities
             'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'answer' => static fn (array $gone) => Answers::done(__('Deleted :name', ['name' => $gone['name'] ?? ''])),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = User::query()->findOrFail($in['id']);
 
@@ -262,9 +277,10 @@ final class UserAbilities
                     throw AbilityException::conflict('There must be at least one super admin.');
                 }
 
+                $name = $user->name;
                 $this->cms->accounts()->erase($user);
 
-                return ['deleted' => $in['id']];
+                return ['deleted' => $in['id'], 'name' => $name];
             },
         ]);
 
@@ -274,6 +290,9 @@ final class UserAbilities
             'description' => 'Email a user a link to set their password.',
             'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'answer' => static fn (mixed $sent, array $in) => Answers::done(__('Invitation sent'), User::query()->find($in['id'])?->email, [
+                ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/users/'.$in['id']],
+            ]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $this->invite(User::query()->findOrFail($in['id']), $ctx->user);
 

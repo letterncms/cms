@@ -10,6 +10,7 @@ use Cms\Abilities\AbilityRegistry;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Cms;
+use Cms\Modules\Workspace\Answers;
 use Cms\Support\RecordTimestamps;
 use Cms\Users\User;
 
@@ -31,6 +32,45 @@ final class ContentAbilities
         $this->collections($abilities);
         $this->entries($abilities);
         $this->builtinPages($abilities);
+    }
+
+    /**
+     * What the workspace answers a change to an entry with: what happened, in a line, and what
+     * comes next: open it, publish it, see it live, or take it back.
+     */
+    private function answer(string $what): \Closure
+    {
+        return function (mixed $entry) use ($what): array {
+            if ($what === 'deleted') {
+                return Answers::done(isset($entry['title']) && $entry['title'] !== '' ? __('Deleted “:title”', ['title' => $entry['title']]) : __('Deleted the entry'));
+            }
+
+            $title = (string) ($entry['title'] ?? '');
+            $collection = $this->cms->collections()->find((string) ($entry['collection'] ?? ''));
+            $live = in_array($entry['displayStatus'] ?? '', ['published', 'changed'], true);
+            $id = (string) $entry['id'];
+            $open = ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/content/'.$entry['collection'].'/'.$id];
+            $may = static fn (string $action) => 'entries.'.$entry['collection'].'.'.$action;
+            $publish = ['label' => __('Publish'), 'icon' => 'globe', 'ability' => 'entries/publish', 'input' => ['id' => $id], 'can' => $may('publish'), 'success' => Answers::literal(__('Published “:title”', ['title' => $title]))];
+            $unpublish = ['label' => __('Unpublish'), 'icon' => 'eye-off', 'ability' => 'entries/unpublish', 'input' => ['id' => $id], 'can' => $may('publish'), 'success' => Answers::literal(__('Unpublished “:title”', ['title' => $title]))];
+            $site = $live && ! empty($entry['uri']) ? ['label' => __('View on Site'), 'icon' => 'external', 'href' => rtrim((string) config('app.url'), '/').$entry['uri']] : null;
+            $delete = ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'ghost', 'ability' => 'entries/delete', 'input' => ['id' => $id], 'can' => $may('delete'),
+                'confirm' => ['title' => Answers::literal(__('Delete “:title”?', ['title' => $title])), 'confirm' => __('Delete'), 'danger' => true], 'success' => __('Deleted the entry')];
+            $unpublished = ($entry['displayStatus'] ?? '') !== 'published';
+
+            [$said, $actions] = match ($what) {
+                'created' => [__('Created “:title”', ['title' => $title]), [$open, $live ? $site : $publish, $delete]],
+                'saved' => [__('Saved “:title”', ['title' => $title]), [$open, $unpublished ? $publish : $site]],
+                'published' => [__('Published “:title”', ['title' => $title]), [$open, $site, $unpublish]],
+                'unpublished' => [__('Unpublished “:title”', ['title' => $title]), [$open, $publish]],
+                'discarded' => [__('Discarded the changes to “:title”', ['title' => $title]), [$open]],
+                'duplicated' => [__('Duplicated as “:title”', ['title' => $title]), [$open, $publish, $delete]],
+                default => [__('Restored “:title”', ['title' => $title]), [$open, $unpublished ? $publish : $site]],
+            };
+            $where = $collection === null ? null : ($live ? __('Live in :collection', ['collection' => $collection->title]) : __('Draft in :collection', ['collection' => $collection->title]));
+
+            return Answers::done($said, $where, array_values(array_filter($actions)));
+        };
     }
 
     /** Pages features bring with them (sign in, checkout): what each group has, and making one the site's own. */
@@ -275,6 +315,7 @@ final class ContentAbilities
                 'authorId' => ['type' => ['string', 'null'], 'format' => 'ulid'],
                 'at' => ['type' => 'string', 'format' => 'date-time', 'description' => 'Publication time; requires status published.'],
             ], 'required' => ['collection', 'title']],
+            'answer' => $this->answer('created'),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->create($in['collection'], $in, $ctx->user)->toArray(),
         ]);
 
@@ -298,6 +339,7 @@ final class ContentAbilities
                 'publish' => ['type' => 'boolean', 'default' => false],
                 'expectedVersion' => self::VERSION,
             ], 'required' => ['id']],
+            'answer' => $this->answer('saved'),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish'])->toArray(),
         ]);
 
@@ -306,6 +348,7 @@ final class ContentAbilities
             'description' => 'Publish an entry (applying its draft). Pass `at` to schedule.',
             'permission' => $entryPermission('publish'),
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'at' => ['type' => 'string', 'format' => 'date-time'], 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'answer' => $this->answer('published'),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -314,6 +357,7 @@ final class ContentAbilities
             'description' => 'Take an entry offline (it becomes a draft).',
             'permission' => $entryPermission('publish'),
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'answer' => $this->answer('unpublished'),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -323,6 +367,7 @@ final class ContentAbilities
             'permission' => $entryPermission('edit'),
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'answer' => $this->answer('discarded'),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -332,10 +377,12 @@ final class ContentAbilities
             'permission' => $entryPermission('delete'),
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'answer' => $this->answer('deleted'),
             'handler' => function (array $in, AbilityContext $ctx) {
+                $title = $this->cms->entries()->find($in['id'])?->title;
                 $this->cms->content()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
 
-                return ['deleted' => $in['id']];
+                return ['deleted' => $in['id'], 'title' => $title];
             },
         ]);
 
@@ -344,6 +391,7 @@ final class ContentAbilities
             'description' => 'Copy an entry (as a draft).',
             'permission' => $entryPermission('create'),
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'answer' => $this->answer('duplicated'),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -399,6 +447,7 @@ final class ContentAbilities
             'description' => 'Restore an entry to a previous revision (as a draft for published entries).',
             'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['revisionId'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'edit'),
             'input' => ['type' => 'object', 'properties' => ['revisionId' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['revisionId']],
+            'answer' => $this->answer('restored'),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -530,8 +579,9 @@ final class ContentAbilities
         return $user !== null && $collection !== '' && $user->hasPermission("entries.{$collection}.{$action}");
     }
 
+    /** The collection an entry is in. One that is gone is said to be gone, not forbidden: a button left on view finds out. */
     private function collectionOf(string $id): string
     {
-        return $this->cms->entries()->find($id)?->collection ?? '';
+        return $this->cms->entries()->find($id)?->collection ?? throw new AbilityException(__('This entry no longer exists.'), 'not_found');
     }
 }

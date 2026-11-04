@@ -392,7 +392,8 @@
     right: 0;
     display: flex;
     width: 100%;
-    overflow: hidden;
+    /* Clipped, not scrollable: a field taking the focus inside never slides the whole panel. */
+    overflow: clip;
     background: var(--cms-surface);
     box-shadow: inset 1px 0 var(--cms-border);
     transition: width var(--cms-panel-speed) var(--ease-out);
@@ -534,8 +535,11 @@
     font-weight: 500;
     text-decoration: none;
     translate: 0 calc(-100% - 16px);
+    /* Out of sight entirely, its shadow too, until it has the focus. */
+    opacity: 0;
+    pointer-events: none;
   }
-  .cms-skip:focus-visible { translate: 0 0; outline: 2px solid var(--cms-focus); outline-offset: 2px; }
+  .cms-skip:focus-visible { translate: 0 0; opacity: 1; pointer-events: auto; outline: 2px solid var(--cms-focus); outline-offset: 2px; }
   [data-cms-screen]:focus { outline: none; }
 
   /* A screen's sections under its row: no icons, set in from the row's label, at the sidebar's own rhythm. */

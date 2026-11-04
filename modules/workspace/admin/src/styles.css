@@ -1,0 +1,110 @@
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(plugins);
+@import "@letterncms/admin/theme.css";
+
+@source "./";
+
+.cms-thread { container-type: inline-size; width: 100%; }
+
+.cms-thread-width {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+  padding-inline: 12px;
+}
+
+.cms-thread-greeting {
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.cms-thread-footer {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.cms-thread-turns {
+  overflow-wrap: anywhere;
+}
+
+.cms-thread-bubble { background: var(--cms-active); }
+
+.cms-thread-chip {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  height: 22px;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  padding-right: 2px;
+  border: 1px solid var(--cms-border);
+  border-radius: var(--radius-xs);
+  background: var(--cms-surface);
+  font-size: var(--text-xs);
+  transition: color 120ms var(--ease-out);
+}
+
+/* Reserve the action row so revealing controls never moves a message. */
+.cms-thread-message-actions { min-height: 28px; }
+.cms-thread-message-editor textarea { resize: none; }
+@media (pointer: coarse) {
+  .cms-thread-message-actions button { width: 44px; height: 44px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .cms-thread-message-actions { opacity: 0; }
+  .cms-thread-message:hover .cms-thread-message-actions,
+  .cms-thread-message:focus-within .cms-thread-message-actions { opacity: 1; }
+}
+
+/* Keep the composer a single surface, above the shared textarea utilities. It grows with what is written. Only its own:
+   a form asked for in it keeps its fields' style. */
+.cms-thread-composer textarea.cms-thread-input {
+  display: block;
+  field-sizing: content;
+  min-height: calc(2lh + 16px);
+  resize: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 10px 12px 6px;
+  outline: none;
+  box-shadow: none;
+}
+/* Any smaller and a phone zooms in on the field. */
+@media (pointer: coarse) {
+  .cms-thread-composer textarea.cms-thread-input { font-size: 16px; }
+}
+/* What it says when empty reads clearly, in the dark too. */
+.cms-thread-input::placeholder { color: var(--cms-muted); opacity: 1; }
+
+/* An answer's view sits in the thread like a card on the desk. */
+.cms-thread-view { container-type: inline-size; }
+/* A list in an answer keeps to the thread's width: the page's gutters are not the thread's. */
+.cms-thread-view [data-table-frame] { margin-inline: 0; padding-inline: 0; }
+
+/* With room, the same thread reads as a page. */
+@container (min-width: 640px) {
+  .cms-thread-width { padding-inline: 28px; }
+  .cms-thread-greeting { font-size: clamp(23px, 3cqw, 30px); }
+  .cms-thread-footer { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
+  .cms-thread-welcome { max-width: 680px; }
+  .cms-thread-page[data-empty] .cms-thread-scroll { flex: 0 1 auto; margin-top: auto; }
+  .cms-thread-page[data-empty] .cms-thread-welcome { min-height: 0; }
+  .cms-thread-page[data-empty] .cms-thread-footer { max-width: 680px; margin-bottom: auto; }
+}
+
+/* On a touch screen, everything that is tapped takes a finger: 40px at least, however small it looks. */
+@media (pointer: coarse), (max-width: 640px) {
+  .cms-thread header button,
+  .cms-thread-footer button,
+  .cms-thread-view button,
+  .cms-thread-command button,
+  .cms-thread-turns > * button { min-height: 40px; min-width: 40px; }
+  .cms-thread-option,
+  .cms-thread nav[aria-label] .cms-sidebar-row-main,
+  .cms-thread-view .cms-view-link { min-height: 40px; }
+  /* Small things keep their look and get a larger place to tap. */
+  .cms-thread-chip, .cms-thread-chip button { position: relative; }
+  .cms-thread-chip button::after { content: ""; position: absolute; inset: -12px; }
+  button.cms-thread-chip::after { content: ""; position: absolute; inset: -9px; }
+}

@@ -1,4 +1,4 @@
-// Build admin + assistant, then run this server and open its printed URL.
+// Build the admin, the workspace and the assistant, then run this server and open its printed URL.
 // Exercises the actual bundled UI against local fixtures; never calls an AI provider.
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
@@ -19,9 +19,9 @@ const manifest = {
   cms: { version: 'test', debug: false },
   brand: { name: 'Acme', domain: '', product_url: '', docs_url: '', support_email: '', mark: '', wordmark: '' }, site: { name: 'Acme', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Alex Morgan', email: 'alex@example.invalid', initials: 'AM', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
-  packages: { active: ['cms/admin', 'letterncms/assistant', 'fixture'], pending: {} },
-  modules: [{ id: 'fixture', url: '/fixture.js' }, { id: 'letterncms/assistant', url: '/_cms/assets/cms-assistant/admin.js' }],
-  styles: ['/_cms/assets/cms-assistant/admin.css'], settings: [], collections: [], globals: [], fieldTypes: [], commands: [], widgets: [{ id: 'fixture-widget', label: 'Live plugin widget', icon: 'grid', description: 'Shared with Home', column: 'side', enabled: true, source: 'Fixture' }], dashboard: [], config: {}, nav,
+  packages: { active: ['cms/admin', 'letterncms/workspace', 'letterncms/assistant', 'fixture'], pending: {} },
+  modules: [{ id: 'fixture', url: '/fixture.js' }, { id: 'letterncms/workspace', url: '/_cms/assets/cms-workspace/admin.js' }, { id: 'letterncms/assistant', url: '/_cms/assets/cms-assistant/admin.js' }],
+  styles: ['/_cms/assets/cms-workspace/admin.css', '/_cms/assets/cms-assistant/admin.css'], settings: [], collections: [], globals: [], fieldTypes: [], commands: [], widgets: [{ id: 'fixture-widget', label: 'Live plugin widget', icon: 'grid', description: 'Shared with Home', column: 'side', enabled: true, source: 'Fixture' }], dashboard: [], config: { workspace: { agent: { name: 'assistant', label: 'Claude' } } }, nav,
   sidebar: { sections: ['main', 'content', 'design'].map((id) => ({ id, label: id === 'main' ? '' : id[0].toUpperCase() + id.slice(1), items: nav.filter((n) => n.section === id).map((n) => n.id) })), hidden: [], personal: false },
   settingsNav: [{ id: 'system', label: 'System', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }],
 }
@@ -47,7 +47,7 @@ const usedSurfaces = new Set()
 const fixture = `import { createElement as h } from 'react'; import { registry } from '@letterncms/sdk'; import { Topbar, Widget, WidgetRow } from '@letterncms/ui'; registry.components.set('fixture/context', ({props}) => h('p', null, props.title)); registry.widgets.set('fixture-widget', () => h(Widget, null, h(WidgetRow, { title: 'A live record from the plugin', description: 'The same widget renders on Home and in chat', icon: 'file' }))); ${JSON.stringify(nav)}.forEach(n => registry.routes.set(n.path, { path: n.path, component: () => h('div', null, h(Topbar, { crumbs: [{ label: n.label, icon: n.icon }] }), h('main', {style:{padding:32}}, h('h1', null, n.label))) }));`
 const editedItems = new Map()
 const runner = `
-import { navigate, queryClient, blockNavigation, unregister, reregister, registry } from '@letterncms/sdk'
+import { navigate, queryClient, blockNavigation, unregister, reregister, registry, loadManifest } from '@letterncms/sdk'
 const results = [], output = document.querySelector('#results')
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const assert = (value, message) => { if (!value) throw new Error(message) }
@@ -59,9 +59,11 @@ const isOpen = () => !!dock()?.hasAttribute('data-open')
 const isFull = () => !!dock()?.hasAttribute('data-full')
 const composer = () => dock().querySelector('textarea[role="combobox"]')
 const control = label => dock().querySelector('button[aria-label="' + label + '"]')
+// A fresh thread: the + in the thread's header, which a new empty thread leaves out, or the sidebar's New Chat.
+const newChat = () => (control('New Chat') ?? document.querySelector('.cms-side-panel button[aria-label="New Chat"]')).click()
 const button = label => [...dock().querySelectorAll('button')].find(el => el.textContent.trim() === label)
-const heading = () => dock().querySelector('.cms-assistant-page header h2')?.textContent
-const welcome = () => !!dock().querySelector('.cms-assistant-welcome')
+const heading = () => dock().querySelector('.cms-thread-page header h2')?.textContent
+const welcome = () => !!dock().querySelector('.cms-thread-welcome')
 const historyRows = () => [...dock().querySelectorAll('nav[aria-label="Chats"] .cms-sidebar-row-main')]
 const row = title => historyRows().find(el => el.getAttribute('aria-label') === title)
 const spinning = () => dock().querySelector('nav[aria-label="Chats"] [role="status"]')
@@ -90,13 +92,13 @@ try {
     await wait(() => document.querySelector('.cms-sheet').getBoundingClientRect().right <= dock().querySelector('.cms-dock-panel').getBoundingClientRect().left + 1, 'dock covers the page instead of sitting beside it')
     await wait(() => historyRows().length === 30, 'a new chat does not list the first page of chats')
     const length = window.history.length
-    control('New Chat').click(); control('New Chat').click(); await sleep(100)
+    newChat(); newChat(); await sleep(100)
     assert(location.pathname === '/admin/content/pages' && window.history.length === length, 'New Chat navigated')
     assert(sidebar.getBoundingClientRect().x === before.x && sidebar.getBoundingClientRect().width === before.width, 'shell jumped')
     assert((await state()).created === 0, 'empty chat saved')
   })
   await test('The composer stays in place when typing or clearing a short draft', async () => {
-    const targets = ['.cms-assistant-welcome', '.cms-assistant-composer', 'textarea[role="combobox"]', '[aria-label="Send"]']
+    const targets = ['.cms-thread-welcome', '.cms-thread-composer', 'textarea[role="combobox"]', '[aria-label="Send"]']
     const bounds = () => targets.map(selector => {
       const { x, y, width, height } = dock().querySelector(selector).getBoundingClientRect()
       return [x, y, width, height]
@@ -122,7 +124,7 @@ try {
   })
   await test('New Chat preserves an unfinished draft and focuses its composer', async () => {
     fill('Unfinished landing page idea'); await sleep(30); document.activeElement.blur()
-    control('New Chat').click()
+    newChat()
     await wait(() => document.activeElement === composer(), 'New Chat did not focus the composer')
     assert(composer().value === 'Unfinished landing page idea' && welcome(), 'draft lost')
   })
@@ -132,17 +134,17 @@ try {
     row('Refine the launch page').click()
     await wait(() => dock().textContent.includes('Reply for chat-1') && heading() === 'Refine the launch page', 'saved chat did not open in the dock')
     assert(location.pathname === '/admin/content/pages' && composer().value === '', 'new draft leaked into the saved chat or the page was left')
-    control('New Chat').click(); await wait(() => welcome(), 'new chat did not open')
+    newChat(); await wait(() => welcome(), 'new chat did not open')
     assert(composer().value === 'Unfinished landing page idea', 'new draft was lost')
     fill(''); await sleep(30)
   })
   await test('New Chat leaves a saved conversation and keeps its reply draft, which the command does not throw away', async () => {
-    const command = registry.commands.get('assistant')
+    const command = registry.commands.get('workspace')
     row('Refine the launch page').click(); await wait(() => dock().textContent.includes('Reply for chat-1'), 'saved chat did not open')
     fill('Reply draft'); await sleep(30)
     command.perform(); await sleep(50)
     assert(heading() === 'Refine the launch page' && composer().value === 'Reply draft', 'the New Chat command discarded a reply draft')
-    control('New Chat').click(); await wait(() => welcome() && composer().value === '', 'New Chat did not start fresh')
+    newChat(); await wait(() => welcome() && composer().value === '', 'New Chat did not start fresh')
     await wait(() => row('Refine the launch page')?.textContent.includes('Draft'), 'the list does not mark the reply draft')
     row('Refine the launch page').click(); await wait(() => composer().value === 'Reply draft', 'reply draft was discarded')
     fill(''); await sleep(30)
@@ -155,7 +157,7 @@ try {
     list().scrollTop = list().scrollHeight; await wait(() => historyRows().length === 60, 'second page did not load')
     list().scrollTop = list().scrollHeight; await wait(() => historyRows().length === 70, 'last page did not load')
     list().scrollTop = list().scrollHeight; await sleep(300)
-    const offsets = (await state()).requests.slice(from).filter(r => r.ability === 'assistant/conversations').map(r => r.input.offset)
+    const offsets = (await state()).requests.slice(from).filter(r => r.ability === 'threads/list').map(r => r.input.offset)
     assert(offsets.includes(30) && offsets.includes(60) && offsets.every(offset => [30, 60].includes(offset)) && historyRows().length === 70, 'paging asked for the wrong pages: ' + offsets)
     row('Earlier conversation 65').click(); await wait(() => heading() === 'Earlier conversation 65' && dock().textContent.includes('Reply for chat-65'), 'older chat did not open')
     control('All Chats').click(); await wait(() => row('Earlier conversation 65'), 'All Chats did not list the chats')
@@ -165,8 +167,8 @@ try {
   await test('Late history responses cannot replace the selected conversation', async () => {
     navigate('/chat/slow'); await sleep(50); await open('chat-2'); await sleep(600)
     assert(dock().textContent.includes('Reply for chat-2') && !dock().textContent.includes('Reply for slow'), 'late load replaced selected chat')
-    navigate('/chat/slow'); await sleep(50); control('New Chat').click(); await sleep(650)
-    assert(location.pathname === '/admin/chat/new' && welcome() && !dock().querySelector('.cms-assistant-scroll svg[class*="spin_"]'), 'new chat stuck loading')
+    navigate('/chat/slow'); await sleep(50); newChat(); await sleep(650)
+    assert(location.pathname === '/admin/chat/new' && welcome() && !dock().querySelector('.cms-thread-scroll svg[class*="spin_"]'), 'new chat stuck loading')
   })
   await test('Full size and back never leave the page, so unsaved changes stay without asking', async () => {
     navigate('/content/pages'); await wait(() => !isFull() && isOpen() && screen() === 'Pages', 'leaving the chat URL did not dock the chat')
@@ -206,16 +208,16 @@ try {
     history.forward(); await wait(() => dock().textContent.includes('Reply for chat-2'), 'forward failed')
   })
   await test('A failed first request clears its loading state in the list of chats', async () => {
-    control('New Chat').click(); await wait(() => location.pathname.endsWith('/chat/new') && welcome(), 'new chat failed')
+    newChat(); await wait(() => location.pathname.endsWith('/chat/new') && welcome(), 'new chat failed')
     fill('failed request'); await sleep(30); composer().form.requestSubmit()
     await wait(() => spinning(), 'pending request missing')
     await wait(() => dock().textContent.includes('Request fixture failure'), 'request error missing')
     assert(!spinning(), 'failed request kept spinning')
-    control('New Chat').click()
+    newChat()
     await wait(() => welcome() && !dock().textContent.includes('Request fixture failure') && !dock().textContent.includes('failed request'), 'New Chat kept the failed thread')
   })
   await test('First send appears immediately, stays loading through streaming, becomes one saved chat and is named', async () => {
-    control('New Chat').click(); await wait(() => location.pathname.endsWith('/chat/new'), 'new chat failed')
+    newChat(); await wait(() => location.pathname.endsWith('/chat/new'), 'new chat failed')
     fill('A new conversation'); await sleep(30); composer().form.requestSubmit()
     await wait(() => spinning(), 'pending request missing before response')
     const pending = spinning().closest('.cms-sidebar-row')
@@ -231,7 +233,7 @@ try {
     const { created, requests } = await state()
     assert(created === 1, 'duplicate conversation created')
     assert(requests.find(r => r.kind === 'chat' && r.input.message === 'A new conversation').input.context.path === '/content/pages', 'CMS context lost')
-    assert(requests.some(r => r.ability === 'assistant/conversation-title' && r.input.id === 'created-1'), 'naming was not asked for')
+    assert(requests.some(r => r.ability === 'threads/rename' && r.input.id === 'created-1'), 'naming was not asked for')
   })
   await test('Each chat shows its own model, and a pick is sent, kept and remembered for new chats', async () => {
     const picker = () => dock().querySelector('[aria-label^="Model: "]')
@@ -247,11 +249,11 @@ try {
     fill('Use the faster model'); await sleep(30); composer().form.requestSubmit()
     await wait(() => dock().textContent.includes('Streamed answer'), 'stream did not finish')
     const { requests } = await state()
-    assert(requests.filter(r => r.kind === 'chat').at(-1).input.model === 'claude-sonnet-5-5', 'turn did not send the picked model')
+    assert(requests.filter(r => r.kind === 'chat').at(-1).input.agent?.model === 'claude-sonnet-5-5', 'turn did not send the picked model')
     assert(requests.some(r => r.ability === 'account/update' && r.input.preferences['assistant.model'] === 'claude-sonnet-5-5'), 'pick was not remembered')
     await open('chat-3'); await shows('Claude Haiku 5.5', 'a pick leaked into another chat')
     await open('chat-5'); await shows('Claude Sonnet 5.5', 'pick was lost when switching chats')
-    control('New Chat').click(); await wait(() => location.pathname.endsWith('/chat/new'), 'new chat failed')
+    newChat(); await wait(() => location.pathname.endsWith('/chat/new'), 'new chat failed')
     await shows('Claude Sonnet 5.5', 'new chat did not start with the last pick')
     await open('created-1')
   })
@@ -280,13 +282,13 @@ try {
     assert(dock().textContent.includes('LATE STREAM') && heading() === 'Draft the autumn newsletter', 'stream was lost while the chat was put away')
   })
   await test('An older deep-linked chat opens by name without loading every history page', async () => {
-    queryClient.removeQueries({ queryKey: ['assistant/conversations'] })
+    queryClient.removeQueries({ queryKey: ['threads/list'] })
     const from = (await state()).requests.length
     await open('chat-65')
     // Older than the first page of chats, it is listed at the top all the same, as the one on view.
     await wait(() => heading() === 'Earlier conversation 65' && historyRows().length === 31 && historyRows()[0].getAttribute('aria-current') === 'page' && row('Earlier conversation 65'), 'deep-linked chat did not open by name, listed as the one on view')
     await sleep(200)
-    const listed = (await state()).requests.slice(from).filter(r => r.ability === 'assistant/conversations')
+    const listed = (await state()).requests.slice(from).filter(r => r.ability === 'threads/list')
     assert(listed.length > 0 && listed.every(r => (r.input.offset ?? 0) === 0), 'opening an older chat loaded more history')
   })
   await test('Message copy preserves the full text and confirms success', async () => {
@@ -333,7 +335,7 @@ try {
     assert(!dock().textContent.includes('Reply for chat-5') && !dock().textContent.includes('Please review this page'), 'old branch remained')
     assert(composer().value === 'Keep composer draft', 'edit overwrote the composer draft')
     const { requests } = await state()
-    assert(JSON.stringify(requests.findLast(r => r.kind === 'chat').input.edit) === JSON.stringify({ index: 0, original: 'Please review this page' }), 'edit target was not sent')
+    assert(JSON.stringify(requests.findLast(r => r.kind === 'chat').input.edit) === JSON.stringify({ turn: 'u-0', original: 'Please review this page' }), 'edit target was not sent')
     await open('chat-1')
     navigate('/chat/chat-5'); await wait(() => dock().textContent.includes('Revised answer') && dock().textContent.includes('Revised prompt'), 'edit did not survive reload')
     assert(!dock().textContent.includes('Please review this page'), 'reload brought back the old prompt')
@@ -342,14 +344,14 @@ try {
     control('Chat Actions').click()
     await wait(() => [...document.querySelectorAll('[role="menuitem"]')].some(el => el.textContent === 'Delete Chat'), 'delete action missing')
     ;[...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent === 'Delete Chat').click()
-    await wait(() => document.querySelector('[role="dialog"]'), 'confirmation missing')
+    await wait(() => document.querySelector('[role="alertdialog"]'), 'confirmation missing')
   }
-  const dialogAction = label => [...document.querySelectorAll('[role="dialog"] button')].find(el => el.textContent === label).click()
+  const dialogAction = label => [...document.querySelectorAll('[role="alertdialog"] button')].find(el => el.textContent === label).click()
   await test('Canceling deletion preserves the saved chat and its draft', async () => {
     await open('chat-1'); fill('Keep this draft'); await sleep(30)
     await deletionDialog(); dialogAction('Cancel'); await sleep(300)
     assert(location.pathname.endsWith('/chat/chat-1') && composer().value === 'Keep this draft', 'cancel discarded the chat or draft')
-    assert(!(await state()).requests.some(r => r.ability === 'assistant/conversation-delete'), 'cancel sent a deletion')
+    assert(!(await state()).requests.some(r => r.ability === 'threads/delete'), 'cancel sent a deletion')
   })
   await test('A failed deletion reports its error and preserves the conversation', async () => {
     await open('chat-2'); fill('Preserve on failure'); await sleep(30)
@@ -380,13 +382,14 @@ try {
   })
   await test('Generated actions use approval and stay consumed after history reload', async () => {
     button('Publish selected page').click()
-    await wait(() => button('Allow'), 'component action did not reach approval')
-    assert(dock().textContent.includes('Asked because this chat has read site content.'), 'untrusted approval has no warning')
+    await wait(() => button('Publish page'), 'component action did not reach approval')
+    assert(dock().textContent.includes('After reading site content'), 'untrusted approval has no warning')
+    assert(document.activeElement === button('Decline'), 'the approval does not start on its safe answer')
     assert(button('Publish selected page').disabled, 'used surface stayed interactive')
     const request = (await state()).requests.findLast(r => r.kind === 'chat').input
     assert(JSON.stringify(request.action) === JSON.stringify({ tool: 'surface-tool', node: 'action', name: 'submit' }), 'browser sent generated ability inputs')
     assert(!('message' in request), 'click was sent as a prompt')
-    button('Allow').click()
+    button('Publish page').click()
     await wait(() => dock().textContent.includes('Published through the normal approval flow'), 'approval failed')
     await open('chat-3')
     await open('surfaces')
@@ -407,6 +410,103 @@ try {
     assert(!dock().textContent.includes('Preparing generated overview'), 'replaced surface remained visible')
     assert([...dock().querySelectorAll('h2')].filter(el => el.textContent === 'Live generated overview').length === 1, 'surface update duplicated the interface')
   })
+  await test('A command picked with / runs at once, or asks for what it needs right in the composer', async () => {
+    newChat(); await wait(() => welcome(), 'new chat failed')
+    fill('/build site'); await sleep(30)
+    await wait(() => dock().querySelector('[role="option"]')?.textContent.includes('Build Site'), 'the ability is not offered')
+    composer().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await wait(() => dock().textContent.includes('Built the site'), 'a command without input did not run at once')
+    const ran = (await state()).requests.findLast(r => r.kind === 'chat').input
+    assert(JSON.stringify(ran.command) === JSON.stringify({ ability: 'site/build', input: {}, label: 'Build Site' }) && !('message' in ran), 'the command was sent as words')
+    fill('/create entry'); await sleep(30)
+    await wait(() => dock().querySelector('[role="option"]')?.textContent.includes('Create Entry'), 'the ability is not offered')
+    composer().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await wait(() => dock().querySelector('form[aria-label="Create Entry"] input'), 'its form did not open in the composer')
+    const inputs = [...dock().querySelectorAll('form[aria-label="Create Entry"] input')]
+    assert(inputs.length === 2, 'the form does not ask for what is required')
+    for (const [input, value] of [[inputs[0], 'pages'], [inputs[1], 'Refused title']]) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) }
+    await sleep(30); button('Run').click()
+    await wait(() => dock().textContent.includes('Title fixture refusal'), 'a refusal is not said on its field')
+    assert(dock().querySelector('form[aria-label="Create Entry"]'), 'the form closed on a refusal')
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(inputs[1], 'Summer Menu'); inputs[1].dispatchEvent(new Event('input', { bubbles: true }))
+    await sleep(30); button('Run').click()
+    await wait(() => dock().textContent.includes('Created “Summer Menu”') && !dock().querySelector('form[aria-label="Create Entry"]'), 'the command did not answer with its view')
+    assert(button('Publish'), 'the answer has no next step')
+    button('Publish').click()
+    await wait(() => dock().textContent.includes('Published “Summer Menu”'), 'an answer’s button did not run as a turn of the thread')
+  })
+  await test('A bare / stays short, an ability that needs a raw id is not offered, and an answer’s form asks in the composer', async () => {
+    fill('/'); await sleep(30)
+    await wait(() => dock().querySelector('[role="listbox"]') && !dock().textContent.includes('Looking…'), 'the list did not open')
+    assert(!dock().querySelector('[role="listbox"]').textContent.includes('Build Site'), 'a bare / lists every ability')
+    fill('/get form'); await sleep(300)
+    assert(!dock().querySelector('[role="listbox"]')?.textContent.includes('Get Form By Id'), 'an ability that needs a raw id is offered')
+    fill(''); await sleep(30)
+    button('Add to Menu').click()
+    await wait(() => dock().querySelector('form[aria-label="Add to Menu"]'), 'the answer’s form did not open in the composer')
+    assert(!document.querySelector('[role="dialog"]'), 'the answer’s form opened as a dialog')
+    dock().querySelector('form[aria-label="Add to Menu"] button[type="submit"]').click()
+    await wait(() => dock().textContent.includes('Added to footer'), 'the form did not run its ability with what it asked')
+    const sent = (await state()).requests.findLast(r => r.kind === 'chat').input.command
+    assert(JSON.stringify(sent.input) === JSON.stringify({ menu: 'footer', entry: 'e1' }) && sent.detail === 'Footer', 'the form’s answers or their words did not go with it: ' + JSON.stringify(sent))
+    assert(dock().textContent.includes('Add to Menu') && dock().textContent.includes('Footer'), 'the turn does not say what was chosen in words')
+  })
+  await test('A button for something gone says so once, in the thread', async () => {
+    const toasts = () => [...document.querySelectorAll('[data-sonner-toast], [role="status"]')].filter(el => el.textContent.includes('no longer exists')).length
+    button('Publish Again').click()
+    await wait(() => dock().querySelector('[role="alert"]')?.textContent.includes('This entry no longer exists.'), 'a stale button does not say what is gone')
+    await sleep(200)
+    assert(toasts() === 0, 'the error was said twice, in a toast too')
+    control('Dismiss').click()
+  })
+  await test('A chat is renamed in place, from its menu', async () => {
+    await open('chat-1')
+    control('Chat Actions').click()
+    await wait(() => [...document.querySelectorAll('[role="menuitem"]')].some(el => el.textContent === 'Rename Chat'), 'Rename Chat missing')
+    ;[...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent === 'Rename Chat').click()
+    await wait(() => dock().querySelector('header input'), 'the name did not become a field')
+    const field = dock().querySelector('header input')
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field, 'Launch plan'); field.dispatchEvent(new Event('input', { bubbles: true }))
+    field.form.requestSubmit()
+    await wait(() => heading() === 'Launch plan', 'the new name does not show')
+    assert((await state()).requests.some(r => r.ability === 'threads/rename' && r.input.title === 'Launch plan' && r.input.id === 'chat-1'), 'the rename was not saved')
+  })
+  await test('An agent that opens a place moves the admin there as it answers, never on a reload, and its links stay in the admin', async () => {
+    navigate('/content/pages'); await wait(() => screen() === 'Pages', 'CMS navigation failed')
+    if (!isOpen()) toggle().click()
+    await wait(() => isOpen() && !isFull(), 'the thread is not docked')
+    newChat(); await wait(() => welcome(), 'new chat failed')
+    window.__alive = 'same page'
+    fill('open the posts'); await sleep(30); composer().form.requestSubmit()
+    await wait(() => screen() === 'Posts' && location.pathname === '/admin/content/posts', 'an opened place did not open')
+    assert(isOpen() && !isFull(), 'the thread did not stay beside the page')
+    await wait(() => dock().textContent.includes('Opened') && [...dock().querySelectorAll('a')].some(a => a.textContent === 'Posts'), 'the tool row does not say what it opened')
+    // A link to a place of the admin, written either way, opens in the admin without a reload.
+    const link = [...dock().querySelectorAll('a')].find(a => a.textContent === 'the pages')
+    assert(link && link.getAttribute('href') === '/admin/content/pages' && !link.target, 'an admin path in Markdown is no link in the admin')
+    link.click(); await wait(() => screen() === 'Pages', 'the Markdown link did not open the place')
+    const code = [...dock().querySelectorAll('a code')].find(c => c.textContent === '/admin/content/posts')
+    assert(code, 'an admin path written as code is no link')
+    code.closest('a').click(); await wait(() => screen() === 'Posts', 'the code link did not open the place')
+    assert(window.__alive === 'same page', 'the admin reloaded')
+    // Reopening the thread replays it, and goes nowhere.
+    navigate('/content/pages'); await wait(() => screen() === 'Pages', 'CMS navigation failed')
+    navigate('/chat/opened'); await wait(() => isFull() && heading() === 'Opened before' && dock().textContent.includes('Opened'), 'the thread did not load'); await sleep(500)
+    assert(location.pathname === '/admin/chat/opened' && screen() === 'Pages', 'replaying a thread moved the admin')
+    navigate('/content/pages'); await wait(() => !isFull(), 'the thread did not dock again')
+  })
+  await test('Without an agent the thread searches and runs commands, and nothing mentions AI', async () => {
+    await fetch('/__test/agent', { method: 'POST', body: 'off' }); await loadManifest()
+    newChat(); await wait(() => welcome(), 'new chat failed')
+    await wait(() => composer().placeholder === 'Search, or / for a command', 'the composer still offers to ask')
+    assert(!dock().querySelector('[aria-label="Add Context"]') && !dock().querySelector('[aria-label^="Model: "]'), 'context or a model picker without an agent')
+    assert(!/Claude|\bAI\b|assistant/i.test(dock().textContent), 'the thread mentions AI')
+    fill('Pricing'); await sleep(30); composer().form.requestSubmit()
+    await wait(() => dock().textContent.includes('Found Pricing'), 'the search did not answer')
+    const sent = (await state()).requests.findLast(r => r.kind === 'chat').input
+    assert(sent.search === 'Pricing' && !('message' in sent) && !('context' in sent), 'plain words were not a search')
+    await fetch('/__test/agent', { method: 'POST', body: 'on' }); await loadManifest()
+  })
   output.textContent += '\\nAll ' + results.length + ' chat checks passed.'
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results }) })
 } catch (error) {
@@ -422,6 +522,7 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost')
     if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
     if (url.pathname === '/__test/state') return json(res, 200, { created, requests })
+    if (url.pathname === '/__test/agent') { manifest.config = { workspace: { agent: (await new Promise(r => { let b = ''; req.on('data', c => b += c); req.on('end', () => r(b)) })) === 'on' ? { name: 'assistant', label: 'Claude' } : null } }; return json(res, 200, {}) }
     if (url.pathname === '/__test/results') { const result = await body(req); result.passed.forEach(name => console.log('PASS', name)); if (result.error) console.error('FAIL', result.error); json(res, 200, {}); return finish(result.error) }
     if (url.pathname === '/fixture.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); return res.end(fixture) }
     if (url.pathname.startsWith('/api/admin/abilities/')) {
@@ -429,52 +530,86 @@ const server = createServer(async (req, res) => {
       requests.push({ ability, input })
       if (ability === 'assistant/status') return json(res, 200, { data: { configured: true, model: 'claude-opus-5-5', models } })
       if (ability === 'account/update') return json(res, 200, { data: {} })
-      if (ability === 'assistant/conversations') return json(res, 200, { data: chats.slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 30)) })
-      if (ability === 'assistant/conversation-title') {
+      if (ability === 'threads/list') return json(res, 200, { data: chats.slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 30)) })
+      if (ability === 'threads/rename' && input.title) {
+        const chat = chats.find(c => c.id === input.id)
+        if (chat) chat.title = input.title
+        return json(res, 200, { data: { id: input.id, title: input.title } })
+      }
+      if (ability === 'threads/rename') {
         const chat = chats.find(c => c.id === input.id)
         if (chat && chat.title === 'A new conversation') chat.title = 'Launch page ideas'
         return json(res, 200, { data: { title: chat?.title ?? 'Content overview' } })
       }
-      if (ability === 'assistant/conversation-delete') {
+      if (ability === 'threads/delete') {
         await new Promise(r => setTimeout(r, input.id === 'chat-4' ? 450 : 50))
         if (input.id === 'chat-2') return json(res, 422, { error: { message: 'Deletion fixture failure', type: 'invalid_input' } })
         chats = chats.filter(chat => chat.id !== input.id)
         return json(res, 200, { data: { deleted: true } })
       }
-      if (ability === 'assistant/conversation') {
+      if (ability === 'threads/get') {
         await new Promise(r => setTimeout(r, input.id === 'slow' ? 500 : 25))
-        return json(res, 200, { data: { id: input.id, title: chats.find(c => c.id === input.id)?.title ?? 'Slow chat', model: { 'chat-3': 'claude-haiku-5-5', 'chat-6': 'claude-retired' }[input.id] ?? null, awaiting: [], items: editedItems.get(input.id) ?? [{ role: 'user', text: 'Please review this page', messageIndex: 0 }, { role: 'assistant', parts: [{ type: 'text', text: 'Reply for ' + input.id }, ...(input.id === 'surfaces' ? [{ type: 'tool', id: 'surface-tool', name: 'ui_present', label: 'Present interface', status: 'ok', surface, used: usedSurfaces.has(input.id) }] : [])] }] } })
+        if (input.id === 'opened') return json(res, 200, { data: { id: 'opened', title: 'Opened before', agent: { model: null }, awaiting: [], turns: [{ id: 'u-o', role: 'user', kind: 'message', text: 'open the posts' }, { id: 'a-o', role: 'answer', agent: 'assistant', parts: [{ type: 'tool', id: 'open-0', name: 'admin__open', label: 'Open in Admin', ability: 'admin/open', status: 'ok', output: JSON.stringify({ to: '/content/posts', label: 'Posts' }) }] }] } })
+        return json(res, 200, { data: { id: input.id, title: chats.find(c => c.id === input.id)?.title ?? 'Slow chat', agent: { model: { 'chat-3': 'claude-haiku-5-5', 'chat-6': 'claude-retired' }[input.id] ?? null }, awaiting: [], turns: editedItems.get(input.id) ?? [{ id: 'u-0', role: 'user', kind: 'message', text: 'Please review this page' }, { id: 'a-0', role: 'answer', agent: 'assistant', parts: [{ type: 'text', text: 'Reply for ' + input.id }, ...(input.id === 'surfaces' ? [{ type: 'tool', id: 'surface-tool', name: 'ui_present', label: 'Present interface', status: 'ok', surface, used: usedSurfaces.has(input.id) }] : [])] }] } })
       }
+      if (ability === 'workspace/commands') return json(res, 200, { data: [{ name: 'entries/create', label: 'Create Entry', group: 'Content', icon: 'file', input: { type: 'object', properties: { collection: { type: 'string' }, title: { type: 'string' } }, required: ['collection', 'title'] }, destructive: false, readOnly: false }, { name: 'site/build', label: 'Build Site', group: 'Site', icon: 'globe', input: { type: 'object', properties: {} }, destructive: false, readOnly: false }, { name: 'forms/get', label: 'Get Form By Id', group: 'Forms', icon: 'file', input: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }, destructive: false, readOnly: true }] })
       throw new Error('Unexpected ability ' + ability)
     }
-    if (url.pathname === '/api/admin/assistant/chat') {
+    if (url.pathname === '/api/admin/workspace/turn') {
       const input = await body(req); requests.push({ kind: 'chat', input })
-      if (!input.conversation) await new Promise(r => setTimeout(r, 400))
+      if (!input.thread) await new Promise(r => setTimeout(r, 400))
       if (input.message === 'failed request') return json(res, 422, { error: { message: 'Request fixture failure', type: 'invalid_input' } })
-      let id = input.conversation
-      if (!id) { id = `created-${++created}`; chats.unshift({ id, title: input.message, updatedAt: new Date().toISOString() }) }
+      if (input.command?.ability === 'entries/publish' && input.command.input.id === 'gone') {
+        res.writeHead(200, { 'Content-Type': 'text/event-stream' })
+        res.write(`event: error\ndata: ${JSON.stringify({ type: 'not_found', message: 'This entry no longer exists.' })}\n\n`); return res.end()
+      }
+      if (input.command?.input?.title === 'Refused title') {
+        res.writeHead(200, { 'Content-Type': 'text/event-stream' })
+        res.write(`event: error\ndata: ${JSON.stringify({ type: 'invalid_input', message: 'Title fixture refusal', details: { title: 'Title fixture refusal' } })}\n\n`); return res.end()
+      }
+      let id = input.thread
+      if (!id) { id = `created-${++created}`; chats.unshift({ id, title: input.message ?? input.search ?? input.command?.label, updatedAt: new Date().toISOString() }) }
+      if (input.command || input.search) {
+        res.writeHead(200, { 'Content-Type': 'text/event-stream' })
+        const send = (name, data) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`)
+        const title = input.command?.input?.title
+        const said = input.search ? 'Found ' + input.search : input.command.ability === 'site/build' ? 'Built the site' : input.command.ability === 'entries/publish' ? 'Published “Summer Menu”' : input.command.ability === 'navigation/add' ? 'Added to ' + input.command.input.menu : 'Created “' + title + '”'
+        const actions = input.command?.ability === 'entries/create' ? [{ type: 'ui/actions', props: { items: [{ label: 'Open', to: '/content/pages/e1' }, { label: 'Publish', ability: 'entries/publish', input: { id: 'e1' } }, { label: 'Add to Menu', ability: 'navigation/add', input: { menu: '{values.menu}', entry: 'e1' }, form: { title: 'Add to Menu', fields: [{ handle: 'menu', type: 'select', label: 'Menu', required: true, display: 'dropdown', options: { main: 'Main', footer: 'Footer' } }], values: { menu: 'footer' } } }, { label: 'Publish Again', ability: 'entries/publish', input: { id: 'gone' } }] } }] : []
+        send('thread', { id, title: chats.find(c => c.id === id)?.title })
+        send('turn', { turn: { id: 'u-' + Date.now(), role: 'user', kind: input.search ? 'search' : 'command', text: input.search ?? input.command.label, ...(input.command ? { command: input.command } : {}) } })
+        send('turn', { turn: { id: 'a-' + Date.now(), role: 'answer', parts: [{ type: 'view', view: { type: 'ui/stack', props: {}, children: [{ type: 'ui/notice', props: { tone: 'success', title: said } }, ...actions] } }] } })
+        send('done', { thread: { id, title: chats.find(c => c.id === id)?.title }, awaiting: [], agent: null }); return res.end()
+      }
       res.writeHead(200, { 'Content-Type': 'text/event-stream' })
       const event = (name, data) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`)
-      event('conversation', { id, title: chats.find(c => c.id === id)?.title ?? 'Content overview' })
+      event('thread', { id, title: chats.find(c => c.id === id)?.title ?? 'Content overview' })
       if (input.edit) {
-        event('user_message', { messageIndex: 0, text: input.message })
+        event('turn', { turn: { id: 'u-1', role: 'user', kind: 'message', text: input.message, replaces: input.edit.turn } })
+        event('turn', { turn: { id: 'a-1', role: 'answer', agent: 'assistant', parts: [] } })
         await new Promise(r => setTimeout(r, 200))
-        editedItems.set(id, [{ role: 'user', text: input.message, messageIndex: 0 }, { role: 'assistant', parts: [{ type: 'text', text: 'Revised answer' }] }])
+        editedItems.set(id, [{ id: 'u-1', role: 'user', kind: 'message', text: input.message }, { id: 'a-1', role: 'answer', agent: 'assistant', parts: [{ type: 'text', text: 'Revised answer' }] }])
         event('text', { delta: 'Revised answer' })
-        event('done', { conversation: { id, title: 'Revised chat' } }); return res.end()
+        event('done', { thread: { id, title: 'Revised chat' } }); return res.end()
       }
-      if (input.message) event('user_message', { messageIndex: 2, text: input.message })
+      if (input.message || input.action) event('turn', { turn: { id: 'u-' + Date.now(), role: 'user', kind: input.action ? 'action' : 'message', text: input.message ?? 'Selected an action' } })
+      if (input.message || input.action) event('turn', { turn: { id: 'a-' + Date.now(), role: 'answer', agent: 'assistant', parts: [] } })
       if (input.action) {
         usedSurfaces.add(id)
         event('surface_used', { id: input.action.tool })
         event('tool', { id: 'action-tool', name: 'entries__publish', label: 'Publish page' })
         event('approval', { calls: [{ id: 'action-tool', name: 'entries__publish', label: 'Publish page', input: { id: 'stored-id' }, destructive: false, untrusted: true }] })
-        event('done', { conversation: { id, title: 'Content overview' } }); return res.end()
+        event('done', { thread: { id, title: 'Content overview' } }); return res.end()
       }
       if (input.approve) {
         event('tool_result', { id: 'action-tool', ok: true, mutated: true, output: 'Published', input: { id: 'stored-id' } })
         event('text', { delta: 'Published through the normal approval flow' })
-        event('done', { conversation: { id, title: 'Content overview' } }); return res.end()
+        event('done', { thread: { id, title: 'Content overview' } }); return res.end()
+      }
+      if (input.message === 'open the posts') {
+        event('tool', { id: 'open-1', name: 'admin__open', label: 'Open in Admin', ability: 'admin/open' })
+        event('tool_result', { id: 'open-1', ability: 'admin/open', ok: true, mutated: false, input: { to: '/content/posts' }, output: JSON.stringify({ to: '/content/posts', label: 'Posts' }) })
+        event('text', { delta: 'Here are [the pages](/content/pages), and the posts are at `/admin/content/posts`.' })
+        event('done', { thread: { id, title: 'Open the posts' } }); return res.end()
       }
       if (input.message === 'show generated interface') {
         for (const [tool, title] of [['surface-preview', 'Preparing generated overview'], ['surface-live', 'Live generated overview']]) {
@@ -482,15 +617,15 @@ const server = createServer(async (req, res) => {
           event('tool_result', { id: tool, ok: true, mutated: false, surface: { ...surface, title }, output: 'Presented' })
           await new Promise(r => setTimeout(r, 80))
         }
-        event('done', { conversation: { id, title: 'Content overview' } }); return res.end()
+        event('done', { thread: { id, title: 'Content overview' } }); return res.end()
       }
       await new Promise(r => setTimeout(r, input.message === 'slow stream' ? 500 : 200))
       event('text', { delta: input.message === 'slow stream' ? 'LATE STREAM' : 'Streamed answer' })
-      event('done', { conversation: chats.find(c => c.id === id) }); return res.end()
+      event('done', { thread: chats.find(c => c.id === id), agent: { model: null } }); return res.end()
     }
-    const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin|assistant)\/(.+)$/)
+    const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin|assistant|workspace)\/(.+)$/)
     if (asset) {
-      const dir = resolve(root, asset[1] === 'admin' ? 'modules/admin/dist' : '../plugins-public/assistant/dist'), path = resolve(dir, asset[2])
+      const dir = resolve(root, { admin: 'modules/admin/dist', workspace: 'modules/workspace/dist', assistant: '../plugins-public/assistant/dist' }[asset[1]]), path = resolve(dir, asset[2])
       if (!path.startsWith(dir + sep)) { res.writeHead(403); return res.end() }
       res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(await readFile(path))
     }

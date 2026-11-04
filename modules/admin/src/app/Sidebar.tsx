@@ -1,8 +1,8 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, events, navigate, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { boot, events, navigate, panelsFor, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
 import { BrandMark } from './Brand'
 import { getThemePreference, setThemePreference, type ThemePreference } from '../ui/theme'
@@ -132,6 +132,7 @@ function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => v
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={t('Main')}>
+        <SidebarStart onNavigate={onNavigate} />
         {sections.map((section, index) => (index === 0 || section.items.length > 0) && (
           <div key={section.id} className={cn('space-y-px', index > 0 && 'mt-4')}>
             {section.label && section.items.length > 0 && <SectionLabel>{section.label}</SectionLabel>}
@@ -143,6 +144,14 @@ function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => v
       </nav>
     </>
   )
+}
+
+/** Rows a module puts at the top of the main sidebar, above what is pinned (the workspace's New Chat): the `sidebar.start` slot. */
+function SidebarStart({ onNavigate }: { onNavigate?: () => void }) {
+  useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
+  const rows = panelsFor('sidebar.start', { onNavigate })
+  if (rows.length === 0) return null
+  return <div className="mb-4 space-y-px">{rows.map(({ id, component: Row }) => <Row key={id} onNavigate={onNavigate} />)}</div>
 }
 
 /** A section's pinned items: drag to reorder, right-click for the rest. */

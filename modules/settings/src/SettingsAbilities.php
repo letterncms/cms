@@ -12,6 +12,7 @@ use Cms\Admin\Arranged;
 use Cms\Admin\Translations;
 use Cms\Content\Fields\Blueprint;
 use Cms\Cms;
+use Cms\Modules\Workspace\Answers;
 use Cms\Users\User;
 
 /** Settings namespaces of the kernel, modules and plugins, and the admin arrangement. */
@@ -81,6 +82,17 @@ final class SettingsAbilities
             'permission' => static fn (?User $u, array $in) => $u?->hasPermission($permissionFor((string) $in['namespace'])) ?? false,
             'expose' => ['mcp' => false],
             'input' => ['type' => 'object', 'properties' => ['namespace' => ['type' => 'string'], 'values' => ['type' => 'object']], 'required' => ['namespace', 'values']],
+            // What was saved, by its fields' names when there are a few, and the way to the page.
+            'answer' => static function (mixed $saved, array $in) use ($registry): array {
+                $schema = $registry->schemas()[$in['namespace']] ?? [];
+                $labels = array_column(array_filter((array) ($schema['fields'] ?? []), static fn ($f) => is_array($f) && isset($f['handle'], $f['label']) && array_key_exists($f['handle'], (array) $in['values'])), 'label');
+                $name = __((string) ($schema['label'] ?? $in['namespace']));
+                $what = $labels !== [] && count($labels) <= 3 ? $name.': '.implode(', ', array_map(static fn ($l) => __((string) $l), $labels)) : $name;
+
+                return Answers::done(__('Saved :name', ['name' => $what]), null, [
+                    ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/settings/'.$in['namespace']],
+                ]);
+            },
             'handler' => function (array $in, AbilityContext $ctx) use ($registry) {
                 if (! $registry->has($in['namespace'])) {
                     throw new AbilityException('Unknown settings.', 'not_found');

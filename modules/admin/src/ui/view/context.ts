@@ -12,6 +12,8 @@ export interface ViewHost {
   disabled: boolean
   /** An assistant reply: its buttons report the node and event, and the server runs them through approvals. */
   emit?: (node: string, name: string) => void
+  /** Drawn inside something else, beside the place at this path: a way there adds nothing. */
+  at?: string
 }
 
 export const ViewContext = createContext<ViewHost>({ scope: {}, refresh: () => {}, act: async () => {}, disabled: true })
