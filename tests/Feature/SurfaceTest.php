@@ -29,10 +29,10 @@ final class SurfaceTest extends TestCase
         $this->assertNotContains('widget/private-widget', $names);
         $this->assertNotContains('widget/launcher', $names);
         $this->assertNotContains('reviews/summary', $names);
-        $this->assertSame([], $this->app->make(Manifest::class)->build($author)['components']);
+        $this->assertNotContains('reviews/summary', array_column($this->app->make(Manifest::class)->build($author)['components'], 'id'));
         $owner = $this->admin();
         $this->assertContains('reviews/summary', array_column($surface->catalog($owner), 'id'));
-        $this->assertSame('reviews/summary', $this->app->make(Manifest::class)->build($owner)['components'][0]['id']);
+        $this->assertContains('reviews/summary', array_column($this->app->make(Manifest::class)->build($owner)['components'], 'id'));
     }
 
     public function test_invalid_specs_fail_before_rendering(): void

@@ -1,19 +1,11 @@
-import { invalidate, CmsError, loadManifest, navigate, run, t, useAbility, type FieldDef, type RecordTimestamps } from '@letterncms/sdk'
+import { invalidate, CmsError, loadManifest, navigate, run, t, useAbility, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
 import { useState } from 'react'
-import { Button, DataView, Dialog, EmptyState, Fields, Icon, Page, slugify, toast } from '@letterncms/ui'
+import { Button, Dialog, Fields, Icon, slugify, toast } from '@letterncms/ui'
 
-interface CollectionRow extends RecordTimestamps {
+interface CollectionRow {
   handle: string
-  title: string
-  singular: string
-  icon: string
-  description: string
   driver: 'database' | 'files'
   structure: 'list' | 'tree' | 'dated'
-  route: string | null
-  /** Brought by the CMS or a plugin (templates, components, account pages): not part of the site's content model. */
-  system: boolean
-  count: number
 }
 
 type Structure = CollectionRow['structure']
@@ -24,38 +16,13 @@ const structures = (): Record<Structure, string> => ({
   dated: t('Dated'),
 })
 
-export default function Collections({ creating = false }: { creating?: boolean; params?: Record<string, string> }) {
+/**
+ * The new-collection dialog: from the New Collection button (it closes itself), or at
+ * /collections/new from the command palette, where closing it leaves the list.
+ */
+export default function NewCollection({ close }: SurfaceComponentProps) {
   const list = useAbility<CollectionRow[]>('collections/list')
-  // System collections are edited as entries where they live (Design, Account…); their schema comes with the code.
-  const own = list.data?.filter((c) => !c.system)
-  const [open, setOpen] = useState(creating)
-  const openChange = (o: boolean) => {
-    setOpen(o)
-    // Opened from /collections/new (the command palette): closing returns to the list.
-    if (!o && creating) navigate('/collections', { replace: true })
-  }
-
-  return (
-    <Page
-      width="wide"
-      crumbs={[{ label: t('Collections'), icon: 'collection' }]}
-      // With none yet, the empty state holds the one way to make the first.
-      actions={own?.length !== 0 && <Button variant="primary" icon="plus" onClick={() => setOpen(true)}>{t('New Collection')}</Button>}
-    >
-      <DataView id="collections" label={t('Collections')} items={own ?? []} rowKey={(c) => c.handle} rowHref={(c) => `/collections/${c.handle}`}
-        loading={list.isLoading} error={list.isError} onRetry={() => void list.refetch()} searchText={(c) => `${c.title} ${c.handle} ${c.route ?? ''}`}
-        columns={[
-          { id: 'title', label: t('Name'), value: (c) => c.title, render: (c) => <span className="flex items-center gap-2"><Icon name={c.icon} size={16} className="shrink-0 text-muted" /><span className="truncate">{c.title}</span></span> },
-          { id: 'route', label: t('URL'), width: 'minmax(200px,1fr)', value: (c) => c.route, render: (c) => <span className="font-mono text-xs">{c.route ?? t('No URL')}</span> },
-          { id: 'structure', label: t('Structure'), width: '120px', value: (c) => c.structure, render: (c) => structures()[c.structure] },
-          { id: 'count', label: t('Entries'), width: '90px', align: 'end', value: (c) => c.count, render: (c) => c.count },
-        ]}
-        empty={<EmptyState icon="collection" title={t('No collections yet')} description={t('Collections define what you can write: pages, posts, products…')} action={<Button variant="primary" icon="plus" onClick={() => setOpen(true)}>{t('New Collection')}</Button>} />}
-      />
-
-      {open && <NewCollection existing={list.data ?? []} onOpenChange={openChange} />}
-    </Page>
-  )
+  return <NewCollectionDialog existing={list.data ?? []} onOpenChange={(o) => { if (!o) (close ?? (() => navigate('/collections', { replace: true })))() }} />
 }
 
 interface NewCollectionValues {
@@ -68,7 +35,7 @@ interface NewCollectionValues {
   route: string | null
 }
 
-function NewCollection({ existing, onOpenChange }: { existing: CollectionRow[]; onOpenChange: (o: boolean) => void }) {
+function NewCollectionDialog({ existing, onOpenChange }: { existing: CollectionRow[]; onOpenChange: (o: boolean) => void }) {
   const options = useAbility<{ defaults: Record<string, unknown>; settings: FieldDef[] }>('collections/options')
   const [values, setValues] = useState<NewCollectionValues>({ title: '', handle: '', singular: '', template: '', structure: 'list', driver: 'database', route: null })
   const [busy, setBusy] = useState(false)

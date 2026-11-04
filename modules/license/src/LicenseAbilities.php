@@ -29,7 +29,7 @@ final class LicenseAbilities
                     $report['items'][$product]['label'] = $packages->find((string) $product)?->label ?? $product;
                 }
 
-                return $report;
+                return [...$report, 'list' => LicenseViews::rows($report['items'])];
             },
         ]);
 

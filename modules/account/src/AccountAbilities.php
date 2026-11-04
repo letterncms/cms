@@ -64,7 +64,8 @@ final class AccountAbilities
                 }
 
                 if (isset($in['password'])) {
-                    LaravelValidator::make($in, ['password' => Passwords::rules()])->validate();
+                    // An empty one is no password.
+                    LaravelValidator::make($in, ['password' => ['required', ...Passwords::rules()]])->validate();
                     $user->password = $in['password'];
                 }
 
@@ -139,7 +140,7 @@ final class AccountAbilities
             'input' => ['type' => 'object', 'properties' => ['password' => ['type' => 'string']], 'required' => ['password']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 if (! Hash::check($in['password'], $ctx->user->password)) {
-                    throw AbilityException::invalid('Your password is not correct.');
+                    throw AbilityException::invalid('Your password is not correct.', ['password' => 'Is incorrect.']);
                 }
 
                 $ctx->user->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null, 'two_factor_recovery_codes' => null])->save();

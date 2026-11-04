@@ -60,6 +60,9 @@ final class AuditAbilities
                             'subject' => $subject, 'to' => $to,
                             ...RecordTimestamps::api(['updated_at' => $r->created_at]),
                             'user' => $r->user_id ? ['id' => $r->user_id, 'name' => $users[$r->user_id] ?? __('Deleted user')] : null,
+                            // Said in words, for whoever shows the row: who made the change, and where from.
+                            'who' => $r->user_id ? ($users[$r->user_id] ?? __('Deleted user')) : __('System'),
+                            'via' => self::channel((string) $r->transport),
                             'input' => $input, 'createdAt' => $r->created_at ? Carbon::parse($r->created_at)->toIso8601String() : null,
                         ];
                     })->all(),
@@ -190,6 +193,15 @@ final class AuditAbilities
      * @param  array<string, string>  $settings  namespace => label
      * @return array{0: ?string, 1: ?string}
      */
+    /** Where a change came from: someone in the admin, an agent, the assistant, the API or the command line. */
+    public static function channel(string $transport): string
+    {
+        return match ($transport) {
+            'mcp' => __('Agent'), 'assistant' => __('Assistant'), 'rest' => __('API'), 'cli' => __('CLI'), 'install' => __('Install'),
+            default => __('Admin'),
+        };
+    }
+
     private function subject(string $ability, array $input, array $entries, array $settings): array
     {
         $id = self::entryId($ability, $input);

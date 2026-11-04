@@ -196,7 +196,8 @@ interface DataTableProps<T> {
   items: T[]
   columns: DataColumn<T>[]
   rowKey: (item: T) => string
-  rowHref?: (item: T) => string
+  /** Where a row opens; nothing for a row with nowhere to go. */
+  rowHref?: (item: T) => string | undefined
   onRowClick?: (item: T) => void
   selected?: (item: T) => boolean | undefined
   selection?: DataSelection<T>
@@ -236,7 +237,7 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
         return <TableRow key={rowKey(item)} recordId={rowKey(item)} selected={selected?.(item) || selection?.ids.has(rowKey(item))} active={cursor === rowKey(item)}>
           {selection && <div role="cell" data-row-check="" className="relative z-10 flex items-center max-sm:w-4 max-sm:shrink-0"><Checkbox checked={selection.ids.has(rowKey(item))} disabled={loading} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([rowKey(item)], on, items)} /></div>}
           <div role="cell" className="flex min-w-0 items-center py-2 font-medium text-ink max-sm:flex-1 max-sm:py-0">
-            {rowHref ? <Link to={rowHref(item)} className={linkClass}>{first.render(item)}</Link> : onRowClick ? <button type="button" onClick={() => onRowClick(item)} className={linkClass}>{first.render(item)}</button> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
+            {rowHref?.(item) ? <Link to={rowHref(item)!} className={linkClass}>{first.render(item)}</Link> : onRowClick ? <button type="button" onClick={() => onRowClick(item)} className={linkClass}>{first.render(item)}</button> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
           </div>
           <TableMeta>{rest.map(cell)}</TableMeta>
           {actions && <div role="cell" data-table-actions className={rowActionsClass}>{actions(item)}</div>}

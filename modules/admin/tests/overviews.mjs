@@ -5,6 +5,7 @@ import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, extname, sep } from 'node:path'
+import { mounted, viewResponse } from './views.mjs'
 
 const root = fileURLToPath(new URL('../../..', import.meta.url))
 const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
@@ -32,6 +33,7 @@ const eventsCollection = { ...collection, handle: 'events', title: 'Events', sin
 const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const manifest = {
+  views: mounted,
   cms: { version: 'test', debug: false },
   site: { name: 'Overview regression test', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Test User', email: 'test@example.invalid', initials: 'TU', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
@@ -452,11 +454,13 @@ const server = createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/admin/abilities/')) {
       const ability = url.pathname.slice('/api/admin/abilities/'.length), input = JSON.parse(await body(req))
       requests.push({ ability, input })
+      if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
       if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); return json(res, 200, { data: manifest.user }) }
       if (ability === 'forms/list' && fail) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
       let data
       if (ability === 'forms/list') data = forms
-      else if (ability === 'collections/list') data = [{ ...collection, route: null, system: false, count: 2 }]
+      else if (ability === 'collections/list' || ability === 'collections/editable') data = [{ ...collection, route: null, system: false, count: 2 }]
+      else if (ability === 'globals/list') data = manifest.globals
       else if (ability === 'collections/get') data = input.handle === 'pages' ? { ...treeCollection, fields: [], resolvedFields: [], schema: {} } : input.handle === 'events' ? { ...eventsCollection, sort: '-published_at', fields: [], resolvedFields: [], schema: {} } : { ...collectionDef, schema: {} }
       else if (ability === 'collections/save') { collectionDef = { ...collectionDef, ...input.definition }; collection.defaultView = collectionDef.default_view; data = collectionDef }
       else if (ability === 'entries/tree') data = [{ ...entry('parent', 'Parent page'), uri: '/parent', displayStatus: 'published', children: [{ ...entry('child', 'Child page with a substantially longer title'), uri: '/parent/child', displayStatus: 'published', children: [] }] }]
@@ -481,14 +485,14 @@ const server = createServer(async (req, res) => {
         data = { ...page(items.slice((current - 1) * perPage, current * perPage), items.length, current, perPage), folders: emptyMedia ? [] : ['Projects'] }
       } else if (ability === 'media/lookup') data = { items: media.filter((item) => input.ids.includes(item.id)) }
       else if (ability === 'navigation/list') data = [{ handle: 'main', title: 'Main menu', count: 4, maxDepth: 2 }]
-      else if (ability === 'users/list') data = page([{ id: 'ada', name: 'Ada Example', email: 'ada@example.invalid', initials: 'AE', roles: ['editor'], super: false, twoFactor: true, lastLoginAt: null }, { id: 'grace', name: 'Grace with a longer display name', email: 'a.very.long.email.address@example.invalid', initials: 'GE', roles: ['editor', 'content_manager'], super: true, twoFactor: false, lastLoginAt: null }])
+      else if (ability === 'users/list') data = page([{ id: 'ada', name: 'Ada Example', email: 'ada@example.invalid', initials: 'AE', roles: ['editor'], super: false, twoFactor: true, lastLoginAt: null }, { id: 'grace', name: 'Grace with a longer display name', email: 'a.very.long.email.address@example.invalid', initials: 'GE', roles: ['editor', 'content_manager'], super: true, twoFactor: false, lastLoginAt: null }].map((u) => ({ ...u, person: { id: u.id, name: u.name, initials: u.initials, avatar: null }, you: null, badges: [...(u.super ? ['super'] : []), ...u.roles] })))
       else if (ability === 'roles/list') data = { roles: { editor: { label: 'Editor', permissions: [] } }, permissions: {} }
       else if (ability === 'users/fields') data = { fields: [], resolvedFields: [] }
       else if (ability === 'languages/list') data = { prefixDefault: false, canTranslate: false, languages: [{ code: 'en', name: 'English', default: true, prefix: '', direction: 'ltr', entries: 2 }] }
       else if (ability === 'audit/list') data = { ...page([{ id: 'audit-1', ability: 'entries/publish', label: 'Publish Entry', subject: 'Alpha post', to: '/content/posts/alpha', transport: 'rest', user: { id: 'ada', name: 'Ada Example' }, createdAt: '2026-10-27T12:00:00Z', input: {} }]), filters: { people: [{ id: 'ada', name: 'Ada Example' }], actions: [{ value: 'entries/publish', label: 'Publish Entry' }] } }
       else if (ability === 'redirects/list') data = [{ from: '/old', to: '/new', status: 301 }]
       else if (ability === 'settings/get') data = { label: 'SEO', description: '', icon: 'seo', fields: [], values: {} }
-      else if (ability === 'packages/list') data = { items: [...packages, { ...plugin('admin', 'Admin'), core: true }], errors: [] }
+      else if (ability === 'packages/list') data = { items: [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type !== 'plugin' || !p.core).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
       else throw new Error('Unexpected ability: ' + ability)
       return json(res, 200, { data })
     }

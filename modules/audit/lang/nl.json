@@ -1,11 +1,8 @@
 {
-  "{count} field": "{count} veld",
-  "{count} fields": "{count} velden",
-  "{count} item": "{count} item",
-  "{count} items": "{count} items",
   "{count} time": "{count} keer",
   "{count} times": "{count} keer",
   "0 keeps them forever.": "0 bewaart ze voor altijd.",
+  "Ability": "Vaardigheid",
   "Action": "Actie",
   "Activity": "Activiteit",
   "Admin": "Admin",
@@ -23,12 +20,9 @@
   "Install": "Installatie",
   "Keep Entries For": "Items bewaren",
   "Log": "Logboek",
-  "No": "Nee",
   "No changes recorded yet": "Nog geen wijzigingen vastgelegd",
-  "Nothing else was sent.": "Er is verder niets verstuurd.",
   "Open": "Openen",
   "Person": "Persoon",
-  "Raw Data": "Ruwe gegevens",
   "Recent Activity": "Recente activiteit",
   "Records every change made through abilities — who, what, when and from where.": "Legt elke wijziging via acties vast: wie, wat, wanneer en vanwaar.",
   "System": "Systeem",
@@ -42,6 +36,5 @@
   "When": "Wanneer",
   "Who": "Wie",
   "Who changed what across the site, and when.": "Wie wat heeft gewijzigd op de site, en wanneer.",
-  "Who looked at what. The log grows quickly.": "Wie wat bekeek. Het logboek groeit snel.",
-  "Yes": "Ja"
+  "Who looked at what. The log grows quickly.": "Wie wat bekeek. Het logboek groeit snel."
 }

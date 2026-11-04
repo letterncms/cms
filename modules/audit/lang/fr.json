@@ -1,11 +1,8 @@
 {
-  "{count} field": "{count} champ",
-  "{count} fields": "{count} champs",
-  "{count} item": "{count} élément",
-  "{count} items": "{count} éléments",
   "{count} time": "{count} fois",
   "{count} times": "{count} fois",
   "0 keeps them forever.": "0 les conserve indéfiniment.",
+  "Ability": "Capacité",
   "Action": "Action",
   "Activity": "Activité",
   "Admin": "Admin",
@@ -23,12 +20,9 @@
   "Install": "Installation",
   "Keep Entries For": "Conserver les entrées",
   "Log": "Journal",
-  "No": "Non",
   "No changes recorded yet": "Aucune modification enregistrée pour l’instant",
-  "Nothing else was sent.": "Rien d’autre n’a été envoyé.",
   "Open": "Ouvrir",
   "Person": "Personne",
-  "Raw Data": "Données brutes",
   "Recent Activity": "Activité récente",
   "Records every change made through abilities — who, what, when and from where.": "Enregistre chaque modification faite par une action : qui, quoi, quand et d’où.",
   "System": "Système",
@@ -42,6 +36,5 @@
   "When": "Quand",
   "Who": "Qui",
   "Who changed what across the site, and when.": "Qui a modifié quoi sur le site, et quand.",
-  "Who looked at what. The log grows quickly.": "Qui a consulté quoi. Le journal grossit vite.",
-  "Yes": "Oui"
+  "Who looked at what. The log grows quickly.": "Qui a consulté quoi. Le journal grossit vite."
 }

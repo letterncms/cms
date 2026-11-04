@@ -5,6 +5,7 @@ import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, extname, sep } from 'node:path'
+import { mounted, viewResponse } from './views.mjs'
 
 const root = fileURLToPath(new URL('../../..', import.meta.url))
 const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
@@ -16,6 +17,7 @@ const namespaces = ['site', 'mail', 'admin', 'broken']
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const settingsNav = namespaces.map((namespace) => ({ id: `settings-${namespace}`, label: namespace.toUpperCase(), path: `/settings/${namespace}`, icon: 'settings', section: 'system' }))
 const manifest = {
+  views: mounted,
   cms: { version: 'test', debug: false },
   site: { name: 'Navigation regression test', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Test User', email: 'test@example.invalid', initials: 'TU', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
@@ -207,6 +209,7 @@ const server = createServer(async (req, res) => {
       const ability = url.pathname.slice('/api/admin/abilities/'.length)
       const input = JSON.parse(await body(req))
       requests.push({ ability, input })
+      if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
       await new Promise((r) => setTimeout(r, input.namespace === 'mail' ? 700 : 30))
       if (ability === 'settings/get') {
         if (input.namespace === 'broken' && broken) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })

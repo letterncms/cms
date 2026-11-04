@@ -17,7 +17,8 @@ interface DataCalendarProps<T> {
   date: (item: T) => string | null | undefined
   title: (item: T) => ReactNode
   rowKey: (item: T) => string
-  rowHref?: (item: T) => string
+  /** Where a row opens; nothing for a row with nowhere to go. */
+  rowHref?: (item: T) => string | undefined
   onRowClick?: (item: T) => void
   actions?: (item: T) => ReactNode
   selection?: DataSelection<T>
@@ -53,7 +54,7 @@ export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date
     const className = 'min-w-0 flex-1 truncate text-left text-inherit no-underline'
     return <div key={rowKey(item)} data-entry={rowKey(item)} className={cn('group/event flex min-h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-text transition-colors duration-120 hover:bg-hover', cursor === rowKey(item) && 'bg-hover shadow-[inset_2px_0_0_var(--cms-focus)]', selection?.ids.has(rowKey(item)) && 'bg-focus-soft')} title={iso && Number.isFinite(Date.parse(iso)) ? longDate(iso) : undefined}>
       {selection && <span className={cn('flex shrink-0', !choosing && '[@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover/event:flex [@media(hover:hover)]:group-focus-within/event:flex')}><Checkbox checked={selection.ids.has(rowKey(item))} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([rowKey(item)], on, items)} /></span>}
-      {rowHref ? <Link className={className} to={rowHref(item)}>{title(item)}</Link> : onRowClick ? <button type="button" className={className} onClick={() => onRowClick(item)}>{title(item)}</button> : <span className={className}>{title(item)}</span>}
+      {rowHref?.(item) ? <Link className={className} to={rowHref(item)!}>{title(item)}</Link> : onRowClick ? <button type="button" className={className} onClick={() => onRowClick(item)}>{title(item)}</button> : <span className={className}>{title(item)}</span>}
       {actions && <div className="flex shrink-0 items-center">{actions(item)}</div>}
     </div>
   }

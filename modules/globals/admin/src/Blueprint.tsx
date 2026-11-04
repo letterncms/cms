@@ -1,4 +1,4 @@
-import { t } from '@letterncms/sdk'
+import { t, type SurfaceComponentProps } from '@letterncms/sdk'
 import { BlueprintEditor, type BlueprintKind } from '@letterncms/ui'
 
 const kind = (handle: string): BlueprintKind => ({
@@ -11,7 +11,7 @@ const kind = (handle: string): BlueprintKind => ({
   crumbs: (def) => [{ label: t('Globals'), to: '/globals', icon: 'globe' }, { label: def.title, to: `/globals/${handle}` }, { label: t('Edit Fields') }],
 })
 
-/** The fields of a global set. */
-export default function GlobalBlueprint({ params }: { params: Record<string, string> }) {
-  return <BlueprintEditor key={params.handle} kind={kind(params.handle)} />
+/** The fields of a global set: the `globals/fields` component its view is made of. */
+export default function GlobalBlueprint({ props }: SurfaceComponentProps<{ handle: string }>) {
+  return <BlueprintEditor key={props.handle} kind={kind(props.handle)} />
 }

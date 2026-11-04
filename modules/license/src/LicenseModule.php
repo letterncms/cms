@@ -56,6 +56,8 @@ final class LicenseModule extends Plugin
             return $manifest;
         });
 
+        // The Licenses tab of Plugins. Its class loads only when that view is drawn, never for a public request.
+        $cms->hooks()->addFilter('view.plugins', static fn (array $view, User $user) => LicenseViews::withTab($view, $user));
         $this->adminModule();
     }
 

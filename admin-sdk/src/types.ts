@@ -28,12 +28,66 @@ export interface SurfaceAction {
   name: string
 }
 
+/**
+ * A place of the admin as data (see `Cms\Admin\Views`): a tree of catalog components. Strings in
+ * props may hold `{params.x}`, `{query.x}`, `{row.x}` or `{user.x}`, filled in where it is drawn;
+ * one that is only such a reference stands for the value itself (an object, a list).
+ */
+export interface ViewDocument {
+  id: string
+  path: string
+  package: string | null
+  root: ViewNode
+}
+
+export interface ViewNode {
+  type: string
+  props: Record<string, any>
+  children?: ViewNode[]
+  /** An assistant reply's element id, which its buttons report. */
+  key?: string
+}
+
+/** What follows an ability that worked: load again, reload the manifest, go back, or open `to` (with `{result}`). */
+export type ViewThen = 'refresh' | 'manifest' | 'back' | 'open'
+
+/** A button or row action: an ability to run, a place to go, a dialog of nodes, or a catalog component in a dialog. */
+export interface ViewAction {
+  label: string
+  icon?: string
+  variant?: 'primary' | 'default' | 'ghost' | 'danger'
+  ability?: string
+  input?: Record<string, unknown>
+  to?: string
+  href?: string
+  confirm?: { title: string; text?: string; confirm?: string; danger?: boolean }
+  success?: string
+  then?: ViewThen | ViewThen[]
+  dialog?: { title: string; text?: string; size?: 'md' | 'lg'; body: ViewNode[]; actions?: ViewAction[] }
+  /** Asks first: these fields in a dialog; their values go with the ability's input (and fill `{values.x}`). */
+  form?: { title: string; text?: string; confirm?: string; fields: FieldDef[]; values?: Record<string, unknown> }
+  component?: string
+  props?: Record<string, unknown>
+  when?: string
+  unless?: string
+  /** Shown, but not possible while this holds (a template, like `when`). */
+  disabled?: string
+  /** Copies this (a template) to the clipboard. */
+  copy?: string
+  /** Opened from the address too: `?do=<name>` runs it once the place is on view. */
+  name?: string
+}
+
 /** Renderers own their interactions; the host sends action identifiers to the server. */
 export interface SurfaceComponentProps<P = Record<string, unknown>> {
   props: P
   children?: ReactNode
   disabled: boolean
   onAction: (name: string) => void
+  /** Opened by a view's action: closes it again. */
+  close?: () => void
+  /** Opened by a view's action: what it was opened with (`row`, `params`, `user`). */
+  scope?: Record<string, unknown>
 }
 
 /** The product's display name, links and images, from brand/brand.json. */
@@ -186,6 +240,8 @@ export interface Manifest {
   fieldTypes: FieldTypeDef[]
   /** Settings pages. One with a `home` is the Settings tab of that sidebar item's screen (its nav item's path leads there). */
   settings: { namespace: string; label: string; icon: string; description: string; package: string | null; home?: string | null }[]
+  /** Places drawn from data, mounted at their paths (see ViewDocument). */
+  views?: { id: string; path: string; package: string | null; private?: boolean }[]
   packages: { active: string[]; pending: Record<string, string> }
   /** Every screen the user may open: the sidebar's in its order (those under More included), then the settings sidebar's. */
   nav: NavItem[]

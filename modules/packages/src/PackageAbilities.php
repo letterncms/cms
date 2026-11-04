@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Packages;
 
+use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Admin\Translations;
 use Cms\Cms;
 use Cms\Packages\PackageManifest;
 use Cms\Support\RecordTimestamps;
+use Cms\Users\User;
 use RuntimeException;
 
 /** Modules and plugins: on, off, upgrades. */
@@ -33,7 +35,7 @@ final class PackageAbilities
             'permission' => 'packages.manage',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['module', 'plugin', 'all'], 'default' => 'all']]],
-            'handler' => function (array $in) {
+            'handler' => function (array $in, AbilityContext $ctx) {
                 $manager = $this->cms->packages();
                 $timestamps = $manager->timestamps();
                 $settings = $this->cms->settingsRegistry()->schemas();
@@ -42,6 +44,10 @@ final class PackageAbilities
                 $locale = app(Translations::class)->current();
                 $out = [];
 
+                app(Translations::class)->register();
+                $place = $ctx->user ? $this->places($ctx->user) : static fn () => [null, null];
+                $labels = array_map(static fn (PackageManifest $p) => self::translated($p, $locale)['label'] ?? $p->label, $manager->repository()->all());
+
                 foreach ($manager->repository()->all() as $package) {
                     $type = $package->core ? 'module' : 'plugin';
 
@@ -49,20 +55,41 @@ final class PackageAbilities
                         continue;
                     }
 
+                    $translated = self::translated($package, $locale);
+                    $problem = $inactive[$package->name] ?? $problems[$package->name] ?? null;
+                    $dependents = $manager->dependents($package->name);
+                    $enabled = $manager->isEnabled($package->name);
+                    $settingsOf = array_keys(array_filter($settings, static fn ($s) => $s['package'] === $package->name));
+                    [$to, $settingsTo] = $manager->isActive($package->name) ? $place($package->name, $settingsOf) : [null, null];
+
                     $out[] = [
                         ...$package->toArray(),
                         ...($timestamps[$package->name] ?? RecordTimestamps::api([])),
-                        ...self::translated($package, $locale),
-                        'enabled' => $manager->isEnabled($package->name),
+                        ...$translated,
+                        'enabled' => $enabled,
                         'active' => $manager->isActive($package->name),
-                        'problem' => $inactive[$package->name] ?? $problems[$package->name] ?? null,
+                        'problem' => $problem,
                         'installedVersion' => $manager->installedVersion($package->name),
-                        'dependents' => $manager->dependents($package->name),
-                        'settings' => array_keys(array_filter($settings, static fn ($s) => $s['package'] === $package->name)),
+                        'dependents' => $dependents,
+                        'settings' => $settingsOf,
+                        // In words, for a list: why it stays on, or what it is (its description's first clause). A problem is said instead, by `problem`.
+                        'note' => match (true) {
+                            $package->required => __('Required'),
+                            $enabled && $dependents !== [] => __('Needed by :names', ['names' => implode(', ', array_map(static fn ($d) => $labels[$d] ?? $d, $dependents))]),
+                            default => self::gist($translated['description'] ?? $package->description),
+                        },
+                        // Its switch stays as it is: what is required or needed by another stays on, and one with a problem can't come on.
+                        'locked' => $package->required || ($enabled && $dependents !== []) || ($problem !== null && ! $enabled),
+                        // Where it is set up for whoever asks: its settings, else its screen, else nowhere. `settingsTo` only for settings.
+                        'to' => $to,
+                        'settingsTo' => $settingsTo,
                     ];
                 }
 
-                return ['items' => $out, 'errors' => $manager->repository()->errors()];
+                // Found by their names.
+                usort($out, static fn (array $a, array $b) => strnatcasecmp((string) $a['label'], (string) $b['label']));
+
+                return ['items' => $out, 'total' => count($out), 'errors' => $manager->repository()->errors()];
             },
         ]);
 
@@ -92,6 +119,27 @@ final class PackageAbilities
             }),
         ]);
 
+        $a->register('packages/switch', [
+            'label' => 'Turn Module or Plugin On or Off',
+            'description' => 'Turn a module or plugin on (and run its install and upgrade steps) or off. Its data is kept.',
+            'permission' => 'packages.manage',
+            'expose' => ['mcp' => false, 'assistant' => false],
+            'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'on' => ['type' => 'boolean']], 'required' => ['name', 'on']],
+            'handler' => fn (array $in) => $guard(function () use ($in) {
+                $packages = $this->cms->packages();
+                $label = $this->label($in['name']);
+
+                if ($in['on']) {
+                    $packages->enable($in['name']);
+                    rescue(static fn () => $packages->sync(), report: false);
+                } else {
+                    $packages->disable($in['name']);
+                }
+
+                return ['name' => $in['name'], 'on' => $in['on'], 'message' => $in['on'] ? __(':name enabled', ['name' => $label]) : __(':name disabled', ['name' => $label])];
+            }),
+        ]);
+
         $a->register('packages/uninstall', [
             'label' => 'Uninstall Plugin',
             'description' => 'Disable a plugin and remove its data (and its files when deleteFiles is true).',
@@ -104,13 +152,14 @@ final class PackageAbilities
                     throw new AbilityException(__('This site is managed with Composer. Run: composer remove :package', ['package' => $in['name']]), 'invalid');
                 }
 
+                $label = $this->label($in['name']);
                 $this->cms->packages()->uninstall($in['name'], $in['deleteFiles']);
 
                 if ($in['deleteFiles']) {
                     app(\Cms\Packages\SiteComposer::class)->removes($in['name']);
                 }
 
-                return ['uninstalled' => $in['name']];
+                return ['uninstalled' => $in['name'], 'message' => __(':name uninstalled', ['name' => $label])];
             }),
         ]);
 
@@ -122,6 +171,46 @@ final class PackageAbilities
             'handler' => fn () => $guard(fn () => ['done' => $this->cms->packages()->sync()]),
         ]);
 
+    }
+
+    /**
+     * Where each package is set up, for this person: its settings page (or the Settings tab of its
+     * screen), else its screen in settings (Languages), else its screen.
+     *
+     * @return \Closure(string, list<string>): array{0: ?string, 1: ?string} the place, and that place again when it is settings
+     */
+    private function places(User $user): \Closure
+    {
+        $menu = $this->cms->navigation()->forUser($user);
+        $nav = array_column($menu['nav'], null, 'id');
+        $inSettings = array_merge(...array_map(static fn (array $s) => $s['items'], $menu['settingsNav'] ?: [['items' => []]]));
+
+        return static function (string $package, array $namespaces) use ($nav, $inSettings): array {
+            foreach ($namespaces as $namespace) {
+                if (isset($nav["settings.{$namespace}"])) {
+                    return [$nav["settings.{$namespace}"]['path'], $nav["settings.{$namespace}"]['path']];
+                }
+            }
+
+            $screens = array_filter($nav, static fn (array $n) => $n['package'] === $package && $n['home'] === null);
+            $screen = current(array_filter($screens, static fn (array $n) => in_array($n['id'], $inSettings, true))) ?: current($screens);
+
+            return $screen ? [$screen['path'], in_array($screen['id'], $inSettings, true) ? $screen['path'] : null] : [null, null];
+        };
+    }
+
+    /** A package's name in the language of whoever asks, for what an ability says back. */
+    private function label(string $name): string
+    {
+        $package = $this->cms->packages()->repository()->find($name);
+
+        return $package ? self::translated($package, app(Translations::class)->current())['label'] ?? $package->label : $name;
+    }
+
+    /** A description's first clause ("Media library", "Sell anything from a site"): one short line in a list. */
+    private static function gist(string $description): string
+    {
+        return trim((string) preg_split('/[:;,]\s|\.(\s|$)/', $description, 2)[0]);
     }
 
     /**

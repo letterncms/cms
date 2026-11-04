@@ -158,6 +158,12 @@ final class Cms
         return $this->app->make(AdminRegistry::class);
     }
 
+    /** The admin's places as data: views drawn by one renderer from one component catalog. */
+    public function views(): Admin\Views
+    {
+        return $this->app->make(Admin\Views::class);
+    }
+
     public function navigation(): Navigation
     {
         return $this->app->make(Navigation::class);

@@ -24,7 +24,8 @@ interface BaseDataViewProps<T> {
   /** Only advertise server sorting when the endpoint supports it. */
   dateSort?: Partial<Record<'published' | 'updated', string>>
   rowKey: (item: T) => string
-  rowHref?: (item: T) => string
+  /** Where a row opens; nothing for a row with nowhere to go. */
+  rowHref?: (item: T) => string | undefined
   onRowClick?: (item: T) => void
   selected?: (item: T) => boolean
   selection?: DataSelection<T>
@@ -45,6 +46,8 @@ interface BaseDataViewProps<T> {
   error?: boolean
   onRetry?: () => void
   empty: ReactNode
+  /** A list read as it is (a ranked top 8): no view, column or sort choices. */
+  plain?: boolean
 }
 
 /** Ordinary records must provide the standard metadata; wrappers supply a typed accessor. */
@@ -58,7 +61,7 @@ const FEW = 8
 const isDate = (iso: string | null | undefined) => !!iso && Number.isFinite(Date.parse(iso))
 
 /** Search, display preferences and selection use the same components as Content collections. */
-export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, defaultView = 'table', calendar: offersCalendar = false, image, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty }: DataViewProps<T>) {
+export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, defaultView = 'table', calendar: offersCalendar = false, image, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false }: DataViewProps<T>) {
   // Date columns and the calendar only for dates the records have.
   const has = { published: items.some((item) => isDate(dates(item).publishedAt)), updated: items.some((item) => isDate(dates(item).updatedAt)) }
   const settled = items.length > 0 || !loading
@@ -86,7 +89,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
   const few = (!pagination || pagination.pages <= 1) && items.length < FEW
   const changed = view !== (views.includes(defaultView) ? defaultView : 'table') || !!sort || calendarDate !== (calendarDates[0] ?? 'published') || !!locationQuery.month
     || visible.length - 1 !== defaults.length || defaults.some((c) => !shown.has(c))
-  const display = changed || !few || columns.some((c) => c.hiddenByDefault && !(c.id in has))
+  const display = !plain && (changed || !few || columns.some((c) => c.hiddenByDefault && !(c.id in has)))
   const query = search.trim().toLocaleLowerCase(locale())
   const filtered = searchText && query ? records.filter((item) => searchText(item).toLocaleLowerCase(locale()).includes(query)) : records
   const column = columns.find((c) => (c.sort ?? c.id) === sort?.replace(/^-/, ''))
@@ -100,7 +103,8 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
   const openRecord = (key: string) => {
     const item = rows.find((item) => rowKey(item) === key)
     if (!item) return
-    if (rowHref) navigate(rowHref(item))
+    const to = rowHref?.(item)
+    if (to) navigate(to)
     else onRowClick?.(item)
   }
   const cursor = useRecordNavigation({ scope, resetKey: `${id}:${search}:${sort}:${rows.map(rowKey).join(',')}`, selection: selection ? { ...selection, onSelect: (ids, on) => selection.onSelect(ids, on, rows) } : undefined, onOpen: rowHref || onRowClick ? openRecord : undefined, enabled: !busy && !stale })
@@ -116,10 +120,10 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
     onReset={changed ? () => { setPrefs({ view: null, columns: null, sort: null, calendarDate: 'published' }); onSort?.(null); setQuery({ month: null }) } : undefined} />
 
   return <div ref={scope}>
-    {!blank && (searchable || toolbar || display || views.length > 1) && <TableToolbar>
+    {!blank && (searchable || toolbar || display || (!plain && views.length > 1)) && <TableToolbar>
       {searchable && <Fields bare layout="inline" className="w-full sm:w-60" fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder: searchPlaceholder ?? t('Search {items}…', { items: label.toLocaleLowerCase(locale()) }) }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} />}
       {toolbar}
-      {controls}
+      {!plain && controls}
     </TableToolbar>}
     {view === 'calendar' ? state ?? <DataCalendar label={label} items={rows} month={locationQuery.month} onMonth={(month) => setQuery({ month })}
       date={(item) => dates(item)[calendarDate === 'published' ? 'publishedAt' : 'updatedAt']} title={columns[0].render} rowKey={rowKey} rowHref={rowHref} onRowClick={onRowClick}

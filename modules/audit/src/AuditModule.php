@@ -36,8 +36,49 @@ final class AuditModule extends Plugin
         });
 
         $cms->admin()->nav('audit', ['label' => 'Audit Log', 'path' => '/audit', 'icon' => 'activity', 'section' => 'system', 'order' => 80, 'permission' => 'audit.view']);
+        $cms->views()->register('audit', '/audit', self::view(...), permission: 'audit.view', private: true);
         $cms->admin()->widget('audit-activity', ['label' => 'Activity', 'description' => 'Who changed what across the site, and when.', 'icon' => 'activity', 'column' => 'main', 'order' => 40, 'permission' => 'audit.view']);
         $this->adminModule();
+    }
+
+    /** The Audit Log: every change, newest first, narrowed to a person or an action; a change opens with what was sent. */
+    private static function view(): array
+    {
+        return ['type' => 'ui/page', 'props' => ['title' => __('Audit Log'), 'icon' => 'activity'], 'children' => [
+            ['type' => 'ui/tabs', 'children' => [
+                ['type' => 'ui/tab', 'props' => ['id' => 'log', 'label' => __('Log')], 'children' => [
+                    ['type' => 'ui/records', 'props' => [
+                        'id' => 'audit', 'label' => __('Audit Log'), 'address' => true,
+                        'source' => ['ability' => 'audit/list'],
+                        'paged' => ['perPage' => 50],
+                        'filters' => [
+                            ['param' => 'userId', 'label' => __('Person'), 'all' => __('Everyone'), 'at' => 'filters.people', 'value' => 'id', 'text' => 'name'],
+                            ['param' => 'ability', 'label' => __('Action'), 'all' => __('All Actions'), 'at' => 'filters.actions'],
+                        ],
+                        'columns' => [
+                            ['key' => 'label', 'label' => __('Change'), 'muted' => 'subject'],
+                            ['key' => 'who', 'label' => __('Who'), 'width' => '160px'],
+                            ['key' => 'transport', 'label' => __('Via'), 'width' => '96px', 'format' => 'badge',
+                                'labels' => ['admin' => __('Admin'), 'mcp' => __('Agent'), 'assistant' => __('Assistant'), 'rest' => __('API'), 'cli' => __('CLI'), 'install' => __('Install')],
+                                'tones' => ['mcp' => 'info', 'assistant' => 'info']],
+                            ['key' => 'createdAt', 'label' => __('When'), 'width' => '140px', 'align' => 'end', 'format' => 'ago'],
+                        ],
+                        'open' => ['label' => __('Open'), 'dialog' => [
+                            'title' => '{row.label}', 'text' => '{row.subject}', 'size' => 'lg',
+                            'body' => [
+                                ['type' => 'ui/detail', 'props' => ['items' => [
+                                    ['label' => __('Who'), 'key' => 'row.who'], ['label' => __('Via'), 'key' => 'row.via'], ['label' => __('When'), 'key' => 'row.createdAt', 'format' => 'datetime'],
+                                    ['label' => __('Ability'), 'key' => 'row.ability', 'format' => 'code'],
+                                ]]],
+                                ['type' => 'ui/detail', 'props' => ['record' => '{row.input}', 'raw' => '{row.input}']],
+                            ],
+                            'actions' => [['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '{row.to}', 'when' => '{row.to}']],
+                        ]],
+                        'empty' => ['icon' => 'activity', 'title' => __('No changes recorded yet')],
+                    ]],
+                ]],
+            ]],
+        ]];
     }
 
     private function record(Ability $ability, array $input, AbilityContext $context): void

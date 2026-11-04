@@ -42,6 +42,8 @@ final class Manifest
             'dashboard' => [],
             'fieldTypes' => array_values(array_map(static fn ($t) => $t->toArray(), $this->cms->fields()->all())),
             'settings' => $settings,
+            // Places drawn from data: the admin mounts each at its path (see Views).
+            'views' => $this->cms->views()->forUser($user),
             'packages' => [
                 'active' => array_keys($this->cms->packages()->active()),
                 'pending' => $user->hasPermission('packages.manage') ? $this->cms->packages()->pending() : [],

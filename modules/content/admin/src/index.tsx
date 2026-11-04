@@ -3,8 +3,8 @@ import { getManifest, prefetchAbility, registry, run, t, type ComposerOption, ty
 import { lazy } from 'react'
 import { TitleField, UriField } from './TitleField'
 
-// Entries of every collection; one sidebar item per collection comes from the server.
-registry.routes.set('/content/:collection', { path: '/content/:collection', component: lazy(() => import('./EntriesList')), load: (params, location) => import('./EntriesList').then((m) => m.loadEntriesList(params.collection, location.query)) })
+// A collection's place is a view (ContentModule::view); its entries are this component of the catalog.
+registry.components.set('content/entries', lazy(() => import('./EntriesList')))
 registry.routes.set('/content/:collection/:id', {
   path: '/content/:collection/:id', component: lazy(() => import('./EntryEditor')),
   load: ({ collection, id }) => Promise.all([
