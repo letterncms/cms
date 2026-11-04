@@ -11,7 +11,7 @@ namespace Cms\Support;
  *   token:color.primary    → var(--color-primary)
  *   token:color.primary/40 → color-mix(in srgb, var(--color-primary) 40%, transparent)
  *
- * Groups map to CSS custom property prefixes (see letterncms/site ThemeJson::GROUPS).
+ * Groups map to CSS custom property prefixes (see Cms\Modules\Site\Design\DesignJson::GROUPS).
  */
 final class Tokens
 {

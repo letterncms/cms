@@ -17,7 +17,7 @@ use Symfony\Component\Process\Process;
  */
 final class PluginIsolationTest extends TestCase
 {
-    private const array MODULES = ['letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/globals', 'letterncms/languages', 'letterncms/mcp', 'letterncms/users'];
+    private const array MODULES = ['letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/globals', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site', 'letterncms/users'];
 
     private const int PARALLEL = 4;
 
@@ -37,7 +37,7 @@ final class PluginIsolationTest extends TestCase
     {
         $all = $this->plugins();
         $all === [] && $this->markTestSkipped("Needs every plugin, which aren't installed here.");
-        $this->assertContains('letterncms/site', array_keys($all));
+        $this->assertContains('letterncms/forms', array_keys($all));
 
         $seed = $this->root.'/seed';
         $this->writeSite($seed, array_keys($all));

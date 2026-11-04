@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Cms\Modules\Navigation\MenuResolver;
+use Cms\Modules\Site\Rendering\PageContext;
 
 if (! function_exists('cms_menu')) {
     /**
@@ -13,9 +14,9 @@ if (! function_exists('cms_menu')) {
      */
     function cms_menu(string $handle): ?array
     {
-        // The page being rendered, when a site plugin renders one: {entry, uri, locale}.
-        $page = cms()->hooks()->filter('render.page', null);
+        // The page Site is rendering, if any.
+        $page = PageContext::current();
 
-        return app(MenuResolver::class)->resolve($handle, $page['uri'] ?? null, $page['locale'] ?? null);
+        return app(MenuResolver::class)->resolve($handle, $page?->uri, $page?->locale());
     }
 }

@@ -191,7 +191,7 @@ final class Forms
     /** A button that shows what was typed, so a long password can be checked. It appears once a script can run it. */
     private function reveal(): string
     {
-        \Cms\Site\Rendering\PageContext::current()?->addFoot('cms-reveal', '<script>document.querySelectorAll(".cms-reveal__button").forEach(b=>{b.hidden=false;b.onclick=()=>{const i=b.previousElementSibling,s=i.type==="password";i.type=s?"text":"password";b.textContent=s?b.dataset.hide:b.dataset.show}})</script>');
+        \Cms\Modules\Site\Rendering\PageContext::current()?->addFoot('cms-reveal', '<script>document.querySelectorAll(".cms-reveal__button").forEach(b=>{b.hidden=false;b.onclick=()=>{const i=b.previousElementSibling,s=i.type==="password";i.type=s?"text":"password";b.textContent=s?b.dataset.hide:b.dataset.show}})</script>');
 
         return '<button type="button" class="cms-reveal__button" hidden data-show="'.e(__('Show password')).'" data-hide="'.e(__('Hide password')).'">'.e(__('Show password')).'</button>';
     }
@@ -272,6 +272,6 @@ final class Forms
 
     private function locale(): string
     {
-        return \Cms\Site\Rendering\PageContext::current()?->locale() ?? $this->cms->defaultLocale();
+        return \Cms\Modules\Site\Rendering\PageContext::current()?->locale() ?? $this->cms->defaultLocale();
     }
 }

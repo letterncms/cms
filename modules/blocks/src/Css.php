@@ -22,7 +22,7 @@ final class Css
 
     private const string MEDIA = '/media:([0-9a-z]{26})/i';
 
-    /** Group → CSS custom property prefix (see letterncms/site DesignJson::GROUPS). */
+    /** Group → CSS custom property prefix (see Cms\Modules\Site\Design\DesignJson::GROUPS). */
     private const array PREFIX = ['weight' => 'font-weight'];
 
     public static function value(mixed $value): ?string

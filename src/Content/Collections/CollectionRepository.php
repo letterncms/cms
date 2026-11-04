@@ -56,7 +56,7 @@ final class CollectionRepository
     /**
      * The settings of a collection as fields, for the admin and agents: core's,
      * then whatever plugins add through the `collections.settings` filter
-     * (for example, the site plugin adds its template).
+     * (for example, the Site module adds its template).
      */
     public function settingsFields(?Collection $collection = null): array
     {

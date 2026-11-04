@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Contracts;
 
-/** Builds the static site. Bound by letterncms/site (or a replacement such as a headless deploy hook). */
+/** Builds the static site. Bound by the Site module, or by a plugin that publishes another way, such as a headless deploy hook. */
 interface SiteBuilder
 {
     public function available(): bool;

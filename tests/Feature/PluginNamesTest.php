@@ -14,9 +14,7 @@ use Cms\Tests\TestCase;
 final class PluginNamesTest extends TestCase
 {
     /** Screens of something a plugin adds, not the plugin's own place: they name themselves. Keep this short. */
-    private const OTHER_PLACES = [
-        'design' => 'Design System', // letterncms/site
-    ];
+    private const OTHER_PLACES = [];
 
     /** @return list<string> plugin folders */
     private static function folders(): array

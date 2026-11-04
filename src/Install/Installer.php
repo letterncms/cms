@@ -24,7 +24,7 @@ use Throwable;
 final class Installer
 {
     /** What a new site gets unless someone chooses otherwise. Everything else is a click away in the store. */
-    public const array RECOMMENDED = ['site', 'seo', 'forms', 'assistant'];
+    public const array RECOMMENDED = ['seo', 'forms', 'assistant'];
 
     public function __construct(private readonly Application $app) {}
 
@@ -170,7 +170,7 @@ final class Installer
 
     /**
      * The last step of a setup, on a request that booted with the plugins it pulled: what they
-     * start a new site with (the site plugin's starter kit), then a first build.
+     * start a new site with (the Site module's starter kit), then a first build.
      */
     public function finish(User $user): void
     {

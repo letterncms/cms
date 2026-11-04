@@ -2,7 +2,7 @@
     "name": "letterncms/cms",
     "description": "The kernel \u2014 plugins, abilities, content, users and APIs.",
     "type": "library",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "license": "MIT",
     "require": {
         "php": "^8.4",
@@ -16,6 +16,9 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^12.0"
+    },
+    "conflict": {
+        "letterncms/site": "*"
     },
     "autoload": {
         "psr-4": {
@@ -36,6 +39,7 @@
             "Cms\\Modules\\Navigation\\": "modules/navigation/src/",
             "Cms\\Modules\\Packages\\": "modules/packages/src/",
             "Cms\\Modules\\Settings\\": "modules/settings/src/",
+            "Cms\\Modules\\Site\\": "modules/site/src/",
             "Cms\\Modules\\Users\\": "modules/users/src/",
             "Cms\\Modules\\Workspace\\": "modules/workspace/src/"
         },
@@ -56,6 +60,7 @@
             "Cms\\Modules\\Media\\Tests\\": "modules/media/tests/",
             "Cms\\Modules\\Navigation\\Tests\\": "modules/navigation/tests/",
             "Cms\\Modules\\Packages\\Tests\\": "modules/packages/tests/",
+            "Cms\\Modules\\Site\\Tests\\": "modules/site/tests/",
             "Cms\\Modules\\Users\\Tests\\": "modules/users/tests/",
             "Cms\\Modules\\Workspace\\Tests\\": "modules/workspace/tests/"
         }

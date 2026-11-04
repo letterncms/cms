@@ -14,8 +14,8 @@ use Cms\Modules\Blocks\BlockRenderer;
 use Cms\Cms;
 use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
-use Cms\Site\Http\SiteController;
-use Cms\Site\Rendering\Renderer;
+use Cms\Modules\Site\Http\SiteController;
+use Cms\Modules\Site\Rendering\Renderer;
 
 /**
  * The public account pages. A plugin ships no template: a screen is a block document, so it wears

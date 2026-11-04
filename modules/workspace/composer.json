@@ -2,7 +2,7 @@
     "name": "letterncms/workspace",
     "description": "Where people work: threads at the right edge of the admin, answered with views, for commands, search and an agent when there is one.",
     "type": "cms-plugin",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"
