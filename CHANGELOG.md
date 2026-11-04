@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.0 (2026-11-04)
+
 ### Changed
 
 - **Breaking.** Site is part of the CMS: the design system, page templates and components, rendering, previews, the static build, search and the starter kit are a core module instead of a plugin, never installed from the store. It is on unless you switch it off under Plugins → **Built In**, as a headless site may, and keeps Blocks on while it is. A Composer site takes it by dropping `letterncms/site` from its `composer.json` and running `composer update`. The CMS can't be installed next to the Site plugin, so a site that still requires it stays on 0.7 until then.
