@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.5.0 (2026-11-04)
+
 ### Added
 
 - Views: a place of the admin as data. A plugin registers a screen with `cms()->views()->register()`, or ships it as `views/<id>.json`: a page, tabs, lists bound to an ability with search, filters, pages, row and bulk actions, forms that load from one ability and save with another, details, stats, charts, before-and-after, and buttons that run abilities, ask first or open a dialog. Lettern draws every view with one renderer, checks it against the component catalog, and leaves out what the person looking may not see or do. See Plugins → Views in the docs.
