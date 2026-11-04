@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Users\Tests;
 
-use Cms\Contracts\MailMessage;
-use Cms\Contracts\Mailer;
+use Cms\Modules\Email\Message;
+use Cms\Modules\Email\Mailer;
 use Cms\Support\Yaml;
 use Cms\Tests\TestCase;
 use Cms\Users\AccountInBrowser;
@@ -16,7 +16,7 @@ use Cms\Users\User;
 /** Public accounts through the real routes: a stranger becomes a member, and back again. */
 final class PublicAccountsTest extends TestCase
 {
-    /** @var list<MailMessage> */
+    /** @var list<Message> */
     private array $mail = [];
 
     private bool $acting = false;
@@ -36,11 +36,11 @@ final class PublicAccountsTest extends TestCase
         parent::setUp();
 
         $outbox = &$this->mail;
-        $this->app->instance(Mailer::class, new class($outbox) implements Mailer
+        $this->app->instance(Mailer::class, new class($outbox) extends Mailer
         {
             public function __construct(private array &$outbox) {}
 
-            public function send(MailMessage $message): void
+            public function send(Message $message): void
             {
                 $this->outbox[] = $message;
             }
@@ -80,7 +80,7 @@ final class PublicAccountsTest extends TestCase
         $this->post('/_cms/account/sign-in', ['email' => $email, 'password' => $password]);
     }
 
-    private function linkIn(MailMessage $message): string
+    private function linkIn(Message $message): string
     {
         $this->assertSame(1, preg_match('#https?://[^/]+(/[^\s"<]+)#', $message->text, $m), $message->text);
 

@@ -36,7 +36,7 @@ final class Upgrader
             @mkdir($app->storagePath($dir), 0o775, true);
         }
 
-        @unlink($app->storagePath('i18n.json'));
+        @unlink($app->storagePath('languages.json'));
         @unlink($app->storagePath('cache/packages.php'));
         @unlink($app->storagePath('update/purge'));
     }

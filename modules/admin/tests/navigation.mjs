@@ -13,7 +13,7 @@ const assetBase = '/_cms/assets/cms-admin/'
 const grants = { create: true, edit: true, publish: true, delete: true }
 const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel: 'New Post', icon: 'article', structure: 'list', driver: 'files', editor: 'document', can: grants, routable: false }
 const entry = { id: 'entry-1', collection: 'posts', locale: 'en', title: 'Original title', slug: 'original', uri: null, status: 'draft', displayStatus: 'draft', data: {}, hasDraft: false, parentId: null, position: 0, originId: null, authorId: null, createdAt: null, updatedAt: null, publishedAt: null }
-const namespaces = ['site', 'mail', 'admin', 'broken']
+const namespaces = ['site', 'email', 'admin', 'broken']
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const settingsNav = namespaces.map((namespace) => ({ id: `settings-${namespace}`, label: namespace.toUpperCase(), path: `/settings/${namespace}`, icon: 'settings', section: 'system' }))
 const manifest = {
@@ -57,11 +57,11 @@ try {
     const blanks = []
     const observer = new MutationObserver(() => { if (!heading()) blanks.push(true) })
     observer.observe(document.querySelector('#cms'), { childList: true, subtree: true })
-    navigate('/settings/mail')
+    navigate('/settings/email')
     await wait(progress, 'missing navigation progress')
     await sleep(100)
     assert(heading() === 'SITE' && current.isConnected, 'previous content disappeared while fetching')
-    await wait(() => heading() === 'MAIL' && !progress(), 'mail settings never became ready')
+    await wait(() => heading() === 'EMAIL' && !progress(), 'email settings never became ready')
     observer.disconnect()
     assert(blanks.length === 0, 'navigation flashed empty content')
   })
@@ -73,8 +73,8 @@ try {
     assert(after.length === before.length, 'cache was bypassed')
   })
   await test('Rapid navigation keeps the latest destination when an older response finishes last', async () => {
-    queryClient.removeQueries({ queryKey: abilityKey('settings/get', { namespace: 'mail' }) })
-    navigate('/settings/mail')
+    queryClient.removeQueries({ queryKey: abilityKey('settings/get', { namespace: 'email' }) })
+    navigate('/settings/email')
     await wait(progress, 'slow navigation did not begin')
     await sleep(80)
     navigate('/settings/admin')
@@ -114,7 +114,7 @@ try {
     const native = window.confirm
     window.confirm = () => { throw new Error('asked with the browser’s dialog') }
     try {
-      navigate('/settings/mail')
+      navigate('/settings/email')
       assert(location.href === before && !progress(), 'blocked navigation changed location or started loading')
       await wait(dialog, 'leaving did not ask')
       answer('Cancel')
@@ -210,7 +210,7 @@ const server = createServer(async (req, res) => {
       const input = JSON.parse(await body(req))
       requests.push({ ability, input })
       if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
-      await new Promise((r) => setTimeout(r, input.namespace === 'mail' ? 700 : 30))
+      await new Promise((r) => setTimeout(r, input.namespace === 'email' ? 700 : 30))
       if (ability === 'settings/get') {
         if (input.namespace === 'broken' && broken) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
         return json(res, 200, { data: { namespace: input.namespace, label: input.namespace.toUpperCase(), fields: [{ handle: 'name', type: 'text', label: 'Name' }], values: { name: 'Example' } } })

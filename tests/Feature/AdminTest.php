@@ -22,7 +22,7 @@ final class AdminTest extends TestCase
         $this->assertSame('', $sidebar['sections'][0]['label']);
         // Plugins sits with the home screens, Collections with how the site is built and looks.
         $this->assertContains('plugins', $sidebar['sections'][0]['items']);
-        $this->assertSame(['collection.notes', 'collection.pages', 'collection.posts', 'globals'], $sidebar['sections'][1]['items']);
+        $this->assertSame(['collection.notes', 'collection.pages', 'collection.posts', 'media', 'navigation', 'globals'], $sidebar['sections'][1]['items']);
         $this->assertSame(['collections'], $sidebar['sections'][2]['items']);
         // Nothing is put away: More holds only what someone unpins.
         $this->assertSame([], $sidebar['hidden']);
@@ -74,7 +74,7 @@ final class AdminTest extends TestCase
         // Sections are the registered ones: people pin and order items, they do not invent or rename sections.
         $this->assertSame(['main', 'content', 'design'], array_column($result['sidebar']['sections'], 'id'));
         $this->assertSame('Content', $result['sidebar']['sections'][1]['label']);
-        $this->assertSame(['globals', 'collection.pages', 'collection.notes', 'collection.posts', 'collection.products'], $result['sidebar']['sections'][1]['items']);
+        $this->assertSame(['globals', 'collection.pages', 'collection.notes', 'collection.posts', 'collection.products', 'media', 'navigation'], $result['sidebar']['sections'][1]['items']);
         $this->assertSame(['collection.pages'], $result['sidebar']['hidden']);
         $this->assertTrue($result['sidebar']['personal']);
         // Under More, still in the list the command palette offers.
@@ -89,7 +89,7 @@ final class AdminTest extends TestCase
     {
         $admin = $this->admin();
         $this->settle($admin, ['sections' => [['id' => 'content', 'items' => ['collection.posts', 'collection.pages', 'collection.notes']]], 'hidden' => ['collection.notes']]);
-        $this->assertSame(['collection.posts', 'collection.pages', 'collection.notes', 'globals'], $this->section($admin, 'content')['items']);
+        $this->assertSame(['collection.posts', 'collection.pages', 'collection.notes', 'media', 'navigation', 'globals'], $this->section($admin, 'content')['items']);
         $this->assertSame(['collection.notes'], $this->cms()->navigation()->forUser($admin)['sidebar']['hidden']);
 
         $this->pin($admin, ['sections' => [['id' => 'content', 'items' => ['collection.pages']]], 'hidden' => []]);
@@ -112,7 +112,7 @@ final class AdminTest extends TestCase
         $this->assertContains('collection.posts', $this->cms()->navigation()->saved()['sections'][0]['items']);
 
         $this->cms()->collections()->save(Collection::fromArray('posts', ['title' => 'Posts', 'fields' => []]));
-        $this->assertSame(['collection.pages', 'collection.posts', 'collection.notes', 'globals'], $this->section($admin, 'content')['items']);
+        $this->assertSame(['collection.pages', 'collection.posts', 'collection.notes', 'media', 'navigation', 'globals'], $this->section($admin, 'content')['items']);
     }
 
     public function test_a_hand_edited_arrangement_is_read_forgivingly(): void
@@ -133,7 +133,7 @@ final class AdminTest extends TestCase
     {
         $this->cms()->admin()->nav('links', ['label' => 'Links', 'path' => '/links', 'section' => 'design']);
         $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']]);
-        $this->cms()->settingsRegistry()->register('mail', 'Mail', [['handle' => 'from', 'type' => 'text', 'label' => 'From']]);
+        $this->cms()->settingsRegistry()->register('newsletter', 'Newsletter', [['handle' => 'from', 'type' => 'text', 'label' => 'From']]);
 
         $result = $this->cms()->navigation()->forUser($this->admin());
 
@@ -141,7 +141,7 @@ final class AdminTest extends TestCase
         // The unnamed group, People, then a settings page without a section of its own: a plugin's, under Plugins by name.
         $this->assertSame(['account', 'people', 'plugins'], array_column($result['settingsNav'], 'id'));
         $this->assertSame(['', 'People', 'Plugins'], array_column($result['settingsNav'], 'label'));
-        $this->assertSame(['settings.mail', 'settings.shop'], array_column($result['settingsNav'], 'items', 'id')['plugins']);
+        $this->assertSame(['settings.newsletter', 'settings.shop'], array_column($result['settingsNav'], 'items', 'id')['plugins']);
     }
 
     public function test_a_group_of_one_in_settings_joins_the_unnamed_group(): void
@@ -151,7 +151,7 @@ final class AdminTest extends TestCase
         $settings = array_column($this->cms()->navigation()->forUser($this->admin())['settingsNav'], null, 'id');
 
         $this->assertArrayNotHasKey('plugins', $settings);
-        $this->assertSame(['account', 'settings.site', 'audit', 'settings.shop'], $settings['account']['items']);
+        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit', 'settings.shop'], $settings['account']['items']);
     }
 
     public function test_a_page_with_a_home_is_that_screens_settings_tab_and_listed_in_settings(): void
@@ -201,7 +201,7 @@ final class AdminTest extends TestCase
 
         // Your account, General and the Audit Log without a group name; then People.
         $this->assertSame(['account', 'people'], array_keys($settings));
-        $this->assertSame(['account', 'settings.site', 'audit'], $settings['account']['items']);
+        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit'], $settings['account']['items']);
         $this->assertSame(['users', 'settings.roles'], $settings['people']['items']);
         // Settings kept with a screen are its Settings tab, reached through the screen's row when that is in settings.
         $this->assertSame('/audit?tab=settings', array_column($result['nav'], 'path', 'id')['settings.audit']);

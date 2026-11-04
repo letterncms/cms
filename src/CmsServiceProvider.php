@@ -89,7 +89,6 @@ final class CmsServiceProvider extends ServiceProvider
         Update\CoreUpdate::class => Update\CoreUpdate::class,
         Packages\Install\PackageJobs::class => Packages\Install\PackageJobs::class,
         // Contracts with safe defaults; plugins rebind them.
-        Contracts\Mailer::class => Contracts\Defaults\LogMailer::class,
         Contracts\SiteBuilder::class => Contracts\Defaults\NullSiteBuilder::class,
         Contracts\Agent::class => Contracts\Defaults\NoAgent::class,
     ];

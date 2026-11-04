@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Account;
 
 use Illuminate\Http\Request;
-use Cms\Blocks\BlockRegistry;
+use Cms\Modules\Blocks\BlockRegistry;
 use Cms\Content\Collections\Collection;
 use Cms\Modules\Account\Site\Forms;
 use Cms\Modules\Account\Site\Screens;

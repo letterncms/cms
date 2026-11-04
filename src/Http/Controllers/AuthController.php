@@ -10,8 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Cms\Admin\Translations;
-use Cms\Contracts\MailMessage;
-use Cms\Contracts\Mailer;
+use Cms\Modules\Email\Message;
+use Cms\Modules\Email\Mailer;
 use Cms\Users\Accounts;
 use Cms\Users\Passwords;
 use Cms\Users\Totp;
@@ -121,7 +121,7 @@ final class AuthController
             // In the account's own language when it has one.
             $locale = app(Translations::class)->locale($user, $request);
 
-            $mailer->send(new MailMessage(
+            $mailer->send(new Message(
                 to: $user->email,
                 subject: __('Reset your :site password', ['site' => $site], $locale),
                 html: '<p>'.e(__('Someone asked to reset the password for your :site account.', ['site' => $site], $locale)).'</p>'

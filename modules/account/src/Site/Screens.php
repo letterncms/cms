@@ -10,7 +10,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Cms\Admin\Translations;
-use Cms\Blocks\BlockRenderer;
+use Cms\Modules\Blocks\BlockRenderer;
 use Cms\Cms;
 use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
@@ -197,7 +197,7 @@ final class Screens
 
     private function prefix(string $locale): string
     {
-        return $locale === $this->cms->defaultLocale() && ! $this->cms->settings('i18n', 'prefix_default', false) ? '' : '/'.strtolower($locale);
+        return $locale === $this->cms->defaultLocale() && ! $this->cms->settings('languages', 'prefix_default', false) ? '' : '/'.strtolower($locale);
     }
 
     private function defaults(): array

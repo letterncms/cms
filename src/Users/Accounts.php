@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Cms\Cms;
-use Cms\Contracts\Mailer;
+use Cms\Modules\Email\Mailer;
 use Cms\Extend\Hooks;
 
 /**

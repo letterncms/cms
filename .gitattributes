@@ -5,6 +5,9 @@
 /modules/*/package.json export-ignore
 /modules/*/tsconfig.json export-ignore
 /modules/*/vite.config.mjs export-ignore
+/modules/blocks/vite.runtime.config.mjs export-ignore
+/modules/blocks/runtime export-ignore
+/modules/blocks/scripts export-ignore
 /modules/admin/src export-ignore
 /modules/admin/public export-ignore
 /modules/admin/scripts export-ignore

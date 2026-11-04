@@ -20,8 +20,8 @@ final readonly class PackageManifest
     public const string CORE = self::VENDOR.'/cms';
 
     /**
-     * @param  array<string, string>  $requires  Packages this package needs (name => constraint); CMS packages or composer libraries
-     * @param  list<string>  $provides  Capabilities offered (e.g. "mail", "image-processing")
+     * @param  array<string, string>  $requires  Packages this package needs (name => constraint): CMS packages, composer libraries, and the optional modules in `extra.cms.modules`
+     * @param  list<string>  $provides  Capabilities offered (e.g. "search")
      * @param  list<string>  $suggests  Packages that enhance this one
      * @param  array<string, string>  $psr4
      * @param  list<string>  $files  Files from composer's `autoload.files`, loaded when the package starts
@@ -80,6 +80,11 @@ final readonly class PackageManifest
             } elseif (str_contains((string) $dep, '/')) {
                 $requires[(string) $dep] = (string) $constraint;
             }
+        }
+
+        // Optional modules a plugin builds on, such as letterncms/blocks: they come with the core, so not from Composer.
+        foreach ((array) ($cms['modules'] ?? []) as $needed) {
+            $requires[(string) $needed] ??= '*';
         }
 
         return new self(

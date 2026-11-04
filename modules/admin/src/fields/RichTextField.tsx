@@ -5,7 +5,7 @@ import { Fields, IconButton, Popover, cn } from '../ui'
 
 /**
  * Lightweight rich text (contenteditable). Output is sanitized on the server.
- * The blocks plugin may register a richer editor under the same key.
+ * Blocks may register a richer editor under the same key.
  */
 export function RichTextField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
   const ref = useRef<HTMLDivElement>(null)

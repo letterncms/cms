@@ -1,5 +1,5 @@
 import { fieldControlId } from '../ui/fieldIdentity'
-import { can, isActive, t, useAbility, useManifest, type EntrySummary, type FieldProps } from '@letterncms/sdk'
+import { can, t, useAbility, useManifest, type EntrySummary, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon, Popover, Spinner, Switch, cn } from '../ui'
 
@@ -187,7 +187,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
   const list = useRef<HTMLDivElement>(null)
   const reference = !!field.reference
   const collections = (field.collections as string[] | undefined) ?? undefined
-  const media = isActive('letterncms/media') && can('media.view') && field.files !== false
+  const media = can('media.view') && field.files !== false
   const current = parse(value)
 
   useEffect(() => {

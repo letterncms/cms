@@ -1,0 +1,22 @@
+{
+    "name": "letterncms/languages",
+    "description": "Multilingual sites: languages, translations linked to their original, localized URLs, hreflang, language switcher and AI translation.",
+    "type": "cms-plugin",
+    "version": "0.7.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Languages\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Languages",
+            "icon": "translate",
+            "provider": "Cms\\Modules\\Languages\\LanguagesModule"
+        }
+    }
+}

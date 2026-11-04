@@ -17,7 +17,16 @@ final class PluginsViewTest extends TestCase
         $view = $this->cms()->abilities()->execute('views/get', ['id' => 'plugins'], $ctx)['root'];
         $tabs = $view['children'][0]['children'];
 
-        $this->assertSame(['installed', 'store', 'updates'], array_slice(array_column(array_column($tabs, 'props'), 'id'), 0, 3));
+        $this->assertSame(['installed', 'built-in', 'store', 'updates'], array_slice(array_column(array_column($tabs, 'props'), 'id'), 0, 4));
+
+        // Built In: the modules that can be switched off, never a required one, nothing to uninstall.
+        $builtIn = $tabs[1]['children'][0];
+        $this->assertSame(['type' => 'module', 'optional' => true], $builtIn['props']['source']['input']);
+        $this->assertSame([], array_filter($builtIn['props']['actions'], static fn ($a) => ($a['ability'] ?? null) === 'packages/uninstall'));
+        $modules = $this->cms()->abilities()->execute('packages/list', ['type' => 'module', 'optional' => true], $ctx)['items'];
+        $this->assertNotContains('letterncms/media', array_column($modules, 'name'));
+        $this->assertNotContains('letterncms/license', array_column($modules, 'name'), 'Held on by the required Modules module.');
+        $this->assertSame([], array_filter($modules, static fn ($m) => $m['required']));
         $records = array_values(array_filter($tabs[0]['children'], static fn ($n) => $n['type'] === 'ui/records'))[0];
         $this->assertSame('packages/switch', array_column($records['props']['columns'], 'action', 'key')['enabled']['ability']);
 

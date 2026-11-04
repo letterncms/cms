@@ -91,6 +91,13 @@ final class PackageRepository
                 }
 
                 $manifest = PackageManifest::fromComposer($path, $composer, $module);
+
+                // A module is part of the core: a plugin by the same name never stands in for it.
+                if (! $module && ($packages[$manifest->name]->core ?? false)) {
+                    $this->errors[] = basename($path).': '.$manifest->name.' is part of '.\Cms\Support\Brand::get().'. Remove plugins/'.basename($path).'.';
+                    continue;
+                }
+
                 $packages[$manifest->name] = $manifest;
             } catch (Throwable $e) {
                 $this->errors[] = basename($path).': '.$e->getMessage();

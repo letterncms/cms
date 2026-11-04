@@ -17,7 +17,7 @@ use Symfony\Component\Process\Process;
  */
 final class PluginIsolationTest extends TestCase
 {
-    private const array MODULES = ['letterncms/audit', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/globals', 'letterncms/users'];
+    private const array MODULES = ['letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/globals', 'letterncms/languages', 'letterncms/mcp', 'letterncms/users'];
 
     private const int PARALLEL = 4;
 

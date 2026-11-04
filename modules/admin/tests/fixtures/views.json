@@ -511,6 +511,82 @@
                         {
                             "type": "ui/tab",
                             "props": {
+                                "id": "built-in",
+                                "label": "Built In"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/records",
+                                    "props": {
+                                        "id": "packages.modules",
+                                        "label": "Built In",
+                                        "key": "name",
+                                        "source": {
+                                            "ability": "packages/list",
+                                            "input": {
+                                                "type": "module",
+                                                "optional": true
+                                            }
+                                        },
+                                        "columns": [
+                                            {
+                                                "key": "label",
+                                                "label": "Name",
+                                                "width": "minmax(160px,1fr)",
+                                                "icon": "icon",
+                                                "muted": "note",
+                                                "warning": "problem"
+                                            },
+                                            {
+                                                "key": "enabled",
+                                                "label": "On",
+                                                "width": "48px",
+                                                "format": "switch",
+                                                "ariaLabel": "{row.label} on",
+                                                "disabled": "locked",
+                                                "action": {
+                                                    "label": "On",
+                                                    "ability": "packages/switch",
+                                                    "input": {
+                                                        "name": "{row.name}",
+                                                        "on": "{value}"
+                                                    },
+                                                    "success": "{result.message}",
+                                                    "then": "manifest",
+                                                    "props": []
+                                                }
+                                            },
+                                            {
+                                                "key": "name",
+                                                "label": "Package",
+                                                "format": "code",
+                                                "hidden": true
+                                            }
+                                        ],
+                                        "open": {
+                                            "label": "Open",
+                                            "to": "{row.to}",
+                                            "when": "{row.to}",
+                                            "input": [],
+                                            "props": []
+                                        },
+                                        "actions": [
+                                            {
+                                                "label": "Settings",
+                                                "icon": "settings",
+                                                "to": "{row.settingsTo}",
+                                                "when": "{row.settingsTo}",
+                                                "input": [],
+                                                "props": []
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
                                 "id": "store",
                                 "label": "Store"
                             },
@@ -1155,7 +1231,7 @@
     "languages": {
         "id": "languages",
         "path": "/languages",
-        "package": "letterncms/i18n",
+        "package": "letterncms/languages",
         "root": {
             "type": "ui/page",
             "props": {
@@ -1169,7 +1245,7 @@
                         "icon": "plus",
                         "variant": "primary",
                         "can": "settings.manage",
-                        "component": "i18n/add-language",
+                        "component": "languages/add-language",
                         "input": [],
                         "props": []
                     }

@@ -20,11 +20,14 @@ abstract class TestCase extends BaseTestCase
 {
     protected string $site;
 
-    /** @return list<string> */
+    /** @return list<string> Plugins, and optional modules that are off unless a test names them (see OPT_IN). */
     protected function plugins(): array
     {
         return [];
     }
+
+    /** Optional modules that change what a site holds: a test turns them on by naming them in plugins(). */
+    private const array OPT_IN = ['letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp'];
 
     /** @return array<string, array> collection handle => definition */
     protected function collections(): array
@@ -51,7 +54,12 @@ abstract class TestCase extends BaseTestCase
         $this->site = sys_get_temp_dir().'/cms-test-'.bin2hex(random_bytes(6));
 
         Yaml::write($this->site.'/config/site.yaml', ['name' => 'Test site', 'url' => 'http://localhost', 'locale' => 'en', 'locales' => ['en', 'de']]);
-        Yaml::write($this->site.'/config/plugins.yaml', ['enabled' => $this->plugins()]);
+        $modules = array_map(static fn (string $file) => (string) json_decode((string) file_get_contents($file), true)['name'], glob(dirname(__DIR__).'/modules/*/composer.json') ?: []);
+        $plugins = getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins';
+        // What the named plugins build on comes on with them.
+        $needed = array_merge($this->plugins(), ...array_map(static fn (string $name) => (array) (json_decode((string) @file_get_contents($plugins.'/'.basename($name).'/composer.json'), true)['extra']['cms']['modules'] ?? []), $this->plugins()));
+        $off = array_values(array_diff(self::OPT_IN, $needed));
+        Yaml::write($this->site.'/config/plugins.yaml', ['enabled' => array_values(array_diff($this->plugins(), $modules)), ...($off === [] ? [] : ['disabled' => $off])]);
 
         foreach ($this->collections() as $handle => $definition) {
             Yaml::write($this->site."/content/collections/{$handle}.yaml", $definition);
@@ -59,9 +67,8 @@ abstract class TestCase extends BaseTestCase
 
         // The plugins this test turns on, and only those: a link to the rest would let a test's own files write through it.
         @mkdir($this->site.'/plugins', 0o777, true);
-        $plugins = getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins';
 
-        foreach ($this->plugins() as $name) {
+        foreach (array_diff($this->plugins(), $modules) as $name) {
             if (is_dir($plugin = $plugins.'/'.basename($name))) {
                 symlink($plugin, $this->site.'/plugins/'.basename($name));
             } elseif (str_starts_with($name, 'letterncms/')) {

@@ -28,7 +28,8 @@ final class PluginWidgetsTest extends TestCase
 
     protected function plugins(): array
     {
-        return array_map(static fn ($dir) => (string) json_decode((string) file_get_contents($dir.'/composer.json'), true)['name'], self::folders());
+        // Every optional module too, as a site has them.
+        return [...array_map(static fn ($dir) => (string) json_decode((string) file_get_contents($dir.'/composer.json'), true)['name'], self::folders()), 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp'];
     }
 
     public function test_every_bundled_plugin_registers_a_widget(): void
