@@ -195,7 +195,7 @@ export function App() {
   useShortcut('mod+k', () => setPalette((p) => !p))
   useShortcut(SETTINGS_SHORTCUT, toggleSettings)
   useEffect(() => events.on('sidebar.customize', () => setCustomizing(true)), [])
-  // Modules pin and unpin their own items (the assistant's setup offers to put New Chat away).
+  // Modules pin and unpin their own items.
   useEffect(() => events.on<{ id: string; pinned: boolean }>('sidebar.pin', ({ id, pinned }) => (pinned ? setPinned(id, true) : unpin(id))), [])
   useShortcut('mod+\\', toggleSidebar)
 

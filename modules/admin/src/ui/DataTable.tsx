@@ -123,7 +123,7 @@ export function TableFrame({ template, label, busy, children }: { template: stri
   const columns = shrink ? tracks.map(shrunk).filter((_, i) => !hidden.has(i)).join(' ') : template
   // `cms-table` (app.css): row checkboxes show on hover or focus, and all of them once one is ticked.
   // Every row draws its hairline below; the frame tucks the last one away (rows may be nested, as in a tree, so `:last-child` can't tell).
-  return <div ref={frame} className="-mx-4 overflow-x-auto overflow-y-hidden px-4 md:-mx-6 md:px-6 [scrollbar-width:thin]">
+  return <div ref={frame} data-table-frame className="-mx-4 overflow-x-auto overflow-y-hidden px-4 md:-mx-6 md:px-6 [scrollbar-width:thin]">
     <div ref={table} role="table" aria-label={label} aria-busy={busy} className="cms-table -mb-px sm:min-w-fit" style={{ '--cols': columns } as CSSProperties}>{children}</div>
   </div>
 }

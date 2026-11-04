@@ -158,7 +158,8 @@ export function ToggleField({ field, value, onChange, disabled }: FieldProps<boo
   }
   return (
     <div className="flex items-start gap-3">
-      <Switch checked={!!value} onChange={onChange} disabled={disabled} size={field.size === 'sm' || field.size === 'xs' ? 'sm' : 'md'} />
+      {/* Named by its label, so it says what it switches wherever it is. */}
+      <Switch checked={!!value} onChange={onChange} disabled={disabled} size={field.size === 'sm' || field.size === 'xs' ? 'sm' : 'md'} aria-label={typeof field.label === 'string' && field.label !== '' ? field.label : undefined} />
       <div className="-mt-px">
         <ToggleLabel field={field} />
         {field.instructions && <div className="mt-0.5 text-xs text-muted">{field.instructions}</div>}

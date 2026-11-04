@@ -28,7 +28,8 @@
             "Cms\\Modules\\License\\": "modules/license/src/",
             "Cms\\Modules\\Packages\\": "modules/packages/src/",
             "Cms\\Modules\\Settings\\": "modules/settings/src/",
-            "Cms\\Modules\\Users\\": "modules/users/src/"
+            "Cms\\Modules\\Users\\": "modules/users/src/",
+            "Cms\\Modules\\Workspace\\": "modules/workspace/src/"
         },
         "files": [
             "src/helpers.php"
@@ -40,7 +41,8 @@
             "Cms\\Modules\\Admin\\Tests\\": "modules/admin/tests/",
             "Cms\\Modules\\License\\Tests\\": "modules/license/tests/",
             "Cms\\Modules\\Packages\\Tests\\": "modules/packages/tests/",
-            "Cms\\Modules\\Users\\Tests\\": "modules/users/tests/"
+            "Cms\\Modules\\Users\\Tests\\": "modules/users/tests/",
+            "Cms\\Modules\\Workspace\\Tests\\": "modules/workspace/tests/"
         }
     },
     "scripts": {

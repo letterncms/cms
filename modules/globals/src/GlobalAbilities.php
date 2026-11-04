@@ -11,6 +11,7 @@ use Cms\Admin\Translations;
 use Cms\Content\Fields\Blueprint;
 use Cms\Content\Globals\GlobalSet;
 use Cms\Cms;
+use Cms\Modules\Workspace\Answers;
 
 /** Global sets: their values, and their fields. */
 final class GlobalAbilities
@@ -51,6 +52,15 @@ final class GlobalAbilities
             'permission' => 'globals.edit',
             'description' => 'Set values of a global set (merged into existing values). Returns the values as stored.',
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'values' => ['type' => 'object'], 'locale' => ['type' => 'string']], 'required' => ['handle', 'values']],
+            'answer' => function (mixed $values, array $in) {
+                $set = $this->cms->globals()->find($in['handle']);
+                $labels = array_column(array_filter((array) ($set?->fields ?? []), static fn ($f) => is_array($f) && isset($f['handle'], $f['label']) && array_key_exists($f['handle'], (array) $in['values'])), 'label');
+                $name = ($set?->title ?? $in['handle']).($labels !== [] && count($labels) <= 3 ? ': '.implode(', ', $labels) : '');
+
+                return Answers::done(__('Saved :name', ['name' => $name]), null, [
+                    ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/globals/'.$in['handle']],
+                ]);
+            },
             'handler' => fn (array $in) => $this->cms->globals()->updateValues($in['handle'], $in['values'], $in['locale'] ?? null)->values($in['locale'] ?? null),
         ]);
 
@@ -61,6 +71,12 @@ final class GlobalAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => self::HANDLE, 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120], 'icon' => ['type' => 'string'], 'fields' => ['type' => 'array', 'items' => ['type' => 'object']],
             ], 'required' => ['title', 'fields']],
+            // A new set comes with a way back; a changed one with a way to it.
+            'answer' => static fn (array $set, array $in) => Answers::done(isset($in['handle']) ? __('Saved :name', ['name' => $set['title']]) : __('Created :name', ['name' => $set['title']]), null, [
+                ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/globals/'.$set['handle']],
+                ...(isset($in['handle']) ? [] : [['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'ghost', 'ability' => 'globals/delete', 'input' => ['handle' => $set['handle']],
+                    'confirm' => ['title' => Answers::literal(__('Delete :name?', ['name' => $set['title']])), 'confirm' => __('Delete'), 'danger' => true], 'success' => __('Deleted')]]),
+            ]),
             'handler' => function (array $in) {
                 if (! isset($in['handle'])) {
                     $in['handle'] = substr(Str::slug($in['title'], '_'), 0, 64);

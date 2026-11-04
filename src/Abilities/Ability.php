@@ -20,6 +20,7 @@ final class Ability
      * @param  Closure|string|array  $handler  fn(array $input, AbilityContext $ctx): mixed, "Class@method", invokable class, or [Class, method]
      * @param  array{readOnly?: bool, destructive?: bool, idempotent?: bool, openWorld?: bool, trustedOutput?: bool, draft?: bool}  $annotations
      * @param  array{rest?: bool, mcp?: bool, cli?: bool, assistant?: bool}  $expose
+     * @param  Closure|null  $answer  fn(mixed $result, array $input, User $user): array — the view a person sees in the workspace after running it (see Cms\Modules\Workspace\Answers)
      */
     public function __construct(
         public readonly string $name,
@@ -33,6 +34,7 @@ final class Ability
         public readonly array $annotations = [],
         public readonly array $expose = [],
         public readonly ?string $package = null,
+        public readonly ?Closure $answer = null,
     ) {
         if (! preg_match('#^[a-z0-9-]+/[a-z0-9-]+(\.[a-z0-9-]+)*$#', $name)) {
             throw new InvalidArgumentException("Ability name must look like namespace/name, got {$name}.");
@@ -53,6 +55,7 @@ final class Ability
             annotations: $config['annotations'] ?? [],
             expose: $config['expose'] ?? [],
             package: $config['package'] ?? \Cms\Packages\Scope::$current,
+            answer: $config['answer'] ?? null,
         );
     }
 
@@ -69,6 +72,12 @@ final class Ability
     public function isDestructive(): bool
     {
         return (bool) ($this->annotations['destructive'] ?? false);
+    }
+
+    /** Whether an agent asks a person before running it: anything destructive, and changes marked `confirm`, such as turning a plugin off. */
+    public function asksFirst(): bool
+    {
+        return $this->isDestructive() || (bool) ($this->annotations['confirm'] ?? false);
     }
 
     /** Public description used by REST discovery, MCP tools/list and the assistant. */

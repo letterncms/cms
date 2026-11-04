@@ -1,4 +1,4 @@
-import { abilityKey, locale, navigate, registry, run, t, useAbility, useManifest, type SurfaceComponentProps, type ViewAction, type ViewNode } from '@letterncms/sdk'
+import { abilityKey, Link, locale, navigate, registry, run, t, useAbility, useManifest, type SurfaceComponentProps, type ViewAction, type ViewNode } from '@letterncms/sdk'
 import { useQueries } from '@tanstack/react-query'
 import { Fragment, Suspense, useCallback, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { Button } from '../Button'
@@ -33,7 +33,8 @@ export function ViewNodeView({ node, path }: { node: ViewNode; path: string }) {
 
 /** Props as shown: words and values filled in, while `source`, actions and dialogs keep their templates for when they run. */
 function fillShown(props: Record<string, any>, scope: Record<string, unknown>): Record<string, any> {
-  const kept = new Set(['source', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'empty', 'count'])
+  // A list's literal `rows` are values as they were found, never templates.
+  const kept = new Set(['source', 'rows', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'empty', 'count'])
   return Object.fromEntries(Object.entries(props ?? {}).map(([k, v]) => [k, kept.has(k) ? v : fill(v, scope)]))
 }
 
@@ -263,6 +264,30 @@ function SurfaceAction({ node, path }: { node: ViewNode; path: string }) {
   return <Button size="sm" disabled={disabled || !emit} onClick={() => emit?.(path, 'submit')}>{node.props.label}</Button>
 }
 
+/** A short list of places, each a line that opens where it leads: its icon, its name, and what it is, cut short with an ellipsis. */
+function Links({ node }: { node: ViewNode }) {
+  const items = (Array.isArray(node.props.items) ? node.props.items : []) as { label: string; detail?: string; icon?: string; to: string }[]
+  return (
+    <ul className="m-0 flex list-none flex-col p-0">
+      {items.map((item, i) => {
+        const to = typeof item.to === 'string' && item.to.startsWith('/') && !item.to.startsWith('//') ? item.to : null
+        const line = <>
+          <Icon name={item.icon ?? 'file'} size={15} className="shrink-0 text-muted" />
+          <span className="min-w-0 shrink truncate font-medium text-ink">{item.label}</span>
+          {item.detail && <span className="min-w-0 flex-1 truncate text-muted">{item.detail}</span>}
+        </>
+        return (
+          <li key={i}>
+            {to
+              ? <Link to={to} className="cms-view-link -mx-2 flex min-h-9 min-w-0 items-center gap-2 rounded-sm px-2 text-sm no-underline hover:bg-hover">{line}</Link>
+              : <span className="flex min-h-9 min-w-0 items-center gap-2 text-sm">{line}</span>}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 /** A titled group; without a title or anything to do, no heading at all. */
 function SectionNode({ node, path }: { node: ViewNode; path: string }) {
   const { scope } = useView()
@@ -297,6 +322,7 @@ const builtins: Record<string, Renderer> = {
     ? <p className="m-0 py-3 text-sm text-muted">{node.props.title ?? t('Nothing here yet')}</p>
     : <EmptyState icon={node.props.icon ?? 'inbox'} title={node.props.title ?? t('Nothing here yet')} description={node.props.text} action={node.props.action && <ActionButton action={node.props.action} />} />,
   'ui/action': SurfaceAction,
+  'ui/links': Links,
   'ui/actions': ({ node }) => <div className="flex flex-wrap items-center gap-2"><Buttons actions={node.props.items} /></div>,
   'ui/records': ({ node }) => <Records {...(node.props as any)} />,
   'ui/form': ({ node }) => <Form {...(node.props as any)} />,

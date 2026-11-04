@@ -19,6 +19,8 @@ export interface DialogProps {
   className?: string
   /** The × at the top right; confirmations leave it out (Cancel says it). */
   close?: boolean
+  /** A question that needs an answer before anything else (a confirmation): `alertdialog`. */
+  alert?: boolean
 }
 
 const widths = { sm: 'max-w-[400px]', md: 'max-w-[520px]', lg: 'max-w-[720px]', xl: 'max-w-[960px]' }
@@ -26,7 +28,7 @@ const widths = { sm: 'max-w-[400px]', md: 'max-w-[520px]', lg: 'max-w-[720px]', 
 /** What a dialog focuses first: its first field, else its main action, never Close. */
 const firstField = 'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable=true], [role=combobox]:not([disabled])'
 
-export function Dialog({ open, onOpenChange, title, description, children, footer, size = 'md', className, close = true }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, footer, size = 'md', className, close = true, alert = false }: DialogProps) {
   const popup = useRef<HTMLDivElement>(null)
   return (
     <Base.Root open={open} onOpenChange={(o) => onOpenChange(o)}>
@@ -34,6 +36,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         <Base.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-160 ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[ending-style]:duration-100 data-[starting-style]:opacity-0" />
         <Base.Popup
           ref={popup}
+          {...(alert ? { role: 'alertdialog' } : {})}
           initialFocus={(type) => {
             const root = popup.current
             if (!root || type === 'touch') return root
@@ -77,8 +80,13 @@ export interface ConfirmOptions {
   danger?: boolean
 }
 
+/** The confirmation on view: a second one never stacks on it (a double click asks once). */
+let asking = false
+
 /** Imperative confirmation dialog: `if (await confirm({...})) …` */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
+  if (asking) return Promise.resolve(false)
+  asking = true
   return new Promise((resolve) => {
     const host = document.createElement('div')
     document.body.appendChild(host)
@@ -88,6 +96,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
       const [open, setOpen] = useState(true)
       const done = (value: boolean) => {
         setOpen(false)
+        asking = false
         resolve(value)
         setTimeout(() => {
           root.unmount()
@@ -102,6 +111,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
           onOpenChange={(o) => !o && done(false)}
           size="sm"
           close={false}
+          alert
           title={options.title}
           description={options.description}
           footer={

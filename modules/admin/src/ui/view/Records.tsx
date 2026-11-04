@@ -57,7 +57,9 @@ interface Filter {
 export interface RecordsProps {
   id?: string
   label: string
-  source: { ability: string; input?: Record<string, unknown> }
+  /** Where the records load from; or literal `rows`, what a command or search found. */
+  source?: { ability: string; input?: Record<string, unknown> }
+  rows?: Row[]
   /** Where the records are in the response (`items` unless it is a list itself). */
   at?: string
   key?: string
@@ -85,7 +87,7 @@ type Row = Record<string, unknown>
  * `search.param`, otherwise among what is loaded), filters, pages, a row that opens and
  * the actions of each row. The same component as every overview, so it looks and works alike.
  */
-export function Records({ id, label, source, at: path, key = 'id', columns, search, filters = [], paged, open, actions, bulk, empty, calendar, address, display = true }: RecordsProps) {
+export function Records({ id, label, source, rows, at: path, key = 'id', columns, search, filters = [], paged, open, actions, bulk, empty, calendar, address, display = true }: RecordsProps) {
   const { scope, act } = useView()
   const { query: location } = useLocation()
   const [ownText, setOwnText] = useState('')
@@ -101,10 +103,10 @@ export function Records({ id, label, source, at: path, key = 'id', columns, sear
   const setChosen = (v: Record<string, string>) => address ? setQuery({ ...Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x || null])), page: null }) : setOwnChosen(v)
   const perPage = paged?.perPage ?? 100
   const server = !!(search && search.param)
-  const base = input(source.input, scope)
+  const base = input(source?.input, scope)
   const query = { ...base, ...(server && text ? { [(search as { param: string }).param]: text } : {}), ...Object.fromEntries(Object.entries(chosen).filter(([, v]) => v !== '')), ...(paged ? { page, perPage } : {}) }
-  const data = useAbility<unknown>(source.ability, query, { placeholderData: (p: unknown) => p })
-  const response = data.data
+  const data = useAbility<unknown>(source?.ability ?? 'abilities/list', query, { placeholderData: (p: unknown) => p, enabled: !!source && !rows })
+  const response = rows ?? data.data
   const items = useMemo(() => {
     const list = Array.isArray(response) ? response : at(response, path ?? 'items')
     return Array.isArray(list) ? (list as Row[]) : []
@@ -144,10 +146,10 @@ export function Records({ id, label, source, at: path, key = 'id', columns, sear
   return (
     <>
     <DataView<Row>
-      id={id ?? source.ability}
+      id={id ?? source?.ability ?? label}
       label={label}
       items={items}
-      source={{ ability: source.ability, input: { ...base, ...chosen }, perPage }}
+      source={source ? { ability: source.ability, input: { ...base, ...chosen }, perPage } : undefined}
       rowKey={(row) => String(at(row, key))}
       dates={(row) => ({ publishedAt: (at(row, 'publishedAt') as string) ?? null, updatedAt: (at(row, 'updatedAt') as string) ?? null }) as RecordTimestamps}
       calendar={calendar}
@@ -170,9 +172,9 @@ export function Records({ id, label, source, at: path, key = 'id', columns, sear
       searchPlaceholder={search ? search.placeholder : undefined}
       toolbar={toolbar || undefined}
       pagination={paged && response ? { page, pages, total, perPage, onPage: setPage } : undefined}
-      loading={data.isLoading}
-      stale={data.isPlaceholderData}
-      error={data.isError}
+      loading={!rows && data.isLoading}
+      stale={!rows && data.isPlaceholderData}
+      error={!rows && data.isError}
       onRetry={() => void data.refetch()}
       columns={columns.map((c) => ({
         id: c.key,

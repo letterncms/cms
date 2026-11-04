@@ -81,10 +81,14 @@ final class Catalog
             'ui/empty' => ['label' => 'Nothing here yet', 'children' => false, 'props' => $empty],
             'ui/action' => ['label' => 'Action button (uses its submit action)', 'children' => false, 'surface' => true, 'props' => $this->object(['label' => $s], ['label'])],
             'ui/actions' => ['label' => 'A row of buttons bound to abilities or places', 'children' => false, 'props' => $this->object(['items' => ['type' => 'array', 'minItems' => 1, 'maxItems' => 6, 'items' => $action]], ['items'])],
+            'ui/links' => ['label' => 'A short list of places to open, each a line with its icon and detail', 'children' => false, 'surface' => true, 'props' => $this->object([
+                'items' => ['type' => 'array', 'maxItems' => 50, 'items' => $this->object(['label' => $s, 'detail' => $s, 'icon' => $id, 'to' => $s], ['label', 'to'])],
+            ], ['items'])],
 
             // Data bound to abilities.
             'ui/records' => ['label' => 'Records from an ability: table, search, filters, pages, row actions', 'children' => false, 'props' => $this->object([
-                'id' => $id, 'label' => $s, 'source' => $source, 'at' => $id, 'key' => $id,
+                // Or literal `rows`: what a command or search found, as it was then.
+                'id' => $id, 'label' => $s, 'source' => $source, 'rows' => ['type' => 'array', 'maxItems' => 200, 'items' => ['type' => 'object']], 'at' => $id, 'key' => $id,
                 'columns' => ['type' => 'array', 'minItems' => 1, 'maxItems' => 12, 'items' => $column],
                 'search' => ['anyOf' => [$this->object(['param' => $id, 'placeholder' => $s]), ['type' => 'boolean', 'const' => false]]],
                 'filters' => ['type' => 'array', 'maxItems' => 4, 'items' => $this->object([
@@ -96,7 +100,7 @@ final class Catalog
                 'open' => $action, 'actions' => ['type' => 'array', 'maxItems' => 4, 'items' => $action],
                 'bulk' => ['type' => 'array', 'maxItems' => 4, 'items' => $action],
                 'empty' => $empty, 'calendar' => ['type' => 'boolean'], 'address' => ['type' => 'boolean'], 'display' => ['type' => 'boolean'],
-            ], ['label', 'source', 'columns'])],
+            ], ['label', 'columns'])],
             'ui/form' => ['label' => 'A form loaded from one ability and saved with another, with the save bar', 'children' => false, 'props' => $this->object([
                 'source' => $source, 'fieldsAt' => $id, 'valuesAt' => $id, 'into' => $id,
                 'fields' => ['type' => 'array', 'maxItems' => 80, 'items' => ['type' => 'object']],

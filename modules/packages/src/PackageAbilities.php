@@ -97,7 +97,7 @@ final class PackageAbilities
             'label' => 'Enable Module or Plugin',
             'description' => 'Turn a module or plugin on and run its install/upgrade steps.',
             'permission' => 'packages.manage',
-            'expose' => ['mcp' => false, 'assistant' => false],
+            'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']],
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $this->cms->packages()->enable($in['name']);
@@ -110,7 +110,7 @@ final class PackageAbilities
             'label' => 'Disable Module or Plugin',
             'description' => 'Turn a module or plugin off. Its data is kept. Required modules cannot be turned off.',
             'permission' => 'packages.manage',
-            'expose' => ['mcp' => false, 'assistant' => false],
+            'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']],
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $this->cms->packages()->disable($in['name']);
@@ -123,7 +123,7 @@ final class PackageAbilities
             'label' => 'Turn Module or Plugin On or Off',
             'description' => 'Turn a module or plugin on (and run its install and upgrade steps) or off. Its data is kept.',
             'permission' => 'packages.manage',
-            'expose' => ['mcp' => false, 'assistant' => false],
+            'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'on' => ['type' => 'boolean']], 'required' => ['name', 'on']],
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $packages = $this->cms->packages();
@@ -144,7 +144,7 @@ final class PackageAbilities
             'label' => 'Uninstall Plugin',
             'description' => 'Disable a plugin and remove its data (and its files when deleteFiles is true).',
             'permission' => 'packages.manage',
-            'expose' => ['mcp' => false, 'assistant' => false],
+            
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'deleteFiles' => ['type' => 'boolean', 'default' => false]], 'required' => ['name']],
             'handler' => fn (array $in) => $guard(function () use ($in) {

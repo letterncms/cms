@@ -76,6 +76,29 @@ final class Views
         return $out;
     }
 
+    /**
+     * Whether this user may open the place at a path, by the view that draws it: true or false,
+     * or null when no view is there (a screen of a module's own, or nothing at all).
+     */
+    public function opens(string $path, User $user): ?bool
+    {
+        $path = '/'.trim($path, '/');
+        $best = null;
+
+        foreach ($this->views as $view) {
+            $pattern = '~^'.preg_replace('~/:[A-Za-z_][A-Za-z0-9_]*~', '/[^/]+', $view['path']).'$~';
+            if (preg_match($pattern, $path) === 1) {
+                // An exact place wins over one with params (`/users/fields` over `/users/:id`).
+                $exact = ! str_contains($view['path'], ':');
+                if ($best === null || ($exact && ! $best['exact'])) {
+                    $best = ['view' => $view, 'exact' => $exact];
+                }
+            }
+        }
+
+        return $best === null ? null : $this->allowed($best['view']['permission'], $user);
+    }
+
     /** One view, for this user: checked against the catalog, what they may not see taken out, labels in their language. */
     public function resolve(string $id, User $user, array $params = []): array
     {

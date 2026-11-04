@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Added
+
+- The workspace: a thread at the right edge of every screen, opened with **New Chat** at the top of the sidebar, **Chat** in the top bar or `⌘J`, where the whole site can be run without AI. `/` lists what you may do: make a page or post, go somewhere, change a settings page, or run any ability, grouped by what it belongs to. A command that needs input asks for it right in the composer, with fields from its input; one that needs nothing runs at once. Every command runs as you, through the same permissions and audit log as the screens.
+- Each command is answered with a view to act on. Creating, publishing, updating, duplicating and deleting entries, inviting and adding users, saving settings and global sets say what happened in a line, with the next steps (**Open**, **Publish**, **View on Site**, **Unpublish**, **Resend Invitation**, and **Delete** to take it back), and those buttons run as commands in the same thread. Any other ability is answered from what it returned: a list as records, a record as its values, with **Open** when it names a place.
+- A thread is renamed in place with **Rename Chat**, from its `⋯` menu or its row. An approval starts on **Decline**, and its go-ahead says what it does (**Delete Entry**). Every control in the thread is at least 40px to tap on a touch screen.
+- Search in the thread: a few words and `Enter` find the places, settings pages, content, people and files you may see, grouped, each opening where it is. Fast, and no tokens.
+- Agents: plain language in the thread goes to an agent when a plugin provides one, through the new `Cms\Contracts\Agent` contract (`NoAgent` by default, when a message is a search and nothing mentions AI). An agent streams its answer into the same turns, keeps its own history with the thread, and is told what the person ran and searched since it last answered. See Plugins → Agents in the docs.
+- An ability can say how it's answered in the workspace with `answer`; `Cms\Modules\Workspace\Answers::done()` writes the usual one. The `workspace.answer` filter adds to any answer and the `workspace.search` filter adds a section to search.
+- `threads/list`, `threads/get`, `threads/rename` and `threads/delete` for the admin's own client, `workspace/search` and `workspace/commands`. Threads belong to one person, are encrypted at rest and go with their account.
+- The `sidebar.start` and `workspace.composer` panel slots. A composer source's line can run an ability in the thread (`command`), with fields from its schema or loaded ones, and have a heading of its own (`group`).
+- `ui/records` takes literal `rows` in place of a `source`, and `View` draws a view inside something else (`embedded`), running its buttons through the host when it says how (`run`, and `ask` for one that asks first). The new `ui/links` draws a short list of places.
+- An agent can move the admin. `admin/open` opens a place the person may see (an admin path, with `?tab=`, `?field=` or `?do=`), and the screen goes there as the agent answers, with the thread beside it, never on reloading a thread. Its row reads **Opened** with a link to the place, and admin links in an agent's answer, or a path written as code, open in the admin. It is offered to agents and the admin, not over MCP, REST or the CLI, and not in `/`. Tool events and results name the `ability` they ran.
+- An input schema can name its choices with `x-labels` (or `oneOf` with `const` and `title`) and a property with `title`, for the forms the workspace asks with.
+
+### Changed
+
+- **Breaking.** The thread at the right edge, its history, composer, `@` context, approvals and the full-size `/chat/:id` view are the workspace's, a module of the core, instead of the assistant plugin's. `@` is offered only while an agent answers.
+- `users/create` and `users/update` list the roles there are in their input, with their names, so a form can offer them. Their switch for super admins reads **Super Admin**, and every switch in a form is named by its label.
+- A button for an entry that is gone says **This entry no longer exists.** instead of that you aren't allowed to: a missing entry is `not_found`, not `forbidden`. Deleting an entry or a person says whom (`entries/delete` returns the `title`, `users/delete` the `name`).
+- Confirmations are alert dialogs, and a second one never opens over the first.
+- The hidden **Skip to Content** link stays out of sight, its shadow too, until the keyboard reaches it.
+- Agents can turn plugins on and off and uninstall them, over MCP and in the assistant, and always ask a person first. An ability marked `confirm` asks first like a destructive one (`Ability::asksFirst()`).
+
 ## 0.5.1 (2026-11-04)
 
 ### Fixed

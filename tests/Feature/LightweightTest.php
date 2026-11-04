@@ -20,7 +20,7 @@ final class LightweightTest extends TestCase
 
     public function test_only_the_required_modules_run(): void
     {
-        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/license', 'letterncms/packages', 'letterncms/settings'], array_values(array_filter(array_keys($this->cms()->packages()->active()), static fn ($n) => ! in_array($n, ['cms/admin', 'cms/starter'], true))));
+        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/license', 'letterncms/packages', 'letterncms/settings', 'letterncms/workspace'], array_values(array_filter(array_keys($this->cms()->packages()->active()), static fn ($n) => ! in_array($n, ['cms/admin', 'cms/starter'], true))));
     }
 
     public function test_what_switched_off_modules_add_is_gone(): void

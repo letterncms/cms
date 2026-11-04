@@ -1,0 +1,23 @@
+{
+    "name": "letterncms/workspace",
+    "description": "Where people work: threads at the right edge of the admin, answered with views, for commands, search and an agent when there is one.",
+    "type": "cms-plugin",
+    "version": "0.5.1",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Workspace\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Workspace",
+            "icon": "compose",
+            "provider": "Cms\\Modules\\Workspace\\WorkspaceModule",
+            "required": true
+        }
+    }
+}
