@@ -197,7 +197,7 @@ final class AuditAbilities
     public static function channel(string $transport): string
     {
         return match ($transport) {
-            'mcp' => __('Agent'), 'assistant' => __('Assistant'), 'rest' => __('API'), 'cli' => __('CLI'), 'install' => __('Install'),
+            'mcp' => __('Agent'), 'assistant' => __('Assistant'), 'rest' => __('API'), 'cli' => __('CLI'), 'install' => __('Installation'),
             default => __('Admin'),
         };
     }

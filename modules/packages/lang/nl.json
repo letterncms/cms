@@ -53,7 +53,7 @@
   "Continue": "Doorgaan",
   "Database": "Database",
   "Database is up to date": "Database is bijgewerkt",
-  "Database updates are waiting": "Database-updates staan klaar",
+  "Database updates are waiting": "Er staan database-updates klaar",
   "Disable Module or Plugin": "Module of plugin uitschakelen",
   "Downloading…": "Downloaden…",
   "Enable Module or Plugin": "Module of plugin inschakelen",
@@ -123,7 +123,7 @@
   "Run Pending Upgrades": "Openstaande upgrades uitvoeren",
   "Run Updates": "Updates uitvoeren",
   "Search": "Zoeken",
-  "Search {items}…": "{items} zoeken…",
+  "Search {items}…": "Zoeken in {items}…",
   "Security": "Beveiliging",
   "Security Advisories": "Beveiligingsadviezen",
   "Security fixes for this version ended in {date}.": "Beveiligingsfixes voor deze versie stopten in {date}.",
@@ -199,6 +199,6 @@
   "Uploading {name}…": "{name} uploaden…",
   "Version": "Versie",
   "View Updates": "Updates bekijken",
-  "What Changed": "Wat er veranderde",
+  "What Changed": "Wat er veranderd is",
   "What it installed stays, without update offers.": "Wat ze installeerde blijft, zonder aangeboden updates."
 }

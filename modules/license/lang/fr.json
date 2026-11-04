@@ -1,5 +1,5 @@
 {
-  "Active": "Active",
+  "Active": "Actif",
   "Add License Key": "Ajouter une clé de licence",
   "Charged back": "Rétrofacturé",
   "Checks the keys of paid plugins. Does nothing on a site without one, and never touches the public site.": "Vérifie les clés des plugins payants. Ne fait rien sur un site qui n’en a pas et ne touche jamais au site public.",
