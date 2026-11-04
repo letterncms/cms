@@ -2,7 +2,7 @@
     "name": "letterncms/account",
     "description": "Each person’s own profile, password, two-factor sign-in, appearance and API tokens.",
     "type": "cms-plugin",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"

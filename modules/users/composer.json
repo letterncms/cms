@@ -2,7 +2,7 @@
     "name": "letterncms/users",
     "description": "People, their roles and profile fields; invitations by email.",
     "type": "cms-plugin",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"

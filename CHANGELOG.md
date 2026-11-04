@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.0 (2026-11-04)
+
 ### Added
 
 - Plugins can add tabs to a settings page, in the `settings.tabs` slot: the form is the first tab, Settings, and each other tab brings its own content and buttons. A page with only its form shows no tabs.
