@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- A word reads the same on every screen in Dutch, French and German: where the core and a plugin translated it differently, which one you saw could change from one page to the next. `./dev check` now refuses a word translated two ways.
+- The Audit Log says **Installation** for changes made while installing.
+
 ## 0.5.0 (2026-11-04)
 
 ### Added

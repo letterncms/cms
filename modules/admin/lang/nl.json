@@ -213,12 +213,12 @@
   "Results": "Resultaten",
   "Retry": "Opnieuw proberen",
   "Save": "Opslaan",
-  "Save as Default": "Als standaard bewaren",
+  "Save as Default": "Als standaard opslaan",
   "Save Password": "Wachtwoord opslaan",
   "Saved as the default sidebar": "Bewaard als standaardzijbalk",
   "Scheduled": "Ingepland",
   "Search": "Zoeken",
-  "Search {items}…": "{items} zoeken…",
+  "Search {items}…": "Zoeken in {items}…",
   "Search icons…": "Pictogrammen zoeken…",
   "Search or jump to…": "Zoek of ga naar…",
   "Search Pages or Paste a Link": "Zoek pagina’s of plak een link",
@@ -286,6 +286,6 @@
   "Width": "Breedte",
   "Write in Markdown…": "Schrijf in Markdown…",
   "Yes": "Ja",
-  "You are not allowed to do this.": "Je mag dit niet doen.",
+  "You are not allowed to do this.": "Je hebt hier geen toestemming voor.",
   "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord."
 }

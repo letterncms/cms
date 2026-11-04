@@ -218,7 +218,7 @@
   "Saved as the default sidebar": "Enregistrée comme barre latérale par défaut",
   "Scheduled": "Planifié",
   "Search": "Rechercher",
-  "Search {items}…": "Rechercher : {items}…",
+  "Search {items}…": "Rechercher dans {items}…",
   "Search icons…": "Rechercher des icônes…",
   "Search or jump to…": "Rechercher ou aller à…",
   "Search Pages or Paste a Link": "Recherchez des pages ou collez un lien",
@@ -286,6 +286,6 @@
   "Width": "Largeur",
   "Write in Markdown…": "Écrire en Markdown…",
   "Yes": "Oui",
-  "You are not allowed to do this.": "Vous n’êtes pas autorisé à faire ceci.",
+  "You are not allowed to do this.": "Vous n’êtes pas autorisé à effectuer cette action.",
   "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe."
 }

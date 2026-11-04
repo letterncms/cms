@@ -72,7 +72,7 @@
                                                     "assistant": "Assistant",
                                                     "rest": "API",
                                                     "cli": "CLI",
-                                                    "install": "Install"
+                                                    "install": "Installation"
                                                 },
                                                 "tones": {
                                                     "mcp": "info",
