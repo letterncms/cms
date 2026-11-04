@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.0 (2026-11-04)
+
 ### Added
 
 - The workspace: a thread at the right edge of every screen, opened with **New Chat** at the top of the sidebar, **Chat** in the top bar or `⌘J`, where the whole site can be run without AI. `/` lists what you may do: make a page or post, go somewhere, change a settings page, or run any ability, grouped by what it belongs to. A command that needs input asks for it right in the composer, with fields from its input; one that needs nothing runs at once. Every command runs as you, through the same permissions and audit log as the screens.
