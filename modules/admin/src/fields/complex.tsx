@@ -20,9 +20,9 @@ export function TagsField({ field, value, onChange, disabled }: FieldProps<strin
     } else if (e.key === 'Backspace' && draft === '' && tags.length) onChange(tags.slice(0, -1))
   }
   return (
-    <div className="cms-focus-ring flex min-h-8 flex-wrap items-center gap-1 rounded-sm border border-border-strong bg-bg px-1.5 py-1 focus-within:border-focus focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_22%,transparent)]">
+    <div className="cms-input flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1 focus-within:border-focus focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_18%,transparent)]">
       {tags.map((tag) => (
-        <span key={tag} className="inline-flex h-5 items-center gap-1 rounded-xs bg-sunken pl-1.5 pr-0.5 text-xs">
+        <span key={tag} className="inline-flex h-5 items-center gap-1 rounded-xs bg-active pl-1.5 pr-0.5 text-xs font-medium text-text">
           {tag}
           <button type="button" disabled={disabled} onClick={() => onChange(tags.filter((x) => x !== tag))} className="grid size-4 place-items-center rounded-xs text-faint hover:bg-active hover:text-text" aria-label={t('Remove {tag}', { tag })}>
             <Icon name="close" size={10} />
@@ -36,8 +36,8 @@ export function TagsField({ field, value, onChange, disabled }: FieldProps<strin
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={onKey}
         onBlur={() => draft && add(draft)}
-        placeholder={tags.length ? '' : t('Add tags…')}
-        className="h-5 min-w-24 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-faint"
+        placeholder={tags.length ? '' : typeof field.placeholder === 'string' ? field.placeholder : t('Add…')}
+        className="h-5 min-w-24 flex-1 bg-transparent px-1 text-sm outline-none"
       />
     </div>
   )
@@ -94,7 +94,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
   return (
     <div className="space-y-1.5">
       {ids.length > 0 && (
-        <div className="divide-y divide-border rounded-sm border border-border">
+        <div className="divide-y divide-border rounded-md border border-border">
           <SortableList
             disabled={disabled}
             items={ids}
@@ -135,7 +135,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
                 onChange([...ids, e.id])
                 if (ids.length + 1 >= max) setOpen(false)
               }}
-              className="flex h-8 w-full items-center gap-2 rounded-xs px-2 text-left text-sm hover:bg-hover"
+              className="cms-menu-item h-8 w-full"
             >
               <span className="min-w-0 flex-1 truncate">{e.title}</span>
               <span className="text-xs text-faint">{e.collection}</span>
@@ -149,7 +149,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
 }
 
 export function UsersField({ field, value, onChange, disabled }: FieldProps<string[]>) {
-  return <PersonPicker aria-describedby={field.describedBy} id={fieldControlId(field)} value={Array.isArray(value) ? value : []} onChange={onChange} disabled={disabled} max={(field.max as number) || Infinity} label={field.label || t('Select people')} />
+  return <PersonPicker aria-describedby={field.describedBy} id={fieldControlId(field)} value={Array.isArray(value) ? value : []} onChange={onChange} disabled={disabled} max={(field.max as number) || Infinity} label={field.label || t('Select people')} size={field.size === 'sm' || field.size === 'xs' ? 'sm' : 'md'} />
 }
 
 export function GroupField({ field, value, onChange, disabled, context }: FieldProps<Record<string, any>>) {

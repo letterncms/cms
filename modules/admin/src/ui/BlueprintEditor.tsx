@@ -1,15 +1,15 @@
-import { blockNavigation, invalidate, loadManifest, navigate, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
+import { invalidate, loadManifest, navigate, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
 import { useEffect, useRef, useState } from 'react'
 import { FieldsEditor, type RawField } from '../fields/FieldsEditor'
 import { Button } from './Button'
 import { confirm } from './Dialog'
-import { EmptyState } from './EmptyState'
+import { EmptyState, NotFoundState } from './EmptyState'
 import { Fields } from './Fields'
-import { Page } from './Page'
-import { useShortcut } from './shortcuts'
+import { Page, type Crumb } from './Page'
+import { SaveBar } from './SaveBar'
 import { Spinner } from './Spinner'
-import { Tabs } from './Segmented'
 import { toast } from './toast'
+import { Tabs } from './Segmented'
 
 export interface BlueprintDefinition {
   title: string
@@ -38,6 +38,8 @@ export interface BlueprintKind {
   removeLabel?: string
   canRemove?: (source: Record<string, unknown>) => boolean
   back: { label: string; to: string; icon: string }
+  /** The crumbs to the editor, once it has loaded; `back` and the definition's title by default. */
+  crumbs?: (def: BlueprintDefinition) => Crumb[]
   entries?: string
   /** What every item has without a field; null when nothing. */
   builtIn?: string | null
@@ -63,6 +65,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
   const operation = useRef(false)
   const [tab, setTab] = useTab(['fields', 'settings'])
@@ -74,26 +77,25 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     }
   }, [source.data, def])
 
-  useEffect(() => blockNavigation(() => (dirty ? t('Discard unsaved changes to this blueprint?') : null)), [dirty])
-
   const patch = (p: Partial<BlueprintDefinition>) => {
     setDef((d) => (d ? { ...d, ...p } : d))
     setDirty(true)
   }
   const setFields = (fields: RawField[]) => patch({ fields })
 
+  // The save bar is the one way to save (and asks before leaving with changes); it says when saving failed.
   const save = async () => {
     if (!def || operation.current) return
     operation.current = true
     setSaving(true)
+    setSaveError(null)
     try {
       await run(...kind.save(def))
       setDirty(false)
       invalidate('collections/', 'globals/', 'entries/', 'users/')
       await loadManifest()
-      toast.success(t('Blueprint saved'))
     } catch (e) {
-      toast.error(e)
+      setSaveError(e instanceof Error && e.constructor !== TypeError ? e.message : t('Couldn’t save. Check your connection.'))
     } finally {
       setSaving(false)
       operation.current = false
@@ -121,24 +123,33 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     }
   }
 
-  useShortcut('mod+s', () => void save())
+  const discard = () => {
+    setDef(editableDefinition(source.data))
+    setDirty(false)
+    setSaveError(null)
+  }
 
   if (source.isLoading || (!def && source.data)) return <div className="grid h-full place-items-center text-faint"><Spinner /></div>
   if (source.isError && !def) return <Page crumbs={[kind.back]}><EmptyState title={t('Could not load this blueprint')} description={source.error?.message} action={<Button onClick={() => void source.refetch()} loading={source.isFetching}>{t('Retry')}</Button>} /></Page>
-  if (!def) return <Page crumbs={[kind.back, { label: t('Not Found') }]}><EmptyState title={t('Not Found')} /></Page>
+  if (!def) return <Page crumbs={[kind.back, { label: t('Not Found') }]}><NotFoundState icon={kind.back.icon} action={<Button onClick={() => navigate(kind.back.to)}>{t('Back to {label}', { label: kind.back.label })}</Button>} /></Page>
+
+  // Deleting is there to see, at the end of the page, never next to Save.
+  const removal = removable && (
+    <section className="mt-10 flex flex-wrap items-center gap-3 border-t border-border pt-6">
+      <div className="min-w-0 flex-1">
+        <h2 className="m-0 text-sm font-semibold text-ink">{kind.removeLabel ?? t('Delete')}</h2>
+        {typeof kind.remove !== 'function' && kind.remove?.[2] && <p className="m-0 mt-0.5 text-xs text-muted">{kind.remove[2]}</p>}
+      </div>
+      <Button icon="trash" className="!text-danger" disabled={saving} loading={removing} onClick={remove}>{kind.removeLabel ?? t('Delete')}</Button>
+    </section>
+  )
 
   return (
     <Page
       width="wide"
       title={kind.settingsSections ? def.title : undefined}
-      crumbs={[kind.back, { label: kind.remove ? def.title : t('Profile Fields') }]}
-      actions={
-        <>
-          {removable && !kind.settingsSections && <Button variant="ghost" icon="trash" disabled={saving} loading={removing} onClick={remove}>{kind.removeLabel ?? t('Delete')}</Button>}
-          {kind.entries && <Button variant="ghost" icon="arrow-up-right" onClick={() => navigate(kind.entries!)}>{t('Entries')}</Button>}
-          <Button variant="primary" disabled={!dirty || removing} loading={saving} onClick={save}>{t('Save')}</Button>
-        </>
-      }
+      crumbs={kind.crumbs?.(def) ?? [kind.back, { label: kind.remove ? def.title : t('Profile Fields') }]}
+      actions={kind.entries && <Button icon="arrow-up-right" onClick={() => navigate(kind.entries!)}>{t('Entries')}</Button>}
     >
       {removeError && <div role="alert" className="mb-5 flex items-center gap-3 rounded-sm border border-danger/30 p-3 text-sm">
         <span className="min-w-0 flex-1 text-danger">{removeError}</span>
@@ -162,12 +173,15 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
                   </section>
                 )
               })}
-              {removable && <div className="pt-6"><Button variant="ghost" icon="trash" onClick={remove}>{kind.removeLabel ?? t('Delete')}</Button></div>}
+              {removal}
             </div>
           )}
         </div>
       ) : <div className={settings.length > 0 ? 'grid grid-cols-1 gap-10 lg:grid-cols-[1fr_300px]' : 'max-w-[760px]'}>
-        <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} />
+        <div className="min-w-0">
+          <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} />
+          {removal}
+        </div>
 
         {settings.length > 0 && (
           <aside className="space-y-5">
@@ -180,6 +194,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         )}
       </div>}
       </div>
+      <SaveBar dirty={dirty} saving={saving} error={saveError} onSave={() => void save()} onDiscard={discard} />
     </Page>
   )
 }

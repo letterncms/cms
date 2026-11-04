@@ -1,14 +1,15 @@
-import { t } from '@letterncms/sdk'
-import { BlueprintEditor, type BlueprintKind } from '@letterncms/ui'
+import { navigate, useLocation } from '@letterncms/sdk'
+import { useEffect } from 'react'
 
-const kind = (): BlueprintKind => ({
-  get: ['users/fields', {}],
-  builtIn: t('Name, email and roles are built in.'),
-  save: (def) => ['users/fields-save', { fields: def.fields }],
-  back: { label: t('Users'), to: '/users', icon: 'users' },
-})
-
-/** The fields every user profile has. */
+/** Profile Fields are a tab of Users now; the old address leads there. */
 export default function UserBlueprint() {
-  return <BlueprintEditor kind={kind()} />
+  useEffect(() => navigate('/users?tab=fields', { replace: true }), [])
+  return null
+}
+
+/** The visitor accounts settings are the Sign-Up tab of Users now; their old page leads there. */
+export function SignUpSettings() {
+  const { query } = useLocation()
+  useEffect(() => navigate(`/users?tab=sign-up${query.field ? `&field=${encodeURIComponent(query.field)}` : ''}`, { replace: true }), [query.field])
+  return null
 }

@@ -6,37 +6,40 @@ namespace Cms\Tests\Feature;
 
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
+use Cms\Admin\Manifest;
 use Cms\Content\Collections\Collection;
 use Cms\Support\Yaml;
 use Cms\Tests\TestCase;
 
 final class AdminTest extends TestCase
 {
-    public function test_the_sidebar_pins_what_the_registrations_pin(): void
+    public function test_the_sidebar_shows_every_item_from_the_start(): void
     {
         $sidebar = $this->cms()->navigation()->forUser($this->admin())['sidebar'];
 
         // Sections without items are left out; the settings sidebar is separate.
-        $this->assertSame(['main', 'content'], array_column($sidebar['sections'], 'id'));
-        $this->assertSame(['collection.notes', 'collection.pages', 'collection.posts', 'globals'], $sidebar['sections'][1]['items']);
+        $this->assertSame(['main', 'content', 'design'], array_column($sidebar['sections'], 'id'));
         $this->assertSame('', $sidebar['sections'][0]['label']);
-        // Globals is not pinned by default: it waits under More.
-        $this->assertSame(['globals'], $sidebar['hidden']);
+        // Plugins sits with the home screens, Collections with how the site is built and looks.
+        $this->assertContains('plugins', $sidebar['sections'][0]['items']);
+        $this->assertSame(['collection.notes', 'collection.pages', 'collection.posts', 'globals'], $sidebar['sections'][1]['items']);
+        $this->assertSame(['collections'], $sidebar['sections'][2]['items']);
+        // Nothing is put away: More holds only what someone unpins.
+        $this->assertSame([], $sidebar['hidden']);
         $this->assertFalse($sidebar['personal']);
     }
 
-    public function test_a_collection_names_its_default_section_and_system_collections_wait_under_more(): void
+    public function test_a_collection_names_its_section_and_is_shown_there(): void
     {
         $this->cms()->collections()->save(Collection::fromArray('layouts', ['title' => 'Layouts', 'section' => 'shop', 'fields' => []]));
         $this->cms()->collections()->save(Collection::fromArray('parts', ['title' => 'Parts', 'section' => 'shop', 'system' => true, 'fields' => []]));
-        $this->cms()->admin()->section('shop', 'Shop', 20);
+        $this->cms()->admin()->section('shop', 'Shop', 25);
 
         $sidebar = $this->cms()->navigation()->forUser($this->admin())['sidebar'];
 
-        $this->assertSame(['main', 'content', 'shop'], array_column($sidebar['sections'], 'id'));
-        $this->assertSame(['collection.layouts', 'collection.parts'], $sidebar['sections'][2]['items']);
-        $this->assertContains('collection.parts', $sidebar['hidden']);
-        $this->assertNotContains('collection.layouts', $sidebar['hidden']);
+        $this->assertSame(['main', 'content', 'design', 'shop'], array_column($sidebar['sections'], 'id'));
+        $this->assertSame(['collection.layouts', 'collection.parts'], $sidebar['sections'][3]['items']);
+        $this->assertSame([], $sidebar['hidden']);
     }
 
     public function test_collection_navigation_priority_is_explicit_and_saved_arrangements_still_win(): void
@@ -69,7 +72,7 @@ final class AdminTest extends TestCase
         $result = $this->cms()->navigation()->forUser($admin);
 
         // Sections are the registered ones: people pin and order items, they do not invent or rename sections.
-        $this->assertSame(['main', 'content'], array_column($result['sidebar']['sections'], 'id'));
+        $this->assertSame(['main', 'content', 'design'], array_column($result['sidebar']['sections'], 'id'));
         $this->assertSame('Content', $result['sidebar']['sections'][1]['label']);
         $this->assertSame(['globals', 'collection.pages', 'collection.notes', 'collection.posts', 'collection.products'], $result['sidebar']['sections'][1]['items']);
         $this->assertSame(['collection.pages'], $result['sidebar']['hidden']);
@@ -87,7 +90,7 @@ final class AdminTest extends TestCase
         $admin = $this->admin();
         $this->settle($admin, ['sections' => [['id' => 'content', 'items' => ['collection.posts', 'collection.pages', 'collection.notes']]], 'hidden' => ['collection.notes']]);
         $this->assertSame(['collection.posts', 'collection.pages', 'collection.notes', 'globals'], $this->section($admin, 'content')['items']);
-        $this->assertSame(['collection.notes', 'globals'], $this->cms()->navigation()->forUser($admin)['sidebar']['hidden']);
+        $this->assertSame(['collection.notes'], $this->cms()->navigation()->forUser($admin)['sidebar']['hidden']);
 
         $this->pin($admin, ['sections' => [['id' => 'content', 'items' => ['collection.pages']]], 'hidden' => []]);
         $this->assertSame('collection.pages', $this->section($admin, 'content')['items'][0]);
@@ -126,14 +129,69 @@ final class AdminTest extends TestCase
         $this->assertSame('collection.pages', $content['items'][0]);
     }
 
-    public function test_tools_are_in_the_settings_sidebar_not_the_main_one(): void
+    public function test_the_core_names_the_sections_of_both_sidebars(): void
     {
-        $this->cms()->admin()->nav('links', ['label' => 'Links', 'path' => '/links', 'section' => 'tools', 'pinned' => true]);
+        $this->cms()->admin()->nav('links', ['label' => 'Links', 'path' => '/links', 'section' => 'design']);
+        $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']]);
+        $this->cms()->settingsRegistry()->register('mail', 'Mail', [['handle' => 'from', 'type' => 'text', 'label' => 'From']]);
 
         $result = $this->cms()->navigation()->forUser($this->admin());
 
-        $this->assertNotContains('tools', array_column($result['sidebar']['sections'], 'id'));
-        $this->assertSame(['account', 'site', 'tools', 'system'], array_column($result['settingsNav'], 'id'));
+        $this->assertSame(['collections', 'links'], array_column($result['sidebar']['sections'], 'items', 'id')['design']);
+        // The unnamed group, People, then a settings page without a section of its own: a plugin's, under Plugins by name.
+        $this->assertSame(['account', 'people', 'plugins'], array_column($result['settingsNav'], 'id'));
+        $this->assertSame(['', 'People', 'Plugins'], array_column($result['settingsNav'], 'label'));
+        $this->assertSame(['settings.mail', 'settings.shop'], array_column($result['settingsNav'], 'items', 'id')['plugins']);
+    }
+
+    public function test_a_group_of_one_in_settings_joins_the_unnamed_group(): void
+    {
+        $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']]);
+
+        $settings = array_column($this->cms()->navigation()->forUser($this->admin())['settingsNav'], null, 'id');
+
+        $this->assertArrayNotHasKey('plugins', $settings);
+        $this->assertSame(['account', 'settings.site', 'audit', 'settings.shop'], $settings['account']['items']);
+    }
+
+    public function test_a_page_with_a_home_is_that_screens_settings_tab_and_listed_in_settings(): void
+    {
+        $this->cms()->admin()->nav('shop', ['label' => 'Shop', 'path' => '/shop', 'pinned' => true]);
+        $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']], home: 'shop');
+
+        $result = $this->cms()->navigation()->forUser($this->admin());
+        $nav = array_column($result['nav'], null, 'id');
+
+        $this->assertSame('shop', $nav['settings.shop']['home']);
+        $this->assertSame('/shop?tab=settings', $nav['settings.shop']['path']);
+        // Found in settings with every other page, and never pinned on its own.
+        $this->assertContains('settings.shop', array_merge(...array_column($result['settingsNav'], 'items')));
+        $this->assertNotContains('settings.shop', array_merge(...array_column($result['sidebar']['sections'], 'items')));
+        $this->assertSame('shop', array_column($this->app->make(Manifest::class)->build($this->admin())['settings'], 'home', 'namespace')['shop']);
+    }
+
+    public function test_built_in_pages_are_listed_with_the_pages_and_customised_from_their_standard_version(): void
+    {
+        $this->cms()->collections()->save(Collection::fromArray('shop-pages', ['title' => 'Shop Pages', 'section' => 'design', 'system' => true, 'fields' => [['handle' => 'blocks', 'type' => 'json', 'label' => 'Page']]]));
+        $this->cms()->builtinPages()->register('shop', 'Shop', 'shop-pages',
+            pages: static fn () => ['basket' => ['label' => 'Basket', 'path' => '/basket']],
+            seed: static fn (string $handle, string $locale) => [['id' => 'b1', 'type' => 'heading', 'props' => ['text' => "Standard {$handle} {$locale}"]]],
+        );
+        $ctx = AbilityContext::forUser($this->admin(), 'admin');
+
+        // Not an item of its own: it belongs to the pages, and the editor goes back there.
+        $nav = array_column($this->cms()->navigation()->forUser($this->admin())['nav'], null, 'id');
+        $this->assertSame('collection.pages', $nav['collection.shop-pages']['home']);
+        $this->assertSame('pages', array_column($this->app->make(Manifest::class)->build($this->admin())['collections'], 'within', 'handle')['shop-pages']);
+
+        $groups = array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id');
+        $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'status' => 'standard']], $groups['shop']['pages']);
+
+        $made = $this->cms()->abilities()->execute('pages/customise', ['group' => 'shop', 'handle' => 'basket'], $ctx);
+        $entry = $this->cms()->entries()->find($made['id']);
+        $this->assertSame(['shop-pages', 'basket', 'Standard basket en'], [$entry->collection, $entry->slug, $entry->data['blocks'][0]['props']['text']]);
+        $this->assertSame($made['id'], $this->cms()->abilities()->execute('pages/customise', ['group' => 'shop', 'handle' => 'basket'], $ctx)['id'], 'Once is enough');
+        $this->assertSame('draft', array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id')['shop']['pages'][0]['status']);
     }
 
     public function test_settings_have_a_sidebar_of_their_own(): void
@@ -141,11 +199,16 @@ final class AdminTest extends TestCase
         $result = $this->cms()->navigation()->forUser($this->admin());
         $settings = array_column($result['settingsNav'], null, 'id');
 
-        $this->assertSame(['account', 'site', 'system'], array_keys($settings));
-        $this->assertSame(['account'], $settings['account']['items']);
-        $this->assertContains('settings.site', $settings['site']['items']);
-        $this->assertContains('users', $settings['system']['items']);
-        $this->assertContains('settings.admin', $settings['system']['items']);
+        // Your account, General and the Audit Log without a group name; then People.
+        $this->assertSame(['account', 'people'], array_keys($settings));
+        $this->assertSame(['account', 'settings.site', 'audit'], $settings['account']['items']);
+        $this->assertSame(['users', 'settings.roles'], $settings['people']['items']);
+        // Settings kept with a screen are its Settings tab, reached through the screen's row when that is in settings.
+        $this->assertSame('/audit?tab=settings', array_column($result['nav'], 'path', 'id')['settings.audit']);
+        $this->assertNotContains('settings.audit', array_merge(...array_column($result['settingsNav'], 'items')));
+        // The default sidebar and home screen are saved where they are arranged: no page of their own.
+        $this->assertNotContains('settings.admin', array_column($result['nav'], 'id'));
+        $this->assertNotContains('admin', array_column($this->app->make(Manifest::class)->build($this->admin())['settings'], 'namespace'));
         // Settings pages are not something to pin, but the command palette finds them.
         $this->assertNotContains('users', array_merge(...array_column($result['sidebar']['sections'], 'items')));
         $this->assertContains('settings.site', array_column($result['nav'], 'id'));
@@ -157,7 +220,7 @@ final class AdminTest extends TestCase
         $ids = array_column($result['nav'], 'id');
 
         $this->assertNotContains('users', $ids);
-        $this->assertNotContains('settings.admin', $ids);
+        $this->assertNotContains('settings.site', $ids);
         // Everyone has an account to look after.
         $this->assertSame(['account'], array_column($result['settingsNav'], 'id'));
     }
@@ -178,7 +241,7 @@ final class AdminTest extends TestCase
         $this->assertTrue($result['fixed']);
         $this->assertContains('collection.pages', array_column($result['items'], 'id'));
         $this->assertNotContains('users', array_column($result['items'], 'id'));
-        $this->assertSame(['main', 'content'], array_column($result['layout']['sections'], 'id'));
+        $this->assertSame(['main', 'content', 'design'], array_column($result['layout']['sections'], 'id'));
 
         $this->expectException(AbilityException::class);
         $this->cms()->abilities()->execute('admin/arrangement', ['of' => 'sidebar'], AbilityContext::forUser($this->userWithRole('author'), 'admin'));

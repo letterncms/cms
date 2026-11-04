@@ -41,7 +41,7 @@ function adminManifest(): Plugin {
         if (chunk.type === 'chunk' && chunk.isEntry && chunk.name === 'main') main = chunk.imports
         if (chunk.type === 'asset' && chunk.fileName.endsWith('.css')) css.push(chunk.fileName)
         // The UI font, so the first paint is already set in it (the mono one waits until code shows up).
-        if (chunk.type === 'asset' && /\/Geist-Variable-[\w-]+\.woff2$/.test(chunk.fileName)) fonts.push(chunk.fileName)
+        if (chunk.type === 'asset' && /\/InstrumentSans-Latin-[\w-]{8}\.woff2$/.test(chunk.fileName)) fonts.push(chunk.fileName)
       }
       const imports = Object.fromEntries(Object.keys(shared).map((s) => [s, files[entryName(s)]]))
       // Everything the entry imports, fetched in parallel with it instead of one level at a time.

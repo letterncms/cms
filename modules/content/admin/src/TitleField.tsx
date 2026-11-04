@@ -49,8 +49,8 @@ export function UriField({ field, value, onChange, disabled }: FieldProps<string
   useEffect(() => setDraft(slug), [slug])
 
   return (
-    <div className="flex h-6 items-center gap-1.5 text-sm text-faint">
-      <Icon name="link" size={13} />
+    <div className="flex h-6 min-w-0 items-center gap-1.5 text-sm text-faint">
+      <Icon name="link" size={13} className="shrink-0" />
       {editing ? (
         <input
           ref={input}
@@ -72,10 +72,10 @@ export function UriField({ field, value, onChange, disabled }: FieldProps<string
               setEditing(false)
             }
           }}
-          className="h-6 w-72 rounded-xs border border-focus bg-bg px-1.5 font-mono text-xs text-text outline-none"
+          className="h-6 w-72 min-w-0 max-w-full rounded-xs border border-focus bg-bg px-1.5 font-mono text-xs text-text outline-none"
         />
       ) : (
-        <button id={fieldControlId(field)} aria-describedby={field.describedBy as string | undefined} type="button" disabled={disabled || uri === '/'} onClick={() => setEditing(true)} className={cn('rounded-xs px-1 font-mono text-xs hover:bg-hover hover:text-text disabled:hover:bg-transparent')} title={t('Edit URL')}>
+        <button id={fieldControlId(field)} aria-describedby={field.describedBy as string | undefined} type="button" disabled={disabled || uri === '/'} onClick={() => setEditing(true)} aria-label={uri === '/' ? undefined : t('Edit URL')} className={cn('block min-w-0 truncate rounded-xs px-1 text-left font-mono text-xs hover:bg-hover hover:text-text disabled:hover:bg-transparent')} title={uri}>
           {uri}
         </button>
       )}

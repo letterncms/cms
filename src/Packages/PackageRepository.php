@@ -36,6 +36,12 @@ final class PackageRepository
         return $this->all()[$name] ?? null;
     }
 
+    /** A plugin's name (`extra.cms.label`), for what is called after it; null for the kernel and its modules. */
+    public static function labelOf(?string $package): ?string
+    {
+        return $package !== null && function_exists('app') && app()->bound(self::class) ? app(self::class)->find($package)?->label : null;
+    }
+
     /** @return array<string, PackageManifest> */
     public function plugins(): array
     {

@@ -12,11 +12,41 @@
 @source "../";
 
 
+/* Instrument Sans (SIL Open Font License, fonts/OFL.txt), split like Google Fonts so only the letters a page uses load. */
 @font-face {
-  font-family: "Geist";
-  src: url("../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "Instrument Sans";
+  src: url("../../fonts/InstrumentSans-Latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("../../fonts/InstrumentSans-LatinExt.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("../../fonts/InstrumentSans-Latin-Italic.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("../../fonts/InstrumentSans-LatinExt-Italic.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @font-face {
@@ -38,11 +68,11 @@
     background: var(--cms-bg);
     color: var(--cms-text);
     font-family: var(--font-sans);
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "ss01", "cv11";
+    font-kerning: normal;
     text-rendering: optimizeLegibility;
   }
 
@@ -50,8 +80,10 @@
     min-height: 100%;
   }
 
+  /* Selected text is highlighted, as with a marker on paper: the brand's yellow. */
   ::selection {
-    background: color-mix(in srgb, var(--cms-focus) 22%, transparent);
+    background: var(--cms-signal-soft);
+    color: var(--cms-ink);
   }
 
   :focus-visible {
@@ -61,6 +93,11 @@
 
   h1, h2, h3 {
     text-wrap: balance;
+  }
+
+  ::placeholder {
+    color: var(--cms-ghost);
+    opacity: 1;
   }
 
   button {
@@ -91,8 +128,8 @@
     height: calc(100dvh - 24px);
     overflow: hidden;
     border: 1px solid var(--cms-border-float);
-    border-radius: var(--radius-lg);
-    background: var(--cms-bg);
+    border-radius: var(--radius-xl);
+    background: var(--cms-float);
     box-shadow: var(--cms-shadow-dialog);
     outline: none;
     transition: transform 200ms var(--ease-out), opacity 160ms var(--ease-out);
@@ -162,22 +199,94 @@
   .cms-focus-ring:focus-visible,
   .cms-focus-ring[data-focus] {
     border-color: var(--cms-focus);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 22%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+  }
+
+  /* Every control that holds a value (text fields, select triggers): a white field with a hairline that firms up on hover. */
+  .cms-input {
+    border: 1px solid var(--cms-border-strong);
+    background-color: var(--cms-bg);
+    color: var(--cms-text);
+    outline: none;
+    transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out), background-color 120ms var(--ease-out);
+  }
+  .cms-input:hover {
+    border-color: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
+  }
+  .cms-input-quiet {
+    border-color: transparent;
+    background-color: transparent;
+  }
+  .cms-input-quiet:hover {
+    border-color: transparent;
+    background-color: var(--cms-hover);
+  }
+  /* On the desk (an inspector), fields are white slips on the gray: no edge until they're pointed at. */
+  [data-cms-desk] .cms-input:not(:hover, :focus-visible, [data-focus], [data-popup-open], [aria-invalid="true"]) {
+    border-color: transparent;
+  }
+  .cms-input:is(:focus-visible, [data-focus], [data-popup-open]),
+  .cms-input:is(:focus-visible, [data-focus], [data-popup-open]):hover {
+    border-color: var(--cms-focus);
+    background-color: var(--cms-bg);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+  }
+  .cms-input[aria-invalid="true"],
+  .cms-input[aria-invalid="true"]:is(:hover, :focus-visible) {
+    border-color: var(--cms-danger);
+    box-shadow: 0 0 0 3px var(--cms-danger-soft);
+  }
+  .cms-input:is(:disabled, [data-disabled]),
+  .cms-input:is(:disabled, [data-disabled]):hover {
+    border-color: var(--cms-border);
+    background-color: var(--cms-sunken);
+    color: var(--cms-faint);
+  }
+  /* A phone zooms into any field set under 16px: on touch, text fields are 16px, at the same height. */
+  @media (pointer: coarse) {
+    input.cms-input, textarea.cms-input { font-size: 16px !important; }
   }
 
   .cms-pop {
-    background: var(--cms-bg);
+    background: var(--cms-float);
     border: 1px solid var(--cms-border-float);
     border-radius: var(--radius-lg);
     box-shadow: var(--cms-shadow-pop);
     transform-origin: var(--transform-origin);
     transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
   }
-  .cms-pop[data-starting-style],
-  .cms-pop[data-ending-style] {
+  /* Opens from the trigger's side; closes by fading out, quicker. */
+  .cms-pop[data-starting-style] {
     opacity: 0;
     transform: scale(0.97);
   }
+  .cms-pop[data-ending-style] {
+    opacity: 0;
+    transition-duration: 80ms;
+  }
+
+  /* A row in a menu, a select or a picker: 30px, the highlight a film, its icon coming up to ink. */
+  .cms-menu-item {
+    display: flex;
+    min-height: 30px;
+    align-items: center;
+    gap: 8px;
+    padding-inline: 8px;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--cms-text);
+    text-align: start;
+    outline: none;
+    user-select: none;
+    cursor: default;
+  }
+  .cms-menu-item > svg:first-child { color: var(--cms-muted); flex-shrink: 0; }
+  .cms-menu-item:is([data-highlighted], :hover:not([data-disabled], :disabled), :focus-visible) { background: var(--cms-hover); }
+  .cms-menu-item:is([data-highlighted], :hover, :focus-visible) > svg:first-child { color: var(--cms-ink); }
+  .cms-menu-item:is([data-disabled], :disabled) { opacity: 0.45; }
+  .cms-menu-item[data-danger] { color: var(--cms-danger); }
+  .cms-menu-item[data-danger] > svg:first-child { color: var(--cms-danger); }
 
   /* Range slider (number fields with display: slider): a hairline track, an ink fill from
      --cms-range-from to --cms-range-to, and a white thumb with a hairline ring. */
@@ -366,14 +475,118 @@
   }
   .cms-side-panel[data-hidden] { width: 0; }
 
-  /* The top bar moves with the sidebar, frame for frame; its title stays in the middle of the window. */
+  /* The top bar moves with the sidebar, frame for frame; its title stays in the middle of the sheet.
+     Its hairline shows only once the screen under it is scrolled. */
   .cms-topbar {
     padding-left: calc(1rem + var(--cms-sidebar-toggle, 0px));
-    transition: padding-left var(--cms-panel-speed) var(--ease-out);
+    border-bottom: 1px solid transparent;
+    transition: padding-left var(--cms-panel-speed) var(--ease-out), border-color 120ms var(--ease-out);
   }
-  .cms-topbar-title {
-    left: calc(50% - var(--cms-sidebar-width, 0px) / 2);
-    transition: left var(--cms-panel-speed) var(--ease-out);
+  [data-cms-screen][data-scrolled] .cms-topbar { border-bottom-color: var(--cms-border); }
+  .cms-topbar-title { left: 50%; }
+
+  /* Paper on a desk: the window is the desk (sidebar, dock, banners), the screen a sheet inset into it.
+     On a phone the sheet is the whole window and the sidebar a drawer over it. */
+  .cms-sheet { background: var(--cms-bg); }
+  @media (min-width: 768px) {
+    .cms-shell[data-inset] .cms-sheet {
+      margin: 8px 8px 8px 0;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--cms-shadow-sheet);
+      transition: margin-left var(--cms-panel-speed) var(--ease-out);
+    }
+    .cms-shell[data-inset]:not([data-sidebar]) .cms-sheet { margin-left: 8px; }
+    /* Next to the sheet the dock is on the desk too: no rule of its own between them. */
+    .cms-shell[data-inset] .cms-dock:not([data-floating]) .cms-dock-panel { box-shadow: none; }
+  }
+  @media (min-width: 768px) and (max-width: 1099px) {
+    .cms-shell[data-inset] .cms-dock[data-open]:not([data-floating]) .cms-dock-panel { box-shadow: var(--cms-shadow-dialog); }
+  }
+  /* The sidebar button and the way back: in the sidebar's first row, or in the sheet's top bar while the sidebar is away. */
+  .cms-leading {
+    left: 8px;
+    top: 10px;
+    transition: translate var(--cms-panel-speed) var(--ease-out);
+  }
+  /* On a phone the sheet's top bar is under the banner; with the drawer out, the drawer's first row is at the top. */
+  @media (max-width: 767px) {
+    .cms-leading:not([data-drawer]) { translate: 0 var(--cms-banner-height, 0px); }
+  }
+  /* On the desk the sidebar's first row and the sheet's top bar share one line, 8px down from the window. */
+  @media (min-width: 768px) {
+    .cms-shell[data-inset] .cms-leading { top: 18px; }
+    .cms-shell[data-inset]:not([data-sidebar]) .cms-leading { translate: 8px var(--cms-banner-height, 0px); }
+  }
+
+  /* Skip to the screen: out of sight until the keyboard reaches it, first thing. */
+  .cms-skip {
+    position: absolute;
+    z-index: 60;
+    top: 8px;
+    left: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--cms-float);
+    box-shadow: var(--cms-shadow-pop);
+    color: var(--cms-ink);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    text-decoration: none;
+    translate: 0 calc(-100% - 16px);
+  }
+  .cms-skip:focus-visible { translate: 0 0; outline: 2px solid var(--cms-focus); outline-offset: 2px; }
+  [data-cms-screen]:focus { outline: none; }
+
+  /* A screen's sections under its row: no icons, set in from the row's label, at the sidebar's own rhythm. */
+  .cms-sidebar-nested { margin-top: 1px; }
+  .cms-sidebar-nested:empty { display: none; }
+  .cms-sidebar-nested .cms-sidebar-row { padding-left: 46px; }
+
+  /* The one way to save a form: up while there are changes, over the bottom of the sheet. */
+  .cms-savebar {
+    position: absolute;
+    z-index: 25;
+    left: 50%;
+    bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: min(560px, calc(100% - 32px));
+    height: 48px;
+    padding: 0 8px 0 16px;
+    border-radius: var(--radius-lg);
+    background: var(--cms-ink);
+    color: var(--cms-ink-contrast);
+    box-shadow: var(--cms-shadow-dialog);
+    translate: -50% 0;
+    transition: opacity 120ms var(--ease-out), translate 160ms var(--ease-out);
+  }
+  @starting-style {
+    .cms-savebar[data-state='open'] { opacity: 0; translate: -50% 8px; }
+  }
+  .cms-savebar[data-state='closed'] { opacity: 0; pointer-events: none; }
+  .cms-savebar button {
+    position: relative;
+    height: 28px;
+    padding-inline: 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 120ms var(--ease-out);
+  }
+  .cms-savebar button:focus-visible { outline: 2px solid var(--cms-focus); outline-offset: 2px; }
+  .cms-savebar button:disabled { cursor: default; opacity: 0.6; }
+  .cms-savebar-discard { color: color-mix(in srgb, var(--cms-ink-contrast) 80%, transparent); }
+  .cms-savebar-discard:not(:disabled):hover { background: color-mix(in srgb, var(--cms-ink-contrast) 10%, transparent); color: var(--cms-ink-contrast); }
+  .cms-savebar-save { background: var(--cms-ink-contrast); color: var(--cms-ink); }
+  .cms-savebar-save:not(:disabled):hover { background: color-mix(in srgb, var(--cms-ink-contrast) 90%, var(--cms-ink)); }
+  @media (max-width: 767px) {
+    .cms-savebar { position: fixed; width: calc(100% - 16px); bottom: calc(8px + env(safe-area-inset-bottom)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    @starting-style { .cms-savebar[data-state='open'] { translate: -50% 0; } }
   }
 }
 
@@ -402,10 +615,11 @@
     animation: cms-appear 240ms var(--ease-out, ease-out) 600ms both;
   }
 
-  /* The sidebar switching between the main list and settings: settings come in from the side they lead to, the main list returns from the other. */
+  /* The sidebar switching states: a deeper one (settings, a screen's own) comes in from the side it leads to, the way back from the other. */
   @media (prefers-reduced-motion: no-preference) {
-    .cms-sidebar-mode:is([data-mode='settings'], [data-mode='screen']) { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; --cms-sidebar-from: 12px; }
-    .cms-sidebar-mode[data-mode='main'] { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; --cms-sidebar-from: -12px; }
+    .cms-sidebar-mode[data-direction] { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; }
+    .cms-sidebar-mode[data-direction='in'] { --cms-sidebar-from: 12px; }
+    .cms-sidebar-mode[data-direction='out'] { --cms-sidebar-from: -12px; }
   }
 
   /* Loading placeholders stay out of sight for loads too quick to notice, so a screen never flickers gray. */
@@ -456,10 +670,15 @@
     background: var(--cms-hover);
     color: var(--cms-text);
   }
+  /* The place you are: a slip of paper on the desk. */
   .cms-sidebar-row-active, .cms-sidebar-row-active:hover, .cms-sidebar-row-active:focus-within, .cms-sidebar-row-active[data-popup-open] {
-    background: var(--cms-active);
+    background: var(--cms-bg);
+    box-shadow: var(--cms-shadow-raise);
     color: var(--cms-ink);
   }
+  .cms-sidebar-row-active .cms-sidebar-row-main { font-weight: 500; }
+  /* On the drawer (a float) the slip is the desk's tone instead, so it still reads. */
+  .cms-sidebar-drawer .cms-sidebar-row-active { background: var(--cms-active); box-shadow: none; }
   .cms-sidebar-row-main {
     display: flex;
     align-items: center;
@@ -505,4 +724,39 @@
       transition: transform var(--marquee-duration) linear 400ms;
     }
   }
+}
+
+/* Toasts (sonner, whose own styles sit outside any layer, so these do too): they rise 8px as they fade in and
+   fade out where they are, quicker; the stack closes up over the same 160ms. */
+[data-sonner-toaster] [data-sonner-toast].cms-toast {
+  transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), height 160ms var(--ease-out);
+}
+[data-sonner-toaster] [data-sonner-toast].cms-toast:not([data-mounted="true"]) {
+  --y: translateY(8px);
+}
+[data-sonner-toaster] [data-sonner-toast].cms-toast[data-removed="true"][data-swipe-out="false"] {
+  --y: translateY(calc(var(--lift) * var(--offset, 0px)));
+  opacity: 0;
+  transition-duration: 100ms;
+}
+
+@layer components {
+  /* Tables: a row's checkbox keeps its column but shows only on hover or focus, or for every row once one is ticked. Touch screens always show it. */
+  @media (hover: hover) {
+    .cms-table [role="checkbox"] { transition: opacity 120ms var(--ease-out); }
+    .cms-table:not(:has([role="checkbox"]:is([data-checked], [data-indeterminate]))) [role="row"]:not(:hover, :focus-within) [role="checkbox"] { opacity: 0; }
+  }
+}
+
+/* Sections under a row keep one rhythm, however the screen groups them: 1px between rows, as everywhere in the sidebar. */
+.cms-sidebar-nested > * > * + * { margin-top: 1px; }
+
+/* A column that gave way to fit the sheet (see TableFrame): its cells go with its track. */
+@media (min-width: 640px) {
+  .cms-table [data-column-hidden] { display: none !important; }
+}
+
+/* On a phone a row's second line starts under its title, not under the checkbox before it (16px box + 12px gap). */
+@media (max-width: 639px) {
+  [data-row-check] ~ [data-row-meta] { padding-left: 28px; }
 }

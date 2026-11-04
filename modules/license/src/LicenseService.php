@@ -166,7 +166,7 @@ final class LicenseService
             $url = (string) (($issuer === 'default' ? env('CMS_LICENSE_URL') : null) ?: $this->issuers()[$issuer]['url']);
 
             if ($url === '') {
-                throw new RuntimeException('No licence server is known.');
+                throw new RuntimeException('No license server is known.');
             }
 
             [$host] = $this->host();
@@ -184,7 +184,7 @@ final class LicenseService
             $claims = is_string($token) ? $this->verified($token, $issuer) : null;
 
             if (! $claims || $claims->lid !== $current->lid || $claims->rev < $current->rev) {
-                throw new RuntimeException($answer['status'] === 200 ? 'The answer did not verify.' : 'The licence server answered '.$answer['status'].'.');
+                throw new RuntimeException($answer['status'] === 200 ? 'The answer did not verify.' : 'The license server answered '.$answer['status'].'.');
             }
         } catch (Throwable $e) {
             $state = $store->state($issuer);

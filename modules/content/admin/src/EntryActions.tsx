@@ -1,5 +1,5 @@
 import { invalidate, navigate, run, t, useAction, useManifest, type EntrySummary } from '@letterncms/sdk'
-import { IconButton, Menu, confirm, cn, toast, entryActionAvailability } from '@letterncms/ui'
+import { IconButton, Menu, confirm, cn, copyText, toast, entryActionAvailability } from '@letterncms/ui'
 
 /** A row's or card's hover actions: view the live page, and a menu with the rest. */
 export function EntryActions({ item, handle, className }: { item: EntrySummary; handle: string; className?: string }) {
@@ -7,6 +7,10 @@ export function EntryActions({ item, handle, className }: { item: EntrySummary; 
   const actions = entryActionAvailability(capabilities, item)
   const duplicate = useAction('entries/duplicate', { invalidates: ['entries/', 'content/'], onSuccess: (e: any) => navigate(`/content/${handle}/${e.id}`), onError: toast.error })
   const live = !!item.uri && item.displayStatus !== 'draft' && item.displayStatus !== 'scheduled'
+  const change = (ability: 'entries/publish' | 'entries/unpublish', done: string) => run(ability, { id: item.id, expectedVersion: item.version }).then(() => {
+    toast.success(done)
+    invalidate('entries/', 'content/')
+  }, toast.error)
 
   return (
     <div className={cn('flex items-center gap-0.5 has-[[data-popup-open]]:opacity-100', className)}>
@@ -16,7 +20,9 @@ export function EntryActions({ item, handle, className }: { item: EntrySummary; 
         items={[
           { label: t('Open'), icon: 'edit', onSelect: () => navigate(`/content/${handle}/${item.id}`) },
           actions.duplicate ? { label: t('Duplicate'), icon: 'copy', onSelect: () => duplicate.mutate({ id: item.id, expectedVersion: item.version }) } : null,
-          item.uri ? { label: t('Copy URL'), icon: 'link', onSelect: () => navigator.clipboard.writeText(new URL(item.uri!, window.location.origin).href).then(() => toast.success(t('URL copied')), toast.error) } : null,
+          actions.publish && (item.displayStatus === 'draft' || item.displayStatus === 'changed') ? { label: t('Publish'), icon: 'rocket', onSelect: () => change('entries/publish', t('Published')) } : null,
+          actions.unpublish && item.displayStatus !== 'draft' ? { label: t('Unpublish'), icon: 'eye-off', onSelect: () => change('entries/unpublish', t('Unpublished')) } : null,
+          item.uri ? { label: t('Copy URL'), icon: 'link', onSelect: () => void copyText(new URL(item.uri!, window.location.origin).href, { copied: t('URL copied'), failed: t('Couldn’t copy the URL') }) } : null,
           actions.delete ? { separator: true, label: '' } : null,
           actions.delete ? {
             label: t('Delete'),

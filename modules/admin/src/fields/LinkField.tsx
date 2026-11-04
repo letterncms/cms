@@ -43,8 +43,8 @@ export function LinkField({ field, value, onChange, disabled }: FieldProps<strin
             disabled={disabled}
             aria-label={field.label || t('Link')}
             className={cn(
-              'cms-focus-ring flex w-full min-w-0 items-center rounded-sm border border-border-strong bg-bg text-left text-text transition-[border-color,box-shadow] duration-120 hover:border-faint disabled:opacity-50',
-              xs ? 'h-6 gap-1.5 pl-1.5 pr-1.5 text-2xs' : 'h-8 gap-2 pl-2.5 pr-2.5 text-sm',
+              'cms-input flex w-full min-w-0 items-center text-left',
+              xs ? 'h-6 gap-1.5 rounded-xs pl-1.5 pr-1.5 text-xs' : 'h-8 gap-2 rounded-md pl-2.5 pr-2.5 text-sm',
               link.kind !== 'none' && (xs ? 'pr-6' : 'pr-8'),
             )}
           >
@@ -250,7 +250,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
           placeholder={t('Search Pages or Paste a Link')}
           aria-label={t('Search Pages or Paste a Link')}
           spellCheck={false}
-          className="h-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-faint"
+          className="h-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none"
         />
         {loading && <Spinner size={12} />}
       </div>
@@ -259,7 +259,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
           const heading = o.group && o.group !== group ? (group = o.group) : null
           return (
             <div key={o.key}>
-              {heading && <div className="cms-caps px-2 pb-1 pt-2">{heading}</div>}
+              {heading && <div className="cms-label px-2 pb-1 pt-2">{heading}</div>}
               <button
                 type="button"
                 role="option"
@@ -268,7 +268,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
                 aria-disabled={!!o.invalid || undefined}
                 onMouseEnter={() => setIndex(i)}
                 onClick={() => choose(o)}
-                className={cn('flex h-8 w-full items-center gap-2 rounded-xs px-2 text-left text-sm', i === index && 'bg-hover', o.invalid && 'cursor-not-allowed')}
+                className={cn('cms-menu-item h-8 w-full', i === index && 'bg-hover', o.invalid && 'cursor-not-allowed')}
               >
                 <Icon name={o.icon} size={14} className={cn('shrink-0', o.invalid ? 'text-warning' : 'text-muted')} />
                 <span className={cn('min-w-0 flex-1 truncate', o.invalid && 'text-muted')}>{o.label}</span>

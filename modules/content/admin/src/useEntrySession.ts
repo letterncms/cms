@@ -12,7 +12,9 @@ export function useEntrySession(initial: Entry | null, defaults: EntryContent, c
       : entry
       ? await run<Entry>('entries/update', { id: entry.id, ...values, publish: !!options.publish, ...(options.at ? { at: options.at } : {}), expectedVersion: options.expectedVersion ?? entry.version })
       : await run<Entry>('entries/create', { collection, locale, ...values, slug: values.slug || undefined, status: options.publish ? 'published' : 'draft', ...(options.at ? { at: options.at } : {}) })
-    if (!entry && mounted.current && window.location.pathname === creationPath.current) window.history.replaceState(null, '', `${window.__CMS__.base}/content/${collection}/${result.id}${locale ? `?locale=${encodeURIComponent(locale)}` : ''}`)
+    if (!entry && mounted.current && window.location.pathname === creationPath.current)
+      // The router's own state stays, so Back and Forward still know where they are.
+      window.history.replaceState(window.history.state, '', `${window.__CMS__.base}/content/${collection}/${result.id}${locale ? `?locale=${encodeURIComponent(locale)}` : ''}`)
     invalidate('entries/', 'content/', 'collections/overview')
     return result
   }))
@@ -27,7 +29,7 @@ export function useEntrySession(initial: Entry | null, defaults: EntryContent, c
     }
     return cancel
   }, [session, state, autosave, editable])
-  useEffect(() => blockNavigation(() => session.get().dirty || session.get().phase === 'saving' ? t('You have unsaved changes. Leave anyway?') : null), [session])
+  useEffect(() => blockNavigation(() => session.get().dirty || session.get().phase === 'saving' ? t('Discard unsaved changes?') : null), [session])
   useEffect(() => {
     const unload = (event: BeforeUnloadEvent) => { if (session.get().dirty || session.get().phase === 'saving') event.preventDefault() }
     window.addEventListener('beforeunload', unload)

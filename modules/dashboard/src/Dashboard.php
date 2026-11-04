@@ -9,7 +9,7 @@ use Cms\Admin\Arrangement;
 use Cms\Users\User;
 
 /**
- * The home screen: widgets registered by modules and plugins, in a main and a
+ * The Dashboard: widgets registered by modules and plugins, in a main and a
  * side column. Everyone arranges their own (the `dashboard` user preference);
  * until they do, they see the site's default (the `dashboard` value of the
  * `admin` settings), and without one the registrations: widgets that are

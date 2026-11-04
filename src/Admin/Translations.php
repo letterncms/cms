@@ -15,7 +15,7 @@ use Cms\Users\User;
  * and the active packages' into one, and PHP's `__()` reads the same files.
  *
  * Which language: the user's own (Account → Appearance), else the admin's default
- * (Settings → Admin), else the browser's when the CMS speaks it, else English.
+ * (Settings → General → Admin Language), else the browser's when the CMS speaks it, else English.
  */
 final class Translations
 {
@@ -49,7 +49,7 @@ final class Translations
     {
         $languages = $this->languages();
 
-        foreach ([$user?->locale, (string) $this->cms->settings(Arranged::SETTINGS, 'language', '')] as $code) {
+        foreach ([$user?->locale, (string) $this->cms->settings('site', 'admin_language', '')] as $code) {
             if ($code && isset($languages[$code])) {
                 return $code;
             }
@@ -113,26 +113,27 @@ final class Translations
 
     /**
      * Field definitions in the user's language: labels, instructions, placeholders,
-     * section names and option labels, nested fields included.
+     * section names, option labels, a select's empty text and action, nested fields included. English too: it is
+     * where `{brand}` and `:brand` become the product's name.
      *
      * @param  list<array>  $fields
      * @return list<array>
      */
     public function fields(array $fields): array
     {
-        if ($this->current() === self::SOURCE) {
-            return $fields;
-        }
-
         return array_map(function ($field) {
             if (! is_array($field)) {
                 return $field;
             }
 
-            foreach (['label', 'instructions', 'placeholder', 'section', 'description', 'prefix', 'suffix', 'add'] as $key) {
+            foreach (['label', 'instructions', 'placeholder', 'section', 'description', 'prefix', 'suffix', 'add', 'empty'] as $key) {
                 if (isset($field[$key]) && is_string($field[$key])) {
                     $field[$key] = $this->label($field[$key]);
                 }
+            }
+
+            if (isset($field['action']['label']) && is_string($field['action']['label'])) {
+                $field['action']['label'] = $this->label($field['action']['label']);
             }
 
             if (isset($field['options']) && is_array($field['options'])) {

@@ -17,7 +17,7 @@ final class CollectionsModule extends Plugin
     {
         $cms = $this->cms();
 
-        $cms->permissions()->register('collections.manage', 'Create and edit collections and fields', 'Content');
+        $cms->permissions()->register('collections.manage', 'Manage Collections and Fields', 'Content');
         $this->app->make(CollectionAbilities::class)->register($cms->abilities());
 
         // The overview's counts stay cached until an entry of that collection changes.
@@ -25,7 +25,7 @@ final class CollectionsModule extends Plugin
             $cms->hooks()->on($event, static fn (Entry $entry) => cache()->forget(CollectionAbilities::overviewKey($entry->collection, $cms->defaultLocale())));
         }
 
-        $cms->admin()->nav('collections', ['label' => 'Collections', 'path' => '/collections', 'icon' => 'collection', 'section' => 'system', 'order' => 10, 'permission' => 'collections.manage']);
+        $cms->admin()->nav('collections', ['label' => 'Collections', 'path' => '/collections', 'icon' => 'collection', 'section' => 'design', 'order' => 40, 'permission' => 'collections.manage']);
         $cms->admin()->command('new-collection', ['label' => 'New Collection', 'icon' => 'plus', 'path' => '/collections/new', 'permission' => 'collections.manage', 'keywords' => ['content type', 'model']]);
         $cms->admin()->widget('collections-overview', ['label' => 'Content Overview', 'description' => 'Every collection with its number of entries and drafts.', 'icon' => 'collection', 'column' => 'side', 'order' => 30]);
         $this->adminModule();

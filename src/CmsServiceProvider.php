@@ -65,6 +65,7 @@ final class CmsServiceProvider extends ServiceProvider
         UriBuilder::class => UriBuilder::class,
         Revisions::class => Revisions::class,
         GlobalRepository::class => GlobalRepository::class,
+        Content\BuiltinPages::class => Content\BuiltinPages::class,
         Permissions::class => Permissions::class,
         Roles::class => Roles::class,
         Users\Accounts::class => Users\Accounts::class,
@@ -199,9 +200,9 @@ final class CmsServiceProvider extends ServiceProvider
     {
         $p = $this->app->make(Permissions::class);
 
-        $p->register('admin.access', 'Access the admin', 'General');
-        $p->register('settings.manage', 'Manage settings', 'System');
-        $p->register('users.view', 'View users', 'Users');
+        $p->register('admin.access', 'Access the Admin', 'General');
+        $p->register('settings.manage', 'Manage Settings', 'System');
+        $p->register('users.view', 'View Users', 'Users');
     }
 
     private function registerAbilities(): void
@@ -217,20 +218,21 @@ final class CmsServiceProvider extends ServiceProvider
         $settings = $this->app->make(SettingsRegistry::class);
         $hooks = $this->app->make(Hooks::class);
 
-        $settings->register('site', 'Site', [
+        $settings->register('site', 'General', [
             ['handle' => 'name', 'type' => 'text', 'label' => 'Name', 'required' => true, 'default' => Brand::get(), 'width' => 'half'],
             ['handle' => 'url', 'type' => 'url', 'label' => 'Public URL', 'width' => 'half'],
             ['handle' => 'description', 'type' => 'textarea', 'label' => 'Description', 'rows' => 2],
             ['handle' => 'timezone', 'type' => 'select', 'label' => 'Timezone', 'dynamic' => 'timezones', 'default' => 'UTC', 'required' => true, 'width' => 'half'],
             ['handle' => 'locale', 'type' => 'text', 'label' => 'Language', 'default' => 'en', 'required' => true, 'width' => 'half', 'placeholder' => 'en'],
-        ], icon: 'globe', order: 0);
+            // Empty: each person's browser decides (English when the CMS doesn't speak it); Account → Appearance overrides it.
+            ['handle' => 'admin_language', 'type' => 'select', 'label' => 'Admin Language', 'dynamic' => 'admin-languages', 'placeholder' => 'Browser Language', 'width' => 'half'],
+        ], icon: 'globe', description: 'Name, address, language and timezone.', order: 0, section: 'site');
 
-        // The defaults everyone's sidebar and home screen start from; each is arranged where it is shown.
+        // The defaults everyone's sidebar and home screen start from. Each is saved where it is arranged
+        // (Customize Sidebar, the home screen's Customize → Save as Default), so they have no page.
         $settings->register(Arranged::SETTINGS, 'Admin', [
-            // Empty: each person's browser decides (English when the CMS doesn't speak it).
-            ['handle' => 'language', 'type' => 'select', 'label' => 'Language', 'dynamic' => 'admin-languages', 'placeholder' => 'Browser Language'],
-            ['handle' => 'sidebar', 'type' => 'json', 'label' => 'Sidebar', 'component' => 'sidebar-default'],
-        ], icon: 'sidebar', order: 50, section: 'system');
+            ['handle' => 'sidebar', 'type' => 'json', 'label' => 'Sidebar'],
+        ], icon: 'sidebar', order: 50, section: 'system', page: false);
 
         $hooks->addFilter('fields.options.admin-languages', fn (array $options) => [...$options, ...$this->app->make(Admin\Translations::class)->languages()]);
         $hooks->addFilter('fields.options.timezones', static fn (array $options) => [...$options, ...timezone_identifiers_list()]);
@@ -274,13 +276,18 @@ final class CmsServiceProvider extends ServiceProvider
     {
         $admin = $this->app->make(AdminRegistry::class);
 
+        // Where the work is: the home screens (and the plugins), the content, and how the site is built and looks.
         $admin->section('main', '', 0);
         $admin->section('content', __('Content'), 10);
-                // The settings sidebar: the person's own account, the site's settings pages, running the installation.
+        $admin->section('design', __('Design'), 20);
+        // The settings sidebar, the same on every site: your own account, the site's General page and what
+        // runs the installation, as one group without a name; then who works on it; then each plugin's page,
+        // named by the plugin (see Navigation::PLUGINS).
         $admin->section('account', '', 0, settings: true);
-        $admin->section('site', __('Site'), 10, settings: true);
-        $admin->section('tools', __('Tools'), 16, settings: true);
-        $admin->section('system', __('Administration'), 20, settings: true);
+        $admin->section('site', '', 10, settings: true);
+        $admin->section('system', '', 12, settings: true);
+        $admin->section('people', __('People'), 16, settings: true);
+        $admin->section(Navigation::PLUGINS, __('Plugins'), 90, settings: true);
         $admin->arrange('sidebar', Navigation::class);
     }
 

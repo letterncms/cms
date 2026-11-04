@@ -97,7 +97,7 @@ final class LicenseNeverTest extends TestCase
 
         $result = $this->probe($site, $env);
 
-        $this->assertFalse($result['loaded'], 'A licence class was loaded for a public request: '.implode(', ', $result['classes']));
+        $this->assertFalse($result['loaded'], 'A license class was loaded for a public request: '.implode(', ', $result['classes']));
         $this->assertSame(0, $baseline['problems']);
         $this->assertSame($baseline['home'], str_replace('https://example.com', 'http://localhost', $result['home']));
         $this->assertSame($result['home'], $result['after']);

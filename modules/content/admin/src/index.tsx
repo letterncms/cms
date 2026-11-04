@@ -9,7 +9,7 @@ registry.routes.set('/content/:collection/:id', {
   path: '/content/:collection/:id', component: lazy(() => import('./EntryEditor')),
   load: ({ collection, id }) => Promise.all([
     prefetchAbility('collections/get', { handle: collection }),
-    ...(id === 'new' ? [] : [prefetchAbility('entries/get', { id })]),
+    ...(id === 'new' ? [] : [prefetchAbility('entries/get', { id }).catch(() => undefined)]),
   ]),
 })
 registry.fields.set('title', TitleField as any)

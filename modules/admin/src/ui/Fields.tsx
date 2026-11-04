@@ -1,8 +1,9 @@
 import { registry, t, useManifestIfLoaded, type FieldContext, type FieldDef } from '@letterncms/sdk'
 import { useSyncExternalStore } from 'react'
 import { cn } from './cn'
-import { Field } from './Field'
+import { Field, FieldError } from './Field'
 import { fieldControlId } from './fieldIdentity'
+import { Tooltip } from './Tooltip'
 
 export interface FieldsProps {
   fields: FieldDef[]
@@ -46,7 +47,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
     return (
       <div data-field={field.handle} className={cn(className, field.className as string | undefined)}>
         <Component field={accessible(field)} value={values[field.handle] ?? field.default ?? null} onChange={(v: unknown) => onChange(field.handle, v)} error={fieldError(field)} disabled={disabled} context={{ ...context, values, errors }} />
-        {fieldError(field) && <p id={`${controlId(field)}-error`} role="alert" className="m-0 mt-1.5 text-xs text-danger">{fieldError(field)}</p>}
+        {fieldError(field) && <FieldError id={`${controlId(field)}-error`}>{fieldError(field)}</FieldError>}
       </div>
     )
   }
@@ -68,7 +69,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
               {!bare && field.type !== 'toggle' && <InlineLabel field={accessible(field)} stacked={stacked} />}
               <div className={cn('min-w-0', !stacked && 'flex-1')}>
                 <Component field={accessible(field)} value={values[field.handle] ?? field.default ?? null} onChange={(v: unknown) => onChange(field.handle, v)} error={fieldError(field)} disabled={disabled} context={{ ...context, values, errors }} />
-                {fieldError(field) && <p id={`${controlId(field)}-error`} role="alert" className="m-0 mt-1 text-xs text-danger">{fieldError(field)}</p>}
+                {fieldError(field) && <FieldError id={`${controlId(field)}-error`} className="mt-1">{fieldError(field)}</FieldError>}
               </div>
             </div>
           )
@@ -78,7 +79,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
   }
 
   return (
-    <div className={cn('grid grid-cols-6 gap-x-4 gap-y-5', className)}>
+    <div className={cn('grid grid-cols-6 gap-x-4 gap-y-4', className)}>
       {fields.filter((field) => visible(field, values)).map((field) => {
         const type = manifest?.fieldTypes.find((ft) => ft.key === field.type)
         // A field may ask for another component than its type's (a json value with its own editor).
@@ -108,7 +109,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
             {bare || field.type === 'toggle' ? (
               <>
                 {control}
-                {fieldError(field) && <p id={`${controlId(field)}-error`} role="alert" className="m-0 mt-1.5 text-xs text-danger">{fieldError(field)}</p>}
+                {fieldError(field) && <FieldError id={`${controlId(field)}-error`}>{fieldError(field)}</FieldError>}
               </>
             ) : (
               // A single select always holds a value: marking it required tells nobody anything.
@@ -124,17 +125,27 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
 }
 
 /**
- * The label of an inline row. `status: 'own'` (set here) or `'inherited'` (from a
- * breakpoint, state or component) colors it; with a `reset` function on the
- * field, clicking an own value's label clears it — the inspector's convention.
+ * The label of an inline row, drawn like the block inspector's: an 88px column, one control high.
+ * `status: 'own'` (set here) reads in ink, and with a `reset` function on the field clicking it
+ * clears the value; `'inherited'` (from a breakpoint, state or component) stays muted with a small dot.
  */
 function InlineLabel({ field, stacked }: { field: FieldDef; stacked?: boolean }) {
   const status = field.status as 'own' | 'inherited' | undefined
   const reset = field.reset as (() => void) | undefined
-  const className = cn('min-w-0 shrink-0 text-left text-2xs', stacked ? '[overflow-wrap:anywhere]' : 'w-20 truncate', status === 'own' ? 'text-focus' : status === 'inherited' ? 'text-warning' : 'text-muted')
+  const className = cn('flex min-h-7 min-w-0 shrink-0 items-center gap-1 text-left text-xs', stacked ? '[overflow-wrap:anywhere]' : 'h-7 w-[88px]', status === 'own' ? 'text-ink' : 'text-muted')
+  const text = <span className={cn('min-w-0', !stacked && 'truncate')}>{field.label}</span>
   if (status === 'own' && reset) {
-    return <button type="button" onClick={reset} className={cn(className, 'hover:underline')} title={t('Reset {label}', { label: field.label })}>{field.label}</button>
+    return (
+      <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
+        <button type="button" onClick={reset} className={cn(className, 'decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</button>
+      </Tooltip>
+    )
   }
-  return <label htmlFor={fieldControlId(field)} className={className} title={field.instructions}>{field.label}</label>
+  return (
+    <label htmlFor={fieldControlId(field)} className={className} title={status === 'inherited' ? t('Inherited from a larger screen, another state or the component') : field.instructions}>
+      {text}
+      {status === 'inherited' && <span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden />}
+    </label>
+  )
 }
 

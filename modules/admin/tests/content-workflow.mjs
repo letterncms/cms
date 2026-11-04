@@ -116,7 +116,7 @@ const details = async () => {
   if (!document.querySelector('#entry-sidebar-details')) {
     const back = button('Page', document.querySelector('[data-block-workspace]')) || button('Post', document.querySelector('[data-block-workspace]'))
     if (back) back.click()
-    else button('Entry details').click()
+    else (button('Page Details') || button('Post Details')).click()
     await wait(() => document.querySelector('#entry-sidebar-details'), 'Details did not open')
   }
   document.querySelector('#entry-sidebar-details').click()
@@ -472,7 +472,9 @@ try {
   await test('Moving a record preserves source content and checks the saved version', async () => {
     await details()
     const before = (await state()).entries['page-1']
-    button('Move', document.querySelector('#entry-sidebar-details-panel')).click()
+    button('More Actions').click()
+    await wait(() => [...document.querySelectorAll('[role="menuitem"]')].some((item) => item.textContent.trim() === 'Move…'), 'Move action missing')
+    ;[...document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent.trim() === 'Move…').click()
     await wait(() => document.querySelector('#f-parentId'), 'Move dialog did not load')
     document.querySelector('#f-parentId').click()
     await wait(() => [...document.querySelectorAll('[role="option"]')].some((option) => option.textContent.includes('A parent page')), 'Eligible parent missing')

@@ -1,5 +1,5 @@
-import { invalidate, run, t, useAbility, can, plural } from '@letterncms/sdk'
-import { Badge, Button, confirm, EmptyState, Icon, IconButton, Input, Menu, prompt, Select, Skeleton, Slideover, Switch, toast } from '@letterncms/ui'
+import { invalidate, locale, run, t, useAbility, can, plural } from '@letterncms/sdk'
+import { Badge, Button, confirm, EmptyState, Icon, Input, NoMatches, prompt, Select, Skeleton, Slideover, Switch, toast } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 import { driveJob, JobFailed, type Job } from './installing'
 
@@ -62,6 +62,10 @@ export function Store() {
   const [turnOn, setTurnOn] = useState(true)
   const file = useRef<HTMLInputElement>(null)
   const data = catalog.data
+  // What's installed here brings its own icon: the store's listing may have none.
+  const local = useAbility<{ items: { name: string; icon: string }[] }>('packages/list', { type: 'all' })
+  const icons = Object.fromEntries((local.data?.items ?? []).map((p) => [p.name, p.icon]))
+  const current = stores.data?.items.find((s) => s.id === store)
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -162,34 +166,35 @@ export function Store() {
   }
 
   const notice = !data ? null
-    : data.problem === 'dev_trust' ? t('This build carries development keys, which only count on local and test sites. The store opens once it ships with production keys.')
-    : data.problem ? t('This site has no valid list of signing keys, so it cannot trust a store. Download packages and upload them instead.')
-    : data.freshness === 'clock' ? t('This server’s clock looks wrong, so installs are paused. The public site is not affected.')
-    : data.freshness === 'expired' ? t('Can’t confirm this catalog is current, so installs from it are off. Refresh it, or upload a package by hand.')
-    : data.freshness === 'stale' ? t('This catalog is a few days old. Refresh it when you can.')
-    : data.error ? t('The store could not be reached. Installed packages are not affected. {error}', { error: data.error })
+    : data.problem === 'dev_trust' ? t('This build has development keys, so the store is closed.')
+    : data.problem ? t('No valid signing keys, so the store is off. Upload packages instead.')
+    : data.freshness === 'clock' ? t('This server’s clock looks wrong, so installs are paused.')
+    : data.freshness === 'expired' ? t('This catalog is out of date, so installs are off. Refresh it.')
+    : data.freshness === 'stale' ? t('This catalog is a few days old.')
+    : data.error ? t('Can’t reach the store. {error}', { error: data.error })
     : null
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {(stores.data?.items.length ?? 0) > 1 && <Select value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} />}
-        <Input className="min-w-40 flex-1" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search the store')} aria-label={t('Search the store')} />
-        <Select value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('All') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} />
-        <Switch checked={turnOn} onChange={setTurnOn} size="sm" label={t('Turn on after install')} />
+      <div className="mb-3 flex min-h-10 flex-wrap items-center gap-2">
+        {(stores.data?.items.length ?? 0) > 1 && <div className="w-36"><Select size="sm" value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} /></div>}
+        <Input size="sm" className="w-full sm:w-60" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}…', { items: t('Plugins').toLocaleLowerCase(locale()) })} aria-label={t('Search')} />
+        <div className="w-24"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('All') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>
+        <Switch checked={turnOn} onChange={setTurnOn} size="sm" label={t('Turn On After Install')} />
         <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
-        <Menu trigger={<IconButton icon="more" label={t('More store actions')} />} items={[
-          { label: t('Refresh Catalog'), icon: 'refresh', disabled: busy !== null, onSelect: () => void refresh() },
-          { label: t('Upload a Zip…'), icon: 'upload', disabled: busy !== null, onSelect: () => file.current?.click() },
-          { label: t('Add a Store…'), icon: 'plus', onSelect: () => void addStore() },
-          !stores.data?.items.find((s) => s.id === store)?.default && { label: t('Remove This Store…'), icon: 'trash', danger: true, onSelect: async () => {
-            if (await confirm({ title: t('Remove this store?'), description: t('What it installed stays, without update offers.'), confirm: t('Remove Store'), danger: true })) {
+        {/* Every way to change what the store offers, in view. */}
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          <Button variant="ghost" icon="refresh" loading={busy === 'refresh'} disabled={busy !== null} onClick={() => void refresh()}>{t('Refresh')}</Button>
+          <Button variant="ghost" icon="upload" disabled={busy !== null} onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>
+          <Button variant="ghost" icon="plus" onClick={() => void addStore()}>{t('Add Store')}</Button>
+          {current && !current.default && <Button variant="ghost" icon="trash" className="!text-danger" onClick={async () => {
+            if (await confirm({ title: t('Remove {name}?', { name: current.name }), description: t('What it installed stays, without update offers.'), confirm: t('Remove Store'), danger: true })) {
               await run('packages/store-remove', { id: store })
               setStore('default')
               await stores.refetch()
             }
-          } },
-        ]} />
+          }}>{t('Remove Store')}</Button>}
+        </div>
       </div>
 
       {step && <p role="status" className="mb-4 text-sm text-muted">{step}</p>}
@@ -198,12 +203,14 @@ export function Store() {
       {catalog.isLoading ? (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-36" />)}</div>
       ) : items.length === 0 ? (
-        <EmptyState icon="download" title={search ? t('Nothing matches that search') : t('Nothing in this store yet')} description={search ? t('Try fewer words.') : t('You can still upload a package as a zip.')} action={search ? <Button onClick={() => setSearch('')}>{t('Clear Search')}</Button> : <Button onClick={() => file.current?.click()}>{t('Upload a Zip')}</Button>} />
+        search.trim() !== '' || pricing !== 'all'
+          ? <NoMatches onClear={() => { setSearch(''); setPricing('all') }} />
+          : <EmptyState icon="download" title={t('Nothing in this store yet')} action={<Button onClick={() => file.current?.click()}>{t('Upload a Zip')}</Button>} />
       ) : (
         <>
-          <p className="mb-2 text-xs text-muted">{plural(items.length, '{count} package', '{count} packages')}</p>
+          <p className="mb-2 text-xs text-muted">{plural(items.length, '{count} plugin', '{count} plugins')}</p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3">
-            {items.map((item) => <Card key={item.package} item={item} busy={busy === item.package} locked={busy !== null} onOpen={() => setOpen(item)} onInstall={() => void install(item)} />)}
+            {items.map((item) => <Card key={item.package} item={item} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} onOpen={() => setOpen(item)} onInstall={() => void install(item)} />)}
           </div>
         </>
       )}
@@ -213,8 +220,9 @@ export function Store() {
   )
 }
 
-function ItemIcon({ item }: { item: Item }) {
-  return item.icon ? <img src={item.icon} alt="" className="size-8 shrink-0 rounded object-cover" loading="lazy" /> : <span className="grid size-8 shrink-0 place-items-center rounded border border-border text-muted"><Icon name="plugin" size={16} /></span>
+/** The store's picture of it, else the icon it has here once installed, else a plugin's. */
+function ItemIcon({ item, icon }: { item: Item; icon?: string }) {
+  return item.icon ? <img src={item.icon} alt="" className="size-8 shrink-0 rounded-md object-cover" loading="lazy" /> : <span className="grid size-8 shrink-0 place-items-center rounded-md bg-sunken text-muted"><Icon name={icon || 'plugin'} size={16} /></span>
 }
 
 function Action({ item, busy, locked, onInstall }: { item: Item; busy: boolean; locked: boolean; onInstall: () => void }) {
@@ -233,16 +241,17 @@ function Action({ item, busy, locked, onInstall }: { item: Item; busy: boolean; 
   }
 }
 
-function Card({ item, busy, locked, onOpen, onInstall }: { item: Item; busy: boolean; locked: boolean; onOpen: () => void; onInstall: () => void }) {
+function Card({ item, icon, busy, locked, onOpen, onInstall }: { item: Item; icon?: string; busy: boolean; locked: boolean; onOpen: () => void; onInstall: () => void }) {
   return (
     <article className="flex min-w-0 flex-col gap-2 rounded-lg border border-border p-3">
-      <div className="flex min-w-0 items-start gap-2.5">
-        <ItemIcon item={item} />
+      <div className="flex min-w-0 items-center gap-2.5">
+        <ItemIcon item={item} icon={icon} />
         <div className="min-w-0 flex-1">
           <button type="button" onClick={onOpen} className="block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left text-sm font-medium text-ink hover:underline">{item.title}</button>
-          <p className="m-0 truncate text-xs text-muted">{item.author.name || item.package}</p>
+          {/* Who made it, when that isn't the store's own. */}
+          {!item.first_party && <p className="m-0 truncate text-xs text-muted">{item.author.name || item.package}</p>}
         </div>
-        <Badge tone={item.pricing === 'free' ? 'neutral' : 'warning'}>{PRICE_LABEL(item)}</Badge>
+        <Badge>{PRICE_LABEL(item)}</Badge>
       </div>
       <p className="m-0 line-clamp-2 min-h-8 flex-1 text-xs text-text">{item.summary}</p>
       <div className="flex items-center justify-between gap-2">
@@ -258,7 +267,7 @@ function DetailPanel({ item, onClose, locked, onInstall }: { item: Item; onClose
   const d = detail.data
   const [expanded, setExpanded] = useState(false)
   const addKey = async () => {
-    const asked = await prompt({ title: t('Add Key'), description: t('Paste the key you got when you bought this plugin.'), fields: [{ handle: 'key', type: 'textarea', label: t('Key'), required: true }], confirm: t('Add Key') })
+    const asked = await prompt({ title: t('Add Key'), fields: [{ handle: 'key', type: 'textarea', label: t('Key'), required: true }], confirm: t('Add Key') })
     const key = asked?.key as string | undefined
     if (!key) return
     try {

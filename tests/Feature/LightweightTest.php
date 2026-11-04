@@ -48,7 +48,7 @@ final class LightweightTest extends TestCase
         $this->assertNotContains('dashboard', array_column($manifest['nav'], 'id'));
         $this->assertNotContains('audit', array_column($manifest['nav'], 'id'));
         $this->assertContains('collection.pages', array_column($manifest['nav'], 'id'));
-        $this->assertContains('modules', array_column($manifest['nav'], 'id'));
+        $this->assertContains('plugins', array_column($manifest['nav'], 'id'));
 
         // Changes still work; there is just no log of them.
         $entry = $this->cms()->abilities()->execute('entries/create', ['collection' => 'posts', 'title' => 'Light', 'data' => ['excerpt' => 'Small']], AbilityContext::forUser($this->admin(), 'admin'));

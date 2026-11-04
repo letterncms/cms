@@ -2,8 +2,9 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { can, t, useManifest, type NavItem } from '@letterncms/sdk'
+import { useEffect, useState } from 'react'
 import { Button, Dialog, Icon, Switch, cn } from '../ui'
-import { isPinned, reorder, resetToDefault, saveForEveryone, setPinned } from './sidebarStore'
+import { isPinned, loadSiteDefault, reorder, resetEveryonesDefault, resetToDefault, saveForEveryone, setPinned } from './sidebarStore'
 
 /**
  * Every item of the sidebar, section by section: pin or unpin, drag to
@@ -13,26 +14,34 @@ export function CustomizeSidebar({ open, onOpenChange }: { open: boolean; onOpen
   const manifest = useManifest()
   const layout = manifest.sidebar
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
+  const manage = can('settings.manage')
+  // Whether the site's default differs from what modules and plugins set up: only then can it be reset.
+  const [customized, setCustomized] = useState(false)
+  useEffect(() => {
+    if (open && manage) void loadSiteDefault().then((result) => setCustomized(!!result?.customized))
+  }, [open, manage])
 
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
       title={t('Customize Sidebar')}
-      footer={
+      // Changes apply as they are made: the dialog closes like any other, with nothing to confirm.
+      footer={(layout.personal || manage) && (
         <>
           {layout.personal && <Button variant="ghost" icon="undo" onClick={() => void resetToDefault()}>{t('Reset to Default')}</Button>}
-          {can('settings.manage') && <Button variant="ghost" onClick={() => void saveForEveryone()}>{t('Save as Default')}</Button>}
-          <Button variant="primary" className="ml-auto" onClick={() => onOpenChange(false)}>{t('Done')}</Button>
+          {manage && <Button variant="ghost" onClick={() => void saveForEveryone().then(() => loadSiteDefault()).then((result) => setCustomized(!!result?.customized))}>{t('Save as Default')}</Button>}
+          {manage && customized && <Button variant="ghost" onClick={() => void resetEveryonesDefault().then((done) => done && setCustomized(false))}>{t('Reset Everyone’s Default')}</Button>}
         </>
-      }
+      )}
     >
       {layout.sections.map((section) => {
         const ids = section.items.filter((id) => items.has(id))
         if (!ids.length) return null
         return (
           <section key={section.id} className="mb-4 last:mb-1">
-            <h3 className="cms-caps m-0 mb-1 px-2">{section.label || t('Main')}</h3>
+            {/* Named as the sidebar names it: the first section has no name there, so none here. */}
+            {section.label && <h3 className="cms-label m-0 mb-1 px-2">{section.label}</h3>}
             <Items section={section.id} ids={ids} all={section.items} items={items} pinned={(id) => isPinned(layout, id)} />
           </section>
         )
@@ -82,8 +91,9 @@ function Item({ item, pinned }: { item: NavItem; pinned: boolean }) {
       >
         <Icon name="drag" size={14} />
       </button>
-      <Icon name={item.icon} size={16} className={cn('shrink-0', pinned ? 'text-text' : 'text-faint')} />
-      <span className={cn('min-w-0 flex-1 truncate text-sm', pinned ? 'text-text' : 'text-muted')}>{item.label}</span>
+      {/* The switch says whether it is pinned; the row stays as legible either way. */}
+      <Icon name={item.icon} size={16} className="shrink-0 text-muted" />
+      <span className="min-w-0 flex-1 truncate text-sm text-text">{item.label}</span>
       <Switch size="sm" checked={pinned} onChange={(on) => setPinned(item.id, on)} aria-label={t('Pin {label}', { label: item.label })} />
     </li>
   )

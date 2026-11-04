@@ -2,24 +2,30 @@ import { forwardRef, useLayoutEffect, useRef, type InputHTMLAttributes, type Tex
 import { cn } from './cn'
 import { Icon } from './Icon'
 
-const base =
-  'w-full rounded-sm border border-border-strong bg-bg text-text placeholder:text-faint transition-[border-color,box-shadow] duration-120 cms-focus-ring disabled:opacity-50 disabled:bg-sunken aria-[invalid=true]:border-danger'
+/** `.cms-input` (app.css) draws the field: border, hover, focus, invalid, disabled, quiet, and white slips on the desk. */
+const base = 'cms-input w-full'
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   icon?: string
   size?: 'xs' | 'sm' | 'md' | 'lg'
   invalid?: boolean
   suffix?: React.ReactNode
+  /** `quiet`: no border until hovered or focused — for inline edits in a table or a toolbar. */
+  appearance?: 'default' | 'quiet'
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ icon, size = 'md', invalid, suffix, className, ...props }, ref) {
-  // xs is the inspector density.
-  const height = { xs: 'h-6 text-2xs', sm: 'h-7 text-sm', md: 'h-8 text-sm', lg: 'h-10 text-base' }[size]
+// xs is the inspector density; md the forms'.
+const heights = { xs: 'h-6 rounded-xs text-xs', sm: 'h-7 rounded-sm text-sm', md: 'h-8 rounded-md text-sm', lg: 'h-10 rounded-lg text-base' }
+const padding = { xs: ['pl-1.5', 'pr-1.5', 'pl-6', 'left-1.5'], sm: ['pl-2', 'pr-2', 'pl-7', 'left-2'], md: ['pl-2.5', 'pr-2.5', 'pl-[30px]', 'left-2.5'], lg: ['pl-3', 'pr-3', 'pl-9', 'left-3'] }
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ icon, size = 'md', invalid, suffix, appearance = 'default', className, ...props }, ref) {
+  const [left, right, withIcon, iconAt] = padding[size]
   return (
-    <div className={cn('relative flex items-center', className)}>
-      {icon && <Icon name={icon} size={size === 'xs' ? 12 : 14} className={cn('pointer-events-none absolute text-faint', size === 'xs' ? 'left-1.5' : 'left-2.5')} />}
-      <input ref={ref} aria-invalid={invalid || undefined} className={cn(base, height, icon ? (size === 'xs' ? 'pl-6' : 'pl-8') : size === 'xs' ? 'pl-1.5' : 'pl-2.5', suffix ? 'pr-16' : size === 'xs' ? 'pr-1.5' : 'pr-2.5')} {...props} />
-      {suffix && <div className="absolute right-1.5 flex items-center gap-1 text-xs text-faint">{suffix}</div>}
+    // As wide as its place, also in a row beside other controls, unless the caller gives it a width.
+    <div className={cn('relative flex min-w-0 items-center', !/(^|\s)([\w-]+:)*!?w-/.test(className ?? '') && 'w-full', className)}>
+      {icon && <Icon name={icon} size={size === 'xs' ? 12 : 14} className={cn('pointer-events-none absolute z-[1] text-faint', iconAt)} />}
+      <input ref={ref} aria-invalid={invalid || undefined} className={cn(base, appearance === 'quiet' && 'cms-input-quiet', heights[size], icon ? withIcon : left, suffix ? 'pr-16' : right)} {...props} />
+      {suffix && <div className="absolute right-2 flex items-center gap-1 text-xs text-faint">{suffix}</div>}
     </div>
   )
 })
@@ -27,8 +33,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ i
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   invalid?: boolean
   autoGrow?: boolean
-  /** Keep shared sizing/focus behavior while the caller supplies document typography. */
-  appearance?: 'default' | 'plain'
+  /** `plain`: shared sizing and focus, document typography from the caller. `quiet`: no border until hovered or focused. */
+  appearance?: 'default' | 'plain' | 'quiet'
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea({ invalid, autoGrow = true, appearance = 'default', className, onInput, ...props }, forwarded) {
@@ -67,7 +73,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         grow()
         onInput?.(e)
       }}
-      className={cn(appearance === 'plain' ? 'w-full min-h-0 resize-none rounded-none border-0 bg-transparent p-0 outline-none' : `${base} min-h-16 resize-y px-2.5 py-1.5 leading-[20px]`, className)}
+      className={cn(appearance === 'plain' ? 'w-full min-h-0 resize-none rounded-none border-0 bg-transparent p-0 outline-none' : cn(base, appearance === 'quiet' && 'cms-input-quiet', 'block min-h-[72px] rounded-md px-2.5 py-[7px] leading-[20px]', autoGrow ? 'resize-none' : 'resize-y'), className)}
       {...props}
     />
   )

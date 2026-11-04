@@ -1,11 +1,12 @@
 import { getManifest, prefetchAbility, type Manifest, batch, invalidate, locale, navigate, plural, setQuery, t, useAbility, useLocation, useManifest, type Page as PageData } from '@letterncms/sdk'
-import { Button, EmptyState, QueryError, Fields, entryActionAvailability, Icon, IconButton, Page, PagePagination, OverviewControls, SelectionBar, nextTableSort, confirm, toast, useRecordNavigation, useShortcut, loadOverviewSource } from '@letterncms/ui'
+import { Button, EmptyState, NoMatches, NotFoundState, QueryError, Fields, entryActionAvailability, Icon, IconButton, Page, PagePagination, OverviewControls, SelectionBar, nextTableSort, confirm, toast, useRecordNavigation, useShortcut, loadOverviewSource } from '@letterncms/ui'
 import { useEffect, useMemo, useState } from 'react'
+import { BuiltinPages, type BuiltinGroup } from './BuiltinPages'
 import { calendarQueries, EntriesCalendar } from './EntriesCalendar'
 import { EntriesGrid } from './EntriesGrid'
-import { EntriesTable, flatten, type TableSort } from './EntriesTable'
+import { EntriesTable, flatten, hasChildren, type TableSort } from './EntriesTable'
 import { availableColumns, defaultColumns, excerptField, mediaFields, mediaIds, type CellContext, type Column, type MediaThumb } from './listColumns'
-import { readListPrefs, useListPrefs, type ListPrefs, type ListItem } from './listPrefs'
+import { readListPrefs, useListPrefs, type ListPrefs, type ListItem, type ListView } from './listPrefs'
 import { useCollection, type CollectionDef } from './useCollection'
 
 /** "Deutsch" for "de", in the language itself. */
@@ -28,7 +29,9 @@ function listState(manifest: Manifest, handle: string, collection: CollectionDef
   const page = Number(query.page ?? 1)
   const isTree = summary?.structure === 'tree'
   const dated = summary?.structure === 'dated'
-  const view = prefs.view
+  // Grid for collections with pictures, Calendar for ones that happen on a day.
+  const views: ListView[] = ['table', ...(mediaFields(collection).length > 0 || summary?.defaultView === 'grid' ? ['grid' as const] : []), ...(dated || summary?.defaultView === 'calendar' ? ['calendar' as const] : [])]
+  const view = views.includes(prefs.view) ? prefs.view : 'table'
 
   // Columns: everything the collection offers, the ones this person shows, in a fixed order.
   const all = summary ? availableColumns(summary, collection, locales) : []
@@ -44,7 +47,7 @@ function listState(manifest: Manifest, handle: string, collection: CollectionDef
 
   const fields = [...new Set(columns.filter((c) => c.field).map((c) => c.field!.handle))].sort()
 
-  return { all, shown, columns, sortable, sortKey, ownSort, isTree, view, showTree, filtered, fields, locale,
+  return { all, shown, columns, sortable, sortKey, ownSort, isTree, view, views, showTree, filtered, fields, locale,
     input: { collection: handle, locale, search: search || undefined, status, page, perPage: (manifest.config?.content?.perPage as number | undefined) ?? 50, sort: sortKey ?? undefined, fields },
   }
 }
@@ -80,7 +83,7 @@ export default function EntriesList({ params }: { params: Record<string, string>
   const [bulkFailures, setBulkFailures] = useState<{ id: string; title: string; message: string }[]>([])
   const [calendarItems, setCalendarItems] = useState<ListItem[]>([])
 
-  const { all, shown, columns, sortable, sortKey, ownSort, isTree, view, showTree, filtered, fields, input } = useMemo(() => listState(manifest, handle, collection, prefs, { ...query, q: search }), [manifest, handle, collection, prefs, query, search])
+  const { all: allColumns, shown, columns: shownColumns, sortable, sortKey, ownSort, isTree, view, views, showTree, filtered, fields, input } = useMemo(() => listState(manifest, handle, collection, prefs, { ...query, q: search }), [manifest, handle, collection, prefs, query, search])
   const tableSort: TableSort | null = sortKey ? { field: sortKey.replace(/^-/, ''), desc: sortKey.startsWith('-') } : ownSort ? { field: ownSort.replace(/^-/, ''), desc: ownSort.startsWith('-'), implicit: true } : null
   const media = mediaFields(collection)[0]
 
@@ -91,6 +94,9 @@ export default function EntriesList({ params }: { params: Record<string, string>
     input,
     { enabled: !!summary && !showTree && view !== 'calendar', placeholderData: (prev) => prev },
   )
+  // The calendar shows a month; the title still counts the whole collection.
+  const counted = useAbility<PageData<ListItem>>('entries/list', { ...input, page: 1, perPage: 1, fields: [] }, { enabled: !!summary && view === 'calendar', placeholderData: (prev) => prev })
+  const builtin = useAbility<BuiltinGroup[]>('pages/builtin', {}, { enabled: handle === 'pages' })
   const tree = useAbility<ListItem[]>('entries/tree', { collection: handle, locale, fields }, { enabled: !!summary && showTree, placeholderData: (prev) => prev })
 
   const items = showTree ? (tree.data ?? []) : (list.data?.items ?? [])
@@ -99,7 +105,12 @@ export default function EntriesList({ params }: { params: Record<string, string>
   const stale = showTree ? tree.isPlaceholderData : list.isPlaceholderData
   const loadError = collectionError ?? (showTree ? tree.error : list.error)
   const retry = () => { if (collectionError) invalidate('collections/get'); void (showTree ? tree.refetch() : list.refetch()) }
-  const total = showTree ? rows.length : (list.data?.total ?? 0)
+  // Dates only for records that have them: templates and the like are never published on a day.
+  const dated = { published: rows.some((e) => !!e.publishedAt), updated: rows.some((e) => !!e.updatedAt) }
+  const withDates = (column: Column) => loading || !(column.id in dated) || dated[column.id as keyof typeof dated]
+  const all = allColumns.filter(withDates)
+  const columns = shownColumns.filter(withDates)
+  const total = view === 'calendar' ? counted.data?.total ?? null : loading ? null : showTree ? rows.length : (list.data?.total ?? 0)
 
   // Thumbnails for media columns and cards, in one lookup per page.
   const mediaHandles = [...columns.filter((c) => c.field?.type === 'media').map((c) => c.field!.handle), ...(view === 'grid' && media ? [media.handle] : [])]
@@ -114,7 +125,7 @@ export default function EntriesList({ params }: { params: Record<string, string>
   useEffect(() => {
     setSelected(new Set())
     setBulkFailures([])
-  }, [handle, page, status, search, locale, sortKey, view])
+  }, [handle, page, status, search, locale, sortKey])
 
   const select = (ids: string[], on: boolean) =>
     setSelected((current) => {
@@ -129,7 +140,7 @@ export default function EntriesList({ params }: { params: Record<string, string>
   if (!summary) {
     return (
       <Page crumbs={[{ label: t('Not Found') }]}>
-        <EmptyState icon="collection" title={t('Collection not found')} description={t('It may have been removed, or you lack access.')} />
+        <NotFoundState icon="collection" action={<Button onClick={() => navigate('/')}>{t('Go Home')}</Button>} />
       </Page>
     )
   }
@@ -171,23 +182,30 @@ export default function EntriesList({ params }: { params: Record<string, string>
   }
 
   const sortColumn = sortKey ? sortable.find((c) => c.sort === sortKey.replace(/^-/, '')) : undefined
+  const defaults = defaultColumns(summary, collection, view)
+  const changed = view !== (summary.defaultView ?? 'table') || !!sortKey || prefs.calendarDate !== 'published' || !!query.month
+    || all.some((c) => shown.has(c.id) !== defaults.includes(c.id))
+  // Bulk actions that would change something for at least one selected entry.
+  const chosen = (view === 'calendar' ? calendarItems : rows).filter((item) => selected.has(item.id))
+  const publishable = chosen.some((item) => item.displayStatus === 'draft' || item.displayStatus === 'changed')
+  const unpublishable = chosen.some((item) => item.displayStatus !== 'draft')
+  const builtinGroups = handle === 'pages' && view !== 'calendar' && !filtered ? (builtin.data ?? []).filter((group) => group.pages.length > 0) : []
   const empty = !loading && !collectionLoading && !loadError && rows.length === 0
-  const newButton = (primary: boolean) =>
-    actions.create && (
-      <Button variant="primary" icon="plus" onClick={() => navigate(newPath)} title={primary ? t('New (C)') : undefined}>
-        {summary.newLabel}
-      </Button>
-    )
+  const newButton = actions.create && (
+    <Button variant="primary" icon="plus" onClick={() => navigate(newPath)} title={t('New (C)')}>
+      {summary.newLabel}
+    </Button>
+  )
 
   return (
-    <Page width="wide" crumbs={[{ label: <Heading title={summary.title} count={loading || view === 'calendar' ? null : total} />, icon: summary.icon }]} actions={newButton(true)}>
+    <Page width="wide" crumbs={[{ label: <Heading title={summary.title} count={total} />, icon: summary.icon }]} actions={newButton}>
       <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-2">
         <Fields
           bare
           layout="inline"
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2 max-sm:contents"
           fields={[
-            { handle: 'q', type: 'text', label: t('Search'), icon: 'search', size: 'sm', className: 'min-w-36 max-w-64 flex-1', placeholder: t('Search {items}…', { items: summary.title.toLowerCase() }) },
+            { handle: 'q', type: 'text', label: t('Search'), icon: 'search', size: 'sm', className: 'w-full sm:w-60', placeholder: t('Search {items}…', { items: summary.title.toLowerCase() }) },
             { handle: 'status', type: 'select', label: t('Status'), display: 'segmented', required: true, className: 'shrink-0', options: { any: t('All'), published: t('Published'), draft: t('Drafts') } },
             ...(locales.length > 1 ? [{ handle: 'locale', type: 'select', label: t('Language'), display: 'segmented', required: true, className: 'shrink-0', options: locales.map((code) => ({ value: code, label: code.toUpperCase(), title: languageName(code) })) }] : []),
           ]}
@@ -201,9 +219,9 @@ export default function EntriesList({ params }: { params: Record<string, string>
           }}
         />
 
-        <OverviewControls view={view} all={all} shown={shown} sortable={sortable} sortKey={sortKey} isTree={isTree} onColumns={(columns) => setPrefs({ columns })} onSort={setSort}
+        <OverviewControls view={view} views={views} all={all} shown={shown} sortable={sortable} sortKey={sortKey} implicitSort={ownSort} isTree={isTree} onColumns={(columns) => setPrefs({ columns })} onSort={setSort}
           onView={(view) => setPrefs({ view })} calendarDate={prefs.calendarDate} onCalendarDate={(calendarDate) => setPrefs({ calendarDate })}
-          onReset={() => { setPrefs({ view: null, sort: null, columns: null, calendarDate: 'published' }); setQuery({ page: null, month: null }) }}>
+          onReset={changed ? () => { setPrefs({ view: null, sort: null, columns: null, calendarDate: 'published' }); setQuery({ page: null, month: null }) } : undefined}>
           {sortColumn && view !== 'calendar' && (
             <span className="inline-flex h-6 items-center gap-1 rounded-sm bg-sunken pl-2 pr-0.5 text-xs text-muted" title={t('Sorted by {column}', { column: sortColumn.label })}>
               <Icon name={sortKey!.startsWith('-') ? 'arrow-down' : 'arrow-up'} size={11} />
@@ -228,23 +246,20 @@ export default function EntriesList({ params }: { params: Record<string, string>
       {view === 'calendar' ? (
         <EntriesCalendar onItems={setCalendarItems} handle={handle} filters={{ locale, status, search: search || undefined }} dateField={prefs.calendarDate} selection={{ ids: selected, onSelect: select }} cursor={cursor} />
       ) : empty ? (
-        <div className="border-y border-border">
-          {filtered ? (
-            <EmptyState icon="search" title={t('No matches')} description={t('Nothing matches these filters.')} action={<Button onClick={clearFilters}>{t('Clear Filters')}</Button>} />
-          ) : (
-            <EmptyState icon={summary.icon} title={t('No {items} yet', { items: summary.title.toLowerCase() })} action={newButton(false)} />
-          )}
-        </div>
+        filtered ? <NoMatches onClear={clearFilters} /> : <EmptyState icon={summary.icon} title={t('No {items} yet', { items: summary.title.toLowerCase() })} />
       ) : view === 'grid' ? (
         <EntriesGrid handle={handle} items={rows} ctx={ctx} media={media && shown.has(`field:${media.handle}`) ? media : undefined} excerpt={excerpt && shown.has(`field:${excerpt.handle}`) ? excerpt : undefined} columns={columns} visible={shown} icon={summary.icon} loading={loading || collectionLoading} stale={stale} selected={selected} onSelect={select} cursor={cursor} />
       ) : (
-        <EntriesTable handle={handle} columns={columns} ctx={ctx} items={items} tree={showTree} loading={loading || collectionLoading} stale={stale} selected={selected} onSelect={select} sort={tableSort} onSort={onSort} cursor={cursor} />
+        <EntriesTable handle={handle} columns={columns} ctx={ctx} items={items} urls={builtinGroups.flatMap((group) => group.pages.map((page) => page.path ?? ''))} tree={showTree} loading={loading || collectionLoading} stale={stale} selected={selected} onSelect={select} sort={tableSort} onSort={onSort} cursor={cursor} />
       )}
+
+      {builtinGroups.length > 0 && view === 'table' && <BuiltinPages groups={builtinGroups} columns={columns} nested={showTree && hasChildren(items)} tree={showTree} urls={[...flatten(items).map((e) => e.uri ?? ''), ...builtinGroups.flatMap((group) => group.pages.map((page) => page.path ?? ''))]} />}
 
       {!showTree && view !== 'calendar' && list.data && <PagePagination page={list.data.page} pages={list.data.pages} total={list.data.total} perPage={list.data.perPage ?? 50} onPage={(next) => setQuery({ page: next > 1 ? next : null })} />}
 
       <SelectionBar count={selected.size} onClear={() => setSelected(new Set())}>
-        {actions.publish && <><Button size="sm" variant="ghost" disabled={bulkPending || stale} onClick={() => bulk('entries/publish')}>{t('Publish')}</Button><Button size="sm" variant="ghost" disabled={bulkPending || stale} onClick={() => bulk('entries/unpublish')}>{t('Unpublish')}</Button></>}
+        {actions.publish && publishable && <Button size="sm" variant="ghost" disabled={bulkPending || stale} onClick={() => bulk('entries/publish')}>{t('Publish')}</Button>}
+        {actions.publish && unpublishable && <Button size="sm" variant="ghost" disabled={bulkPending || stale} onClick={() => bulk('entries/unpublish')}>{t('Unpublish')}</Button>}
         {actions.delete && <Button size="sm" variant="ghost" disabled={bulkPending || stale} onClick={() => bulk('entries/delete')}>{t('Delete')}</Button>}
       </SelectionBar>
     </Page>
@@ -256,7 +271,7 @@ function Heading({ title, count }: { title: string; count: number | null }) {
   return (
     <>
       {title}
-      {count !== null && <span className="ml-0.5 font-normal tabular-nums text-faint" title={plural(count, '{count} entry', '{count} entries')}>{count.toLocaleString(locale())}</span>}
+      {count !== null && <span className="ml-2 font-normal tabular-nums text-faint" title={plural(count, '{count} entry', '{count} entries')}>{count.toLocaleString(locale())}</span>}
     </>
   )
 }

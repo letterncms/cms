@@ -30,20 +30,82 @@ final class ContentAbilities
     {
         $this->collections($abilities);
         $this->entries($abilities);
+        $this->builtinPages($abilities);
+    }
+
+    /** Pages features bring with them (sign in, checkout): what each group has, and making one the site's own. */
+    private function builtinPages(AbilityRegistry $a): void
+    {
+        $registry = $this->cms->builtinPages();
+        $own = fn (array $group, string $handle) => $this->cms->entries()->query()->collection($group['collection'])->locale($this->cms->defaultLocale())->where('slug', $handle)->first();
+
+        $a->register('pages/builtin', [
+            'label' => 'Built-in Pages',
+            'description' => 'Pages features bring at addresses of their own (sign in and account pages, checkout), by group: each page\'s path, and whether the site has its own version (an entry of the group\'s collection) or uses the standard one.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
+                $groups = [];
+
+                foreach ($registry->all() as $group) {
+                    if (! $this->allowed($ctx->user, $group['collection'], 'view')) {
+                        continue;
+                    }
+
+                    $pages = [];
+
+                    foreach (($group['pages'])() as $handle => $page) {
+                        $entry = $own($group, (string) $handle);
+                        $pages[] = ['handle' => (string) $handle, 'label' => __($page['label']), 'path' => $page['path'] ?? null, 'id' => $entry?->id, 'status' => match (true) {
+                            $group['conflict'] !== null && ($group['conflict'])((string) $handle) => 'conflict',
+                            $entry === null => 'standard',
+                            $entry->isLive() => 'customised',
+                            default => 'draft',
+                        }];
+                    }
+
+                    // Named after what brought them: a plugin's own name, the way its screen and settings are called.
+                    $groups[] = ['id' => $group['id'], 'label' => __(\Cms\Packages\PackageRepository::labelOf($group['package']) ?? $group['label']), 'collection' => $group['collection'], 'canCustomise' => $this->allowed($ctx->user, $group['collection'], 'create'), 'pages' => $pages];
+                }
+
+                return $groups;
+            },
+        ]);
+
+        $a->register('pages/customise', [
+            'label' => 'Customize a Built-in Page',
+            'description' => 'Make a built-in page the site\'s own: creates a draft from its standard version and returns the entry to edit. An already customized page returns its entry.',
+            'annotations' => ['draft' => true],
+            'permission' => fn (?User $user, array $in) => ($group = $registry->get((string) $in['group'])) !== null && $this->allowed($user, $group['collection'], 'create'),
+            'input' => ['type' => 'object', 'properties' => ['group' => self::HANDLE, 'handle' => ['type' => 'string', 'maxLength' => 64]], 'required' => ['group', 'handle']],
+            'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
+                $group = $registry->get($in['group']) ?? throw AbilityException::notFound($in['group']);
+                $page = ($group['pages'])()[$in['handle']] ?? throw AbilityException::notFound($in['handle']);
+
+                if ($existing = $own($group, $in['handle'])) {
+                    return ['id' => $existing->id, 'collection' => $group['collection']];
+                }
+
+                $locale = $this->cms->defaultLocale();
+                $entry = $this->cms->content()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user);
+
+                return ['id' => $entry->id, 'collection' => $group['collection']];
+            },
+        ]);
     }
 
     private function collections(AbilityRegistry $a): void
     {
         $a->register('collections/list', [
             'label' => 'List Collections',
-            'description' => 'All content collections (content types) with their routes and structure.',
+            'description' => 'All content collections (content types) with their routes and structure. `system` marks the ones the CMS and its plugins bring (templates, components, account and checkout pages): their entries are edited like any other, their schema comes with the code.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'handler' => fn () => array_values(array_map(fn (Collection $c) => [
                 ...RecordTimestamps::api($c->extra),
                 'handle' => $c->handle, 'title' => $c->title, 'singular' => $c->singular, 'icon' => $c->icon,
                 'description' => $c->description, 'driver' => $c->driver, 'structure' => $c->structure, 'route' => $c->route, 'defaultView' => $c->defaultView,
-                'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
+                'system' => $c->system, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
             ], $this->cms->collections()->all())),
         ]);
 
@@ -354,14 +416,14 @@ final class ContentAbilities
 
         $a->register('content/recent', [
             'label' => 'Recently Edited',
-            'description' => 'The most recently changed entries across collections you can view.',
+            'description' => 'The most recently changed entries across collections you can view (ones never changed here, like files that came with the site, are not listed).',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10]]],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $handles = array_values(array_filter(array_keys($this->cms->collections()->all()), fn ($h) => $ctx->system || $this->allowed($ctx->user, $h, 'view')));
 
-                return $handles === [] ? [] : array_map(static fn (Entry $e) => $e->toSummary(), $this->cms->entries()->query()->working()->collection(...$handles)->orderBy('-updated_at')->limit($in['limit'])->get());
+                return $handles === [] ? [] : array_map(static fn (Entry $e) => $e->toSummary(), $this->cms->entries()->query()->working()->collection(...$handles)->where('updated_at', 'not null', null)->orderBy('-updated_at')->limit($in['limit'])->get());
             },
         ]);
 

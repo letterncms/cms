@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Settings;
 
+use Cms\Users\Roles;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
@@ -80,9 +81,14 @@ final class SettingsAbilities
             'permission' => static fn (?User $u, array $in) => $u?->hasPermission($permissionFor((string) $in['namespace'])) ?? false,
             'expose' => ['mcp' => false],
             'input' => ['type' => 'object', 'properties' => ['namespace' => ['type' => 'string'], 'values' => ['type' => 'object']], 'required' => ['namespace', 'values']],
-            'handler' => function (array $in) use ($registry) {
+            'handler' => function (array $in, AbilityContext $ctx) use ($registry) {
                 if (! $registry->has($in['namespace'])) {
                     throw new AbilityException('Unknown settings.', 'not_found');
+                }
+
+                // Who may do what is for people to decide: the assistant never changes roles.
+                if ($ctx->transport === 'assistant' && $in['namespace'] === Roles::SETTINGS) {
+                    throw AbilityException::forbidden(__('Roles are changed by people, in Settings.'));
                 }
 
                 $registry->save($in['namespace'], $in['values']);

@@ -150,11 +150,11 @@ class CoreUpdate
             $freshness = $this->feed->freshness();
 
             if ($freshness === 'clock') {
-                throw new RuntimeException(__("This server's clock looks wrong. Updates are paused. The public site is not affected."));
+                throw new RuntimeException(__("This server’s clock looks wrong. Updates are paused. The public site is not affected."));
             }
 
             if ($freshness === 'expired' || $freshness === 'none') {
-                throw new RuntimeException(__("Can't confirm this update list is current. Check for updates again."));
+                throw new RuntimeException(__("Can’t confirm this update list is current. Check for updates again."));
             }
 
             $release = $this->feed->find($version);
@@ -460,7 +460,7 @@ class CoreUpdate
         $runtime = $this->layout->runtime();
 
         if (! is_writable($runtime) || ! is_writable(dirname($this->layout->pointer()))) {
-            throw new RuntimeException(__("Can't write to runtime/. Download the release, upload runtime/:version/ by FTP, then switch to it here.", ['version' => $release['version']]));
+            throw new RuntimeException(__("Can’t write to runtime/. Download the release, upload runtime/:version/ by FTP, then switch to it here.", ['version' => $release['version']]));
         }
 
         $needed = 3 * (int) ($release['size'] ?? 0);
@@ -630,7 +630,7 @@ class CoreUpdate
         $pointer = $this->layout->pointer();
 
         if (! is_writable(dirname($pointer)) || (is_file($pointer) && ! is_writable($pointer) && ! is_writable(dirname($pointer)))) {
-            throw new RuntimeException(__("Can't write the release pointer. Edit :file by FTP and run the update from Modules.", ['file' => basename($pointer)]));
+            throw new RuntimeException(__("Can’t write the release pointer. Edit :file by FTP and run the update from Modules.", ['file' => basename($pointer)]));
         }
 
         $this->backupSqlite();

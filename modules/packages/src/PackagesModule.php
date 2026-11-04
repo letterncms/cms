@@ -21,8 +21,8 @@ final class PackagesModule extends Plugin
     {
         $cms = $this->cms();
 
-        $cms->permissions()->register('packages.manage', 'Manage modules and plugins', 'System');
-        $cms->permissions()->register('packages.install_unsigned', 'Install packages that aren\'t signed', 'System');
+        $cms->permissions()->register('packages.manage', 'Manage Modules and Plugins', 'System');
+        $cms->permissions()->register('packages.install_unsigned', 'Install Unsigned Packages', 'System', trusted: true);
         $this->app->make(PackageAbilities::class)->register($cms->abilities());
         $this->app->make(StoreAbilities::class)->register($cms->abilities());
 
@@ -41,10 +41,9 @@ final class PackagesModule extends Plugin
             return $manifest;
         });
 
-        $cms->admin()->nav('modules', ['label' => 'Modules', 'path' => '/modules', 'icon' => 'plugin', 'section' => 'system', 'order' => 40, 'permission' => 'packages.manage']);
-        $cms->admin()->command('store', ['label' => 'Store', 'icon' => 'download', 'path' => '/modules?tab=store', 'permission' => 'packages.manage', 'keywords' => ['plugins', 'install', 'marketplace']]);
-        $cms->admin()->command('updates', ['label' => 'Updates', 'icon' => 'refresh', 'path' => '/modules?tab=updates', 'permission' => 'packages.manage', 'keywords' => ['upgrade', 'version', 'security']]);
-        $cms->admin()->command('modules', ['label' => 'Modules and Plugins', 'icon' => 'plugin', 'path' => '/modules', 'permission' => 'packages.manage', 'keywords' => ['plugins', 'themes', 'disable', 'enable']]);
+        $cms->admin()->nav('plugins', ['label' => 'Plugins', 'path' => '/plugins', 'icon' => 'plugin', 'section' => 'main', 'order' => 20, 'permission' => 'packages.manage']);
+        $cms->admin()->command('store', ['label' => 'Store', 'icon' => 'download', 'path' => '/plugins?tab=store', 'permission' => 'packages.manage', 'keywords' => ['plugins', 'install', 'marketplace']]);
+        $cms->admin()->command('updates', ['label' => 'Updates', 'icon' => 'refresh', 'path' => '/plugins?tab=updates', 'permission' => 'packages.manage', 'keywords' => ['upgrade', 'version', 'security']]);
         $cms->admin()->widget('packages-system', ['label' => 'System', 'description' => '{brand} version, database updates and plugins that need attention.', 'icon' => 'plugin', 'column' => 'side', 'order' => 70, 'permission' => 'packages.manage']);
         $this->adminModule();
     }

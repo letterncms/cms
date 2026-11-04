@@ -20,13 +20,13 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 /**
  * Each person's own account. In the admin: profile, password, two-factor sign-in and API tokens.
  * Required: without it nobody could change a password or secure a login. On the site, once a site
- * turns public accounts on: sign-up, sign-in, reset, profile, export and deletion.
+ * turns visitor accounts on: sign-up, sign-in, reset, profile, export and deletion.
  */
 final class AccountModule extends Plugin
 {
     public function boot(): void
     {
-        $this->cms()->permissions()->register('tokens.manage', 'Create personal API tokens', 'Users');
+        $this->cms()->permissions()->register('tokens.manage', 'Create Personal API Tokens', 'Users');
         $this->app->make(AccountAbilities::class)->register($this->cms()->abilities());
         // First in the settings sidebar: everyone has one, whatever else they may change.
         $this->cms()->admin()->nav('account', ['label' => 'Account', 'path' => '/account', 'icon' => 'user', 'section' => 'account', 'order' => 0]);
@@ -38,14 +38,15 @@ final class AccountModule extends Plugin
 
     private function settingsSchema(): void
     {
-        $this->cms()->settingsRegistry()->register(Accounts::SETTINGS, 'Public Accounts', [
-            ['handle' => 'enabled', 'type' => 'toggle', 'label' => 'Let Visitors Have Accounts', 'default' => false, 'instructions' => 'Adds sign-up, sign-in and account pages to the site, and lets pages be limited to people with an account. Sign-up and password reset need working email.'],
-            ['handle' => 'sign_up', 'type' => 'select', 'label' => 'Sign-Up', 'options' => ['open' => 'Anyone Can Sign Up', 'closed' => 'Only People Who Already Have an Account'], 'default' => 'open'],
-            ['handle' => 'default_role', 'type' => 'select', 'label' => 'Role for New Accounts', 'dynamic' => 'visitor-roles', 'default' => 'member', 'instructions' => 'Roles that open the admin are not offered.'],
-            ['handle' => 'terms_url', 'type' => 'url', 'label' => 'Terms to Agree To', 'instructions' => 'When set, signing up needs a tick next to a link to this page.'],
-            ['handle' => 'after_sign_in', 'type' => 'text', 'label' => 'Page After Sign-In', 'default' => '/account'],
-            ['handle' => 'remember', 'type' => 'toggle', 'label' => 'Offer “Keep Me Signed In”', 'default' => true],
-        ], icon: 'users', description: 'Whether visitors can have an account on this site.', order: 28, section: 'site');
+        // With the Users screen, these are its Sign-Up tab rather than a settings page of their own.
+        $this->cms()->settingsRegistry()->register(Accounts::SETTINGS, 'Visitor Accounts', [
+            ['handle' => 'enabled', 'type' => 'toggle', 'label' => 'Allow Visitor Accounts', 'default' => false, 'instructions' => 'Sign-up and password resets need working email.'],
+            ['handle' => 'sign_up', 'type' => 'select', 'label' => 'Who Can Sign Up', 'options' => ['open' => 'Anyone', 'closed' => 'Only People You Add'], 'default' => 'open', 'if' => ['enabled' => true]],
+            ['handle' => 'default_role', 'type' => 'select', 'label' => 'Role for New Visitors', 'dynamic' => 'visitor-roles', 'default' => 'member', 'if' => ['enabled' => true]],
+            ['handle' => 'terms_url', 'type' => 'url', 'label' => 'Terms to Agree To', 'instructions' => 'Signing up then asks to agree.', 'if' => ['enabled' => true]],
+            ['handle' => 'after_sign_in', 'type' => 'text', 'label' => 'Page After Sign-In', 'default' => '/account', 'if' => ['enabled' => true]],
+            ['handle' => 'remember', 'type' => 'toggle', 'label' => 'Offer “Keep Me Signed In”', 'default' => true, 'if' => ['enabled' => true]],
+        ], icon: 'users', description: 'Sign-up and sign-in for visitors.', order: 30, section: 'people', page: ! $this->cms()->isActive('letterncms/users'));
 
         $this->cms()->hooks()->addFilter('fields.options.visitor-roles', function (array $options) {
             $team = $this->cms()->accounts()->teamRoles();
@@ -87,8 +88,7 @@ final class AccountModule extends Plugin
 
         $this->screensCollection();
         $this->screenBlocks();
-        $this->screenAbilities();
-        $this->adminPages();
+        $this->builtinPages();
         $this->app->make(\Illuminate\Contracts\Http\Kernel::class)->appendMiddlewareToGroup('web', SignedInCookie::class);
 
         // After every plugin has had the chance to add screens, before the site's catch-all.
@@ -159,13 +159,6 @@ final class AccountModule extends Plugin
 
             return $collections;
         });
-
-        // Account Pages (below) lists these along with the pages nobody customised yet.
-        $this->cms()->hooks()->addFilter('admin.nav', static function (array $items) {
-            unset($items['collection.'.Screens::COLLECTION]);
-
-            return $items;
-        }, 20);
     }
 
     private function screenBlocks(): void
@@ -188,56 +181,16 @@ final class AccountModule extends Plugin
         }
     }
 
-    private function screenAbilities(): void
+    /** The sign-in and account pages are listed with the site's pages, and customised there. */
+    private function builtinPages(): void
     {
-        $abilities = $this->cms()->abilities();
         $screens = fn () => $this->app->make(Screens::class);
-        $entry = fn (string $handle) => $this->cms()->entries()->query()->collection(Screens::COLLECTION)->locale($this->cms()->defaultLocale())->where('slug', $handle)->first();
 
-        $abilities->register('accounts/screens', [
-            'label' => 'Account Pages',
-            'description' => 'The public sign-in and account pages: their paths, and whether a site has its own version (an entry of the `screens` collection).',
-            'permission' => 'entries.screens.view',
-            'annotations' => ['readOnly' => true],
-            'handler' => function () use ($screens, $entry) {
-                $out = [];
-
-                foreach ($screens()->all() as $handle => $screen) {
-                    $own = $entry($handle);
-                    $out[] = ['handle' => $handle, 'label' => __($screen['label']), 'path' => $screen['path'] ?? null, 'id' => $own?->id, 'status' => match (true) {
-                        $screens()->conflict($handle) => 'conflict',
-                        $own === null => 'default',
-                        $own->isLive() => 'customised',
-                        default => 'draft',
-                    }];
-                }
-
-                return $out;
-            },
-        ]);
-
-        $abilities->register('accounts/screen-customise', [
-            'label' => 'Customise an Account Page',
-            'description' => 'Make an account page editable: creates a draft from the standard page and returns the entry to edit.',
-            'permission' => 'entries.screens.create',
-            'input' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string', 'maxLength' => 64]], 'required' => ['handle']],
-            'handler' => function (array $in, $ctx) use ($screens, $entry) {
-                $screen = $screens()->get($in['handle']) ?? throw \Cms\Abilities\AbilityException::notFound($in['handle']);
-                $existing = $entry($in['handle']);
-
-                if ($existing) {
-                    return ['id' => $existing->id];
-                }
-
-                $locale = $this->cms()->defaultLocale();
-
-                return ['id' => $this->cms()->content()->create(Screens::COLLECTION, ['title' => __($screen['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => $screens()->seedIn($in['handle'], $locale)]], $ctx->user)->id];
-            },
-        ]);
-    }
-
-    private function adminPages(): void
-    {
-        $this->cms()->admin()->nav('account-pages', ['label' => 'Account Pages', 'path' => '/account-pages', 'icon' => 'user', 'section' => 'design', 'order' => 80, 'permission' => 'entries.screens.view']);
+        $this->cms()->builtinPages()->register('accounts', 'Accounts', Screens::COLLECTION,
+            pages: static fn () => array_map(static fn (array $screen) => ['label' => $screen['label'], 'path' => $screen['path'] ?? null], $screens()->all()),
+            seed: static fn (string $handle, string $locale) => $screens()->seedIn($handle, $locale),
+            conflict: static fn (string $handle) => $screens()->conflict($handle),
+            order: 20,
+        );
     }
 }

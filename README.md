@@ -24,6 +24,7 @@ pnpm install
 pnpm build
 pnpm typecheck
 pnpm test
+pnpm test:browser   # the admin in headless Chrome against fixtures (needs the plugins next to it, built; CHROME=path)
 ```
 
 To try a change in a real site, build the admin, then make a site next to your clone and point it there:

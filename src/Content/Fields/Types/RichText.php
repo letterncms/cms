@@ -12,11 +12,11 @@ class RichText extends FieldType
 {
     public function key(): string { return 'richtext'; }
 
-    public function label(): string { return __('Rich text'); }
+    public function label(): string { return __('Rich Text'); }
 
     public function icon(): string { return 'richtext'; }
 
-    public function description(): string { return __('Formatted text with headings, lists and links (sanitized HTML).'); }
+    public function description(): string { return __('Formatted text with headings, lists and links.'); }
 
     public function schema(Field $field): array
     {

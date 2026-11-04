@@ -12,16 +12,19 @@ export interface PopoverProps {
   className?: string
   modal?: boolean
   returnFocus?: () => HTMLElement | null | false
+  /** Keep the requested side and shift along the edge instead of flipping (a picker that should open below its button). */
+  keepSide?: boolean
+  collisionPadding?: number
 }
 
-export function Popover({ trigger, children, side = 'bottom', align = 'start', open, onOpenChange, className, modal = false, returnFocus }: PopoverProps) {
+export function Popover({ trigger, children, side = 'bottom', align = 'start', open, onOpenChange, className, modal = false, returnFocus, keepSide, collisionPadding }: PopoverProps) {
   const popup = useRef<HTMLDivElement>(null)
   const anchor = useRef<HTMLButtonElement>(null)
   return (
     <Base.Root open={open} onOpenChange={(o) => onOpenChange?.(o)} modal={modal}>
       <Base.Trigger ref={anchor} render={trigger} />
       <Base.Portal>
-        <Base.Positioner side={side} align={align} sideOffset={6} className="z-50">
+        <Base.Positioner side={side} align={align} sideOffset={6} collisionPadding={collisionPadding} collisionAvoidance={keepSide ? { side: 'none', align: 'shift', fallbackAxisSide: 'none' } : undefined} className="z-50">
           <Base.Popup ref={popup} initialFocus={(interaction) => {
             const target = interaction === 'touch' ? popup.current : popup.current?.querySelector<HTMLElement>('input:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex="0"]') ?? popup.current
             target?.focus({ preventScroll: true })

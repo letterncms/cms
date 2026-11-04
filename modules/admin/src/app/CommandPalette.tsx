@@ -36,7 +36,7 @@ function matchScore(title: string, query: string, keywords = '', slug = ''): num
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const manifest = useManifest()
   const [query, setQuery] = useState('')
-  const [selection, setSelection] = useState({ query: '', first: '', value: '' })
+  const [selection, setSelection] = useState({ query: '', value: '' })
   const debounced = useDebounced(query.trim())
   useSyncExternalStore(registry.commands.subscribe, registry.commands.version)
   const search = useAbility<EntrySummary[]>('content/search', { query: debounced, limit: 8 }, { enabled: open && debounced.length > 1 })
@@ -44,7 +44,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   useEffect(() => {
     if (!open) {
       setQuery('')
-      setSelection({ query: '', first: '', value: '' })
+      setSelection({ query: '', value: '' })
     }
   }, [open])
 
@@ -55,7 +55,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   const pages = useMemo(
     () => [
-      ...manifest.nav.map((n) => ({ id: n.id, label: n.label, icon: n.icon, path: n.path })),
+      ...manifest.nav.filter((n) => !n.home || n.id.startsWith('settings.')).map((n) => ({ id: n.id, label: n.home && n.id.startsWith('settings.') ? t('{name} Settings', { name: manifest.nav.find((h) => h.id === n.home)?.label ?? n.label }) : n.label, icon: n.icon, path: n.path })),
       ...manifest.globals.map((g) => ({ id: `g-${g.handle}`, label: g.title, icon: g.icon, path: `/globals/${g.handle}` })),
     ],
     [manifest],
@@ -71,7 +71,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     { heading: t('Jump To'), items: pages.map((p) => ({
       value: `go ${p.label}`, icon: p.icon, label: p.label, path: p.path, perform: () => navigate(p.path),
     })) },
-    { heading: t('Create'), items: manifest.collections.filter((c) => c.can.create).map((c) => ({
+    { heading: t('Create'), items: manifest.collections.filter((c) => c.can.create && !c.within).map((c) => ({
       value: `new ${c.singular} create`, icon: 'plus', label: c.newLabel, perform: () => navigate(`/content/${c.handle}/new`),
     })) },
     { heading: t('Commands'), items: [
@@ -105,7 +105,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     items: group.items.map((item) => ({ ...item, score: matchScore(String(item.label), trimmedQuery, item.value) }))
       .filter((item) => item.score > 0).sort((a, b) => b.score - a.score),
   })).filter((group) => group.items.length > 0)
+  // Content arrives a moment after the commands: it goes below them, so nothing already shown moves.
   const groups: Group[] = [
+    ...matchedGroups.sort((a, b) => (b.items[0].score ?? 1) - (a.items[0].score ?? 1)),
     ...(entries.length > 0 ? [{ heading: t('Content'), items: entries.map((e) => ({
       value: `entry ${e.title} ${e.slug} ${e.id}`, icon: manifest.collections.find((c) => c.handle === e.collection)?.icon ?? 'file', label: e.title,
       // Body-only matches stay useful, below title, slug and command matches.
@@ -113,8 +115,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       trailing: <><span className="text-xs text-faint">{e.uri ?? e.collection}</span><StatusDot status={e.displayStatus} label="" /></>,
       perform: () => navigate(`/content/${e.collection}/${e.id}`),
     })).sort((a, b) => b.score - a.score) }] : []),
-    ...matchedGroups,
-  ].sort((a, b) => (b.items[0].score ?? 1) - (a.items[0].score ?? 1))
+  ]
   if (trimmedQuery && groups.length === 0 && !isSearching && queryCommands.length > 0) {
     groups.push({ heading: t('Ask'), items: queryCommands.map((c) => ({
       value: `ask ${c.id} ${trimmedQuery}`, icon: c.icon ?? 'sparkle',
@@ -123,9 +124,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     })) })
   }
   const firstValue = groups[0]?.items[0]?.value ?? ''
-  // Reset in the same render as the results, without a frame showing the old highlight.
-  const selected = selection.query === query && selection.first === firstValue
-    && groups.some((group) => group.items.some((item) => item.value === selection.value))
+  // A new query highlights its first result, in the same render; results that arrive later keep the highlight where it is.
+  const selected = selection.query === query && groups.some((group) => group.items.some((item) => item.value === selection.value))
     ? selection.value : firstValue
 
   return (
@@ -135,7 +135,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         <Base.Popup className="fixed left-1/2 top-[14vh] z-50 w-[calc(100vw-32px)] max-w-[620px] -translate-x-1/2 overflow-hidden rounded-xl border border-border-modal bg-bg shadow-dialog outline-none transition-[opacity,transform] duration-150 ease-out data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
           <Base.Title className="sr-only">{t('Command Palette')}</Base.Title>
           <Command label={t('Command Palette')} loop shouldFilter={false} value={selected} onValueChange={(value) => {
-            setSelection({ query, first: firstValue, value: value ?? '' })
+            setSelection({ query, value: value ?? '' })
             const item = groups.flatMap((group) => group.items).find((item) => item.value === value)
             if (item?.path) prefetch(item.path)
           }} className="flex flex-col">
@@ -145,7 +145,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               {isSearching && <Spinner size={14} className="text-faint" />}
               <Kbd keys="esc" />
             </div>
-            <Command.List className="max-h-[min(440px,60vh)] overflow-y-auto p-2 [&_[cmdk-group-heading]]:cms-caps [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2">
+            <Command.List className="max-h-[min(440px,60vh)] overflow-y-auto p-2 [&_[cmdk-group-heading]]:cms-label [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2">
               {groups.length === 0 && !isSearching && <Command.Empty className="px-3 py-8 text-center text-sm text-faint">{t('No matches')}</Command.Empty>}
               {groups.map((group) => (
                 <Command.Group key={group.heading} heading={group.heading}>

@@ -16,9 +16,9 @@ final class GlobalsModule extends Plugin
     {
         $cms = $this->cms();
         $p = $cms->permissions();
-        $p->register('globals.view', 'View globals', 'Content');
-        $p->register('globals.edit', 'Edit globals', 'Content');
-        $p->register('globals.manage', 'Create global sets and change their fields', 'Content');
+        $p->register('globals.view', 'View Globals', 'Content');
+        $p->register('globals.edit', 'Edit Globals', 'Content');
+        $p->register('globals.manage', 'Manage Global Sets and Fields', 'Content');
 
         $this->app->make(GlobalAbilities::class)->register($cms->abilities());
 

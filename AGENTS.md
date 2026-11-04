@@ -3,7 +3,7 @@
 The kernel, package `letterncms/cms`: `src/`, `modules/` (what the admin is made of, including `admin`), `admin-sdk/`, `brand/`, `stubs/site/` (the files every site starts with). `README.md` says how to run it from a clean clone.
 
 - `composer test` needs no Node and no plugins: tests that turn on a plugin skip themselves here. Those plugins' own repositories cover the rest.
-- `pnpm build`, `pnpm typecheck` (the build doesn't typecheck) and `pnpm test` for the admin.
+- `pnpm build`, `pnpm typecheck` (the build doesn't typecheck) and `pnpm test` for the admin; `pnpm test:browser` runs its fixture checks in headless Chrome.
 
 ## Rules
 

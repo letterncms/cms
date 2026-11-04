@@ -78,11 +78,11 @@ export function IconPicker({ value, onChange, choices, disabled, invalid, id, cl
           aria-describedby={describedBy}
           aria-invalid={invalid || undefined}
           disabled={disabled}
-          className={cn('cms-focus-ring flex h-8 w-full items-center gap-2 rounded-sm border border-border-strong bg-bg px-2.5 text-left text-sm transition-[border-color,box-shadow] duration-120 data-[popup-open]:border-focus aria-[invalid=true]:border-danger disabled:opacity-50', className)}
+          className={cn('cms-input flex h-8 w-full items-center gap-2 rounded-md pl-2.5 pr-2 text-left text-sm', className)}
         >
           {value && <Icon name={value} size={16} className="shrink-0 text-muted" />}
-          <span className={cn('flex-1 truncate', !value && 'text-faint')}>{value ?? t('Choose an icon…')}</span>
-          <Icon name="chevrons-up-down" size={13} className="text-faint" />
+          <span className={cn('flex-1 truncate', !value && 'text-ghost')}>{value ?? t('Choose an icon…')}</span>
+          <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />
         </button>
       }
     >
@@ -139,7 +139,7 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
       onMouseLeave={() => setHovered(null)}
       onFocus={() => setHovered(e.label)}
       onBlur={() => setHovered(null)}
-      className={cn('cms-focus-ring grid aspect-square place-items-center rounded-xs text-muted transition-colors duration-120 hover:bg-hover hover:text-text', isSelected(e) && 'bg-active text-ink')}
+      className={cn('grid aspect-square place-items-center rounded-md text-muted outline-offset-[-2px] transition-colors duration-120 hover:bg-hover hover:text-ink', isSelected(e) && 'bg-active text-ink')}
     >
       <Icon name={e.id} size={20} />
     </button>

@@ -10,12 +10,12 @@ use RuntimeException;
 
 final class LicenseSetCommand extends Command
 {
-    protected $signature = 'license:set {token : The licence key}';
+    protected $signature = 'license:set {token : The license key}';
 
     /** A site with no paid plugin never sees these in the list. They still run: a key can go in before its plugin. */
     protected $hidden = true;
 
-    protected $description = 'Put a licence key in place for this site';
+    protected $description = 'Put a license key in place for this site';
 
     public function handle(LicenseService $service): int
     {

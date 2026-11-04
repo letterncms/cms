@@ -19,7 +19,7 @@ use Throwable;
  */
 final class SettingsRegistry
 {
-    /** @var array<string, array{label: string, icon: string, description: string, fields: list<array>, permission: string, package: ?string, order: int, section: string}> */
+    /** @var array<string, array{label: string, icon: string, description: string, fields: list<array>, permission: string, package: ?string, order: int, section: string, home: ?string, page: bool}> */
     private array $schemas = [];
 
     /** @var array<string, array> */
@@ -30,20 +30,36 @@ final class SettingsRegistry
     public function __construct(private readonly Encrypter $encrypter) {}
 
     /**
-     * A settings page. `section` is where the settings sidebar lists it: `site`
-     * (the site's own settings) or `system` (running the installation).
+     * A settings page. A plugin's is listed under Plugins in the settings
+     * sidebar, by the plugin's name: leave out `label` and `section`. The core's
+     * modules name their section: `site` (what the site is), `people` or
+     * `system` (how the installation runs).
+     *
+     * `home` is the sidebar item of a screen of the plugin's own (`commerce`):
+     * the page is then that screen's Settings tab (see `ScreenTabs`), and
+     * /settings/<namespace> leads there. Everything a plugin adds is in one place.
+     *
+     * `page: false` keeps values that are set where they are used (the default
+     * sidebar, from Customize Sidebar): they are read and saved like any
+     * others, but have no page of their own.
+     *
+     *   $settings->register('seo', fields: [...], icon: 'seo');
      */
-    public function register(string $namespace, string $label, array $fields, string $icon = 'settings', string $description = '', ?string $package = null, ?string $permission = null, int $order = 50, string $section = 'site'): void
+    public function register(string $namespace, ?string $label = null, array $fields = [], string $icon = 'settings', string $description = '', ?string $package = null, ?string $permission = null, int $order = 50, ?string $section = null, ?string $home = null, bool $page = true): void
     {
+        $package ??= \Cms\Packages\Scope::$current;
+
         $this->schemas[$namespace] = [
-            'label' => $label,
+            'label' => $label ?? \Cms\Packages\PackageRepository::labelOf($package) ?? ucfirst($namespace),
             'icon' => $icon,
             'description' => $description,
             'fields' => $fields,
             'permission' => $permission ?? 'settings.manage',
-            'package' => $package ?? \Cms\Packages\Scope::$current,
+            'package' => $package,
             'order' => $order,
-            'section' => $section,
+            'section' => $section ?? \Cms\Admin\Navigation::PLUGINS,
+            'home' => $home,
+            'page' => $page,
         ];
 
         // Read before its schema existed: read again with the defaults.
@@ -73,6 +89,12 @@ final class SettingsRegistry
     public function has(string $namespace): bool
     {
         return isset($this->schemas[$namespace]);
+    }
+
+    /** Whether the namespace has a settings page; values set where they are used have none. */
+    public function hasPage(string $namespace): bool
+    {
+        return $this->schemas[$namespace]['page'] ?? false;
     }
 
     public function get(string $namespace, ?string $key = null, mixed $default = null): mixed

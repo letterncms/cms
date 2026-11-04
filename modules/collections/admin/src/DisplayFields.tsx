@@ -29,7 +29,7 @@ export default function DisplayFields({ value, onChange, context, disabled }: Fi
   return <div id="f-default_columns" role="group" aria-label={t('Default Display Fields')} className="rounded-sm border border-border px-4 py-3">
     {choices(system)}
     {fields.length > 0 && <div className="mt-3 border-t border-border pt-3">
-      <div className="cms-caps mb-2.5">{t('Collection Fields')}</div>
+      <div className="cms-label mb-2.5">{t('Collection Fields')}</div>
       {choices(fields)}
     </div>}
     {changed && <div className="mt-3 border-t border-border pt-3">

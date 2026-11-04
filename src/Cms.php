@@ -173,6 +173,12 @@ final class Cms
         return $this->app->make(SkillRegistry::class);
     }
 
+    /** Pages features bring at addresses of their own (sign in, checkout), listed with the site's pages. */
+    public function builtinPages(): Content\BuiltinPages
+    {
+        return $this->app->make(Content\BuiltinPages::class);
+    }
+
     public function settingsRegistry(): SettingsRegistry
     {
         return $this->app->make(SettingsRegistry::class);

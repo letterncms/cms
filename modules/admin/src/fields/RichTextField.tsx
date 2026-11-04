@@ -50,7 +50,7 @@ export function RichTextField({ field, value, onChange, error, disabled }: Field
   const tool = (icon: string, label: string, onClick: () => void) => <IconButton icon={icon} label={label} size="xs" disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onClick} />
 
   return (
-    <div className={cn('rounded-sm border border-border-strong bg-bg focus-within:border-focus focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_22%,transparent)]', error && 'border-danger')}>
+    <div aria-invalid={error ? true : undefined} className="cms-input rounded-md focus-within:border-focus focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_18%,transparent)]">
       <div className="flex items-center gap-0.5 border-b border-border px-1 py-1">
         {tool('bold', t('Bold'), () => exec('bold'))}
         {tool('italic', t('Italic'), () => exec('italic'))}
