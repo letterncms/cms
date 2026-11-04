@@ -1,6 +1,6 @@
-import { blockNavigation, can, invalidate, CmsError, loadManifest, navigate, run, t, useAbility, useManifest, type FieldDef } from '@letterncms/sdk'
+import { can, invalidate, CmsError, loadManifest, navigate, run, t, useAbility, useManifest, type FieldDef } from '@letterncms/sdk'
 import { useEffect, useState } from 'react'
-import { Button, DataView, Dialog, EmptyState, Fields, Icon, IconButton, Menu, Page, Spinner, slugify, toast, useShortcut } from '@letterncms/ui'
+import { Button, DataView, Dialog, EmptyState, Fields, Icon, IconButton, Menu, NotFoundState, Page, SaveBar, Spinner, slugify, toast } from '@letterncms/ui'
 
 export function GlobalsList() {
   const manifest = useManifest()
@@ -14,16 +14,17 @@ export function GlobalsList() {
     >
       <NewGlobal open={open} onOpenChange={setOpen} />
       <DataView id="globals" label={t('Globals')} items={manifest.globals} rowKey={(g) => g.handle} rowHref={(g) => `/globals/${g.handle}`}
-        searchText={(g) => `${g.title} ${g.handle}`}
+        searchText={(g) => (manage ? `${g.title} ${g.handle}` : g.title)}
         columns={[
           { id: 'title', label: t('Name'), value: (g) => g.title, render: (g) => <span className="flex items-center gap-2"><Icon name={g.icon} size={16} className="shrink-0 text-muted" /><span className="truncate">{g.title}</span></span> },
-          { id: 'handle', label: t('Handle'), width: 'minmax(200px,1fr)', value: (g) => g.handle, render: (g) => <span className="font-mono text-xs">{g.handle}</span> },
+          // The handle is for whoever builds the site's templates, not for those who fill in the values.
+          ...(manage ? [{ id: 'handle', label: t('Handle'), width: 'minmax(200px,1fr)', value: (g: (typeof manifest.globals)[number]) => g.handle, render: (g: (typeof manifest.globals)[number]) => <span className="font-mono text-xs text-muted">{g.handle}</span> }] : []),
         ]}
         actions={manage ? (g) => <Menu trigger={<IconButton icon="more" label={t('Actions for {name}', { name: g.title })} size="xs" />} items={[
           { label: t('Edit'), icon: 'edit', onSelect: () => navigate(`/globals/${g.handle}`) },
           { label: t('Edit Fields'), icon: 'field', onSelect: () => navigate(`/globals/${g.handle}/fields`) },
         ]} /> : undefined}
-        empty={<EmptyState icon="globe" title={t('No global sets yet')} description={t('Site-wide values, like contact details or footer links.')} action={manage && <Button variant="primary" icon="plus" onClick={() => setOpen(true)}>{t('New Global Set')}</Button>} />}
+        empty={<EmptyState icon="globe" title={t('No global sets yet')} description={t('Site-wide values, like contact details or footer links.')} />}
       />
     </Page>
   )
@@ -36,32 +37,30 @@ export function GlobalEditor({ params }: { params: Record<string, string> }) {
   const [values, setValues] = useState<Record<string, any> | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const [failed, setFailed] = useState<string | null>(null)
   const dirty = values !== null
 
   useEffect(() => setValues(null), [locale])
-  useEffect(() => blockNavigation(() => (dirty ? t('Discard unsaved changes?') : null)), [dirty])
 
   const save = async () => {
     if (!values) return
     setSaving(true)
+    setFailed(null)
     try {
       await run('globals/update', { handle: params.handle, values, locale })
       setValues(null)
       setErrors({})
       invalidate('globals/')
-      toast.success(t('Saved'))
     } catch (e) {
       if (e instanceof CmsError) setErrors(e.details)
-      toast.error(e)
+      setFailed(e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
     }
   }
 
-  useShortcut('mod+s', () => void save())
-
   if (set.isLoading) return <div className="grid h-full place-items-center text-faint"><Spinner /></div>
-  if (!set.data) return <Page crumbs={[{ label: t('Globals'), to: '/globals', icon: 'globe' }, { label: t('Not Found') }]}><EmptyState icon="globe" title={t('Global set not found')} /></Page>
+  if (!set.data) return <Page crumbs={[{ label: t('Globals'), to: '/globals', icon: 'globe' }, { label: t('Not Found') }]}><NotFoundState icon="globe" action={<Button onClick={() => navigate('/globals')}>{t('Back to {label}', { label: t('Globals') })}</Button>} /></Page>
 
   return (
     <Page
@@ -70,14 +69,13 @@ export function GlobalEditor({ params }: { params: Record<string, string> }) {
       actions={
         <>
           {manifest.site.locales.length > 1 && <Fields bare layout="inline" fields={[{ handle: 'locale', type: 'select', label: t('Language'), display: 'segmented', required: true, options: manifest.site.locales.map((l) => ({ value: l, label: l.toUpperCase() })) }]} values={{ locale }} onChange={(_, v) => setLocale(v)} />}
-          {can('globals.manage') && <IconButton icon="field" label={t('Edit Fields')} onClick={() => navigate(`/globals/${params.handle}/fields`)} />}
-          {dirty && <Button variant="ghost" onClick={() => { setValues(null); setErrors({}) }}>{t('Discard')}</Button>}
-          <Button variant="primary" disabled={!dirty} loading={saving} onClick={save}>{t('Save')}</Button>
+          {can('globals.manage') && <Button icon="field" onClick={() => navigate(`/globals/${params.handle}/fields`)}>{t('Edit Fields')}</Button>}
         </>
       }
       title={set.data.title}
     >
       <Fields fields={set.data.resolvedFields} values={values ?? set.data.data} onChange={(h, v) => setValues({ ...(values ?? set.data!.data), [h]: v })} errors={errors} context={{ locale }} />
+      <SaveBar dirty={dirty} saving={saving} error={failed} onSave={() => void save()} onDiscard={() => { setValues(null); setErrors({}); setFailed(null) }} />
     </Page>
   )
 }

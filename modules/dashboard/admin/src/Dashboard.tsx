@@ -2,8 +2,8 @@ import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, 
 import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { can, loadManifest, locale, plural, registry, run, setQuery, t, useLocation, useManifest, type Arrangement, type WidgetInfo } from '@letterncms/sdk'
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { Button, Icon, IconButton, Menu, Page, WidgetSlot, WidgetMessage, cn, confirm, toast, useShortcut } from '@letterncms/ui'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { Button, Icon, IconButton, Page, WidgetSlot, WidgetMessage, cn, confirm, toast, useShortcut } from '@letterncms/ui'
 import { Gallery } from './Gallery'
 
 function greeting(name: string): string {
@@ -16,6 +16,11 @@ function greeting(name: string): string {
 
 type Column = 'main' | 'side'
 
+// One grid in both modes, so Customize changes nothing's place.
+const GRID = 'grid grid-cols-1 gap-x-10 gap-y-10'
+const COLUMNS = 'lg:grid-cols-[minmax(0,1fr)_300px]'
+const COLUMN = 'min-w-0 space-y-10'
+
 /** Items prefer widget targets under the pointer; an empty column is a target of its own. */
 const collision: CollisionDetection = (args) => {
   const under = pointerWithin(args)
@@ -26,10 +31,10 @@ const collision: CollisionDetection = (args) => {
 }
 
 /**
- * The home screen. A greeting, then the widgets in a main and a
- * side column. Customize turns the screen into its own editor: drag widgets within
- * and between columns, remove them, add more from the gallery. The result is the
- * user's own; admins can make it everyone's default.
+ * The Dashboard. A greeting, then the widgets in a main and a side column.
+ * Customize turns the screen into its own editor, in place — nothing moves: drag
+ * widgets within and between columns, remove them, add more from the gallery. The
+ * result is the user's own; admins can make it everyone's default, or reset that.
  */
 export default function Dashboard() {
   const manifest = useManifest()
@@ -39,7 +44,10 @@ export default function Dashboard() {
   // Open for a column (added widgets go there) or for 'default' (each goes to its registered column).
   const [gallery, setGallery] = useState<Column | 'default' | null>(null)
   const [busy, setBusy] = useState(false)
+  // Whether the site's default differs from what modules and plugins set up (asked for by those who may change it).
+  const [customized, setCustomized] = useState(false)
   const editing = draft !== null
+  const manage = can('settings.manage')
 
   // Only widgets whose module is loaded can be shown or added.
   const widgets = useMemo(() => new Map(manifest.widgets.filter((w) => registry.widgets.get(w.id)).map((w) => [w.id, w])), [manifest.widgets, registry.widgets.version()])
@@ -49,7 +57,10 @@ export default function Dashboard() {
   const shown = (column: Column) => layout.sections.find((s) => s.id === column)?.items.filter((id) => widgets.has(id) && !hidden.has(id)) ?? []
   const columns: Column[] = editing ? ['main', 'side'] : (['main', 'side'] as Column[]).filter((c) => shown(c).length > 0)
 
-  const customize = () => setDraft(structuredClone(saved))
+  const customize = () => {
+    setDraft(structuredClone(saved))
+    if (manage) run<{ customized: boolean }>('admin/arrangement', { of: 'dashboard' }).then((r) => setCustomized(r.customized), () => setCustomized(false))
+  }
   const cancel = () => {
     setDraft(null)
     setGallery(null)
@@ -91,16 +102,24 @@ export default function Dashboard() {
   const resetToDefault = () =>
     act(async () => {
       await run('account/update', { preferences: { dashboard: null } })
-      await reload(t('Home screen reset to the default'))
+      await reload(t('Dashboard reset to the default'))
     })
 
   const saveForEveryone = () =>
     act(async () => {
-      const ok = await confirm({ title: t('Make this everyone’s home screen?'), description: t('People who customized their own home screen keep theirs.'), confirm: t('Save as Default') })
+      const ok = await confirm({ title: t('Make this everyone’s Dashboard?'), description: t('People who customized their own Dashboard keep theirs.'), confirm: t('Save as Default') })
       if (!ok) return
       await run('settings/update', { namespace: 'admin', values: { dashboard: draft } })
       await run('account/update', { preferences: { dashboard: null } })
-      await reload(t('Saved as the default home screen'))
+      await reload(t('Saved as the default Dashboard'))
+    })
+
+  const resetEveryone = () =>
+    act(async () => {
+      const ok = await confirm({ title: t('Reset everyone’s Dashboard?'), description: t('People who customized their own Dashboard keep theirs.'), confirm: t('Reset') })
+      if (!ok) return
+      await run('settings/update', { namespace: 'admin', values: { dashboard: null } })
+      await reload(t('Default Dashboard reset'))
     })
 
   const update = (fn: (layout: Arrangement) => Arrangement) => setDraft((d) => (d ? fn(d) : d))
@@ -114,25 +133,15 @@ export default function Dashboard() {
     }))
 
   return (
+    // The greeting heads the screen: no crumb, no title of its own.
     <Page
-      crumbs={[{ label: t('Dashboard'), icon: 'grid' }]}
-      width="default"
+      width="wide"
       actions={
         editing ? (
           <>
-            <Button icon="plus" variant="ghost" onClick={() => setGallery('default')}>
-              {t('Add Widget')}
-            </Button>
-            {(manifest.home?.personal || can('settings.manage')) && (
-              <Menu
-                trigger={<IconButton icon="more" label={t('More')} />}
-                items={[
-                  can('settings.manage') && { label: t('Save as Default'), onSelect: saveForEveryone },
-                  manifest.home?.personal && { label: t('Reset to Default'), icon: 'undo', onSelect: resetToDefault },
-                ]}
-              />
-            )}
-            <span className="mx-1 h-4 w-px bg-border" />
+            {manifest.home?.personal && <Button variant="ghost" icon="undo" disabled={busy} onClick={resetToDefault}>{t('Reset to Default')}</Button>}
+            {manage && <Button variant="ghost" disabled={busy} onClick={saveForEveryone}>{t('Save as Default')}</Button>}
+            {manage && customized && <Button variant="ghost" disabled={busy} onClick={resetEveryone}>{t('Reset Everyone’s Default')}</Button>}
             <Button variant="ghost" onClick={cancel}>
               {t('Cancel')}
             </Button>
@@ -154,12 +163,12 @@ export default function Dashboard() {
         <EditGrid widgets={widgets} shown={shown} setDraft={setDraft} columnOf={columnOf} onRemove={remove} onAdd={setGallery} />
       ) : columns.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border-strong">
-          <WidgetMessage icon="layout" title={t('Your home screen is empty')} description={t('Add widgets for what you want to keep an eye on.')} action={<Button icon="plus" onClick={() => { customize(); setGallery('default') }}>{t('Add Widgets')}</Button>} />
+          <WidgetMessage icon="layout" title={t('Your Dashboard is empty')} description={t('Add widgets for what you want to keep an eye on.')} action={<Button icon="plus" onClick={() => { customize(); setGallery('default') }}>{t('Add Widgets')}</Button>} />
         </div>
       ) : (
-        <div className={cn('grid grid-cols-1 gap-x-10 gap-y-10', columns.length > 1 && 'lg:grid-cols-[minmax(0,1fr)_300px]')}>
+        <div className={cn(GRID, columns.length > 1 && COLUMNS)}>
           {columns.map((column) => (
-            <div key={column} className="min-w-0 space-y-10">
+            <div key={column} className={COLUMN}>
               {shown(column).map((id) => (
                 <WidgetSlot key={id} widget={widgets.get(id)!} />
               ))}
@@ -219,8 +228,7 @@ function Notices() {
         <div className="mb-8 flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/6 px-4 py-3">
           <Icon name="database" className="text-warning" />
           <div className="min-w-0 flex-1 text-sm">
-            <span className="font-medium text-ink">{t('Database updates pending')}</span>
-            <span className="text-muted"> · {pending.join(', ')}</span>
+            <span className="font-medium text-ink">{t('Database updates are waiting')}</span>
           </div>
           <Button size="sm" variant="primary" onClick={() => run('packages/sync').then(() => { toast.success(t('Updated')); window.location.reload() }, toast.error)}>
             {t('Run Updates')}
@@ -277,7 +285,7 @@ function EditGrid({ widgets, shown, setDraft, columnOf, onRemove, onAdd }: { wid
 
   return (
     <DndContext sensors={sensors} collisionDetection={collision} onDragStart={(e) => setActive(String(e.active.id))} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
-      <div className="grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className={cn(GRID, COLUMNS)}>
         {(['main', 'side'] as Column[]).map((column) => (
           <EditColumn key={column} column={column} ids={shown(column)} widgets={widgets} active={active} onRemove={onRemove} onAdd={() => onAdd(column)} />
         ))}
@@ -300,9 +308,8 @@ function EditColumn({ column, ids, widgets, active, onRemove, onAdd }: { column:
 
   return (
     <div ref={drop.setNodeRef} className="min-w-0">
-      <p className="m-0 mb-2 text-2xs font-medium uppercase tracking-[0.04em] text-faint">{column === 'main' ? t('Main Column') : t('Side Column')}</p>
       <SortableContext items={ids} strategy={rectSortingStrategy}>
-        <div className="space-y-3">
+        <div className={COLUMN}>
           {ids.map((id) => (
             <EditableWidget key={id} widget={widgets.get(id)!} dragging={active === id} onRemove={() => onRemove(id)} />
           ))}
@@ -312,8 +319,9 @@ function EditColumn({ column, ids, widgets, active, onRemove, onAdd }: { column:
         type="button"
         onClick={onAdd}
         className={cn(
-          'mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong text-sm text-muted transition-colors duration-120 hover:border-faint hover:bg-surface hover:text-text',
-          ids.length === 0 ? 'h-32' : 'h-11',
+          // As wide as the tiles, a tile's gap below the last one.
+          'flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong text-sm text-muted transition-colors duration-120 hover:border-faint hover:bg-sunken hover:text-text',
+          ids.length === 0 ? 'h-32' : 'mt-10 h-11',
           drop.isOver && ids.length === 0 && 'border-focus bg-focus/5',
         )}
       >
@@ -324,47 +332,38 @@ function EditColumn({ column, ids, widgets, active, onRemove, onAdd }: { column:
   )
 }
 
-/** In edit mode a widget is a card you can pick up; its content shows but does not react. */
+/**
+ * In edit mode a widget is a tile you can pick up; its content shows but does not react.
+ * A ring on the tile's own edge says so (nothing shifts, no frame around it); its remove
+ * button takes the place of the tile's own header link.
+ */
 function EditableWidget({ widget, dragging, onRemove }: { widget: WidgetInfo; dragging: boolean; onRemove: () => void }) {
   const sortable = useSortable({ id: widget.id })
-  // Tall widgets are cut short; only those fade out at the bottom.
-  const [clipped, setClipped] = useState(false)
-  const box = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = box.current
-    if (!el) return
-    const observer = new ResizeObserver(() => setClipped(el.scrollHeight > el.clientHeight + 1))
-    observer.observe(el)
-    if (el.firstElementChild) observer.observe(el.firstElementChild)
-    return () => observer.disconnect()
-  }, [])
 
   return (
     <div
       ref={sortable.setNodeRef}
       style={{ transform: CSS.Translate.toString(sortable.transform), transition: sortable.transition }}
-      className={cn('group relative rounded-lg border border-border bg-bg transition-[border-color,box-shadow,opacity] duration-120 hover:border-border-strong', dragging && 'opacity-40')}
+      className={cn('group relative', dragging && 'opacity-40')}
     >
       <div
         {...sortable.attributes}
         {...sortable.listeners}
-        ref={box}
         aria-label={t('Move {widget}', { widget: widget.label })}
-        className={cn('max-h-80 cursor-grab overflow-hidden rounded-lg px-4 pb-4 pt-3 outline-none focus-visible:ring-2 focus-visible:ring-focus active:cursor-grabbing', clipped && '[mask-image:linear-gradient(to_bottom,black_calc(100%-48px),transparent)]')}
+        className="cursor-grab rounded-lg outline-none ring-1 ring-border-strong transition-shadow duration-120 hover:ring-faint focus-visible:ring-2 focus-visible:ring-focus active:cursor-grabbing"
       >
-        <div inert className="pointer-events-none select-none">
+        <div inert className="pointer-events-none select-none [&_section>header>:is(a,button,div)]:invisible">
           <WidgetSlot widget={widget} />
         </div>
       </div>
-      <button
-        type="button"
+      <IconButton
+        icon="close"
+        size="xs"
+        label={t('Remove {widget}', { widget: widget.label })}
+        title={undefined}
         onClick={onRemove}
-        aria-label={t('Remove {widget}', { widget: widget.label })}
-        title={t('Remove')}
-        className="absolute -right-2 -top-2 grid size-6 place-items-center rounded-full bg-bg text-muted shadow-pop transition-[color,transform] duration-120 hover:scale-105 hover:text-danger"
-      >
-        <Icon name="minus" size={13} />
-      </button>
+        className="absolute right-3 top-4 hover:text-danger"
+      />
     </div>
   )
 }

@@ -22,11 +22,12 @@ final class AuditAbilities
     {
         $a->register('audit/list', [
             'label' => 'Audit Log',
-            'description' => 'Recent changes made through abilities, newest first.',
+            'description' => 'Recent changes made through abilities, newest first. Narrowed to one person (userId) or one ability; `filters` lists the people and abilities the log holds.',
             'permission' => 'audit.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => [
                 'userId' => ['type' => 'string'],
+                'ability' => ['type' => 'string', 'maxLength' => 120],
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
             ]],
@@ -35,6 +36,10 @@ final class AuditAbilities
 
                 if (isset($in['userId'])) {
                     $query->where('user_id', $in['userId']);
+                }
+
+                if (isset($in['ability'])) {
+                    $query->where('ability', $in['ability']);
                 }
 
                 $total = (clone $query)->count();
@@ -61,6 +66,7 @@ final class AuditAbilities
                     'total' => $total,
                     'page' => $in['page'],
                     'pages' => (int) max(1, ceil($total / $in['perPage'])),
+                    'filters' => $this->filters($t),
                 ];
             },
         ]);
@@ -75,6 +81,22 @@ final class AuditAbilities
             ]],
             'handler' => fn (array $in) => $this->recent($in['limit']),
         ]);
+    }
+
+    /**
+     * Who and what the log holds, to narrow it by: people by name, abilities by their label.
+     *
+     * @return array{people: list<array{id: string, name: string}>, actions: list<array{value: string, label: string}>}
+     */
+    private function filters(Translations $t): array
+    {
+        $ids = DB::table('audit_log')->whereNotNull('user_id')->distinct()->pluck('user_id');
+        $people = User::query()->whereIn('id', $ids)->orderBy('name')->get(['id', 'name'])->map(static fn (User $u) => ['id' => (string) $u->id, 'name' => $u->name])->all();
+        $actions = DB::table('audit_log')->distinct()->pluck('ability')
+            ->map(fn (string $name) => ['value' => $name, 'label' => $t->label($this->cms->abilities()->get($name)?->label ?? $name)])
+            ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+
+        return ['people' => $people, 'actions' => $actions];
     }
 
     /** @return list<array<string, mixed>> */
@@ -92,7 +114,7 @@ final class AuditAbilities
             $input = (array) json_decode((string) $row->input, true);
 
             // Saving one's own preferences (a rearranged home screen, a theme) is not a change to the site.
-            if ($row->ability === 'account/update' && array_keys($input) === ['preferences']) {
+            if (AuditModule::unrecorded($row->ability, $input)) {
                 continue;
             }
 
@@ -179,7 +201,20 @@ final class AuditAbilities
         }
 
         if ($ability === 'settings/update' && is_string($input['namespace'] ?? null) && isset($settings[$input['namespace']])) {
-            return [$settings[$input['namespace']], '/settings/'.$input['namespace']];
+            $namespace = $input['namespace'];
+            $registry = $this->cms->settingsRegistry();
+
+            if ($registry->hasPage($namespace)) {
+                return [$settings[$namespace], '/settings/'.$namespace];
+            }
+
+            // Values without a page of their own (the default sidebar and Dashboard) are set where they are used:
+            // named by what was saved, not by the namespace that keeps them.
+            $t = app(Translations::class);
+            $labels = array_column($registry->schemas()[$namespace]['fields'] ?? [], 'label', 'handle');
+            $saved = array_map(static fn (string $key) => $t->label($labels[$key] ?? ucfirst(str_replace('_', ' ', $key))), array_keys((array) ($input['values'] ?? [])));
+
+            return [$saved !== [] && count($saved) <= 2 ? implode(', ', $saved) : $settings[$namespace], null];
         }
 
         if (str_starts_with($ability, 'globals/') && $ability !== 'globals/delete' && is_string($input['handle'] ?? null) && ($set = $this->cms->globals()->find($input['handle']))) {
@@ -187,7 +222,7 @@ final class AuditAbilities
         }
 
         if (str_starts_with($ability, 'packages/') && is_string($input['name'] ?? null)) {
-            return [$this->cms->packages()->repository()->find($input['name'])?->label ?? $input['name'], '/modules'];
+            return [$this->cms->packages()->repository()->find($input['name'])?->label ?? $input['name'], '/plugins'];
         }
 
         foreach (['title', 'name', 'label', 'handle', 'email'] as $key) {

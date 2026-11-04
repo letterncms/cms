@@ -6,7 +6,9 @@ const kind = (handle: string): BlueprintKind => ({
   builtIn: null,
   save: (def) => ['globals/save', { handle, title: def.title, icon: def.icon, fields: def.fields }],
   remove: ['globals/delete', { handle }, t('Its values are deleted too.')],
-  back: { label: t('Globals'), to: `/globals/${handle}`, icon: 'globe' },
+  removeLabel: t('Delete Global Set'),
+  back: { label: t('Globals'), to: '/globals', icon: 'globe' },
+  crumbs: (def) => [{ label: t('Globals'), to: '/globals', icon: 'globe' }, { label: def.title, to: `/globals/${handle}` }, { label: t('Edit Fields') }],
 })
 
 /** The fields of a global set. */

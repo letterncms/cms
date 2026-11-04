@@ -37,7 +37,7 @@ export function LicenseBanner() {
 
   return (
     <Banner
-      action={{ to: '/license', label: t('See Licence') }}
+      action={{ to: '/plugins?tab=licenses', label: t('View License') }}
       onDismiss={level === 2 ? () => {
         const now = Date.now()
         setDismissed(now)
@@ -48,7 +48,7 @@ export function LicenseBanner() {
         }
       } : undefined}
     >
-      {worst ? reasonText(worst.reason, license.host ?? '') : ''}
+      {worst ? t('Licenses: {state}', { state: reasonText(worst.reason) }) : ''}
     </Banner>
   )
 }

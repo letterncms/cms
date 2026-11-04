@@ -1,7 +1,8 @@
 import { fieldControlId } from '../ui/fieldIdentity'
 import { t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Checkbox, IconPicker, Input, Segmented, Select, Switch, Textarea, cn } from '../ui'
+import { Checkbox, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
+import type { SelectAction } from '../ui/Select'
 import { slugify } from '../ui/slugify'
 import { formatDateTimeInZone, parseDateTimeInZone } from '../ui/dateTime'
 
@@ -95,7 +96,7 @@ export function NumberField({ field, value, onChange, error, disabled }: FieldPr
       onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
       invalid={!!error}
       disabled={disabled}
-      className={cn(!field.size && 'max-w-48', !!field.mono && 'font-mono')}
+      className={cn(!field.size && !field.width && 'max-w-48', !!field.mono && 'font-mono')}
     />
   )
 }
@@ -153,29 +154,36 @@ function SliderField({ field, value, onChange, disabled }: FieldProps<number | n
 /** A yes/no value: a switch with its label, or `display: checkbox` for lists of choices and selection. */
 export function ToggleField({ field, value, onChange, disabled }: FieldProps<boolean>) {
   if (field.display === 'checkbox') {
-    return <Checkbox checked={!!value} indeterminate={field.indeterminate === true} onChange={onChange} disabled={disabled} label={field.label ? <span>{field.label}{field.instructions ? <span className="text-xs text-faint"> {field.instructions as string}</span> : null}</span> : undefined} />
+    return <Checkbox checked={!!value} indeterminate={field.indeterminate === true} onChange={onChange} disabled={disabled} label={field.label ? <span>{field.label}{field.instructions ? <span className="text-xs text-muted"> {field.instructions as string}</span> : null}</span> : undefined} />
   }
   return (
     <div className="flex items-start gap-3">
       <Switch checked={!!value} onChange={onChange} disabled={disabled} size={field.size === 'sm' || field.size === 'xs' ? 'sm' : 'md'} />
       <div className="-mt-px">
         <ToggleLabel field={field} />
-        {field.instructions && <div className="text-xs text-faint">{field.instructions}</div>}
+        {field.instructions && <div className="mt-0.5 text-xs text-muted">{field.instructions}</div>}
       </div>
     </div>
   )
 }
 
-/** Options as `{value: label}`, a list of values, or a list of `{value, label, icon, title}`. */
-/** A toggle's label carries `status` and `reset` like an inline row's label does. */
+/** A toggle's label carries `status` and `reset` like an inline row's label does: ink when set here (click to reset), muted with a dot when inherited. */
 function ToggleLabel({ field }: { field: FieldProps['field'] }) {
   const status = field.status as 'own' | 'inherited' | undefined
-  const className = cn('font-medium', field.size === 'xs' ? 'text-2xs' : 'text-sm', status === 'own' && 'text-focus', status === 'inherited' && 'text-warning')
+  const className = cn('font-medium', field.size === 'xs' || field.size === 'sm' ? 'text-xs' : 'text-sm', status === 'inherited' ? 'text-muted' : 'text-ink')
   const reset = field.reset as (() => void) | undefined
-  if (status === 'own' && reset) return <button type="button" onClick={reset} className={cn(className, 'text-left hover:underline')} title={t('Reset {label}', { label: field.label })}>{field.label}</button>
+  if (status === 'own' && reset) {
+    return (
+      <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
+        <button type="button" onClick={reset} className={cn(className, 'text-left decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{field.label}</button>
+      </Tooltip>
+    )
+  }
+  if (status === 'inherited') return <div className={cn(className, 'flex items-center gap-1')} title={t('Inherited from a larger screen, another state or the component')}>{field.label}<span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden /></div>
   return <div className={className}>{field.label}</div>
 }
 
+/** Options as `{value: label}`, a list of values, or a list of `{value, label, icon, title}`. */
 function options(field: FieldProps['field']): { value: string; label: string; icon?: string; title?: string }[] {
   const raw = (field.options ?? {}) as Record<string, string> | (string | { value: string; label?: string; icon?: string; title?: string })[]
   if (!Array.isArray(raw)) return Object.entries(raw).map(([value, label]) => ({ value, label: String(label) }))
@@ -199,7 +207,8 @@ export function SelectField({ field, value, onChange, error, disabled }: FieldPr
               type="button"
               disabled={disabled}
               onClick={() => onChange(on ? selected.filter((v) => v !== o.value) : [...selected, o.value])}
-              className={cn('h-7 rounded-sm border px-2.5 text-sm transition-colors', on ? 'border-ink bg-ink text-ink-contrast' : 'border-border-strong bg-bg hover:bg-hover')}
+              aria-pressed={on}
+              className={cn('h-7 rounded-sm px-2.5 text-sm font-medium transition-[background-color,box-shadow,color] duration-120 ease-out disabled:opacity-45', on ? 'bg-ink text-ink-contrast' : 'bg-float text-text shadow-[0_0_0_1px_var(--cms-border-strong),var(--cms-shadow-raise)] hover:bg-sunken')}
             >
               {o.label}
             </button>
@@ -211,11 +220,12 @@ export function SelectField({ field, value, onChange, error, disabled }: FieldPr
 
   if (field.display === 'segmented' || (field.display === 'radio' && opts.length <= 4)) {
     // Clicking the chosen segment again clears it, unless a value is required.
-    return <Segmented id={fieldControlId(field)} aria-label={field.label} disabled={disabled} value={(value ?? '') as string} onChange={(v) => onChange(v === value && !field.required ? null : v)} options={opts} size={field.size === 'xs' ? 'xs' : 'sm'} block={field.block === true} placeholder={typeof field.placeholder === 'string' ? field.placeholder : undefined} />
+    return <Segmented id={fieldControlId(field)} aria-label={field.label} disabled={disabled} value={(value ?? '') as string} onChange={(v) => onChange(v === value && !field.required ? null : v)} options={opts} size={field.size === 'xs' ? 'xs' : 'sm'} block={field.block === true} fit={field.fit === true} placeholder={typeof field.placeholder === 'string' ? field.placeholder : undefined} />
   }
 
   // Numbers stay numbers (an HTTP status, a level): `numeric: true` on the field.
   const numeric = field.numeric === true
+  const compact = field.size === 'xs' || field.size === 'sm'
   return (
     <Select
       id={fieldControlId(field)}
@@ -224,7 +234,12 @@ export function SelectField({ field, value, onChange, error, disabled }: FieldPr
       value={value === null || value === undefined ? null : String(value)}
       onChange={(v) => onChange(numeric && v !== null ? Number(v) : v)}
       options={opts}
-      placeholder={field.placeholder as string | undefined}
+      placeholder={compact ? field.placeholder as string | undefined : undefined}
+      // In a form, a select's placeholder names what applies while nothing is chosen ("Browser Language"):
+      // it reads as the value. Compact ones (the inspector) keep it lighter, as inherited.
+      defaultLabel={compact || typeof field.placeholder !== 'string' ? undefined : field.placeholder}
+      empty={typeof field.empty === 'string' ? field.empty : undefined}
+      action={field.action as SelectAction | undefined}
       size={field.size === 'xs' ? 'xs' : field.size === 'sm' ? 'sm' : 'md'}
       invalid={!!error}
       disabled={disabled}
@@ -291,12 +306,13 @@ export function SlugField({ field, value, onChange, error, disabled, context }: 
       value={value ?? ''}
       onChange={(e) => onChange(slugify(e.target.value, true))}
       onBlur={(e) => onChange(slugify(e.target.value))}
+      size={field.size as 'xs' | 'sm' | 'md' | 'lg' | undefined}
       invalid={!!error}
       disabled={disabled}
       className="font-mono"
       suffix={
         title && (
-          <button type="button" className="rounded-xs px-1.5 py-0.5 hover:bg-hover hover:text-text" onClick={() => onChange(slugify(title))}>
+          <button type="button" className={cn('rounded-xs px-1.5 hover:bg-hover hover:text-text', field.size === 'xs' || field.size === 'sm' ? 'py-0' : 'py-0.5')} onClick={() => onChange(slugify(title))}>
             {t('From Title')}
           </button>
         )
@@ -322,7 +338,7 @@ export function ColorField({ field, value, onChange, error, disabled }: FieldPro
   const small = field.size === 'sm' || field.size === 'xs'
   return (
     <div className={cn('flex items-center gap-2', !small && 'max-w-60')}>
-      <label className={cn('relative shrink-0 overflow-hidden rounded-sm border border-border-strong', small ? 'size-7' : 'size-8')} style={{ background: swatch }}>
+      <label className={cn('relative shrink-0 overflow-hidden border border-border-strong', small ? 'size-7 rounded-sm' : 'size-8 rounded-md')} style={{ background: swatch }}>
         <input type="color" value={hex} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="absolute inset-0 cursor-pointer opacity-0" aria-label={t('Pick a Color')} />
       </label>
       <Input {...inputProps(field)} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} placeholder={(field.placeholder as string) || '#ff5a1f'} invalid={!!error} disabled={disabled} className="font-mono" />

@@ -30,7 +30,7 @@ const themeAction = { do: 'theme', mode: 'toggle' }
 const node = { id: 'example', type: 'button', props: {}, logic: { on: [{ event: 'click', actions: [themeAction, { do: 'play', node: 'example' }, { do: 'if', test: 'open', then: [{ do: 'if', test: 'ready', then: [themeAction] }], else: [themeAction] }] }] } }
 const store = new EditorStore([node], () => {})
 queryClient.setQueryData(abilityKey('design/get', {}), { tokens: [], breakpoints: {}, templates: {} })
-sessionStorage.setItem('cms.canvas.tab', 'interact')
+sessionStorage.setItem('cms.block.tab', 'interact')
 
 function Example() {
   const current = useEditor(store, (s) => s.nodes[0])
@@ -113,9 +113,12 @@ const server = createServer(async (req, res) => {
       if (req.method === 'POST') {
         let body = ''; for await (const chunk of req) body += chunk
         result = JSON.parse(body)
-        console.log(JSON.stringify(result, null, 2))
+        result.passed.forEach((name) => console.log('PASS', name))
+        if (result.error) console.error('FAIL', result.error)
       }
-      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(result ?? null)); return
+      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(result ?? null))
+      if (req.method === 'POST') finish(result.error)
+      return
     }
     if (url.pathname === '/api/admin/auth/session') {
       res.setHeader('Content-Type', 'application/json'); res.end('{"authenticated":false}'); return
@@ -132,4 +135,8 @@ const server = createServer(async (req, res) => {
     res.setHeader('Content-Type', 'text/html'); res.end(html)
   } catch (error) { console.error(error); res.writeHead(500); res.end(error.message) }
 })
+// Exits with the page's verdict, unless --preview keeps it up to look at.
+const keepAlive = process.argv.includes('--preview')
+const finish = (error) => { if (keepAlive) return; clearTimeout(timeout); setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = error ? 1 : 0 }, 100) }
+const timeout = keepAlive ? null : setTimeout(() => { console.error('Inspector browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
 server.listen(0, '127.0.0.1', () => console.log('Open http://localhost:' + server.address().port + '/'))

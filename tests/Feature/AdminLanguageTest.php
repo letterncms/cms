@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Tests\Feature;
 
+use Cms\Abilities\AbilityContext;
 use Cms\Admin\Translations;
 use Cms\Tests\TestCase;
 
@@ -22,6 +23,16 @@ final class AdminLanguageTest extends TestCase
         $this->assertSame('nl', app(Translations::class)->current());
     }
 
+    public function test_the_general_settings_set_the_admin_language_for_people_without_one(): void
+    {
+        $admin = $this->admin();
+        $this->cms()->abilities()->execute('settings/update', ['namespace' => 'site', 'values' => ['admin_language' => 'nl']], AbilityContext::forUser($admin, 'admin'));
+        $this->actingAs($admin);
+
+        $this->getJson('/api/admin/manifest', ['Accept-Language' => 'fr'])->assertOk()->assertJsonPath('data.locale', 'nl');
+        $this->assertSame('Admin Language', array_column($this->cms()->settingsRegistry()->schemas()['site']['fields'], 'label', 'handle')['admin_language']);
+    }
+
     public function test_a_language_cms_does_not_speak_falls_back_to_english(): void
     {
         $admin = $this->admin();
@@ -36,14 +47,29 @@ final class AdminLanguageTest extends TestCase
     {
         $translations = app(Translations::class);
         $translations->apply('nl');
-        app('translator')->addLines(['*.Name' => 'Naam', '*.Both' => 'Beide'], 'nl');
+        app('translator')->addLines(['*.Name' => 'Naam', '*.Both' => 'Beide', '*.Nothing yet' => 'Nog niets', '*.New Thing' => 'Nieuw ding', '*.Who You Are' => 'Wie je bent'], 'nl');
 
-        $fields = $translations->fields([['handle' => 'name', 'type' => 'text', 'label' => 'Name', 'options' => ['a' => 'Both'], 'fields' => [['handle' => 'x', 'label' => 'Name']]]]);
+        $fields = $translations->fields([['handle' => 'name', 'type' => 'select', 'label' => 'Name', 'section' => 'Who You Are', 'options' => ['a' => 'Both'], 'empty' => 'Nothing yet', 'action' => ['label' => 'New Thing', 'to' => '/things'], 'fields' => [['handle' => 'x', 'label' => 'Name']]]]);
 
         $this->assertSame('Naam', $fields[0]['label']);
+        $this->assertSame('Wie je bent', $fields[0]['section']);
         $this->assertSame('Beide', $fields[0]['options']['a']);
+        $this->assertSame('Nog niets', $fields[0]['empty']);
+        $this->assertSame(['label' => 'Nieuw ding', 'to' => '/things'], $fields[0]['action']);
         $this->assertSame('Naam', $fields[0]['fields'][0]['label']);
         $this->assertArrayHasKey('nl', $translations->languages());
+    }
+
+    public function test_field_definitions_name_the_product_in_english_too(): void
+    {
+        $translations = app(Translations::class);
+        $translations->apply('en');
+
+        $fields = $translations->fields([['handle' => 'url', 'type' => 'url', 'label' => '{brand} URL', 'instructions' => 'Where :brand lives.', 'options' => ['a' => '{brand}']]]);
+
+        $this->assertSame(\Cms\Support\Brand::get().' URL', $fields[0]['label']);
+        $this->assertSame('Where '.\Cms\Support\Brand::get().' lives.', $fields[0]['instructions']);
+        $this->assertSame(\Cms\Support\Brand::get(), $fields[0]['options']['a']);
     }
 
     /** The sign-in screen speaks the browser's language before anyone is signed in. */

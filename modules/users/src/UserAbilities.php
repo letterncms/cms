@@ -62,7 +62,7 @@ final class UserAbilities
             'label' => 'Create User',
             'permission' => 'users.manage',
             'description' => 'Add a user. Without a password, an invitation email with a set-password link is sent.',
-            'expose' => ['mcp' => false],
+            'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => [
                 'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
                 'email' => ['type' => 'string', 'format' => 'email'],
@@ -110,7 +110,7 @@ final class UserAbilities
             'label' => 'Update User',
             'permission' => 'users.manage',
             'description' => 'Change a user\'s name, email, roles or profile fields (data).',
-            'expose' => ['mcp' => false],
+            'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => [
                 'id' => ['type' => 'string'],
                 'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
@@ -122,6 +122,12 @@ final class UserAbilities
             ], 'required' => ['id']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = User::query()->findOrFail($in['id']);
+                $self = $ctx->user && $user->is($ctx->user);
+
+                // Nobody takes away their own way back in: another admin changes these.
+                if ($self && ((isset($in['roles']) && array_diff((array) $user->roles, $in['roles']) !== []) || (isset($in['super']) && ! $in['super'] && $user->super))) {
+                    throw AbilityException::conflict('You cannot take away your own roles. Ask another administrator.');
+                }
 
                 if (isset($in['roles'])) {
                     $this->assertRoles($in['roles']);
@@ -185,7 +191,7 @@ final class UserAbilities
             'label' => 'Give Access',
             'description' => 'Give someone an access name, optionally until a date. Entries gated on that name open for them.',
             'permission' => 'users.manage',
-            'expose' => ['mcp' => false],
+            'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => [
                 'id' => ['type' => 'string'],
                 'access' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
@@ -203,7 +209,7 @@ final class UserAbilities
             'label' => 'Take Access Away',
             'description' => 'Remove an access name from someone, whoever gave it.',
             'permission' => 'users.manage',
-            'expose' => ['mcp' => false],
+            'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'access' => ['type' => 'string', 'maxLength' => 120]], 'required' => ['id', 'access']],
             'handler' => function (array $in) {
@@ -242,7 +248,7 @@ final class UserAbilities
             'label' => 'Delete User',
             'permission' => 'users.manage',
             'description' => 'Remove a user. Their content stays.',
-            'expose' => ['mcp' => false],
+            'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'handler' => function (array $in, AbilityContext $ctx) {
@@ -266,7 +272,7 @@ final class UserAbilities
             'label' => 'Resend Invitation',
             'permission' => 'users.manage',
             'description' => 'Email a user a link to set their password.',
-            'expose' => ['mcp' => false],
+            'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $this->invite(User::query()->findOrFail($in['id']), $ctx->user);
@@ -283,12 +289,36 @@ final class UserAbilities
             'handler' => function () {
                 $t = app(\Cms\Admin\Translations::class);
                 $permissions = [];
+                $grouped = $this->cms->permissions()->grouped();
+                // In the order people look for them: the admin, content and each collection, what the site
+                // has, then who and how. Groups no one listed here go before Users, by name.
+                $order = ['General', 'Content', 'Media', 'Navigation', 'Forms', 'Comments', 'Site', 'Design', 'Assistant', 'Analytics'];
+                $last = ['Users', 'System'];
+                $rank = static function (string $group, array $items) use ($order, $last): array {
+                    $collection = str_starts_with((string) ($items[0]['name'] ?? ''), 'entries.');
 
-                foreach ($this->cms->permissions()->grouped() as $group => $items) {
+                    return match (true) {
+                        $collection => [1, 1, $group],
+                        in_array($group, $order, true) => [array_search($group, $order, true) < 2 ? 0 : 2, array_search($group, $order, true), ''],
+                        in_array($group, $last, true) => [4, array_search($group, $last, true), ''],
+                        default => [3, 0, $group],
+                    };
+                };
+                uksort($grouped, static fn ($a, $b) => $rank((string) $a, $grouped[$a]) <=> $rank((string) $b, $grouped[$b]));
+
+                foreach ($grouped as $group => $items) {
                     $permissions[$t->label($group)] = array_map(static fn ($p) => [...$p, 'label' => $t->label($p['label']), 'description' => $t->label($p['description'])], $items);
                 }
 
-                return ['roles' => $this->cms->roles()->all(), 'permissions' => $permissions];
+                $roles = $this->cms->roles()->all();
+                // How many people hold each role, for the roles editor.
+                $people = [];
+
+                foreach (array_keys($roles) as $role) {
+                    $people[$role] = User::query()->whereJsonContains('roles', $role)->count();
+                }
+
+                return ['roles' => $roles, 'permissions' => $permissions, 'people' => $people];
             },
         ]);
     }

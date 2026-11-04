@@ -4,35 +4,42 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
-  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Instrument Sans: a compact grotesque with a little warmth, set for the interface; its x-height runs small, so the scale sits half a pixel above the usual. */
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  --text-2xs: 11px;
+  --text-2xs: 11.5px;
   --text-2xs--line-height: 16px;
-  --text-xs: 12px;
+  --text-2xs--letter-spacing: 0.005em;
+  --text-xs: 12.5px;
   --text-xs--line-height: 16px;
-  --text-sm: 13px;
+  --text-sm: 13.5px;
   --text-sm--line-height: 20px;
-  --text-base: 14px;
+  --text-base: 14.5px;
   --text-base--line-height: 22px;
   --text-lg: 16px;
   --text-lg--line-height: 24px;
+  --text-lg--letter-spacing: -0.006em;
   --text-xl: 20px;
   --text-xl--line-height: 28px;
+  --text-xl--letter-spacing: -0.014em;
   --text-2xl: 24px;
-  --text-2xl--line-height: 32px;
-  --text-3xl: 32px;
-  --text-3xl--line-height: 40px;
+  --text-2xl--line-height: 30px;
+  --text-2xl--letter-spacing: -0.02em;
+  --text-3xl: 30px;
+  --text-3xl--line-height: 36px;
+  --text-3xl--letter-spacing: -0.024em;
 
-  --radius-xs: 4px;
-  --radius-sm: 6px;
+  --radius-xs: 5px;
+  --radius-sm: 7px;
   --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   --color-bg: var(--cms-bg);
   --color-surface: var(--cms-surface);
   --color-sunken: var(--cms-sunken);
+  --color-float: var(--cms-float);
   --color-hover: var(--cms-hover);
   --color-active: var(--cms-active);
   --color-border: var(--cms-border);
@@ -44,27 +51,35 @@
   --color-text: var(--cms-text);
   --color-muted: var(--cms-muted);
   --color-faint: var(--cms-faint);
+  --color-ghost: var(--cms-ghost);
   --color-signal: var(--cms-signal);
   --color-signal-ink: var(--cms-signal-ink);
+  --color-signal-soft: var(--cms-signal-soft);
   --color-focus: var(--cms-focus);
+  --color-focus-soft: var(--cms-focus-soft);
   --color-success: var(--cms-success);
+  --color-success-soft: var(--cms-success-soft);
   --color-warning: var(--cms-warning);
+  --color-warning-soft: var(--cms-warning-soft);
   --color-danger: var(--cms-danger);
+  --color-danger-soft: var(--cms-danger-soft);
   --color-overlay: var(--cms-overlay);
 
+  --shadow-raise: var(--cms-shadow-raise);
+  --shadow-sheet: var(--cms-shadow-sheet);
   --shadow-pop: var(--cms-shadow-pop);
   --shadow-dialog: var(--cms-shadow-dialog);
 
+  /* Things that answer the pointer move out fast and settle; nothing moves by itself. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.32, 1.25, 0.5, 1);
 }
 
-@utility cms-caps {
-  font-size: 11px;
+/* The label over a group of things (menu groups, panel sections): the same as the sidebar's, in sentence case like every other heading. */
+@utility cms-label {
+  font-size: 12.5px;
   line-height: 16px;
-  font-weight: 550;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--cms-muted);
 }
 

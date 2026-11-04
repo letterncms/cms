@@ -21,17 +21,17 @@ export interface BannerProps {
 }
 
 /**
- * A line across the whole top of the admin, above the sidebar and the workspace, for what someone
- * who can act on it should see. It is part of the shell's layout, never over a screen: nothing
- * under it moves when it comes or goes, and the sidebar button and back link sit below it.
+ * A line on the desk above the sheet, for what someone who can act on it should see. It is part
+ * of the shell's layout, never over a screen, and the sidebar button and the way back sit below it.
  */
 export function Banner({ tone = 'warning', children, action, onDismiss }: BannerProps) {
   return (
-    <div role="status" className="flex min-h-9 shrink-0 items-center gap-2.5 border-b border-border bg-surface py-1.5 pl-4 pr-2 text-sm text-text">
+    // On the desk, above the sheet: no edge of its own, the tone only in its icon.
+    <div role="status" className="flex min-h-9 shrink-0 items-center gap-2.5 bg-surface py-1.5 pl-4 pr-2 text-sm text-text">
       <Icon name="warning" size={16} className={cn('shrink-0', tones[tone])} />
       <span className="min-w-0 flex-1 line-clamp-2 leading-snug">{children}</span>
       {action && (
-        <Link to={action.to} className="shrink-0 rounded-xs px-1 font-medium text-text underline underline-offset-2 hover:text-ink">
+        <Link to={action.to} className="shrink-0 rounded-xs px-1 font-medium text-ink underline decoration-muted decoration-1 underline-offset-[3px] transition-colors duration-120 hover:decoration-ink">
           {action.label}
         </Link>
       )}

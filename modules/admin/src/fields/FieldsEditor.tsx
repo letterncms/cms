@@ -78,12 +78,12 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
   }, [types, q])
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ('') }} align={align} className="w-[360px] p-2" trigger={<Button size="sm" icon="plus" variant={nested ? 'ghost' : 'secondary'}>{label ?? t('Add Field')}</Button>}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ('') }} side="bottom" align={align} keepSide collisionPadding={8} className="w-[288px] max-w-[calc(100vw-16px)] p-2" trigger={<Button size="sm" icon="plus" variant={nested ? 'ghost' : 'secondary'}>{label ?? t('Add Field')}</Button>}>
       <Fields bare layout="inline" className="mb-2" fields={[{ handle: 'q', type: 'text', label: t('Field Type'), icon: 'search', size: 'sm', placeholder: t('Search…') }]} values={{ q }} onChange={(_, v) => setQ(v ?? '')} />
       <div className="max-h-[360px] overflow-y-auto">
         {groups.map(([group, list]) => (
           <div key={group} className="mb-2">
-            <div className="cms-caps px-2 pb-1">{group}</div>
+            <div className="cms-label px-2 pb-1">{group}</div>
             {list.map((type) => (
               <button
                 key={type.key}
@@ -93,9 +93,9 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
                   setOpen(false)
                   setQ('')
                 }}
-                className="flex w-full items-start gap-2.5 rounded-sm px-2 py-1.5 text-left hover:bg-hover"
+                className="flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors duration-120 hover:bg-hover"
               >
-                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-xs border border-border bg-surface text-muted"><Icon name={type.icon} size={13} /></span>
+                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-xs border border-border bg-sunken text-muted"><Icon name={type.icon} size={14} /></span>
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">{type.label}</span>
                   {type.description && <span className="block truncate text-xs text-faint">{type.description}</span>}
@@ -165,7 +165,7 @@ function Sortable({ id, children }: { id: string; children: (handle: ReactNode) 
 function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; depth: number; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
   if (field.import) {
     return (
-      <div className="flex h-11 items-center gap-2 rounded-lg border border-dashed border-border-strong bg-surface px-2">
+      <div className="flex h-11 items-center gap-2 rounded-lg border border-dashed border-border-strong bg-sunken px-2">
         {dragHandle}
         <Icon name="stack" size={15} className="text-muted" />
         <span className="flex-1 text-sm">{t('Imports fieldset {handle}').split('{handle}').map((part, i) => (i === 0 ? part : [<span key={i} className="font-mono">{field.import}</span>, part]))}</span>
@@ -185,7 +185,7 @@ function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onCh
     <div className={cn('rounded-lg border bg-bg transition-shadow', open ? 'border-border-strong shadow-pop' : 'border-border')}>
       <div className="flex h-11 items-center gap-2 px-2">
         {dragHandle}
-        <span className="grid size-6 shrink-0 place-items-center rounded-xs bg-sunken text-muted"><Icon name={type?.icon ?? 'field'} size={13} /></span>
+        <span className="grid size-6 shrink-0 place-items-center rounded-xs bg-active text-muted"><Icon name={type?.icon ?? 'field'} size={14} /></span>
         <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <span className="truncate text-sm font-medium">{field.label || field.handle}</span>
           <span className="truncate font-mono text-xs text-faint">{field.handle}</span>
@@ -213,13 +213,13 @@ function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onCh
           />
           {type && type.config.length > 0 && (
             <div className="border-t border-border pt-4">
-              <div className="cms-caps mb-3">{t('{type} options', { type: type.label })}</div>
+              <div className="cms-label mb-3">{t('{type} options', { type: type.label })}</div>
               <Fields fields={type.config.map((c) => ({ ...c, width: c.type === 'json' || c.type === 'fields' ? 'full' : 'half' }))} values={field} onChange={(h, v) => set(h, v)} context={{ depth: depth + 1 }} />
             </div>
           )}
           <div className="flex justify-between border-t border-border pt-3">
             <Button size="sm" variant="ghost" icon="copy" onClick={onDuplicate}>{t('Duplicate')}</Button>
-            <Button size="sm" variant="ghost" icon="trash" className="text-danger" onClick={onRemove}>{t('Remove Field')}</Button>
+            <Button size="sm" variant="ghost" icon="trash" className="text-danger hover:bg-danger-soft" onClick={onRemove}>{t('Remove Field')}</Button>
           </div>
         </div>
       )}

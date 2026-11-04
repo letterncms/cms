@@ -1,55 +1,75 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, can, events, navigate, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
+import { boot, events, navigate, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Avatar, Icon, IconButton, Menu, MenuButton, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
+import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
 import { BrandMark } from './Brand'
 import { getThemePreference, setThemePreference, type ThemePreference } from '../ui/theme'
-import { inSettings, isPinned, itemAt, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
+import { inSettings, isPinned, lastApp, placeAt, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, settingsRowAt, unpin, wayBack } from './sidebarStore'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {
   title: string
   backTo: string
   backLabel: string
+  /** Sections of the screen: under its row in the sidebar, not a sidebar of their own. */
+  nested?: boolean
 }
 
 interface SidebarProps {
   /** On a screen with a state of its own: what to call it, and where its list goes. */
   own?: OwnSidebar | null
+  /** On a screen whose sections go under its row: where they go. */
+  nested?: OwnSidebar | null
+  /** Over the screen, on a phone. */
+  drawer?: boolean
   onOwnHost?: (element: HTMLElement | null) => void
   onSearch: () => void
   /** Called when a link is followed (the overlay sidebar on narrow screens closes). */
   onNavigate?: () => void
 }
 
-const rowClass = 'relative flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-sm no-underline outline-offset-[-2px]'
-const rowState = (on: boolean) => (on ? 'bg-active text-ink' : 'text-muted hover:bg-hover hover:text-text')
 
 const customize = () => events.emit('sidebar.customize')
+
+/** How far each state of the sidebar is from the main one. */
+const depth = { main: 0, settings: 1, screen: 2 } as const
 
 /**
  * The admin's sidebar, in one of two states that follow the screen on view:
  * the main sidebar (what each person pinned, More for the rest) and, on a settings page, the settings sidebar with a way back. Same frame,
- * same rows, same footer — only the list changes.
+ * same rows, same footer — only the list changes. A screen's own state (the editor's Outline) is the screen's: its list, no footer.
  */
-export function Sidebar({ own, onOwnHost, onSearch, onNavigate }: SidebarProps) {
+export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate }: SidebarProps) {
   const manifest = useManifest()
   const { path, search } = useLocation()
   const settings = inSettings(manifest, path)
   const state = own ? 'screen' : settings ? 'settings' : 'main'
-  const active = itemAt(manifest.nav, path)?.id
+  const active = (settings ? settingsRowAt(manifest, path, search) : placeAt(manifest.nav, path))?.id
 
   useEffect(() => remember(manifest, path, search), [manifest, path, search])
-  // Switching states moves the list; the admin opening does not.
-  const initial = useRef(state)
-  const switched = useRef(false)
-  if (state !== initial.current) switched.current = true
+  // Switching states moves the list, in from the side it leads to (deeper: settings, then a screen's own) and back from the other; the admin opening does not.
+  const previous = useRef<keyof typeof depth>(state)
+  const direction = useRef<'in' | 'out' | undefined>(undefined)
+  if (state !== previous.current) {
+    direction.current = depth[state] > depth[previous.current] ? 'in' : 'out'
+    previous.current = state
+  }
+
+  // A row of a screen's own sidebar is followed like any other: on narrow screens, the overlay goes. (Its rows come through a portal, so listen in the DOM.)
+  const aside = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const element = aside.current
+    if (!(own || nested) || !element || !onNavigate) return
+    const follow = (e: MouseEvent) => { if (e.target instanceof Element && e.target.closest('.cms-sidebar-row-main')) onNavigate() }
+    element.addEventListener('click', follow)
+    return () => element.removeEventListener('click', follow)
+  }, [own, nested, onNavigate])
 
   return (
-    <aside className="flex h-full w-[248px] shrink-0 flex-col bg-surface">
-      <div key={state} data-mode={switched.current ? state : undefined} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
+    <aside ref={aside} className={cn('flex h-full shrink-0 flex-col', drawer ? 'w-[min(320px,86vw)] bg-float shadow-dialog' : 'w-[248px] bg-surface pt-2')}>
+      <div key={state} data-direction={direction.current} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
         {own ? (
           <>
             <StateTitle>{own.title}</StateTitle>
@@ -57,9 +77,10 @@ export function Sidebar({ own, onOwnHost, onSearch, onNavigate }: SidebarProps) 
           </>
         ) : settings
           ? <SettingsSidebar onNavigate={onNavigate} active={active} />
-          : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} />}
+          : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} nest={nested ? onOwnHost : undefined} />}
       </div>
-      <Footer settings={settings} onNavigate={onNavigate} />
+      {/* The admin's own states end with who is signed in; a screen's own (the Outline) gives the screen all the room. */}
+      {!own && <Footer settings={settings} onNavigate={onNavigate} />}
     </aside>
   )
 }
@@ -81,15 +102,12 @@ function Row({ item, active, sortable, actions, onNavigate }: { item: NavItem; a
   )
 }
 
-/** Every row of the main sidebar ends its menu here. */
-const customizeAction = (): SidebarRowAction => ({ label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: customize })
-
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <div className="flex h-7 items-center px-2 text-xs font-medium text-muted">{children}</div>
+  return <div className="cms-label flex h-7 items-center px-2">{children}</div>
 }
 
-/** Pinned items, section by section, More after the first section. */
-function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; onNavigate?: () => void; active?: string }) {
+/** Pinned items, section by section; More after the first section, once someone has unpinned something. */
+function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => void; onNavigate?: () => void; active?: string; nest?: (element: HTMLElement | null) => void }) {
   const manifest = useManifest()
   const layout = manifest.sidebar
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
@@ -100,32 +118,26 @@ function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; o
     <>
       {/* The shell's sidebar button holds the first place in the row, in every state. */}
       <div className="flex h-12 shrink-0 items-center gap-1 pl-10 pr-2">
-        <Menu
-          align="start"
-          trigger={
-            <button type="button" aria-label={manifest.site.name} className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left hover:bg-hover">
-              <BrandMark size={22} />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-ink">{manifest.site.name}</span>
-              <Icon name="chevrons-up-down" size={12} className="shrink-0 text-faint" />
-            </button>
-          }
-          items={[
-            { label: t('Open Site'), icon: 'external', onSelect: () => window.open(manifest.site.url || '/', '_blank', 'noopener') },
-            can('settings.manage') && { label: t('Site Settings'), icon: 'settings', onSelect: () => navigate('/settings/site') },
-            { label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: customize },
-          ]}
-        />
+        {/* One site, so no switcher: the name opens it. */}
+        <Tooltip content={t('Open Site')} side="bottom">
+          <a href={manifest.site.url || '/'} target="_blank" rel="noopener" className="group flex h-8 min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left no-underline outline-offset-[-2px] hover:bg-hover">
+            <BrandMark size={22} />
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-ink">{manifest.site.name}</span>
+            <Icon name="external" size={12} className="shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+          </a>
+        </Tooltip>
         <Tooltip content={t('Search')} shortcut="mod+k" side="bottom">
           <IconButton icon="search" label={t('Search')} title={undefined} size="sm" onClick={onSearch} />
         </Tooltip>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label={t('Main')}>
+      <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={t('Main')}>
         {sections.map((section, index) => (index === 0 || section.items.length > 0) && (
           <div key={section.id} className={cn('space-y-px', index > 0 && 'mt-4')}>
             {section.label && section.items.length > 0 && <SectionLabel>{section.label}</SectionLabel>}
-            <Pinned section={section} items={items} active={active} onNavigate={onNavigate} />
-            {index === 0 && <More groups={more} items={items} active={active} onNavigate={onNavigate} />}
+            <Pinned section={section} items={items} active={active} onNavigate={onNavigate} nest={nest} />
+            {/* Only what someone unpinned: nothing is put away by default. */}
+            {index === 0 && more.length > 0 && <More groups={more} items={items} active={active} onNavigate={onNavigate} />}
           </div>
         ))}
       </nav>
@@ -134,7 +146,7 @@ function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; o
 }
 
 /** A section's pinned items: drag to reorder, right-click for the rest. */
-function Pinned({ section, items, active, onNavigate }: { section: ArrangedSection; items: Map<string, NavItem>; active?: string; onNavigate?: () => void }) {
+function Pinned({ section, items, active, onNavigate, nest }: { section: ArrangedSection; items: Map<string, NavItem>; active?: string; onNavigate?: () => void; nest?: (element: HTMLElement | null) => void }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   // The pointer is let go over the link it dragged: that is not a click.
   const dragged = useRef(false)
@@ -157,6 +169,7 @@ function Pinned({ section, items, active, onNavigate }: { section: ArrangedSecti
             active={active === id}
             dragged={dragged}
             onNavigate={onNavigate}
+            nest={active === id ? nest : undefined}
           />
         ))}
       </SortableContext>
@@ -164,7 +177,8 @@ function Pinned({ section, items, active, onNavigate }: { section: ArrangedSecti
   )
 }
 
-function PinnedRow({ item, section, index, last, active, dragged, onNavigate }: { item: NavItem; section: string; index: number; last: boolean; active: boolean; dragged: { current: boolean }; onNavigate?: () => void }) {
+/** A pinned row; the one on view holds its screen's sections under it, when it has some (`nest`). */
+function PinnedRow({ item, section, index, last, active, dragged, onNavigate, nest }: { item: NavItem; section: string; index: number; last: boolean; active: boolean; dragged: { current: boolean }; onNavigate?: () => void; nest?: (element: HTMLElement | null) => void }) {
   const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({ id: item.id })
 
   return (
@@ -179,9 +193,10 @@ function PinnedRow({ item, section, index, last, active, dragged, onNavigate }: 
         e.stopPropagation()
       }}
     >
+      {/* Open, with its sections under it: the section on view is the place you are, not the row above it. */}
       <Row
         item={item}
-        active={active}
+        active={active && !nest}
         sortable
         onNavigate={onNavigate}
         actions={[
@@ -189,9 +204,10 @@ function PinnedRow({ item, section, index, last, active, dragged, onNavigate }: 
           { label: t('Move Down'), icon: 'arrow-down', disabled: last, onSelect: () => movePinned(section, item.id, index + 1) },
           { label: t('Unpin'), icon: 'pin-off', quick: true, onSelect: () => unpin(item.id) },
           { separator: true, label: '' },
-          customizeAction(),
+          { label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: customize },
         ]}
       />
+      {nest && <div ref={nest} className="cms-sidebar-nested" onPointerDown={(e) => e.stopPropagation()} />}
     </div>
   )
 }
@@ -210,17 +226,19 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
       align="start"
       className="w-60"
       trigger={
-        <button type="button" className={cn(rowClass, 'group', rowState(here || open))}>
-          <Icon name="more" size={16} className={cn('shrink-0', here || open ? 'text-ink' : 'text-muted group-hover:text-text')} />
-          <span className="min-w-0 flex-1 truncate text-left">{t('More')}</span>
-          <Icon name="chevron-right" size={12} className="shrink-0 text-faint" />
+        <button type="button" className={cn('cms-sidebar-row w-full', here && 'cms-sidebar-row-active')} data-popup-open={open || undefined}>
+          <span className="cms-sidebar-row-main">
+            <Icon name="more" size={16} className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate text-left">{t('More')}</span>
+            <Icon name="chevron-right" size={12} className="shrink-0 text-faint" />
+          </span>
         </button>
       }
     >
       {groups.length === 0 && <p className="m-0 px-2 py-1.5 text-sm text-muted">{t('Everything is pinned.')}</p>}
       {groups.map((group) => (
         <div key={group.id} role="group" aria-label={group.label || undefined} className="space-y-px">
-          {group.label && <div className="cms-caps px-2 pb-1 pt-2">{group.label}</div>}
+          {group.label && <div className="cms-label px-2 pb-1 pt-2">{group.label}</div>}
           {group.items.map((id) => {
             const item = items.get(id)!
             return (
@@ -231,8 +249,6 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
                 onNavigate={() => { setOpen(false); onNavigate?.() }}
                 actions={[
                   { label: t('Pin to Sidebar'), icon: 'pin', quick: true, onSelect: () => setPinned(id, true) },
-                  { separator: true, label: '' },
-                  customizeAction(),
                 ]}
               />
             )
@@ -240,24 +256,30 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
         </div>
       ))}
       <div className="my-1 h-px bg-border" />
-      <MenuButton icon="sidebar" label={t('Customize Sidebar…')} onClick={() => { setOpen(false); customize() }} />
+      {/* A row like the others above it: the one place to arrange the sidebar. */}
+      <SidebarRow label={t('Customize Sidebar…')} icon="sidebar" onClick={() => { setOpen(false); customize() }} />
     </Popover>
   )
 }
 
 /** What a state of the sidebar other than the main one is, under the row with the sidebar button and the way back. */
 function StateTitle({ children }: { children: ReactNode }) {
-  return <h2 className="m-0 shrink-0 truncate px-5 pb-2 pt-12 text-sm font-semibold tracking-[-0.01em] text-ink">{children}</h2>
+  return <h2 className="m-0 shrink-0 truncate px-4 pb-2 pt-12 text-sm font-semibold tracking-[-0.01em] text-ink">{children}</h2>
 }
 
-/** The way back from a state of the sidebar. It sits by the sidebar button, in the same place with the sidebar in or out, where the main state has the site's name. */
+/**
+ * The way back from a state of the sidebar. It sits by the sidebar button, in the same place with the sidebar in or out,
+ * where the main state has the site's name. It returns to where you came from: out of settings, the last screen before
+ * them; from a screen's own sidebar, the screen it was opened from (else the one it names, its list).
+ */
 export function StateBack({ own, onNavigate }: Pick<SidebarProps, 'own' | 'onNavigate'>) {
   const manifest = useManifest()
   const { path } = useLocation()
   if (!own && !inSettings(manifest, path)) return null
-  const label = own ? own.backLabel : itemAt(manifest.nav, lastApp().split('?')[0])?.label ?? t('Back')
+  const way = own ? wayBack(manifest, { to: own.backTo, label: own.backLabel }) : { to: lastApp(), label: placeAt(manifest.nav, lastApp().split('?')[0])?.label ?? t('Dashboard') }
+  const label = way.label
   const back = () => {
-    if (own) navigate(own.backTo)
+    if (own) navigate(way.to)
     else leaveSettings()
     onNavigate?.()
   }
@@ -280,7 +302,7 @@ function SettingsSidebar({ onNavigate, active }: { onNavigate?: () => void; acti
     <>
       <StateTitle>{t('Settings')}</StateTitle>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label={t('Settings')}>
+      <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={t('Settings')}>
         {manifest.settingsNav.map((section, index) => (
           <div key={section.id} className={cn('space-y-px', index > 0 && 'mt-4')}>
             {section.label && <SectionLabel>{section.label}</SectionLabel>}
@@ -316,12 +338,12 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-1 border-t border-border p-2">
+    <div className="flex shrink-0 items-center gap-1 p-2">
       <Menu
         align="start"
         side="top"
         trigger={
-          <button type="button" aria-label={t('Account')} className="flex min-w-0 flex-1 items-center gap-2 rounded-sm p-1 text-left hover:bg-hover">
+          <button type="button" aria-label={t('Account')} className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left outline-offset-[-2px] hover:bg-hover">
             <Avatar name={manifest.user.name} initials={manifest.user.initials} src={manifest.user.avatar} size={24} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium leading-4 text-text">{manifest.user.name}</span>
@@ -331,7 +353,6 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
         }
         items={[
           { label: t('Account'), icon: 'user', onSelect: () => navigate('/account') },
-          { label: t('Settings'), icon: 'settings', shortcut: SETTINGS_SHORTCUT, onSelect: openSettings },
           { separator: true, label: '' },
           { label: t('Appearance'), heading: true },
           { label: t('System'), icon: 'monitor', checked: theme === 'system', onSelect: () => chooseTheme('system') },

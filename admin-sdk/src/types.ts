@@ -122,6 +122,8 @@ export interface CollectionSummary {
   defaultView?: 'table' | 'grid' | 'calendar'
   routable: boolean
   driver: 'database' | 'files'
+  /** The collection whose list shows these entries (built-in pages are listed with the site's pages), when not their own. */
+  within?: string | null
   can: { create: boolean; edit: boolean; publish: boolean; delete: boolean }
 }
 
@@ -135,6 +137,10 @@ export interface NavItem {
   /** A keyboard shortcut that opens it, shown with its label (e.g. `mod+j`). */
   shortcut?: string | null
   badge?: string | number | null
+  /** The item of the screen this belongs to (a plugin's settings page, to the plugin's screen): it is in neither sidebar, and its home shows as the place you are. */
+  home?: string | null
+  /** The plugin or module that added it. */
+  package?: string | null
 }
 
 /** The main sidebar as arranged for this user: items in sections; hidden ones are under More. `personal` when they pinned their own. */
@@ -178,7 +184,8 @@ export interface Manifest {
   collections: CollectionSummary[]
   globals: ({ handle: string; title: string; icon: string } & RecordTimestamps)[]
   fieldTypes: FieldTypeDef[]
-  settings: { namespace: string; label: string; icon: string; description: string; package: string | null }[]
+  /** Settings pages. One with a `home` is the Settings tab of that sidebar item's screen (its nav item's path leads there). */
+  settings: { namespace: string; label: string; icon: string; description: string; package: string | null; home?: string | null }[]
   packages: { active: string[]; pending: Record<string, string> }
   /** Every screen the user may open: the sidebar's in its order (those under More included), then the settings sidebar's. */
   nav: NavItem[]
@@ -338,4 +345,6 @@ export interface EntryEditorProps extends EntryPanelProps {
   toolbar: Element | null
   /** The list of entries this editor came from. */
   listPath: string
+  /** What the way back to `listPath` is called: the collection, or the site's pages for a built-in page. */
+  listLabel?: string
 }

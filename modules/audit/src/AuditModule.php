@@ -24,13 +24,13 @@ final class AuditModule extends Plugin
         $cms->permissions()->register('audit.view', 'View the Audit Log', 'System');
         $this->app->make(AuditAbilities::class)->register($cms->abilities());
 
-        $cms->settingsRegistry()->register('audit', 'Auditing', [
-            ['handle' => 'retention', 'type' => 'number', 'label' => 'Keep Entries for (Days)', 'default' => 365, 'min' => 1, 'max' => 3650, 'required' => true, 'width' => 'half'],
-            ['handle' => 'reads', 'type' => 'toggle', 'label' => 'Also Record Reads', 'default' => false, 'instructions' => 'For sites that must show who looked at what. The log grows quickly.'],
-        ], icon: 'history', description: 'What is recorded and for how long.', order: 85, section: 'system');
+        $cms->settingsRegistry()->register('audit', 'Audit Log', [
+            ['handle' => 'retention', 'type' => 'number', 'label' => 'Keep Entries For', 'suffix' => 'days', 'default' => 365, 'min' => 0, 'max' => 3650, 'instructions' => '0 keeps them forever.'],
+            ['handle' => 'reads', 'type' => 'toggle', 'label' => 'Also Record Reads', 'default' => false, 'instructions' => 'Who looked at what. The log grows quickly.'],
+        ], icon: 'activity', description: 'What is recorded and for how long.', order: 85, section: 'system', home: 'audit');
 
         $cms->hooks()->on('ability.executed', function (Ability $ability, array $input, mixed $result, AbilityContext $context): void {
-            if (! $ability->isReadOnly() || $this->settings('reads', false)) {
+            if ((! $ability->isReadOnly() || $this->settings('reads', false)) && ! self::unrecorded($ability->name, $input)) {
                 $this->record($ability, $input, $context);
             }
         });
@@ -53,13 +53,25 @@ final class AuditModule extends Plugin
                 'created_at' => now(),
             ]);
 
-            // Pruning on roughly one write in a hundred keeps the table bounded without a cron job.
-            if (random_int(1, 100) === 1) {
-                DB::table('audit_log')->where('created_at', '<', now()->subDays((int) $this->settings('retention', 365)))->delete();
+            // Pruning on roughly one write in a hundred keeps the table bounded without a cron job. 0 keeps every entry.
+            $days = (int) $this->settings('retention', 365);
+
+            if ($days > 0 && random_int(1, 100) === 1) {
+                DB::table('audit_log')->where('created_at', '<', now()->subDays($days))->delete();
             }
         } catch (Throwable $e) {
             report($e);
         }
+    }
+
+    /**
+     * What is not a change to the site, and never recorded: saving one's own preferences (a list's
+     * view and columns, a rearranged home screen), and starting two-factor setup, which changes
+     * nothing until it is confirmed (that is recorded) and is often canceled.
+     */
+    public static function unrecorded(string $ability, array $input): bool
+    {
+        return ($ability === 'account/update' && array_keys($input) === ['preferences']) || $ability === 'account/two-factor-setup';
     }
 
     private static function redact(array $input): array

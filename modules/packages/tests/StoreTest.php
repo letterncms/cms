@@ -322,7 +322,7 @@ final class StoreTest extends TestCase
 
         try {
             $this->client->install(StoreClient::DEFAULT, 'acme/paid', null);
-            $this->fail('A paid package installed without a licence.');
+            $this->fail('A paid package installed without a license.');
         } catch (\RuntimeException $e) {
             $this->assertStringContainsString('paid', $e->getMessage());
         }

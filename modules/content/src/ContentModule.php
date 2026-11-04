@@ -16,6 +16,15 @@ use Cms\Users\User;
  */
 final class ContentModule extends Plugin
 {
+    /** Entries per page of a list. */
+    public const int PER_PAGE = 50;
+
+    /** Milliseconds after the last change before the editor saves; ⌘S saves at once. */
+    public const int AUTOSAVE = 1200;
+
+    /** Revisions each entry keeps. */
+    public const int REVISIONS = 100;
+
     public function boot(): void
     {
         $cms = $this->cms();
@@ -40,25 +49,22 @@ final class ContentModule extends Plugin
         $this->app->make(ContentAbilities::class)->register($cms->abilities());
         $this->skills($cms);
 
-        $cms->settingsRegistry()->register('content', 'Content', [
-            ['handle' => 'per_page', 'type' => 'number', 'label' => 'Entries per Page', 'default' => 50, 'min' => 10, 'max' => 100, 'required' => true, 'width' => 'half'],
-            ['handle' => 'autosave', 'type' => 'number', 'label' => 'Autosave After (ms)', 'default' => 1200, 'min' => 0, 'max' => 60000, 'required' => true, 'width' => 'half', 'instructions' => 'Set to 0 to save only with ⌘S.'],
-            ['handle' => 'revisions', 'type' => 'number', 'label' => 'Revisions Kept per Entry', 'default' => 100, 'min' => 1, 'max' => 1000, 'required' => true, 'width' => 'half'],
-        ], icon: 'file', description: 'Entry lists, the editor and history.', order: 20);
+        // Plugins may keep more or fewer revisions with the same filter.
+        $cms->hooks()->addFilter('revisions.keep', static fn () => self::REVISIONS);
 
-        $cms->hooks()->addFilter('revisions.keep', fn () => (int) $this->settings('revisions', 100));
-
-        // One sidebar item per collection, in the collection's own section; pinned unless it is a system collection (templates, components).
+        // One sidebar item per collection, in the collection's own section (templates and components in Design).
+        // Built-in pages (sign in, checkout) are pages: they belong to the pages' item and are listed with them.
         $cms->hooks()->addFilter('admin.nav', function (array $items) use ($cms) {
             foreach ($cms->collections()->all() as $collection) {
+                $within = $this->within($collection->handle);
                 $items["collection.{$collection->handle}"] ??= [
+                    'home' => $within === null ? null : "collection.{$within}",
                     'id' => "collection.{$collection->handle}",
                     'label' => $collection->title,
                     'path' => "/content/{$collection->handle}",
                     'icon' => $collection->icon,
                     'section' => $collection->section,
                     'order' => (int) $collection->get('nav_order', 10),
-                    'pinned' => ! $collection->system,
                     'permission' => "entries.{$collection->handle}.view",
                 ];
             }
@@ -69,7 +75,7 @@ final class ContentModule extends Plugin
         $cms->hooks()->addFilter('admin.manifest', fn (array $manifest, User $user) => [
             ...$manifest,
             'collections' => $this->collectionsFor($user),
-            'config' => [...($manifest['config'] ?? []), 'content' => ['perPage' => (int) $this->settings('per_page', 50), 'autosave' => (int) $this->settings('autosave', 1200)]],
+            'config' => [...($manifest['config'] ?? []), 'content' => ['perPage' => self::PER_PAGE, 'autosave' => self::AUTOSAVE]],
         ]);
 
         $cms->context()->register('cms://collections', 'Collections', 'Every collection with its fields and JSON schema — use these field handles in entry data.', fn () => array_map(
@@ -79,6 +85,14 @@ final class ContentModule extends Plugin
 
         $cms->admin()->widget('recent', ['label' => 'Recently Edited', 'description' => 'Entries you and your team changed last.', 'icon' => 'clock', 'column' => 'main', 'enabled' => true, 'order' => 10]);
         $this->adminModule();
+    }
+
+    /** The collection whose list shows this one's entries: the site's pages, for built-in pages. */
+    private function within(string $handle): ?string
+    {
+        $cms = $this->cms();
+
+        return $handle !== 'pages' && $cms->builtinPages()->holds($handle) && isset($cms->collections()->all()['pages']) ? 'pages' : null;
     }
 
     /** @return list<array> The collections this user may view, with what they may do in each. */
@@ -94,7 +108,7 @@ final class ContentModule extends Plugin
             // Names read like the sidebar's: in the user's language when the dictionaries know them.
             $out[] = [
                 'handle' => $c->handle, 'title' => __($c->title), 'singular' => __($c->singular), 'newLabel' => self::newLabel($c->singular), 'icon' => $c->icon,
-                'structure' => $c->structure, 'routable' => $c->routable(), 'driver' => $c->driver, 'defaultView' => $c->defaultView,
+                'structure' => $c->structure, 'routable' => $c->routable(), 'driver' => $c->driver, 'defaultView' => $c->defaultView, 'within' => $this->within($c->handle),
                 'can' => array_combine(['create', 'edit', 'publish', 'delete'], array_map(static fn ($a) => $user->hasPermission("entries.{$c->handle}.{$a}"), ['create', 'edit', 'publish', 'delete'])),
             ];
         }

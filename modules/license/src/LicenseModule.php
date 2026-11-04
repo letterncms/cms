@@ -30,12 +30,12 @@ final class LicenseModule extends Plugin
             return;
         }
 
-        $cms->permissions()->register('license.view', 'See the licence state', 'System');
-        $cms->permissions()->register('license.manage', 'Manage the licence key', 'System');
+        $cms->permissions()->register('license.view', 'View Licenses', 'System');
+        $cms->permissions()->register('license.manage', 'Manage the License Key', 'System');
         (new LicenseAbilities)->register($cms->abilities());
 
-        $cms->admin()->nav('license', ['label' => 'Licence', 'path' => '/license', 'icon' => 'key', 'section' => 'system', 'order' => 45, 'permission' => 'license.view']);
-        $cms->admin()->command('license', ['label' => 'Licence', 'icon' => 'key', 'path' => '/license', 'permission' => 'license.view', 'keywords' => ['license', 'key', 'domain']]);
+        // A tab of Plugins (its admin module puts it there), beside the plugins it covers.
+        $cms->admin()->command('license', ['label' => 'Licenses', 'icon' => 'key', 'path' => '/plugins?tab=licenses', 'permission' => 'license.view', 'keywords' => ['license', 'licence', 'key', 'domain']]);
 
         $cms->hooks()->addFilter('admin.manifest', static function (array $manifest, User $user): array {
             try {

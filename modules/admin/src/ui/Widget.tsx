@@ -45,8 +45,9 @@ export interface WidgetEmpty {
 }
 
 export interface WidgetProps {
-  /** Defaults to the registered label and icon. */
+  /** Defaults to the registered label. */
   title?: ReactNode
+  /** The registered icon names the widget in the gallery; the tile itself shows only its title. */
   icon?: string
   /** A link in the header ("View all"), or any node (a menu, a button). */
   action?: { label: string; to?: string; onClick?: () => void } | ReactNode
@@ -61,10 +62,9 @@ export interface WidgetProps {
   className?: string
 }
 
-export function Widget({ title, icon, action, query, loading, skeleton, empty, children, className }: WidgetProps) {
+export function Widget({ title, action, query, loading, skeleton, empty, children, className }: WidgetProps) {
   const meta = useWidget()
   const heading = title ?? meta?.label
-  const glyph = icon ?? meta?.icon
   const headingId = useId()
   const isLoading = loading || query?.isLoading
   const failed = !isLoading && query?.isError
@@ -72,21 +72,21 @@ export function Widget({ title, icon, action, query, loading, skeleton, empty, c
   if (!isLoading && !failed && empty && empty.action) action = null
 
   return (
-    <section aria-labelledby={heading ? headingId : undefined} className={cn('@container min-w-0', className)}>
+    // A tile pressed into the sheet: no border, no shadow, its title and one way further.
+    <section aria-labelledby={heading ? headingId : undefined} className={cn('@container min-w-0 rounded-lg bg-sunken p-4', className)}>
       {heading && (
-        <header className="mb-2 flex h-8 items-center gap-2 border-b border-border pb-2">
-          {glyph && <Icon name={glyph} size={14} className="shrink-0 text-faint" />}
+        <header className="mb-3 flex h-6 items-center gap-2">
           <h2 id={headingId} className="m-0 min-w-0 flex-1 truncate text-sm font-semibold text-ink">
             {heading}
           </h2>
           {action && isActionLink(action) ? (
             action.to ? (
-              <Link to={action.to} className="-mr-1 flex shrink-0 items-center gap-0.5 rounded-xs px-1 py-0.5 text-xs text-muted no-underline transition-colors duration-120 hover:bg-hover hover:text-text">
+              <Link to={action.to} className="-mr-1.5 flex h-6 shrink-0 items-center gap-0.5 rounded-xs px-1.5 text-xs text-muted no-underline transition-colors duration-120 hover:bg-hover hover:text-text">
                 {action.label}
                 <Icon name="chevron-right" size={12} className="text-faint" />
               </Link>
             ) : (
-              <button type="button" onClick={action.onClick} className="-mr-1 shrink-0 rounded-xs px-1 py-0.5 text-xs text-muted transition-colors duration-120 hover:bg-hover hover:text-text">
+              <button type="button" onClick={action.onClick} className="-mr-1.5 h-6 shrink-0 rounded-xs px-1.5 text-xs text-muted transition-colors duration-120 hover:bg-hover hover:text-text">
                 {action.label}
               </button>
             )
@@ -132,8 +132,8 @@ export function WidgetSkeleton({ rows = 4 }: { rows?: number }) {
 export function WidgetMessage({ icon = 'inbox', title, description, action }: WidgetEmpty) {
   return (
     <div className="flex flex-col items-center px-4 py-7 text-center">
-      <span className="mb-2.5 grid size-8 place-items-center rounded-md border border-border bg-surface text-faint">
-        <Icon name={icon} size={15} />
+      <span className="mb-3 grid size-8 place-items-center rounded-md border border-border bg-bg text-muted">
+        <Icon name={icon} size={16} />
       </span>
       <p className="m-0 text-sm font-medium text-text">{title}</p>
       {description && <p className="m-0 mt-0.5 max-w-64 text-xs text-muted">{description}</p>}
@@ -149,19 +149,20 @@ export function WidgetMessage({ icon = 'inbox', title, description, action }: Wi
 export function WidgetRow({ to, onClick, href, icon, leading, title, description, meta, className }: { to?: string; onClick?: () => void; href?: string; icon?: string; leading?: ReactNode; title: ReactNode; description?: ReactNode; meta?: ReactNode; className?: string }) {
   const body = (
     <>
-      {leading ?? (icon && <Icon name={icon} size={15} className="shrink-0 text-faint" />)}
+      {leading ?? (icon && <Icon name={icon} size={16} className="shrink-0 text-muted" />)}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-text">{title}</span>
+        <span className="block truncate font-medium text-ink">{title}</span>
         {description && <span className="block truncate text-xs text-muted">{description}</span>}
       </span>
       {meta !== undefined && meta !== null && <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-faint">{meta}</span>}
     </>
   )
-  const cls = cn('-mx-2 flex items-center gap-3 rounded-sm px-2 text-left text-sm no-underline', description ? 'min-h-11 py-1.5' : 'h-9', (to || onClick || href) && 'transition-colors duration-120 hover:bg-hover', className)
+  // Rows reach to 4px from the tile's edge, so the hover lies inside it.
+  const cls = cn('-mx-3 flex items-center gap-3 rounded-md px-3 text-left text-sm no-underline', description ? 'min-h-11 py-1.5' : 'h-9', (to || onClick || href) && 'transition-colors duration-120 hover:bg-hover', className)
 
   if (to) return <Link to={to} className={cls}>{body}</Link>
   if (href) return <a href={href} target="_blank" rel="noreferrer" className={cls}>{body}</a>
-  if (onClick) return <button type="button" onClick={onClick} className={cn(cls, 'w-[calc(100%+1rem)]')}>{body}</button>
+  if (onClick) return <button type="button" onClick={onClick} className={cn(cls, 'w-[calc(100%+1.5rem)]')}>{body}</button>
   return <div className={cls}>{body}</div>
 }
 
@@ -179,7 +180,7 @@ export function Stat({ label, value, delta, good = 'up', trend, size = 'md', cla
     <div className={cn('min-w-0', className)}>
       <p className="m-0 truncate text-xs text-muted">{label}</p>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className={cn('font-semibold text-ink', size === 'lg' ? 'text-3xl tracking-[-0.025em]' : size === 'md' ? 'text-2xl tracking-[-0.02em]' : 'text-lg tracking-[-0.01em]')}>{value}</span>
+        <span className={cn('font-semibold tabular-nums text-ink', size === 'lg' ? 'text-3xl' : size === 'md' ? 'text-2xl' : 'text-lg')}>{value}</span>
         {delta !== undefined && delta !== null && <Delta value={delta} good={good} />}
       </div>
       {trend && trend.length > 1 && <Sparkline values={trend} label={typeof label === 'string' ? t('Trend for {label}', { label }) : t('Trend')} className="mt-2 h-8 w-full" />}
@@ -231,7 +232,7 @@ export function Meter({ value, tone = 'ink', className, label }: { value: number
   const fill = { ink: 'bg-ink', success: 'bg-success', warning: 'bg-warning', danger: 'bg-danger', muted: 'bg-border-strong' }[tone]
   const pct = Math.max(0, Math.min(1, value)) * 100
   return (
-    <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label={label} className={cn('h-1.5 overflow-hidden rounded-full bg-sunken', className)}>
+    <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label={label} className={cn('h-1.5 overflow-hidden rounded-full bg-active', className)}>
       <div className={cn('h-full rounded-full transition-[width] duration-300 ease-out', fill)} style={{ width: `${pct}%` }} />
     </div>
   )
@@ -241,7 +242,7 @@ export function Meter({ value, tone = 'ink', className, label }: { value: number
 export function BarRow({ label, value, share, icon, to, href }: { label: ReactNode; value: ReactNode; share: number; icon?: ReactNode; to?: string; href?: string }) {
   const body = (
     <>
-      <span aria-hidden="true" className="absolute inset-y-0.5 left-0 rounded-xs bg-sunken transition-[width] duration-300 ease-out" style={{ width: `${Math.max(0.5, Math.min(1, share) * 100)}%` }} />
+      <span aria-hidden="true" className="absolute inset-y-0.5 left-0 rounded-xs bg-active transition-[width,background-color] duration-300 ease-out" style={{ width: `${Math.max(0.5, Math.min(1, share) * 100)}%` }} />
       <span className="relative flex min-w-0 flex-1 items-center gap-2 pl-2">
         {icon}
         <span className="truncate text-text">{label}</span>
@@ -250,7 +251,7 @@ export function BarRow({ label, value, share, icon, to, href }: { label: ReactNo
     </>
   )
   const cls = 'relative flex h-8 items-center gap-3 text-sm no-underline'
-  if (to) return <Link to={to} className={cn(cls, 'hover:[&>span:first-child]:bg-active')}>{body}</Link>
-  if (href) return <a href={href} target="_blank" rel="noreferrer" className={cn(cls, 'hover:[&>span:first-child]:bg-active')}>{body}</a>
+  if (to) return <Link to={to} className={cn(cls, 'hover:[&>span:first-child]:bg-[color-mix(in_srgb,var(--cms-ink)_11%,transparent)]')}>{body}</Link>
+  if (href) return <a href={href} target="_blank" rel="noreferrer" className={cn(cls, 'hover:[&>span:first-child]:bg-[color-mix(in_srgb,var(--cms-ink)_11%,transparent)]')}>{body}</a>
   return <div className={cls}>{body}</div>
 }

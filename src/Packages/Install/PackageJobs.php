@@ -510,8 +510,8 @@ class PackageJobs
             'no_zip' => __('This host has no ZipArchive. Download the package, unpack it and upload its folder to plugins/ by FTP.'),
             'no_curl' => __('This host has no curl. Download the package and upload it here by hand.'),
             'no_rename' => __('This host disables rename(). Upload the package folder to plugins/ by FTP.'),
-            'not_writable' => __("Can't write to plugins/. Download the package and upload its folder by FTP."),
-            'opcache' => __('This host caches PHP without noticing changed files, and :brand cannot clear that cache. Upload the files, then restart PHP in your host\'s panel.'),
+            'not_writable' => __("Can’t write to plugins/. Download the package and upload its folder by FTP."),
+            'opcache' => __('This host caches PHP without noticing changed files, and :brand cannot clear that cache. Upload the files, then restart PHP in your host’s panel.'),
             default => $problem,
         };
     }

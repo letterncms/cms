@@ -36,11 +36,11 @@ export function UpdateRunner() {
     : state.yanked ? t('This version was withdrawn: {reason}', { reason: state.yanked })
     : state.supportEnded ? t('This major version stopped getting security fixes in {date}.', { date: state.supportEnded })
     : state.advisories?.length ? t('A security advisory covers: {list}.', { list: state.advisories.join(', ') })
-    : state.stuck?.length ? t('A security fix for {list} needs a licence or a connection to the store.', { list: state.stuck.join(', ') })
+    : state.stuck?.length ? t('A security fix for {list} needs a license or a connection to the store.', { list: state.stuck.join(', ') })
     : state.security ? t('A security update is ready: {version}.', { version: state.security })
     : null
 
   if (!message) return null
 
-  return <Banner action={{ to: '/modules?tab=updates', label: t('See Updates') }}>{message}</Banner>
+  return <Banner action={{ to: '/plugins?tab=updates', label: t('View Updates') }}>{message}</Banner>
 }

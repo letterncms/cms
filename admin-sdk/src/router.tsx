@@ -31,7 +31,52 @@ function update(action: Snapshot['action']) {
   listeners.forEach((l) => l())
 }
 
-window.addEventListener('popstate', () => update('pop'))
+/**
+ * Each entry the admin adds to the history knows its place (`cmsIndex`), so going
+ * back or forward past unsaved changes can be undone by as many steps as it took.
+ */
+let index = typeof window.history.state?.cmsIndex === 'number' ? window.history.state.cmsIndex : 0
+const entry = (at: number) => ({ ...(window.history.state ?? {}), cmsIndex: at })
+if (window.history.state?.cmsIndex !== index) window.history.replaceState(entry(index), '')
+
+function pushEntry(url: string) {
+  window.history.pushState({ cmsIndex: ++index }, '', url)
+}
+
+function replaceEntry(url: string) {
+  window.history.replaceState({ cmsIndex: index }, '', url)
+}
+
+/** Back or forward the admin itself is doing, which isn't a navigation of its own. */
+let undoing: 'stay' | 'leave' | null = null
+
+window.addEventListener('popstate', (event) => {
+  const to = typeof event.state?.cmsIndex === 'number' ? (event.state.cmsIndex as number) : null
+  const steps = to === null ? null : index - to
+  if (to !== null) index = to
+  if (undoing) {
+    const leaving = undoing === 'leave'
+    undoing = null
+    if (leaving) update('pop')
+    return
+  }
+  const message = asking ? null : blockMessage()
+  if (!message && !asking) return update('pop')
+  // The screen with the changes is still on view: put its entry back, then ask (once).
+  if (steps) {
+    undoing = 'stay'
+    window.history.go(steps)
+  } else {
+    pushEntry(boot.base + (snapshot.path === '/' ? '' : snapshot.path) + snapshot.search)
+  }
+  if (!message) return
+  void ask(message).then((leave) => {
+    if (!leave) return
+    undoing = 'leave'
+    if (steps) window.history.go(-steps)
+    else window.history.back()
+  })
+})
 
 const subscribe = (l: Listener) => {
   listeners.add(l)
@@ -48,29 +93,68 @@ const ScreenContext = createContext<Location | null>(null)
 /** Register a guard (e.g. unsaved changes). Return a message to block navigation. */
 export function blockNavigation(check: () => string | null): () => void {
   blockers.push(check)
+  if (blockers.length === 1) window.addEventListener('beforeunload', beforeUnload)
   return () => {
     blockers = blockers.filter((b) => b !== check)
+    if (blockers.length === 0) window.removeEventListener('beforeunload', beforeUnload)
   }
 }
 
-function blocked(): boolean {
+function blockMessage(): string | null {
   for (const check of blockers) {
     const message = check()
-    if (message && !window.confirm(message)) return true
+    if (message) return message
   }
-  return false
+  return null
+}
+
+/** Closing the tab, reloading or leaving the admin with changes unsaved: the browser asks, in its own words. */
+function beforeUnload(event: BeforeUnloadEvent) {
+  if (left || !blockMessage()) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+let confirmer: (message: string) => Promise<boolean> = (message) => Promise.resolve(window.confirm(message))
+let asking = false
+/** Someone just chose to leave their changes: the browser needn't ask again. */
+let left = false
+
+/** For admin themes: how to ask whether to leave unsaved changes behind (the admin's own dialog). Resolve true to leave. */
+export function confirmLeaving(handler: (message: string) => Promise<boolean>) {
+  confirmer = handler
+}
+
+async function ask(message: string): Promise<boolean> {
+  asking = true
+  try {
+    return await confirmer(message)
+  } finally {
+    asking = false
+  }
 }
 
 /** `overlay`: to or from a route drawn over the screen on view. Nothing is being left, so nothing needs to ask. */
 export function navigate(to: string, options: { replace?: boolean; overlay?: boolean } = {}) {
+  if (asking) return
+  const message = options.overlay ? null : blockMessage()
+  if (!message) return go(to, options)
+  void ask(message).then((leave) => {
+    if (!leave) return
+    left = true
+    go(to, options)
+    setTimeout(() => { left = false }, 1000)
+  })
+}
+
+function go(to: string, options: { replace?: boolean }) {
   if (/^https?:\/\//.test(to)) {
     window.location.href = to
     return
   }
-  if (!options.overlay && blocked()) return
   const url = boot.base + (to === '/' ? '' : to)
-  if (options.replace) window.history.replaceState(null, '', url)
-  else window.history.pushState(null, '', url)
+  if (options.replace) replaceEntry(url)
+  else pushEntry(url)
   update(options.replace ? 'replace' : 'push')
 }
 
@@ -159,7 +243,7 @@ export function setQuery(values: Record<string, string | number | null | undefin
   }
   const qs = params.toString()
   const url = window.location.pathname + (qs ? `?${qs}` : '')
-  replace ? window.history.replaceState(null, '', url) : window.history.pushState(null, '', url)
+  replace ? replaceEntry(url) : pushEntry(url)
   update(replace ? 'replace' : 'push')
 }
 

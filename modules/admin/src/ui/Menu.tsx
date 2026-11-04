@@ -51,33 +51,30 @@ export function ContextMenu({ children, items, className }: { children: ReactEle
   )
 }
 
-const popupClass = 'cms-pop max-h-[var(--available-height)] min-w-44 overflow-y-auto overscroll-contain p-1 outline-none'
+const popupClass = 'cms-pop max-h-[min(60vh,var(--available-height))] min-w-[200px] max-w-[var(--available-width)] overflow-y-auto overscroll-contain p-1 outline-none'
 
 function Items({ items, parts }: { items: (MenuItemDef | false | null | undefined)[]; parts: typeof Base | typeof BaseContext }) {
   return items.filter(Boolean).map((item, i) => {
     const it = item as MenuItemDef
-    if (it.separator) return <parts.Separator key={i} className="my-1 h-px bg-border" />
-    if (it.heading) return <div key={i} className="cms-caps px-2 pb-1 pt-2">{it.label}</div>
+    if (it.separator) return <parts.Separator key={i} className="-mx-1 my-1 h-px bg-border" />
+    if (it.heading) return <div key={i} className="cms-label flex h-6 items-center px-2 [&:not(:first-child)]:mt-1">{it.label}</div>
     return (
       <parts.Item
         key={i}
         disabled={it.disabled}
         onClick={it.onSelect}
-        className={cn(
-          'flex select-none items-center gap-2 rounded-xs px-2 text-sm outline-none data-[highlighted]:bg-hover data-[disabled]:opacity-40',
-          it.description ? 'min-h-7 py-1.5' : 'h-7',
-          it.danger ? 'text-danger' : 'text-text',
-        )}
+        data-danger={it.danger || undefined}
+        className={cn('cms-menu-item', it.description && 'py-1.5')}
       >
-        {it.icon && <Icon name={it.icon} size={14} className={it.danger ? '' : 'text-muted'} />}
+        {it.icon && <Icon name={it.icon} size={16} />}
         {it.description ? (
           <span className="min-w-0 flex-1">
             <span className="block truncate">{it.label}</span>
             <span className="block truncate text-xs text-faint">{it.description}</span>
           </span>
-        ) : <span className="flex-1">{it.label}</span>}
-        {it.checked && <Icon name="check" size={14} />}
-        {it.shortcut && <Kbd keys={it.shortcut} />}
+        ) : <span className="min-w-0 flex-1 truncate">{it.label}</span>}
+        {it.checked && <Icon name="check" size={16} className="shrink-0 text-ink" />}
+        {it.shortcut && <Kbd keys={it.shortcut} bare className="ml-2" />}
       </parts.Item>
     )
   })
@@ -86,8 +83,8 @@ function Items({ items, parts }: { items: (MenuItemDef | false | null | undefine
 /** A generic menu panel item for custom popovers. */
 export function MenuButton({ icon, label, onClick, active, hint, className }: { icon?: string; label: ReactNode; onClick?: () => void; active?: boolean; hint?: ReactNode; className?: string }) {
   return (
-    <button type="button" onClick={onClick} className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-sm outline-none hover:bg-hover focus-visible:bg-hover', active && 'bg-active', className)}>
-      {icon && <Icon name={icon} size={14} className="text-muted" />}
+    <button type="button" onClick={onClick} className={cn('cms-menu-item w-full', active && 'bg-active', className)}>
+      {icon && <Icon name={icon} size={16} />}
       <span className="flex-1 truncate">{label}</span>
       {hint && <span className="text-xs text-faint">{hint}</span>}
     </button>

@@ -1,5 +1,5 @@
-import { invalidate, run, t, useAbility } from '@letterncms/sdk'
-import { Badge, Button, confirm, EmptyState, Icon, List, Row, Section, Skeleton, Switch, toast } from '@letterncms/ui'
+import { invalidate, run, t, timeAgo, useAbility } from '@letterncms/sdk'
+import { Badge, Button, confirm, EmptyState, Icon, List, Row, Section, Skeleton, Switch, longDate, toast } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 import { driveJob, driveTick, type Job } from './installing'
 
@@ -40,14 +40,17 @@ const STATE_TEXT = (state: string) =>
 
 const MANAGED_TEXT = (reason: string) =>
   ({
-    composer: t('This site is managed with Composer. Update it with composer update.'),
-    git: t('This site is managed with Composer. Update it with composer update.'),
-    file_mods: t('This site does not change its own files. Update it through your deploy.'),
+    composer: t('Managed with Composer: run composer update.'),
+    git: t('Managed with Composer: run composer update.'),
+    file_mods: t('Updated through your deploy.'),
   })[reason] ?? reason
 
 /** One click, always: the steps below run beside the live site, and whatever goes wrong puts it back. */
 export function UpdatesPanel() {
   const updates = useAbility<Updates>('packages/updates')
+  // Plugins by their names, as everywhere else, not their package handles.
+  const installed = useAbility<{ items: { name: string; label: string }[] }>('packages/list', { type: 'all' })
+  const labels = Object.fromEntries((installed.data?.items ?? []).map((p) => [p.name, p.label]))
   const [progress, setProgress] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const data = updates.data
@@ -131,18 +134,21 @@ export function UpdatesPanel() {
     <div>
       <Section
         title={t('{brand} {version}', { version: core.current })}
-        description={core.check.checked_at ? t('Checked {date}', { date: new Date(core.check.checked_at * 1000).toLocaleString() }) : t('Not checked yet')}
-        actions={<Button size="sm" loading={busy === 'check'} disabled={busy !== null} onClick={() => void check()}>{t('Check Now')}</Button>}
+        actions={<>
+          {/* When it last looked, beside the way to look again. */}
+          <span className="text-xs text-faint">{core.check.checked_at ? <time dateTime={new Date(core.check.checked_at * 1000).toISOString()} title={longDate(new Date(core.check.checked_at * 1000).toISOString())}>{t('Checked {date}', { date: timeAgo(new Date(core.check.checked_at * 1000).toISOString()) })}</time> : t('Not checked yet')}</span>
+          <Button size="sm" loading={busy === 'check'} disabled={busy !== null} onClick={() => void check()}>{t('Check Now')}</Button>
+        </>}
       >
         {core.managed ? (
           <Note icon="info">{MANAGED_TEXT(core.managed)}</Note>
         ) : core.trust === 'dev_trust' ? (
-          <Note icon="info">{t('This build carries development keys, which only count on local and test sites. Updates start once it ships with production keys.')}</Note>
+          <Note icon="info">{t('This build has development keys, so updates are off.')}</Note>
         ) : null}
-        {status.state === 'rolled_back' && <Note icon="warning">{t('The update to {version} failed its own checks, so this site went back. Your content is safe. {error}', { version: status.target ?? '', error: status.error ?? '' })}</Note>}
-        {status.state === 'failed' && <Note icon="warning">{t('The last update stopped before anything changed. {error}', { error: status.error ?? '' })}</Note>}
+        {status.state === 'rolled_back' && <Note icon="warning">{t('The update to {version} failed and was undone. {error}', { version: status.target ?? '', error: status.error ?? '' })}</Note>}
+        {status.state === 'failed' && <Note icon="warning">{t('The last update stopped. Nothing changed. {error}', { error: status.error ?? '' })}</Note>}
         {core.yanked && <Note icon="warning">{t('This version was withdrawn: {reason}', { reason: core.yanked })}</Note>}
-        {core.support_ended && <Note icon="warning">{t('This major version stopped getting security fixes in {date}. Plan the move to a newer one.', { date: core.support_ended.until })}</Note>}
+        {core.support_ended && <Note icon="warning">{t('Security fixes for this version ended in {date}.', { date: core.support_ended.until })}</Note>}
         {core.check.error && !core.trust && <Note icon="info">{t('The last check failed: {error}', { error: core.check.error })}</Note>}
         {progress && <p role="status" className="mt-3 flex items-center gap-2 text-sm text-text"><Icon name="spinner" size={16} className="animate-spin" />{progress}</p>}
 
@@ -152,11 +158,11 @@ export function UpdatesPanel() {
               <Row key={r.version}>
                 <span className="font-medium">{r.version}</span>
                 {r.security && <Badge tone="warning">{t('Security')}</Badge>}
-                {r.major && <Badge tone="neutral">{t('New major')}</Badge>}
+                {r.major && <Badge tone="neutral">{t('New Major Version')}</Badge>}
                 <span className="min-w-0 flex-1 truncate text-xs text-muted">
                   {r.host_problems.length ? t('Needs {what} on this host', { what: r.host_problems.join(', ') }) : r.incompatible.length ? t('Not for: {list}', { list: r.incompatible.join(', ') }) : ''}
                 </span>
-                {r.notes_url && <a href={r.notes_url} target="_blank" rel="noreferrer" className="text-xs text-muted underline">{t('What changed')}</a>}
+                {r.notes_url && <a href={r.notes_url} target="_blank" rel="noreferrer" className="text-xs text-muted underline">{t('What Changed')}</a>}
                 <Button size="sm" variant="primary" loading={busy === 'core'} disabled={busy !== null || r.host_problems.length > 0 || core.freshness === 'expired' || core.freshness === 'clock'} onClick={() => void updateCore(r)}>{t('Update')}</Button>
               </Row>
             ))}
@@ -177,25 +183,25 @@ export function UpdatesPanel() {
                   toast.error(e)
                 }
               }
-            }}>{t('Go back')}</button>
+            }}>{t('Go Back')}</button>
           </p>
         )}
 
         {!core.managed && (
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-text">
-            <Switch checked={core.auto} size="sm" label={t('Install security updates by themselves')} onChange={(on) => void run('packages/update-auto', { on }).then(reload)} />
+            <Switch checked={core.auto} size="sm" label={t('Install Security Updates Automatically')} onChange={(on) => void run('packages/update-auto', { on }).then(reload)} />
             {core.auto && release?.security && <Button size="sm" variant="ghost" onClick={async () => { await run('packages/update-postpone', { days: 7 }); toast.success(t('Postponed for 7 days')); await reload() }}>{t('Postpone 7 Days')}</Button>}
           </div>
         )}
       </Section>
 
       {data.advisories.length > 0 && (
-        <Section title={t('Security advisories')}>
+        <Section title={t('Security Advisories')}>
           <List>
             {data.advisories.map((a) => (
               <Row key={a.package}>
                 <Icon name="warning" size={16} className="shrink-0 text-warning" />
-                <span className="min-w-0 flex-1 truncate">{t('{name} {version} has a known problem. It keeps running until you decide.', { name: a.label, version: a.version })}</span>
+                <span className="min-w-0 flex-1 truncate">{t('{name} {version} has a known security problem.', { name: a.label, version: a.version })}</span>
                 {a.advisory && <a href={a.advisory} target="_blank" rel="noreferrer" className="text-xs underline">{t('Read More')}</a>}
               </Row>
             ))}
@@ -205,7 +211,7 @@ export function UpdatesPanel() {
 
       <Section title={t('Plugins')}>
         {data.packages.length === 0 ? (
-          <EmptyState icon="check" title={t('Everything from the store is up to date')} className="py-8" />
+          <EmptyState icon="check" title={t('All plugins are up to date')} className="py-8" />
         ) : (
           <List>
             {data.packages.map((p) => (
@@ -215,13 +221,13 @@ export function UpdatesPanel() {
                 {p.security && <Badge tone="warning">{t('Security')}</Badge>}
                 <span className="min-w-0 flex-1 truncate text-xs text-muted">{p.message}</span>
                 {p.allowed ? <Button size="sm" variant="primary" loading={busy === p.package} disabled={busy !== null} onClick={() => void updatePackage(p.package, p.store, p.version)}>{t('Update')}</Button>
-                  : p.buy_url ? <Button size="sm" onClick={() => window.open(p.buy_url!, '_blank', 'noopener')}>{t('Extend Licence')}</Button> : null}
+                  : p.buy_url ? <Button size="sm" onClick={() => window.open(p.buy_url!, '_blank', 'noopener')}>{t('Extend License')}</Button> : null}
                 {p.backup && <Button size="sm" variant="ghost" disabled={busy !== null} onClick={async () => { await run('packages/rollback', { package: p.package }); await reload() }}>{t('Go Back')}</Button>}
               </Row>
             ))}
           </List>
         )}
-        {data.unverified.length > 0 && <p className="mt-3 text-xs text-muted">{t('Not from a store, so no update offers: {list}', { list: data.unverified.join(', ') })}</p>}
+        {data.unverified.length > 0 && <p className="mt-3 text-xs text-muted">{t('Not from a store: {list}', { list: data.unverified.map((n) => labels[n] ?? n).join(', ') })}</p>}
       </Section>
     </div>
   )

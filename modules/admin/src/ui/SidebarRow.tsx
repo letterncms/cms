@@ -9,7 +9,7 @@ import { ContextMenu, type MenuItemDef } from './Menu'
 import { Tooltip } from './Tooltip'
 
 export interface SidebarRowAction extends MenuItemDef {
-  /** Also a button on the row, shown on hover and focus (it needs an `icon`). */
+  /** Also a button on the row, shown on hover (it needs an `icon`); it is no tab stop, the context menu has it. */
   quick?: boolean
 }
 
@@ -67,11 +67,11 @@ export function SidebarRow({ label, icon, to, onClick, active, title, badge, sho
     <div className={cn('cms-sidebar-row', active && 'cms-sidebar-row-active')}>
       {link}
       {quick.length > 0 && (
-        // The group names the row, so "Unpin" is heard as Unpin Pages.
-        <div className="cms-sidebar-row-actions" role="group" aria-label={label}>
+        // A shortcut for the pointer: the keyboard and screen readers reach the same actions in the row's context menu, so tabbing goes from row to row.
+        <div className="cms-sidebar-row-actions" aria-hidden="true">
           {quick.map((action) => (
             <Tooltip key={action.label} content={action.label}>
-              <IconButton icon={action.icon!} size="xs" label={action.label} title={undefined} disabled={action.disabled} onClick={action.onSelect} />
+              <IconButton icon={action.icon!} size="xs" label={action.label} title={undefined} tabIndex={-1} disabled={action.disabled} onClick={action.onSelect} />
             </Tooltip>
           ))}
         </div>

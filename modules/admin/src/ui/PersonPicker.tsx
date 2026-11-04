@@ -18,10 +18,13 @@ interface PersonPickerProps {
   label?: string
   id?: string
   'aria-describedby'?: string
+  /** `sm`: the inspector's control height (28px); `md` (default): a form's (32px). */
+  size?: 'sm' | 'md'
 }
 
 /** Public summaries only. The single-person control keeps the same geometry in every state. */
-export function PersonPicker({ value, onChange, max = Infinity, disabled, label = t('Select people'), id, 'aria-describedby': describedBy }: PersonPickerProps) {
+export function PersonPicker({ value, onChange, max = Infinity, disabled, label = t('Select people'), id, 'aria-describedby': describedBy, size = 'md' }: PersonPickerProps) {
+  const small = size === 'sm'
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -48,16 +51,16 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
       aria-label={label}
       aria-describedby={describedBy}
       disabled={disabled}
-      className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-sm px-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-default"
+      className={cn('flex h-full min-w-0 flex-1 items-center gap-2 pr-1 text-left text-sm outline-none disabled:cursor-default', small ? 'rounded-sm pl-2' : 'rounded-md pl-2.5')}
     >
-      {current && <Avatar name={current.name} initials={current.initials} src={current.avatar} size={18} />}
-      <span className={cn('min-w-0 flex-1 truncate', !value.length && 'text-faint')}>
+      {current && <Avatar name={current.name} initials={current.initials} src={current.avatar} size={small ? 16 : 18} />}
+      <span className={cn('min-w-0 flex-1 truncate', !value.length && 'text-ghost')}>
         {value.length ? personName(value[0]) : disabled ? '—' : label}
       </span>
-      {!disabled && <Icon name="chevrons-up-down" size={13} className="shrink-0 text-faint" />}
+      {!disabled && <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />}
     </button>
   ) : (
-    <Button id={id} aria-describedby={describedBy} size="sm" disabled={disabled || value.length >= max}>
+    <Button id={id} aria-describedby={describedBy} size={small ? 'xs' : 'sm'} disabled={disabled || value.length >= max}>
       {value.length === 0 ? disabled ? '—' : label : t('Add people')}
     </Button>
   )
@@ -67,14 +70,15 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
       {!single && value.map((personId) => {
         const person = people.get(personId)
         return (
-          <div key={personId} className="flex h-8 min-w-0 items-center gap-2 rounded-sm border border-border px-2">
+          <div key={personId} className={cn('flex min-w-0 items-center gap-2 border border-border pl-2 pr-1', small ? 'h-7 rounded-sm' : 'h-8 rounded-md')}>
             {person && <Avatar name={person.name} initials={person.initials} src={person.avatar} size={18} />}
             <span className="min-w-0 flex-1 truncate text-sm">{personName(personId)}</span>
-            {!disabled && <IconButton size="xs" icon="close" label={t('Remove person')} onClick={() => onChange(value.filter((selectedId) => selectedId !== personId))} />}
+            {!disabled && <IconButton size="xs" icon="close" label={t('Remove Person')} onClick={() => onChange(value.filter((selectedId) => selectedId !== personId))} />}
           </div>
         )
       })}
-      <div data-open={open || undefined} className={cn(single && 'flex h-8 min-w-0 items-center rounded-sm border border-border-strong bg-bg pr-1 focus-within:border-focus data-[open]:border-focus', disabled && single && 'bg-sunken text-muted')}>
+      {/* One field: the trigger and its clear button share the border, and it lights up as a field does while the list is open. */}
+      <div data-focus={(single && open) || undefined} data-disabled={(single && disabled) || undefined} className={cn(single && 'cms-input flex min-w-0 items-center pr-1', single && (small ? 'h-7 rounded-sm' : 'h-8 rounded-md'), single && 'focus-within:border-focus focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_18%,transparent)]')}>
         <Popover open={open && !disabled} onOpenChange={(next) => !disabled && setOpen(next)} className="w-72 max-w-[calc(100vw-24px)]" trigger={trigger}>
           <Input size="sm" icon="search" aria-label={t('Search people')} placeholder={t('Search people…')} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} />
           <div className="mt-1 max-h-64 overflow-y-auto">
@@ -83,7 +87,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
             ) : (
               <>
                 {(options.data?.items ?? []).map((person) => (
-                  <button type="button" key={person.id} aria-label={person.name} disabled={value.includes(person.id)} onClick={() => choose(person)} className="flex min-h-9 w-full items-center gap-2 rounded-xs px-2 py-1 text-left text-sm hover:bg-hover disabled:opacity-40">
+                  <button type="button" key={person.id} aria-label={person.name} disabled={value.includes(person.id)} onClick={() => choose(person)} className="cms-menu-item min-h-9 w-full py-1">
                     <Avatar name={person.name} initials={person.initials} src={person.avatar} size={20} />
                     <span className="min-w-0 flex-1 truncate">{person.name}</span>
                   </button>
@@ -100,7 +104,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
             )}
           </div>
         </Popover>
-        {single && value.length > 0 && !disabled && <IconButton size="xs" icon="close" label={t('Remove person')} onClick={() => onChange([])} />}
+        {single && value.length > 0 && !disabled && <IconButton size="xs" icon="close" label={t('Remove Person')} onClick={() => onChange([])} />}
       </div>
       {failed && value.length > 0 && <Button size="xs" onClick={() => selected.filter((query) => query.isError).forEach((query) => void query.refetch())}>{t('Retry')}</Button>}
     </div>

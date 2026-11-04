@@ -21,7 +21,8 @@ const manifest = {
   packages: { active: ['cms/admin', 'fixture'], pending: {} },
   modules: [{ id: 'fixture', url: '/fixture.js' }],
   styles: [], settings: [], collections: [], globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [], config: {}, nav,
-  sidebar: ['main', 'content', 'design', 'system'].map((id) => ({ id, label: id === 'main' ? '' : id[0].toUpperCase() + id.slice(1), items: nav.filter((n) => n.section === id).map((n) => n.id) })),
+  sidebar: { sections: ['main', 'content', 'design'].map((id) => ({ id, label: id === 'main' ? '' : id[0].toUpperCase() + id.slice(1), items: nav.filter((n) => n.section === id).map((n) => n.id) })), hidden: [], personal: false },
+  settingsNav: [{ id: 'system', label: 'System', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }],
 }
 const boot = { base: '/admin', api: '/api/admin', version: 'test', theme: { name: 'cms/admin', version: 'test' }, site: manifest.site, locale: 'en', messages: {}, manifest }
 const imports = Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path]))
@@ -48,6 +49,9 @@ const ask = () => items().find(el => el.dataset.value.startsWith('ask '))
 const selected = () => document.querySelector('[cmdk-item][aria-selected="true"]')
 const set = value => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input(),value); input().dispatchEvent(new Event('input',{bubbles:true})) }
 const key = value => input().dispatchEvent(new KeyboardEvent('keydown',{key:value,bubbles:true}))
+const content = () => items().filter(el => el.dataset.value.startsWith('entry '))
+// Content lands below the commands; the arrow keys reach it.
+const choose = async (title) => { for (let i = 0; i < 20 && !selected()?.textContent.startsWith(title); i++) { key('ArrowDown'); await sleep(25) } assert(selected()?.textContent.startsWith(title), title + ' could not be selected') }
 const open = async () => { document.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:true,bubbles:true})); await wait(input,'palette did not open'); await wait(selected,'palette opened without a selection') }
 try {
  await wait(()=>document.querySelector('main h1'),'shell did not load'); await open()
@@ -56,11 +60,11 @@ try {
  await test('Every keystroke selects the first local result',async()=>{
    for (const q of ['h','ho','hom','home']) { set(q); await sleep(35); assert(selected()===items()[0], 'not first for '+q) }
  })
- await test('Content arriving above a matching command selects the first content result',async()=>{
-   await wait(()=>items()[0]?.textContent.includes('Home page'),'home results missing')
-   assert(items().some(el=>el.textContent.includes('Customize Home Screen')),'mixed command fixture missing')
-   assert(selected()===items()[0],'local command stayed selected above content')
-   assert(items().slice(0,3).map(el=>el.textContent.trim()).join('|')==='Home pagepages|Headerpages|Footerpages','server result order changed')
+ await test('Content arrives below the matching commands without moving the selection',async()=>{
+   await wait(()=>content()[0]?.textContent.includes('Home page'),'home results missing')
+   assert(items()[0].textContent.includes('Customize Home Screen'),'the matching command is not first')
+   assert(selected()===items()[0],'arriving content moved the selection')
+   assert(content().slice(0,3).map(el=>el.textContent.trim()).join('|')==='Home pagepages|Headerpages|Footerpages','server result order changed')
  })
  await test('Arrow navigation remains selected after results settle',async()=>{
    key('ArrowDown');await sleep(40);assert(selected()===items()[1],'ArrowDown failed')
@@ -70,16 +74,16 @@ try {
  await test('Editing and backspacing reset selection to the first row',async()=>{
    key('ArrowDown');await sleep(30)
    for (const q of ['hom','ho','home']) { set(q);await sleep(35);assert(selected()===items()[0],'old selection remained for '+q) }
-   await wait(()=>items()[0]?.textContent.includes('Home page'),'cached results missing')
-   assert(selected()===items()[0],'cached content not selected')
+   await wait(()=>content()[0]?.textContent.includes('Home page'),'cached results missing')
+   assert(selected()===items()[0],'cached content moved the selection')
  })
  await test('Late search responses cannot replace the current first result',async()=>{
    set('slowhome');await sleep(220);set('home');await sleep(1100)
-   assert(input().value==='home'&&items()[0]?.textContent.includes('Home page'),'late results replaced home')
+   assert(input().value==='home'&&content()[0]?.textContent.includes('Home page')&&!items().some(el=>el.textContent.includes('Late result')),'late results replaced home')
    assert(selected()===items()[0],'late response moved selection')
  })
- await test('Enter opens the selected first content result',async()=>{
-   key('Enter');await wait(()=>location.pathname==='/admin/content/pages/home','Enter did not open Home')
+ await test('Enter opens the content result the arrows select',async()=>{
+   await choose('Home page');key('Enter');await wait(()=>location.pathname==='/admin/content/pages/home','Enter did not open Home')
    await open();assert(selected()===items()[0],'reopening lost first selection')
  })
  await test('Matching commands are selected without Ask',async()=>{set('analytics');await sleep(700);assert(!ask(),'Ask visible with match');assert(selected()?.textContent.includes('Analytics'),'analytics not selected')})
@@ -88,13 +92,12 @@ try {
  await test('Delayed content matches suppress Ask and receive keyboard selection',async()=>{set('quuxcontent');await sleep(250);assert(!ask(),'Ask visible while content pending');await wait(()=>items().some(el=>el.textContent.includes('Quux result')),'content missing');assert(!ask(),'Ask visible with content');await wait(()=>selected()?.textContent.includes('Quux result'),'content not selected')})
  await test('Changing query clears stale content before offering Ask',async()=>{set('zzfreshzz');await sleep(50);assert(!items().some(el=>el.textContent.includes('Quux result')),'stale content visible');await wait(ask,'fallback missing for new query');await wait(()=>selected()===ask(),'new fallback not selected')})
  await test('Whitespace clears fallback and content',async()=>{set('   ');await sleep(250);assert(!ask(),'Ask visible for whitespace');assert(!items().some(el=>el.textContent.includes('Quux result')),'stale content visible for whitespace')})
- await test('Exact titles outrank newer body matches and select Agents',async()=>{
+ await test('Exact titles outrank newer body matches, below the matching command',async()=>{
    set('agents');await wait(()=>items().some(el=>el.dataset.value==='entry Agents agents agents'),'Agents result missing')
-   const content = items().filter(el=>el.dataset.value.startsWith('entry '))
-   assert(content.slice(0,4).map(el=>el.textContent.trim()).join('|')==='Agentspages|Overviewpages|Agents guidepages|Using agentspages','title and slug relevance order is wrong')
-   assert(items()[0]===content[0]&&selected()===items()[0],'Agents was not the first selected result')
+   assert(content().slice(0,4).map(el=>el.textContent.trim()).join('|')==='Agentspages|Overviewpages|Agents guidepages|Using agentspages','title and slug relevance order is wrong')
+   assert(items()[0].textContent.includes('Connect an AI Agent')&&selected()===items()[0],'the matching command is not first')
    assert(!ask(),'Ask appeared beside a matching page')
-   key('Enter');await wait(()=>location.pathname==='/admin/content/pages/agents','Enter did not open Agents');await open()
+   await choose('Agents');key('Enter');await wait(()=>location.pathname==='/admin/content/pages/agents','Enter did not open Agents');await open()
  })
  await test('Exact commands outrank body-only content matches',async()=>{
    set('analytics');await sleep(700)
@@ -116,7 +119,8 @@ const server = createServer(async (req, res) => {
       const result = await body(req)
       result.passed.forEach(name => console.log('PASS', name))
       if (result.error) console.error('FAIL', result.error)
-      return json(res, 200, {})
+      json(res, 200, {})
+      return finish(result.error)
     }
     if (url.pathname === '/fixture.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); return res.end(fixture) }
     if (url.pathname === '/api/admin/abilities/content/search') {
@@ -138,4 +142,8 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(html(url.searchParams.has('test')))
   } catch (error) { console.error(error); json(res, 500, { error: { message: error.message } }) }
 })
+// Exits with the page's verdict, unless --preview keeps it up to look at.
+const keepAlive = process.argv.includes('--preview')
+const finish = (error) => { if (keepAlive) return; clearTimeout(timeout); setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = error ? 1 : 0 }, 100) }
+const timeout = keepAlive ? null : setTimeout(() => { console.error('Command palette browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
 server.listen(0, '127.0.0.1', () => console.log(`Palette checks: http://localhost:${server.address().port}/admin?test=1\nPreview: http://localhost:${server.address().port}/admin`))

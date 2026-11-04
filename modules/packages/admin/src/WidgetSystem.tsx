@@ -22,7 +22,6 @@ export default function WidgetSystem() {
   const all = list.data?.items ?? []
 
   const extensions = all
-  const modules = extensions.filter((p) => p.core && p.active).length
   const plugins = extensions.filter((p) => !p.core && p.active).length
   const pending = all.filter((p) => p.active && p.installedVersion !== p.version)
   const troubled = extensions.filter((p) => p.enabled && p.problem)
@@ -43,12 +42,11 @@ export default function WidgetSystem() {
   }
 
   return (
-    <Widget action={{ label: t('Modules'), to: '/modules' }} query={list}>
+    <Widget action={{ label: t('Plugins'), to: '/plugins' }} query={list}>
       {list.data && (
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Stat size="sm" label={brand().name} value={manifest.cms.version} />
-            <Stat size="sm" label={t('Modules')} value={modules} />
             <Stat size="sm" label={t('Plugins')} value={plugins} />
           </div>
 
@@ -65,10 +63,10 @@ export default function WidgetSystem() {
               value={troubled.length || broken.length ? plural(troubled.length + broken.length, '{count} needs attention', '{count} need attention') : t('All working')}
             />
             {troubled.slice(0, 3).map((p) => (
-              <WidgetRow key={p.name} to="/modules" leading={<Icon name="warning" size={14} className="shrink-0 text-warning" />} title={p.label} description={p.problem} />
+              <WidgetRow key={p.name} to="/plugins" leading={<Icon name="warning" size={14} className="shrink-0 text-warning" />} title={p.label} description={p.problem} />
             ))}
             {broken.slice(0, Math.max(0, 3 - troubled.length)).map((e) => (
-              <WidgetRow key={e} to="/modules" leading={<Icon name="warning" size={14} className="shrink-0 text-warning" />} title={t('A package could not be read')} description={e} />
+              <WidgetRow key={e} to="/plugins" leading={<Icon name="warning" size={14} className="shrink-0 text-warning" />} title={t('A package could not be read')} description={e} />
             ))}
           </div>
         </div>

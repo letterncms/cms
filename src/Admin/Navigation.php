@@ -10,17 +10,29 @@ use Cms\Users\User;
  * The admin sidebar. It has two states, both drawn from registered sections
  * and items (one per collection and one per settings page too):
  *
- * - the main sidebar: items people pin, in the order they put them, section
- *   by section; everything else is under More. Everyone pins their own (the
- *   `sidebar` user preference); until they do, they see the site's default
- *   (the `sidebar` value of the `admin` settings), and without one the
- *   registrations — items registered as `pinned`.
+ * - the main sidebar: every item, section by section, in the order people
+ *   put them; what someone unpins waits under More. Everyone arranges their
+ *   own (the `sidebar` user preference); until they do, they see the site's
+ *   default (the `sidebar` value of the `admin` settings), and without one the
+ *   registrations, where nothing is put away unless registered `pinned: false`.
  * - the settings sidebar: the items of `settings` sections, in registered
- *   order. Settings are a place to visit, not something to arrange.
+ *   order. Settings are a place to visit, not something to arrange. The core's
+ *   modules name their section; whatever a plugin puts there (its settings
+ *   page, or a screen that lives in settings) is listed under Plugins, by the
+ *   plugin's name, so no plugin makes a group of its own or slips into the core's.
+ *   Unnamed sections are one group at the top, which a group of one joins.
+ *
+ * An item with a `home` (another item's id) belongs to that screen, like a
+ * plugin's settings page to the plugin's screen (its Settings tab), and is there
+ * when its home is. It is never in the main sidebar; in the settings sidebar it
+ * is listed like any plugin's page, unless its screen is there already.
  */
 final class Navigation extends Arranged
 {
     public const string PREFERENCE = 'sidebar';
+
+    /** The settings sidebar's section for what plugins put there. */
+    public const string PLUGINS = 'plugins';
 
     public function key(): string
     {
@@ -35,8 +47,14 @@ final class Navigation extends Arranged
      */
     public function items(): array
     {
-        $defaults = ['icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => false, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null];
+        $defaults = ['icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => true, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null, 'home' => null];
         $items = array_map(static fn (array $item) => [...$defaults, ...$item], (array) $this->cms->hooks()->filter('admin.nav', $this->cms->admin()->navItems()));
+
+        foreach ($items as $id => $item) {
+            if ($this->inSettings($item) && $this->fromPlugin($item)) {
+                $items[$id]['section'] = self::PLUGINS;
+            }
+        }
 
         uasort($items, static fn ($a, $b) => [$a['order'], $a['label']] <=> [$b['order'], $b['label']]);
 
@@ -46,7 +64,7 @@ final class Navigation extends Arranged
     public function arrangement(): Arrangement
     {
         $sections = array_filter($this->cms->admin()->sections(), static fn ($s) => ! $s['settings']);
-        $items = array_filter($this->items(), fn ($i) => ! $this->inSettings($i));
+        $items = array_filter($this->items(), fn ($i) => $i['home'] === null && ! $this->inSettings($i));
 
         return new Arrangement($sections, array_map(static fn ($i) => [...$i, 'group' => $i['section'], 'hidden' => ! $i['pinned']], $items), fixed: true);
     }
@@ -94,14 +112,28 @@ final class Navigation extends Arranged
             $ids = [];
 
             foreach ($items as $id => $item) {
-                if ($item['section'] === $section['id'] && $may($item)) {
+                if ($item['section'] === $section['id'] && $this->listedInSettings($item, $items) && $may($item)) {
                     $nav[$id] = $this->present($item);
                     $ids[] = $id;
                 }
             }
 
+            // Plugins are found by their name.
+            if ($section['id'] === self::PLUGINS) {
+                usort($ids, static fn ($a, $b) => strnatcasecmp($items[$a]['label'], $items[$b]['label']));
+            }
+
             if ($ids !== []) {
                 $settings[] = ['id' => $section['id'], 'label' => $section['label'], 'items' => $ids];
+            }
+        }
+
+        $settings = $this->ungroupSingles($settings);
+
+        // What belongs to a screen comes with it.
+        foreach ($items as $id => $item) {
+            if ($item['home'] !== null && isset($nav[$item['home']]) && $may($item)) {
+                $nav[$id] = $this->present($item);
             }
         }
 
@@ -119,7 +151,7 @@ final class Navigation extends Arranged
     /** Items of the main sidebar, for the arrangement ability. */
     public function catalog(): array
     {
-        return array_map(fn ($item) => $this->present($item, badge: false), array_filter($this->items(), fn ($i) => ! $this->inSettings($i)));
+        return array_map(fn ($item) => $this->present($item, badge: false), array_filter($this->items(), fn ($i) => $i['home'] === null && ! $this->inSettings($i)));
     }
 
     /** @return list<array{id: string, label: string, order: int, settings: bool}> */
@@ -131,9 +163,58 @@ final class Navigation extends Arranged
         return array_values($sections);
     }
 
+    /**
+     * A settings page kept as its screen's Settings tab is a row of the settings sidebar too, when that
+     * screen is in the main sidebar (Analytics, Forms): every plugin's settings are found under Plugins.
+     * When the screen is itself in settings (the Audit Log), its row is the way there.
+     */
+    private function listedInSettings(array $item, array $items): bool
+    {
+        if ($item['home'] === null) {
+            return true;
+        }
+
+        $home = $items[$item['home']] ?? null;
+
+        return $home !== null && ! $this->inSettings($home);
+    }
+
+    /**
+     * The sections without a name come first, as one group, and a group of one is no group:
+     * its row joins them.
+     *
+     * @param  list<array{id: string, label: string, items: list<string>}>  $sections
+     * @return list<array{id: string, label: string, items: list<string>}>
+     */
+    private function ungroupSingles(array $sections): array
+    {
+        $grouped = [];
+        $top = null;
+
+        foreach ($sections as $section) {
+            if ($section['label'] !== '' && count($section['items']) > 1) {
+                $grouped[] = $section;
+            } elseif ($top === null) {
+                $top = [...$section, 'label' => ''];
+            } else {
+                $top['items'] = [...$top['items'], ...$section['items']];
+            }
+        }
+
+        return $top === null ? $grouped : [$top, ...$grouped];
+    }
+
     private function inSettings(array $item): bool
     {
         return $this->cms->admin()->sections()[$item['section']]['settings'] ?? false;
+    }
+
+    /** Added by a plugin, not by the kernel or one of its modules. */
+    private function fromPlugin(array $item): bool
+    {
+        $package = $item['package'] ?? null;
+
+        return is_string($package) && $this->cms->packages()->repository()->find($package)?->core === false;
     }
 
     private function present(array $item, bool $badge = true): array
@@ -148,6 +229,6 @@ final class Navigation extends Arranged
             }
         }
 
-        return ['id' => $item['id'], 'label' => $item['label'], 'path' => $item['path'], 'icon' => $item['icon'], 'section' => $item['section'], 'shortcut' => $item['shortcut'], 'badge' => $value];
+        return ['id' => $item['id'], 'label' => $item['label'], 'path' => $item['path'], 'icon' => $item['icon'], 'section' => $item['section'], 'shortcut' => $item['shortcut'], 'badge' => $value, 'home' => $item['home'], 'package' => $item['package'] ?? null];
     }
 }

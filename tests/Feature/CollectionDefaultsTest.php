@@ -135,4 +135,22 @@ final class CollectionDefaultsTest extends TestCase
         $updated = $this->cms()->abilities()->execute('collections/save', [...$input, 'createOnly' => false, 'definition' => [...$input['definition'], 'title' => 'Cases']], $ctx);
         $this->assertSame('Cases', $updated['title']);
     }
+
+    public function test_the_list_marks_collections_the_cms_and_plugins_bring_so_the_collections_screen_can_leave_them_out(): void
+    {
+        $this->cms()->hooks()->addFilter('collections', static fn (array $collections) => [
+            ...$collections,
+            'testimonials' => Collection::fromArray('testimonials', ['title' => 'Testimonials', 'driver' => 'files', 'system' => true]),
+        ]);
+        $this->cms()->collections()->flush();
+        $ctx = AbilityContext::forUser($this->admin(), 'admin');
+        $this->cms()->abilities()->execute('collections/save', ['handle' => 'services', 'definition' => ['title' => 'Services']], $ctx);
+
+        $system = array_column($this->cms()->abilities()->execute('collections/list', [], $ctx), 'system', 'handle');
+        $this->assertFalse($system['services']);
+        $this->assertTrue($system['testimonials']);
+        // collections/get still describes them: their entries need the schema, and the screen reads `system` from it.
+        $this->assertTrue($this->cms()->abilities()->execute('collections/get', ['handle' => 'testimonials'], $ctx)['system']);
+        $this->assertFalse($this->cms()->abilities()->execute('collections/get', ['handle' => 'testimonials'], $ctx)['deletable']);
+    }
 }

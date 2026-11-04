@@ -14,7 +14,7 @@ final class LicenseRefreshCommand extends Command
     /** A site with no paid plugin never sees these in the list. They still run: a key can go in before its plugin. */
     protected $hidden = true;
 
-    protected $description = 'Ask the licence server for a current token now';
+    protected $description = 'Ask the license server for a current token now';
 
     public function handle(LicenseService $service): int
     {

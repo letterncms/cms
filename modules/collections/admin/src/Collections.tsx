@@ -11,6 +11,8 @@ interface CollectionRow extends RecordTimestamps {
   driver: 'database' | 'files'
   structure: 'list' | 'tree' | 'dated'
   route: string | null
+  /** Brought by the CMS or a plugin (templates, components, account pages): not part of the site's content model. */
+  system: boolean
   count: number
 }
 
@@ -24,6 +26,8 @@ const structures = (): Record<Structure, string> => ({
 
 export default function Collections({ creating = false }: { creating?: boolean; params?: Record<string, string> }) {
   const list = useAbility<CollectionRow[]>('collections/list')
+  // System collections are edited as entries where they live (Design, Account…); their schema comes with the code.
+  const own = list.data?.filter((c) => !c.system)
   const [open, setOpen] = useState(creating)
   const openChange = (o: boolean) => {
     setOpen(o)
@@ -35,9 +39,10 @@ export default function Collections({ creating = false }: { creating?: boolean; 
     <Page
       width="wide"
       crumbs={[{ label: t('Collections'), icon: 'collection' }]}
-      actions={<Button variant="primary" icon="plus" onClick={() => setOpen(true)}>{t('New Collection')}</Button>}
+      // With none yet, the empty state holds the one way to make the first.
+      actions={own?.length !== 0 && <Button variant="primary" icon="plus" onClick={() => setOpen(true)}>{t('New Collection')}</Button>}
     >
-      <DataView id="collections" label={t('Collections')} items={list.data ?? []} rowKey={(c) => c.handle} rowHref={(c) => `/collections/${c.handle}`}
+      <DataView id="collections" label={t('Collections')} items={own ?? []} rowKey={(c) => c.handle} rowHref={(c) => `/collections/${c.handle}`}
         loading={list.isLoading} error={list.isError} onRetry={() => void list.refetch()} searchText={(c) => `${c.title} ${c.handle} ${c.route ?? ''}`}
         columns={[
           { id: 'title', label: t('Name'), value: (c) => c.title, render: (c) => <span className="flex items-center gap-2"><Icon name={c.icon} size={16} className="shrink-0 text-muted" /><span className="truncate">{c.title}</span></span> },

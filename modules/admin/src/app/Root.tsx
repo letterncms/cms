@@ -96,11 +96,13 @@ export function Root() {
 function Booting() {
   const signedIn = !!boot.manifest
   const sidebar = localStorage.getItem('cms.sidebar') !== 'collapsed' && window.matchMedia('(min-width: 768px)').matches
+  // The desk and its sheet, where the admin is about to draw them.
+  const desk = signedIn && window.matchMedia('(min-width: 768px)').matches
   return (
-    <div className="flex h-screen bg-bg">
-      {signedIn && sidebar && <div className="w-[248px] shrink-0 border-r border-border bg-surface" />}
-      <div className="cms-appear-late grid flex-1 place-items-center text-faint">
-        <Spinner size={18} />
+    <div className={desk ? 'flex h-screen bg-surface' : 'flex h-screen bg-bg'}>
+      {signedIn && sidebar && <div className="w-[248px] shrink-0" />}
+      <div className={desk ? `my-2 mr-2 grid flex-1 place-items-center rounded-lg bg-bg text-faint shadow-sheet ${sidebar ? '' : 'ml-2'}` : 'grid flex-1 place-items-center text-faint'}>
+        <Spinner size={18} className="cms-appear-late" />
       </div>
     </div>
   )

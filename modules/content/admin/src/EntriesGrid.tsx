@@ -35,6 +35,9 @@ function Card({ item, handle, ctx, media, excerpt, columns, visible, icon, selec
   const src = ids[0] ? mediaSource(ids[0], ctx) : null
   const text = !media && excerpt && !columns.some((column) => column.field?.handle === excerpt.handle) ? plain(item.values?.[excerpt.handle]) : ''
   const details = columns.filter((column) => column.id === 'translations' || (column.field && column.field.handle !== media?.handle))
+  // One date on a card, saying which: when it was published, else when it last changed.
+  const date = visible.has('published') && item.publishedAt ? { label: t('Published'), iso: item.publishedAt, relative: false }
+    : visible.has('updated') && item.updatedAt ? { label: t('Updated'), iso: item.updatedAt, relative: true } : null
 
   return <DataCard recordId={item.id} title={item.title || <span className="text-faint">{t('Untitled')}</span>} href={`/content/${handle}/${item.id}`} icon={icon}
     selected={selected} active={active} onSelect={(on) => onSelect([item.id], on)} actions={<EntryActions item={item} handle={handle} />}
@@ -43,8 +46,7 @@ function Card({ item, handle, ctx, media, excerpt, columns, visible, icon, selec
       {visible.has('status') && <StatusDot status={item.displayStatus} />}
       <span className="ml-auto flex min-w-0 items-center gap-1.5">
         {visible.has('author') && (item.author ? <Avatar name={item.author.name} initials={item.author.initials} src={item.author.avatar} size={16} /> : <span className="text-2xs text-faint">{item.authorId ? t('Unavailable person') : t('Unassigned')}</span>)}
-        {visible.has('published') && <span aria-label={t('Published')}><DateCell iso={item.publishedAt} /></span>}
-        {visible.has('updated') && <span aria-label={t('Updated')}><DateCell iso={item.updatedAt} relative /></span>}
+        {date && <span className="flex min-w-0 items-center gap-1 text-xs text-faint">{date.label}<DateCell iso={date.iso} relative={date.relative} /></span>}
       </span>
     </>}
   >

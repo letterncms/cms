@@ -31,7 +31,7 @@ final class Roles
             'permissions' => ['admin.access', 'entries.*.view', 'entries.*.create', 'entries.*.edit', 'media.view', 'media.upload', 'comments.view', 'comments.create', 'assistant.use'],
         ],
         'member' => [
-            'label' => 'Member',
+            'label' => 'Visitor',
             'description' => 'A site visitor with an account. No access to the admin.',
             'permissions' => [],
         ],

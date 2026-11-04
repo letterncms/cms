@@ -1,4 +1,4 @@
-import { abilityKey, boot, can, getManifest, loadManifest, navigate, queryClient, run, setManifest, t, type Manifest, type NavItem, type Sidebar } from '@letterncms/sdk'
+import { boot, can, getManifest, loadManifest, navigate, run, setManifest, t, type Arrangement, type Manifest, type Sidebar } from '@letterncms/sdk'
 import { confirm, toast } from '../ui'
 
 /**
@@ -9,18 +9,67 @@ import { confirm, toast } from '../ui'
 
 let saving: Promise<unknown> = Promise.resolve()
 
-function stored(layout: Sidebar) {
+/** A layout as it is saved: the sections' ids and items, and what is under More. */
+interface Stored {
+  sections: { id: string; items: string[] }[]
+  hidden: string[]
+}
+
+function stored(layout: Stored): Stored {
   return { sections: layout.sections.map(({ id, items }) => ({ id, items })), hidden: layout.hidden }
 }
 
+/**
+ * The site's default, as this person sees it (null while unknown): taken from the
+ * sidebar while they follow it, or asked for by those who may change it. A sidebar
+ * arranged back into it is the default again, not a copy of it.
+ */
+let siteDefault: Stored | null = null
+
+/** The same items in the same places, among those this person may open. */
+function sameLayout(a: Stored, b: Stored) {
+  const nav = new Set(getManifest().nav.map((n) => n.id))
+  const shape = (l: Stored) => JSON.stringify({
+    sections: l.sections.map((s) => ({ id: s.id, items: s.items.filter((id) => nav.has(id)) })).filter((s) => s.items.length > 0),
+    hidden: l.hidden.filter((id) => nav.has(id)).sort(),
+  })
+  return shape(a) === shape(b)
+}
+
+function noteDefault() {
+  const current = getManifest().sidebar
+  if (!current.personal) siteDefault = stored(current)
+}
+
 export function arrange(next: Sidebar) {
-  setManifest({ ...getManifest(), sidebar: { ...next, personal: true } })
+  noteDefault()
+  const personal = !siteDefault || !sameLayout(next, siteDefault)
+  setManifest({ ...getManifest(), sidebar: { ...next, personal } })
   saving = saving
-    .then(() => run('account/update', { preferences: { sidebar: stored(next) } }))
+    .then(() => run('account/update', { preferences: { sidebar: personal ? stored(next) : null } }))
     .catch((e) => {
       toast.error(e)
       return loadManifest()
     })
+}
+
+/**
+ * For those who may change it: the site's default, and whether it was changed from
+ * what modules and plugins set up (`customized`).
+ */
+export async function loadSiteDefault(): Promise<{ customized: boolean } | null> {
+  if (!can('settings.manage')) return null
+  try {
+    const result = await run<{ layout: Arrangement; customized: boolean }>('admin/arrangement', { of: 'sidebar' })
+    const fetched = stored(result.layout)
+    siteDefault = fetched
+    // Arranged back into the default before it was known: it is the default again.
+    const current = getManifest().sidebar
+    if (current.personal && sameLayout(current, fetched)) arrange(current)
+    return { customized: result.customized }
+  } catch {
+    return null
+  }
 }
 
 export function isPinned(layout: Sidebar, id: string) {
@@ -63,6 +112,7 @@ export async function resetToDefault() {
   try {
     await run('account/update', { preferences: { sidebar: null } })
     await loadManifest()
+    noteDefault()
     toast.success(t('Sidebar reset to the default'))
   } catch (e) {
     toast.error(e)
@@ -77,33 +127,36 @@ export async function saveForEveryone() {
   try {
     await run('settings/update', { namespace: 'admin', values: { sidebar: stored(getManifest().sidebar) } })
     await run('account/update', { preferences: { sidebar: null } })
-    // Settings → Admin shows the default too.
-    void queryClient.invalidateQueries({ queryKey: abilityKey('settings/get', { namespace: 'admin' }) })
+    siteDefault = null
     await loadManifest()
+    noteDefault()
     toast.success(t('Saved as the default sidebar'))
   } catch (e) {
     toast.error(e)
   }
 }
 
-/** The item a path belongs to: the one with the longest matching path (`/` only for itself). */
-export function itemAt(nav: NavItem[], path: string): NavItem | undefined {
-  let found: NavItem | undefined
-  for (const item of nav) {
-    const match = item.path === '/' ? path === '/' : path === item.path || path.startsWith(`${item.path}/`)
-    if (match && (!found || item.path.length > found.path.length)) found = item
+/** Everyone's default back to what modules and plugins set up. */
+export async function resetEveryonesDefault() {
+  if (!can('settings.manage')) return false
+  const ok = await confirm({ title: t('Reset everyone’s sidebar?'), description: t('People who pinned their own sidebar keep theirs.'), confirm: t('Reset') })
+  if (!ok) return false
+  await saving
+  try {
+    await run('settings/update', { namespace: 'admin', values: { sidebar: null } })
+    siteDefault = null
+    await loadManifest()
+    noteDefault()
+    toast.success(t('Default sidebar reset'))
+    return true
+  } catch (e) {
+    toast.error(e)
+    return false
   }
-  return found
 }
 
-export function settingsIds(manifest: Manifest): Set<string> {
-  return new Set(manifest.settingsNav.flatMap((s) => s.items))
-}
-
-export function inSettings(manifest: Manifest, path: string): boolean {
-  const item = itemAt(manifest.nav, path)
-  return !!item && settingsIds(manifest).has(item.id)
-}
+export { cameFrom, homedSettings, inSettings, itemAt, noteLocation, noteSide, placeAt, settingsIds, settingsRowAt, wayBack } from '../ui/place'
+import { inSettings, placeAt } from '../ui/place'
 
 /**
  * Opens settings, and in settings goes back. Not ⌘, — browsers keep that one for their
@@ -111,27 +164,33 @@ export function inSettings(manifest: Manifest, path: string): boolean {
  */
 export const SETTINGS_SHORTCUT = 'mod+shift+,'
 
-/** Where Back and the settings shortcut return to: the last screen of each side, for this visit. */
-const last = { app: '/', settings: '' }
+/** Where the way out of settings and the settings shortcut return to: the last screen of the main sidebar, for this visit. */
+const last = { app: '' }
 
+/** Only a place is remembered: a path on its way somewhere else (/settings opening its first page) is never a way back. */
 export function remember(manifest: Manifest, path: string, search: string) {
-  if (inSettings(manifest, path)) last.settings = path + search
-  else last.app = path + search
+  if (!placeAt(manifest.nav, path)) return
+  if (!inSettings(manifest, path)) last.app = path + search
 }
 
+/** The last screen of the main sidebar, or its first item before there was one. */
 export function lastApp(): string {
-  return last.app
+  if (last.app) return last.app
+  const manifest = getManifest()
+  const first = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => !manifest.sidebar.hidden.includes(id))
+  return manifest.nav.find((n) => n.id === first)?.path ?? '/'
 }
 
+/** Settings open on General, as /settings does (or the first page this person may see, their account). */
 export function openSettings() {
   const manifest = getManifest()
-  const first = manifest.nav.find((n) => n.id === manifest.settingsNav[0]?.items[0])?.path
-  const to = last.settings || first
+  const general = manifest.nav.find((n) => n.id === 'settings.site')
+  const to = general?.path ?? manifest.nav.find((n) => n.id === manifest.settingsNav[0]?.items[0])?.path
   if (to) navigate(to)
 }
 
 export function leaveSettings() {
-  navigate(last.app)
+  navigate(lastApp())
 }
 
 /** The settings shortcut: opens settings, and in settings goes back. */

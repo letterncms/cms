@@ -31,7 +31,7 @@ final class ModulesTest extends TestCase
         $this->assertSame('letterncms/content', $cms->abilities()->get('entries/list')->package);
         $this->assertSame('letterncms/users', $cms->abilities()->get('users/create')->package);
         $this->assertNull($cms->abilities()->get('users/list')->package, 'Pickers need users/list; it stays the kernel’s.');
-        $this->assertSame('letterncms/content', $cms->settingsRegistry()->schemas()['content']['package']);
+        $this->assertSame('letterncms/users', $cms->settingsRegistry()->schemas()['roles']['package']);
     }
 
     public function test_switching_modules_off_is_written_as_disabled_and_required_ones_stay(): void
@@ -66,18 +66,17 @@ final class ModulesTest extends TestCase
 
         $this->assertCount(11, $list['items']);
         $this->assertTrue($content['required']);
-        $this->assertSame(['content'], $content['settings']);
+        $this->assertSame(['roles'], array_column($list['items'], null, 'name')['letterncms/users']['settings']);
         $this->assertArrayNotHasKey('metrics', $content);
     }
 
     public function test_audit_records_changes_through_its_module(): void
     {
         $ctx = AbilityContext::forUser($this->admin(), 'admin');
-        $this->cms()->abilities()->execute('settings/update', ['namespace' => 'content', 'values' => ['per_page' => 25]], $ctx);
+        $this->cms()->abilities()->execute('settings/update', ['namespace' => 'site', 'values' => ['description' => 'Changed']], $ctx);
 
         $this->assertSame(['settings/update'], \DB::table('audit_log')->pluck('ability')->all());
-        $this->assertSame(25, $this->cms()->settings('content', 'per_page'));
-        $this->assertSame(25, $this->app->make(Manifest::class)->build($this->admin())['config']['content']['perPage']);
+        $this->assertSame('Changed', $this->cms()->settings('site', 'description'));
     }
 
     public function test_the_admin_settings_hold_what_modules_add(): void
@@ -85,5 +84,8 @@ final class ModulesTest extends TestCase
         $settings = array_column($this->cms()->abilities()->execute('settings/get', ['namespace' => 'admin'], AbilityContext::forUser($this->admin(), 'admin'))['fields'], null, 'handle');
 
         $this->assertArrayHasKey('dashboard', $settings, 'letterncms/dashboard adds its arrangement to the admin settings.');
+        // How the editor works is the same everywhere: no settings.
+        $this->assertArrayNotHasKey('per_page', $settings);
+        $this->assertSame(['perPage' => 50, 'autosave' => 1200], $this->app->make(Manifest::class)->build($this->admin())['config']['content']);
     }
 }

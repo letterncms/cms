@@ -14,7 +14,7 @@ final class LicenseStatusCommand extends Command
     /** A site with no paid plugin never sees these in the list. They still run: a key can go in before its plugin. */
     protected $hidden = true;
 
-    protected $description = 'Show this site\'s licence state';
+    protected $description = 'Show this site\'s license state';
 
     public function handle(LicenseService $service): int
     {

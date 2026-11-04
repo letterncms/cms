@@ -18,13 +18,13 @@ final class UsersModule extends Plugin
     {
         $cms = $this->cms();
 
-        $cms->permissions()->register('users.manage', 'Manage users and roles', 'Users');
+        $cms->permissions()->register('users.manage', 'Manage Users and Roles', 'Users');
         $this->app->make(UserAbilities::class)->register($cms->abilities());
 
         $cms->settingsRegistry()->register(Roles::SETTINGS, 'Roles', [
             // The page is titled Roles already; the editor needs no label of its own.
             ['handle' => 'roles', 'type' => 'json', 'label' => '', 'component' => 'roles', 'default' => Roles::DEFAULTS],
-        ], icon: 'shield', permission: 'users.manage', order: 25, section: 'system');
+        ], icon: 'shield', permission: 'users.manage', order: 20, section: 'people');
 
         $cms->hooks()->addFilter('settings.saving', static fn (array $values, string $namespace) => $namespace === Roles::SETTINGS
             ? [...$values, 'roles' => Roles::normalize((array) ($values['roles'] ?? []))]
@@ -32,7 +32,7 @@ final class UsersModule extends Plugin
 
         $this->gating();
 
-        $cms->admin()->nav('users', ['label' => 'Users', 'path' => '/users', 'icon' => 'users', 'section' => 'system', 'order' => 20, 'permission' => 'users.view']);
+        $cms->admin()->nav('users', ['label' => 'Users', 'path' => '/users', 'icon' => 'users', 'section' => 'people', 'order' => 10, 'permission' => 'users.view']);
         $cms->admin()->command('new-user', ['label' => 'Invite User', 'icon' => 'user-plus', 'path' => '/users/new', 'permission' => 'users.manage']);
         $cms->admin()->widget('users-team', ['label' => 'Team', 'description' => 'The people on this site, their roles and when they were last here.', 'icon' => 'users', 'column' => 'side', 'order' => 50, 'permission' => 'users.view']);
         $this->adminModule();
@@ -87,7 +87,7 @@ final class UsersModule extends Plugin
     {
         return [
             ['handle' => 'mode', 'type' => 'select', 'label' => 'Access', 'default' => 'inherit', 'options' => ['inherit' => 'Same as Above', 'public' => 'Everyone', 'teaser' => 'Everyone Reads the Start', 'locked' => 'Only People with Access']],
-            ['handle' => 'access', 'type' => 'tags', 'label' => 'Who Has Access', 'instructions' => 'Role names or access names, like magazine. Empty: anyone with an account.'],
+            ['handle' => 'access', 'type' => 'tags', 'label' => 'Who Has Access', 'instructions' => 'Roles or access names. Empty: any account.'],
             ['handle' => 'teaser_words', 'type' => 'number', 'label' => 'Words in the Teaser', 'min' => 0, 'placeholder' => '120'],
             ['handle' => 'teaser_fields', 'type' => 'tags', 'label' => 'Fields in the Teaser', 'instructions' => 'Field names everyone may see, like excerpt.'],
         ];

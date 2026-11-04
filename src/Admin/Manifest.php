@@ -20,8 +20,8 @@ final class Manifest
         $settings = [];
 
         foreach ($this->cms->settingsRegistry()->schemas() as $namespace => $schema) {
-            if ($user->hasPermission($schema['permission'])) {
-                $settings[] = ['namespace' => $namespace, 'label' => $schema['label'], 'icon' => $schema['icon'], 'description' => $schema['description'], 'package' => $schema['package']];
+            if (($schema['page'] ?? true) && $user->hasPermission($schema['permission'])) {
+                $settings[] = ['namespace' => $namespace, 'label' => $schema['label'], 'icon' => $schema['icon'], 'description' => $schema['description'], 'package' => $schema['package'], 'home' => $schema['home'] ?? null];
             }
         }
 

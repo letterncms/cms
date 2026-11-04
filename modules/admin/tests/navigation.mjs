@@ -13,6 +13,8 @@ const grants = { create: true, edit: true, publish: true, delete: true }
 const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel: 'New Post', icon: 'article', structure: 'list', driver: 'files', editor: 'document', can: grants, routable: false }
 const entry = { id: 'entry-1', collection: 'posts', locale: 'en', title: 'Original title', slug: 'original', uri: null, status: 'draft', displayStatus: 'draft', data: {}, hasDraft: false, parentId: null, position: 0, originId: null, authorId: null, createdAt: null, updatedAt: null, publishedAt: null }
 const namespaces = ['site', 'mail', 'admin', 'broken']
+const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
+const settingsNav = namespaces.map((namespace) => ({ id: `settings-${namespace}`, label: namespace.toUpperCase(), path: `/settings/${namespace}`, icon: 'settings', section: 'system' }))
 const manifest = {
   cms: { version: 'test', debug: false },
   site: { name: 'Navigation regression test', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
@@ -22,10 +24,12 @@ const manifest = {
   styles: [], settings: namespaces.map((namespace) => ({ namespace, label: namespace.toUpperCase(), icon: 'settings' })),
   collections: [collection], globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [],
   config: { content: { autosave: 0, perPage: 50 } },
-  nav: [{ id: 'settings', label: 'Settings', path: '/settings/site', icon: 'settings', section: 'main' }, { id: 'posts', label: 'Posts', path: '/content/posts', icon: 'article', section: 'main' }],
-  sidebar: [{ id: 'main', label: '', items: ['settings', 'posts'] }],
+  nav: [{ id: 'posts', label: 'Posts', path: '/content/posts', icon: 'article', section: 'main' }, ...settingsNav],
+  sidebar: { sections: [{ id: 'main', label: '', items: ['posts'] }], hidden: [], personal: false },
+  settingsNav: [{ id: 'system', label: 'System', items: settingsNav.map((item) => item.id) }],
+  brand,
 }
-const boot = { base: '/admin', api: '/api/admin', version: 'test', theme: { name: 'cms/admin', version: 'test' }, site: manifest.site, locale: 'en', messages: {}, manifest }
+const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', theme: { name: 'cms/admin', version: 'test' }, site: manifest.site, locale: 'en', messages: {}, manifest }
 const imports = Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path]))
 const requests = []
 let broken = true
@@ -40,12 +44,14 @@ const wait = async (check, message) => {
   while (!check()) { if (Date.now() > end) throw new Error(message); await sleep(10) }
 }
 const test = async (name, fn) => { await fn(); results.push(name); output.textContent = results.map((s) => 'PASS ' + s).join('\\n') }
-const heading = () => document.querySelector('main h1')?.textContent
+// A screen's name is the last crumb of its top bar.
+const titleEl = () => document.querySelector('.cms-topbar [aria-current="page"]')
+const heading = () => titleEl()?.textContent
 const progress = () => document.querySelector('[role="progressbar"]')
 try {
   await wait(() => heading() === 'SITE', 'initial settings did not load')
   await test('Cold settings navigation preserves content until data is ready', async () => {
-    const current = document.querySelector('main h1')
+    const current = titleEl()
     const blanks = []
     const observer = new MutationObserver(() => { if (!heading()) blanks.push(true) })
     observer.observe(document.querySelector('#cms'), { childList: true, subtree: true })
@@ -74,14 +80,10 @@ try {
     await sleep(850)
     assert(heading() === 'ADMIN' && location.pathname === '/admin/settings/admin', 'late response overwrote newer navigation')
   })
-  await test('Admin arrangement fields arrive ready with the settings page', async () => {
-    assert([...document.querySelectorAll('main button')].some((b) => b.textContent === 'New Section'), 'arrangement data was not ready when the settings screen committed')
-    assert(!document.querySelector('main .animate-spin'), 'cached arrangement flashed a spinner')
-  })
   await test('Query changes apply immediately and survive the next pending navigation', async () => {
     setQuery({ tab: 'example' })
     await sleep(40)
-    const current = document.querySelector('main h1')
+    const current = titleEl()
     assert(!progress() && current.textContent === 'ADMIN', 'query change restarted the screen')
     const original = registry.routes.get('/settings/:namespace')
     let release
@@ -102,13 +104,39 @@ try {
     assert(received.tab === 'advanced', 'intent discarded query parameters')
     registry.routes.set('/settings/:namespace', original)
   })
-  await test('Unsaved-change guard runs before starting destination loading', async () => {
-    const confirm = window.confirm
+  await test('Unsaved changes ask in the admin’s own dialog before anything loads, for a link and for Back', async () => {
     const unblock = blockNavigation(() => 'Unsaved test changes')
     const before = location.href
-    window.confirm = () => false
-    try { navigate('/settings/mail'); assert(location.href === before, 'blocked navigation changed location') }
-    finally { window.confirm = confirm; unblock() }
+    const dialog = () => [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].find((d) => d.textContent.includes('Unsaved test changes'))
+    const answer = (label) => [...dialog().querySelectorAll('button')].find((b) => b.textContent === label).click()
+    const native = window.confirm
+    window.confirm = () => { throw new Error('asked with the browser’s dialog') }
+    try {
+      navigate('/settings/mail')
+      assert(location.href === before && !progress(), 'blocked navigation changed location or started loading')
+      await wait(dialog, 'leaving did not ask')
+      answer('Cancel')
+      await wait(() => !dialog(), 'the dialog stayed after Cancel')
+      await sleep(50)
+      assert(location.href === before && heading() === 'SITE', 'Cancel left anyway')
+      history.back()
+      await wait(dialog, 'Back did not ask')
+      await sleep(100)
+      assert(location.href === before && heading() === 'SITE', 'Back left before the answer')
+      answer('Cancel')
+      await wait(() => !dialog(), 'the dialog stayed after Cancel')
+      await sleep(100)
+      assert(location.href === before && heading() === 'SITE', 'Back left after Cancel')
+      history.back()
+      await wait(dialog, 'Back did not ask again')
+      answer('Discard')
+      await wait(() => heading() === 'ADMIN' && !progress(), 'Discard did not go back')
+    } finally {
+      window.confirm = native
+      unblock()
+    }
+    history.forward()
+    await wait(() => heading() === 'SITE' && !progress(), 'forward did not return')
   })
   await test('Back and forward finish on the requested screen', async () => {
     navigate('/settings/admin')
@@ -142,8 +170,10 @@ try {
   })
   await test('Refreshing cached entry data does not remount the working editor', async () => {
     navigate('/content/posts/entry-1')
-    await wait(() => document.querySelector('textarea[aria-label="Title"]'), 'entry editor failed')
-    const title = document.querySelector('textarea[aria-label="Title"]')
+    // The title is the editor's first field, in the document or (with a canvas) its panel.
+    const titleField = () => document.querySelector('textarea[aria-label="Title"], #f-title, [data-field="title"] input')
+    await wait(() => titleField(), 'entry editor failed')
+    const title = titleField()
     queryClient.setQueryData(abilityKey('entries/get', { id: 'entry-1' }), (old) => ({ ...old, title: 'Background refresh' }))
     await sleep(50)
     assert(title.isConnected && title.value === 'Original title', 'cache refresh remounted the editor')
@@ -168,6 +198,7 @@ const server = createServer(async (req, res) => {
       for (const name of result.passed) console.log('PASS', name)
       if (result.error) console.error('FAIL', result.error)
       json(res, 200, {})
+      if (keepAlive) return
       clearTimeout(timeout)
       setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = result.error ? 1 : 0 }, 100)
       return
@@ -179,7 +210,7 @@ const server = createServer(async (req, res) => {
       await new Promise((r) => setTimeout(r, input.namespace === 'mail' ? 700 : 30))
       if (ability === 'settings/get') {
         if (input.namespace === 'broken' && broken) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
-        return json(res, 200, { data: { namespace: input.namespace, label: input.namespace.toUpperCase(), fields: input.namespace === 'admin' ? [{ handle: 'sidebar', type: 'json', component: 'admin-arrangement', label: 'Sidebar' }] : [{ handle: 'name', type: 'text', label: 'Name' }], values: input.namespace === 'admin' ? { sidebar: null } : { name: 'Example' } } })
+        return json(res, 200, { data: { namespace: input.namespace, label: input.namespace.toUpperCase(), fields: [{ handle: 'name', type: 'text', label: 'Name' }], values: { name: 'Example' } } })
       }
       if (ability === 'admin/arrangement') return json(res, 200, { data: { items: [{ id: 'settings', label: 'Settings', icon: 'settings' }], layout: { sections: [{ id: 'main', label: 'Main', items: ['settings'] }], hidden: [] }, fixed: false, customized: false } })
       if (ability === 'collections/get') return json(res, 200, { data: { ...collection, fields: [], resolvedFields: [], schema: {} } })
@@ -199,5 +230,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(html)
   } catch (error) { console.error(error); json(res, 500, { error: { message: error.message } }) }
 })
-const timeout = setTimeout(() => { console.error('Navigation browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
+// --preview keeps the server up after the checks, to look at.
+const keepAlive = process.argv.includes('--preview')
+const timeout = keepAlive ? null : setTimeout(() => { console.error('Navigation browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
 server.listen(0, '127.0.0.1', () => console.log(`Open http://localhost:${server.address().port}/admin/settings/site to run navigation checks.`))

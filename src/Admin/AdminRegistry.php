@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Admin;
 
 use Cms\Support\Brand;
+use Cms\Packages\PackageRepository;
 use Cms\Packages\Scope;
 use Cms\Cms;
 use Cms\Users\User;
@@ -62,16 +63,26 @@ final class AdminRegistry
     }
 
     /**
-     * A screen people open from the sidebar. `pinned` puts it in everyone's
-     * sidebar until they pin their own; every other item waits under More —
-     * keep it for screens people open every week. `visible` decides per user
+     * A screen people open from the sidebar. Every item is in everyone's
+     * sidebar until they arrange their own: More holds only what a person
+     * unpins (or `pinned: false`, for a screen nearly nobody opens). `visible` decides per user
      * beyond the permission (the assistant shows only once it can work).
      *
-     * @param  array{label: string, path: string, icon?: string, section?: string, order?: int, pinned?: bool, shortcut?: ?string, permission?: ?string, visible?: ?callable(User): bool, badge?: ?callable}  $item
+     * `section` is where it is listed: `main`, `content` or `design`
+     * in the sidebar, or a section of the settings sidebar for a screen that is
+     * set up once (a plugin's then lands under Plugins, see Navigation).
+     *
+     * A plugin's main screen is called what the plugin is: leave out `label`
+     * and the item takes the plugin's name (`extra.cms.label`). Its other
+     * screens (the design system's) name themselves.
+     *
+     * @param  array{label?: string, path: string, icon?: string, section?: string, order?: int, pinned?: bool, shortcut?: ?string, permission?: ?string, visible?: ?callable(User): bool, badge?: ?callable}  $item
      */
     public function nav(string $id, array $item): void
     {
-        $this->nav[$id] = ['id' => $id, 'icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => false, 'shortcut' => null, 'permission' => null, 'visible' => null, ...$item];
+        $package = $item['package'] ?? Scope::$current;
+        $label = $item['label'] ?? PackageRepository::labelOf($package) ?? ucfirst($id);
+        $this->nav[$id] = ['id' => $id, 'icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => true, 'shortcut' => null, 'permission' => null, 'visible' => null, ...$item, 'label' => $label, 'package' => $package];
     }
 
     public function removeNav(string $id): void

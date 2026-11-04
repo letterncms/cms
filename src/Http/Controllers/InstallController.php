@@ -137,7 +137,7 @@ final class InstallController
             'finishing' => __('Putting your site together…'),
             'paid' => __('Paid'),
             'composerSite' => __('This site is managed with Composer. Add plugins with: composer require letterncms/site'),
-            'noStore' => __('The store can\'t be reached right now. You can add plugins later, under Modules.'),
+            'noStore' => __('The store can’t be reached right now. You can add them later, under Plugins in the sidebar.'),
         ];
     }
 }

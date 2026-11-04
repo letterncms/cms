@@ -127,7 +127,7 @@ final class StoreClient
             $trust = $store->current();
 
             if (! $trust) {
-                throw new RuntimeException($store->problem() === 'dev_trust' ? __('This build has no production signing keys yet, so it can\'t trust a store.') : __('No trust file counts on this site.'));
+                throw new RuntimeException($store->problem() === 'dev_trust' ? __('This build has no production signing keys yet, so it can’t trust a store.') : __('No trust file counts on this site.'));
             }
 
             $trustUrl = $id === self::DEFAULT ? $trust->endpoint('trust') : (json_decode($this->remote->get(rtrim((string) $this->added()[$id]['url'], '/').'/api/store/v1/index.json', 200_000, 3), true)['trust_url'] ?? null);
@@ -511,7 +511,7 @@ final class StoreClient
                 return ['allowed' => true, 'reason' => $state['reason'], 'headers' => $headers, 'query' => "?site_host={$host}"];
             }
 
-            return [...$buy, 'reason' => 'updates_lapsed', 'message' => __('Updates for this package have lapsed. Extend the licence to get this version.')];
+            return [...$buy, 'reason' => 'updates_lapsed', 'message' => __('Updates for this package have lapsed. Extend the license to get this version.')];
         }
 
         // A security fix goes to anyone whose token ever named it; the store checks that.
@@ -772,18 +772,18 @@ final class StoreClient
         $freshness = $this->freshness($payload);
 
         if ($freshness === 'clock') {
-            throw new RuntimeException(__("This server's clock looks wrong. Installs are paused. The public site is not affected."));
+            throw new RuntimeException(__("This server’s clock looks wrong. Installs are paused. The public site is not affected."));
         }
 
         if ($freshness === 'expired' || $freshness === 'none') {
-            throw new RuntimeException(__("Can't confirm this catalog is current. Refresh it, or upload the package by hand."));
+            throw new RuntimeException(__("Can’t confirm this catalog is current. Refresh it, or upload the package by hand."));
         }
     }
 
     private function requireSameOrigin(array $payload, string $url): string
     {
         if (self::origin($url) !== self::origin((string) ($payload['store'] ?? ''))) {
-            throw new RuntimeException(__('This download is not on the store\'s own address.'));
+            throw new RuntimeException(__('This download is not on the store’s own address.'));
         }
 
         return $url;

@@ -1,9 +1,9 @@
 import { t, type WidgetInfo } from '@letterncms/sdk'
 import { useEffect, useState } from 'react'
-import { Button, Dialog, Fields, Icon, cn } from '@letterncms/ui'
+import { Dialog, Fields, Icon, cn } from '@letterncms/ui'
 
 /**
- * Every widget the user may put on their home screen: what it shows and where it
+ * Every widget the user may put on their Dashboard: what it shows and where it
  * comes from. A click adds it (to the column the gallery was opened for) or takes it off.
  */
 export function Gallery({ open, onOpenChange, widgets, shown, onAdd, onRemove }: { open: boolean; onOpenChange: (open: boolean) => void; widgets: WidgetInfo[]; shown: Set<string>; onAdd: (widget: WidgetInfo) => void; onRemove: (id: string) => void }) {
@@ -23,14 +23,7 @@ export function Gallery({ open, onOpenChange, widgets, shown, onAdd, onRemove }:
       onOpenChange={onOpenChange}
       size="lg"
       title={t('Widgets')}
-      footer={
-        <>
-          <span className="mr-auto text-xs text-muted">{t('{count} on your home screen', { count: shown.size })}</span>
-          <Button variant="primary" onClick={() => onOpenChange(false)}>
-            {t('Done')}
-          </Button>
-        </>
-      }
+      description={t('{count} on your Dashboard', { count: shown.size })}
     >
       <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search Widgets'), placeholder: t('Search widgets…'), icon: 'search', autofocus: true }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} className="mb-4" />
 
@@ -55,7 +48,7 @@ function Grid({ widgets, shown, onAdd, onRemove }: { widgets: WidgetInfo[]; show
             onClick={() => (on ? onRemove(w.id) : onAdd(w))}
             className={cn('group flex items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] duration-120 outline-none focus-visible:ring-2 focus-visible:ring-focus', on ? 'border-border bg-surface' : 'border-border hover:border-border-strong hover:bg-surface')}
           >
-            <span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-bg text-muted">
+            <span className="grid size-9 shrink-0 place-items-center rounded-md bg-sunken text-muted">
               <Icon name={w.icon} size={17} />
             </span>
             <span className="min-w-0 flex-1">

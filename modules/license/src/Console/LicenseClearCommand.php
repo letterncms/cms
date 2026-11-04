@@ -14,7 +14,7 @@ final class LicenseClearCommand extends Command
     /** A site with no paid plugin never sees these in the list. They still run: a key can go in before its plugin. */
     protected $hidden = true;
 
-    protected $description = 'Remove this site\'s licence key. The site keeps working';
+    protected $description = 'Remove this site\'s license key. The site keeps working';
 
     public function handle(LicenseService $service): int
     {
