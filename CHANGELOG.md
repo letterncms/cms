@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.0 (2026-11-04)
+
 ### Added
 
 - The Plugins screen lists what comes with the CMS and can be switched off, under **Built In**, each with its switch.
