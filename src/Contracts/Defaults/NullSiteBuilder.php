@@ -17,6 +17,6 @@ final class NullSiteBuilder implements SiteBuilder
 
     public function status(): array
     {
-        return ['state' => 'unavailable', 'progress' => 0.0, 'message' => __('No site builder plugin is active.'), 'finishedAt' => null];
+        return ['state' => 'unavailable', 'progress' => 0.0, 'message' => __('No site builder is on.'), 'finishedAt' => null];
     }
 }

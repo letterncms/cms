@@ -77,7 +77,7 @@ export interface DesignInfo {
   stylesheet: string
 }
 
-/** The site's design system (empty when the site plugin is off). */
+/** The site's design system (empty while Site is off). */
 export function useTokens() {
   const q = useAbility<DesignInfo>('design/get', {}, { staleTime: 60_000, retry: false })
   return useMemo(() => {

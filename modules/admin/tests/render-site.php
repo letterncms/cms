@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Cms\Abilities\AbilityContext;
 use Cms\Foundation\Bootstrap;
 use Cms\Cms;
-use Cms\Site\Http\SiteController;
+use Cms\Modules\Site\Http\SiteController;
 use Cms\Users\User;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 

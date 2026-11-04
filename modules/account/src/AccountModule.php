@@ -11,7 +11,7 @@ use Cms\Modules\Account\Site\Forms;
 use Cms\Modules\Account\Site\Screens;
 use Cms\Modules\Account\Site\SignedInCookie;
 use Cms\Packages\Plugin;
-use Cms\Site\Rendering\PageContext;
+use Cms\Modules\Site\Rendering\PageContext;
 use Cms\Users\AccountInBrowser;
 use Cms\Users\AccountToken;
 use Cms\Users\Accounts;

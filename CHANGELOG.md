@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking.** Site is part of the CMS: the design system, page templates and components, rendering, previews, the static build, search and the starter kit are a core module instead of a plugin, never installed from the store. It is on unless you switch it off under Plugins → **Built In**, as a headless site may, and keeps Blocks on while it is. A Composer site takes it by dropping `letterncms/site` from its `composer.json` and running `composer update`. The CMS can't be installed next to the Site plugin, so a site that still requires it stays on 0.7 until then.
+- **Breaking.** Site's classes are under `Cms\Modules\Site\` (was `Cms\Site\`), with the provider `Cms\Modules\Site\SiteModule`. Its package name `letterncms/site`, its settings, routes, abilities and permissions stay as they were. A plugin that renders with Site names it under `extra.cms.modules` in `composer.json` (`["letterncms/site"]`) instead of requiring it, and needs the CMS 0.8.
+- **Breaking.** The `render.page` filter is gone: `Cms\Modules\Site\Rendering\PageContext::current()` is the page being rendered, or null when there is none.
+- The installer recommends SEO, Forms and Assistant: the rest comes with the CMS.
+
 ## 0.7.0 (2026-11-04)
 
 ### Added

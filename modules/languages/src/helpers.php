@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Cms\Content\Entries\Entry;
 use Cms\Modules\Languages\Languages;
 use Cms\Modules\Languages\Translations;
+use Cms\Modules\Site\Rendering\PageContext;
 
 if (! function_exists('cms_translations')) {
     /**
@@ -21,10 +22,10 @@ if (! function_exists('cms_translations')) {
             return [];
         }
 
-        // The page being rendered, when a site plugin renders one: {entry, uri, locale}.
-        $page = cms()->hooks()->filter('render.page', null);
-        $entry ??= $page['entry'] ?? null;
-        $current = $entry?->locale ?? $page['locale'] ?? $languages->default();
+        // The page Site is rendering, if any.
+        $page = PageContext::current();
+        $entry ??= $page?->entry;
+        $current = $entry?->locale ?? $page?->locale() ?? $languages->default();
         $versions = $entry ? app(Translations::class)->versions($entry) : [];
         $links = [];
 

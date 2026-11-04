@@ -27,7 +27,7 @@ abstract class TestCase extends BaseTestCase
     }
 
     /** Optional modules that change what a site holds: a test turns them on by naming them in plugins(). */
-    private const array OPT_IN = ['letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp'];
+    private const array OPT_IN = ['letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
 
     /** @return array<string, array> collection handle => definition */
     protected function collections(): array
@@ -56,8 +56,14 @@ abstract class TestCase extends BaseTestCase
         Yaml::write($this->site.'/config/site.yaml', ['name' => 'Test site', 'url' => 'http://localhost', 'locale' => 'en', 'locales' => ['en', 'de']]);
         $modules = array_map(static fn (string $file) => (string) json_decode((string) file_get_contents($file), true)['name'], glob(dirname(__DIR__).'/modules/*/composer.json') ?: []);
         $plugins = getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins';
-        // What the named plugins build on comes on with them.
-        $needed = array_merge($this->plugins(), ...array_map(static fn (string $name) => (array) (json_decode((string) @file_get_contents($plugins.'/'.basename($name).'/composer.json'), true)['extra']['cms']['modules'] ?? []), $this->plugins()));
+        // What the named packages build on comes on with them, and what that builds on (Commerce, Site, Blocks).
+        $needs = static fn (string $name) => (array) (json_decode((string) @file_get_contents((in_array($name, $modules, true) ? dirname(__DIR__).'/modules' : $plugins).'/'.basename($name).'/composer.json'), true)['extra']['cms']['modules'] ?? []);
+        $needed = $this->plugins();
+
+        for ($i = 0; $i < count($needed); $i++) {
+            $needed = array_values(array_unique([...$needed, ...$needs($needed[$i])]));
+        }
+
         $off = array_values(array_diff(self::OPT_IN, $needed));
         Yaml::write($this->site.'/config/plugins.yaml', ['enabled' => array_values(array_diff($this->plugins(), $modules)), ...($off === [] ? [] : ['disabled' => $off])]);
 

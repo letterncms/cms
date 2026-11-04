@@ -43,8 +43,8 @@ if (realSite && realSources.some((source) => !source.entry)) throw new Error('Th
 const realEntries = new Set(realSources.map((source) => source.entry.id))
 const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
 const assetBase = '/_cms/assets/cms-admin/'
-const modules = ['content', 'blocks']
-const plugins = ['seo', 'site']
+const modules = ['content', 'blocks', 'site']
+const plugins = ['seo']
 const all = { create: true, edit: true, publish: true, delete: true }
 const viewer = { create: false, edit: false, publish: false, delete: false }
 const summary = (handle, title, singular, { structure = 'list', routable = false, can = all } = {}) => ({ handle, title, singular, newLabel: `New ${singular}`, icon: structure === 'tree' ? 'page' : 'article', structure, driver: 'database', can, routable })
