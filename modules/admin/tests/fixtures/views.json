@@ -1,0 +1,1912 @@
+{
+    "audit": {
+        "id": "audit",
+        "path": "/audit",
+        "package": "letterncms/audit",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Audit Log",
+                "icon": "activity"
+            },
+            "children": [
+                {
+                    "type": "ui/tabs",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "log",
+                                "label": "Log"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/records",
+                                    "props": {
+                                        "id": "audit",
+                                        "label": "Audit Log",
+                                        "address": true,
+                                        "source": {
+                                            "ability": "audit/list",
+                                            "input": []
+                                        },
+                                        "paged": {
+                                            "perPage": 50
+                                        },
+                                        "filters": [
+                                            {
+                                                "param": "userId",
+                                                "label": "Person",
+                                                "all": "Everyone",
+                                                "at": "filters.people",
+                                                "value": "id",
+                                                "text": "name"
+                                            },
+                                            {
+                                                "param": "ability",
+                                                "label": "Action",
+                                                "all": "All Actions",
+                                                "at": "filters.actions"
+                                            }
+                                        ],
+                                        "columns": [
+                                            {
+                                                "key": "label",
+                                                "label": "Change",
+                                                "muted": "subject"
+                                            },
+                                            {
+                                                "key": "who",
+                                                "label": "Who",
+                                                "width": "160px"
+                                            },
+                                            {
+                                                "key": "transport",
+                                                "label": "Via",
+                                                "width": "96px",
+                                                "format": "badge",
+                                                "labels": {
+                                                    "admin": "Admin",
+                                                    "mcp": "Agent",
+                                                    "assistant": "Assistant",
+                                                    "rest": "API",
+                                                    "cli": "CLI",
+                                                    "install": "Install"
+                                                },
+                                                "tones": {
+                                                    "mcp": "info",
+                                                    "assistant": "info"
+                                                }
+                                            },
+                                            {
+                                                "key": "createdAt",
+                                                "label": "When",
+                                                "width": "140px",
+                                                "align": "end",
+                                                "format": "ago"
+                                            }
+                                        ],
+                                        "open": {
+                                            "label": "Open",
+                                            "dialog": {
+                                                "title": "{row.label}",
+                                                "text": "{row.subject}",
+                                                "size": "lg",
+                                                "body": [
+                                                    {
+                                                        "type": "ui/detail",
+                                                        "props": {
+                                                            "items": [
+                                                                {
+                                                                    "label": "Who",
+                                                                    "key": "row.who"
+                                                                },
+                                                                {
+                                                                    "label": "Via",
+                                                                    "key": "row.via"
+                                                                },
+                                                                {
+                                                                    "label": "When",
+                                                                    "key": "row.createdAt",
+                                                                    "format": "datetime"
+                                                                },
+                                                                {
+                                                                    "label": "Ability",
+                                                                    "key": "row.ability",
+                                                                    "format": "code"
+                                                                }
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        "type": "ui/detail",
+                                                        "props": {
+                                                            "record": "{row.input}",
+                                                            "raw": "{row.input}"
+                                                        }
+                                                    }
+                                                ],
+                                                "actions": [
+                                                    {
+                                                        "label": "Open",
+                                                        "icon": "arrow-right",
+                                                        "variant": "primary",
+                                                        "to": "{row.to}",
+                                                        "when": "{row.to}"
+                                                    }
+                                                ]
+                                            },
+                                            "input": [],
+                                            "props": []
+                                        },
+                                        "empty": {
+                                            "icon": "activity",
+                                            "title": "No changes recorded yet"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "users": {
+        "id": "users",
+        "path": "/users",
+        "package": "letterncms/users",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Users",
+                "icon": "users"
+            },
+            "children": [
+                {
+                    "type": "ui/tabs",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "team",
+                                "label": "Team",
+                                "actions": [
+                                    {
+                                        "label": "Invite User",
+                                        "icon": "user-plus",
+                                        "variant": "primary",
+                                        "component": "users/person",
+                                        "can": "users.manage",
+                                        "input": [],
+                                        "props": []
+                                    }
+                                ]
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/records",
+                                    "props": {
+                                        "id": "users",
+                                        "label": "Users",
+                                        "source": {
+                                            "ability": "users/list",
+                                            "input": {
+                                                "kind": "team"
+                                            }
+                                        },
+                                        "search": {
+                                            "param": "search",
+                                            "placeholder": "Search people…"
+                                        },
+                                        "paged": {
+                                            "perPage": 100
+                                        },
+                                        "columns": [
+                                            {
+                                                "key": "person",
+                                                "label": "Name",
+                                                "format": "person",
+                                                "muted": "you"
+                                            },
+                                            {
+                                                "key": "email",
+                                                "label": "Email",
+                                                "width": "minmax(200px,1fr)"
+                                            },
+                                            {
+                                                "key": "badges",
+                                                "label": "Roles",
+                                                "width": "minmax(200px,1fr)",
+                                                "format": "badges",
+                                                "labels": {
+                                                    "admin": "Administrator",
+                                                    "editor": "Editor",
+                                                    "author": "Author",
+                                                    "member": "Visitor",
+                                                    "suspended": "Suspended",
+                                                    "super": "Super Admin",
+                                                    "twoFactor": "Two-Factor"
+                                                },
+                                                "tones": {
+                                                    "suspended": "danger",
+                                                    "twoFactor": "success"
+                                                }
+                                            },
+                                            {
+                                                "key": "lastLoginAt",
+                                                "label": "Last Sign-In",
+                                                "width": "140px",
+                                                "format": "ago",
+                                                "empty": "Never signed in"
+                                            }
+                                        ],
+                                        "open": {
+                                            "label": "Edit User",
+                                            "component": "users/person",
+                                            "props": {
+                                                "user": "{row}"
+                                            },
+                                            "can": "users.manage",
+                                            "input": []
+                                        },
+                                        "empty": {
+                                            "icon": "users",
+                                            "title": "No users yet"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "visitors",
+                                "label": "Visitors"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/records",
+                                    "props": {
+                                        "id": "users",
+                                        "label": "Users",
+                                        "source": {
+                                            "ability": "users/list",
+                                            "input": {
+                                                "kind": "visitors"
+                                            }
+                                        },
+                                        "search": {
+                                            "param": "search",
+                                            "placeholder": "Search people…"
+                                        },
+                                        "paged": {
+                                            "perPage": 100
+                                        },
+                                        "columns": [
+                                            {
+                                                "key": "person",
+                                                "label": "Name",
+                                                "format": "person",
+                                                "muted": "you"
+                                            },
+                                            {
+                                                "key": "email",
+                                                "label": "Email",
+                                                "width": "minmax(200px,1fr)"
+                                            },
+                                            {
+                                                "key": "badges",
+                                                "label": "Roles",
+                                                "width": "minmax(200px,1fr)",
+                                                "format": "badges",
+                                                "labels": {
+                                                    "admin": "Administrator",
+                                                    "editor": "Editor",
+                                                    "author": "Author",
+                                                    "member": "Visitor",
+                                                    "suspended": "Suspended",
+                                                    "super": "Super Admin",
+                                                    "twoFactor": "Two-Factor"
+                                                },
+                                                "tones": {
+                                                    "suspended": "danger",
+                                                    "twoFactor": "success"
+                                                }
+                                            },
+                                            {
+                                                "key": "lastLoginAt",
+                                                "label": "Last Sign-In",
+                                                "width": "140px",
+                                                "format": "ago",
+                                                "empty": "Never signed in"
+                                            }
+                                        ],
+                                        "open": {
+                                            "label": "Edit User",
+                                            "component": "users/person",
+                                            "props": {
+                                                "user": "{row}"
+                                            },
+                                            "can": "users.manage",
+                                            "input": []
+                                        },
+                                        "empty": {
+                                            "icon": "users",
+                                            "title": "No visitors yet"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "sign-up",
+                                "label": "Sign-Up"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/settings",
+                                    "props": {
+                                        "namespace": "accounts"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "fields",
+                                "label": "Profile Fields"
+                            },
+                            "children": [
+                                {
+                                    "type": "users/profile-fields",
+                                    "props": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "plugins": {
+        "id": "plugins",
+        "path": "/plugins",
+        "package": "letterncms/packages",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Plugins",
+                "icon": "plugin"
+            },
+            "children": [
+                {
+                    "type": "ui/tabs",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "installed",
+                                "label": "Installed",
+                                "count": {
+                                    "source": {
+                                        "ability": "packages/list",
+                                        "input": {
+                                            "type": "plugin"
+                                        }
+                                    },
+                                    "at": "total"
+                                }
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/records",
+                                    "props": {
+                                        "id": "packages.plugins",
+                                        "label": "Plugins",
+                                        "key": "name",
+                                        "source": {
+                                            "ability": "packages/list",
+                                            "input": {
+                                                "type": "plugin"
+                                            }
+                                        },
+                                        "columns": [
+                                            {
+                                                "key": "label",
+                                                "label": "Name",
+                                                "width": "minmax(160px,1fr)",
+                                                "icon": "icon",
+                                                "muted": "note",
+                                                "warning": "problem"
+                                            },
+                                            {
+                                                "key": "version",
+                                                "label": "Version",
+                                                "width": "80px"
+                                            },
+                                            {
+                                                "key": "enabled",
+                                                "label": "On",
+                                                "width": "48px",
+                                                "format": "switch",
+                                                "ariaLabel": "{row.label} on",
+                                                "disabled": "locked",
+                                                "action": {
+                                                    "label": "On",
+                                                    "ability": "packages/switch",
+                                                    "input": {
+                                                        "name": "{row.name}",
+                                                        "on": "{value}"
+                                                    },
+                                                    "success": "{result.message}",
+                                                    "then": "manifest",
+                                                    "props": []
+                                                }
+                                            },
+                                            {
+                                                "key": "name",
+                                                "label": "Package",
+                                                "format": "code",
+                                                "hidden": true
+                                            }
+                                        ],
+                                        "open": {
+                                            "label": "Open",
+                                            "to": "{row.to}",
+                                            "when": "{row.to}",
+                                            "input": [],
+                                            "props": []
+                                        },
+                                        "actions": [
+                                            {
+                                                "label": "Settings",
+                                                "icon": "settings",
+                                                "to": "{row.settingsTo}",
+                                                "when": "{row.settingsTo}",
+                                                "input": [],
+                                                "props": []
+                                            },
+                                            {
+                                                "label": "Uninstall…",
+                                                "icon": "trash",
+                                                "variant": "danger",
+                                                "ability": "packages/uninstall",
+                                                "input": {
+                                                    "name": "{row.name}",
+                                                    "deleteFiles": true
+                                                },
+                                                "disabled": "{row.dependents}",
+                                                "confirm": {
+                                                    "title": "Uninstall {row.label}?",
+                                                    "text": "Its database tables, settings and files are removed.",
+                                                    "confirm": "Uninstall",
+                                                    "danger": true
+                                                },
+                                                "success": "{result.message}",
+                                                "then": "manifest",
+                                                "props": []
+                                            }
+                                        ],
+                                        "empty": {
+                                            "icon": "plugin",
+                                            "title": "No plugins yet",
+                                            "action": {
+                                                "label": "Open Store",
+                                                "to": "/plugins?tab=store",
+                                                "input": [],
+                                                "props": []
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "store",
+                                "label": "Store"
+                            },
+                            "children": [
+                                {
+                                    "type": "packages/store",
+                                    "props": []
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "updates",
+                                "label": "Updates"
+                            },
+                            "children": [
+                                {
+                                    "type": "packages/updates",
+                                    "props": []
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "licenses",
+                                "label": "Licenses"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/stack",
+                                    "props": [],
+                                    "children": [
+                                        {
+                                            "type": "ui/records",
+                                            "props": {
+                                                "id": "licenses",
+                                                "label": "Licenses",
+                                                "key": "product",
+                                                "source": {
+                                                    "ability": "license/status",
+                                                    "input": []
+                                                },
+                                                "at": "list",
+                                                "columns": [
+                                                    {
+                                                        "key": "label",
+                                                        "label": "Plugin",
+                                                        "format": "strong",
+                                                        "width": "minmax(160px,0.6fr)"
+                                                    },
+                                                    {
+                                                        "key": "state",
+                                                        "label": "License",
+                                                        "format": "muted",
+                                                        "width": "minmax(200px,1fr)"
+                                                    },
+                                                    {
+                                                        "key": "standing",
+                                                        "label": "Status",
+                                                        "format": "badge",
+                                                        "width": "140px",
+                                                        "align": "end",
+                                                        "labels": {
+                                                            "active": "Active",
+                                                            "limited": "Limited",
+                                                            "attention": "Needs Attention"
+                                                        },
+                                                        "tones": {
+                                                            "active": "success",
+                                                            "limited": "neutral",
+                                                            "attention": "warning"
+                                                        }
+                                                    }
+                                                ],
+                                                "empty": {
+                                                    "icon": "key",
+                                                    "title": "No paid plugins yet"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "type": "ui/stack",
+                                            "props": [],
+                                            "children": [
+                                                {
+                                                    "type": "ui/form",
+                                                    "props": {
+                                                        "fields": [
+                                                            {
+                                                                "handle": "token",
+                                                                "type": "text",
+                                                                "label": "License Key",
+                                                                "placeholder": "v4.public.",
+                                                                "mono": true
+                                                            }
+                                                        ],
+                                                        "save": {
+                                                            "ability": "license/install",
+                                                            "as": "*",
+                                                            "input": []
+                                                        },
+                                                        "after": "manifest",
+                                                        "width": "wide"
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "globals": {
+        "id": "globals",
+        "path": "/globals",
+        "package": "letterncms/globals",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Globals",
+                "icon": "globe",
+                "actions": [
+                    {
+                        "label": "New Global Set",
+                        "icon": "plus",
+                        "variant": "primary",
+                        "ability": "globals/save",
+                        "form": {
+                            "title": "New Global Set",
+                            "confirm": "Create",
+                            "fields": [
+                                {
+                                    "handle": "title",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "placeholder": "Footer",
+                                    "required": true,
+                                    "autofocus": true
+                                }
+                            ]
+                        },
+                        "input": {
+                            "title": "{values.title}",
+                            "fields": [
+                                {
+                                    "handle": "text",
+                                    "type": "text",
+                                    "label": "Text"
+                                }
+                            ]
+                        },
+                        "then": [
+                            "manifest",
+                            "open"
+                        ],
+                        "to": "/globals/{result.handle}/fields",
+                        "props": []
+                    }
+                ]
+            },
+            "children": [
+                {
+                    "type": "ui/records",
+                    "props": {
+                        "id": "globals",
+                        "label": "Globals",
+                        "key": "handle",
+                        "source": {
+                            "ability": "globals/list",
+                            "input": []
+                        },
+                        "columns": [
+                            {
+                                "key": "title",
+                                "label": "Name",
+                                "icon": "icon"
+                            },
+                            {
+                                "key": "handle",
+                                "label": "Handle",
+                                "width": "minmax(200px,1fr)",
+                                "format": "code"
+                            }
+                        ],
+                        "open": {
+                            "label": "Edit",
+                            "to": "/globals/{row.handle}",
+                            "input": [],
+                            "props": []
+                        },
+                        "actions": [
+                            {
+                                "label": "Edit",
+                                "icon": "edit",
+                                "to": "/globals/{row.handle}",
+                                "can": "globals.manage",
+                                "input": [],
+                                "props": []
+                            },
+                            {
+                                "label": "Edit Fields",
+                                "icon": "field",
+                                "to": "/globals/{row.handle}/fields",
+                                "can": "globals.manage",
+                                "input": [],
+                                "props": []
+                            }
+                        ],
+                        "empty": {
+                            "icon": "globe",
+                            "title": "No global sets yet",
+                            "text": "Site-wide values, like contact details or footer links."
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "collections": {
+        "id": "collections",
+        "path": "/collections",
+        "package": "letterncms/collections",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Collections",
+                "icon": "collection",
+                "actions": [
+                    {
+                        "label": "New Collection",
+                        "icon": "plus",
+                        "variant": "primary",
+                        "component": "collections/new",
+                        "input": [],
+                        "props": []
+                    }
+                ]
+            },
+            "children": [
+                {
+                    "type": "ui/records",
+                    "props": {
+                        "id": "collections",
+                        "label": "Collections",
+                        "key": "handle",
+                        "source": {
+                            "ability": "collections/editable",
+                            "input": []
+                        },
+                        "columns": [
+                            {
+                                "key": "title",
+                                "label": "Name",
+                                "icon": "icon"
+                            },
+                            {
+                                "key": "route",
+                                "label": "URL",
+                                "width": "minmax(200px,1fr)",
+                                "format": "code",
+                                "empty": "No URL"
+                            },
+                            {
+                                "key": "structure",
+                                "label": "Structure",
+                                "width": "120px",
+                                "labels": {
+                                    "list": "List",
+                                    "tree": "Tree",
+                                    "dated": "Dated"
+                                }
+                            },
+                            {
+                                "key": "count",
+                                "label": "Entries",
+                                "width": "90px",
+                                "align": "end",
+                                "format": "number"
+                            }
+                        ],
+                        "open": {
+                            "label": "Open",
+                            "to": "/collections/{row.handle}",
+                            "input": [],
+                            "props": []
+                        },
+                        "empty": {
+                            "icon": "collection",
+                            "title": "No collections yet",
+                            "text": "Collections define what you can write: pages, posts, products…",
+                            "action": {
+                                "label": "New Collection",
+                                "icon": "plus",
+                                "variant": "primary",
+                                "component": "collections/new",
+                                "input": [],
+                                "props": []
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "forms": {
+        "id": "forms",
+        "path": "/forms",
+        "package": "letterncms/forms",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Forms",
+                "icon": "form"
+            },
+            "children": [
+                {
+                    "type": "ui/tabs",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "forms",
+                                "label": "Forms",
+                                "actions": [
+                                    {
+                                        "label": "New Form",
+                                        "name": "new-form",
+                                        "icon": "plus",
+                                        "variant": "primary",
+                                        "ability": "forms/create",
+                                        "input": {
+                                            "title": "{values.title}"
+                                        },
+                                        "then": "open",
+                                        "to": "/forms/{result.handle}",
+                                        "form": {
+                                            "title": "New Form",
+                                            "text": "Starts with name, email and message.",
+                                            "confirm": "Create",
+                                            "fields": [
+                                                {
+                                                    "handle": "title",
+                                                    "type": "text",
+                                                    "label": "Name",
+                                                    "placeholder": "Quote Request",
+                                                    "required": true,
+                                                    "autofocus": true
+                                                }
+                                            ]
+                                        },
+                                        "props": []
+                                    }
+                                ]
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/records",
+                                    "props": {
+                                        "id": "forms",
+                                        "label": "Forms",
+                                        "key": "handle",
+                                        "source": {
+                                            "ability": "forms/list",
+                                            "input": []
+                                        },
+                                        "columns": [
+                                            {
+                                                "key": "title",
+                                                "label": "Name",
+                                                "icon": "icon"
+                                            },
+                                            {
+                                                "key": "enabled",
+                                                "label": "Status",
+                                                "width": "120px",
+                                                "format": "status",
+                                                "labels": {
+                                                    "true": "On",
+                                                    "false": "Off"
+                                                },
+                                                "tones": {
+                                                    "true": "success",
+                                                    "false": "neutral"
+                                                }
+                                            },
+                                            {
+                                                "key": "fields",
+                                                "label": "Fields",
+                                                "width": "90px",
+                                                "align": "end",
+                                                "format": "number"
+                                            },
+                                            {
+                                                "key": "total",
+                                                "label": "Submissions",
+                                                "width": "120px",
+                                                "align": "end",
+                                                "format": "number"
+                                            },
+                                            {
+                                                "key": "unread",
+                                                "label": "Unread",
+                                                "width": "90px",
+                                                "align": "end",
+                                                "format": "badge"
+                                            }
+                                        ],
+                                        "open": {
+                                            "label": "Open",
+                                            "to": "/forms/{row.handle}",
+                                            "input": [],
+                                            "props": []
+                                        },
+                                        "actions": [
+                                            {
+                                                "label": "Fields",
+                                                "icon": "field",
+                                                "to": "/forms/{row.handle}",
+                                                "input": [],
+                                                "props": []
+                                            },
+                                            {
+                                                "label": "Submissions",
+                                                "icon": "inbox",
+                                                "to": "/forms/{row.handle}?tab=submissions",
+                                                "input": [],
+                                                "props": []
+                                            },
+                                            {
+                                                "label": "Settings",
+                                                "icon": "settings",
+                                                "to": "/forms/{row.handle}?tab=options",
+                                                "input": [],
+                                                "props": []
+                                            }
+                                        ],
+                                        "empty": {
+                                            "icon": "form",
+                                            "title": "No forms yet"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "media": {
+        "id": "media",
+        "path": "/media",
+        "package": "letterncms/media",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Media",
+                "icon": "media",
+                "width": "wide",
+                "count": {
+                    "source": {
+                        "ability": "media/list",
+                        "input": {
+                            "perPage": 1,
+                            "search": "{query.search}",
+                            "kind": "{query.kind}",
+                            "folder": "{query.folder}"
+                        }
+                    },
+                    "at": "total"
+                }
+            },
+            "children": [
+                {
+                    "type": "ui/tabs",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "library",
+                                "label": "Library",
+                                "actions": [
+                                    {
+                                        "label": "Upload",
+                                        "icon": "upload",
+                                        "variant": "primary",
+                                        "component": "media/upload",
+                                        "can": "media.upload",
+                                        "input": [],
+                                        "props": []
+                                    }
+                                ]
+                            },
+                            "children": [
+                                {
+                                    "type": "media/library",
+                                    "props": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "navigation": {
+        "id": "navigation",
+        "path": "/navigation",
+        "package": "letterncms/navigation",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Navigation",
+                "icon": "list-tree",
+                "actions": [
+                    {
+                        "label": "New Menu",
+                        "icon": "plus",
+                        "variant": "primary",
+                        "ability": "navigation/create",
+                        "input": {
+                            "title": "{values.title}"
+                        },
+                        "then": "open",
+                        "to": "/navigation/{result.handle}",
+                        "form": {
+                            "title": "New Menu",
+                            "confirm": "Create",
+                            "fields": [
+                                {
+                                    "handle": "title",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "placeholder": "Footer",
+                                    "instructions": "For example Main, Footer or Legal.",
+                                    "required": true,
+                                    "autofocus": true
+                                }
+                            ]
+                        },
+                        "props": []
+                    }
+                ]
+            },
+            "children": [
+                {
+                    "type": "ui/records",
+                    "props": {
+                        "id": "navigation",
+                        "label": "Menus",
+                        "key": "handle",
+                        "source": {
+                            "ability": "navigation/list",
+                            "input": []
+                        },
+                        "columns": [
+                            {
+                                "key": "title",
+                                "label": "Name",
+                                "icon": "icon"
+                            },
+                            {
+                                "key": "handle",
+                                "label": "Handle",
+                                "width": "minmax(200px,1fr)",
+                                "format": "code"
+                            },
+                            {
+                                "key": "links",
+                                "label": "Links",
+                                "width": "100px",
+                                "align": "end"
+                            }
+                        ],
+                        "open": {
+                            "label": "Open",
+                            "to": "/navigation/{row.handle}",
+                            "input": [],
+                            "props": []
+                        },
+                        "actions": [
+                            {
+                                "label": "Rename",
+                                "icon": "edit",
+                                "ability": "navigation/save",
+                                "input": {
+                                    "handle": "{row.handle}",
+                                    "title": "{values.title}"
+                                },
+                                "form": {
+                                    "title": "Rename Menu",
+                                    "confirm": "Rename",
+                                    "values": {
+                                        "title": "{row.title}"
+                                    },
+                                    "fields": [
+                                        {
+                                            "handle": "title",
+                                            "type": "text",
+                                            "label": "Name",
+                                            "required": true,
+                                            "autofocus": true
+                                        }
+                                    ]
+                                },
+                                "props": []
+                            },
+                            {
+                                "label": "Delete",
+                                "icon": "trash",
+                                "variant": "danger",
+                                "ability": "navigation/delete",
+                                "input": {
+                                    "handle": "{row.handle}"
+                                },
+                                "confirm": {
+                                    "title": "Delete “{row.title}”?",
+                                    "text": "Repeat blocks that list this menu will show nothing.",
+                                    "confirm": "Delete",
+                                    "danger": true
+                                },
+                                "props": []
+                            }
+                        ],
+                        "empty": {
+                            "icon": "list-tree",
+                            "title": "No menus yet"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "languages": {
+        "id": "languages",
+        "path": "/languages",
+        "package": "letterncms/i18n",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Languages",
+                "icon": "translate",
+                "width": "narrow",
+                "actions": [
+                    {
+                        "label": "Add Language",
+                        "name": "add-language",
+                        "icon": "plus",
+                        "variant": "primary",
+                        "can": "settings.manage",
+                        "component": "i18n/add-language",
+                        "input": [],
+                        "props": []
+                    }
+                ]
+            },
+            "children": [
+                {
+                    "type": "ui/stack",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/records",
+                            "props": {
+                                "id": "languages",
+                                "label": "Languages",
+                                "key": "code",
+                                "source": {
+                                    "ability": "languages/list",
+                                    "input": []
+                                },
+                                "at": "languages",
+                                "columns": [
+                                    {
+                                        "key": "name",
+                                        "label": "Name",
+                                        "muted": "badge"
+                                    },
+                                    {
+                                        "key": "code",
+                                        "label": "Code",
+                                        "width": "72px",
+                                        "format": "code"
+                                    },
+                                    {
+                                        "key": "path",
+                                        "label": "URL Prefix",
+                                        "width": "120px",
+                                        "format": "code",
+                                        "empty": "None"
+                                    },
+                                    {
+                                        "key": "entries",
+                                        "label": "Entries",
+                                        "width": "80px",
+                                        "align": "end",
+                                        "format": "number"
+                                    }
+                                ],
+                                "open": {
+                                    "label": "Open",
+                                    "dialog": {
+                                        "title": "{row.name}",
+                                        "text": "{row.note}",
+                                        "body": [
+                                            {
+                                                "type": "ui/detail",
+                                                "props": {
+                                                    "items": [
+                                                        {
+                                                            "label": "Code",
+                                                            "key": "row.code",
+                                                            "format": "code"
+                                                        },
+                                                        {
+                                                            "label": "URL Prefix",
+                                                            "key": "row.prefixLabel"
+                                                        },
+                                                        {
+                                                            "label": "Direction",
+                                                            "key": "row.directionName"
+                                                        },
+                                                        {
+                                                            "label": "Entries",
+                                                            "key": "row.entries",
+                                                            "format": "number"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ],
+                                        "actions": [
+                                            {
+                                                "label": "Remove",
+                                                "icon": "trash",
+                                                "variant": "danger",
+                                                "ability": "languages/remove",
+                                                "input": {
+                                                    "code": "{row.code}"
+                                                },
+                                                "then": "manifest",
+                                                "unless": "{row.default}",
+                                                "disabled": "{row.entries}",
+                                                "success": "{row.name} removed",
+                                                "confirm": {
+                                                    "title": "Remove {row.name}?",
+                                                    "text": "Visitors will no longer see this language. You can add it again later.",
+                                                    "confirm": "Remove",
+                                                    "danger": true
+                                                }
+                                            },
+                                            {
+                                                "label": "Add URL Prefix",
+                                                "icon": "link",
+                                                "ability": "languages/prefix",
+                                                "input": {
+                                                    "prefixDefault": true
+                                                },
+                                                "then": "manifest",
+                                                "when": "{row.prefixable}",
+                                                "success": "{row.name} now has a URL prefix",
+                                                "confirm": {
+                                                    "title": "Give {row.name} a URL prefix?",
+                                                    "text": "Its pages move to /{row.code}/….",
+                                                    "confirm": "Add Prefix"
+                                                }
+                                            },
+                                            {
+                                                "label": "Remove URL Prefix",
+                                                "icon": "link",
+                                                "ability": "languages/prefix",
+                                                "input": {
+                                                    "prefixDefault": false
+                                                },
+                                                "then": "manifest",
+                                                "when": "{row.prefixed}",
+                                                "success": "{row.name} is now at the root URL",
+                                                "confirm": {
+                                                    "title": "Remove the URL prefix of {row.name}?",
+                                                    "text": "Its pages move to the root URL.",
+                                                    "confirm": "Remove Prefix"
+                                                }
+                                            },
+                                            {
+                                                "label": "Make Default",
+                                                "icon": "star",
+                                                "ability": "languages/default",
+                                                "input": {
+                                                    "code": "{row.code}"
+                                                },
+                                                "then": "manifest",
+                                                "unless": "{row.default}",
+                                                "success": "{row.name} is now the default",
+                                                "confirm": {
+                                                    "title": "Make {row.name} the default?",
+                                                    "text": "Its pages move to the root URL and English gets a prefix. Old URLs redirect automatically.",
+                                                    "confirm": "Make Default"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "input": [],
+                                    "props": []
+                                },
+                                "actions": [
+                                    {
+                                        "label": "Make Default",
+                                        "icon": "star",
+                                        "ability": "languages/default",
+                                        "input": {
+                                            "code": "{row.code}"
+                                        },
+                                        "then": "manifest",
+                                        "unless": "{row.default}",
+                                        "success": "{row.name} is now the default",
+                                        "confirm": {
+                                            "title": "Make {row.name} the default?",
+                                            "text": "Its pages move to the root URL and English gets a prefix. Old URLs redirect automatically.",
+                                            "confirm": "Make Default"
+                                        },
+                                        "props": []
+                                    },
+                                    {
+                                        "label": "Add URL Prefix",
+                                        "icon": "link",
+                                        "ability": "languages/prefix",
+                                        "input": {
+                                            "prefixDefault": true
+                                        },
+                                        "then": "manifest",
+                                        "when": "{row.prefixable}",
+                                        "success": "{row.name} now has a URL prefix",
+                                        "confirm": {
+                                            "title": "Give {row.name} a URL prefix?",
+                                            "text": "Its pages move to /{row.code}/….",
+                                            "confirm": "Add Prefix"
+                                        },
+                                        "props": []
+                                    },
+                                    {
+                                        "label": "Remove URL Prefix",
+                                        "icon": "link",
+                                        "ability": "languages/prefix",
+                                        "input": {
+                                            "prefixDefault": false
+                                        },
+                                        "then": "manifest",
+                                        "when": "{row.prefixed}",
+                                        "success": "{row.name} is now at the root URL",
+                                        "confirm": {
+                                            "title": "Remove the URL prefix of {row.name}?",
+                                            "text": "Its pages move to the root URL.",
+                                            "confirm": "Remove Prefix"
+                                        },
+                                        "props": []
+                                    },
+                                    {
+                                        "label": "Remove",
+                                        "icon": "trash",
+                                        "variant": "danger",
+                                        "ability": "languages/remove",
+                                        "input": {
+                                            "code": "{row.code}"
+                                        },
+                                        "then": "manifest",
+                                        "unless": "{row.default}",
+                                        "disabled": "{row.entries}",
+                                        "success": "{row.name} removed",
+                                        "confirm": {
+                                            "title": "Remove {row.name}?",
+                                            "text": "Visitors will no longer see this language. You can add it again later.",
+                                            "confirm": "Remove",
+                                            "danger": true
+                                        },
+                                        "props": []
+                                    }
+                                ],
+                                "empty": {
+                                    "icon": "translate",
+                                    "title": "Languages are not available"
+                                }
+                            }
+                        },
+                        {
+                            "type": "ui/actions",
+                            "props": {
+                                "items": [
+                                    {
+                                        "label": "Set Up Automatic Translation",
+                                        "icon": "sparkle",
+                                        "variant": "ghost",
+                                        "to": "/settings/assistant",
+                                        "input": [],
+                                        "props": []
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "settings:namespace=seo": {
+        "id": "settings",
+        "path": "/settings/:namespace",
+        "package": "letterncms/settings",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "SEO",
+                "icon": "seo",
+                "actions": []
+            },
+            "children": [
+                {
+                    "type": "ui/tabs",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "settings",
+                                "label": "Settings"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/settings",
+                                    "props": {
+                                        "namespace": "seo"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "redirects",
+                                "label": "Redirects"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/form",
+                                    "props": {
+                                        "source": {
+                                            "ability": "redirects/list",
+                                            "input": []
+                                        },
+                                        "into": "redirects",
+                                        "width": "wide",
+                                        "fields": [
+                                            {
+                                                "handle": "redirects",
+                                                "type": "repeater",
+                                                "display": "table",
+                                                "label": "Redirects",
+                                                "add": "New Redirect",
+                                                "empty": "No redirects",
+                                                "fields": [
+                                                    {
+                                                        "handle": "from",
+                                                        "type": "text",
+                                                        "label": "From",
+                                                        "mono": true,
+                                                        "placeholder": "/old-url"
+                                                    },
+                                                    {
+                                                        "handle": "to",
+                                                        "type": "text",
+                                                        "label": "To",
+                                                        "mono": true,
+                                                        "placeholder": "/new-url or https://…"
+                                                    },
+                                                    {
+                                                        "handle": "status",
+                                                        "type": "select",
+                                                        "label": "Status",
+                                                        "required": true,
+                                                        "numeric": true,
+                                                        "default": 301,
+                                                        "options": {
+                                                            "301": "301 Permanent",
+                                                            "302": "302 Temporary"
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        "save": {
+                                            "ability": "redirects/save",
+                                            "as": "*",
+                                            "input": []
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "form:handle=contact": {
+        "id": "form",
+        "path": "/forms/:handle",
+        "package": "letterncms/forms",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Contact",
+                "icon": "form",
+                "width": "default",
+                "back": {
+                    "to": "/forms",
+                    "label": "Forms"
+                },
+                "actions": [
+                    {
+                        "label": "Rename",
+                        "icon": "edit",
+                        "ability": "forms/save",
+                        "input": {
+                            "handle": "contact",
+                            "title": "{values.title}"
+                        },
+                        "form": {
+                            "title": "Rename Form",
+                            "confirm": "Rename",
+                            "values": {
+                                "title": "Contact"
+                            },
+                            "fields": [
+                                {
+                                    "handle": "title",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true,
+                                    "autofocus": true
+                                }
+                            ]
+                        },
+                        "props": []
+                    },
+                    {
+                        "label": "Delete",
+                        "icon": "trash",
+                        "variant": "ghost",
+                        "ability": "forms/delete",
+                        "input": {
+                            "handle": "contact"
+                        },
+                        "then": "open",
+                        "to": "/forms",
+                        "confirm": {
+                            "title": "Delete “Contact”?",
+                            "text": "Submissions are kept. Pages that embed it will show nothing.",
+                            "confirm": "Delete",
+                            "danger": true
+                        },
+                        "props": []
+                    }
+                ]
+            },
+            "children": [
+                {
+                    "type": "ui/tabs",
+                    "props": [],
+                    "children": [
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "fields",
+                                "label": "Fields"
+                            },
+                            "children": [
+                                {
+                                    "type": "forms/builder",
+                                    "props": {
+                                        "handle": "contact"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "options",
+                                "label": "Settings"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/form",
+                                    "props": {
+                                        "source": {
+                                            "ability": "forms/get",
+                                            "input": {
+                                                "handle": "contact"
+                                            }
+                                        },
+                                        "valuesAt": "settings",
+                                        "fields": [
+                                            {
+                                                "handle": "enabled",
+                                                "type": "toggle",
+                                                "label": "Accept Submissions"
+                                            },
+                                            {
+                                                "handle": "submit",
+                                                "type": "text",
+                                                "label": "Button Label"
+                                            },
+                                            {
+                                                "handle": "success",
+                                                "type": "textarea",
+                                                "label": "Success Message",
+                                                "rows": 2
+                                            },
+                                            {
+                                                "handle": "redirect",
+                                                "type": "url",
+                                                "component": "link",
+                                                "label": "Or Redirect To",
+                                                "placeholder": "A Thank-You Page"
+                                            },
+                                            {
+                                                "handle": "notify",
+                                                "type": "tags",
+                                                "label": "Email Submissions To",
+                                                "placeholder": "name@example.com",
+                                                "section": "Email"
+                                            },
+                                            {
+                                                "handle": "subject",
+                                                "type": "text",
+                                                "label": "Email Subject",
+                                                "instructions": "Use {{form}} or any {{field_name}}.",
+                                                "section": "Email"
+                                            },
+                                            {
+                                                "handle": "reply_to_field",
+                                                "type": "text",
+                                                "label": "Reply-to Field",
+                                                "instructions": "The field that holds the sender’s email.",
+                                                "section": "Email"
+                                            },
+                                            {
+                                                "handle": "confirmation",
+                                                "type": "toggle",
+                                                "label": "Send the Person a Confirmation Email",
+                                                "section": "Email"
+                                            },
+                                            {
+                                                "handle": "confirmation_subject",
+                                                "type": "text",
+                                                "label": "Confirmation Subject",
+                                                "if": {
+                                                    "confirmation": true
+                                                },
+                                                "section": "Email"
+                                            },
+                                            {
+                                                "handle": "confirmation_message",
+                                                "type": "richtext",
+                                                "label": "Confirmation Message",
+                                                "if": {
+                                                    "confirmation": true
+                                                },
+                                                "section": "Email"
+                                            },
+                                            {
+                                                "handle": "store",
+                                                "type": "toggle",
+                                                "label": "Keep Submissions in Lettern",
+                                                "section": "Submissions"
+                                            },
+                                            {
+                                                "handle": "honeypot",
+                                                "type": "toggle",
+                                                "label": "Hidden Spam Trap",
+                                                "section": "Submissions"
+                                            },
+                                            {
+                                                "handle": "min_seconds",
+                                                "type": "number",
+                                                "label": "Minimum Seconds to Fill In",
+                                                "min": 0,
+                                                "max": 60,
+                                                "section": "Submissions"
+                                            },
+                                            {
+                                                "handle": "webhook",
+                                                "type": "url",
+                                                "label": "Webhook",
+                                                "instructions": "Each submission is POSTed as JSON to this https:// URL (Zapier, Make, n8n, your CRM).",
+                                                "section": "Submissions"
+                                            }
+                                        ],
+                                        "save": {
+                                            "ability": "forms/configure",
+                                            "input": {
+                                                "handle": "contact"
+                                            },
+                                            "as": "settings"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "languages",
+                                "label": "Languages"
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/form",
+                                    "props": {
+                                        "source": {
+                                            "ability": "forms/words",
+                                            "input": {
+                                                "handle": "contact"
+                                            }
+                                        },
+                                        "save": {
+                                            "ability": "forms/translate",
+                                            "input": {
+                                                "handle": "contact"
+                                            },
+                                            "as": "words"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ui/tab",
+                            "props": {
+                                "id": "submissions",
+                                "label": "Submissions",
+                                "actions": [
+                                    {
+                                        "label": "Export CSV",
+                                        "icon": "download",
+                                        "href": "/api/admin/forms/contact/export",
+                                        "input": [],
+                                        "props": []
+                                    }
+                                ]
+                            },
+                            "children": [
+                                {
+                                    "type": "ui/records",
+                                    "props": {
+                                        "id": "submissions",
+                                        "label": "Submissions",
+                                        "source": {
+                                            "ability": "forms/submissions",
+                                            "input": {
+                                                "form": "contact"
+                                            }
+                                        },
+                                        "search": {
+                                            "param": "search",
+                                            "placeholder": "Search…"
+                                        },
+                                        "filters": [
+                                            {
+                                                "param": "status",
+                                                "label": "Show",
+                                                "all": "Inbox",
+                                                "options": [
+                                                    {
+                                                        "value": "new",
+                                                        "label": "Unread"
+                                                    },
+                                                    {
+                                                        "value": "archived",
+                                                        "label": "Archived"
+                                                    },
+                                                    {
+                                                        "value": "spam",
+                                                        "label": "Spam"
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        "paged": {
+                                            "perPage": 100
+                                        },
+                                        "columns": [
+                                            {
+                                                "key": "data.name",
+                                                "label": "Name"
+                                            },
+                                            {
+                                                "key": "data.email",
+                                                "label": "Email"
+                                            },
+                                            {
+                                                "key": "data.message",
+                                                "label": "Message"
+                                            },
+                                            {
+                                                "key": "status",
+                                                "label": "Status",
+                                                "width": "100px",
+                                                "format": "badge",
+                                                "tones": {
+                                                    "new": "info"
+                                                },
+                                                "labels": {
+                                                    "new": "New",
+                                                    "read": "Read",
+                                                    "spam": "Spam",
+                                                    "archived": "Archived"
+                                                }
+                                            },
+                                            {
+                                                "key": "createdAt",
+                                                "label": "Received",
+                                                "width": "120px",
+                                                "align": "end",
+                                                "format": "ago"
+                                            }
+                                        ],
+                                        "open": {
+                                            "label": "Open",
+                                            "component": "forms/submission",
+                                            "props": {
+                                                "id": "{row.id}"
+                                            },
+                                            "input": []
+                                        },
+                                        "bulk": [
+                                            {
+                                                "label": "Mark Read",
+                                                "ability": "forms/submission-update",
+                                                "input": {
+                                                    "ids": "{ids}",
+                                                    "status": "read"
+                                                },
+                                                "props": []
+                                            },
+                                            {
+                                                "label": "Archive",
+                                                "ability": "forms/submission-update",
+                                                "input": {
+                                                    "ids": "{ids}",
+                                                    "status": "archived"
+                                                },
+                                                "props": []
+                                            },
+                                            {
+                                                "label": "Spam",
+                                                "ability": "forms/submission-update",
+                                                "input": {
+                                                    "ids": "{ids}",
+                                                    "status": "spam"
+                                                },
+                                                "props": []
+                                            },
+                                            {
+                                                "label": "Delete",
+                                                "ability": "forms/submission-delete",
+                                                "input": {
+                                                    "ids": "{ids}"
+                                                },
+                                                "confirm": {
+                                                    "title": "Delete the selected submissions?",
+                                                    "text": "{ids.length} selected. This cannot be undone.",
+                                                    "confirm": "Delete",
+                                                    "danger": true
+                                                },
+                                                "props": []
+                                            }
+                                        ],
+                                        "empty": {
+                                            "icon": "inbox",
+                                            "title": "No submissions"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -1,6 +1,5 @@
-import { navigate, plural, run, t, useAbility } from '@letterncms/sdk'
-import { BlueprintEditor, Button, NotFoundState, Page, type BlueprintKind } from '@letterncms/ui'
-import Collections from './Collections'
+import { plural, run, t, type SurfaceComponentProps } from '@letterncms/sdk'
+import { BlueprintEditor, type BlueprintKind } from '@letterncms/ui'
 
 const kind = (handle: string): BlueprintKind => ({
   get: ['collections/get', { handle }],
@@ -23,18 +22,7 @@ const kind = (handle: string): BlueprintKind => ({
   ],
 })
 
-/** The fields and settings of a collection; /collections/new opens the list with the new-collection dialog. */
-export default function Blueprint({ params }: { params: Record<string, string> }) {
-  if (params.handle === 'new') return <Collections creating />
-  return <CollectionBlueprint key={params.handle} handle={params.handle} />
-}
-
-/** A system collection (templates, components, account pages) keeps the schema its code brings: not editable or deletable here. */
-function CollectionBlueprint({ handle }: { handle: string }) {
-  const source = useAbility<{ system?: boolean }>('collections/get', { handle }, { refetchOnWindowFocus: false })
-  if (source.data?.system) {
-    const back = { label: t('Collections'), to: '/collections', icon: 'collection' }
-    return <Page crumbs={[back, { label: t('Not Found') }]}><NotFoundState icon="collection" action={<Button onClick={() => navigate(back.to)}>{t('Back to {label}', { label: back.label })}</Button>} /></Page>
-  }
-  return <BlueprintEditor kind={kind(handle)} />
+/** The fields and settings of a collection: the `collections/blueprint` component its view is made of (system collections never reach it). */
+export default function Blueprint({ props }: SurfaceComponentProps<{ handle: string }>) {
+  return <BlueprintEditor key={props.handle} kind={kind(props.handle)} />
 }

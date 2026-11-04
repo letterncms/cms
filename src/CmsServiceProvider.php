@@ -74,6 +74,7 @@ final class CmsServiceProvider extends ServiceProvider
         AdminRegistry::class => AdminRegistry::class,
         Admin\Translations::class => Admin\Translations::class,
         Navigation::class => Navigation::class,
+        Admin\Views::class => Admin\Views::class,
         ContextRegistry::class => ContextRegistry::class,
         SkillRegistry::class => SkillRegistry::class,
         SettingsRegistry::class => SettingsRegistry::class,

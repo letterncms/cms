@@ -18,42 +18,26 @@ final class Surface
 
     public function __construct(private readonly Cms $cms) {}
 
-    /** The live, permission-filtered catalog. Widget integrations require no extra registration. */
+    /** The live, permission-filtered catalog: the components of the admin's views that take literal props. */
     public function catalog(User $user): array
     {
-        $string = ['type' => 'string', 'maxLength' => 2000];
-        $cell = ['type' => ['string', 'number', 'boolean', 'null']];
-        $definitions = [
-            'ui/stack' => ['label' => 'Stack', 'children' => true, 'props' => $this->object([])],
-            'ui/grid' => ['label' => 'Responsive grid', 'children' => true, 'props' => $this->object(['columns' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 3, 'default' => 2]])],
-            'ui/text' => ['label' => 'Text', 'props' => $this->object(['text' => $string], ['text'])],
-            'ui/stat' => ['label' => 'Metric with optional trend', 'props' => $this->object([
-                'label' => $string, 'value' => ['type' => ['string', 'number']],
-                'delta' => ['type' => 'number'],
-                'trend' => ['type' => 'array', 'maxItems' => 60, 'items' => ['type' => 'number', 'minimum' => 0]],
-            ], ['label', 'value'])],
-            'ui/table' => ['label' => 'Data table', 'props' => $this->object([
-                'columns' => ['type' => 'array', 'minItems' => 1, 'maxItems' => 8, 'items' => $string],
-                'rows' => ['type' => 'array', 'maxItems' => 50, 'items' => ['type' => 'array', 'maxItems' => 8, 'items' => $cell]],
-            ], ['columns', 'rows'])],
-            'ui/action' => ['label' => 'Action button (uses its submit action)', 'props' => $this->object(['label' => $string], ['label'])],
-        ];
+        $definitions = array_filter($this->cms->app()->make(Catalog::class)->definitions($user), static fn (array $d) => $d['surface'] ?? false);
 
-        foreach ($this->cms->admin()->widgetsForUser($user) as $widget) {
-            // An assistant launcher is useful on Home, but not inside its own reply.
-            if (($widget['assistant'] ?? true) === false) {
-                continue;
+        // An answer's data is literal and its buttons go through the assistant's approvals: nothing in it loads or runs an ability by itself.
+        $literal = static function (array $definition, string $id): array {
+            // Without a source, a metric has to say its value.
+            if ($id === 'ui/stat') {
+                $definition['props']['required'] = ['label', 'value'];
             }
-            $definitions['widget/'.$widget['id']] = ['label' => $widget['label'], 'description' => $widget['description'], 'props' => $this->object([])];
-        }
+            if (isset($definition['props']['properties']) && is_array($definition['props']['properties'])) {
+                $definition['props']['properties'] = array_diff_key($definition['props']['properties'], array_flip(['source', 'action', 'actions', 'open', 'at']));
+                $definition['props']['properties'] = $definition['props']['properties'] ?: (object) [];
+            }
 
-        foreach ($this->cms->admin()->componentsForUser($user) as $component) {
-            $definitions[$component['id']] = $component;
-        }
+            return array_diff_key($definition, ['surface' => true]);
+        };
 
-        ksort($definitions);
-
-        return array_map(static fn ($id, $definition) => ['id' => $id, 'description' => '', 'children' => false, ...$definition], array_keys($definitions), $definitions);
+        return array_map(static fn ($id, $definition) => ['id' => $id, 'description' => '', ...$literal($definition, $id)], array_keys($definitions), $definitions);
     }
 
     public function schema(): array
@@ -144,7 +128,7 @@ final class Surface
         return ['type' => 'object', 'properties' => $properties ?: (object) [], 'required' => $required, 'additionalProperties' => false];
     }
 
-    /** Plugin object props must not accidentally opt into json-render's expression language. */
+    /** A reply's props are literal: no key that reads like an expression (`$state`, `$cond`). */
     private function literalProps(array $value): void
     {
         foreach ($value as $key => $item) {

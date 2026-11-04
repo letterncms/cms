@@ -31,7 +31,7 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const last = crumbs[crumbs.length - 1]
   // An editor's document (`title`) names the screen before its crumbs do: "Home", not "Pages".
   const named = firstText(title)
-  useScreenContext({ title: named ?? (typeof last?.label === 'string' ? last.label : undefined), icon: last?.icon ?? crumbs[0]?.icon })
+  useScreenContext({ title: named ?? firstText(last?.label), icon: last?.icon ?? crumbs[0]?.icon })
   const shown = crumbs
   // What every screen's bar has, before the screen's own actions.
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
@@ -119,11 +119,12 @@ export function Page({ crumbs = [], actions, title, headerActions, children, wid
   )
 }
 
-/** The settings namespace the screen on view keeps as its Settings tab (see `ScreenTabs`). */
+/** The settings namespace the screen on view keeps as its Settings tab (see `ScreenTabs`): on the screen itself, not on a page under it (a form of Forms). */
 function useHomedSettings(): string | undefined {
   const manifest = useManifestIfLoaded()
   const { path } = useLocation()
-  return manifest ? homedSettings(manifest, placeAt(manifest.nav, path)?.id) : undefined
+  const item = manifest ? placeAt(manifest.nav, path) : undefined
+  return manifest && item && item.path.split('?')[0] === path ? homedSettings(manifest, item.id) : undefined
 }
 
 /**

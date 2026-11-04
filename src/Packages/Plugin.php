@@ -64,6 +64,14 @@ abstract class Plugin extends ServiceProvider
         }
     }
 
+    /** Register the screens this package ships as data: each `views/<id>.json` (see Cms\Admin\Views). */
+    protected function views(): void
+    {
+        foreach (glob($this->path('views/*.json')) ?: [] as $file) {
+            $this->cms()->views()->registerFile($file, $this->manifest->name);
+        }
+    }
+
     /** Public URL of a file in this package's dist/ folder. */
     protected function asset(string $file): string
     {

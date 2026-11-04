@@ -1,5 +1,5 @@
-import { getManifest, prefetchAbility, type Manifest, batch, invalidate, locale, navigate, plural, setQuery, t, useAbility, useLocation, useManifest, type Page as PageData } from '@letterncms/sdk'
-import { Button, EmptyState, NoMatches, NotFoundState, QueryError, Fields, entryActionAvailability, Icon, IconButton, Page, PagePagination, OverviewControls, SelectionBar, nextTableSort, confirm, toast, useRecordNavigation, useShortcut, loadOverviewSource } from '@letterncms/ui'
+import { getManifest, prefetchAbility, type Manifest, batch, invalidate, navigate, plural, setQuery, t, useAbility, useLocation, useManifest, type Page as PageData, type SurfaceComponentProps } from '@letterncms/sdk'
+import { Button, EmptyState, NoMatches, NotFoundState, QueryError, Fields, entryActionAvailability, Icon, IconButton, PagePagination, OverviewControls, SelectionBar, nextTableSort, confirm, toast, useRecordNavigation, useShortcut, loadOverviewSource } from '@letterncms/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { BuiltinPages, type BuiltinGroup } from './BuiltinPages'
 import { calendarQueries, EntriesCalendar } from './EntriesCalendar'
@@ -65,8 +65,12 @@ export async function loadEntriesList(handle: string, query: Record<string, stri
   }
 }
 
-export default function EntriesList({ params }: { params: Record<string, string> }) {
-  const handle = params.collection
+/**
+ * A collection's entries, as the view `content` draws them inside its page (ContentModule::view): search,
+ * status and language, the tree or a sort, table, grid or calendar, built-in pages, and bulk publishing.
+ */
+export default function EntriesList({ props }: SurfaceComponentProps<{ collection: string }>) {
+  const handle = props.collection
   const manifest = useManifest()
   const { summary, collection, error: collectionError, isLoading: collectionLoading } = useCollection(handle)
   const { query } = useLocation()
@@ -94,8 +98,6 @@ export default function EntriesList({ params }: { params: Record<string, string>
     input,
     { enabled: !!summary && !showTree && view !== 'calendar', placeholderData: (prev) => prev },
   )
-  // The calendar shows a month; the title still counts the whole collection.
-  const counted = useAbility<PageData<ListItem>>('entries/list', { ...input, page: 1, perPage: 1, fields: [] }, { enabled: !!summary && view === 'calendar', placeholderData: (prev) => prev })
   const builtin = useAbility<BuiltinGroup[]>('pages/builtin', {}, { enabled: handle === 'pages' })
   const tree = useAbility<ListItem[]>('entries/tree', { collection: handle, locale, fields }, { enabled: !!summary && showTree, placeholderData: (prev) => prev })
 
@@ -110,7 +112,6 @@ export default function EntriesList({ params }: { params: Record<string, string>
   const withDates = (column: Column) => loading || !(column.id in dated) || dated[column.id as keyof typeof dated]
   const all = allColumns.filter(withDates)
   const columns = shownColumns.filter(withDates)
-  const total = view === 'calendar' ? counted.data?.total ?? null : loading ? null : showTree ? rows.length : (list.data?.total ?? 0)
 
   // Thumbnails for media columns and cards, in one lookup per page.
   const mediaHandles = [...columns.filter((c) => c.field?.type === 'media').map((c) => c.field!.handle), ...(view === 'grid' && media ? [media.handle] : [])]
@@ -137,13 +138,7 @@ export default function EntriesList({ params }: { params: Record<string, string>
   useShortcut('c', () => actions.create && navigate(newPath))
   const cursor = useRecordNavigation({ resetKey: `${handle}:${page}:${status}:${search}:${locale}:${sortKey}`, selection: { ids: selected, onSelect: select }, onOpen: (id) => navigate(`/content/${handle}/${id}`) })
 
-  if (!summary) {
-    return (
-      <Page crumbs={[{ label: t('Not Found') }]}>
-        <NotFoundState icon="collection" action={<Button onClick={() => navigate('/')}>{t('Go Home')}</Button>} />
-      </Page>
-    )
-  }
+  if (!summary) return <NotFoundState icon="collection" action={<Button onClick={() => navigate('/')}>{t('Go Home')}</Button>} />
 
   const setSort = (next: string | null) => {
     setPrefs({ sort: next })
@@ -191,14 +186,8 @@ export default function EntriesList({ params }: { params: Record<string, string>
   const unpublishable = chosen.some((item) => item.displayStatus !== 'draft')
   const builtinGroups = handle === 'pages' && view !== 'calendar' && !filtered ? (builtin.data ?? []).filter((group) => group.pages.length > 0) : []
   const empty = !loading && !collectionLoading && !loadError && rows.length === 0
-  const newButton = actions.create && (
-    <Button variant="primary" icon="plus" onClick={() => navigate(newPath)} title={t('New (C)')}>
-      {summary.newLabel}
-    </Button>
-  )
-
   return (
-    <Page width="wide" crumbs={[{ label: <Heading title={summary.title} count={total} />, icon: summary.icon }]} actions={newButton}>
+    <>
       <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-2">
         <Fields
           bare
@@ -262,16 +251,6 @@ export default function EntriesList({ params }: { params: Record<string, string>
         {actions.publish && unpublishable && <Button size="sm" variant="ghost" disabled={bulkPending || stale} onClick={() => bulk('entries/unpublish')}>{t('Unpublish')}</Button>}
         {actions.delete && <Button size="sm" variant="ghost" disabled={bulkPending || stale} onClick={() => bulk('entries/delete')}>{t('Delete')}</Button>}
       </SelectionBar>
-    </Page>
-  )
-}
-
-/** The collection's name with its size. */
-function Heading({ title, count }: { title: string; count: number | null }) {
-  return (
-    <>
-      {title}
-      {count !== null && <span className="ml-2 font-normal tabular-nums text-faint" title={plural(count, '{count} entry', '{count} entries')}>{count.toLocaleString(locale())}</span>}
     </>
   )
 }

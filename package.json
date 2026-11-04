@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
-    "test": "node --experimental-vm-modules --test modules/admin/tests/calendar.mjs modules/admin/tests/dateTime.mjs modules/admin/tests/entryActions.mjs modules/admin/tests/fieldIdentity.mjs modules/admin/tests/iconCatalog.mjs modules/content/tests/entrySession.mjs modules/content/tests/listPrefs.mjs",
+    "test": "node --experimental-vm-modules --test modules/admin/tests/calendar.mjs modules/admin/tests/dateTime.mjs modules/admin/tests/entryActions.mjs modules/admin/tests/fieldIdentity.mjs modules/admin/tests/iconCatalog.mjs modules/admin/tests/viewScope.mjs modules/content/tests/entrySession.mjs modules/content/tests/listPrefs.mjs",
     "test:browser": "node modules/admin/tests/browser.mjs"
   },
   "packageManager": "pnpm@11.12.0",

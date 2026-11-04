@@ -1,8 +1,10 @@
 import './styles.css'
-import { prefetchAbility, registry } from '@letterncms/sdk'
+import { registry } from '@letterncms/sdk'
 import { lazy } from 'react'
 import { UpdateRunner } from './UpdateRunner'
 
-registry.routes.set('/plugins', { path: '/plugins', component: lazy(() => import('./Plugins')), load: () => prefetchAbility('packages/list', { type: 'all' }) })
+// Plugins is a view (PackagesViews); the store and updates are its catalog components.
+registry.components.set('packages/store', lazy(() => import('./Store').then((m) => ({ default: m.Store }))))
+registry.components.set('packages/updates', lazy(() => import('./Updates').then((m) => ({ default: m.UpdatesPanel }))))
 registry.widgets.set('packages-system', lazy(() => import('./WidgetSystem')))
 registry.panels.set('packages-updates', { id: 'packages-updates', slot: 'shell.banner', component: UpdateRunner })

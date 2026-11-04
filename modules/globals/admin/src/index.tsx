@@ -1,10 +1,9 @@
 import './styles.css'
-import { prefetchAbility, getManifest, registry, run, t } from '@letterncms/sdk'
+import { getManifest, registry, run, t } from '@letterncms/sdk'
 import { lazy } from 'react'
 
-registry.routes.set('/globals', { path: '/globals', component: lazy(() => import('./Globals').then((m) => ({ default: m.GlobalsList }))) })
-registry.routes.set('/globals/:handle', { path: '/globals/:handle', component: lazy(() => import('./Globals').then((m) => ({ default: m.GlobalEditor }))), load: ({ handle }) => prefetchAbility('globals/get', { handle, locale: getManifest().site.defaultLocale }) })
-registry.routes.set('/globals/:handle/fields', { path: '/globals/:handle/fields', component: lazy(() => import('./Blueprint')), load: ({ handle }) => prefetchAbility('globals/get', { handle }) })
+// Globals are views (GlobalsViews); a set's fields are the blueprint editor, its catalog component.
+registry.components.set('globals/fields', lazy(() => import('./Blueprint')))
 registry.widgets.set('globals-sets', lazy(() => import('./WidgetGlobals')))
 
 // @ in a chat: a global set, with its values.

@@ -31,6 +31,7 @@ final class AccountModule extends Plugin
         // First in the settings sidebar: everyone has one, whatever else they may change.
         $this->cms()->admin()->nav('account', ['label' => 'Account', 'path' => '/account', 'icon' => 'user', 'section' => 'account', 'order' => 0]);
         $this->cms()->admin()->widget('account-security', ['label' => 'Security', 'description' => 'Two-factor sign-in, your API tokens and your last sign-in.', 'icon' => 'shield', 'column' => 'side', 'order' => 60]);
+        AccountViews::register($this->cms());
         $this->settingsSchema();
         $this->publicAccounts();
         $this->adminModule();

@@ -371,7 +371,7 @@ try {
     assert(location.pathname === '/admin/content/pages' && !isFull(), 'deletion pulled the user back into the full-size chat')
     assert(heading() === 'New Chat' && welcome(), 'the dock kept showing the deleted chat')
   })
-  await test('Generated UI uses json-render with shared metrics, tables, widgets and plugin components', async () => {
+  await test('Generated UI uses the shared view renderer with metrics, tables, widgets and plugin components', async () => {
     await open('surfaces')
     await wait(() => dock().textContent.includes('A live record from the plugin'), 'shared widget did not render')
     assert(dock().textContent.includes('Published pages') && dock().textContent.includes('Autumn launch'), 'generated data was not rendered')

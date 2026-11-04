@@ -27,6 +27,20 @@ final class SystemAbilities
             'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_map(static fn (Ability $x) => $x->toArray(), $a->available($ctx))),
         ]);
 
+        // The admin's places as data. For people's screens: agents read and change through the abilities a view binds, not the view.
+        $a->register('views/get', [
+            'label' => 'Get View',
+            'description' => 'One place of the admin as data: its components, and the abilities they load from and act with, for the signed-in person.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'expose' => ['mcp' => false, 'assistant' => false],
+            'input' => ['type' => 'object', 'properties' => [
+                'id' => ['type' => 'string', 'maxLength' => 120],
+                'params' => ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'default' => []],
+            ], 'required' => ['id']],
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->views()->resolve($in['id'], $ctx->user, $in['params']),
+        ]);
+
         $a->register('system/info', [
             'label' => 'System Information',
             'description' => 'CMS version, PHP, database, packages and pending upgrades.',
@@ -81,7 +95,7 @@ final class SystemAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
             ]],
-            'handler' => function (array $in) {
+            'handler' => function (array $in, AbilityContext $ctx) {
                 $query = User::query()->orderBy('name');
 
                 match ($in['kind']) {
@@ -101,7 +115,15 @@ final class SystemAbilities
 
                 $page = $query->paginate($in['perPage'], ['*'], 'page', $in['page']);
 
-                return ['items' => array_map(static fn (User $u) => $u->toPublic(), $page->items()), 'total' => $page->total(), 'page' => $page->currentPage(), 'pages' => $page->lastPage()];
+                // For whoever lists them: the person as one value, "You" beside the one asking, and what stands out about each (suspended, super admin, their roles, then two-factor when it is on).
+                $listed = static fn (User $u) => [
+                    ...$u->toPublic(),
+                    'person' => $u->toPerson(),
+                    'you' => $ctx->user?->is($u) ? app(\Cms\Admin\Translations::class)->label(__('You')) : null,
+                    'badges' => [...($u->status === \Cms\Users\Accounts::SUSPENDED ? ['suspended'] : []), ...($u->super ? ['super'] : []), ...($u->roles ?? []), ...($u->hasTwoFactor() ? ['twoFactor'] : [])],
+                ];
+
+                return ['items' => array_map($listed, $page->items()), 'total' => $page->total(), 'page' => $page->currentPage(), 'pages' => $page->lastPage()];
             },
         ]);
     }

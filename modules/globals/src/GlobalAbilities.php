@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Globals;
 
+use Illuminate\Support\Str;
+use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Admin\Translations;
 use Cms\Content\Fields\Blueprint;
@@ -47,19 +49,31 @@ final class GlobalAbilities
         $a->register('globals/update', [
             'label' => 'Update Global Values',
             'permission' => 'globals.edit',
-            'description' => 'Set values of a global set (merged into existing values).',
+            'description' => 'Set values of a global set (merged into existing values). Returns the values as stored.',
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'values' => ['type' => 'object'], 'locale' => ['type' => 'string']], 'required' => ['handle', 'values']],
-            'handler' => fn (array $in) => $this->cms->globals()->updateValues($in['handle'], $in['values'], $in['locale'] ?? null)->toArray($in['locale'] ?? null),
+            'handler' => fn (array $in) => $this->cms->globals()->updateValues($in['handle'], $in['values'], $in['locale'] ?? null)->values($in['locale'] ?? null),
         ]);
 
         $a->register('globals/save', [
             'label' => 'Save Global Set',
             'permission' => 'globals.manage',
-            'description' => 'Create a global set or change its fields.',
+            'description' => 'Create a global set or change its fields. Without a handle, a new set is made with one from its title.',
             'input' => ['type' => 'object', 'properties' => [
-                'handle' => self::HANDLE, 'title' => ['type' => 'string', 'maxLength' => 120], 'icon' => ['type' => 'string'], 'fields' => ['type' => 'array', 'items' => ['type' => 'object']],
-            ], 'required' => ['handle', 'title', 'fields']],
+                'handle' => self::HANDLE, 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120], 'icon' => ['type' => 'string'], 'fields' => ['type' => 'array', 'items' => ['type' => 'object']],
+            ], 'required' => ['title', 'fields']],
             'handler' => function (array $in) {
+                if (! isset($in['handle'])) {
+                    $in['handle'] = substr(Str::slug($in['title'], '_'), 0, 64);
+
+                    if ($in['handle'] === '') {
+                        throw AbilityException::invalid('Use letters or numbers in the name.', ['title' => 'Use letters or numbers in the name.']);
+                    }
+
+                    if ($this->cms->globals()->find($in['handle'])) {
+                        throw new AbilityException('A global set with this handle already exists.', 'conflict', ['title' => 'A global set with this handle already exists.']);
+                    }
+                }
+
                 $set = $this->cms->globals()->find($in['handle']) ?? new GlobalSet($in['handle'], $in['title'], $in['icon'] ?? 'globe', []);
                 $set->title = $in['title'];
                 $set->icon = $in['icon'] ?? $set->icon;

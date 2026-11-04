@@ -135,7 +135,8 @@ final class RecordTimestampsTest extends TestCase
         $this->assertNull($first['en']['publishedAt']);
         CarbonImmutable::setTestNow('2026-10-02 12:00:00 UTC');
         $this->cms()->saveSite(['name' => 'Renamed site']);
-        $this->assertSame(array_values($first), array_map(static fn ($row) => array_diff_key($row, ['entries' => true]), $this->ability('languages/list')['languages']));
+        // The list adds what the Languages screen shows (entries, path, badge…); the record itself is the same.
+        $this->assertSame(array_values($first), array_map(static fn ($row) => array_intersect_key($row, $first[$row['code']]), $this->ability('languages/list')['languages']));
         $changed = array_column($this->ability('languages/save', ['default' => 'fr', 'languages' => ['en', 'de', 'fr']]), null, 'code');
         $this->assertSame($first['fr']['publishedAt'], $changed['fr']['publishedAt']);
         $this->assertNotSame($first['fr']['updatedAt'], $changed['fr']['updatedAt']);

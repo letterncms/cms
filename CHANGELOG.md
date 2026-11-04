@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Added
+
+- Views: a place of the admin as data. A plugin registers a screen with `cms()->views()->register()`, or ships it as `views/<id>.json`: a page, tabs, lists bound to an ability with search, filters, pages, row and bulk actions, forms that load from one ability and save with another, details, stats, charts, before-and-after, and buttons that run abilities, ask first or open a dialog. Lettern draws every view with one renderer, checks it against the component catalog, and leaves out what the person looking may not see or do. See Plugins → Views in the docs.
+- A repeater can show its items as a table (`display: table`), one row each.
+- `packages/switch` turns a module or plugin on (with its install steps) or off. `packages/list` says where each one is set up (`to`, `settingsTo`) and, in a few words, what it is or why it stays on (`note`), sorted by name. `users/list` gives each person as one value (`person`), marks the one asking (`you`), and lists what stands out (`badges`: suspended, super admin, roles).
+
+### Changed
+
+- Settings pages, the Audit Log and each collection's place are views. A plugin adds a tab or a button to a settings page as data, through the `view.settings` filter.
+- Users, Plugins, Globals, Collections and Account are views too. A plugin adds a tab to Plugins, or a section to Account, with the `view.plugins` and `view.account` filters, as the license module adds **Licenses**. A global set in several languages has a tab for each.
+- `globals/update` returns the values as stored, and `globals/save` without a handle makes a new set with one from its title.
+- The assistant's answers are drawn by the same renderer and catalog as the admin's places, and can use notices, charts, details and before-and-after too. An answer still can't load data or run an ability without its approvals.
+
+### Removed
+
+- **Breaking.** The `settings.tabs` and `settings.actions` panel slots. Add tabs and buttons to a settings page with the `view.settings` filter.
+- **Breaking.** The `plugins.tabs` and `account.sections` panel slots. Use the `view.plugins` and `view.account` filters.
+- The json-render packages from the admin.
+
 ## 0.4.0 (2026-11-04)
 
 ### Added

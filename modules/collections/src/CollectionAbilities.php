@@ -29,6 +29,19 @@ final class CollectionAbilities
             'handler' => fn (array $in, AbilityContext $ctx) => $this->overview($ctx),
         ]);
 
+        $a->register('collections/editable', [
+            'label' => 'List Editable Collections',
+            'description' => 'The site\'s own collections, whose fields and settings are edited in the admin (not the system ones the CMS and its plugins bring), with how many entries each has.',
+            'permission' => 'collections.manage',
+            'annotations' => ['readOnly' => true],
+            'expose' => ['mcp' => false, 'assistant' => false],
+            'handler' => fn () => array_values(array_map(fn ($c) => [
+                ...\Cms\Support\RecordTimestamps::api($c->extra),
+                'handle' => $c->handle, 'title' => $c->title, 'icon' => $c->icon, 'structure' => $c->structure, 'route' => $c->route,
+                'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
+            ], array_filter($this->cms->collections()->all(), static fn ($c) => ! $c->system))),
+        ]);
+
         $a->register('collections/save', [
             'label' => 'Save Collection',
             'description' => 'Create or update a collection definition (fields, route, structure). Written to content/collections/<handle>.yaml.',

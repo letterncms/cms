@@ -80,3 +80,14 @@ export { useRecordNavigation } from './recordNavigation'
 
 export { WidgetSlot } from './WidgetSlot'
 export { Surface } from './SurfaceHost'
+
+// Views: the admin's places as data (see Cms\Admin\Views), and the pieces they are drawn with.
+export { View, viewRoute } from './view/View'
+export { Records } from './view/Records'
+export type { RecordsProps } from './view/Records'
+export { Form, SettingsView } from './view/Form'
+export type { FormProps } from './view/Form'
+export { formatValue } from './view/formats'
+export { fill as fillTemplate } from './view/scope'
+export { useTabDirty } from './view/context'
+export { GroupedFields, changedFrom } from './GroupedFields'

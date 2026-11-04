@@ -84,7 +84,27 @@ final class ContentModule extends Plugin
         ));
 
         $cms->admin()->widget('recent', ['label' => 'Recently Edited', 'description' => 'Entries you and your team changed last.', 'icon' => 'clock', 'column' => 'main', 'enabled' => true, 'order' => 10]);
+        // A collection's place: its page as data, its entries the catalog's `content/entries` (search, tree, table, grid, calendar, bulk).
+        $cms->admin()->component('content/entries', ['label' => 'Entries of a collection', 'description' => 'The admin list of one collection.', 'props' => ['type' => 'object', 'properties' => ['collection' => ['type' => 'string']], 'required' => ['collection'], 'additionalProperties' => false], 'surface' => false]);
+        $cms->views()->register('content', '/content/:collection', fn (User $user, array $params) => $this->view((string) ($params['collection'] ?? ''), $user));
         $this->adminModule();
+    }
+
+    /** One collection's place: its name and size, its New button, and its entries. */
+    private function view(string $handle, User $user): array
+    {
+        $collection = $this->cms()->collections()->all()[$handle] ?? null;
+
+        if ($collection === null || ! $user->hasPermission("entries.{$handle}.view")) {
+            return ['type' => 'ui/page', 'props' => ['title' => __('Not Found')], 'children' => [['type' => 'ui/empty', 'props' => ['icon' => 'collection', 'title' => __('Not Found'), 'action' => ['label' => __('Go Home'), 'to' => '/']]]]];
+        }
+
+        return ['type' => 'ui/page', 'props' => [
+            'title' => __($collection->title), 'icon' => $collection->icon,
+            // The count follows what the list shows: its language, status and search.
+            'count' => ['source' => ['ability' => 'entries/list', 'input' => ['collection' => $handle, 'locale' => '{query.locale}', 'status' => '{query.status}', 'search' => '{query.q}', 'perPage' => 1, 'fields' => []]], 'at' => 'total'],
+            'actions' => [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'to' => "/content/{$handle}/new?locale={query.locale}", 'can' => "entries.{$handle}.create"]],
+        ], 'children' => [['type' => 'content/entries', 'props' => ['collection' => $handle]]]];
     }
 
     /** The collection whose list shows this one's entries: the site's pages, for built-in pages. */

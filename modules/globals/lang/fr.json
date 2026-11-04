@@ -1,8 +1,7 @@
 {
-  "Actions for {name}": "Actions pour {name}",
+  "A global set with this handle already exists.": "Un ensemble global avec cet identifiant existe déjà.",
   "All Globals": "Toutes les données globales",
-  "Back to {label}": "Retour à {label}",
-  "Cancel": "Annuler",
+  "Back to Globals": "Retour aux données globales",
   "Content": "Contenu",
   "Create": "Créer",
   "Delete Global Set": "Supprimer l’ensemble global",
@@ -11,12 +10,12 @@
   "Edit Globals": "Modifier les données globales",
   "Footer": "Pied de page",
   "Get Global Set": "Obtenir un ensemble global",
+  "Global Set Fields": "Champs d’un ensemble global",
   "Global sets: site-wide values such as contact details or a footer, with their own fields.": "Ensembles globaux : des valeurs pour tout le site, comme les coordonnées ou un pied de page, avec leurs propres champs.",
   "Globals": "Données globales",
   "Handle": "Identifiant",
   "Icon": "Icône",
   "Its values are deleted too.": "Ses valeurs sont aussi supprimées.",
-  "Language": "Langue",
   "List Globals": "Lister les données globales",
   "Manage Global Sets and Fields": "Gérer les ensembles globaux et leurs champs",
   "Name": "Nom",
@@ -27,6 +26,8 @@
   "Save Global Set": "Enregistrer l’ensemble global",
   "Site-wide values, like contact details or footer links.": "Des valeurs pour tout le site, comme les coordonnées ou les liens du pied de page.",
   "Text": "Texte",
+  "The fields of one global set, in the blueprint editor.": "Les champs d’un ensemble global, dans l’éditeur de modèle.",
   "Update Global Values": "Mettre à jour les valeurs globales",
+  "Use letters or numbers in the name.": "Utilisez des lettres ou des chiffres dans le nom.",
   "View Globals": "Voir les données globales"
 }
