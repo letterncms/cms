@@ -1,0 +1,22 @@
+{
+    "name": "letterncms/sync",
+    "description": "Move a site between environments in one click: push or pull the database, media and files between local, staging and production, with URLs rewritten, a preview first, a backup and one-click undo.",
+    "type": "cms-plugin",
+    "version": "0.8.0",
+    "license": "MIT",
+    "require": {
+        "letterncms/cms": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cms\\Modules\\Sync\\": "src/"
+        }
+    },
+    "extra": {
+        "cms": {
+            "label": "Sync",
+            "icon": "sync",
+            "provider": "Cms\\Modules\\Sync\\SyncModule"
+        }
+    }
+}

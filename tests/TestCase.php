@@ -26,8 +26,8 @@ abstract class TestCase extends BaseTestCase
         return [];
     }
 
-    /** Optional modules that change what a site holds: a test turns them on by naming them in plugins(). */
-    private const array OPT_IN = ['letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
+    /** Optional modules that change what a site holds or who answers in it: a test turns them on by naming them in plugins(). */
+    private const array OPT_IN = ['letterncms/assistant', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
 
     /** @return array<string, array> collection handle => definition */
     protected function collections(): array

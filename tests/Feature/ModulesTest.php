@@ -13,12 +13,12 @@ use RuntimeException;
 
 final class ModulesTest extends TestCase
 {
-    private const array MODULES = ['letterncms/account', 'letterncms/admin', 'letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/content', 'letterncms/dashboard', 'letterncms/email', 'letterncms/globals', 'letterncms/languages', 'letterncms/license', 'letterncms/mcp', 'letterncms/media', 'letterncms/navigation', 'letterncms/packages', 'letterncms/settings', 'letterncms/site', 'letterncms/users', 'letterncms/workspace'];
+    private const array MODULES = ['letterncms/account', 'letterncms/admin', 'letterncms/assistant', 'letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/content', 'letterncms/dashboard', 'letterncms/email', 'letterncms/globals', 'letterncms/languages', 'letterncms/license', 'letterncms/mcp', 'letterncms/media', 'letterncms/navigation', 'letterncms/packages', 'letterncms/settings', 'letterncms/site', 'letterncms/sync', 'letterncms/users', 'letterncms/workspace'];
 
     /** Every module as a new site has them: the optional ones the test case keeps off are on here. */
     protected function plugins(): array
     {
-        return ['letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
+        return ['letterncms/assistant', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
     }
 
     public function test_the_admin_is_made_of_modules_that_are_on_by_default(): void
@@ -70,7 +70,7 @@ final class ModulesTest extends TestCase
         $list = $this->cms()->abilities()->execute('packages/list', ['type' => 'module'], AbilityContext::forUser($this->admin(), 'admin'));
         $content = array_column($list['items'], null, 'name')['letterncms/content'];
 
-        $this->assertCount(20, $list['items']);
+        $this->assertCount(22, $list['items']);
         $this->assertTrue($content['required']);
         $this->assertSame(['roles'], array_column($list['items'], null, 'name')['letterncms/users']['settings']);
         $this->assertArrayNotHasKey('metrics', $content);

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking.** Assistant and Sync are part of the CMS: core modules instead of plugins, never installed from the store. Both are on unless you switch them off under Plugins → **Built In**. Claude answers in the workspace once an Anthropic API key is set under Settings → **Assistant**; without one, nothing mentions it. A Composer site takes them by dropping `letterncms/assistant` and `letterncms/sync` from its `composer.json` and running `composer update`. The CMS can't be installed next to either plugin, so a site that still requires one stays on 0.8 until then.
+- Sync is free on every site: a public site no longer needs a Sync license to push or pull.
+- **Breaking.** Their classes are under `Cms\Modules\Assistant\` (was `Cms\Assistant\`) and `Cms\Modules\Sync\` (was `Cms\Sync\`), with the providers `Cms\Modules\Assistant\AssistantModule` and `Cms\Modules\Sync\SyncModule`. Their package names, settings, routes, abilities, commands and permissions stay as they were.
+- **Breaking.** Sync knows a plugin's tables only from the plugin's own `composer.json` (`extra.cms.sync`): it no longer has Forms', Commerce's and Analytics' built in. The workspace's chats are a group of their own, **Chats**, pulled but never pushed.
+- The installer recommends SEO and Forms: the rest comes with the CMS.
+
+### Removed
+
+- **Breaking.** `extra.cms.provides` in a package's `composer.json`, and `PackageManager::providing()`: nothing asked a package what it provides.
+
 ## 0.8.0 (2026-11-04)
 
 ### Changed
