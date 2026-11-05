@@ -2,18 +2,11 @@
 
 ## Unreleased
 
-## 0.11.0 (2026-11-05)
-
 ### Changed
 
-- **Breaking.** Sites style with Lettern Design, an open design vocabulary (design.lettern.org): every style is a name, never a CSS value. A block's style reads `{"text": "heading-2", "color": "foreground-muted", "paddingBlock": "section", "max-md": {"text": "heading-3"}}`; `token:` references, raw values (`23px`, `#ff0000`, `clamp()`) and the `tablet`/`mobile` keys (now `max-lg`/`max-md`) are gone, and a style that uses them is refused with the names it could have meant.
-- **Breaking.** The design system is a theme, `content/design/theme.json`, instead of `tokens.json`: a few decisions (brand colors, fonts, a base size and ratio, space, radius, shadow depth, motion speed, the transition between pages, flow, element styles, button, card and field looks) that every palette, size and step follows from. Text colors are worked out to keep their contrast in every scheme, and the Design System screen reports any pair that misses. Custom CSS is gone; custom JavaScript stays.
-- **Breaking.** The Design System screen edits the theme beside a live preview of the site: brand colors and modes, families and text styles, the space scale and flow, shapes and components, motion, element defaults, a contrast report and the DESIGN.md agents read.
-- **Breaking.** The Design tab only offers names: each value is picked from what the property takes, with what it is on this site (24–30px), stepped with the arrow keys or by dragging sideways. Colors are the scheme's roles, the palettes' roles and shades, with an opacity step. A section takes a scheme (inverse, muted, a brand color) that recolors everything in it; a container takes a flow that spaces its children.
-- **Breaking.** Animations use the theme's durations and easings and names for their values (`opacity: "0"`, `y: "lg"`, reveal `hidden-down`); only a step's start on a timeline is in seconds.
-- **Breaking.** Buttons take a variant (solid, soft, outline, ghost, link), a color (any palette) and a size, and render the vocabulary's button; cards look default, raised, flat or ghost. Content Color fields hold a color name such as `accent`, picked from the theme.
-- **Breaking.** `design/get` returns the theme, what it resolves to, the catalog of every property and name, DESIGN.md and the contrast findings; `design/update` and `design/preview` take a `theme` (merged, or replaced with `replace: true`); `design/code` takes `js` only. `cms://site/design` is the theme as DESIGN.md.
-- **Breaking.** Light and dark are `data-mode` on the page (was `data-theme`), remembered as `cms-mode`.
+- **Breaking.** Sites style with `content/design/tokens.json`, custom CSS and the Design tab as in 0.10.0 again. 0.11.0's theme (`theme.json`), its style names and its Design System screen are gone, and so is the `letterncms/design` dependency. Light and dark are `data-theme` again.
+
+## 0.11.0 (2026-11-05)
 
 ### Fixed
 

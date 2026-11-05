@@ -313,7 +313,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/get', [
             'label' => 'Design System',
-            'description' => 'The site’s theme (content/design/theme.json, on https://design.lettern.org) and everything it resolves to: palettes, schemes, sizes and steps, the vocabulary every style uses (catalog: each property and the names it takes), DESIGN.md (the theme written for agents), what the contrast check found, fonts and custom JS.',
+            'description' => 'The site’s theme (content/design/theme.json, Lettern Design: https://design.lettern.org) and everything it resolves to: palettes, schemes, sizes and steps, the vocabulary every style uses (catalog: each property and the names it takes), DESIGN.md (the theme written for agents), what the contrast check found, fonts and custom JS.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'handler' => function () use ($design) {
@@ -333,7 +333,7 @@ final class SiteModule extends Plugin
             },
         ]);
 
-        $theme = ['type' => 'object', 'description' => 'A theme, or part of one (see https://design.lettern.org/v1/theme.schema.json): color seeds and palettes, font slots and faces, type base/ratio/styles, space, layout, radius, shadow, motion, flow, elements and recipes. Names only, never CSS values.'];
+        $theme = ['type' => 'object', 'description' => 'A Lettern Design theme, or part of one (see https://design.lettern.org/v1/theme.schema.json): color seeds and palettes, font slots and faces, type base/ratio/styles, space, layout, radius, shadow, motion, flow, elements and recipes. Names only, never CSS values.'];
 
         $abilities->register('design/update', [
             'label' => 'Update Design System',
