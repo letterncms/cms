@@ -36,8 +36,8 @@ final class Catalog
             'tones' => ['type' => 'object', 'additionalProperties' => $tone], 'labels' => ['type' => 'object', 'additionalProperties' => $s],
             // `sort`: true sorts among what is loaded; a name is what the list's ability sorts by (its `sort.param`).
             'muted' => $id, 'sort' => ['type' => ['boolean', 'string'], 'maxLength' => 120], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
-            // A row's own icon, what an empty value reads as, a row's problem in words (drawn as a warning), and a switch's per-row label and lock.
-            'icon' => $id, 'empty' => $s, 'warning' => $id, 'ariaLabel' => $s, 'disabled' => $id,
+            // A row's own icon, what an empty value reads as, a row's problem in words (drawn as a warning), and a switch's per-row label, lock and why it is locked.
+            'icon' => $id, 'empty' => $s, 'warning' => $id, 'ariaLabel' => $s, 'disabled' => $id, 'reason' => $id,
             // As wide as its longest value (an address); a few lines on a card instead of a labeled value; on cards from the start; the field a `field` value belongs to; every language there is, for `languages`.
             'fit' => ['type' => 'boolean'], 'excerpt' => ['type' => 'boolean'], 'card' => ['type' => 'boolean'],
             'field' => ['type' => 'object', 'required' => ['type'], 'properties' => ['type' => $id, 'options' => []]],

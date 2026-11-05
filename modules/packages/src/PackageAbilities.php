@@ -77,11 +77,12 @@ final class PackageAbilities
                         'installedVersion' => $manager->installedVersion($package->name),
                         'dependents' => $dependents,
                         'settings' => $settingsOf,
-                        // In words, for a list: why it stays on, or what it is (its description's first clause). A problem is said instead, by `problem`.
-                        'note' => match (true) {
+                        // In words, for a list: what it is (its description's first clause), and why its switch stays on. A problem is said instead of the first, by `problem`.
+                        'note' => self::gist($translated['description'] ?? $package->description),
+                        'keptOn' => match (true) {
                             $package->required => __('Required'),
                             $enabled && $dependents !== [] => __('Needed by :names', ['names' => implode(', ', array_map(static fn ($d) => $labels[$d] ?? $d, $dependents))]),
-                            default => self::gist($translated['description'] ?? $package->description),
+                            default => null,
                         },
                         // Its switch stays as it is: what is required or needed by another stays on, and one with a problem can't come on.
                         'locked' => $package->required || ($enabled && $dependents !== []) || ($problem !== null && ! $enabled),

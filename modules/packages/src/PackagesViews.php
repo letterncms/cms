@@ -54,7 +54,7 @@ final class PackagesViews
             'source' => ['ability' => 'packages/list', 'input' => ['type' => 'module', 'optional' => true]],
             'columns' => [
                 ['key' => 'label', 'label' => __('Name'), 'width' => 'minmax(160px,1fr)', 'icon' => 'icon', 'muted' => 'note', 'warning' => 'problem'],
-                ['key' => 'enabled', 'label' => __('On'), 'width' => '48px', 'format' => 'switch', 'ariaLabel' => __('{row.label} on'), 'disabled' => 'locked', 'action' => [
+                ['key' => 'enabled', 'label' => __('On'), 'width' => '72px', 'align' => 'end', 'format' => 'switch', 'ariaLabel' => __('{row.label} on'), 'disabled' => 'locked', 'reason' => 'keptOn', 'action' => [
                     'label' => __('On'), 'ability' => 'packages/switch', 'input' => ['name' => '{row.name}', 'on' => '{value}'], 'success' => '{result.message}', 'then' => 'manifest',
                 ]],
                 ['key' => 'name', 'label' => __('Package'), 'format' => 'code', 'hidden' => true],
@@ -78,7 +78,7 @@ final class PackagesViews
             'columns' => [
                 ['key' => 'label', 'label' => __('Name'), 'width' => 'minmax(160px,1fr)', 'icon' => 'icon', 'muted' => 'note', 'warning' => 'problem'],
                 ['key' => 'version', 'label' => __('Version'), 'width' => '80px'],
-                ['key' => 'enabled', 'label' => __('On'), 'width' => '48px', 'format' => 'switch', 'ariaLabel' => __('{row.label} on'), 'disabled' => 'locked', 'action' => [
+                ['key' => 'enabled', 'label' => __('On'), 'width' => '72px', 'align' => 'end', 'format' => 'switch', 'ariaLabel' => __('{row.label} on'), 'disabled' => 'locked', 'reason' => 'keptOn', 'action' => [
                     'label' => __('On'), 'ability' => 'packages/switch', 'input' => ['name' => '{row.name}', 'on' => '{value}'], 'success' => '{result.message}', 'then' => 'manifest',
                 ]],
                 // Found by its package name too.
