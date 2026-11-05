@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.0 (2026-11-05)
+
 ### Changed
 
 - **Breaking.** Sites style with `content/design/tokens.json`, custom CSS and the Design tab as in 0.10.0 again. 0.11.0's theme (`theme.json`), its style names and its Design System screen are gone, and so is the `letterncms/design` dependency. Light and dark are `data-theme` again.

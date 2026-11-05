@@ -2,7 +2,7 @@
     "name": "letterncms/email",
     "description": "Email delivery for the CMS and its plugins: SMTP, sendmail or log, provider plugins, branded templates and a delivery log.",
     "type": "cms-plugin",
-    "version": "0.11.0",
+    "version": "0.12.0",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"
