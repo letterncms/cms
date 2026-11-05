@@ -160,10 +160,8 @@ final class StoreTest extends TestCase
         $this->assertSame([], $this->remote->callsTo('/download/acme/forms/1.0.0')[0]['headers']);
     }
 
-    public function test_the_store_tab_is_there_with_the_commerce_plugin_nowhere_in_sight(): void
+    public function test_the_store_tab_is_there_with_no_store_plugin_in_sight(): void
     {
-        $this->assertFalse($this->cms()->isActive('letterncms/commerce'));
-
         $abilities = $this->cms()->abilities();
         $admin = AbilityContext::forUser($this->admin());
         $this->list('acme/forms', '1.0.0');

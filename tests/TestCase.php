@@ -56,7 +56,7 @@ abstract class TestCase extends BaseTestCase
         Yaml::write($this->site.'/config/site.yaml', ['name' => 'Test site', 'url' => 'http://localhost', 'locale' => 'en', 'locales' => ['en', 'de']]);
         $modules = array_map(static fn (string $file) => (string) json_decode((string) file_get_contents($file), true)['name'], glob(dirname(__DIR__).'/modules/*/composer.json') ?: []);
         $plugins = getenv('CMS_TEST_PLUGINS') ?: getcwd().'/plugins';
-        // What the named packages build on comes on with them, and what that builds on (Commerce, Site, Blocks).
+        // What the named packages build on comes on with them, and what that builds on (Forms, Site, Blocks).
         $needs = static fn (string $name) => (array) (json_decode((string) @file_get_contents((in_array($name, $modules, true) ? dirname(__DIR__).'/modules' : $plugins).'/'.basename($name).'/composer.json'), true)['extra']['cms']['modules'] ?? []);
         $needed = $this->plugins();
 

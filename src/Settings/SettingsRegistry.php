@@ -35,7 +35,7 @@ final class SettingsRegistry
      * modules name their section: `site` (what the site is), `people` or
      * `system` (how the installation runs).
      *
-     * `home` is the sidebar item of a screen of the plugin's own (`commerce`):
+     * `home` is the sidebar item of a screen of the plugin's own (`forms`):
      * the page is then that screen's Settings tab (see `ScreenTabs`), and
      * /settings/<namespace> leads there. Everything a plugin adds is in one place.
      *
