@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.10.0 (2026-11-05)
+
 ### Added
 
 - For plugins: a `ui/records` list can do everything a collection's list does. `sort` sorts by the ability, `tree` draws records nested and puts them in order by dragging, `filters` can be `segmented`, `calendar` loads a month at a time, `dates` and `defaultView` say how dates sort and which view comes first, and `appendix` draws other rows under the list, lined up with it. Columns take `address`, `media`, `languages` and `field` as formats, `fit`, `excerpt` and `card`. A bulk action with `each` runs once per selected row, keeps what failed selected and says why, and shows while `some` holds; its `success` and `confirm` title can count (`{"one": …, "other": …}`). A row action can be `inline`, a page's action can have a `key`, and a `when` can compare (`{row.status} is draft, changed`). See Plugins → Views in the docs.
