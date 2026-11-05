@@ -15,5 +15,5 @@ $user = Cms\Users\User::query()->firstOrFail();
 
 echo json_encode([
     'manifest' => $app->make(Cms\Admin\Manifest::class)->build($user),
-    'robots' => $app->make(Cms\Seo\SiteFiles::class)->robots(),
+    'guide' => $app->make(Cms\Abilities\AgentGuide::class)->text(),
 ], JSON_UNESCAPED_SLASHES);
