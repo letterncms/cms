@@ -38,7 +38,7 @@ final class ViewFixturesTest extends TestCase
     protected function plugins(): array
     {
         // Every optional module too, as a site has them.
-        return [...array_map(static fn ($dir) => (string) json_decode((string) file_get_contents($dir.'/composer.json'), true)['name'], self::folders()), 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
+        return [...array_map(static fn ($dir) => (string) json_decode((string) file_get_contents($dir.'/composer.json'), true)['name'], self::folders()), 'letterncms/assistant', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
     }
 
     public function test_the_fixtures_draw_the_views_the_server_sends(): void

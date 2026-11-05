@@ -344,21 +344,6 @@
                         {
                             "type": "ui/tab",
                             "props": {
-                                "id": "sign-up",
-                                "label": "Sign-Up"
-                            },
-                            "children": [
-                                {
-                                    "type": "ui/settings",
-                                    "props": {
-                                        "namespace": "accounts"
-                                    }
-                                }
-                            ]
-                        },
-                        {
-                            "type": "ui/tab",
-                            "props": {
                                 "id": "fields",
                                 "label": "Profile Fields"
                             },
