@@ -6,6 +6,7 @@ import { readFile, realpath } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
 import { assets, body, imports, json, page as adminPage, root, serve, serveFile } from './harness.mjs'
+import { mounted, viewResponse } from './views.mjs'
 
 const siteArgument = process.argv.find((argument) => argument.startsWith('--site='))?.slice('--site='.length)
 const realSite = siteArgument ? await realpath(resolve(siteArgument)) : null
@@ -75,7 +76,7 @@ const manifest = {
   styles: [...modules, ...plugins].map((name) => `/_cms/assets/cms-${name}/admin.css`),
   settings: [], collections, globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [], config: { content: { autosave: 0, perPage: 50 } }, nav,
   sidebar: { sections: [{ id: 'content', label: 'Content', items: nav.map((item) => item.id) }], hidden: [], personal: false },
-  settingsNav: [], brand,
+  settingsNav: [], brand, views: mounted,
 }
 const boot = { brand, base: '/admin', api: '/api/admin', version: 'fixture', site: manifest.site, locale: 'en', messages: {}, manifest }
 const map = imports({ '@letterncms/blocks': `${assets('blocks')}admin.js` })
@@ -93,7 +94,7 @@ const results = []
 queryClient.setDefaultOptions({ queries: { retry: false, staleTime: 15000 } })
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const assert = (value, message) => { if (!value) throw new Error(message) }
-const wait = async (fn, message) => { const until = Date.now() + 10000; while (!fn()) { if (Date.now() > until) throw new Error(message); await sleep(20) } }
+const wait = async (fn, message) => { const until = Date.now() + 10000; while (!fn()) { if (Date.now() > until) throw new Error(typeof message === 'function' ? message() : message); await sleep(20) } }
 const button = (label, host = document) => [...(host ?? document).querySelectorAll('button')].find((button) => button.textContent.trim() === label || button.textContent.trim().endsWith(label) || button.getAttribute('aria-label') === label)
 const waitAsync = async (fn, message) => { const until = Date.now() + 10000; while (!(await fn())) { if (Date.now() > until) throw new Error(message); await sleep(25) } }
 const save = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 's', metaKey: /Mac|iPhone|iPad/.test(navigator.platform), ctrlKey: !/Mac|iPhone|iPad/.test(navigator.platform), bubbles: true }))
@@ -109,7 +110,8 @@ const rendered = async () => { await wait(() => liveDoc()?.documentElement?.hasA
 const details = async () => {
   await rendered()
   if (!document.querySelector('#entry-sidebar-details')) {
-    const back = button('Page', document.querySelector('[data-block-workspace]')) || button('Post', document.querySelector('[data-block-workspace]'))
+    // The block inspector's way back to the entry's details, in the inspector beside the canvas.
+    const back = button('Back to Page') || button('Back to Post')
     if (back) back.click()
     else (button('Page Details') || button('Post Details')).click()
     await wait(() => document.querySelector('#entry-sidebar-details'), 'Details did not open')
@@ -119,7 +121,7 @@ const details = async () => {
 }
 const open = async (path, title) => {
   navigate(path)
-  await wait(() => location.pathname === '/admin' + path && document.querySelector('header')?.textContent.includes(title), 'Failed to open ' + path)
+  await wait(() => location.pathname === '/admin' + path && document.querySelector('header')?.textContent.includes(title), () => 'Failed to open ' + path + ' at ' + location.pathname + ' dialog: ' + document.querySelector('[role="dialog"], [role="alertdialog"]')?.textContent.slice(0, 120) + ' header: ' + document.querySelector('header')?.textContent.slice(0, 80))
   await rendered()
 }
 const typeText = (target, text) => {
@@ -137,6 +139,8 @@ const persist = async () => {
 }
 const sourceChildren = (host) => [...host.children].filter((child) => child.dataset.cmsDocument === 'fixture-editor-document' && child.dataset.cmsNode)
 const frameTick = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+// Panels sliding in or out change the canvas's scale, and the chrome drawn over it with it: geometry is compared once they end.
+const settle = () => Promise.all(document.getAnimations().filter((a) => a instanceof CSSTransition).map((a) => a.finished.catch(() => {})))
 const controls = (id) => document.querySelector('[data-cms-block-controls="' + id + '"]')
 const selectRendered = async (id) => {
   liveDoc().activeElement?.blur?.()
@@ -180,7 +184,7 @@ const gapInsert = async (parentId, index, text) => {
   const children = sourceChildren(host)
   const before = children[index - 1], after = children[index]
   ;(after ?? before ?? host).scrollIntoView({ block: 'center' })
-  await frameTick()
+  await frameTick(); await settle()
   const parentBox = host.getBoundingClientRect(), beforeBox = before?.getBoundingClientRect(), afterBox = after?.getBoundingClientRect()
   const x = parentBox.left + parentBox.width / 2
   const y = beforeBox && afterBox ? (beforeBox.bottom + afterBox.top) / 2 : afterBox ? afterBox.top - 2 : beforeBox.bottom + 2
@@ -295,6 +299,7 @@ try {
     const previous = await parentOrder('block-layout'), previousIndex = previous.indexOf('block-text')
     insertKey('KeyT')
     await wait(() => insertMenu() && document.querySelector('[data-cms-insertion-line]'), 'Insert before did not open the quick inserter')
+    await settle()
     const block = source('block-text').getBoundingClientRect(), line = document.querySelector('[data-cms-insertion-line]').getBoundingClientRect()
     assert(Math.abs(line.top - outerPoint(0, block.top).y) <= 4, 'Insert before is not anchored to the block edge')
     const host = source('block-layout').getBoundingClientRect()
@@ -318,6 +323,9 @@ try {
   })
   await test('Inline text focus hides block selection chrome without changing content', async () => {
     liveDoc().activeElement?.blur?.()
+    // Nothing selected, so whatever shows comes from hovering.
+    liveDoc().body.dispatchEvent(new (liveDoc().defaultView.MouseEvent)('click', { clientX: 4, clientY: 4, bubbles: true, cancelable: true }))
+    await wait(() => !document.querySelector('[data-cms-selection], [data-cms-block-controls]'), 'Clicking outside every block kept the selection')
     source('block-text').scrollIntoView({ block: 'center' }); await frameTick()
     const hoverRect = source('block-text').getBoundingClientRect()
     pointerEvent(source('block-text'), 'pointermove', hoverRect.left + 2, hoverRect.top + 12)
@@ -327,7 +335,9 @@ try {
     assert(document.querySelector('[data-cms-selection]'), 'Explicit block selection has no selection frame')
     const prior = await parentOrder('block-layout')
     editing('block-text').focus()
-    await wait(() => !document.querySelector('[data-cms-block-controls], [data-cms-selection], [data-cms-hover]'), 'Writing text retains block selection chrome')
+    // The block stays framed while you write in it; its toolbar waits for block selection (Esc).
+    await wait(() => !document.querySelector('[data-cms-block-controls], [data-cms-hover]'), 'Writing text retains block selection chrome')
+    assert(document.querySelector('[data-cms-selection]'), 'Writing text lost the frame around its block')
     await details()
     editing('block-nested-tail').focus()
     await wait(() => document.querySelector('fieldset[role="tabpanel"]'), 'Writing in a block does not make it the active block in the sidebar')
@@ -340,12 +350,12 @@ try {
   await test('Move controls reorder exact source siblings and preserve nested content', async () => {
     const originalNodes = await parentNodes('block-layout'), original = originalNodes.map((node) => node.id), index = original.indexOf('block-text')
     await selectRendered('block-text')
-    button('Move down', controls('block-text')).click()
+    button('Move Down', controls('block-text')).click()
     await persist()
     let next = await parentOrder('block-layout')
     assert(next[index + 1] === 'block-text' && next.length === original.length, 'Move down lost content or moved to another parent')
     await selectRendered('block-text')
-    button('Move up', controls('block-text')).click()
+    button('Move Up', controls('block-text')).click()
     await persist()
     assert(JSON.stringify(await parentNodes('block-layout')) === JSON.stringify(originalNodes), 'Move up did not restore sibling order and original content')
     await details()
@@ -354,7 +364,7 @@ try {
     const originalNodes = await parentNodes('block-layout'), original = originalNodes.map((node) => node.id)
     const start = async () => {
       await selectRendered('block-text')
-      const handle = button('Drag to move', controls('block-text')), rect = handle.getBoundingClientRect()
+      const handle = button('Drag to Move', controls('block-text')), rect = handle.getBoundingClientRect()
       const from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
       pointerEvent(handle, 'pointerdown', from.x, from.y)
       pointerEvent(document, 'pointermove', from.x + 2, from.y + 1)
@@ -382,7 +392,7 @@ try {
     const next = await parentOrder('block-layout')
     assert(next[original.indexOf('block-text') + 1] === 'block-text' && next.length === original.length && new Set(next).size === next.length, 'Drag release lost, duplicated, or misplaced source content')
     for (let i = next.indexOf('block-text'); i > original.indexOf('block-text'); i--) {
-      await selectRendered('block-text'); button('Move up', controls('block-text')).click(); await persist()
+      await selectRendered('block-text'); button('Move Up', controls('block-text')).click(); await persist()
     }
     assert(JSON.stringify(await parentNodes('block-layout')) === JSON.stringify(originalNodes), 'Restoring a dragged block lost its original sibling order or content')
     await details()
@@ -427,7 +437,8 @@ try {
     const target = instance().querySelector('[data-cms-inline]')
     target.focus()
     await wait(() => !document.querySelector('[data-cms-selection], [data-cms-block-controls]'), 'Direct component typing retains structural selection chrome')
-    assert(!document.querySelector('[data-layer]'), 'Editing component text requires opening the outline')
+    // A folded-away outline stays mounted, out of reach: only one on view would count.
+    assert(![...document.querySelectorAll('[data-layer]')].some((layer) => !layer.closest('[inert]')), 'Editing component text requires opening the outline')
     assert(target.hasAttribute('data-cms-plain'), 'Component text is not marked as plain text')
     const text = '**A private component title with <literal> & symbols**'
     typeText(target, text)
@@ -453,8 +464,12 @@ try {
     await open('/content/pages/page-1', 'An editable page'); await details()
   })
   await test('Rendered preview runs site scripts while editing stays inert', async () => {
-    assert([...document.querySelectorAll('button[aria-label="Preview"]')].length === 1, 'The editor exposes duplicate preview actions')
-    button('Preview').click()
+    // Preview is one of the entry's actions, under More Actions.
+    button('More Actions').click()
+    const previews = () => [...document.querySelectorAll('[role="menuitem"]')].filter((item) => item.textContent.trim() === 'Preview')
+    await wait(() => previews().length, 'The editor offers no preview')
+    assert(previews().length === 1, 'The editor exposes duplicate preview actions')
+    previews()[0].click()
     await wait(() => document.querySelector('iframe[title="Site preview"]')?.contentDocument?.querySelector('#fixture-preview'), 'Read-only preview did not load')
     const frame = document.querySelector('iframe[title="Site preview"]')
     assert(!frame.contentDocument.querySelector('[contenteditable], [data-cms-inline], [data-cms-prop]'), 'Preview contains an editing bridge')
@@ -499,9 +514,12 @@ try {
     setInput(document.querySelector('#f-title'), 'Unsaved title remains'); save()
     await wait(() => document.querySelector('header [role="status"]')?.textContent === 'Couldn’t save', 'Save failure feedback missing')
     assert(document.querySelector('#f-title').value === 'Unsaved title remains', 'Failed save replaced local edits')
-    const confirm = window.confirm; window.confirm = () => false
-    navigate('/content/posts'); await sleep(100)
-    window.confirm = confirm
+    // Leaving asks in the admin's own dialog; staying keeps the edits.
+    navigate('/content/posts')
+    const leaving = () => [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].find((dialog) => dialog.textContent.includes('Discard unsaved changes?'))
+    await wait(() => leaving(), 'Failed save did not protect navigation')
+    button('Cancel', leaving()).click()
+    await wait(() => !leaving(), 'Staying did not close the question')
     assert(location.pathname.endsWith('/posts/post-1'), 'Failed save did not protect navigation')
     await configure({ failures: [] }); button('Retry').click()
     await waitAsync(async () => (await state()).entries['post-1'].title === 'Unsaved title remains', 'Retry did not save retained edits')
@@ -551,24 +569,31 @@ try {
     assert(!button('Restore', document.querySelector('#entry-sidebar-history-panel')), 'Read-only history offers Restore')
     source('block-text').dispatchEvent(new (liveDoc().defaultView.MouseEvent)('click', { bubbles: true, cancelable: true }))
     await wait(() => document.querySelector('fieldset[role="tabpanel"]'), 'Read-only inspector did not open')
-    assert(button('Page', document.querySelector('[data-block-workspace]')), 'No clear return path from the inspector')
-    assert(button('Duplicate').disabled && button('Delete').disabled, 'Read-only block mutations enabled')
+    assert(button('Back to Page'), 'No clear return path from the inspector')
+    // Duplicate and Delete are in the inspector's Block Actions menu, off for someone who may only read.
+    button('Block Actions', document.querySelector('[data-cms-inspector]')).click()
+    const item = (label) => [...document.querySelectorAll('[role="menuitem"]')].find((menuitem) => menuitem.textContent.includes(label))
+    await wait(() => item('Duplicate') && item('Delete'), 'Block Actions menu missing')
+    assert(item('Duplicate').getAttribute('aria-disabled') === 'true' && item('Delete').getAttribute('aria-disabled') === 'true', 'Read-only block mutations enabled')
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await wait(() => !item('Duplicate'), 'Block Actions menu did not close')
     assert(document.querySelector('fieldset[disabled]'), 'Read-only inspector fields are enabled')
     const before = (await state()).requests.filter((request) => request.ability === 'entries/update').length
     liveDoc().body.dispatchEvent(new (liveDoc().defaultView.KeyboardEvent)('keydown', { key: 'Backspace', bubbles: true }))
     await sleep(80)
     assert((await state()).requests.filter((request) => request.ability === 'entries/update').length === before, 'Read-only keyboard path wrote content')
-    button('Page', document.querySelector('[data-block-workspace]')).click()
+    button('Back to Page').click()
     await wait(() => document.querySelector('#entry-sidebar-details'), 'Returning from the inspector did not restore record tabs')
   })
   await test('List failures are distinct from empty collections and recover', async () => {
     navigate('/content/posts'); await wait(() => document.querySelector('[role="table"]'), 'Entry overview missing')
     await configure({ failures: ['entries/list'] })
     await queryClient.invalidateQueries({ queryKey: ['entries/list'] })
-    await wait(() => document.querySelector('#cms').textContent.includes('Couldn’t load entries.'), 'List request failure appeared empty')
+    // The list says it couldn't load, as every list drawn from data does.
+    await wait(() => document.querySelector('#cms').textContent.includes('Could not load data'), 'List request failure appeared empty')
     assert(!document.querySelector('#cms').textContent.includes('No posts yet'), 'List failure masquerades as an empty collection')
     await configure({ failures: [] }); button('Retry').click()
-    await wait(() => !document.querySelector('#cms').textContent.includes('Couldn’t load entries.'), 'List retry failed')
+    await wait(() => !document.querySelector('#cms').textContent.includes('Could not load data'), 'List retry failed')
   })
   await test('Bulk failures report individual reasons and retain only failed selections', async () => {
     await wait(() => document.querySelectorAll('[role="table"] [role="row"] a').length === 2, 'Both list rows did not load')
@@ -648,6 +673,8 @@ serve('Content workflow', async (req, res, url) => {
     if (failures.has(ability)) return json(res, 500, { error: { message: `Fixture request failed: ${ability}`, type: 'failed' } })
     if (delay && ability === 'entries/update') await new Promise((resolve) => setTimeout(resolve, delay))
     let data
+    // A collection's place is a view (ContentModule::view), drawn from its definition.
+    if (ability === 'views/get') { const view = viewResponse(input, manifest, definition); return json(res, view.status, view.body) }
     if (ability === 'collections/get') data = definition(input.handle)
     else if (ability === 'entries/get') data = entries.get(input.id)
     else if (ability === 'entries/create') { const id = `new-${++sequence}`; data = { ...makeEntry(id, input.collection, input.title), ...input, id, version: `v-${sequence}`, author: people.find((person) => person.id === input.authorId) ?? null }; entries.set(id, data) }
