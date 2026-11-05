@@ -71,7 +71,7 @@ final class Document
                 continue;
             }
 
-            $props = $type->current((array) ($node['props'] ?? []));
+            $props = (array) ($node['props'] ?? []);
 
             foreach ($type->inline as $prop) {
                 if (isset($props[$prop])) {

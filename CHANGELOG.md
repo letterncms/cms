@@ -14,7 +14,6 @@
 - **Breaking.** Buttons take a variant (solid, soft, outline, ghost, link), a color (any palette) and a size, and render the vocabulary's button; cards look default, raised, flat or ghost. Content Color fields hold a color name such as `accent`, picked from the theme.
 - **Breaking.** `design/get` returns the theme, what it resolves to, the catalog of every property and name, DESIGN.md and the contrast findings; `design/update` and `design/preview` take a `theme` (merged, or replaced with `replace: true`); `design/code` takes `js` only. `cms://site/design` is the theme as DESIGN.md.
 - **Breaking.** Light and dark are `data-mode` on the page (was `data-theme`), remembered as `cms-mode`.
-- A section's widths are Text, Content, Wide and Full. A section saved with the old Prose width saves and renders as Text, so pages made before the update still save.
 
 ### Fixed
 

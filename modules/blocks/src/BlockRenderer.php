@@ -341,7 +341,7 @@ final class BlockRenderer
                 return $browser === null ? $html : '<div style="display:contents" data-cms-account="'.$browser.'">'.$html.'</div>';
             }
 
-            $props = array_replace($type->blueprint()->defaults(), $type->defaults, array_filter($type->current((array) ($node['props'] ?? [])), static fn ($v) => $v !== null));
+            $props = array_replace($type->blueprint()->defaults(), $type->defaults, array_filter((array) ($node['props'] ?? []), static fn ($v) => $v !== null));
             [$props, $extra] = $this->bindings($type, $props, $bind, $scope);
             $browser !== null && $extra['attrs']['data-cms-account'] = $browser;
             $state = (array) ($node['logic']['data'] ?? []);
@@ -522,7 +522,7 @@ final class BlockRenderer
                 continue;
             }
 
-            [$props] = $this->bindings($type, array_replace($type->defaults, $type->current((array) ($node['props'] ?? []))), $bind, $scope);
+            [$props] = $this->bindings($type, array_replace($type->defaults, (array) ($node['props'] ?? [])), $bind, $scope);
 
             // Links to pages by reference read as their URL.
             foreach ($type->blueprint()->fields() as $field) {

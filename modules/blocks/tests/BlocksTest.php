@@ -85,14 +85,6 @@ final class BlocksTest extends TestCase
         $this->assertSame($nodes[3]['style'], $again[3]['style']);
     }
 
-    public function test_a_section_saved_with_the_old_prose_width_saves_and_renders_as_text(): void
-    {
-        $node = ['id' => 'old', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => []];
-
-        $this->assertSame('text', app(Document::class)->normalize([$node], strict: true)[0]['props']['width']);
-        $this->assertStringContainsString('data-width="text"', app(BlockRenderer::class)->render([$node]));
-    }
-
     public function test_document_sanitizes_text_and_styles(): void
     {
         $nodes = app(Document::class)->normalize([

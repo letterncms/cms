@@ -67,7 +67,7 @@ final class CoreBlocks
                 'description' => 'A full-width band.', 'keywords' => ['container', 'band', 'hero', 'wrapper'],
                 'children' => true, 'html' => 'section',
                 'fields' => [
-                    ['handle' => 'width', 'type' => 'select', 'label' => 'Content Width', 'options' => ['text' => 'Text', 'content' => 'Content', 'wide' => 'Wide', 'full' => 'Full'], 'default' => 'content', 'display' => 'segmented', 'renamed' => ['prose' => 'text']],
+                    ['handle' => 'width', 'type' => 'select', 'label' => 'Content Width', 'options' => ['text' => 'Text', 'content' => 'Content', 'wide' => 'Wide', 'full' => 'Full'], 'default' => 'content', 'display' => 'segmented'],
                     ['handle' => 'tag', 'type' => 'select', 'label' => 'HTML Tag', 'options' => ['section' => 'section', 'header' => 'header', 'footer' => 'footer', 'aside' => 'aside', 'main' => 'main', 'nav' => 'nav', 'article' => 'article', 'div' => 'div'], 'default' => 'section', 'advanced' => true],
                     ['handle' => 'background_image', 'type' => 'media', 'label' => 'Background Image', 'max' => 1],
                     ['handle' => 'overlay', 'type' => 'select', 'label' => 'Overlay', 'options' => ['none' => 'None', 'light' => 'Light', 'dark' => 'Dark'], 'default' => 'none'],

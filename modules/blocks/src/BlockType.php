@@ -95,21 +95,6 @@ final class BlockType
     }
 
     /**
-     * Props with option values a field has renamed (`renamed` on the field: old => new), so content
-     * saved before the rename still saves and renders.
-     */
-    public function current(array $props): array
-    {
-        foreach ($this->fields as $field) {
-            if (is_array($field) && isset($field['renamed'], $field['handle']) && is_string($value = $props[$field['handle']] ?? null) && isset($field['renamed'][$value])) {
-                $props[$field['handle']] = $field['renamed'][$value];
-            }
-        }
-
-        return $props;
-    }
-
-    /**
      * Names from a dynamic list can't be judged right now: what they name may belong
      * to a plugin that is off (the `menu` source without navigation). They stay as
      * they are, so an entry still saves and works again when the plugin comes back.
