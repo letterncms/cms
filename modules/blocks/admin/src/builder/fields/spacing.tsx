@@ -1,20 +1,15 @@
 import { t, type FieldProps } from '@letterncms/sdk'
 import { Popover, cn } from '@letterncms/ui'
-import { useEffect, useRef, useState } from 'react'
-import { useTokens } from '../../core/context'
-import { SubField } from './controls'
-import { useTokenOf } from './tokens'
+import { useState } from 'react'
+import { useDesign } from '../../core/context'
 
 /* `blocks-spacing` — the box model, like Webflow: margin around padding around the content.
-   Each side shows its value (blue when set here, orange when inherited, a token as its name);
-   drag a side to scrub, click it to type or pick a token. Alt changes the opposite side too,
-   Shift all four. */
+   Each side shows its space step; drag a side to walk the scale, click it to pick a step or a
+   role (section, gutter). Alt changes the opposite side too, Shift all four. */
 
 type Box = 'margin' | 'padding'
 type Sides = (string | undefined)[]
 export type SideStatus = 'own' | 'inherited' | 'none'
-
-const NUMBER = /^(-?\d*\.?\d+)([a-z%]*)$/i
 
 /** Which sides a change reaches: the one, it and its opposite (Alt), or all four (Shift). */
 function reach(i: number, e: { altKey: boolean; shiftKey: boolean }): number[] {
@@ -71,32 +66,28 @@ export function SpacingField({ field, value, onChange, context }: FieldProps<Rec
   )
 }
 
-function SideValue({ box, index, value, status, onChange, context }: { box: Box; index: number; value?: string; status: SideStatus; onChange: (sides: number[], v: string | null) => void; context: FieldProps['context'] }) {
-  const tokenOf = useTokenOf()
+function SideValue({ box, index, value, status, onChange }: { box: Box; index: number; value?: string; status: SideStatus; onChange: (sides: number[], v: string | null) => void; context: FieldProps['context'] }) {
+  const design = useDesign()
   const [open, setOpen] = useState(false)
   const [sides, setSides] = useState<number[]>([index])
   const [dragging, setDragging] = useState(false)
-  const chosen = tokenOf(value)
-  const parts = value?.match(NUMBER)
-  const shown = chosen ? chosen.token.name : parts ? (parts[2] === 'px' || !parts[2] ? parts[1] : `${parts[1]}${parts[2]}`) : value ?? '0'
+  const steps = design.names(box === 'margin' ? 'marginTop' : 'paddingTop').filter((n) => n !== 'auto' && !/^v[wh]-/.test(n) && !Object.keys(design.resolved?.spaceRoles ?? {}).includes(n))
 
+  // A drag walks the space scale a step at a time; margins go below zero into negative steps.
   const down = (e: React.PointerEvent) => {
     if (e.button !== 0) return
     e.preventDefault()
     const start = { x: e.clientX, y: e.clientY }
-    const base = parts ? parseFloat(parts[1]) : 0
-    const unit = parts?.[2] || 'px'
-    const numeric = !value || !!parts
+    const ladder = box === 'margin' ? [...steps.slice(1).reverse().map((s) => `-${s}`), ...steps] : steps
+    const at = Math.max(0, ladder.indexOf(value ?? '0'))
     let moved = false
     const move = (ev: PointerEvent) => {
-      const delta = ev.clientX - start.x - (ev.clientY - start.y)
-      if (!moved && Math.abs(delta) < 3) return
-      if (!numeric) return
+      const delta = Math.trunc((ev.clientX - start.x - (ev.clientY - start.y)) / 12)
+      if (!moved && delta === 0) return
       if (!moved) setDragging(true)
       moved = true
       document.body.style.cursor = index % 2 ? 'ew-resize' : 'ns-resize'
-      const n = Math.round(base + Math.round(delta / 2))
-      onChange(reach(index, ev), `${box === 'padding' ? Math.max(0, n) : n}${unit}`)
+      onChange(reach(index, ev), ladder[Math.max(0, Math.min(ladder.length - 1, at + delta))])
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
@@ -121,14 +112,14 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
       open={open}
       onOpenChange={setOpen}
       align="center"
-      className="w-60 !p-2"
+      className="w-64 !p-2"
       trigger={
         <button
           type="button"
           onPointerDown={down}
           onClick={(e) => setSides(reach(index, e))}
           aria-label={title(box, [index])}
-          title={`${title(box, [index])}${chosen ? ` · ${chosen.token.path}` : ''}\n${t('Drag to change. Alt: opposite side too, Shift: all sides.')}`}
+          title={`${title(box, [index])}\n${t('Drag to step through the space scale. Alt: opposite side too, Shift: all sides.')}`}
           className={cn(
             'mx-auto flex h-full min-w-0 max-w-full items-center justify-center rounded-xs px-1 text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus',
             index % 2 ? 'cursor-ew-resize' : 'cursor-ns-resize',
@@ -136,38 +127,42 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
             (open || dragging) ? 'bg-active' : 'hover:bg-hover',
           )}
         >
-          <span className={cn('truncate', chosen && 'rounded-[3px] px-1 leading-4', chosen && 'bg-active')}>{shown}</span>
+          <span className="truncate">{value ?? '0'}</span>
         </button>
       }
     >
-      <SideEditor box={box} sides={sides} value={value} onChange={(v) => onChange(sides, v)} close={() => setOpen(false)} context={context} />
+      <SideEditor box={box} sides={sides} value={value} onChange={(v) => onChange(sides, v)} close={() => setOpen(false)} />
     </Popover>
   )
 }
 
-const PRESETS = ['0', '4px', '8px', '12px', '16px', '24px', '32px', '48px', '64px', '96px']
-
-/** Type a value, pick a space token, or a common size. */
-function SideEditor({ box, sides, value, onChange, close, context }: { box: Box; sides: number[]; value?: string; onChange: (v: string | null) => void; close: () => void; context: FieldProps['context'] }) {
-  const { byGroup } = useTokens()
-  const tokens = byGroup.get('space') ?? []
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const input = ref.current?.querySelector('input')
-    input?.focus()
-  }, [])
+/** The space scale, the roles (section, gutter) and, for margins, auto and negative steps. */
+function SideEditor({ box, sides, value, onChange, close }: { box: Box; sides: number[]; value?: string; onChange: (v: string | null) => void; close: () => void }) {
+  const design = useDesign()
+  const r = design.resolved
+  const roles = Object.keys(r?.spaceRoles ?? {})
+  const names = design.names(box === 'margin' ? 'marginTop' : 'paddingTop').filter((n) => n !== 'auto' && !/^v[wh]-/.test(n))
+  const steps = names.filter((n) => !roles.includes(n))
+  const negative = value?.startsWith('-') ?? false
   const pick = (v: string | null) => {
     onChange(v)
     close()
   }
+  const range = (n: string) => {
+    const f = r?.space[r.spaceRoles[n] ?? n]
+    return f ? (Math.round(f.min) === Math.round(f.max) ? `${Math.round(f.max)}px` : `${Math.round(f.min)}–${Math.round(f.max)}px`) : ''
+  }
+  const button = (n: string, label = n) => {
+    const v = negative && n !== '0' && !roles.includes(n) ? `-${n}` : n
+    return (
+      <button key={n} type="button" title={range(n)} onClick={() => pick(v)} className={cn('h-6 min-w-8 rounded-xs px-1.5 text-2xs tabular-nums', value === v ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
+        {label}
+      </button>
+    )
+  }
 
   return (
-    <div
-      ref={ref}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') requestAnimationFrame(close)
-      }}
-    >
+    <div>
       <p className="m-0 mb-1.5 flex items-center justify-between text-xs font-semibold text-ink">
         {title(box, sides)}
         {value !== undefined && (
@@ -176,42 +171,18 @@ function SideEditor({ box, sides, value, onChange, close, context }: { box: Box;
           </button>
         )}
       </p>
-      <SubField
-        field={{ handle: `${box}-${sides.join('')}`, type: 'text', component: 'blocks-value', label: title(box, sides), placeholder: '0', keywords: box === 'margin' ? ['auto'] : [], min: box === 'padding' ? 0 : undefined }}
-        value={value ?? null}
-        onChange={(v) => onChange(v as string | null)}
-        context={context}
-      />
-      {tokens.length > 0 ? (
-        <>
-          <p className="cms-label m-0 mb-1 mt-2.5 !text-2xs">{t('Space Tokens')}</p>
-          <div className="flex flex-wrap gap-1">
-            {tokens.map((token) => (
-              <button
-                key={token.path}
-                type="button"
-                title={`${token.path} · ${typeof token.value === 'object' && token.value ? Object.values(token.value).join('–') : String(token.value)}`}
-                onClick={() => pick(`token:${token.path}`)}
-                className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === `token:${token.path}` ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}
-              >
-                {token.name}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {PRESETS.map((p) => (
-            <button key={p} type="button" onClick={() => pick(p)} className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === p ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
-              {p.replace('px', '')}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-1">{steps.map((n) => button(n))}</div>
+      <p className="cms-label m-0 mb-1 mt-2.5 !text-2xs">{t('Roles')}</p>
+      <div className="flex flex-wrap gap-1">{roles.map((n) => button(n))}</div>
       {box === 'margin' && (
-        <button type="button" onClick={() => pick('auto')} className={cn('mt-1 h-6 rounded-xs px-1.5 text-2xs', value === 'auto' ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
-          {t('Auto')}
-        </button>
+        <div className="mt-2 flex gap-1 border-t border-border pt-2">
+          <button type="button" onClick={() => pick('auto')} className={cn('h-6 rounded-xs px-1.5 text-2xs', value === 'auto' ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
+            {t('Auto')}
+          </button>
+          <button type="button" disabled={!value || value === 'auto' || value === '0' || roles.includes(value)} onClick={() => value && pick(negative ? value.slice(1) : `-${value}`)} aria-pressed={negative} className={cn('h-6 rounded-xs px-1.5 text-2xs disabled:opacity-40', negative ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
+            {t('Negative')}
+          </button>
+        </div>
       )}
     </div>
   )

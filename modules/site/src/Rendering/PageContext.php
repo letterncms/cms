@@ -127,6 +127,7 @@ final class PageContext
         $rules = $this->styles;
         uasort($rules, static fn ($a, $b) => $a[0] <=> $b[0]);
 
-        return implode('', array_column($rules, 1));
+        // Above the theme's components, so a block's own styles always win.
+        return $rules === [] ? '' : '@layer design.styles{'.implode('', array_column($rules, 1)).'}';
     }
 }

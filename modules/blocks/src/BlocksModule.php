@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Blocks;
 
+use Lettern\Design\Spec;
+
 use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
@@ -90,9 +92,14 @@ final class BlocksModule extends Plugin
             return $collections;
         });
 
-        // The lists block fields choose from (`dynamic`). The site's design system adds its own button looks (`buttons` in tokens.json).
+        // The lists block fields choose from (`dynamic`).
         $hooks = $this->cms()->hooks();
-        $hooks->addFilter('fields.options.button-variants', static fn (array $options) => [...['primary' => 'Primary', 'secondary' => 'Secondary', 'ghost' => 'Ghost', 'link' => 'Text link'], ...$options], 5);
+        // A button's color is one of the theme's palettes.
+        $hooks->addFilter('fields.options.palettes', function (array $options) {
+            $palettes = (array) ($this->cms()->hooks()->filter('blocks.vocabulary', null)['palettes'] ?? Spec::PALETTES);
+
+            return [...$options, ...array_combine($palettes, array_map('ucfirst', $palettes))];
+        });
         $hooks->addFilter('fields.options.sources', fn (array $options) => [...$options, ...array_column($this->app->make(DataSources::class)->catalog(), 'label', 'name')]);
         $hooks->addFilter('fields.options.patterns', fn (array $options) => [...$options, ...array_map(static fn ($p) => $p['title'], array_filter($this->app->make(Patterns::class)->all(), static fn ($p) => $p['synced']))]);
 
@@ -295,18 +302,15 @@ final class BlocksModule extends Plugin
 
         $a->register('blocks/types', [
             'label' => 'Block Catalog',
-            'description' => 'Every block type (props, children, examples), every style property and variant, data sources for Repeat, and the schema of scripts (logic) and animations (motion). Compose pages from these.',
+            'description' => 'Every block type (props, children, examples), the design vocabulary (every style property, the names it takes and every condition), data sources for Repeat, and the schema of scripts (logic) and animations (motion). Compose pages from these.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
             'handler' => fn () => [
                 'blocks' => $this->translatedBlocks(),
                 'categories' => $this->translatedCategories(),
-                'styles' => array_map(static fn ($p) => ['property' => $p[0], 'group' => $p[1]], StyleCompiler::PROPERTIES),
-                'aliases' => StyleCompiler::ALIASES,
-                'states' => [...array_keys(StyleCompiler::STATES), 'is-<name>', 'in-<name>'],
-                'breakpoints' => $this->app->make(StyleCompiler::class)->breakpoints(),
+                'styles' => $this->app->make(StyleCompiler::class)->catalog(),
                 'sources' => $this->translatedSources(),
-                'motion' => ['triggers' => Motion::TRIGGERS, 'properties' => Motion::PROPERTIES, 'eases' => array_keys(Motion::EASES), 'screens' => Motion::SCREENS],
+                'motion' => ['triggers' => Motion::TRIGGERS, 'properties' => Motion::PROPERTIES, 'clips' => array_keys(Motion::CLIPS), 'eases' => array_keys(Spec::EASES), 'durations' => array_keys(Spec::DURATIONS), 'screens' => Motion::SCREENS],
                 'logic' => ['events' => Logic::EVENTS, 'mods' => Logic::MODS, 'actions' => Logic::ACTIONS, 'transitions' => Logic::TRANSITIONS, 'merges' => Logic::MERGES],
             ],
         ]);
@@ -392,40 +396,41 @@ final class BlocksModule extends Plugin
                 'Everything visitors see is blocks: entries (their blocks field), templates (entries of the templates collection — they frame pages and contain one `outlet` block) and components (entries of the components collection — header, footer, cards). There are no theme files to edit.',
                 'A node: {type, props, style?, attrs?, bind?, logic?, motion?, children?, label?}. Omit ids — they are generated. Name important layers with `label`.',
                 'Compose layouts from `box` (any HTML tag; flex or grid via style) and text primitives (`heading`, `paragraph` with a tag, `link`, `button`, `icon`, `image`). Use `section` for page-width bands in content.',
-                'style keys are CSS properties in camelCase (gridTemplateColumns, backdropFilter…). Prefer design tokens: token:space.8, token:color.primary, token:color.primary/20 (alpha), token:text.xl, token:radius.lg — read cms://site/design. Plain CSS values work too (clamp(), %, vw, gradients); media:<id> becomes url().',
-                'Variants: base (all screens), tablet, mobile (desktop-first) or sm/md/lg/xl (min-width); states hover, focus-visible, active, before, after, first, last, group-hover (inside an element with logic.behaviors.group), dark; custom states is-<name> (set by logic.states, behaviors or bind state:<name>) and in-<name> (an ancestor has is-<name>). Combine: "mobile:hover".',
-                'Text props are inline HTML: <strong>, <em>, <a href>, <code>, <mark>, <br>. Style <em>/<strong> inside headings through element styles in the design system.',
-                'bind connects props to data: {"text": "entry.title"}, {"url": "item.url"}, {"image": "entry.cover"}, {"visible": "entry.excerpt"}, {"state:active": "item.active"}, {"attr:aria-label": "item.label"}, {"style:backgroundImage": "item.image"}. Filters: |date:M j, Y |excerpt:120 |upper |default:Text |count |not.',
+                'style uses Lettern Design (https://design.lettern.org): camelCase CSS properties mapped to names, never CSS values. {"text": "heading-2", "color": "foreground-muted", "paddingBlock": "section", "gap": "lg", "gridTemplateColumns": "12", "gridColumn": "2 / span 6", "backgroundImage": "linear(to-br, primary, accent/40)"}. A wrong value is refused with the nearest names. Every property and the names it takes are in blocks/types styles; the site\'s own values in cms://site/design.',
+                'Reach for the largest unit: a text style (`text`) over size and weight, a role (`foreground-muted`, `primary-text`, `border`) over a shade, `scheme` (inverse, muted, primary…) to put a section in another color, and `flow` (tight, normal, loose, prose) on a container instead of margins on its children. Space is fluid; add a breakpoint only when the layout changes.',
+                'Conditions: base (all screens), max-lg (tablets and phones), max-md (phones), or md/lg/xl (from that width up); @sm…@4xl (container width); states hover, focus-visible, active, before, after, first, last, group-hover (inside an element with logic.behaviors.group), dark; custom states is-<name> (set by logic.states, behaviors or bind state:<name>) and in-<name> (an ancestor has is-<name>). Combine: "max-md:hover". Base properties may sit at the top beside the conditions: {"gap": "lg", "max-md": {"gap": "sm"}}.',
+                'Text props are inline HTML: <strong>, <em>, <a href>, <code>, <mark>, <br>. Style <em>/<strong> inside headings through element styles in the theme.',
+                'bind connects props to data: {"text": "entry.title"}, {"url": "item.url"}, {"image": "entry.cover"}, {"visible": "entry.excerpt"}, {"state:active": "item.active"}, {"attr:aria-label": "item.label"}, {"style:backgroundImage": "item.image"}, {"style:color": "item.color"} (data bound to a style holds a name: "accent", not a hex). Filters: |date:M j, Y |excerpt:120 |upper |default:Text |count |not.',
                 'Scope: site.*, entry.* (title, url, date, any field, parent, prev, next, children), globals.<set>.<field>, page.uri, item/index/first/last inside a Repeat, props.* inside a component, pagination.* after a paginated Repeat.',
                 'Repeat renders its children once per item of a data source (see blocks/types sources): entries {collection, sort, limit, hasTag, parent, paginate}, menu {menu}, children, headings, breadcrumbs, languages, list {path: "item.children"}. Nest Repeats for sub-menus.',
                 'Components: entries of the components collection with synced: true and props (fields). Instances: {"type":"pattern","props":{"ref":"card","values":{"title":"Fast"}}}; inside the component bind to props.title. Bind instance values to data with bind {"values.title": "item.title"}.',
                 'logic compiles to Alpine.js (CSP build): data (state), on (events → actions: set, toggle, add, if, wait, play, scroll, copy, go, theme, focus, dispatch, fetch, lock, run), show + transition, states, text, attrs, model, target/merge (load links and forms into blocks), behaviors (scroll: is-scrolled/is-hidden on scroll, spy: scrollspy for in-page links, group: hover group, marquee, carousel: step through the first child with the buttons after it).',
-                'motion compiles to CSS (load, scroll, loop) or Web Animations (appear, hover, press, event): [{trigger: {type: appear|scroll|hover|press|load|loop|event, start, end, once, node}, on: [desktop|tablet|mobile], steps: [{target: self|children|words|#<node id>, mask, from, to, duration, delay, ease, stagger, at}], repeat, yoyo}]. start and end read "<top|center|bottom> <top|center|bottom|N%>". load caps its delay at 0.2s and its stagger at 0.3s so it cannot hold back the page. repeat -1 needs a motion-toggle block on the page. Properties: opacity, x, y, xPercent, yPercent, scale, rotate, rotateX/Y, skewX/Y, perspective, blur, clipPath, colors, borderRadius. Use event triggers with a logic play action for menus and modals.',
+                'motion compiles to CSS (load, scroll, loop) or Web Animations (appear, hover, press, event): [{trigger: {type: appear|scroll|hover|press|load|loop|event, start, end, once, node}, on: [desktop|tablet|mobile], steps: [{target: self|children|words|#<node id>, mask, from, to, duration, delay, ease, stagger, at}], repeat, yoyo}]. Values are names too: duration, delay and stagger are durations (fastest…glacial), ease an easing (out, expo, emphasized, swift, spring…), from/to take the names of the matching style property (opacity "0", y "lg" or "-1/2", scale "95", rotate "-6", blur "md", color "primary", borderRadius "xl") and clipPath a reveal (visible, hidden-up, hidden-down, hidden-left, hidden-right, hidden-center, circle-hidden, circle-visible). Only at (a step\'s start on its timeline) and hold are seconds. start and end read "<top|center|bottom> <top|center|bottom|N%>". load caps its delay so it cannot hold back the page. repeat -1 needs a motion-toggle block on the page. Use event triggers with a logic play action for menus and modals.',
                 'Templates and components are entries of the "templates" and "components" collections (body field: blocks). entries/update saves a draft; entries/publish (or publish: true) makes it live and rebuilds the pages that use it.',
                 'Prefer existing components and sections (patterns/list) to keep sites consistent. You can send entry data for a blocks field as Block Markdown (a string).',
             ],
             'blocks' => $this->app->make(BlockRegistry::class)->catalog(),
             'examples' => [
-                'navigation from a menu' => ['type' => 'box', 'label' => 'Nav', 'props' => ['tag' => 'nav'], 'attrs' => ['aria-label' => 'Main'], 'style' => ['base' => ['display' => 'flex', 'gap' => 'token:space.6']], 'children' => [
-                    ['type' => 'repeat', 'props' => ['source' => 'menu', 'menu' => 'main', 'tag' => 'ul'], 'style' => ['base' => ['display' => 'flex', 'gap' => 'token:space.6', 'listStyle' => 'none', 'margin' => '0', 'padding' => '0']], 'children' => [
+                'navigation from a menu' => ['type' => 'box', 'label' => 'Nav', 'props' => ['tag' => 'nav'], 'attrs' => ['aria-label' => 'Main'], 'style' => ['display' => 'flex', 'gap' => 'lg'], 'children' => [
+                    ['type' => 'repeat', 'props' => ['source' => 'menu', 'menu' => 'main', 'tag' => 'ul'], 'style' => ['display' => 'flex', 'gap' => 'lg'], 'children' => [
                         ['type' => 'box', 'props' => ['tag' => 'li'], 'children' => [
-                            ['type' => 'link', 'bind' => ['label' => 'item.label', 'url' => 'item.url', 'state:active' => 'item.active'], 'style' => ['base' => ['color' => 'token:color.muted', 'textDecoration' => 'none'], 'hover' => ['color' => 'token:color.foreground'], 'is-active' => ['color' => 'token:color.foreground']]],
+                            ['type' => 'link', 'bind' => ['label' => 'item.label', 'url' => 'item.url', 'state:active' => 'item.active'], 'style' => ['color' => 'foreground-muted', 'transitionProperty' => 'colors', 'transitionDuration' => 'fast', 'hover' => ['color' => 'foreground'], 'is-active' => ['color' => 'foreground']]],
                         ]],
                     ]],
                 ]],
-                'blog list' => ['type' => 'repeat', 'props' => ['source' => 'entries', 'collection' => 'posts', 'sort' => '-published_at', 'limit' => 6], 'style' => ['base' => ['display' => 'grid', 'gridTemplateColumns' => 'repeat(3,1fr)', 'gap' => 'token:space.8'], 'mobile' => ['gridTemplateColumns' => '1fr']], 'children' => [
-                    ['type' => 'box', 'props' => ['tag' => 'article'], 'bind' => ['link' => 'item.url'], 'children' => [
+                'blog list' => ['type' => 'repeat', 'props' => ['source' => 'entries', 'collection' => 'posts', 'sort' => '-published_at', 'limit' => 6], 'style' => ['display' => 'grid', 'gridTemplateColumns' => '3', 'gap' => 'xl', 'max-lg' => ['gridTemplateColumns' => '2'], 'max-md' => ['gridTemplateColumns' => '1']], 'children' => [
+                    ['type' => 'box', 'props' => ['tag' => 'article'], 'bind' => ['link' => 'item.url'], 'style' => ['flow' => 'tight'], 'children' => [
                         ['type' => 'image', 'bind' => ['image' => 'item.cover', 'visible' => 'item.cover'], 'props' => ['aspect' => '3/2']],
-                        ['type' => 'paragraph', 'props' => ['tag' => 'time'], 'bind' => ['text' => 'item.date|date:M j, Y']],
-                        ['type' => 'heading', 'props' => ['level' => '3'], 'bind' => ['text' => 'item.title']],
+                        ['type' => 'paragraph', 'props' => ['tag' => 'time'], 'style' => ['text' => 'eyebrow', 'color' => 'foreground-muted'], 'bind' => ['text' => 'item.date|date:M j, Y']],
+                        ['type' => 'heading', 'props' => ['level' => '3'], 'style' => ['text' => 'heading-4'], 'bind' => ['text' => 'item.title']],
                     ]],
                 ]],
                 'mobile menu toggle' => ['type' => 'box', 'logic' => ['data' => ['open' => false], 'states' => ['open' => 'open'], 'on' => [['event' => 'keydown', 'key' => 'escape', 'mods' => ['window'], 'actions' => [['do' => 'set', 'var' => 'open', 'value' => 'false']]]]], 'children' => [
                     ['type' => 'box', 'props' => ['tag' => 'button'], 'attrs' => ['aria-label' => 'Menu'], 'logic' => ['attrs' => ['aria-expanded' => 'open'], 'on' => [['event' => 'click', 'actions' => [['do' => 'toggle', 'var' => 'open']]]]], 'children' => [['type' => 'icon', 'props' => ['icon' => 'list']]]],
                     ['type' => 'box', 'logic' => ['show' => 'open', 'transition' => 'fade'], 'children' => []],
                 ]],
-                'animated hero heading' => ['type' => 'heading', 'props' => ['text' => 'Design that moves', 'level' => '1'], 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'words', 'from' => ['opacity' => 0, 'y' => 40], 'duration' => 0.9, 'ease' => 'power3.out', 'stagger' => 0.06]]]]],
-                'parallax image' => ['type' => 'image', 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'bottom top'], 'steps' => [['from' => ['yPercent' => -10], 'to' => ['yPercent' => 10], 'ease' => 'none']]]]],
+                'animated hero heading' => ['type' => 'heading', 'props' => ['text' => 'Design that moves', 'level' => '1'], 'style' => ['text' => 'display'], 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'words', 'mask' => true, 'from' => ['y' => 'full'], 'duration' => 'slower', 'ease' => 'expo', 'stagger' => 'fastest']]]]],
+                'parallax image' => ['type' => 'image', 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'bottom top'], 'steps' => [['from' => ['y' => '-3xl'], 'to' => ['y' => '3xl'], 'ease' => 'linear']]]]],
                 'template' => ['title' => 'Post', 'collections' => ['posts'], 'blocks' => [['type' => 'pattern', 'props' => ['ref' => 'header']], ['type' => 'box', 'props' => ['tag' => 'main'], 'children' => [['type' => 'heading', 'props' => ['level' => '1'], 'bind' => ['text' => 'entry.title']], ['type' => 'outlet']]], ['type' => 'pattern', 'props' => ['ref' => 'footer']]]],
             ],
             'markdown' => "## Why Cms\n\nFast pages by default.\n\n::: buttons\n:::: button {\"props\":{\"label\":\"Start\",\"url\":\"/start\"}}\n::::\n:::",

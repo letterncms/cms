@@ -29,12 +29,16 @@ export interface LogicMap {
 export interface MotionStep {
   target?: string
   mask?: boolean
-  from?: Record<string, number | string>
-  to?: Record<string, number | string>
-  duration?: number
-  delay?: number
+  /** Names of the vocabulary: opacity "0", y "lg", scale "95", clipPath "hidden-down"… */
+  from?: Record<string, string>
+  to?: Record<string, string>
+  /** Durations of the theme: fastest … glacial. */
+  duration?: string
+  delay?: string
+  /** An easing of the vocabulary: out, expo, swift, spring… */
   ease?: string
-  stagger?: number
+  stagger?: string
+  /** Seconds into the timeline. */
   at?: number
 }
 
@@ -102,7 +106,7 @@ export interface Catalog {
   states: string[]
   breakpoints: Record<string, string>
   sources: DataSourceDef[]
-  motion: { triggers: string[]; properties: Record<string, 'number' | 'length' | 'css'> }
+  motion: { triggers: string[]; properties: Record<string, string>; clips: string[]; eases: string[]; durations: string[]; screens: string[] }
   logic: { events: string[]; mods: string[]; actions: string[]; transitions: string[]; merges: string[] }
 }
 

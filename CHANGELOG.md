@@ -8,6 +8,14 @@
 
 ### Changed
 
+- **Breaking.** Sites style with Lettern Design, an open design vocabulary (design.lettern.org): every style is a name, never a CSS value. A block's style reads `{"text": "heading-2", "color": "foreground-muted", "paddingBlock": "section", "max-md": {"text": "heading-3"}}`; `token:` references, raw values (`23px`, `#ff0000`, `clamp()`) and the `tablet`/`mobile` keys (now `max-lg`/`max-md`) are gone, and a style that uses them is refused with the names it could have meant.
+- **Breaking.** The design system is a theme, `content/design/theme.json`, instead of `tokens.json`: a few decisions (brand colors, fonts, a base size and ratio, space, radius, shadow depth, motion speed, the transition between pages, flow, element styles, button, card and field looks) that every palette, size and step follows from. Text colors are worked out to keep their contrast in every scheme, and the Design System screen reports any pair that misses. Custom CSS is gone; custom JavaScript stays.
+- **Breaking.** The Design System screen edits the theme beside a live preview of the site: brand colors and modes, families and text styles, the space scale and flow, shapes and components, motion, element defaults, a contrast report and the DESIGN.md agents read.
+- **Breaking.** The Design tab only offers names: each value is picked from what the property takes, with what it is on this site (24–30px), stepped with the arrow keys or by dragging sideways. Colors are the scheme's roles, the palettes' roles and shades, with an opacity step. A section takes a scheme (inverse, muted, a brand color) that recolors everything in it; a container takes a flow that spaces its children.
+- **Breaking.** Animations use the theme's durations and easings and names for their values (`opacity: "0"`, `y: "lg"`, reveal `hidden-down`); only a step's start on a timeline is in seconds.
+- **Breaking.** Buttons take a variant (solid, soft, outline, ghost, link), a color (any palette) and a size, and render the vocabulary's button; cards look default, raised, flat or ghost. Content Color fields hold a color name such as `accent`, picked from the theme.
+- **Breaking.** `design/get` returns the theme, what it resolves to, the catalog of every property and name, DESIGN.md and the contrast findings; `design/update` and `design/preview` take a `theme` (merged, or replaced with `replace: true`); `design/code` takes `js` only. `cms://site/design` is the theme as DESIGN.md.
+- **Breaking.** Light and dark are `data-mode` on the page (was `data-theme`), remembered as `cms-mode`.
 - Each collection's list is drawn by the same list as every other place, from data: its search, status and language, the page tree with drag to reorder, sorting, table, cards and calendar, its columns, row and bulk actions, and the built-in pages under Pages work as before. Its search is `?search=` in the address.
 - Every list has its checkboxes in the margin left of the rows, as collections had, so titles line up with the search above them.
 - `pages/builtin` says for each page which `group` and `collection` it belongs to, and whether you may customize it (`customisable`).
@@ -15,6 +23,7 @@
 ### Removed
 
 - **Breaking.** The `content/entries` catalog component. A collection's place is `ui/records`, from `Cms\Modules\Content\EntriesView`.
+
 
 ## 0.9.0 (2026-11-05)
 

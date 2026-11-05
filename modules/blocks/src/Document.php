@@ -136,8 +136,8 @@ final class Document
         return $out;
     }
 
-    /** Attributes people may set on any element (no event handlers, styles, ids or links — those have their own settings). */
-    public const string ATTRIBUTE = '/^(aria-[a-z-]{2,30}|data-(?!cms(?:-|$))[a-z0-9-]{1,40}|role|title|tabindex|target|rel|lang|hreflang|dir|loading|inert|translate|draggable|spellcheck|autocomplete|name|type|for|placeholder|required|width|height|open)$/';
+    /** Attributes people may set on any element (no event handlers, styles, ids or links — those have their own settings; data-scheme, data-flow and data-texture come from the style). */
+    public const string ATTRIBUTE = '/^(aria-[a-z-]{2,30}|data-(?!cms(?:-|$)|scheme$|flow$|texture$)[a-z0-9-]{1,40}|role|title|tabindex|target|rel|lang|hreflang|dir|loading|inert|translate|draggable|spellcheck|autocomplete|name|type|for|placeholder|required|width|height|open)$/';
 
     /** @return array<string, string> */
     public static function attrs(mixed $attrs): array
@@ -147,27 +147,12 @@ final class Document
         foreach (is_array($attrs) ? array_slice($attrs, 0, 30, true) : [] as $name => $value) {
             if (is_string($name) && preg_match(self::ATTRIBUTE, strtolower($name)) && (is_scalar($value))) {
                 $out[strtolower($name)] = mb_substr(strip_tags((string) $value), 0, 300);
-            } elseif (is_string($name) && strtolower($name) === 'style' && is_string($value) && self::variables($value)) {
-                $out['style'] = trim($value);
             }
         }
 
         return $out;
     }
 
-    /** A style attribute that only sets CSS variables, such as a section's own colours: `--color-primary:#d9432a`. */
-    private static function variables(string $style): bool
-    {
-        $declarations = array_filter(array_map('trim', explode(';', $style)), static fn ($d) => $d !== '');
-
-        foreach ($declarations as $declaration) {
-            if (! preg_match('/^--[a-z0-9-]{1,40}\s*:\s*(.{1,200})$/i', $declaration, $m) || Css::value(trim($m[1])) === null) {
-                return false;
-            }
-        }
-
-        return $declarations !== [] && strlen($style) <= 2000;
-    }
 
     /**
      * Bindings: prop (or visible, hidden, state:<name>, attr:<name>, style:<property>) => data path.
@@ -224,7 +209,7 @@ final class Document
 
                     $value = is_array($value) ? $value : [$value];
                     array_walk_recursive($value, static function ($v) use (&$parts): void {
-                        if (is_string($v) && ! preg_match('~^(token:|https?://|/|#|var\()~', $v)) {
+                        if (is_string($v) && ! preg_match('~^(https?://|/|#)~', $v)) {
                             $parts[] = Sanitizer::text($v);
                         }
                     });
