@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Plugins and Built In say what each one is again when another needs it: a lock beside its switch says "Needed by …" on hover or a press. A list's switch column can do the same with `reason`.
+
 ## 0.12.0 (2026-11-05)
 
 ### Changed

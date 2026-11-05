@@ -419,10 +419,12 @@
                                             {
                                                 "key": "enabled",
                                                 "label": "On",
-                                                "width": "48px",
+                                                "width": "72px",
+                                                "align": "end",
                                                 "format": "switch",
                                                 "ariaLabel": "{row.label} on",
                                                 "disabled": "locked",
+                                                "reason": "keptOn",
                                                 "action": {
                                                     "label": "On",
                                                     "ability": "packages/switch",
@@ -525,10 +527,12 @@
                                             {
                                                 "key": "enabled",
                                                 "label": "On",
-                                                "width": "48px",
+                                                "width": "72px",
+                                                "align": "end",
                                                 "format": "switch",
                                                 "ariaLabel": "{row.label} on",
                                                 "disabled": "locked",
+                                                "reason": "keptOn",
                                                 "action": {
                                                     "label": "On",
                                                     "ability": "packages/switch",
@@ -592,96 +596,6 @@
                                 {
                                     "type": "packages/updates",
                                     "props": []
-                                }
-                            ]
-                        },
-                        {
-                            "type": "ui/tab",
-                            "props": {
-                                "id": "licenses",
-                                "label": "Licenses"
-                            },
-                            "children": [
-                                {
-                                    "type": "ui/stack",
-                                    "props": [],
-                                    "children": [
-                                        {
-                                            "type": "ui/records",
-                                            "props": {
-                                                "id": "licenses",
-                                                "label": "Licenses",
-                                                "key": "product",
-                                                "source": {
-                                                    "ability": "license/status",
-                                                    "input": []
-                                                },
-                                                "at": "list",
-                                                "columns": [
-                                                    {
-                                                        "key": "label",
-                                                        "label": "Plugin",
-                                                        "format": "strong",
-                                                        "width": "minmax(160px,0.6fr)"
-                                                    },
-                                                    {
-                                                        "key": "state",
-                                                        "label": "License",
-                                                        "format": "muted",
-                                                        "width": "minmax(200px,1fr)"
-                                                    },
-                                                    {
-                                                        "key": "standing",
-                                                        "label": "Status",
-                                                        "format": "badge",
-                                                        "width": "140px",
-                                                        "align": "end",
-                                                        "labels": {
-                                                            "active": "Active",
-                                                            "limited": "Limited",
-                                                            "attention": "Needs Attention"
-                                                        },
-                                                        "tones": {
-                                                            "active": "success",
-                                                            "limited": "neutral",
-                                                            "attention": "warning"
-                                                        }
-                                                    }
-                                                ],
-                                                "empty": {
-                                                    "icon": "key",
-                                                    "title": "No paid plugins yet"
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "type": "ui/stack",
-                                            "props": [],
-                                            "children": [
-                                                {
-                                                    "type": "ui/form",
-                                                    "props": {
-                                                        "fields": [
-                                                            {
-                                                                "handle": "token",
-                                                                "type": "text",
-                                                                "label": "License Key",
-                                                                "placeholder": "v4.public.",
-                                                                "mono": true
-                                                            }
-                                                        ],
-                                                        "save": {
-                                                            "ability": "license/install",
-                                                            "as": "*",
-                                                            "input": []
-                                                        },
-                                                        "after": "manifest",
-                                                        "width": "wide"
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
                                 }
                             ]
                         }

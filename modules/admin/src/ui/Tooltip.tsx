@@ -7,10 +7,11 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   return <Base.Provider delay={400}>{children}</Base.Provider>
 }
 
-export function Tooltip({ content, shortcut, side = 'top', children }: { content: ReactNode; shortcut?: string; side?: 'top' | 'bottom' | 'left' | 'right'; children: ReactElement }) {
+/** `open` and `onOpenChange` hold it open on a press too, for a hint that touch must reach; a press then doesn't close it. */
+export function Tooltip({ content, shortcut, side = 'top', open, onOpenChange, children }: { content: ReactNode; shortcut?: string; side?: 'top' | 'bottom' | 'left' | 'right'; open?: boolean; onOpenChange?: (open: boolean) => void; children: ReactElement }) {
   return (
-    <Base.Root>
-      <Base.Trigger render={children} />
+    <Base.Root open={open} onOpenChange={onOpenChange ? (o) => onOpenChange(o) : undefined}>
+      <Base.Trigger render={children} closeOnClick={open === undefined} />
       <Base.Portal>
         <Base.Positioner side={side} sideOffset={6} className="z-[60]">
           {/* Inverted ink, no arrow: a label, not a surface. */}

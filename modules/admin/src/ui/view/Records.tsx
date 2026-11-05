@@ -14,6 +14,7 @@ import { Notice } from '../Notice'
 import { Select } from '../Select'
 import { SelectionBar } from '../SelectionBar'
 import { Switch } from '../Switch'
+import { Tooltip } from '../Tooltip'
 import { toast } from '../toast'
 import { readViewPrefs, useViewPrefs } from '../viewPrefs'
 import { ActionButton, place, shown } from './actions'
@@ -37,6 +38,8 @@ interface Column {
   /** `true`: sorted among what is loaded; a name: what the ability sorts by (`sort.param`). */
   sort?: boolean | string
   currency?: string
+  /** With `format: switch`: why a row's switch stays as it is (a key of the row), said on hover of a lock before it. */
+  reason?: string
   /** With `format: switch`: what turning it runs, with `{row}` and the new `{value}`. */
   action?: ViewAction
   /** Pictures for the cards: a column of images offers the grid. */
@@ -440,6 +443,21 @@ function Cell({ row, column: c, media }: { row: Row; column: Column; media: Map<
   )
 }
 
+/** Why a switch stays as it is: a lock that says so on hover, focus or a press (touch has no hover), above the row's own link. */
+function Reason({ text }: { text: string }) {
+  const [hovered, setHovered] = useState(false)
+  // A press keeps it open until a press elsewhere or Escape.
+  const [pinned, setPinned] = useState(false)
+  return (
+    <Tooltip content={text} open={hovered || pinned} onOpenChange={setHovered}>
+      <button type="button" aria-label={text} onClick={() => setPinned((p) => !p)} onBlur={() => setPinned(false)} onKeyDown={(e) => { if (e.key === 'Escape') setPinned(false) }}
+        className="relative z-10 grid size-5 shrink-0 cursor-help place-items-center rounded-xs text-muted transition-colors duration-120 hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[popup-open]:bg-hover data-[popup-open]:text-text">
+        <Icon name="lock" size={14} />
+      </button>
+    </Tooltip>
+  )
+}
+
 /** A card's picture: the address in the column, or the first file of a media value, looked up. */
 function CardImage({ row, column, media }: { row: Row; column: Column; media: Map<string, MediaThumb> }) {
   const raw = at(row, column.key)
@@ -456,8 +474,11 @@ function SwitchCell({ row, column }: { row: Row; column: Column }) {
   const [busy, setBusy] = useState(false)
   const on = !!at(row, column.key)
   const locked = column.disabled ? !!at(row, column.disabled) : false
+  const reason = column.reason ? plainValue(at(row, column.reason))?.toString() : undefined
   return (
-    <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+    <span onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-2">
+      {/* Every row keeps the lock's place, so the switches line up. */}
+      {column.reason ? reason ? <Reason text={reason} /> : <span aria-hidden className="size-5 shrink-0" /> : null}
       <Switch checked={on} disabled={disabled || busy || locked || !column.action} aria-label={column.ariaLabel ? fill(column.ariaLabel, { ...scope, row }) : column.label} onChange={(value) => {
         if (!column.action) return
         setBusy(true)

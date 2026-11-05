@@ -32,6 +32,7 @@ final class PluginsViewTest extends TestCase
 
         $columns = array_column($records['props']['columns'], null, 'key');
         $this->assertSame('locked', $columns['enabled']['disabled']);
+        $this->assertSame('keptOn', $columns['enabled']['reason']);
         $this->assertSame('{row.to}', $records['props']['open']['when']);
 
         $list = $this->cms()->abilities()->execute('packages/list', ['type' => 'plugin'], $ctx);
@@ -45,6 +46,8 @@ final class PluginsViewTest extends TestCase
         foreach ($items as $item) {
             $this->assertFalse($item['core']);
             $this->assertIsString($item['note']);
+            // Why it stays on, beside its switch: the description is still said.
+            $this->assertSame($item['required'] || ($item['enabled'] && $item['dependents'] !== []), $item['keptOn'] !== null);
             // Somewhere to set it up, or nowhere to go.
             $this->assertTrue($item['to'] === null || str_starts_with($item['to'], '/'));
             // What the site requires, or another plugin needs, stays on.
