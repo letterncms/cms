@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Admin SDK: API client, ability hooks, router and extension registry. Provided at runtime by the active admin theme through the import map.",
+  "description": "Admin SDK: API client, ability hooks, router and extension registry. Provided at runtime by the admin through the import map.",
   "exports": {
     ".": "./src/index.ts"
   },

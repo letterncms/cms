@@ -98,8 +98,3 @@ export function viewRoute(id: string, path: string, options: { private?: boolean
     },
   }
 }
-
-/** Whether a path is a view's: modules that used to draw a screen there leave it to the view. */
-export function viewAt(path: string): boolean {
-  return (getManifest().views ?? []).some((v) => v.path === path)
-}

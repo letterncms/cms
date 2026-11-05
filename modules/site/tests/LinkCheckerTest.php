@@ -53,7 +53,7 @@ final class LinkCheckerTest extends TestCase
 
     public function test_what_the_application_answers_is_left_alone(): void
     {
-        $this->assertSame([], $this->broken('<img src="/api/analytics/view?p=%2F" alt=""><a href="/admin">a</a><a href="/admin/login">b</a><a href="/install">c</a><a href="/downloads/cms-latest.zip">f</a>'));
+        $this->assertSame([], $this->broken('<img src="/api/analytics/view?p=%2F" alt=""><a href="/admin">a</a><a href="/admin/login">b</a><a href="/install">c</a>'));
     }
 
     public function test_an_address_only_counts_when_something_answers_it(): void

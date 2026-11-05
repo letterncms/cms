@@ -1,5 +1,6 @@
 import { t, useLocation, useManifest, type SurfaceAction, type SurfaceDocument, type ViewNode } from '@letterncms/sdk'
 import { useId, useMemo } from 'react'
+import { ComponentBoundary } from './ComponentBoundary'
 import { ViewContext } from './view/context'
 import { ViewNodeView } from './view/render'
 import { WidgetMessage } from './Widget'
@@ -15,7 +16,11 @@ export interface SurfaceProps {
   onAction?: (action: SurfaceAction) => void
 }
 
-export function Surface({ document, disabled = false, onAction }: SurfaceProps) {
+export function Surface(props: SurfaceProps) {
+  return <ComponentBoundary key={props.document.id} label={props.document.title}><SurfaceView {...props} /></ComponentBoundary>
+}
+
+function SurfaceView({ document, disabled = false, onAction }: SurfaceProps) {
   const manifest = useManifest()
   const { query } = useLocation()
   const titleId = useId()

@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
 import { BrandMark } from './Brand'
 import { getThemePreference, setThemePreference, type ThemePreference } from '../ui/theme'
-import { inSettings, isPinned, lastApp, placeAt, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, settingsRowAt, unpin, wayBack } from './sidebarStore'
+import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
+import { inSettings, placeAt, settingsRowAt, wayBack } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {

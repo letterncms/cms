@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Sync;
 
+use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Illuminate\Support\Carbon;
@@ -16,9 +17,7 @@ use RuntimeException;
  */
 final class Abilities
 {
-    private const array PRIVATE = ['mcp' => false, 'assistant' => false];
-
-    public function register(AbilityRegistry $a, string $package): void
+    public function register(AbilityRegistry $a): void
     {
         $guard = static function (callable $fn) {
             try {
@@ -31,7 +30,7 @@ final class Abilities
         $direction = ['type' => 'string', 'enum' => ['pull', 'push']];
         $id = ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 26]], 'required' => ['id']];
         $pairs = ['type' => 'array', 'maxItems' => 20, 'items' => ['type' => 'array', 'maxItems' => 2, 'items' => ['type' => 'string', 'maxLength' => 500]]];
-        $base = ['permission' => 'sync.manage', 'package' => $package, 'expose' => self::PRIVATE];
+        $base = ['permission' => 'sync.manage', 'expose' => Ability::ADMIN_ONLY];
 
         $a->register('sync/overview', [...$base,
             'label' => 'Sync Overview',

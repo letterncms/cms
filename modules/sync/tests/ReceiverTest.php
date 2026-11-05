@@ -20,11 +20,6 @@ use RuntimeException;
 /** The receiving side, in one process: what arrives is staged, switched in at once, and can be undone. */
 final class ReceiverTest extends TestCase
 {
-    protected function plugins(): array
-    {
-        return ['letterncms/sync'];
-    }
-
     private function entry(string $collection, string $title, array $data = []): string
     {
         $id = strtolower((string) Str::ulid());
@@ -161,7 +156,7 @@ final class ReceiverTest extends TestCase
             }
         }
 
-        $this->assertSame([], \Cms\Modules\Sync\Site::readJson(\Cms\Modules\Sync\Site::dir('incoming/'.$job.'/state.json'))['areas']['config']['remove']);
+        $this->assertSame([], \Cms\Support\Files::readJson(\Cms\Modules\Sync\Site::dir('incoming/'.$job.'/state.json'))['areas']['config']['remove']);
     }
 
     public function test_people_who_are_signed_in_stay_signed_in_when_people_are_replaced(): void

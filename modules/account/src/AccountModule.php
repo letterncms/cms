@@ -39,7 +39,7 @@ final class AccountModule extends Plugin
 
     private function settingsSchema(): void
     {
-        // With the Users screen, these are its Sign-Up tab rather than a settings page of their own.
+        // With the Users screen, these are its Settings tab; without it, a settings page of their own.
         $this->cms()->settingsRegistry()->register(Accounts::SETTINGS, 'Visitor Accounts', [
             ['handle' => 'enabled', 'type' => 'toggle', 'label' => 'Allow Visitor Accounts', 'default' => false, 'instructions' => 'Sign-up and password resets need working email.'],
             ['handle' => 'sign_up', 'type' => 'select', 'label' => 'Who Can Sign Up', 'options' => ['open' => 'Anyone', 'closed' => 'Only People You Add'], 'default' => 'open', 'if' => ['enabled' => true]],
@@ -47,7 +47,7 @@ final class AccountModule extends Plugin
             ['handle' => 'terms_url', 'type' => 'url', 'label' => 'Terms to Agree To', 'instructions' => 'Signing up then asks to agree.', 'if' => ['enabled' => true]],
             ['handle' => 'after_sign_in', 'type' => 'text', 'label' => 'Page After Sign-In', 'default' => '/account', 'if' => ['enabled' => true]],
             ['handle' => 'remember', 'type' => 'toggle', 'label' => 'Offer “Keep Me Signed In”', 'default' => true, 'if' => ['enabled' => true]],
-        ], icon: 'users', description: 'Sign-up and sign-in for visitors.', order: 30, section: 'people', page: ! $this->cms()->isActive('letterncms/users'));
+        ], icon: 'users', description: 'Sign-up and sign-in for visitors.', order: 30, section: 'people', home: 'users');
 
         $this->cms()->hooks()->addFilter('fields.options.visitor-roles', function (array $options) {
             $team = $this->cms()->accounts()->teamRoles();
@@ -73,8 +73,6 @@ final class AccountModule extends Plugin
         $hooks = $this->cms()->hooks();
         $screens = fn () => $this->app->make(Screens::class);
         $this->app->singleton(Screens::class);
-
-        $hooks->addFilter('account.url', fn (string $url, string $screen, ?string $locale = null) => $screens()->get($screen) ? $screens()->url($screen, $locale) : $url);
 
         // Now and then, like other housekeeping without a cron.
         $this->app->terminating(function () {
@@ -131,9 +129,6 @@ final class AccountModule extends Plugin
             return $answered;
         });
 
-        $hooks->addFilter('account.teaser-notice', fn (string $html, $entry) => $html.$screens()->fragment('teaser-notice', $entry->locale));
-        $hooks->addFilter('account.denied', fn ($response, $entry) => $response ?? $screens()->respond('denied', $entry->locale, 403));
-
         // A form left open past its session: back to the form with a plain message, not an error page.
         $this->app->make(\Illuminate\Contracts\Debug\ExceptionHandler::class)->renderable(static function (HttpException $e, Request $request) {
             if ($e->getStatusCode() === 419 && $request->is('_cms/account/*')) {
@@ -170,7 +165,7 @@ final class AccountModule extends Plugin
         foreach (Forms::blocks() as $form => [$title, $description]) {
             $registry->register([
                 'name' => 'account/'.$form, 'title' => $title, 'description' => $description, 'icon' => 'user', 'category' => 'account',
-                'keywords' => ['account', 'login', 'members'], 'package' => $this->manifest->name,
+                'keywords' => ['account', 'login', 'members'],
                 'styles' => ['layout', 'size', 'spacing', 'typography'],
                 'fields' => match ($form) {
                     'nav' => [['handle' => 'layout', 'type' => 'select', 'label' => 'Links', 'options' => ['row' => 'In a Row', 'column' => 'In a Column'], 'default' => 'row', 'instructions' => 'In a column for a sidebar. On a phone they stay in a row.']],

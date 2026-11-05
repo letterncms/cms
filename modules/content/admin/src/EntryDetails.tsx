@@ -1,5 +1,5 @@
 import { can, locale, t, useAbility, useManifest, type Entry, type EntryContent, type EntryPanelProps, type EntrySummary, type FieldDef } from '@letterncms/sdk'
-import { Button, Dialog, Fields, PersonPicker, QueryError, StatusDot, cn, fieldControlId, slugify, statusLabel } from '@letterncms/ui'
+import { Button, Dialog, Fields, PersonPicker, QueryError, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 import type { BuiltinGroup } from './BuiltinPages'
 
@@ -19,9 +19,6 @@ export function previewUri(collection: EntryPanelProps['collection'], entry: Ent
     .replace(/\{[a-z_]+\}/g, '…')
     .replace(/\/+/g, '/')
 }
-
-/** Field types that need the panel's width: their label goes above them. */
-const WIDE = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'repeater', 'tags', 'entries', 'group', 'properties', 'fields', 'table', 'grid', 'blocks']
 
 /**
  * The entry's panel, laid out like every inspector: rows with an 88px label column and
@@ -166,7 +163,7 @@ function PanelGroup({ title, children }: { title?: string | null; children: Reac
  */
 function PanelRow({ field, error, children }: { field: FieldDef; error?: string; children: ReactNode }) {
   const toggle = field.type === 'toggle'
-  const wide = WIDE.includes(field.type) && !(field.type === 'slug')
+  const wide = wideFieldTypes.includes(field.type)
   const help = !error && field.instructions ? <p className="m-0 mt-1 text-xs text-muted">{field.instructions}</p> : null
   const label = <label htmlFor={fieldControlId(field)} className={cn('flex h-7 min-w-0 shrink-0 items-center text-xs text-muted', !wide && 'w-[88px]')}><span className="truncate">{field.label}</span></label>
   if (toggle) return <div className="py-1">{children}{help}</div>

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Blocks;
 
-use Cms\Content\Entries\Entry;
 use Cms\Content\Fields\Blueprint;
 use Cms\Extend\Hooks;
 use Cms\Cms;

@@ -1,5 +1,5 @@
-import { can, locale, plural, t, xsrfToken, type EntryContent } from '@letterncms/sdk'
-import { QueryError, Spinner } from '@letterncms/ui'
+import { can, plural, requestText, t, type EntryContent } from '@letterncms/sdk'
+import { QueryError, Spinner, deviceWidths } from '@letterncms/ui'
 import { createPortal, flushSync } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext, useTokens } from './core/context'
@@ -314,7 +314,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
       // than reflowed (a narrow canvas would show the tablet or phone layout while desktop is styled).
       // A phone draws at the room there is, up to a phone's width.
       const desktop = Math.max(el.clientWidth, desktopWidth)
-      const width = breakpoint === 'tablet' ? 820 : breakpoint === 'mobile' ? Math.min(390, el.clientWidth) : desktop
+      const width = breakpoint === 'tablet' ? deviceWidths.tablet : breakpoint === 'mobile' ? Math.min(deviceWidths.phone, el.clientWidth) : desktop
       const scale = Math.min(1, el.clientWidth / width)
       geometry.current = null
       setLayout({ width, scale, height: el.clientHeight / scale, left: Math.max(0, (el.clientWidth - width * scale) / 2) })
@@ -330,11 +330,9 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
       const capturedStructure = structure()
       const controller = new AbortController(); abort.current = controller
       try {
-        const response = await fetch(entryId ? `/__preview/${entryId}` : '/__preview', { method: 'POST', credentials: 'same-origin', signal: controller.signal, headers: { 'Content-Type': 'application/json', Accept: 'text/html', 'X-XSRF-TOKEN': xsrfToken() ?? '', 'X-Cms-Locale': locale() }, body: JSON.stringify({ ...content, collection, field: fieldHandle, standalone, data: { ...content.data, [fieldHandle]: store.get().nodes }, play: false }) })
-        const html = await response.text()
-        if (!response.ok) throw new Error(response.status === 422 ? html.replace(/<[^>]+>/g, '').trim() : t('Preview failed ({status})', { status: response.status }))
+        const { text: html, headers } = await requestText('POST', entryId ? `/__preview/${entryId}` : '/__preview', { ...content, collection, field: fieldHandle, standalone, data: { ...content.data, [fieldHandle]: store.get().nodes }, play: false }, { signal: controller.signal })
         if (!state.alive || controller.signal.aborted || (sequence !== request.current && capturedStructure !== structure())) return
-        const scope = response.headers.get('X-Cms-Editor-Document')
+        const scope = headers.get('X-Cms-Editor-Document')
         if (!scope) throw new Error(t('The editor could not load its rendering context.'))
         const next = new DOMParser().parseFromString(html, 'text/html')
         if (!next.querySelector(`[data-cms-editor-root="${scope}"]`)) throw new Error(t('This template has no content outlet. Choose a template that includes the content field.'))

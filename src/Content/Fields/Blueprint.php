@@ -23,11 +23,6 @@ final class Blueprint
         $fields = [];
 
         foreach (self::expand($raw) as $definition) {
-            // A field whose type belongs to a plugin that is off stands in with its `fallback`.
-            if (isset($definition['type'], $definition['fallback']) && ! self::types()->has($definition['type'])) {
-                $definition = [...$definition, 'type' => $definition['fallback'], 'standsInFor' => $definition['type']];
-            }
-
             $field = Field::fromArray($definition);
             $fields[$field->handle] = $field;
         }
@@ -60,7 +55,7 @@ final class Blueprint
             }
             $seen[$field->handle] = true;
 
-            if (! $types->has($field->type) && ! $types->has((string) $field->get('fallback', ''))) {
+            if (! $types->has($field->type)) {
                 throw new InvalidArgumentException(__('Unknown field type ":type" for field :field.', ['type' => $field->type, 'field' => $name]));
             }
 
@@ -117,10 +112,6 @@ final class Blueprint
 
             $schema = $types->resolve($field->type)->schema($field);
 
-            if ($field->get('standsInFor')) {
-                $schema = ['anyOf' => [$schema, ['type' => 'array', 'items' => ['type' => 'string']]]];
-            }
-
             $properties[$field->handle] = ['title' => $field->label, ...$schema];
 
             if ($field->required) {
@@ -149,7 +140,7 @@ final class Blueprint
         $types = self::types();
 
         foreach ($this->fields as $field) {
-            if (array_key_exists($field->handle, $data) && ! $this->standsAside($field, $data[$field->handle])) {
+            if (array_key_exists($field->handle, $data)) {
                 $data[$field->handle] = $types->resolve($field->type)->normalize($data[$field->handle], $field);
             }
         }
@@ -168,18 +159,12 @@ final class Blueprint
         $types = self::types();
 
         foreach ($this->fields as $field) {
-            if (array_key_exists($field->handle, $data) && ! $this->standsAside($field, $data[$field->handle])) {
+            if (array_key_exists($field->handle, $data)) {
                 $data[$field->handle] = $types->resolve($field->type)->normalize($data[$field->handle], $field);
             }
         }
 
         return Validator::validate($data, $this->schema($partial));
-    }
-
-    /** What the real type stored (a list of media ids) waits for its plugin to come back. */
-    private function standsAside(Field $field, mixed $value): bool
-    {
-        return $field->get('standsInFor') && is_array($value) && array_is_list($value) && array_all($value, static fn ($v) => is_string($v));
     }
 
     public function augment(array $data): array

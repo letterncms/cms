@@ -7,6 +7,7 @@ import { ComponentBoundary } from '../ComponentBoundary'
 import { DataTable } from '../DataTable'
 import { EmptyState } from '../EmptyState'
 import { Icon } from '../Icon'
+import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
 import { Spinner } from '../Spinner'
 import { Stat, WidgetMessage } from '../Widget'
@@ -236,18 +237,9 @@ function StatNode({ node }: { node: ViewNode }) {
   return <Stat label={label} value={shownValue} delta={delta} trend={trend} />
 }
 
-function Notice({ node }: { node: ViewNode }) {
+function NoticeNode({ node }: { node: ViewNode }) {
   const { tone = 'info', title, text, action } = node.props
-  const colors: Record<string, string> = { info: 'border-border bg-sunken', neutral: 'border-border bg-sunken', success: 'border-success/30 bg-success/5', warning: 'border-warning/40 bg-warning/5', danger: 'border-danger/30 bg-danger/5' }
-  return (
-    <div role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'} className={cn('flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3', colors[tone])}>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-ink">{title}</span>
-        {text && <span className="mt-0.5 block text-sm text-muted">{text}</span>}
-      </span>
-      {action && <ActionButton action={action} size="sm" />}
-    </div>
-  )
+  return <Notice tone={tone} title={title} action={action && <ActionButton action={action} size="sm" />}>{text}</Notice>
 }
 
 function LiteralTable({ node }: { node: ViewNode }) {
@@ -310,7 +302,7 @@ const builtins: Record<string, Renderer> = {
   'ui/stack': ({ node, path }) => <div className="space-y-4">{children(node, path)}</div>,
   'ui/grid': ({ node, path }) => <div className={cn('grid min-w-0 gap-4', { 1: 'grid-cols-1', 2: '@md:grid-cols-2 md:grid-cols-2', 3: '@lg:grid-cols-3 lg:grid-cols-3', 4: '@lg:grid-cols-4 lg:grid-cols-4' }[Number(node.props.columns ?? 2)])}>{children(node, path)}</div>,
   'ui/text': ({ node }) => <p className={cn('m-0 whitespace-pre-wrap text-sm leading-relaxed', node.props.muted ? 'text-muted' : 'text-text')}>{node.props.text}</p>,
-  'ui/notice': Notice,
+  'ui/notice': NoticeNode,
   'ui/stat': StatNode,
   'ui/chart': Chart,
   'ui/table': LiteralTable,
@@ -331,14 +323,12 @@ const builtins: Record<string, Renderer> = {
 
 // Subscribe at the mounted slot: the CMS can replace or withdraw a plugin implementation without changing the view.
 function RegisteredComponent({ node, path }: { node: ViewNode; path: string }) {
-  const manifest = useManifest()
   const { disabled, emit, scope } = useView()
   useSyncExternalStore(registry.components.subscribe, registry.components.version)
-  const info = manifest.components?.find((c) => c.id === node.type)
   const Component = registry.components.get(node.type) as ComponentType<SurfaceComponentProps> | undefined
   if (!Component) return <Unavailable />
   return (
-    <ComponentBoundary label={info?.label ?? node.type}>
+    <ComponentBoundary label={node.type}>
       <Suspense fallback={<div className="grid place-items-center py-10 text-faint"><Spinner /></div>}>
         <Component props={node.props} disabled={disabled} onAction={(name) => emit?.(path, name)} scope={scope}>{children(node, path)}</Component>
       </Suspense>

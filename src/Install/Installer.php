@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Cms\Install;
 
 use Illuminate\Encryption\Encrypter;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
@@ -17,6 +16,7 @@ use Cms\Support\Files;
 use Cms\Support\Yaml;
 use Cms\Users\Passwords;
 use Cms\Users\User;
+use Cms\Update\Upgrader;
 use PDO;
 use Throwable;
 
@@ -24,7 +24,7 @@ use Throwable;
 final class Installer
 {
     /** What a new site gets unless someone chooses otherwise. Everything else is a click away in the store. */
-    public const array RECOMMENDED = ['seo', 'forms'];
+    public const array RECOMMENDED = ['letterncms/seo', 'letterncms/forms'];
 
     public function __construct(private readonly Application $app) {}
 
@@ -150,7 +150,7 @@ final class Installer
 
         $this->writeSiteConfig($input['site_name'], $url);
 
-        Artisan::call('migrate', ['--force' => true, '--path' => $this->app->databasePath('migrations'), '--realpath' => true]);
+        Upgrader::migrateCore($this->app);
         $this->app->make(PackageManager::class)->sync();
 
         $user = User::query()->create([
@@ -163,7 +163,7 @@ final class Installer
 
         cms()->hooks()->dispatch('cms.sync');
 
-        Files::put(storage_path('installed.json'), json_encode(['version' => Cms::VERSION, 'installedAt' => now()->toIso8601String()], JSON_PRETTY_PRINT));
+        Files::putJson(storage_path('installed.json'), ['version' => Cms::VERSION, 'installedAt' => now()->toIso8601String()]);
 
         return $user;
     }

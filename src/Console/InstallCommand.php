@@ -94,7 +94,7 @@ final class InstallCommand extends Command
 
         return match ($option) {
             'none', '' => [],
-            'recommended' => array_map(static fn (string $name) => PackageManifest::VENDOR.'/'.$name, Installer::RECOMMENDED),
+            'recommended' => Installer::RECOMMENDED,
             default => array_map(static fn (string $name) => str_contains($name, '/') ? trim($name) : PackageManifest::VENDOR.'/'.trim($name), explode(',', $option)),
         };
     }

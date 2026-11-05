@@ -115,15 +115,9 @@ function FormDialog({ action, scope, perform, onClose }: { action: ViewAction; s
     }
   }
   return (
-    <Dialog open onOpenChange={(o) => !o && !busy && onClose()} size="sm" title={form.title} description={form.text}
-      footer={<>
-        <Button onClick={onClose} disabled={busy}>{t('Cancel')}</Button>
-        <Button variant={action.variant === 'danger' ? 'danger' : 'primary'} type="submit" form="cms-view-form" loading={busy}>{form.confirm ?? action.label}</Button>
-      </>}>
-      <form id="cms-view-form" onSubmit={(e) => { e.preventDefault(); void submit() }}>
-        <Fields fields={action.form!.fields.map((f, i) => ({ autofocus: i === 0, ...f }))} values={values} errors={errors} onChange={(h, v) => { setValues((current) => ({ ...current, [h]: v })); setErrors(({ [h]: _, ...rest }) => rest) }} />
-        {error && <p role="alert" className="m-0 mt-3 text-sm text-danger">{error}</p>}
-      </form>
+    <Dialog open onOpenChange={(o) => !o && onClose()} size="sm" title={form.title} description={form.text} onSubmit={() => void submit()} submitLabel={form.confirm ?? action.label} danger={action.variant === 'danger'} busy={busy}>
+      <Fields fields={action.form!.fields.map((f, i) => ({ autofocus: i === 0, ...f }))} values={values} errors={errors} onChange={(h, v) => { setValues((current) => ({ ...current, [h]: v })); setErrors(({ [h]: _, ...rest }) => rest) }} />
+      {error && <p role="alert" className="m-0 mt-3 text-sm text-danger">{error}</p>}
     </Dialog>
   )
 }

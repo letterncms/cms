@@ -41,6 +41,49 @@ final class Files
         }
     }
 
+    /** A JSON file's object or list: [] when the file is missing or holds no JSON array. */
+    public static function readJson(string $file): array
+    {
+        $data = is_file($file) ? json_decode((string) @file_get_contents($file), true) : null;
+
+        return is_array($data) ? $data : [];
+    }
+
+    /** Atomically write $data as JSON, creating parent directories. */
+    public static function putJson(string $file, array $data, int $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE): void
+    {
+        self::put($file, json_encode($data, $flags | JSON_THROW_ON_ERROR)."\n");
+    }
+
+    /**
+     * Run $work while holding the lock file $path, so it never runs twice at once. When someone
+     * else holds it, $busy answers instead, and without $busy that is an error. Doesn't wait:
+     * for that, flock() a handle of your own.
+     *
+     * @template T
+     * @param  callable(): T  $work
+     * @param  (callable(): T)|null  $busy
+     * @return T
+     */
+    public static function locked(string $path, callable $work, ?callable $busy = null): mixed
+    {
+        self::ensureDir(dirname($path));
+        $handle = @fopen($path, 'c');
+
+        if ($handle === false || ! flock($handle, LOCK_EX | LOCK_NB)) {
+            $handle && fclose($handle);
+
+            return $busy ? $busy() : throw new RuntimeException("{$path} is held by another process.");
+        }
+
+        try {
+            return $work();
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
     /**
      * Join a relative path onto a root, refusing anything that escapes the root.
      * Segments are normalized without touching the filesystem.
@@ -71,7 +114,6 @@ final class Files
         return $parts === [] ? $root : $root.'/'.implode('/', $parts);
     }
 
-    /** A filename-safe handle: lowercase letters, digits, dashes and underscores. */
     /** Relative path from directory $from to $to, e.g. for symlinks that survive moving the tree. */
     public static function relativePath(string $from, string $to): string
     {
@@ -86,6 +128,7 @@ final class Files
         return str_repeat('../', count($from)).implode('/', $to);
     }
 
+    /** A filename-safe handle: lowercase letters, digits, dashes and underscores. */
     public static function isHandle(string $value): bool
     {
         return (bool) preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $value);

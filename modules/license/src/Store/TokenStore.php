@@ -77,16 +77,14 @@ final class TokenStore
     /** @return array<string, mixed> */
     public function state(string $issuer = 'default'): array
     {
-        $file = $this->stateFile($issuer);
-
-        return is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+        return Files::readJson($this->stateFile($issuer));
     }
 
     /** @param  array<string, mixed>  $changes */
     public function saveState(array $changes, string $issuer = 'default'): void
     {
         try {
-            Files::put($this->stateFile($issuer), (string) json_encode([...$this->state($issuer), ...$changes], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            Files::putJson($this->stateFile($issuer), [...$this->state($issuer), ...$changes]);
         } catch (Throwable) {
         }
     }

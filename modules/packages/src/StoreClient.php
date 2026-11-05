@@ -731,7 +731,7 @@ final class StoreClient
         }
     }
 
-    /** The default store alone may provide the `cms/` vendor or the `Cms\` namespace: nothing else can replace a built-in. */
+    /** The default store alone may provide the `letterncms/` vendor or the `Cms\` namespace: nothing else can pass for first-party. */
     private function nameAllowed(string $store, string $package, array $psr4 = []): bool
     {
         if ($store === self::DEFAULT) {

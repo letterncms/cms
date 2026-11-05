@@ -8,10 +8,8 @@ use Cms\Content\Entries\Entry;
 use Cms\Content\Entries\EntryQuery;
 
 /**
- * What templates get from cms_entries(): a query over live entries that
- * returns AugmentedEntry objects and records the dependency for builds.
- *
- *   @foreach (cms_entries('posts')->orderBy('-published_at')->limit(3)->get() as $post)
+ * The `entries` data source's query: live entries as AugmentedEntry objects,
+ * recording the dependency for builds.
  */
 final class EntryQueryProxy
 {

@@ -34,7 +34,3 @@ export function NodesField({ field, value, onChange, disabled, context }: FieldP
   )
 }
 
-export function nodeLabel(node: { label?: string; type: string; props?: Record<string, any> } | null | undefined, title?: string): string {
-  if (!node) return t('Missing element')
-  return node.label || tree.summary(node as any, 28) || title || node.type
-}

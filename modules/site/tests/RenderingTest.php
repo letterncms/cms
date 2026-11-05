@@ -198,7 +198,7 @@ final class RenderingTest extends TestCase
         ], \Cms\Abilities\AbilityContext::system('test'));
 
         $design = $this->app->make(\Cms\Modules\Site\Design\Design::class);
-        $design->forget();
+        $design->saved();
         $css = (string) file_get_contents(public_path(ltrim($design->stylesheet(), '/')));
 
         $this->assertFileExists(content_path('design/tokens.json'));

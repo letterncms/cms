@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Assistant;
 
+use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Packages\Plugin;
@@ -23,12 +24,13 @@ final class AssistantModule extends Plugin
         }
 
         $this->app->singleton(\Cms\Contracts\Agent::class, static fn ($app) => $app->make(Agent::class));
+        $this->app->singleton(\Cms\Contracts\Translator::class, static fn ($app) => $app->make(Translator::class));
     }
 
     public function boot(): void
     {
-        $this->cms()->permissions()->register('assistant.use', __('Use the AI Assistant'), __('Assistant'));
-        $this->cms()->admin()->widget('assistant-ask', ['label' => 'Ask {brand}', 'description' => __('Ask the assistant from the Dashboard.'), 'icon' => 'sparkle', 'column' => 'side', 'order' => 15, 'permission' => 'assistant.use', 'assistant' => false]);
+        $this->cms()->permissions()->register('assistant.use', 'Use the AI Assistant', 'Assistant', roles: ['editor', 'author']);
+        $this->cms()->admin()->widget('assistant-ask', ['label' => 'Ask {brand}', 'description' => 'Ask the assistant from the Dashboard.', 'icon' => 'sparkle', 'column' => 'side', 'order' => 15, 'permission' => 'assistant.use', 'assistant' => false]);
 
         $this->cms()->settingsRegistry()->register('assistant', fields: [
             ['handle' => 'api_key', 'type' => 'text', 'label' => 'Anthropic API Key', 'secret' => true, 'instructions' => 'From console.anthropic.com.'],
@@ -36,13 +38,9 @@ final class AssistantModule extends Plugin
             ['handle' => 'effort', 'type' => 'select', 'label' => 'Effort', 'options' => Claude::efforts(), 'default' => 'medium', 'display' => 'dropdown', 'width' => 'half'],
             ['handle' => 'small_model', 'type' => 'select', 'label' => 'Model for Small Tasks', 'instructions' => 'Names chats. A fast model is enough.', 'options' => array_map(static fn (array $model) => $model['name'], Claude::models()), 'default' => Claude::DEFAULT_SMALL_MODEL, 'required' => true, 'display' => 'dropdown', 'width' => 'half'],
             ['handle' => 'approval', 'type' => 'select', 'label' => 'Ask Before', 'options' => ['destructive' => __('Deletes and Admin Changes'), 'writes' => __('Every Change')], 'default' => 'destructive', 'display' => 'radio'],
-        ], icon: 'sparkle', description: __('API key, models and approvals.'), package: $this->manifest->name, order: 60, section: 'system');
+        ], icon: 'sparkle', description: 'API key, models and approvals.', order: 60, section: 'system');
 
         $this->abilities();
-
-        // Machine translation for letterncms/languages, when an API key is set.
-        $this->cms()->hooks()->addFilter('languages.translator', fn (?\Closure $translator) => $translator
-            ?? ($this->app->make(Claude::class)->configured() ? $this->app->make(Translator::class)(...) : null));
 
         $this->adminModule();
     }
@@ -50,8 +48,8 @@ final class AssistantModule extends Plugin
     private function abilities(): void
     {
         $a = $this->cms()->abilities();
-        // What the workspace's composer asks for: the admin's own, no tokens, agents or CLI.
-        $expose = ['rest' => false, 'mcp' => false, 'cli' => false, 'assistant' => false];
+        // What the workspace's composer asks for: the admin's own.
+        $expose = Ability::ADMIN_ONLY;
 
         $a->register('assistant/status', [
             'label' => 'Assistant Status',
@@ -59,7 +57,6 @@ final class AssistantModule extends Plugin
             'permission' => 'assistant.use',
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
-            'package' => $this->manifest->name,
             'handler' => fn () => [
                 'configured' => $this->app->make(Claude::class)->configured(),
                 'model' => $this->app->make(Claude::class)->model(),
@@ -73,7 +70,6 @@ final class AssistantModule extends Plugin
             'permission' => 'assistant.use',
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
-            'package' => $this->manifest->name,
             'handler' => fn (array $in, AbilityContext $c) => array_values(array_map(static fn (array $skill) => [
                 'name' => $skill['name'], 'label' => __($skill['label']), 'description' => __($skill['description']), 'icon' => $skill['icon'],
             ], $this->cms()->skills()->all($c->user))),
@@ -85,7 +81,6 @@ final class AssistantModule extends Plugin
             'permission' => 'assistant.use',
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
-            'package' => $this->manifest->name,
             'handler' => fn (array $in, AbilityContext $c) => array_map(static fn (array $resource) => ['uri' => $resource['uri'], 'name' => __($resource['name'])], $this->cms()->context()->list($c->user)),
         ]);
 
@@ -95,7 +90,6 @@ final class AssistantModule extends Plugin
             'permission' => 'assistant.use',
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['uri' => ['type' => 'string']], 'required' => ['uri']],
             'handler' => fn (array $in, AbilityContext $c) => $this->cms()->context()->read($in['uri'], $c->user)['text'] ?? throw new AbilityException(__('Not found.'), 'not_found'),
         ]);

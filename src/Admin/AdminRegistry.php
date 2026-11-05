@@ -85,11 +85,6 @@ final class AdminRegistry
         $this->nav[$id] = ['id' => $id, 'icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => true, 'shortcut' => null, 'permission' => null, 'visible' => null, ...$item, 'label' => $label, 'package' => $package];
     }
 
-    public function removeNav(string $id): void
-    {
-        unset($this->nav[$id]);
-    }
-
     public function module(string $id, string $url, ?string $package = null): void
     {
         $this->modules[$id] = ['url' => $url, 'package' => $package ?? Scope::$current];
@@ -245,7 +240,6 @@ final class AdminRegistry
 
         return [
             'widgets' => $this->widgetCatalog($user),
-            'components' => $this->componentsForUser($user),
             'modules' => array_map(static fn ($id, $m) => ['id' => $id, ...$m], array_keys($this->modules), $this->modules),
             'styles' => array_values(array_unique($this->styles)),
             'commands' => array_values(array_filter($this->commands, $visible)),

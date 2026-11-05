@@ -6,7 +6,9 @@ namespace Cms\Modules\Site\Rendering;
 
 use Cms\Admin\Translations;
 use Illuminate\Contracts\Support\Htmlable;
+use Cms\Modules\Account\Site\Screens;
 use Cms\Modules\Blocks\BlockRenderer;
+use Cms\Modules\Languages\Languages;
 use Cms\Modules\Blocks\BlocksDocument;
 use Cms\Modules\Blocks\Scope;
 use Cms\Modules\Blocks\Templates;
@@ -116,7 +118,7 @@ final class Renderer
     {
         return [
             'name' => config('app.name'),
-            'url' => rtrim((string) $this->cms->site('url', config('app.url')), '/'),
+            'url' => $this->cms->url(),
             'locale' => $this->cms->defaultLocale(),
             'locales' => $this->cms->locales(),
             'description' => $this->cms->site('description'),
@@ -151,17 +153,19 @@ final class Renderer
         };
 
         // A teaser ends by saying how to read the rest.
-        return $entry->gated === 'teaser' ? $html.$this->hooks->filter('account.teaser-notice', '', $entry) : $html;
+        return $entry->gated === 'teaser' && $this->cms->accounts()->enabled() ? $html.$this->cms->app()->make(Screens::class)->fragment('teaser-notice', $entry->locale) : $html;
     }
 
     private function document(PageContext $context, array $nodes, \Closure $outlet, string $title, ?string $bodyDocument = null, ?string $templateDocument = null): string
     {
-        $this->hooks->dispatch('preview.editor', $context->editor);
         $this->hooks->dispatch('render.begin', $context);
-        // Visitors read what the code says (a skip link, a form's messages) in the page's language; the canvas stays in the admin's.
         $translations = $this->cms->app()->make(Translations::class);
         $language = $translations->current();
-        $context->editor || $translations->apply($context->locale());
+        $editor = $this->blocks->editor;
+        $this->blocks->editor = $context->editor;
+        // Visitors read what the code says (a skip link, a form's messages) in the page's language. The canvas
+        // speaks the admin's (placeholders, empty states): the one the editor asks for (`X-Cms-Locale` or `?lang=`), else the user's.
+        $translations->apply($context->editor ? $this->adminLanguage($translations) : $context->locale());
 
         try {
             $body = $context->run(function (PageContext $ctx) use ($nodes, $outlet, $bodyDocument, $templateDocument) {
@@ -189,15 +193,23 @@ final class Renderer
             return $this->finish($context, $body, $title);
         } finally {
             $translations->apply($language);
-            $this->hooks->dispatch('preview.editor', false);
+            $this->blocks->editor = $editor;
         }
+    }
+
+    private function adminLanguage(Translations $translations): string
+    {
+        $request = request();
+        $asked = (string) ($request->header('X-Cms-Locale') ?? $request->query('lang', ''));
+
+        return isset($translations->languages()[$asked]) ? $asked : $translations->locale($request->user(), $request);
     }
 
     private function finish(PageContext $context, string $body, string $title): string
     {
         $entry = $context->entry;
         $locale = $context->locale();
-        $dir = function_exists('cms_text_direction') ? cms_text_direction($locale) : 'ltr';
+        $dir = Languages::direction($locale);
         $name = (string) config('app.name');
         $design = $this->design->json();
 

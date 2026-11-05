@@ -18,7 +18,6 @@ async function sendTest(): Promise<void> {
 
 /** Command palette: send a test email to yourself. */
 registry.commands.set('email-test', {
-  id: 'email-test',
   label: t('Send Test Email'),
   icon: 'mail',
   group: t('Email'),

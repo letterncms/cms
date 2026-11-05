@@ -6,6 +6,7 @@ namespace Cms\Modules\Navigation;
 
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
 use Cms\Support\Files;
 use Cms\Support\RecordTimestamps;
@@ -101,35 +102,33 @@ final class Menus
         return true;
     }
 
-    /** Entry ids referenced by any menu. */
-    public function entryIds(): array
+    /** @return list<string> The entry ids items link to, each once: every menu's without $items. */
+    public function ids(?array $items = null): array
     {
+        $items ??= array_merge([], ...array_column($this->all(), 'items'));
         $ids = [];
-        $walk = static function (array $items) use (&$walk, &$ids): void {
-            foreach ($items as $item) {
-                if (isset($item['entry'])) {
-                    $ids[$item['entry']] = true;
-                }
-                $walk($item['children']);
-            }
-        };
+        array_walk_recursive($items, static function ($value, $key) use (&$ids) {
+            $key === 'entry' && is_string($value) && $ids[$value] = true;
+        });
 
-        foreach ($this->all() as $menu) {
-            $walk($menu['items']);
+        return array_map('strval', array_keys($ids));
+    }
+
+    /** @return array<string, Entry> The entries items link to, by id: those that exist. */
+    public function entriesById(array $items): array
+    {
+        $entries = [];
+
+        foreach (cms()->entries()->findMany($this->ids($items)) as $entry) {
+            $entries[$entry->id] = $entry;
         }
 
-        return array_keys($ids);
+        return $entries;
     }
 
     private function assertEntriesExist(array $items): void
     {
-        $ids = [];
-        array_walk_recursive($items, static function ($value, $key) use (&$ids) {
-            $key === 'entry' && $ids[] = $value;
-        });
-
-        $found = array_map(static fn ($entry) => $entry->id, cms()->entries()->findMany($ids));
-        $missing = array_diff(array_unique($ids), $found);
+        $missing = array_diff($this->ids($items), array_keys($this->entriesById($items)));
 
         if ($missing !== []) {
             throw new InvalidArgumentException(__('These entries do not exist: :ids. Find ids with content/search.', ['ids' => implode(', ', $missing)]));

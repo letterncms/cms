@@ -120,7 +120,7 @@ let asking = false
 /** Someone just chose to leave their changes: the browser needn't ask again. */
 let left = false
 
-/** For admin themes: how to ask whether to leave unsaved changes behind (the admin's own dialog). Resolve true to leave. */
+/** For the admin: how to ask whether to leave unsaved changes behind (the admin's own dialog). Resolve true to leave. */
 export function confirmLeaving(handler: (message: string) => Promise<boolean>) {
   confirmer = handler
 }
@@ -170,7 +170,7 @@ export function useLocation(): Location {
 }
 
 /**
- * For admin themes: the location to draw the screen for. Going to another path
+ * For the admin: the location to draw the screen for. Going to another path
  * keeps the current screen on view until the next one is ready (code and data),
  * so navigating never flashes a loading state; changes to the query apply at once.
  * Wrap the screen in `<ScreenLocation>` with it, so the screen reads it too.
@@ -205,7 +205,7 @@ export function ScreenLocation({ location, children }: { location: Location; chi
 
 let prefetcher: ((path: string) => void) | null = null
 
-/** For admin themes: called when a link is about to be followed (hovered or focused), to get its screen ready. */
+/** For the admin: called when a link is about to be followed (hovered or focused), to get its screen ready. */
 export function onLinkIntent(handler: (path: string) => void) {
   prefetcher = handler
 }

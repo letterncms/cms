@@ -4,6 +4,8 @@ import type { MotionDef } from '../core/types'
 type Events = {
   'preview-motion': { node: string; motion: MotionDef }
   'scroll-to': { node: string }
+  /** Select a block and open its inspector, as clicking it on the page does. */
+  inspect: { node: string }
 }
 
 const target = new EventTarget()

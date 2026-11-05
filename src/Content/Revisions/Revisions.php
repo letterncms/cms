@@ -15,7 +15,7 @@ use Cms\Users\User;
  */
 final class Revisions
 {
-    /** Revisions kept per entry unless `revisions.keep` says otherwise (letterncms/content makes it a setting). */
+    /** Revisions kept per entry unless the `revisions.keep` filter says otherwise. */
     private const int KEEP = 100;
 
     private const int COALESCE_SECONDS = 600;

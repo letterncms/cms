@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Languages;
 
-use Closure;
 use Illuminate\Support\Str;
 use Cms\Abilities\AbilityException;
 use Cms\Content\Entries\Entry;
-use Cms\Extend\Hooks;
+use Cms\Contracts\Translator;
 use Cms\Cms;
 use Cms\Users\User;
 
@@ -19,7 +18,7 @@ use Cms\Users\User;
  */
 final class Translations
 {
-    public function __construct(private readonly Cms $cms, private readonly Languages $languages, private readonly Hooks $hooks) {}
+    public function __construct(private readonly Cms $cms, private readonly Languages $languages, private readonly Translator $translator) {}
 
     /** @return array<string, Entry> locale => entry, every version including $entry */
     public function versions(Entry $entry): array
@@ -45,12 +44,10 @@ final class Translations
         return $entry->locale === $locale ? $entry : ($this->versions($entry)[$locale] ?? null);
     }
 
-    /** A translator turns a list of strings into the target language (see `languages.translator`). */
-    public function translator(): ?Closure
+    /** Whether a machine translator is set up (Cms\Contracts\Translator). */
+    public function canTranslate(): bool
     {
-        $translator = $this->hooks->filter('languages.translator', null);
-
-        return $translator instanceof Closure ? $translator : null;
+        return $this->translator->available();
     }
 
     /**
@@ -81,8 +78,8 @@ final class Translations
         }
 
         if ($translate) {
-            $translator = $this->translator() ?? throw AbilityException::invalid(__('No translator is set up. Enable the assistant (with an API key) to translate automatically.'));
-            $content = $this->translate($content, $source->locale, $locale, $translator);
+            $this->canTranslate() || throw AbilityException::invalid(__('No translator is set up. Enable the assistant (with an API key) to translate automatically.'));
+            $content = $this->translate($content, $source->locale, $locale);
         }
 
         // A translation stands on its own in search: it never points its canonical at, or inherits a noindex from, the original.
@@ -103,8 +100,7 @@ final class Translations
         ], $user);
     }
 
-    /** @param Closure(list<string>, string, string): list<string> $translator */
-    private function translate(array $content, string $from, string $to, Closure $translator): array
+    private function translate(array $content, string $from, string $to): array
     {
         $map = StringMap::extract($content);
 
@@ -112,7 +108,7 @@ final class Translations
             return $content;
         }
 
-        $translated = $translator($map['strings'], $from, $to);
+        $translated = $this->translator->translate($map['strings'], $from, $to);
 
         if (count($translated) !== count($map['strings'])) {
             throw new AbilityException(__('The translation came back incomplete. Try again.'), 'failed');

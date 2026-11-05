@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Blocks;
 
+use Cms\Content\Fields\Blueprint;
 use Cms\Extend\Hooks;
-use Cms\Cms;
 use Throwable;
 
 /**
@@ -22,7 +22,7 @@ final class BlockRegistry
 
     private bool $sourcesLoaded = false;
 
-    public function __construct(private readonly Cms $cms, private readonly Hooks $hooks) {}
+    public function __construct(private readonly Hooks $hooks) {}
 
     public function register(array|BlockType $type): BlockType
     {
@@ -87,19 +87,12 @@ final class BlockRegistry
         }, $this->all()));
     }
 
-    /** Resolve field definitions: fill `dynamic` option lists (collections, patterns…). */
+    /** Resolve field definitions: fill `dynamic` option lists from `fields.options.<name>`, as every field does (Blueprint::withOptions). */
     public function resolveFields(array $fields): array
     {
         foreach ($fields as $i => $field) {
             if (isset($field['dynamic'])) {
-                $fields[$i]['options'] = match ($field['dynamic']) {
-                    'collections' => array_map(static fn ($c) => $c->title, array_filter($this->cms->collections()->all(), static fn ($c) => $c->routable())),
-                    'patterns' => array_map(static fn ($p) => $p['title'], array_filter(app(Patterns::class)->all(), static fn ($p) => $p['synced'])),
-                    'sources' => array_column(app(DataSources::class)->catalog(), 'label', 'name'),
-                    // The site's design system adds its own looks to these (`buttons` in tokens.json).
-                    'button-variants' => (array) $this->hooks->filter('blocks.options.button-variants', ['primary' => 'Primary', 'secondary' => 'Secondary', 'ghost' => 'Ghost', 'link' => 'Text link']),
-                    default => (array) $this->hooks->filter('blocks.options.'.$field['dynamic'], []),
-                };
+                $fields[$i] = Blueprint::withOptions($field);
                 unset($fields[$i]['dynamic']);
             }
         }

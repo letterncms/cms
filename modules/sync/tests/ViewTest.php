@@ -11,11 +11,6 @@ use Cms\Tests\TestCase;
 /** The Sync screen is a view: it passes the catalog, and who may reach this site is saved in one go. */
 final class ViewTest extends TestCase
 {
-    protected function plugins(): array
-    {
-        return ['letterncms/sync'];
-    }
-
     public function test_the_screen_resolves_and_the_switches_save_together(): void
     {
         $context = AbilityContext::forUser($this->admin(), 'admin');

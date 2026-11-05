@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Globals;
 
+use Cms\Admin\Views;
 use Cms\Cms;
 use Cms\Users\User;
 
@@ -58,9 +59,7 @@ final class GlobalsViews
         $set = $cms->globals()->find($handle);
 
         if ($set === null) {
-            return ['type' => 'ui/page', 'props' => ['title' => __('Not Found'), 'icon' => 'globe', 'back' => ['to' => '/globals', 'label' => __('Globals')]], 'children' => [
-                ['type' => 'ui/empty', 'props' => ['icon' => 'globe', 'title' => __('Not Found'), 'action' => ['label' => __('Back to Globals'), 'to' => '/globals']]],
-            ]];
+            return Views::notFound('globe', ['to' => '/globals', 'label' => __('Globals')]);
         }
 
         $form = static fn (?string $locale) => ['type' => 'ui/form', 'props' => [

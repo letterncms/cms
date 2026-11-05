@@ -14,6 +14,7 @@ use Cms\Http\Middleware\SecurityHeaders;
 use Cms\Http\Middleware\SiteCookies;
 use Cms\Http\Middleware\VerifySiteCsrf;
 use Cms\CmsServiceProvider;
+use Cms\Support\Files;
 use Cms\Update\CoreUpdate;
 use Cms\Update\Upgrader;
 use Symfony\Component\Console\Input\ArgvInput;
@@ -83,41 +84,35 @@ final class Bootstrap
     public static function upgrade(string $cmsPath, string $sitePath): void
     {
         // One tick at a time: the loopback, a browser and cron may all knock, and migrations don't run twice at once.
-        $lock = @fopen($sitePath.'/storage/update/tick.lock', 'c');
+        Files::locked($sitePath.'/storage/update/tick.lock', static function () use ($cmsPath, $sitePath): void {
+            try {
+                // Core tables first: no provider may read a schema that isn't there yet.
+                CmsServiceProvider::$withoutPackages = true;
+                $bare = self::create($cmsPath, $sitePath);
+                $bare->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+                $due = CoreUpdate::due($bare);
 
-        if ($lock === false || ! flock($lock, LOCK_EX | LOCK_NB)) {
-            self::answer(200, ['state' => 'migrating']);
+                if ($due) {
+                    Upgrader::migrateCore($bare);
+                }
 
-            return;
-        }
+                CmsServiceProvider::$withoutPackages = false;
+                \Illuminate\Support\Facades\Facade::clearResolvedInstances();
 
-        try {
-            // Core tables first: no provider may read a schema that isn't there yet.
-            CmsServiceProvider::$withoutPackages = true;
-            $bare = self::create($cmsPath, $sitePath);
-            $bare->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-            $due = CoreUpdate::due($bare);
+                if (! $due) {
+                    self::answer(204, null);
 
-            if ($due) {
-                Upgrader::migrateCore($bare);
+                    return;
+                }
+
+                $app = self::create($cmsPath, $sitePath);
+                $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+                self::answer(200, $app->make(CoreUpdate::class)->drive());
+            } catch (\Throwable $e) {
+                CmsServiceProvider::$withoutPackages = false;
+                self::answer(200, CoreUpdate::abandon($sitePath, $e->getMessage()));
             }
-
-            CmsServiceProvider::$withoutPackages = false;
-            \Illuminate\Support\Facades\Facade::clearResolvedInstances();
-
-            if (! $due) {
-                self::answer(204, null);
-
-                return;
-            }
-
-            $app = self::create($cmsPath, $sitePath);
-            $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-            self::answer(200, $app->make(CoreUpdate::class)->drive());
-        } catch (\Throwable $e) {
-            CmsServiceProvider::$withoutPackages = false;
-            self::answer(200, CoreUpdate::abandon($sitePath, $e->getMessage()));
-        }
+        }, static fn () => self::answer(200, ['state' => 'migrating']));
     }
 
     private static function answer(int $status, mixed $body): void

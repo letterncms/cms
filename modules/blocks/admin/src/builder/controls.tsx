@@ -1,5 +1,5 @@
 import { registry, t, useManifestIfLoaded, type FieldContext, type FieldDef } from '@letterncms/sdk'
-import { Icon, Tooltip, cn, fieldControlId, fieldVisible } from '@letterncms/ui'
+import { Icon, Tooltip, cn, fieldControlId, fieldVisible, wideFieldTypes } from '@letterncms/ui'
 import { useState, useSyncExternalStore, type ReactNode } from 'react'
 
 /* The inspector's frame, shared by every tab: sections with a title row, then rows of a
@@ -99,16 +99,13 @@ export function RowLabel({ field, children, htmlFor, className }: { field: Field
 /** About how many characters of a label fit its column. */
 const LABEL_FITS = 15
 
-/** Field types that need the panel's full width: the label goes above them. */
-export const WIDE = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'repeater', 'tags', 'entries', 'group', 'properties', 'fields']
-
 /**
  * Whether a field's label goes above its control rather than beside it: controls that
  * need the panel's width (or say so: `stack`), and choices with words (icon groups and two
  * short words stay beside their label). One rule for every tab.
  */
 export function stacks(field: FieldDef): boolean {
-  if (field.stack === true || (WIDE.includes(field.type) && !field.component)) return true
+  if (field.stack === true || (wideFieldTypes.includes(field.type) && !field.component)) return true
   // A label longer than its column (often in translation) gets the row above instead of an ellipsis.
   if (field.type !== 'toggle' && String(field.label ?? '').length > LABEL_FITS) return true
   if (field.type !== 'select' || field.component || field.display !== 'segmented') return false

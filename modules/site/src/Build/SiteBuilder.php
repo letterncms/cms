@@ -10,6 +10,7 @@ use Cms\Content\Entries\Entry;
 use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Extend\Hooks;
 use Cms\Cms;
+use Cms\Modules\Media\MediaManifest;
 use Cms\Modules\Site\Rendering\PageContext;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Support\Files;
@@ -66,7 +67,7 @@ final class SiteBuilder implements SiteBuilderContract
         $this->queueForDependency('media:'.$id, __('Media changed'));
     }
 
-    /** Queue the pages that recorded this while they were built. A plugin's data source records its own with `PageContext::depend`. */
+    /** Queue the pages that recorded this while they were built. A plugin records its own with the `render.depend` action. */
     public function queueForDependency(string $dependency, string $reason = ''): void
     {
         $uris = array_keys(array_filter($this->readManifest()['pages'], static fn (array $page) => in_array($dependency, $page['deps'] ?? [], true)));
@@ -145,71 +146,66 @@ final class SiteBuilder implements SiteBuilderContract
 
     private function work(int $budgetMs): array
     {
-
-        $lock = fopen(storage_path('framework/build.lock'), 'c');
-
-        if (! $lock || ! flock($lock, LOCK_EX | LOCK_NB)) {
-            return $this->status();
-        }
-
-        try {
-            $deadline = microtime(true) + $budgetMs / 1000;
-            $queue = $this->readQueue();
-            $manifest = $this->readManifest();
-
-            if (! empty($queue['all']) || (! empty($queue['full']) && ! isset($queue['generation']))) {
-                $queue = $this->expandFull($queue, $manifest);
-                Files::put(storage_path('build/signature'), $this->signature());
-            }
-
-            $queue['state'] = 'running';
-            $queue['startedAt'] ??= now()->toIso8601String();
-
-            while ($queue['items'] !== [] && microtime(true) < $deadline) {
-                $item = array_shift($queue['items']);
-
-                $this->warnings = [];
-
-                try {
-                    $more = $this->buildItem($item, $manifest, $queue['generation'] ?? null);
-                    array_push($queue['items'], ...array_diff($more, $queue['items']));
-                    $queue['total'] = max((int) $queue['total'], (int) $queue['done'] + count($queue['items']) + 1);
-                } catch (Throwable $e) {
-                    report($e);
-                    $queue['errors'][] = "{$item}: {$e->getMessage()}";
-                }
-
-                foreach (array_unique($this->warnings) as $warning) {
-                    $queue['warnings'][] = ['uri' => preg_replace('/^uri:|#.*$/', '', $item), 'message' => $warning];
-                }
-
-                $queue['done'] = (int) ($queue['done'] ?? 0) + 1;
-            }
-
-            if ($queue['items'] === []) {
-                if (! empty($queue['full'])) {
-                    $this->removeStale($manifest, $queue['generation']);
-                }
-
-                $manifest['builtAt'] = now()->toIso8601String();
-                $queue = ['all' => false, 'items' => [], 'done' => $queue['done'], 'total' => $queue['done'], 'state' => 'done', 'reason' => $queue['reason'] ?? '', 'errors' => $queue['errors'] ?? [], 'warnings' => $queue['warnings'] ?? []];
-                $this->hooks->dispatch('site.built', $manifest);
-            }
-
-            $this->writeManifest($manifest);
-            $this->writeQueue($queue);
-        } finally {
-            flock($lock, LOCK_UN);
-            fclose($lock);
-        }
+        // One builder at a time: whoever finds it busy reports how far it got.
+        Files::locked(storage_path('framework/build.lock'), fn () => $this->step($budgetMs), static fn () => null);
 
         return $this->status();
+    }
+
+    private function step(int $budgetMs): void
+    {
+        $deadline = microtime(true) + $budgetMs / 1000;
+        $queue = $this->readQueue();
+        $manifest = $this->readManifest();
+
+        if (! empty($queue['all']) || (! empty($queue['full']) && ! isset($queue['generation']))) {
+            $queue = $this->expandFull($queue, $manifest);
+            Files::put(storage_path('build/signature'), $this->signature());
+        }
+
+        $queue['state'] = 'running';
+        $queue['startedAt'] ??= now()->toIso8601String();
+
+        while ($queue['items'] !== [] && microtime(true) < $deadline) {
+            $item = array_shift($queue['items']);
+
+            $this->warnings = [];
+
+            try {
+                $more = $this->buildItem($item, $manifest, $queue['generation'] ?? null);
+                array_push($queue['items'], ...array_diff($more, $queue['items']));
+                $queue['total'] = max((int) $queue['total'], (int) $queue['done'] + count($queue['items']) + 1);
+            } catch (Throwable $e) {
+                report($e);
+                $queue['errors'][] = "{$item}: {$e->getMessage()}";
+            }
+
+            foreach (array_unique($this->warnings) as $warning) {
+                $queue['warnings'][] = ['uri' => preg_replace('/^uri:|#.*$/', '', $item), 'message' => $warning];
+            }
+
+            $queue['done'] = (int) ($queue['done'] ?? 0) + 1;
+        }
+
+        if ($queue['items'] === []) {
+            if (! empty($queue['full'])) {
+                $this->removeStale($manifest, $queue['generation']);
+            }
+
+            $manifest['builtAt'] = now()->toIso8601String();
+            $queue = ['all' => false, 'items' => [], 'done' => $queue['done'], 'total' => $queue['done'], 'state' => 'done', 'reason' => $queue['reason'] ?? '', 'errors' => $queue['errors'] ?? [], 'warnings' => $queue['warnings'] ?? []];
+            $this->hooks->dispatch('site.built', $manifest);
+        }
+
+        $this->writeManifest($manifest);
+        $this->writeQueue($queue);
     }
 
     /** Build everything now (CLI). */
     public function buildAll(?Closure $progress = null): array
     {
-        $this->hooks->dispatch('site.build.before');
+        // content/media may have come in with git or FTP.
+        $this->cms->app()->make(MediaManifest::class)->import();
         $this->queue(null, __('Full Build'));
 
         while ($this->hasWork()) {
@@ -396,20 +392,17 @@ final class SiteBuilder implements SiteBuilderContract
 
     private function readQueue(): array
     {
-        $file = storage_path('build/queue.json');
-
-        return is_file($file) ? (array) json_decode((string) file_get_contents($file), true) : ['all' => false, 'items' => [], 'state' => 'idle'];
+        return Files::readJson(storage_path('build/queue.json')) ?: ['all' => false, 'items' => [], 'state' => 'idle'];
     }
 
     private function writeQueue(array $queue): void
     {
-        Files::put(storage_path('build/queue.json'), json_encode($queue, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        Files::putJson(storage_path('build/queue.json'), $queue);
     }
 
     private function readManifest(): array
     {
-        $file = storage_path('build/manifest.json');
-        $data = is_file($file) ? (array) json_decode((string) file_get_contents($file), true) : [];
+        $data = Files::readJson(storage_path('build/manifest.json'));
 
         return ['pages' => (array) ($data['pages'] ?? []), 'extras' => (array) ($data['extras'] ?? []), 'builtAt' => $data['builtAt'] ?? null];
     }
@@ -424,6 +417,6 @@ final class SiteBuilder implements SiteBuilderContract
 
     private function writeManifest(array $manifest): void
     {
-        Files::put(storage_path('build/manifest.json'), json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        Files::putJson(storage_path('build/manifest.json'), $manifest);
     }
 }

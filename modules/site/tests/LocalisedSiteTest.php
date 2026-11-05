@@ -18,7 +18,7 @@ final class LocalisedSiteTest extends TestCase
 {
     protected function plugins(): array
     {
-        return ['letterncms/blocks', 'letterncms/site', 'letterncms/languages', 'letterncms/navigation', 'letterncms/forms', 'letterncms/seo'];
+        return ['letterncms/blocks', 'letterncms/site', 'letterncms/languages', 'letterncms/forms', 'letterncms/seo'];
     }
 
     protected function collections(): array
@@ -176,7 +176,7 @@ final class LocalisedSiteTest extends TestCase
 
     private function baseUrl(): string
     {
-        return rtrim((string) $this->cms()->site('url', config('app.url')), '/');
+        return $this->cms()->url();
     }
 
     public function test_a_translation_does_not_inherit_a_canonical_or_noindex(): void

@@ -16,7 +16,7 @@ use Symfony\Component\Process\Process;
  */
 final class TwoSitesTest extends TestCase
 {
-    private const array ENV = ['APP_ENV' => 'testing', 'APP_KEY' => 'base64:2fl+Ktvkfl+Fuz4Qp/A75G2RTiWVA/ZoKZvp6fiiM10=', 'DB_CONNECTION' => 'sqlite', 'CACHE_STORE' => 'file', 'SESSION_DRIVER' => 'file', 'BCRYPT_ROUNDS' => '4', 'QUEUE_CONNECTION' => 'sync', 'MAIL_MAILER' => 'array'];
+    private const array ENV = ['APP_ENV' => 'testing', 'APP_KEY' => 'base64:2fl+Ktvkfl+Fuz4Qp/A75G2RTiWVA/ZoKZvp6fiiM10=', 'DB_CONNECTION' => 'sqlite', 'CACHE_STORE' => 'file', 'SESSION_DRIVER' => 'file', 'BCRYPT_ROUNDS' => '4', 'MAIL_MAILER' => 'array'];
 
     private string $local;
 

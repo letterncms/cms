@@ -154,7 +154,7 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
       {...listeners}
       onClick={(e) => {
         if (e.shiftKey) store.extendTo(node.id)
-        else store.select(node.id, true)
+        else bus.emit('inspect', { node: node.id })
         bus.emit('scroll-to', { node: node.id })
       }}
       onMouseEnter={() => store.hover(node.id)}
@@ -162,7 +162,7 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
         if (renaming || e.target !== e.currentTarget) return
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          store.select(node.id, true)
+          bus.emit('inspect', { node: node.id })
           bus.emit('scroll-to', { node: node.id })
         } else if (!readOnly && e.key === 'F2') {
           e.preventDefault()

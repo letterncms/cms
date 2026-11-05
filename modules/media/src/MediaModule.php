@@ -24,8 +24,8 @@ final class MediaModule extends Plugin
     public function boot(): void
     {
         $p = $this->cms()->permissions();
-        $p->register('media.view', __('View the Media Library'), __('Media'));
-        $p->register('media.upload', __('Upload Files'), __('Media'));
+        $p->register('media.view', 'View the Media Library', 'Media');
+        $p->register('media.upload', 'Upload Files', 'Media');
         $p->register('media.edit', 'Edit Media Details', 'Media');
         $p->register('media.delete', 'Delete Files', 'Media');
 
@@ -37,9 +37,9 @@ final class MediaModule extends Plugin
         $admin = $this->cms()->admin();
         $admin->nav('media', ['path' => '/media', 'icon' => 'media', 'section' => 'content', 'order' => 70, 'pinned' => true, 'permission' => 'media.view']);
         $admin->command('upload-media', ['label' => 'Upload Files', 'icon' => 'upload', 'path' => '/media?upload=1', 'permission' => 'media.upload']);
-        $admin->widget('media-recent', ['label' => 'Recent Uploads', 'description' => __('The latest files in the media library.'), 'icon' => 'media', 'column' => 'main', 'order' => 40, 'permission' => 'media.view']);
+        $admin->widget('media-recent', ['label' => 'Recent Uploads', 'description' => 'The latest files in the media library.', 'icon' => 'media', 'column' => 'main', 'order' => 40, 'permission' => 'media.view']);
         $this->places();
-        $this->adminModule(import: '@letterncms/media');
+        $this->adminModule();
 
         // Files in the workspace's search, for those who may see them: each opens the library at it.
         $this->cms()->hooks()->addFilter('workspace.search', static fn (array $sections, string $query, \Cms\Users\User $user) => mb_strlen($query) < 2 || ! $user->hasPermission('media.view') ? $sections : [...$sections, [
@@ -53,7 +53,7 @@ final class MediaModule extends Plugin
 
     /**
      * The Media place, as data (see Cms\Admin\Views): its name and size, Upload in its bar, and
-     * the library (the plugin's `media/library`: the grid, filters, details and uploads).
+     * the library (this module's `media/library` component: the grid, filters, details and uploads).
      */
     private function places(): void
     {
@@ -78,11 +78,8 @@ final class MediaModule extends Plugin
     /** content/media comes in with git or FTP: the table follows on sync, install, a full build or an admin visit. */
     private function mediaAsContent(): void
     {
-        $import = fn () => $this->app->make(MediaManifest::class)->import();
-
-        foreach (['cms.sync', 'site.build.before'] as $event) {
-            $this->cms()->hooks()->on($event, $import);
-        }
+        // A full build imports it too (SiteBuilder::buildAll).
+        $this->cms()->hooks()->on('cms.sync', fn () => $this->app->make(MediaManifest::class)->import());
 
         if ($this->app->runningInConsole()) {
             $this->commands([Console\MediaCheckCommand::class]);
@@ -98,7 +95,7 @@ final class MediaModule extends Plugin
         });
     }
 
-    /** A page asks for an id the table doesn't know, on a site just deployed by FTP: look, at most once a minute. */
+    /** Upload size, image quality and metadata: the Media screen's Settings tab. */
     private function settingsSchema(): void
     {
         $this->cms()->settingsRegistry()->register('media', fields: [
@@ -107,7 +104,7 @@ final class MediaModule extends Plugin
             // The switches together, one group of rows.
             ['handle' => 'avif', 'type' => 'toggle', 'label' => 'Serve AVIF Images', 'default' => true, 'instructions' => 'Smaller than WebP; slower to generate.'],
             ['handle' => 'strip_metadata', 'type' => 'toggle', 'label' => 'Remove Photo Metadata', 'default' => true, 'instructions' => 'Location and camera details.'],
-        ], icon: 'media', description: __('Uploads and responsive images.'), package: $this->manifest->name, order: 30, section: 'system', home: 'media');
+        ], icon: 'media', description: 'Uploads and responsive images.', order: 30, section: 'system', home: 'media');
 
         // The server's own limit, in the reader's language (settings are registered at boot, before it is known).
         $this->cms()->hooks()->addFilter('settings.fields', static fn (array $fields, string $namespace) => $namespace !== 'media' ? $fields : array_map(
@@ -141,7 +138,6 @@ final class MediaModule extends Plugin
     {
         $a = $this->cms()->abilities();
         $store = fn () => $this->app->make(MediaStore::class);
-        $package = $this->manifest->name;
         $public = static fn (MediaItem $m) => $m->toPublic();
 
         $a->register('media/list', [
@@ -149,7 +145,6 @@ final class MediaModule extends Plugin
             'description' => 'Browse the media library with search, filters and sorting.',
             'permission' => 'media.view',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => [
                 'search' => ['type' => 'string', 'maxLength' => 120],
                 'kind' => ['type' => 'string', 'enum' => ['all', 'image', 'video', 'audio', 'pdf', 'file'], 'default' => 'all'],
@@ -197,7 +192,6 @@ final class MediaModule extends Plugin
             'description' => 'Details for media ids.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['ids' => ['type' => 'array', 'items' => ['type' => 'string'], 'maxItems' => 200]], 'required' => ['ids']],
             'handler' => static function (array $in) use ($public) {
                 $ids = array_map('strtolower', array_filter($in['ids'], 'is_string'));
@@ -211,7 +205,6 @@ final class MediaModule extends Plugin
             'label' => 'Import Media',
             'description' => 'Add a file from a public URL or base64 data. Returns the new media item (use its id in media fields and image blocks).',
             'permission' => 'media.upload',
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => [
                 'url' => ['type' => 'string', 'format' => 'uri'],
                 'filename' => ['type' => 'string', 'maxLength' => 200],
@@ -238,7 +231,6 @@ final class MediaModule extends Plugin
             'label' => 'Update Media',
             'description' => 'Change name, alt text, caption, folder or focal point (0–100 %).',
             'permission' => 'media.edit',
-            'package' => $package,
             'annotations' => ['idempotent' => true],
             'input' => ['type' => 'object', 'properties' => [
                 'id' => ['type' => 'string'],
@@ -256,7 +248,6 @@ final class MediaModule extends Plugin
             'description' => 'Ids and /media/ URLs that point at nothing, records without a file, files without a record, and items nothing uses.',
             'permission' => 'media.view',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => (object) []],
             'handler' => fn () => $this->app->make(MediaReferences::class)->report(),
         ]);
@@ -265,7 +256,6 @@ final class MediaModule extends Plugin
             'label' => 'Delete Media',
             'description' => 'Permanently delete a file and its image variants. Refused while something uses it, unless force is true.',
             'permission' => 'media.delete',
-            'package' => $package,
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'force' => ['type' => 'boolean', 'default' => false]], 'required' => ['id']],
             'handler' => function (array $in) use ($store) {

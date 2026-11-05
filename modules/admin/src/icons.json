@@ -105,6 +105,7 @@
  "circle": "ph:circle",
  "filter": "ph:funnel-simple",
  "sort": "ph:arrows-down-up",
+ "sync": "ph:arrows-down-up",
  "refresh": "ph:arrows-clockwise",
  "rocket": "ph:rocket-launch",
  "cloud": "ph:cloud-arrow-up",

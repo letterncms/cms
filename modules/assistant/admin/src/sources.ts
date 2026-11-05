@@ -1,14 +1,14 @@
-import { getManifest, registry, run, t } from '@letterncms/sdk'
+import { getManifest, registry, run, t, type ComposerPanelProps } from '@letterncms/sdk'
 
-/** What Claude puts under @ and / in a thread: only where it answers this person. */
-const answering = () => (getManifest().config?.workspace?.agent as { name?: string } | null | undefined)?.name === 'assistant'
+/** Whether Claude answers this person in the workspace's threads: what it puts under @ and / and in the composer is only there then. */
+export const answering = (agent = getManifest().config?.workspace?.agent as ComposerPanelProps['agent'] | undefined) => agent?.name === 'assistant'
 const matches = (query: string, ...words: (string | undefined)[]) => words.some((word) => word?.toLowerCase().includes(query.toLowerCase()))
 
 let skills: Promise<{ name: string; label: string; description: string; icon: string }[]> | null = null
 let resources: Promise<{ uri: string; name: string }[]> | null = null
 
 registry.composer.set('assistant-skills', {
-  id: 'assistant-skills', trigger: '/', label: t('Skills'), order: 10,
+  trigger: '/', label: t('Skills'), order: 10,
   search: async (query) => {
     if (!answering()) return []
     skills ??= run('assistant/skills')
@@ -19,7 +19,7 @@ registry.composer.set('assistant-skills', {
 })
 
 registry.composer.set('assistant-resources', {
-  id: 'assistant-resources', trigger: '@', label: t('Site'), order: 40,
+  trigger: '@', label: t('Site'), order: 40,
   search: async (query) => {
     if (!answering()) return []
     resources ??= run('assistant/resources')

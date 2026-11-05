@@ -122,7 +122,7 @@ final class Comments
 
         unset($recipients[$author->id]);
 
-        $url = rtrim((string) config('app.url'), '/').'/admin/content/'.$entry->collection.'/'.$entry->id;
+        $url = $this->cms->url('admin/content/'.$entry->collection.'/'.$entry->id);
 
         $translations = $this->cms->app()->make(Translations::class);
         $previous = $translations->current();

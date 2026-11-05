@@ -188,28 +188,6 @@ final class AssistantTest extends TestCase
         $this->chat(['thread' => $thread->id, 'message' => 'Thanks']);
         $this->assertSame(['thinking', 'text'], $kinds($this->api->requests[2])[3]);
         $this->assertSame('sig-'.md5('Deleted; tell them.'), $this->api->requests[2]['body']['messages'][3]['content'][0]['signature']);
-
-        // A thread kept from before (no binding), the API refusing its thinking anyway: once more without it.
-        $thread->refresh()->setState('binding', null);
-        $thread->save();
-        $this->api->queue(FakeAnthropic::text('Still here.'));
-        $this->chat(['thread' => $thread->id, 'message' => 'Still there?']);
-        $this->assertNotContains('thinking', array_merge(...$kinds($this->api->requests[3])));
-
-        $thread->refresh();
-        $this->assertSame(['text'], array_column($thread->state('messages')[3]['content'], 'type'));
-        $messages = $thread->state('messages');
-        $messages[5]['content'] = [['type' => 'thinking', 'thinking' => 'Old', 'signature' => 'sig-old'], ...$messages[5]['content']];
-        $thread->setState('messages', $messages);
-        $thread->save();
-        $this->api->queue(FakeAnthropic::refused('messages.5.content.0: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".'));
-        $this->api->queue(FakeAnthropic::text('Yes.'));
-        $events = $this->chat(['thread' => $thread->id, 'message' => 'And now?']);
-
-        $this->assertSame('done', end($events)[0]);
-        $this->assertContains('thinking', array_merge(...$kinds($this->api->requests[4])));
-        $this->assertNotContains('thinking', array_merge(...$kinds($this->api->requests[5])));
-        $this->assertSame('And now?', end($this->api->requests[5]['body']['messages'])['content'][1]['text']);
     }
 
     public function test_each_chat_keeps_the_model_picked_in_it(): void
@@ -801,9 +779,10 @@ final class AssistantTest extends TestCase
     {
         $this->api->queue(FakeAnthropic::text((string) json_encode(['s0' => 'Preise', 's1' => 'Pläne für jedes Team'])));
 
-        $translator = $this->cms()->hooks()->filter('languages.translator', null);
-        $this->assertInstanceOf(\Closure::class, $translator);
-        $this->assertSame(['Preise', 'Pläne für jedes Team'], $translator(['Pricing', 'Plans for every team'], 'en', 'de'));
+        $translator = app(\Cms\Contracts\Translator::class);
+        $this->assertInstanceOf(\Cms\Modules\Assistant\Translator::class, $translator);
+        $this->assertTrue($translator->available());
+        $this->assertSame(['Preise', 'Pläne für jedes Team'], $translator->translate(['Pricing', 'Plans for every team'], 'en', 'de'));
 
         $body = $this->api->requests[0]['body'];
         $this->assertSame('json_schema', $body['output_config']['format']['type']);
@@ -813,7 +792,7 @@ final class AssistantTest extends TestCase
 
         $this->cms()->settingsRegistry()->save('assistant', ['api_key' => '']);
         putenv('ANTHROPIC_API_KEY');
-        $this->assertNull($this->cms()->hooks()->filter('languages.translator', null), 'no key, no translator');
+        $this->assertFalse($translator->available(), 'no key, no translator');
     }
 
     /** @return list<array{0: string, 1: array}> */

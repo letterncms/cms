@@ -61,13 +61,13 @@ export function Transition({ s }: { s: StyleApi }) {
             },
             {
               handle: 'ease',
-              type: 'select',
-              component: 'blocks-ease',
+              type: 'text',
+              component: 'ease',
               label: t('Curve'),
               keys: ['transition'],
               get: () => tr.ease,
               set: (v) => set({ ease: v ?? 'ease' }),
-              options: [...(byGroup.get('ease') ?? []).map((e) => ({ value: `token:${e.path}`, label: e.name })), 'ease', 'ease-in-out', 'linear', { value: 'cubic-bezier(0.2, 0.8, 0.2, 1)', label: t('Smooth Out') }, { value: 'cubic-bezier(0.65, 0, 0.35, 1)', label: t('Smooth In-Out') }, { value: 'cubic-bezier(0.34, 1.56, 0.64, 1)', label: t('Overshoot') }],
+              options: [...(byGroup.get('ease') ?? []).map((e) => ({ value: `token:${e.path}`, label: e.name, curve: String(e.value) })), { value: 'ease', label: t('Ease') }, { value: 'ease-in-out', label: t('Ease In-Out') }, { value: 'linear', label: t('Linear') }, { value: 'cubic-bezier(0.2, 0.8, 0.2, 1)', label: t('Smooth Out') }, { value: 'cubic-bezier(0.65, 0, 0.35, 1)', label: t('Smooth In-Out') }, { value: 'cubic-bezier(0.34, 1.56, 0.64, 1)', label: t('Overshoot') }],
             },
           ]}
         />

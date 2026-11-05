@@ -16,7 +16,8 @@
         "cms": {
             "label": "Paid Plugins",
             "icon": "key",
-            "provider": "Cms\\Modules\\License\\LicenseModule"
+            "provider": "Cms\\Modules\\License\\LicenseModule",
+            "required": true
         }
     }
 }

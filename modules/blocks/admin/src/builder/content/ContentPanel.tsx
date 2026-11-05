@@ -1,11 +1,11 @@
 import { navigate, t, useAbility, type FieldDef } from '@letterncms/sdk'
-import { fieldControlId, Button, Fields, Icon, Tooltip, cn } from '@letterncms/ui'
+import { fieldControlId, Button, Fields, Icon, Tooltip, cn, wideFieldTypes } from '@letterncms/ui'
 import { useAnchors } from '../../core/anchors'
 import { useEditorContext } from '../../core/context'
 import type { PatternDef } from '../../core/Inserter'
 import * as tree from '../../core/tree'
 import type { BlockNode } from '../../core/types'
-import { AddButton, Body, PanelFields, Section, SubHeading, WIDE, labelColumn, stacks } from '../controls'
+import { AddButton, Body, PanelFields, Section, SubHeading, labelColumn, stacks } from '../controls'
 import { pairOp } from '../fields/composite'
 import { useDataPaths, type DataPath } from './scope'
 
@@ -32,7 +32,7 @@ function Prop({ field: given, value, bound, paths, onValue, onBind, extra }: { f
   // A label, caption or attribution is one line here (it is written on the canvas), not a rich text box.
   const field: FieldDef = given.type === 'richtext' && given.inline && given.handle !== 'text' && !given.component ? { ...given, component: 'blocks-inline-text' } : given
   // Core's own wide controls (rich text, media…) draw as they do in forms; the rest as inspector rows.
-  const core = !bound && WIDE.includes(field.type) && !field.component
+  const core = !bound && wideFieldTypes.includes(field.type) && !field.component
   // The same rule as the Design tab: long choices and long labels put the label above.
   const wide = !bound && stacks(field)
   const toggle = !bound && field.type === 'toggle'

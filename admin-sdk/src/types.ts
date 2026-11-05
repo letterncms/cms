@@ -1,13 +1,5 @@
 import type { ReactNode } from 'react'
 
-export interface SurfaceComponentInfo {
-  id: string
-  label: string
-  description: string
-  props: Record<string, unknown>
-  children: boolean
-}
-
 /** Versioned data, never generated JSX, HTML, CSS or executable code. */
 export interface SurfaceDocument {
   version: 1
@@ -20,7 +12,6 @@ export interface SurfaceElement {
   type: string
   props: Record<string, unknown>
   children?: string[]
-  on?: Record<string, { action: string; params?: Record<string, unknown> }>
 }
 
 export interface SurfaceAction {
@@ -229,8 +220,6 @@ export interface WidgetInfo {
 }
 
 export interface Manifest {
-  /** Trusted components for declarative, contextual admin surfaces. */
-  components?: SurfaceComponentInfo[]
   cms: { version: string; debug: boolean }
   brand: BrandInfo
   site: { name: string; url: string; locales: string[]; defaultLocale: string; timezone: string }
@@ -404,3 +393,45 @@ export interface EntryEditorProps extends EntryPanelProps {
   /** What the way back to `listPath` is called: the collection, or the site's pages for a built-in page. */
   listLabel?: string
 }
+
+/** What the workspace hands a panel in the composer's footer (`workspace.composer`): an agent's model picker, say. What it chooses goes with the next message. */
+export interface ComposerPanelProps {
+  thread: string | null
+  /** The agent that answers in the thread, if any. */
+  agent: { name: string; label: string } | null
+  /** What the agent shows of its state in this thread. */
+  state: Record<string, unknown> | null
+  /** What its controls chose for the next message. */
+  options: Record<string, unknown>
+  setOption: (name: string, value: unknown) => void
+  busy: boolean
+  loading: boolean
+}
+
+/** The named places of the admin where `registry.panels` components appear, with the props each hands them. */
+export interface PanelSlots {
+  /** The entry editor's top bar. */
+  'entry.toolbar': EntryPanelProps
+  /** Tabs in the entry editor's side panel (give `label` and `icon`). */
+  'entry.sidebar': EntryPanelProps
+  /** After the main body, in the editor's footer. */
+  'entry.body': EntryPanelProps
+  /** The body workspace for a collection's explicit body field. */
+  'entry.editor': EntryEditorProps
+  /** A column at the right edge, on every screen (draw it with `Dock`). */
+  'shell.dock': {}
+  /** A strip above the screen, for a notice that concerns the whole admin. */
+  'shell.banner': {}
+  /** Rows at the top of the main sidebar. */
+  'sidebar.start': { onNavigate?: () => void }
+  /** In every screen's top bar, before its own actions. */
+  'topbar.end': {}
+  /** Part of API & Agents on Account. */
+  'account.api': {}
+  /** In a thread's composer, beside Send. */
+  'workspace.composer': ComposerPanelProps
+  /** A settings page's form, by namespace. */
+  'screen.settings': { namespace: string; onDirty?: (dirty: boolean) => void }
+}
+
+export type PanelSlot = keyof PanelSlots

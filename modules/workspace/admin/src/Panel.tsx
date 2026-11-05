@@ -1,5 +1,5 @@
 import { adminUrl, CmsError, Link, panelsFor, registry, t, useAction, useLocation, useManifest, type ComposerOption, type SurfaceAction } from '@letterncms/sdk'
-import { Button, Dock, Icon, IconButton, Menu, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, fillTemplate, toast, type ActionAsker, type ActionRunner } from '@letterncms/ui'
+import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, type ActionAsker, type ActionRunner } from '@letterncms/ui'
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Composer, coarse } from './Composer'
 import { History, NewChatButton } from './History'
@@ -8,18 +8,6 @@ import { Markdown } from './Markdown'
 import { agent, panel, threadAt, useFloating, usePanel } from './store'
 import { answerText, OPEN, opened, type AnswerTurn, type Call, type Part, type Turn, type UserTurn } from './transcript'
 import { go, useThread } from './useThread'
-
-/** What an agent puts in the composer's footer (`workspace.composer`): a model picker, say. What it chooses goes with the next message. */
-export interface ComposerPanelProps {
-  thread: string | null
-  /** What the agent shows of its state in this thread. */
-  state: Record<string, unknown> | null
-  /** What its controls chose for the next message. */
-  options: Record<string, unknown>
-  setOption: (name: string, value: unknown) => void
-  busy: boolean
-  loading: boolean
-}
 
 /** How an answer's buttons run their abilities: as turns of the thread, so it says what they did; and ask for theirs in the composer. */
 const Runner = createContext<{ run?: ActionRunner; ask?: ActionAsker }>({})
@@ -164,7 +152,8 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
   const empty = !thread.loading && !thread.turns.length
   const title = thread.title || t('New Chat')
   const listing = history && !column
-  const footer = panelsFor<ComposerPanelProps>('workspace.composer', { thread: id, state: thread.state, options: options[key] ?? {}, setOption: panel.option, busy: thread.busy, loading: thread.loading })
+  const composerProps = { thread: id, agent: answering, state: thread.state, options: options[key] ?? {}, setOption: panel.option, busy: thread.busy, loading: thread.loading }
+  const footer = panelsFor('workspace.composer', composerProps)
 
   // Esc puts it away, unless something inside it takes the key first (a menu, a message being edited).
   const onKeyDown = (e: KeyboardEvent) => {
@@ -263,11 +252,7 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
 
           {thread.error && (
             <div className="cms-thread-width w-full shrink-0 pb-2">
-              <div role="alert" className="flex items-start gap-2 rounded-md border border-danger/30 bg-danger/6 px-3 py-2 text-sm text-text">
-                <Icon name="warning" size={15} className="mt-0.5 shrink-0 text-danger" />
-                <span className="flex-1">{thread.error}</span>
-                <IconButton icon="close" label={t('Dismiss')} size="xs" onClick={thread.dismissError} />
-              </div>
+              <Notice tone="danger" onDismiss={thread.dismissError}>{thread.error}</Notice>
             </div>
           )}
 
@@ -283,7 +268,7 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
             >
               <div className="flex items-center gap-2 px-2 pb-2">
                 <div className="flex min-w-0 flex-1 items-center">
-                  {footer.map(({ id: panelId, component: Footer }) => <Footer key={panelId} thread={id} state={thread.state} options={options[key] ?? {}} setOption={panel.option} busy={thread.busy} loading={thread.loading} />)}
+                  {footer.map(({ id: panelId, component: Footer }) => <Footer key={panelId} {...composerProps} />)}
                 </div>
                 {thread.busy && answering ? (
                   <IconButton icon="stop" label={t('Stop')} variant="secondary" onClick={thread.stop} />
@@ -423,12 +408,7 @@ function CopyMessage({ text }: { text: string }) {
   const label = copied ? t('Copied') : t('Copy message')
   return <>
     <Tooltip content={label}><IconButton icon={copied ? 'check' : 'copy'} label={label} title={undefined} onClick={async () => {
-      try {
-        await navigator.clipboard.writeText(text)
-        setCopied(true)
-      } catch {
-        toast.error(t('Could not copy the message. Try again.'))
-      }
+      if (await copyText(text, { failed: t('Could not copy the message. Try again.') })) setCopied(true)
     }} /></Tooltip>
     <span role="status" className="sr-only">{copied ? t('Message copied') : ''}</span>
   </>

@@ -55,7 +55,21 @@ export const toast = Object.assign((message: string, options?: Parameters<typeof
   dismiss: sonner.dismiss,
 })
 
-/** Puts text on the clipboard and says how it went, in words of its own. */
-export function copyText(text: string, { copied, failed }: { copied: string; failed: string }): Promise<void> {
-  return (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error('clipboard'))).then(() => { toast.success(copied) }, (error) => { console.error(error); toast.error(failed) })
+/**
+ * Puts text on the clipboard and says how it went, in words of its own: `copied` when it
+ * worked (nothing without it), `failed` when it didn't (`null`: nothing, for a caller that
+ * shows the text instead). Resolves with whether it worked.
+ */
+export function copyText(text: string, { copied, failed = t('Couldn’t copy to the clipboard') }: { copied?: string; failed?: string | null } = {}): Promise<boolean> {
+  return (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error('clipboard'))).then(
+    () => {
+      if (copied) toast.success(copied)
+      return true
+    },
+    (error) => {
+      console.error(error)
+      if (failed) toast.error(failed)
+      return false
+    },
+  )
 }

@@ -22,6 +22,9 @@ final class Ability
      * @param  array{rest?: bool, mcp?: bool, cli?: bool, assistant?: bool}  $expose
      * @param  Closure|null  $answer  fn(mixed $result, array $input, User $user): array — the view a person sees in the workspace after running it (see Cms\Modules\Workspace\Answers)
      */
+    /** For `expose`: only the admin's own client runs it, as the person signed in. No tokens, agents or CLI. */
+    public const array ADMIN_ONLY = ['rest' => false, 'mcp' => false, 'cli' => false, 'assistant' => false];
+
     public function __construct(
         public readonly string $name,
         public readonly string $label,

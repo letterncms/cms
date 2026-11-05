@@ -20,13 +20,6 @@ if (! function_exists('cms_brand')) {
     }
 }
 
-if (! function_exists('cms_path')) {
-    function cms_path(string $path = ''): string
-    {
-        return app()->cmsPath($path);
-    }
-}
-
 if (! function_exists('site_path')) {
     function site_path(string $path = ''): string
     {

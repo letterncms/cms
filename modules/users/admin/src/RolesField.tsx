@@ -152,10 +152,8 @@ function NewRole({ onClose, onCreate }: { onClose: () => void; onCreate: (handle
   const [label, setLabel] = useState('')
   const handle = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} size="sm" title={t('New Role')} footer={<><Button onClick={onClose}>{t('Cancel')}</Button><Button variant="primary" type="submit" form="new-role" disabled={!handle}>{t('Create Role')}</Button></>}>
-      <form id="new-role" onSubmit={(e) => { e.preventDefault(); if (handle) onCreate(handle, label) }}>
-        <Fields fields={[{ handle: 'label', type: 'text', label: t('Name'), placeholder: t('Client Editor'), autofocus: true, instructions: handle ? t('Handle: {handle}', { handle }) : undefined }]} values={{ label }} onChange={(_, v) => setLabel(v ?? '')} />
-      </form>
+    <Dialog open onOpenChange={(o) => !o && onClose()} size="sm" title={t('New Role')} submitLabel={t('Create Role')} submitDisabled={!handle} onSubmit={() => onCreate(handle, label)}>
+      <Fields fields={[{ handle: 'label', type: 'text', label: t('Name'), placeholder: t('Client Editor'), autofocus: true, instructions: handle ? t('Handle: {handle}', { handle }) : undefined }]} values={{ label }} onChange={(_, v) => setLabel(v ?? '')} />
     </Dialog>
   )
 }

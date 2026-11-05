@@ -11,18 +11,18 @@ export type OverviewView = 'table' | 'grid' | 'calendar'
 export interface ViewColumn { id: string; label: string; sort?: string; descFirst?: boolean; field?: unknown }
 
 /** Shared display preferences for every overview, including collection entries. */
-export function DisplayOptions({ view, all, shown, sortable, sortKey, implicitSort = null, isTree, cardColumns, onColumns, onSort, onReset, calendarDate, onCalendarDate, calendarDates = ['published', 'updated'] }: {
+function DisplayOptions({ view, all, shown, sortable, sortKey, implicitSort = null, isTree, onColumns, onSort, onReset, calendarDate, onCalendarDate, calendarDates = ['published', 'updated'] }: {
   view: OverviewView; all: ViewColumn[]; shown: Set<string>; sortable: ViewColumn[]; sortKey: string | null;
   /** The order the list has while nobody picked one ("-published_at"): the menu shows it, as the table's header does. */
   implicitSort?: string | null;
-  isTree?: boolean; cardColumns?: string[];
+  isTree?: boolean;
   onColumns: (ids: string[]) => void; onSort: (key: string | null) => void;
   onReset?: () => void;
   calendarDate?: CalendarDate; onCalendarDate?: (date: CalendarDate) => void;
   /** The dates the records have: the choice shows only when there are two. */
   calendarDates?: CalendarDate[];
 }) {
-  const toggles = view === 'calendar' ? [] : view === 'grid' && cardColumns ? all.filter((column) => cardColumns.includes(column.id)) : all
+  const toggles = view === 'calendar' ? [] : all
   // Without a pick of its own the list keeps its own order, named like the header names it.
   const implicit = !isTree && implicitSort && sortable.some((c) => c.sort === implicitSort.replace(/^-/, '')) ? implicitSort : null
   const effective = sortKey ?? implicit
@@ -56,7 +56,7 @@ export function DisplayOptions({ view, all, shown, sortable, sortKey, implicitSo
 const allViews: OverviewView[] = ['table', 'grid', 'calendar']
 
 /** Only the views a list's records can fill: Grid needs pictures, Calendar dates. */
-export function ViewSwitcher({ value, onChange, views = allViews }: { value: OverviewView; onChange: (view: OverviewView) => void; views?: OverviewView[] }) {
+function ViewSwitcher({ value, onChange, views = allViews }: { value: OverviewView; onChange: (view: OverviewView) => void; views?: OverviewView[] }) {
   const titles: Record<OverviewView, [string, string]> = { table: ['table', t('Table')], grid: ['grid', t('Grid')], calendar: ['calendar', t('Calendar')] }
   if (views.length < 2) return null
   return <Segmented value={value} onChange={onChange} options={views.map((view) => ({ value: view, icon: titles[view][0], title: titles[view][1] }))} />

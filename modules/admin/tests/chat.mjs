@@ -1,13 +1,6 @@
 // Build the admin, the workspace and the assistant, then run this server and open its printed URL.
 // Exercises the actual bundled UI against local fixtures; never calls an AI provider.
-import { createServer } from 'node:http'
-import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { resolve, extname, sep } from 'node:path'
-
-const root = fileURLToPath(new URL('../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
-const assetBase = '/_cms/assets/cms-admin/'
+import { body, json, page, serve } from './harness.mjs'
 const nav = [
   ['dashboard', 'Dashboard', '/', 'grid', 'main'], ['analytics', 'Analytics', '/analytics', 'chart', 'main'],
   ['pages', 'Pages', '/content/pages', 'file', 'content'], ['posts', 'Posts', '/content/posts', 'article', 'content'], ['media', 'Media', '/media', 'media', 'content'],
@@ -25,8 +18,7 @@ const manifest = {
   sidebar: { sections: ['main', 'content', 'design'].map((id) => ({ id, label: id === 'main' ? '' : id[0].toUpperCase() + id.slice(1), items: nav.filter((n) => n.section === id).map((n) => n.id) })), hidden: [], personal: false },
   settingsNav: [{ id: 'system', label: 'System', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }],
 }
-const boot = { base: '/admin', api: '/api/admin', version: 'test', theme: { name: 'cms/admin', version: 'test' }, site: manifest.site, locale: 'en', messages: {}, manifest }
-const imports = Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path]))
+const boot = { base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
 const titles = ['Refine the launch page', 'Draft the autumn newsletter', 'Review page descriptions', 'Update the design system', 'Plan next month’s content']
 let chats = Array.from({ length: 70 }, (_, i) => ({ id: `chat-${i + 1}`, title: titles[i] ?? `Earlier conversation ${i + 1}`, updatedAt: new Date(Date.now() - i * 3600000).toISOString() }))
 let requests = [], created = 0
@@ -514,126 +506,108 @@ try {
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results, error: error.stack }) })
 }
 `
-const html = run => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Chat verification</title>${admin.css.map(path => `<link rel="stylesheet" href="${assetBase + path}">`).join('')}<script type="importmap">${JSON.stringify({ imports })}</script><script>window.__CMS__=${JSON.stringify(boot)}</script><script type="module" src="${assetBase + admin.entry}"></script></head><body><div id="cms"></div>${run ? `<pre id="results" style="position:fixed;bottom:8px;right:8px;z-index:9999;max-width:700px;background:white;border:1px solid #aaa;padding:12px;font-size:10px">Starting tests…</pre><script type="module">${runner}</script>` : ''}</body></html>`
-const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value)) }
-const body = async req => { let value = ''; for await (const chunk of req) value += chunk; return JSON.parse(value || '{}') }
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, 'http://localhost')
-    if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
-    if (url.pathname === '/__test/state') return json(res, 200, { created, requests })
-    if (url.pathname === '/__test/agent') { manifest.config = { workspace: { agent: (await new Promise(r => { let b = ''; req.on('data', c => b += c); req.on('end', () => r(b)) })) === 'on' ? { name: 'assistant', label: 'Claude' } : null } }; return json(res, 200, {}) }
-    if (url.pathname === '/__test/results') { const result = await body(req); result.passed.forEach(name => console.log('PASS', name)); if (result.error) console.error('FAIL', result.error); json(res, 200, {}); return finish(result.error) }
-    if (url.pathname === '/fixture.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); return res.end(fixture) }
-    if (url.pathname.startsWith('/api/admin/abilities/')) {
-      const ability = url.pathname.slice('/api/admin/abilities/'.length), input = await body(req)
-      requests.push({ ability, input })
-      if (ability === 'assistant/status') return json(res, 200, { data: { configured: true, model: 'claude-opus-5-5', models } })
-      if (ability === 'account/update') return json(res, 200, { data: {} })
-      if (ability === 'threads/list') return json(res, 200, { data: chats.slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 30)) })
-      if (ability === 'threads/rename' && input.title) {
-        const chat = chats.find(c => c.id === input.id)
-        if (chat) chat.title = input.title
-        return json(res, 200, { data: { id: input.id, title: input.title } })
-      }
-      if (ability === 'threads/rename') {
-        const chat = chats.find(c => c.id === input.id)
-        if (chat && chat.title === 'A new conversation') chat.title = 'Launch page ideas'
-        return json(res, 200, { data: { title: chat?.title ?? 'Content overview' } })
-      }
-      if (ability === 'threads/delete') {
-        await new Promise(r => setTimeout(r, input.id === 'chat-4' ? 450 : 50))
-        if (input.id === 'chat-2') return json(res, 422, { error: { message: 'Deletion fixture failure', type: 'invalid_input' } })
-        chats = chats.filter(chat => chat.id !== input.id)
-        return json(res, 200, { data: { deleted: true } })
-      }
-      if (ability === 'threads/get') {
-        await new Promise(r => setTimeout(r, input.id === 'slow' ? 500 : 25))
-        if (input.id === 'opened') return json(res, 200, { data: { id: 'opened', title: 'Opened before', agent: { model: null }, awaiting: [], turns: [{ id: 'u-o', role: 'user', kind: 'message', text: 'open the posts' }, { id: 'a-o', role: 'answer', agent: 'assistant', parts: [{ type: 'tool', id: 'open-0', name: 'admin__open', label: 'Open in Admin', ability: 'admin/open', status: 'ok', output: JSON.stringify({ to: '/content/posts', label: 'Posts' }) }] }] } })
-        return json(res, 200, { data: { id: input.id, title: chats.find(c => c.id === input.id)?.title ?? 'Slow chat', agent: { model: { 'chat-3': 'claude-haiku-5-5', 'chat-6': 'claude-retired' }[input.id] ?? null }, awaiting: [], turns: editedItems.get(input.id) ?? [{ id: 'u-0', role: 'user', kind: 'message', text: 'Please review this page' }, { id: 'a-0', role: 'answer', agent: 'assistant', parts: [{ type: 'text', text: 'Reply for ' + input.id }, ...(input.id === 'surfaces' ? [{ type: 'tool', id: 'surface-tool', name: 'ui_present', label: 'Present interface', status: 'ok', surface, used: usedSurfaces.has(input.id) }] : [])] }] } })
-      }
-      if (ability === 'workspace/commands') return json(res, 200, { data: [{ name: 'entries/create', label: 'Create Entry', group: 'Content', icon: 'file', input: { type: 'object', properties: { collection: { type: 'string' }, title: { type: 'string' } }, required: ['collection', 'title'] }, destructive: false, readOnly: false }, { name: 'site/build', label: 'Build Site', group: 'Site', icon: 'globe', input: { type: 'object', properties: {} }, destructive: false, readOnly: false }, { name: 'forms/get', label: 'Get Form By Id', group: 'Forms', icon: 'file', input: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }, destructive: false, readOnly: true }] })
-      throw new Error('Unexpected ability ' + ability)
+serve('Chat', async (req, res, url) => {
+  if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
+  if (url.pathname === '/__test/state') return json(res, 200, { created, requests })
+  if (url.pathname === '/__test/agent') { manifest.config = { workspace: { agent: (await new Promise(r => { let b = ''; req.on('data', c => b += c); req.on('end', () => r(b)) })) === 'on' ? { name: 'assistant', label: 'Claude' } : null } }; return json(res, 200, {}) }
+  if (url.pathname === '/fixture.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); return res.end(fixture) }
+  if (url.pathname.startsWith('/api/admin/abilities/')) {
+    const ability = url.pathname.slice('/api/admin/abilities/'.length), input = await body(req)
+    requests.push({ ability, input })
+    if (ability === 'assistant/status') return json(res, 200, { data: { configured: true, model: 'claude-opus-5-5', models } })
+    if (ability === 'account/update') return json(res, 200, { data: {} })
+    if (ability === 'threads/list') return json(res, 200, { data: chats.slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 30)) })
+    if (ability === 'threads/rename' && input.title) {
+      const chat = chats.find(c => c.id === input.id)
+      if (chat) chat.title = input.title
+      return json(res, 200, { data: { id: input.id, title: input.title } })
     }
-    if (url.pathname === '/api/admin/workspace/turn') {
-      const input = await body(req); requests.push({ kind: 'chat', input })
-      if (!input.thread) await new Promise(r => setTimeout(r, 400))
-      if (input.message === 'failed request') return json(res, 422, { error: { message: 'Request fixture failure', type: 'invalid_input' } })
-      if (input.command?.ability === 'entries/publish' && input.command.input.id === 'gone') {
-        res.writeHead(200, { 'Content-Type': 'text/event-stream' })
-        res.write(`event: error\ndata: ${JSON.stringify({ type: 'not_found', message: 'This entry no longer exists.' })}\n\n`); return res.end()
-      }
-      if (input.command?.input?.title === 'Refused title') {
-        res.writeHead(200, { 'Content-Type': 'text/event-stream' })
-        res.write(`event: error\ndata: ${JSON.stringify({ type: 'invalid_input', message: 'Title fixture refusal', details: { title: 'Title fixture refusal' } })}\n\n`); return res.end()
-      }
-      let id = input.thread
-      if (!id) { id = `created-${++created}`; chats.unshift({ id, title: input.message ?? input.search ?? input.command?.label, updatedAt: new Date().toISOString() }) }
-      if (input.command || input.search) {
-        res.writeHead(200, { 'Content-Type': 'text/event-stream' })
-        const send = (name, data) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`)
-        const title = input.command?.input?.title
-        const said = input.search ? 'Found ' + input.search : input.command.ability === 'site/build' ? 'Built the site' : input.command.ability === 'entries/publish' ? 'Published “Summer Menu”' : input.command.ability === 'navigation/add' ? 'Added to ' + input.command.input.menu : 'Created “' + title + '”'
-        const actions = input.command?.ability === 'entries/create' ? [{ type: 'ui/actions', props: { items: [{ label: 'Open', to: '/content/pages/e1' }, { label: 'Publish', ability: 'entries/publish', input: { id: 'e1' } }, { label: 'Add to Menu', ability: 'navigation/add', input: { menu: '{values.menu}', entry: 'e1' }, form: { title: 'Add to Menu', fields: [{ handle: 'menu', type: 'select', label: 'Menu', required: true, display: 'dropdown', options: { main: 'Main', footer: 'Footer' } }], values: { menu: 'footer' } } }, { label: 'Publish Again', ability: 'entries/publish', input: { id: 'gone' } }] } }] : []
-        send('thread', { id, title: chats.find(c => c.id === id)?.title })
-        send('turn', { turn: { id: 'u-' + Date.now(), role: 'user', kind: input.search ? 'search' : 'command', text: input.search ?? input.command.label, ...(input.command ? { command: input.command } : {}) } })
-        send('turn', { turn: { id: 'a-' + Date.now(), role: 'answer', parts: [{ type: 'view', view: { type: 'ui/stack', props: {}, children: [{ type: 'ui/notice', props: { tone: 'success', title: said } }, ...actions] } }] } })
-        send('done', { thread: { id, title: chats.find(c => c.id === id)?.title }, awaiting: [], agent: null }); return res.end()
-      }
+    if (ability === 'threads/rename') {
+      const chat = chats.find(c => c.id === input.id)
+      if (chat && chat.title === 'A new conversation') chat.title = 'Launch page ideas'
+      return json(res, 200, { data: { title: chat?.title ?? 'Content overview' } })
+    }
+    if (ability === 'threads/delete') {
+      await new Promise(r => setTimeout(r, input.id === 'chat-4' ? 450 : 50))
+      if (input.id === 'chat-2') return json(res, 422, { error: { message: 'Deletion fixture failure', type: 'invalid_input' } })
+      chats = chats.filter(chat => chat.id !== input.id)
+      return json(res, 200, { data: { deleted: true } })
+    }
+    if (ability === 'threads/get') {
+      await new Promise(r => setTimeout(r, input.id === 'slow' ? 500 : 25))
+      if (input.id === 'opened') return json(res, 200, { data: { id: 'opened', title: 'Opened before', agent: { model: null }, awaiting: [], turns: [{ id: 'u-o', role: 'user', kind: 'message', text: 'open the posts' }, { id: 'a-o', role: 'answer', agent: 'assistant', parts: [{ type: 'tool', id: 'open-0', name: 'admin__open', label: 'Open in Admin', ability: 'admin/open', status: 'ok', output: JSON.stringify({ to: '/content/posts', label: 'Posts' }) }] }] } })
+      return json(res, 200, { data: { id: input.id, title: chats.find(c => c.id === input.id)?.title ?? 'Slow chat', agent: { model: { 'chat-3': 'claude-haiku-5-5', 'chat-6': 'claude-retired' }[input.id] ?? null }, awaiting: [], turns: editedItems.get(input.id) ?? [{ id: 'u-0', role: 'user', kind: 'message', text: 'Please review this page' }, { id: 'a-0', role: 'answer', agent: 'assistant', parts: [{ type: 'text', text: 'Reply for ' + input.id }, ...(input.id === 'surfaces' ? [{ type: 'tool', id: 'surface-tool', name: 'ui_present', label: 'Present interface', status: 'ok', surface, used: usedSurfaces.has(input.id) }] : [])] }] } })
+    }
+    if (ability === 'workspace/commands') return json(res, 200, { data: [{ name: 'entries/create', label: 'Create Entry', group: 'Content', icon: 'file', input: { type: 'object', properties: { collection: { type: 'string' }, title: { type: 'string' } }, required: ['collection', 'title'] }, destructive: false, readOnly: false }, { name: 'site/build', label: 'Build Site', group: 'Site', icon: 'globe', input: { type: 'object', properties: {} }, destructive: false, readOnly: false }, { name: 'forms/get', label: 'Get Form By Id', group: 'Forms', icon: 'file', input: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }, destructive: false, readOnly: true }] })
+    throw new Error('Unexpected ability ' + ability)
+  }
+  if (url.pathname === '/api/admin/workspace/turn') {
+    const input = await body(req); requests.push({ kind: 'chat', input })
+    if (!input.thread) await new Promise(r => setTimeout(r, 400))
+    if (input.message === 'failed request') return json(res, 422, { error: { message: 'Request fixture failure', type: 'invalid_input' } })
+    if (input.command?.ability === 'entries/publish' && input.command.input.id === 'gone') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream' })
-      const event = (name, data) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`)
-      event('thread', { id, title: chats.find(c => c.id === id)?.title ?? 'Content overview' })
-      if (input.edit) {
-        event('turn', { turn: { id: 'u-1', role: 'user', kind: 'message', text: input.message, replaces: input.edit.turn } })
-        event('turn', { turn: { id: 'a-1', role: 'answer', agent: 'assistant', parts: [] } })
-        await new Promise(r => setTimeout(r, 200))
-        editedItems.set(id, [{ id: 'u-1', role: 'user', kind: 'message', text: input.message }, { id: 'a-1', role: 'answer', agent: 'assistant', parts: [{ type: 'text', text: 'Revised answer' }] }])
-        event('text', { delta: 'Revised answer' })
-        event('done', { thread: { id, title: 'Revised chat' } }); return res.end()
-      }
-      if (input.message || input.action) event('turn', { turn: { id: 'u-' + Date.now(), role: 'user', kind: input.action ? 'action' : 'message', text: input.message ?? 'Selected an action' } })
-      if (input.message || input.action) event('turn', { turn: { id: 'a-' + Date.now(), role: 'answer', agent: 'assistant', parts: [] } })
-      if (input.action) {
-        usedSurfaces.add(id)
-        event('surface_used', { id: input.action.tool })
-        event('tool', { id: 'action-tool', name: 'entries__publish', label: 'Publish page' })
-        event('approval', { calls: [{ id: 'action-tool', name: 'entries__publish', label: 'Publish page', input: { id: 'stored-id' }, destructive: false, untrusted: true }] })
-        event('done', { thread: { id, title: 'Content overview' } }); return res.end()
-      }
-      if (input.approve) {
-        event('tool_result', { id: 'action-tool', ok: true, mutated: true, output: 'Published', input: { id: 'stored-id' } })
-        event('text', { delta: 'Published through the normal approval flow' })
-        event('done', { thread: { id, title: 'Content overview' } }); return res.end()
-      }
-      if (input.message === 'open the posts') {
-        event('tool', { id: 'open-1', name: 'admin__open', label: 'Open in Admin', ability: 'admin/open' })
-        event('tool_result', { id: 'open-1', ability: 'admin/open', ok: true, mutated: false, input: { to: '/content/posts' }, output: JSON.stringify({ to: '/content/posts', label: 'Posts' }) })
-        event('text', { delta: 'Here are [the pages](/content/pages), and the posts are at `/admin/content/posts`.' })
-        event('done', { thread: { id, title: 'Open the posts' } }); return res.end()
-      }
-      if (input.message === 'show generated interface') {
-        for (const [tool, title] of [['surface-preview', 'Preparing generated overview'], ['surface-live', 'Live generated overview']]) {
-          event('tool', { id: tool, name: 'ui_present', label: 'Present interface' })
-          event('tool_result', { id: tool, ok: true, mutated: false, surface: { ...surface, title }, output: 'Presented' })
-          await new Promise(r => setTimeout(r, 80))
-        }
-        event('done', { thread: { id, title: 'Content overview' } }); return res.end()
-      }
-      await new Promise(r => setTimeout(r, input.message === 'slow stream' ? 500 : 200))
-      event('text', { delta: input.message === 'slow stream' ? 'LATE STREAM' : 'Streamed answer' })
-      event('done', { thread: chats.find(c => c.id === id), agent: { model: null } }); return res.end()
+      res.write(`event: error\ndata: ${JSON.stringify({ type: 'not_found', message: 'This entry no longer exists.' })}\n\n`); return res.end()
     }
-    const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin|assistant|workspace)\/(.+)$/)
-    if (asset) {
-      const dir = resolve(root, { admin: 'modules/admin/dist', workspace: 'modules/workspace/dist', assistant: 'modules/assistant/dist' }[asset[1]]), path = resolve(dir, asset[2])
-      if (!path.startsWith(dir + sep)) { res.writeHead(403); return res.end() }
-      res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(await readFile(path))
+    if (input.command?.input?.title === 'Refused title') {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' })
+      res.write(`event: error\ndata: ${JSON.stringify({ type: 'invalid_input', message: 'Title fixture refusal', details: { title: 'Title fixture refusal' } })}\n\n`); return res.end()
     }
-    res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(html(url.searchParams.has('test')))
-  } catch (error) { console.error(error); json(res, 500, { error: { message: error.message } }) }
-})
-// Exits with the page's verdict, unless --preview keeps it up to look at.
-const keepAlive = process.argv.includes('--preview')
-const finish = (error) => { if (keepAlive) return; clearTimeout(timeout); setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = error ? 1 : 0 }, 100) }
-const timeout = keepAlive ? null : setTimeout(() => { console.error('Chat browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
-server.listen(0, '127.0.0.1', () => console.log(`Chat checks: http://localhost:${server.address().port}/admin?test=1\nPreview: http://localhost:${server.address().port}/admin/chat/new`))
+    let id = input.thread
+    if (!id) { id = `created-${++created}`; chats.unshift({ id, title: input.message ?? input.search ?? input.command?.label, updatedAt: new Date().toISOString() }) }
+    if (input.command || input.search) {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' })
+      const send = (name, data) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`)
+      const title = input.command?.input?.title
+      const said = input.search ? 'Found ' + input.search : input.command.ability === 'site/build' ? 'Built the site' : input.command.ability === 'entries/publish' ? 'Published “Summer Menu”' : input.command.ability === 'navigation/add' ? 'Added to ' + input.command.input.menu : 'Created “' + title + '”'
+      const actions = input.command?.ability === 'entries/create' ? [{ type: 'ui/actions', props: { items: [{ label: 'Open', to: '/content/pages/e1' }, { label: 'Publish', ability: 'entries/publish', input: { id: 'e1' } }, { label: 'Add to Menu', ability: 'navigation/add', input: { menu: '{values.menu}', entry: 'e1' }, form: { title: 'Add to Menu', fields: [{ handle: 'menu', type: 'select', label: 'Menu', required: true, display: 'dropdown', options: { main: 'Main', footer: 'Footer' } }], values: { menu: 'footer' } } }, { label: 'Publish Again', ability: 'entries/publish', input: { id: 'gone' } }] } }] : []
+      send('thread', { id, title: chats.find(c => c.id === id)?.title })
+      send('turn', { turn: { id: 'u-' + Date.now(), role: 'user', kind: input.search ? 'search' : 'command', text: input.search ?? input.command.label, ...(input.command ? { command: input.command } : {}) } })
+      send('turn', { turn: { id: 'a-' + Date.now(), role: 'answer', parts: [{ type: 'view', view: { type: 'ui/stack', props: {}, children: [{ type: 'ui/notice', props: { tone: 'success', title: said } }, ...actions] } }] } })
+      send('done', { thread: { id, title: chats.find(c => c.id === id)?.title }, awaiting: [], agent: null }); return res.end()
+    }
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' })
+    const event = (name, data) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`)
+    event('thread', { id, title: chats.find(c => c.id === id)?.title ?? 'Content overview' })
+    if (input.edit) {
+      event('turn', { turn: { id: 'u-1', role: 'user', kind: 'message', text: input.message, replaces: input.edit.turn } })
+      event('turn', { turn: { id: 'a-1', role: 'answer', agent: 'assistant', parts: [] } })
+      await new Promise(r => setTimeout(r, 200))
+      editedItems.set(id, [{ id: 'u-1', role: 'user', kind: 'message', text: input.message }, { id: 'a-1', role: 'answer', agent: 'assistant', parts: [{ type: 'text', text: 'Revised answer' }] }])
+      event('text', { delta: 'Revised answer' })
+      event('done', { thread: { id, title: 'Revised chat' } }); return res.end()
+    }
+    if (input.message || input.action) event('turn', { turn: { id: 'u-' + Date.now(), role: 'user', kind: input.action ? 'action' : 'message', text: input.message ?? 'Selected an action' } })
+    if (input.message || input.action) event('turn', { turn: { id: 'a-' + Date.now(), role: 'answer', agent: 'assistant', parts: [] } })
+    if (input.action) {
+      usedSurfaces.add(id)
+      event('surface_used', { id: input.action.tool })
+      event('tool', { id: 'action-tool', name: 'entries__publish', label: 'Publish page' })
+      event('approval', { calls: [{ id: 'action-tool', name: 'entries__publish', label: 'Publish page', input: { id: 'stored-id' }, destructive: false, untrusted: true }] })
+      event('done', { thread: { id, title: 'Content overview' } }); return res.end()
+    }
+    if (input.approve) {
+      event('tool_result', { id: 'action-tool', ok: true, mutated: true, output: 'Published', input: { id: 'stored-id' } })
+      event('text', { delta: 'Published through the normal approval flow' })
+      event('done', { thread: { id, title: 'Content overview' } }); return res.end()
+    }
+    if (input.message === 'open the posts') {
+      event('tool', { id: 'open-1', name: 'admin__open', label: 'Open in Admin', ability: 'admin/open' })
+      event('tool_result', { id: 'open-1', ability: 'admin/open', ok: true, mutated: false, input: { to: '/content/posts' }, output: JSON.stringify({ to: '/content/posts', label: 'Posts' }) })
+      event('text', { delta: 'Here are [the pages](/content/pages), and the posts are at `/admin/content/posts`.' })
+      event('done', { thread: { id, title: 'Open the posts' } }); return res.end()
+    }
+    if (input.message === 'show generated interface') {
+      for (const [tool, title] of [['surface-preview', 'Preparing generated overview'], ['surface-live', 'Live generated overview']]) {
+        event('tool', { id: tool, name: 'ui_present', label: 'Present interface' })
+        event('tool_result', { id: tool, ok: true, mutated: false, surface: { ...surface, title }, output: 'Presented' })
+        await new Promise(r => setTimeout(r, 80))
+      }
+      event('done', { thread: { id, title: 'Content overview' } }); return res.end()
+    }
+    await new Promise(r => setTimeout(r, input.message === 'slow stream' ? 500 : 200))
+    event('text', { delta: input.message === 'slow stream' ? 'LATE STREAM' : 'Streamed answer' })
+    event('done', { thread: chats.find(c => c.id === id), agent: { model: null } }); return res.end()
+  }
+  res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(page({ title: 'Chat verification', boot, runner: url.searchParams.has('test') && runner }))
+}, { links: (base) => [`${base}/admin?test=1`, `${base}/admin/chat/new`] })

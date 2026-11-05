@@ -2,7 +2,7 @@ import { registry } from '@letterncms/sdk'
 import { ColorField } from '../color'
 import { BindField } from '../content/BindField'
 import { GroupField, PairsField } from './composite'
-import { EaseField, ValueField } from './controls'
+import { ValueField } from './controls'
 import { NodeField, NodesField } from './nodes'
 import { ClipField } from './clip'
 import { ConditionsField } from './conditions'
@@ -16,7 +16,6 @@ import { AlignField, GradientField, OriginField } from './style'
 export function registerFields() {
   const fields = {
     'blocks-value': ValueField,
-    'blocks-ease': EaseField,
     'blocks-color': ColorField,
     'blocks-bind': BindField,
     'blocks-node': NodeField,
@@ -33,5 +32,5 @@ export function registerFields() {
     'blocks-conditions': ConditionsField,
     'blocks-inline-text': InlineTextField,
   }
-  for (const [key, component] of Object.entries(fields)) registry.fields.set(key, component as any)
+  for (const [key, component] of Object.entries(fields)) registry.fields.set(key, component)
 }

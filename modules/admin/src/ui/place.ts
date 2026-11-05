@@ -52,7 +52,7 @@ function readSide(): 'app' | 'settings' {
   }
 }
 
-/** For admin themes: called with the location on view, before anything asks `inSettings` about it. */
+/** For the admin: called with the location on view, before anything asks `inSettings` about it. */
 export function noteSide(manifest: Manifest, path: string, search: string) {
   here.path = path
   here.search = search
@@ -90,7 +90,7 @@ export function settingsRowAt(manifest: Manifest, path: string, search: string):
  */
 const trail = { current: null as { key: string; route: string } | null, from: null as string | null }
 
-/** For admin themes: called with every location the admin shows, and the route that draws it. */
+/** For the admin: called with every location the admin shows, and the route that draws it. */
 export function noteLocation(key: string, route: string, action: 'push' | 'replace' | 'pop') {
   const current = trail.current
   // Another query, or another entry on the same screen, is still this screen; a redirect takes the place of what it redirects.

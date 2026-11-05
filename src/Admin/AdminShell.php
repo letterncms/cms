@@ -48,7 +48,7 @@ final class AdminShell
             'api' => '/api/admin',
             'version' => Cms::VERSION,
             'brand' => Brand::all(),
-            'site' => ['name' => config('app.name'), 'url' => config('app.url')],
+            'site' => ['name' => config('app.name'), 'url' => $this->cms->url()],
             'xsrfCookie' => SiteCookies::xsrf(request()),
             // The admin's language and its strings, so even the sign-in screen speaks it.
             'locale' => $locale = $this->translations->current(),

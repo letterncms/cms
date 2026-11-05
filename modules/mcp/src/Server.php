@@ -124,7 +124,7 @@ final class Server
 
     private function serverInfo(): array
     {
-        return ['name' => 'cms', 'title' => config('app.name').' ('.Brand::get().')', 'version' => Cms::VERSION, 'websiteUrl' => (string) config('app.url')];
+        return ['name' => 'cms', 'title' => config('app.name').' ('.Brand::get().')', 'version' => Cms::VERSION, 'websiteUrl' => $this->cms->url()];
     }
 
     private function cacheable(array $result): array

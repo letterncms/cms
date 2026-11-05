@@ -5,10 +5,11 @@ import { FieldsConfigField } from './FieldsEditor'
 import { RichTextField } from './RichTextField'
 import { CommandQueryField } from './CommandQueryField'
 import { LinkField } from './LinkField'
+import { EaseField } from './EaseField'
 
 /**
  * The field primitives every form is drawn with — one per core field type, plus the
- * blueprint editor and the palette's query box. Fields that belong to one screen
+ * blueprint editor, the palette's query box and the easing curve. Fields that belong to one screen
  * (roles, the sidebar arrangement, the entry title) come with their modules.
  */
 export function registerCoreFields() {
@@ -16,10 +17,8 @@ export function registerCoreFields() {
     text: TextField, textarea: TextareaField, richtext: RichTextField, markdown: MarkdownField, number: NumberField,
     toggle: ToggleField, select: SelectField, date: DateField, slug: SlugField, url: UrlField, email: EmailField,
     color: ColorField, entries: EntriesField, users: UsersField, tags: TagsField, code: CodeField, json: JsonField,
-    icon: IconField, group: GroupField, repeater: RepeaterField, fields: FieldsConfigField, 'command-query': CommandQueryField, link: LinkField,
+    icon: IconField, group: GroupField, repeater: RepeaterField, fields: FieldsConfigField, 'command-query': CommandQueryField, link: LinkField, ease: EaseField,
   }
-  for (const [key, component] of Object.entries(map)) {
-    if (!registry.fields.get(key)) registry.fields.set(key, component as any)
-  }
+  for (const [key, component] of Object.entries(map)) registry.fields.set(key, component)
 }
 

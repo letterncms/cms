@@ -65,10 +65,7 @@ class CoreUpdate
     /** Whether a tick has anything to do: only inside the window an admin's switch opened. */
     public static function due(Application $app): bool
     {
-        $file = $app->storagePath('update/verify.json');
-        $verify = is_file($file) ? json_decode((string) @file_get_contents($file), true) : null;
-
-        return is_array($verify) && in_array($verify['state'] ?? '', ['migrating', 'checking'], true);
+        return in_array(Files::readJson($app->storagePath('update/verify.json'))['state'] ?? '', ['migrating', 'checking'], true);
     }
 
     /** @return array<string, mixed> The state, with what the admin needs to explain it */
@@ -241,9 +238,9 @@ class CoreUpdate
     public static function abandon(string $sitePath, string $error): array
     {
         $vf = $sitePath.'/storage/update/verify.json';
-        $verify = is_file($vf) ? json_decode((string) @file_get_contents($vf), true) : null;
+        $verify = Files::readJson($vf);
 
-        if (! is_array($verify)) {
+        if ($verify === []) {
             return ['state' => 'idle'];
         }
 
@@ -259,7 +256,7 @@ class CoreUpdate
         }
 
         $file = $sitePath.'/storage/update/state.json';
-        $state = is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+        $state = Files::readJson($file);
         $state = ['state' => 'rolled_back', 'error' => mb_substr($error, 0, 500), 'failures' => ['version' => $state['target'] ?? null, 'count' => (int) ($state['failures']['count'] ?? 0) + 1, 'at' => time()]] + $state;
         @file_put_contents($file, (string) json_encode($state, JSON_UNESCAPED_SLASHES));
 
@@ -637,7 +634,7 @@ class CoreUpdate
 
         $previous = (string) $state['previous'];
 
-        Files::put($this->app->storagePath('update/verify.json'), (string) json_encode(['state' => 'migrating', 'previous' => $previous, 'target' => $target, 'gate_until' => $this->now() + self::GATE_SECONDS, 'until' => $this->now() + self::WATCH_SECONDS]));
+        $this->writeVerify(['state' => 'migrating', 'previous' => $previous, 'target' => $target, 'gate_until' => $this->now() + self::GATE_SECONDS, 'until' => $this->now() + self::WATCH_SECONDS]);
         @unlink($this->app->storagePath('update/fatals'));
 
         if (! $this->layout->flip($target)) {
@@ -652,7 +649,7 @@ class CoreUpdate
     /** Best effort, a second at most: the browser or the CLI keeps ticking if this doesn't land. */
     private function ping(): void
     {
-        $url = rtrim((string) ($this->app->make(Cms::class)->site('url') ?: config('app.url')), '/').'/_cms/update/tick';
+        $url = $this->app->make(Cms::class)->url('_cms/update/tick');
 
         try {
             $ch = curl_init($url);
@@ -758,7 +755,6 @@ class CoreUpdate
         $this->pruneReleases($target, $previous);
 
         try {
-            $this->app->make(Cms::class)->hooks()->dispatch('cms.updated', $previous, $target);
             $builder = $this->app->make(SiteBuilder::class);
 
             if ($builder->available()) {
@@ -797,7 +793,7 @@ class CoreUpdate
     /** Unchanged root files are replaced; a file someone edited stays, with the new one beside it. */
     private function replaceRootFiles(string $target, string $previous): void
     {
-        $meta = fn (string $version) => (array) (json_decode((string) @file_get_contents($this->layout->release($version).'/release.json'), true)['root_files'] ?? []);
+        $meta = fn (string $version) => (array) (Files::readJson($this->layout->release($version).'/release.json')['root_files'] ?? []);
         $new = $meta($target);
         $old = $meta($previous);
         $conflicts = [];
@@ -866,7 +862,7 @@ class CoreUpdate
                 return;
             }
 
-            foreach (User::query()->get() as $user) {
+            foreach (User::query()->team()->get() as $user) {
                 if ($user->hasPermission('packages.manage')) {
                     $mailer->send(new Message(to: (string) $user->email, subject: $subject, text: $body));
                 }
@@ -916,19 +912,7 @@ class CoreUpdate
      */
     private function locked(callable $work, ?callable $busy = null): mixed
     {
-        Files::ensureDir($this->app->storagePath('update'));
-        $handle = fopen($this->app->storagePath('update/lock'), 'c');
-
-        if ($handle === false || ! flock($handle, LOCK_EX | LOCK_NB)) {
-            return $busy ? $busy() : throw new RuntimeException(__('An update step is already running. Try again in a moment.'));
-        }
-
-        try {
-            return $work();
-        } finally {
-            flock($handle, LOCK_UN);
-            fclose($handle);
-        }
+        return Files::locked($this->app->storagePath('update/lock'), $work, $busy ?? static fn () => throw new RuntimeException(__('An update step is already running. Try again in a moment.')));
     }
 
     /** Half the time PHP allows here, ten seconds at most: a step always ends before the host ends it. */
@@ -952,42 +936,35 @@ class CoreUpdate
     /** @return array<string, mixed> */
     private function state(): array
     {
-        $file = $this->app->storagePath('update/state.json');
-
-        return is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+        return Files::readJson($this->app->storagePath('update/state.json'));
     }
 
     /** @param  array<string, mixed>  $state */
     private function save(array $state): void
     {
-        Files::put($this->app->storagePath('update/state.json'), (string) json_encode($state, JSON_UNESCAPED_SLASHES));
+        Files::putJson($this->app->storagePath('update/state.json'), $state, JSON_UNESCAPED_SLASHES);
     }
 
     private function verify(): ?array
     {
-        $file = $this->app->storagePath('update/verify.json');
-        $verify = is_file($file) ? json_decode((string) @file_get_contents($file), true) : null;
-
-        return is_array($verify) ? $verify : null;
+        return Files::readJson($this->app->storagePath('update/verify.json')) ?: null;
     }
 
     /** @param  array<string, mixed>  $verify */
     private function writeVerify(array $verify): void
     {
-        Files::put($this->app->storagePath('update/verify.json'), (string) json_encode($verify));
+        Files::putJson($this->app->storagePath('update/verify.json'), $verify, 0);
     }
 
     /** @return array<string, mixed> */
     private function settings(): array
     {
-        $file = $this->app->storagePath('update/settings.json');
-
-        return is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+        return Files::readJson($this->app->storagePath('update/settings.json'));
     }
 
     /** @param  array<string, mixed>  $changes */
     private function saveSettings(array $changes): void
     {
-        Files::put($this->app->storagePath('update/settings.json'), (string) json_encode([...$this->settings(), ...$changes]));
+        Files::putJson($this->app->storagePath('update/settings.json'), [...$this->settings(), ...$changes], 0);
     }
 }

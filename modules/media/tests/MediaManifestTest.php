@@ -18,11 +18,6 @@ use Illuminate\Support\Facades\Artisan;
 
 final class MediaManifestTest extends TestCase
 {
-    protected function plugins(): array
-    {
-        return ['letterncms/media'];
-    }
-
     private function jpeg(int $w = 1200, int $h = 800, int $blue = 200): string
     {
         $im = imagecreatetruecolor($w, $h);

@@ -10,7 +10,6 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: ButtonSize
   icon?: string
-  iconRight?: string
   loading?: boolean
   children?: ReactNode
 }
@@ -40,7 +39,7 @@ const iconSizes: Record<ButtonSize, number> = { xs: 14, sm: 16, md: 16, lg: 16 }
 const quietIcon = 'text-[color-mix(in_srgb,currentColor_72%,transparent)] transition-colors duration-120 group-hover/button:text-current'
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'secondary', size = 'sm', icon, iconRight, loading, disabled, className, children, type = 'button', ...props },
+  { variant = 'secondary', size = 'sm', icon, loading, disabled, className, children, type = 'button', ...props },
   ref,
 ) {
   return (
@@ -64,25 +63,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {loading && !icon ? (
         // Without an icon to stand in for, the spinner covers the label: the button keeps its width.
         <>
-          <span className="invisible contents">
-            {children}
-            {iconRight && <Icon name={iconRight} size={size === 'xs' ? 12 : 14} className="-mr-0.5 shrink-0 opacity-60" />}
-          </span>
+          <span className="invisible contents">{children}</span>
           <span className="absolute inset-0 grid place-items-center">
             <Spinner size={iconSizes[size]} />
           </span>
         </>
-      ) : (
-        <>
-          {children}
-          {iconRight && <Icon name={iconRight} size={size === 'xs' ? 12 : 14} className="-mr-0.5 shrink-0 opacity-60" />}
-        </>
-      )}
+      ) : children}
     </button>
   )
 })
 
-export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'iconRight'> {
+export interface IconButtonProps extends Omit<ButtonProps, 'children'> {
   icon: string
   label: string
   active?: boolean

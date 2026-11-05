@@ -26,13 +26,13 @@ const matches = (query: string, ...words: (string | undefined)[]) => {
 
 // With an agent, Enter asks it; `/` and words search the admin instead, without it. (Without one, Enter searches.)
 registry.composer.set('workspace-search', {
-  id: 'workspace-search', trigger: '/', label: t('Search'), order: 90,
+  trigger: '/', label: t('Search'), order: 90,
   search: (query) => agent() && query.trim().length > 1 ? [{ id: 'search', label: t('Search for “{query}”', { query: query.trim() }), icon: 'search', perform: () => panel.search(query) }] : [],
 })
 
 // `/` in a thread: making things first, then the places to go, what the admin's screens offer, and every ability the person may run.
 registry.composer.set('workspace-create', {
-  id: 'workspace-create', trigger: '/', label: t('Create'), order: 20,
+  trigger: '/', label: t('Create'), order: 20,
   search: async (query) => {
     const create = (await runnable()).find((ability) => ability.name === 'entries/create')
     if (!create) return []
@@ -44,7 +44,7 @@ registry.composer.set('workspace-create', {
 })
 
 registry.composer.set('workspace-places', {
-  id: 'workspace-places', trigger: '/', label: t('Go To'), order: 30,
+  trigger: '/', label: t('Go To'), order: 30,
   search: (query) => {
     const nav = getManifest().nav.filter((n) => !n.home && matches(query, n.label))
     return nav.slice(0, query ? 8 : 6).map((n) => ({ id: `go:${n.id}`, label: n.label, icon: n.icon, perform: () => navigate(n.path) }))
@@ -52,7 +52,7 @@ registry.composer.set('workspace-places', {
 })
 
 registry.composer.set('workspace-commands', {
-  id: 'workspace-commands', trigger: '/', label: t('Commands'), order: 40,
+  trigger: '/', label: t('Commands'), order: 40,
   search: async (query) => {
     const abilities = await runnable()
     return [
@@ -72,7 +72,7 @@ registry.composer.set('workspace-commands', {
 
 // A settings page, asked right in the thread with what it holds now.
 registry.composer.set('workspace-settings', {
-  id: 'workspace-settings', trigger: '/', label: t('Settings'), order: 50,
+  trigger: '/', label: t('Settings'), order: 50,
   search: (query) => getManifest().settings.filter((s) => matches(query, s.label, s.namespace, 'settings')).slice(0, query ? 8 : 4).map((s) => ({
     id: `settings:${s.namespace}`, label: t('{name} Settings', { name: s.label }), icon: s.icon,
     command: {
@@ -84,7 +84,7 @@ registry.composer.set('workspace-settings', {
 
 // Every ability the person may run, once something is typed: a bare / stays short. One that needs a raw id is left to the places that have it.
 registry.composer.set('workspace-abilities', {
-  id: 'workspace-abilities', trigger: '/', label: t('Abilities'), order: 60,
+  trigger: '/', label: t('Abilities'), order: 60,
   search: async (query) => query.trim() === '' ? [] : (await runnable())
     .filter((ability) => matches(query, ability.label, ability.group, ability.name) && askable(ability.input, ability.name))
     .map((ability) => ({

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Sync;
 
+use Cms\Support\Files;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -166,7 +167,7 @@ final class Transfer
     public function current(): ?array
     {
         foreach (glob(Site::dir('jobs/*.json')) ?: [] as $file) {
-            $job = Site::readJson($file);
+            $job = Files::readJson($file);
 
             if (in_array($job['status'] ?? null, ['running', 'waiting', 'paused'], true)) {
                 return self::progress($job);
@@ -312,14 +313,14 @@ final class Transfer
             throw new RuntimeException('Invalid sync id.');
         }
 
-        $job = Site::readJson(Site::dir('jobs/'.$id.'.json'));
+        $job = Files::readJson(Site::dir('jobs/'.$id.'.json'));
 
         return $job !== [] ? $job : throw new RuntimeException(__('There’s no such sync.'));
     }
 
     private function save(array $job): void
     {
-        Site::writeJson(Site::dir('jobs/'.$job['id'].'.json'), $job);
+        Files::putJson(Site::dir('jobs/'.$job['id'].'.json'), $job);
 
         // Finished syncs are kept a while for their summary, then go.
         foreach (glob(Site::dir('jobs/*.json')) ?: [] as $file) {

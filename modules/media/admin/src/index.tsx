@@ -5,8 +5,8 @@ import { UploadField } from './fields'
 import { MediaField } from './MediaField'
 import UploadAction from './UploadAction'
 
-registry.fields.set('media', MediaField as any)
-registry.fields.set('media-upload', UploadField as any)
+registry.fields.set('media', MediaField)
+registry.fields.set('media-upload', UploadField)
 // The place is a view (MediaModule::places): the library and its Upload are drawn here.
 registry.components.set('media/library', lazy(() => import('./MediaLibrary')))
 // Not lazy: the file picker opens in the same click.
@@ -15,7 +15,7 @@ registry.widgets.set('media-recent', lazy(() => import('./WidgetRecent')))
 
 // @ in a chat: a file from the library, for the assistant to use or to change.
 registry.composer.set('media', {
-  id: 'media', trigger: '@', label: t('Media'), order: 20,
+  trigger: '@', label: t('Media'), order: 20,
   search: async (query) => {
     if (!can('media.view')) return []
     const { items } = await run<{ items: { id: string; name: string; url: string; kind?: string; alt?: string | null }[] }>('media/list', { search: query, perPage: 5 })

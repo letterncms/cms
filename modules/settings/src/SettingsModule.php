@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Settings;
 
+use Cms\Admin\Views;
 use Cms\Packages\Plugin;
 use Cms\Users\User;
 
@@ -61,7 +62,7 @@ final class SettingsModule extends Plugin
         $schema = $this->cms()->settingsRegistry()->schemas()[$namespace] ?? null;
 
         if ($schema === null || ! $schema['page'] || ! $user->hasPermission($schema['permission'])) {
-            return ['type' => 'ui/page', 'props' => ['title' => __('Not Found'), 'icon' => 'settings'], 'children' => [['type' => 'ui/empty', 'props' => ['icon' => 'settings', 'title' => __('Not Found'), 'action' => ['label' => __('Settings'), 'to' => '/settings']]]]];
+            return Views::notFound('settings', ['to' => '/settings', 'label' => __('Settings')]);
         }
 
         $home = $schema['home'] !== null ? ($this->cms()->admin()->navItems()[$schema['home']]['path'] ?? null) : null;

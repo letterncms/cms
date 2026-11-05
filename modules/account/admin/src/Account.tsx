@@ -1,7 +1,7 @@
 import { CmsError, invalidate, languages, loadManifest, panelsFor, plural, registry, run, t, useAbility, useManifest, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
 import qrcode from 'qrcode-generator'
-import { useEffect, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
-import { Avatar, Button, Dialog, Fields, SaveBar, toast } from '@letterncms/ui'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { Avatar, Button, Dialog, Fields, SaveBar, copyText, toast } from '@letterncms/ui'
 
 /**
  * The Profile section of Account: name and email, the site's profile fields (content/users.yaml) and the
@@ -70,24 +70,8 @@ export function Profile() {
 }
 
 /** A dialog that is a small form: Enter submits it, and its footer has Cancel and the one thing it does. */
-function FormDialog({ title, description, submit, disabled, busy, danger, onSubmit, onClose, children }: { title: string; description?: string; submit: string; disabled: boolean; busy: boolean; danger?: boolean; onSubmit: () => void; onClose: () => void; children: ReactNode }) {
-  const id = `account-${title.replace(/\W+/g, '-').toLowerCase()}`
-  return (
-    <Dialog
-      open
-      onOpenChange={(o) => !o && onClose()}
-      title={title}
-      description={description}
-      size="sm"
-      footer={<><Button onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form={id} variant={danger ? 'danger' : 'primary'} loading={busy} disabled={disabled}>{submit}</Button></>}
-    >
-      <form id={id} onSubmit={(e: FormEvent) => { e.preventDefault(); if (!disabled && !busy) onSubmit() }}>{children}</form>
-    </Dialog>
-  )
-}
-
 const groups = (text: string) => text.match(/.{1,4}/g)?.join(' ') ?? text
-const copy = (text: string) => navigator.clipboard.writeText(text).then(() => toast.success(t('Copied')), toast.error)
+const copy = (text: string) => copyText(text, { copied: t('Copied') })
 
 function TwoFactorSetup({ onClose }: { onClose: () => void }) {
   const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null)
@@ -130,7 +114,7 @@ function TwoFactorSetup({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <FormDialog title={t('Set Up Two-Factor Authentication')} description={t('Scan the code with your authenticator app, then enter the code it shows.')} submit={t('Turn On')} busy={busy} disabled={!setup || code.replace(/\D/g, '').length !== 6} onSubmit={() => void confirmCode()} onClose={onClose}>
+    <Dialog open onOpenChange={(o) => !o && onClose()} size="sm" title={t('Set Up Two-Factor Authentication')} description={t('Scan the code with your authenticator app, then enter the code it shows.')} submitLabel={t('Turn On')} busy={busy} submitDisabled={!setup || code.replace(/\D/g, '').length !== 6} onSubmit={() => void confirmCode()}>
       <div className="space-y-4">
         <div className="mx-auto size-44 rounded-lg bg-white p-3 [&_svg]:size-full" role="img" aria-label={t('QR code')} dangerouslySetInnerHTML={{ __html: qr }} />
         {setup && (
@@ -141,7 +125,7 @@ function TwoFactorSetup({ onClose }: { onClose: () => void }) {
         )}
         <Fields fields={[{ handle: 'code', type: 'text', label: t('Code'), placeholder: '123 456', max: 7, mono: true, autofocus: true, inputmode: 'numeric', autocomplete: 'one-time-code' }]} values={{ code }} onChange={(_, v) => setCode(v ?? '')} />
       </div>
-    </FormDialog>
+    </Dialog>
   )
 }
 
@@ -191,9 +175,9 @@ export function NewToken({ close }: SurfaceComponentProps) {
       </div>
     </Dialog>
   ) : (
-    <FormDialog title={t('New Token')} submit={t('Create Token')} busy={busy} disabled={!String(values.name ?? '').trim()} onSubmit={() => void create()} onClose={done}>
+    <Dialog open onOpenChange={(o) => !o && done()} size="sm" title={t('New Token')} submitLabel={t('Create Token')} busy={busy} submitDisabled={!String(values.name ?? '').trim()} onSubmit={() => void create()}>
       <Fields fields={tokenFields()} values={values} onChange={(h, v) => setValues({ ...values, [h]: v })} />
-    </FormDialog>
+    </Dialog>
   )
 }
 

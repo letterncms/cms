@@ -1,13 +1,13 @@
 import './styles.css'
 import { registry, t } from '@letterncms/sdk'
-import { Button, toast } from '@letterncms/ui'
+import { Button, copyText } from '@letterncms/ui'
 import { lazy } from 'react'
 
 /** How to connect Claude, Cursor & co. over MCP: part of API & Agents on the Account screen. */
 function Agents() {
   const endpoint = `${window.location.origin}/mcp`
   const command = `claude mcp add --transport http cms ${endpoint}`
-  const copy = (text: string) => navigator.clipboard.writeText(text).then(() => toast.success(t('Copied')))
+  const copy = (text: string) => void copyText(text, { copied: t('Copied') })
   const row = (label: string, value: string) => (
     <div>
       <div className="mb-1 text-xs text-muted">{label}</div>
@@ -25,5 +25,5 @@ function Agents() {
   )
 }
 
-registry.panels.set('mcp-connect', { id: 'mcp-connect', slot: 'account.api', component: Agents, order: 10 })
+registry.panels.set('mcp-connect', { slot: 'account.api', component: Agents, order: 10 })
 registry.widgets.set('mcp-agents', lazy(() => import('./WidgetAgents')))

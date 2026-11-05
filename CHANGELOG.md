@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- `cms()->url($path)`: the public site's absolute address, from **Public URL** under Settings → **General**, else `APP_URL`. Everything the CMS sends out (emails, the admin, MCP, licence checks, links in comments) uses it, and `config('app.url')` always equals it.
+- `Permissions::register()` takes `roles:`, the default roles that hold a permission (`['editor']`, `['editor', 'author']`). The Editor and Author roles a site starts with are built from them, so a module or plugin that is off adds nothing to them.
+- `Cms\Contracts\Translator` (`available()`, `translate(array $strings, string $from, string $to): array`) is the machine translation Languages offers. The Assistant binds Claude; `NoTranslator` is the default.
+- `Cms\Support\Files::readJson()`, `Files::putJson()` and `Files::locked()` for a module's or plugin's own state files: read a JSON file (or `[]`), write one atomically, and run work under a lock file without waiting.
+- `Cms\Admin\Views::notFound($icon, $back)` draws the page of a place that isn't there, and `Cms\Abilities\Ability::ADMIN_ONLY` keeps an ability to the admin's own client (no API tokens, MCP, CLI or agents).
+- `EntryDriver` has `findMany()` and `findByUri()`, as both drivers already did.
+- `setPreference()`, `requestText()`, `ComposerPanelProps` (with the answering `agent`) and `PanelSlots` in `@letterncms/sdk`; `Notice`, `formatBytes`, `deviceWidths` and `wideFieldTypes` in `@letterncms/ui`, and a form mode for `Dialog` (`onSubmit`, `submitLabel`, `submitDisabled`, `danger`, `busy`).
+- The `ease` field component: one easing control for design tokens, transitions and animations.
+
 ### Changed
 
 - **Breaking.** Assistant and Sync are part of the CMS: core modules instead of plugins, never installed from the store. Both are on unless you switch them off under Plugins → **Built In**. Claude answers in the workspace once an Anthropic API key is set under Settings → **Assistant**; without one, nothing mentions it. A Composer site takes them by dropping `letterncms/assistant` and `letterncms/sync` from its `composer.json` and running `composer update`. The CMS can't be installed next to either plugin, so a site that still requires one stays on 0.8 until then.
@@ -9,10 +20,38 @@
 - **Breaking.** Their classes are under `Cms\Modules\Assistant\` (was `Cms\Assistant\`) and `Cms\Modules\Sync\` (was `Cms\Sync\`), with the providers `Cms\Modules\Assistant\AssistantModule` and `Cms\Modules\Sync\SyncModule`. Their package names, settings, routes, abilities, commands and permissions stay as they were.
 - **Breaking.** Sync knows a plugin's tables only from the plugin's own `composer.json` (`extra.cms.sync`): it no longer has Forms', Commerce's and Analytics' built in. The workspace's chats are a group of their own, **Chats**, pulled but never pushed.
 - The installer recommends SEO and Forms: the rest comes with the CMS.
+- **Breaking.** `fields.options.<name>` fills the `dynamic` options of block fields too: `blocks.options.<name>` is gone. `button-variants`, `sources` and `patterns` are `fields.options` lists like `templates`, and `collections` is every collection but the system ones, wherever it is used.
+- **Breaking.** `config('app.url')` follows **Public URL** under Settings → **General**: `APP_URL` only counts while that is empty.
+- `media.uploaded` fires for every new file, however it was added (an upload in the admin or with an API token, `media/import` from a URL, a plugin calling `MediaStore::store()`), and not again for a file that was already there.
+- Visitor accounts are the **Settings** tab of **Users**, and **Visitor Accounts** in the settings sidebar. `/settings/accounts` leads there. `/users/fields` is gone: it is the **Profile Fields** tab of Users.
+- Paid Plugins (`letterncms/license`) is a required module: Modules needs it to check keys.
+- Sync's abilities are the admin's only: no API tokens or CLI (`cms pull` and `cms push` stay), as already no MCP or agents.
+- After a pull or push, Sync clears the same caches an update does: everything under `storage/cache`, where Languages now keeps its own too.
+- **Breaking.** `Cms\Modules\Sync\Console\SyncCommand`, the base of `cms pull` and `cms push`, is `TransferCommand`.
+- **Breaking.** Panels, commands, entry actions and composer sources take their `id` from their key: leave `id` out of `registry.*.set()`. `registry.panels` is typed by slot (`PanelSlots`).
+- Notices across the admin look like a view's `ui/notice`, tablet previews are 820px wide everywhere, file sizes read in the admin's language, and copying says **Copied** only when it worked.
+- The Shortcuts widget always lists ⌘J, named after the workspace's agent.
+- A preview that can't be drawn says why in the editor, instead of “Request failed (422)”.
+- Picking a block in the Outline opens its inspector, also when it was already selected.
+- `request()` keeps its default headers when you pass your own.
 
 ### Removed
 
 - **Breaking.** `extra.cms.provides` in a package's `composer.json`, and `PackageManager::providing()`: nothing asked a package what it provides.
+- **Breaking.** The `cms.updated` action: an update runs `cms.sync` like `cms sync` does.
+- **Breaking.** `Cms::version()` (use `Cms::VERSION`) and the `cms_path()` helper.
+- **Breaking.** A field type's `fallback` key, which let one type stand in for another that is missing.
+- **Breaking.** `AdminRegistry::removeNav()`, `Views::unregister()` and `AbilityRegistry::unregister()`: a plugin adds what it needs and changes what is there with the `admin.nav` and `view.<id>` filters.
+- **Breaking.** `type` and `suggests` in what `PackageManifest` reads from a package's `composer.json`.
+- **Breaking.** The `languages.translator` filter: bind `Cms\Contracts\Translator` instead.
+- **Breaking.** The `blocks.options.<name>` filters: use `fields.options.<name>`.
+- **Breaking.** The internal hooks `preview.editor`, `site.build.before`, `account.url`, `account.denied` and `account.teaser-notice`: Site and Account call each other directly.
+- **Breaking.** The site helpers `cms_entries()`, `cms_entry()`, `cms_url()` and `cms_token()`, which nothing documented: `cms_global()`, `cms_menu()` and `cms_translations()` stay.
+- **Breaking.** The admin import names `@letterncms/collaboration`, `@letterncms/languages`, `@letterncms/media` and `@letterncms/navigation`, which nothing imported. `@letterncms/blocks` stays.
+- **Breaking.** A collection's `listing` key: `default_columns` chooses the columns.
+- **Breaking.** Content's own `revisions.keep` listener, which kept the default of 100: the filter stays for plugins.
+- The `/downloads/` exception in the static build's link check: a site answers its own addresses with `site.links.answered`.
+- **Breaking.** From the admin's API: `RouteDef.layout` and `title`; the `shell.aside` slot and the `full` prop of `shell.banner` and `shell.dock` panels; `Manifest.components`; the UI kit's `Page.headerActions`, `Button.iconRight`, `Badge.dot`, `Textarea.autoGrow` props and the exports `MenuButton`, `ContextMenu`, `TableSkeleton`, `TableToolbar`, `DisplayOptions`, `ViewSwitcher`, `formatValue`, `GroupedFields`, `changedFrom`, `recordDateColumnIds`, `WidgetContext`, `useWidget`, `viewRoute` and `fieldColumnId`; `@letterncms/blocks`' `BlocksField`, `useTokens`, `InlineEditable`, `blockTree` and `BlockTypeDef`; the field components `site-ease`, `blocks-ease` and `blocks-easing` (use `ease`); a module's default export is no longer called at start.
 
 ## 0.8.0 (2026-11-04)
 

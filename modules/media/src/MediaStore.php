@@ -42,7 +42,7 @@ final class MediaStore
         return (int) cms()->settings('media', 'max_upload_mb', 32) * 1024 * 1024;
     }
 
-    /** Store an uploaded or downloaded file. The temp file is moved or removed. */
+    /** Store an uploaded or downloaded file. The temp file is moved or removed. A new file fires `media.uploaded`; the same file again is the one already stored. */
     public function store(string $tmp, string $originalName, ?User $user = null, string $folder = ''): MediaItem
     {
         try {
@@ -111,6 +111,9 @@ final class MediaStore
 
                 throw new AbilityException($e->getMessage());
             }
+
+            // Every way in (the admin, an ability, a URL import) adds a file the same way.
+            cms()->hooks()->dispatch('media.uploaded', $item, $user);
 
             return $item;
         } finally {

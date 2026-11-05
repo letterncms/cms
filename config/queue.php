@@ -1,18 +1,10 @@
 <?php
 
+// Nothing is queued: work that can wait runs after the response, so no worker or cron is needed.
 return [
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    'default' => 'sync',
     'connections' => [
         'sync' => ['driver' => 'sync'],
-        'database' => [
-            'driver' => 'database',
-            'connection' => null,
-            'table' => 'jobs',
-            'queue' => 'default',
-            'retry_after' => 300,
-            'after_commit' => true,
-        ],
     ],
-    'batching' => ['database' => env('DB_CONNECTION', 'sqlite'), 'table' => 'job_batches'],
-    'failed' => ['driver' => 'database-uuids', 'database' => env('DB_CONNECTION', 'sqlite'), 'table' => 'failed_jobs'],
+    'failed' => ['driver' => 'null'],
 ];

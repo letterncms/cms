@@ -30,8 +30,12 @@ export class EditorStore {
   private future: BlockNode[][] = []
   private lastCommit = 0
   private lastGroup = ''
+  private onChange: (nodes: BlockNode[]) => void
+  private readOnly: boolean
 
-  constructor(nodes: BlockNode[], private onChange: (nodes: BlockNode[]) => void, private readOnly = false) {
+  constructor(nodes: BlockNode[], onChange: (nodes: BlockNode[]) => void, readOnly = false) {
+    this.onChange = onChange
+    this.readOnly = readOnly
     this.state = { nodes, selected: null, head: null, blockMode: false, focus: null, breakpoint: 'base', state: '', hovered: null }
   }
 

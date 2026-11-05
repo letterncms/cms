@@ -212,9 +212,7 @@ final class TrustStore
     /** @return array<string, mixed> */
     private function state(): array
     {
-        $file = $this->directory.'/'.$this->id.'.state.json';
-
-        return is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+        return Files::readJson($this->directory.'/'.$this->id.'.state.json');
     }
 
     /** @param  array<string, mixed>  $state */
@@ -222,7 +220,7 @@ final class TrustStore
     {
         // A read-only disk loses the counters, not the check.
         try {
-            Files::put($this->directory.'/'.$this->id.'.state.json', (string) json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            Files::putJson($this->directory.'/'.$this->id.'.state.json', $state);
         } catch (Throwable) {
         }
     }

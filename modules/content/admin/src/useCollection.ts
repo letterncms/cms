@@ -16,7 +16,6 @@ export interface CollectionDef {
   body?: string
   group?: 'content' | 'design'
   home?: string
-  listing?: string[]
   fields: FieldDef[]
   resolvedFields: FieldDef[]
   schema: Record<string, unknown>

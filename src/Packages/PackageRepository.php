@@ -15,7 +15,7 @@ use Throwable;
 final class PackageRepository
 {
     /** Bump when PackageManifest gains or changes a property. */
-    private const int FORMAT = 4;
+    private const int FORMAT = 5;
 
     /** @var array<string, PackageManifest>|null */
     private ?array $packages = null;
@@ -40,12 +40,6 @@ final class PackageRepository
     public static function labelOf(?string $package): ?string
     {
         return $package !== null && function_exists('app') && app()->bound(self::class) ? app(self::class)->find($package)?->label : null;
-    }
-
-    /** @return array<string, PackageManifest> */
-    public function plugins(): array
-    {
-        return $this->all();
     }
 
     /** @return list<string> */

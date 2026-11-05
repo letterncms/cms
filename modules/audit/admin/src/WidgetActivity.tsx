@@ -1,4 +1,4 @@
-import { plural, t, timeAgo, useAbility } from '@letterncms/sdk'
+import { plural, t, timeAgo, useAbility, type PersonSummary } from '@letterncms/sdk'
 import { Avatar, Icon, Widget, WidgetRow } from '@letterncms/ui'
 
 interface Change {
@@ -8,7 +8,7 @@ interface Change {
   subject: string | null
   to: string | null
   transport: string
-  user: { id: string; name: string; initials: string; avatar: string | null } | null
+  user: PersonSummary | null
   count: number
   createdAt: string
 }

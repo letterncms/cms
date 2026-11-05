@@ -1,13 +1,7 @@
 // Build admin, then run `node modules/admin/tests/command-palette.mjs`
 // and open the printed URL. Uses the real shell with delayed search fixtures.
-import { createServer } from 'node:http'
-import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { resolve, extname, sep } from 'node:path'
+import { body, json, page, serve } from './harness.mjs'
 
-const root = fileURLToPath(new URL('../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
-const assetBase = '/_cms/assets/cms-admin/'
 const nav = [
   ['dashboard', 'Dashboard', '/', 'grid', 'main'], ['analytics', 'Analytics', '/analytics', 'chart', 'main'],
   ['pages', 'Pages', '/content/pages', 'file', 'content'], ['posts', 'Posts', '/content/posts', 'article', 'content'], ['media', 'Media', '/media', 'media', 'content'],
@@ -24,15 +18,14 @@ const manifest = {
   sidebar: { sections: ['main', 'content', 'design'].map((id) => ({ id, label: id === 'main' ? '' : id[0].toUpperCase() + id.slice(1), items: nav.filter((n) => n.section === id).map((n) => n.id) })), hidden: [], personal: false },
   settingsNav: [{ id: 'system', label: 'System', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }],
 }
-const boot = { base: '/admin', api: '/api/admin', version: 'test', theme: { name: 'cms/admin', version: 'test' }, site: manifest.site, locale: 'en', messages: {}, manifest }
-const imports = Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path]))
+const boot = { base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
 const fixture = `
 import { createElement as h } from 'react'
 import { registry } from '@letterncms/sdk'
-registry.commands.set('agents-command', { id: 'agents-command', label: 'Connect an AI Agent (MCP)', keywords: ['agents'], perform: () => {} })
-registry.commands.set('home', { id: 'home', label: 'Customize Home Screen', perform: () => {} })
-registry.commands.set('ask', { id: 'ask', label: 'New Chat', acceptsQuery: true, perform: q => { window.asked = q } })
-registry.commands.set('analytics', { id: 'analytics', label: 'Open Analytics', keywords: ['metrics'], perform: () => { window.ranAnalytics = true } })
+registry.commands.set('agents-command', { label: 'Connect an AI Agent (MCP)', keywords: ['agents'], perform: () => {} })
+registry.commands.set('home', { label: 'Customize Home Screen', perform: () => {} })
+registry.commands.set('ask', { label: 'New Chat', acceptsQuery: true, perform: q => { window.asked = q } })
+registry.commands.set('analytics', { label: 'Open Analytics', keywords: ['metrics'], perform: () => { window.ranAnalytics = true } })
 const links = ${JSON.stringify(nav)}
 links.forEach(n => registry.routes.set(n.path, { path: n.path, component: () => h('main', { style: { padding: 32 } }, h('h1', null, n.label)) }))
 `
@@ -109,41 +102,18 @@ try {
  await fetch('/__test/results',{method:'POST',body:JSON.stringify({passed:results})})
 } catch(error){output.textContent+='\\nFAIL '+error.message;await fetch('/__test/results',{method:'POST',body:JSON.stringify({passed:results,error:error.stack})})}
 `
-const html = run => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Command palette regression checks</title>${admin.css.map(path => `<link rel="stylesheet" href="${assetBase + path}">`).join('')}<script type="importmap">${JSON.stringify({ imports })}</script><script>window.__CMS__=${JSON.stringify(boot)}</script><script type="module" src="${assetBase + admin.entry}"></script></head><body><div id="cms"></div>${run ? `<pre id="results" style="position:fixed;bottom:8px;right:8px;z-index:9999;max-width:700px;background:white;border:1px solid #aaa;padding:12px;font-size:10px">Starting tests…</pre><script type="module">${runner}</script>` : ''}</body></html>`
-const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value)) }
-const body = async req => { let value = ''; for await (const chunk of req) value += chunk; return JSON.parse(value || '{}') }
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, 'http://localhost')
-    if (url.pathname === '/__test/results') {
-      const result = await body(req)
-      result.passed.forEach(name => console.log('PASS', name))
-      if (result.error) console.error('FAIL', result.error)
-      json(res, 200, {})
-      return finish(result.error)
-    }
-    if (url.pathname === '/fixture.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); return res.end(fixture) }
-    if (url.pathname === '/api/admin/abilities/content/search') {
-      const input = await body(req)
-      await new Promise(r => setTimeout(r, input.query === 'slowhome' ? 850 : 350))
-      const term = input.query.toLowerCase()
-      const rows = term === 'agents' ? [['home', 'Home'], ['guide', 'Agents guide'], ['using', 'Using agents'], ['overview', 'Overview', 'agents'], ['agents', 'Agents']]
-        : term === 'analytics' ? [['home', 'Home']]
-        : input.query === 'home' ? [['home', 'Home page'], ['header', 'Header'], ['footer', 'Footer']]
-        : input.query === 'quuxcontent' ? [['entry', 'Quux result']] : input.query === 'slowhome' ? [['late', 'Late result']] : []
-      return json(res, 200, { data: rows.map(([id, title, slug = id]) => ({ id, title, slug, collection: 'pages', displayStatus: 'draft' })) })
-    }
-    const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin)\/(.+)$/)
-    if (asset) {
-      const dir = resolve(root, 'modules/admin/dist'), path = resolve(dir, asset[2])
-      if (!path.startsWith(dir + sep)) { res.writeHead(403); return res.end() }
-      res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(await readFile(path))
-    }
-    res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(html(url.searchParams.has('test')))
-  } catch (error) { console.error(error); json(res, 500, { error: { message: error.message } }) }
-})
-// Exits with the page's verdict, unless --preview keeps it up to look at.
-const keepAlive = process.argv.includes('--preview')
-const finish = (error) => { if (keepAlive) return; clearTimeout(timeout); setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = error ? 1 : 0 }, 100) }
-const timeout = keepAlive ? null : setTimeout(() => { console.error('Command palette browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
-server.listen(0, '127.0.0.1', () => console.log(`Palette checks: http://localhost:${server.address().port}/admin?test=1\nPreview: http://localhost:${server.address().port}/admin`))
+serve('Command palette', async (req, res, url) => {
+  if (url.pathname === '/fixture.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); return res.end(fixture) }
+  if (url.pathname === '/api/admin/abilities/content/search') {
+    const input = await body(req)
+    await new Promise(r => setTimeout(r, input.query === 'slowhome' ? 850 : 350))
+    const term = input.query.toLowerCase()
+    const rows = term === 'agents' ? [['home', 'Home'], ['guide', 'Agents guide'], ['using', 'Using agents'], ['overview', 'Overview', 'agents'], ['agents', 'Agents']]
+      : term === 'analytics' ? [['home', 'Home']]
+      : input.query === 'home' ? [['home', 'Home page'], ['header', 'Header'], ['footer', 'Footer']]
+      : input.query === 'quuxcontent' ? [['entry', 'Quux result']] : input.query === 'slowhome' ? [['late', 'Late result']] : []
+    return json(res, 200, { data: rows.map(([id, title, slug = id]) => ({ id, title, slug, collection: 'pages', displayStatus: 'draft' })) })
+  }
+  res.writeHead(200, { 'Content-Type': 'text/html' })
+  res.end(page({ title: 'Command palette regression checks', boot, runner: url.searchParams.has('test') && runner }))
+}, { links: (base) => [`${base}/admin?test=1`, `${base}/admin`] })

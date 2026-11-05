@@ -78,7 +78,7 @@ try {
             'design' => $catalog('design/get'),
             'patterns' => $catalog('patterns/list', ['working' => true]),
             'site' => [
-                'name' => config('app.name'), 'url' => $cms->site('url', config('app.url')),
+                'name' => config('app.name'), 'url' => $cms->url(),
                 'locales' => $cms->locales(), 'defaultLocale' => $cms->defaultLocale(),
                 'timezone' => config('app.timezone'),
             ],

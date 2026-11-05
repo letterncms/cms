@@ -1,12 +1,12 @@
-import { getManifest, prefetchAbility, type Manifest, batch, invalidate, navigate, plural, setQuery, t, useAbility, useLocation, useManifest, type Page as PageData, type SurfaceComponentProps } from '@letterncms/sdk'
-import { Button, EmptyState, NoMatches, NotFoundState, QueryError, Fields, entryActionAvailability, Icon, IconButton, PagePagination, OverviewControls, SelectionBar, nextTableSort, confirm, toast, useRecordNavigation, useShortcut, loadOverviewSource } from '@letterncms/ui'
+import { type Manifest, batch, invalidate, navigate, plural, setQuery, t, useAbility, useLocation, useManifest, type Page as PageData, type SurfaceComponentProps } from '@letterncms/sdk'
+import { Button, EmptyState, NoMatches, Notice, NotFoundState, QueryError, Fields, entryActionAvailability, Icon, IconButton, PagePagination, OverviewControls, SelectionBar, nextTableSort, confirm, toast, useRecordNavigation, useShortcut, type OverviewView, type ViewPrefs } from '@letterncms/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { BuiltinPages, type BuiltinGroup } from './BuiltinPages'
-import { calendarQueries, EntriesCalendar } from './EntriesCalendar'
+import { EntriesCalendar } from './EntriesCalendar'
 import { EntriesGrid } from './EntriesGrid'
 import { EntriesTable, flatten, hasChildren, type TableSort } from './EntriesTable'
 import { availableColumns, defaultColumns, excerptField, mediaFields, mediaIds, type CellContext, type Column, type MediaThumb } from './listColumns'
-import { readListPrefs, useListPrefs, type ListPrefs, type ListItem, type ListView } from './listPrefs'
+import { useListPrefs, type ListItem } from './listPrefs'
 import { useCollection, type CollectionDef } from './useCollection'
 
 /** "Deutsch" for "de", in the language itself. */
@@ -19,8 +19,8 @@ export function languageName(code: string): string {
   }
 }
 
-/** The screen and its navigation loader share the exact view, columns and query input. */
-function listState(manifest: Manifest, handle: string, collection: CollectionDef | undefined, prefs: ListPrefs, query: Record<string, string>) {
+/** The view, columns and query input the list is drawn with. */
+function listState(manifest: Manifest, handle: string, collection: CollectionDef | undefined, prefs: ViewPrefs, query: Record<string, string>) {
   const summary = manifest.collections.find((c) => c.handle === handle)
   const locales = manifest.site.locales
   const locale = locales.includes(query.locale ?? '') ? query.locale! : manifest.site.defaultLocale
@@ -30,7 +30,7 @@ function listState(manifest: Manifest, handle: string, collection: CollectionDef
   const isTree = summary?.structure === 'tree'
   const dated = summary?.structure === 'dated'
   // Grid for collections with pictures, Calendar for ones that happen on a day.
-  const views: ListView[] = ['table', ...(mediaFields(collection).length > 0 || summary?.defaultView === 'grid' ? ['grid' as const] : []), ...(dated || summary?.defaultView === 'calendar' ? ['calendar' as const] : [])]
+  const views: OverviewView[] = ['table', ...(mediaFields(collection).length > 0 || summary?.defaultView === 'grid' ? ['grid' as const] : []), ...(dated || summary?.defaultView === 'calendar' ? ['calendar' as const] : [])]
   const view = views.includes(prefs.view) ? prefs.view : 'table'
 
   // Columns: everything the collection offers, the ones this person shows, in a fixed order.
@@ -49,19 +49,6 @@ function listState(manifest: Manifest, handle: string, collection: CollectionDef
 
   return { all, shown, columns, sortable, sortKey, ownSort, isTree, view, views, showTree, filtered, fields, locale,
     input: { collection: handle, locale, search: search || undefined, status, page, perPage: (manifest.config?.content?.perPage as number | undefined) ?? 50, sort: sortKey ?? undefined, fields },
-  }
-}
-
-export async function loadEntriesList(handle: string, query: Record<string, string>) {
-  const manifest = getManifest()
-  if (!manifest.collections.some((c) => c.handle === handle)) return
-  const collection = await prefetchAbility<CollectionDef>('collections/get', { handle })
-  const state = listState(manifest, handle, collection, readListPrefs(handle), query)
-  if (state.view === 'calendar') {
-    const { dated, undated } = calendarQueries(handle, { locale: state.locale, status: query.status ?? 'any', search: query.q || undefined }, query.month, readListPrefs(handle).calendarDate)
-    await Promise.all([loadOverviewSource({ ability: 'entries/list', input: dated, perPage: 200 }), loadOverviewSource({ ability: 'entries/list', input: undated, perPage: 200 })])
-  } else {
-    await prefetchAbility(state.showTree ? 'entries/tree' : 'entries/list', state.showTree ? { collection: handle, locale: state.locale, fields: state.fields } : state.input)
   }
 }
 
@@ -227,10 +214,9 @@ export default function EntriesList({ props }: SurfaceComponentProps<{ collectio
 
       {loadError && view !== 'calendar' && <QueryError message={`${t('Couldn’t load entries.')} ${loadError.message}`} onRetry={retry} />}
       {bulkFailures.length > 0 && (
-        <div role="alert" className="border-y border-warning/30 px-3 py-3 text-sm text-muted">
-          <p className="m-0">{t('Failed entries remain selected. Retry the action for these entries.')}</p>
-          <ul className="mb-0 mt-2 space-y-1 pl-4">{bulkFailures.map((failure) => <li key={failure.id}><span className="font-medium text-text">{failure.title}</span>: {failure.message}</li>)}</ul>
-        </div>
+        <Notice tone="warning" className="my-3" title={t('Failed entries remain selected. Retry the action for these entries.')}>
+          <ul className="m-0 space-y-1 pl-4">{bulkFailures.map((failure) => <li key={failure.id}><span className="font-medium text-text">{failure.title}</span>: {failure.message}</li>)}</ul>
+        </Notice>
       )}
       {view === 'calendar' ? (
         <EntriesCalendar onItems={setCalendarItems} handle={handle} filters={{ locale, status, search: search || undefined }} dateField={prefs.calendarDate} selection={{ ids: selected, onSelect: select }} cursor={cursor} />

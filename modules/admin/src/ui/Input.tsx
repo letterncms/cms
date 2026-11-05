@@ -32,25 +32,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ i
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   invalid?: boolean
-  autoGrow?: boolean
   /** `plain`: shared sizing and focus, document typography from the caller. `quiet`: no border until hovered or focused. */
   appearance?: 'default' | 'plain' | 'quiet'
 }
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea({ invalid, autoGrow = true, appearance = 'default', className, onInput, ...props }, forwarded) {
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea({ invalid, appearance = 'default', className, onInput, ...props }, forwarded) {
   const inner = useRef<HTMLTextAreaElement | null>(null)
   const grow = () => {
     const el = inner.current
-    if (!el || !autoGrow || !el.clientWidth) return
+    if (!el || !el.clientWidth) return
     el.style.height = 'auto'
     const style = getComputedStyle(el)
     const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth)
     el.style.height = `${el.scrollHeight + border}px`
   }
-  useLayoutEffect(grow, [props.value, autoGrow])
+  useLayoutEffect(grow, [props.value])
   useLayoutEffect(() => {
     const el = inner.current
-    if (!el || !autoGrow) return
+    if (!el) return
     // Hidden chats and responsive layouts need a fresh measurement when their width changes.
     let width = el.clientWidth
     const observer = new ResizeObserver(() => {
@@ -60,7 +59,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
     })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [autoGrow])
+  }, [])
   return (
     <textarea
       ref={(el) => {
@@ -73,7 +72,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         grow()
         onInput?.(e)
       }}
-      className={cn(appearance === 'plain' ? 'w-full min-h-0 resize-none rounded-none border-0 bg-transparent p-0 outline-none' : cn(base, appearance === 'quiet' && 'cms-input-quiet', 'block min-h-[72px] rounded-md px-2.5 py-[7px] leading-[20px]', autoGrow ? 'resize-none' : 'resize-y'), className)}
+      className={cn(appearance === 'plain' ? 'w-full min-h-0 resize-none rounded-none border-0 bg-transparent p-0 outline-none' : cn(base, appearance === 'quiet' && 'cms-input-quiet', 'block min-h-[72px] rounded-md px-2.5 py-[7px] leading-[20px] resize-none'), className)}
       {...props}
     />
   )

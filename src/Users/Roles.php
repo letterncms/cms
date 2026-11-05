@@ -14,7 +14,8 @@ final class Roles
 {
     public const string SETTINGS = 'roles';
 
-    public const array DEFAULTS = [
+    /** The kernel's own part of the roles a site starts with: modules and plugins add theirs (see defaults()). */
+    private const array BASE = [
         'admin' => [
             'label' => 'Administrator',
             'description' => 'Everything, including users, plugins and settings.',
@@ -23,12 +24,12 @@ final class Roles
         'editor' => [
             'label' => 'Editor',
             'description' => 'Manage all content, media and the site build.',
-            'permissions' => ['admin.access', 'entries.*', 'globals.*', 'media.*', 'navigation.*', 'forms.*', 'site.build', 'comments.*', 'assistant.use', 'analytics.view'],
+            'permissions' => ['admin.access', 'entries.*', 'globals.*', 'media.*', 'navigation.*'],
         ],
         'author' => [
             'label' => 'Author',
             'description' => 'Write and edit content; cannot publish.',
-            'permissions' => ['admin.access', 'entries.*.view', 'entries.*.create', 'entries.*.edit', 'media.view', 'media.upload', 'comments.view', 'comments.create', 'assistant.use'],
+            'permissions' => ['admin.access', 'entries.*.view', 'entries.*.create', 'entries.*.edit', 'media.view', 'media.upload'],
         ],
         'member' => [
             'label' => 'Visitor',
@@ -37,12 +38,33 @@ final class Roles
         ],
     ];
 
+    public function __construct(private readonly Permissions $permissions) {}
+
     /** @return array<string, array{label: string, description: string, permissions: list<string>}> */
     public function all(): array
     {
         $roles = cms()->settings(self::SETTINGS, 'roles');
 
-        return self::normalize(is_array($roles) && $roles !== [] ? $roles : self::DEFAULTS);
+        return self::normalize(is_array($roles) && $roles !== [] ? $roles : $this->defaults());
+    }
+
+    /**
+     * The roles a site starts with: the kernel's, and each permission registered for one of them
+     * (`roles:` in Permissions::register()).
+     *
+     * @return array<string, array{label: string, description: string, permissions: list<string>}>
+     */
+    public function defaults(): array
+    {
+        $roles = self::BASE;
+
+        foreach (array_keys($roles) as $role) {
+            if ($role !== 'admin') {
+                $roles[$role]['permissions'] = array_values(array_unique([...$roles[$role]['permissions'], ...$this->permissions->forRole($role)]));
+            }
+        }
+
+        return $roles;
     }
 
     /** @return list<string> */
@@ -78,7 +100,7 @@ final class Roles
             ];
         }
 
-        $out['admin'] = ['label' => $out['admin']['label'] ?? self::DEFAULTS['admin']['label'], 'description' => $out['admin']['description'] ?? self::DEFAULTS['admin']['description'], 'permissions' => ['*']];
+        $out['admin'] = ['label' => $out['admin']['label'] ?? self::BASE['admin']['label'], 'description' => $out['admin']['description'] ?? self::BASE['admin']['description'], 'permissions' => ['*']];
 
         return $out;
     }

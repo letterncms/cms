@@ -31,10 +31,10 @@ final class UsersViewsTest extends TestCase
     {
         $admin = $this->admin();
         $tabs = array_column(array_column(array_filter(self::nodes($this->resolved('users', $admin)), static fn ($n) => $n['type'] === 'ui/tab'), 'props'), 'id');
-        $this->assertSame(['team', 'visitors', 'sign-up', 'fields'], $tabs);
+        $this->assertSame(['team', 'visitors', 'fields'], $tabs);
         $this->assertContains('users/person', self::types($this->resolved('users-person', $admin, ['id' => $admin->id])));
         $this->assertNotContains('users/person', self::types($this->resolved('users', $admin)));
-        $this->assertSame('/users?tab=fields', self::nodes($this->resolved('users-fields', $admin))[1]['props']['to']);
+        $this->assertSame('/users?tab=settings', $this->cms()->hooks()->filter('admin.nav', $this->cms()->admin()->navItems())['settings.accounts']['path'], 'Visitor Accounts are its Settings tab');
     }
 
     public function test_the_list_says_who_is_asking_and_what_stands_out(): void

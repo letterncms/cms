@@ -1,5 +1,5 @@
-import { locale, t, type CollectionSummary, type FieldDef } from '@letterncms/sdk'
-import { Avatar, AvatarStack, Icon, StatusDot, cn, entryFieldColumns, standardEntryColumns, recordDateColumns, DateCell, shortDate, longDate } from '@letterncms/ui'
+import { locale, t, type CollectionSummary, type FieldDef, type PersonSummary } from '@letterncms/sdk'
+import { Avatar, AvatarStack, Icon, StatusDot, cn, entryFieldColumns, standardEntryColumns, recordDateColumns, DateCell } from '@letterncms/ui'
 import type { ReactNode } from 'react'
 import type { ListItem } from './listPrefs'
 import type { CollectionDef } from './useCollection'
@@ -33,8 +33,6 @@ export interface Column {
   render: (item: ListItem, ctx: CellContext) => ReactNode
 }
 
-export { fieldColumnId } from '@letterncms/ui'
-
 /** Every column a collection's table can show, in display order (the title is always first and not listed). */
 export function availableColumns(summary: CollectionSummary, collection: CollectionDef | undefined, locales: string[]): Column[] {
   const columns: Column[] = []
@@ -55,9 +53,9 @@ export function availableColumns(summary: CollectionSummary, collection: Collect
   return columns
 }
 
-/** Shared defaults, falling back to automatic columns and the legacy `listing` fields. */
+/** The collection's own default columns, or the automatic ones. */
 export function defaultColumns(summary: CollectionSummary, collection: CollectionDef | undefined, view = 'table'): string[] {
-  return collection?.default_columns ?? standardEntryColumns(summary.routable, collection?.listing, view, collection?.resolvedFields ?? collection?.fields)
+  return collection?.default_columns ?? standardEntryColumns(summary.routable, view, collection?.resolvedFields ?? collection?.fields)
 }
 
 /** Columns that hold media, for thumbnails in cells and on cards. */
@@ -81,9 +79,7 @@ export function mediaSource(id: string, ctx: CellContext): string | null {
   return id.startsWith('/') || id.startsWith('http') ? id : null
 }
 
-export { shortDate, longDate }
-
-function AuthorCell({ person }: { person: { name: string; initials: string; avatar: string | null } }) {
+function AuthorCell({ person }: { person: PersonSummary }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
       <Avatar name={person.name} initials={person.initials} src={person.avatar} size={18} />
@@ -139,7 +135,7 @@ export function FieldValue({ field, value, ctx }: { field: FieldDef; value: any;
     case 'entries':
       return <Chips labels={(value as { title: string }[]).map((e) => e.title)} />
     case 'users': {
-      const people = value as { name: string; initials: string; avatar: string | null }[]
+      const people = value as PersonSummary[]
       return people.length === 1 ? <AuthorCell person={people[0]} /> : <AvatarStack people={people} size={18} max={3} />
     }
     case 'media': {

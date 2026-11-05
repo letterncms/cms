@@ -1,7 +1,6 @@
 /*
- * The admin's design token values, light and dark — loaded once, by the admin theme.
- * Modules never import these: they use the names in theme.css, which resolve to whatever
- * values the running admin theme defines (another theme brings its own).
+ * The admin's design token values, light and dark — loaded once, by the admin.
+ * Modules never import these: they use the names in theme.css, which resolve to these values.
  *
  * The direction: paper on a desk. The desk (surface) is the warm gray the sidebar and panels sit on;
  * the page (bg) is the white sheet the work happens on; menus and dialogs (float) are sheets lifted above it.

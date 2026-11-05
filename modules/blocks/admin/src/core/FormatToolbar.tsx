@@ -1,4 +1,4 @@
-import { registry, t } from '@letterncms/sdk'
+import { t } from '@letterncms/sdk'
 import { Fields, Icon, Tooltip, cn } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -74,10 +74,7 @@ export function FormatToolbar({ root = document, offset }: { root?: Document; of
   }
 
   startLinkRef.current = startLink
-  // The link picker commits a choice (a page, a pasted URL, "Remove Link") at once.
-  const picker = !!registry.fields.get('link')
-
-  const applyLink = (to = url) => {
+  const applyLink = (to: string) => {
     const sel = root.getSelection()
     if (saved.current && sel) {
       sel.removeAllRanges()
@@ -114,38 +111,23 @@ export function FormatToolbar({ root = document, offset }: { root?: Document; of
 
   return createPortal(
     <div
-      className={cn('fixed z-[70] flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md bg-ink p-1 shadow-pop', linking && !picker && 'p-1.5')}
+      className="fixed z-[70] flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md bg-ink p-1 shadow-pop"
       style={{ left: pos.x, top: pos.y - 8 }}
       onMouseDown={(e) => !linking && e.preventDefault()}
       onKeyDown={(e) => e.key === 'Escape' && cancelLink()}
     >
-      {linking && !picker ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            applyLink()
-          }}
-          className="flex items-center gap-1"
-        >
-          <Fields bare className="w-64" fields={[linkDef]} values={{ url }} onChange={(_, v) => setUrl(v ?? '')} />
-          <button type="submit" className="h-7 rounded-xs px-2 text-xs font-medium text-ink-contrast hover:bg-white/12">{url ? t('Apply') : t('Remove')}</button>
-        </form>
-      ) : (
-        <>
-          {btn('bold', t('Bold'), 'mod+b', () => exec('bold'))}
-          {btn('italic', t('Italic'), 'mod+i', () => exec('italic'))}
-          {btn('underline', t('Underline'), 'mod+u', () => exec('underline'))}
-          {btn('strike', t('Strikethrough'), 'mod+shift+x', () => exec('strikeThrough'))}
-          {btn('code', t('Code'), 'mod+e', () => wrap('code'))}
-          <span className="mx-0.5 h-4 w-px bg-white/15" />
-          {btn('link', t('Link'), 'mod+k', startLink)}
-          {/* The picker opens from the bar itself: its own trigger is only the anchor. */}
-          {linking && (
-            <div className="pointer-events-none absolute inset-0 opacity-0" aria-hidden>
-              <Fields bare className="h-full" fields={[linkDef]} values={{ url }} onChange={(_, v) => applyLink(v ?? '')} />
-            </div>
-          )}
-        </>
+      {btn('bold', t('Bold'), 'mod+b', () => exec('bold'))}
+      {btn('italic', t('Italic'), 'mod+i', () => exec('italic'))}
+      {btn('underline', t('Underline'), 'mod+u', () => exec('underline'))}
+      {btn('strike', t('Strikethrough'), 'mod+shift+x', () => exec('strikeThrough'))}
+      {btn('code', t('Code'), 'mod+e', () => wrap('code'))}
+      <span className="mx-0.5 h-4 w-px bg-white/15" />
+      {btn('link', t('Link'), 'mod+k', startLink)}
+      {/* The link picker opens from the bar itself (its own trigger is only the anchor) and commits a choice at once: a page, a pasted URL, "Remove Link". */}
+      {linking && (
+        <div className="pointer-events-none absolute inset-0 opacity-0" aria-hidden>
+          <Fields bare className="h-full" fields={[linkDef]} values={{ url }} onChange={(_, v) => applyLink(v ?? '')} />
+        </div>
       )}
     </div>,
     document.body,

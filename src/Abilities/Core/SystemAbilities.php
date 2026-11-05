@@ -137,7 +137,7 @@ final class SystemAbilities
             'annotations' => ['readOnly' => true],
             'handler' => fn () => [
                 'name' => config('app.name'),
-                'url' => config('app.url'),
+                'url' => $this->cms->url(),
                 'timezone' => config('app.timezone'),
                 'locale' => $this->cms->defaultLocale(),
                 'locales' => $this->cms->locales(),

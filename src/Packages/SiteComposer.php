@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Packages;
 
 use Cms\Foundation\Application;
+use Cms\Support\Files;
 use Throwable;
 
 /**
@@ -51,7 +52,7 @@ final class SiteComposer
             $composer = is_file($file) ? json_decode((string) file_get_contents($file), true, flags: JSON_THROW_ON_ERROR) : null;
 
             if (is_array($composer) && is_writable($file)) {
-                file_put_contents($file, json_encode($change($composer), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n");
+                Files::putJson($file, $change($composer));
                 @unlink($this->app->sitePath('composer.lock'));
             }
         } catch (Throwable $e) {

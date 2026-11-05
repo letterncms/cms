@@ -9,7 +9,7 @@
     "dev": "vite build --watch --mode development",
     "typecheck": "tsc -p .",
     "icons": "node scripts/icons.mjs",
-    "test": "node --test 'tests/js/*.test.ts'"
+    "test": "node --experimental-vm-modules --test tests/insert.mjs tests/insertionTargets.mjs tests/readOnly.mjs 'tests/js/*.test.ts'"
   },
   "dependencies": {
     "@alpinejs/csp": "3.17.4",

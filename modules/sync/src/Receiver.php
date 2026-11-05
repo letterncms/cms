@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Sync;
 
 use Cms\Support\Files;
+use Cms\Update\Upgrader;
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 use Throwable;
@@ -185,7 +186,7 @@ final class Receiver
         }
 
         $meta = ['id' => $job, 'at' => now()->toIso8601String(), 'from' => $state['from'], 'direction' => $state['direction'], 'tables' => array_map(static fn (array $t) => $t['scope'], $state['tables']), 'files' => [], 'restored_at' => null];
-        Site::writeJson(Site::dir('backups/'.$job.'/backup.json'), $meta);
+        Files::putJson(Site::dir('backups/'.$job.'/backup.json'), $meta);
 
         $sessions = isset($state['tables']['users']) ? new Sessions : null;
         $sessions?->before();
@@ -201,13 +202,13 @@ final class Receiver
             $this->placeFiles($job, $state['areas'], $meta['files']);
         } catch (Throwable $e) {
             // Half the files is worse than none: put back what was there, tables included.
-            Site::writeJson(Site::dir('backups/'.$job.'/backup.json'), $meta);
+            Files::putJson(Site::dir('backups/'.$job.'/backup.json'), $meta);
             $this->restoreNow($job);
 
             throw new RuntimeException(__('The files couldn’t be put in place, so nothing changed: :error', ['error' => $e->getMessage()]), previous: $e);
         }
 
-        Site::writeJson(Site::dir('backups/'.$job.'/backup.json'), $meta);
+        Files::putJson(Site::dir('backups/'.$job.'/backup.json'), $meta);
         $kept = $sessions?->after() ?? 0;
 
         foreach ($state['tables'] as $t) {
@@ -225,7 +226,7 @@ final class Receiver
     public function cancel(string $job): array
     {
         self::validJob($job);
-        $state = Site::readJson($this->dir($job).'/state.json');
+        $state = Files::readJson($this->dir($job).'/state.json');
 
         foreach ((array) ($state['tables'] ?? []) as $t) {
             $this->db->drop((string) $t['staging']);
@@ -247,12 +248,12 @@ final class Receiver
     public function history(?array $add = null): array
     {
         $file = Site::dir('history.json');
-        $all = (array) (Site::readJson($file)['syncs'] ?? []);
+        $all = (array) (Files::readJson($file)['syncs'] ?? []);
 
         if ($add !== null) {
             array_unshift($all, $add);
             $all = array_slice($all, 0, 50);
-            Site::writeJson($file, ['syncs' => $all]);
+            Files::putJson($file, ['syncs' => $all]);
         }
 
         return array_map(static fn (array $s) => [...$s, 'can_undo' => empty($s['undone_at']) && is_file(Site::dir('backups/'.$s['id'].'/backup.json'))], $all);
@@ -266,7 +267,7 @@ final class Receiver
     {
         self::validJob($id);
         $dir = Site::dir('backups/'.$id);
-        $meta = Site::readJson($dir.'/backup.json');
+        $meta = Files::readJson($dir.'/backup.json');
 
         if ($meta === [] || ! empty($meta['restored_at'])) {
             throw new RuntimeException(__('That sync can’t be undone any more.'));
@@ -297,7 +298,7 @@ final class Receiver
         }
 
         $meta['undo'] = $u;
-        Site::writeJson($dir.'/backup.json', $meta);
+        Files::putJson($dir.'/backup.json', $meta);
 
         if ($u['table'] < count($tables)) {
             $this->touch('undo-'.$id);
@@ -314,7 +315,7 @@ final class Receiver
     /** The lock, for the admin: who holds it and since when. */
     public function busy(): ?array
     {
-        $lock = Site::readJson(Site::dir('lock.json'));
+        $lock = Files::readJson(Site::dir('lock.json'));
 
         return isset($lock['job']) && time() - (int) ($lock['touched'] ?? 0) < self::STALE ? $lock : null;
     }
@@ -323,7 +324,7 @@ final class Receiver
     private function restoreNow(string $id): void
     {
         $dir = Site::dir('backups/'.$id);
-        $meta = Site::readJson($dir.'/backup.json');
+        $meta = Files::readJson($dir.'/backup.json');
         $staged = (array) ($meta['undo']['tables'] ?? []);
         $swaps = [];
 
@@ -368,9 +369,9 @@ final class Receiver
         }
 
         $meta['restored_at'] = now()->toIso8601String();
-        Site::writeJson($dir.'/backup.json', $meta);
+        Files::putJson($dir.'/backup.json', $meta);
 
-        $history = (array) (Site::readJson(Site::dir('history.json'))['syncs'] ?? []);
+        $history = (array) (Files::readJson(Site::dir('history.json'))['syncs'] ?? []);
 
         foreach ($history as $i => $s) {
             if (($s['id'] ?? null) === $id) {
@@ -378,7 +379,7 @@ final class Receiver
             }
         }
 
-        Site::writeJson(Site::dir('history.json'), ['syncs' => $history]);
+        Files::putJson(Site::dir('history.json'), ['syncs' => $history]);
         $this->settle();
     }
 
@@ -437,8 +438,9 @@ final class Receiver
     /** Whatever read the old content should read the new: caches, the media index, built pages. */
     private function settle(): void
     {
+        // The configured store may not be a file: it goes first, then every cache file, as after an update.
         rescue(static fn () => Cache::flush(), report: false);
-        Files::deleteDirectory(storage_path('cache/entries'));
+        Upgrader::purgeCaches(app());
         rescue(static fn () => cms()->hooks()->dispatch('cms.sync'), report: true);
 
         $builder = app(\Cms\Contracts\SiteBuilder::class);
@@ -456,7 +458,7 @@ final class Receiver
             throw new RuntimeException(__('This site is busy with another sync, started :ago. Try again when it’s done, or in ten minutes if it stopped.', ['ago' => \Illuminate\Support\Carbon::createFromTimestamp((int) $held['since'])->diffForHumans()]));
         }
 
-        Site::writeJson(Site::dir('lock.json'), ['job' => $job, 'kind' => $kind, 'since' => $held['since'] ?? time(), 'touched' => time()]);
+        Files::putJson(Site::dir('lock.json'), ['job' => $job, 'kind' => $kind, 'since' => $held['since'] ?? time(), 'touched' => time()]);
     }
 
     private function touch(string $job): void
@@ -466,7 +468,7 @@ final class Receiver
 
     private function unlock(string $job): void
     {
-        if ((Site::readJson(Site::dir('lock.json'))['job'] ?? null) === $job) {
+        if ((Files::readJson(Site::dir('lock.json'))['job'] ?? null) === $job) {
             @unlink(Site::dir('lock.json'));
         }
     }
@@ -497,14 +499,14 @@ final class Receiver
     private function state(string $job): array
     {
         self::validJob($job);
-        $state = Site::readJson($this->dir($job).'/state.json');
+        $state = Files::readJson($this->dir($job).'/state.json');
 
         return $state !== [] ? $state : throw new RuntimeException(__('This sync isn’t going on here any more. Start it again.'));
     }
 
     private function save(string $job, array $state): void
     {
-        Site::writeJson($this->dir($job).'/state.json', $state);
+        Files::putJson($this->dir($job).'/state.json', $state);
     }
 
     private static function validJob(string $job): void

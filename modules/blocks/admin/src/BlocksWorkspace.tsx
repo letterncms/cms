@@ -93,6 +93,10 @@ function Workspace({ props }: { props: EntryEditorProps }) {
   useEffect(() => { if (!props.sidebarOpen) setInspecting(false) }, [props.sidebarOpen])
   useEffect(() => { if (Object.keys(props.errors).length) setInspecting(false) }, [props.errors])
   useEffect(() => bus.on('preview-motion', () => events.emit('entry.preview')), [])
+  // A block picked in the outline opens its inspector even when it was already the selected one.
+  const latestInspect = useRef(inspect)
+  latestInspect.current = inspect
+  useEffect(() => bus.on('inspect', ({ node }) => latestInspect.current(node)), [])
   const entryDetails = () => { store.select(null); setInspecting(false) }
   const destination = (type: string | string[]) => {
     const current = store.get()

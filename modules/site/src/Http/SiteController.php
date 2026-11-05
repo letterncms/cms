@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Cms\Modules\Blocks\Document;
 use Cms\Modules\Blocks\Patterns;
 use Cms\Modules\Blocks\Templates;
+use Cms\Modules\Account\Site\Screens;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Users\User;
 
@@ -52,7 +53,7 @@ final class SiteController
             case EntryGate::SIGN_IN:
                 return redirect()->to((string) $this->cms->accounts()->signInUrl($request->getRequestUri(), $entry->locale))->header('Cache-Control', 'no-store, private');
             case EntryGate::DENIED:
-                return $this->cms->hooks()->filter('account.denied', null, $entry) ?? $this->respond($this->renderer->notFound($path)['html'], 404);
+                return $this->cms->accounts()->enabled() ? app(Screens::class)->respond('denied', $entry->locale, 403) : $this->respond($this->renderer->notFound($path)['html'], 404);
         }
 
         $result = $this->renderer->entry($gate->view($entry), $page);
@@ -105,12 +106,16 @@ final class SiteController
             $collection = is_string($handle) ? $this->cms->collections()->find($handle) : null;
             abort_if(! $collection || ! $user || (! $user->hasPermission("entries.{$handle}.create") && ! $user->hasPermission("entries.{$handle}.edit")), 404);
             $locale = $request->json('locale', $this->cms->defaultLocale());
-            abort_if(! is_string($locale) || ! in_array($locale, $this->cms->locales(), true), 422, __('Choose an existing locale.'));
+            if (! is_string($locale) || ! in_array($locale, $this->cms->locales(), true)) {
+                return $this->refuse(__('Choose an existing locale.'));
+            }
             $working = new Entry(id: strtolower((string) Str::ulid()), collection: $handle, locale: $locale, slug: '', title: '', data: $collection->blueprint()->defaults(), authorId: $user->id);
             $parentId = $request->json('parentId');
             if (is_string($parentId) && $parentId !== '') {
                 $parent = $this->cms->entries()->find($parentId);
-                abort_if(! $parent || $parent->collection !== $handle || $parent->locale !== $locale, 422, __('Choose a parent in this collection and language.'));
+                if (! $parent || $parent->collection !== $handle || $parent->locale !== $locale) {
+                    return $this->refuse(__('Choose a parent in this collection and language.'));
+                }
                 $working->parentId = $parentId;
             }
         }
@@ -125,7 +130,7 @@ final class SiteController
         if ($request->json()->has('authorId')) {
             $authorId = $request->json('authorId');
             if ($authorId !== null && (! is_string($authorId) || ($authorId !== $working->authorId && ! User::query()->whereKey($authorId)->exists()))) {
-                return $this->respond('<!doctype html><p>'.e(__('Choose an existing author.')).'</p>', 422);
+                return $this->refuse(__('Choose an existing author.'));
             }
             $working->authorId = $authorId;
         }
@@ -210,6 +215,12 @@ final class SiteController
         }
 
         return null;
+    }
+
+    /** Why a preview can't be drawn, short enough for the editor to show as it is. */
+    private function refuse(string $message): Response
+    {
+        return $this->respond('<!doctype html><p>'.e($message).'</p>', 422);
     }
 
     private function respond(string $html, int $status): Response

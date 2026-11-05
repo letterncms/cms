@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Mcp;
 
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Cms\Abilities\AbilityContext;
+use Cms\Modules\Audit\AuditAbilities;
 use Cms\Modules\Mcp\Http\McpController;
 use Cms\Modules\Mcp\OAuth\OAuthController;
 use Cms\Packages\Plugin;
-use Throwable;
 
 final class McpModule extends Plugin
 {
@@ -42,7 +41,7 @@ final class McpModule extends Plugin
         });
 
         $this->abilities();
-        $this->cms()->admin()->widget('mcp-agents', ['label' => 'Agents', 'description' => __('AI agents connected to your account and what they changed lately.'), 'icon' => 'mcp', 'column' => 'side', 'order' => 70, 'permission' => 'tokens.manage']);
+        $this->cms()->admin()->widget('mcp-agents', ['label' => 'Agents', 'description' => 'AI agents connected to your account and what they changed lately.', 'icon' => 'mcp', 'column' => 'side', 'order' => 70, 'permission' => 'tokens.manage']);
         $this->adminModule();
         $this->cms()->admin()->command('connect-mcp', ['label' => 'Connect an AI Agent (MCP)', 'icon' => 'mcp', 'path' => '/account#mcp', 'keywords' => ['claude', 'cursor', 'agent', 'mcp', 'ai']]);
     }
@@ -56,9 +55,8 @@ final class McpModule extends Plugin
             'description' => 'AI agents (MCP clients) signed in to your account with OAuth, when each was last active, and the latest changes made through MCP as you.',
             'permission' => 'tokens.manage',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20, 'default' => 5]]],
-            'handler' => function (array $in, AbilityContext $ctx) use ($abilities) {
+            'handler' => function (array $in, AbilityContext $ctx) {
                 $agents = $ctx->user->tokens()->where('name', 'like', 'MCP: %')
                     ->where(static fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
                     ->get()
@@ -71,24 +69,12 @@ final class McpModule extends Plugin
                     ->sortByDesc(static fn ($a) => $a['lastUsedAt'] ?? $a['connectedAt'])
                     ->values();
 
-                try {
-                    $activity = DB::table('audit_log')->where('transport', 'mcp')->where('user_id', $ctx->user->id)
-                        ->orderByDesc('created_at')->limit($in['limit'])->get()
-                        ->map(static function ($r) use ($abilities) {
-                            $input = (array) json_decode((string) $r->input, true);
-                            $subject = $input['title'] ?? $input['name'] ?? $input['handle'] ?? $input['path'] ?? null;
-
-                            return [
-                                'id' => $r->id,
-                                'ability' => $r->ability,
-                                'label' => __($abilities->get($r->ability)?->label ?? $r->ability),
-                                'subject' => is_scalar($subject) ? mb_strimwidth((string) $subject, 0, 80, '…') : null,
-                                'createdAt' => $r->created_at ? Carbon::parse($r->created_at)->toIso8601String() : null,
-                            ];
-                        })->all();
-                } catch (Throwable) {
-                    $activity = []; // The audit module is off.
-                }
+                // What agents did, in the Audit Log's words, while it keeps one.
+                $activity = ! $this->cms()->isActive('letterncms/audit') ? [] : array_map(static fn (array $d) => [
+                    'id' => $d['row']->id, 'ability' => $d['row']->ability, 'label' => $d['label'], 'subject' => $d['subject'], 'to' => $d['to'], 'createdAt' => $d['createdAt'],
+                ], $this->app->make(AuditAbilities::class)->describe(
+                    DB::table('audit_log')->where('transport', 'mcp')->where('user_id', $ctx->user->id)->orderByDesc('created_at')->limit($in['limit'])->get(),
+                ));
 
                 return ['agents' => $agents->take($in['limit'])->all(), 'connected' => $agents->count(), 'activity' => $activity];
             },

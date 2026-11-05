@@ -6,7 +6,8 @@ import { CommandPalette } from './CommandPalette'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Sidebar, StateBack, type OwnSidebar } from './Sidebar'
-import { inSettings, isPinned, itemAt, leaveSettings, noteLocation, noteSide, placeAt, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
+import { isPinned, leaveSettings, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
+import { inSettings, itemAt, noteLocation, noteSide, placeAt } from '../ui/place'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/Slideover'
 import { dockState, type DockState } from '../ui/Dock'
@@ -112,7 +113,6 @@ export function App() {
   // Below tablet width it opens over the screen and goes again with the next screen.
   const narrow = useMedia('(max-width: 767px)')
   const [expanded, setExpanded] = useState(false)
-  const full = route?.layout === 'full'
   const content = useRef<HTMLDivElement>(null)
   const [workspace, setWorkspace] = useState<HTMLDivElement | null>(null)
   const [inspector, setInspector] = useState<HTMLDivElement | null>(null)
@@ -235,20 +235,18 @@ export function App() {
 
   const Screen = route?.component ?? NotFound
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
-  // Workspace panels decide their own placement and visibility (e.g. the assistant overlay).
-  const asides = panelsFor('shell.aside', { full })
   // A line on the desk above the sheet for what its module needs someone to see (test mode, an update running): its own row, so it never sits over a screen.
-  const banners = panelsFor('shell.banner', { full })
+  const banners = panelsFor('shell.banner', {})
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
-  const docks = panelsFor('shell.dock', { full })
-  const sidebarShown = !full && !narrow && (own ? ownOpen : !hidden)
+  const docks = panelsFor('shell.dock', {})
+  const sidebarShown = !narrow && (own ? ownOpen : !hidden)
   const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={() => setPalette(true)} onNavigate={onNavigate} />
   const sidebarOut = narrow ? expanded : sidebarShown
   const toggleLabel = own
     ? sidebarOut ? t('Hide {name}', { name: own.title }) : t('Show {name}', { name: own.title })
     : sidebarOut ? t('Hide Sidebar') : t('Show Sidebar')
   // On the desk the sheet is inset from the window; the sidebar button sits in its top bar while the sidebar is away.
-  const inset = !full && !narrow
+  const inset = !narrow
 
   return (
     <div className="flex h-screen bg-surface">
@@ -256,13 +254,13 @@ export function App() {
         className="cms-shell relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
         data-sidebar={sidebarShown ? '' : undefined}
         data-inset={inset ? '' : undefined}
-        style={{ '--cms-sidebar-width': sidebarShown ? '248px' : '0px', '--cms-sidebar-toggle': !full && !sidebarShown ? `${leadingWidth + 4}px` : '0px', '--cms-banner-height': `${bannerHeight}px`, ...(claims.instant ? { '--cms-panel-speed': '0s' } : {}) } as CSSProperties}
+        style={{ '--cms-sidebar-width': sidebarShown ? '248px' : '0px', '--cms-sidebar-toggle': !sidebarShown ? `${leadingWidth + 4}px` : '0px', '--cms-banner-height': `${bannerHeight}px`, ...(claims.instant ? { '--cms-panel-speed': '0s' } : {}) } as CSSProperties}
       >
         <DocumentTitle />
         {/* The first stop for the keyboard: straight to the screen, past the sidebar. */}
         <a href="#cms-content" className="cms-skip" onClick={(e) => { e.preventDefault(); content.current?.focus({ preventScroll: true }) }}>{t('Skip to Content')}</a>
         {/* One place, above whatever is there: the sidebar coming and going never moves these. First for the keyboard too, as they are on view. */}
-        {!full && !(dock.open && narrow) && (
+        {!(dock.open && narrow) && (
           <div ref={setLeading} data-drawer={narrow && expanded ? '' : undefined} className={cn('cms-leading absolute flex max-w-[232px] items-center gap-1', narrow && expanded ? 'z-[51]' : 'z-30')}>
             <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
               <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
@@ -270,7 +268,7 @@ export function App() {
             {!dock.full && <StateBack own={own} onNavigate={() => setExpanded(false)} />}
           </div>
         )}
-        {!full && (narrow ? (
+        {narrow ? (
           expanded && (
             <>
               <div className="fixed inset-0 z-40 bg-overlay" onClick={() => setExpanded(false)} aria-hidden="true" />
@@ -283,13 +281,13 @@ export function App() {
           <div className="cms-side-panel" style={{ '--cms-side-panel-width': '248px' } as CSSProperties} data-hidden={!sidebarShown || undefined} inert={!sidebarShown}>
             {sidebar()}
           </div>
-        ))}
+        )}
         <div className="cms-desk-main flex min-w-0 flex-1 flex-col">
-          {!full && banners.length > 0 && (
+          {banners.length > 0 && (
             <div ref={setBanner} className="shrink-0">
               {banners.map(({ id, component: Banner }) => (
                 <ErrorBoundary key={id}>
-                  <Banner full={full} />
+                  <Banner />
                 </ErrorBoundary>
               ))}
             </div>
@@ -319,11 +317,6 @@ export function App() {
                   </Suspense>
                 </ScreenLocation>
               </div>
-              {asides.map(({ id, component: Aside }) => (
-                <ErrorBoundary key={id}>
-                  <Aside full={full} />
-                </ErrorBoundary>
-              ))}
             </div>
           </WorkspaceContext>
         </div>
@@ -331,7 +324,7 @@ export function App() {
         <div ref={setInspector} className="flex shrink-0 py-2 empty:hidden max-md:hidden" />
         {docks.map(({ id, component: Dock }) => (
           <ErrorBoundary key={id}>
-            <Dock full={full} />
+            <Dock />
           </ErrorBoundary>
         ))}
         <CommandPalette open={palette} onOpenChange={setPalette} />

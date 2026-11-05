@@ -245,7 +245,7 @@ class ReleaseFeed
     private function save(array $state): void
     {
         try {
-            Files::put($this->stateFile(), (string) json_encode($state, JSON_UNESCAPED_SLASHES));
+            Files::putJson($this->stateFile(), $state, JSON_UNESCAPED_SLASHES);
         } catch (Throwable) {
         }
     }
@@ -253,6 +253,6 @@ class ReleaseFeed
     /** @return array<string, mixed> */
     private static function read(string $file): array
     {
-        return is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+        return Files::readJson($file);
     }
 }

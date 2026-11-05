@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Collaboration;
 
+use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Content\Entries\Entry;
@@ -21,9 +22,9 @@ final class CollaborationModule extends Plugin
     public function boot(): void
     {
         $p = $this->cms()->permissions();
-        $p->register('comments.view', __('View Comments'), __('Comments'));
-        $p->register('comments.create', __('Write and Resolve Comments'), __('Comments'));
-        $p->register('comments.moderate', __('Edit and Delete Anyone’s Comments'), __('Comments'));
+        $p->register('comments.view', 'View Comments', 'Comments', roles: ['editor', 'author']);
+        $p->register('comments.create', 'Write and Resolve Comments', 'Comments', roles: ['editor', 'author']);
+        $p->register('comments.moderate', 'Edit and Delete Anyone’s Comments', 'Comments', roles: ['editor']);
 
         $this->abilities();
 
@@ -33,8 +34,8 @@ final class CollaborationModule extends Plugin
             Comment::query()->where('entry_id', $entry->id)->delete();
         });
 
-        $this->cms()->admin()->widget('comments-inbox', ['label' => 'Comments', 'description' => __('Open threads that mention you or sit on your entries.'), 'icon' => 'comment', 'column' => 'main', 'order' => 30, 'permission' => 'comments.view']);
-        $this->adminModule(import: '@letterncms/collaboration');
+        $this->cms()->admin()->widget('comments-inbox', ['label' => 'Comments', 'description' => 'Open threads that mention you or sit on your entries.', 'icon' => 'comment', 'column' => 'main', 'order' => 30, 'permission' => 'comments.view']);
+        $this->adminModule();
     }
 
     private function abilities(): void
@@ -56,8 +57,7 @@ final class CollaborationModule extends Plugin
             'description' => 'Say you have an entry open (and whether you are editing); returns who else has it open and when it was last saved.',
             'permission' => fn (?User $u, array $in) => $u !== null && ($t = $this->cms()->entries()->find((string) $in['entryId'])) !== null && $u->hasPermission("entries.{$t->collection}.view"),
             'annotations' => ['readOnly' => true],
-            'expose' => ['rest' => false, 'mcp' => false, 'cli' => false, 'assistant' => false],
-            'package' => $this->manifest->name,
+            'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => ['entryId' => $id, 'editing' => ['type' => 'boolean', 'default' => false], 'leave' => ['type' => 'boolean', 'default' => false]], 'required' => ['entryId']],
             'handler' => function (array $in, AbilityContext $ctx) use ($entry) {
                 $presence = $this->app->make(Presence::class);
@@ -84,7 +84,6 @@ final class CollaborationModule extends Plugin
             'description' => 'Comment threads on an entry (open threads first), with replies and mentions.',
             'permission' => $on('comments.view'),
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['entryId' => $id, 'resolved' => ['type' => 'boolean', 'default' => true, 'description' => 'Include resolved threads']], 'required' => ['entryId']],
             'handler' => fn (array $in, AbilityContext $ctx) => $comments()->threads($entry($in['entryId']), $ctx->user, $in['resolved']),
         ]);
@@ -93,7 +92,6 @@ final class CollaborationModule extends Plugin
             'label' => 'Comment',
             'description' => 'Comment on an entry, or reply to a thread with parentId. mentions are user ids (see comments/people); they get an email.',
             'permission' => $on('comments.create'),
-            'package' => $this->manifest->name,
             'input' => [
                 'type' => 'object',
                 'properties' => [
@@ -113,7 +111,6 @@ final class CollaborationModule extends Plugin
             'description' => 'Change the text of your comment.',
             'permission' => $on('comments.create'),
             'annotations' => ['idempotent' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['id' => $id, 'body' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 5000]], 'required' => ['id', 'body']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $comment = $this->own(Comment::query()->findOrFail($in['id']), $ctx->user);
@@ -127,7 +124,6 @@ final class CollaborationModule extends Plugin
             'label' => 'Resolve Thread',
             'description' => 'Mark a thread as resolved (or reopen it with resolved: false).',
             'permission' => $on('comments.create'),
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['id' => $id, 'resolved' => ['type' => 'boolean', 'default' => true]], 'required' => ['id']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $comment = Comment::query()->findOrFail($in['id']);
@@ -143,7 +139,6 @@ final class CollaborationModule extends Plugin
             'description' => 'Delete your comment (moderators can delete any). Deleting a thread’s first comment deletes its replies.',
             'permission' => $on('comments.create'),
             'annotations' => ['destructive' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['id' => $id], 'required' => ['id']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $comment = $this->own(Comment::query()->findOrFail($in['id']), $ctx->user);
@@ -160,7 +155,6 @@ final class CollaborationModule extends Plugin
             'description' => 'Admin users who can see an entry and can be @mentioned on it.',
             'permission' => $on('comments.create'),
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['entryId' => $id], 'required' => ['entryId']],
             'handler' => fn (array $in) => $comments()->people($entry($in['entryId'])),
         ]);
@@ -170,7 +164,6 @@ final class CollaborationModule extends Plugin
             'description' => 'Open threads that mention you or sit on entries you created, newest first.',
             'permission' => 'comments.view',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10]]],
             'handler' => fn (array $in, AbilityContext $ctx) => $this->inbox($ctx->user, $in['limit']),
         ]);

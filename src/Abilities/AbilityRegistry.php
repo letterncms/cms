@@ -30,11 +30,6 @@ final class AbilityRegistry
         return $ability;
     }
 
-    public function unregister(string $name): void
-    {
-        unset($this->abilities[$name]);
-    }
-
     public function has(string $name): bool
     {
         return isset($this->abilities[$name]);

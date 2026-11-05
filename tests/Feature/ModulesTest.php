@@ -27,7 +27,7 @@ final class ModulesTest extends TestCase
 
         $this->assertSame(self::MODULES, array_keys($packages->modules()));
         $this->assertSame([], array_values(array_diff(self::MODULES, array_keys($packages->active()))));
-        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/email', 'letterncms/media', 'letterncms/navigation', 'letterncms/packages', 'letterncms/settings', 'letterncms/workspace'], array_keys(array_filter($packages->modules(), static fn ($m) => $m->required)));
+        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/email', 'letterncms/license', 'letterncms/media', 'letterncms/navigation', 'letterncms/packages', 'letterncms/settings', 'letterncms/workspace'], array_keys(array_filter($packages->modules(), static fn ($m) => $m->required)));
     }
 
     public function test_what_a_module_registers_is_its_own(): void

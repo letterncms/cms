@@ -197,10 +197,11 @@ final class ContentGateTest extends TestCase
         $this->get($teaser->uri.'.md')->assertNotFound();
         $this->get('/plain-page.md')->assertOk();
 
-        // A template reading a helper or a relation sees only the reader's view.
-        $this->assertSame('', (string) cms_entry($locked->id)?->raw('blocks', ''));
-        $this->assertNull(cms_entry($teaser->id)?->raw('secret_note'));
-        $this->assertSame('Public bit', cms_entry($teaser->id)?->raw('excerpt'));
+        // A template reading an entry or a relation sees only the reader's view.
+        $read = fn (string $id) => new \Cms\Modules\Site\Rendering\AugmentedEntry($this->cms()->entries()->find($id));
+        $this->assertSame('', (string) $read($locked->id)->raw('blocks', ''));
+        $this->assertNull($read($teaser->id)->raw('secret_note'));
+        $this->assertSame('Public bit', $read($teaser->id)->raw('excerpt'));
     }
 
     public function test_a_gated_entry_never_becomes_a_file_and_stops_being_one(): void

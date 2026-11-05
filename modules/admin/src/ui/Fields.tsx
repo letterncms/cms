@@ -20,6 +20,9 @@ export interface FieldsProps {
 }
 
 /** Conditional fields: `if: { otherField: value | [values] }`. */
+/** Field types that need a panel's full width: in a row of label and control, their label goes above them. */
+export const wideFieldTypes = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'repeater', 'tags', 'entries', 'group', 'properties', 'fields', 'blocks']
+
 export function visible(field: FieldDef, values: Record<string, any>): boolean {
   const rule = field.if as Record<string, unknown> | undefined
   if (!rule) return true

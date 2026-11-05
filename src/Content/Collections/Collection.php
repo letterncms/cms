@@ -37,14 +37,13 @@ final class Collection
         public readonly ?string $body,
         public readonly ?string $home,
         public readonly bool $revisions,
-        public readonly array $listing,
         public readonly int $perPage,
         public readonly array $extra = [],
         /** The sidebar section it is listed in; pinned there unless it is a system collection. */
         public readonly string $section = 'content',
         public readonly bool $system = false,
         public readonly string $defaultView = 'table',
-        /** Visible overview column IDs; null inherits the standard columns and legacy listing. */
+        /** Visible overview column IDs; null keeps the standard columns. */
         public readonly ?array $defaultColumns = null,
     ) {
         if (! Files::isHandle($handle)) {
@@ -74,7 +73,7 @@ final class Collection
     {
         $structure = (string) ($data['structure'] ?? 'list');
         $template = (string) ($data['template'] ?? '');
-        $known = ['title', 'singular', 'icon', 'description', 'driver', 'structure', 'route', 'template', 'sort', 'fields', 'body', 'home', 'revisions', 'listing', 'per_page', 'section', 'system', 'default_view', 'default_columns'];
+        $known = ['title', 'singular', 'icon', 'description', 'driver', 'structure', 'route', 'template', 'sort', 'fields', 'body', 'home', 'revisions', 'per_page', 'section', 'system', 'default_view', 'default_columns'];
 
         if (isset($data['default_columns']) && (! is_array($data['default_columns']) || ! array_is_list($data['default_columns']))) {
             throw new InvalidArgumentException(__('Default display fields must be a list of column IDs.'));
@@ -95,7 +94,6 @@ final class Collection
             body: isset($data['body']) ? (string) $data['body'] : null,
             home: isset($data['home']) ? (string) $data['home'] : null,
             revisions: (bool) ($data['revisions'] ?? true),
-            listing: array_values((array) ($data['listing'] ?? [])),
             perPage: (int) ($data['per_page'] ?? 10),
             extra: array_diff_key($data, array_flip($known)),
             section: is_string($data['section'] ?? null) && Files::isHandle($data['section']) ? $data['section'] : 'content',
@@ -159,7 +157,6 @@ final class Collection
             'home' => $this->home,
             'body' => $this->body,
             'revisions' => $this->revisions ? null : false,
-            'listing' => $this->listing ?: null,
             'per_page' => $this->perPage !== 10 ? $this->perPage : null,
             'section' => $this->section !== 'content' ? $this->section : null,
             'system' => $this->system ?: null,

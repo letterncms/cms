@@ -27,18 +27,13 @@ use Cms\Users\Roles;
 use RuntimeException;
 
 /**
- * The kernel's public API — the single entry point for plugins and themes.
+ * The kernel's public API — the single entry point for modules and plugins.
  */
 final class Cms
 {
     public const string VERSION = '0.8.0';
 
     public function __construct(private readonly Application $app) {}
-
-    public function version(): string
-    {
-        return self::VERSION;
-    }
 
     /**
      * Run code as a visitor nobody knows: every guard answers "no one", whatever the
@@ -202,6 +197,18 @@ final class Cms
         $site = $this->settings('site');
 
         return $key === null ? $site : data_get($site, $key, $default);
+    }
+
+    /**
+     * The public site's absolute address, with $path after it: the `site` setting `url`, else `app.url`
+     * (which follows it). `url()` is the root without a slash, `url('/')` with one, and `url('/about')`
+     * and `url('about')` the same page.
+     */
+    public function url(string $path = ''): string
+    {
+        $root = rtrim((string) ($this->site('url') ?: config('app.url')), '/');
+
+        return $path === '' ? $root : $root.'/'.ltrim($path, '/');
     }
 
     public function saveSite(array $values): void

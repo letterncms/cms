@@ -10,7 +10,8 @@ use Cms\Users\User;
 
 /**
  * What answers plain language in the workspace's threads. Without one bound (NoAgent),
- * a message is a search, and the workspace never mentions AI. An AI plugin rebinds it.
+ * a message is a search, and the workspace never mentions AI. The Assistant module binds
+ * Claude; a plugin may bind another.
  *
  * The agent never writes the thread's turns: it streams its answer through `$emit`, the
  * same events the workspace sends to the browser (`text` and `thinking` with a `delta`,

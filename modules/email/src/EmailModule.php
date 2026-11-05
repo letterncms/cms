@@ -32,7 +32,7 @@ final class EmailModule extends Plugin
         ]));
         // Someone's erased account takes their row in the log with it.
         $this->cms()->hooks()->on('account.deleting', static fn ($user) => DB::table('email_log')->where('to', $user->email)->delete());
-        $this->cms()->admin()->widget('email-status', ['label' => 'Email', 'description' => __('How email is sent, whether it arrives, and the latest messages.'), 'icon' => 'mail', 'column' => 'side', 'order' => 60, 'permission' => 'settings.manage']);
+        $this->cms()->admin()->widget('email-status', ['label' => 'Email', 'description' => 'How email is sent, whether it arrives, and the latest messages.', 'icon' => 'mail', 'column' => 'side', 'order' => 60, 'permission' => 'settings.manage']);
         $this->adminModule();
     }
 
@@ -51,7 +51,8 @@ final class EmailModule extends Plugin
 
         $fields[] = ['handle' => 'footer', 'type' => 'text', 'label' => 'Email Footer', 'instructions' => 'Shown under every email, like your address.'];
 
-        $this->cms()->settingsRegistry()->register('email', fields: $fields, icon: 'mail', description: __('How :brand sends email.'), package: $this->manifest->name, order: 40, section: 'system');
+        // After boot, so out of the module's scope: it names itself.
+        $this->cms()->settingsRegistry()->register('email', fields: $fields, icon: 'mail', description: 'How :brand sends email.', package: $this->manifest->name, order: 40, section: 'system');
     }
 
     private function abilities(): void
@@ -63,7 +64,6 @@ final class EmailModule extends Plugin
             'description' => 'Send a test message with the current email settings.',
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['to' => ['type' => 'string', 'format' => 'email']], 'required' => ['to']],
             'handler' => function (array $in) {
                 try {
@@ -86,7 +86,6 @@ final class EmailModule extends Plugin
             'description' => 'The transport email is sent with, whether it really delivers (log only does not), sent and failed counts for the last 7 days and the latest emails.',
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20, 'default' => 5]]],
             'handler' => function (array $in) {
                 $key = (string) $this->cms()->settings('email', 'transport', 'log');
@@ -95,7 +94,7 @@ final class EmailModule extends Plugin
 
                 return [
                     'transport' => ['key' => $key, 'label' => $transports->all()[$key]['label'] ?? $key, 'delivers' => $this->app->make(Mailer::class)->configured()],
-                    'from' => (string) ($this->cms()->settings('email', 'from_address') ?: 'no-reply@'.(parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'example.com')),
+                    'from' => (string) ($this->cms()->settings('email', 'from_address') ?: $this->app->make(Mailer::class)->noReply()),
                     'sent' => (int) ($counts['sent'] ?? 0),
                     'failed' => (int) ($counts['failed'] ?? 0),
                     'latest' => DB::table('email_log')->orderByDesc('created_at')->limit($in['limit'])->get(['id', 'to', 'subject', 'tag', 'transport', 'status', 'error', 'created_at'])
@@ -109,7 +108,6 @@ final class EmailModule extends Plugin
             'description' => 'Recently sent and failed emails.',
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 50]]],
             'handler' => fn (array $in) => DB::table('email_log')->orderByDesc('created_at')->limit($in['limit'])->get()->all(),
         ]);

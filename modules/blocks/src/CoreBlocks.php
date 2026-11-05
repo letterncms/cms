@@ -68,7 +68,7 @@ final class CoreBlocks
                 'fields' => [
                     ['handle' => 'width', 'type' => 'select', 'label' => 'Content Width', 'options' => ['prose' => 'Text', 'content' => 'Content', 'wide' => 'Wide', 'full' => 'Full'], 'default' => 'content', 'display' => 'segmented'],
                     ['handle' => 'tag', 'type' => 'select', 'label' => 'HTML Tag', 'options' => ['section' => 'section', 'header' => 'header', 'footer' => 'footer', 'aside' => 'aside', 'main' => 'main', 'nav' => 'nav', 'article' => 'article', 'div' => 'div'], 'default' => 'section', 'advanced' => true],
-                    ['handle' => 'background_image', 'type' => 'media', 'fallback' => 'url', 'label' => 'Background Image', 'max' => 1],
+                    ['handle' => 'background_image', 'type' => 'media', 'label' => 'Background Image', 'max' => 1],
                     ['handle' => 'overlay', 'type' => 'select', 'label' => 'Overlay', 'options' => ['none' => 'None', 'light' => 'Light', 'dark' => 'Dark'], 'default' => 'none'],
                 ],
                 'defaults' => ['width' => 'content'],
@@ -275,7 +275,7 @@ final class CoreBlocks
                 'description' => 'A photo or illustration.', 'keywords' => ['photo', 'picture', 'figure'],
                 'inline' => ['caption'], 'html' => 'figure',
                 'fields' => [
-                    ['handle' => 'image', 'type' => 'media', 'fallback' => 'url', 'label' => 'Image', 'max' => 1, 'accept' => 'image/*'],
+                    ['handle' => 'image', 'type' => 'media', 'label' => 'Image', 'max' => 1, 'accept' => 'image/*'],
                     ['handle' => 'alt', 'type' => 'text', 'label' => 'Alt Text', 'placeholder' => 'Decorative', 'instructions' => 'Describes the image for screen readers and search engines.'],
                     ['handle' => 'caption', 'type' => 'richtext', 'label' => 'Caption', 'inline' => true],
                     $url('link', 'Link'),
@@ -292,7 +292,7 @@ final class CoreBlocks
                 'fields' => [
                     ['handle' => 'url', 'type' => 'url', 'label' => 'Video URL', 'required' => true, 'placeholder' => 'YouTube, Vimeo or a video file'],
                     ['handle' => 'caption', 'type' => 'richtext', 'label' => 'Caption', 'inline' => true],
-                    ['handle' => 'poster', 'type' => 'media', 'fallback' => 'url', 'label' => 'Poster Image', 'max' => 1],
+                    ['handle' => 'poster', 'type' => 'media', 'label' => 'Poster Image', 'max' => 1],
                     ['handle' => 'autoplay', 'type' => 'toggle', 'label' => 'Autoplay Muted'],
                     ['handle' => 'controls', 'type' => 'toggle', 'label' => 'Show Controls', 'default' => true],
                     ['handle' => 'loop', 'type' => 'toggle', 'label' => 'Loop'],
