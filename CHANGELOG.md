@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.9.0 (2026-11-05)
+
 ### Added
 
 - `cms()->url($path)`: the public site's absolute address, from **Public URL** under Settings → **General**, else `APP_URL`. Everything the CMS sends out (emails, the admin, MCP, licence checks, links in comments) uses it, and `config('app.url')` always equals it.
