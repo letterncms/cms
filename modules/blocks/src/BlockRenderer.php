@@ -224,7 +224,13 @@ final class BlockRenderer
     /** @var array<string, true> node ids other nodes point at (they get data-cms / id attributes) */
     private array $referenced = [];
 
+    /** Blocks that are a component of the design vocabulary, and its class. */
+    private const array COMPONENTS = ['button' => 'button', 'card' => 'card', 'divider' => 'divider'];
+
     private ?Anchors $anchors = null;
+
+    /** The theme's durations in ms, for animations. */
+    private ?array $durations = null;
 
     /** @var list<array<string, mixed>> script state of the elements being rendered (the canvas shows initial states) */
     private array $logicData = [];
@@ -359,10 +365,13 @@ final class BlockRenderer
             }
 
             $motion = $this->editor ? null : $this->motion($node);
+            $compiled = $this->styles->compile($style);
+            $extra['attrs'] = [...$compiled['attributes'], ...$extra['attrs']];
 
             $classes = trim(implode(' ', array_filter([
                 'cms-'.str_replace('/', '-', $type->name),
-                $this->styles->classes($style),
+                self::COMPONENTS[$type->name] ?? null,
+                $compiled['class'],
                 $this->sanitizeClass((string) ($node['class'] ?? '')),
                 $extra['class'],
                 implode(' ', $motion['classes'] ?? []),
@@ -404,7 +413,7 @@ final class BlockRenderer
             return null;
         }
 
-        $compiled = Motion::compile((array) $node['motion'], $this->styles->breakpoints());
+        $compiled = Motion::compile((array) $node['motion'], $this->durations ??= (array) $this->hooks->filter('blocks.durations', \Lettern\Design\Spec::DURATIONS));
 
         foreach ($compiled['rules'] as $key => $css) {
             $this->hooks->dispatch('render.style', $key, '@layer utilities{'.$css.'}', 5000);
@@ -590,7 +599,7 @@ final class BlockRenderer
             } elseif (str_starts_with($key, 'style:')) {
                 $property = substr($key, 6);
                 $css = $this->styleValue($property, $value);
-                $css !== null && $extra['style'][] = StyleCompiler::PROPERTIES[StyleCompiler::ALIASES[$property] ?? $property][0].':'.$css;
+                $css !== null && $extra['style'][] = $css;
             } else {
                 $field = $type->blueprint()->field($key);
                 $props[$key] = $this->propValue($field?->type ?? 'text', $value, $raw, in_array($key, $type->inline, true));
@@ -684,10 +693,11 @@ final class BlockRenderer
             $one = is_array($value) ? ($value[0] ?? null) : $value;
             $url = is_object($one) && isset($one->url) ? (string) $one->url : (is_string($one) ? Media::url($one) : null);
 
-            return $url ? 'url("'.str_replace(['"', '\\', "\n"], '', $url).'")' : null;
+            return $url ? ($property === 'maskImage' ? 'mask-image' : 'background-image').':url("'.str_replace(['"', '\\', "\n"], '', $url).'")' : null;
         }
 
-        return $this->styles->value($property, is_scalar($value) ? $value : Scope::text($value));
+        // Data bound to a style holds a name of the vocabulary: a category's color is "accent", not a hex.
+        return $this->styles->declaration($property, is_scalar($value) ? $value : Scope::text($value));
     }
 
     private function attributes(array $node, BlockType $type, string $classes, array $extra, bool $conditional, ?array $compiled): string

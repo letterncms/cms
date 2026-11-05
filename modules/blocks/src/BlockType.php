@@ -14,8 +14,8 @@ use Cms\Content\Fields\Blueprint;
  */
 final class BlockType
 {
-    /** Inspector sections a block offers (see StyleCompiler::PROPERTIES for the properties in each). */
-    public const array STYLE_GROUPS = ['layout', 'position', 'size', 'spacing', 'typography', 'fill', 'border', 'effects', 'transform', 'transition'];
+    /** Inspector sections a block offers (each property's group is in Lettern\Design\Spec::PROPERTIES). */
+    public const array STYLE_GROUPS = ['layout', 'grid', 'position', 'size', 'spacing', 'typography', 'color', 'border', 'effects', 'transform', 'motion'];
 
     private ?Blueprint $blueprint = null;
 

@@ -12,7 +12,8 @@ use RuntimeException;
 
 /**
  * Self-hosted fonts in content/design/fonts: imported from Google Fonts (no
- * requests to Google from the site afterwards) or uploaded as .woff2.
+ * requests to Google from the site afterwards) or uploaded as .woff2, and listed
+ * as the theme's font faces.
  */
 final class Fonts
 {
@@ -100,12 +101,13 @@ final class Fonts
         return $font;
     }
 
-    /** Add font faces to the design system (replacing earlier faces of the family). */
+    /** Add font faces to the theme (replacing earlier faces of the family). Use the family in a font slot to see it. */
     private function remember(string $family, array $faces, bool $replace = true): void
     {
-        $json = $this->design->json();
-        $fonts = $replace ? array_values(array_filter($json->fonts(), static fn ($f) => ($f['family'] ?? null) !== $family)) : $json->fonts();
-        $json->setFonts([...$fonts, ...$faces]);
-        $json->save();
+        $theme = $this->design->theme();
+        $current = $theme['font']['faces'] ?? [];
+        $kept = $replace ? array_values(array_filter($current, static fn ($f) => ($f['family'] ?? null) !== $family)) : $current;
+        $theme['font']['faces'] = [...$kept, ...array_map(static fn ($f) => array_filter($f, static fn ($v) => $v !== false), $faces)];
+        $this->design->save($theme);
     }
 }

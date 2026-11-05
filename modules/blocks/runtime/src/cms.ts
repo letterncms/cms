@@ -124,12 +124,12 @@ export const cms = {
   theme(mode: 'toggle' | 'light' | 'dark' | 'system' = 'toggle') {
     const root = document.documentElement
     const system = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    const current = root.dataset.theme ?? system
+    const current = root.dataset.mode ?? system
     const next = mode === 'toggle' ? (current === 'dark' ? 'light' : 'dark') : mode === 'system' ? system : mode
-    root.dataset.theme = next
+    root.dataset.mode = next
     try {
-      if (mode === 'system' || next === system) localStorage.removeItem('cms-theme')
-      else localStorage.setItem('cms-theme', next)
+      if (mode === 'system' || next === system) localStorage.removeItem('cms-mode')
+      else localStorage.setItem('cms-mode', next)
     } catch {
       // Storage blocked: the choice lasts for this page.
     }

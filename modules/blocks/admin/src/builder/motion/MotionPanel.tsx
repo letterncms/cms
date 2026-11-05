@@ -1,11 +1,11 @@
 import { t, type FieldDef } from '@letterncms/sdk'
 import { Icon, Menu, Tooltip, cn } from '@letterncms/ui'
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { useEditorContext } from '../../core/context'
+import { useDesign, useEditorContext } from '../../core/context'
 import type { BlockNode, MotionDef, MotionStep } from '../../core/types'
 import { bus } from '../bus'
 import { RemoveButton, Section, PanelFields } from '../controls'
-import { eases, groupLabel, presets, propertyLabels, triggers, type Preset } from './presets'
+import { groupLabel, presets, propertyLabels, triggers, type Preset } from './presets'
 
 /** Fields shown only when `on`. */
 const when = (on: unknown, ...fields: FieldDef[]): FieldDef[] => (on ? fields : [])
@@ -33,7 +33,7 @@ export function MotionPanel({ node }: { node: BlockNode }) {
 
   const add = (preset?: Preset) => {
     const id = nextId(list)
-    const motion: MotionDef = preset ? { id, name: preset.name, ...preset.make() } : { id, name: t('Custom'), trigger: { type: 'appear' }, steps: [{ target: 'self', from: { opacity: 0, y: 24 }, duration: 0.8, ease: 'power3.out' }] }
+    const motion: MotionDef = preset ? { id, name: preset.name, ...preset.make() } : { id, name: t('Custom'), trigger: { type: 'appear' }, steps: [{ target: 'self', from: { opacity: '0', y: 'lg' }, duration: 'slow', ease: 'out' }] }
     save([...list, motion])
     setOpen(id)
     requestAnimationFrame(() => bus.emit('preview-motion', { node: node.id, motion }))
@@ -150,7 +150,7 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
     else if (h === 'watch') setTrigger({ node: v ? `#${v}` : undefined })
   }
   const addStep = () => {
-    onChange({ steps: [...motion.steps, { target: 'children', from: { opacity: 0, y: 16 }, duration: 0.5, ease: 'power3.out', stagger: 0.06 }] })
+    onChange({ steps: [...motion.steps, { target: 'children', from: { opacity: '0', y: 'md' }, duration: 'slow', ease: 'out', stagger: 'fastest' }] })
     setActive(motion.steps.length)
   }
 
@@ -182,14 +182,25 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
   )
 }
 
+/** The theme's durations in seconds, and the duration nearest a time: timing snaps to the theme's steps. */
+const DEFAULT_MS: Record<string, number> = { instant: 0, fastest: 75, faster: 120, fast: 180, base: 280, slow: 450, slower: 700, slowest: 1100, glacial: 1800 }
+type Clock = { secs: (name?: string) => number; nearest: (seconds: number) => string }
+function useClock(): Clock {
+  const ms = useDesign().resolved?.durations ?? DEFAULT_MS
+  return {
+    secs: (name) => (name ? (ms[name] ?? DEFAULT_MS[name] ?? 0) / 1000 : 0),
+    nearest: (seconds) => Object.entries(ms).reduce((best, [k, v]) => (Math.abs(v / 1000 - seconds) < Math.abs((ms[best] ?? 0) / 1000 - seconds) ? k : best), 'base'),
+  }
+}
+
 /** Where each step sits in time: one after another, unless it has its own start (`at`). */
-function layout(steps: MotionStep[]) {
+function layout(steps: MotionStep[], clock: Clock) {
   let cursor = 0
   return steps.map((s) => {
     const base = s.at ?? cursor
-    const start = base + (s.delay ?? 0)
-    const duration = s.duration ?? 0.6
-    const spread = (s.stagger ?? 0) * 3
+    const start = base + clock.secs(s.delay)
+    const duration = clock.secs(s.duration ?? 'base')
+    const spread = clock.secs(s.stagger) * 3
     cursor = start + duration + spread
     return { base, start, duration, spread }
   })
@@ -203,7 +214,8 @@ const snap = (n: number) => Math.max(0, Math.round(n * 20) / 20)
  * spread (children, words…) as a lighter tail.
  */
 function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionStep[]; active: number; onSelect: (i: number) => void; onChange: (i: number, patch: Partial<MotionStep>) => void; onAdd: () => void }) {
-  const bars = layout(steps)
+  const clock = useClock()
+  const bars = layout(steps, clock)
   const end = Math.max(0.5, ...bars.map((b) => b.start + b.duration + b.spread))
   const live = useRef<{ total: number; width: number } | null>(null)
   const total = live.current?.total ?? Math.ceil(end * 2 + 0.25) / 2
@@ -220,12 +232,12 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
     live.current = { total, width: track.clientWidth }
     const x0 = e.clientX
     const s = steps[i]
-    const from = edge === 'move' ? (s.at !== undefined ? s.at : s.delay ?? 0) : s.duration ?? 0.6
+    const from = edge === 'move' ? (s.at !== undefined ? s.at : clock.secs(s.delay)) : clock.secs(s.duration ?? 'base')
     const move = (ev: PointerEvent) => {
       const dt = ((ev.clientX - x0) / live.current!.width) * live.current!.total
-      if (edge === 'end') onChange(i, { duration: Math.max(0.05, snap(from + dt)) })
+      if (edge === 'end') onChange(i, { duration: clock.nearest(Math.max(0.05, from + dt)) })
       else if (s.at !== undefined) onChange(i, { at: snap(from + dt) })
-      else onChange(i, { delay: snap(from + dt) || undefined })
+      else onChange(i, { delay: from + dt > 0.03 ? clock.nearest(from + dt) : undefined })
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
@@ -270,10 +282,12 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
                 onKeyDown={(e) => {
                   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
                   e.preventDefault()
-                  const d = e.key === 'ArrowRight' ? 0.05 : -0.05
-                  if (e.shiftKey) onChange(i, { duration: Math.max(0.05, snap((s.duration ?? 0.6) + d)) })
-                  else if (s.at !== undefined) onChange(i, { at: snap(s.at + d) })
-                  else onChange(i, { delay: snap((s.delay ?? 0) + d) || undefined })
+                  const names = Object.keys(DEFAULT_MS)
+                  const stepName = (name: string | undefined, by: number) => names[Math.max(0, Math.min(names.length - 1, names.indexOf(name ?? 'instant') + by))]
+                  const d = e.key === 'ArrowRight' ? 1 : -1
+                  if (e.shiftKey) onChange(i, { duration: stepName(s.duration ?? 'base', d) })
+                  else if (s.at !== undefined) onChange(i, { at: snap(s.at + d * 0.05) })
+                  else onChange(i, { delay: stepName(s.delay, d) === 'instant' ? undefined : stepName(s.delay, d) })
                 }}
                 className={cn('cms-focus-ring group/bar absolute top-1 flex h-4 cursor-grab items-center rounded-[3px] active:cursor-grabbing', i === active ? 'bg-focus' : 'bg-focus/50 hover:bg-focus/70')}
                 style={{ left: pct(b.start), width: `max(6px, ${pct(b.duration)})` }}
@@ -293,8 +307,8 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
   )
 }
 
-/** A time in seconds: a value to type, nudge or scrub. */
-const seconds = (handle: string, title: string, icon: string, extra: Partial<FieldDef> = {}): FieldDef => ({ handle, type: 'text', component: 'blocks-value', label: title, title, prefixIcon: icon, unit: '', step: 0.05, min: 0, ...extra })
+/** A duration of the theme: fastest … glacial. */
+const duration = (handle: string, title: string, icon: string, extra: Partial<FieldDef> = {}): FieldDef => ({ handle, type: 'text', component: 'blocks-token', property: 'transitionDuration', label: title, title, prefixIcon: icon, ...extra })
 
 function StepEditor({ node, step, index, count, onChange, onRemove }: { node: BlockNode; step: MotionStep; index: number; count: number; onChange: (patch: Partial<MotionStep>) => void; onRemove: () => void }) {
   const { catalog } = useEditorContext()
@@ -305,7 +319,13 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
 
   const sideEditor = (side: 'from' | 'to') => {
     const values = step[side] ?? {}
-    const add = (key: string, v: string) => onChange({ [side]: { ...values, [key]: /^-?[\d.]+$/.test(v) ? Number(v) : v } })
+    const add = (key: string, v: string) => onChange({ [side]: { ...values, [key]: v } })
+    const property = (key: string) => catalog.motion?.properties[key]
+    const field = (key: string): FieldDef =>
+      property(key) === 'clip'
+        ? { handle: 'value', type: 'select', size: 'sm', label: t('Reveal'), required: true, options: (catalog.motion?.clips ?? []).map((c: string) => ({ value: c, label: c })) }
+        : { handle: 'value', type: property(key)?.toLowerCase().includes('color') ? 'color' : 'text', component: property(key)?.toLowerCase().includes('color') ? 'blocks-color' : 'blocks-token', property: property(key), label: t('Value') }
+    const start: Record<string, string> = { opacity: '0', scale: '95', clipPath: 'hidden-down', color: 'primary', backgroundColor: 'primary', borderColor: 'primary', borderRadius: 'lg', boxShadow: 'lg', letterSpacing: 'normal', transformOrigin: 'center', perspective: 'normal', blur: 'md', brightness: '110', grayscale: '100' }
     return (
       <div className="space-y-1">
         <div className="flex h-7 items-center justify-between">
@@ -317,7 +337,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
                 <Icon name="b-plus" size={14} />
               </button>
             }
-            items={props.filter((p) => !(p in values)).map((p) => ({ label: labels[p] ?? p, onSelect: () => add(p, catalog.motion.properties[p] === 'css' ? (p === 'clipPath' ? 'inset(0% 0% 0% 0%)' : 'token:color.primary') : p === 'opacity' || p.startsWith('scale') ? '1' : '0') }))}
+            items={props.filter((p) => !(p in values)).map((p) => ({ label: labels[p] ?? p, onSelect: () => add(p, start[p] ?? (p.startsWith('scale') ? '95' : p.startsWith('rotate') ? '6' : p.startsWith('skew') ? '3' : 'md')) }))}
           />
         </div>
         {Object.keys(values).length === 0 && <p className="m-0 text-2xs text-faint">{side === 'from' ? t('As it looks now') : t('As Designed')}</p>}
@@ -331,13 +351,13 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
               className: 'items-start',
               label: side === 'from' ? t('From') : t('To'),
               labels,
-              item: { handle: 'value', type: 'text', component: 'blocks-value', label: t('Value'), unit: '' },
-              items: Object.fromEntries(Object.keys(values).map((key) => [key, { handle: 'value', type: 'text', component: 'blocks-value', label: t('Value'), unit: '', step: key === 'opacity' || key.startsWith('scale') ? 0.05 : 1, group: key.toLowerCase().includes('color') ? 'color' : undefined }])),
+              item: { handle: 'value', type: 'text', component: 'blocks-token', label: t('Value') },
+              items: Object.fromEntries(Object.keys(values).map((key) => [key, field(key)])),
             },
           ]}
           values={{ [side]: values }}
           onChange={(_, next: Record<string, string | number | null>) => {
-            const out = Object.fromEntries(Object.entries(next).filter(([, v]) => v !== null && v !== '').map(([k, v]) => [k, typeof v === 'string' && /^-?[\d.]+$/.test(v) ? Number(v) : (v as string | number)]))
+            const out = Object.fromEntries(Object.entries(next).filter(([, v]) => v !== null && v !== '').map(([k, v]) => [k, String(v)]))
             onChange({ [side]: Object.keys(out).length ? out : undefined })
           }}
         />
@@ -379,19 +399,19 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
             label: t('Timing'),
             columns: 2,
             fields: [
-              seconds('duration', t('Duration in Seconds'), 'b-timer'),
-              seconds('delay', t('Delay in Seconds'), 'b-clock', { placeholder: '0' }),
-              ...when(target !== 'self', seconds('stagger', t('Time between items in seconds'), 'b-dots-three', { step: 0.01, placeholder: '0' })),
-              ...when(count > 1, seconds('at', t('Start in seconds into the timeline'), 'b-flow-arrow', { placeholder: t('After') })),
+              duration('duration', t('Duration'), 'b-timer'),
+              duration('delay', t('Delay'), 'b-clock', { placeholder: t('None') }),
+              ...when(target !== 'self', duration('stagger', t('Time between items'), 'b-dots-three', { placeholder: t('None') })),
+              ...when(count > 1, { handle: 'at', type: 'number', size: 'sm', label: t('Start in seconds into the timeline'), title: t('Start in seconds into the timeline'), prefixIcon: 'b-flow-arrow', min: 0, step: 0.1, placeholder: t('After') }),
             ],
           },
-          { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: eases() },
+          { handle: 'ease', type: 'text', component: 'blocks-token', property: 'transitionTimingFunction', label: t('Easing'), placeholder: 'out' },
         ]}
-        values={{ timing: { duration: String(step.duration ?? 0.6), delay: step.delay !== undefined ? String(step.delay) : undefined, stagger: step.stagger !== undefined ? String(step.stagger) : undefined, at: step.at !== undefined ? String(step.at) : undefined }, ease: step.ease }}
+        values={{ timing: { duration: step.duration ?? 'base', delay: step.delay, stagger: step.stagger, at: step.at }, ease: step.ease }}
         onChange={(h, v) =>
           h === 'ease'
             ? onChange({ ease: v ?? undefined })
-            : onChange({ duration: Number(v.duration ?? 0.6), delay: v.delay ? Number(v.delay) : undefined, stagger: v.stagger ? Number(v.stagger) : undefined, at: v.at ? Number(v.at) : undefined })
+            : onChange({ duration: v.duration ?? 'base', delay: v.delay ?? undefined, stagger: v.stagger ?? undefined, at: v.at !== undefined && v.at !== null && v.at !== '' ? Number(v.at) : undefined })
         }
       />
     </div>

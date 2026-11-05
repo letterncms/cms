@@ -1,0 +1,11 @@
+{
+  "$schema": "https://design.lettern.org/v1/theme.schema.json",
+  "name": "Starter",
+  "color": { "primary": "#1d4ed8", "accent": "#ff5a1f", "light": { "background": "white" } },
+  "font": {
+    "sans": "Inter",
+    "faces": [{ "family": "Inter", "src": "fonts/InterVariable.woff2", "weight": "100 900", "preload": true }]
+  },
+  "type": { "weight": "semibold" },
+  "motion": { "page": "fade" }
+}

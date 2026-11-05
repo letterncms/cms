@@ -36,10 +36,11 @@ final class MediaReferences
             $this->walk($data, ['kind' => 'global', 'id' => (string) $handle, 'title' => (string) $handle], '', $found);
         }
 
-        $tokens = content_path('design/tokens.json');
+        // The theme's element styles can hold images (backgroundImage: media:<id>).
+        $theme = content_path('design/theme.json');
 
-        if (is_file($tokens)) {
-            $this->walk((array) json_decode((string) file_get_contents($tokens), true), ['kind' => 'design', 'id' => 'tokens', 'title' => 'Design tokens'], '', $found, styles: true);
+        if (is_file($theme)) {
+            $this->walk((array) json_decode((string) file_get_contents($theme), true), ['kind' => 'design', 'id' => 'theme', 'title' => 'Theme'], '', $found, styles: true);
         }
 
         return $found;

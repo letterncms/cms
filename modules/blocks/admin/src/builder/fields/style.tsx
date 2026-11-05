@@ -1,64 +1,68 @@
 import { t, type FieldProps } from '@letterncms/sdk'
 import { Icon, cn } from '@letterncms/ui'
-import { useColorPreview } from '../color'
+import { useDesign } from '../../core/context'
+import { colorCss } from '../vocab'
 import { RemoveButton, PanelFields } from '../controls'
 import { splitList, splitValue } from '../css'
-import { Control, SubField } from './controls'
+import { Control } from './controls'
 
-/* Field components for CSS values that need more than one control: gradients and the
-   flex alignment matrix. Shadows, spacing, filters and clip paths have files of their own. */
+/* Field components for values that need more than one control: gradients of the palette's
+   colors, the alignment matrix and the origin grid. Every value is a name of the vocabulary. */
 
 interface Stop {
   color: string
   at: string
 }
 
-type Gradient = { kind: 'linear' | 'radial'; angle: string; stops: Stop[] }
+type Gradient = { kind: 'linear' | 'radial'; head: string; stops: Stop[] }
 
+const DIRECTIONS = ['to-t', 'to-tr', 'to-r', 'to-br', 'to-b', 'to-bl', 'to-l', 'to-tl']
+const ARROWS: Record<string, string> = { 'to-t': '↑', 'to-tr': '↗', 'to-r': '→', 'to-br': '↘', 'to-b': '↓', 'to-bl': '↙', 'to-l': '←', 'to-tl': '↖' }
+const AT = ['center', 'top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
+const PERCENTS = ['', '0', '10', '20', '25', '30', '40', '50', '60', '70', '75', '80', '90', '100']
+
+/** A gradient of the vocabulary: linear(to-br, primary, accent/50 60%) or radial(circle top, …). */
 export function parseGradient(value: string | undefined | null): Gradient | null {
-  const m = value?.match(/^(linear|radial)-gradient\((.*)\)$/)
+  const m = value?.match(/^(linear|radial)\((.*)\)$/)
   if (!m) return null
   const parts = splitList(m[2])
-  let angle = m[1] === 'linear' ? '180deg' : 'circle'
-  if (parts[0] && (/deg$|^to /.test(parts[0]) || /^(circle|ellipse)/.test(parts[0]))) angle = parts.shift()!
+  const kind = m[1] as Gradient['kind']
+  let head = kind === 'linear' ? 'to-b' : 'circle'
+  if (parts[0] && (DIRECTIONS.includes(parts[0]) || /^\d+$/.test(parts[0]) || /^(circle|ellipse)/.test(parts[0]))) head = parts.shift()!
   const stops = parts.map((p) => {
     const bits = splitValue(p)
-    return { color: bits[0], at: bits[1] ?? '' }
+    return { color: bits[0], at: (bits[1] ?? '').replace('%', '') }
   })
-  return { kind: m[1] as 'linear' | 'radial', angle, stops }
+  return { kind, head, stops }
 }
 
 export function formatGradient(g: Gradient): string {
-  return `${g.kind}-gradient(${[g.angle, ...g.stops.map((s) => `${s.color}${s.at ? ` ${s.at}` : ''}`)].join(', ')})`
+  return `${g.kind}(${[g.head, ...g.stops.map((s) => `${s.color}${s.at ? ` ${s.at}%` : ''}`)].join(', ')})`
 }
 
-/** `blocks-gradient` — a linear or radial gradient: preview, shape, angle and color stops. */
+/** `blocks-gradient` — a linear or radial gradient of the palette's colors: direction, then color stops. */
 export function GradientField({ value, onChange, context }: FieldProps<string | null>) {
-  const preview = useColorPreview()
+  const design = useDesign()
   const gradient = parseGradient(value)
   if (!gradient) return null
   const set = (g: Gradient) => onChange(formatGradient(g))
+  const preview = `linear-gradient(90deg, ${gradient.stops.map((s) => `${colorCss(s.color, design.resolved)}${s.at ? ` ${s.at}%` : ''}`).join(', ')})`
+  const [shape, at] = gradient.head.split(' ')
 
   return (
     <div className="min-w-0 flex-1 space-y-1 rounded-md bg-active/60 p-1.5">
-      <div className="h-6 rounded-sm shadow-[inset_0_0_0_1px_rgb(0_0_0/0.1)]" style={{ background: preview(formatGradient({ ...gradient, kind: 'linear', angle: '90deg' })) }} />
+      <div className="h-6 rounded-sm shadow-[inset_0_0_0_1px_rgb(0_0_0/0.1)]" style={{ background: preview }} />
       <PanelFields
         bare
         context={context}
         fields={[
-          {
-            handle: 'shape',
-            type: 'group',
-            component: 'blocks-group',
-            label: t('Shape'),
-            fields: [
-              { handle: 'kind', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Kind'), required: true, options: [{ value: 'linear', label: t('Linear') }, { value: 'radial', label: t('Radial') }] },
-              { handle: 'angle', type: 'text', component: 'blocks-value', label: t('Angle'), unit: 'deg', prefix: '∠', className: '!flex-none w-20', if: { kind: 'linear' } },
-            ],
-          },
+          { handle: 'kind', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Kind'), required: true, options: [{ value: 'linear', label: t('Linear') }, { value: 'radial', label: t('Radial') }] },
+          gradient.kind === 'linear'
+            ? { handle: 'head', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Direction'), required: true, options: DIRECTIONS.map((d) => ({ value: d, label: ARROWS[d], title: d })) }
+            : { handle: 'head', type: 'select', size: 'sm', label: t('From'), required: true, options: AT.map((p) => ({ value: p === 'center' ? 'circle' : `circle ${p}`, label: p })) },
         ]}
-        values={{ shape: { kind: gradient.kind, angle: gradient.angle } }}
-        onChange={(_, v) => set(v.kind !== gradient.kind ? { ...gradient, kind: v.kind, angle: v.kind === 'radial' ? 'circle' : '180deg' } : { ...gradient, angle: v.angle ?? '180deg' })}
+        values={{ kind: gradient.kind, head: gradient.kind === 'radial' ? (at ? `${shape} ${at}` : 'circle') : gradient.head }}
+        onChange={(h, v) => set(h === 'kind' ? { ...gradient, kind: v, head: v === 'radial' ? 'circle' : 'to-b' } : { ...gradient, head: v })}
       />
       {gradient.stops.map((stop, i) => (
         <div key={i} className="flex items-center gap-1">
@@ -74,7 +78,7 @@ export function GradientField({ value, onChange, context }: FieldProps<string | 
                 label: t('Stop'),
                 fields: [
                   { handle: 'color', type: 'color', component: 'blocks-color', label: t('Color') },
-                  { handle: 'at', type: 'text', component: 'blocks-value', label: t('Position'), unit: '%', placeholder: 'auto', className: '!flex-none w-14' },
+                  { handle: 'at', type: 'select', size: 'sm', label: t('Position'), options: PERCENTS.map((p) => ({ value: p, label: p ? `${p}%` : t('Auto') })), className: '!flex-none w-16' },
                 ],
               },
             ]}
@@ -84,21 +88,21 @@ export function GradientField({ value, onChange, context }: FieldProps<string | 
           {gradient.stops.length > 2 && <RemoveButton onClick={() => set({ ...gradient, stops: gradient.stops.filter((_, j) => j !== i) })} />}
         </div>
       ))}
-      <button type="button" onClick={() => set({ ...gradient, stops: [...gradient.stops, { color: 'token:color.foreground', at: '' }] })} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
+      <button type="button" onClick={() => set({ ...gradient, stops: [...gradient.stops, { color: 'foreground', at: '' }] })} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
         <Icon name="b-plus" size={14} /> {t('Add Stop')}
       </button>
     </div>
   )
 }
 
-const MAIN = ['flex-start', 'center', 'flex-end']
+const MAIN = ['start', 'center', 'end']
 const DISTRIBUTE = () => [
-  { value: 'flex-start', label: t('Start') },
+  { value: 'start', label: t('Start') },
   { value: 'center', label: t('Center') },
-  { value: 'flex-end', label: t('End') },
-  { value: 'space-between', label: t('Space Between') },
-  { value: 'space-around', label: t('Space Around') },
-  { value: 'space-evenly', label: t('Space Evenly') },
+  { value: 'end', label: t('End') },
+  { value: 'between', label: t('Space Between') },
+  { value: 'around', label: t('Space Around') },
+  { value: 'evenly', label: t('Space Evenly') },
 ]
 
 /**
@@ -117,9 +121,9 @@ export function AlignField({ field, value, onChange, context }: FieldProps<{ jus
           [0, 1, 2].map((x) => {
             const main = MAIN[row ? x : y]
             const cross = MAIN[row ? y : x]
-            const on = (justify ?? 'flex-start') === main && (align ?? 'stretch').replace('stretch', 'flex-start') === cross
+            const on = (justify ?? 'start') === main && (align ?? 'stretch').replace('stretch', 'start') === cross
             return (
-              <button key={`${x}${y}`} type="button" onClick={() => onChange({ justifyContent: main, alignItems: cross })} className="grid place-items-center rounded-[2px] hover:bg-hover" title={`${main.replace('flex-', '')} · ${cross.replace('flex-', '')}`}>
+              <button key={`${x}${y}`} type="button" onClick={() => onChange({ justifyContent: main, alignItems: cross })} className="grid place-items-center rounded-[2px] hover:bg-hover" title={`${main} · ${cross}`}>
                 <span className={cn('rounded-full', on ? 'size-2 bg-ink' : 'size-1 bg-faint')} />
               </button>
             )
@@ -140,9 +144,9 @@ export function AlignField({ field, value, onChange, context }: FieldProps<{ jus
             size: 'sm',
             label: t('Align'),
             options: [
-              { value: 'flex-start', icon: row ? 'b-align-top' : 'b-align-left', title: t('Start') },
+              { value: 'start', icon: row ? 'b-align-top' : 'b-align-left', title: t('Start') },
               { value: 'center', icon: row ? 'b-align-center-vertical' : 'b-align-center-horizontal', title: t('Center') },
-              { value: 'flex-end', icon: row ? 'b-align-bottom' : 'b-align-right', title: t('End') },
+              { value: 'end', icon: row ? 'b-align-bottom' : 'b-align-right', title: t('End') },
               { value: 'stretch', icon: row ? 'b-arrows-out-line-vertical' : 'b-arrows-out-line-horizontal', title: t('Stretch') },
               { value: 'baseline', icon: 'b-text-t', title: t('Baseline') },
             ],
@@ -176,7 +180,7 @@ function spotKey(value: string | null | undefined): string {
  * `blocks-origin` — a position (transform-origin, background-position, object-position):
  * a 3×3 grid of spots, or any value typed beside it ("30% 70%").
  */
-export function OriginField({ field, value, onChange, context, disabled }: FieldProps<string | null>) {
+export function OriginField({ field, value, onChange, disabled }: FieldProps<string | null>) {
   const current = spotKey(value)
   return (
     <Control>
@@ -190,7 +194,7 @@ export function OriginField({ field, value, onChange, context, disabled }: Field
           )
         })}
       </div>
-      <SubField field={{ handle: `${field.handle}-value`, type: 'text', component: 'blocks-value', label: field.label, unit: '', placeholder: t('Center') }} value={value ?? null} onChange={(v) => onChange((v as string | null) || null)} context={context} disabled={disabled} />
+      <span className="min-w-0 truncate text-xs text-muted">{value ?? t('Center')}</span>
     </Control>
   )
 }

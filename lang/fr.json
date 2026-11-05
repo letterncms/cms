@@ -13,7 +13,7 @@
   "{count} entry": "{count} entrée",
   "/blog/{slug}": "/blog/{slug}",
   "A calendar date, optionally with a time.": "Une date, avec l’heure en option.",
-  "A color: a design token, hex value or CSS color function.": "Une couleur : un jeton de design, une valeur hexadécimale ou une fonction de couleur CSS.",
+  "A color from the design system.": "Une couleur du système de design.",
   "A file in the package does not parse: :name, line :line": "Un fichier du paquet contient une erreur : :name, ligne :line",
   "A fixed set of nested fields stored together.": "Un ensemble fixe de champs imbriqués enregistrés ensemble.",
   "A list of items that share the same nested fields.": "Une liste d’éléments qui partagent les mêmes champs imbriqués.",
