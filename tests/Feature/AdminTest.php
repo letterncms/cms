@@ -185,7 +185,7 @@ final class AdminTest extends TestCase
         $this->assertSame('pages', array_column($this->app->make(Manifest::class)->build($this->admin())['collections'], 'within', 'handle')['shop-pages']);
 
         $groups = array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id');
-        $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'status' => 'standard']], $groups['shop']['pages']);
+        $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'status' => 'standard', 'group' => 'shop', 'collection' => 'shop-pages', 'customisable' => true]], $groups['shop']['pages']);
 
         $made = $this->cms()->abilities()->execute('pages/customise', ['group' => 'shop', 'handle' => 'basket'], $ctx);
         $entry = $this->cms()->entries()->find($made['id']);

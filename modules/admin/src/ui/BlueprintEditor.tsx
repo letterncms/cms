@@ -92,7 +92,8 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     try {
       await run(...kind.save(def))
       setDirty(false)
-      invalidate('collections/', 'globals/', 'entries/', 'users/')
+      // The places drawn from a blueprint (a collection's columns) change with it.
+      invalidate('collections/', 'globals/', 'entries/', 'users/', 'views/')
       await loadManifest()
     } catch (e) {
       setSaveError(e instanceof Error && e.constructor !== TypeError ? e.message : t('Couldn’t save. Check your connection.'))
@@ -112,7 +113,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       if (!(await confirm({ title: t('Delete “{title}”?', { title: def?.title }), description: request[2], confirm: request[3] ?? t('Delete'), danger: true }))) return
       await run(request[0], request[1])
       setDirty(false)
-      invalidate('collections/', 'globals/', 'entries/', 'content/')
+      invalidate('collections/', 'globals/', 'entries/', 'content/', 'views/')
       try { await loadManifest() } catch (e) { toast.error(e) }
       navigate(kind.back.to)
     } catch (e) {

@@ -1,9 +1,13 @@
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Link, t } from '@letterncms/sdk'
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
 import { Skeleton } from './Spinner'
 import { Checkbox } from './Switch'
+import { toast } from './toast'
 
 /** A grid template's tracks, split where it has spaces outside parentheses. */
 function tracksOf(template: string): string[] {
@@ -75,6 +79,8 @@ function markColumns(table: HTMLElement, hidden: Set<number>) {
     for (const child of row.children) {
       const cells = child.getAttribute('role') === 'none' ? [...child.children] : [child]
       for (const cell of cells) {
+        // A row's checkbox lies in the gutter, outside the tracks.
+        if (cell.hasAttribute('data-row-check')) continue
         if (hidden.has(column++)) cell.setAttribute('data-column-hidden', '')
         else cell.removeAttribute('data-column-hidden')
       }
@@ -183,6 +189,10 @@ export interface DataColumn<T> {
   /** Server sort field, handled by onSort. */
   sort?: string
   descFirst?: boolean
+  /** On a card: `text` is a few lines under the title (an excerpt), not a labeled value. */
+  card?: 'text'
+  /** Hidden in the table at first, but shown on cards (a picture, an excerpt). */
+  cardByDefault?: boolean
 }
 
 export interface DataSelection<T = unknown> {
@@ -190,9 +200,33 @@ export interface DataSelection<T = unknown> {
   onSelect: (ids: string[], on: boolean, records?: T[]) => void
 }
 
+/** Records that hold others (pages under pages): drawn nested, opened and closed, and put in order among their siblings by dragging. */
+export interface DataTree<T> {
+  children: (item: T) => T[]
+  /** Siblings in their new order under their parent (`null`: the top level). Without it, nothing can be dragged. */
+  reorder?: (siblings: T[], parent: T | null) => Promise<void>
+}
+
+/** A row's checkbox: in the sheet's gutter, left of the row, on a wide screen, so titles line up with the search above; before the title on a phone. */
+export const GUTTER = 'relative z-10 flex items-center max-sm:w-4 max-sm:shrink-0 sm:absolute sm:right-full sm:top-1/2 sm:-translate-y-1/2 md:mr-1 [&_label]:gap-0'
+
+/** Every record of a tree, each before the ones it holds. */
+export function flattenTree<T>(items: T[], children?: (item: T) => T[]): T[] {
+  return children ? items.flatMap((item) => [item, ...flattenTree(children(item) ?? [], children)]) : items
+}
+
+/**
+ * One table's tracks: the title and the columns, then the row's actions (with room for a drag
+ * handle in a tree that can be reordered). A tree with anything nested has a track of no width
+ * before the title, whose gap holds the toggles. Two tables built alike line up exactly.
+ */
+export function tableTemplate<T>(columns: DataColumn<T>[], { actions, nested, reorder }: { actions?: boolean; nested?: boolean; reorder?: boolean } = {}): string {
+  return [...(nested ? ['0px'] : []), ...columns.map((c, i) => c.width ?? (i === 0 ? 'minmax(240px,2fr)' : 'minmax(160px,1fr)')), ...(reorder ? ['76px'] : actions ? ['52px'] : [])].join(' ')
+}
 
 interface DataTableProps<T> {
   label: string
+  /** The rows; in a tree, its top level. */
   items: T[]
   columns: DataColumn<T>[]
   rowKey: (item: T) => string
@@ -202,6 +236,11 @@ interface DataTableProps<T> {
   selected?: (item: T) => boolean | undefined
   selection?: DataSelection<T>
   actions?: (item: T) => ReactNode
+  tree?: DataTree<T>
+  /** The row's actions always in view, not only on hover: what these rows are there to offer. */
+  actionsInView?: boolean
+  /** Another table's tracks, to line up under it (with its room for toggles). */
+  align?: { template: string; nested: boolean }
   loading?: boolean
   stale?: boolean
   state?: ReactNode
@@ -211,38 +250,115 @@ interface DataTableProps<T> {
   cursor?: string | null
 }
 
-/** A controlled table: collection entries and DataView use the exact same rendering. */
-export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClick, selected, selection, actions, loading, stale, state, sort, sortable, onSort, cursor }: DataTableProps<T>) {
-  const rowIds = items.map(rowKey)
+const INDENT = 20
+const LINK = 'min-w-0 flex-1 truncate text-left text-inherit no-underline outline-none after:absolute after:inset-0 after:content-[\'\'] focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus'
+
+/** The admin's one table: every list, flat or a tree, is drawn by it, so they look and work alike. */
+export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClick, selected, selection, actions, tree, actionsInView, align, loading, stale, state, sort, sortable, onSort, cursor }: DataTableProps<T>) {
+  const all = flattenTree(items, tree?.children)
+  const rowIds = all.map(rowKey)
   const chosen = rowIds.filter((key) => selection?.ids.has(key)).length
-  // Content must never decide a row's tracks: identical fractional/fixed tracks
-  // keep headers, short rows, long rows and skeletons aligned.
-  const template = [...(selection ? ['16px'] : []), ...columns.map((c, i) => c.width ?? (i === 0 ? 'minmax(240px,2fr)' : 'minmax(160px,1fr)')), ...(actions ? ['52px'] : [])].join(' ')
-  const count = columns.length + (actions ? 1 : 0) + (selection ? 1 : 0)
-  const linkClass = 'min-w-0 flex-1 truncate text-left text-inherit no-underline after:absolute after:inset-0 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus'
+  // Room for the toggles only when something in the tree holds something.
+  const nested = align?.nested ?? (!!tree && items.some((item) => tree.children(item)?.length > 0))
+  // Content must never decide a row's tracks: identical tracks keep headers, rows and skeletons aligned.
+  const template = align?.template ?? tableTemplate(columns, { actions: !!actions, nested, reorder: !!tree?.reorder })
+  const hasActions = !!actions || !!tree?.reorder || !!align
+  const count = columns.length + (hasActions ? 1 : 0)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   // An empty or failed list is its message alone, without headers above it.
   if (!loading && state) return <div>{state}</div>
-  return <TableFrame template={template} label={label} busy={loading || stale}>
-    <TableRow header>
-      {selection && <div role="columnheader"><Checkbox checked={rowIds.length > 0 && chosen === rowIds.length} indeterminate={chosen > 0 && chosen < rowIds.length} disabled={loading || items.length === 0} label={<span className="sr-only">{t('Select All')}</span>} onChange={(on) => selection.onSelect(rowIds, on, items)} /></div>}
-      {columns.map((c) => <TableHeader key={c.id} label={c.label} align={c.align} direction={sort?.replace(/^-/, '') === (c.sort ?? c.id) ? sort.startsWith('-') ? 'descending' : 'ascending' : undefined} onSort={onSort && (sortable ? sortable.has(c.id) : c.sort) ? () => onSort(c) : undefined} />)}
-      {actions && <TableHeader label={t('Actions')} hiddenLabel />}
+
+  const row = (item: T, depth = 0, extra?: { expander?: ReactNode; handle?: ReactNode }) => {
+    const [first, ...rest] = columns
+    const key = rowKey(item)
+    const href = rowHref?.(item)
+    return <TableRow key={key} recordId={key} selected={selected?.(item) || selection?.ids.has(key)} active={cursor === key}>
+      {selection && <div role="cell" data-row-check="" className={GUTTER}><Checkbox checked={selection.ids.has(key)} disabled={loading} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([key], on, all)} /></div>}
+      {nested && <span role="none" className="max-sm:hidden" />}
+      <div role="cell" className="flex min-w-0 items-center py-2 font-medium text-ink max-sm:flex-1 max-sm:py-0" style={depth ? { paddingLeft: depth * INDENT } : undefined}>
+        {extra?.expander}
+        {href ? <Link to={href} className={LINK}>{first.render(item)}</Link> : onRowClick ? <button type="button" onClick={() => onRowClick(item)} className={LINK}>{first.render(item)}</button> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
+      </div>
+      <TableMeta>{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
+        <div className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
+      </div>)}</TableMeta>
+      {hasActions && <div role="cell" data-table-actions className={actionsInView ? 'relative z-10 flex min-w-0 items-center justify-end gap-0.5 [&>*]:shrink-0' : rowActionsClass}>{extra?.handle}{actions?.(item)}</div>}
     </TableRow>
-    {loading ? <TableSkeleton columns={count} /> : <div role="rowgroup" className={cn(stale && 'opacity-60')}>
-      {items.map((item) => {
-        const [first, ...rest] = columns
-        const cell = (c: DataColumn<T>) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
-          <div className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
-        </div>
-        return <TableRow key={rowKey(item)} recordId={rowKey(item)} selected={selected?.(item) || selection?.ids.has(rowKey(item))} active={cursor === rowKey(item)}>
-          {selection && <div role="cell" data-row-check="" className="relative z-10 flex items-center max-sm:w-4 max-sm:shrink-0"><Checkbox checked={selection.ids.has(rowKey(item))} disabled={loading} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([rowKey(item)], on, items)} /></div>}
-          <div role="cell" className="flex min-w-0 items-center py-2 font-medium text-ink max-sm:flex-1 max-sm:py-0">
-            {rowHref?.(item) ? <Link to={rowHref(item)!} className={linkClass}>{first.render(item)}</Link> : onRowClick ? <button type="button" onClick={() => onRowClick(item)} className={linkClass}>{first.render(item)}</button> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
-          </div>
-          <TableMeta>{rest.map(cell)}</TableMeta>
-          {actions && <div role="cell" data-table-actions className={rowActionsClass}>{actions(item)}</div>}
-        </TableRow>
-      })}
+  }
+
+  return <TableFrame template={template} label={label} busy={loading || stale}>
+    <TableRow header className="relative">
+      {selection && <div role="columnheader" data-row-check="" className={GUTTER}><Checkbox checked={rowIds.length > 0 && chosen === rowIds.length} indeterminate={chosen > 0 && chosen < rowIds.length} disabled={loading || all.length === 0} label={<span className="sr-only">{t('Select All')}</span>} onChange={(on) => selection.onSelect(rowIds, on, all)} /></div>}
+      {nested && <span role="none" />}
+      {columns.map((c) => <TableHeader key={c.id} label={c.label} align={c.align} direction={sort?.replace(/^-/, '') === (c.sort ?? c.id) ? sort.startsWith('-') ? 'descending' : 'ascending' : undefined} onSort={onSort && (sortable ? sortable.has(c.id) : c.sort) ? () => onSort(c) : undefined} />)}
+      {hasActions && <TableHeader label={t('Actions')} hiddenLabel />}
+    </TableRow>
+    {loading ? <TableSkeleton columns={count} /> : <div role="rowgroup" className={cn('transition-opacity duration-180', stale && 'opacity-60')}>
+      {tree ? <TreeLevel nodes={items} parent={null} depth={0} tree={tree} rowKey={rowKey} row={row} collapsed={collapsed} setCollapsed={setCollapsed} /> : items.map((item) => row(item))}
     </div>}
   </TableFrame>
+}
+
+interface LevelProps<T> {
+  nodes: T[]
+  parent: T | null
+  depth: number
+  tree: DataTree<T>
+  rowKey: (item: T) => string
+  row: (item: T, depth: number, extra: { expander?: ReactNode; handle?: ReactNode }) => ReactNode
+  collapsed: Record<string, boolean>
+  setCollapsed: (change: (current: Record<string, boolean>) => Record<string, boolean>) => void
+}
+
+/** One level of a tree: siblings reorder by dragging; those that hold others open and close. */
+function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setCollapsed }: LevelProps<T>) {
+  const [order, setOrder] = useState<T[] | null>(null)
+  const list = order ?? nodes
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const ids = list.map(rowKey)
+
+  const onDragEnd = async (e: DragEndEvent) => {
+    if (!tree.reorder || !e.over || e.active.id === e.over.id) return
+    const next = arrayMove(list, ids.indexOf(String(e.active.id)), ids.indexOf(String(e.over.id)))
+    setOrder(next)
+    try {
+      await tree.reorder(next, parent)
+    } catch (error) {
+      toast.error(error)
+    } finally {
+      setOrder(null)
+    }
+  }
+
+  return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void onDragEnd(e)}>
+    <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+      {list.map((node) => {
+        const key = rowKey(node)
+        const children = tree.children(node) ?? []
+        const open = !collapsed[key]
+        // Sits in the room left of the title, so titles line up whatever they hold.
+        const expander = children.length > 0 && <button type="button" onClick={() => setCollapsed((c) => ({ ...c, [key]: open }))} aria-expanded={open} aria-label={open ? t('Collapse') : t('Expand')}
+          className="relative z-10 -ml-5 mr-0 grid size-5 shrink-0 -translate-x-0.5 place-items-center rounded-xs text-faint transition-colors duration-120 hover:bg-hover hover:text-text">
+          <Icon name="chevron-right" size={12} className={cn('transition-transform duration-120', open && 'rotate-90')} />
+        </button>
+        return <SortableRow key={key} id={key} disabled={!tree.reorder}>
+          {(handle) => <>
+            {row(node, depth, { expander, handle })}
+            {children.length > 0 && open && <TreeLevel nodes={children} parent={node} depth={depth + 1} tree={tree} rowKey={rowKey} row={row} collapsed={collapsed} setCollapsed={setCollapsed} />}
+          </>}
+        </SortableRow>
+      })}
+    </SortableContext>
+  </DndContext>
+}
+
+function SortableRow({ id, disabled, children }: { id: string; disabled?: boolean; children: (handle: ReactNode) => ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled })
+  const handle = <button type="button" {...attributes} {...listeners} aria-label={t('Drag to Reorder')}
+    className="grid size-6 cursor-grab place-items-center rounded-xs text-faint transition-colors duration-120 hover:bg-hover hover:text-text active:cursor-grabbing max-sm:hidden">
+    <Icon name="drag" size={14} />
+  </button>
+  return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-20 bg-bg shadow-pop')}>
+    {children(disabled ? null : handle)}
+  </div>
 }

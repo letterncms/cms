@@ -34,9 +34,14 @@ final class Catalog
             'key' => $id, 'label' => $s, 'format' => ['type' => 'string', 'enum' => self::FORMATS],
             'width' => $id, 'align' => ['type' => 'string', 'enum' => ['start', 'end']], 'hidden' => ['type' => 'boolean'],
             'tones' => ['type' => 'object', 'additionalProperties' => $tone], 'labels' => ['type' => 'object', 'additionalProperties' => $s],
-            'muted' => $id, 'sort' => ['type' => 'boolean'], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
+            // `sort`: true sorts among what is loaded; a name is what the list's ability sorts by (its `sort.param`).
+            'muted' => $id, 'sort' => ['type' => ['boolean', 'string'], 'maxLength' => 120], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
             // A row's own icon, what an empty value reads as, a row's problem in words (drawn as a warning), and a switch's per-row label and lock.
             'icon' => $id, 'empty' => $s, 'warning' => $id, 'ariaLabel' => $s, 'disabled' => $id,
+            // As wide as its longest value (an address); a few lines on a card instead of a labeled value; on cards from the start; the field a `field` value belongs to; every language there is, for `languages`.
+            'fit' => ['type' => 'boolean'], 'excerpt' => ['type' => 'boolean'], 'card' => ['type' => 'boolean'],
+            'field' => ['type' => 'object', 'required' => ['type'], 'properties' => ['type' => $id, 'options' => []]],
+            'locales' => ['type' => 'array', 'maxItems' => 40, 'items' => $id],
         ], ['key', 'label']);
         $item = $this->object(['label' => $s, 'key' => $id, 'value' => [], 'format' => ['type' => 'string', 'enum' => self::FORMATS], 'tones' => ['type' => 'object', 'additionalProperties' => $tone], 'labels' => ['type' => 'object', 'additionalProperties' => $s], 'currency' => $id], ['label']);
 
@@ -93,13 +98,29 @@ final class Catalog
                 'search' => ['anyOf' => [$this->object(['param' => $id, 'placeholder' => $s]), ['type' => 'boolean', 'const' => false]]],
                 'filters' => ['type' => 'array', 'maxItems' => 4, 'items' => $this->object([
                     'param' => $id, 'label' => $s, 'all' => $s,
-                    'options' => ['type' => 'array', 'items' => $this->object(['value' => ['type' => ['string', 'number', 'boolean']], 'label' => $s], ['value', 'label'])],
+                    'options' => ['type' => 'array', 'items' => $this->object(['value' => ['type' => ['string', 'number', 'boolean']], 'label' => $s, 'title' => $s], ['value', 'label'])],
                     'at' => $id, 'value' => $id, 'text' => $id,
+                    // Every choice in view, one always on; `default` stands for none.
+                    'display' => ['type' => 'string', 'enum' => ['segmented']], 'default' => $id,
                 ], ['param', 'label'])],
                 'paged' => $this->object(['perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100]]),
-                'open' => $action, 'actions' => ['type' => 'array', 'maxItems' => 4, 'items' => $action],
+                // Sorted by the ability: the input that takes a column's `sort` name (`-` first for descending), and its order while none is chosen.
+                'sort' => $this->object(['param' => $id, 'default' => $id], ['param']),
+                // A tree while nothing narrows or sorts the list: where it loads, and what puts siblings in order (`{ids}`, `{parent}`, `{versions}`).
+                'tree' => $this->object(['source' => $source, 'at' => $id, 'children' => $id, 'version' => $id, 'reorder' => $action], ['source']),
+                'open' => $action, 'actions' => ['type' => 'array', 'maxItems' => 8, 'items' => $action],
                 'bulk' => ['type' => 'array', 'maxItems' => 4, 'items' => $action],
-                'empty' => $empty, 'calendar' => ['type' => 'boolean'], 'address' => ['type' => 'boolean'], 'display' => ['type' => 'boolean'],
+                // A calendar; with `dated` (and `undated`), the ability's input for a month, filled with `{field}`, `{start}` and `{end}`.
+                'calendar' => ['anyOf' => [['type' => 'boolean'], $this->object(['dated' => ['type' => 'object'], 'undated' => ['type' => 'object']], ['dated'])]],
+                'dates' => $this->object(['published' => $id, 'updated' => $id]),
+                'defaultView' => ['type' => 'string', 'enum' => ['table', 'grid', 'calendar']],
+                'empty' => $empty, 'address' => ['type' => 'boolean'], 'display' => ['type' => 'boolean'],
+                // Rows under the list, in its columns, while nothing narrows it: built-in pages under the site's own.
+                'appendix' => $this->object([
+                    'label' => $s, 'source' => $source, 'groups' => $this->object(['label' => $id, 'rows' => $id]), 'key' => $id,
+                    'open' => $action, 'actions' => ['type' => 'array', 'maxItems' => 4, 'items' => $action],
+                    'columns' => ['type' => 'object', 'additionalProperties' => ['type' => 'object']],
+                ], ['label', 'source']),
             ], ['label', 'columns'])],
             'ui/form' => ['label' => 'A form loaded from one ability and saved with another, with the save bar', 'children' => false, 'props' => $this->object([
                 'source' => $source, 'fieldsAt' => $id, 'valuesAt' => $id, 'into' => $id,
@@ -130,20 +151,22 @@ final class Catalog
     }
 
     /** How a value in a column or detail is written. */
-    public const array FORMATS = ['text', 'strong', 'muted', 'code', 'badge', 'badges', 'status', 'date', 'datetime', 'ago', 'number', 'money', 'bytes', 'yesno', 'person', 'count', 'image', 'link', 'switch', 'share', 'compact'];
+    public const array FORMATS = ['text', 'strong', 'muted', 'code', 'badge', 'badges', 'status', 'date', 'datetime', 'ago', 'number', 'money', 'bytes', 'yesno', 'person', 'count', 'image', 'link', 'switch', 'share', 'compact', 'address', 'media', 'languages', 'field'];
 
     /** A button or row action: an ability to run (with `input`), a place to go (`to`), or a dialog of nodes (`dialog`). */
     public static function action(): array
     {
         $s = ['type' => 'string', 'maxLength' => 2000];
+        // Words that depend on how many: `{"one": …, "other": …}`, for what is done with a selection.
+        $counted = ['anyOf' => [$s, ['type' => 'object', 'additionalProperties' => false, 'required' => ['one', 'other'], 'properties' => ['one' => $s, 'other' => $s]]]];
 
         return ['type' => 'object', 'additionalProperties' => false, 'required' => ['label'], 'properties' => [
             'label' => $s, 'icon' => ['type' => 'string', 'maxLength' => 60],
             'variant' => ['type' => 'string', 'enum' => ['primary', 'default', 'ghost', 'danger']],
             'ability' => ['type' => 'string', 'maxLength' => 160], 'input' => ['type' => 'object', 'default' => []],
             'to' => $s, 'href' => $s,
-            'confirm' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['title'], 'properties' => ['title' => $s, 'text' => $s, 'confirm' => $s, 'danger' => ['type' => 'boolean']]],
-            'success' => $s, 'then' => ['anyOf' => [['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open']], ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open']]]]],
+            'confirm' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['title'], 'properties' => ['title' => $counted, 'text' => $s, 'confirm' => $s, 'danger' => ['type' => 'boolean']]],
+            'success' => $counted, 'then' => ['anyOf' => [['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open']], ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open']]]]],
             'dialog' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['title', 'body'], 'properties' => [
                 'title' => $s, 'text' => $s, 'size' => ['type' => 'string', 'enum' => ['md', 'lg']],
                 'body' => ['type' => 'array', 'maxItems' => 12, 'items' => ['type' => 'object']],
@@ -156,6 +179,10 @@ final class Catalog
             'component' => ['type' => 'string', 'maxLength' => 160], 'props' => ['type' => 'object', 'default' => []],
             'can' => ['type' => ['string', 'array']], 'when' => $s, 'unless' => $s, 'disabled' => $s,
             'copy' => $s, 'name' => ['type' => 'string', 'pattern' => '^[a-z0-9-]{1,40}$'],
+            // A row's: an icon button beside its menu. A selection's: run once per row (`{row}`), shown while it holds for `some` row.
+            'inline' => ['type' => 'boolean'], 'each' => ['type' => 'boolean'], 'some' => $s,
+            // A page's: the key that takes it too.
+            'key' => ['type' => 'string', 'pattern' => '^[a-z0-9]$'],
         ]];
     }
 

@@ -9,6 +9,7 @@ import { EmptyState } from '../EmptyState'
 import { Icon } from '../Icon'
 import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
+import { useShortcut } from '../shortcuts'
 import { Spinner } from '../Spinner'
 import { Stat, WidgetMessage } from '../Widget'
 import { WidgetSlot } from '../WidgetSlot'
@@ -34,8 +35,9 @@ export function ViewNodeView({ node, path }: { node: ViewNode; path: string }) {
 
 /** Props as shown: words and values filled in, while `source`, actions and dialogs keep their templates for when they run. */
 function fillShown(props: Record<string, any>, scope: Record<string, unknown>): Record<string, any> {
-  // A list's literal `rows` are values as they were found, never templates.
-  const kept = new Set(['source', 'rows', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'empty', 'count'])
+  // A list's literal `rows` are values as they were found, never templates. A list's calendar, tree
+  // and appendix fill in with their month and their rows.
+  const kept = new Set(['source', 'rows', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'empty', 'count', 'calendar', 'tree', 'appendix'])
   return Object.fromEntries(Object.entries(props ?? {}).map(([k, v]) => [k, kept.has(k) ? v : fill(v, scope)]))
 }
 
@@ -53,7 +55,14 @@ function Buttons({ actions, size, bar }: { actions?: ViewAction[]; size?: 'sm' |
   const { scope } = useView()
   const list = shown(actions, scope)
   // In a page's bar on a phone, a button with an icon is its icon: the page's name keeps its room.
-  return list.length > 0 ? <>{list.map((a, i) => <ActionButton key={i} action={a} size={size} compact={bar && !!a.icon} />)}</> : null
+  return list.length > 0 ? <>{list.map((a, i) => <Fragment key={i}><ActionButton action={a} size={size} compact={bar && !!a.icon} />{bar && a.key && <ActionKey action={a} />}</Fragment>)}</> : null
+}
+
+/** A page's action on a key of its own (`c` for a new entry), as the person looking may take it. */
+function ActionKey({ action }: { action: ViewAction }) {
+  const { act, scope } = useView()
+  useShortcut(action.key!, () => void act(action, scope).catch(() => {}))
+  return null
 }
 
 /** The page: one bar naming it with what can be done there; its tabs under it when it has them. */

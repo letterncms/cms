@@ -1,11 +1,12 @@
-// node --experimental-vm-modules --test modules/content/tests/listPrefs.mjs
+// node --experimental-vm-modules --test modules/admin/tests/viewPrefs.mjs
+// A list's view, sort and columns, as a collection's entries keep them: its default view (the
+// collection's, sent with its view) until the person picks one.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { test } from 'node:test'
 import { createContext, SourceTextModule, SyntheticModule } from 'node:vm'
 
-const source = stripTypeScriptTypes(readFileSync(new URL('../admin/src/listPrefs.ts', import.meta.url), 'utf8'))
 
 async function setup(preferences = {}, defaultView = 'grid') {
   const manifest = { collections: [{ handle: 'posts', defaultView }], user: { preferences } }
@@ -29,11 +30,16 @@ async function setup(preferences = {}, defaultView = 'grid') {
   await sdk.link((name) => name === './api' ? api : react)
   await sdk.evaluate()
   sdk.namespace.setManifest(manifest)
-  const module = new SourceTextModule(source, { context })
-  const ui = new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL('../../admin/src/ui/viewPrefs.ts', import.meta.url), 'utf8')), { context })
+  const ui = new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL('../src/ui/viewPrefs.ts', import.meta.url), 'utf8')), { context })
   await ui.link((name) => name === '@letterncms/sdk' ? sdk : react)
-  await module.link((name) => name === '@letterncms/sdk' ? sdk : ui)
-  await module.evaluate()
+  await ui.evaluate()
+  // As Records keeps them: `overview.<list id>`, the collection's default view as the fallback.
+  const key = (handle) => `overview.entries.${handle}`
+  const fallback = (handle) => sdk.namespace.getManifest().collections.find((c) => c.handle === handle)?.defaultView ?? 'table'
+  const module = { namespace: {
+    readListPrefs: (handle) => ui.namespace.readViewPrefs(key(handle), fallback(handle)),
+    useListPrefs: (handle) => ui.namespace.useViewPrefs(key(handle), fallback(handle)),
+  } }
   return { ...module.namespace, manifest: sdk.namespace.getManifest(), saves, flush: () => { for (const save of pending.values()) save(); pending.clear() } }
 }
 
@@ -44,12 +50,12 @@ test('a collection default applies before a personal view has been chosen', asyn
 })
 
 test('personal views override the collection default', async () => {
-  const prefs = await setup({ 'entries.posts': { view: 'calendar' } })
+  const prefs = await setup({ 'overview.entries.posts': { view: 'calendar' } })
   assert.equal(prefs.readListPrefs('posts').view, 'calendar')
 })
 
 test('invalid stored views fall back to the collection default', async () => {
-  const prefs = await setup({ 'entries.posts': { view: 'removed-view' } }, 'calendar')
+  const prefs = await setup({ 'overview.entries.posts': { view: 'removed-view' } }, 'calendar')
   assert.equal(prefs.readListPrefs('posts').view, 'calendar')
 })
 
@@ -58,13 +64,13 @@ test('changing sort or columns keeps the view inherited', async () => {
   const [, update] = prefs.useListPrefs('posts')
   update({ sort: '-title' })
   update({ columns: ['status'] })
-  assert.equal(prefs.manifest.user.preferences['entries.posts'].view, undefined)
+  assert.equal(prefs.manifest.user.preferences['overview.entries.posts'].view, undefined)
   prefs.manifest.collections[0].defaultView = 'calendar'
   assert.equal(prefs.readListPrefs('posts').view, 'calendar')
   prefs.flush()
   assert.equal(prefs.saves.length, 1)
-  assert.equal(prefs.saves[0].input.preferences['entries.posts'].view, undefined)
-  assert.equal(prefs.saves[0].input.preferences['entries.posts'].sort, '-title')
+  assert.equal(prefs.saves[0].input.preferences['overview.entries.posts'].view, undefined)
+  assert.equal(prefs.saves[0].input.preferences['overview.entries.posts'].sort, '-title')
 })
 
 test('choosing a view stores an explicit override for subsequent visits', async () => {
@@ -74,11 +80,11 @@ test('choosing a view stores an explicit override for subsequent visits', async 
   prefs.manifest.collections[0].defaultView = 'calendar'
   assert.equal(prefs.readListPrefs('posts').view, 'table')
   prefs.flush()
-  assert.equal(prefs.saves[0].input.preferences['entries.posts'].view, 'table')
+  assert.equal(prefs.saves[0].input.preferences['overview.entries.posts'].view, 'table')
 })
 
 test('resetting display preferences resumes inheritance without pinning the view', async () => {
-  const prefs = await setup({ 'entries.posts': { view: 'table', sort: '-title', columns: ['status'] } })
+  const prefs = await setup({ 'overview.entries.posts': { view: 'table', sort: '-title', columns: ['status'] } })
   const [, update] = prefs.useListPrefs('posts')
   update({ view: null, sort: null, columns: null })
   assert.equal(prefs.readListPrefs('posts').view, 'grid')
@@ -87,7 +93,7 @@ test('resetting display preferences resumes inheritance without pinning the view
   prefs.manifest.collections[0].defaultView = 'calendar'
   assert.equal(prefs.readListPrefs('posts').view, 'calendar')
   prefs.flush()
-  assert.equal(prefs.saves[0].input.preferences['entries.posts'].view, null)
+  assert.equal(prefs.saves[0].input.preferences['overview.entries.posts'].view, null)
 })
 
 test('an explicitly empty column selection survives other preference changes', async () => {
@@ -97,11 +103,11 @@ test('an explicitly empty column selection survives other preference changes', a
   update({ sort: 'title' })
   assert.equal(prefs.readListPrefs('posts').columns.length, 0)
   prefs.flush()
-  assert.equal(prefs.saves[0].input.preferences['entries.posts'].columns.length, 0)
+  assert.equal(prefs.saves[0].input.preferences['overview.entries.posts'].columns.length, 0)
 })
 
 test('calendar date choices use the shared preferences and survive navigation', async () => {
-  const prefs = await setup({ 'entries.posts': { view: 'calendar', calendarDate: 'updated' } })
+  const prefs = await setup({ 'overview.entries.posts': { view: 'calendar', calendarDate: 'updated' } })
   assert.equal(prefs.readListPrefs('posts').calendarDate, 'updated')
   const [, update] = prefs.useListPrefs('posts')
   update({ sort: 'title' })
@@ -111,6 +117,6 @@ test('calendar date choices use the shared preferences and survive navigation', 
 })
 
 test('invalid calendar dates fall back to the shared publication date', async () => {
-  const prefs = await setup({ 'entries.posts': { calendarDate: 'removed-field' } })
+  const prefs = await setup({ 'overview.entries.posts': { calendarDate: 'removed-field' } })
   assert.equal(prefs.readListPrefs('posts').calendarDate, 'published')
 })

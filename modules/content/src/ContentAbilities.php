@@ -96,12 +96,15 @@ final class ContentAbilities
 
                     foreach (($group['pages'])() as $handle => $page) {
                         $entry = $own($group, (string) $handle);
-                        $pages[] = ['handle' => (string) $handle, 'label' => __($page['label']), 'path' => $page['path'] ?? null, 'id' => $entry?->id, 'status' => match (true) {
+                        $status = match (true) {
                             $group['conflict'] !== null && ($group['conflict'])((string) $handle) => 'conflict',
                             $entry === null => 'standard',
                             $entry->isLive() => 'customised',
                             default => 'draft',
-                        }];
+                        };
+                        // Where it opens once it is the site's own, and whether this person may make it so.
+                        $pages[] = ['handle' => (string) $handle, 'label' => __($page['label']), 'path' => $page['path'] ?? null, 'id' => $entry?->id, 'status' => $status,
+                            'group' => $group['id'], 'collection' => $group['collection'], 'customisable' => $status === 'standard' && $this->allowed($ctx->user, $group['collection'], 'create')];
                     }
 
                     // Named after what brought them: a plugin's own name, the way its screen and settings are called.

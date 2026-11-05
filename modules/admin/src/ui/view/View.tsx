@@ -6,6 +6,7 @@ import { Page } from '../Page'
 import { Spinner } from '../Spinner'
 import { useActions, type ActionAsker, type ActionRunner } from './actions'
 import { ViewContext } from './context'
+import { recordsLoad, type RecordsProps } from './Records'
 import { ViewNodeView } from './render'
 import { fill, input, type Scope } from './scope'
 
@@ -19,7 +20,7 @@ export function View({ root, params = {}, embedded = false, run, ask }: { root: 
   const { query: address, path } = useLocation()
   const query = embedded ? NONE : address
   const manifest = useManifest()
-  const scope: Scope = useMemo(() => ({ params, query, user: manifest.user }), [params, query, manifest.user])
+  const scope: Scope = useMemo(() => ({ params, query, user: manifest.user, origin: window.location.origin }), [params, query, manifest.user])
   const refresh = useCallback(() => {}, [])
   const { act, layer } = useActions(scope, refresh, run, ask)
   // `?do=<name>` opens one of the place's named actions, once: a link to "New Form" from elsewhere.
@@ -82,14 +83,15 @@ export function viewRoute(id: string, path: string, options: { private?: boolean
     // The place appears whole: its view, then what its tab on view loads, before it shows.
     load: async (params, location) => {
       const view = await prefetchAbility<ViewDocument>('views/get', { id, params })
-      const scope = { params, query: location.query, user: getManifest().user }
+      const scope = { params, query: location.query, user: getManifest().user, origin: window.location.origin }
       await Promise.all(loads(view.root, location.query.tab).map(([ability, input]) => prefetchAbility(ability, input).catch(() => undefined)))
       function loads(node: ViewNode, tab: string | undefined): [string, Record<string, unknown>][] {
         const p = node.props ?? {}
         const own: [string, Record<string, unknown>][] = []
         if (node.type === 'ui/settings') own.push(['settings/get', { namespace: String(fill(p.namespace, scope)) }])
         if (node.type === 'ui/form' && p.source) own.push([p.source.ability, input(p.source.input, scope)])
-        if (node.type === 'ui/records' && p.source) own.push([p.source.ability, { ...input(p.source.input, scope), ...(p.paged ? { page: 1, perPage: p.paged.perPage ?? 100 } : {}) }])
+        const records = node.type === 'ui/records' ? recordsLoad(p as RecordsProps, scope, location.query) : null
+        if (records) own.push(records)
         if (node.type === 'ui/page' && p.count) own.push([p.count.source.ability, input(p.count.source.input, scope)])
         // Of a page's tabs, only the one that opens.
         const children = node.type === 'ui/tabs' ? [(node.children ?? []).find((c) => c.props.id === tab) ?? node.children?.[0]].filter((c): c is ViewNode => !!c) : node.children ?? []
