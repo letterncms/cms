@@ -38,5 +38,7 @@ export function recordDateColumns<T>(dates: (item: T) => Partial<RecordTimestamp
 
 /** Called by DataView so new screens inherit the metadata without per-screen columns. */
 export function withRecordDateColumns<T>(columns: DataColumn<T>[], dates: (item: T) => Partial<RecordTimestamps>, sort?: Partial<Record<'published' | 'updated', string>>): DataColumn<T>[] {
-  return [...columns.filter((column) => !recordDateColumnIds.some((id) => column.id === id)), ...recordDateColumns(dates, sort)]
+  // A list may name the dates itself, to show them from the start.
+  const own = new Map(columns.map((column) => [column.id, column]))
+  return [...columns.filter((column) => !recordDateColumnIds.some((id) => column.id === id)), ...recordDateColumns(dates, sort).map((column) => own.has(column.id) ? { ...column, hiddenByDefault: own.get(column.id)!.hiddenByDefault ?? false } : column)]
 }

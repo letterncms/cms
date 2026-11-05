@@ -1,7 +1,14 @@
 import { can, locale, t, useAbility, useManifest, type Entry, type EntryContent, type EntryPanelProps, type EntrySummary, type FieldDef } from '@letterncms/sdk'
 import { Button, Dialog, Fields, PersonPicker, QueryError, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
-import type { BuiltinGroup } from './BuiltinPages'
+
+/** The pages features bring (sign in, checkout), as `pages/builtin` gives them, by what brought them. */
+interface BuiltinGroup {
+  id: string
+  label: string
+  collection: string
+  pages: { handle: string; label: string; path: string | null; id: string | null; status: 'standard' | 'draft' | 'customised' | 'conflict' }[]
+}
 
 interface EntryDetailsProps {
   props: EntryPanelProps

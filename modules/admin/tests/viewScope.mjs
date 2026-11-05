@@ -24,6 +24,14 @@ test('a condition holds for something, not for nothing', () => {
   assert.equal(holds('{query.locale}', scope), false)
 })
 
+test('a condition can compare a value with a few words', () => {
+  assert.equal(holds('{row.name} is Ada', scope), true)
+  assert.equal(holds('{row.name} is Bea, Ada', scope), true)
+  assert.equal(holds('{row.name} is not Ada', scope), false)
+  assert.equal(holds('{row.name} is not Bea, Cy', scope), true)
+  assert.equal(holds('{row.nothing} is not draft', scope), true)
+})
+
 test('links are web addresses or the site’s own, never scripts', () => {
   assert.equal(safeUrl('/admin/x'), '/admin/x')
   assert.equal(safeUrl('https://example.com/a'), 'https://example.com/a')

@@ -433,8 +433,10 @@ serve('Overview', async (req, res, url) => {
   if (url.pathname.startsWith('/api/admin/abilities/')) {
     const ability = url.pathname.slice('/api/admin/abilities/'.length), input = await body(req)
     requests.push({ ability, input })
-    if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
+    if (ability === 'views/get') { const view = viewResponse(input, manifest, (handle) => handle === 'pages' ? treeCollection : handle === 'events' ? { ...eventsCollection, sort: '-published_at' } : collectionDef); return json(res, view.status, view.body) }
     if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); return json(res, 200, { data: manifest.user }) }
+    // As the real input schema: a filter names its field.
+    if ((input.filters ?? []).some((f) => !f.field)) return json(res, 422, { error: { message: 'filters.0.field: Is required.', type: 'invalid_input' } })
     if (ability === 'forms/list' && fail) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
     let data
     if (ability === 'forms/list') data = forms

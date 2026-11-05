@@ -44,9 +44,18 @@ export function input(value: Record<string, unknown> | unknown[] | undefined, sc
   return Object.fromEntries(Object.entries(fill(value ?? {}, scope)).filter(([, v]) => v !== '' && v !== undefined && v !== null))
 }
 
-/** Whether a `when` holds: a template that comes out as something (not empty, false, 0 or an empty list). */
+/**
+ * Whether a `when` holds: a template that comes out as something (not empty, false, 0 or an empty
+ * list), or one that compares: `{row.status} is draft, changed`, `{row.status} is not published`.
+ */
 export function holds(template: string | undefined, scope: Scope): boolean {
   if (template === undefined) return true
+  const compare = /^(\{[a-zA-Z_][\w.]*\}) is (not )?(.+)$/.exec(template)
+  if (compare) {
+    const found = at(scope, compare[1].slice(1, -1))
+    const among = compare[3].split(',').map((word) => word.trim())
+    return among.includes(found === null || found === undefined ? '' : String(found)) !== !!compare[2]
+  }
   const value: unknown = fill<unknown>(template, scope)
   return !(value === undefined || value === null || value === '' || value === false || value === 0 || value === '0' || value === 'false' || (Array.isArray(value) && value.length === 0))
 }

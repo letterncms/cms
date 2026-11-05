@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- For plugins: a `ui/records` list can do everything a collection's list does. `sort` sorts by the ability, `tree` draws records nested and puts them in order by dragging, `filters` can be `segmented`, `calendar` loads a month at a time, `dates` and `defaultView` say how dates sort and which view comes first, and `appendix` draws other rows under the list, lined up with it. Columns take `address`, `media`, `languages` and `field` as formats, `fit`, `excerpt` and `card`. A bulk action with `each` runs once per selected row, keeps what failed selected and says why, and shows while `some` holds; its `success` and `confirm` title can count (`{"one": …, "other": …}`). A row action can be `inline`, a page's action can have a `key`, and a `when` can compare (`{row.status} is draft, changed`). See Plugins → Views in the docs.
+
+### Changed
+
+- Each collection's list is drawn by the same list as every other place, from data: its search, status and language, the page tree with drag to reorder, sorting, table, cards and calendar, its columns, row and bulk actions, and the built-in pages under Pages work as before. Its search is `?search=` in the address.
+- Every list has its checkboxes in the margin left of the rows, as collections had, so titles line up with the search above them.
+- `pages/builtin` says for each page which `group` and `collection` it belongs to, and whether you may customize it (`customisable`).
+
+### Removed
+
+- **Breaking.** The `content/entries` catalog component. A collection's place is `ui/records`, from `Cms\Modules\Content\EntriesView`.
+
 ## 0.9.0 (2026-11-05)
 
 ### Added

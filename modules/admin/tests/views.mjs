@@ -37,12 +37,12 @@ export const views = {
     ], actions: [{ label: 'Open', icon: 'arrow-right', variant: 'primary', to: '{row.to}', when: '{row.to}' }] } },
     empty: { icon: 'activity', title: 'No changes recorded yet' },
   } }]))),
-  content: ({ collection }, manifest) => {
+  content: ({ collection }, manifest, definition) => {
     const summary = manifest.collections.find((c) => c.handle === collection)
     if (!summary) return page('Not Found', undefined, [{ type: 'ui/empty', props: { icon: 'collection', title: 'Not Found' } }])
-    return page(summary.title, summary.icon, [{ type: 'content/entries', props: { collection } }], {
-      count: { source: { ability: 'entries/list', input: { collection, locale: '{query.locale}', perPage: 1, fields: [] } }, at: 'total' },
-      actions: summary.can?.create === false ? [] : [{ label: summary.newLabel ?? `New ${summary.singular}`, icon: 'plus', variant: 'primary', to: `/content/${collection}/new?locale={query.locale}` }],
+    return page(summary.title, summary.icon, [{ type: 'ui/records', props: entries(summary, definition?.(collection) ?? {}, manifest) }], {
+      count: { source: { ability: 'entries/list', input: { collection, locale: '{query.locale}', status: '{query.status}', search: '{query.search}', perPage: 1, fields: [] } }, at: 'total' },
+      actions: summary.can?.create === false ? [] : [{ label: summary.newLabel ?? `New ${summary.singular}`, icon: 'plus', variant: 'primary', to: `/content/${collection}/new?locale={query.locale}`, key: 'c' }],
     })
   },
   users: () => users(),
@@ -109,6 +109,80 @@ function collections(open) {
   } }, ...(open ? [open] : [])], { actions: [{ label: 'New Collection', icon: 'plus', variant: 'primary', component: 'collections/new' }] })
 }
 
+const WIDTHS = { text: '180px', textarea: 'minmax(160px,0.8fr)', select: '132px', toggle: '80px', date: '112px', number: '96px', entries: '180px', users: '132px', tags: '180px', media: '64px', url: '180px', email: '180px', slug: '160px', color: '112px' }
+const SORTABLE = ['text', 'select', 'toggle', 'date', 'number', 'url', 'email', 'slug', 'color']
+
+/** A collection's entries, as EntriesView::records sends them (for an admin who may do everything the summary says). */
+function entries(summary, def, manifest) {
+  const handle = summary.handle, can = summary.can ?? {}
+  const fields = def.resolvedFields ?? def.fields ?? []
+  const locales = manifest.site.locales
+  const tree = summary.structure === 'tree', datedList = summary.structure === 'dated'
+  const defaultView = def.default_view ?? summary.defaultView ?? 'table'
+  const excerpt = fields.find((f) => f.type === 'textarea' || (f.type === 'text' && !['title', 'slug'].includes(f.handle)))
+  const media = fields.filter((f) => f.type === 'media')
+  const shown = def.default_columns ?? [...(summary.routable ? ['uri'] : []), 'status', 'published', 'updated']
+  const cards = def.default_columns ? [] : [media[0], excerpt].filter(Boolean).map((f) => `field:${f.handle}`)
+  const columns = [
+    ...(summary.routable ? [{ id: 'uri', key: 'uri', label: 'URL', format: 'address', fit: true, sort: 'uri' }] : []),
+    { id: 'status', key: 'displayStatus', label: 'Status', format: 'status', width: '104px', sort: 'status' },
+    ...fields.filter((f) => WIDTHS[f.type] && !['title', 'slug'].includes(f.handle) && !['title', 'uri'].includes(f.component)).map((f) => ({
+      id: `field:${f.handle}`, key: `values.${f.handle}`, label: f.label || f.handle, format: 'field', field: { type: f.type, ...(f.options ? { options: f.options } : {}) }, width: WIDTHS[f.type],
+      ...(SORTABLE.includes(f.type) ? { sort: f.handle } : {}), ...(f.type === 'number' ? { align: 'end' } : {}), ...(excerpt?.handle === f.handle ? { excerpt: true } : {}), ...(media[0]?.handle === f.handle ? { image: true } : {}),
+    })),
+    ...(locales.length > 1 ? [{ id: 'translations', key: 'translations', label: 'Languages', format: 'languages', locales, width: `${24 + locales.length * 26}px` }] : []),
+    { id: 'author', key: 'author', label: 'Author', format: 'person', width: '132px', sort: 'author_id', empty: 'Unassigned' },
+    { id: 'published', key: 'published', label: 'Published' }, { id: 'updated', key: 'updated', label: 'Updated' },
+  ].map(({ id, ...c }) => ({ ...c, hidden: !shown.includes(id), ...(cards.includes(id) ? { card: true } : {}) }))
+  const values = columns.filter((c) => c.key.startsWith('values.')).map((c) => c.key.slice(7))
+  const plain = { collection: handle, locale: '{query.locale}', fields: values }
+  const entry = { id: '{row.id}', expectedVersion: '{row.version}' }
+  const open = `/content/${handle}/{row.id}`
+  return {
+    id: `entries.${handle}`, label: summary.title, key: 'id', address: true,
+    source: { ability: 'entries/list', input: { ...plain, status: '{query.status}' } },
+    columns: [{ key: 'title', label: 'Title', width: 'minmax(200px,1fr)', sort: 'title', empty: 'Untitled' }, ...columns],
+    search: { param: 'search', placeholder: `Search ${summary.title.toLowerCase()}…` },
+    filters: [
+      { param: 'status', label: 'Status', display: 'segmented', default: 'any', options: [{ value: 'any', label: 'All' }, { value: 'published', label: 'Published' }, { value: 'draft', label: 'Drafts' }] },
+      ...(locales.length > 1 ? [{ param: 'locale', label: 'Language', display: 'segmented', default: manifest.site.defaultLocale, options: locales.map((code) => ({ value: code, label: code.toUpperCase(), title: code })) }] : []),
+    ],
+    paged: { perPage: 50 },
+    sort: { param: 'sort', ...(tree ? {} : { default: def.sort || (datedList ? '-published_at' : 'title') }) },
+    dates: { published: 'published_at', updated: 'updated_at' },
+    open: { label: 'Open', to: open },
+    actions: [
+      { label: 'View on Site', icon: 'external', inline: true, href: '{row.uri}', when: '{row.uri}', unless: '{row.displayStatus} is draft, scheduled' },
+      { label: 'Open', icon: 'edit', to: open },
+      ...(can.create ? [{ label: 'Duplicate', icon: 'copy', ability: 'entries/duplicate', input: entry, then: 'open', to: `/content/${handle}/{result.id}` }] : []),
+      ...(can.publish ? [{ label: 'Publish', icon: 'rocket', ability: 'entries/publish', input: entry, success: 'Published', when: '{row.displayStatus} is draft, changed' }, { label: 'Unpublish', icon: 'eye-off', ability: 'entries/unpublish', input: entry, success: 'Unpublished', unless: '{row.displayStatus} is draft' }] : []),
+      { label: 'Copy URL', icon: 'link', copy: '{origin}{row.uri}', success: 'URL copied', when: '{row.uri}' },
+      ...(can.delete ? [{ label: 'Delete', icon: 'trash', variant: 'danger', ability: 'entries/delete', input: entry, success: 'Deleted', confirm: { title: 'Delete “{row.title}”?', text: 'This cannot be undone.', confirm: 'Delete', danger: true } }] : []),
+    ],
+    bulk: [
+      ...(can.publish ? [
+        { label: 'Publish', each: true, ability: 'entries/publish', input: entry, some: '{row.displayStatus} is draft, changed', success: { one: 'Published {count} entry', other: 'Published {count} entries' } },
+        { label: 'Unpublish', each: true, ability: 'entries/unpublish', input: entry, some: '{row.displayStatus} is not draft', success: { one: 'Unpublished {count} entry', other: 'Unpublished {count} entries' } },
+      ] : []),
+      ...(can.delete ? [{ label: 'Delete', each: true, ability: 'entries/delete', input: entry, confirm: { title: { one: 'Delete {count} entry?', other: 'Delete {count} entries?' }, text: 'This cannot be undone.', confirm: 'Delete', danger: true }, success: { one: 'Deleted {count} entry', other: 'Deleted {count} entries' } }] : []),
+    ],
+    empty: { icon: summary.icon, title: `No ${summary.title.toLowerCase()} yet` },
+    defaultView: ['grid', 'calendar'].includes(defaultView) ? defaultView : 'table',
+    ...(datedList || defaultView === 'calendar' ? { calendar: {
+      dated: { sort: '{field}', filters: [{ field: '{field}', operator: '>=', value: '{start}' }, { field: '{field}', operator: '<', value: '{end}' }] },
+      undated: { sort: '-updated_at', filters: [{ field: '{field}', operator: 'null' }] },
+    } } : {}),
+    ...(tree ? { tree: { source: { ability: 'entries/tree', input: plain }, version: 'version', ...(can.edit ? { reorder: { label: 'Drag to Reorder', ability: 'entries/reorder', input: { collection: handle, ids: '{ids}', parentId: '{parent}', versions: '{versions}' }, ...(can.publish ? {} : { when: '{row.status} is not published' }) } } : {}) } } : {}),
+    ...(handle === 'pages' ? { appendix: {
+      label: 'Built-in Pages', source: { ability: 'pages/builtin', input: {} }, groups: { rows: 'pages' }, key: 'handle',
+      open: { label: 'Open', to: '/content/{row.collection}/{row.id}', when: '{row.id}' },
+      actions: [{ label: 'Customize', ability: 'pages/customise', input: { group: '{row.group}', handle: '{row.handle}' }, then: 'open', to: '/content/{result.collection}/{result.id}', when: '{row.customisable}' }],
+      columns: { title: { key: 'label' }, uri: { key: 'path', empty: 'Shown inside other pages' }, displayStatus: { key: 'status', format: 'status', tones: { standard: 'neutral', conflict: 'warning', customised: 'published', draft: 'draft' }, labels: { standard: 'Standard', conflict: 'A page has this address', customised: 'Published', draft: 'Draft' } },
+        ...Object.fromEntries(columns.filter((c) => !['uri', 'displayStatus'].includes(c.key)).map((c) => [c.key, { blank: true }])) },
+    } } : {}),
+  }
+}
+
 /** The manifest's `views`: where each is mounted. */
 export const mounted = [
   ...Object.values(snapshot).filter((v, i, all) => all.findIndex((w) => w.id === v.id) === i && !['settings', 'audit', 'users', 'plugins', 'globals', 'collections'].includes(v.id)).map((v) => ({ id: v.id, path: v.path, package: v.package })),
@@ -125,12 +199,12 @@ export const mounted = [
 ]
 
 /** Answers `views/get` for a fixture: `{ data }`, as the abilities endpoint does. */
-export function viewResponse(input, manifest) {
+export function viewResponse(input, manifest, definition) {
   const params = input.params ?? {}
   const key = input.id + (Object.keys(params).length ? ':' + new URLSearchParams(params) : '')
   if (snapshot[key]) return { status: 200, body: { data: snapshot[key] } }
   const make = views[input.id]
   const found = mounted.find((v) => v.id === input.id)
   if (!make || !found) return { status: 404, body: { error: { type: 'not_found', message: `No view ${input.id}.` } } }
-  return { status: 200, body: { data: { id: input.id, path: found.path, package: null, root: make(input.params ?? {}, manifest) } } }
+  return { status: 200, body: { data: { id: input.id, path: found.path, package: null, root: make(input.params ?? {}, manifest, definition) } } }
 }

@@ -3,8 +3,7 @@ import { getManifest, prefetchAbility, registry, run, t, type ComposerOption, ty
 import { lazy } from 'react'
 import { TitleField, UriField } from './TitleField'
 
-// A collection's place is a view (ContentModule::view); its entries are this component of the catalog.
-registry.components.set('content/entries', lazy(() => import('./EntriesList')))
+// A collection's place is a view (ContentModule::view, EntriesView), drawn from the catalog like every list.
 registry.routes.set('/content/:collection/:id', {
   path: '/content/:collection/:id', component: lazy(() => import('./EntryEditor')),
   load: ({ collection, id }) => Promise.all([

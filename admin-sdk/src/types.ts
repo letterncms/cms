@@ -67,6 +67,14 @@ export interface ViewAction {
   copy?: string
   /** Opened from the address too: `?do=<name>` runs it once the place is on view. */
   name?: string
+  /** A page's action on a key too: `c`. */
+  key?: string
+  /** A row's action as an icon button beside its menu (it needs an `icon`). */
+  inline?: boolean
+  /** A selection's action run once per selected row, with `{row}`; what failed stays selected. */
+  each?: boolean
+  /** A selection's action shown only while this holds for at least one selected row (a template with `{row}`). */
+  some?: string
 }
 
 /** Renderers own their interactions; the host sends action identifiers to the server. */
