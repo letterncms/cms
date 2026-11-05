@@ -8,9 +8,9 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Changing the one brand file changes the product's own strings: the admin, the
- * command line and generated files. A scratch installation gets its own
- * brand/brand.json with another name, next to an empty site built with the real
- * CLI. Content names the product in plain text, so it isn't part of this. The
+ * command line and what agents read. A scratch installation of this package gets
+ * its own brand/brand.json with another name, next to an empty site built with
+ * the CLI every site starts with (stubs/site/cms). Content names the product in plain text, so it isn't part of this. The
  * repository's own brand file is never touched, so other work on this checkout
  * can't catch a half-way name.
  */
@@ -24,18 +24,17 @@ final class BrandProofTest extends TestCase
 
     protected function setUp(): void
     {
-        if (! is_file(self::root().'/website/cms')) {
-            $this->markTestSkipped("This proof borrows the website's CLI file, and it has moved to its own repository.");
-        }
-
-        $real = self::root().'/cms';
+        $real = self::package();
         $this->realName = (string) json_decode((string) file_get_contents($real.'/brand/brand.json'), true)['name'];
         $this->scratch = sys_get_temp_dir().'/cms-brand-proof-'.bin2hex(random_bytes(6));
 
+        // The package as a site installs it, everything but its brand folder the real one.
         mkdir($this->scratch.'/cms/brand', 0o755, true);
 
-        foreach (['core', 'modules', 'plugins', 'themes', 'vendor'] as $part) {
-            symlink("{$real}/{$part}", "{$this->scratch}/cms/{$part}");
+        foreach (scandir($real) ?: [] as $part) {
+            if (! in_array($part, ['.', '..', '.git', 'brand'], true)) {
+                symlink("{$real}/{$part}", "{$this->scratch}/cms/{$part}");
+            }
         }
 
         foreach (['mark.svg', 'wordmark.svg'] as $file) {
@@ -43,12 +42,15 @@ final class BrandProofTest extends TestCase
         }
 
         $brand = json_decode((string) file_get_contents($real.'/brand/brand.json'), true);
-        file_put_contents($this->scratch.'/cms/brand/brand.json', json_encode(['name' => self::NAME, 'domain' => 'zorblax.test', 'product_url' => 'https://zorblax.test', 'docs_url' => 'https://docs.zorblax.test', 'support_email' => 'support@zorblax.test'] + $brand));
-        copy($real.'/cms', $this->scratch.'/cms/cms');
+        file_put_contents($this->scratch.'/cms/brand/brand.json', json_encode(['name' => self::NAME, 'domain' => 'zorblax.test', 'product_url' => 'https://zorblax.test', 'docs_url' => 'https://docs.zorblax.test', 'github_url' => 'https://github.com/zorblax/zorblax', 'support_email' => 'support@zorblax.test'] + $brand));
 
+        // An empty site with the CLI every site starts with, its vendor folder holding that package.
         mkdir("{$this->scratch}/site/public", 0o755, true);
         mkdir("{$this->scratch}/site/storage", 0o755, true);
-        copy(self::root().'/website/cms', "{$this->scratch}/site/cms");
+        mkdir("{$this->scratch}/site/vendor/letterncms", 0o755, true);
+        copy($real.'/stubs/site/cms', "{$this->scratch}/site/cms");
+        file_put_contents("{$this->scratch}/site/vendor/autoload.php", '<?php return require '.var_export($real.'/vendor/autoload.php', true).";\n");
+        symlink("{$this->scratch}/cms", "{$this->scratch}/site/vendor/letterncms/cms");
 
         $this->cli('install --no-interaction --db=sqlite --site-name=Proof --site-url=http://localhost --name=Proof --email=proof@example.com --password=proof-password-1');
     }
@@ -66,7 +68,7 @@ final class BrandProofTest extends TestCase
 
         $this->assertSame(self::NAME, $probe['manifest']['brand']['name']);
         $this->assertNamed('manifest', (string) json_encode($probe['manifest']));
-        $this->assertNamed('robots.txt', $probe['robots']);
+        $this->assertNamed('agent guide', $probe['guide']);
         $this->assertNamed('CLI banner', $this->cli('--version'));
     }
 
@@ -91,8 +93,9 @@ final class BrandProofTest extends TestCase
         return $text;
     }
 
-    private static function root(): string
+    /** This repository: the package a site installs. */
+    private static function package(): string
     {
-        return dirname(__DIR__, 4);
+        return dirname(__DIR__, 2);
     }
 }
