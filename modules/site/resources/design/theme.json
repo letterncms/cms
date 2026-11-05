@@ -1,6 +1,0 @@
-{
-  "$schema": "https://design.lettern.org/v1/theme.schema.json",
-  "name": "Default",
-  "color": { "primary": "#2f5bea" },
-  "motion": { "page": "fade" }
-}

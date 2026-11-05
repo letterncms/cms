@@ -177,87 +177,56 @@ final class RenderingTest extends TestCase
         $this->assertSame(404, $this->app->make(Renderer::class)->notFound('/nope')['status']);
     }
 
-    public function test_buttons_render_the_component_with_a_variant_a_palette_of_the_theme_and_a_size(): void
+    public function test_buttons_from_the_design_system_are_valid_block_variants(): void
     {
-        $this->cms()->abilities()->execute('design/update', ['theme' => ['color' => ['palettes' => ['lime' => '#c6ff3d']]]], \Cms\Abilities\AbilityContext::system('test'));
+        $this->cms()->abilities()->execute('design/update', ['buttons' => ['on-brand' => ['base' => ['color' => '#000']]]], \Cms\Abilities\AbilityContext::system());
 
-        $fields = app(\Cms\Modules\Blocks\BlockRegistry::class)->get('button')->blueprint();
-        $colors = app(\Cms\Modules\Blocks\BlockRegistry::class)->resolveFields([$fields->field('color')->toArray()])[0]['options'];
-        $this->assertSame('Lime', $colors['lime'], 'a palette the theme adds is a button color');
-        $this->assertSame('Primary', $colors['primary']);
-        $this->assertSame(['solid', 'soft', 'outline', 'ghost', 'link'], array_keys($fields->field('variant')->get('options')));
+        $field = app(\Cms\Modules\Blocks\BlockRegistry::class)->get('button')->blueprint()->field('variant');
 
-        $html = app(\Cms\Modules\Blocks\BlockRenderer::class)->render(app(\Cms\Modules\Blocks\Document::class)->normalize([
-            ['type' => 'button', 'props' => ['label' => 'Join', 'url' => '/join', 'variant' => 'outline', 'color' => 'lime', 'size' => 'lg']],
-        ]));
-
-        $this->assertStringContainsString('<a class="cms-button button" data-variant="outline" data-color="lime" data-size="lg" href="/join"><span>Join</span></a>', $html);
+        $this->assertSame('On brand', $field->get('options')['on-brand']);
+        $this->assertSame('Primary', $field->get('options')['primary']);
     }
 
-    public function test_the_theme_compiles_to_a_stylesheet_with_its_fonts_palettes_and_schemes(): void
+    public function test_the_design_system_compiles_tokens_fonts_elements_and_buttons(): void
     {
-        $result = $this->cms()->abilities()->execute('design/update', ['theme' => [
-            'color' => ['primary' => '#0f766e', 'palettes' => ['lime' => '#c6ff3d']],
-            'font' => ['display' => 'Fraunces'],
-            'elements' => ['h1' => ['text' => 'display']],
-            'motion' => ['page' => 'slide'],
-        ]], \Cms\Abilities\AbilityContext::system('test'));
+        $this->cms()->abilities()->execute('design/update', [
+            'tokens' => ['color.primary' => '#0f766e'],
+            'dark' => ['color.primary' => '#5eead4'],
+            'styles' => ['h1' => ['fontSize' => 'token:text.5xl', 'letterSpacing' => '-0.04em']],
+            'buttons' => ['primary' => ['base' => ['backgroundColor' => 'token:color.primary'], 'hover' => ['opacity' => 0.9]]],
+            'transition' => ['type' => 'slide', 'duration' => 0.4],
+        ], \Cms\Abilities\AbilityContext::system('test'));
 
         $design = $this->app->make(\Cms\Modules\Site\Design\Design::class);
         $design->saved();
         $css = (string) file_get_contents(public_path(ltrim($design->stylesheet(), '/')));
 
-        $this->assertTrue($result['saved']);
-        $this->assertIsArray($result['findings'], 'what the contrast check found');
-        $this->assertSame($design->stylesheet(), $result['stylesheet']);
-        $this->assertFileExists(content_path('design/theme.json'));
-        $this->assertFileDoesNotExist(content_path('design/tokens.json'));
+        $this->assertFileExists(content_path('design/tokens.json'));
         $this->assertStringContainsString('--color-primary:#0f766e', $css);
-        $this->assertMatchesRegularExpression('/--color-lime-500:#[0-9a-f]{6}/', $css, 'a palette of eleven shades');
-        $this->assertStringContainsString('--font-display:Fraunces, ', $css, 'with a system fallback');
-        $this->assertStringContainsString(':root,[data-scheme]{', $css, 'schemes recolour whatever carries one');
-        $this->assertStringContainsString('[data-scheme=dark],:root[data-mode=dark]{', $css);
-        $this->assertTrue($design->hasDark());
-        $this->assertStringContainsString('h1{font-family:var(--type-display-font)', $css);
+        $this->assertStringContainsString('[data-theme=dark]{', $css);
+        $this->assertStringContainsString('h1{font-size:var(--text-5xl);letter-spacing:-0.04em}', $css);
+        $this->assertStringContainsString('.cms-button.cms-button[data-variant="primary"]{background-color:var(--color-primary)}', $css);
         $this->assertStringContainsString('@view-transition{navigation:auto}', $css);
-        $this->assertStringStartsWith('@layer design.reset, design.tokens, design.base, design.layout, design.recipes, design.styles;', $css);
     }
 
-    public function test_design_update_merges_into_the_theme_and_refuses_one_outside_the_vocabulary(): void
+    public function test_tokens_rename_with_their_references_and_dark_values_clear(): void
     {
         $abilities = $this->cms()->abilities();
         $context = \Cms\Abilities\AbilityContext::system('test');
-        $theme = fn () => json_decode((string) file_get_contents(content_path('design/theme.json')), true);
+        $abilities->execute('design/update', ['buttons' => ['primary' => ['base' => ['backgroundColor' => 'token:color.primary']]], 'dark' => ['color.primary' => '#5eead4']], $context);
+        $before = array_keys(array_filter((array) json_decode((string) file_get_contents(content_path('design/tokens.json')), true)['tokens']['color'], fn ($k) => $k[0] !== '$', ARRAY_FILTER_USE_KEY));
 
-        $abilities->execute('design/update', ['theme' => ['color' => ['accent' => '#ff5a1f']]], $context);
-        $this->assertSame(['primary' => '#2f5bea', 'accent' => '#ff5a1f'], $theme()['color'], 'objects merge into the saved theme');
-        $this->assertSame('fade', $theme()['motion']['page']);
-
-        $abilities->execute('design/update', ['theme' => ['motion' => null]], $context);
-        $this->assertArrayNotHasKey('motion', $theme(), 'null removes a key');
-
-        try {
-            $abilities->execute('design/update', ['theme' => ['layout' => ['gutter' => '13px']]], $context);
-            $this->fail('a raw value is refused');
-        } catch (\Cms\Abilities\AbilityException $e) {
-            $this->assertStringContainsString('"13px" is not a space step', $e->getMessage());
-        }
-        $this->assertArrayNotHasKey('layout', $theme(), 'and nothing is saved');
-
-        $preview = $abilities->execute('design/preview', ['theme' => ['color' => ['primary' => '#123456']]], $context);
+        $preview = $abilities->execute('design/preview', ['tokens' => ['color.primary' => '#123456'], 'css' => '.x{color:red}'], $context);
         $this->assertStringContainsString('--color-primary:#123456', $preview['css']);
-        $this->assertArrayHasKey('palettes', $preview['resolved']);
-        $this->assertIsArray($preview['findings']);
-        $this->assertSame('#2f5bea', $theme()['color']['primary'], 'a preview saves nothing');
+        $this->assertStringContainsString('.x{color:red}', $preview['css']);
 
-        $abilities->execute('design/update', ['theme' => ['color' => ['primary' => '#111111']], 'replace' => true], $context);
-        $this->assertSame(['$schema', 'color'], array_keys($theme()));
-        $this->assertSame(['primary' => '#111111'], $theme()['color']);
+        $abilities->execute('design/update', ['rename' => ['color.primary' => 'color.brand'], 'dark' => ['color.brand' => null]], $context);
 
-        $get = $abilities->execute('design/get', [], $context);
-        $this->assertSame(['primary' => '#111111'], $get['theme']['color']);
-        $this->assertIsString($get['design'], 'DESIGN.md, the theme written for agents');
-        $this->assertArrayHasKey('gap', $get['catalog']['properties']);
+        $json = json_decode((string) file_get_contents(content_path('design/tokens.json')), true);
+        $after = array_keys(array_filter($json['tokens']['color'], fn ($k) => $k[0] !== '$', ARRAY_FILTER_USE_KEY));
+        $this->assertSame(array_search('primary', $before, true), array_search('brand', $after, true));
+        $this->assertArrayNotHasKey('$extensions', $json['tokens']['color']['brand']);
+        $this->assertSame('token:color.brand', $json['buttons']['primary']['base']['backgroundColor']);
     }
 
     public function test_rendered_preview_uses_the_unsaved_editorial_snapshot_without_persisting_it(): void

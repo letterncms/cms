@@ -116,8 +116,7 @@ final class Elements
     {
         $b = $d['block'];
         $url = self::url($b['url'] ?? null);
-        // The button component of the design vocabulary: a variant, a palette and a size.
-        $meta = ' data-variant="'.e((string) ($b['variant'] ?? 'solid')).'" data-color="'.e((string) ($b['color'] ?? 'primary')).'" data-size="'.e((string) ($b['size'] ?? 'md')).'"';
+        $meta = ' data-variant="'.e((string) ($b['variant'] ?? 'primary')).'" data-size="'.e((string) ($b['size'] ?? 'md')).'"';
         $icon = ! empty($b['icon']) ? Icons::svg((string) $b['icon'], 'cms-button__icon') : '';
         $label = '<span'.self::editable($d, 'label').self::placeholder($d, 'label').'>'.($b['label'] ?? '').'</span>';
         $inner = ($b['icon_position'] ?? 'end') === 'start' ? $icon.$label : $label.$icon;
@@ -327,7 +326,7 @@ final class Elements
     public static function card(array $d): string
     {
         $link = self::url($d['block']['link'] ?? null);
-        $variant = ' data-variant="'.e((string) ($d['block']['variant'] ?? 'default')).'"';
+        $variant = ' data-variant="'.e((string) ($d['block']['variant'] ?? 'outline')).'"';
 
         return $link !== null
             ? '<a '.$d['attrs'].$variant.self::href($link, false, $d['scope']).'>'.$d['content'].'</a>'

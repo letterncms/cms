@@ -332,12 +332,17 @@ export function EmailField({ field, value, onChange, error, disabled }: FieldPro
   return <Input {...props} type="email" icon={props.icon ?? 'mail'} value={value ?? ''} onChange={(e) => onChange(e.target.value)} invalid={!!error} disabled={disabled} />
 }
 
-/** A color name of the design system, typed: the Blocks module replaces this with its picker of the theme's colors. */
 export function ColorField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
+  const hex = value && value.startsWith('#') ? value : '#000000'
+  // Any CSS color shows as itself; token references and empty values show a checkerboard.
+  const swatch = value && typeof CSS !== 'undefined' && CSS.supports('color', value) ? value : 'repeating-conic-gradient(var(--cms-sunken) 0 25%, var(--cms-bg) 0 50%) 0 0/8px 8px'
   const small = field.size === 'sm' || field.size === 'xs'
   return (
-    <div className={cn(!small && 'max-w-60')}>
-      <Input {...inputProps(field)} value={value ?? ''} onChange={(e) => onChange(e.target.value.trim().toLowerCase() || null)} placeholder={(field.placeholder as string) || 'accent'} invalid={!!error} disabled={disabled} className="font-mono" />
+    <div className={cn('flex items-center gap-2', !small && 'max-w-60')}>
+      <label className={cn('relative shrink-0 overflow-hidden border border-border-strong', small ? 'size-7 rounded-sm' : 'size-8 rounded-md')} style={{ background: swatch }}>
+        <input type="color" value={hex} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="absolute inset-0 cursor-pointer opacity-0" aria-label={t('Pick a Color')} />
+      </label>
+      <Input {...inputProps(field)} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} placeholder={(field.placeholder as string) || '#ff5a1f'} invalid={!!error} disabled={disabled} className="font-mono" />
     </div>
   )
 }

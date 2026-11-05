@@ -60,77 +60,30 @@ export function blockName(node: BlockNode, types: Map<string, BlockTypeDef>, com
   return node.label || (node.type === 'pattern' ? components.get(String(node.props?.ref ?? '')) : undefined) || types.get(node.type)?.title || node.type
 }
 
-/** A property of the design vocabulary: its CSS name, inspector group, kind, and the names it takes. */
-export interface VocabProperty {
-  css: string
+export interface ThemeToken {
+  path: string
   group: string
-  kind: string
-  tokens: string[]
-  keywords?: string[]
-  parts?: [number, number]
-  negative?: boolean
-}
-
-export interface Vocabulary {
-  properties: Record<string, VocabProperty>
-  conditions: { breakpoints: Record<string, number>; containers: Record<string, number>; states: string[] }
-  roles: { surface: Record<string, string>; palette: Record<string, string>; space: Record<string, string> }
-  collections: { palettes: string[]; families: string[]; textStyles: string[] }
-  descriptions: { families: Record<string, string>; textStyles: Record<string, string>; schemes: Record<string, string> }
-  scales: Record<string, any>
-}
-
-type Fluid = { min: number; max: number; css: string }
-
-/** A theme worked out (Lettern Design): what every name is on this site, for previews. */
-export interface Resolved {
   name: string
-  palettes: Record<string, { seed: string; shades: Record<string, string>; fill: string; on: string }>
-  modes: { light: { background: string; foreground: string }; dark: { background: string; foreground: string } | null }
-  schemes: Record<string, { background: string; foreground: string; text: Record<string, string>; mix: { muted: number; subtle: number; strong: number }; dark: boolean; self?: string }>
-  families: Record<string, string>
-  fontRoles: { body: string; heading: string; code: string }
-  sizes: Record<string, Fluid & { leading: number; tracking: number }>
-  space: Record<string, Fluid>
-  spaceRoles: Record<string, string>
-  textStyles: Record<string, { font: string; size: string; weight: string; leading: string; tracking: string; case: string; style: string }>
-  weights: Record<string, number>
-  radii: Record<string, string>
-  durations: Record<string, number>
-  containers: Record<string, string>
+  value: unknown
+  dark?: unknown
 }
 
 export interface DesignInfo {
-  theme: Record<string, any>
-  resolved: Resolved
-  catalog: Vocabulary
-  design: string
-  findings: { level: 'error' | 'warning'; scheme: string; pair: string; ratio: number; needs: number }[]
+  tokens: ThemeToken[]
+  breakpoints: Record<string, string>
   templates: Record<string, string>
-  fontFiles: string[]
+  name: string
+  fonts: { family: string; src: string; weight?: string; style?: string }[]
   stylesheet: string
-  js: string
 }
 
-/** The site's design: its theme, what it resolves to and the vocabulary styles may use (empty while Site is off). */
-export function useDesign() {
+/** The site's design system (empty while Site is off). */
+export function useTokens() {
   const q = useAbility<DesignInfo>('design/get', {}, { staleTime: 60_000, retry: false })
   return useMemo(() => {
-    const d = q.data
-    return {
-      available: !!d,
-      theme: d?.theme,
-      resolved: d?.resolved,
-      catalog: d?.catalog,
-      templates: d?.templates ?? {},
-      /** The names a property takes: its keywords, then its tokens. */
-      names: (property: string): string[] => {
-        const p = d?.catalog.properties[property]
-        return p ? [...(p.keywords ?? []), ...p.tokens.filter((t) => !(p.keywords ?? []).includes(t))] : []
-      },
-      property: (property: string): VocabProperty | undefined => d?.catalog.properties[property],
-    }
+    const byGroup = new Map<string, ThemeToken[]>()
+    for (const t of q.data?.tokens ?? []) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t])
+    const byPath = new Map((q.data?.tokens ?? []).map((t) => [t.path, t]))
+    return { tokens: q.data?.tokens ?? [], byGroup, byPath, breakpoints: q.data?.breakpoints ?? { md: '768px', lg: '1024px' }, templates: q.data?.templates ?? {}, available: !!q.data }
   }, [q.data])
 }
-
-export type Design = ReturnType<typeof useDesign>

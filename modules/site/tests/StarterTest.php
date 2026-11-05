@@ -46,7 +46,7 @@ final class StarterTest extends TestCase
         }
         $article = $this->cms()->entries()->query()->collection('templates')->where('slug', 'post')->first();
         $main = collect($article->data['blocks'])->firstWhere('id', 'p-main');
-        $this->assertSame('text', $main['style']['base']['maxWidth']);
+        $this->assertSame('token:container.prose', $main['style']['base']['maxWidth']);
         $this->assertSame([], app(SiteBuilder::class)->buildAll()['errors']);
         $this->assertFileExists(public_path('blog/index.html'));
         $this->assertFileExists(public_path('blog/hello-world/index.html'));

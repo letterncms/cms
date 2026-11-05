@@ -9,7 +9,7 @@ description: 'Used for anything without its own template.'
 ::: pattern {"id":"t-header","props":{"ref":"header"}}
 :::
 
-::: box {"id":"t-main","props":{"tag":"main"},"label":"Main","style":{"base":{"minHeight":"vh-50"}},"anchor":"main"}
+::: box {"id":"t-main","props":{"tag":"main"},"label":"Main","style":{"base":{"minHeight":"60vh"}},"anchor":"main"}
 :::: outlet {"id":"t-outlet"}
 ::::
 :::

@@ -12,7 +12,6 @@
         "laravel/framework": "^13.0",
         "league/commonmark": "^2.6",
         "letterncms/composer-plugin": ">=0.1 <1",
-        "letterncms/design": "^0.1",
         "symfony/yaml": "^7.0|^8.0"
     },
     "require-dev": {

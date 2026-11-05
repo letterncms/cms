@@ -72,7 +72,7 @@ final class Renderer
         $locale = $this->hooks->filter('site.locale', null, $uri);
         $context = new PageContext(null, 1, false, false, $uri, is_string($locale) ? $locale : null);
         $template = $this->templates->resolve(['error', 'default'], false) ?? self::fallback();
-        $nodes = [['id' => 'msg', 'type' => 'section', 'props' => ['width' => 'text'], 'children' => [
+        $nodes = [['id' => 'msg', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => [
             ['id' => 'msgt', 'type' => 'heading', 'props' => ['text' => $title, 'level' => '1']],
             ['id' => 'msgp', 'type' => 'paragraph', 'props' => ['text' => $text]],
             ['id' => 'msgb', 'type' => 'link', 'props' => ['label' => $backLabel ?? __('Go back'), 'url' => $back], 'style' => ['base' => ['display' => 'inline-block', 'marginTop' => '1rem', 'textDecoration' => 'underline']]],
@@ -211,6 +211,7 @@ final class Renderer
         $locale = $context->locale();
         $dir = Languages::direction($locale);
         $name = (string) config('app.name');
+        $design = $this->design->json();
 
         $head = [
             '<meta charset="utf-8">',
@@ -218,9 +219,9 @@ final class Renderer
             '<title>'.e($title !== '' && $entry?->uri !== '/' ? "{$title} · {$name}" : $name).'</title>',
         ];
 
-        if ($this->design->hasDark()) {
+        if ($design->hasDark()) {
             // A saved light/dark choice applies before the first paint.
-            $head[] = '<script>try{var t=localStorage.getItem("cms-mode");if(t)document.documentElement.dataset.mode=t}catch(e){}</script>';
+            $head[] = '<script>try{var t=localStorage.getItem("cms-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>';
         }
 
         foreach ($this->design->preloads() as $href) {
@@ -274,8 +275,8 @@ final class Renderer
     public static function fallback404(): array
     {
         return ['handle' => '404', 'title' => 'Not Found', 'blocks' => [
-            ['id' => 't404', 'type' => 'section', 'props' => ['width' => 'text'], 'anchor' => 'main', 'style' => ['textAlign' => 'center', 'paddingBlock' => 'section', 'flow' => 'normal'], 'children' => [
-                ['id' => 't404c', 'type' => 'paragraph', 'props' => ['text' => '404'], 'style' => ['text' => 'eyebrow', 'color' => 'foreground-muted']],
+            ['id' => 't404', 'type' => 'section', 'props' => ['width' => 'prose'], 'anchor' => 'main', 'style' => ['base' => ['textAlign' => 'center']], 'children' => [
+                ['id' => 't404c', 'type' => 'paragraph', 'props' => ['text' => '404'], 'style' => ['base' => ['color' => 'token:color.muted']]],
                 ['id' => 't404h', 'type' => 'heading', 'props' => ['text' => 'This page does not exist', 'level' => '1']],
                 ['id' => 't404l', 'type' => 'link', 'props' => ['label' => 'Go to the Home Page', 'url' => '/']],
             ]],

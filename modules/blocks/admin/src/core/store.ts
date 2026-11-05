@@ -260,13 +260,9 @@ export class EditorStore {
   }
 }
 
-/** The condition each preview width edits: tablets and phones are below a breakpoint, so desktop styles carry down. */
-export const SCREEN_CONDITION: Record<string, string> = { base: 'base', tablet: 'max-lg', mobile: 'max-md' }
-
 export function variantKey(breakpoint: string, state: string): string {
-  const screen = SCREEN_CONDITION[breakpoint] ?? breakpoint
-  if (screen === 'base') return state || 'base'
-  return state ? `${screen}:${state}` : screen
+  if (breakpoint === 'base') return state || 'base'
+  return state ? `${breakpoint}:${state}` : breakpoint
 }
 
 /** Variants a value is inherited through, most specific first (desktop-first breakpoints). */
@@ -274,7 +270,7 @@ export function variantChain(breakpoint: string, state: string): string[] {
   const bps = breakpoint === 'mobile' ? ['mobile', 'tablet', 'base'] : breakpoint === 'tablet' ? ['tablet', 'base'] : ['base']
   const chain: string[] = []
   if (state) for (const bp of bps) chain.push(variantKey(bp, state))
-  chain.push(...bps.map((bp) => variantKey(bp, '')))
+  chain.push(...bps)
   return chain
 }
 

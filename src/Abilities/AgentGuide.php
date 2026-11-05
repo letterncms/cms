@@ -25,13 +25,13 @@ final class AgentGuide
         You are working on {$site}, a website built with {$brand}. Every tool is an ability (for example entries/create) and runs with the permissions of the signed-in person.
 
         Before creating or changing pages:
-        1. Read the collections (content types and field schemas) and the design system (DESIGN.md) — the cms://collections and cms://site/design context, or collections/list and design/get.
+        1. Read the collections (content types and field schemas) and the design system (tokens) — the cms://collections and cms://site/design context, or collections/list and design/get.
         2. Read the block catalog (cms://blocks or blocks/types) for block props, nesting rules and an example page.
         3. Prefer patterns (patterns/list) for common sections so the site stays consistent.
 
         Conventions:
         - Entries are drafts until published (entries/publish, or status "published" on create).
-        - Styles use the design vocabulary only (Lettern Design): names like "heading-2", "foreground-muted", "section", "lg", never CSS values. A wrong name comes back with the nearest right ones. When something is missing, add it to the theme (design/update), not to one block.
+        - Block styles only use design tokens (token:space.8, token:color.primary…), never raw colors or pixel values.
         - A blocks field also accepts Block Markdown (Markdown plus ::: directives) as a string.
         - Every image needs alt text. Add files with media/import (url or base64) and use the returned id.
         - Write for people first: lead with the answer, short paragraphs, question-style headings where they help.

@@ -8,14 +8,14 @@ category: Components
 description: 'Site name, footer menu and tagline.'
 ---
 
-::: box {"id":"ftr","props":{"tag":"footer"},"label":"Footer","style":{"base":{"marginTop":"3xl","borderTopWidth":"1","borderStyle":"solid","borderColor":"border"}}}
-:::: box {"id":"ftr-inner","style":{"base":{"width":"full","maxWidth":"content","marginInline":"auto","paddingInline":"gutter","display":"flex","flexWrap":"wrap","alignItems":"center","justifyContent":"between","gap":"sm","paddingBlock":"xl","fontSize":"sm","color":"foreground-muted"}}}
+::: box {"id":"ftr","props":{"tag":"footer"},"label":"Footer","style":{"base":{"marginTop":"token:space.24","borderTop":"1px solid token:color.border"}}}
+:::: box {"id":"ftr-inner","style":{"base":{"width":"100%","maxWidth":"token:container.content","marginInline":"auto","paddingInline":"token:space.gutter","display":"flex","flexWrap":"wrap","alignItems":"center","justifyContent":"space-between","gap":"token:space.4","paddingBlock":"token:space.12","fontSize":"token:text.sm","color":"token:color.muted"}}}
 ::::: paragraph {"id":"ftr-copy","bind":{"text":"© {site.year} {site.name}"}}
 :::::
 
-::::: repeat {"id":"ftr-nav","props":{"source":"menu","menu":"footer","tag":"ul"},"label":"Footer menu","style":{"base":{"display":"flex","flexWrap":"wrap","gap":"md"}}}
+::::: repeat {"id":"ftr-nav","props":{"source":"menu","menu":"footer","tag":"ul"},"label":"Footer menu","style":{"base":{"display":"flex","flexWrap":"wrap","gap":"token:space.6"}}}
 :::::: box {"id":"ftr-item","props":{"tag":"li"}}
-::::::: link {"id":"ftr-link","style":{"hover":{"color":"foreground"}},"bind":{"label":"item.label","url":"item.url"}}
+::::::: link {"id":"ftr-link","style":{"hover":{"color":"token:color.foreground"}},"bind":{"label":"item.label","url":"item.url"}}
 :::::::
 ::::::
 :::::

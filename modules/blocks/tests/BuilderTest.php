@@ -90,33 +90,28 @@ final class BuilderTest extends TestCase
         return implode('', $css);
     }
 
-    public function test_styles_take_names_for_any_property_with_breakpoints_states_and_custom_states(): void
+    public function test_styles_take_any_css_property_with_variants_and_custom_states(): void
     {
         $style = app(StyleCompiler::class)->sanitize([
-            'base' => ['gridTemplateColumns' => '3', 'backdropBlur' => 'md', 'boxShadow' => 'lg', 'nope' => 'x', 'color' => 'red;}body{', 'gap' => 'repeat(3, 1fr)'],
-            'max-md:hover' => ['opacity' => '80'],
-            'is-open' => ['rotate' => '45'],
-            'in-open' => ['opacity' => '100'],
-            '@md' => ['gridTemplateColumns' => '2'],
+            'base' => ['gridTemplateColumns' => 'repeat(3, 1fr)', 'backdropFilter' => 'blur(12px)', 'boxShadow' => '0 8px 24px token:color.primary/20', 'nope' => 'x', 'color' => 'red;}body{'],
+            'mobile:hover' => ['opacity' => 0.8],
+            'is-open' => ['rotate' => '45deg'],
+            'in-open' => ['opacity' => 1],
             'before' => ['position' => 'absolute'],
-            'mobile' => ['opacity' => '50'],
-            'evil:hover' => ['color' => 'primary'],
+            'evil:hover' => ['color' => 'red'],
         ]);
 
-        $this->assertSame(['gridTemplateColumns', 'backdropBlur', 'boxShadow'], array_keys($style['base']));
-        $this->assertSame(['base', 'max-md:hover', 'is-open', 'in-open', '@md', 'before'], array_keys($style), 'mobile and evil are not conditions');
+        $this->assertSame(['gridTemplateColumns', 'backdropFilter', 'boxShadow'], array_keys($style['base']));
+        $this->assertArrayNotHasKey('evil:hover', $style);
 
-        $css = $this->css(fn () => app(StyleCompiler::class)->compile($style));
-        $this->assertStringContainsString('grid-template-columns:repeat(3, minmax(0, 1fr))', $css);
-        $this->assertStringContainsString('--fx-backdrop-blur:blur(8px);-webkit-backdrop-filter:', $css);
-        $this->assertStringContainsString('box-shadow:var(--shadow-lg)', $css);
-        $this->assertMatchesRegularExpression('/@media \(max-width: 47\.99875rem\)\{@media \(hover: hover\)\{\.s\w+:hover\{opacity:0\.8\}\}\}/', $css);
+        $css = $this->css(fn () => app(StyleCompiler::class)->classes($style));
+        $this->assertStringContainsString('grid-template-columns:repeat(3, 1fr)', $css);
+        $this->assertStringContainsString('-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)', $css);
+        $this->assertStringContainsString('box-shadow:0 8px 24px color-mix(in srgb, var(--color-primary) 20%, transparent)', $css);
+        $this->assertMatchesRegularExpression('/@media \(max-width:767\.98px\)\{@media \(hover:hover\)\{\.s\w+:hover\{opacity:0\.8\}\}\}/', $css);
         $this->assertMatchesRegularExpression('/\.s\w+\.is-open\{rotate:45deg\}/', $css);
-        $this->assertMatchesRegularExpression('/:where\(\.is-open,\[open\]\) \.s\w+\{opacity:1\}/', $css);
-        $this->assertMatchesRegularExpression('/@container \(min-width: 28rem\)\{\.s\w+\{grid-template-columns:repeat\(2, minmax\(0, 1fr\)\)\}\}/', $css);
-        $this->assertMatchesRegularExpression('/\.s\w+::before\{content:"";position:absolute\}/', $css);
-        $this->assertSame([], app(StyleCompiler::class)->errors($style), 'a sanitized style compiles without complaint');
-        $this->assertNotSame([], app(StyleCompiler::class)->errors(['padding' => '13px']), 'a raw value is explained to whoever wrote it');
+        $this->assertMatchesRegularExpression('/\.is-open \.s\w+\{opacity:1\}/', $css);
+        $this->assertMatchesRegularExpression('/\.p\w+::before\{content:""\}/', $css, 'pseudo-elements get content');
     }
 
     public function test_bindings_fill_props_states_attributes_and_visibility_from_the_scope(): void
@@ -169,7 +164,7 @@ final class BuilderTest extends TestCase
                     'attrs' => ['aria-expanded' => 'open', 'onclick' => 'alert(1)'],
                     'on' => [['event' => 'click', 'mods' => ['outside', 'evil'], 'actions' => [['do' => 'toggle', 'var' => 'open'], ['do' => 'run', 'expr' => 'new Function("x")'], ['do' => 'play', 'node' => 'panel1', 'motion' => 'm1']]]],
                 ]],
-                ['id' => 'panel1', 'type' => 'box', 'logic' => ['show' => 'open', 'transition' => 'fade'], 'motion' => [['id' => 'm1', 'trigger' => ['type' => 'event'], 'steps' => [['target' => 'children', 'from' => ['opacity' => '0', 'y' => 'sm', 'evil' => '1', 'x' => '12px'], 'stagger' => 'fastest']]]]],
+                ['id' => 'panel1', 'type' => 'box', 'logic' => ['show' => 'open', 'transition' => 'fade'], 'motion' => [['id' => 'm1', 'trigger' => ['type' => 'event'], 'steps' => [['target' => 'children', 'from' => ['opacity' => 0, 'y' => 12, 'evil' => 1], 'stagger' => 0.05]]]]],
             ]],
         ]);
 
@@ -183,7 +178,7 @@ final class BuilderTest extends TestCase
         $this->assertStringContainsString('x-show="open" x-cloak x-transition.opacity.duration.200ms', $html);
         $this->assertStringContainsString('data-cms="panel1"', $html, 'a node that is played gets a reference');
         $this->assertStringContainsString('&quot;opacity&quot;:0', $html);
-        $this->assertStringContainsString('&quot;transform&quot;:&quot;translateY(var(--space-sm))&quot;', $html, 'unknown animation properties and raw values are dropped');
+        $this->assertStringContainsString('translateY(12px)', $html, 'unknown animation properties are dropped');
         $this->assertStringNotContainsString('evil', $html);
         $this->assertSame(['logic' => true, 'motion' => true], app(BlockRenderer::class)->features);
     }

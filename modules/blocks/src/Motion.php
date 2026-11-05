@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Blocks;
 
-use Lettern\Design\Spec;
-use Lettern\Design\Style;
-use Lettern\Design\StyleError;
-
 /**
  * Animations as data, compiled here to what the browser runs by itself.
  *
@@ -18,8 +14,8 @@ use Lettern\Design\StyleError;
  *     steps: [{
  *       target: "self",                                                          self · children · words · #<node id>
  *       mask: false,                                                             words: clip each word, so it rises from behind a line
- *       from: { opacity: "0", y: "lg" }, to: {},                                 empty side = the element's own styles
- *       duration: "slow", delay: "fast", ease: "expo", stagger: "fastest", at: null,
+ *       from: { opacity: 0, y: 32 }, to: {},                                     empty side = the element's own styles
+ *       duration: 0.8, delay: 0, ease: "expo.out", stagger: 0.05, at: null,
  *     }],
  *     repeat: 0, yoyo: false,                                                    repeat -1 = forever
  *     hold: 2,                                                                   with appear and repeat -1: the steps play as one timeline that loops, resting this long
@@ -30,10 +26,6 @@ use Lettern\Design\StyleError;
  * event become a Web Animations description for the small `motion` runtime chunk, which
  * shows everything as designed if it never runs. Scroll start and end read "<element
  * edge> <viewport position>": "top 80%", "center center", "bottom top".
- *
- * Every value is a name of the design vocabulary, like a style's: durations and easings
- * from the theme, distances in space or translate steps, colors as roles, clip reveals
- * as named shapes. Only `at` (where a step starts on its timeline) and `hold` are seconds.
  */
 final class Motion
 {
@@ -41,22 +33,29 @@ final class Motion
 
     public const array SCREENS = ['desktop', 'tablet', 'mobile'];
 
-    /** Animatable properties: name => the style property whose names it takes (see Lettern\Design\Spec::PROPERTIES), or one of Motion's own. */
+    /** Animatable properties: name => kind. */
     public const array PROPERTIES = [
-        'opacity' => 'opacity', 'x' => 'translateX', 'y' => 'translateY', 'z' => 'paddingTop',
-        'scale' => 'scale', 'scaleX' => 'scale', 'scaleY' => 'scale', 'rotate' => 'rotate', 'rotateX' => 'rotate', 'rotateY' => 'rotate',
-        'skewX' => 'skewX', 'skewY' => 'skewY', 'perspective' => 'perspective', 'blur' => 'blur', 'brightness' => 'brightness', 'grayscale' => 'grayscale',
-        'clipPath' => 'clip', 'backgroundColor' => 'backgroundColor', 'color' => 'color', 'borderColor' => 'borderColor', 'borderRadius' => 'borderRadius',
-        'boxShadow' => 'boxShadow', 'letterSpacing' => 'letterSpacing', 'transformOrigin' => 'transformOrigin',
+        'opacity' => 'number', 'x' => 'length', 'y' => 'length', 'xPercent' => 'number', 'yPercent' => 'number', 'z' => 'length',
+        'scale' => 'number', 'scaleX' => 'number', 'scaleY' => 'number', 'rotate' => 'number', 'rotateX' => 'number', 'rotateY' => 'number',
+        'skewX' => 'number', 'skewY' => 'number', 'perspective' => 'length', 'blur' => 'number', 'brightness' => 'number', 'grayscale' => 'number',
+        'clipPath' => 'css', 'backgroundColor' => 'css', 'color' => 'css', 'borderColor' => 'css', 'borderRadius' => 'css', 'boxShadow' => 'css',
+        'letterSpacing' => 'css', 'transformOrigin' => 'css',
     ];
 
-    /** Clip shapes to reveal from or to: "hidden-up" is clipped away to the top edge, so it reveals downwards. */
-    public const array CLIPS = [
-        'visible' => 'inset(0% 0% 0% 0%)', 'hidden-up' => 'inset(0% 0% 100% 0%)', 'hidden-down' => 'inset(100% 0% 0% 0%)',
-        'hidden-left' => 'inset(0% 100% 0% 0%)', 'hidden-right' => 'inset(0% 0% 0% 100%)', 'hidden-center' => 'inset(50% 50% 50% 50%)',
-        'circle-hidden' => 'circle(0% at 50% 50%)', 'circle-visible' => 'circle(75% at 50% 50%)',
+    /** Ease names => CSS timing functions. `linear()` draws what a bezier can't. */
+    public const array EASES = [
+        'none' => 'linear', 'linear' => 'linear',
+        'power1.in' => 'cubic-bezier(.11,0,.5,0)', 'power1.out' => 'cubic-bezier(.5,1,.89,1)', 'power1.inOut' => 'cubic-bezier(.45,0,.55,1)',
+        'power2.in' => 'cubic-bezier(.32,0,.67,0)', 'power2.out' => 'cubic-bezier(.33,1,.68,1)', 'power2.inOut' => 'cubic-bezier(.65,0,.35,1)',
+        'power3.in' => 'cubic-bezier(.5,0,.75,0)', 'power3.out' => 'cubic-bezier(.25,1,.5,1)', 'power3.inOut' => 'cubic-bezier(.76,0,.24,1)',
+        'power4.in' => 'cubic-bezier(.64,0,.78,0)', 'power4.out' => 'cubic-bezier(.22,1,.36,1)', 'power4.inOut' => 'cubic-bezier(.83,0,.17,1)',
+        'sine.in' => 'cubic-bezier(.12,0,.39,0)', 'sine.out' => 'cubic-bezier(.61,1,.88,1)', 'sine.inOut' => 'cubic-bezier(.37,0,.63,1)',
+        'expo.in' => 'cubic-bezier(.7,0,.84,0)', 'expo.out' => 'cubic-bezier(.16,1,.3,1)', 'expo.inOut' => 'cubic-bezier(.87,0,.13,1)',
+        'circ.in' => 'cubic-bezier(.55,0,1,.45)', 'circ.out' => 'cubic-bezier(0,.55,.45,1)', 'circ.inOut' => 'cubic-bezier(.85,0,.15,1)',
+        'back.in' => 'cubic-bezier(.36,0,.66,-.56)', 'back.out' => 'cubic-bezier(.34,1.56,.64,1)', 'back.inOut' => 'cubic-bezier(.68,-.6,.32,1.6)',
+        'elastic.out' => 'linear(0,.361,.832,1.2,1.364,1.336,1.193,1.029,.912,.868,.889,.944,1,1.036,1.047,1.036,1.016,.997,.986,.984,.989,.996,1.002,1.005,1.006,1.004,1.001,.999,.998,.998,.999,1,1)',
+        'bounce.out' => 'linear(0,.007,.03,.066,.118,.185,.266,.362,.473,.598,.739,.894,.97,.897,.838,.794,.766,.752,.752,.768,.798,.843,.903,.977,.973,.948,.938,.942,.962,.996,.987,.986,1)',
     ];
-
 
     /** A page load animation may hold nothing back for long: it decides when the page looks done. */
     private const float LOAD_DELAY = 0.2;
@@ -130,10 +129,10 @@ final class Motion
                     'mask' => $mask && $target === 'words' ? true : null,
                     'from' => self::props($step['from'] ?? []) ?: null,
                     'to' => self::props($step['to'] ?? []) ?: null,
-                    'duration' => self::duration($step['duration'] ?? null) ?? 'base',
-                    'delay' => self::duration($step['delay'] ?? null),
+                    'duration' => self::number($step['duration'] ?? 0.6, 0, 30),
+                    'delay' => isset($step['delay']) ? self::number($step['delay'], 0, 30) : null,
                     'ease' => self::ease($step['ease'] ?? null),
-                    'stagger' => self::duration($step['stagger'] ?? null),
+                    'stagger' => isset($step['stagger']) ? self::number($step['stagger'], 0, 5) : null,
                     'at' => isset($step['at']) && is_numeric($step['at']) ? self::number($step['at'], 0, 120) : null,
                 ], static fn ($v) => $v !== null);
             }
@@ -181,14 +180,12 @@ final class Motion
     /**
      * What a node's animations come to.
      *
-     * @param  array<string, int>  $durations  the theme's durations in ms (they follow its motion speed)
+     * @param  array<string, string>  $breakpoints  name => min-width (see StyleCompiler)
      * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, split: ?array{mask: bool}, timelines: list<string>, forever: bool}
      */
-    public static function compile(array $motion, array $durations = Spec::DURATIONS): array
+    public static function compile(array $motion, array $breakpoints = []): array
     {
         $out = ['classes' => [], 'rules' => [], 'runtime' => [], 'split' => null, 'timelines' => [], 'forever' => false];
-        $breakpoints = array_map(static fn (int $px) => "{$px}px", Spec::BREAKPOINTS);
-        $motion = self::resolve($motion, $durations);
 
         foreach ($motion as $animation) {
             foreach ($animation['steps'] as $step) {
@@ -545,8 +542,15 @@ final class Motion
             $transform[] = 'perspective('.$number($props['perspective']).')';
         }
 
-        foreach (['x', 'y'] as $axis) {
-            isset($props[$axis]) && $transform[] = 'translate'.strtoupper($axis).'('.$number($props[$axis]).')';
+        foreach (['x' => 'xPercent', 'y' => 'yPercent'] as $axis => $percent) {
+            $parts = [];
+            isset($props[$axis]) && $parts[] = $number($props[$axis]);
+            isset($props[$percent]) && $parts[] = ((float) $props[$percent]).'%';
+
+            if ($parts !== []) {
+                $value = count($parts) === 2 ? 'calc('.$parts[0].' + '.$parts[1].')' : $parts[0];
+                $transform[] = 'translate'.strtoupper($axis).'('.$value.')';
+            }
         }
 
         isset($props['z']) && $transform[] = 'translateZ('.$number($props['z']).')';
@@ -573,7 +577,8 @@ final class Motion
 
         foreach (['opacity', 'clipPath', 'backgroundColor', 'color', 'borderColor', 'borderRadius', 'boxShadow', 'letterSpacing', 'transformOrigin'] as $key) {
             if (isset($props[$key])) {
-                $props[$key] !== null && $out[$key] = $props[$key];
+                $value = is_string($props[$key]) ? Css::value($props[$key]) : $props[$key];
+                $value !== null && $out[$key] = $value;
             }
         }
 
@@ -582,7 +587,9 @@ final class Motion
 
     private static function timing(array $step): string
     {
-        return (string) ($step['ease'] ?? Spec::EASES['out']);
+        $ease = (string) ($step['ease'] ?? 'power3.out');
+
+        return self::EASES[preg_replace('/\(.*\)$/', '', $ease)] ?? self::EASES[$ease.'.out'] ?? $ease;
     }
 
     private static function seconds(float $value): string
@@ -600,66 +607,22 @@ final class Motion
         $out = [];
 
         foreach ((array) $props as $key => $value) {
-            $value = is_scalar($value) ? trim((string) $value) : null;
+            $kind = self::PROPERTIES[$key] ?? null;
 
-            if ($value !== null && isset(self::PROPERTIES[$key]) && self::value($key, $value) !== null) {
-                $out[$key] = $value;
+            if ($kind === null) {
+                continue;
+            }
+
+            if ($kind === 'number' && is_numeric($value)) {
+                $out[$key] = (float) $value;
+            } elseif ($kind === 'length' && (is_numeric($value) || (is_string($value) && (preg_match('/^-?[\d.]+(px|rem|em|vw|vh|%)$/', trim($value)) || (preg_match('/^(calc|min|max|clamp)\(/', trim($value)) && Css::value($value) !== null))))) {
+                $out[$key] = is_numeric($value) ? (float) $value : trim($value);
+            } elseif ($kind === 'css' && is_string($value) && Css::value($value) !== null) {
+                $out[$key] = trim($value);
             }
         }
 
         return $out;
-    }
-
-    /** What a prop's name stands for, in the form css() takes: numbers for transforms and filters, CSS for the rest. */
-    private static function value(string $key, string $name): float|string|null
-    {
-        $property = self::PROPERTIES[$key];
-
-        if ($property === 'clip') {
-            return self::CLIPS[$name] ?? null;
-        }
-
-        try {
-            $declarations = (new Style)->declarations($property, $name);
-        } catch (StyleError) {
-            return null;
-        }
-
-        $css = (string) end($declarations)[1];
-        $first = (string) $declarations[0][1];
-
-        return match ($property) {
-            'opacity', 'scale' => (float) $css,
-            'rotate', 'skewX', 'skewY' => (float) $first,
-            'blur' => (float) (Spec::BLURS[$name] ?? 0),
-            'brightness' => (float) $name / 100,
-            'grayscale' => (float) $name / 100,
-            'translateX', 'translateY' => $first,
-            default => $css,
-        };
-    }
-
-    /** The names of every step as the values the compiler works with: seconds, CSS timing functions, numbers and CSS. */
-    private static function resolve(array $motion, array $durations): array
-    {
-        $seconds = static fn (?string $name) => $name === null ? null : ($durations[$name] ?? Spec::DURATIONS[$name] ?? 0) / 1000;
-
-        foreach ($motion as &$animation) {
-            foreach ($animation['steps'] as &$step) {
-                $step['duration'] = $seconds($step['duration'] ?? 'base');
-                isset($step['delay']) && $step['delay'] = $seconds($step['delay']);
-                isset($step['stagger']) && $step['stagger'] = $seconds($step['stagger']);
-                $step['ease'] = Spec::EASES[$step['ease'] ?? 'out'] ?? Spec::EASES['out'];
-
-                foreach (['from', 'to'] as $side) {
-                    foreach ($step[$side] ?? [] as $key => $name) {
-                        $step[$side][$key] = self::value($key, (string) $name);
-                    }
-                }
-            }
-        }
-
-        return $motion;
     }
 
     private static function number(mixed $value, float $min, float $max): float
@@ -673,15 +636,22 @@ final class Motion
         return is_string($value) && preg_match('/^(top|center|bottom) (top|center|bottom|\d{1,3}(\.\d+)?%)$/', trim($value)) ? trim($value) : null;
     }
 
-    /** An easing of the vocabulary: out, expo, swift, spring… */
+    /** Names from EASES ("expo.out", "back.out(1.7)"), or cubic-bezier(), linear() and steps() as written. */
     private static function ease(mixed $value): ?string
     {
-        return is_string($value) && array_key_exists($value, Spec::EASES) ? $value : null;
-    }
+        if (! is_string($value)) {
+            return null;
+        }
 
-    /** A duration of the vocabulary: fastest, fast, base, slow… */
-    private static function duration(mixed $value): ?string
-    {
-        return is_string($value) && array_key_exists($value, Spec::DURATIONS) ? $value : null;
+        $value = trim($value);
+        $name = (string) preg_replace('/\([\d., ]{0,20}\)$/', '', $value);
+
+        if (isset(self::EASES[$name]) || isset(self::EASES[$name.'.out'])) {
+            return $name;
+        }
+
+        return preg_match('/^cubic-bezier\(\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*-?[\d.]+\s*\)$/', $value)
+            || preg_match('/^linear\([\d.,% -]{1,800}\)$/', $value)
+            || preg_match('/^steps\(\s*\d{1,3}\s*(,\s*(start|end|jump-[a-z]+)\s*)?\)$/', $value) ? $value : null;
     }
 }

@@ -18,7 +18,7 @@ namespace Cms\Modules\Blocks;
  */
 final class CoreBlocks
 {
-    private const array TEXT = ['layout', 'position', 'size', 'spacing', 'typography', 'color', 'border', 'effects', 'transform', 'motion'];
+    private const array TEXT = ['layout', 'position', 'size', 'spacing', 'typography', 'fill', 'border', 'effects', 'transform', 'transition'];
 
     /** @return list<array{name: string, label: string}> the inserter's groups, in order */
     public static function categories(): array
@@ -38,9 +38,8 @@ final class CoreBlocks
     /** @return list<array> */
     public static function all(): array
     {
-        // Space steps of the design vocabulary: fluid, so they suit every screen.
         $space = static fn (string $default) => ['type' => 'select', 'options' => [
-            '0' => 'None', '2xs' => '2XS', 'xs' => 'XS', 'sm' => 'S', 'md' => 'M', 'lg' => 'L', 'xl' => 'XL', '2xl' => '2XL', '3xl' => '3XL', '4xl' => '4XL',
+            'token:space.0' => 'None', 'token:space.2' => 'XS', 'token:space.4' => 'S', 'token:space.6' => 'M', 'token:space.8' => 'L', 'token:space.12' => 'XL', 'token:space.16' => '2XL',
         ], 'default' => $default];
         // Technical settings sit under Advanced in the Content tab ('advanced').
         $tags = static fn (array $tags, string $default) => ['handle' => 'tag', 'type' => 'select', 'label' => 'HTML Tag', 'options' => array_combine($tags, $tags), 'default' => $default, 'advanced' => true];
@@ -67,7 +66,7 @@ final class CoreBlocks
                 'description' => 'A full-width band.', 'keywords' => ['container', 'band', 'hero', 'wrapper'],
                 'children' => true, 'html' => 'section',
                 'fields' => [
-                    ['handle' => 'width', 'type' => 'select', 'label' => 'Content Width', 'options' => ['text' => 'Text', 'content' => 'Content', 'wide' => 'Wide', 'full' => 'Full'], 'default' => 'content', 'display' => 'segmented'],
+                    ['handle' => 'width', 'type' => 'select', 'label' => 'Content Width', 'options' => ['prose' => 'Text', 'content' => 'Content', 'wide' => 'Wide', 'full' => 'Full'], 'default' => 'content', 'display' => 'segmented'],
                     ['handle' => 'tag', 'type' => 'select', 'label' => 'HTML Tag', 'options' => ['section' => 'section', 'header' => 'header', 'footer' => 'footer', 'aside' => 'aside', 'main' => 'main', 'nav' => 'nav', 'article' => 'article', 'div' => 'div'], 'default' => 'section', 'advanced' => true],
                     ['handle' => 'background_image', 'type' => 'media', 'label' => 'Background Image', 'max' => 1],
                     ['handle' => 'overlay', 'type' => 'select', 'label' => 'Overlay', 'options' => ['none' => 'None', 'light' => 'Light', 'dark' => 'Dark'], 'default' => 'none'],
@@ -82,7 +81,7 @@ final class CoreBlocks
                 'children' => true,
                 'fields' => [
                     ['handle' => 'direction', 'type' => 'select', 'label' => 'Direction', 'options' => ['vertical' => 'Vertical', 'horizontal' => 'Horizontal'], 'default' => 'vertical', 'display' => 'segmented'],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('md')],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.4')],
                     ['handle' => 'align', 'type' => 'select', 'label' => 'Align', 'options' => ['stretch' => 'Stretch', 'start' => 'Start', 'center' => 'Center', 'end' => 'End'], 'default' => 'stretch'],
                     ['handle' => 'justify', 'type' => 'select', 'label' => 'Justify', 'options' => ['start' => 'Start', 'center' => 'Center', 'end' => 'End', 'between' => 'Space Between'], 'default' => 'start'],
                     ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Wrap'],
@@ -91,9 +90,9 @@ final class CoreBlocks
                 'derive' => static fn (array $p) => ['base' => array_filter([
                     'display' => 'flex',
                     'flexDirection' => ($p['direction'] ?? 'vertical') === 'horizontal' ? 'row' : 'column',
-                    'gap' => $p['gap'] ?? 'md',
-                    'alignItems' => ['start' => 'start', 'center' => 'center', 'end' => 'end'][$p['align'] ?? ''] ?? (($p['direction'] ?? '') === 'horizontal' ? 'center' : null),
-                    'justifyContent' => ['center' => 'center', 'end' => 'end', 'between' => 'between'][$p['justify'] ?? ''] ?? null,
+                    'gap' => $p['gap'] ?? 'token:space.4',
+                    'alignItems' => ['start' => 'flex-start', 'center' => 'center', 'end' => 'flex-end'][$p['align'] ?? ''] ?? (($p['direction'] ?? '') === 'horizontal' ? 'center' : null),
+                    'justifyContent' => ['center' => 'center', 'end' => 'flex-end', 'between' => 'space-between'][$p['justify'] ?? ''] ?? null,
                     'flexWrap' => ! empty($p['wrap']) ? 'wrap' : null,
                 ])],
                 'render' => Elements::box(...),
@@ -104,19 +103,19 @@ final class CoreBlocks
                 'children' => ['column'],
                 'fields' => [
                     ['handle' => 'layout', 'type' => 'select', 'label' => 'Layout', 'options' => ['1-1' => '½ ½', '1-2' => '⅓ ⅔', '2-1' => '⅔ ⅓', '1-1-1' => '⅓ ⅓ ⅓', '1-1-1-1' => '¼ ¼ ¼ ¼', '3-2' => '⅗ ⅖', '2-3' => '⅖ ⅗'], 'default' => '1-1'],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('xl')],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.8')],
                     ['handle' => 'align', 'type' => 'select', 'label' => 'Vertical Align', 'options' => ['stretch' => 'Stretch', 'start' => 'Top', 'center' => 'Middle', 'end' => 'Bottom'], 'default' => 'start'],
                     ['handle' => 'stack', 'type' => 'select', 'label' => 'Stack On', 'options' => ['md' => 'Phone', 'lg' => 'Tablet and Phone', 'never' => 'Never'], 'default' => 'md'],
                     ['handle' => 'reverse', 'type' => 'toggle', 'label' => 'Reverse Order When Stacked'],
                 ],
                 'derive' => static function (array $p): array {
                     $layout = preg_match('/^\d(-\d){1,3}$/', (string) ($p['layout'] ?? '')) ? (string) $p['layout'] : '1-1';
-                    $cols = implode(' ', array_map(static fn ($n) => "{$n}fr", explode('-', $layout)));
+                    $cols = implode(' ', array_map(static fn ($n) => "minmax(0,{$n}fr)", explode('-', $layout)));
                     $stack = $p['stack'] ?? 'md';
-                    $style = ['base' => ['display' => 'grid', 'gap' => $p['gap'] ?? 'xl', 'alignItems' => ['start' => 'start', 'center' => 'center', 'end' => 'end', 'stretch' => 'stretch'][$p['align'] ?? 'start'] ?? 'start', 'gridTemplateColumns' => $cols]];
+                    $style = ['base' => ['display' => 'grid', 'gap' => $p['gap'] ?? 'token:space.8', 'alignItems' => ['start' => 'start', 'center' => 'center', 'end' => 'end', 'stretch' => 'stretch'][$p['align'] ?? 'start'] ?? 'start', 'gridTemplateColumns' => $cols]];
 
                     if ($stack !== 'never') {
-                        $style[$stack === 'lg' ? 'max-lg' : 'max-md'] = ['gridTemplateColumns' => '1'];
+                        $style[$stack === 'lg' ? 'tablet' : 'mobile'] = ['gridTemplateColumns' => 'minmax(0,1fr)'];
                     }
 
                     return $style;
@@ -134,17 +133,17 @@ final class CoreBlocks
                 'children' => true,
                 'fields' => [
                     ['handle' => 'columns', 'type' => 'number', 'label' => 'Columns', 'min' => 1, 'max' => 12, 'default' => 3],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('lg')],
+                    ['handle' => 'min', 'type' => 'select', 'label' => 'Minimum Item Width', 'options' => ['10rem' => 'XS', '12rem' => 'S', '16rem' => 'M', '20rem' => 'L', '24rem' => 'XL'], 'default' => '16rem'],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.6')],
                 ],
-                // Fewer columns as the screen narrows: at most two on a tablet, one on a phone.
                 'derive' => static function (array $p): array {
                     $n = max(1, min(12, (int) ($p['columns'] ?? 3)));
+                    $min = in_array($p['min'] ?? '16rem', ['10rem', '12rem', '16rem', '20rem', '24rem'], true) ? ($p['min'] ?? '16rem') : '16rem';
 
-                    return array_filter([
-                        'base' => ['display' => 'grid', 'gap' => $p['gap'] ?? 'lg', 'gridTemplateColumns' => (string) $n],
-                        'max-lg' => $n > 2 ? ['gridTemplateColumns' => '2'] : null,
-                        'max-md' => $n > 1 ? ['gridTemplateColumns' => '1'] : null,
-                    ]);
+                    return [
+                        'base' => ['display' => 'grid', 'gap' => $p['gap'] ?? 'token:space.6', 'gridTemplateColumns' => "repeat({$n},minmax(0,1fr))"],
+                        'tablet' => ['gridTemplateColumns' => "repeat(auto-fill,minmax(min(100%,{$min}),1fr))"],
+                    ];
                 },
                 'template' => [
                     ['type' => 'card', 'children' => [['type' => 'heading', 'props' => ['text' => 'Feature', 'level' => '3']], ['type' => 'paragraph', 'props' => ['text' => '']]]],
@@ -159,7 +158,7 @@ final class CoreBlocks
                 'children' => true,
                 'fields' => [
                     $url('link', 'Link'),
-                    ['handle' => 'variant', 'type' => 'select', 'label' => 'Look', 'options' => ['default' => 'Outline', 'raised' => 'Raised', 'flat' => 'Filled', 'ghost' => 'Plain'], 'default' => 'default', 'display' => 'segmented'],
+                    ['handle' => 'variant', 'type' => 'select', 'label' => 'Look', 'options' => ['plain' => 'Plain', 'outline' => 'Outline', 'filled' => 'Filled', 'raised' => 'Raised'], 'default' => 'outline', 'display' => 'segmented'],
                 ],
                 'render' => Elements::card(...),
             ],
@@ -171,8 +170,8 @@ final class CoreBlocks
             ['name' => 'divider', 'title' => 'Divider', 'icon' => 'divider', 'category' => 'layout', 'description' => 'A horizontal line.', 'keywords' => ['hr', 'line', 'separator'], 'render' => static fn (array $d) => '<hr '.$d['attrs'].'>'],
             [
                 'name' => 'spacer', 'title' => 'Spacer', 'icon' => 'height', 'category' => 'layout', 'description' => 'Empty vertical space.', 'keywords' => ['gap', 'space'],
-                'fields' => [['handle' => 'size', 'label' => 'Size', ...$space('2xl')]],
-                'derive' => static fn (array $p) => ['base' => ['height' => $p['size'] ?? '2xl']],
+                'fields' => [['handle' => 'size', 'label' => 'Size', ...$space('token:space.12')]],
+                'derive' => static fn (array $p) => ['base' => ['height' => $p['size'] ?? 'token:space.12']],
                 'render' => static fn (array $d) => '<div '.$d['attrs'].' aria-hidden="true"></div>',
             ],
 
@@ -331,24 +330,23 @@ final class CoreBlocks
                 'fields' => [
                     ['handle' => 'label', 'type' => 'richtext', 'label' => 'Label', 'inline' => true],
                     $url('url', 'Link', ['placeholder' => 'No link (runs an interaction)']),
-                    ['handle' => 'variant', 'type' => 'select', 'label' => 'Style', 'options' => ['solid' => 'Solid', 'soft' => 'Soft', 'outline' => 'Outline', 'ghost' => 'Ghost', 'link' => 'Link'], 'default' => 'solid'],
-                    ['handle' => 'color', 'type' => 'select', 'label' => 'Color', 'options' => [], 'dynamic' => 'palettes', 'default' => 'primary'],
+                    ['handle' => 'variant', 'type' => 'select', 'label' => 'Style', 'options' => [], 'dynamic' => 'button-variants', 'default' => 'primary'],
                     ['handle' => 'size', 'type' => 'select', 'label' => 'Size', 'options' => ['sm' => 'S', 'md' => 'M', 'lg' => 'L'], 'default' => 'md', 'display' => 'segmented'],
                     ['handle' => 'icon', 'type' => 'text', 'component' => 'blocks-icon', 'label' => 'Icon', 'placeholder' => 'None'],
                     ['handle' => 'icon_position', 'type' => 'select', 'label' => 'Icon Position', 'options' => ['start' => 'Before', 'end' => 'After'], 'default' => 'end', 'display' => 'segmented'],
                     ['handle' => 'new_tab', 'type' => 'toggle', 'label' => 'Open in New Tab'],
                     ['handle' => 'type', 'type' => 'select', 'label' => 'Button Type', 'options' => ['button' => 'Button', 'submit' => 'Submit'], 'default' => 'button', 'advanced' => true],
                 ],
-                'defaults' => ['variant' => 'solid', 'color' => 'primary', 'size' => 'md'],
+                'defaults' => ['variant' => 'primary', 'size' => 'md'],
                 'render' => Elements::button(...),
-                'example' => ['label' => 'Get Started', 'url' => '/start', 'variant' => 'solid'],
+                'example' => ['label' => 'Get Started', 'url' => '/start', 'variant' => 'primary'],
             ],
             [
                 'name' => 'buttons', 'title' => 'Buttons', 'icon' => 'button', 'category' => 'interactive',
                 'description' => 'A row of buttons.', 'keywords' => ['ctas', 'actions'],
                 'children' => ['button'],
                 'fields' => [['handle' => 'justify', 'type' => 'select', 'label' => 'Align', 'options' => ['start' => 'Start', 'center' => 'Center', 'end' => 'End'], 'default' => 'start', 'display' => 'segmented']],
-                'template' => [['type' => 'button', 'props' => ['label' => 'Get Started', 'variant' => 'solid']], ['type' => 'button', 'props' => ['label' => 'Learn More', 'variant' => 'outline', 'color' => 'neutral']]],
+                'template' => [['type' => 'button', 'props' => ['label' => 'Get Started', 'variant' => 'primary']], ['type' => 'button', 'props' => ['label' => 'Learn More', 'variant' => 'secondary']]],
                 'render' => Elements::buttons(...),
             ],
             [

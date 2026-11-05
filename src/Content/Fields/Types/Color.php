@@ -7,14 +7,14 @@ namespace Cms\Content\Fields\Types;
 use Cms\Content\Fields\Field;
 use Cms\Content\Fields\FieldType;
 
-/** A color of the design vocabulary: a role or palette ("accent", "primary-text", "lime-300"), optionally with an opacity ("primary/20"). */
+/** A color: a design token reference ("token:primary") or a CSS color. */
 class Color extends FieldType
 {
     public function key(): string { return 'color'; }
 
     public function label(): string { return __('Color'); }
 
-    public function description(): string { return __('A color from the design system.'); }
+    public function description(): string { return __('A color: a design token, hex value or CSS color function.'); }
 
     public function icon(): string { return 'palette'; }
 
@@ -22,8 +22,8 @@ class Color extends FieldType
     {
         return $this->nullable([
             'type' => 'string',
-            'pattern' => '^[a-z][a-z0-9-]*(/[0-9]{1,2})?$',
-            'description' => ($field->instructions ?: $field->label).' — a color name of the design system, like accent, primary-text or lime-300',
+            'pattern' => '^(token:[a-z0-9.-]+|#[0-9a-fA-F]{3,8}|(rgb|hsl|oklch)a?\([^)]*\))$',
+            'description' => ($field->instructions ?: $field->label).' — prefer design tokens like token:primary',
         ], $field);
     }
 }

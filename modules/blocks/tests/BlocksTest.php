@@ -68,35 +68,34 @@ final class BlocksTest extends TestCase
     public function test_markdown_round_trip_keeps_structure(): void
     {
         $codec = app(MarkdownCodec::class);
-        $markdown = "## Hello\n\nSome **bold** and [a link](/x).\n\n- One\n- Two\n\n::: section {\"props\":{\"width\":\"wide\"},\"style\":{\"paddingBlock\":\"section\",\"max-md\":{\"paddingBlock\":\"xl\"}}}\n### Inside\n\n:::: buttons\n::::: button {\"props\":{\"label\":\"Go\",\"url\":\"/go\"}}\n:::::\n::::\n:::\n\n```php\necho 1;\n```";
+        $markdown = "## Hello\n\nSome **bold** and [a link](/x).\n\n- One\n- Two\n\n::: section {\"props\":{\"width\":\"wide\"},\"style\":{\"base\":{\"paddingY\":\"token:space.16\"}}}\n### Inside\n\n:::: buttons\n::::: button {\"props\":{\"label\":\"Go\",\"url\":\"/go\"}}\n:::::\n::::\n:::\n\n```php\necho 1;\n```";
 
         $nodes = app(Document::class)->normalize($codec->decode($markdown));
 
         $this->assertSame(['heading', 'paragraph', 'list', 'section', 'code'], array_column($nodes, 'type'));
         $this->assertSame('Some <strong>bold</strong> and <a href="/x">a link</a>.', $nodes[1]['props']['text']);
         $this->assertSame('wide', $nodes[3]['props']['width']);
-        $this->assertSame(['base' => ['paddingBlock' => 'section'], 'max-md' => ['paddingBlock' => 'xl']], $nodes[3]['style'], 'a flat style is stored per condition');
+        $this->assertSame('token:space.16', $nodes[3]['style']['base']['paddingBlock'], 'shorthand keys are stored as CSS properties');
         $this->assertSame('button', $nodes[3]['children'][1]['children'][0]['type']);
         $this->assertSame('php', $nodes[4]['props']['language']);
 
         $again = app(Document::class)->normalize($codec->decode($codec->encode($nodes)));
         $this->assertSame(array_column($nodes, 'type'), array_column($again, 'type'));
         $this->assertSame($nodes[3]['children'][1]['children'][0]['props']['label'], $again[3]['children'][1]['children'][0]['props']['label']);
-        $this->assertSame($nodes[3]['style'], $again[3]['style']);
     }
 
     public function test_document_sanitizes_text_and_styles(): void
     {
         $nodes = app(Document::class)->normalize([
             ['type' => 'paragraph', 'props' => ['text' => 'Hi <script>alert(1)</script><em>there</em><img src=x onerror=alert(1)>']],
-            ['type' => 'section', 'style' => ['base' => ['paddingBlock' => 'section', 'color' => 'red;}body{display:none', 'gap' => '3px', 'margin' => 'token:space.8', 'nonsense' => 'lg'], 'evil' => ['color' => 'primary']], 'children' => [
+            ['type' => 'section', 'style' => ['base' => ['paddingY' => 'token:space.8', 'color' => 'red;}body{display:none', 'nonsense' => '1px'], 'evil' => ['color' => 'red']], 'children' => [
                 ['type' => 'columns', 'children' => [['type' => 'paragraph', 'props' => ['text' => 'not a column']], ['type' => 'column']]],
             ]],
             ['type' => 'from-a-removed-plugin', 'props' => ['keep' => 'me']],
         ]);
 
         $this->assertSame('Hi <em>there</em>', $nodes[0]['props']['text']);
-        $this->assertSame(['base' => ['paddingBlock' => 'section']], $nodes[1]['style'], 'names stay; CSS, old token references and unknown conditions go');
+        $this->assertSame(['base' => ['paddingBlock' => 'token:space.8']], $nodes[1]['style']);
         $this->assertSame(['column'], array_column($nodes[1]['children'][0]['children'], 'type'));
         $this->assertSame('me', $nodes[2]['props']['keep']);
         $this->assertMatchesRegularExpression('/^b[a-z0-9]{10}$/', $nodes[0]['id']);
@@ -110,18 +109,15 @@ final class BlocksTest extends TestCase
         });
 
         $compiler = app(StyleCompiler::class);
-        $a = $compiler->compile(['base' => ['paddingTop' => 'xl', 'scheme' => 'inverse'], 'max-md' => ['paddingTop' => 'md'], 'hover' => ['color' => 'primary/50']]);
-        $b = $compiler->compile(['paddingTop' => 'xl']);
+        $a = $compiler->classes(['base' => ['paddingTop' => 'token:space.8'], 'mobile' => ['paddingTop' => 'token:space.4'], 'hover' => ['color' => 'token:color.primary/50']]);
+        $b = $compiler->classes(['base' => ['paddingTop' => 'token:space.8']]);
 
-        $classes = explode(' ', $a['class']);
-        $this->assertCount(3, $classes);
-        $this->assertSame($classes[0], $b['class'], 'identical declarations share a class');
-        $this->assertSame(['data-scheme' => 'inverse'], $a['attributes'], 'a scheme is an attribute, not a class');
-        $this->assertSame(".{$classes[0]}{padding-top:var(--space-xl)}", $css[$classes[0]]);
-        $this->assertSame("@media (max-width: 47.99875rem){.{$classes[1]}{padding-top:var(--space-md)}}", $css[$classes[1]], 'max-md is phones');
-        $this->assertSame("@media (hover: hover){.{$classes[2]}:hover{color:color-mix(in oklab, var(--color-primary) 50%, transparent)}}", $css[$classes[2]]);
-        $this->assertCount(3, $css, 'each rule is emitted once');
-        $this->assertStringContainsString('padding-top:var(--space-xl)', $compiler->css());
+        $this->assertCount(3, explode(' ', $a));
+        $this->assertSame(explode(' ', $a)[0], $b, 'identical declarations share a class');
+        $all = implode('', $css);
+        $this->assertStringContainsString('padding-top:var(--space-8)', $all);
+        $this->assertStringContainsString('@media (max-width:767.98px)', $all);
+        $this->assertStringContainsString(':hover{color:color-mix(in srgb, var(--color-primary) 50%, transparent)}', $all);
     }
 
     public function test_renders_blocks_with_theme_independent_markup(): void
@@ -138,7 +134,7 @@ final class BlocksTest extends TestCase
 
         $this->assertStringContainsString('<h1 class="cms-heading" id="title">Title</h1>', $html);
         $this->assertMatchesRegularExpression('/<div class="cms-columns( s\w+)+" data-stack="md">/', $html, 'layout props become atomic styles');
-        $this->assertStringContainsString('<a class="cms-button button" data-variant="solid" data-color="primary" data-size="md" href="/go"><span>Go</span></a>', $html, 'the button component of the design vocabulary');
+        $this->assertStringContainsString('<a class="cms-button" data-variant="primary" data-size="md" href="/go"><span>Go</span></a>', $html);
         $this->assertStringContainsString('youtube-nocookie.com/embed/dQw4w9WgXcQ', $html);
         $this->assertStringNotContainsString('evil.example.com', $html);
     }
@@ -178,7 +174,7 @@ final class BlocksTest extends TestCase
         $this->assertSame(['getting-started', 'install-cms', 'getting-started-2', 'my-anchor'], array_column($toc, 'id'));
         $this->assertSame('Install Cms', $toc[1]['text']);
 
-        $this->assertSame('Getting started Install Cms Getting started Custom Deep', $this->app->make(\Cms\Modules\Blocks\Document::class)->text([...$nodes, ['type' => 'section', 'props' => ['align' => 'center'], 'style' => ['color' => 'primary']]]));
+        $this->assertSame('Getting started Install Cms Getting started Custom Deep', $this->app->make(\Cms\Modules\Blocks\Document::class)->text([...$nodes, ['type' => 'section', 'props' => ['align' => 'center'], 'style' => ['base' => ['color' => 'token:color.primary']]]]));
 
         $html = $this->app->make(\Cms\Modules\Blocks\BlockRenderer::class)->render($nodes);
         foreach (['getting-started', 'install-cms', 'getting-started-2', 'my-anchor', 'deep'] as $id) {
@@ -255,26 +251,23 @@ final class BlocksTest extends TestCase
 
     public function test_saving_drops_empty_breakpoints_instead_of_turning_them_into_lists(): void
     {
-        $saved = $this->save('::: box {"id":"x","style":{"base":{},"max-lg":{"color":"foreground-muted"}}}'."\n:::");
+        $saved = $this->save('::: box {"id":"x","style":{"base":{},"tablet":{"color":"token:color.ink"}}}'."\n:::");
 
-        $this->assertSame('::: box {"id":"x","style":{"max-lg":{"color":"foreground-muted"}}}'."\n:::", $saved);
+        $this->assertSame('::: box {"id":"x","style":{"tablet":{"color":"token:color.ink"}}}'."\n:::", $saved);
     }
 
-    public function test_saving_keeps_heading_boxes_motion_names_and_schemes(): void
+    public function test_saving_keeps_heading_boxes_calc_motion_and_colour_variables(): void
     {
         $saved = $this->save(implode("\n\n", [
             '::: box {"id":"h","props":{"tag":"h2"}}'."\n:::",
-            '::: box {"id":"m","motion":[{"id":"a","trigger":{"type":"appear"},"steps":[{"target":"self","at":0,"duration":"slow","ease":"expo","from":{"y":"-1/2","opacity":"0"},"to":{"y":"0"}}]}]}'."\n:::",
-            '::: box {"id":"v","style":{"scheme":"inverse"},"attrs":{"style":"--color-primary:#d9432a","data-scheme":"dark"}}'."\n:::",
+            '::: box {"id":"m","motion":[{"id":"a","trigger":{"type":"appear"},"steps":[{"target":"self","at":0,"duration":0.5,"from":{"y":"calc(-1 * 8.25rem)"},"to":{"y":0}}]}]}'."\n:::",
+            '::: box {"id":"v","attrs":{"style":"--color-primary:#d9432a;--color-panel:#f3e4cf"}}'."\n:::",
         ]));
         $nodes = app(MarkdownCodec::class)->decode($saved);
 
         $this->assertSame('h2', $nodes[0]['props']['tag']);
-        $this->assertSame(['y' => '-1/2', 'opacity' => '0'], $nodes[1]['motion'][0]['steps'][0]['from']);
-        $this->assertSame(['duration' => 'slow', 'ease' => 'expo'], array_intersect_key($nodes[1]['motion'][0]['steps'][0], ['duration' => 1, 'ease' => 1]));
-        $this->assertSame(['base' => ['scheme' => 'inverse']], $nodes[2]['style'], 'colours change through a scheme');
-        $this->assertArrayNotHasKey('attrs', $nodes[2], 'not through variables in a style attribute, nor a data-scheme of its own');
-        $this->assertSame([], Document::attrs(['style' => '--color-primary:#d9432a', 'data-scheme' => 'dark', 'data-flow' => 'loose', 'data-texture' => 'grain']));
-        $this->assertStringContainsString('data-scheme="inverse"', app(BlockRenderer::class)->render(app(Document::class)->normalize($nodes)));
+        $this->assertSame('calc(-1 * 8.25rem)', $nodes[1]['motion'][0]['steps'][0]['from']['y']);
+        $this->assertSame('--color-primary:#d9432a;--color-panel:#f3e4cf', $nodes[2]['attrs']['style']);
+        $this->assertSame([], Document::attrs(['style' => 'color:red;--x:url(javascript:alert(1))']), 'a style attribute only sets variables');
     }
 }

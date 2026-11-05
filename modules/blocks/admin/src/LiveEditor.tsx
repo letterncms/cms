@@ -2,7 +2,7 @@ import { can, plural, requestText, t, type EntryContent } from '@letterncms/sdk'
 import { QueryError, Spinner, deviceWidths } from '@letterncms/ui'
 import { createPortal, flushSync } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { blockName, useComponentTitles, useEditorContext } from './core/context'
+import { blockName, useComponentTitles, useEditorContext, useTokens } from './core/context'
 import { caretRect } from './core/caret'
 import { FormatToolbar } from './core/FormatToolbar'
 import { InlineEditable } from './core/InlineEditable'
@@ -70,6 +70,12 @@ function contentAt(d: Document, x: number, y: number): boolean {
   })
 }
 
+/** A breakpoint's width in CSS pixels (rem and em at 16px). */
+function pixels(value: string | undefined): number {
+  const n = parseFloat(value ?? '')
+  return Number.isNaN(n) ? 0 : /r?em$/.test(value ?? '') ? n * 16 : n
+}
+
 /** The site's renderer is the editor. React owns only explicit inline text slots. */
 export function LiveEditor({ collection, entryId, content, onInspect, standalone, onTitleChange }: Props) {
   const { store, types, allowed, fieldHandle, readOnly = false } = useEditorContext()
@@ -80,8 +86,9 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
   const blockMode = useEditor(store, (state) => state.blockMode)
   const hovered = useEditor(store, (state) => state.hovered)
   const breakpoint = useEditor(store, (state) => state.breakpoint)
-  // Desktop styles apply from the large breakpoint up (tablet styles, max-lg, below it).
-  const desktopWidth = 1024
+  const { breakpoints } = useTokens()
+  // Desktop styles apply from the site's large breakpoint up (tablet styles below it).
+  const desktopWidth = pixels(breakpoints.lg) || 1024
   const viewport = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLIFrameElement>(null)
   const [doc, setDoc] = useState<Document | null>(null)

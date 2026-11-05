@@ -1,8 +1,153 @@
-import { t, type FieldProps } from '@letterncms/sdk'
-import { Icon, cn, fieldControlId } from '@letterncms/ui'
-import { useState } from 'react'
+import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
+import { fieldControlId, Fields, Icon, IconButton, Input, Popover, Select, Tooltip, cn } from '@letterncms/ui'
+import { forwardRef, useEffect, useState, type ButtonHTMLAttributes } from 'react'
 
-/** `site-file` — a font file, dropped or chosen. */
+/* Field components of the design system editor — the controls core fields can't
+   express: fluid sizes, font stacks, CSS declarations, easing curves, shadows and
+   font files. Compact (xs) like the canvas inspector, whose value control (a number
+   with its unit, scrubbed or typed) they use when Blocks has drawn it. */
+
+/** The canvas inspector's value control (`blocks-value`), or a plain input without it. */
+export function ValueInput({ field, value, onChange, disabled }: { field: FieldDef; value: string | number | null; onChange: (value: string | null) => void; disabled?: boolean }) {
+  const Value = registry.fields.get('blocks-value')
+  if (Value) return <Value field={{ ...field, component: 'blocks-value' }} value={value} onChange={(v: string | number | null) => onChange(v === null || v === undefined ? null : String(v))} disabled={disabled} context={{}} />
+  return <Input id={fieldControlId(field)} size="sm" className="min-w-0 flex-1 font-mono" aria-label={field.label} placeholder={field.placeholder as string | undefined} value={String(value ?? '')} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
+}
+
+type Declarations = Record<string, string | number>
+type Size = string | { min: string; max: string }
+
+/** A size token: one value, or fluid `{min, max}` between phone and desktop. */
+export function SizeField({ field, value, onChange, disabled }: FieldProps<Size | null>) {
+  const fluid = !!value && typeof value === 'object' && 'min' in value
+  const unitOf = (v: string) => v.match(/[a-z%]+$/i)?.[0] ?? ''
+  // Phone and desktop in one unit name it once, after the second: the numbers get the room.
+  const shared = fluid && unitOf(String(value.min)) === unitOf(String(value.max))
+  const sub = (handle: string, label: string): FieldDef => ({ ...field, handle: `${field.handle}-${handle}`, label, unit: 'rem', units: handle === 'min' && shared ? [] : ['rem', 'px', 'em', '%', 'vw'], step: 0.125 })
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1">
+      {fluid ? (
+        <>
+          <div className="min-w-0 flex-1" title={t('Phone')}><ValueInput field={sub('min', t('Phone'))} value={value.min} disabled={disabled} onChange={(v) => onChange({ ...value, min: v ?? '0' })} /></div>
+          <Icon name="arrow-right" size={10} className="shrink-0 text-faint" />
+          <div className="min-w-0 flex-1" title={t('Desktop')}><ValueInput field={sub('max', t('Desktop'))} value={value.max} disabled={disabled} onChange={(v) => onChange({ ...value, max: v ?? '0' })} /></div>
+        </>
+      ) : (
+        <div className="min-w-0 flex-1"><ValueInput field={{ ...field, unit: 'rem', units: ['rem', 'px', 'em', '%', 'vw'], step: 0.125 }} value={value ?? null} disabled={disabled} onChange={(v) => onChange(v ?? '0')} /></div>
+      )}
+      <Tooltip content={fluid ? t('Use One Size') : t('Scale from Phone to Desktop')}>
+        <IconButton icon="width" label={t('Fluid')} size="sm" active={fluid} disabled={disabled} onClick={() => onChange(fluid ? value.max : { min: String(value ?? ''), max: String(value ?? '') })} />
+      </Tooltip>
+    </div>
+  )
+}
+
+/** What a font family falls back to: the system's own fonts of its kind. */
+const FALLBACKS = { sans: ['ui-sans-serif', 'system-ui', 'sans-serif'], serif: ['ui-serif', 'Georgia', 'serif'], mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'] } as const
+type Fallback = keyof typeof FALLBACKS
+const SYSTEM_FONTS = new Set<string>([...Object.values(FALLBACKS).flat(), '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', 'Times New Roman', 'Times', 'Courier New', 'Consolas', 'Monaco', 'cursive', 'fantasy'])
+
+function fallbackOf(stack: string[]): Fallback {
+  if (stack.includes('monospace')) return 'mono'
+  return stack.includes('serif') ? 'serif' : 'sans'
+}
+
+/**
+ * A font family token (`["Inter", "ui-sans-serif", "system-ui", "sans-serif"]`): the
+ * site's font, or the system's, and what it falls back to. `families` are the fonts the
+ * site serves.
+ */
+export function FontStackField({ field, value, onChange, disabled }: FieldProps<string[] | string | null>) {
+  const stack = Array.isArray(value) ? value : String(value ?? '').split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+  const first = stack[0] && !SYSTEM_FONTS.has(stack[0]) ? stack[0] : ''
+  const fallback = fallbackOf(stack)
+  const families = [...new Set([...((field.families as string[] | undefined) ?? []), ...(first ? [first] : [])])]
+  const set = (family: string, kind: Fallback) => onChange([...(family ? [family] : []), ...FALLBACKS[kind]])
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1">
+      <Select id={fieldControlId(field)} size="sm" className="min-w-0 flex-[3]" aria-label={t('Font')} disabled={disabled} value={first || 'system'} onChange={(v) => set(v === 'system' || !v ? '' : v, fallback)} options={[{ value: 'system', label: t('System') }, ...families.map((family) => ({ value: family, label: family }))]} />
+      <Select size="sm" className="min-w-0 flex-[2]" aria-label={t('Fallback')} disabled={disabled} value={fallback} onChange={(v) => set(first, (v as Fallback) ?? 'sans')} options={[{ value: 'sans', label: t('Sans') }, { value: 'serif', label: t('Serif') }, { value: 'mono', label: t('Mono') }]} />
+    </div>
+  )
+}
+
+/** Common properties offered while typing one (any camelCase CSS property works). */
+const PROPERTIES = [
+  'color', 'backgroundColor', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'textTransform', 'textDecoration', 'textUnderlineOffset', 'textWrap',
+  'marginBlock', 'marginBlockStart', 'marginBlockEnd', 'padding', 'paddingInline', 'paddingBlock', 'border', 'borderColor', 'borderWidth', 'borderRadius', 'boxShadow', 'opacity', 'transition',
+]
+
+/**
+ * CSS declarations of one element or state: property/value rows. `tokens` (token
+ * references) are offered for values; `removable` adds a Remove action that clears it (null).
+ */
+export function DeclarationsField({ field, value, onChange, disabled }: FieldProps<Declarations | null>) {
+  const decl = value ?? {}
+  const [adding, setAdding] = useState(false)
+  const list = `site-decl-${field.handle.replace(/[^a-z0-9-]/gi, '-')}`
+  const tokens = (field.tokens as string[] | undefined) ?? []
+  const rename = (prop: string, next: string) => {
+    if (!next || next === prop || next in decl) return
+    onChange(Object.fromEntries(Object.entries(decl).map(([k, v]) => (k === prop ? [next, v] : [k, v]))))
+  }
+  return (
+    <div className="cms-declarations group/decl py-2">
+      <div className="flex h-6 items-center gap-1">
+        <span className={cn('min-w-0 flex-1 truncate text-xs font-medium text-ink', field.mono !== false && 'font-mono')}>{field.label}</span>
+        <IconButton icon="plus" label={t('Add Property')} size="xs" disabled={disabled} onClick={() => setAdding(true)} />
+        {field.removable === true && <IconButton icon="trash" label={t('Remove')} size="xs" disabled={disabled} className="opacity-0 group-hover/decl:opacity-100 focus-visible:opacity-100" onClick={() => onChange(null)} />}
+      </div>
+      <datalist id={`${list}-props`}>{PROPERTIES.filter((p) => !(p in decl)).map((p) => <option key={p} value={p} />)}</datalist>
+      <datalist id={`${list}-values`}>{tokens.map((v) => <option key={v} value={v} />)}</datalist>
+      <div className="mt-1 space-y-1">
+        {Object.entries(decl).map(([prop, v]) => (
+          <div key={prop} className="group/row grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_20px] items-center gap-1">
+            <PropertyInput value={prop} list={`${list}-props`} disabled={disabled} onCommit={(next) => rename(prop, next)} />
+            <Input size="xs" className="font-mono" spellCheck={false} list={`${list}-values`} aria-label={t('{property} value', { property: prop })} value={String(v)} disabled={disabled} onChange={(e) => onChange({ ...decl, [prop]: e.target.value })} />
+            <button type="button" disabled={disabled} onClick={() => onChange(Object.fromEntries(Object.entries(decl).filter(([k]) => k !== prop)))} className="grid size-5 place-items-center rounded-xs text-faint opacity-0 hover:bg-hover hover:text-text group-hover/row:opacity-100 focus-visible:opacity-100" aria-label={t('Remove {property}', { property: prop })}>
+              <Icon name="close" size={10} />
+            </button>
+          </div>
+        ))}
+        {adding && (
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_20px] items-center gap-1">
+            <PropertyInput value="" autoFocus list={`${list}-props`} disabled={disabled} onCommit={(next) => { setAdding(false); if (next && !(next in decl)) onChange({ ...decl, [next]: '' }) }} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** A property name, committed on blur or Enter (renaming a key on every keystroke would reorder rows). */
+function PropertyInput({ value, list, disabled, autoFocus, onCommit }: { value: string; list: string; disabled?: boolean; autoFocus?: boolean; onCommit: (next: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+  return (
+    <Input
+      size="xs"
+      className="font-mono"
+      spellCheck={false}
+      autoFocus={autoFocus}
+      list={list}
+      placeholder={t('property')}
+      aria-label={t('Property')}
+      value={draft}
+      disabled={disabled}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => onCommit(draft.trim())}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        if (e.key === 'Escape') {
+          setDraft(value)
+          if (!value) onCommit('')
+        }
+      }}
+    />
+  )
+}
+
+/** Picks a local file (`accept`, `placeholder`) and hands it to onChange; nothing is stored. Files can be dropped on it. */
 export function FileField({ field, onChange, disabled }: FieldProps<File | null>) {
   const [over, setOver] = useState(false)
   return (
@@ -19,4 +164,57 @@ export function FileField({ field, onChange, disabled }: FieldProps<File | null>
   )
 }
 
+/** A trigger that looks like the inspector's inputs: what is chosen, a chevron. (A popover's trigger: it takes the props and ref it is given.) */
+const PickerButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { label: string }>(function PickerButton({ label, children, className, ...props }, ref) {
+  return (
+    <button ref={ref} type="button" aria-label={label} {...props} className={cn('cms-input flex h-7 w-full min-w-0 items-center gap-1.5 rounded-sm pl-2 pr-1.5 text-left text-sm text-text transition-[border-color,box-shadow] duration-120 hover:bg-hover data-[popup-open]:border-focus disabled:opacity-50', className)}>
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <Icon name="chevrons-up-down" size={11} className="shrink-0 text-faint" />
+    </button>
+  )
+})
 
+const SHADOW: FieldProps['field'] = { handle: 'shadow', type: 'text', component: 'blocks-shadows', label: 'Shadow' }
+
+const shadows = (): { label: string; value: string }[] => [
+  { label: t('None'), value: 'none' },
+  { label: t('Small'), value: '0 1px 2px rgb(0 0 0 / 0.06)' },
+  { label: t('Medium'), value: '0 4px 16px -4px rgb(0 0 0 / 0.12)' },
+  { label: t('Large'), value: '0 24px 48px -16px rgb(0 0 0 / 0.2)' },
+]
+
+const ShadowSample = ({ value }: { value: string | null }) => <span className="size-3.5 shrink-0 rounded-[3px] border border-border bg-bg" style={{ boxShadow: value ?? undefined }} />
+
+/** A box-shadow: a named preset, or a custom one made in the canvas's shadow editor (offsets, blur, spread, color). */
+export function ShadowField({ field, value, onChange, disabled }: FieldProps<string | null>) {
+  const preset = shadows().find((p) => p.value === value?.replace(/\s+/g, ' ').trim())
+  return (
+    <Popover
+      align="start"
+      className="w-72 p-1"
+      trigger={
+        <PickerButton id={fieldControlId(field)} disabled={disabled} label={field.label}>
+          {preset?.label ?? t('Custom')}
+        </PickerButton>
+      }
+    >
+      <div className="space-y-px">
+        {shadows().map((option) => (
+          <button key={option.value} type="button" onClick={() => onChange(option.value)} className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-xs transition-colors', option.value === preset?.value ? 'bg-active text-ink' : 'text-text hover:bg-hover')}>
+            <ShadowSample value={option.value} />
+            <span className="flex-1">{option.label}</span>
+            {option.value === preset?.value && <Icon name="check" size={12} className="text-muted" />}
+          </button>
+        ))}
+      </div>
+      <div className="mt-1 border-t border-border px-1 pb-1 pt-2">
+        <p className="m-0 mb-1 text-2xs font-medium text-muted">{t('Custom')}</p>
+        <Fields bare fields={[SHADOW]} values={{ shadow: value && value !== 'none' ? value : '0 4px 16px 0 rgb(0 0 0 / 12%)' }} onChange={(_, v) => onChange(v ?? 'none')} />
+        <button type="button" onClick={() => onChange(`${value && value !== 'none' ? `${value}, ` : ''}0 2px 8px 0 rgb(0 0 0 / 10%)`)} className="mt-1.5 flex h-6 w-full items-center justify-center gap-1 rounded-xs text-2xs text-muted hover:bg-hover hover:text-text">
+          <Icon name="plus" size={11} />
+          {t('Add Layer')}
+        </button>
+      </div>
+    </Popover>
+  )
+}

@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Route;
 use Cms\Modules\Blocks\Anchors;
 use Cms\Modules\Blocks\BlocksDocument;
 use Cms\Modules\Blocks\Scope;
-use Cms\Modules\Blocks\StyleCompiler;
 use Cms\Modules\Blocks\Templates;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
@@ -16,9 +15,9 @@ use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Packages\Plugin;
 use Cms\Modules\Site\Build\SiteBuilder;
 use Cms\Modules\Site\Design\Design;
+use Cms\Modules\Site\Design\DesignCompiler;
+use Cms\Modules\Site\Design\DesignJson;
 use Cms\Modules\Site\Design\Fonts;
-use Lettern\Design\Describe;
-use Lettern\Design\Theme;
 use Cms\Modules\Site\Http\PublicPage;
 use Cms\Modules\Site\Http\SiteController;
 use Cms\Modules\Site\Rendering\AugmentedEntry;
@@ -35,7 +34,7 @@ final class SiteModule extends Plugin
     {
         require_once __DIR__.'/helpers.php';
 
-        foreach ([Design::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class] as $service) {
+        foreach ([Design::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class] as $service) {
             $this->app->singleton($service);
         }
 
@@ -49,7 +48,7 @@ final class SiteModule extends Plugin
             'label' => 'Adjust the Design',
             'description' => 'Change the design system so the site feels a certain way.',
             'icon' => 'palette',
-            'prompt' => 'Change the design system so the site feels the way asked here: {feel}. Read cms://site/design first. Change the theme (its seeds, fonts, type scale, radius, motion, text styles) with design/update rather than restyling individual blocks: every page follows the theme. Keep what the contrast check finds clean. Say what you changed and why.',
+            'prompt' => 'Change the design system so the site feels the way asked here: {feel}. Read cms://site/design first and change design tokens rather than individual blocks. Say what you changed and why.',
             'arguments' => [['name' => 'feel', 'description' => 'How the site should feel', 'required' => true]],
             'permission' => 'settings.manage',
         ]);
@@ -80,22 +79,25 @@ final class SiteModule extends Plugin
         $hooks->on('render.head', static fn (string $key, string $html) => PageContext::current()?->addHead($key, $html));
         $hooks->on('render.foot', static fn (string $key, string $html) => PageContext::current()?->addFoot($key, $html));
         $hooks->on('render.depend', static fn (string $key) => PageContext::depend($key));
-        // Mail wears the site's colours: its light mode, worked out to hex, since mail clients know no custom properties.
+        // Mail wears the site's colours, from whichever tokens this design has.
         $hooks->addFilter('email.colors', static function (array $colors) use ($design) {
-            $t = $design()->resolved()->resolved;
-            $light = $t['schemes']['light'];
-            $mix = static fn (float $p) => \Lettern\Design\Color::mix($light['foreground'], $light['background'], $p);
+            $token = static fn (string $path, string $fallback) => is_string($value = $design()->json()->token($path)) && $value !== '' ? $value : $fallback;
 
-            return [...$colors, 'background' => $mix(0.04), 'card' => $light['background'], 'text' => $light['foreground'], 'muted' => $mix($light['mix']['muted'] / 100), 'line' => $mix(0.13), 'button' => $t['palettes']['primary']['fill'], 'button_text' => $t['palettes']['primary']['on']];
+            return [...$colors, 'background' => $token('color.background', $colors['background']), 'card' => $token('color.raised', $colors['card']), 'text' => $token('color.ink', $token('color.foreground', $colors['text'])), 'muted' => $token('color.muted', $colors['muted']), 'line' => $token('color.line', $colors['line']), 'button' => $token('color.primary', $colors['button']), 'button_text' => $token('color.primary-foreground', $colors['button_text'])];
         });
         $hooks->on('render.warning', fn (string $message) => $this->app->make(SiteBuilder::class)->warn($message));
 
         $hooks->addFilter('site.build.extras', fn (array $extras) => $this->cms()->settings('site', 'search_index', true)
             ? [...$extras, 'search' => ['path' => 'search.json', 'render' => fn () => $this->app->make(Search\SearchIndex::class)->json()]]
             : $extras);
-        // Styles and animations speak the theme's vocabulary: its own palettes, families and text styles, its durations.
-        $hooks->addFilter('blocks.vocabulary', static fn ($v) => $design()->resolved()->vocabulary());
-        $hooks->addFilter('blocks.durations', static fn (array $d) => $design()->resolved()->resolved['durations']);
+        $hooks->addFilter('blocks.breakpoints', static fn (array $bp) => $design()->json()->breakpoints() ?: $bp);
+        $hooks->addFilter('fields.options.button-variants', static function (array $options) use ($design) {
+            foreach (array_keys($design()->json()->buttons()) as $variant) {
+                $options[$variant] ??= ucfirst(str_replace(['-', '_'], ' ', (string) $variant));
+            }
+
+            return $options;
+        });
 
         // Blocks rendered outside a page (Markdown twins, search) still see the site.
         $hooks->addFilter('blocks.scope', fn (array $scope) => $scope + ['site' => $this->app->make(Renderer::class)->site()]);
@@ -313,72 +315,101 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/get', [
             'label' => 'Design System',
-            'description' => 'The site’s theme (content/design/theme.json, Lettern Design: https://design.lettern.org) and everything it resolves to: palettes, schemes, sizes and steps, the vocabulary every style uses (catalog: each property and the names it takes), DESIGN.md (the theme written for agents), what the contrast check found, fonts and custom JS.',
+            'description' => 'The site’s design system (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'handler' => function () use ($design) {
-                $resolved = $design()->resolved();
+                $json = $design()->json();
 
                 return [
-                    'theme' => $design()->theme(),
-                    'resolved' => $resolved->resolved,
-                    'catalog' => $this->app->make(StyleCompiler::class)->catalog(),
-                    'design' => Describe::design($resolved),
-                    'findings' => Describe::check($resolved),
+                    'name' => $json->name(),
+                    'tokens' => array_values(array_map(static fn ($k, $v) => ['path' => $k, ...$v], array_keys($json->tokens()), $json->tokens())),
+                    'fonts' => $json->fonts(),
                     'fontFiles' => $design()->fontFiles(),
+                    'styles' => (object) $json->styles(),
+                    'prose' => (object) $json->prose(),
+                    'buttons' => (object) $json->buttons(),
+                    'transition' => $json->transition(),
+                    'breakpoints' => $json->breakpoints(),
                     'templates' => $this->app->make(Templates::class)->options(),
                     'stylesheet' => $design()->stylesheet(),
+                    'css' => $design()->customCss(),
                     'js' => $design()->customJs(),
+                    'elements' => DesignCompiler::ELEMENTS,
                 ];
             },
         ]);
 
-        $theme = ['type' => 'object', 'description' => 'A Lettern Design theme, or part of one (see https://design.lettern.org/v1/theme.schema.json): color seeds and palettes, font slots and faces, type base/ratio/styles, space, layout, radius, shadow, motion, flow, elements and recipes. Names only, never CSS values.'];
-
         $abilities->register('design/update', [
             'label' => 'Update Design System',
-            'description' => 'Change the theme. By default `theme` merges into the saved one (objects merge, anything else replaces, null removes a key); with replace: true it replaces it. A theme with a name outside the vocabulary is refused with the reason, and nothing is saved. Returns what the contrast check found. The site rebuilds.',
+            'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, fonts or the page transition. Sections you pass replace the stored ones. The site rebuilds.',
             'permission' => 'settings.manage',
-            'input' => ['type' => 'object', 'properties' => ['theme' => $theme, 'replace' => ['type' => 'boolean', 'default' => false]], 'required' => ['theme']],
+            'input' => ['type' => 'object', 'properties' => [
+                'tokens' => ['type' => 'object', 'description' => 'path => value'],
+                'dark' => ['type' => 'object', 'description' => 'path => dark-mode value'],
+                'remove' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'rename' => ['type' => 'object', 'description' => 'old path => new path, within a group; references follow'],
+                'styles' => ['type' => 'object', 'description' => 'Element styles: {"h1": {"fontSize": "token:text.5xl"}}'],
+                'prose' => ['type' => 'object'],
+                'buttons' => ['type' => 'object', 'description' => '{"primary": {"base": {...}, "hover": {...}}}'],
+                'fonts' => ['type' => 'array'],
+                'transition' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['none', 'fade', 'slide', 'scale']], 'duration' => ['type' => 'number']]],
+            ]],
             'handler' => function (array $in) use ($design) {
-                $next = ! empty($in['replace']) ? (array) $in['theme'] : Design::merge($design()->theme(), (array) $in['theme']);
-                $findings = $design()->save($next);
-                $this->app->make(StyleCompiler::class)->forget();
+                $json = $design()->json();
+                $json->apply($in);
+                $json->save();
                 $design()->saved();
 
-                return ['saved' => true, 'findings' => $findings, 'stylesheet' => $design()->stylesheet()];
+                return ['saved' => true, 'stylesheet' => $design()->stylesheet()];
             },
         ]);
 
         $abilities->register('design/preview', [
             'label' => 'Preview Design System',
-            'description' => 'The stylesheet, resolved values and contrast findings a theme would give, without saving: the design/update input. For live previews.',
+            'description' => 'The stylesheet the site would get with these changes (the design/update input, plus css), without saving. For live previews.',
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
-            'input' => ['type' => 'object', 'properties' => ['theme' => $theme, 'replace' => ['type' => 'boolean', 'default' => false]], 'required' => ['theme']],
+            'input' => ['type' => 'object', 'properties' => [
+                'tokens' => ['type' => 'object'],
+                'dark' => ['type' => 'object'],
+                'remove' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'rename' => ['type' => 'object'],
+                'styles' => ['type' => 'object'],
+                'prose' => ['type' => 'object'],
+                'buttons' => ['type' => 'object'],
+                'transition' => ['type' => 'object'],
+                'css' => ['type' => 'string', 'maxLength' => 200000],
+            ]],
             'handler' => function (array $in) use ($design) {
-                $resolved = Theme::resolve(! empty($in['replace']) ? (array) $in['theme'] : Design::merge($design()->theme(), (array) $in['theme']));
+                $json = DesignJson::fromArray($design()->json()->toArray());
+                $json->apply($in);
 
-                return ['css' => $design()->compile($resolved), 'resolved' => $resolved->resolved, 'findings' => Describe::check($resolved)];
+                return ['css' => $design()->compile($json, isset($in['css']) ? (string) $in['css'] : $design()->customCss())];
             },
         ]);
 
         $abilities->register('design/code', [
-            'label' => 'Custom JavaScript',
-            'description' => 'Replace the site’s custom.js (content/design): an ES module on every page that may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component. Anything visual belongs in the theme, not here.',
+            'label' => 'Custom CSS and JavaScript',
+            'description' => 'Replace the site’s custom.css or custom.js (content/design). CSS is appended after everything else; JS loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component.',
             'permission' => 'site.code',
-            'input' => ['type' => 'object', 'properties' => ['js' => ['type' => 'string', 'maxLength' => 200000]], 'required' => ['js']],
+            'input' => ['type' => 'object', 'properties' => ['css' => ['type' => 'string', 'maxLength' => 200000], 'js' => ['type' => 'string', 'maxLength' => 200000]]],
             'handler' => function (array $in) use ($design) {
-                $design()->saveJs((string) $in['js']);
+                foreach (['css', 'js'] as $kind) {
+                    if (isset($in[$kind])) {
+                        $design()->saveCode($kind, (string) $in[$kind]);
+                    }
+                }
+
                 $design()->saved();
 
-                return ['saved' => true];
+                return ['saved' => array_keys(array_intersect_key($in, ['css' => 1, 'js' => 1]))];
             },
         ]);
 
         $abilities->register('design/fonts-import', [
             'label' => 'Add a Google Font',
-            'description' => 'Download a Google Fonts family (latin, variable weights when available) into content/design/fonts so it is self-hosted, and add its faces to the theme. Then put the family in a font slot (font.sans, font.display…) with design/update.',
+            'description' => 'Download a Google Fonts family (latin, variable weights when available) into content/design/fonts so it is self-hosted, and add it to the design system. Then use it in a font token.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
@@ -394,7 +425,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/fonts-upload', [
             'label' => 'Upload a Font',
-            'description' => 'Add a .woff2 file (base64) to content/design/fonts and its face to the theme.',
+            'description' => 'Add a .woff2 file (base64) to content/design/fonts and the design system.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 60],
@@ -420,8 +451,8 @@ final class SiteModule extends Plugin
             'handler' => fn (array $in) => ['url' => url('/__preview/'.strtolower($in['id']))],
         ]);
 
-        $this->cms()->permissions()->register('site.build', __('Publish the Site'), __('Site'));
-        $this->cms()->permissions()->register('site.code', __('Edit Custom JavaScript'), __('Design'), trusted: true);
+        $this->cms()->permissions()->register('site.build', 'Publish the Site', 'Site', roles: ['editor']);
+        $this->cms()->permissions()->register('site.code', 'Edit Custom CSS and JavaScript', 'Design', trusted: true);
 
         // Collections and entries choose from the site's templates.
         $this->cms()->hooks()->addFilter('fields.options.templates', fn (array $options, ?string $collection = null) => array_replace($options, $this->app->make(Templates::class)->options($collection)));
@@ -529,8 +560,8 @@ final class SiteModule extends Plugin
         $this->cms()->context()->register(
             'cms://site/design',
             'Design System',
-            'The site’s design: its theme as DESIGN.md (every name styles use, and what it is on this site) and the theme file itself. Style only with these names, never CSS values.',
-            fn () => ['design' => Describe::design($this->app->make(Design::class)->resolved()), 'theme' => $this->app->make(Design::class)->theme()]
+            'The site’s design tokens (use as token:group.name), fonts, element styles, button variants, page transition and breakpoints. Compose with these instead of raw values.',
+            fn () => $this->app->make(Design::class)->json()->toArray()
         );
     }
 }

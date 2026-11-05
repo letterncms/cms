@@ -1,6 +1,5 @@
 import './styles.css'
 import { registry, t } from '@letterncms/sdk'
-import { ColorField } from './builder/color'
 import { lazy } from 'react'
 import { BlocksField } from './BlocksField'
 import { registerFields } from './builder/fields'
@@ -9,8 +8,6 @@ import { IconField } from './builder/content/IconField'
 
 registerBuilderIcons()
 registry.fields.set('blocks', BlocksField)
-// Color fields in content pick from the theme's colors, like the builder's.
-registry.fields.set('color', ColorField)
 registerFields()
 registry.fields.set('blocks-icon', IconField)
 
@@ -28,6 +25,6 @@ registry.widgets.set('blocks-design', lazy(() => import('./WidgetDesign')))
 // and the inspector's browser check mounts.
 export { EditorStore, useEditor } from './core/store'
 export { Inspector } from './builder/Inspector'
-export { EditorProvider, useCatalog, useDesign, useEditorContext } from './core/context'
+export { EditorProvider, useCatalog, useEditorContext } from './core/context'
 export { WriteEditor, blockViews } from './write/WriteEditor'
 export type { BlockNode } from './core/types'

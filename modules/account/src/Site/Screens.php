@@ -240,6 +240,6 @@ final class Screens
                 : ['id' => 'sblock'.$i, 'type' => 'account/'.$block, 'props' => []];
         }
 
-        return [['id' => 'smain', 'type' => 'section', 'props' => ['width' => 'text'], 'children' => $children]];
+        return [['id' => 'smain', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => $children]];
     }
 }

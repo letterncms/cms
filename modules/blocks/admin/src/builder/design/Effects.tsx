@@ -1,31 +1,33 @@
 import { t } from '@letterncms/sdk'
 import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
-import { seg, tok } from './fields'
 import { StyleFields } from './StyleFields'
 
-const KEYS = ['opacity', 'boxShadow', 'blur', 'brightness', 'contrast', 'saturate', 'grayscale', 'backdropBlur', 'mixBlendMode', 'mask', 'cursor']
+const BLEND = ['multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity']
+const CURSORS = ['pointer', 'default', 'text', 'move', 'grab', 'grabbing', 'zoom-in', 'zoom-out', 'not-allowed', 'none', 'crosshair']
 
-/** Opacity, shadow, filters, glass, blend modes and masks, each a step of the vocabulary. */
+/** Opacity, shadows, filters (blur, backdrop blur…), clip path, blend mode, cursor and interaction. */
 export function Effects({ s }: { s: StyleApi }) {
+  const any = ['opacity', 'boxShadow', 'filter', 'backdropFilter', 'mixBlendMode', 'cursor', 'pointerEvents', 'clipPath'].some((k) => s.value(k))
+
   return (
-    <Section title={t('Effects')} open={false} empty={!KEYS.some((k) => s.value(k))}>
+    <Section title={t('Effects')} empty={!any}>
       <StyleFields
         s={s}
         fields={[
-          tok('opacity', t('Opacity'), { placeholder: '100' }),
-          tok('boxShadow', t('Shadow'), { placeholder: t('None') }),
-          tok('blur', t('Blur'), { placeholder: t('None') }),
-          tok('backdropBlur', t('Background Blur'), { placeholder: t('None'), title: t('Blurs what is behind the element: glass.') }),
-          !!s.value('backdropBlur') && tok('backdropSaturate', t('Background Color'), { placeholder: '100' }),
-          tok('brightness', t('Brightness'), { placeholder: '100' }),
-          tok('contrast', t('Contrast'), { placeholder: '100' }),
-          tok('saturate', t('Saturation'), { placeholder: '100' }),
-          seg('grayscale', t('Grayscale'), [{ value: '0', label: t('Off') }, { value: '100', label: t('On') }]),
-          tok('mixBlendMode', t('Blend'), { placeholder: 'normal' }),
-          tok('mask', t('Mask'), { placeholder: t('None'), title: t('Fade an edge out, or crop to a circle.') }),
-          tok('cursor', t('Cursor'), { placeholder: t('Auto') }),
-          seg('pointerEvents', t('Clicks'), [{ value: 'auto', label: t('Yes') }, { value: 'none', label: t('Pass Through') }]),
+          { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100', slider: { min: 0, max: 1, step: 0.01, neutral: 1 } },
+        ]}
+      />
+      <StyleFields s={s} bare fields={[{ handle: 'boxShadow', type: 'text', component: 'blocks-shadows', label: t('Shadows'), group: 'shadow' }]} />
+      <StyleFields s={s} bare fields={[{ handle: 'filter', type: 'text', component: 'blocks-filters', label: t('Filters') }]} />
+      <StyleFields s={s} bare fields={[{ handle: 'backdropFilter', type: 'text', component: 'blocks-filters', label: t('Backdrop'), instructions: t('Filters what is behind the element, like frosted glass') }]} />
+      <StyleFields
+        s={s}
+        fields={[
+          { handle: 'clipPath', type: 'text', component: 'blocks-clip', label: t('Clip Path'), className: 'items-start py-0.5 [&>label]:leading-6' },
+          { handle: 'mixBlendMode', type: 'select', size: 'sm', label: t('Blending'), placeholder: t('Normal'), options: BLEND },
+          { handle: 'cursor', type: 'select', size: 'sm', label: t('Cursor'), placeholder: t('Auto'), options: CURSORS },
+          { handle: 'pointerEvents', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Clicks'), placeholder: 'auto', options: [{ value: 'auto', label: t('On') }, { value: 'none', label: t('Pass Through') }] },
         ]}
       />
     </Section>

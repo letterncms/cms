@@ -13,7 +13,7 @@
   "{count} entry": "{count} item",
   "/blog/{slug}": "/blog/{slug}",
   "A calendar date, optionally with a time.": "Een datum, eventueel met tijd.",
-  "A color from the design system.": "Een kleur uit het designsysteem.",
+  "A color: a design token, hex value or CSS color function.": "Een kleur: een designtoken, hexwaarde of CSS-kleurfunctie.",
   "A file in the package does not parse: :name, line :line": "Een bestand in het pakket bevat een fout: :name, regel :line",
   "A fixed set of nested fields stored together.": "Een vaste set geneste velden die samen worden opgeslagen.",
   "A list of items that share the same nested fields.": "Een lijst met elementen die dezelfde geneste velden delen.",

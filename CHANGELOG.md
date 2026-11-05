@@ -29,7 +29,6 @@
 - The `conflict` with the old `letterncms/assistant`, `letterncms/site` and `letterncms/sync` packages. None of them is published any more.
 - **Breaking.** The `content/entries` catalog component. A collection's place is `ui/records`, from `Cms\Modules\Content\EntriesView`.
 
-
 ## 0.9.0 (2026-11-05)
 
 ### Added

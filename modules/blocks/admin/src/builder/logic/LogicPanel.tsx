@@ -231,7 +231,7 @@ export function LogicPanel({ node }: { node: BlockNode }) {
           help={t('Adds is-scrolled once the page scrolls, for headers that change.')}
           onToggle={(on) => save({ behaviors: { ...behaviors, scroll: on ? { threshold: 20 } : undefined } })}
           fields={[
-            { handle: 'threshold', type: 'number', size: 'sm', label: t('After (px scrolled)'), min: 0 },
+            { handle: 'threshold', type: 'text', component: 'blocks-value', label: t('After'), unit: '', prefix: 'px' },
             { handle: 'hide', type: 'toggle', size: 'sm', label: t('Add is-hidden While Scrolling Down') },
           ]}
           values={{ threshold: String(behaviors.scroll?.threshold ?? 20), hide: !!behaviors.scroll?.hide }}
@@ -247,7 +247,7 @@ export function LogicPanel({ node }: { node: BlockNode }) {
           help={t('Children scroll sideways in an endless loop.')}
           onToggle={(on) => save({ behaviors: { ...behaviors, marquee: on ? { speed: 60 } : undefined } })}
           fields={[
-            { handle: 'speed', type: 'number', size: 'sm', label: t('Speed'), min: 1, title: t('Pixels per Second') },
+            { handle: 'speed', type: 'text', component: 'blocks-value', label: t('Speed'), unit: '', prefix: 'px/s', title: t('Pixels per Second') },
             { handle: 'reverse', type: 'toggle', size: 'sm', label: t('Reverse') },
             { handle: 'pause', type: 'toggle', size: 'sm', label: t('Pause on Hover') },
           ]}
@@ -388,7 +388,7 @@ function ActionFields({ action: a, onChange, variables, node, depth }: { action:
         { handle: 'kind', type: 'select', size: 'sm', label: t('To'), required: true, options: [{ value: 'top', label: t('Top of Page') }, { value: 'bottom', label: t('Bottom of Page') }, { value: 'anchor', label: t('Section') }, { value: 'node', label: t('Element') }] },
         { handle: 'anchor', type: 'select', size: 'sm', label: t('Section'), options: anchors.map((x) => ({ value: `#${x.id}`, label: x.label })), placeholder: t('Choose a Section'), if: { kind: 'anchor' } },
         element('node', t('Element'), { if: { kind: 'node' } }),
-        { handle: 'offset', type: 'number', size: 'sm', label: t('Offset'), placeholder: '0', title: t('Offset in pixels, e.g. a sticky header’s height') },
+        { handle: 'offset', type: 'text', component: 'blocks-value', label: t('Offset'), unit: '', prefix: 'px', placeholder: '0', title: t('Offset in pixels, e.g. a sticky header’s height') },
       ]
       values = { kind: scrollKind(a.to), anchor: a.to, node: a.to, offset: a.offset ? String(a.offset) : undefined }
       apply = (h, v) => (h === 'kind' ? { to: v === 'anchor' ? `#${anchors[0]?.id ?? 'top'}` : v === 'node' ? node.id : v ?? 'top' } : h === 'anchor' ? { to: v } : h === 'node' ? { to: v ?? 'top' } : { offset: v ? parseInt(v) : undefined })
@@ -420,7 +420,7 @@ function ActionFields({ action: a, onChange, variables, node, depth }: { action:
       apply = (_, v) => ({ on: v !== 'off' })
       break
     case 'wait':
-      fields = [{ handle: 'ms', type: 'number', size: 'sm', label: t('Wait (ms)'), step: 50, min: 0 }]
+      fields = [{ handle: 'ms', type: 'text', component: 'blocks-value', label: t('Wait'), unit: '', step: 50, min: 0, prefix: 'ms' }]
       values = { ms: String(a.ms ?? 300) }
       apply = (_, v) => ({ ms: Number(v ?? 300) })
       break

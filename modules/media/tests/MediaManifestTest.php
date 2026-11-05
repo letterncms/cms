@@ -237,7 +237,7 @@ final class MediaManifestTest extends TestCase
         $gone = '01m5x9jmrth1ggeatmbzxcz7zz';
         Files::ensureDir(public_path('media/loose'));
         file_put_contents(public_path('media/loose/a.txt'), 'x');
-        Files::put(content_path('design/theme.json'), (string) json_encode(['color' => ['primary' => '#2f5bea'], 'elements' => ['body' => ['backgroundImage' => "media:{$used->id}"]]]));
+        Files::put(content_path('design/tokens.json'), (string) json_encode(['color' => ['hero' => "media:{$used->id}"]]));
         Yaml::write(content_path('globals/brand.yaml'), ['logo' => ['image' => "/{$byUrl->path}"], 'other' => "media:{$gone}", 'broken' => ['image' => '/media/nope.webp']]);
 
         $report = app(MediaReferences::class)->report();
@@ -254,7 +254,7 @@ final class MediaManifestTest extends TestCase
             $abilities->execute('media/delete', ['id' => $used->id], $ctx);
             $this->fail('expected a conflict');
         } catch (AbilityException $e) {
-            $this->assertStringContainsString('Theme', $e->getMessage());
+            $this->assertStringContainsString('Design tokens', $e->getMessage());
         }
 
         $this->assertNotNull(MediaItem::query()->find($used->id));
