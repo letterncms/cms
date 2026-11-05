@@ -15,6 +15,8 @@ import { Inspector, EditorProvider, EditorStore, useEditor } from '${assets('blo
 
 const h = React.createElement
 const pause = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+// The inspector's panels load in chunks of their own: what they draw is waited for, not assumed after two frames.
+const until = async (check, message) => { const end = Date.now() + 5000; while (!check()) { if (Date.now() > end) throw new Error(message); await pause() } }
 const assert = (condition, message) => { if (!condition) throw new Error(message) }
 const results = []
 const output = document.querySelector('#results')
@@ -49,9 +51,8 @@ try {
       for (const width of [300, 240, 200]) {
         preview.style.width = width + 'px'
         render(h(Example, { key: locale + theme + width }))
-        await pause()
+        await until(() => preview.querySelectorAll('[role="radiogroup"]').length >= 4, 'Missing action groups')
         const groups = [...preview.querySelectorAll('[role="radiogroup"]')]
-        assert(groups.length >= 4, 'Missing action groups')
         for (const group of groups) {
           const bounds = group.getBoundingClientRect()
           assert(group.scrollWidth <= group.clientWidth + 1, 'Group overflow: ' + group.textContent)
