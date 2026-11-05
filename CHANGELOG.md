@@ -13,6 +13,10 @@
 - **Breaking.** `design/get` returns the theme, what it resolves to, the catalog of every property and name, DESIGN.md and the contrast findings; `design/update` and `design/preview` take a `theme` (merged, or replaced with `replace: true`); `design/code` takes `js` only. `cms://site/design` is the theme as DESIGN.md.
 - **Breaking.** Light and dark are `data-mode` on the page (was `data-theme`), remembered as `cms-mode`.
 
+### Fixed
+
+- Going Back past unsaved changes and choosing **Discard** right away left you on the page; it now goes back.
+
 ## 0.10.0 (2026-11-05)
 
 ### Added

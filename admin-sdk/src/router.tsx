@@ -49,6 +49,9 @@ function replaceEntry(url: string) {
 
 /** Back or forward the admin itself is doing, which isn't a navigation of its own. */
 let undoing: 'stay' | 'leave' | null = null
+/** Putting the screen's entry back is asynchronous: leaving waits until it is done, or it would be taken for the leaving. */
+let restored: Promise<void> = Promise.resolve()
+let settle: (() => void) | null = null
 
 window.addEventListener('popstate', (event) => {
   const to = typeof event.state?.cmsIndex === 'number' ? (event.state.cmsIndex as number) : null
@@ -58,6 +61,7 @@ window.addEventListener('popstate', (event) => {
     const leaving = undoing === 'leave'
     undoing = null
     if (leaving) update('pop')
+    else { settle?.(); settle = null }
     return
   }
   const message = asking ? null : blockMessage()
@@ -65,13 +69,16 @@ window.addEventListener('popstate', (event) => {
   // The screen with the changes is still on view: put its entry back, then ask (once).
   if (steps) {
     undoing = 'stay'
+    // A browser that never answers the step must not keep the person on the page.
+    restored = Promise.race([new Promise<void>((resolve) => { settle = resolve }), new Promise<void>((resolve) => setTimeout(resolve, 1000))])
     window.history.go(steps)
   } else {
     pushEntry(boot.base + (snapshot.path === '/' ? '' : snapshot.path) + snapshot.search)
   }
   if (!message) return
-  void ask(message).then((leave) => {
+  void ask(message).then(async (leave) => {
     if (!leave) return
+    await restored
     undoing = 'leave'
     if (steps) window.history.go(-steps)
     else window.history.back()
