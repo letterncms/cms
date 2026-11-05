@@ -245,4 +245,15 @@ final class EditorRenderingTest extends TestCase
         $this->postJson('/__preview', ['collection' => 'pages'])->assertNotFound();
         $this->assertSame($version, $this->cms()->entries()->find($entry->id)->version());
     }
+
+    public function test_the_canvas_speaks_the_language_the_editor_asks_for_and_hands_it_back(): void
+    {
+        $nl = json_decode((string) file_get_contents(dirname(__DIR__, 2).'/blocks/lang/nl.json'), true);
+        $entry = $this->cms()->content()->create('pages', ['title' => 'Example', 'data' => ['content' => [['type' => 'heading', 'props' => ['level' => '2']]]]]);
+
+        $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id, [], ['X-Cms-Locale' => 'nl'])->assertOk()
+            ->assertSee('data-cms-placeholder="'.$nl['Heading'].'"', false);
+        $this->assertSame(\Cms\Admin\Translations::SOURCE, app(\Cms\Admin\Translations::class)->current(), 'the language is restored after the canvas');
+        $this->assertFalse(app(\Cms\Modules\Blocks\BlockRenderer::class)->editor, 'and the renderer leaves the canvas');
+    }
 }

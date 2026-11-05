@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { createContext, SourceTextModule, SyntheticModule } from 'node:vm'
 
-// node --experimental-vm-modules --test cms/plugins/blocks/tests/readOnly.mjs
+// node --experimental-vm-modules --test modules/blocks/tests/readOnly.mjs
 async function editor(nodes) {
   const context = createContext({ structuredClone })
   // The field and entry workspace both use this hook lifecycle; effects run after render.
@@ -19,14 +19,16 @@ async function editor(nodes) {
   }, { context })
   let sequence = 0
   const types = new SyntheticModule(['newId'], function () { this.setExport('newId', () => `new-${++sequence}`) }, { context })
-  const source = (path) => new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL(path, import.meta.url), 'utf8'), { mode: 'transform' }), { context })
+  const source = (path) => new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL(path, import.meta.url), 'utf8')), { context })
   const tree = source('../admin/src/core/tree.ts')
   await tree.link(() => types)
   const storeModule = source('../admin/src/core/store.ts')
   await storeModule.link((name) => name === 'react' ? react : tree)
   await storeModule.evaluate()
+  const uniqueIds = source('../admin/src/core/uniqueIds.ts')
+  await uniqueIds.link((name) => name === './tree' ? tree : types)
   const sessionModule = source('../admin/src/core/useBlockSession.ts')
-  await sessionModule.link((name) => name === 'react' ? react : storeModule)
+  await sessionModule.link((name) => ({ react, './store': storeModule, './types': types, './uniqueIds': uniqueIds })[name])
   await sessionModule.evaluate()
   const changes = []
   return {

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Cms\Cms;
+use Cms\Modules\Account\Site\Screens;
 use Cms\Modules\Email\Mailer;
 use Cms\Extend\Hooks;
 
@@ -226,7 +227,9 @@ final class Accounts
     /** A public account page's path, in the language asked for. Plugins add pages through `account.screens`. */
     public function pathOf(string $screen, ?string $locale = null): string
     {
-        return (string) $this->hooks->filter('account.url', '/'.$screen, $screen, $locale);
+        $screens = app(Screens::class);
+
+        return $screens->get($screen) ? $screens->url($screen, $locale) : '/'.$screen;
     }
 
     /** Only a path on this site: `//evil.example` and `/\evil.example` go somewhere else. */

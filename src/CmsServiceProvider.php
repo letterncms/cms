@@ -88,9 +88,10 @@ final class CmsServiceProvider extends ServiceProvider
         Update\ReleaseFeed::class => Update\ReleaseFeed::class,
         Update\CoreUpdate::class => Update\CoreUpdate::class,
         Packages\Install\PackageJobs::class => Packages\Install\PackageJobs::class,
-        // Contracts with safe defaults; plugins rebind them.
+        // Contracts with safe defaults, for when the module that binds them (Site, Assistant) is off.
         Contracts\SiteBuilder::class => Contracts\Defaults\NullSiteBuilder::class,
         Contracts\Agent::class => Contracts\Defaults\NoAgent::class,
+        Contracts\Translator::class => Contracts\Defaults\NoTranslator::class,
     ];
 
     /** Set while an update migrates core tables: nothing a package does may run before that. */
@@ -237,6 +238,8 @@ final class CmsServiceProvider extends ServiceProvider
 
         $hooks->addFilter('fields.options.admin-languages', fn (array $options) => [...$options, ...$this->app->make(Admin\Translations::class)->languages()]);
         $hooks->addFilter('fields.options.timezones', static fn (array $options) => [...$options, ...timezone_identifiers_list()]);
+        // Every collection that holds content of its own: not the system ones (templates, components, account screens).
+        $hooks->addFilter('fields.options.collections', fn (array $options) => [...$options, ...array_map(static fn ($c) => $c->title, array_filter($this->app->make(CollectionRepository::class)->all(), static fn ($c) => ! $c->system))]);
 
         $hooks->addFilter('settings.saving', function (array $values, string $namespace, array $stored) {
             return match ($namespace) {
@@ -248,7 +251,12 @@ final class CmsServiceProvider extends ServiceProvider
 
         $hooks->on('settings.saved', static function (string $namespace, array $values): void {
             if ($namespace === 'site') {
-                config(['app.name' => (string) $values['name'], 'app.locale' => $values['locale'], 'app.timezone' => $values['timezone']]);
+                config([
+                    'app.name' => (string) $values['name'],
+                    'app.url' => rtrim((string) (($values['url'] ?? null) ?: env('APP_URL') ?: 'http://localhost'), '/'),
+                    'app.locale' => $values['locale'],
+                    'app.timezone' => $values['timezone'],
+                ]);
             }
         });
     }
@@ -298,7 +306,7 @@ final class CmsServiceProvider extends ServiceProvider
 
         $context->register('cms://site', 'Site', 'Site name, URL and locales.', fn () => [
             'name' => config('app.name'),
-            'url' => config('app.url'),
+            'url' => $this->app->make(Cms::class)->url(),
             'locales' => $this->app->make(Cms::class)->locales(),
             'site' => $this->app->make(Cms::class)->site(),
         ]);

@@ -1,13 +1,9 @@
 // Build @letterncms/admin and @letterncms/module-blocks, run this file, then open the printed URL.
 // Exercises real built components with in-memory documents; never writes site content.
-import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { resolve, extname, sep } from 'node:path'
+import { resolve } from 'node:path'
+import { assets, json, page, root, serve } from './harness.mjs'
 
-const root = fileURLToPath(new URL('../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
-const imports = Object.fromEntries(Object.entries(admin.imports).map(([name, path]) => [name, '/assets/admin/' + path]))
 const translations = Object.assign({}, ...await Promise.all(['modules/admin/lang/nl.json', 'modules/blocks/lang/nl.json'].map(async (path) => JSON.parse(await readFile(resolve(root, path), 'utf8')))))
 const runner = `
 import React from 'react'
@@ -15,7 +11,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { registry, queryClient, abilityKey, setManifest, setLocale } from '@letterncms/sdk'
 import { Fields, TooltipProvider } from '@letterncms/ui'
-import { Inspector, EditorProvider, EditorStore, useEditor } from '/assets/blocks/admin.js'
+import { Inspector, EditorProvider, EditorStore, useEditor } from '${assets('blocks')}admin.js'
 
 const h = React.createElement
 const pause = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
@@ -97,46 +93,17 @@ try {
   render()
   await pause()
   document.querySelector('#state').textContent = 'PASS'
-  await fetch('/results', { method: 'POST', body: JSON.stringify({ passed: results }) })
+  await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results }) })
 } catch (error) {
   output.textContent += '\\nFAIL ' + error.message
   document.querySelector('#state').textContent = 'FAIL'
-  await fetch('/results', { method: 'POST', body: JSON.stringify({ passed: results, error: error.stack }) })
+  await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results, error: error.stack }) })
 }
 `
-const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Inspector regression checks</title>${admin.css.map((path) => `<link rel="stylesheet" href="/assets/admin/${path}">`).join('')}<link rel="stylesheet" href="/assets/blocks/admin.css"><script type="importmap">${JSON.stringify({ imports })}</script><script>window.__CMS__={base:'/admin',api:'/api/admin',site:{name:'Fixture'},locale:'en',messages:{}}</script><script type="module" src="/assets/admin/${admin.entry}"></script></head><body style="padding:24px"><div id="cms" hidden></div><h1 style="font-size:18px;margin-bottom:16px">Inspector regression checks · <span id="state">Running</span></h1><div style="display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap"><div id="preview" style="width:300px;border:1px solid var(--cms-border);border-radius:8px;background:var(--cms-bg)"></div><pre id="results" style="font-size:12px;line-height:1.8;white-space:pre-wrap">Starting…</pre></div><script type="module">${runner}</script></body></html>`
-let result
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, 'http://localhost')
-    if (url.pathname === '/results') {
-      if (req.method === 'POST') {
-        let body = ''; for await (const chunk of req) body += chunk
-        result = JSON.parse(body)
-        result.passed.forEach((name) => console.log('PASS', name))
-        if (result.error) console.error('FAIL', result.error)
-      }
-      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(result ?? null))
-      if (req.method === 'POST') finish(result.error)
-      return
-    }
-    if (url.pathname === '/api/admin/auth/session') {
-      res.setHeader('Content-Type', 'application/json'); res.end('{"authenticated":false}'); return
-    }
-    const asset = url.pathname.match(/^\/assets\/(admin|blocks)\/(.+)$/)
-    if (asset) {
-      const dir = resolve(root, asset[1] === 'admin' ? 'modules/admin/dist' : 'modules/blocks/dist')
-      const path = resolve(dir, asset[2])
-      if (!path.startsWith(dir + sep)) { res.writeHead(403); res.end(); return }
-      res.setHeader('Content-Type', { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream')
-      res.end(await readFile(path)); return
-    }
-    if (url.pathname !== '/') { res.writeHead(404); res.end(); return }
-    res.setHeader('Content-Type', 'text/html'); res.end(html)
-  } catch (error) { console.error(error); res.writeHead(500); res.end(error.message) }
-})
-// Exits with the page's verdict, unless --preview keeps it up to look at.
-const keepAlive = process.argv.includes('--preview')
-const finish = (error) => { if (keepAlive) return; clearTimeout(timeout); setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = error ? 1 : 0 }, 100) }
-const timeout = keepAlive ? null : setTimeout(() => { console.error('Inspector browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
-server.listen(0, '127.0.0.1', () => console.log('Open http://localhost:' + server.address().port + '/'))
+const body = `<div id="cms" hidden></div><div style="padding:24px"><h1 style="font-size:18px;margin-bottom:16px">Inspector regression checks · <span id="state">Running</span></h1><div style="display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap"><div id="preview" style="width:300px;border:1px solid var(--cms-border);border-radius:8px;background:var(--cms-bg)"></div><pre id="results" style="font-size:12px;line-height:1.8;white-space:pre-wrap">Starting…</pre></div></div>`
+serve('Inspector', (req, res, url) => {
+  if (url.pathname === '/api/admin/auth/session') return json(res, 200, { authenticated: false })
+  if (url.pathname !== '/') return json(res, 404, {})
+  res.writeHead(200, { 'Content-Type': 'text/html' })
+  res.end(page({ title: 'Inspector regression checks', boot: { base: '/admin', api: '/api/admin', site: { name: 'Fixture' }, locale: 'en', messages: {} }, head: `<link rel="stylesheet" href="${assets('blocks')}admin.css">`, body, runner, results: false }))
+}, { links: (base) => [`${base}/`] })

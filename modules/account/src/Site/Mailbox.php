@@ -37,6 +37,6 @@ final class Mailbox
 
     public function absolute(string $path): string
     {
-        return rtrim((string) $this->cms->site('url', config('app.url')), '/').$path;
+        return $this->cms->url($path);
     }
 }

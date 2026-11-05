@@ -1,5 +1,6 @@
-import { boot, can, getManifest, loadManifest, navigate, run, setManifest, t, type Arrangement, type Manifest, type Sidebar } from '@letterncms/sdk'
+import { boot, can, getManifest, loadManifest, navigate, run, setManifest, setPreference, t, type Arrangement, type Manifest, type Sidebar } from '@letterncms/sdk'
 import { confirm, toast } from '../ui'
+import { inSettings, placeAt } from '../ui/place'
 
 /**
  * The sidebar people pin: items in sections, those that are `hidden` wait
@@ -46,7 +47,7 @@ export function arrange(next: Sidebar) {
   const personal = !siteDefault || !sameLayout(next, siteDefault)
   setManifest({ ...getManifest(), sidebar: { ...next, personal } })
   saving = saving
-    .then(() => run('account/update', { preferences: { sidebar: personal ? stored(next) : null } }))
+    .then(() => setPreference('sidebar', personal ? stored(next) : null))
     .catch((e) => {
       toast.error(e)
       return loadManifest()
@@ -110,7 +111,7 @@ export function movePinned(section: string, id: string, to: number) {
 export async function resetToDefault() {
   await saving
   try {
-    await run('account/update', { preferences: { sidebar: null } })
+    await setPreference('sidebar', null)
     await loadManifest()
     noteDefault()
     toast.success(t('Sidebar reset to the default'))
@@ -126,7 +127,7 @@ export async function saveForEveryone() {
   await saving
   try {
     await run('settings/update', { namespace: 'admin', values: { sidebar: stored(getManifest().sidebar) } })
-    await run('account/update', { preferences: { sidebar: null } })
+    await setPreference('sidebar', null)
     siteDefault = null
     await loadManifest()
     noteDefault()
@@ -154,9 +155,6 @@ export async function resetEveryonesDefault() {
     return false
   }
 }
-
-export { cameFrom, homedSettings, inSettings, itemAt, noteLocation, noteSide, placeAt, settingsIds, settingsRowAt, wayBack } from '../ui/place'
-import { inSettings, placeAt } from '../ui/place'
 
 /**
  * Opens settings, and in settings goes back. Not ⌘, — browsers keep that one for their

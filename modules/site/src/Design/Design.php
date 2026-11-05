@@ -35,9 +35,11 @@ final class Design
         return $this->json ??= DesignJson::load($this->path('tokens.json'), dirname(__DIR__, 2).'/resources/design/tokens.json');
     }
 
-    public function forget(): void
+    /** After anything under content/design changed: read it again, and tell whoever shows it (`design.saved`). */
+    public function saved(): void
     {
         $this->json = null;
+        cms()->hooks()->dispatch('design.saved');
     }
 
     public function customCss(): string

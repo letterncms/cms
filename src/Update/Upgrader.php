@@ -28,16 +28,18 @@ final class Upgrader
         return $done;
     }
 
-    /** New code may read these differently, and a rollback must not read what new code wrote. */
+    /**
+     * New code may read these differently, and a rollback must not read what new code wrote.
+     * Everything under storage/cache is a cache: a module keeps its own there to have it purged too.
+     */
     public static function purgeCaches(Application $app): void
     {
-        foreach (['cache/entries', 'cache/data', 'framework/cache', 'framework/views'] as $dir) {
+        foreach (['cache', 'framework/cache', 'framework/views'] as $dir) {
             Files::deleteDirectory($app->storagePath($dir));
             @mkdir($app->storagePath($dir), 0o775, true);
         }
 
-        @unlink($app->storagePath('languages.json'));
-        @unlink($app->storagePath('cache/packages.php'));
+        @mkdir($app->storagePath('cache/data'), 0o775, true);
         @unlink($app->storagePath('update/purge'));
     }
 }

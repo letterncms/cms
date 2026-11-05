@@ -6,7 +6,7 @@ namespace Cms\Content\Fields;
 
 /**
  * Defines how a kind of value is validated, normalized, stored and rendered.
- * Core ships the basics; plugins add more (media, blocks, seo, …).
+ * The kernel ships the basics; modules and plugins add more (media, blocks, …).
  */
 abstract class FieldType
 {

@@ -244,9 +244,10 @@ final class BlockRenderer
         private readonly DataSources $sources,
     ) {}
 
-    /** A fresh page: forget features and references collected for the previous one. */
+    /** A fresh page: forget the styles, features and references collected for the previous one. */
     public function begin(): void
     {
+        $this->styles->reset();
         $this->features = [];
         $this->referenced = [];
         $this->timelines = [];

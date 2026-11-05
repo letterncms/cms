@@ -27,6 +27,26 @@ final class LanguagesTest extends TestCase
         return $this->cms()->abilities()->execute($name, $input, AbilityContext::system());
     }
 
+    /** @param  \Closure(list<string>, string, string): list<string>  $translate */
+    private function translator(\Closure $translate): void
+    {
+        $this->app->instance(\Cms\Contracts\Translator::class, new class($translate) implements \Cms\Contracts\Translator
+        {
+            public function __construct(private readonly \Closure $translate) {}
+
+            public function available(): bool
+            {
+                return true;
+            }
+
+            public function translate(array $strings, string $from, string $to): array
+            {
+                return ($this->translate)($strings, $from, $to);
+            }
+        });
+        $this->app->forgetInstance(\Cms\Modules\Languages\Translations::class);
+    }
+
     private function page(string $title, array $extra = []): array
     {
         return $this->ability('entries/create', ['collection' => 'pages', 'title' => $title, 'status' => 'published', ...$extra]);
@@ -132,7 +152,7 @@ final class LanguagesTest extends TestCase
 
     public function test_a_translated_slug_follows_the_rules_of_its_language(): void
     {
-        $this->cms()->hooks()->addFilter('languages.translator', static fn () => static fn (array $strings) => array_map(static fn () => 'Über Größe', $strings));
+        $this->translator(static fn (array $strings) => array_map(static fn () => 'Über Größe', $strings));
 
         $source = $this->page('About');
 
@@ -141,7 +161,7 @@ final class LanguagesTest extends TestCase
 
     public function test_ai_translation_changes_text_but_never_structure(): void
     {
-        $this->cms()->hooks()->addFilter('languages.translator', static fn () => static fn (array $strings, string $from, string $to) => array_map(static fn ($s) => "[{$to}] {$s}", $strings));
+        $this->translator(static fn (array $strings, string $from, string $to) => array_map(static fn ($s) => "[{$to}] {$s}", $strings));
 
         $source = $this->page('Pricing', ['data' => ['summary' => 'Plans for every team']]);
         $de = $this->ability('translations/create', ['id' => $source['id'], 'locale' => 'de', 'translate' => true]);

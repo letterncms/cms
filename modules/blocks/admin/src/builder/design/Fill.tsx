@@ -1,4 +1,4 @@
-import { registry, t } from '@letterncms/sdk'
+import { t } from '@letterncms/sdk'
 import { Fields, cn } from '@letterncms/ui'
 import { Section, inputClass } from '../controls'
 import { parseGradient } from '../fields/style'
@@ -11,7 +11,6 @@ const CLEAR = { backgroundImage: null, backgroundSize: null, backgroundPosition:
 export function Fill({ s }: { s: StyleApi }) {
   const image = s.value('backgroundImage')
   const kind = !image ? 'none' : parseGradient(image) ? 'gradient' : 'image'
-  const media = !!registry.fields.get('media')
   const mediaId = image?.match(/^media:([0-9a-z]{26})$/i)?.[1]
   const any = s.value('backgroundColor') || image
 
@@ -41,7 +40,7 @@ export function Fill({ s }: { s: StyleApi }) {
         ]}
       />
       {kind === 'gradient' && <StyleFields s={s} bare fields={[{ handle: 'backgroundImage', type: 'text', component: 'blocks-gradient', className: 'items-start', label: t('Gradient') }]} />}
-      {kind === 'image' && media && (
+      {kind === 'image' && (
         <div className="rounded-md bg-active/60 p-1.5 text-xs">
           <Fields bare fields={[{ handle: 'bg', type: 'media', label: t('Image'), max: 1, accept: 'image/*' }]} values={{ bg: mediaId ? [mediaId] : [] }} onChange={(_, v: string[]) => s.set('backgroundImage', v?.[0] ? `media:${v[0]}` : 'none')} />
         </div>
@@ -49,7 +48,6 @@ export function Fill({ s }: { s: StyleApi }) {
       <StyleFields
         s={s}
         fields={[
-          kind === 'image' && !media && { handle: 'mediaId', type: 'text', component: 'blocks-value', label: t('Media ID'), unit: '', get: () => mediaId, set: (v) => s.set('backgroundImage', v ? `media:${v}` : null) },
           kind === 'image' && { handle: 'backgroundSize', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Size'), options: [{ value: 'cover', label: t('Cover') }, { value: 'contain', label: t('Contain') }, { value: 'auto', label: t('Original') }] },
           kind === 'image' && { handle: 'backgroundPosition', type: 'json', component: 'blocks-origin', label: t('Position'), className: 'items-start py-0.5 [&>label]:leading-6' },
           kind === 'image' && { handle: 'backgroundRepeat', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Repeat'), placeholder: 'repeat', options: [{ value: 'no-repeat', label: t('Once') }, { value: 'repeat', label: t('Tile') }, { value: 'repeat-x', icon: 'b-arrows-out-line-horizontal', title: t('Tile Across') }, { value: 'repeat-y', icon: 'b-arrows-out-line-vertical', title: t('Tile Down') }] },

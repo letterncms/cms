@@ -6,12 +6,11 @@ namespace Cms\Modules\Navigation;
 
 use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
-use Cms\Cms;
 
 /** Turns a stored menu into links for templates: live entries only, current page marked. */
 final class MenuResolver
 {
-    public function __construct(private readonly Menus $menus, private readonly Cms $cms, private readonly Hooks $hooks) {}
+    public function __construct(private readonly Menus $menus, private readonly Hooks $hooks) {}
 
     /**
      * @param  string|null  $current  URI of the page being rendered (marks current/active items)
@@ -27,16 +26,11 @@ final class MenuResolver
             return null;
         }
 
-        $ids = [];
-        array_walk_recursive($menu['items'], static function ($value, $key) use (&$ids) {
-            $key === 'entry' && $ids[] = $value;
-        });
+        $entries = $this->menus->entriesById($menu['items']);
 
-        $entries = [];
-        foreach ($this->cms->entries()->findMany(array_values(array_unique($ids))) as $entry) {
-            $entries[$entry->id] = $entry;
+        foreach (array_keys($entries) as $id) {
             // Renaming, moving or unpublishing a linked entry rebuilds every page that shows this menu.
-            $this->hooks->dispatch('render.depend', 'entry:'.$entry->id);
+            $this->hooks->dispatch('render.depend', 'entry:'.$id);
         }
 
         return $this->items($menu['items'], $entries, $current === null ? null : self::normal($current), $locale);
@@ -58,8 +52,7 @@ final class MenuResolver
                     continue; // Hidden with its children until the page is live.
                 }
 
-                $uri = $entry->uri;
-                $url = function_exists('cms_url') ? cms_url($uri) : $uri;
+                $uri = $url = $entry->uri;
                 $label = $item['label'] ?? $entry->title;
             } else {
                 $uri = $url = $item['url'];

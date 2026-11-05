@@ -40,8 +40,6 @@ final class MediaController
             return response()->json(['error' => $e->toArray()], $e->status());
         }
 
-        cms()->hooks()->dispatch('media.uploaded', $item, $user);
-
         return response()->json(['data' => $item->toPublic()], 201);
     }
 

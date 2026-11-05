@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Content;
 
+use Cms\Admin\Views;
 use Cms\Admin\Translations;
 use Cms\Cms;
 use Cms\Packages\Plugin;
@@ -21,9 +22,6 @@ final class ContentModule extends Plugin
 
     /** Milliseconds after the last change before the editor saves; ⌘S saves at once. */
     public const int AUTOSAVE = 1200;
-
-    /** Revisions each entry keeps. */
-    public const int REVISIONS = 100;
 
     public function boot(): void
     {
@@ -48,9 +46,6 @@ final class ContentModule extends Plugin
 
         $this->app->make(ContentAbilities::class)->register($cms->abilities());
         $this->skills($cms);
-
-        // Plugins may keep more or fewer revisions with the same filter.
-        $cms->hooks()->addFilter('revisions.keep', static fn () => self::REVISIONS);
 
         // One sidebar item per collection, in the collection's own section (templates and components in Design).
         // Built-in pages (sign in, checkout) are pages: they belong to the pages' item and are listed with them.
@@ -96,7 +91,7 @@ final class ContentModule extends Plugin
         $collection = $this->cms()->collections()->all()[$handle] ?? null;
 
         if ($collection === null || ! $user->hasPermission("entries.{$handle}.view")) {
-            return ['type' => 'ui/page', 'props' => ['title' => __('Not Found')], 'children' => [['type' => 'ui/empty', 'props' => ['icon' => 'collection', 'title' => __('Not Found'), 'action' => ['label' => __('Go Home'), 'to' => '/']]]]];
+            return Views::notFound('collection');
         }
 
         return ['type' => 'ui/page', 'props' => [

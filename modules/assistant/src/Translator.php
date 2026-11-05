@@ -4,22 +4,26 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Assistant;
 
+use Cms\Contracts\Translator as TranslatorContract;
+use Cms\Modules\Languages\Languages;
+
 /**
- * Translates website text with Claude for letterncms/languages (`languages.translator`).
+ * Translates website text with Claude, for Languages, once an API key is set.
  * Strings go out as a keyed object and must come back with exactly the same
  * keys (structured outputs), so nothing can be dropped or reordered.
  */
-final class Translator
+final class Translator implements TranslatorContract
 {
     private const int BATCH = 60;
 
     public function __construct(private readonly Claude $claude) {}
 
-    /**
-     * @param  list<string>  $strings
-     * @return list<string>
-     */
-    public function __invoke(array $strings, string $from, string $to): array
+    public function available(): bool
+    {
+        return $this->claude->configured();
+    }
+
+    public function translate(array $strings, string $from, string $to): array
     {
         $out = [];
 
@@ -53,8 +57,6 @@ final class Translator
 
     private static function language(string $code): string
     {
-        $name = class_exists(\Locale::class) ? \Locale::getDisplayName(str_replace('-', '_', $code), 'en') : '';
-
-        return $name !== '' && $name !== $code ? "{$name} ({$code})" : $code;
+        return Languages::name($code, 'en')." ({$code})";
     }
 }

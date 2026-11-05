@@ -1,19 +1,12 @@
-import { can, invalidate, locale, run, t, timeAgo, useAbility, type Entry } from '@letterncms/sdk'
+import { can, invalidate, locale, run, t, timeAgo, useAbility, type Entry, type PersonSummary } from '@letterncms/sdk'
 import { Avatar, Button, Fields, Icon, IconButton, Menu, Spinner, confirm, toast, cn } from '@letterncms/ui'
 import { Fragment, useState, type ReactNode } from 'react'
-
-export interface Person {
-  id: string
-  name: string
-  initials: string
-  avatar: string | null
-}
 
 export interface CommentData {
   id: string
   body: string
-  author: Person | null
-  mentions: Person[]
+  author: PersonSummary | null
+  mentions: PersonSummary[]
   resolved: boolean
   mine: boolean
   createdAt: string
@@ -27,7 +20,7 @@ export function CommentsPanel({ entry }: { entry: Entry | null }) {
   const entryId = entry?.id ?? ''
   const threads = useAbility<CommentData[]>('comments/list', { entryId }, { enabled: !!entry, refetchInterval: 30_000 })
   const writable = can('comments.create')
-  const people = useAbility<Person[]>('comments/people', { entryId }, { enabled: !!entry && writable, staleTime: 300_000 })
+  const people = useAbility<PersonSummary[]>('comments/people', { entryId }, { enabled: !!entry && writable, staleTime: 300_000 })
   const [showResolved, setShowResolved] = useState(false)
 
   if (!entry) return null
@@ -65,7 +58,7 @@ export function CommentsPanel({ entry }: { entry: Entry | null }) {
   )
 }
 
-function Thread({ thread, entryId, people, onChange, writable }: { thread: CommentData; entryId: string; people: Person[]; onChange: () => void; writable: boolean }) {
+function Thread({ thread, entryId, people, onChange, writable }: { thread: CommentData; entryId: string; people: PersonSummary[]; onChange: () => void; writable: boolean }) {
   const [replying, setReplying] = useState(false)
 
   const resolve = async () => {
@@ -160,14 +153,14 @@ function CommentView({ comment, onChange, actions }: { comment: CommentData; onC
 }
 
 /** Shows "@Name" for mentioned people as a token. */
-function highlight(body: string, mentions: Person[]): ReactNode {
+function highlight(body: string, mentions: PersonSummary[]): ReactNode {
   if (!mentions.length) return body
   const names = mentions.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).sort((a, b) => b.length - a.length)
   const parts = body.split(new RegExp(`(@(?:${names.join('|')}))`, 'g'))
   return parts.map((part, i) => (i % 2 === 1 ? <span key={i} className="rounded-xs bg-active px-0.5 font-medium text-ink">{part}</span> : <Fragment key={i}>{part}</Fragment>))
 }
 
-function Composer({ entryId, parentId, people, onPosted, onCancel, placeholder, autoFocus }: { entryId: string; parentId?: string; people: Person[]; onPosted: () => void; onCancel?: () => void; placeholder: string; autoFocus?: boolean }) {
+function Composer({ entryId, parentId, people, onPosted, onCancel, placeholder, autoFocus }: { entryId: string; parentId?: string; people: PersonSummary[]; onPosted: () => void; onCancel?: () => void; placeholder: string; autoFocus?: boolean }) {
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
 

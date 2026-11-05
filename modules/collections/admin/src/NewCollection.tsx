@@ -1,6 +1,6 @@
 import { invalidate, CmsError, loadManifest, navigate, run, t, useAbility, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
 import { useState } from 'react'
-import { Button, Dialog, Fields, Icon, slugify, toast } from '@letterncms/ui'
+import { Dialog, Fields, Icon, QueryError, slugify, toast } from '@letterncms/ui'
 
 interface CollectionRow {
   handle: string
@@ -91,18 +91,15 @@ function NewCollectionDialog({ existing, onOpenChange }: { existing: CollectionR
   return (
     <Dialog
       open
-      onOpenChange={(o) => { if (!busy) onOpenChange(o) }}
+      onOpenChange={onOpenChange}
       title={t('New Collection')}
-      footer={<>
-        <Button disabled={busy} onClick={() => onOpenChange(false)}>{t('Cancel')}</Button>
-        <Button variant="primary" type="submit" form="new-collection" disabled={!options.data || !title.trim() || !!handleError} loading={busy}>{t('Create Collection')}</Button>
-      </>}
+      onSubmit={() => void create()}
+      submitLabel={t('Create Collection')}
+      submitDisabled={!options.data || !title.trim() || !!handleError}
+      busy={busy}
     >
-      <form id="new-collection" className="space-y-5" onSubmit={(e) => { e.preventDefault(); void create() }}>
-        {options.isError && <div role="alert" className="flex items-center gap-3 rounded-sm border border-danger/30 p-3 text-sm">
-          <span className="min-w-0 flex-1 text-danger">{t('Could not load collection options.')}</span>
-          <Button size="sm" loading={options.isFetching} onClick={() => void options.refetch()}>{t('Retry')}</Button>
-        </div>}
+      <div className="space-y-5">
+        {options.isError && <QueryError compact message={t('Could not load collection options.')} onRetry={() => void options.refetch()} />}
         <Fields fields={[{ handle: 'title', type: 'text', label: t('Name'), required: true, autofocus: true, placeholder: t('Products') }]} values={values} onChange={change} errors={errors} disabled={busy} />
         <Fields fields={[
           { handle: 'structure', type: 'select', label: t('Structure'), display: 'segmented', required: true, options: structures() },
@@ -116,7 +113,7 @@ function NewCollectionDialog({ existing, onOpenChange }: { existing: CollectionR
         </details>
         {handle && handleError && <p role="alert" className="m-0 text-xs text-danger">{handleError}</p>}
         {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
-      </form>
+      </div>
     </Dialog>
   )
 }

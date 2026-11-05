@@ -21,14 +21,12 @@ final readonly class PackageManifest
 
     /**
      * @param  array<string, string>  $requires  Packages this package needs (name => constraint): CMS packages, composer libraries, and the optional modules in `extra.cms.modules`
-     * @param  list<string>  $suggests  Packages that enhance this one
      * @param  array<string, string>  $psr4
      * @param  list<string>  $files  Files from composer's `autoload.files`, loaded when the package starts
      * @param  array<string, mixed>  $extra  Raw extra.cms block
      */
     public function __construct(
         public string $name,
-        public string $type,
         public string $version,
         public string $path,
         public string $label,
@@ -38,7 +36,6 @@ final readonly class PackageManifest
         public string $namespace,
         public array $requires,
         public ?string $coreConstraint,
-        public array $suggests,
         public array $psr4,
         public array $authors,
         public ?string $homepage,
@@ -87,7 +84,6 @@ final readonly class PackageManifest
 
         return new self(
             name: $name,
-            type: $type,
             version: (string) ($composer['version'] ?? '0.0.0'),
             path: rtrim($path, '/'),
             label: (string) ($cms['label'] ?? ucwords(str_replace(['-', '_'], ' ', $short))),
@@ -97,7 +93,6 @@ final readonly class PackageManifest
             namespace: (string) ($cms['namespace'] ?? $short),
             requires: $requires,
             coreConstraint: $core,
-            suggests: array_values(array_map('strval', array_keys((array) ($composer['suggest'] ?? [])))),
             psr4: array_map(static fn ($p) => is_array($p) ? (string) $p[0] : (string) $p, (array) ($composer['autoload']['psr-4'] ?? [])),
             authors: array_values((array) ($composer['authors'] ?? [])),
             homepage: isset($composer['homepage']) ? (string) $composer['homepage'] : null,
@@ -136,7 +131,6 @@ final readonly class PackageManifest
             'core' => $this->core,
             'required' => $this->required,
             'requires' => $this->requires,
-            'suggests' => $this->suggests,
             'authors' => $this->authors,
             'homepage' => $this->homepage,
         ];

@@ -11,11 +11,6 @@ use Cms\Tests\TestCase;
 
 final class NavigationTest extends TestCase
 {
-    protected function plugins(): array
-    {
-        return ['letterncms/navigation'];
-    }
-
     private function ability(string $ability, array $input = []): mixed
     {
         return $this->cms()->abilities()->execute($ability, $input, AbilityContext::system());

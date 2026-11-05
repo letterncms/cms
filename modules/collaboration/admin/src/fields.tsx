@@ -1,7 +1,6 @@
-import { t, type FieldProps } from '@letterncms/sdk'
+import { t, type FieldProps, type PersonSummary } from '@letterncms/sdk'
 import { Avatar, Textarea, cn } from '@letterncms/ui'
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import type { Person } from './CommentsPanel'
 
 /**
  * A comment being written: `@` suggests the `people` to mention, ⌘↵ submits
@@ -9,7 +8,7 @@ import type { Person } from './CommentsPanel'
  */
 export function ComposerField({ field, value, onChange, disabled }: FieldProps<string | null>) {
   const body = value ?? ''
-  const people = (field.people as Person[]) ?? []
+  const people = (field.people as PersonSummary[]) ?? []
   const [query, setQuery] = useState<string | null>(null)
   const [highlighted, setHighlighted] = useState(0)
   const input = useRef<HTMLTextAreaElement>(null)
@@ -23,7 +22,7 @@ export function ComposerField({ field, value, onChange, disabled }: FieldProps<s
     setHighlighted(0)
   }
 
-  const pick = (person: Person) => {
+  const pick = (person: PersonSummary) => {
     const el = input.current
     const caret = el?.selectionStart ?? body.length
     const before = body.slice(0, caret).replace(/@([\p{L}\p{N} .'-]{0,30})$/u, `@${person.name} `)

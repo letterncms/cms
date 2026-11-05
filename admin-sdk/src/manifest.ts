@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { boot, request } from './api'
+import { boot, request, run } from './api'
 import type { BrandInfo, Manifest } from './types'
 
 let manifest: Manifest | null = null
@@ -26,7 +26,7 @@ export function setManifest(next: Manifest) {
   publish(next)
 }
 
-/** Be told whenever the manifest changes (admin themes follow it to load and unload modules). */
+/** Be told whenever the manifest changes (the admin follows it to load and unload modules). */
 export function onManifest(listener: (manifest: Manifest) => void): () => void {
   const l = () => manifest && listener(manifest)
   listeners.add(l)
@@ -74,6 +74,33 @@ export function useManifest(): Manifest {
  */
 export function useConfig<T extends Record<string, unknown> = Record<string, any>>(namespace: string): Partial<T> {
   return (useManifest().config?.[namespace] ?? {}) as Partial<T>
+}
+
+const waiting = new Map<string, { timer: ReturnType<typeof setTimeout>; done: () => void }>()
+
+/**
+ * Change one of the signed-in person's preferences (a list's columns, the sidebar they
+ * arranged; `null` gives it up). This session's copy in the manifest changes at once and
+ * their account follows; with `delay`, a moment later, so a burst of changes saves once.
+ */
+export function setPreference(key: string, value: unknown, delay = 0): Promise<void> {
+  if (manifest) manifest.user.preferences = { ...manifest.user.preferences, [key]: value }
+  const previous = waiting.get(key)
+  if (previous) {
+    clearTimeout(previous.timer)
+    previous.done()
+  }
+  waiting.delete(key)
+  const save = () => run('account/update', { preferences: { [key]: value } }).then(() => {})
+  if (delay <= 0) return save()
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      waiting.delete(key)
+      save().then(resolve, reject)
+    }, delay)
+    // A later change takes this one's place: it is saved with that.
+    waiting.set(key, { timer, done: resolve })
+  })
 }
 
 /** True when a package (module, plugin or theme) is active on this site. */

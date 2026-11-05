@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace Cms\Modules\Site;
 
 use Illuminate\Support\Facades\Route;
-use Cms\Abilities\AbilityException;
 use Cms\Modules\Blocks\Anchors;
 use Cms\Modules\Blocks\BlocksDocument;
 use Cms\Modules\Blocks\Scope;
-use Cms\Modules\Blocks\StyleCompiler;
 use Cms\Modules\Blocks\Templates;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
@@ -89,14 +87,11 @@ final class SiteModule extends Plugin
         });
         $hooks->on('render.warning', fn (string $message) => $this->app->make(SiteBuilder::class)->warn($message));
 
-        // A fresh page starts a fresh style registry.
-        $hooks->on('render.begin', fn () => $this->app->make(StyleCompiler::class)->reset());
-
         $hooks->addFilter('site.build.extras', fn (array $extras) => $this->cms()->settings('site', 'search_index', true)
             ? [...$extras, 'search' => ['path' => 'search.json', 'render' => fn () => $this->app->make(Search\SearchIndex::class)->json()]]
             : $extras);
         $hooks->addFilter('blocks.breakpoints', static fn (array $bp) => $design()->json()->breakpoints() ?: $bp);
-        $hooks->addFilter('blocks.options.button-variants', static function (array $options) use ($design) {
+        $hooks->addFilter('fields.options.button-variants', static function (array $options) use ($design) {
             foreach (array_keys($design()->json()->buttons()) as $variant) {
                 $options[$variant] ??= ucfirst(str_replace(['-', '_'], ' ', (string) $variant));
             }
@@ -285,7 +280,7 @@ final class SiteModule extends Plugin
             }
 
             return [...$fields,
-                ['handle' => 'favicon', 'type' => 'media', 'fallback' => 'url', 'label' => 'Favicon', 'max' => 1, 'instructions' => 'SVG or PNG, square.'],
+                ['handle' => 'favicon', 'type' => 'media', 'label' => 'Favicon', 'max' => 1, 'instructions' => 'SVG or PNG, square.'],
                 ['handle' => 'static', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Build a Static Site', 'default' => true],
                 ['handle' => 'auto_build', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Rebuild Automatically on Publish', 'default' => true],
                 ['handle' => 'search_index', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Publish a Search Index', 'default' => true, 'instructions' => 'For the Search block.'],
@@ -298,13 +293,11 @@ final class SiteModule extends Plugin
         $abilities = $this->cms()->abilities();
         $builder = fn () => $this->app->make(SiteBuilder::class);
         $design = fn () => $this->app->make(Design::class);
-        $package = $this->manifest->name;
 
         $abilities->register('site/build', [
             'label' => 'Publish Site',
             'description' => 'Rebuild the static site (all pages). Work continues in the background; poll site/build-status.',
             'permission' => 'site.build',
-            'package' => $package,
             'handler' => function () use ($builder) {
                 $builder()->queue(null, __('Manual Rebuild'));
 
@@ -317,7 +310,6 @@ final class SiteModule extends Plugin
             'description' => 'Progress of the static build. Calling it also advances queued work.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'handler' => fn () => $builder()->process(1500),
         ]);
 
@@ -326,7 +318,6 @@ final class SiteModule extends Plugin
             'description' => 'The site’s design system (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'handler' => function () use ($design) {
                 $json = $design()->json();
 
@@ -353,7 +344,6 @@ final class SiteModule extends Plugin
             'label' => 'Update Design System',
             'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, fonts or the page transition. Sections you pass replace the stored ones. The site rebuilds.',
             'permission' => 'settings.manage',
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => [
                 'tokens' => ['type' => 'object', 'description' => 'path => value'],
                 'dark' => ['type' => 'object', 'description' => 'path => dark-mode value'],
@@ -369,8 +359,7 @@ final class SiteModule extends Plugin
                 $json = $design()->json();
                 $json->apply($in);
                 $json->save();
-                $design()->forget();
-                $this->cms()->hooks()->dispatch('design.saved');
+                $design()->saved();
 
                 return ['saved' => true, 'stylesheet' => $design()->stylesheet()];
             },
@@ -381,7 +370,6 @@ final class SiteModule extends Plugin
             'description' => 'The stylesheet the site would get with these changes (the design/update input, plus css), without saving. For live previews.',
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => [
                 'tokens' => ['type' => 'object'],
                 'dark' => ['type' => 'object'],
@@ -405,7 +393,6 @@ final class SiteModule extends Plugin
             'label' => 'Custom CSS and JavaScript',
             'description' => 'Replace the site’s custom.css or custom.js (content/design). CSS is appended after everything else; JS loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component.',
             'permission' => 'site.code',
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['css' => ['type' => 'string', 'maxLength' => 200000], 'js' => ['type' => 'string', 'maxLength' => 200000]]],
             'handler' => function (array $in) use ($design) {
                 foreach (['css', 'js'] as $kind) {
@@ -414,7 +401,7 @@ final class SiteModule extends Plugin
                     }
                 }
 
-                $this->cms()->hooks()->dispatch('design.saved');
+                $design()->saved();
 
                 return ['saved' => array_keys(array_intersect_key($in, ['css' => 1, 'js' => 1]))];
             },
@@ -424,15 +411,13 @@ final class SiteModule extends Plugin
             'label' => 'Add a Google Font',
             'description' => 'Download a Google Fonts family (latin, variable weights when available) into content/design/fonts so it is self-hosted, and add it to the design system. Then use it in a font token.',
             'permission' => 'settings.manage',
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
                 'italic' => ['type' => 'boolean', 'default' => false],
             ], 'required' => ['family']],
             'handler' => function (array $in) use ($design) {
                 $fonts = $this->app->make(Fonts::class)->import((string) $in['family'], (bool) ($in['italic'] ?? false));
-                $design()->forget();
-                $this->cms()->hooks()->dispatch('design.saved');
+                $design()->saved();
 
                 return ['fonts' => $fonts];
             },
@@ -442,7 +427,6 @@ final class SiteModule extends Plugin
             'label' => 'Upload a Font',
             'description' => 'Add a .woff2 file (base64) to content/design/fonts and the design system.',
             'permission' => 'settings.manage',
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 60],
                 'name' => ['type' => 'string', 'maxLength' => 120],
@@ -452,8 +436,7 @@ final class SiteModule extends Plugin
             ], 'required' => ['family', 'data']],
             'handler' => function (array $in) use ($design) {
                 $font = $this->app->make(Fonts::class)->upload((string) $in['family'], (string) ($in['name'] ?? $in['family']), (string) $in['data'], (string) ($in['weight'] ?? '400'), (string) ($in['style'] ?? 'normal'));
-                $design()->forget();
-                $this->cms()->hooks()->dispatch('design.saved');
+                $design()->saved();
 
                 return $font;
             },
@@ -464,13 +447,12 @@ final class SiteModule extends Plugin
             'description' => 'URL that previews an entry\'s working copy (drafts included) for signed-in users.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'format' => 'ulid']], 'required' => ['id']],
             'handler' => fn (array $in) => ['url' => url('/__preview/'.strtolower($in['id']))],
         ]);
 
-        $this->cms()->permissions()->register('site.build', __('Publish the Site'), __('Site'));
-        $this->cms()->permissions()->register('site.code', __('Edit Custom CSS and JavaScript'), __('Design'), trusted: true);
+        $this->cms()->permissions()->register('site.build', 'Publish the Site', 'Site', roles: ['editor']);
+        $this->cms()->permissions()->register('site.code', 'Edit Custom CSS and JavaScript', 'Design', trusted: true);
 
         // Collections and entries choose from the site's templates.
         $this->cms()->hooks()->addFilter('fields.options.templates', fn (array $options, ?string $collection = null) => array_replace($options, $this->app->make(Templates::class)->options($collection)));
@@ -567,7 +549,7 @@ final class SiteModule extends Plugin
     {
         $admin = $this->cms()->admin();
         $admin->nav('design', ['label' => 'Design System', 'path' => '/design', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
-        $admin->widget('site-status', ['label' => 'Site', 'description' => __('Whether the live site is up to date, with a button to publish it.'), 'icon' => 'rocket', 'column' => 'side', 'enabled' => true, 'order' => 10]);
+        $admin->widget('site-status', ['label' => 'Site', 'description' => 'Whether the live site is up to date, with a button to publish it.', 'icon' => 'rocket', 'column' => 'side', 'enabled' => true, 'order' => 10]);
         $admin->command('publish-site', ['label' => 'Publish Site', 'icon' => 'rocket', 'ability' => 'site/build', 'permission' => 'site.build', 'keywords' => ['build', 'deploy', 'static']]);
 
         $this->adminModule();

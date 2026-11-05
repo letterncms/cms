@@ -21,24 +21,11 @@ final class Site
         return storage_path('sync'.($path === '' ? '' : '/'.$path));
     }
 
-    /** @return array<string, mixed> */
-    public static function readJson(string $file, array $default = []): array
-    {
-        $data = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
-
-        return is_array($data) ? $data : $default;
-    }
-
-    public static function writeJson(string $file, array $data): void
-    {
-        Files::put($file, (string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n");
-    }
-
     /** @return array{id: string, secret: string, allow_pull: bool, allow_push: bool} */
     public function settings(): array
     {
         $file = self::dir('site.json');
-        $data = self::readJson($file);
+        $data = Files::readJson($file);
         $secret = null;
 
         try {
@@ -49,7 +36,7 @@ final class Site
 
         if (! isset($data['id']) || ! is_string($secret)) {
             $data = ['id' => $data['id'] ?? self::newId(), 'secret' => encrypt($secret = self::newSecret()), 'allow_pull' => $data['allow_pull'] ?? true, 'allow_push' => $data['allow_push'] ?? true];
-            self::writeJson($file, $data);
+            Files::putJson($file, $data);
         }
 
         return ['id' => (string) $data['id'], 'secret' => $secret, 'allow_pull' => (bool) ($data['allow_pull'] ?? true), 'allow_push' => (bool) ($data['allow_push'] ?? true)];
@@ -72,22 +59,22 @@ final class Site
         }
 
         $this->settings();
-        $data = self::readJson(self::dir('site.json'));
+        $data = Files::readJson(self::dir('site.json'));
         $data['allow_'.$what] = $on;
-        self::writeJson(self::dir('site.json'), $data);
+        Files::putJson(self::dir('site.json'), $data);
     }
 
     /** A new key: every site connected with the old one has to be given the new one. With `$identity`, a new id too, for a copy of another site's folder. */
     public function renew(bool $identity = false): void
     {
-        $data = self::readJson(self::dir('site.json'));
+        $data = Files::readJson(self::dir('site.json'));
         $data['secret'] = encrypt(self::newSecret());
 
         if ($identity || ! isset($data['id'])) {
             $data['id'] = self::newId();
         }
 
-        self::writeJson(self::dir('site.json'), $data);
+        Files::putJson(self::dir('site.json'), $data);
     }
 
     public function key(): string
@@ -98,9 +85,7 @@ final class Site
     /** The address this site has in its settings, which is the one the other site is told about. */
     public function url(): string
     {
-        $url = rtrim((string) (cms()->site('url') ?? ''), '/');
-
-        return $url !== '' ? $url : rtrim((string) url('/'), '/');
+        return cms()->url();
     }
 
     public function name(): string

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Sync;
 
+use Cms\Support\Files;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
@@ -47,14 +48,14 @@ final class Remotes
         $all = array_values(array_filter($this->raw(), static fn (array $r) => ($r['name'] ?? null) !== $name && ($r['site_id'] ?? null) !== $hello['site_id']));
         $remote = ['name' => $name, 'label' => trim($label) ?: Str::headline($name), 'url' => rtrim($url, '/'), 'site_id' => $hello['site_id'], 'secret' => encrypt($secret), 'added_at' => now()->toIso8601String(), 'last' => null];
         $all[] = $remote;
-        Site::writeJson(Site::dir('remotes.json'), ['remotes' => $all]);
+        Files::putJson(Site::dir('remotes.json'), ['remotes' => $all]);
 
         return self::public($remote);
     }
 
     public function remove(string $name): void
     {
-        Site::writeJson(Site::dir('remotes.json'), ['remotes' => array_values(array_filter($this->raw(), static fn (array $r) => ($r['name'] ?? null) !== $name))]);
+        Files::putJson(Site::dir('remotes.json'), ['remotes' => array_values(array_filter($this->raw(), static fn (array $r) => ($r['name'] ?? null) !== $name))]);
     }
 
     /** @param  array<string, mixed>  $last */
@@ -68,7 +69,7 @@ final class Remotes
             }
         }
 
-        Site::writeJson(Site::dir('remotes.json'), ['remotes' => $all]);
+        Files::putJson(Site::dir('remotes.json'), ['remotes' => $all]);
     }
 
     /** A short lower-case name, as typed in `php cms pull <name>`. */
@@ -86,7 +87,7 @@ final class Remotes
     /** @return list<array<string, mixed>> */
     private function raw(): array
     {
-        return array_values(array_filter((array) (Site::readJson(Site::dir('remotes.json'))['remotes'] ?? []), 'is_array'));
+        return array_values(array_filter((array) (Files::readJson(Site::dir('remotes.json'))['remotes'] ?? []), 'is_array'));
     }
 
     private static function public(array $remote): array

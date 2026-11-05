@@ -14,11 +14,6 @@ use Cms\Tests\TestCase;
 
 final class MediaTest extends TestCase
 {
-    protected function plugins(): array
-    {
-        return ['letterncms/media'];
-    }
-
     private function tmp(string $contents): string
     {
         $file = tempnam(sys_get_temp_dir(), 'cms');

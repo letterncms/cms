@@ -1,7 +1,6 @@
 import { queryClient, run, t, type SurfaceComponentProps } from '@letterncms/sdk'
 import { Dialog, Spinner, confirm, toast } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
-import { error } from './shared'
 
 /**
  * Undoing a sync, from a button of the Sync screen: asks first, then puts back what it replaced a
@@ -28,7 +27,7 @@ export default function SyncUndo({ props, close }: SurfaceComponentProps<{ id: s
         toast.success(there ? t('{site} is back as it was before the push.', { site }) : t('Undone. This site is as it was before that sync.'))
         void queryClient.invalidateQueries()
       } catch (e) {
-        error(e)
+        toast.error(e)
       } finally {
         close?.()
       }

@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
 use Throwable;
 
 /** `php cms pull` and `php cms push`: the same preview, question and progress as the admin. */
-abstract class SyncCommand extends Command
+abstract class TransferCommand extends Command
 {
     abstract protected function direction(): string;
 

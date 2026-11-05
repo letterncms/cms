@@ -5,7 +5,7 @@ import { useEditorContext } from '../../core/context'
 import type { BlockNode, MotionDef, MotionStep } from '../../core/types'
 import { bus } from '../bus'
 import { RemoveButton, Section, PanelFields } from '../controls'
-import { groupLabel, presets, propertyLabels, triggers, type Preset } from './presets'
+import { eases, groupLabel, presets, propertyLabels, triggers, type Preset } from './presets'
 
 /** Fields shown only when `on`. */
 const when = (on: unknown, ...fields: FieldDef[]): FieldDef[] => (on ? fields : [])
@@ -385,7 +385,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
               ...when(count > 1, seconds('at', t('Start in seconds into the timeline'), 'b-flow-arrow', { placeholder: t('After') })),
             ],
           },
-          { handle: 'ease', type: 'select', component: 'blocks-easing', label: t('Ease'), placeholder: t('Smooth Out') },
+          { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: eases() },
         ]}
         values={{ timing: { duration: String(step.duration ?? 0.6), delay: step.delay !== undefined ? String(step.delay) : undefined, stagger: step.stagger !== undefined ? String(step.stagger) : undefined, at: step.at !== undefined ? String(step.at) : undefined }, ease: step.ease }}
         onChange={(h, v) =>

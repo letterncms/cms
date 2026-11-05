@@ -1,5 +1,5 @@
 /* The admin's design tokens as Tailwind names, shared with plugin admin modules (import "@letterncms/admin/theme.css").
-   Their values live in tokens.css, defined once by the admin theme, so a module never overrides them. */
+   Their values live in tokens.css, defined once by the admin, so a module never overrides them. */
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 

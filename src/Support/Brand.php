@@ -64,7 +64,7 @@ final class Brand
         $file = self::path('brand.json');
 
         return self::$values[$file] ??= array_filter(
-            (array) json_decode((string) @file_get_contents($file), true),
+            Files::readJson($file),
             is_string(...),
         );
     }

@@ -45,31 +45,22 @@ final class AuditAbilities
                 $total = (clone $query)->count();
                 $rows = $query->offset(($in['page'] - 1) * $in['perPage'])->limit($in['perPage'])->get();
                 $users = User::query()->whereIn('id', $rows->pluck('user_id')->filter()->unique())->pluck('name', 'id');
-                [$entries, $settings] = $this->lookups($rows);
-                $t = app(Translations::class);
 
                 return [
-                    'items' => $rows->map(function ($r) use ($users, $entries, $settings, $t) {
-                        $input = json_decode((string) $r->input, true);
-                        [$subject, $to] = $this->subject($r->ability, (array) $input, $entries, $settings);
-
-                        return [
-                            'id' => $r->id, 'ability' => $r->ability, 'transport' => $r->transport,
-                            // The ability's label in the user's language: "Publish Entry", not entries/publish.
-                            'label' => $t->label($this->cms->abilities()->get($r->ability)?->label ?? $r->ability),
-                            'subject' => $subject, 'to' => $to,
-                            ...RecordTimestamps::api(['updated_at' => $r->created_at]),
-                            'user' => $r->user_id ? ['id' => $r->user_id, 'name' => $users[$r->user_id] ?? __('Deleted user')] : null,
-                            // Said in words, for whoever shows the row: who made the change, and where from.
-                            'who' => $r->user_id ? ($users[$r->user_id] ?? __('Deleted user')) : __('System'),
-                            'via' => self::channel((string) $r->transport),
-                            'input' => $input, 'createdAt' => $r->created_at ? Carbon::parse($r->created_at)->toIso8601String() : null,
-                        ];
-                    })->all(),
+                    'items' => array_map(static fn (array $d) => [
+                        'id' => $d['row']->id, 'ability' => $d['row']->ability, 'transport' => $d['row']->transport,
+                        'label' => $d['label'], 'subject' => $d['subject'], 'to' => $d['to'],
+                        ...RecordTimestamps::api(['updated_at' => $d['row']->created_at]),
+                        'user' => $d['row']->user_id ? ['id' => $d['row']->user_id, 'name' => $users[$d['row']->user_id] ?? __('Deleted user')] : null,
+                        // Said in words, for whoever shows the row: who made the change, and where from.
+                        'who' => $d['row']->user_id ? ($users[$d['row']->user_id] ?? __('Deleted user')) : __('System'),
+                        'via' => self::channel((string) $d['row']->transport),
+                        'input' => $d['input'], 'createdAt' => $d['createdAt'],
+                    ], $this->describe($rows)),
                     'total' => $total,
                     'page' => $in['page'],
                     'pages' => (int) max(1, ceil($total / $in['perPage'])),
-                    'filters' => $this->filters($t),
+                    'filters' => $this->filters(app(Translations::class)),
                 ];
             },
         ]);
@@ -102,26 +93,47 @@ final class AuditAbilities
         return ['people' => $people, 'actions' => $actions];
     }
 
+    /**
+     * Rows of the log in words: the ability's label in the reader's language ("Publish Entry", not
+     * entries/publish) and what it was done to, with where that opens. MCP shows what agents did with it.
+     *
+     * @param  iterable<object>  $rows  Rows of `audit_log`
+     * @return list<array{row: object, input: array, label: string, subject: ?string, to: ?string, createdAt: ?string}>
+     */
+    public function describe(iterable $rows): array
+    {
+        $rows = collect($rows);
+        [$entries, $settings] = $this->lookups($rows);
+        $t = app(Translations::class);
+
+        return $rows->map(function ($row) use ($entries, $settings, $t) {
+            $input = (array) json_decode((string) $row->input, true);
+            [$subject, $to] = $this->subject($row->ability, $input, $entries, $settings);
+
+            return [
+                'row' => $row, 'input' => $input,
+                'label' => $t->label($this->cms->abilities()->get($row->ability)?->label ?? $row->ability),
+                'subject' => $subject, 'to' => $to,
+                'createdAt' => $row->created_at ? Carbon::parse($row->created_at)->toIso8601String() : null,
+            ];
+        })->values()->all();
+    }
+
     /** @return list<array<string, mixed>> */
     private function recent(int $limit): array
     {
         // Autosave writes a row per save; reading a few times the limit leaves enough after folding them.
         $rows = DB::table('audit_log')->orderByDesc('created_at')->orderByDesc('id')->limit($limit * 6)->get();
         $users = User::query()->whereIn('id', $rows->pluck('user_id')->filter()->unique())->get()->keyBy('id');
-        [$entries, $settings] = $this->lookups($rows);
-        $t = app(Translations::class);
         $out = [];
         $last = null;
 
-        foreach ($rows as $row) {
-            $input = (array) json_decode((string) $row->input, true);
-
+        foreach ($this->describe($rows) as ['row' => $row, 'input' => $input, 'label' => $label, 'subject' => $subject, 'to' => $to, 'createdAt' => $createdAt]) {
             // Saving one's own preferences (a rearranged home screen, a theme) is not a change to the site.
             if (AuditModule::unrecorded($row->ability, $input)) {
                 continue;
             }
 
-            [$subject, $to] = $this->subject($row->ability, $input, $entries, $settings);
             $key = $row->user_id.'|'.$row->ability.'|'.($subject ?? '');
 
             if ($key === $last) {
@@ -135,17 +147,16 @@ final class AuditAbilities
             }
 
             $user = $row->user_id ? $users[$row->user_id] ?? null : null;
-            $ability = $this->cms->abilities()->get($row->ability);
             $out[] = [
                 'id' => $row->id,
                 'ability' => $row->ability,
-                'label' => $t->label($ability?->label ?? $row->ability),
+                'label' => $label,
                 'subject' => $subject,
                 'to' => $to,
                 'transport' => $row->transport,
                 'user' => $user ? ['id' => $user->id, 'name' => $user->name, 'initials' => $user->initials(), 'avatar' => $user->avatar] : ($row->user_id ? ['id' => $row->user_id, 'name' => __('Deleted user'), 'initials' => '?', 'avatar' => null] : null),
                 'count' => 1,
-                'createdAt' => $row->created_at ? Carbon::parse($row->created_at)->toIso8601String() : null,
+                'createdAt' => $createdAt,
             ];
             $last = $key;
         }
@@ -186,15 +197,8 @@ final class AuditAbilities
         return is_string($id) && $id !== '' ? $id : null;
     }
 
-    /**
-     * What a change was made to, in words, and where it can be opened.
-     *
-     * @param  array<string, Entry>  $entries
-     * @param  array<string, string>  $settings  namespace => label
-     * @return array{0: ?string, 1: ?string}
-     */
     /** Where a change came from: someone in the admin, an agent, the assistant, the API or the command line. */
-    public static function channel(string $transport): string
+    private static function channel(string $transport): string
     {
         return match ($transport) {
             'mcp' => __('Agent'), 'assistant' => __('Assistant'), 'rest' => __('API'), 'cli' => __('CLI'), 'install' => __('Installation'),
@@ -202,6 +206,13 @@ final class AuditAbilities
         };
     }
 
+    /**
+     * What a change was made to, in words, and where it can be opened.
+     *
+     * @param  array<string, Entry>  $entries
+     * @param  array<string, string>  $settings  namespace => label
+     * @return array{0: ?string, 1: ?string}
+     */
     private function subject(string $ability, array $input, array $entries, array $settings): array
     {
         $id = self::entryId($ability, $input);

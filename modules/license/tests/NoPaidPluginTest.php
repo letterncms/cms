@@ -64,7 +64,7 @@ final class NoPaidPluginTest extends TestCase
         $row = array_values(array_filter($list['items'], static fn (array $p) => $p['name'] === 'letterncms/license'))[0];
 
         $this->assertDoesNotMatchRegularExpression(self::WORD, $row['label'].' '.$row['description']);
-        $this->assertFalse($row['required']);
+        $this->assertTrue($row['required'], 'required like every module the admin needs: Modules checks keys with it');
     }
 
     public function test_the_command_list_says_nothing(): void

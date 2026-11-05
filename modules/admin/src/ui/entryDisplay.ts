@@ -7,7 +7,7 @@ const widths: Record<string, number | string> = {
   tags: 180, media: 64, url: 180, email: 180, slug: 160, color: 112,
 }
 const sortable = new Set(['text', 'select', 'toggle', 'date', 'number', 'url', 'email', 'slug', 'color'])
-export const fieldColumnId = (handle: string) => `field:${handle}`
+const fieldColumnId = (handle: string) => `field:${handle}`
 
 export function entryFieldColumns(fields: FieldDef[]) {
   return fields.filter((f) => widths[f.type] && !['title', 'slug'].includes(f.handle) && f.component !== 'title' && f.component !== 'uri').map((field) => ({
@@ -27,7 +27,8 @@ export function entrySystemColumns(routable: boolean, locales: string[]) {
   ]
 }
 
-export function standardEntryColumns(routable: boolean, listing: string[] = [], view = 'table', fields: FieldDef[] = []): string[] {
+/** The columns a collection shows until someone picks theirs: its address, status and dates, and on cards a picture and an excerpt. */
+export function standardEntryColumns(routable: boolean, view = 'table', fields: FieldDef[] = []): string[] {
   const preview = view === 'grid' ? [fields.find((f) => f.type === 'media'), fields.find((f) => f.type === 'textarea' || (f.type === 'text' && !['title', 'slug'].includes(f.handle)))] : []
-  return [...new Set([...(routable ? ['uri'] : []), 'status', ...recordDateColumnIds, ...listing.map(fieldColumnId), ...preview.filter((f): f is FieldDef => !!f).map((f) => fieldColumnId(f.handle))])]
+  return [...new Set([...(routable ? ['uri'] : []), 'status', ...recordDateColumnIds, ...preview.filter((f): f is FieldDef => !!f).map((f) => fieldColumnId(f.handle))])]
 }

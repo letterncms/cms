@@ -66,7 +66,7 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
     {
         $uri = $this->entry->uri ?? '/';
 
-        return cms('Cms\Modules\Site\Rendering\UrlGenerator')->to($uri);
+        return app(UrlGenerator::class)->to($uri);
     }
 
     public function raw(string $field, mixed $default = null): mixed

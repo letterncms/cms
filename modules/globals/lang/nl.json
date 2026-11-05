@@ -1,7 +1,6 @@
 {
   "A global set with this handle already exists.": "Er bestaat al een globale set met deze handle.",
   "All Globals": "Alle globale gegevens",
-  "Back to Globals": "Terug naar Globale gegevens",
   "Content": "Inhoud",
   "Create": "Maken",
   "Created :name": ":name aangemaakt",
@@ -25,7 +24,6 @@
   "Name": "Naam",
   "New Global Set": "Nieuwe globale set",
   "No global sets yet": "Nog geen globale sets",
-  "Not Found": "Niet gevonden",
   "Open": "Openen",
   "Quick links to your global sets.": "Snelkoppelingen naar je globale sets.",
   "Save Global Set": "Globale set opslaan",

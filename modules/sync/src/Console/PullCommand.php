@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Sync\Console;
 
-final class PullCommand extends SyncCommand
+final class PullCommand extends TransferCommand
 {
     protected $signature = 'pull
         {remote : The connected site, like production (php cms remote lists them)}

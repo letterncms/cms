@@ -233,19 +233,6 @@ final class UserAbilities
             },
         ]);
 
-        $a->register('users/fields', [
-            'label' => 'User Profile Fields',
-            'description' => 'The fields every user profile has beyond name and email (content/users.yaml), as stored and resolved.',
-            'permission' => 'admin.access',
-            'annotations' => ['readOnly' => true],
-            'handler' => fn () => [
-                'title' => 'Users',
-                'fields' => $this->cms->app()->make(UserFields::class)->stored(),
-                'resolvedFields' => $this->cms->app()->make(UserFields::class)->blueprint()->toArray(),
-                'settings' => [],
-            ],
-        ]);
-
         $a->register('users/fields-save', [
             'label' => 'Save User Profile Fields',
             'description' => 'Replace the fields of user profiles. Values of removed fields stay stored.',

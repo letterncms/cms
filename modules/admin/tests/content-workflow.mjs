@@ -2,13 +2,11 @@
 // node modules/admin/tests/content-workflow.mjs --preview
 // node modules/admin/tests/content-workflow.mjs --site=/absolute/site (real rendering, in-memory edits)
 // The printed URL runs the real bundles against isolated in-memory APIs, with no site writes.
-import { createServer } from 'node:http'
 import { readFile, realpath } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import { resolve, extname, sep } from 'node:path'
+import { resolve } from 'node:path'
+import { assets, body, imports, json, page as adminPage, root, serve, serveFile } from './harness.mjs'
 
-const root = fileURLToPath(new URL('../../..', import.meta.url))
 const siteArgument = process.argv.find((argument) => argument.startsWith('--site='))?.slice('--site='.length)
 const realSite = siteArgument ? await realpath(resolve(siteArgument)) : null
 const realPublic = realSite ? await realpath(resolve(realSite, 'public')) : null
@@ -41,8 +39,6 @@ const realSources = realSite ? [
 ] : []
 if (realSite && realSources.some((source) => !source.entry)) throw new Error('The real-site preview requires pages/home and a blog entry.')
 const realEntries = new Set(realSources.map((source) => source.entry.id))
-const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
-const assetBase = '/_cms/assets/cms-admin/'
 const modules = ['content', 'blocks', 'site']
 const plugins = ['seo']
 const all = { create: true, edit: true, publish: true, delete: true }
@@ -81,12 +77,11 @@ const manifest = {
   sidebar: { sections: [{ id: 'content', label: 'Content', items: nav.map((item) => item.id) }], hidden: [], personal: false },
   settingsNav: [], brand,
 }
-const boot = { brand, base: '/admin', api: '/api/admin', version: 'fixture', theme: { name: 'cms/admin', version: 'fixture' }, site: manifest.site, locale: 'en', messages: {}, manifest }
-const imports = { ...Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path])), '@letterncms/blocks': '/_cms/assets/cms-blocks/admin.js' }
+const boot = { brand, base: '/admin', api: '/api/admin', version: 'fixture', site: manifest.site, locale: 'en', messages: {}, manifest }
+const map = imports({ '@letterncms/blocks': `${assets('blocks')}admin.js` })
 const fixtureNonce = 'fixture-preview-scripts'
 const editorToken = 'fixture-editor-document'
 const requests = []
-let lastResult = null
 const failures = new Set()
 let delay = 0
 let sequence = 1
@@ -595,8 +590,6 @@ try {
 }
 `
 // Keep the runner source separate from the fixture API below so debugging never touches site state.
-const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value)) }
-const body = async (req) => { let value = ''; for await (const chunk of req) value += chunk; return value }
 const page = (items, current = 1, perPage = 50) => ({ items: items.slice((current - 1) * perPage, current * perPage), total: items.length, page: current, pages: Math.max(1, Math.ceil(items.length / perPage)), perPage })
 const escape = (text) => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;')
 const sourceAttrs = (node, edit) => edit ? ` data-cms-document="${editorToken}" data-cms-node="${escape(node.id)}" data-cms-type="${escape(node.type)}"` : ''
@@ -617,107 +610,93 @@ const renderBlocks = (nodes, edit) => nodes.map((node) => {
   return `<p${attr}><span${propAttrs('text', edit)}>${props.text ?? ''}</span></p>`
 }).join('')
 const prototypes = () => ['paragraph', 'heading', 'list', 'quote', 'callout', 'code'].map((type) => `<template data-cms-prototype="${type}">${renderBlocks([{ id: '__prototype__', type, props: { level: 2, items: [''] } }], true)}</template>`).join('')
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, 'http://localhost')
-    if (url.pathname === '/favicon.ico') { res.writeHead(204); return res.end() }
-    if (url.pathname === '/__test/state') return json(res, 200, { entries: Object.fromEntries(entries), requests, patterns: realSources[0]?.patterns ?? [fixtureComponent] })
-    if (url.pathname === '/__test/config') { const config = JSON.parse(await body(req)); if (config.failures) { failures.clear(); config.failures.forEach((ability) => failures.add(ability)) }; if (config.delay !== undefined) delay = config.delay; return json(res, 200, {}) }
-    if (url.pathname === '/__test/results' && req.method === 'GET') return json(res, 200, lastResult)
-    if (url.pathname === '/__test/results') { const result = JSON.parse(await body(req)); lastResult = result; result.passed.forEach((name) => console.log('PASS', name)); if (result.error) console.error('FAIL', result.error); console.log('Viewport', result.viewport); return json(res, 200, result) }
-    if (url.pathname === '/__preview' || url.pathname.startsWith('/__preview/')) {
-      const input = JSON.parse(await body(req))
-      requests.push({ ability: '__preview', path: url.pathname, input })
-      if (realSite) {
-        const id = decodeURIComponent(url.pathname.slice('/__preview/'.length))
-        const current = entries.get(id)
-        const rendered = await siteRequest({ ...current, ...input, data: { ...current?.data, ...input.data }, id: realEntries.has(id) ? id : undefined })
-        res.writeHead(rendered.status, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store, private', ...(rendered.document ? { 'X-Cms-Editor-Document': rendered.document } : {}) })
-        return res.end(rendered.html)
-      }
-      const edit = !input.play
-      res.writeHead(200, { 'Content-Type': 'text/html', ...(edit ? { 'X-Cms-Editor-Document': editorToken } : {}) })
-      return res.end(`<!doctype html><html><head><style>body{font:18px/1.65 system-ui;margin:0;padding:48px;color:#111;background:white}h1{font-size:40px;line-height:1.2}#fixture-entry-title{font-size:42px;line-height:1.2;max-width:680px;margin:0 auto 32px}.story{display:flow-root;max-width:680px;margin:0 auto;padding:24px 0 56px}.story section{padding:24px 0;margin:28px 0}.story p{margin:24px 0;min-height:1lh}.story h1,.story h2{margin:24px 0}.story h2{font-size:30px;line-height:1.3}.story li{min-height:1lh}</style></head><body><h1 id="fixture-entry-title">${escape(input.title ?? '')}</h1><main id="fixture-preview" class="story"${edit ? ` data-cms-editor-root="${editorToken}"` : ''}>${renderBlocks(input.data.body ?? [], edit)}</main>${edit ? prototypes() : ''}<script>window.__fixturePreviewRan = true</script></body></html>`)
+serve('Content workflow', async (req, res, url) => {
+  if (url.pathname === '/__test/state') return json(res, 200, { entries: Object.fromEntries(entries), requests, patterns: realSources[0]?.patterns ?? [fixtureComponent] })
+  if (url.pathname === '/__test/config') { const config = await body(req); if (config.failures) { failures.clear(); config.failures.forEach((ability) => failures.add(ability)) }; if (config.delay !== undefined) delay = config.delay; return json(res, 200, {}) }
+  if (url.pathname === '/__preview' || url.pathname.startsWith('/__preview/')) {
+    const input = await body(req)
+    requests.push({ ability: '__preview', path: url.pathname, input })
+    if (realSite) {
+      const id = decodeURIComponent(url.pathname.slice('/__preview/'.length))
+      const current = entries.get(id)
+      const rendered = await siteRequest({ ...current, ...input, data: { ...current?.data, ...input.data }, id: realEntries.has(id) ? id : undefined })
+      res.writeHead(rendered.status, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store, private', ...(rendered.document ? { 'X-Cms-Editor-Document': rendered.document } : {}) })
+      return res.end(rendered.html)
+    }
+    const edit = !input.play
+    res.writeHead(200, { 'Content-Type': 'text/html', ...(edit ? { 'X-Cms-Editor-Document': editorToken } : {}) })
+    return res.end(`<!doctype html><html><head><style>body{font:18px/1.65 system-ui;margin:0;padding:48px;color:#111;background:white}h1{font-size:40px;line-height:1.2}#fixture-entry-title{font-size:42px;line-height:1.2;max-width:680px;margin:0 auto 32px}.story{display:flow-root;max-width:680px;margin:0 auto;padding:24px 0 56px}.story section{padding:24px 0;margin:28px 0}.story p{margin:24px 0;min-height:1lh}.story h1,.story h2{margin:24px 0}.story h2{font-size:30px;line-height:1.3}.story li{min-height:1lh}</style></head><body><h1 id="fixture-entry-title">${escape(input.title ?? '')}</h1><main id="fixture-preview" class="story"${edit ? ` data-cms-editor-root="${editorToken}"` : ''}>${renderBlocks(input.data.body ?? [], edit)}</main>${edit ? prototypes() : ''}<script>window.__fixturePreviewRan = true</script></body></html>`)
 
+  }
+  if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
+  if (url.pathname === '/api/admin/batch') {
+    const input = await body(req)
+    const result = input.calls.map(call => {
+      requests.push(call)
+      if (call.input.id === 'post-2') return { error: { type: 'conflict', message: 'Fixture row is locked.' } }
+      const current = entries.get(call.input.id)
+      if (call.input.expectedVersion !== current.version) return { error: { type: 'conflict', message: 'Another editor saved this entry.' } }
+      const updated = { ...current, status: 'published', displayStatus: 'published', version: `v-${++sequence}` }
+      entries.set(updated.id, updated)
+      return { data: updated }
+    })
+    return json(res, 200, { data: result })
+  }
+  if (url.pathname.startsWith('/api/admin/abilities/')) {
+    const ability = url.pathname.slice('/api/admin/abilities/'.length)
+    const input = await body(req); requests.push({ ability, input })
+    if (failures.has(ability)) return json(res, 500, { error: { message: `Fixture request failed: ${ability}`, type: 'failed' } })
+    if (delay && ability === 'entries/update') await new Promise((resolve) => setTimeout(resolve, delay))
+    let data
+    if (ability === 'collections/get') data = definition(input.handle)
+    else if (ability === 'entries/get') data = entries.get(input.id)
+    else if (ability === 'entries/create') { const id = `new-${++sequence}`; data = { ...makeEntry(id, input.collection, input.title), ...input, id, version: `v-${sequence}`, author: people.find((person) => person.id === input.authorId) ?? null }; entries.set(id, data) }
+    else if (ability === 'entries/lookup') data = input.ids.map(id => entries.get(id)).filter(Boolean)
+    else if (ability === 'entries/list') data = page([...entries.values()].filter((entry) => entry.collection === input.collection && (!input.search || entry.title.includes(input.search))), input.page ?? 1, input.perPage ?? 50)
+    else if (ability === 'entries/tree') data = [...entries.values()].filter((entry) => entry.collection === input.collection)
+    else if (ability === 'entries/revisions') data = revisions(entries.get(input.id))
+    else if (ability === 'users/lookup') data = page(people.filter((person) => (!input.ids || input.ids.includes(person.id)) && (!input.search || person.name.toLowerCase().includes(input.search.toLowerCase()))), input.page ?? 1, input.perPage ?? 25)
+    else if (ability === 'entries/move' || ability === 'entries/update' || ability === 'entries/publish' || ability === 'entries/unpublish' || ability === 'entries/discard-draft' || ability === 'entries/restore') {
+      const current = entries.get(input.id ?? input.revisionId?.replace(/-revision-\d+$/, ''))
+      if (input.expectedVersion && input.expectedVersion !== current.version) return json(res, 409, { error: { message: 'Another editor saved this entry.', type: 'conflict', details: { version: current.version } } })
+      if (current.collection === 'viewer') return json(res, 403, { error: { type: 'forbidden', message: 'Read only fixture' } })
+      const publish = input.publish || ability === 'entries/publish'
+      const at = input.at ?? new Date().toISOString()
+      data = { ...current, ...(ability === 'entries/move' ? { parentId: input.parentId } : {}), ...(input.title !== undefined ? { title: input.title } : {}), ...(input.slug !== undefined ? { slug: input.slug } : {}), ...(input.data ? { data: input.data } : {}), ...(input.authorId !== undefined ? { authorId: input.authorId, author: people.find((person) => person.id === input.authorId) ?? null } : {}), version: `v-${++sequence}`, updatedAt: new Date().toISOString(), ...(publish ? { status: 'published', displayStatus: Date.parse(at) > Date.now() ? 'scheduled' : 'published', publishedAt: at } : {}), ...(ability === 'entries/unpublish' ? { status: 'draft', displayStatus: 'draft', publishedAt: null } : {}) }
+      entries.set(data.id, data)
     }
-    if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
-    if (url.pathname === '/api/admin/batch') {
-      const input = JSON.parse(await body(req))
-      const result = input.calls.map(call => {
-        requests.push(call)
-        if (call.input.id === 'post-2') return { error: { type: 'conflict', message: 'Fixture row is locked.' } }
-        const current = entries.get(call.input.id)
-        if (call.input.expectedVersion !== current.version) return { error: { type: 'conflict', message: 'Another editor saved this entry.' } }
-        const updated = { ...current, status: 'published', displayStatus: 'published', version: `v-${++sequence}` }
-        entries.set(updated.id, updated)
-        return { data: updated }
-      })
-      return json(res, 200, { data: result })
-    }
-    if (url.pathname.startsWith('/api/admin/abilities/')) {
-      const ability = url.pathname.slice('/api/admin/abilities/'.length)
-      const input = JSON.parse(await body(req)); requests.push({ ability, input })
-      if (failures.has(ability)) return json(res, 500, { error: { message: `Fixture request failed: ${ability}`, type: 'failed' } })
-      if (delay && ability === 'entries/update') await new Promise((resolve) => setTimeout(resolve, delay))
-      let data
-      if (ability === 'collections/get') data = definition(input.handle)
-      else if (ability === 'entries/get') data = entries.get(input.id)
-      else if (ability === 'entries/create') { const id = `new-${++sequence}`; data = { ...makeEntry(id, input.collection, input.title), ...input, id, version: `v-${sequence}`, author: people.find((person) => person.id === input.authorId) ?? null }; entries.set(id, data) }
-      else if (ability === 'entries/lookup') data = input.ids.map(id => entries.get(id)).filter(Boolean)
-      else if (ability === 'entries/list') data = page([...entries.values()].filter((entry) => entry.collection === input.collection && (!input.search || entry.title.includes(input.search))), input.page ?? 1, input.perPage ?? 50)
-      else if (ability === 'entries/tree') data = [...entries.values()].filter((entry) => entry.collection === input.collection)
-      else if (ability === 'entries/revisions') data = revisions(entries.get(input.id))
-      else if (ability === 'users/lookup') data = page(people.filter((person) => (!input.ids || input.ids.includes(person.id)) && (!input.search || person.name.toLowerCase().includes(input.search.toLowerCase()))), input.page ?? 1, input.perPage ?? 25)
-      else if (ability === 'entries/move' || ability === 'entries/update' || ability === 'entries/publish' || ability === 'entries/unpublish' || ability === 'entries/discard-draft' || ability === 'entries/restore') {
-        const current = entries.get(input.id ?? input.revisionId?.replace(/-revision-\d+$/, ''))
-        if (input.expectedVersion && input.expectedVersion !== current.version) return json(res, 409, { error: { message: 'Another editor saved this entry.', type: 'conflict', details: { version: current.version } } })
-        if (current.collection === 'viewer') return json(res, 403, { error: { type: 'forbidden', message: 'Read only fixture' } })
-        const publish = input.publish || ability === 'entries/publish'
-        const at = input.at ?? new Date().toISOString()
-        data = { ...current, ...(ability === 'entries/move' ? { parentId: input.parentId } : {}), ...(input.title !== undefined ? { title: input.title } : {}), ...(input.slug !== undefined ? { slug: input.slug } : {}), ...(input.data ? { data: input.data } : {}), ...(input.authorId !== undefined ? { authorId: input.authorId, author: people.find((person) => person.id === input.authorId) ?? null } : {}), version: `v-${++sequence}`, updatedAt: new Date().toISOString(), ...(publish ? { status: 'published', displayStatus: Date.parse(at) > Date.now() ? 'scheduled' : 'published', publishedAt: at } : {}), ...(ability === 'entries/unpublish' ? { status: 'draft', displayStatus: 'draft', publishedAt: null } : {}) }
-        entries.set(data.id, data)
-      }
-      else if (ability === 'blocks/types') data = catalog
-      else if (ability === 'patterns/list') data = realSources[0]?.patterns ?? [fixtureComponent]
-      else if (ability === 'design/get') data = realSources[0]?.design ?? { tokens: [], breakpoints: { tablet: '820px', mobile: '390px' }, templates: {}, name: 'Fixture', fonts: [], stylesheet: '' }
-      else if (ability === 'seo/analyze') data = { score: 100, checks: [{ id: 'title', status: 'pass', label: 'Title', message: 'Search title is available.' }], meta: { title: entries.get(input.id)?.title, description: 'A fixture description', canonical: '', image: null } }
-      else if (ability === 'seo/markdown') data = { markdown: '# Fixture Markdown' }
-      else if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); data = manifest.user }
-      else if (ability === 'content/search') data = []
-      else throw new Error(`Unexpected fixture ability: ${ability}`)
-      return json(res, 200, { data })
-    }
-    const asset = url.pathname.match(/^\/_cms\/assets\/cms-([^/]+)\/(.+)$/)
-    if (asset) {
-      const folder = asset[1] === 'admin' ? 'modules/admin' : modules.includes(asset[1]) ? `modules/${asset[1]}` : `../plugins-public/${asset[1]}`
-      const directory = resolve(root, folder, 'dist'), path = resolve(directory, asset[2])
-      if (!path.startsWith(directory + sep)) return json(res, 403, {})
-      const assetContent = await readFile(path)
-      res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(assetContent)
-    }
-    if (realSite && (url.pathname.startsWith('/_cms/site/') || url.pathname.startsWith('/_cms/blocks/') || url.pathname.startsWith('/media/'))) {
-      const path = resolve(realPublic, '.' + decodeURIComponent(url.pathname))
-      if (!path.startsWith(realPublic + sep)) return json(res, 403, {})
-      let actual
-      try { actual = await realpath(path) } catch { return json(res, 404, {}) }
-      if (!actual.startsWith(realPublic + sep)) return json(res, 403, {})
-      const content = await readFile(actual)
-      const mime = { '.css': 'text/css', '.js': 'text/javascript', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.otf': 'font/otf', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif' }[extname(actual)] ?? 'application/octet-stream'
-      res.writeHead(200, { 'Content-Type': mime }); return res.end(content)
-    }
-    if (!url.pathname.startsWith('/admin')) return json(res, 404, {})
-    if (!realSite && !url.searchParams.has('preview')) { entries = initialEntries(); failures.clear(); requests.length = 0; sequence = 1; delay = 0 }
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Content workflow verification</title>${admin.css.map((path) => `<link rel="stylesheet" href="${assetBase + path}">`).join('')}<script type="importmap" nonce="${fixtureNonce}">${JSON.stringify({ imports })}</script><script nonce="${fixtureNonce}">window.__CMS__=${JSON.stringify(boot)};localStorage.setItem('cms.sidebar','collapsed');localStorage.setItem('cms.entry.panel.posts','details');localStorage.setItem('cms.entry.panel.pages','details');localStorage.setItem('cms.entry.panel.viewer','details');localStorage.setItem('cms.theme','light');${url.searchParams.has('dark') ? "localStorage.setItem('cms.theme','dark')" : ''}</script><script type="module" src="${assetBase + admin.entry}"></script></head><body><div id="cms"></div>${realSite || url.searchParams.has('preview') ? '' : `<pre id="results" style="position:fixed;bottom:8px;left:8px;z-index:9999;max-width:600px;max-height:35vh;overflow:auto;background:white;color:black;border:1px solid #aaa;padding:12px;font-size:10px">Starting checks…</pre><script type="module" nonce="${fixtureNonce}">${runner}</script>`}</body></html>`
-    res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Security-Policy': `default-src 'self'; script-src 'self' 'nonce-${fixtureNonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; frame-src 'self'; connect-src 'self'` }); res.end(html)
-  } catch (error) { console.error(error); if (res.headersSent) { res.end(); return }; json(res, 500, { error: { message: error.message, type: 'failed' } }) }
-})
-server.listen(Number(process.argv.find((argument) => argument.startsWith('--port='))?.split('=')[1]) || 0, '127.0.0.1', () => {
-  const base = `http://localhost:${server.address().port}`
-  if (realSite) {
-    console.log(`Real site: ${realSite} (entry edits stay in memory)`)
-    for (const { entry } of realSources) console.log(`${entry.title}: ${base}/admin/content/${entry.collection}/${entry.id}?preview=1`)
+    else if (ability === 'blocks/types') data = catalog
+    else if (ability === 'patterns/list') data = realSources[0]?.patterns ?? [fixtureComponent]
+    else if (ability === 'design/get') data = realSources[0]?.design ?? { tokens: [], breakpoints: { tablet: '820px', mobile: '390px' }, templates: {}, name: 'Fixture', fonts: [], stylesheet: '' }
+    else if (ability === 'seo/analyze') data = { score: 100, checks: [{ id: 'title', status: 'pass', label: 'Title', message: 'Search title is available.' }], meta: { title: entries.get(input.id)?.title, description: 'A fixture description', canonical: '', image: null } }
+    else if (ability === 'seo/markdown') data = { markdown: '# Fixture Markdown' }
+    else if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); data = manifest.user }
+    else if (ability === 'content/search') data = []
+    else throw new Error(`Unexpected fixture ability: ${ability}`)
+    return json(res, 200, { data })
+  }
+  if (realSite && (url.pathname.startsWith('/_cms/site/') || url.pathname.startsWith('/_cms/blocks/') || url.pathname.startsWith('/media/'))) {
+    // Through its real path, so a link out of public/ is refused.
+    let actual
+    try { actual = await realpath(resolve(realPublic, '.' + decodeURIComponent(url.pathname))) } catch { return json(res, 404, {}) }
+    if (!await serveFile(res, realPublic, actual.slice(realPublic.length + 1))) json(res, 404, {})
     return
   }
-  console.log(`Checks: ${base}/admin/content/posts/post-1`)
-  for (const [collection, id] of [['posts', 'post-1'], ['pages', 'page-1'], ['viewer', 'view-1']]) console.log(`Preview: ${base}/admin/content/${collection}/${id}?preview=1`)
+  if (!url.pathname.startsWith('/admin')) return json(res, 404, {})
+  if (!realSite && !url.searchParams.has('preview')) { entries = initialEntries(); failures.clear(); requests.length = 0; sequence = 1; delay = 0 }
+  const html = adminPage({
+    title: 'Content workflow verification', boot, map, nonce: fixtureNonce,
+    setup: `localStorage.setItem('cms.sidebar','collapsed');localStorage.setItem('cms.entry.panel.posts','details');localStorage.setItem('cms.entry.panel.pages','details');localStorage.setItem('cms.entry.panel.viewer','details');localStorage.setItem('cms.theme',${JSON.stringify(url.searchParams.has('dark') ? 'dark' : 'light')})`,
+    runner: !realSite && !url.searchParams.has('preview') && runner,
+    results: 'position:fixed;bottom:8px;left:8px;z-index:9999;max-width:600px;max-height:35vh;overflow:auto;background:white;color:black;border:1px solid #aaa;padding:12px;font-size:10px',
+  })
+  res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Security-Policy': `default-src 'self'; script-src 'self' 'nonce-${fixtureNonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; frame-src 'self'; connect-src 'self'` }); res.end(html)
+}, {
+  links: (base) => realSite
+    ? realSources.map(({ entry }) => `${base}/admin/content/${entry.collection}/${entry.id}?preview=1`)
+    : [`${base}/admin/content/posts/post-1`, ...[['posts', 'post-1'], ['pages', 'page-1'], ['viewer', 'view-1']].map(([collection, id]) => `${base}/admin/content/${collection}/${id}?preview=1`)],
+  folder: (pkg) => (pkg === 'admin' || modules.includes(pkg) ? `modules/${pkg}` : `../plugins-public/${pkg}`),
+  // A real site is for looking at: its entry edits stay in memory.
+  keepAlive: !!realSite || process.argv.includes('--preview'),
+  port: Number(process.argv.find((argument) => argument.startsWith('--port='))?.split('=')[1]) || 0,
 })

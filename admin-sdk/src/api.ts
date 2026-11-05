@@ -52,12 +52,14 @@ function headers(accept: string, json: boolean): Record<string, string> {
   return h
 }
 
-function failure(response: Response, json: any): CmsError {
+function failure(response: Response, json: any, text = ''): CmsError {
   if (response.status === 401 && unauthorizedHandler) unauthorizedHandler()
   const error = json?.error
   const laravelErrors = json?.errors ? Object.fromEntries(Object.entries(json.errors).map(([k, v]) => [k, (v as string[])[0]])) : {}
+  // A text answer that failed may say why in a line of its own (`<p>Choose a blocks field.</p>`).
+  const said = text.replace(/<[^>]+>/g, '').trim()
   return new CmsError(
-    error?.message ?? json?.message ?? (response.status === 419 ? t('Your session expired. Reload the page.') : t('Request failed ({status})', { status: response.status })),
+    error?.message ?? json?.message ?? (said && said.length <= 200 ? said : response.status === 419 ? t('Your session expired. Reload the page.') : t('Request failed ({status})', { status: response.status })),
     error?.type ?? (response.status === 422 ? 'invalid_input' : 'failed'),
     response.status,
     error?.details ?? laravelErrors,
@@ -66,21 +68,32 @@ function failure(response: Response, json: any): CmsError {
 
 const apiUrl = (path: string) => (path.startsWith('/') ? path : `${boot.api}/${path}`)
 
-export async function request<T = unknown>(method: string, path: string, body?: unknown, init: RequestInit = {}): Promise<T> {
+async function send(method: string, path: string, accept: string, body: unknown, { headers: extra, ...init }: RequestInit): Promise<{ response: Response; text: string }> {
   const response = await fetch(apiUrl(path), {
     method,
     credentials: 'same-origin',
-    headers: { ...headers('application/json', body !== undefined && !(body instanceof FormData)), ...(init.headers as Record<string, string> | undefined) },
+    headers: { ...headers(accept, body !== undefined && !(body instanceof FormData)), ...(extra as Record<string, string> | undefined) },
     body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
     ...init,
   })
+  return { response, text: await response.text() }
+}
 
-  const text = await response.text()
+export async function request<T = unknown>(method: string, path: string, body?: unknown, init: RequestInit = {}): Promise<T> {
+  const { response, text } = await send(method, path, 'application/json', body, init)
   const json = text ? safeJson(text) : null
-
   if (!response.ok) throw failure(response, json)
-
   return json as T
+}
+
+/**
+ * A request answered with text rather than JSON, such as the site's rendering of a page
+ * (`/__preview`): its body and headers. Fails with a `CmsError`, as `request` does.
+ */
+export async function requestText(method: string, path: string, body?: unknown, init: RequestInit = {}): Promise<{ text: string; headers: Headers }> {
+  const { response, text } = await send(method, path, 'text/html', body, init)
+  if (!response.ok) throw failure(response, safeJson(text), text)
+  return { text, headers: response.headers }
 }
 
 /**

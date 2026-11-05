@@ -53,7 +53,7 @@ export function formatValue(value: unknown, { format = 'text', tones, labels, cu
       const n = Math.max(0, Math.min(1, Number(value) || 0))
       return <span className="flex min-w-0 items-center gap-2"><span className="h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-sunken"><span className="block h-full rounded-full bg-ink/70" style={{ width: `${n * 100}%` }} /></span><span className="w-10 shrink-0 text-right tabular-nums text-muted">{Math.round(n * 100).toLocaleString(locale())}%</span></span>
     }
-    case 'bytes': return typeof value === 'number' ? bytes(value) : String(value)
+    case 'bytes': return typeof value === 'number' ? formatBytes(value) : String(value)
     case 'person': {
       const person = typeof value === 'object' ? value as { name?: string; avatar?: string | null; initials?: string } : { name: String(value) }
       return <span className="flex min-w-0 items-center gap-2"><Avatar name={person.name ?? ''} initials={person.initials} src={person.avatar ?? undefined} size={24} /><span className="truncate">{person.name}</span></span>
@@ -69,12 +69,11 @@ export function formatValue(value: unknown, { format = 'text', tones, labels, cu
   }
 }
 
-function bytes(size: number): string {
-  const units = ['B', 'KB', 'MB', 'GB']
-  let n = size
-  let i = 0
-  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++ }
-  return `${n.toLocaleString(locale(), { maximumFractionDigits: i ? 1 : 0 })} ${units[i]}`
+/** A file size in the admin's language (“12 kB”, “1,4 Mo”). */
+export function formatBytes(bytes: number): string {
+  const [unit, value, digits] = bytes < 1024 ? ['byte', bytes, 0] : bytes < 1024 ** 2 ? ['kilobyte', bytes / 1024, 0] : bytes < 1024 ** 3 ? ['megabyte', bytes / 1024 ** 2, 1] : ['gigabyte', bytes / 1024 ** 3, 1]
+  // Bytes in short form read “109 byte”; narrow is “109B”, like kB and MB.
+  return new Intl.NumberFormat(locale(), { style: 'unit', unit: unit as string, unitDisplay: unit === 'byte' ? 'narrow' : 'short', maximumFractionDigits: digits as number }).format(value as number)
 }
 
 /** A value for client sorting and searching: what it reads as, not how it is drawn. */

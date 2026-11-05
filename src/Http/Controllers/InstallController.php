@@ -12,7 +12,6 @@ use Cms\Admin\Translations;
 use Cms\Http\Csp;
 use Cms\Http\Middleware\SiteCookies;
 use Cms\Install\Installer;
-use Cms\Packages\PackageManifest;
 use Cms\Update\Layout;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -68,7 +67,7 @@ final class InstallController
             'redirect' => '/admin',
             'xsrfCookie' => SiteCookies::xsrf($request),
             'composer' => app(Layout::class)->managed() === 'composer',
-            'recommended' => array_map(static fn (string $name) => PackageManifest::VENDOR.'/'.$name, Installer::RECOMMENDED),
+            'recommended' => Installer::RECOMMENDED,
         ]);
     }
 

@@ -48,7 +48,7 @@ if (! function_exists('cms_translations')) {
             $links[] = [
                 'locale' => $code,
                 'name' => Languages::name($code),
-                'url' => function_exists('cms_url') ? cms_url($uri) : $uri,
+                'url' => $uri,
                 'current' => $code === $current,
             ];
         }

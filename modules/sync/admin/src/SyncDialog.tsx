@@ -1,7 +1,7 @@
 import { plural, queryClient, run, t, useAbility, type SurfaceComponentProps } from '@letterncms/sdk'
-import { Button, Checkbox, Dialog, Icon, Spinner, confirm } from '@letterncms/ui'
+import { Button, Checkbox, Dialog, Icon, Notice, Spinner, confirm, formatBytes, toast } from '@letterncms/ui'
 import { useState } from 'react'
-import { bytes, count, error, type Direction, type Progress } from './shared'
+import { count, type Direction, type Progress } from './shared'
 
 interface Group { id: string; label: string; description: string; selected: boolean; available: boolean; reason: string | null; tables: { table: string; from: number; to: number }[]; areas: string[]; files: { add: number; change: number; remove: number; bytes: number } | null; bytes: number; collections?: { handle: string; from: number; to: number }[] }
 interface Preview { direction: Direction; from: { label: string; url: string; cms: string }; to: { label: string; url: string; cms: string }; problems: string[]; notes: string[]; groups: Group[]; rewrite: [string, string][] }
@@ -46,7 +46,7 @@ export default function SyncDialog({ props, close }: SurfaceComponentProps<{ rem
       void queryClient.invalidateQueries()
       onClose()
     } catch (e) {
-      error(e)
+      toast.error(e)
       setStarting(false)
     }
   }
@@ -55,12 +55,12 @@ export default function SyncDialog({ props, close }: SurfaceComponentProps<{ rem
     <Dialog open onOpenChange={(o) => !o && onClose()} size="lg"
       title={pull ? t('Pull from {site}', { site: remote.label }) : t('Push to {site}', { site: remote.label })}
       description={data ? <span className="flex flex-wrap items-center gap-1.5"><span>{data.from.label}</span><Icon name="arrow-right" size={12} /><span>{data.to.label}</span><span className="text-faint">· {data.from.url.replace(/^https?:\/\//, '')} → {data.to.url.replace(/^https?:\/\//, '')}</span></span> : t('Comparing the two sites…')}
-      footer={<><Button onClick={onClose}>{t('Cancel')}</Button><Button variant={pull ? 'primary' : 'publish'} icon={pull ? 'arrow-down' : 'arrow-up'} loading={starting} disabled={!data || data.problems.length > 0 || selected.length === 0} onClick={() => void start()}>{pull ? t('Pull') : t('Push')}{selected.length > 0 && total > 0 ? ` · ${bytes(total)}` : ''}</Button></>}>
+      footer={<><Button onClick={onClose}>{t('Cancel')}</Button><Button variant={pull ? 'primary' : 'publish'} icon={pull ? 'arrow-down' : 'arrow-up'} loading={starting} disabled={!data || data.problems.length > 0 || selected.length === 0} onClick={() => void start()}>{pull ? t('Pull') : t('Push')}{selected.length > 0 && total > 0 ? ` · ${formatBytes(total)}` : ''}</Button></>}>
       {preview.isLoading && <div className="grid h-40 place-items-center"><div className="flex items-center gap-2 text-sm text-muted"><Spinner />{t('Comparing the two sites…')}</div></div>}
-      {preview.isError && <p role="alert" className="m-0 rounded-md border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{(preview.error as Error).message}</p>}
+      {preview.isError && <Notice tone="danger">{(preview.error as Error).message}</Notice>}
       {data && (
         <div className="grid gap-4">
-          {data.problems.map((p) => <p key={p} role="alert" className="m-0 flex gap-2 rounded-md border border-danger/30 bg-danger/5 p-3 text-sm text-danger"><Icon name="warning" size={16} className="mt-0.5 shrink-0" />{p}</p>)}
+          {data.problems.map((p) => <Notice key={p} tone="danger">{p}</Notice>)}
           {data.problems.length === 0 && groups.length === 0 && <p className="m-0 text-sm text-muted">{t('The two sites already have the same content and files. There’s nothing to {direction}.', { direction: pull ? t('pull') : t('push') })}</p>}
           {groups.length > 0 && (
             <ul className="m-0 grid list-none gap-1 p-0">
@@ -120,7 +120,7 @@ function summary(g: Group): string {
   if (g.files) {
     const f = g.files
     const changes = [f.add && t('{n} new', { n: count(f.add) }), f.change && t('{n} changed', { n: count(f.change) }), f.remove && t('{n} removed', { n: count(f.remove) })].filter(Boolean)
-    parts.push(changes.length ? changes.join(', ') + (f.bytes > 0 ? ` · ${bytes(f.bytes)}` : '') : t('Files the same'))
+    parts.push(changes.length ? changes.join(', ') + (f.bytes > 0 ? ` · ${formatBytes(f.bytes)}` : '') : t('Files the same'))
   }
   return parts.join(' · ')
 }

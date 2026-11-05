@@ -25,7 +25,7 @@ final class PluginsViewTest extends TestCase
         $this->assertSame([], array_filter($builtIn['props']['actions'], static fn ($a) => ($a['ability'] ?? null) === 'packages/uninstall'));
         $modules = $this->cms()->abilities()->execute('packages/list', ['type' => 'module', 'optional' => true], $ctx)['items'];
         $this->assertNotContains('letterncms/media', array_column($modules, 'name'));
-        $this->assertNotContains('letterncms/license', array_column($modules, 'name'), 'Held on by the required Modules module.');
+        $this->assertNotContains('letterncms/license', array_column($modules, 'name'), 'Required, as Modules needs it.');
         $this->assertSame([], array_filter($modules, static fn ($m) => $m['required']));
         $records = array_values(array_filter($tabs[0]['children'], static fn ($n) => $n['type'] === 'ui/records'))[0];
         $this->assertSame('packages/switch', array_column($records['props']['columns'], 'action', 'key')['enabled']['ability']);

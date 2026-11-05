@@ -1,14 +1,12 @@
 import { can, navigate, t, timeAgo, useAbility } from '@letterncms/sdk'
 import { Button, Widget, WidgetRow } from '@letterncms/ui'
-
-interface Remote { name: string; label: string; url: string; last: { direction: 'pull' | 'push'; at: string; undone_at?: string } | null }
-interface Overview { remotes: Remote[]; current: { remote: string; label: string; percent: number; status: string } | null }
+import { RUNNING, type Overview } from './shared'
 
 /** Home-screen widget: the sites this one syncs with, and when each was last pulled or pushed. */
 export default function WidgetSites() {
   const overview = useAbility<Overview>('sync/overview', undefined, { refetchInterval: 60_000 })
   const data = overview.data
-  const running = data?.current && ['running', 'waiting'].includes(data.current.status) ? data.current : null
+  const running = data?.current && RUNNING.includes(data.current.status) ? data.current : null
 
   return (
     <Widget

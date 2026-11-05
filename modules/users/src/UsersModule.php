@@ -21,10 +21,12 @@ final class UsersModule extends Plugin
         $cms->permissions()->register('users.manage', 'Manage Users and Roles', 'Users');
         $this->app->make(UserAbilities::class)->register($cms->abilities());
 
-        $cms->settingsRegistry()->register(Roles::SETTINGS, 'Roles', [
+        // Once every module and plugin has booted: the default roles hold what they registered for them.
+        $package = $this->manifest->name;
+        $this->app->booted(static fn () => $cms->settingsRegistry()->register(Roles::SETTINGS, 'Roles', [
             // The page is titled Roles already; the editor needs no label of its own.
-            ['handle' => 'roles', 'type' => 'json', 'label' => '', 'component' => 'roles', 'default' => Roles::DEFAULTS],
-        ], icon: 'shield', permission: 'users.manage', order: 20, section: 'people');
+            ['handle' => 'roles', 'type' => 'json', 'label' => '', 'component' => 'roles', 'default' => $cms->roles()->defaults()],
+        ], icon: 'shield', permission: 'users.manage', order: 20, section: 'people', package: $package));
 
         $cms->hooks()->addFilter('settings.saving', static fn (array $values, string $namespace) => $namespace === Roles::SETTINGS
             ? [...$values, 'roles' => Roles::normalize((array) ($values['roles'] ?? []))]

@@ -30,7 +30,7 @@ final class Manifest
             'brand' => Brand::all(),
             'site' => [
                 'name' => config('app.name'),
-                'url' => config('app.url'),
+                'url' => $this->cms->url(),
                 'locales' => $this->cms->locales(),
                 'defaultLocale' => $this->cms->defaultLocale(),
                 'timezone' => config('app.timezone'),

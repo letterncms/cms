@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Navigation;
 
+use Cms\Admin\Views;
 use Cms\Abilities\AbilityException;
 use Cms\Content\Entries\Entry;
 use Cms\Modules\Workspace\Answers;
@@ -23,8 +24,8 @@ final class NavigationModule extends Plugin
     public function boot(): void
     {
         $p = $this->cms()->permissions();
-        $p->register('navigation.view', __('View Menus'), __('Navigation'));
-        $p->register('navigation.manage', __('Create and Edit Menus'), __('Navigation'));
+        $p->register('navigation.view', 'View Menus', 'Navigation');
+        $p->register('navigation.manage', 'Create and Edit Menus', 'Navigation');
 
         $this->abilities();
 
@@ -41,7 +42,7 @@ final class NavigationModule extends Plugin
         $this->cms()->hooks()->on('entry.deleted', function (Entry $entry) {
             $menus = $this->app->make(Menus::class);
 
-            if (! in_array($entry->id, $menus->entryIds(), true)) {
+            if (! in_array($entry->id, $menus->ids(), true)) {
                 return;
             }
 
@@ -58,10 +59,10 @@ final class NavigationModule extends Plugin
 
         $this->cms()->admin()->nav('navigation', ['path' => '/navigation', 'icon' => 'list-tree', 'section' => 'content', 'order' => 72, 'permission' => 'navigation.view']);
         $this->cms()->admin()->command('navigation', ['label' => 'Edit Menus', 'icon' => 'list-tree', 'path' => '/navigation', 'keywords' => ['menu', 'navigation', 'links', 'header', 'footer'], 'permission' => 'navigation.view']);
-        $this->cms()->admin()->widget('navigation-menus', ['label' => 'Menus', 'description' => __('The site’s menus and how many links each has.'), 'icon' => 'list-tree', 'column' => 'side', 'order' => 60, 'permission' => 'navigation.view']);
+        $this->cms()->admin()->widget('navigation-menus', ['label' => 'Menus', 'description' => 'The site’s menus and how many links each has.', 'icon' => 'list-tree', 'column' => 'side', 'order' => 60, 'permission' => 'navigation.view']);
         $this->places();
         $this->answers();
-        $this->adminModule(import: '@letterncms/navigation');
+        $this->adminModule();
     }
 
     /** The places of Navigation, as data (see Cms\Admin\Views): the menus, and one menu around its tree editor. */
@@ -97,9 +98,7 @@ final class NavigationModule extends Plugin
             $menu = $this->app->make(Menus::class)->find((string) ($params['handle'] ?? ''));
 
             if ($menu === null) {
-                return ['type' => 'ui/page', 'props' => ['title' => __('Not Found'), 'icon' => 'list-tree', 'back' => ['to' => '/navigation', 'label' => __('Navigation')]], 'children' => [
-                    ['type' => 'ui/empty', 'props' => ['icon' => 'list-tree', 'title' => __('Not Found'), 'action' => ['label' => __('Back to Navigation'), 'icon' => 'arrow-left', 'to' => '/navigation']]],
-                ]];
+                return Views::notFound('list-tree', ['to' => '/navigation', 'label' => __('Navigation')]);
             }
 
             return ['type' => 'ui/page', 'props' => ['title' => $menu['title'], 'icon' => 'list-tree', 'width' => 'narrow', 'back' => ['to' => '/navigation', 'label' => __('Navigation')], 'actions' => [
@@ -131,7 +130,6 @@ final class NavigationModule extends Plugin
             'description' => 'Menus with their item counts.',
             'permission' => 'navigation.view',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'handler' => fn () => array_values(array_map(static fn ($m) => ['handle' => $m['handle'], 'title' => $m['title'], 'icon' => 'list-tree', 'maxDepth' => $m['maxDepth'], 'count' => $count = self::count($m['items']), 'links' => $count === 1 ? __('1 link') : __(':count links', ['count' => $count]), 'publishedAt' => $m['publishedAt'], 'updatedAt' => $m['updatedAt']], $menus()->all())),
         ]);
 
@@ -140,7 +138,6 @@ final class NavigationModule extends Plugin
             'description' => 'A menu with its items; entry items include the linked entry’s title, URI and status.',
             'permission' => 'navigation.view',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle']],
             'handler' => fn (array $in) => $this->describe($menus()->find($in['handle']) ?? throw new AbilityException(__('Menu not found.'), 'not_found')),
         ]);
@@ -149,7 +146,6 @@ final class NavigationModule extends Plugin
             'label' => 'Create Menu',
             'description' => 'A new, empty menu named title. Its handle is made from the title (main, footer).',
             'permission' => 'navigation.manage',
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120]], 'required' => ['title']],
             'answer' => static fn (array $menu) => Answers::done(__('Created :name', ['name' => $menu['title']]), null, [
                 ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/navigation/'.$menu['handle']],
@@ -177,7 +173,6 @@ final class NavigationModule extends Plugin
             'description' => 'Create a menu or replace its items. Items nest through children (up to maxDepth levels). Link pages by entry id so links survive moves; use url for anything else. On an existing menu, what is left out (title, maxDepth, items) stays as it is.',
             'permission' => 'navigation.manage',
             'annotations' => ['idempotent' => true],
-            'package' => $this->manifest->name,
             'input' => [
                 'type' => 'object',
                 'properties' => [
@@ -198,7 +193,6 @@ final class NavigationModule extends Plugin
             'label' => 'Add to Menu',
             'description' => 'Add one link at the end of a menu: a page by its entry id (it follows the page when it moves), or any url. Its label is the page’s title unless one is given.',
             'permission' => 'navigation.manage',
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => [
                 'menu' => ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,63}$', 'description' => 'The menu’s handle (main, footer).'],
                 'entry' => ['type' => 'string', 'format' => 'ulid', 'description' => 'Entry id to link to.'],
@@ -224,7 +218,6 @@ final class NavigationModule extends Plugin
             'description' => 'Delete a menu. Templates that render it show nothing in its place.',
             'permission' => 'navigation.manage',
             'annotations' => ['destructive' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle']],
             'handler' => fn (array $in) => ['deleted' => $menus()->delete($in['handle'])],
         ]);
@@ -265,14 +258,7 @@ final class NavigationModule extends Plugin
     /** Menu with entry details for editors and agents. */
     private function describe(array $menu): array
     {
-        $ids = [];
-        array_walk_recursive($menu['items'], static function ($value, $key) use (&$ids) {
-            $key === 'entry' && $ids[] = $value;
-        });
-        $entries = [];
-        foreach ($this->cms()->entries()->findMany($ids) as $entry) {
-            $entries[$entry->id] = $entry;
-        }
+        $entries = $this->app->make(Menus::class)->entriesById($menu['items']);
 
         $walk = static function (array $items) use (&$walk, $entries): array {
             return array_map(static function (array $item) use (&$walk, $entries) {

@@ -33,7 +33,7 @@ export interface WidgetMeta {
 export const WidgetContext = createContext<WidgetMeta | null>(null)
 
 /** The registration of the widget being rendered (label, icon), when it is on the home screen. */
-export function useWidget(): WidgetMeta | null {
+function useWidget(): WidgetMeta | null {
   return useContext(WidgetContext)
 }
 

@@ -27,7 +27,7 @@ final class AuthController
             'authenticated' => $user !== null,
             'user' => $user?->toPublic(),
             'twoFactorPending' => $request->session()->has('cms.2fa.user'),
-            'site' => ['name' => config('app.name'), 'url' => config('app.url')],
+            'site' => ['name' => config('app.name'), 'url' => cms()->url()],
         ]);
     }
 

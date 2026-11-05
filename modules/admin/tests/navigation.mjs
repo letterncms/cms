@@ -1,15 +1,11 @@
 // Build first, then run `node modules/admin/tests/navigation.mjs` and open
 // the printed URL. Tests use the real built shell, SDK and modules with delayed
 // fixture abilities. No account, database, browser dependency or site writes.
-import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { resolve, extname, sep } from 'node:path'
+import { resolve } from 'node:path'
+import { body, json, page, root, serve } from './harness.mjs'
 import { mounted, viewResponse } from './views.mjs'
 
-const root = fileURLToPath(new URL('../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
-const assetBase = '/_cms/assets/cms-admin/'
 const grants = { create: true, edit: true, publish: true, delete: true }
 const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel: 'New Post', icon: 'article', structure: 'list', driver: 'files', editor: 'document', can: grants, routable: false }
 const entry = { id: 'entry-1', collection: 'posts', locale: 'en', title: 'Original title', slug: 'original', uri: null, status: 'draft', displayStatus: 'draft', data: {}, hasDraft: false, parentId: null, position: 0, originId: null, authorId: null, createdAt: null, updatedAt: null, publishedAt: null }
@@ -31,8 +27,7 @@ const manifest = {
   settingsNav: [{ id: 'system', label: 'System', items: settingsNav.map((item) => item.id) }],
   brand,
 }
-const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', theme: { name: 'cms/admin', version: 'test' }, site: manifest.site, locale: 'en', messages: {}, manifest }
-const imports = Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path]))
+const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
 const requests = []
 let broken = true
 const runner = `
@@ -187,53 +182,25 @@ try {
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results, error: error.stack }) })
 }
 `
-const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Navigation regression test</title>${admin.css.map((path) => `<link rel="stylesheet" href="${assetBase + path}">`).join('')}<script type="importmap">${JSON.stringify({ imports })}</script><script>window.__CMS__=${JSON.stringify(boot)}</script><script type="module" src="${assetBase + admin.entry}"></script></head><body><div id="cms"></div><pre id="results" style="position:fixed;bottom:8px;right:8px;z-index:9999;max-width:620px;background:white;border:1px solid #aaa;padding:12px;font-size:11px">Starting tests…</pre><script type="module">${runner}</script></body></html>`
-const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value)) }
-const body = async (req) => { let value = ''; for await (const chunk of req) value += chunk; return value }
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, 'http://localhost')
-    if (url.pathname === '/__test/requests') return json(res, 200, requests)
-    if (url.pathname === '/__test/recover') { broken = false; return json(res, 200, {}) }
-    if (url.pathname === '/__test/results') {
-      const result = JSON.parse(await body(req))
-      for (const name of result.passed) console.log('PASS', name)
-      if (result.error) console.error('FAIL', result.error)
-      json(res, 200, {})
-      if (keepAlive) return
-      clearTimeout(timeout)
-      setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = result.error ? 1 : 0 }, 100)
-      return
+serve('Navigation', async (req, res, url) => {
+  if (url.pathname === '/__test/requests') return json(res, 200, requests)
+  if (url.pathname === '/__test/recover') { broken = false; return json(res, 200, {}) }
+  if (url.pathname.startsWith('/api/admin/abilities/')) {
+    const ability = url.pathname.slice('/api/admin/abilities/'.length)
+    const input = await body(req)
+    requests.push({ ability, input })
+    if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
+    await new Promise((r) => setTimeout(r, input.namespace === 'email' ? 700 : 30))
+    if (ability === 'settings/get') {
+      if (input.namespace === 'broken' && broken) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
+      return json(res, 200, { data: { namespace: input.namespace, label: input.namespace.toUpperCase(), fields: [{ handle: 'name', type: 'text', label: 'Name' }], values: { name: 'Example' } } })
     }
-    if (url.pathname.startsWith('/api/admin/abilities/')) {
-      const ability = url.pathname.slice('/api/admin/abilities/'.length)
-      const input = JSON.parse(await body(req))
-      requests.push({ ability, input })
-      if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
-      await new Promise((r) => setTimeout(r, input.namespace === 'email' ? 700 : 30))
-      if (ability === 'settings/get') {
-        if (input.namespace === 'broken' && broken) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
-        return json(res, 200, { data: { namespace: input.namespace, label: input.namespace.toUpperCase(), fields: [{ handle: 'name', type: 'text', label: 'Name' }], values: { name: 'Example' } } })
-      }
-      if (ability === 'admin/arrangement') return json(res, 200, { data: { items: [{ id: 'settings', label: 'Settings', icon: 'settings' }], layout: { sections: [{ id: 'main', label: 'Main', items: ['settings'] }], hidden: [] }, fixed: false, customized: false } })
-      if (ability === 'collections/get') return json(res, 200, { data: { ...collection, fields: [], resolvedFields: [], schema: {} } })
-      if (ability === 'entries/list') return json(res, 200, { data: { items: [entry], total: 1, page: 1, pages: 1 } })
-      if (ability === 'entries/get') return json(res, 200, { data: entry })
-      if (ability === 'entries/revisions') return json(res, 200, { data: [] })
-      throw new Error('Unexpected ability: ' + ability)
-    }
-    const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin|settings|content|collections)\/(.+)$/)
-    if (asset) {
-      const dir = resolve(root, asset[1] === 'admin' ? 'modules/admin/dist' : `modules/${asset[1]}/dist`)
-      const path = resolve(dir, asset[2])
-      if (!path.startsWith(dir + sep)) { res.writeHead(403); res.end(); return }
-      const mime = { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream'
-      res.writeHead(200, { 'Content-Type': mime }); res.end(await readFile(path)); return
-    }
-    res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(html)
-  } catch (error) { console.error(error); json(res, 500, { error: { message: error.message } }) }
-})
-// --preview keeps the server up after the checks, to look at.
-const keepAlive = process.argv.includes('--preview')
-const timeout = keepAlive ? null : setTimeout(() => { console.error('Navigation browser test timed out'); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
-server.listen(0, '127.0.0.1', () => console.log(`Open http://localhost:${server.address().port}/admin/settings/site to run navigation checks.`))
+    if (ability === 'admin/arrangement') return json(res, 200, { data: { items: [{ id: 'settings', label: 'Settings', icon: 'settings' }], layout: { sections: [{ id: 'main', label: 'Main', items: ['settings'] }], hidden: [] }, fixed: false, customized: false } })
+    if (ability === 'collections/get') return json(res, 200, { data: { ...collection, fields: [], resolvedFields: [], schema: {} } })
+    if (ability === 'entries/list') return json(res, 200, { data: { items: [entry], total: 1, page: 1, pages: 1 } })
+    if (ability === 'entries/get') return json(res, 200, { data: entry })
+    if (ability === 'entries/revisions') return json(res, 200, { data: [] })
+    throw new Error('Unexpected ability: ' + ability)
+  }
+  res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(page({ title: 'Navigation regression test', boot, runner }))
+}, { links: (base) => [`${base}/admin/settings/site`] })

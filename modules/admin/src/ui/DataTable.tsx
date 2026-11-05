@@ -159,7 +159,7 @@ export function TableHeader({ label, align, direction, onSort, hiddenLabel }: { 
   </div>
 }
 
-export function TableSkeleton({ columns, rows = 5 }: { columns: number; rows?: number }) {
+function TableSkeleton({ columns, rows = 5 }: { columns: number; rows?: number }) {
   return <div role="rowgroup" aria-hidden="true">{Array.from({ length: rows }, (_, i) => <TableRow key={i} className="max-sm:[&>*:not(:first-child)]:hidden">
     {Array.from({ length: columns }, (_, j) => <div key={j} className="py-3 max-sm:flex-1 max-sm:py-1"><Skeleton className={cn('h-3', j === 0 ? 'w-3/5' : 'w-2/5')} /></div>)}
   </TableRow>)}</div>

@@ -53,7 +53,7 @@ final class ContentAbilities
             $may = static fn (string $action) => 'entries.'.$entry['collection'].'.'.$action;
             $publish = ['label' => __('Publish'), 'icon' => 'globe', 'ability' => 'entries/publish', 'input' => ['id' => $id], 'can' => $may('publish'), 'success' => Answers::literal(__('Published “:title”', ['title' => $title]))];
             $unpublish = ['label' => __('Unpublish'), 'icon' => 'eye-off', 'ability' => 'entries/unpublish', 'input' => ['id' => $id], 'can' => $may('publish'), 'success' => Answers::literal(__('Unpublished “:title”', ['title' => $title]))];
-            $site = $live && ! empty($entry['uri']) ? ['label' => __('View on Site'), 'icon' => 'external', 'href' => rtrim((string) config('app.url'), '/').$entry['uri']] : null;
+            $site = $live && ! empty($entry['uri']) ? ['label' => __('View on Site'), 'icon' => 'external', 'href' => $this->cms->url($entry['uri'])] : null;
             $delete = ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'ghost', 'ability' => 'entries/delete', 'input' => ['id' => $id], 'can' => $may('delete'),
                 'confirm' => ['title' => Answers::literal(__('Delete “:title”?', ['title' => $title])), 'confirm' => __('Delete'), 'danger' => true], 'success' => __('Deleted the entry')];
             $unpublished = ($entry['displayStatus'] ?? '') !== 'published';

@@ -13,21 +13,28 @@ async function setup(preferences = {}, defaultView = 'grid') {
   const pending = new Map()
   let timer = 0
   const context = createContext({ setTimeout: (fn) => { pending.set(++timer, fn); return timer }, clearTimeout: (id) => pending.delete(id) })
-  const sdk = new SyntheticModule(['getManifest', 'run'], function () {
-    this.setExport('getManifest', () => manifest)
+  // The SDK's own manifest store, with the network replaced: `setPreference` is what is tested.
+  const api = new SyntheticModule(['boot', 'request', 'run'], function () {
+    this.setExport('boot', {})
+    this.setExport('request', () => Promise.reject(new Error('offline')))
     this.setExport('run', (ability, input) => { saves.push({ ability, input }); return Promise.resolve() })
   }, { context })
-  const react = new SyntheticModule(['useEffect', 'useRef', 'useState'], function () {
+  const react = new SyntheticModule(['useEffect', 'useRef', 'useState', 'useSyncExternalStore'], function () {
     this.setExport('useEffect', () => {})
     this.setExport('useRef', (value) => ({ current: value }))
     this.setExport('useState', (initial) => [typeof initial === 'function' ? initial() : initial, () => {}])
+    this.setExport('useSyncExternalStore', (_, get) => get())
   }, { context })
+  const sdk = new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL('../../../admin-sdk/src/manifest.ts', import.meta.url), 'utf8')), { context })
+  await sdk.link((name) => name === './api' ? api : react)
+  await sdk.evaluate()
+  sdk.namespace.setManifest(manifest)
   const module = new SourceTextModule(source, { context })
   const ui = new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL('../../admin/src/ui/viewPrefs.ts', import.meta.url), 'utf8')), { context })
   await ui.link((name) => name === '@letterncms/sdk' ? sdk : react)
   await module.link((name) => name === '@letterncms/sdk' ? sdk : ui)
   await module.evaluate()
-  return { ...module.namespace, manifest, saves, flush: () => { for (const save of pending.values()) save(); pending.clear() } }
+  return { ...module.namespace, manifest: sdk.namespace.getManifest(), saves, flush: () => { for (const save of pending.values()) save(); pending.clear() } }
 }
 
 test('a collection default applies before a personal view has been chosen', async () => {

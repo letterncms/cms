@@ -6,7 +6,7 @@ import type { ListItem } from './listPrefs'
 const sql = (date: Date) => date.toISOString().slice(0, 19).replace('T', ' ')
 
 /** Source-specific filters only; geometry, paging and rendering are shared with all overviews. */
-export function calendarQueries(handle: string, filters: { locale: string; status: string; search?: string }, monthValue?: string, dateField: CalendarDate = 'published') {
+function calendarQueries(handle: string, filters: { locale: string; status: string; search?: string }, monthValue?: string, dateField: CalendarDate = 'published') {
   const range = calendarRange(monthValue)
   const field = dateField === 'published' ? 'published_at' : 'updated_at'
   return { ...range,

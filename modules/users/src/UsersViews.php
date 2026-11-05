@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Cms\Modules\Users;
 
 use Cms\Cms;
-use Cms\Users\Accounts;
 use Cms\Users\User;
 
 /**
- * Users as data: the team and the site's visitors, how visitors sign up, and the fields every
- * profile has, as the tabs of one page. A person opens in the dialog that edits them (`users/person`).
+ * Users as data: the team and the site's visitors and the fields every profile has, as the tabs
+ * of one page, with the Visitor Accounts settings as its Settings tab (their `home`). A person opens in the dialog that edits them (`users/person`).
  */
 final class UsersViews
 {
@@ -27,22 +26,17 @@ final class UsersViews
         $views->register('users', '/users', static fn (User $user) => self::page($cms), permission: 'users.view', private: true);
         // One person, or `new`: the page with their dialog open. Closing it leads back to the list.
         $views->register('users-person', '/users/:id', static fn (User $user, array $params) => self::page($cms, (string) ($params['id'] ?? '')), permission: 'users.view', private: true);
-        // Where these lived before they were tabs of Users.
-        $views->register('users-fields', '/users/fields', static fn () => self::redirect('/users?tab=fields'));
-        $views->register('users-sign-up', '/settings/accounts', static fn () => self::redirect('/users?tab=sign-up&field={query.field}'));
     }
 
     private static function page(Cms $cms, ?string $open = null): array
     {
         $person = ['type' => 'users/person', 'props' => ['id' => $open], 'can' => 'users.manage'];
         $invite = ['label' => __('Invite User'), 'icon' => 'user-plus', 'variant' => 'primary', 'component' => 'users/person', 'can' => 'users.manage'];
-        $signUp = isset($cms->settingsRegistry()->schemas()[Accounts::SETTINGS]);
 
         return ['type' => 'ui/page', 'props' => ['title' => __('Users'), 'icon' => 'users'], 'children' => [
             ['type' => 'ui/tabs', 'children' => [
                 ['type' => 'ui/tab', 'props' => ['id' => 'team', 'label' => __('Team'), 'actions' => [$invite]], 'children' => [self::people($cms, 'team', ['icon' => 'users', 'title' => __('No users yet')]), ...($open ? [$person] : [])]],
                 ['type' => 'ui/tab', 'props' => ['id' => 'visitors', 'label' => __('Visitors')], 'children' => [self::people($cms, 'visitors', ['icon' => 'users', 'title' => __('No visitors yet')])]],
-                ...($signUp ? [['type' => 'ui/tab', 'can' => 'settings.manage', 'props' => ['id' => 'sign-up', 'label' => __('Sign-Up')], 'children' => [['type' => 'ui/settings', 'props' => ['namespace' => Accounts::SETTINGS]]]]] : []),
                 ['type' => 'ui/tab', 'can' => 'collections.manage', 'props' => ['id' => 'fields', 'label' => __('Profile Fields')], 'children' => [['type' => 'users/profile-fields']]],
             ]],
         ]];
@@ -70,10 +64,5 @@ final class UsersViews
             'open' => ['label' => __('Edit User'), 'component' => 'users/person', 'props' => ['user' => '{row}'], 'can' => 'users.manage'],
             'empty' => $empty,
         ]];
-    }
-
-    private static function redirect(string $to): array
-    {
-        return ['type' => 'ui/page', 'props' => ['title' => __('Users'), 'icon' => 'users'], 'children' => [['type' => 'ui/redirect', 'props' => ['to' => $to]]]];
     }
 }

@@ -454,7 +454,7 @@ final class Elements
             return null;
         }
 
-        return (function_exists('cms_url') ? cms_url($entry->uri) : $entry->uri).$fragment;
+        return $entry->uri.$fragment;
     }
 
     /** href plus target, rel and aria-current when it is the page being rendered. */

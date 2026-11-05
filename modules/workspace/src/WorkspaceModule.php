@@ -16,7 +16,7 @@ use Cms\Users\User;
 /**
  * Where people work: a thread at the right edge of every screen of the admin. A command
  * runs an ability and is answered with a view to act on, a search with what was found,
- * plain language by the agent when a plugin provides one (Cms\Contracts\Agent). The whole
+ * plain language by the agent when one is bound (Cms\Contracts\Agent). The whole
  * site can be run from here without AI.
  */
 final class WorkspaceModule extends Plugin
@@ -55,8 +55,8 @@ final class WorkspaceModule extends Plugin
     private function abilities(): void
     {
         $a = $this->cms()->abilities();
-        // A thread is its person's: only the admin's own client reads it. No tokens, agents or CLI.
-        $mine = ['rest' => false, 'mcp' => false, 'cli' => false, 'assistant' => false];
+        // A thread is its person's: only the admin's own client reads it.
+        $mine = Ability::ADMIN_ONLY;
         $threads = static fn (AbilityContext $c) => Thread::query()->where('user_id', $c->user?->id ?? throw new AbilityException(__('Authentication required.'), 'unauthenticated'));
         $workspace = fn () => $this->app->make(Workspace::class);
 

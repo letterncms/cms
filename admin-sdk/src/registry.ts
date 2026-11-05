@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import type { EntryPanelProps, FieldProps, SurfaceComponentProps } from './types'
+import type { EntryPanelProps, FieldProps, PanelSlot, PanelSlots, SurfaceComponentProps } from './types'
 import type { Location } from './router'
 import type { ComposerSource } from './composer'
 
@@ -8,30 +8,28 @@ export interface RouteDef {
   component: ComponentType<{ params: Record<string, string> }>
   /** Prime required queries before showing this screen. Also called on link intent. */
   load?: (params: Record<string, string>, location: Location) => Promise<unknown>
-  /** "default" renders inside the shell; "full" takes the whole window (editors). */
-  layout?: 'default' | 'full'
   /** Drawn over the screen it was opened from, which stays open underneath. */
   overlay?: boolean
-  /** What this screen shows stays on it: the assistant's chat gets neither its title nor its text. */
+  /** What this screen shows stays on it: the workspace's thread gets neither its title nor its text. */
   private?: boolean
-  title?: string
 }
 
-export interface PanelDef<P = any> {
-  id: string
-  slot: string
-  /** Tab label for sidebar panels. */
-  label?: string
-  icon?: string
-  component: ComponentType<P>
-  order?: number
-  when?: (props: P) => boolean
-  /** Entry field handles edited by this applicable panel. Unclaimed fields use the standard form. */
-  fieldHandles?: string[]
-}
+/** A component in a named slot of the admin (see `PanelSlots`); the slot decides its props. */
+export type PanelDef<S extends PanelSlot = PanelSlot> = {
+  [K in S]: {
+    slot: K
+    /** Tab label for sidebar panels. */
+    label?: string
+    icon?: string
+    component: ComponentType<PanelSlots[K]>
+    order?: number
+    when?: (props: PanelSlots[K]) => boolean
+    /** Entry field handles edited by this applicable panel. Unclaimed fields use the standard form. */
+    fieldHandles?: string[]
+  }
+}[S]
 
 export interface CommandDef {
-  id: string
   label: string
   icon?: string
   group?: string
@@ -44,13 +42,15 @@ export interface CommandDef {
 
 /** A line in the entry editor's More menu. */
 export interface EntryActionDef {
-  id: string
   label: string
   icon?: string
   order?: number
   when?: (props: EntryPanelProps) => boolean
   perform: (props: EntryPanelProps) => void
 }
+
+/** What a keyed registry hands back: the registration, with the key it was registered under as its `id`. */
+export type Registered<T> = T & { id: string }
 
 type Listener = () => void
 
@@ -66,7 +66,7 @@ interface Layer<T> {
  * A keyed store where a later registration of the same key wins, and taking a
  * module's registrations back reveals what it had replaced.
  */
-function store<T>() {
+function store<T, In = T>(make: (key: string, value: In) => T = (_, value) => value as unknown as T) {
   const layers = new Map<string, Layer<T>[]>()
   const listeners = new Set<Listener>()
   let version = 0
@@ -79,9 +79,9 @@ function store<T>() {
     return stack?.[stack.length - 1]
   }
   return {
-    set(key: string, value: T) {
+    set(key: string, value: In) {
       const stack = (layers.get(key) ?? []).filter((layer) => layer.owner !== owner)
-      stack.push({ owner, value })
+      stack.push({ owner, value: make(key, value) })
       layers.set(key, stack)
       changed()
     },
@@ -121,23 +121,26 @@ function store<T>() {
   }
 }
 
+/** A store whose registrations take their key as their `id`. Getters stay getters (a command's `keywords` can follow the manifest). */
+const keyed = <T extends object>() => store<Registered<T>, T>((id, value) => Object.defineProperties({}, { ...Object.getOwnPropertyDescriptors(value), id: { value: id, enumerable: true } }) as Registered<T>)
+
 /**
- * Extension points for plugins. Admin themes read from here; plugins write.
+ * Extension points for plugins. The admin reads from here; plugins write.
  *
  *   registry.routes.set('/media', { path: '/media', component: MediaLibrary })
  *   registry.fields.set('media', MediaField)
- *   registry.panels.set('seo', { id: 'seo', slot: 'entry.sidebar', component: SeoPanel })
+ *   registry.panels.set('seo', { slot: 'entry.sidebar', component: SeoPanel })
  */
 export const registry = {
   routes: store<RouteDef>(),
   fields: store<ComponentType<FieldProps>>(),
-  panels: store<PanelDef>(),
+  panels: keyed<PanelDef>(),
   widgets: store<ComponentType<{ id: string }>>(),
   components: store<ComponentType<SurfaceComponentProps<any>>>(),
-  commands: store<CommandDef>(),
-  entryActions: store<EntryActionDef>(),
+  commands: keyed<CommandDef>(),
+  entryActions: keyed<EntryActionDef>(),
   /** Where `@` and `/` look in a message. */
-  composer: store<ComposerSource>(),
+  composer: keyed<ComposerSource>(),
   icons: store<string>(),
 }
 
@@ -147,7 +150,7 @@ export type Registrations = { [K in keyof Stores]: ReturnType<Stores[K]['withdra
 /**
  * Run a module's code (its import and setup) with everything it registers
  * attributed to it, so the admin can take it back when its package is turned
- * off. Admin themes load modules through this, one at a time.
+ * off. The admin loads modules through this, one at a time.
  */
 export async function registerAs(id: string, load: () => unknown): Promise<void> {
   const previous = owner
@@ -169,9 +172,9 @@ export function reregister(id: string, registrations: Registrations) {
   for (const [name, entries] of Object.entries(registrations)) registry[name as keyof Stores].restore(id, entries as never)
 }
 
-/** Panels for a slot, ordered. */
-export function panelsFor<P>(slot: string, props: P): PanelDef<P>[] {
-  return (registry.panels.all() as PanelDef<P>[])
-    .filter((p) => p.slot === slot && (!p.when || p.when(props)))
+/** Panels for a slot that apply to these props, ordered. */
+export function panelsFor<S extends PanelSlot>(slot: S, props: PanelSlots[S]): Registered<PanelDef<S>>[] {
+  return (registry.panels.all().filter((p) => p.slot === slot) as unknown as (Registered<PanelDef<S>> & { when?: (props: PanelSlots[S]) => boolean })[])
+    .filter((p) => !p.when || p.when(props))
     .sort((a, b) => (a.order ?? 50) - (b.order ?? 50))
 }

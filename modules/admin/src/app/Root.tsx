@@ -13,6 +13,9 @@ type State = 'loading' | 'guest' | 'ready' | 'error'
 let embedded: Manifest | undefined = boot.manifest
 let following = false
 
+// Field components first, once: every form, sign-in included, is drawn with them, and modules may replace them.
+registerCoreFields()
+
 export function Root() {
   const [state, setState] = useState<State>('loading')
   const [error, setError] = useState<string>('')
@@ -20,8 +23,6 @@ export function Root() {
 
   const start = useCallback(async () => {
     setState('loading')
-    // Field components first: every form, sign-in included, is drawn with them.
-    registerCoreFields()
     try {
       let manifest = embedded
       embedded = undefined

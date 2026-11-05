@@ -2,11 +2,10 @@ import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
 import { fieldControlId, Icon, Menu, cn } from '@letterncms/ui'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { inputClass } from '../controls'
-import { EaseCurve } from '../motion/EaseCurve'
 import { TokenButton, TokenChip, useTokenOf, useTypedToken } from './tokens'
 
 /* The inspector's own field components — only what core fields can't express: CSS values
-   with units, tokens and scrubbing, and easing curves. Text, selects, segmented controls and
+   with units, tokens and scrubbing. Text, selects, segmented controls and
    toggles are core types (size: 'sm'); a row's status and reset live on its inline label. */
 
 /** Conditional sub-fields (`if`), as in Fields. */
@@ -316,16 +315,6 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
           <Icon name={action.icon} size={14} />
         </button>
       )}
-    </Control>
-  )
-}
-
-/** `blocks-ease` — an easing curve: core select with a preview of the curve's shape beside it. */
-export function EaseField({ field, ...props }: FieldProps<string | null>) {
-  return (
-    <Control>
-      <SubField {...props} field={{ ...field, type: 'select', component: undefined, size: 'sm' }} />
-      <EaseCurve value={props.value ?? undefined} size={28} />
     </Control>
   )
 }

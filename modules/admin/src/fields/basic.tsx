@@ -185,14 +185,14 @@ function ToggleLabel({ field }: { field: FieldProps['field'] }) {
 }
 
 /** Options as `{value: label}`, a list of values, or a list of `{value, label, icon, title}`. */
-function options(field: FieldProps['field']): { value: string; label: string; icon?: string; title?: string }[] {
+export function fieldOptions(field: FieldProps['field']): { value: string; label: string; icon?: string; title?: string }[] {
   const raw = (field.options ?? {}) as Record<string, string> | (string | { value: string; label?: string; icon?: string; title?: string })[]
   if (!Array.isArray(raw)) return Object.entries(raw).map(([value, label]) => ({ value, label: String(label) }))
   return raw.map((o) => (typeof o === 'object' ? { ...o, value: String(o.value), label: o.label ?? '' } : { value: String(o), label: String(o) }))
 }
 
 export function SelectField({ field, value, onChange, error, disabled }: FieldProps<any>) {
-  const listed = options(field)
+  const listed = fieldOptions(field)
   // A stored value that is no longer offered stays visible (and selectable) rather than vanishing.
   const opts = !field.multiple && value !== null && value !== undefined && value !== '' && !listed.some((o) => o.value === String(value)) ? [{ value: String(value), label: String(value) }, ...listed] : listed
 

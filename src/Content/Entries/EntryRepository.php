@@ -47,13 +47,9 @@ final class EntryRepository
         $ids = array_values(array_filter(array_map(static fn ($id) => strtolower((string) $id), $ids), static fn ($id) => preg_match('/^[0-9a-z]{26}$/', $id)));
         $found = [];
 
-        foreach ($this->database->findMany($ids) as $entry) {
-            $found[$entry->id] = $entry;
-        }
-
-        foreach (array_diff($ids, array_keys($found)) as $id) {
-            if ($entry = $this->files->find($id)) {
-                $found[$id] = $entry;
+        foreach ([$this->database, $this->files] as $driver) {
+            foreach ($driver->findMany(array_values(array_diff($ids, array_keys($found)))) as $entry) {
+                $found[$entry->id] = $entry;
             }
         }
 
@@ -153,23 +149,16 @@ final class EntryRepository
     /** @return list<array{0: EntryDriver, 1: list<string>}> */
     private function groups(EntryQuery $query): array
     {
-        $handles = $query->collections ?: array_keys($this->collections->all());
-        $byDriver = [];
+        $groups = [];
 
-        foreach ($handles as $handle) {
-            $collection = $this->collections->find($handle);
-
-            if ($collection) {
-                $byDriver[$collection->driver][] = $handle;
+        foreach ($query->collections ?: array_keys($this->collections->all()) as $handle) {
+            if ($collection = $this->collections->find($handle)) {
+                $driver = $this->driver($collection);
+                $groups[spl_object_id($driver)] ??= [$driver, []];
+                $groups[spl_object_id($driver)][1][] = $handle;
             }
         }
 
-        $groups = [];
-
-        foreach ($byDriver as $driver => $list) {
-            $groups[] = [$driver === 'files' ? $this->files : $this->database, $list];
-        }
-
-        return $groups;
+        return array_values($groups);
     }
 }

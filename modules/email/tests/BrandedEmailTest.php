@@ -8,11 +8,6 @@ use Cms\Tests\TestCase;
 
 final class BrandedEmailTest extends TestCase
 {
-    protected function plugins(): array
-    {
-        return ['letterncms/email'];
-    }
-
     public function test_an_erased_account_leaves_no_address_in_the_log(): void
     {
         $mailer = app(\Cms\Modules\Email\Mailer::class);

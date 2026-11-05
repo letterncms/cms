@@ -29,7 +29,7 @@ final class BlocksModule extends Plugin
         $registry = $this->app->make(BlockRegistry::class);
 
         foreach (CoreBlocks::all() as $block) {
-            $registry->register([...$block, 'package' => $this->manifest->name]);
+            $registry->register($block);
         }
 
         foreach (CoreBlocks::categories() as $category) {
@@ -90,10 +90,11 @@ final class BlocksModule extends Plugin
             return $collections;
         });
 
-        $this->cms()->hooks()->addFilter('fields.options.collections', fn (array $options) => array_replace(
-            $options,
-            array_map(static fn ($c) => $c->title, array_filter($this->cms()->collections()->all(), static fn ($c) => ! $c->system)),
-        ));
+        // The lists block fields choose from (`dynamic`). The site's design system adds its own button looks (`buttons` in tokens.json).
+        $hooks = $this->cms()->hooks();
+        $hooks->addFilter('fields.options.button-variants', static fn (array $options) => [...['primary' => 'Primary', 'secondary' => 'Secondary', 'ghost' => 'Ghost', 'link' => 'Text link'], ...$options], 5);
+        $hooks->addFilter('fields.options.sources', fn (array $options) => [...$options, ...array_column($this->app->make(DataSources::class)->catalog(), 'label', 'name')]);
+        $hooks->addFilter('fields.options.patterns', fn (array $options) => [...$options, ...array_map(static fn ($p) => $p['title'], array_filter($this->app->make(Patterns::class)->all(), static fn ($p) => $p['synced']))]);
 
         foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted'] as $event) {
             $this->cms()->hooks()->on($event, function ($entry) {
@@ -168,24 +169,6 @@ final class BlocksModule extends Plugin
 
             return $foot;
         });
-
-        // The canvas speaks the admin's language (placeholders, empty states): the one the
-        // editor asks for (`X-Cms-Locale` or `?lang=`), else the user's.
-        $restore = null;
-        $hooks->on('preview.editor', function (bool $on) use ($renderer, &$restore) {
-            $renderer()->editor = $on;
-            $translations = $this->app->make(\Cms\Admin\Translations::class);
-
-            if ($on) {
-                $request = request();
-                $asked = (string) ($request->header('X-Cms-Locale') ?? $request->query('lang', ''));
-                $restore ??= $translations->current();
-                $translations->apply(isset($translations->languages()[$asked]) ? $asked : $translations->locale($request->user(), $request));
-            } elseif ($restore !== null) {
-                $translations->apply($restore);
-                $restore = null;
-            }
-        });
     }
 
     /**
@@ -201,16 +184,9 @@ final class BlocksModule extends Plugin
             return $cache;
         }
 
-        $manifest = $this->path('dist/runtime/manifest.json');
-        $data = is_file($manifest) ? json_decode((string) file_get_contents($manifest), true) : null;
-
-        if (! is_array($data)) {
-            return $cache = ['entry' => null];
-        }
-
         $entry = null;
 
-        foreach ($data as $chunk) {
+        foreach (Files::readJson($this->path('dist/runtime/manifest.json')) as $chunk) {
             if (! empty($chunk['isEntry'])) {
                 $entry = $this->asset('runtime/'.$chunk['file']);
             }
@@ -312,7 +288,6 @@ final class BlocksModule extends Plugin
     private function abilities(): void
     {
         $a = $this->cms()->abilities();
-        $package = $this->manifest->name;
         $patterns = fn () => $this->app->make(Patterns::class);
         $templates = fn () => $this->app->make(Templates::class);
         $document = fn () => $this->app->make(Document::class);
@@ -323,7 +298,6 @@ final class BlocksModule extends Plugin
             'description' => 'Every block type (props, children, examples), every style property and variant, data sources for Repeat, and the schema of scripts (logic) and animations (motion). Compose pages from these.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
-            'package' => $package,
             'handler' => fn () => [
                 'blocks' => $this->translatedBlocks(),
                 'categories' => $this->translatedCategories(),
@@ -342,7 +316,6 @@ final class BlocksModule extends Plugin
             'description' => 'Search the Phosphor icon set for the Icon and Button blocks. Append -bold, -fill or -light to a name for other weights.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['query' => ['type' => 'string', 'maxLength' => 60], 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 400, 'default' => 120]]],
             'handler' => static fn (array $in) => Icons::search((string) ($in['query'] ?? ''), (int) ($in['limit'] ?? 120)),
         ]);
@@ -352,7 +325,6 @@ final class BlocksModule extends Plugin
             'description' => 'Convert Block Markdown (Markdown plus ::: directives for other blocks) into a block tree.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['markdown' => ['type' => 'string', 'maxLength' => 500000]], 'required' => ['markdown']],
             'handler' => fn (array $in) => $document()->normalize($this->app->make(MarkdownCodec::class)->decode($in['markdown'])),
         ]);
@@ -362,7 +334,6 @@ final class BlocksModule extends Plugin
             'description' => 'Convert a block tree to Block Markdown.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['blocks' => ['type' => 'array']], 'required' => ['blocks']],
             'handler' => fn (array $in) => ['markdown' => $this->app->make(MarkdownCodec::class)->encode($in['blocks'])],
         ]);
@@ -373,7 +344,6 @@ final class BlocksModule extends Plugin
             'description' => 'Entries of the components collection (plus plugin patterns). Synced ones are components: instances update everywhere and take property values. Others are sections copied on insert. Create and change them with entries/create and entries/update in the "components" collection.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['working' => ['type' => 'boolean', 'default' => false]]],
             'handler' => fn (array $in) => array_values($patterns()->all((bool) ($in['working'] ?? false))),
         ]);
@@ -382,7 +352,6 @@ final class BlocksModule extends Plugin
             'label' => 'Save as Component or Section',
             'description' => 'Create or replace an entry of the components collection by handle (slug). synced: true makes it a component. Saved as a draft of an existing one unless publish is true.',
             'permission' => fn (?\Cms\Users\User $user) => (bool) $user?->hasPermission('entries.'.Patterns::COLLECTION.'.create'),
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => $handle,
                 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
@@ -411,7 +380,6 @@ final class BlocksModule extends Plugin
             'description' => 'Entries of the templates collection: block documents that frame pages (header, Page content, footer…). `default` frames anything without its own, `404` renders missing pages. Edit them with entries/update; publishing rebuilds the site.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $package,
             'input' => ['type' => 'object', 'properties' => ['working' => ['type' => 'boolean', 'default' => false]]],
             'handler' => fn (array $in) => array_values($templates()->all((bool) ($in['working'] ?? false))),
         ]);

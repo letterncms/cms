@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Account;
 
+use Cms\Abilities\Ability;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator as LaravelValidator;
 use Cms\Abilities\AbilityContext;
@@ -25,6 +26,20 @@ final class AccountAbilities
     {
         $this->account($a);
         $this->tokens($a);
+
+        // Everyone's own account page shows these, with or without the Users module.
+        $a->register('users/fields', [
+            'label' => 'User Profile Fields',
+            'description' => 'The fields every user profile has beyond name and email (content/users.yaml), as stored and resolved.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'handler' => fn () => [
+                'title' => 'Users',
+                'fields' => $this->cms->app()->make(UserFields::class)->stored(),
+                'resolvedFields' => $this->cms->app()->make(UserFields::class)->blueprint()->toArray(),
+                'settings' => [],
+            ],
+        ]);
     }
 
     private function account(AbilityRegistry $a): void
@@ -103,7 +118,7 @@ final class AccountAbilities
             'label' => 'Start Two-Factor Setup',
             'description' => 'Generate a TOTP secret. Confirm with account/two-factor-confirm.',
             'permission' => $signedIn,
-            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'expose' => Ability::ADMIN_ONLY,
             'handler' => function (array $in, AbilityContext $ctx) {
                 $secret = Totp::secret();
                 $ctx->user->forceFill(['two_factor_secret' => $secret, 'two_factor_confirmed_at' => null])->save();
@@ -116,7 +131,7 @@ final class AccountAbilities
             'label' => 'Confirm Two-Factor',
             'description' => 'Verify a code from the authenticator app and enable two-factor sign-in.',
             'permission' => $signedIn,
-            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => ['code' => ['type' => 'string', 'maxLength' => 12]], 'required' => ['code']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = $ctx->user;
@@ -136,7 +151,7 @@ final class AccountAbilities
             'label' => 'Disable Two-Factor',
             'description' => 'Turn off two-factor sign-in (needs your password).',
             'permission' => $signedIn,
-            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => ['password' => ['type' => 'string']], 'required' => ['password']],
             'handler' => function (array $in, AbilityContext $ctx) {
                 if (! Hash::check($in['password'], $ctx->user->password)) {
@@ -165,7 +180,7 @@ final class AccountAbilities
             'label' => 'Create API Token',
             'permission' => 'tokens.manage',
             'description' => 'Create a personal access token. Scopes are ability patterns (e.g. "entries/*", "read" for all read-only abilities, "*" for everything). The token is shown once.',
-            'expose' => ['mcp' => false, 'assistant' => false, 'rest' => false],
+            'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => [
                 'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
                 'scopes' => ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 120], 'default' => ['*']],

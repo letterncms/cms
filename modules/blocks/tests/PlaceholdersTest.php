@@ -72,25 +72,15 @@ final class PlaceholdersTest extends TestCase
         $this->assertStringNotContainsString('placeholders', implode('', $this->cms()->hooks()->filter('site.head', [])));
     }
 
-    public function test_the_canvas_and_the_catalog_speak_the_editors_language(): void
+    public function test_the_canvas_and_the_catalog_speak_the_current_language(): void
     {
         $nl = json_decode((string) file_get_contents(dirname(__DIR__).'/lang/nl.json'), true);
-        $hooks = $this->cms()->hooks();
-
-        request()->headers->set('X-Cms-Locale', 'nl');
-        $hooks->dispatch('preview.editor', true);
-
-        try {
-            $canvas = $this->render([['type' => 'heading', 'props' => ['level' => '2']]], true);
-        } finally {
-            $hooks->dispatch('preview.editor', false);
-            request()->headers->remove('X-Cms-Locale');
-        }
-
-        $this->assertStringContainsString('data-cms-placeholder="'.$nl['Heading'].'"', $canvas);
-        $this->assertSame(Translations::SOURCE, app(Translations::class)->current(), 'the language is restored after the canvas');
 
         app(Translations::class)->apply('nl');
+        $canvas = $this->render([['type' => 'heading', 'props' => ['level' => '2']]], true);
+
+        $this->assertStringContainsString('data-cms-placeholder="'.$nl['Heading'].'"', $canvas);
+
         $catalog = $this->cms()->abilities()->execute('blocks/types', [], AbilityContext::forUser($this->admin(), 'rest'));
         $heading = collect($catalog['blocks'])->firstWhere('name', 'heading');
         $section = collect($catalog['blocks'])->firstWhere('name', 'section');

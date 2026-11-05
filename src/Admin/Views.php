@@ -52,9 +52,19 @@ final class Views
         $this->views[$id]['file'] = true;
     }
 
-    public function unregister(string $id): void
+    /**
+     * A place that isn't there (a deleted menu, a collection someone may not see): its page says so,
+     * with the way back (`to`, and its `label` in the reader's language), or home without one.
+     *
+     * @param  array{to: string, label: string}|null  $back
+     */
+    public static function notFound(string $icon, ?array $back = null): array
     {
-        unset($this->views[$id]);
+        $action = $back !== null ? ['label' => $back['label'], 'icon' => 'arrow-left', 'to' => $back['to']] : ['label' => __('Go Home'), 'to' => '/'];
+
+        return ['type' => 'ui/page', 'props' => ['title' => __('Not Found'), 'icon' => $icon, ...($back !== null ? ['back' => $back] : [])], 'children' => [
+            ['type' => 'ui/empty', 'props' => ['icon' => $icon, 'title' => __('Not Found'), 'action' => $action]],
+        ]];
     }
 
     public function has(string $id): bool

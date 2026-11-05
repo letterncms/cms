@@ -255,11 +255,6 @@ final class DesignJson
         return (array) ($this->data['styles'] ?? []);
     }
 
-    public function setStyles(array $styles): void
-    {
-        $this->data['styles'] = $styles;
-    }
-
     public function prose(): array
     {
         return (array) ($this->data['prose'] ?? []);
@@ -326,6 +321,6 @@ final class DesignJson
             throw new InvalidArgumentException(__('This design has no file.'));
         }
 
-        Files::put($this->file, json_encode($this->data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n");
+        Files::putJson($this->file, $this->data);
     }
 }

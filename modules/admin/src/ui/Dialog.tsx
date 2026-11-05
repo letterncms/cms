@@ -1,6 +1,6 @@
 import { Dialog as Base } from '@base-ui/react/dialog'
 import { createRoot } from 'react-dom/client'
-import { useRef, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { t, type FieldDef } from '@letterncms/sdk'
 import { Button } from './Button'
 import { Fields } from './Fields'
@@ -21,6 +21,18 @@ export interface DialogProps {
   close?: boolean
   /** A question that needs an answer before anything else (a confirmation): `alertdialog`. */
   alert?: boolean
+  /**
+   * Makes it a form: its body is the form (Enter submits) and, without a `footer` of its own,
+   * the footer has Cancel and the submit button, which says `submitLabel`.
+   */
+  onSubmit?: () => void
+  submitLabel?: string
+  /** Not submittable yet: its button is off. */
+  submitDisabled?: boolean
+  /** A destructive form: its button is red. */
+  danger?: boolean
+  /** Being submitted: its button spins, and nothing closes it meanwhile. */
+  busy?: boolean
 }
 
 const widths = { sm: 'max-w-[400px]', md: 'max-w-[520px]', lg: 'max-w-[720px]', xl: 'max-w-[960px]' }
@@ -28,10 +40,18 @@ const widths = { sm: 'max-w-[400px]', md: 'max-w-[520px]', lg: 'max-w-[720px]', 
 /** What a dialog focuses first: its first field, else its main action, never Close. */
 const firstField = 'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [contenteditable=true], [role=combobox]:not([disabled])'
 
-export function Dialog({ open, onOpenChange, title, description, children, footer, size = 'md', className, close = true, alert = false }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, footer: own, size = 'md', className, close = true, alert = false, onSubmit, submitLabel, submitDisabled = false, danger = false, busy = false }: DialogProps) {
   const popup = useRef<HTMLDivElement>(null)
+  const form = useId()
+  const footer = own ?? (onSubmit && (
+    <>
+      <Button onClick={() => onOpenChange(false)} disabled={busy}>{t('Cancel')}</Button>
+      <Button variant={danger ? 'danger' : 'primary'} type="submit" form={form} loading={busy} disabled={submitDisabled}>{submitLabel ?? t('Save')}</Button>
+    </>
+  ))
+  const body = onSubmit ? <form id={form} onSubmit={(e) => { e.preventDefault(); if (!busy && !submitDisabled) onSubmit() }}>{children}</form> : children
   return (
-    <Base.Root open={open} onOpenChange={(o) => onOpenChange(o)}>
+    <Base.Root open={open} onOpenChange={(o) => { if (!busy || o) onOpenChange(o) }}>
       <Base.Portal>
         <Base.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-160 ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[ending-style]:duration-100 data-[starting-style]:opacity-0" />
         <Base.Popup
@@ -64,7 +84,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
             </div>
           )}
           {close && (title || description) && <Base.Close render={<IconButton icon="close" label={t('Close')} size="sm" className="!absolute right-2 top-2" />} />}
-          {children && <div data-dialog-body className={cn('min-h-0 flex-1 overflow-auto px-5 max-sm:px-4', title || description ? 'pt-4' : 'pt-5 max-sm:pt-4', !footer && 'pb-5 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))]')}>{children}</div>}
+          {body && <div data-dialog-body className={cn('min-h-0 flex-1 overflow-auto px-5 max-sm:px-4', title || description ? 'pt-4' : 'pt-5 max-sm:pt-4', !footer && 'pb-5 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))]')}>{body}</div>}
           {footer && <div data-dialog-footer className="flex shrink-0 items-center justify-end gap-2 px-5 pb-5 pt-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:px-4 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))] max-sm:[&>button]:w-full">{footer}</div>}
         </Base.Popup>
       </Base.Portal>
@@ -164,16 +184,10 @@ export function prompt(options: PromptOptions): Promise<Record<string, any> | nu
           size="sm"
           title={options.title}
           description={options.description}
-          footer={
-            <>
-              <Button onClick={() => done(null)}>{t('Cancel')}</Button>
-              <Button variant="primary" type="submit" form="cms-prompt">{options.confirm ?? t('OK')}</Button>
-            </>
-          }
+          onSubmit={() => done(values)}
+          submitLabel={options.confirm ?? t('OK')}
         >
-          <form id="cms-prompt" onSubmit={(e) => { e.preventDefault(); done(values) }}>
-            <Fields fields={options.fields.map((f, i) => ({ autofocus: i === 0, ...f }))} values={values} onChange={(h, v) => setValues((current) => ({ ...current, [h]: v }))} />
-          </form>
+          <Fields fields={options.fields.map((f, i) => ({ autofocus: i === 0, ...f }))} values={values} onChange={(h, v) => setValues((current) => ({ ...current, [h]: v }))} />
         </Dialog>
       )
     }

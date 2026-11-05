@@ -1,9 +1,9 @@
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, pointerWithin, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { can, loadManifest, locale, plural, registry, run, setQuery, t, useLocation, useManifest, type Arrangement, type WidgetInfo } from '@letterncms/sdk'
+import { can, loadManifest, locale, plural, registry, run, setPreference, setQuery, t, useLocation, useManifest, type Arrangement, type WidgetInfo } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { Button, Icon, IconButton, Page, WidgetSlot, WidgetMessage, cn, confirm, toast, useShortcut } from '@letterncms/ui'
+import { Button, Icon, IconButton, Notice, Page, WidgetSlot, WidgetMessage, cn, confirm, toast, useShortcut } from '@letterncms/ui'
 import { Gallery } from './Gallery'
 
 function greeting(name: string): string {
@@ -95,13 +95,13 @@ export default function Dashboard() {
 
   const done = () =>
     act(async () => {
-      if (JSON.stringify(draft) !== JSON.stringify(saved)) await run('account/update', { preferences: { dashboard: draft } })
+      if (JSON.stringify(draft) !== JSON.stringify(saved)) await setPreference('dashboard', draft)
       await reload()
     })
 
   const resetToDefault = () =>
     act(async () => {
-      await run('account/update', { preferences: { dashboard: null } })
+      await setPreference('dashboard', null)
       await reload(t('Dashboard reset to the default'))
     })
 
@@ -110,7 +110,7 @@ export default function Dashboard() {
       const ok = await confirm({ title: t('Make this everyone’s Dashboard?'), description: t('People who customized their own Dashboard keep theirs.'), confirm: t('Save as Default') })
       if (!ok) return
       await run('settings/update', { namespace: 'admin', values: { dashboard: draft } })
-      await run('account/update', { preferences: { dashboard: null } })
+      await setPreference('dashboard', null)
       await reload(t('Saved as the default Dashboard'))
     })
 
@@ -210,30 +210,24 @@ function Notices() {
   return (
     <>
       {problems.length > 0 && (
-        <div role="alert" className="mb-8 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3 text-sm">
-          <p className="m-0 flex items-center gap-2 font-medium text-ink">
-            <Icon name="warning" size={15} className="text-danger" />
-            {plural(problems.length, '{count} plugin is invalid', '{count} plugins are invalid')}
-          </p>
-          <ul className="m-0 mt-1.5 list-none space-y-0.5 pl-[23px] text-muted">
+        <Notice tone="danger" className="mb-8" title={plural(problems.length, '{count} plugin is invalid', '{count} plugins are invalid')}>
+          <ul className="m-0 list-none space-y-0.5 p-0">
             {problems.map(([name, problem]) => (
               <li key={name}>
                 <span className="font-mono text-xs text-text">{name}</span> — {problem}
               </li>
             ))}
           </ul>
-        </div>
+        </Notice>
       )}
       {pending.length > 0 && can('packages.manage') && (
-        <div className="mb-8 flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/6 px-4 py-3">
-          <Icon name="database" className="text-warning" />
-          <div className="min-w-0 flex-1 text-sm">
-            <span className="font-medium text-ink">{t('Database updates are waiting')}</span>
-          </div>
-          <Button size="sm" variant="primary" onClick={() => run('packages/sync').then(() => { toast.success(t('Updated')); window.location.reload() }, toast.error)}>
-            {t('Run Updates')}
-          </Button>
-        </div>
+        <Notice
+          tone="warning"
+          icon="database"
+          className="mb-8"
+          title={t('Database updates are waiting')}
+          action={<Button size="sm" variant="primary" onClick={() => run('packages/sync').then(() => { toast.success(t('Updated')); window.location.reload() }, toast.error)}>{t('Run Updates')}</Button>}
+        />
       )}
     </>
   )

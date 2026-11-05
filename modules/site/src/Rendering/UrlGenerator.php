@@ -15,9 +15,4 @@ final class UrlGenerator
 
         return '/'.ltrim($uri, '/');
     }
-
-    public function absolute(string $uri): string
-    {
-        return rtrim((string) cms()->site('url', config('app.url')), '/').$this->to($uri);
-    }
 }

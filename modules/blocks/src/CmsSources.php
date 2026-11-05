@@ -87,7 +87,7 @@ final class CmsSources
     {
         $out = array_map(
             static fn (PackageManifest $p) => ['name' => $p->name, 'label' => $p->label, 'description' => __($p->description), 'version' => $p->version],
-            array_values(array_filter($this->packages->plugins(), static fn (PackageManifest $p) => $p->firstParty() && ! $p->core)),
+            array_values(array_filter($this->packages->all(), static fn (PackageManifest $p) => $p->firstParty() && ! $p->core)),
         );
         usort($out, static fn ($a, $b) => strcmp($a['name'], $b['name']));
 
@@ -99,7 +99,7 @@ final class CmsSources
     {
         $out = array_map(
             static fn (PackageManifest $p) => ['name' => $p->name, 'label' => $p->label, 'description' => $p->description, 'version' => $p->version, 'required' => $p->required],
-            array_values(array_filter($this->packages->plugins(), static fn (PackageManifest $p) => $p->core)),
+            array_values(array_filter($this->packages->all(), static fn (PackageManifest $p) => $p->core)),
         );
         usort($out, static fn ($a, $b) => strcmp($a['name'], $b['name']));
 

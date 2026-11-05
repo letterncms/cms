@@ -14,11 +14,10 @@ const tones: Record<Tone, string> = {
   signal: 'bg-signal text-signal-ink',
 }
 
-/** A state on a detail screen, a plugin or an order. Tables use StatusDot instead. `dot` puts a 6px dot of the tone before the label. */
-export function Badge({ tone = 'neutral', dot, children, className }: { tone?: Tone; dot?: boolean; children: ReactNode; className?: string }) {
+/** A state on a detail screen, a plugin or an order. Tables use StatusDot instead. */
+export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
     <span className={cn('inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xs px-1.5 text-xs font-medium tabular-nums', tones[tone], className)}>
-      {dot && <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-current" />}
       {children}
     </span>
   )

@@ -3,7 +3,7 @@ import type { ContextItem } from './composer'
 
 /**
  * What the screen on view is about, for whatever works alongside it (the
- * assistant's chat). Screens say what they know and nothing needs them to: a
+ * workspace's thread). Screens say what they know and nothing needs them to: a
  * screen that says nothing is still known by its title and its text.
  */
 export interface ScreenContext {

@@ -12,8 +12,8 @@ registry.routes.set('/content/:collection/:id', {
     ...(id === 'new' ? [] : [prefetchAbility('entries/get', { id }).catch(() => undefined)]),
   ]),
 })
-registry.fields.set('title', TitleField as any)
-registry.fields.set('uri', UriField as any)
+registry.fields.set('title', TitleField)
+registry.fields.set('uri', UriField)
 registry.widgets.set('recent', lazy(() => import('./WidgetRecent')))
 
 // @ in a chat: any entry, by its title or what it says. Before anything is typed, the latest ones.
@@ -25,7 +25,7 @@ const entryOption = (entry: EntrySummary): ComposerOption => {
   }
 }
 registry.composer.set('entries', {
-  id: 'entries', trigger: '@', label: t('Content'), order: 10,
+  trigger: '@', label: t('Content'), order: 10,
   search: async (query) => (query
     ? await run<EntrySummary[]>('content/search', { query, limit: 6 })
     : await run<EntrySummary[]>('content/recent', { limit: 6 })

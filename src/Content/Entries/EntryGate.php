@@ -192,9 +192,9 @@ final class EntryGate
         }
 
         $signature = $this->signature();
-        $cached = is_file($this->file()) ? json_decode((string) @file_get_contents($this->file()), true) : null;
+        $cached = Files::readJson($this->file());
 
-        if (is_array($cached) && ($cached['signature'] ?? null) === $signature) {
+        if (($cached['signature'] ?? null) === $signature) {
             return $this->index = (array) $cached['entries'];
         }
 
@@ -205,7 +205,7 @@ final class EntryGate
         }
 
         try {
-            Files::put($this->file(), (string) json_encode(['signature' => $signature, 'entries' => $entries]));
+            Files::putJson($this->file(), ['signature' => $signature, 'entries' => $entries], 0);
         } catch (\Throwable) {
             // The file only saves work.
         }

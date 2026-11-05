@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Collections;
 
+use Cms\Admin\Views;
 use Cms\Cms;
 use Cms\Users\User;
 
@@ -58,9 +59,7 @@ final class CollectionsViews
         $collection = $cms->collections()->find($handle);
 
         if ($collection === null || $collection->system) {
-            return ['type' => 'ui/page', 'props' => ['title' => __('Not Found'), 'icon' => 'collection', 'back' => ['to' => '/collections', 'label' => __('Collections')]], 'children' => [
-                ['type' => 'ui/empty', 'props' => ['icon' => 'collection', 'title' => __('Not Found'), 'action' => ['label' => __('Back to Collections'), 'to' => '/collections']]],
-            ]];
+            return Views::notFound('collection', ['to' => '/collections', 'label' => __('Collections')]);
         }
 
         return ['type' => 'collections/blueprint', 'props' => ['handle' => $handle]];

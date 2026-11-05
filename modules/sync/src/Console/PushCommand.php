@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Sync\Console;
 
-final class PushCommand extends SyncCommand
+final class PushCommand extends TransferCommand
 {
     protected $signature = 'push
         {remote : The connected site, like production (php cms remote lists them)}

@@ -11,7 +11,7 @@ export default function DisplayFields({ value, onChange, context, disabled }: Fi
     ? (context.blueprintFields ?? []).filter((f) => !raw.some((r) => r.handle === f.handle)) : []
   const fields = entryFieldColumns([...raw, ...imported])
   const system = entrySystemColumns(!!def.route, site.locales)
-  const defaults = standardEntryColumns(!!def.route, def.listing, def.default_view, [...raw, ...imported])
+  const defaults = standardEntryColumns(!!def.route, def.default_view, [...raw, ...imported])
   const shown = new Set(value ?? defaults)
   const automatic = new Set(defaults)
   const changed = shown.size !== automatic.size || [...shown].some((id) => !automatic.has(id))

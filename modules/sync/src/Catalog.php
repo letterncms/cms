@@ -23,7 +23,7 @@ final class Catalog
 {
     /** This site's own: how it runs, who is signed in, its keys and its queues. */
     private const array KEEP = [
-        'migrations', 'packages', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs', 'sessions', 'password_reset_tokens', 'api_tokens', 'account_tokens',
+        'migrations', 'packages', 'cache', 'cache_locks', 'sessions', 'password_reset_tokens', 'api_tokens', 'account_tokens',
         'oauth_*',
     ];
 

@@ -1,11 +1,13 @@
-import { isActive, t } from '@letterncms/sdk'
+import { t, useConfig, type ComposerPanelProps } from '@letterncms/sdk'
 import { Kbd, Widget } from '@letterncms/ui'
 
 /** Home-screen widget: the keys worth knowing. */
 export default function Shortcuts() {
+  // The workspace's thread: asking its agent when one answers, a chat of commands and search otherwise.
+  const agent = useConfig<{ agent: ComposerPanelProps['agent'] }>('workspace').agent
   const keys: [string, string][] = [
     [t('Search and Commands'), 'mod+k'],
-    ...(isActive('letterncms/assistant') ? [[t('Ask the assistant'), 'mod+j'] as [string, string]] : []),
+    [agent ? t('Ask {name}', { name: agent.label }) : t('Chat'), 'mod+j'],
     [t('New Entry in a List'), 'c'],
     [t('Save'), 'mod+s'],
     [t('Publish'), 'mod+shift+p'],

@@ -1,5 +1,5 @@
 import { can, queryClient, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
-import { Button, EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useScreenSidebar } from '@letterncms/ui'
+import { Button, EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 interface Token {
@@ -80,7 +80,7 @@ function newTitle(group: string): string {
   return titles[group] ?? t('New Token')
 }
 
-const WIDTHS = { desktop: '100%', tablet: '768px', phone: '390px' } as const
+const WIDTHS = { desktop: '100%', tablet: `${deviceWidths.tablet}px`, phone: `${deviceWidths.phone}px` } as const
 type Viewport = keyof typeof WIDTHS
 
 /**
@@ -475,7 +475,7 @@ export default function DesignTokens() {
               <Group title={t('Easing')} onAdd={() => add('ease', 'cubic-bezier(0.2, 0.8, 0.2, 1)')}>
                 {byGroup('ease').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions}>
-                    {value(token, { component: 'site-ease' })}
+                    {value(token, { component: 'ease' })}
                   </Row>
                 ))}
               </Group>
@@ -547,10 +547,7 @@ function seconds(value: unknown, fallback: number): number {
  */
 function Row({ token, sample, after, below, wide, rename, remove, children }: { token: DraftToken; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; rename: (token: DraftToken) => void; remove: (token: DraftToken) => void; children: ReactNode }) {
   const reference = `token:${token.path}`
-  const copy = () => {
-    void navigator.clipboard?.writeText(reference)
-    toast.success(t('Copied {reference}', { reference }))
-  }
+  const copy = () => void copyText(reference, { copied: t('Copied {reference}', { reference }) })
   return (
     <div className="group border-b border-border last:border-b-0">
       <div className="flex min-h-9 items-center gap-2 py-1">

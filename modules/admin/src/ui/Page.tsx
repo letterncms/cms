@@ -32,7 +32,6 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   // An editor's document (`title`) names the screen before its crumbs do: "Home", not "Pages".
   const named = firstText(title)
   useScreenContext({ title: named ?? firstText(last?.label), icon: last?.icon ?? crumbs[0]?.icon })
-  const shown = crumbs
   // What every screen's bar has, before the screen's own actions.
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const ends = panelsFor('topbar.end', {})
@@ -47,22 +46,21 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
             <span className="truncate max-sm:hidden">{way.label}</span>
           </Link>
         )}
-        {shown.length > 0 && (
+        {crumbs.length > 0 && (
           <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1.5 text-sm">
-            {shown.map((c, i) => {
-              const here = i === shown.length - 1
-              // On a phone only the nearest crumb shows, and whole: never two cut short.
-              const nearest = i === shown.length - 1
+            {crumbs.map((c, i) => {
+              // The screen itself; on a phone the only crumb that shows, and whole: never two cut short.
+              const here = i === crumbs.length - 1
               return (
                 <Fragment key={i}>
                   {i > 0 && <span aria-hidden className="shrink-0 text-faint max-sm:hidden">/</span>}
                   {c.to && !here ? (
-                    <Link to={c.to} className={cn('flex min-w-0 items-center gap-1.5 rounded-xs px-1 py-0.5 text-muted no-underline hover:bg-hover hover:text-text', nearest ? 'max-sm:shrink-0' : 'max-sm:hidden')}>
+                    <Link to={c.to} className="flex min-w-0 items-center gap-1.5 rounded-xs px-1 py-0.5 text-muted no-underline hover:bg-hover hover:text-text max-sm:hidden">
                       {c.icon && <Icon name={c.icon} size={14} className="shrink-0" />}
                       <span className="truncate">{c.label}</span>
                     </Link>
                   ) : (
-                    <span aria-current={here ? 'page' : undefined} className={cn('flex min-w-0 items-center gap-1.5 px-1', here ? 'font-semibold text-ink' : 'text-muted', !nearest && 'max-sm:hidden')}>
+                    <span aria-current={here ? 'page' : undefined} className={cn('flex min-w-0 items-center gap-1.5 px-1', here ? 'font-semibold text-ink' : 'text-muted max-sm:hidden')}>
                       {c.icon && <Icon name={c.icon} size={14} className="shrink-0 text-muted" />}
                       <span className="truncate">{c.label}</span>
                     </span>
@@ -106,12 +104,12 @@ function firstText(node: ReactNode): string | undefined {
  * No second, bigger title under it, and no line explaining the screen: it explains itself.
  * `narrow` is the form column of settings and accounts.
  */
-export function Page({ crumbs = [], actions, title, headerActions, children, width = 'default', className }: { crumbs?: Crumb[]; actions?: ReactNode; title?: ReactNode; headerActions?: ReactNode; children: ReactNode; width?: 'narrow' | 'default' | 'wide' | 'full'; className?: string }) {
+export function Page({ crumbs = [], actions, title, children, width = 'default', className }: { crumbs?: Crumb[]; actions?: ReactNode; title?: ReactNode; children: ReactNode; width?: 'narrow' | 'default' | 'wide' | 'full'; className?: string }) {
   const max = { narrow: 'max-w-[688px]', default: 'max-w-[1080px]', wide: 'max-w-[1400px]', full: 'max-w-none' }[width]
   const trail = crumbs.length > 0 ? crumbs : title ? [{ label: title }] : []
   return (
     <div className="flex min-h-full flex-col">
-      <Topbar crumbs={trail} actions={(actions || headerActions) && <>{headerActions}{actions}</>} />
+      <Topbar crumbs={trail} actions={actions} />
       <main className={cn('mx-auto w-full flex-1 px-4 pb-24 pt-3 md:px-6 md:pt-4', max, className)}>
         {children}
       </main>
@@ -151,7 +149,7 @@ export function ScreenTabs<T extends string>({ value, onChange, tabs, className,
   const manifest = useManifestIfLoaded()
   const { path } = useLocation()
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
-  const Form = namespace ? panelsFor<{ namespace: string; onDirty?: (dirty: boolean) => void }>('screen.settings', { namespace })[0]?.component : undefined
+  const Form = namespace ? panelsFor('screen.settings', { namespace })[0]?.component : undefined
   const [dirty, setDirty] = useState(false)
   const settings = value === 'settings' && !!namespace
   // Once opened the form stays, hidden, so changes made there wait for their save bar while another tab is on view.

@@ -96,7 +96,7 @@ final class LinkChecker
 
     private function resolves(string $url, string $from): bool
     {
-        $site = rtrim($this->siteUrl ?? (string) config('app.url'), '/');
+        $site = rtrim($this->siteUrl ?? cms()->url(), '/');
 
         if ($site !== '' && str_starts_with($url, $site.'/')) {
             $url = substr($url, strlen($site));
@@ -107,8 +107,7 @@ final class LinkChecker
         }
 
         // Answered by the application, not by a file: the API, the admin and the installer.
-        // Release zips are written by the release, not by a build.
-        if (preg_match('#^/(api|admin|install)(/|\?|$)|^/downloads/#', $url)) {
+        if (preg_match('#^/(api|admin|install)(/|\?|$)#', $url)) {
             return true;
         }
 
@@ -116,7 +115,7 @@ final class LinkChecker
         $path = explode('?', $before)[0];
 
         // A plugin's own addresses, like the pages of a store.
-        if (str_starts_with($path, '/') && function_exists('cms') && cms()->hooks()->filter('site.links.answered', false, $path)) {
+        if (str_starts_with($path, '/') && cms()->hooks()->filter('site.links.answered', false, $path)) {
             return true;
         }
 

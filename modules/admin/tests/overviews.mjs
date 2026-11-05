@@ -1,15 +1,11 @@
 // Build first, then run `node modules/admin/tests/overviews.mjs` and open the
 // printed URL. Uses real admin/module bundles with isolated fixture APIs; no site writes.
 // Run with --preview and add ?preview=1 to inspect fixture screens without running checks.
-import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { resolve, extname, sep } from 'node:path'
+import { resolve } from 'node:path'
+import { assets, body, imports, json, page as adminPage, root, serve, text } from './harness.mjs'
 import { mounted, viewResponse } from './views.mjs'
 
-const root = fileURLToPath(new URL('../../..', import.meta.url))
-const admin = JSON.parse(await readFile(resolve(root, 'modules/admin/dist/admin.json'), 'utf8'))
-const assetBase = '/_cms/assets/cms-admin/'
 const modules = ['content', 'collections', 'globals', 'users', 'packages', 'audit', 'settings', 'blocks', 'media', 'navigation', 'languages']
 const plugins = ['forms', 'seo']
 const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel: 'New Post', icon: 'article', structure: 'list', driver: 'database', editor: 'document', defaultView: 'table', can: { create: true, edit: true, publish: true, delete: true }, routable: false }
@@ -44,8 +40,8 @@ const manifest = {
   sidebar: { sections: [{ id: 'main', label: '', items: nav.map((n) => n.id) }], hidden: [], personal: false },
   settingsNav: [], brand,
 }
-const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', theme: { name: 'cms/admin', version: 'test' }, site: manifest.site, locale: 'en', messages: {}, manifest }
-const imports = { ...Object.fromEntries(Object.entries(admin.imports).map(([key, path]) => [key, assetBase + path])), '@letterncms/blocks': '/_cms/assets/cms-blocks/admin.js' }
+const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
+const map = imports({ '@letterncms/blocks': `${assets('blocks')}admin.js` })
 const requests = []
 const runner = `
 import { navigate, queryClient, abilityKey, registry } from '@letterncms/sdk'
@@ -420,92 +416,64 @@ try {
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results, error: error.stack }) })
 }
 `
-const keepAlive = process.argv.includes('--preview')
 let fail = false
 let emptyMedia = false
 let current = 'loading the admin'
-const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(value)) }
-const body = async (req) => { let value = ''; for await (const chunk of req) value += chunk; return value }
 const page = (items, total = items.length, current = 1, perPage = 50) => ({ items, total, page: current, pages: Math.max(1, Math.ceil(total / perPage)), perPage })
 const camel = { created_at: 'createdAt', updated_at: 'updatedAt', published_at: 'publishedAt' }
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, 'http://localhost')
-    if (url.pathname === '/__test/requests') return json(res, 200, requests)
-    if (url.pathname === '/__test/progress') { current = await body(req); return json(res, 200, {}) }
-    if (url.pathname === '/__test/media-empty') { emptyMedia = true; return json(res, 200, {}) }
-    if (url.pathname === '/__test/media-populated') { emptyMedia = false; return json(res, 200, {}) }
-    if (url.pathname === '/__test/fail') { fail = true; return json(res, 200, {}) }
-    if (url.pathname === '/__test/recover') { fail = false; return json(res, 200, {}) }
-    if (url.pathname === '/__test/results') {
-      const result = JSON.parse(await body(req))
-      result.passed.forEach((name) => console.log('PASS', name))
-      if (result.error) console.error('FAIL', result.error)
-      if (result.viewport) console.log('PASS viewport', result.viewport)
-      json(res, 200, {})
-      if (!keepAlive) {
-        clearTimeout(timeout)
-        setTimeout(() => { server.closeAllConnections(); server.close(); process.exitCode = result.error ? 1 : 0 }, 100)
+serve('Overview', async (req, res, url) => {
+  if (url.pathname === '/__test/requests') return json(res, 200, requests)
+  if (url.pathname === '/__test/progress') { current = await text(req); return json(res, 200, {}) }
+  if (url.pathname === '/__test/media-empty') { emptyMedia = true; return json(res, 200, {}) }
+  if (url.pathname === '/__test/media-populated') { emptyMedia = false; return json(res, 200, {}) }
+  if (url.pathname === '/__test/fail') { fail = true; return json(res, 200, {}) }
+  if (url.pathname === '/__test/recover') { fail = false; return json(res, 200, {}) }
+  if (url.pathname === '/fixture.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#e8e8e5"/><text x="600" y="400" text-anchor="middle" font-family="sans-serif" font-size="40" fill="#6b6b67">Image fixture</text></svg>') }
+  if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
+  if (url.pathname.startsWith('/api/admin/abilities/')) {
+    const ability = url.pathname.slice('/api/admin/abilities/'.length), input = await body(req)
+    requests.push({ ability, input })
+    if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
+    if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); return json(res, 200, { data: manifest.user }) }
+    if (ability === 'forms/list' && fail) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
+    let data
+    if (ability === 'forms/list') data = forms
+    else if (ability === 'collections/list' || ability === 'collections/editable') data = [{ ...collection, route: null, system: false, count: 2 }]
+    else if (ability === 'globals/list') data = manifest.globals
+    else if (ability === 'collections/get') data = input.handle === 'pages' ? { ...treeCollection, fields: [], resolvedFields: [], schema: {} } : input.handle === 'events' ? { ...eventsCollection, sort: '-published_at', fields: [], resolvedFields: [], schema: {} } : { ...collectionDef, schema: {} }
+    else if (ability === 'collections/save') { collectionDef = { ...collectionDef, ...input.definition }; collection.defaultView = collectionDef.default_view; data = collectionDef }
+    else if (ability === 'entries/tree') data = [{ ...entry('parent', 'Parent page'), uri: '/parent', displayStatus: 'published', children: [{ ...entry('child', 'Child page with a substantially longer title'), uri: '/parent/child', displayStatus: 'published', children: [] }] }]
+    else if (ability === 'pages/builtin') data = []
+    else if (ability === 'blocks/types') data = { blocks: [], sources: [], transforms: [] }
+    else if (ability === 'forms/get') data = { handle: input.handle, title: 'Contact', fields: [], settings: {} }
+    else if (ability === 'forms/submissions') data = page([{ id: 'submission-1', data: { name: 'Ada Example', email: 'ada@example.invalid', message: 'A short message' }, files: [], meta: {}, status: 'new', createdAt: '2026-10-27T12:00:00Z' }, { id: 'submission-2', data: { name: 'A very long sender name that must not change the column alignment', email: 'very.long.email.address@example.invalid', message: 'A longer submission message that must stay in its own column.' }, files: [], meta: {}, status: 'read', createdAt: '2026-10-26T12:00:00Z' }])
+    else if (ability === 'entries/list') {
+      let records = input.collection === 'events'
+        ? [{ ...entry('launch', 'Launch event'), collection: 'events', status: 'published', displayStatus: 'published', publishedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]
+        : [entry('alpha', 'Alpha post'), { ...entry('beta', 'Beta post'), publishedAt: '2026-10-25T12:00:00Z' }]
+      for (const filter of input.filters ?? []) {
+        const key = camel[filter.field]
+        records = records.filter((row) => filter.operator === 'null' ? row[key] == null : row[key] != null && (filter.operator === '>=' ? new Date(row[key]) >= new Date(filter.value) : new Date(row[key]) < new Date(filter.value)))
       }
-      return
+      data = page(records)
     }
-    if (url.pathname === '/fixture.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); return res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#e8e8e5"/><text x="600" y="400" text-anchor="middle" font-family="sans-serif" font-size="40" fill="#6b6b67">Image fixture</text></svg>') }
-    if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
-    if (url.pathname.startsWith('/api/admin/abilities/')) {
-      const ability = url.pathname.slice('/api/admin/abilities/'.length), input = JSON.parse(await body(req))
-      requests.push({ ability, input })
-      if (ability === 'views/get') { const view = viewResponse(input, manifest); return json(res, view.status, view.body) }
-      if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); return json(res, 200, { data: manifest.user }) }
-      if (ability === 'forms/list' && fail) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
-      let data
-      if (ability === 'forms/list') data = forms
-      else if (ability === 'collections/list' || ability === 'collections/editable') data = [{ ...collection, route: null, system: false, count: 2 }]
-      else if (ability === 'globals/list') data = manifest.globals
-      else if (ability === 'collections/get') data = input.handle === 'pages' ? { ...treeCollection, fields: [], resolvedFields: [], schema: {} } : input.handle === 'events' ? { ...eventsCollection, sort: '-published_at', fields: [], resolvedFields: [], schema: {} } : { ...collectionDef, schema: {} }
-      else if (ability === 'collections/save') { collectionDef = { ...collectionDef, ...input.definition }; collection.defaultView = collectionDef.default_view; data = collectionDef }
-      else if (ability === 'entries/tree') data = [{ ...entry('parent', 'Parent page'), uri: '/parent', displayStatus: 'published', children: [{ ...entry('child', 'Child page with a substantially longer title'), uri: '/parent/child', displayStatus: 'published', children: [] }] }]
-      else if (ability === 'pages/builtin') data = []
-      else if (ability === 'blocks/types') data = { blocks: [], sources: [], transforms: [] }
-      else if (ability === 'forms/get') data = { handle: input.handle, title: 'Contact', fields: [], settings: {} }
-      else if (ability === 'forms/submissions') data = page([{ id: 'submission-1', data: { name: 'Ada Example', email: 'ada@example.invalid', message: 'A short message' }, files: [], meta: {}, status: 'new', createdAt: '2026-10-27T12:00:00Z' }, { id: 'submission-2', data: { name: 'A very long sender name that must not change the column alignment', email: 'very.long.email.address@example.invalid', message: 'A longer submission message that must stay in its own column.' }, files: [], meta: {}, status: 'read', createdAt: '2026-10-26T12:00:00Z' }])
-      else if (ability === 'entries/list') {
-        let records = input.collection === 'events'
-          ? [{ ...entry('launch', 'Launch event'), collection: 'events', status: 'published', displayStatus: 'published', publishedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]
-          : [entry('alpha', 'Alpha post'), { ...entry('beta', 'Beta post'), publishedAt: '2026-10-25T12:00:00Z' }]
-        for (const filter of input.filters ?? []) {
-          const key = camel[filter.field]
-          records = records.filter((row) => filter.operator === 'null' ? row[key] == null : row[key] != null && (filter.operator === '>=' ? new Date(row[key]) >= new Date(filter.value) : new Date(row[key]) < new Date(filter.value)))
-        }
-        data = page(records)
-      }
-      else if (ability === 'media/list') {
-        const field = (input.sort ?? '-created_at').replace(/^-/, ''), key = camel[field] ?? field
-        const sorted = (emptyMedia ? [] : [...media]).sort((a, b) => { const x = a[key], y = b[key]; const order = typeof x === 'number' ? x - y : String(x).localeCompare(String(y)); return (input.sort ?? '-created_at').startsWith('-') ? -order : order })
-        const items = sorted.filter((m) => (!input.search || m.name.includes(input.search)) && (!input.kind || input.kind === 'all' || m.kind === input.kind) && (!input.folder || m.folder === input.folder)); const current = input.page ?? 1, perPage = input.perPage ?? 60
-        data = { ...page(items.slice((current - 1) * perPage, current * perPage), items.length, current, perPage), folders: emptyMedia ? [] : ['Projects'] }
-      } else if (ability === 'media/lookup') data = { items: media.filter((item) => input.ids.includes(item.id)) }
-      else if (ability === 'navigation/list') data = [{ handle: 'main', title: 'Main menu', count: 4, maxDepth: 2 }]
-      else if (ability === 'users/list') data = page([{ id: 'ada', name: 'Ada Example', email: 'ada@example.invalid', initials: 'AE', roles: ['editor'], super: false, twoFactor: true, lastLoginAt: null }, { id: 'grace', name: 'Grace with a longer display name', email: 'a.very.long.email.address@example.invalid', initials: 'GE', roles: ['editor', 'content_manager'], super: true, twoFactor: false, lastLoginAt: null }].map((u) => ({ ...u, person: { id: u.id, name: u.name, initials: u.initials, avatar: null }, you: null, badges: [...(u.super ? ['super'] : []), ...u.roles] })))
-      else if (ability === 'roles/list') data = { roles: { editor: { label: 'Editor', permissions: [] } }, permissions: {} }
-      else if (ability === 'users/fields') data = { fields: [], resolvedFields: [] }
-      else if (ability === 'languages/list') data = { prefixDefault: false, canTranslate: false, languages: [{ code: 'en', name: 'English', default: true, prefix: '', direction: 'ltr', entries: 2 }] }
-      else if (ability === 'audit/list') data = { ...page([{ id: 'audit-1', ability: 'entries/publish', label: 'Publish Entry', subject: 'Alpha post', to: '/content/posts/alpha', transport: 'rest', user: { id: 'ada', name: 'Ada Example' }, createdAt: '2026-10-27T12:00:00Z', input: {} }]), filters: { people: [{ id: 'ada', name: 'Ada Example' }], actions: [{ value: 'entries/publish', label: 'Publish Entry' }] } }
-      else if (ability === 'redirects/list') data = [{ from: '/old', to: '/new', status: 301 }]
-      else if (ability === 'settings/get') data = { label: 'SEO', description: '', icon: 'seo', fields: [], values: {} }
-      else if (ability === 'packages/list') data = { items: [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type === 'module' ? p.core && !p.required : input.type !== 'plugin' || !p.core).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
-      else throw new Error('Unexpected ability: ' + ability)
-      return json(res, 200, { data })
-    }
-    const asset = url.pathname.match(/^\/_cms\/assets\/cms-([^/]+)\/(.+)$/)
-    if (asset) {
-      const folder = asset[1] === 'admin' ? 'modules/admin' : modules.includes(asset[1]) ? `modules/${asset[1]}` : `../plugins-public/${asset[1]}`
-      const dir = resolve(root, folder, 'dist'), path = resolve(dir, asset[2])
-      if (!path.startsWith(dir + sep)) return json(res, 403, {})
-      res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(await readFile(path))
-    }
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Overview regression test</title>${admin.css.map((path) => `<link rel="stylesheet" href="${assetBase + path}">`).join('')}<script type="importmap">${JSON.stringify({ imports })}</script><script>window.__CMS__=${JSON.stringify(boot)}</script><script type="module" src="${assetBase + admin.entry}"></script></head><body><div id="cms"></div>${url.searchParams.has('preview') ? '' : `<pre id="results" style="position:fixed;bottom:8px;right:8px;z-index:9999;max-width:620px;background:white;border:1px solid #aaa;padding:12px;font-size:11px">Starting tests…</pre><script type="module">${runner}</script>`}</body></html>`
-    res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(html)
-  } catch (error) { console.error(error); json(res, 500, { error: { message: error.message } }) }
-})
-const timeout = keepAlive ? null : setTimeout(() => { console.error('Overview browser test timed out during: ' + current); server.closeAllConnections(); server.close(); process.exitCode = 1 }, 120_000)
-server.listen(0, '127.0.0.1', () => console.log(`Open http://localhost:${server.address().port}/admin/forms to run overview checks.`))
+    else if (ability === 'media/list') {
+      const field = (input.sort ?? '-created_at').replace(/^-/, ''), key = camel[field] ?? field
+      const sorted = (emptyMedia ? [] : [...media]).sort((a, b) => { const x = a[key], y = b[key]; const order = typeof x === 'number' ? x - y : String(x).localeCompare(String(y)); return (input.sort ?? '-created_at').startsWith('-') ? -order : order })
+      const items = sorted.filter((m) => (!input.search || m.name.includes(input.search)) && (!input.kind || input.kind === 'all' || m.kind === input.kind) && (!input.folder || m.folder === input.folder)); const current = input.page ?? 1, perPage = input.perPage ?? 60
+      data = { ...page(items.slice((current - 1) * perPage, current * perPage), items.length, current, perPage), folders: emptyMedia ? [] : ['Projects'] }
+    } else if (ability === 'media/lookup') data = { items: media.filter((item) => input.ids.includes(item.id)) }
+    else if (ability === 'navigation/list') data = [{ handle: 'main', title: 'Main menu', count: 4, maxDepth: 2 }]
+    else if (ability === 'users/list') data = page([{ id: 'ada', name: 'Ada Example', email: 'ada@example.invalid', initials: 'AE', roles: ['editor'], super: false, twoFactor: true, lastLoginAt: null }, { id: 'grace', name: 'Grace with a longer display name', email: 'a.very.long.email.address@example.invalid', initials: 'GE', roles: ['editor', 'content_manager'], super: true, twoFactor: false, lastLoginAt: null }].map((u) => ({ ...u, person: { id: u.id, name: u.name, initials: u.initials, avatar: null }, you: null, badges: [...(u.super ? ['super'] : []), ...u.roles] })))
+    else if (ability === 'roles/list') data = { roles: { editor: { label: 'Editor', permissions: [] } }, permissions: {} }
+    else if (ability === 'users/fields') data = { fields: [], resolvedFields: [] }
+    else if (ability === 'languages/list') data = { prefixDefault: false, canTranslate: false, languages: [{ code: 'en', name: 'English', default: true, prefix: '', direction: 'ltr', entries: 2 }] }
+    else if (ability === 'audit/list') data = { ...page([{ id: 'audit-1', ability: 'entries/publish', label: 'Publish Entry', subject: 'Alpha post', to: '/content/posts/alpha', transport: 'rest', user: { id: 'ada', name: 'Ada Example' }, createdAt: '2026-10-27T12:00:00Z', input: {} }]), filters: { people: [{ id: 'ada', name: 'Ada Example' }], actions: [{ value: 'entries/publish', label: 'Publish Entry' }] } }
+    else if (ability === 'redirects/list') data = [{ from: '/old', to: '/new', status: 301 }]
+    else if (ability === 'settings/get') data = { label: 'SEO', description: '', icon: 'seo', fields: [], values: {} }
+    else if (ability === 'packages/list') data = { items: [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type === 'module' ? p.core && !p.required : input.type !== 'plugin' || !p.core).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
+    else throw new Error('Unexpected ability: ' + ability)
+    return json(res, 200, { data })
+  }
+  res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(adminPage({ title: 'Overview regression test', boot, map, runner: !url.searchParams.has('preview') && runner }))
+}, { links: (base) => [`${base}/admin/forms`], folder: (pkg) => (pkg === 'admin' || modules.includes(pkg) ? `modules/${pkg}` : `../plugins-public/${pkg}`), during: () => current })

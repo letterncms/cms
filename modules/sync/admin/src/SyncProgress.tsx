@@ -1,7 +1,7 @@
 import { plural, queryClient, run, t, useAbility } from '@letterncms/sdk'
 import { Button, Icon, confirm, toast } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
-import { duration, error, RUNNING, type Overview, type Progress } from './shared'
+import { duration, RUNNING, type Overview, type Progress } from './shared'
 
 /**
  * The sync going on, at the top of the Sync screen. It runs from this page, a few seconds per
@@ -62,7 +62,7 @@ function Running({ job, onChange, onClose }: { job: Progress; onChange: (p: Prog
       onChange(await run<Progress>('sync/cancel', { id }))
       void queryClient.invalidateQueries()
     } catch (e) {
-      error(e)
+      toast.error(e)
     }
   }
 
@@ -70,7 +70,7 @@ function Running({ job, onChange, onClose }: { job: Progress; onChange: (p: Prog
     try {
       onChange(await run<Progress>('sync/resume', { id }))
     } catch (e) {
-      error(e)
+      toast.error(e)
     }
   }
 
@@ -82,7 +82,7 @@ function Running({ job, onChange, onClose }: { job: Progress; onChange: (p: Prog
       toast.success(t('Undone. {site} is as it was before.', { site: job.to }))
       onClose()
     } catch (e) {
-      error(e)
+      toast.error(e)
     } finally {
       setUndoing(false)
     }

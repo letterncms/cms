@@ -8,8 +8,8 @@ use Illuminate\Support\ServiceProvider;
 use Cms\Cms;
 
 /**
- * Base class for every plugin and theme provider — built-in or third-party.
- * Built-in plugins use nothing beyond what this class and the CMS API expose.
+ * Base class for every module's and plugin's provider. Modules use nothing beyond what
+ * this class and the CMS API expose, so a plugin can do whatever they do.
  */
 abstract class Plugin extends ServiceProvider
 {

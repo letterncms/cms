@@ -1,6 +1,7 @@
-import { getManifest, run, t, useAbility } from '@letterncms/sdk'
+import { getManifest, setPreference, t, useAbility, type ComposerPanelProps } from '@letterncms/sdk'
 import { Icon, Menu } from '@letterncms/ui'
 import { useEffect } from 'react'
+import { answering } from './sources'
 
 interface Model {
   id: string
@@ -15,17 +16,7 @@ interface Status {
   models: Model[]
 }
 
-/** What the workspace hands a panel in the composer's footer (`workspace.composer`). */
-interface ComposerPanelProps {
-  thread: string | null
-  state: Record<string, unknown> | null
-  options: Record<string, unknown>
-  setOption: (name: string, value: unknown) => void
-  loading: boolean
-}
-
 const PREFERENCE = 'assistant.model'
-const answering = () => (getManifest().config?.workspace?.agent as { name?: string } | null | undefined)?.name === 'assistant'
 
 /** New threads start with the person's last pick, while it is still offered; otherwise with the default. */
 function preferred(status: Status): string {
@@ -33,19 +24,12 @@ function preferred(status: Status): string {
   return status.models.some((m) => m.id === saved) ? (saved as string) : status.model
 }
 
-function remember(id: string) {
-  // The manifest is this session's copy of the preferences; keep it current for the next new thread.
-  const user = getManifest().user
-  user.preferences = { ...(user.preferences ?? {}), [PREFERENCE]: id }
-  void run('account/update', { preferences: { [PREFERENCE]: id } }).catch(() => {})
-}
-
 /**
  * Which model the next message runs on, in the composer. A change applies from the next message and
  * stays with the thread; a thread saved with a model no longer offered falls back to the default.
  */
-export function ModelPicker({ thread, state, options, setOption, loading }: ComposerPanelProps) {
-  const ready = answering()
+export function ModelPicker({ thread, agent, state, options, setOption, loading }: ComposerPanelProps) {
+  const ready = answering(agent)
   const status = useAbility<Status>('assistant/status', {}, { staleTime: 60_000, enabled: ready })
   const models = status.data?.models ?? []
   const offered = (id: unknown): id is string => typeof id === 'string' && models.some((m) => m.id === id)
@@ -72,7 +56,7 @@ export function ModelPicker({ thread, state, options, setOption, loading }: Comp
       }
       items={[
         { label: t('Model'), heading: true },
-        ...models.map((m) => ({ label: m.name, description: m.description, checked: m.id === current.id, onSelect: () => { if (m.id !== current.id) { setOption('model', m.id); remember(m.id) } } })),
+        ...models.map((m) => ({ label: m.name, description: m.description, checked: m.id === current.id, onSelect: () => { if (m.id !== current.id) { setOption('model', m.id); void setPreference(PREFERENCE, m.id).catch(() => {}) } } })),
       ]}
     />
   )

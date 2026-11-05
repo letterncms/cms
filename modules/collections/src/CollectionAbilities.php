@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Collections;
 
-use Illuminate\Support\Facades\DB;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
@@ -95,8 +94,6 @@ final class CollectionAbilities
                     }
                 }
 
-                // Include history orphaned by older versions of the delete lifecycle.
-                DB::table('revisions')->where('collection', $collection->handle)->delete();
                 $this->cms->collections()->delete($collection->handle);
 
                 return ['deleted' => $collection->handle, 'deletedEntries' => $count];

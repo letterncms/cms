@@ -1,14 +1,8 @@
-import { plural, run, t, useManifest, type Entry } from '@letterncms/sdk'
+import { plural, run, t, useManifest, type Entry, type PersonSummary } from '@letterncms/sdk'
 import { Avatar, Button, Tooltip, cn } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 
-interface Person {
-  id: string
-  name: string
-  initials: string
-  avatar: string | null
-  editing: boolean
-}
+type Person = PersonSummary & { editing: boolean }
 
 interface Beat {
   others: Person[]

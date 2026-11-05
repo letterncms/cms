@@ -47,6 +47,11 @@ final class FileDriver implements EntryDriver
         return null;
     }
 
+    public function findMany(array $ids): array
+    {
+        return array_values(array_filter(array_map($this->find(...), $ids)));
+    }
+
     public function findByUri(string $uri, ?string $locale): ?Entry
     {
         foreach ($this->fileCollections() as $collection) {

@@ -5,7 +5,7 @@ import {
 } from '@letterncms/sdk'
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import {
-  Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, NotFoundState, Page, QueryError,
+  Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, NotFoundState, Notice, Page, QueryError,
   ScreenSidebar, Spinner, StatusDot, Tabs, statusLabel, Tooltip, Topbar, confirm, cn, entryActionAvailability,
   fieldControlId, toast, useShortcut, useWideInspector,
 } from '@letterncms/ui'
@@ -16,7 +16,6 @@ import { EntryDetails, PublicationDialog } from './EntryDetails'
 import { EntryHistory } from './EntryHistory'
 import { EntryMoveDialog } from './EntryMoveDialog'
 
-export type { EntryPanelProps } from '@letterncms/sdk'
 
 export default function EntryEditor({ params }: { params: Record<string, string> }) {
   const { collection, summary, isLoading, error } = useCollection(params.collection)
@@ -504,7 +503,7 @@ function Editor({ collection, initial, can }: EditorProps) {
         }
       />
       {placement.error && (
-        <div role="alert" className="border-b border-danger/20 p-3 text-sm text-danger">{placement.error}</div>
+        <Notice tone="danger" className="m-3">{placement.error}</Notice>
       )}
       {workspace && editorProps ? (
         <div className="min-h-0 flex-1"><Suspense fallback={<div className="grid h-full place-items-center"><Spinner /></div>}><workspace.component {...editorProps} /></Suspense></div>
@@ -638,7 +637,8 @@ function Properties({ collection, count, children }: PropertiesProps) {
   )
 }
 
-const WIDE_FIELDS = ['repeater', 'blocks', 'richtext', 'markdown', 'json', 'group', 'code', 'fields', 'table', 'grid']
+/** Fields that are a part of the document under the properties, not a property: a short textarea, media, tags or entries stay properties, drawn small. */
+const WIDE_FIELDS = ['repeater', 'blocks', 'richtext', 'markdown', 'json', 'group', 'code', 'fields']
 
 interface PropertyRowProps {
   field: FieldDef

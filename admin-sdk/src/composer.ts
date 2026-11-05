@@ -62,7 +62,6 @@ export interface ComposerOption extends ContextItem {
  * message carries) is asked only when an agent answers in the thread; `/` always.
  */
 export interface ComposerSource {
-  id: string
   trigger: '@' | '/'
   label: string
   order?: number

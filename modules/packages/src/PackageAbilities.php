@@ -55,8 +55,8 @@ final class PackageAbilities
                         continue;
                     }
 
-                    // Only what can be switched off: not what is required, or held on by something that is.
-                    if (($in['optional'] ?? false) && ($package->required || array_filter($manager->dependents($package->name), static fn ($d) => $manager->repository()->find($d)?->required))) {
+                    // Only what can be switched off.
+                    if (($in['optional'] ?? false) && $package->required) {
                         continue;
                     }
 

@@ -11,7 +11,7 @@ use Cms\Contracts\AgentMessage;
 use Cms\Modules\Workspace\Thread;
 use Cms\Users\User;
 
-/** Used when no AI plugin answers: the workspace treats every message as a search. */
+/** Used when no agent answers (the Assistant is off): the workspace treats every message as a search. */
 final class NoAgent implements Agent
 {
     public function name(): string

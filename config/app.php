@@ -7,7 +7,8 @@ return [
     'name' => (string) env('CMS_SITE_NAME', $site['name'] ?? env('APP_NAME', Cms\Support\Brand::get())),
     'env' => env('APP_ENV', 'production'),
     'debug' => (bool) env('APP_DEBUG', false),
-    'url' => env('CMS_SITE_URL', env('APP_URL', $site['url'] ?? 'http://localhost')),
+    // The public address, as Cms::url() reads it: the `site` setting, else APP_URL.
+    'url' => rtrim((string) (env('CMS_SITE_URL') ?: ($site['url'] ?? null) ?: env('APP_URL') ?: 'http://localhost'), '/'),
     'timezone' => env('CMS_SITE_TIMEZONE', $site['timezone'] ?? 'UTC'),
     'locale' => env('CMS_SITE_LOCALE', $site['locale'] ?? 'en'),
     'fallback_locale' => 'en',

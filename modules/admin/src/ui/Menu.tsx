@@ -1,6 +1,6 @@
 import { ContextMenu as BaseContext } from '@base-ui/react/context-menu'
 import { Menu as Base } from '@base-ui/react/menu'
-import type { ReactElement, ReactNode } from 'react'
+import type { ReactElement } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
 import { Kbd } from './Kbd'
@@ -80,13 +80,3 @@ function Items({ items, parts }: { items: (MenuItemDef | false | null | undefine
   })
 }
 
-/** A generic menu panel item for custom popovers. */
-export function MenuButton({ icon, label, onClick, active, hint, className }: { icon?: string; label: ReactNode; onClick?: () => void; active?: boolean; hint?: ReactNode; className?: string }) {
-  return (
-    <button type="button" onClick={onClick} className={cn('cms-menu-item w-full', active && 'bg-active', className)}>
-      {icon && <Icon name={icon} size={16} />}
-      <span className="flex-1 truncate">{label}</span>
-      {hint && <span className="text-xs text-faint">{hint}</span>}
-    </button>
-  )
-}

@@ -24,7 +24,7 @@ function preload(url: string) {
  * and whenever the manifest is fetched again, so nothing needs a reload.
  *
  * Modules are fetched in parallel but run one at a time, so everything a module
- * registers is attributed to it. A failing one is reported, never fatal.
+ * registers on import is attributed to it. A failing one is reported, never fatal.
  */
 export async function syncModules(manifest: Manifest) {
   const wanted = new Map(manifest.modules.map((m) => [m.id, m]))
@@ -48,10 +48,7 @@ export async function syncModules(manifest: Manifest) {
       continue
     }
     try {
-      await registerAs(m.id, async () => {
-        const mod = await import(/* @vite-ignore */ m.url)
-        if (typeof mod.default === 'function') await mod.default()
-      })
+      await registerAs(m.id, () => import(/* @vite-ignore */ m.url))
     } catch (error) {
       console.error(`[cms] module ${m.id} failed`, error)
       failed.push(m)

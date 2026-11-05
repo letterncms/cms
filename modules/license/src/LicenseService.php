@@ -169,8 +169,7 @@ final class LicenseService
                 throw new RuntimeException('No license server is known.');
             }
 
-            [$host] = $this->host();
-            $site = (string) ($this->cms->site('url') ?: 'https://'.$host);
+            $site = $this->cms->url();
             $answer = $this->remote->postJson(rtrim($url, '/').'/refresh', [
                 'lid' => $current->lid,
                 'rev' => $current->rev,
@@ -246,20 +245,12 @@ final class LicenseService
         return $this->report();
     }
 
-    /** @return array{0: string, 1: ?int} The configured URL decides: spoofing Host can only change a banner. */
+    /** @return array{0: string, 1: ?int} The site's address decides, never the request: spoofing Host can only change a banner. */
     public function host(): array
     {
-        $configured = (string) ($this->cms->site('url') ?? '');
-        $parts = $configured !== '' ? parse_url($configured) : null;
+        $parts = parse_url($this->cms->url()) ?: [];
 
-        if (is_array($parts) && isset($parts['host'])) {
-            return [(string) $parts['host'], isset($parts['port']) ? (int) $parts['port'] : null];
-        }
-
-        $request = request();
-        $port = $request->getPort();
-
-        return [(string) $request->getHost(), in_array($port, [80, 443], true) ? null : $port];
+        return [(string) ($parts['host'] ?? ''), isset($parts['port']) ? (int) $parts['port'] : null];
     }
 
     private function compute(): LicenseReport

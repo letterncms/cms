@@ -1,5 +1,5 @@
 import { t, useAbility } from '@letterncms/sdk'
-import { Button, Input, Skeleton, toast } from '@letterncms/ui'
+import { Button, Input, Skeleton, copyText } from '@letterncms/ui'
 import { useState } from 'react'
 import type { Overview } from './shared'
 
@@ -12,13 +12,9 @@ export default function SyncKey() {
   if (!key) return <Skeleton className="h-8" />
 
   const masked = key.replace(/#.*/, '#' + '•'.repeat(16))
+  // Where the clipboard can't be written, the key shows, to copy by hand.
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(key)
-      toast.success(t('Copied. Paste it under Sync on the other site.'))
-    } catch {
-      setShown(true)
-    }
+    if (!(await copyText(key, { copied: t('Copied. Paste it under Sync on the other site.'), failed: null }))) setShown(true)
   }
 
   return (

@@ -1,7 +1,7 @@
 import { can, invalidate, locale, plural, run, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
-import { Badge, Button, DataView, Dialog, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, confirm, cn, copyText, toast, readViewPrefs } from '@letterncms/ui'
+import { Badge, Button, DataView, Dialog, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, confirm, cn, copyText, formatBytes, toast, readViewPrefs } from '@letterncms/ui'
 import { useEffect, useState } from 'react'
-import { formatBytes, libraryFolder, uploadAll, type MediaItem } from './upload'
+import { libraryFolder, uploadAll, type MediaItem } from './upload'
 
 const KINDS = ['all', 'image', 'video', 'audio', 'pdf', 'file'] as const
 type Kind = (typeof KINDS)[number]

@@ -1,4 +1,4 @@
-import { registry, t, useScreen, type ComposerOption, type ComposerSource, type ContextItem, type FieldDef } from '@letterncms/sdk'
+import { registry, t, useScreen, type ComposerOption, type ComposerSource, type ContextItem, type FieldDef, type Registered } from '@letterncms/sdk'
 import { Button, Fields, Icon, Spinner, Textarea, Tooltip, cn } from '@letterncms/ui'
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
 import { runnable } from './commands'
@@ -28,7 +28,7 @@ function triggerAt(text: string, caret: number, mentions: boolean): Trigger | nu
 }
 
 interface Group {
-  source: ComposerSource
+  source: Registered<ComposerSource>
   /** Its own heading: the source's, or one of its lines' `group`. */
   label: string
   options: ComposerOption[]

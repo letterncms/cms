@@ -132,9 +132,9 @@ class PackageJobs
     public function running(): ?array
     {
         foreach (glob($this->dir('jobs/*.json')) ?: [] as $file) {
-            $job = json_decode((string) @file_get_contents($file), true);
+            $job = Files::readJson($file);
 
-            if (is_array($job) && ($job['state'] ?? '') === 'running') {
+            if (($job['state'] ?? '') === 'running') {
                 return $job;
             }
         }
@@ -164,9 +164,7 @@ class PackageJobs
     /** @return array<string, array<string, mixed>> package => where it came from */
     public function sources(): array
     {
-        $file = $this->dir('sources.json');
-
-        return is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+        return Files::readJson($this->dir('sources.json'));
     }
 
     /** @return list<string> What would make any install fail right now, as codes the admin explains */
@@ -277,7 +275,7 @@ class PackageJobs
         $job['psr4'] = array_keys((array) ($result['composer']['autoload']['psr-4'] ?? []));
         $this->save($job);
 
-        // A site package with a built-in's name replaces it, so who may claim the name is the verifier's call.
+        // Who may claim a package's name is the verifier's call (no package may take a module's: see PackageRepository).
         ($this->verifiers[(string) $job['verifier'].':inspected'] ?? static fn () => null)($job);
 
         return 'stage';
@@ -469,7 +467,7 @@ class PackageJobs
             Files::deleteDirectory($target);
             $sources = $this->sources();
             unset($sources[$package]);
-            Files::put($this->dir('sources.json'), (string) json_encode($sources, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            Files::putJson($this->dir('sources.json'), $sources);
         }
 
         $this->packages()->refresh();
@@ -494,7 +492,7 @@ class PackageJobs
     /** @param  array<string, mixed>  $record */
     private function record(string $package, array $record): void
     {
-        Files::put($this->dir('sources.json'), (string) json_encode([...$this->sources(), $package => $record], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        Files::putJson($this->dir('sources.json'), [...$this->sources(), $package => $record]);
     }
 
     private static function setModes(string $dir): void
@@ -539,10 +537,9 @@ class PackageJobs
     /** @return array<string, mixed> */
     private function load(string $id): array
     {
-        $file = $this->dir('jobs/'.preg_replace('/[^a-f0-9]/', '', $id).'.json');
-        $job = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
+        $job = Files::readJson($this->dir('jobs/'.preg_replace('/[^a-f0-9]/', '', $id).'.json'));
 
-        if (! is_array($job)) {
+        if ($job === []) {
             throw new RuntimeException(__('That install is not known here.'));
         }
 
@@ -558,7 +555,7 @@ class PackageJobs
     /** @param  array<string, mixed>  $job */
     private function save(array $job): void
     {
-        Files::put($this->dir('jobs/'.$job['id'].'.json'), (string) json_encode($job, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        Files::putJson($this->dir('jobs/'.$job['id'].'.json'), $job);
     }
 
     /**
@@ -568,18 +565,6 @@ class PackageJobs
      */
     private function locked(callable $work): mixed
     {
-        Files::ensureDir($this->dir());
-        $handle = fopen($this->dir('lock'), 'c');
-
-        if ($handle === false || ! flock($handle, LOCK_EX | LOCK_NB)) {
-            throw new RuntimeException(__('Another install step is running. Try again in a moment.'));
-        }
-
-        try {
-            return $work();
-        } finally {
-            flock($handle, LOCK_UN);
-            fclose($handle);
-        }
+        return Files::locked($this->dir('lock'), $work, static fn () => throw new RuntimeException(__('Another install step is running. Try again in a moment.')));
     }
 }

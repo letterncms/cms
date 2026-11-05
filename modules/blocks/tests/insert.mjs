@@ -1,4 +1,4 @@
-// node --experimental-vm-modules --test cms/plugins/blocks/tests/insert.mjs
+// node --experimental-vm-modules --test modules/blocks/tests/insert.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
@@ -9,7 +9,7 @@ async function insertionEngine() {
   const context = createContext({ structuredClone })
   let sequence = 0
   const types = new SyntheticModule(['newId'], function () { this.setExport('newId', () => `inserted-${++sequence}`) }, { context })
-  const source = (path) => new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL(path, import.meta.url), 'utf8'), { mode: 'transform' }), { context })
+  const source = (path) => new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL(path, import.meta.url), 'utf8')), { context })
   const tree = source('../admin/src/core/tree.ts')
   await tree.link(() => types)
   const insert = source('../admin/src/core/insert.ts')

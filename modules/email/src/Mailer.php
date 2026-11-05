@@ -55,10 +55,16 @@ class Mailer
         }
     }
 
+    /** Where mail comes from when the settings name no address: no-reply@ the site's host. */
+    public function noReply(): string
+    {
+        return 'no-reply@'.(parse_url($this->cms->url(), PHP_URL_HOST) ?: 'example.com');
+    }
+
     private function build(Message $message, array $settings): Email
     {
         $from = new Address(
-            $message->fromAddress ?? (string) ($settings['from_address'] ?? 'no-reply@'.(parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'example.com')),
+            $message->fromAddress ?? (string) ($settings['from_address'] ?? $this->noReply()),
             $message->fromName ?? (string) ($settings['from_name'] ?? config('app.name'))
         );
 
@@ -109,7 +115,7 @@ class Mailer
         $translations->apply($locale);
 
         try {
-            return $this->views->make('email::layout', ['body' => $message->html, 'site' => config('app.name'), 'url' => config('app.url'), 'footer' => (string) ($settings['footer'] ?? '') ?: __('Sent by :site', ['site' => config('app.name')]), 'locale' => $locale, 'colors' => Body::colors()])->render();
+            return $this->views->make('email::layout', ['body' => $message->html, 'site' => config('app.name'), 'url' => $this->cms->url(), 'footer' => (string) ($settings['footer'] ?? '') ?: __('Sent by :site', ['site' => config('app.name')]), 'locale' => $locale, 'colors' => Body::colors()])->render();
         } finally {
             $translations->apply($previous);
         }

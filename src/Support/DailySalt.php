@@ -18,14 +18,14 @@ final class DailySalt
     public static function for(string $purpose, string $day): string
     {
         $file = storage_path("app/salts/{$purpose}.json");
-        $stored = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
+        $stored = Files::readJson($file);
 
-        if (is_array($stored) && ($stored['day'] ?? null) === $day && is_string($stored['salt'] ?? null)) {
+        if (($stored['day'] ?? null) === $day && is_string($stored['salt'] ?? null)) {
             return $stored['salt'];
         }
 
         $salt = bin2hex(random_bytes(32));
-        Files::put($file, (string) json_encode(['day' => $day, 'salt' => $salt]));
+        Files::putJson($file, ['day' => $day, 'salt' => $salt], 0);
 
         return $salt;
     }

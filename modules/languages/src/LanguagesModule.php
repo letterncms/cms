@@ -8,6 +8,7 @@ use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Content\Entries\Entry;
 use Cms\Packages\Plugin;
+use Cms\Support\Files;
 use Cms\Users\User;
 
 final class LanguagesModule extends Plugin
@@ -52,14 +53,14 @@ final class LanguagesModule extends Plugin
         });
 
         $languages()->track();
+        // Once the site's own settings apply: changing languages or the default reshapes URLs, so recompute
+        // them (redirects follow via entry.uri-changed), and note when each language changed.
         $hooks->on('settings.saved', function (string $namespace) use ($languages) {
             if (in_array($namespace, ['site', 'languages'], true)) {
+                $this->refreshUris();
                 $languages()->recordChanges();
             }
         }, priority: 20);
-
-        // Changing languages or the default reshapes URLs; recompute them (redirects follow via entry.uri-changed).
-        $hooks->on('settings.saved', fn (string $namespace) => in_array($namespace, ['site', 'languages'], true) && $this->refreshUris());
 
         // Languages — the default among them — are managed under Languages, not as a field of the site.
         $hooks->addFilter('settings.fields', static fn (array $fields, string $namespace) => $namespace === 'site' ? array_filter($fields, static fn ($f) => $f['handle'] !== 'locale') : $fields);
@@ -128,8 +129,8 @@ final class LanguagesModule extends Plugin
         $this->cms()->admin()->component('languages/add-language', ['label' => 'Add Language', 'description' => 'A searchable list of languages to add to the site, chosen with the keyboard; any other xx-YY code works too.', 'surface' => false, 'permission' => 'settings.manage',
             'props' => ['type' => 'object', 'properties' => [], 'additionalProperties' => false]]);
         $this->cms()->views()->register('languages', '/languages', fn (User $user) => $this->view($user), permission: 'settings.manage');
-        $this->cms()->admin()->widget('languages-coverage', ['label' => 'Translations', 'description' => __('How much of the content exists in each language.'), 'icon' => 'translate', 'column' => 'side', 'order' => 55]);
-        $this->adminModule(import: '@letterncms/languages');
+        $this->cms()->admin()->widget('languages-coverage', ['label' => 'Translations', 'description' => 'How much of the content exists in each language.', 'icon' => 'translate', 'column' => 'side', 'order' => 55]);
+        $this->adminModule();
     }
 
     private function abilities(): void
@@ -149,13 +150,12 @@ final class LanguagesModule extends Plugin
             'description' => 'The site’s languages with names, URL prefixes, direction and how many entries each has.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'handler' => function () use ($languages) {
                 $prefixed = (bool) $this->cms()->settings('languages', 'prefix_default', false);
 
                 return [
                     'prefixDefault' => $prefixed,
-                    'canTranslate' => $this->app->make(Translations::class)->translator() !== null,
+                    'canTranslate' => $this->app->make(Translations::class)->canTranslate(),
                     'languages' => array_map(fn (array $l) => $this->row([...$l, 'entries' => $this->count($l['code'])], $prefixed), $languages()->all()),
                 ];
             },
@@ -166,7 +166,6 @@ final class LanguagesModule extends Plugin
             'description' => 'Set the site’s languages and the default one. Languages that still have entries cannot be removed.',
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
-            'package' => $this->manifest->name,
             'input' => [
                 'type' => 'object',
                 'properties' => [
@@ -186,7 +185,6 @@ final class LanguagesModule extends Plugin
             'description' => 'Add a language to the site.',
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
-            'package' => $this->manifest->name,
             'input' => $one,
             'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), [...$languages()->codes(), $in['code']]),
         ]);
@@ -197,7 +195,6 @@ final class LanguagesModule extends Plugin
             'permission' => 'settings.manage',
             'annotations' => ['destructive' => true],
             'expose' => ['mcp' => false],
-            'package' => $this->manifest->name,
             'input' => $one,
             'handler' => function (array $in) use ($languages) {
                 if ($in['code'] === $languages()->default()) {
@@ -213,7 +210,6 @@ final class LanguagesModule extends Plugin
             'description' => 'Make one of the site’s languages the default: its pages move to the root URL.',
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
-            'package' => $this->manifest->name,
             'input' => $one,
             'handler' => fn (array $in) => in_array($in['code'], $languages()->codes(), true)
                 ? $this->saveLanguages($in['code'], $languages()->codes())
@@ -225,7 +221,6 @@ final class LanguagesModule extends Plugin
             'description' => 'Whether the default language’s pages are under a prefix (/en/…) too.',
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['prefixDefault' => ['type' => 'boolean']], 'required' => ['prefixDefault']],
             'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), $languages()->codes(), $in['prefixDefault']),
         ]);
@@ -235,7 +230,6 @@ final class LanguagesModule extends Plugin
             'description' => 'Every language version of an entry, with status and URL, plus the languages it is missing.',
             'permission' => fn (?User $u, array $in) => $can($u, (string) $in['id'], 'view'),
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'handler' => function (array $in) use ($languages, $translations) {
                 $entry = $this->cms()->entries()->findOrFail($in['id']);
@@ -262,7 +256,6 @@ final class LanguagesModule extends Plugin
             'description' => 'For each language, how many entries exist in it (as the original or a translation) out of all entries in content collections, as counts and a share. Counted at most every 10 minutes.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
-            'package' => $this->manifest->name,
             'handler' => fn () => cache()->remember(self::COVERAGE, 600, fn () => $this->coverage()),
         ]);
 
@@ -270,7 +263,6 @@ final class LanguagesModule extends Plugin
             'label' => 'Translate Entry',
             'description' => 'Start the version of an entry in another language, as a draft. translate: true translates the text with AI (when the assistant is set up); otherwise the content is copied for a person to translate.',
             'permission' => fn (?User $u, array $in) => $can($u, (string) $in['id'], 'create'),
-            'package' => $this->manifest->name,
             'input' => [
                 'type' => 'object',
                 'properties' => ['id' => ['type' => 'string'], 'locale' => $code, 'translate' => ['type' => 'boolean', 'default' => false]],
@@ -322,8 +314,8 @@ final class LanguagesModule extends Plugin
     private function view(User $user): array
     {
         $fallback = Languages::name($this->app->make(Languages::class)->default());
-        $assistant = isset($this->cms()->settingsRegistry()->schemas()['assistant']);
-        $translator = $this->app->make(Translations::class)->translator() !== null;
+        $assistant = $this->cms()->isActive('letterncms/assistant');
+        $translator = $this->app->make(Translations::class)->canTranslate();
         // A language's own actions: in its row's menu, and under it once opened. Only the default has a prefix to change.
         $makeDefault = ['label' => __('Make Default'), 'icon' => 'star', 'ability' => 'languages/default', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'success' => __('{row.name} is now the default'),
             'confirm' => ['title' => __('Make {row.name} the default?'), 'text' => __('Its pages move to the root URL and :current gets a prefix. Old URLs redirect automatically.', ['current' => $fallback]), 'confirm' => __('Make Default')]];
@@ -388,8 +380,7 @@ final class LanguagesModule extends Plugin
         return [
             'total' => $total,
             'languages' => array_map(function (array $language) use ($query, $total) {
-                $entries = $total === 0 ? 0 : $query()->locale($language['code'])->where('origin_id', 'null', null)->count()
-                    + $query()->locale($language['code'])->where('origin_id', 'not null', null)->count();
+                $entries = $total === 0 ? 0 : $query()->locale($language['code'])->count();
 
                 return [
                     ...array_intersect_key($language, array_flip(['code', 'name', 'englishName', 'default'])),
@@ -403,14 +394,14 @@ final class LanguagesModule extends Plugin
     /** Recompute URLs only when something that shapes them changed. */
     private function refreshUris(): void
     {
-        $file = storage_path('languages.json');
+        $file = storage_path('cache/languages.json');
         $signature = $this->app->make(Languages::class)->signature();
 
-        if (is_file($file) && (json_decode((string) file_get_contents($file), true)['signature'] ?? null) === $signature) {
+        if ((Files::readJson($file)['signature'] ?? null) === $signature) {
             return;
         }
 
         $this->cms()->content()->refreshUris();
-        file_put_contents($file, json_encode(['signature' => $signature]));
+        Files::putJson($file, ['signature' => $signature]);
     }
 }

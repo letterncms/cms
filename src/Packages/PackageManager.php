@@ -82,7 +82,7 @@ final class PackageManager
 
     /**
      * Packages switched on. Plugins are on when config/plugins.yaml lists them
-     * under `enabled` (every built-in one when the file is missing). Core modules
+     * under `enabled`. Core modules
      * are on unless listed under `disabled`; required ones are always on.
      *
      * @return list<string>
@@ -96,10 +96,10 @@ final class PackageManager
         $file = $this->stateFile();
         $state = is_file($file) ? Yaml::read($file) : null;
         $plugins = $state === null
-            ? array_keys(array_filter($this->repository->plugins(), static fn (PackageManifest $p) => ! $p->core))
+            ? array_keys(array_filter($this->repository->all(), static fn (PackageManifest $p) => ! $p->core))
             : array_map('strval', (array) ($state['enabled'] ?? []));
         $disabled = array_map('strval', (array) ($state['disabled'] ?? []));
-        $modules = array_keys(array_filter($this->repository->plugins(), static fn (PackageManifest $p) => $p->core && ($p->required || ! in_array($p->name, $disabled, true))));
+        $modules = array_keys(array_filter($this->repository->all(), static fn (PackageManifest $p) => $p->core && ($p->required || ! in_array($p->name, $disabled, true))));
 
         return $this->enabled = array_values(array_unique([...$modules, ...$plugins]));
     }
@@ -107,7 +107,7 @@ final class PackageManager
     /** @return array<string, PackageManifest> The modules the admin is made of (on or off). */
     public function modules(): array
     {
-        return array_filter($this->repository->plugins(), static fn (PackageManifest $p) => $p->core);
+        return array_filter($this->repository->all(), static fn (PackageManifest $p) => $p->core);
     }
 
     public function isEnabled(string $name): bool
@@ -166,11 +166,6 @@ final class PackageManager
         }
 
         return $out;
-    }
-
-    public function provider(string $name): ?Plugin
-    {
-        return $this->providers[$name] ?? null;
     }
 
     /** Autoload and register every active package's provider. One that fails stays off; the rest run. */
@@ -291,8 +286,7 @@ final class PackageManager
     private function failures(): array
     {
         if ($this->failures === null) {
-            $file = $this->failuresFile();
-            $this->failures = is_file($file) ? (array) json_decode((string) @file_get_contents($file), true) : [];
+            $this->failures = Files::readJson($this->failuresFile());
         }
 
         return $this->failures;
@@ -312,7 +306,7 @@ final class PackageManager
         try {
             $this->failures === []
                 ? @unlink($this->failuresFile())
-                : Files::put($this->failuresFile(), (string) json_encode($this->failures, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                : Files::putJson($this->failuresFile(), $this->failures);
         } catch (Throwable) {
         }
     }
@@ -611,12 +605,10 @@ final class PackageManager
     /** @return array<string, string> The libraries in a plugin's own vendor/: name => version. */
     private function bundledVersions(PackageManifest $package): array
     {
-        $file = $package->path('vendor/composer/installed.json');
-        $installed = is_file($file) ? (array) json_decode((string) file_get_contents($file), true) : [];
+        $installed = Files::readJson($package->path('vendor/composer/installed.json'));
         $out = [];
 
-        // Composer 2 wraps the list in {"packages": [...]}, Composer 1 does not.
-        foreach ((array) ($installed['packages'] ?? $installed) as $library) {
+        foreach ((array) ($installed['packages'] ?? []) as $library) {
             if (is_array($library) && isset($library['name'])) {
                 $out[(string) $library['name']] = (string) ($library['version'] ?? '');
             }

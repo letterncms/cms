@@ -1,7 +1,7 @@
-import type { FieldDef, PanelDef } from '@letterncms/sdk'
+import type { FieldDef } from '@letterncms/sdk'
 
 /** Every field has one owner. Inactive panels cannot hide fields. */
-export function resolveEntryFields(fields: FieldDef[], body: string | undefined, panels: Pick<PanelDef, 'id' | 'fieldHandles'>[]) {
+export function resolveEntryFields(fields: FieldDef[], body: string | undefined, panels: { id: string; fieldHandles?: string[] }[]) {
   const claimed = new Map<string, string>()
   let error: string | null = null
   for (const panel of panels) for (const handle of panel.fieldHandles ?? []) {

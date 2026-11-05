@@ -74,7 +74,7 @@ final class BlockType
             parent: isset($d['parent']) ? (string) $d['parent'] : null,
             view: isset($d['view']) ? (string) $d['view'] : null,
             render: ($d['render'] ?? null) instanceof Closure ? $d['render'] : null,
-            package: isset($d['package']) ? (string) $d['package'] : null,
+            package: isset($d['package']) ? (string) $d['package'] : \Cms\Packages\Scope::$current,
             variants: (array) ($d['variants'] ?? []),
             example: (array) ($d['example'] ?? []),
             defer: (bool) ($d['defer'] ?? false),

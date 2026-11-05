@@ -1,7 +1,6 @@
 {
   "A global set with this handle already exists.": "Un ensemble global avec cet identifiant existe déjà.",
   "All Globals": "Toutes les données globales",
-  "Back to Globals": "Retour aux données globales",
   "Content": "Contenu",
   "Create": "Créer",
   "Created :name": ":name créé",
@@ -25,7 +24,6 @@
   "Name": "Nom",
   "New Global Set": "Nouvel ensemble global",
   "No global sets yet": "Aucun ensemble global pour l’instant",
-  "Not Found": "Introuvable",
   "Open": "Ouvrir",
   "Quick links to your global sets.": "Accès rapide à vos ensembles globaux.",
   "Save Global Set": "Enregistrer l’ensemble global",
