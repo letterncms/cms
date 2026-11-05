@@ -31,7 +31,7 @@ final class AgentGuide
 
         Conventions:
         - Entries are drafts until published (entries/publish, or status "published" on create).
-        - Styles use the design vocabulary only (Lettern Design): names like "heading-2", "foreground-muted", "section", "lg", never CSS values. A wrong name comes back with the nearest right ones. When something is missing, add it to the theme (design/update), not to one block.
+        - Styles use the design vocabulary only: names like "heading-2", "foreground-muted", "section", "lg", never CSS values. A wrong name comes back with the nearest right ones. When something is missing, add it to the theme (design/update), not to one block.
         - A blocks field also accepts Block Markdown (Markdown plus ::: directives) as a string.
         - Every image needs alt text. Add files with media/import (url or base64) and use the returned id.
         - Write for people first: lead with the answer, short paragraphs, question-style headings where they help.
