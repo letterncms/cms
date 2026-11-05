@@ -126,16 +126,31 @@ final class AdminRegistry
 
     /**
      * A home-screen widget; its component is registered in the admin module under the same id
-     * (`registry.widgets.set(id, Component)`). Every plugin registers at least one (see
+     * (`registry.widgets.set(id, Component)`), or it is drawn from a `view`: a tree of catalog
+     * components like any place's (see Views), built for whoever looks, with no admin build.
+     * `action` is the link in its header ("All Orders"), its label in English like the widget's. Every plugin registers at least one (see
      * PackageManager::problems()). The gallery shows label, icon and description; `enabled`
      * puts it on everyone's home screen until they rearrange it — keep that for the few
      * widgets nearly everyone wants.
      *
-     * @param  array{label: string, description: string, icon?: string, column?: 'main'|'side', enabled?: bool, assistant?: bool, permission?: ?string, order?: int}  $widget
+     * @param  array{label: string, description: string, icon?: string, column?: 'main'|'side', enabled?: bool, assistant?: bool, permission?: ?string, order?: int, view?: array|\Closure(\Cms\Users\User): array, action?: array{label: string, to: string}}  $widget
      */
     public function widget(string $id, array $widget): void
     {
-        $this->widgets[$id] = ['id' => $id, 'description' => '', 'icon' => 'box', 'column' => 'side', 'enabled' => false, 'order' => 50, 'permission' => null, ...$widget, 'package' => $widget['package'] ?? Scope::$current];
+        $package = $widget['package'] ?? Scope::$current;
+
+        if (isset($widget['view'])) {
+            $this->cms->views()->register(self::view($id), null, $widget['view'], $widget['permission'] ?? null, $package);
+        }
+
+        unset($widget['view']);
+        $this->widgets[$id] = ['id' => $id, 'description' => '', 'icon' => 'box', 'column' => 'side', 'enabled' => false, 'order' => 50, 'permission' => null, ...$widget, 'package' => $package];
+    }
+
+    /** The id of the view a widget is drawn from. */
+    public static function view(string $widget): string
+    {
+        return 'widget.'.$widget;
     }
 
     /** @return array<string, array> */
@@ -155,6 +170,8 @@ final class AdminRegistry
     {
         $packages = $this->cms->packages()->repository()->all();
 
+        $views = $this->cms->views();
+
         return array_values(array_map(static fn ($w) => [
             'id' => $w['id'],
             'label' => $w['label'],
@@ -163,6 +180,8 @@ final class AdminRegistry
             'column' => $w['column'],
             'enabled' => (bool) $w['enabled'],
             'source' => isset($packages[$w['package']]) ? $packages[$w['package']]->label : Brand::get(),
+            ...($views->has(self::view($w['id'])) ? ['view' => self::view($w['id'])] : []),
+            ...(isset($w['action']) ? ['action' => ['label' => (string) $w['action']['label'], 'to' => (string) $w['action']['to']]] : []),
         ], $this->widgetsForUser($user)));
     }
 

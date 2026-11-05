@@ -4,6 +4,7 @@ import { Button } from '../Button'
 import { EmptyState } from '../EmptyState'
 import { Page } from '../Page'
 import { Spinner } from '../Spinner'
+import { Widget } from '../Widget'
 import { useActions, type ActionAsker, type ActionRunner } from './actions'
 import { ViewContext } from './context'
 import { recordsLoad, type RecordsProps } from './Records'
@@ -99,4 +100,21 @@ export function viewRoute(id: string, path: string, options: { private?: boolean
       }
     },
   }
+}
+
+const widgets = new Map<string, ComponentType<{ id: string }>>()
+
+/** A home-screen widget drawn from a view: its tree in the widget's frame, with the link in its header. */
+export function viewWidget(id: string, action?: { label: string; to: string }): ComponentType<{ id: string }> {
+  const key = `${id}\n${action?.label ?? ''}\n${action?.to ?? ''}`
+  let widget = widgets.get(key)
+  if (!widget) {
+    widget = () => {
+      const view = useAbility<ViewDocument>('views/get', { id, params: {} })
+      return <Widget action={action} query={view}>{view.data && <View root={view.data.root} embedded />}</Widget>
+    }
+    widget.displayName = `ViewWidget(${id})`
+    widgets.set(key, widget)
+  }
+  return widget
 }

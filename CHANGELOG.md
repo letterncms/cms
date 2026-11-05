@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- A Dashboard widget can be drawn from a view: `view` gives it a tree of the same components as any place, built in PHP for whoever looks, with no admin build, and `action` the link in its header.
+
 ### Changed
 
 - Plugins and Built In say what each one is again when another needs it: a lock beside its switch says "Needed by …" on hover or a press. A list's switch column can do the same with `reason`.

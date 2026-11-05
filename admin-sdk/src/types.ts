@@ -26,7 +26,8 @@ export interface SurfaceAction {
  */
 export interface ViewDocument {
   id: string
-  path: string
+  /** Null for a view drawn inside something else (a widget). */
+  path: string | null
   package: string | null
   root: ViewNode
 }
@@ -225,6 +226,10 @@ export interface WidgetInfo {
   enabled: boolean
   /** The package it comes from (its label). */
   source: string
+  /** Drawn from this view (`views/get`) instead of a component of its own. */
+  view?: string
+  /** The link in its header ("All Orders"). */
+  action?: { label: string; to: string }
 }
 
 export interface Manifest {
