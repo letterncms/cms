@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.11.0 (2026-11-05)
+
 ### Changed
 
 - **Breaking.** Sites style with Lettern Design, an open design vocabulary (design.lettern.org): every style is a name, never a CSS value. A block's style reads `{"text": "heading-2", "color": "foreground-muted", "paddingBlock": "section", "max-md": {"text": "heading-3"}}`; `token:` references, raw values (`23px`, `#ff0000`, `clamp()`) and the `tablet`/`mobile` keys (now `max-lg`/`max-md`) are gone, and a style that uses them is refused with the names it could have meant.
