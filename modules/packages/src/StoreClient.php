@@ -22,7 +22,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Browses and installs from a store endpoint, on any site, with no commerce plugin in sight. A
+ * Browses and installs from a store endpoint, on any site, with no store plugin in sight. A
  * store is a few static signed files: nothing here trusts the server, only the signatures.
  * A paid package needs a licence that names it; the store decides, this offers a way to buy.
  */
