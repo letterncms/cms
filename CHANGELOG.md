@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.0 (2026-11-05)
+
 ### Added
 
 - A Dashboard widget can be drawn from a view: `view` gives it a tree of the same components as any place, built in PHP for whoever looks, with no admin build, and `action` the link in its header.
