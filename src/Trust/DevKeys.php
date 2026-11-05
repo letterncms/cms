@@ -11,7 +11,7 @@ use Cms\Support\Crypto\Base64Url;
  *
  * Each key is derived from a string anyone can read here, so anyone can sign with it. The
  * trust file they make is marked `"dev": true`, and TrustStore refuses it unless APP_ENV is
- * local or testing. The real root key is made by the owner with `bin/keys root-new`, offline.
+ * local or testing. The real keys are made once by the owner, with `./dev keys production` in the workspace.
  */
 final class DevKeys
 {
