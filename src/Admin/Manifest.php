@@ -65,6 +65,8 @@ final class Manifest
             $manifest[$part] = array_map(static fn ($item) => is_array($item) ? $label($item, 'label', 'group', 'description') : $item, $manifest[$part] ?? []);
         }
 
+        $manifest['widgets'] = array_map(static fn ($widget) => isset($widget['action']) ? [...$widget, 'action' => $label($widget['action'], 'label')] : $widget, $manifest['widgets'] ?? []);
+
         if (isset($manifest['sidebar']['sections'])) {
             $manifest['sidebar']['sections'] = array_map(static fn ($section) => $label($section, 'label'), $manifest['sidebar']['sections']);
         }

@@ -1,6 +1,6 @@
 import { queryClient, registerAs, registry, reregister, t, unregister, type Manifest, type Registrations } from '@letterncms/sdk'
 import { toast } from '../ui'
-import { viewRoute } from '../ui/view/View'
+import { viewRoute, viewWidget } from '../ui/view/View'
 
 type Module = Manifest['modules'][number]
 
@@ -60,11 +60,12 @@ export async function syncModules(manifest: Manifest) {
   return failed
 }
 
-/** The routes of views, after the modules': a place drawn from data takes its path from any screen still registered there. */
+/** The routes of views, after the modules': a place drawn from data takes its path from any screen still registered there. Widgets drawn from views too. */
 async function syncViews(manifest: Manifest) {
   unregister(VIEWS)
   await registerAs(VIEWS, () => {
     for (const view of manifest.views ?? []) registry.routes.set(view.path, viewRoute(view.id, view.path, { private: view.private }))
+    for (const widget of manifest.widgets) if (widget.view) registry.widgets.set(widget.id, viewWidget(widget.view, widget.action))
   })
 }
 

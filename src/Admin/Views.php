@@ -32,15 +32,18 @@ final class Views
 {
     public const int DEPTH = 12;
 
-    /** @var array<string, array{path: string, permission: string|Closure|null, view: array|Closure, package: ?string, private: bool, file?: bool}> */
+    /** @var array<string, array{path: ?string, permission: string|Closure|null, view: array|Closure, package: ?string, private: bool, file?: bool}> */
     private array $views = [];
 
     public function __construct(private readonly Cms $cms) {}
 
-    /** `private`: what the place shows stays on it, out of what the assistant is told about the screen on view. */
-    public function register(string $id, string $path, array|Closure $view, string|Closure|null $permission = null, ?string $package = null, bool $private = false): void
+    /**
+     * `private`: what the place shows stays on it, out of what the assistant is told about the screen on view.
+     * A null `path`: drawn inside something else (a widget), never a place of its own.
+     */
+    public function register(string $id, ?string $path, array|Closure $view, string|Closure|null $permission = null, ?string $package = null, bool $private = false): void
     {
-        $this->views[$id] = ['path' => '/'.trim($path, '/'), 'permission' => $permission, 'view' => $view, 'package' => $package ?? \Cms\Packages\Scope::$current, 'private' => $private];
+        $this->views[$id] = ['path' => $path === null ? null : '/'.trim($path, '/'), 'permission' => $permission, 'view' => $view, 'package' => $package ?? \Cms\Packages\Scope::$current, 'private' => $private];
     }
 
     /** A view a package ships as `views/<id>.json`. */
@@ -78,7 +81,7 @@ final class Views
         $out = [];
 
         foreach ($this->views as $id => $view) {
-            if ($this->allowed($view['permission'], $user)) {
+            if ($view['path'] !== null && $this->allowed($view['permission'], $user)) {
                 $out[] = ['id' => $id, 'path' => $view['path'], 'package' => $view['package'], 'private' => $view['private']];
             }
         }
@@ -96,6 +99,9 @@ final class Views
         $best = null;
 
         foreach ($this->views as $view) {
+            if ($view['path'] === null) {
+                continue;
+            }
             $pattern = '~^'.preg_replace('~/:[A-Za-z_][A-Za-z0-9_]*~', '/[^/]+', $view['path']).'$~';
             if (preg_match($pattern, $path) === 1) {
                 // An exact place wins over one with params (`/users/fields` over `/users/:id`).
