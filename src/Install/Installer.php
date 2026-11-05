@@ -24,7 +24,7 @@ use Throwable;
 final class Installer
 {
     /** What a new site gets unless someone chooses otherwise. Everything else is a click away in the store. */
-    public const array RECOMMENDED = ['seo', 'forms', 'assistant'];
+    public const array RECOMMENDED = ['seo', 'forms'];
 
     public function __construct(private readonly Application $app) {}
 

@@ -173,20 +173,6 @@ final class PackageManager
         return $this->providers[$name] ?? null;
     }
 
-    /** Active package that declares a capability, e.g. "search". */
-    public function providing(string $capability): ?PackageManifest
-    {
-        $match = null;
-
-        foreach ($this->active() as $package) {
-            if (in_array($capability, $package->provides, true)) {
-                $match = $package;
-            }
-        }
-
-        return $match;
-    }
-
     /** Autoload and register every active package's provider. One that fails stays off; the rest run. */
     public function register(): void
     {

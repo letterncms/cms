@@ -625,7 +625,7 @@ const server = createServer(async (req, res) => {
     }
     const asset = url.pathname.match(/^\/_cms\/assets\/cms-(admin|assistant|workspace)\/(.+)$/)
     if (asset) {
-      const dir = resolve(root, { admin: 'modules/admin/dist', workspace: 'modules/workspace/dist', assistant: '../plugins-public/assistant/dist' }[asset[1]]), path = resolve(dir, asset[2])
+      const dir = resolve(root, { admin: 'modules/admin/dist', workspace: 'modules/workspace/dist', assistant: 'modules/assistant/dist' }[asset[1]]), path = resolve(dir, asset[2])
       if (!path.startsWith(dir + sep)) { res.writeHead(403); return res.end() }
       res.writeHead(200, { 'Content-Type': { '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' }[extname(path)] ?? 'application/octet-stream' }); return res.end(await readFile(path))
     }

@@ -18,12 +18,15 @@
         "phpunit/phpunit": "^12.0"
     },
     "conflict": {
-        "letterncms/site": "*"
+        "letterncms/assistant": "*",
+        "letterncms/site": "*",
+        "letterncms/sync": "*"
     },
     "autoload": {
         "psr-4": {
             "Cms\\": "src/",
             "Cms\\Modules\\Account\\": "modules/account/src/",
+            "Cms\\Modules\\Assistant\\": "modules/assistant/src/",
             "Cms\\Modules\\Audit\\": "modules/audit/src/",
             "Cms\\Modules\\Blocks\\": "modules/blocks/src/",
             "Cms\\Modules\\Collaboration\\": "modules/collaboration/src/",
@@ -40,6 +43,7 @@
             "Cms\\Modules\\Packages\\": "modules/packages/src/",
             "Cms\\Modules\\Settings\\": "modules/settings/src/",
             "Cms\\Modules\\Site\\": "modules/site/src/",
+            "Cms\\Modules\\Sync\\": "modules/sync/src/",
             "Cms\\Modules\\Users\\": "modules/users/src/",
             "Cms\\Modules\\Workspace\\": "modules/workspace/src/"
         },
@@ -51,6 +55,7 @@
         "psr-4": {
             "Cms\\Tests\\": "tests/",
             "Cms\\Modules\\Admin\\Tests\\": "modules/admin/tests/",
+            "Cms\\Modules\\Assistant\\Tests\\": "modules/assistant/tests/",
             "Cms\\Modules\\Blocks\\Tests\\": "modules/blocks/tests/",
             "Cms\\Modules\\Collaboration\\Tests\\": "modules/collaboration/tests/",
             "Cms\\Modules\\Email\\Tests\\": "modules/email/tests/",
@@ -61,6 +66,7 @@
             "Cms\\Modules\\Navigation\\Tests\\": "modules/navigation/tests/",
             "Cms\\Modules\\Packages\\Tests\\": "modules/packages/tests/",
             "Cms\\Modules\\Site\\Tests\\": "modules/site/tests/",
+            "Cms\\Modules\\Sync\\Tests\\": "modules/sync/tests/",
             "Cms\\Modules\\Users\\Tests\\": "modules/users/tests/",
             "Cms\\Modules\\Workspace\\Tests\\": "modules/workspace/tests/"
         }

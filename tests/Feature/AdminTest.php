@@ -151,7 +151,7 @@ final class AdminTest extends TestCase
         $settings = array_column($this->cms()->navigation()->forUser($this->admin())['settingsNav'], null, 'id');
 
         $this->assertArrayNotHasKey('plugins', $settings);
-        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit', 'settings.shop'], $settings['account']['items']);
+        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit', 'sync', 'settings.shop'], $settings['account']['items']);
     }
 
     public function test_a_page_with_a_home_is_that_screens_settings_tab_and_listed_in_settings(): void
@@ -199,9 +199,9 @@ final class AdminTest extends TestCase
         $result = $this->cms()->navigation()->forUser($this->admin());
         $settings = array_column($result['settingsNav'], null, 'id');
 
-        // Your account, General and the Audit Log without a group name; then People.
+        // Your account, General, the Audit Log and Sync without a group name; then People.
         $this->assertSame(['account', 'people'], array_keys($settings));
-        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit'], $settings['account']['items']);
+        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit', 'sync'], $settings['account']['items']);
         $this->assertSame(['users', 'settings.roles'], $settings['people']['items']);
         // Settings kept with a screen are its Settings tab, reached through the screen's row when that is in settings.
         $this->assertSame('/audit?tab=settings', array_column($result['nav'], 'path', 'id')['settings.audit']);

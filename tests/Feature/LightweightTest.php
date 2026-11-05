@@ -15,7 +15,7 @@ final class LightweightTest extends TestCase
 {
     protected function prepareSite(string $site): void
     {
-        Yaml::write($site.'/config/plugins.yaml', ['enabled' => [], 'disabled' => ['letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/globals', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site', 'letterncms/users']]);
+        Yaml::write($site.'/config/plugins.yaml', ['enabled' => [], 'disabled' => ['letterncms/assistant', 'letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/globals', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site', 'letterncms/sync', 'letterncms/users']]);
     }
 
     public function test_only_the_required_modules_run(): void

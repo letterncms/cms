@@ -15,7 +15,7 @@ use Throwable;
 final class PackageRepository
 {
     /** Bump when PackageManifest gains or changes a property. */
-    private const int FORMAT = 3;
+    private const int FORMAT = 4;
 
     /** @var array<string, PackageManifest>|null */
     private ?array $packages = null;
