@@ -694,7 +694,7 @@ serve('Content workflow', async (req, res, url) => {
     }
     else if (ability === 'blocks/types') data = catalog
     else if (ability === 'patterns/list') data = realSources[0]?.patterns ?? [fixtureComponent]
-    else if (ability === 'design/get') data = realSources[0]?.design ?? JSON.parse(await readFile(resolve(root, 'modules/admin/tests/fixtures/design.json'), 'utf8')) // a default theme, as the engine answers it
+    else if (ability === 'design/get') data = realSources[0]?.design ?? { tokens: [], breakpoints: { tablet: '820px', mobile: '390px' }, templates: {}, name: 'Fixture', fonts: [], stylesheet: '' }
     else if (ability === 'seo/analyze') data = { score: 100, checks: [{ id: 'title', status: 'pass', label: 'Title', message: 'Search title is available.' }], meta: { title: entries.get(input.id)?.title, description: 'A fixture description', canonical: '', image: null } }
     else if (ability === 'seo/markdown') data = { markdown: '# Fixture Markdown' }
     else if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); data = manifest.user }
