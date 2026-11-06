@@ -76,7 +76,7 @@ function sections(): { key: string; label: string; parts: string[]; specimen: st
     { key: 'field', label: t('All Fields'), parts: ['field'], specimen: 'field' },
     { key: 'states', label: t('States'), parts: ['hover', 'focus', 'invalid', 'disabled'], specimen: 'states' },
     { key: 'label', label: t('Labels and Help'), parts: ['label', 'help'], specimen: 'labels' },
-    { key: 'spacing', label: t('Spacing'), parts: ['spacing'], specimen: 'spacing' },
+    { key: 'spacing', label: t('Spacing'), parts: ['spacing'], specimen: 'overview' },
     { key: 'select', label: t('Dropdowns'), parts: ['select'], specimen: 'select' },
     { key: 'textarea', label: t('Text Areas'), parts: ['textarea'], specimen: 'textarea' },
     { key: 'checkbox', label: t('Checkboxes'), parts: ['checkbox'], specimen: 'checkbox' },
@@ -95,7 +95,7 @@ function label(part: string, key: string): string {
     'invalid.color': t('Color'), 'invalid.ringColor': t('Ring'), 'label.color': t('Color'), 'help.color': t('Color'), 'label.fontSize': t('Size'), 'help.fontSize': t('Size'),
     'label.fontWeight': t('Weight'), 'checkbox.background': t('Fill'), 'checkbox.borderColor': t('Border'), 'slider.fill': t('Filled Track'), 'tags.background': t('Tag Fill'),
     'tags.color': t('Tag Text'), 'tags.radius': t('Tag Radius'), 'tags.height': t('Tag Height'), 'file.background': t('Button Fill'), 'file.color': t('Button Text'), 'file.radius': t('Button Radius'),
-    'spacing.label': t('Label to Field'), 'switch.radius': t('Radius'), 'chips.background': t('Fill'), 'chips.borderColor': t('Border'),
+    'spacing.label': t('Label to Field'), 'switch.knobShadow': t('Shadow'), 'slider.thumbShadow': t('Shadow'), 'switch.radius': t('Radius'), 'chips.background': t('Fill'), 'chips.borderColor': t('Border'),
   }
   const common: Record<string, string> = {
     height: t('Height'), paddingX: t('Padding'), background: t('Fill'), borderWidth: t('Border Width'), borderColor: t('Border'), radius: t('Radius'), color: t('Text'),

@@ -3,7 +3,7 @@ import { Button, EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSide
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Disclosure, Group, css, px, variable } from './design-parts'
 import { FieldEditor, fieldVars, specimenPart, type FieldSchema, type FieldValues } from './form-fields'
-import { Specimen, applyDraft } from './specimen'
+import { applyDraft, showPart } from './specimen'
 
 interface Token {
   path: string
@@ -208,6 +208,11 @@ export default function DesignTokens() {
   const draftVars = dirty ? [vars, fieldVars(theme.data?.fieldStyles ?? {}, current?.fields ?? {})].filter(Boolean).join(';') : ''
   const preview = { compiled, vars: draftVars, mode }
   const inject = () => applyDraft(frame.current?.contentDocument, preview)
+  // Buttons and fields show beside their controls every variant and every kind of field, in each state,
+  // drawn by the site: the part being edited is scrolled to and marked, and nothing else moves.
+  const page = section === 'fields' ? '/__specimen/fields' : section === 'buttons' ? '/__specimen/buttons' : '/'
+  const part = section === 'fields' ? specimenPart(fieldOpen) : section === 'buttons' ? buttonOpen : null
+  useEffect(() => showPart(frame.current?.contentDocument, part, true), [part])
   useEffect(inject)
 
   // The site's fonts, so specimens here show them.
@@ -448,19 +453,8 @@ export default function DesignTokens() {
             </>
           )}
 
-          {/* Buttons and fields: what they look like in every state, drawn by the site, above their controls. */}
-          {section === 'buttons' && (
-            <>
-              <Specimen kind="buttons" show={buttonOpen} draft={preview} className="sticky top-2 z-10 mb-5 shadow-[0_0_0_8px_var(--cms-bg)]" />
-              <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />
-            </>
-          )}
-          {section === 'fields' && (
-            <>
-              <Specimen kind="fields" show={specimenPart(fieldOpen)} draft={preview} className="sticky top-2 z-10 mb-5 max-h-[42vh] overflow-y-auto shadow-[0_0_0_8px_var(--cms-bg)]" />
-              <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} onChange={(fields) => update((d) => ({ ...d, fields }))} />
-            </>
-          )}
+          {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
+          {section === 'fields' && <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} onChange={(fields) => update((d) => ({ ...d, fields }))} />}
 
           {section === 'code' && <Code css={current.css} js={current.js} onChange={(code) => update((d) => ({ ...d, ...code }))} />}
         </div>
@@ -472,8 +466,8 @@ export default function DesignTokens() {
             <span className="flex-1" />
             <Segmented size="xs" value={mode} onChange={setMode} options={[{ value: 'light', icon: 'sun', title: t('Light') }, { value: 'dark', icon: 'moon', title: t('Dark') }]} />
           </div>
-          <Preview viewport={viewport} desktop={px(theme.data.breakpoints?.lg) || 1024}>
-            {(style) => <iframe ref={frame} src="/" title={t('Site Preview')} className={cn('border-0 bg-bg', viewport !== 'desktop' && 'border-x border-border')} style={style} onLoad={inject} />}
+          <Preview viewport={viewport} desktop={page === '/' ? px(theme.data.breakpoints?.lg) || 1024 : 0}>
+            {(style) => <iframe key={page} ref={frame} src={page} title={page === '/' ? t('Site Preview') : section === 'buttons' ? t('Button Specimen') : t('Form Field Specimen')} className={cn('border-0 bg-bg', viewport !== 'desktop' && 'border-x border-border')} style={style} onLoad={() => { inject(); showPart(frame.current?.contentDocument, part, false) }} />}
           </Preview>
         </div>
       </div>

@@ -23,21 +23,25 @@ final class Specimen
         $parts = $kind === 'buttons' ? $this->buttons() : $this->fields();
         $html = '';
 
-        foreach ($parts as $part => $content) {
-            $html .= '<section class="specimen" data-part="'.e($part).'">'.$content.'</section>';
+        foreach ($parts as $part => [$title, $content]) {
+            $html .= '<section class="specimen" data-part="'.e($part).'"><div class="specimen-title" role="heading" aria-level="2">'.e($title).'</div>'.$content.'</section>';
         }
 
-        $style = '.specimen{display:none;padding:20px}body:not([data-show]) .specimen[data-part=overview],'
-            .implode(',', array_map(static fn ($p) => 'body[data-show='.$p.'] .specimen[data-part='.$p.']', array_keys($parts))).'{display:grid;gap:18px}'
-            .'body{margin:0;min-height:0;background:var(--color-background,#fff);color:var(--color-foreground,inherit)}'
+        // A board of cards that always shows everything (titles are not h2s: the site styles those); the Design System scrolls to the part being edited and marks it.
+        $style = 'body{margin:0;min-height:0;background:var(--color-background,#fff);color:var(--color-foreground,inherit)}'
+            .'.specimen-board{padding:28px;columns:18rem auto;column-gap:20px}'
+            .'.specimen{break-inside:avoid;display:grid;gap:18px;margin:0 0 20px;padding:20px 22px 24px;border:1px solid color-mix(in srgb,currentColor 10%,transparent);border-radius:14px;scroll-margin:24px;transition:border-color .2s ease,box-shadow .2s ease}'
+            .'.specimen[data-active]{border-color:color-mix(in srgb,currentColor 32%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,currentColor 7%,transparent)}'
+            .'.specimen-title{margin:0;font-size:11px;font-weight:600;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;color:var(--field-help-color)}'
             .'.specimen-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 20px}.specimen-cell{display:grid;justify-items:center;gap:8px}.specimen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 14px}'
-            .'.specimen-caption{font-size:11px;line-height:1.2;color:var(--field-help-color);white-space:nowrap}.specimen-rule{height:1px;background:color-mix(in srgb,currentColor 10%,transparent)}';
+            .'.specimen-caption{font-size:11px;line-height:1.2;color:var(--field-help-color);white-space:nowrap}.specimen-rule{height:1px;background:color-mix(in srgb,currentColor 10%,transparent)}'
+            .'@media (max-width:520px){.specimen-board{padding:16px}}';
 
         // A checkbox is only ever mixed by script.
-        return '<style>'.$style.'</style><main id="main">'.$html.'</main><script>document.querySelectorAll("[data-cms-indeterminate]").forEach(c=>c.indeterminate=true)</script>';
+        return '<style>'.$style.'</style><main id="main" class="specimen-board">'.$html.'</main><script>document.querySelectorAll("[data-cms-indeterminate]").forEach(c=>c.indeterminate=true)</script>';
     }
 
-    /** @return array<string, string> part => markup */
+    /** @return array<string, array{string, string}> part => [title, markup] */
     private function fields(): array
     {
         $text = fn (string $label, array $attrs = [], string $help = '') => $this->field($label, '<input class="cms-input"'.$this->attrs(['type' => 'text', ...$attrs]).'>', $help);
@@ -62,58 +66,57 @@ final class Specimen
             .'<div><button type="button" class="cms-button" data-variant="primary" data-size="md">'.e(__('Send')).'</button></div>';
 
         return [
-            'overview' => '<div class="cms-form">'.$overview.'</div>',
-            'field' => '<div class="cms-form">'
+            'overview' => [__('Form'), '<div class="cms-form">'.$overview.'</div>'],
+            'field' => [__('All Fields'), '<div class="cms-form">'
                 .$text(__('Text'), ['placeholder' => __('Placeholder')])
                 .$this->field(__('Dropdown'), $select())
                 .'<div class="cms-form__row">'.$text(__('Number'), ['type' => 'number', 'value' => '12']).$text(__('Date'), ['type' => 'date', 'value' => '2026-11-06']).'</div>'
                 .$this->field(__('Text area'), '<textarea class="cms-input" rows="2">'.e(__('Several lines of text.')).'</textarea>')
-                .'</div>',
-            'states' => '<div class="specimen-grid">'
+                .'</div>'],
+            'states' => [__('States'), '<div class="specimen-grid">'
                 .$text(__('Default'), ['placeholder' => __('Placeholder')])
                 .$text(__('Hover'), ['placeholder' => __('Placeholder'), 'data-cms-state' => 'hover'])
                 .$text(__('Focus'), ['value' => __('Typing'), 'data-cms-state' => 'focus'])
                 .$text(__('Disabled'), ['value' => __('Not now'), 'disabled' => true, 'data-cms-state' => 'disabled'])
                 .$this->field(__('Invalid'), '<input class="cms-input" type="email" value="ada@" aria-invalid="true">', '', __('Enter a full email address.'))
                 .$this->field(__('Invalid, typing'), '<input class="cms-input" type="email" value="ada@" aria-invalid="true" data-cms-state="focus">')
-                .'</div>',
-            'labels' => '<div class="cms-form">'
+                .'</div>'],
+            'labels' => [__('Labels and Help'), '<div class="cms-form">'
                 .$this->field(__('Company').' <span class="cms-req" aria-hidden="true">*</span>', '<input class="cms-input" type="text">', __('The name on your invoices.'))
                 .$this->field(__('Website').' <span class="cms-optional">'.e(__('optional')).'</span>', '<input class="cms-input" type="url" aria-invalid="true" value="example">', '', __('Enter a full web address (https://…).'))
                 .$this->slider(__('Team size'), 12, 1, 50, 1)
-                .'</div>',
-            'spacing' => '<div class="cms-form">'.$text(__('Name')).$text(__('Email'), ['type' => 'email'], __('We only use it to reply.')).$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone')], 0).$this->choice('checkbox', __('I agree to the privacy policy'), false).'</div>',
-            'select' => '<div class="cms-form">'
+                .'</div>'],
+            'select' => [__('Dropdowns'), '<div class="cms-form">'
                 .$this->field(__('Dropdown'), $select())
                 .$this->field(__('Nothing chosen yet'), '<select class="cms-input"><option value="">'.e(__('Choose…')).'</option></select>')
                 .$this->field(__('Several at once'), '<select class="cms-input" multiple size="3"><option selected>'.e(__('Website')).'</option><option>'.e(__('Online store')).'</option><option selected>'.e(__('Something else')).'</option></select>')
-                .'</div>',
-            'textarea' => '<div class="cms-form">'.$this->field(__('Message'), '<textarea class="cms-input" rows="4">'.e(__('Hello! We are planning a new website for the spring and would love to hear how you work.')).'</textarea>', __('A few lines are enough.')).'</div>',
-            'checkbox' => $states(fn ($state) => '<input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'"'.$this->state($state).'>')
+                .'</div>'],
+            'textarea' => [__('Text Areas'), '<div class="cms-form">'.$this->field(__('Message'), '<textarea class="cms-input" rows="4">'.e(__('Hello! We are planning a new website for the spring and would love to hear how you work.')).'</textarea>', __('A few lines are enough.')).'</div>'],
+            'checkbox' => [__('Checkboxes'), $states(fn ($state) => '<input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'"'.$this->state($state).'>')
                 .'<div class="specimen-row"><div class="specimen-cell"><input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'" data-cms-indeterminate><span class="specimen-caption">'.e(__('Some')).'</span></div><div class="specimen-cell"><input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'" aria-invalid="true"><span class="specimen-caption">'.e(__('Invalid')).'</span></div></div>'
-                .'<div class="specimen-rule"></div>'.$this->group(__('Services'), 'checkbox', [__('Design'), __('Build'), __('Hosting')], 0, 2),
-            'radio' => $states(fn ($state) => '<input type="radio" class="cms-radio" aria-label="'.e(__('Radio')).'"'.$this->state($state).'>')
-                .'<div class="specimen-rule"></div>'.$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone'), __('Either')], 0),
-            'switch' => $states(fn ($state) => '<input type="checkbox" role="switch" class="cms-switch" aria-label="'.e(__('Switch')).'"'.$this->state($state).'>')
-                .'<div class="specimen-rule"></div><div class="cms-form">'.$this->choice('switch', __('Send me the newsletter'), true).$this->choice('switch', __('Remember this device'), false).'</div>',
-            'slider' => '<div class="cms-form">'.$this->slider(__('Budget'), 4000, 1000, 10000, 500, '€', true).$this->slider(__('Focus'), 30, 0, 100, 1, '', false, 'focus').$this->slider(__('Disabled'), 70, 0, 100, 1, '', false, 'disabled').'</div>',
-            'tags' => '<div class="cms-form">'.$this->field(__('Topics'), $this->tags($topics, __('Add a topic')), __('Press Enter after each one.')).$this->field(__('Empty'), $this->tags([], __('Add a topic'))).'</div>',
-            'chips' => '<div class="cms-form">'.$this->group(__('Services'), 'chips', [__('Design'), __('Build'), __('Hosting'), __('Care')], 1)
-                .'<div class="specimen-row">'.implode('', array_map(fn ($state, $caption) => '<div class="specimen-cell"><span class="cms-chip"'.($state !== '' ? ' data-cms-state="'.$state.'"' : '').'>'.e(__('Design')).'</span><span class="specimen-caption">'.e($caption).'</span></div>', ['', 'checked', 'hover', 'focus'], [__('Off'), __('On'), __('Hover'), __('Focus')])).'</div></div>',
-            'file' => '<div class="cms-form">'.$this->field(__('Attachment'), '<input class="cms-input" type="file">', __('PDF or Word, 10 MB at most.')).'</div>',
+                .'<div class="specimen-rule"></div>'.$this->group(__('Services'), 'checkbox', [__('Design'), __('Build'), __('Hosting')], 0, 2)],
+            'radio' => [__('Radio Buttons'), $states(fn ($state) => '<input type="radio" class="cms-radio" aria-label="'.e(__('Radio')).'"'.$this->state($state).'>')
+                .'<div class="specimen-rule"></div>'.$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone'), __('Either')], 0)],
+            'switch' => [__('Switches'), $states(fn ($state) => '<input type="checkbox" role="switch" class="cms-switch" aria-label="'.e(__('Switch')).'"'.$this->state($state).'>')
+                .'<div class="specimen-rule"></div><div class="cms-form">'.$this->choice('switch', __('Send me the newsletter'), true).$this->choice('switch', __('Remember this device'), false).'</div>'],
+            'slider' => [__('Sliders'), '<div class="cms-form">'.$this->slider(__('Budget'), 4000, 1000, 10000, 500, '€', true).$this->slider(__('Focus'), 30, 0, 100, 1, '', false, 'focus').$this->slider(__('Disabled'), 70, 0, 100, 1, '', false, 'disabled').'</div>'],
+            'tags' => [__('Tag Fields'), '<div class="cms-form">'.$this->field(__('Topics'), $this->tags($topics, __('Add a topic')), __('Press Enter after each one.')).$this->field(__('Empty'), $this->tags([], __('Add a topic'))).'</div>'],
+            'chips' => [__('Chips'), '<div class="cms-form">'.$this->group(__('Services'), 'chips', [__('Design'), __('Build'), __('Hosting'), __('Care')], 1)
+                .'<div class="specimen-row">'.implode('', array_map(fn ($state, $caption) => '<div class="specimen-cell"><span class="cms-chip"'.($state !== '' ? ' data-cms-state="'.$state.'"' : '').'>'.e(__('Design')).'</span><span class="specimen-caption">'.e($caption).'</span></div>', ['', 'checked', 'hover', 'focus'], [__('Off'), __('On'), __('Hover'), __('Focus')])).'</div></div>'],
+            'file' => [__('File Pickers'), '<div class="cms-form">'.$this->field(__('Attachment'), '<input class="cms-input" type="file">', __('PDF or Word, 10 MB at most.')).'</div>'],
         ];
     }
 
-    /** @return array<string, string> variant => markup, and all of them at once */
+    /** @return array<string, array{string, string}> variant => [name, markup] */
     private function buttons(): array
     {
         $variants = $this->cms->hooks()->filter('fields.options.button-variants', []);
         $button = static fn (string $variant, string $label, string $state = '', string $size = 'md') => '<button type="button" class="cms-button" data-variant="'.e($variant).'" data-size="'.$size.'"'.($state !== '' ? ' data-cms-state="'.$state.'"' : '').($state === 'disabled' ? ' disabled' : '').'>'.e($label).'</button>';
-        $out = ['overview' => '<div class="specimen-grid">'.implode('', array_map(fn ($variant, $name) => '<div class="specimen-cell">'.$button((string) $variant, (string) $name).'<span class="specimen-caption">'.e((string) $variant).'</span></div>', array_keys($variants), $variants)).'</div>'];
+        $out = [];
 
         foreach ($variants as $variant => $name) {
             $variant = (string) $variant;
-            $out[$variant] = '<div class="specimen-row">'.implode('', array_map(
+            $out[$variant] = [(string) $name, '<div class="specimen-row">'.implode('', array_map(
                 fn ($state, $caption) => '<div class="specimen-cell">'.$button($variant, __('Get started'), $state).'<span class="specimen-caption">'.e($caption).'</span></div>',
                 ['', 'hover', 'active', 'focus', 'disabled'],
                 [__('Default'), __('Hover'), __('Pressed'), __('Focus'), __('Disabled')],
@@ -121,7 +124,7 @@ final class Specimen
                 fn ($size, $caption) => '<div class="specimen-cell">'.$button($variant, (string) $name, '', $size).'<span class="specimen-caption">'.e($caption).'</span></div>',
                 ['sm', 'md', 'lg'],
                 [__('Small'), __('Medium'), __('Large')],
-            )).'</div>';
+            )).'</div>'];
         }
 
         return $out;
