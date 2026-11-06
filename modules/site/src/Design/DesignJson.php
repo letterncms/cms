@@ -10,11 +10,12 @@ use Cms\Support\Files;
 /**
  * content/design/tokens.json — the design system of a site.
  *
- *   tokens       DTCG design tokens (color, font, text, leading, tracking, weight, space, radius, shadow, container, breakpoint, duration, ease)
+ *   tokens       DTCG design tokens (color, font, text, leading, tracking, weight, space, radius, shadow, container, control, breakpoint, duration, ease);
+ *                control holds the size scale of buttons and fields: control.sm-height, control.md-padding, control.lg-text…
  *   fonts        self-hosted fonts: [{family, src: "fonts/Inter.woff2", weight: "100 900", style, preload}]
  *   styles       element defaults: { body: {...}, h1: {...}, a: {...}, "a:hover": {...} } — camelCase CSS, tokens allowed
  *   prose        styles for long-form text inside Page content marked as prose: { h2: {...}, p: {...} }
- *   buttons      button variants: { primary: { base: {...}, hover: {...} }, secondary: {...} }
+ *   buttons      button variants, each a look: { primary: { base: {...}, hover: {...} }, secondary: {...} } (sizes are control tokens)
  *   fields       every form field, part by part: { field: { height, background… }, checkbox: { checked… }, … } (FieldStyles)
  *   transition   page transitions between pages: { type: fade|slide|none, duration: 0.3 }
  */
@@ -32,6 +33,7 @@ final class DesignJson
         'radius' => 'radius',
         'shadow' => 'shadow',
         'container' => 'container',
+        'control' => 'control',
         'breakpoint' => 'breakpoint',
         'duration' => 'duration',
         'ease' => 'ease',

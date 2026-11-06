@@ -7,7 +7,8 @@ namespace Cms\Modules\Site\Design;
 use Cms\Modules\Blocks\Css;
 
 /**
- * How every form field on a site looks: `fields` in tokens.json, part by part.
+ * How every form field on a site looks: `fields` in tokens.json, part by part. How big a field is
+ * comes from the control size scale buttons share (ControlSizes), not from here.
  *
  * Each property becomes a custom property (--field-height, --field-checkbox-size…) that
  * resources/css/fields.css reads, so one value reaches every kind of field: the fill of a
@@ -24,14 +25,11 @@ final class FieldStyles
      */
     public const array PARTS = [
         'field' => [
-            'height' => ['length', '2.75rem'],
-            'paddingX' => ['length', '0.875rem', ['tokens' => 'space']],
             'background' => ['color', ['token:color.raised', 'token:color.background', 'transparent']],
             'borderWidth' => ['length', '1px'],
             'borderColor' => ['color', 'color-mix(in srgb, var(--color-border, currentColor) 70%, currentColor)', ['hint' => 'border']],
             'radius' => ['length', ['token:radius.md', '0.5rem'], ['tokens' => 'radius']],
             'color' => ['color', 'currentColor'],
-            'fontSize' => ['length', ['token:text.base', '1rem'], ['tokens' => 'text']],
             'placeholder' => ['color', ['token:color.muted', 'color-mix(in srgb, currentColor 50%, transparent)']],
             'shadow' => ['shadow', '0 0 #0000'],
         ],
@@ -64,6 +62,7 @@ final class FieldStyles
             'color' => ['color', ['token:color.muted', 'currentColor']],
         ],
         'spacing' => [
+            'size' => ['choice', 'md', ['options' => ['sm', 'md', 'lg']]],
             'fields' => ['length', '1.25rem', ['tokens' => 'space']],
             'label' => ['length', '0.375rem', ['tokens' => 'space']],
             'list' => ['length', '0.625rem', ['tokens' => 'space']],
@@ -116,13 +115,11 @@ final class FieldStyles
             'thumbShadow' => ['shadow', '0 1px 3px rgb(0 0 0 / 0.16)'],
         ],
         'tags' => [
-            'height' => ['length', '1.75rem'],
             'background' => ['color', 'color-mix(in srgb, currentColor 8%, transparent)', ['hint' => 'faint']],
             'color' => ['color', 'currentColor'],
             'radius' => ['length', ['token:radius.sm', '0.375rem'], ['tokens' => 'radius']],
         ],
         'chips' => [
-            'height' => ['length', '2.25rem'],
             'radius' => ['length', '999px', ['tokens' => 'radius']],
             'background' => ['color', 'transparent'],
             'borderColor' => ['color', 'field:field.borderColor'],
@@ -200,7 +197,10 @@ final class FieldStyles
         $vars[] = '--field-radio-on-background:'.($ring ? 'var(--field-checkbox-background)' : 'var(--field-radio-checked)');
         $vars[] = '--field-radio-on-dot:'.($ring ? 'var(--field-radio-checked)' : 'var(--field-radio-dot-color)');
 
-        return ':root,[data-theme]{'.implode(';', $vars).'}';
+        // Fields in a form take the form size the site picks, unless the form names its own.
+        $size = $choice('spacing', 'size');
+
+        return ':root,[data-theme]{'.implode(';', $vars).'}'.($size !== 'md' ? '.cms-form:not([data-size]){'.ControlSizes::pick($size).'}' : '');
     }
 
     /**
@@ -246,7 +246,7 @@ final class FieldStyles
     }
 
     /** A default as CSS: `field:` references and token chains become var()s with fallbacks. */
-    private static function fallback(string|array $default): string
+    public static function fallback(string|array $default): string
     {
         if (is_string($default)) {
             return self::value($default, '') ?? $default;

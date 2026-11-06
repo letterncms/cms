@@ -111,7 +111,8 @@ final class Interactive
             $html .= $option((string) $value, $o['label'], $o['count'], false);
         }
 
-        $look = $list ? ' data-look="list"' : '';
+        // Chips are small controls, like a row of small buttons.
+        $look = $list ? ' data-look="list"' : ' data-size="sm"';
 
         return '<fieldset '.$d['attrs'].$look.' data-cms-filter-control data-facet="'.e($facet).'"><legend class="cms-label cms-filter__legend">'.e((string) ($b['label'] ?? $facet)).'</legend>'.$html.'</fieldset>';
     }

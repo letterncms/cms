@@ -1,0 +1,35 @@
+/* Buttons. Their size is the control size scale fields share (data-size → --control-*), their
+   look a variant from the design system. Three layers, so nothing depends on specificity: the
+   base and the core variants, then the site's variants, then shapes and states, which a
+   variant can't undo. [data-cms-state] shows a state without the pointer, for the specimen. */
+@layer components {
+  @layer button-base, button-variants, button-shapes;
+
+  @layer button-base {
+    .cms-button {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5em; box-sizing: border-box; flex-shrink: 0;
+      height: var(--control-height); padding: 0 var(--control-padding);
+      font: inherit; font-size: var(--control-text); font-weight: var(--font-weight-medium, 500); line-height: 1; white-space: nowrap; text-decoration: none;
+      color: inherit; background: none; border: 1px solid transparent; border-radius: var(--radius-md, 0.5rem); cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+    }
+    .cms-button__icon { flex: none; width: 1.25em; height: 1.25em; }
+    .cms-button[data-variant="primary"] { color: var(--color-primary-foreground, #fff); background: var(--color-primary, #111); }
+    .cms-button[data-variant="primary"]:is(:hover, [data-cms-state~=hover]) { opacity: 0.9; }
+    .cms-button[data-variant="secondary"] { border-color: var(--color-border, rgb(0 0 0 / 0.15)); }
+    .cms-button[data-variant="secondary"]:is(:hover, [data-cms-state~=hover]), .cms-button[data-variant="ghost"]:is(:hover, [data-cms-state~=hover]) { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
+    .cms-button[data-variant="link"] { color: var(--color-primary, inherit); text-decoration: underline; text-underline-offset: 0.2em; }
+  }
+
+  @layer button-shapes {
+    /* An icon alone makes a square button, as tall as it is wide; round makes it a circle, and a labelled one a pill. */
+    .cms-button[data-icon-only] { width: var(--control-height); padding: 0; gap: 0; }
+    .cms-button[data-shape="round"] { border-radius: 999px; }
+    .cms-button[data-variant="link"] { height: auto; padding: 0; border: 0; }
+    .cms-button:is(:active, [data-cms-state~=active]):not(:disabled) { transform: translateY(1px); }
+    .cms-button[data-cms-state~=focus] { outline: 2px solid var(--color-focus, var(--color-primary, currentColor)); outline-offset: 3px; }
+    /* Disabled reads the same on a button as on a field. */
+    .cms-button:is(:disabled, [aria-disabled=true], [data-cms-state~=disabled]) { opacity: var(--field-disabled-opacity, 0.5); cursor: not-allowed; transform: none; }
+    .cms-button[data-danger] { color: var(--color-danger, #b91c1c); }
+  }
+}
