@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- **Design**: the menu button of a font row no longer slips past the edge of the panel when the panel is narrow.
+- **Design**: the ⋯ menu of every token row (fonts, type scale, spacing, shape, motion) no longer slips past the edge of the panel, which also caused a horizontal scroll, when the panel is narrow.
 
 ## 0.18.1 (2026-11-06)
 
