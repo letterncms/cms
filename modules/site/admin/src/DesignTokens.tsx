@@ -297,6 +297,55 @@ export default function DesignTokens() {
   const durationEase = css('ease', byGroup('ease')[0]?.value ?? 'cubic-bezier(0.2, 0.8, 0.2, 1)')
   const families = [...new Set((theme.data.fonts ?? []).map((font) => font.family))]
   const refreshFonts = () => { void theme.refetch(); frame.current?.contentWindow?.location.reload() }
+  // The fonts the site serves, for the font tokens' pickers: added there (from Google Fonts, or a .woff2 file) and removed there when no token uses them.
+  const siteFonts = families.map((family) => ({ family, styles: styles((theme.data.fonts ?? []).filter((font) => font.family === family)), used: byGroup('font').some((token) => fontStack(token.value)[0] === family) }))
+  const addFont = async (kind: string): Promise<string | null> => {
+    try {
+      if (kind === 'google') {
+        const asked = await prompt({ title: t('Add a Google Font'), description: t('Its files are downloaded to your site.'), fields: [{ handle: 'family', type: 'text', label: t('Name'), placeholder: 'Inter Tight', autofocus: true }], confirm: t('Add') })
+        const family = String(asked?.family ?? '').trim()
+        if (!family) return null
+        await run('design/fonts-import', { family })
+        toast.success(t('{family} added', { family }))
+        refreshFonts()
+        return family
+      }
+      const picked = await new Promise<File | null>((resolve) => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.woff2,font/woff2'
+        input.onchange = () => resolve(input.files?.[0] ?? null)
+        input.oncancel = () => resolve(null)
+        input.click()
+      })
+      if (!picked) return null
+      const data = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.readAsDataURL(picked)
+      })
+      const name = picked.name.replace(/\.woff2$/i, '')
+      const asked = await prompt({ title: t('Upload Font'), fields: [{ handle: 'family', type: 'text', label: t('Family Name'), autofocus: true }], values: { family: name.replace(/[-_](regular|bold|variable|italic|\d+).*$/i, '').replace(/[-_]/g, ' ') }, confirm: t('Upload') })
+      const family = String(asked?.family ?? '').trim()
+      if (!family) return null
+      await run('design/fonts-upload', { family, name, data, weight: /variable/i.test(name) ? '100 900' : '400', style: /italic/i.test(name) ? 'italic' : 'normal' })
+      toast.success(t('{family} uploaded', { family }))
+      refreshFonts()
+      return family
+    } catch (e) {
+      toast.error(e)
+      return null
+    }
+  }
+  const removeFont = async (family: string) => {
+    if (!(await confirm({ title: t('Remove {family}?', { family }), description: t('Its files are deleted from your site.'), confirm: t('Remove'), danger: true }))) return
+    try {
+      await run('design/update', { fonts: (theme.data.fonts ?? []).filter((font) => font.family !== family) })
+      refreshFonts()
+    } catch (e) {
+      toast.error(e)
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -344,7 +393,7 @@ export default function DesignTokens() {
 
           {section === 'type' && (
             <>
-              {/* Fonts are roles (sans, display, mono…), each using a font from the library below. */}
+              {/* Fonts are the roles the site uses (sans, display, mono…); each picks, or adds, the font it uses. */}
               <Group title={t('Fonts')} onAdd={() => add('font', [...(families[0] ? [families[0]] : []), 'ui-sans-serif', 'system-ui', 'sans-serif'])}>
                 {byGroup('font').map((token) => (
                   <Row
@@ -358,11 +407,10 @@ export default function DesignTokens() {
                       ...(['sans', 'serif', 'mono'] as const).map((kind) => ({ label: { sans: t('Sans'), serif: t('Serif'), mono: t('Mono') }[kind], checked: fallbackOf(fontStack(token.value)) === kind, onSelect: () => setToken(token, { value: withFallback(token.value, kind) }) })),
                     ]}
                   >
-                    {value(token, { component: 'site-font-stack', families })}
+                    {value(token, { component: 'site-font-stack', fonts: siteFonts, onAdd: addFont, onRemove: removeFont })}
                   </Row>
                 ))}
               </Group>
-              <FontLibrary fonts={theme.data.fonts ?? []} onChanged={refreshFonts} />
               <Group title={t('Type Scale')} onAdd={() => add('text', { min: '1rem', max: '1.25rem' })}>
                 {byGroup('text').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} below={<p className="m-0 truncate pb-2.5 leading-[1.1] tracking-[-0.01em] text-ink" style={{ fontSize: css('text', token.value), fontFamily: css('font', byGroup('font').find((x) => x.name === 'display')?.value ?? byGroup('font')[0]?.value) }}>{t('Ship It')}</p>}>
@@ -569,74 +617,6 @@ function styles(files: Font[]): string {
   const high = Math.max(...weights)
   const range = weights.length === 0 ? '400' : low === high ? String(low) : `${low}–${high}`
   return files.some((font) => font.style === 'italic') ? `${range} · ${t('Italic')}` : range
-}
-
-/**
- * The fonts the site serves from its own files, each shown in itself: added from Google Fonts
- * (downloaded, so visitors never connect to Google) or uploaded as .woff2.
- */
-function FontLibrary({ fonts, onChanged }: { fonts: Font[]; onChanged: () => void }) {
-  const file = useRef<HTMLInputElement>(null)
-  const families = [...new Set(fonts.map((font) => font.family))]
-
-  const importFamily = async () => {
-    const asked = await prompt({ title: t('Add a Google Font'), description: t('Its files are downloaded to your site.'), fields: [{ handle: 'family', type: 'text', label: t('Name'), placeholder: 'Inter Tight', autofocus: true }], confirm: t('Add') })
-    const name = String(asked?.family ?? '').trim()
-    if (!name) return
-    try {
-      await run('design/fonts-import', { family: name })
-      toast.success(t('{family} added', { family: name }))
-      onChanged()
-    } catch (e) {
-      toast.error(e)
-    }
-  }
-
-  const upload = async (picked: File) => {
-    const data = await new Promise<string>((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(String(reader.result))
-      reader.readAsDataURL(picked)
-    })
-    const name = picked.name.replace(/\.woff2$/i, '')
-    const asked = await prompt({ title: t('Upload Font'), fields: [{ handle: 'family', type: 'text', label: t('Family Name'), autofocus: true }], values: { family: name.replace(/[-_](regular|bold|variable|italic|\d+).*$/i, '').replace(/[-_]/g, ' ') }, confirm: t('Upload') })
-    const family = String(asked?.family ?? '').trim()
-    if (!family) return
-    try {
-      await run('design/fonts-upload', { family, name, data, weight: /variable/i.test(name) ? '100 900' : '400', style: /italic/i.test(name) ? 'italic' : 'normal' })
-      toast.success(t('{family} uploaded', { family }))
-      onChanged()
-    } catch (e) {
-      toast.error(e)
-    }
-  }
-
-  const remove = async (name: string) => {
-    if (!(await confirm({ title: t('Remove {family}?', { family: name }), description: t('Fonts that use it fall back to the system font.'), confirm: t('Remove'), danger: true }))) return
-    try {
-      await run('design/update', { fonts: fonts.filter((font) => font.family !== name) })
-      onChanged()
-    } catch (e) {
-      toast.error(e)
-    }
-  }
-
-  return (
-    <Group
-      title={t('Font Library')}
-      action={<Menu trigger={<IconButton icon="plus" label={t('Add Font')} size="xs" />} items={[{ label: t('Google Font…'), icon: 'search', onSelect: () => void importFamily() }, { label: t('Upload .woff2…'), icon: 'upload', onSelect: () => file.current?.click() }]} />}
-    >
-      <input ref={file} type="file" accept=".woff2,font/woff2" hidden onChange={(e) => { const picked = e.target.files?.[0]; e.target.value = ''; if (picked) void upload(picked) }} />
-      {families.length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('No fonts yet: the site uses the system’s.')}</p>}
-      {families.map((name) => (
-        <div key={name} className="group flex min-h-11 items-center gap-3 border-b border-border py-2 last:border-b-0">
-          <span className="min-w-0 flex-1 truncate text-[17px] leading-tight text-ink" style={{ fontFamily: `"${name}"` }}>{name}</span>
-          <span className="shrink-0 text-2xs tabular-nums text-faint">{styles(fonts.filter((font) => font.family === name))}</span>
-          <Menu trigger={<IconButton icon="more" label={t('Font Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => void remove(name) }]} />
-        </div>
-      ))}
-    </Group>
-  )
 }
 
 /** What people call the elements the design system styles. */
