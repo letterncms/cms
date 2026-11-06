@@ -31,7 +31,7 @@ use RuntimeException;
  */
 final class Cms
 {
-    public const string VERSION = '0.18.3';
+    public const string VERSION = '0.19.0';
 
     public function __construct(private readonly Application $app) {}
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.0 (2026-11-06)
+
 ### Added
 
 - **Design System**: **Prose** is a section of its own. Set the space between blocks, before and after headings and between list items once, and every block in long-form text follows it, images and your own blocks too. A live sample shows the result.
