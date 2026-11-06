@@ -444,5 +444,22 @@
   "Weights": "Graisses",
   "Welcome to your blog": "Bienvenue sur votre blog",
   "Whether the live site is up to date, with a button to publish it.": "Si le site en ligne est à jour, avec un bouton pour le publier.",
-  "Width": "Largeur"
+  "Width": "Largeur",
+  "A block of its own, such as a callout, keeps the same spacing as the text around it.": "Un bloc à part, comme un encadré, garde le même espacement que le texte autour.",
+  "A heading opens a new part": "Un titre ouvre une nouvelle partie",
+  "A quote sits in the flow like any other block.": "Une citation s’inscrit dans le flux comme tout autre bloc.",
+  "A smaller heading": "Un titre plus petit",
+  "After Headings": "Après les titres",
+  "Before Headings": "Avant les titres",
+  "Between Blocks": "Entre les blocs",
+  "Between List Items": "Entre les éléments de liste",
+  "between their items": "entre leurs éléments",
+  "Links, inline code and quotes take their look from the prose styles.": "Les liens, le code en ligne et les citations prennent leur style du texte courant.",
+  "Lists keep their own rhythm": "Les listes gardent leur propre rythme",
+  "Long-form text reads best when every block keeps the same distance from the next, whatever kind of block it is.": "Un long texte se lit mieux quand chaque bloc garde la même distance avec le suivant, quel que soit son type.",
+  "The space before a heading is larger than between paragraphs, and the space after it is smaller, so it belongs to what follows.": "L’espace avant un titre est plus grand qu’entre les paragraphes, et plus petit après, pour qu’il appartienne à ce qui suit.",
+  "Bottom Margin": "Marge inférieure",
+  "Margin": "Marge extérieure",
+  "More": "Plus",
+  "Top Margin": "Marge supérieure"
 }

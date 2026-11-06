@@ -14,7 +14,8 @@ use Cms\Support\Files;
  *                control holds the size scale of buttons and fields: control.sm-height, control.md-padding, control.lg-text…
  *   fonts        self-hosted fonts: [{family, src: "fonts/Inter.woff2", weight: "100 900", style, preload}]
  *   styles       element defaults: { body: {...}, h1: {...}, a: {...}, "a:hover": {...} } — camelCase CSS, tokens allowed
- *   prose        styles for long-form text inside Page content marked as prose: { h2: {...}, p: {...} }
+ *   prose        long-form text, in any block styled as prose: element styles { h2: {...}, p: {...} } (marginTop is the space
+ *                above it, after the block before) and `spacing`, the flow between its blocks: { blocks, headings, afterHeadings, items }
  *   buttons      button variants, each a look: { primary: { base: {...}, hover: {...} }, secondary: {...} } (sizes are control tokens)
  *   fields       every form field, part by part: { field: { height, background… }, checkbox: { checked… }, … } (FieldStyles)
  *   transition   page transitions between pages: { type: fade|slide|none, duration: 0.3 }
@@ -258,9 +259,19 @@ final class DesignJson
         return (array) ($this->data['styles'] ?? []);
     }
 
+    /** The flow between the blocks of prose: key => the custom property it sets (--prose-…). */
+    public const array PROSE_SPACING = ['blocks' => 'blocks', 'headings' => 'headings', 'afterHeadings' => 'after-headings', 'items' => 'items'];
+
+    /** @return array<string, array<string, mixed>> element => declarations, inside prose */
     public function prose(): array
     {
-        return (array) ($this->data['prose'] ?? []);
+        return array_diff_key((array) ($this->data['prose'] ?? []), ['spacing' => true]);
+    }
+
+    /** @return array<string, string|int|float> blocks, headings, afterHeadings, items */
+    public function proseSpacing(): array
+    {
+        return array_intersect_key((array) ($this->data['prose']['spacing'] ?? []), self::PROSE_SPACING);
     }
 
     public function buttons(): array

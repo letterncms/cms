@@ -1,6 +1,6 @@
 import { t } from '@letterncms/sdk'
-import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
+import { StyleSection } from './more'
 import { StyleFields } from './StyleFields'
 
 /** Position and offsets. */
@@ -8,7 +8,7 @@ export function Position({ s }: { s: StyleApi }) {
   const position = s.value('position')
   const placed = !!position && position !== 'static'
   return (
-    <Section title={t('Position')} open={!!position} empty={!position}>
+    <StyleSection s={s} group="position" title={t('Position')} open={!!position} empty={!position}>
       <StyleFields
         s={s}
         fields={[
@@ -39,6 +39,6 @@ export function Position({ s }: { s: StyleApi }) {
           { handle: 'isolation', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Isolation'), placeholder: 'auto', options: [{ value: 'auto', label: t('Auto') }, { value: 'isolate', label: t('Isolate') }], instructions: t('A new stacking context: keeps blend modes and z-index inside') },
         ]}
       />
-    </Section>
+    </StyleSection>
   )
 }

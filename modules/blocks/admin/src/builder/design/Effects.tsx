@@ -1,6 +1,6 @@
 import { t } from '@letterncms/sdk'
-import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
+import { StyleSection } from './more'
 import { StyleFields } from './StyleFields'
 
 const BLEND = ['multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity']
@@ -11,7 +11,7 @@ export function Effects({ s }: { s: StyleApi }) {
   const any = ['opacity', 'boxShadow', 'filter', 'backdropFilter', 'mixBlendMode', 'cursor', 'pointerEvents', 'clipPath'].some((k) => s.value(k))
 
   return (
-    <Section title={t('Effects')} empty={!any}>
+    <StyleSection s={s} group="effects" title={t('Effects')} empty={!any}>
       <StyleFields
         s={s}
         fields={[
@@ -30,6 +30,6 @@ export function Effects({ s }: { s: StyleApi }) {
           { handle: 'pointerEvents', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Clicks'), placeholder: 'auto', options: [{ value: 'auto', label: t('On') }, { value: 'none', label: t('Pass Through') }] },
         ]}
       />
-    </Section>
+    </StyleSection>
   )
 }

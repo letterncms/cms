@@ -1,6 +1,6 @@
 import { t } from '@letterncms/sdk'
-import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
+import { StyleSection } from './more'
 import { StyleFields, type StyleField } from './StyleFields'
 
 /** Width or height: a value, with Fill / Fit / Auto / window presets. */
@@ -33,7 +33,7 @@ function dimension(s: StyleApi, prop: 'width' | 'height', label: string): StyleF
 export function Size({ s, media }: { s: StyleApi; media?: boolean }) {
   const any = ['width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'aspectRatio', 'overflow'].some((k) => s.value(k))
   return (
-    <Section title={t('Size')} empty={!any}>
+    <StyleSection s={s} group="size" title={t('Size')} empty={!any}>
       <StyleFields
         s={s}
         fields={[
@@ -72,6 +72,6 @@ export function Size({ s, media }: { s: StyleApi; media?: boolean }) {
           media && { handle: 'objectPosition', type: 'json', component: 'blocks-origin', label: t('Focus'), className: 'items-start py-0.5 [&>label]:leading-6' },
         ]}
       />
-    </Section>
+    </StyleSection>
   )
 }

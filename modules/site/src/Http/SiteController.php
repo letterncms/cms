@@ -30,7 +30,7 @@ final class SiteController
     /** Every form field, or every button, in each of its states: the Design System's live specimen. */
     public function specimen(string $kind): SymfonyResponse
     {
-        $html = $this->renderer->specimen(static fn () => app(\Cms\Modules\Site\Design\Specimen::class)->html($kind), match ($kind) { 'buttons' => __('Buttons'), 'sizes' => __('Sizes'), default => __('Form Fields') });
+        $html = $this->renderer->specimen(static fn () => app(\Cms\Modules\Site\Design\Specimen::class)->html($kind), match ($kind) { 'buttons' => __('Buttons'), 'sizes' => __('Sizes'), 'prose' => __('Prose'), default => __('Form Fields') });
 
         return response($html)->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex');
     }

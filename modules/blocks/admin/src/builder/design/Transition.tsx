@@ -2,8 +2,8 @@ import { t } from '@letterncms/sdk'
 import { Icon } from '@letterncms/ui'
 import { useTokens } from '../../core/context'
 import { splitValue } from '../css'
-import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
+import { StyleSection } from './more'
 import { StyleFields } from './StyleFields'
 
 const PROPERTIES = () => [
@@ -35,7 +35,7 @@ export function Transition({ s }: { s: StyleApi }) {
   }
 
   return (
-    <Section title={t('Transition')} open={!!tr} empty={!tr}>
+    <StyleSection s={s} group="transition" title={t('Transition')} open={!!tr} empty={!tr}>
       {!tr ? (
         <button type="button" onClick={() => set({})} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
           <Icon name="b-plus" size={14} />
@@ -72,6 +72,6 @@ export function Transition({ s }: { s: StyleApi }) {
           ]}
         />
       )}
-    </Section>
+    </StyleSection>
   )
 }

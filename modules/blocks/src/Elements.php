@@ -266,7 +266,16 @@ final class Elements
             return '<div '.$d['attrs'].'><div class="cms-placeholder"'.($document !== null ? ' data-cms-editor-empty-root' : '').'>'.e(__('Page Content')).'</div></div>';
         }
 
-        return $d['block']['wrap'] ?? false ? '<div '.$d['attrs'].'>'.$html.'</div>' : ($d['editor'] ? '<div '.$d['attrs'].' style="display:contents">'.$html.'</div>' : $html);
+        // One element in the editor and on the site alike. Unwrapped, its blocks lay out as its parent's own (display: contents):
+        // what they inherit from it (text styles, prose) still reaches them.
+        $attrs = (string) $d['attrs'];
+
+        // Prose sees through it: its blocks keep the flow of the prose around them (data-cms-contents).
+        if (! ($d['block']['wrap'] ?? false)) {
+            $attrs = (str_contains($attrs, ' style="') ? str_replace(' style="', ' style="display:contents;', $attrs) : $attrs.' style="display:contents"').' data-cms-contents';
+        }
+
+        return '<div '.$attrs.'>'.$html.'</div>';
     }
 
     public static function input(array $d): string

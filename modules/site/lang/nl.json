@@ -444,5 +444,22 @@
   "Weights": "Gewichten",
   "Welcome to your blog": "Welkom op je blog",
   "Whether the live site is up to date, with a button to publish it.": "Of de live site up-to-date is, met een knop om te publiceren.",
-  "Width": "Breedte"
+  "Width": "Breedte",
+  "A block of its own, such as a callout, keeps the same spacing as the text around it.": "Een eigen blok, zoals een kader, houdt dezelfde ruimte als de tekst eromheen.",
+  "A heading opens a new part": "Een kop opent een nieuw deel",
+  "A quote sits in the flow like any other block.": "Een citaat staat in de stroom zoals elk ander blok.",
+  "A smaller heading": "Een kleinere kop",
+  "After Headings": "Na koppen",
+  "Before Headings": "Voor koppen",
+  "Between Blocks": "Tussen blokken",
+  "Between List Items": "Tussen lijstitems",
+  "between their items": "tussen hun items",
+  "Links, inline code and quotes take their look from the prose styles.": "Links, code in de tekst en citaten krijgen hun uiterlijk van de stijlen voor lopende tekst.",
+  "Lists keep their own rhythm": "Lijsten houden hun eigen ritme",
+  "Long-form text reads best when every block keeps the same distance from the next, whatever kind of block it is.": "Lange tekst leest het best als elk blok dezelfde afstand tot het volgende houdt, welk soort blok het ook is.",
+  "The space before a heading is larger than between paragraphs, and the space after it is smaller, so it belongs to what follows.": "De ruimte voor een kop is groter dan tussen alinea’s, en erna kleiner, zodat hij bij wat volgt hoort.",
+  "Bottom Margin": "Marge onder",
+  "Margin": "Buitenmarge",
+  "More": "Meer",
+  "Top Margin": "Marge boven"
 }

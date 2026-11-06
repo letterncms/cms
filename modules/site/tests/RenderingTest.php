@@ -173,7 +173,7 @@ final class RenderingTest extends TestCase
         $page = $this->cms()->content()->create('pages', ['title' => 'Bare', 'slug' => 'bare', 'status' => 'published', 'data' => ['content' => [['type' => 'heading', 'props' => ['text' => 'Hello', 'level' => '1']]]]]);
         $html = $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($page->id))['html'];
 
-        $this->assertStringContainsString('<main class="cms-box" id="main"><h1 class="cms-heading" id="hello">Hello</h1></main>', $html);
+        $this->assertStringContainsString('<main class="cms-box" id="main"><div class="cms-outlet" style="display:contents" data-cms-contents><h1 class="cms-heading" id="hello">Hello</h1></div></main>', $html);
         $this->assertSame(404, $this->app->make(Renderer::class)->notFound('/nope')['status']);
     }
 
@@ -207,6 +207,35 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('h1{font-size:var(--text-5xl);letter-spacing:-0.04em}', $css);
         $this->assertStringContainsString('.cms-button[data-variant="primary"]{background-color:var(--color-primary)}', $css);
         $this->assertStringContainsString('@view-transition{navigation:auto}', $css);
+    }
+
+    public function test_page_content_is_one_element_and_prose_is_a_toggle(): void
+    {
+        $content = $this->cms()->content();
+        $content->create('templates', ['title' => 'Site default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
+            ['type' => 'box', 'props' => ['prose' => true], 'children' => [['type' => 'outlet']]],
+        ]]]);
+        $page = $content->create('pages', ['title' => 'Notes', 'slug' => 'notes', 'status' => 'published', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'One']]]]]);
+        $html = $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($page->id))['html'];
+
+        // Unwrapped, Page Content lends its blocks to the prose box around it, on the site as in the editor.
+        $this->assertStringContainsString('<div class="cms-box cms-prose"><div class="cms-outlet" style="display:contents" data-cms-contents><p class="cms-paragraph">One</p></div></div>', $html);
+    }
+
+    public function test_prose_spacing_is_the_flow_between_its_blocks(): void
+    {
+        $this->cms()->abilities()->execute('design/update', [
+            'prose' => ['spacing' => ['blocks' => '1.25em', 'headings' => 'token:space.12'], 'h2' => ['fontSize' => '2rem', 'marginTop' => '3rem']],
+        ], \Cms\Abilities\AbilityContext::system('test'));
+
+        $design = $this->app->make(\Cms\Modules\Site\Design\Design::class);
+        $design->saved();
+        $css = (string) file_get_contents(public_path(ltrim($design->stylesheet(), '/')));
+
+        $this->assertStringContainsString('.cms-prose{--prose-blocks:1.25em;--prose-headings:var(--space-12)}', $css);
+        $this->assertStringContainsString('.cms-prose h2{font-size:2rem}', $css);
+        $this->assertStringContainsString('.cms-prose > * + h2,.cms-prose > [data-cms-contents] > * + h2,.cms-prose > * + [data-cms-contents] > h2:first-child{margin-top:3rem}', $css);
+        $this->assertArrayHasKey('spacing', (array) $this->cms()->abilities()->execute('design/get', [], \Cms\Abilities\AbilityContext::system('test'))['prose']);
     }
 
     public function test_form_fields_are_styled_once_from_the_design_system(): void

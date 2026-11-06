@@ -1,6 +1,6 @@
 import { t } from '@letterncms/sdk'
-import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
+import { StyleSection } from './more'
 import { StyleFields } from './StyleFields'
 
 const DISPLAY = () => [
@@ -19,7 +19,7 @@ export function Layout({ s }: { s: StyleApi }) {
   const row = flex && (s.value('flexDirection') ?? 'row').startsWith('row')
 
   return (
-    <Section title={t('Layout')} empty={!display}>
+    <StyleSection s={s} group="layout" title={t('Layout')} empty={!display}>
       <StyleFields
         s={s}
         fields={[
@@ -71,7 +71,7 @@ export function Layout({ s }: { s: StyleApi }) {
           grid && { handle: 'gridAutoFlow', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Flow'), options: [{ value: 'row', icon: 'b-arrow-right', title: t('Rows First') }, { value: 'column', icon: 'b-arrow-down', title: t('Columns First') }, { value: 'row dense', icon: 'b-squares-four', title: t('Fill Gaps (Dense)') }] },
         ]}
       />
-    </Section>
+    </StyleSection>
   )
 }
 
@@ -80,7 +80,7 @@ export function InParent({ s, parentDisplay }: { s: StyleApi; parentDisplay?: st
   if (!parentDisplay || !/flex|grid/.test(parentDisplay)) return null
   const grid = parentDisplay.includes('grid')
   return (
-    <Section title={grid ? t('Grid Item') : t('Stack Item')} open={false} empty={!s.value('alignSelf') && !s.value('flex') && !s.value('gridColumn')}>
+    <StyleSection s={s} group="item" title={grid ? t('Grid Item') : t('Stack Item')} open={false} empty={!s.value('alignSelf') && !s.value('flex') && !s.value('gridColumn')}>
       <StyleFields
         s={s}
         fields={[
@@ -91,6 +91,6 @@ export function InParent({ s, parentDisplay }: { s: StyleApi; parentDisplay?: st
           { handle: 'order', type: 'text', component: 'blocks-value', label: t('Display Order'), unit: '', placeholder: '0', prefixIcon: 'b-list-numbers' },
         ]}
       />
-    </Section>
+    </StyleSection>
   )
 }

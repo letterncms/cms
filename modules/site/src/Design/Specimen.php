@@ -22,7 +22,7 @@ final class Specimen
 
     public function html(string $kind): string
     {
-        $parts = match ($kind) { 'buttons' => $this->buttons(), 'sizes' => $this->sizes(), default => $this->fields() };
+        $parts = match ($kind) { 'buttons' => $this->buttons(), 'sizes' => $this->sizes(), 'prose' => $this->prose(), default => $this->fields() };
         $html = '';
 
         foreach ($parts as $part => [$title, $content]) {
@@ -143,6 +143,24 @@ final class Specimen
         }
 
         return $out;
+    }
+
+    /** @return array<string, array{string, string}> long-form text with a block of its own in it: the flow of prose between blocks of any kind */
+    private function prose(): array
+    {
+        $p = static fn (string $text) => '<p>'.e($text).'</p>';
+        $box = 'padding:1.25rem;border-radius:var(--radius-lg,.75rem);background:var(--color-surface,rgb(0 0 0 / .05))';
+
+        return ['prose' => [__('Prose'), '<div class="cms-prose">'
+            .$p(__('Long-form text reads best when every block keeps the same distance from the next, whatever kind of block it is.'))
+            .'<h2>'.e(__('A heading opens a new part')).'</h2>'
+            .$p(__('The space before a heading is larger than between paragraphs, and the space after it is smaller, so it belongs to what follows.'))
+            .'<ul><li>'.e(__('Lists keep their own rhythm')).'</li><li>'.e(__('between their items')).'</li></ul>'
+            .'<div style="'.$box.'">'.e(__('A block of its own, such as a callout, keeps the same spacing as the text around it.')).'</div>'
+            .'<h3>'.e(__('A smaller heading')).'</h3>'
+            .$p(__('Links, inline code and quotes take their look from the prose styles.'))
+            .'<blockquote><p>'.e(__('A quote sits in the flow like any other block.')).'</p></blockquote>'
+            .'</div>']];
     }
 
     /** @return array<string, array{string, string}> size => [name, markup]: fields and buttons of one size, side by side */

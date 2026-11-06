@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Added
+
+- **Design System**: **Prose** is a section of its own. Set the space between blocks, before and after headings and between list items once, and every block in long-form text follows it, images and your own blocks too. A live sample shows the result.
+- **Prose**, a switch under **Typography** in the Design tab of **Page Content** and **Box**, turns a block into long-form text. It replaces typing the `cms-prose` class, which still works.
+- **Margin** (top and bottom) for element styles in the Design System, as a control.
+
+### Changed
+
+- The **CSS** section is gone, from the inspector and from the Design System. Each section's **+** adds a property it has no row for yet, such as **Scroll Snap Align** in **Size** or **Text Underline Offset** in **Typography**, with its own control; what you had set there shows in its section.
+- **Page Content** looks the same in the editor and on the site. Without **Wrap in a Container**, its blocks join the layout around them, and its Design tab shows only the text styles that still reach them; with it, its own size and spacing apply, such as the margin above an article's text.
+- The editor's top bar keeps **Chat**, the sidebar button and **Publish** together, instead of holding room for the widest publish label.
+
+### Fixed
+
+- Images, videos, embeds, quotes and lists in long-form text get the same space above them as paragraphs.
+
 ## 0.18.3 (2026-11-06)
 
 ### Fixed

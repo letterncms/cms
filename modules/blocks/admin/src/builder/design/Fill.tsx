@@ -1,8 +1,9 @@
 import { t } from '@letterncms/sdk'
 import { Fields, cn } from '@letterncms/ui'
-import { Section, inputClass } from '../controls'
+import { inputClass } from '../controls'
 import { parseGradient } from '../fields/style'
 import type { StyleApi } from '../useStyle'
+import { StyleSection } from './more'
 import { StyleFields } from './StyleFields'
 
 const CLEAR = { backgroundImage: null, backgroundSize: null, backgroundPosition: null, backgroundRepeat: null }
@@ -15,7 +16,7 @@ export function Fill({ s }: { s: StyleApi }) {
   const any = s.value('backgroundColor') || image
 
   return (
-    <Section title={t('Fill')} empty={!any}>
+    <StyleSection s={s} group="fill" title={t('Fill')} empty={!any}>
       <StyleFields
         s={s}
         fields={[
@@ -56,6 +57,6 @@ export function Fill({ s }: { s: StyleApi }) {
         ]}
       />
       {image && kind === 'image' && !mediaId && image !== 'none' && <p className={cn(inputClass, 'h-auto py-1 font-mono')}>{image}</p>}
-    </Section>
+    </StyleSection>
   )
 }

@@ -1,8 +1,9 @@
 import { t } from '@letterncms/sdk'
 import { useTokens } from '../../core/context'
 import { splitValue } from '../css'
-import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
+import { PanelFields } from '../controls'
+import { StyleSection } from './more'
 import { StyleFields, changed } from './StyleFields'
 
 const WEIGHTS = () => [
@@ -11,7 +12,7 @@ const WEIGHTS = () => [
 ]
 
 /** Font, size, weight, leading, tracking, color, alignment and the finer points of text. */
-export function Typography({ s }: { s: StyleApi }) {
+export function Typography({ s, prose }: { s: StyleApi; prose?: { on: boolean; onChange: (on: boolean) => void } }) {
   const { byGroup } = useTokens()
   const fonts = byGroup.get('font') ?? []
   const weights = byGroup.get('weight') ?? []
@@ -23,7 +24,9 @@ export function Typography({ s }: { s: StyleApi }) {
   const stroke = { width: strokeParts.find((p) => /^-?[\d.]/.test(p)), color: strokeParts.find((p) => !/^-?[\d.]/.test(p)) }
 
   return (
-    <Section title={t('Typography')} empty={!any}>
+    <StyleSection s={s} group="typography" title={t('Typography')} empty={!any && !prose?.on}>
+      {/* Long-form text: the design system's Prose spacing and styles reach every block inside. */}
+      {prose && <PanelFields fields={[{ handle: 'prose', type: 'toggle', label: t('Prose') }]} values={{ prose: prose.on }} onChange={(_, v) => prose.onChange(!!v)} />}
       <StyleFields
         s={s}
         fields={[
@@ -65,6 +68,6 @@ export function Typography({ s }: { s: StyleApi }) {
           },
         ]}
       />
-    </Section>
+    </StyleSection>
   )
 }
