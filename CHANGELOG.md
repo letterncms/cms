@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **Typography** is calmer: **Fonts** are the roles your site uses (sans, display, mono…), each a row with a sample and the font it uses; what a font falls back to is in the row's menu. **Font Library** lists the fonts the site serves, each in itself with its weights, and **+** adds one from Google Fonts or a .woff2 file.
+
 ## 0.18.0 (2026-11-06)
 
 ### Added

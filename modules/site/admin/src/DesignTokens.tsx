@@ -1,7 +1,8 @@
 import { can, queryClient, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
-import { Button, EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar } from '@letterncms/ui'
+import { EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar, type MenuItemDef } from '@letterncms/ui'
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Disclosure, Group, css, px, variable } from './design-parts'
+import { fallbackOf, fontStack, withFallback } from './fields'
 import { FieldEditor, fieldVars, specimenPart, type FieldSchema, type FieldValues } from './form-fields'
 import { applyDraft, showPart } from './specimen'
 
@@ -343,14 +344,25 @@ export default function DesignTokens() {
 
           {section === 'type' && (
             <>
-              <Group title={t('Font Families')} onAdd={() => add('font', [...(families[0] ? [families[0]] : []), 'ui-sans-serif', 'system-ui', 'sans-serif'])}>
+              {/* Fonts are roles (sans, display, mono…), each using a font from the library below. */}
+              <Group title={t('Fonts')} onAdd={() => add('font', [...(families[0] ? [families[0]] : []), 'ui-sans-serif', 'system-ui', 'sans-serif'])}>
                 {byGroup('font').map((token) => (
-                  <Row key={token.from ?? token.path} token={token} {...actions} below={<p className="m-0 truncate pb-2.5 text-lg leading-tight text-ink" style={{ fontFamily: css('font', token.value) }}>{t('The quick brown fox jumps over the lazy dog')}</p>}>
+                  <Row
+                    key={token.from ?? token.path}
+                    token={token}
+                    {...actions}
+                    sample={<span className="block max-w-7 overflow-hidden whitespace-nowrap text-center text-[17px] leading-none text-ink" style={{ fontFamily: css('font', token.value) }}>Aa</span>}
+                    extra={[
+                      { separator: true, label: '' },
+                      { heading: true, label: t('Fallback') },
+                      ...(['sans', 'serif', 'mono'] as const).map((kind) => ({ label: { sans: t('Sans'), serif: t('Serif'), mono: t('Mono') }[kind], checked: fallbackOf(fontStack(token.value)) === kind, onSelect: () => setToken(token, { value: withFallback(token.value, kind) }) })),
+                    ]}
+                  >
                     {value(token, { component: 'site-font-stack', families })}
                   </Row>
                 ))}
               </Group>
-              <Fonts fonts={theme.data.fonts ?? []} tokens={byGroup('font')} onChanged={refreshFonts} />
+              <FontLibrary fonts={theme.data.fonts ?? []} onChanged={refreshFonts} />
               <Group title={t('Type Scale')} onAdd={() => add('text', { min: '1rem', max: '1.25rem' })}>
                 {byGroup('text').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} below={<p className="m-0 truncate pb-2.5 leading-[1.1] tracking-[-0.01em] text-ink" style={{ fontSize: css('text', token.value), fontFamily: css('font', byGroup('font').find((x) => x.name === 'display')?.value ?? byGroup('font')[0]?.value) }}>{t('Ship It')}</p>}>
@@ -503,7 +515,7 @@ function seconds(value: unknown, fallback: number): number {
  * specimen line, `after` a visual after the value; `wide` gives the value the row
  * (colors, with a column for each mode).
  */
-function Row({ token, sample, after, below, wide, rename, remove, children }: { token: DraftToken; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; rename: (token: DraftToken) => void; remove: (token: DraftToken) => void; children: ReactNode }) {
+function Row({ token, sample, after, below, wide, rename, remove, extra, children }: { token: DraftToken; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; rename: (token: DraftToken) => void; remove: (token: DraftToken) => void; extra?: MenuItemDef[]; children: ReactNode }) {
   const reference = `token:${token.path}`
   const copy = () => void copyText(reference, { copied: t('Copied {reference}', { reference }) })
   return (
@@ -523,6 +535,7 @@ function Row({ token, sample, after, below, wide, rename, remove, children }: { 
           items={[
             { label: t('Copy Reference'), icon: 'copy', onSelect: copy },
             { label: t('Rename…'), icon: 'edit', onSelect: () => rename(token) },
+            ...(extra ?? []),
             { separator: true, label: '' },
             { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => remove(token) },
           ]}
@@ -549,41 +562,49 @@ function Bar({ value, of }: { value: any; of: Token[] }) {
   return <span className="h-1.5 min-w-px rounded-full bg-border-strong" style={{ width: `${(px(value) / max) * 100}%` }} />
 }
 
-/** The font files the site serves: its families, a Google font to import, a .woff2 to upload. Font families above name them. */
-function Fonts({ fonts, tokens, onChanged }: { fonts: Font[]; tokens: Token[]; onChanged: () => void }) {
-  const [family, setFamily] = useState('')
-  const [busy, setBusy] = useState(false)
+/** The weights a family's files cover, short: 400, 400–700, 100–900; and Italic when it has italics. */
+function styles(files: Font[]): string {
+  const weights = files.flatMap((font) => String(font.weight ?? '400').split(/\s+/).map(Number)).filter((n) => n > 0)
+  const low = Math.min(...weights)
+  const high = Math.max(...weights)
+  const range = weights.length === 0 ? '400' : low === high ? String(low) : `${low}–${high}`
+  return files.some((font) => font.style === 'italic') ? `${range} · ${t('Italic')}` : range
+}
+
+/**
+ * The fonts the site serves from its own files, each shown in itself: added from Google Fonts
+ * (downloaded, so visitors never connect to Google) or uploaded as .woff2.
+ */
+function FontLibrary({ fonts, onChanged }: { fonts: Font[]; onChanged: () => void }) {
+  const file = useRef<HTMLInputElement>(null)
   const families = [...new Set(fonts.map((font) => font.family))]
 
   const importFamily = async () => {
-    const name = family.trim()
+    const asked = await prompt({ title: t('Add a Google Font'), description: t('Its files are downloaded to your site.'), fields: [{ handle: 'family', type: 'text', label: t('Name'), placeholder: 'Inter Tight', autofocus: true }], confirm: t('Add') })
+    const name = String(asked?.family ?? '').trim()
     if (!name) return
-    setBusy(true)
     try {
       await run('design/fonts-import', { family: name })
       toast.success(t('{family} added', { family: name }))
-      setFamily('')
       onChanged()
     } catch (e) {
       toast.error(e)
-    } finally {
-      setBusy(false)
     }
   }
 
-  const upload = async (file: File) => {
+  const upload = async (picked: File) => {
     const data = await new Promise<string>((resolve) => {
       const reader = new FileReader()
       reader.onload = () => resolve(String(reader.result))
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(picked)
     })
-    const name = file.name.replace(/\.woff2$/i, '')
+    const name = picked.name.replace(/\.woff2$/i, '')
     const asked = await prompt({ title: t('Upload Font'), fields: [{ handle: 'family', type: 'text', label: t('Family Name'), autofocus: true }], values: { family: name.replace(/[-_](regular|bold|variable|italic|\d+).*$/i, '').replace(/[-_]/g, ' ') }, confirm: t('Upload') })
-    const fam = String(asked?.family ?? '').trim()
-    if (!fam) return
+    const family = String(asked?.family ?? '').trim()
+    if (!family) return
     try {
-      await run('design/fonts-upload', { family: fam, name, data, weight: /variable/i.test(name) ? '100 900' : '400', style: /italic/i.test(name) ? 'italic' : 'normal' })
-      toast.success(t('{family} uploaded', { family: fam }))
+      await run('design/fonts-upload', { family, name, data, weight: /variable/i.test(name) ? '100 900' : '400', style: /italic/i.test(name) ? 'italic' : 'normal' })
+      toast.success(t('{family} uploaded', { family }))
       onChanged()
     } catch (e) {
       toast.error(e)
@@ -591,7 +612,7 @@ function Fonts({ fonts, tokens, onChanged }: { fonts: Font[]; tokens: Token[]; o
   }
 
   const remove = async (name: string) => {
-    if (!(await confirm({ title: t('Remove {family}?', { family: name }), description: t('Font families that use it fall back to the system font.'), confirm: t('Remove'), danger: true }))) return
+    if (!(await confirm({ title: t('Remove {family}?', { family: name }), description: t('Fonts that use it fall back to the system font.'), confirm: t('Remove'), danger: true }))) return
     try {
       await run('design/update', { fonts: fonts.filter((font) => font.family !== name) })
       onChanged()
@@ -601,31 +622,19 @@ function Fonts({ fonts, tokens, onChanged }: { fonts: Font[]; tokens: Token[]; o
   }
 
   return (
-    <Group title={t('Font Files')}>
-      {families.length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('None yet. The site uses system fonts.')}</p>}
-      {families.map((name) => {
-        const files = fonts.filter((font) => font.family === name)
-        const used = tokens.filter((token) => Array.isArray(token.value) && token.value[0] === name).map((token) => token.name)
-        return (
-          <div key={name} className="group flex items-center gap-3 border-b border-border py-2.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-sm bg-sunken text-lg text-ink" style={{ fontFamily: `"${name}"` }}>Aa</span>
-            <div className="min-w-0 flex-1">
-              <p className="m-0 truncate text-sm text-ink" style={{ fontFamily: `"${name}"` }}>{name}</p>
-              <p className="m-0 truncate text-2xs text-faint">
-                {files.map((font) => `${font.weight ?? '400'}${font.style === 'italic' ? ' italic' : ''}`).join(' · ')}
-                {used.length > 0 && ` · ${t('used by {names}', { names: used.join(', ') })}`}
-              </p>
-            </div>
-            <Menu trigger={<IconButton icon="more" label={t('Font Actions')} size="xs" className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => void remove(name) }]} />
-          </div>
-        )
-      })}
-      {/* A form, so Enter in the field adds the family. Served from this site: visitors never connect to Google. */}
-      <form className="flex items-center gap-2 py-2.5" onSubmit={(e) => { e.preventDefault(); void importFamily() }}>
-        <Fields bare className="min-w-0 flex-1" fields={[{ handle: 'family', type: 'text', label: t('Google Font'), size: 'sm', placeholder: t('Google Font, like Inter Tight'), icon: 'search' }]} values={{ family }} onChange={(_, v) => setFamily(v ?? '')} />
-        <Button type="submit" size="sm" loading={busy} disabled={!family.trim()}>{t('Add')}</Button>
-      </form>
-      <Fields bare fields={[{ handle: 'file', type: 'json', component: 'site-file', label: t('Font File'), placeholder: t('Drop a .woff2 file or choose one'), accept: '.woff2,font/woff2' }]} values={{}} onChange={(_, file) => file && void upload(file)} />
+    <Group
+      title={t('Font Library')}
+      action={<Menu trigger={<IconButton icon="plus" label={t('Add Font')} size="xs" />} items={[{ label: t('Google Font…'), icon: 'search', onSelect: () => void importFamily() }, { label: t('Upload .woff2…'), icon: 'upload', onSelect: () => file.current?.click() }]} />}
+    >
+      <input ref={file} type="file" accept=".woff2,font/woff2" hidden onChange={(e) => { const picked = e.target.files?.[0]; e.target.value = ''; if (picked) void upload(picked) }} />
+      {families.length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('No fonts yet: the site uses the system’s.')}</p>}
+      {families.map((name) => (
+        <div key={name} className="group flex min-h-11 items-center gap-3 border-b border-border py-2 last:border-b-0">
+          <span className="min-w-0 flex-1 truncate text-[17px] leading-tight text-ink" style={{ fontFamily: `"${name}"` }}>{name}</span>
+          <span className="shrink-0 text-2xs tabular-nums text-faint">{styles(fonts.filter((font) => font.family === name))}</span>
+          <Menu trigger={<IconButton icon="more" label={t('Font Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => void remove(name) }]} />
+        </div>
+      ))}
     </Group>
   )
 }
