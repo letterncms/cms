@@ -171,7 +171,7 @@ try {
     button('Clear Filters').click()
     await wait(() => rows().length === 10, 'clear filters did not restore the list')
     assert(searchBox().value === '', 'search not cleared')
-    type(searchBox(), 'comm'); await wait(() => rows().length === 1, 'search did not filter')
+    type(searchBox(), 'book'); await wait(() => rows().length === 1, 'search did not filter')
     type(searchBox(), ''); await wait(() => rows().length === 10, 'search did not clear')
   })
   await test('Column choices persist across navigation and Reset Display restores them', async () => {
