@@ -258,6 +258,7 @@ final class RenderingTest extends TestCase
         }
 
         $this->assertStringContainsString('data-part="primary"', $this->get('/__specimen/buttons')->assertOk()->getContent());
+        $this->assertStringContainsString('data-size="lg"', $this->get('/__specimen/sizes')->assertOk()->getContent());
         $this->get('/__specimen/nothing')->assertNotFound();
     }
 

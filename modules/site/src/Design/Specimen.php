@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Site\Design;
 
 use Cms\Cms;
+use Cms\Modules\Blocks\Css;
 use Cms\Modules\Blocks\Elements;
 use Cms\Modules\Blocks\Icons;
 
@@ -21,25 +22,26 @@ final class Specimen
 
     public function html(string $kind): string
     {
-        $parts = $kind === 'buttons' ? $this->buttons() : $this->fields();
+        $parts = match ($kind) { 'buttons' => $this->buttons(), 'sizes' => $this->sizes(), default => $this->fields() };
         $html = '';
 
         foreach ($parts as $part => [$title, $content]) {
             $html .= '<section class="specimen" data-part="'.e($part).'"><div class="specimen-title" role="heading" aria-level="2">'.e($title).'</div>'.$content.'</section>';
         }
 
-        // A board of cards that always shows everything (titles are not h2s: the site styles those); the Design System scrolls to the part being edited and marks it.
+        // One column that always shows everything, part after part (titles are not h2s: the site styles those); the Design System scrolls to the part being edited and marks it.
         $style = 'body{margin:0;min-height:0;background:var(--color-background,#fff);color:var(--color-foreground,inherit)}'
-            .'.specimen-board{padding:28px;columns:18rem auto;column-gap:20px}'
-            .'.specimen{break-inside:avoid;display:grid;gap:18px;margin:0 0 20px;padding:20px 22px 24px;border:1px solid color-mix(in srgb,currentColor 10%,transparent);border-radius:14px;scroll-margin:24px;transition:border-color .2s ease,box-shadow .2s ease}'
-            .'.specimen[data-active]{border-color:color-mix(in srgb,currentColor 32%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,currentColor 7%,transparent)}'
-            .'.specimen-title{margin:0;font-size:11px;font-weight:600;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;color:var(--field-help-color)}'
+            .'.specimen-board{display:grid;gap:48px;max-width:34rem;padding:40px 32px}'
+            .'.specimen{display:grid;gap:16px;scroll-margin:32px}'
+            .'.specimen-title{margin:0;font-size:11px;font-weight:600;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;color:var(--field-help-color);transition:color .2s ease}'
+            .'.specimen[data-active] .specimen-title{color:var(--color-foreground,currentColor)}'
+            .'.specimen-rows{display:grid;gap:16px}.specimen-surface{display:grid;gap:16px;padding:20px;margin-inline:-20px}.specimen-surface .specimen-caption{color:inherit;opacity:.7}'
             .'.specimen-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 20px}.specimen-cell{display:grid;justify-items:center;gap:8px}.specimen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 14px}'
-            .'.specimen-caption{font-size:11px;line-height:1.2;color:var(--field-help-color);white-space:nowrap}.specimen-size{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}.specimen-rule{height:1px;background:color-mix(in srgb,currentColor 10%,transparent)}'
-            .'@media (max-width:520px){.specimen-board{padding:16px}}';
+            .'.specimen-caption{font-size:11px;line-height:1.2;color:var(--field-help-color);white-space:nowrap}.specimen-size{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}'
+            .'@media (max-width:520px){.specimen-board{padding:20px}}';
 
         // A checkbox is only ever mixed by script.
-        return '<style>'.$style.'</style><main id="main" class="specimen-board">'.$html.'</main><script>document.querySelectorAll("[data-cms-indeterminate]").forEach(c=>c.indeterminate=true)</script>';
+        return '<style>'.$style.'</style><main id="main" class="specimen-board" data-kind="'.e($kind).'">'.$html.'</main><script>document.querySelectorAll("[data-cms-indeterminate]").forEach(c=>c.indeterminate=true)</script>';
     }
 
     /** @return array<string, array{string, string}> part => [title, markup] */
@@ -96,11 +98,11 @@ final class Specimen
             'textarea' => [__('Text Areas'), '<div class="cms-form">'.$this->field(__('Message'), '<textarea class="cms-input" rows="4">'.e(__('Hello! We are planning a new website for the spring and would love to hear how you work.')).'</textarea>', __('A few lines are enough.')).'</div>'],
             'checkbox' => [__('Checkboxes'), $states(fn ($state) => '<input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'"'.$this->state($state).'>')
                 .'<div class="specimen-row"><div class="specimen-cell"><input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'" data-cms-indeterminate><span class="specimen-caption">'.e(__('Some')).'</span></div><div class="specimen-cell"><input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'" aria-invalid="true"><span class="specimen-caption">'.e(__('Invalid')).'</span></div></div>'
-                .'<div class="specimen-rule"></div>'.$this->group(__('Services'), 'checkbox', [__('Design'), __('Build'), __('Hosting')], 0, 2)],
+                .$this->group(__('Services'), 'checkbox', [__('Design'), __('Build'), __('Hosting')], 0, 2)],
             'radio' => [__('Radio Buttons'), $states(fn ($state) => '<input type="radio" class="cms-radio" aria-label="'.e(__('Radio')).'"'.$this->state($state).'>')
-                .'<div class="specimen-rule"></div>'.$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone'), __('Either')], 0)],
+                .$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone'), __('Either')], 0)],
             'switch' => [__('Switches'), $states(fn ($state) => '<input type="checkbox" role="switch" class="cms-switch" aria-label="'.e(__('Switch')).'"'.$this->state($state).'>')
-                .'<div class="specimen-rule"></div><div class="cms-form">'.$this->choice('switch', __('Send me the newsletter'), true).$this->choice('switch', __('Remember this device'), false).'</div>'],
+                .'<div class="cms-form">'.$this->choice('switch', __('Send me the newsletter'), true).$this->choice('switch', __('Remember this device'), false).'</div>'],
             'slider' => [__('Sliders'), '<div class="cms-form">'.$this->slider(__('Budget'), 4000, 1000, 10000, 500, '€', true).$this->slider(__('Focus'), 30, 0, 100, 1, '', false, 'focus').$this->slider(__('Disabled'), 70, 0, 100, 1, '', false, 'disabled').'</div>'],
             'tags' => [__('Tag Fields'), '<div class="cms-form">'.$this->field(__('Topics'), $this->tags($topics, __('Add a topic')), __('Press Enter after each one.')).$this->field(__('Empty'), $this->tags([], __('Add a topic'))).'</div>'],
             'chips' => [__('Chips'), '<div class="cms-form">'.$this->group(__('Services'), 'chips', [__('Design'), __('Build'), __('Hosting'), __('Care')], 1)
@@ -117,14 +119,18 @@ final class Specimen
         // Sizes come from the control size scale; a button with only an icon is square, or round.
         $button = static fn (string $variant, string $inner, string $attrs = '') => '<button type="button" class="cms-button" data-variant="'.e($variant).'"'.$attrs.'>'.$inner.'</button>';
         $cells = static fn (array $cells) => '<div class="specimen-row" style="align-items:flex-end">'.implode('', array_map(static fn ($cell) => '<div class="specimen-cell">'.$cell[0].'<span class="specimen-caption">'.e($cell[1]).'</span></div>', $cells)).'</div>';
+        $designed = app(Design::class)->json()->buttons();
         $out = [];
 
         foreach ($variants as $variant => $name) {
             $variant = (string) $variant;
             $label = '<span>'.e(__('Get started')).'</span>';
-            $out[$variant] = [(string) $name,
-                $cells(array_map(static fn ($state, $caption) => [$button($variant, $label, $state === '' ? '' : ' data-cms-state="'.$state.'"'.($state === 'disabled' ? ' disabled' : '')), $caption], ['', 'hover', 'active', 'focus', 'disabled'], [__('Default'), __('Hover'), __('Pressed'), __('Focus'), __('Disabled')]))
-                .'<div class="specimen-rule"></div>'
+            // A look made for another background (a dark band, a colored card) is shown on it, in its own text color.
+            $surface = Css::value($designed[$variant]['surface'] ?? null);
+            $ink = Css::value($designed[$variant]['base']['color'] ?? null);
+            $out[$variant] = [(string) $name, ($surface !== null ? '<div class="specimen-surface" style="background:'.e($surface).($ink !== null ? ';color:'.e($ink) : '').'">' : '<div class="specimen-rows">')
+                .$cells(array_map(static fn ($state, $caption) => [$button($variant, $label, $state === '' ? '' : ' data-cms-state="'.$state.'"'.($state === 'disabled' ? ' disabled' : '')), $caption], ['', 'hover', 'active', 'focus', 'disabled'], [__('Default'), __('Hover'), __('Pressed'), __('Focus'), __('Disabled')]))
+                
                 .$cells(array_map(static fn ($size, $caption) => [$button($variant, '<span>'.e((string) $name).'</span>', ' data-size="'.$size.'"'), $caption], ['sm', 'md', 'lg'], [__('Small'), __('Medium'), __('Large')]))
                 .($variant === 'link' ? '' : $cells([
                     [$button($variant, $icon('plus'), ' data-size="sm" data-icon-only aria-label="'.e(__('Add')).'"'), __('Small')],
@@ -132,8 +138,24 @@ final class Specimen
                     [$button($variant, $icon('plus'), ' data-size="lg" data-icon-only aria-label="'.e(__('Add')).'"'), __('Large')],
                     [$button($variant, $icon('magnifying-glass'), ' data-icon-only data-shape="round" aria-label="'.e(__('Search')).'"'), __('Round')],
                     [$button($variant, $label.$icon('arrow-right'), ' data-shape="round"'), __('Round, with an icon')],
-                ])),
+                ])).'</div>',
             ];
+        }
+
+        return $out;
+    }
+
+    /** @return array<string, array{string, string}> size => [name, markup]: fields and buttons of one size, side by side */
+    private function sizes(): array
+    {
+        $out = [];
+
+        foreach (['sm' => __('Small'), 'md' => __('Medium'), 'lg' => __('Large')] as $size => $name) {
+            $out[$size] = [$name, '<div class="cms-form" data-size="'.$size.'">'
+                .'<div class="specimen-size"><input class="cms-input" type="text" aria-label="'.e(__('Email')).'" placeholder="'.e(__('Email')).'"><button type="button" class="cms-button" data-variant="primary"><span>'.e(__('Send')).'</span></button><button type="button" class="cms-button" data-variant="secondary" data-icon-only aria-label="'.e(__('Search')).'">'.Icons::svg('magnifying-glass', 'cms-button__icon').'</button></div>'
+                .'<div class="specimen-size"><select class="cms-input" aria-label="'.e(__('Project')).'"><option>'.e(__('Website')).'</option></select><button type="button" class="cms-button" data-variant="secondary"><span>'.e(__('Cancel')).'</span></button><button type="button" class="cms-button" data-variant="primary" data-icon-only data-shape="round" aria-label="'.e(__('Add')).'">'.Icons::svg('plus', 'cms-button__icon').'</button></div>'
+                .'<div class="cms-chips"><label class="cms-chip"><input type="checkbox" checked>'.e(__('Design')).'</label><label class="cms-chip"><input type="checkbox">'.e(__('Build')).'</label><label class="cms-chip"><input type="checkbox">'.e(__('Hosting')).'</label></div>'
+                .'</div>'];
         }
 
         return $out;

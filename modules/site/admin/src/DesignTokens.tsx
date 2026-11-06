@@ -52,7 +52,7 @@ interface Draft {
   js: string
 }
 
-const SECTIONS = ['color', 'type', 'space', 'shape', 'motion', 'elements', 'buttons', 'fields', 'code'] as const
+const SECTIONS = ['color', 'type', 'space', 'sizes', 'shape', 'motion', 'elements', 'buttons', 'fields', 'code'] as const
 type SectionKey = (typeof SECTIONS)[number]
 
 function sections(): { group: string; items: { value: SectionKey; label: string; icon: string }[] }[] {
@@ -63,6 +63,7 @@ function sections(): { group: string; items: { value: SectionKey; label: string;
         { value: 'color', label: t('Colors'), icon: 'palette' },
         { value: 'type', label: t('Typography'), icon: 'typography' },
         { value: 'space', label: t('Spacing'), icon: 'spacing' },
+        { value: 'sizes', label: t('Sizes'), icon: 'ruler' },
         { value: 'shape', label: t('Shape'), icon: 'radius' },
         { value: 'motion', label: t('Motion'), icon: 'speed' },
       ],
@@ -211,7 +212,7 @@ export default function DesignTokens() {
   const inject = () => applyDraft(frame.current?.contentDocument, preview)
   // Buttons and fields show beside their controls every variant and every kind of field, in each state,
   // drawn by the site: the part being edited is scrolled to and marked, and nothing else moves.
-  const page = section === 'fields' ? '/__specimen/fields' : section === 'buttons' ? '/__specimen/buttons' : '/'
+  const page = section === 'fields' || section === 'buttons' || section === 'sizes' ? `/__specimen/${section}` : '/'
   const part = section === 'fields' ? specimenPart(fieldOpen) : section === 'buttons' ? buttonOpen : null
   useEffect(() => showPart(frame.current?.contentDocument, part, true), [part])
   useEffect(inject)
@@ -390,7 +391,6 @@ export default function DesignTokens() {
                   </Row>
                 ))}
               </Group>
-              <ControlSizeTable defaults={theme.data.controlSizes ?? {}} tokens={tokens} onSet={setControl} />
               <Group title={t('Containers')} onAdd={() => add('container', '72rem')}>
                 {byGroup('container').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} after={<Bar value={token.value} of={byGroup('container')} />}>
@@ -463,8 +463,9 @@ export default function DesignTokens() {
             </>
           )}
 
-          {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onSizes={() => setSection('space')} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
-          {section === 'fields' && <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} note={<SizesNote onSizes={() => setSection('space')} />} onChange={(fields) => update((d) => ({ ...d, fields }))} />}
+          {section === 'sizes' && <ControlSizeTable defaults={theme.data.controlSizes ?? {}} tokens={tokens} onSet={setControl} />}
+          {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
+          {section === 'fields' && <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} onChange={(fields) => update((d) => ({ ...d, fields }))} />}
 
           {section === 'code' && <Code css={current.css} js={current.js} onChange={(code) => update((d) => ({ ...d, ...code }))} />}
         </div>
@@ -477,7 +478,7 @@ export default function DesignTokens() {
             <Segmented size="xs" value={mode} onChange={setMode} options={[{ value: 'light', icon: 'sun', title: t('Light') }, { value: 'dark', icon: 'moon', title: t('Dark') }]} />
           </div>
           <Preview viewport={viewport} desktop={page === '/' ? px(theme.data.breakpoints?.lg) || 1024 : 0}>
-            {(style) => <iframe key={page} ref={frame} src={page} title={page === '/' ? t('Site Preview') : section === 'buttons' ? t('Button Specimen') : t('Form Field Specimen')} className={cn('border-0 bg-bg', viewport !== 'desktop' && 'border-x border-border')} style={style} onLoad={() => { inject(); showPart(frame.current?.contentDocument, part, false) }} />}
+            {(style) => <iframe key={page} ref={frame} src={page} title={page === '/' ? t('Site Preview') : t('Specimen')} className={cn('border-0 bg-bg', viewport !== 'desktop' && 'border-x border-border')} style={style} onLoad={() => { inject(); showPart(frame.current?.contentDocument, part, false) }} />}
           </Preview>
         </div>
       </div>
@@ -766,17 +767,6 @@ function StyleList({ title, value, onChange, options, tokens, vars }: { title: s
   )
 }
 
-/** Where buttons and fields get their size: a line that leads to Spacing → Control Sizes. */
-function SizesNote({ onSizes }: { onSizes: () => void }) {
-  return (
-    <p className="m-0 flex items-center gap-1.5 border-b border-border py-2.5 text-xs text-muted">
-      <Icon name="info" size={13} className="shrink-0 text-faint" />
-      <span className="min-w-0 flex-1">{t('Heights, padding and text size are the Control Sizes buttons and fields share.')}</span>
-      <button type="button" onClick={onSizes} className="shrink-0 cursor-pointer text-text underline decoration-faint underline-offset-2 hover:text-ink">{t('Edit Sizes')}</button>
-    </p>
-  )
-}
-
 /**
  * The size scale of everything people click or type in (`control` tokens): each size's height,
  * padding and text size. A button and a field of the same size line up.
@@ -793,8 +783,7 @@ function ControlSizeTable({ defaults, tokens, onSet }: { defaults: Record<string
     return String(first ?? '').replace(/^token:[a-z]+\./, '')
   }
   return (
-    <Group title={t('Control Sizes')}>
-      <p className="m-0 pb-1 pt-2 text-xs text-muted">{t('Buttons, form fields, tags and chips of the same size line up.')}</p>
+    <Group title={t('Sizes')}>
       <div className="grid grid-cols-[52px_repeat(3,minmax(0,1fr))] items-center gap-x-2 gap-y-1.5 py-2">
         <span />
         {columns.map(([key, label]) => <span key={key} className="text-2xs text-faint">{label}</span>)}
@@ -816,7 +805,7 @@ function ControlSizeTable({ defaults, tokens, onSet }: { defaults: Record<string
 }
 
 /** Button variants (Primary, Secondary…) used by every Button block: each opens on its controls, state by state; the specimen above shows them. */
-function ButtonVariants({ value, onChange, tokens, open, onOpen, onSizes }: { value: Buttons; onChange: (v: Buttons) => void; tokens: Token[]; open: string | null; onOpen: (name: string | null) => void; onSizes: () => void }) {
+function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Buttons; onChange: (v: Buttons) => void; tokens: Token[]; open: string | null; onOpen: (name: string | null) => void }) {
   const [state, setState] = useState<'base' | 'hover' | 'active' | 'focus-visible'>('base')
   const add = async () => {
     const asked = await prompt({ title: t('New Button Variant'), fields: [{ handle: 'name', type: 'text', label: t('Name'), placeholder: 'outline', mono: true, autofocus: true }], confirm: t('Add') })
@@ -826,15 +815,19 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen, onSizes }: { va
       onOpen(name)
     }
   }
-  // A variant saved as plain declarations is its base state.
-  const states = (variant: Record<string, Declarations>) => (['base', 'hover', 'active', 'focus-visible'].some((key) => key in variant) ? variant : { base: variant as unknown as Declarations })
+  // A variant is its states, and the background it's made for (`surface`, for the preview); one saved as plain declarations is its base state.
+  const split = (variant: Record<string, unknown>) => {
+    const { surface, ...rest } = variant
+    const states = (['base', 'hover', 'active', 'focus-visible'].some((key) => key in rest) ? rest : { base: rest }) as Record<string, Declarations>
+    return { surface: typeof surface === 'string' ? surface : undefined, states }
+  }
+  const write = (name: string, surface: string | undefined, states: Record<string, Declarations>) => onChange({ ...value, [name]: { ...states, ...(surface ? { surface } : {}) } as Record<string, Declarations> })
   const label = (name: string) => name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, ' ')
   // A variant is a look: how big a button is comes from the control sizes it shares with fields.
   const fields = [...boxFields().filter((f) => f.handle !== 'padding'), ...textFields(tokens).filter((f) => ['fontWeight', 'letterSpacing', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'boxShadow', type: 'text', component: 'blocks-shadows', label: t('Shadow'), group: 'shadow' } as FieldDef, { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' } as FieldDef]
 
   return (
     <Group title={t('Button Variants')} onAdd={add}>
-      <SizesNote onSizes={onSizes} />
       {Object.keys(value).length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('No variants')}</p>}
       {Object.entries(value).map(([name, variant]) => (
         <Disclosure
@@ -844,10 +837,11 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen, onSizes }: { va
           label={label(name)}
           menu={<Menu trigger={<IconButton icon="more" label={t('Variant Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Delete'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== name))) }]} />}
         >
+          <Fields layout="inline" className="mb-2" fields={[{ handle: 'surface', type: 'color', component: 'blocks-color', label: t('Shown On'), placeholder: t('Page Background') }]} values={{ surface: split(variant).surface ?? null }} onChange={(_, v) => write(name, (v as string | null) || undefined, split(variant).states)} />
           <div className="mb-2">
             <Segmented size="xs" block aria-label={t('State')} value={state} onChange={setState} options={[{ value: 'base', label: t('Default') }, { value: 'hover', label: t('Hover') }, { value: 'active', label: t('Pressed') }, { value: 'focus-visible', label: t('Focus') }]} />
           </div>
-          <StyleControls key={state} value={states(variant)[state]} fields={fields} tokens={tokens} onChange={(next) => onChange({ ...value, [name]: { ...states(variant), [state]: next } })} />
+          <StyleControls key={state} value={split(variant).states[state]} fields={fields} tokens={tokens} onChange={(next) => write(name, split(variant).surface, { ...split(variant).states, [state]: next })} />
         </Disclosure>
       ))}
     </Group>

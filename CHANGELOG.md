@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+- **Shown On** on a button variant: the background it's made for, like a dark band, so the preview shows it there instead of on the page.
+
+### Changed
+
+- **Sizes** is its own section of the Design System, with a preview of fields, buttons and chips at each size.
+- The previews of buttons, fields and sizes show their parts in one column, without cards, and mark the part being edited by its title. Buttons and Form Fields lose their note about sizes.
+
 ## 0.17.0 (2026-11-06)
 
 ### Added
