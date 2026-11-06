@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.17.0 (2026-11-06)
+
 ### Added
 
 - **Control Sizes**, under **Spacing**: one Small, Medium and Large scale (height, padding, text size) for buttons, form fields, tag fields and chips. A button and a field of the same size line up. They are `control` tokens (`control.md-height`…), and `data-size` picks the size on an element or anything around it.
