@@ -576,7 +576,7 @@ function Row({ token, sample, after, below, wide, rename, remove, extra, childre
           </button>
         </Tooltip>
         {/* On a phone the value takes the row; the bar beside it waits for a wider screen. */}
-        {wide ? children : <div className="flex w-60 shrink-0 max-lg:w-52 max-sm:w-auto max-sm:min-w-0 max-sm:flex-1">{children}</div>}
+        {wide ? children : <div className="flex w-60 min-w-0 shrink max-lg:w-52 max-sm:w-auto max-sm:flex-1">{children}</div>}
         {!wide && <span className="flex min-w-0 flex-1 items-center max-sm:hidden">{after}</span>}
         <Menu
           trigger={<IconButton icon="more" label={t('Token Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />}

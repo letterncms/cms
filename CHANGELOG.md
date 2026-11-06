@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Design**: the menu button of a font row no longer slips past the edge of the panel when the panel is narrow.
+
 ## 0.18.1 (2026-11-06)
 
 ### Changed
