@@ -9,6 +9,4 @@ The kernel, package `letterncms/cms`: `src/`, `modules/` (what the admin is made
 
 - **The product's name in code is data:** `{brand}` or `:brand` in translated strings, `cms_brand()` in PHP, `brand()` in the admin, from `brand/brand.json`. Identifiers use the permanent prefix `cms` and the permanent vendor `letterncms`.
 - **The core never names a plugin's classes.** Plugins depend down, on this package, not the other way around.
-- **No plan files.** No specs, research or progress notes in the repository. Decisions go in commit messages.
-- **Keep it true.** `letterncms/docs` describes the product as it is after your change.
 - A change people can see or use gets a line under `## Unreleased` in `CHANGELOG.md`, written for the reader, starting with `**Breaking.**` when it breaks something.
