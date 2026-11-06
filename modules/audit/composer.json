@@ -2,7 +2,7 @@
     "name": "letterncms/audit",
     "description": "Records every change made through abilities — who, what, when and from where.",
     "type": "cms-plugin",
-    "version": "0.17.0",
+    "version": "0.18.0",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"

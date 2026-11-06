@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.0 (2026-11-06)
+
 ### Added
 
 - **Shown On** on a button variant: the background it's made for, like a dark band, so the preview shows it there instead of on the page.
