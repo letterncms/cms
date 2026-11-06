@@ -446,19 +446,16 @@ function Editor({ collection, initial, can }: EditorProps) {
             <Tooltip content={t('{name} Details', { name: singular })} shortcut="mod+.">
               <IconButton icon="sidebar" label={t('{name} Details', { name: singular })} title={undefined} active={sidebarOpen} onClick={toggleSidebar} className="[&_svg]:-scale-x-100" />
             </Tooltip>
-            {/* One control says where it stands and what's next: the button while there's something to publish, its state when there isn't.
-                Its slot is as wide as the widest of them, so nothing beside it moves when one turns into the other. */}
+            {/* One control says where it stands and what's next: the button while there's something to publish, its state when there isn't. */}
             {actions.publish ? (
-              <PublishSlot labels={[statusLabel(status), t('Publish Now'), t('Publish Changes'), t('Publish')]}>
-                {upToDate ? (
-                  <StatusDot status={status} label={statusLabel(status)} className="h-7 px-1.5 text-sm" />
-                ) : (
-                  <Button variant="publish" disabled={!working.title.trim()} loading={sending} onClick={() => { void publish() }}>
-                    <span className="max-sm:hidden">{status === 'scheduled' ? t('Publish Now') : live ? t('Publish Changes') : t('Publish')}</span>
-                    <span className="sm:hidden">{t('Publish')}</span>
-                  </Button>
-                )}
-              </PublishSlot>
+              upToDate ? (
+                <StatusDot status={status} label={statusLabel(status)} className="h-7 px-1.5 text-sm" />
+              ) : (
+                <Button variant="publish" disabled={!working.title.trim()} loading={sending} onClick={() => { void publish() }}>
+                  <span className="max-sm:hidden">{status === 'scheduled' ? t('Publish Now') : live ? t('Publish Changes') : t('Publish')}</span>
+                  <span className="sm:hidden">{t('Publish')}</span>
+                </Button>
+              )
             ) : editable && (
               <Button variant="primary" disabled={!dirty || busy} loading={busy} onClick={() => { void save() }}>
                 {t('Save Draft')}
@@ -543,16 +540,6 @@ function Editor({ collection, initial, can }: EditorProps) {
         />
       )}
     </div>
-  )
-}
-
-/** Holds every label it may show at once, invisibly, so it keeps the width of the widest. */
-function PublishSlot({ labels, children }: { labels: string[]; children: ReactNode }) {
-  return (
-    <span className="grid justify-items-end [&>*]:col-start-1 [&>*]:row-start-1">
-      {labels.map((label) => <span key={label} aria-hidden className="invisible h-0 overflow-hidden px-2.5 text-sm font-medium max-sm:hidden">{label}</span>)}
-      {children}
-    </span>
   )
 }
 

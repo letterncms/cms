@@ -1,14 +1,13 @@
 import './styles.css'
 import { events, prefetchAbility, registry, t } from '@letterncms/sdk'
 import { lazy } from 'react'
-import { DeclarationsField, FileField, FontStackField, ShadowField, SizeField } from './fields'
+import { FileField, FontStackField, ShadowField, SizeField } from './fields'
 import { PreviewDialog } from './PreviewDialog'
 import { TemplateField } from './TemplateField'
 
 registry.fields.set('site-template', TemplateField)
 registry.fields.set('site-size', SizeField)
 registry.fields.set('site-font-stack', FontStackField)
-registry.fields.set('site-declarations', DeclarationsField)
 registry.fields.set('site-file', FileField)
 registry.fields.set('site-shadow', ShadowField)
 registry.widgets.set('site-status', lazy(() => import('./WidgetSite')))

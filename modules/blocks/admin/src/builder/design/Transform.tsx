@@ -1,7 +1,7 @@
 import { t } from '@letterncms/sdk'
 import { splitValue } from '../css'
-import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
+import { StyleSection } from './more'
 import { StyleFields, changed } from './StyleFields'
 
 const fn = (value: string | undefined, name: string) => value?.match(new RegExp(`${name}\\(([^)]*)\\)`))?.[1]
@@ -32,7 +32,7 @@ export function Transform({ s }: { s: StyleApi }) {
   ]
 
   return (
-    <Section title={t('Transform')} open={!!any} empty={!any}>
+    <StyleSection s={s} group="transform" title={t('Transform')} open={!!any} empty={!any}>
       <StyleFields
         s={s}
         fields={[
@@ -53,6 +53,6 @@ export function Transform({ s }: { s: StyleApi }) {
           { handle: 'perspective', type: 'text', component: 'blocks-value', label: t('Perspective'), prefixIcon: 'b-perspective', placeholder: 'none', keywords: ['none'], instructions: t('Depth for children rotated in 3D') },
         ]}
       />
-    </Section>
+    </StyleSection>
   )
 }

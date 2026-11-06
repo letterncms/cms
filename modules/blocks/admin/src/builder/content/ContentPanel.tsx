@@ -100,7 +100,8 @@ export function ContentPanel({ node }: { node: BlockNode }) {
   }
   const setProp = (handle: string, v: unknown) => store.updateProps(node.id, { [handle]: v }, `inspector:${node.id}:${handle}`)
 
-  const all = (type?.fields ?? []).filter((f) => !(f.type === 'json' && ['items', 'rows', 'values'].includes(f.handle)))
+  // A field marked `design` is drawn in the Design tab (Prose, in Typography).
+  const all = (type?.fields ?? []).filter((f) => !f.design && !(f.type === 'json' && ['items', 'rows', 'values'].includes(f.handle)))
   // "Open in New Tab" lives in the link picker when the block has both.
   const merged = all.some((f) => f.component === 'link') && all.some((f) => f.handle === 'new_tab')
   const shown = all.filter((f) => !(merged && f.handle === 'new_tab') && applies(f, props))

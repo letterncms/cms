@@ -1,6 +1,6 @@
 import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
 import { fieldControlId, Fields, Icon, IconButton, Input, Popover, Tooltip, cn } from '@letterncms/ui'
-import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 /* Field components of the design system editor — the controls core fields can't
    express: fluid sizes, font stacks, CSS declarations, easing curves, shadows and
@@ -14,7 +14,6 @@ export function ValueInput({ field, value, onChange, disabled }: { field: FieldD
   return <Input id={fieldControlId(field)} size="sm" className="min-w-0 flex-1 font-mono" aria-label={field.label} placeholder={field.placeholder as string | undefined} value={String(value ?? '')} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
 }
 
-type Declarations = Record<string, string | number>
 type Size = string | { min: string; max: string }
 
 /** A size token: one value, or fluid `{min, max}` between phone and desktop. */
@@ -128,82 +127,6 @@ export function FontStackField({ field, value, onChange, disabled }: FieldProps<
         {action('upload', t('Upload a .woff2 File…'), () => void add('upload'))}
       </div>
     </Popover>
-  )
-}
-
-/** Common properties offered while typing one (any camelCase CSS property works). */
-const PROPERTIES = [
-  'color', 'backgroundColor', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'textTransform', 'textDecoration', 'textUnderlineOffset', 'textWrap',
-  'marginBlock', 'marginBlockStart', 'marginBlockEnd', 'padding', 'paddingInline', 'paddingBlock', 'border', 'borderColor', 'borderWidth', 'borderRadius', 'boxShadow', 'opacity', 'transition',
-]
-
-/**
- * CSS declarations of one element or state: property/value rows. `tokens` (token
- * references) are offered for values; `removable` adds a Remove action that clears it (null).
- */
-export function DeclarationsField({ field, value, onChange, disabled }: FieldProps<Declarations | null>) {
-  const decl = value ?? {}
-  const [adding, setAdding] = useState(false)
-  const list = `site-decl-${field.handle.replace(/[^a-z0-9-]/gi, '-')}`
-  const tokens = (field.tokens as string[] | undefined) ?? []
-  const rename = (prop: string, next: string) => {
-    if (!next || next === prop || next in decl) return
-    onChange(Object.fromEntries(Object.entries(decl).map(([k, v]) => (k === prop ? [next, v] : [k, v]))))
-  }
-  return (
-    <div className="cms-declarations group/decl py-2">
-      <div className="flex h-6 items-center gap-1">
-        <span className={cn('min-w-0 flex-1 truncate text-xs font-medium text-ink', field.mono !== false && 'font-mono')}>{field.label}</span>
-        <IconButton icon="plus" label={t('Add Property')} size="xs" disabled={disabled} onClick={() => setAdding(true)} />
-        {field.removable === true && <IconButton icon="trash" label={t('Remove')} size="xs" disabled={disabled} className="opacity-0 group-hover/decl:opacity-100 focus-visible:opacity-100" onClick={() => onChange(null)} />}
-      </div>
-      <datalist id={`${list}-props`}>{PROPERTIES.filter((p) => !(p in decl)).map((p) => <option key={p} value={p} />)}</datalist>
-      <datalist id={`${list}-values`}>{tokens.map((v) => <option key={v} value={v} />)}</datalist>
-      <div className="mt-1 space-y-1">
-        {Object.entries(decl).map(([prop, v]) => (
-          <div key={prop} className="group/row grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_20px] items-center gap-1">
-            <PropertyInput value={prop} list={`${list}-props`} disabled={disabled} onCommit={(next) => rename(prop, next)} />
-            <Input size="xs" className="font-mono" spellCheck={false} list={`${list}-values`} aria-label={t('{property} value', { property: prop })} value={String(v)} disabled={disabled} onChange={(e) => onChange({ ...decl, [prop]: e.target.value })} />
-            <button type="button" disabled={disabled} onClick={() => onChange(Object.fromEntries(Object.entries(decl).filter(([k]) => k !== prop)))} className="grid size-5 place-items-center rounded-xs text-faint opacity-0 hover:bg-hover hover:text-text group-hover/row:opacity-100 focus-visible:opacity-100" aria-label={t('Remove {property}', { property: prop })}>
-              <Icon name="close" size={10} />
-            </button>
-          </div>
-        ))}
-        {adding && (
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_20px] items-center gap-1">
-            <PropertyInput value="" autoFocus list={`${list}-props`} disabled={disabled} onCommit={(next) => { setAdding(false); if (next && !(next in decl)) onChange({ ...decl, [next]: '' }) }} />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/** A property name, committed on blur or Enter (renaming a key on every keystroke would reorder rows). */
-function PropertyInput({ value, list, disabled, autoFocus, onCommit }: { value: string; list: string; disabled?: boolean; autoFocus?: boolean; onCommit: (next: string) => void }) {
-  const [draft, setDraft] = useState(value)
-  useEffect(() => setDraft(value), [value])
-  return (
-    <Input
-      size="xs"
-      className="font-mono"
-      spellCheck={false}
-      autoFocus={autoFocus}
-      list={list}
-      placeholder={t('property')}
-      aria-label={t('Property')}
-      value={draft}
-      disabled={disabled}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => onCommit(draft.trim())}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-        if (e.key === 'Escape') {
-          setDraft(value)
-          if (!value) onCommit('')
-        }
-      }}
-    />
   )
 }
 

@@ -88,9 +88,35 @@ final class DesignCompiler
             }
         }
 
+        $spacing = [];
+
+        foreach (DesignJson::PROSE_SPACING as $key => $var) {
+            $value = $design->proseSpacing()[$key] ?? null;
+            $resolved = is_scalar($value) && $value !== '' ? Css::value(is_numeric($value) && (string) $value !== '0' ? $value.'px' : (string) $value) : null;
+
+            if ($resolved !== null) {
+                $spacing[] = "--prose-{$var}:{$resolved}";
+            }
+        }
+
+        if ($spacing !== []) {
+            $elements[] = '.cms-prose{'.implode(';', $spacing).'}';
+        }
+
         foreach ($design->prose() as $selector => $declarations) {
-            if (in_array($selector, self::ELEMENTS, true) && is_array($declarations) && ($css = $this->declarations($declarations)) !== '') {
+            if (! in_array($selector, self::ELEMENTS, true) || ! is_array($declarations)) {
+                continue;
+            }
+
+            // Space above an element is part of the flow: it opens a gap after the block before, never above the first.
+            $above = array_intersect_key($declarations, ['marginTop' => true]);
+
+            if (($css = $this->declarations(array_diff_key($declarations, $above))) !== '') {
                 $elements[] = ".cms-prose {$selector}{{$css}}";
+            }
+
+            if ($above !== [] && ! str_contains($selector, ':') && ! str_contains($selector, ' ') && ($css = $this->declarations($above)) !== '') {
+                $elements[] = ".cms-prose > * + {$selector},.cms-prose > [data-cms-contents] > * + {$selector},.cms-prose > * + [data-cms-contents] > {$selector}:first-child{{$css}}";
             }
         }
 

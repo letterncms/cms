@@ -194,7 +194,7 @@ final class Renderer
                 try {
                     $html = $this->blocks->withOutletDocument($bodyDocument, fn () => $this->blocks->withEditorDocument($templateDocument, fn () => $this->blocks->render($nodes)));
                     if ($ctx->editor && $templateDocument !== null) {
-                        $html = '<div data-cms-editor-root="'.e($templateDocument).'" style="display:contents">'.($html !== '' ? $html : '<div class="cms-placeholder" data-cms-editor-empty-root>'.e(__('Content')).'</div>').'</div>';
+                        $html = '<div data-cms-editor-root="'.e($templateDocument).'" style="display:contents" data-cms-contents>'.($html !== '' ? $html : '<div class="cms-placeholder" data-cms-editor-empty-root>'.e(__('Content')).'</div>').'</div>';
                     }
                     $source = $bodyDocument ?? $templateDocument;
                     if ($ctx->editor && $source !== null) $html .= $this->blocks->editorPrototypes($source);

@@ -21,7 +21,7 @@ collections:
 
 ::::
 
-:::: outlet {"id":"p-body","props":{"wrap":true},"class":"cms-prose"}
+:::: outlet {"id":"p-body","props":{"wrap":true,"prose":true}}
 ::::
 
 :::: repeat {"id":"p-tags","props":{"source":"list","path":"entry.tags","tag":"ul"},"style":{"base":{"display":"flex","flexWrap":"wrap","gap":"token:space.2","marginTop":"token:space.12"}}}

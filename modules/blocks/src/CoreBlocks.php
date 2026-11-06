@@ -41,7 +41,7 @@ final class CoreBlocks
         $space = static fn (string $default) => ['type' => 'select', 'options' => [
             'token:space.0' => 'None', 'token:space.2' => 'XS', 'token:space.4' => 'S', 'token:space.6' => 'M', 'token:space.8' => 'L', 'token:space.12' => 'XL', 'token:space.16' => '2XL',
         ], 'default' => $default];
-        // Technical settings sit under Advanced in the Content tab ('advanced').
+        // Technical settings sit under Advanced in the Content tab ('advanced'); how text looks, in the Design tab's Typography ('design').
         $tags = static fn (array $tags, string $default) => ['handle' => 'tag', 'type' => 'select', 'label' => 'HTML Tag', 'options' => array_combine($tags, $tags), 'default' => $default, 'advanced' => true];
         // Links pick a page (stored as entry:<id>, so they follow it), an anchor, a URL, an email or a phone number.
         $url = static fn (string $handle, string $label, array $extra = []) => ['handle' => $handle, 'type' => 'url', 'component' => 'link', 'reference' => true, 'label' => $label, ...$extra];
@@ -57,7 +57,7 @@ final class CoreBlocks
                 'description' => 'A container for anything.',
                 'keywords' => ['div', 'frame', 'container', 'group', 'wrapper', 'flex', 'stack', 'row', 'nav', 'header'],
                 'children' => true, 'html' => 'div',
-                'fields' => [$tags(Elements::BOX_TAGS, 'div'), ...$link, ['handle' => 'type', 'type' => 'select', 'label' => 'Button Type', 'options' => ['button' => 'Button', 'submit' => 'Submit'], 'default' => 'button', 'if' => ['tag' => 'button'], 'advanced' => true]],
+                'fields' => [$tags(Elements::BOX_TAGS, 'div'), ...$link, ['handle' => 'prose', 'type' => 'toggle', 'label' => 'Prose', 'instructions' => 'Long-form text: the design system’s Prose spacing and styles for every block inside.', 'design' => true], ['handle' => 'type', 'type' => 'select', 'label' => 'Button Type', 'options' => ['button' => 'Button', 'submit' => 'Submit'], 'default' => 'button', 'if' => ['tag' => 'button'], 'advanced' => true]],
                 'render' => Elements::box(...),
                 'example' => ['tag' => 'nav'],
             ],
@@ -501,7 +501,8 @@ final class CoreBlocks
                 'name' => 'outlet', 'title' => 'Page Content', 'icon' => 'article', 'category' => 'data',
                 'description' => 'Where each page’s content goes.', 'keywords' => ['slot', 'content', 'body', 'main', 'template'],
                 'fields' => [
-                    ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Wrap in a Container', 'instructions' => 'Style the content area as one element.'],
+                    ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Wrap in a Container', 'instructions' => 'Give the content one box to size and space. Without it, its blocks join the layout around it.'],
+                    ['handle' => 'prose', 'type' => 'toggle', 'label' => 'Prose', 'instructions' => 'Long-form text: the design system’s Prose spacing and styles for every block inside.', 'design' => true],
                     ['handle' => 'permalinks', 'type' => 'toggle', 'label' => 'Add # Links to Headings'],
                 ],
                 'render' => Elements::outlet(...),

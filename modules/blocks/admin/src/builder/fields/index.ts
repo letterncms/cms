@@ -6,6 +6,7 @@ import { ValueField } from './controls'
 import { NodeField, NodesField } from './nodes'
 import { ClipField } from './clip'
 import { ConditionsField } from './conditions'
+import { MoreStylesField } from '../design/more'
 import { FiltersField } from './filters'
 import { InlineTextField } from './inlineText'
 import { ShadowsField } from './shadows'
@@ -22,6 +23,7 @@ export function registerFields() {
     'blocks-nodes': NodesField,
     'blocks-group': GroupField,
     'blocks-pairs': PairsField,
+    'blocks-more': MoreStylesField,
     'blocks-shadows': ShadowsField,
     'blocks-gradient': GradientField,
     'blocks-align': AlignField,

@@ -53,7 +53,7 @@ interface Draft {
   js: string
 }
 
-const SECTIONS = ['color', 'type', 'space', 'sizes', 'shape', 'motion', 'elements', 'buttons', 'fields', 'code'] as const
+const SECTIONS = ['color', 'type', 'space', 'sizes', 'shape', 'motion', 'elements', 'prose', 'buttons', 'fields', 'code'] as const
 type SectionKey = (typeof SECTIONS)[number]
 
 function sections(): { group: string; items: { value: SectionKey; label: string; icon: string }[] }[] {
@@ -73,6 +73,7 @@ function sections(): { group: string; items: { value: SectionKey; label: string;
       group: t('Styles'),
       items: [
         { value: 'elements', label: t('Elements'), icon: 'paragraph' },
+        { value: 'prose', label: t('Prose'), icon: 'article' },
         { value: 'buttons', label: t('Buttons'), icon: 'button' },
         { value: 'fields', label: t('Form Fields'), icon: 'form-input' },
         { value: 'code', label: t('Custom Code'), icon: 'code' },
@@ -213,7 +214,7 @@ export default function DesignTokens() {
   const inject = () => applyDraft(frame.current?.contentDocument, preview)
   // Buttons and fields show beside their controls every variant and every kind of field, in each state,
   // drawn by the site: the part being edited is scrolled to and marked, and nothing else moves.
-  const page = section === 'fields' || section === 'buttons' || section === 'sizes' ? `/__specimen/${section}` : '/'
+  const page = section === 'fields' || section === 'buttons' || section === 'sizes' || section === 'prose' ? `/__specimen/${section}` : '/'
   const part = section === 'fields' ? specimenPart(fieldOpen) : section === 'buttons' ? buttonOpen : null
   useEffect(() => showPart(frame.current?.contentDocument, part, true), [part])
   useEffect(inject)
@@ -519,9 +520,10 @@ export default function DesignTokens() {
           {section === 'elements' && (
             <>
               <StyleList title={t('Elements')} options={theme.data.elements ?? []} tokens={tokens} vars={siteVars} value={current.styles} onChange={(styles) => update((d) => ({ ...d, styles }))} />
-              <StyleList title={t('Prose')} options={theme.data.elements ?? []} tokens={tokens} vars={siteVars} value={current.prose} onChange={(prose) => update((d) => ({ ...d, prose }))} />
             </>
           )}
+
+          {section === 'prose' && <Prose value={current.prose} options={theme.data.elements ?? []} tokens={tokens} vars={siteVars} onChange={(prose) => update((d) => ({ ...d, prose }))} />}
 
           {section === 'sizes' && <ControlSizeTable defaults={theme.data.controlSizes ?? {}} tokens={tokens} onSet={setControl} />}
           {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
@@ -681,15 +683,22 @@ function boxFields(): FieldDef[] {
         { handle: 'paddingInline', type: 'text', component: 'blocks-value', label: t('Horizontal Padding'), group: 'space', prefixIcon: 'b-arrows-out-line-horizontal', unit: 'rem', placeholder: '0', min: 0 },
       ],
     },
+    {
+      handle: 'margin', type: 'group', component: 'blocks-group', label: t('Margin'),
+      fields: [
+        { handle: 'marginTop', type: 'text', component: 'blocks-value', label: t('Top Margin'), group: 'space', prefix: 'T', unit: 'rem', units: ['rem', 'em', 'px'], placeholder: '0' },
+        { handle: 'marginBottom', type: 'text', component: 'blocks-value', label: t('Bottom Margin'), group: 'space', prefix: 'B', unit: 'rem', units: ['rem', 'em', 'px'], placeholder: '0' },
+      ],
+    },
   ]
 }
 
 /**
  * Declarations edited with controls: each field's handle is the property it sets (a
- * group's sub-fields are); a set row's label resets it. Properties no control covers
- * stay editable as CSS below, like the canvas inspector's CSS section.
+ * group's sub-fields are); a set row's label resets it. Any other property is added
+ * below with its own control, as in the canvas inspector's sections.
  */
-function StyleControls({ value, onChange, fields, tokens }: { value: Declarations | undefined; onChange: (next: Declarations) => void; fields: FieldDef[]; tokens: Token[] }) {
+function StyleControls({ value, onChange, fields }: { value: Declarations | undefined; onChange: (next: Declarations) => void; fields: FieldDef[] }) {
   const declarations = longhand(value)
   const keysOf = (field: FieldDef) => ((field.fields as FieldDef[] | undefined) ?? [field]).map((f) => f.handle)
   const known = new Set(fields.flatMap(keysOf))
@@ -726,8 +735,8 @@ function StyleControls({ value, onChange, fields, tokens }: { value: Declaration
       ))}
       <Fields
         bare
-        fields={[{ handle: 'css', type: 'json', component: 'site-declarations', label: t('CSS'), mono: false, tokens: tokens.map((token) => `token:${token.path}`) }]}
-        values={{ css: rest }}
+        fields={[{ handle: 'more', type: 'json', component: 'blocks-more', label: t('More'), hidden: [...known] }]}
+        values={{ more: rest }}
         onChange={(_, d) => onChange({ ...Object.fromEntries(Object.entries(declarations).filter(([key]) => known.has(key))), ...(d ?? {}) })}
       />
     </>
@@ -752,10 +761,51 @@ function StyleList({ title, value, onChange, options, tokens, vars }: { title: s
           aside={<span aria-hidden="true" className="grid h-6 w-9 shrink-0 place-items-center rounded-xs" style={{ ...vars, background: 'var(--color-background)', color: 'var(--color-foreground)' }}><span className="px-0.5" style={{ ...style(declarations), fontSize: 15, lineHeight: 1.2, margin: 0, paddingBlock: 0 }}>Aa</span></span>}
           menu={<Menu trigger={<IconButton icon="more" label={t('Element Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== element))) }]} />}
         >
-          <StyleControls value={declarations} fields={fields} tokens={tokens} onChange={(next) => onChange({ ...value, [element]: next })} />
+          <StyleControls value={declarations} fields={fields} onChange={(next) => onChange({ ...value, [element]: next })} />
         </Disclosure>
       ))}
     </Group>
+  )
+}
+
+/** The flow of prose, between its blocks whatever they are: key, label, the reset's default. */
+const PROSE_SPACING = (): [string, string, string][] => [
+  ['blocks', t('Between Blocks'), '1.1em'],
+  ['headings', t('Before Headings'), '1.8em'],
+  ['afterHeadings', t('After Headings'), '0.6em'],
+  ['items', t('Between List Items'), '0.35em'],
+]
+
+/**
+ * Long-form text, in any block styled as prose: the spacing between its blocks (custom
+ * ones too), then how each element looks there. An element's top margin replaces the
+ * spacing before it.
+ */
+function Prose({ value, onChange, options, tokens, vars }: { value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties }) {
+  const { spacing = {}, ...elements } = value
+  const write = (nextSpacing: Declarations, nextElements: Record<string, Declarations>) => onChange({ ...(Object.keys(nextSpacing).length ? { spacing: nextSpacing } : {}), ...nextElements })
+  return (
+    <>
+      <Group title={t('Spacing')}>
+        {PROSE_SPACING().map(([key, label, fallback]) => (
+          <Setting key={key} label={label}>
+            <Fields
+              bare
+              className="flex min-w-0 flex-1"
+              fields={[{ handle: key, type: 'text', component: 'blocks-value', label, group: 'space', unit: 'em', units: ['em', 'rem', 'px'], step: 0.05, min: 0, placeholder: fallback }]}
+              values={{ [key]: spacing[key] ?? null }}
+              onChange={(_, v) => {
+                const next: Declarations = { ...spacing }
+                if (v === null || v === undefined || v === '') delete next[key]
+                else next[key] = v as string
+                write(next, elements)
+              }}
+            />
+          </Setting>
+        ))}
+      </Group>
+      <StyleList title={t('Elements')} options={options} tokens={tokens} vars={vars} value={elements} onChange={(next) => write(spacing, next)} />
+    </>
   )
 }
 
@@ -816,7 +866,7 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
   const write = (name: string, surface: string | undefined, states: Record<string, Declarations>) => onChange({ ...value, [name]: { ...states, ...(surface ? { surface } : {}) } as Record<string, Declarations> })
   const label = (name: string) => name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, ' ')
   // A variant is a look: how big a button is comes from the control sizes it shares with fields.
-  const fields = [...boxFields().filter((f) => f.handle !== 'padding'), ...textFields(tokens).filter((f) => ['fontWeight', 'letterSpacing', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'boxShadow', type: 'text', component: 'blocks-shadows', label: t('Shadow'), group: 'shadow' } as FieldDef, { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' } as FieldDef]
+  const fields = [...boxFields().filter((f) => f.handle !== 'padding' && f.handle !== 'margin'), ...textFields(tokens).filter((f) => ['fontWeight', 'letterSpacing', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'boxShadow', type: 'text', component: 'blocks-shadows', label: t('Shadow'), group: 'shadow' } as FieldDef, { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' } as FieldDef]
 
   return (
     <Group title={t('Button Variants')} onAdd={add}>
@@ -833,7 +883,7 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
           <div className="mb-2">
             <Segmented size="xs" block aria-label={t('State')} value={state} onChange={setState} options={[{ value: 'base', label: t('Default') }, { value: 'hover', label: t('Hover') }, { value: 'active', label: t('Pressed') }, { value: 'focus-visible', label: t('Focus') }]} />
           </div>
-          <StyleControls key={state} value={split(variant).states[state]} fields={fields} tokens={tokens} onChange={(next) => write(name, split(variant).surface, { ...split(variant).states, [state]: next })} />
+          <StyleControls key={state} value={split(variant).states[state]} fields={fields} onChange={(next) => write(name, split(variant).surface, { ...split(variant).states, [state]: next })} />
         </Disclosure>
       ))}
     </Group>

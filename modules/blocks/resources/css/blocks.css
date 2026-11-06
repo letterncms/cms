@@ -120,7 +120,8 @@
   .cms-box, .cms-repeat { min-width: 0; }
   a.cms-box, a.cms-link { color: inherit; text-decoration: none; }
   button.cms-box { appearance: none; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: inherit; }
-  ul.cms-box, ol.cms-box, ul.cms-repeat, ol.cms-repeat { list-style: none; margin: 0; padding: 0; }
+  /* No block resets its own margins here: the base reset has, and prose spaces blocks with margins (a component would win over it). */
+  ul.cms-box, ol.cms-box, ul.cms-repeat, ol.cms-repeat { list-style: none; padding: 0; }
 
   .cms-section { position: relative; padding-block: var(--space-section, clamp(3rem, 8vw, 7rem)); background-size: cover; background-position: center; }
   .cms-section__inner { position: relative; z-index: 1; width: 100%; margin-inline: auto; padding-inline: var(--space-gutter, clamp(1.25rem, 4vw, 2.5rem)); }
@@ -161,15 +162,12 @@
   .cms-icon { display: inline-flex; flex: none; width: 1.25em; height: 1.25em; line-height: 0; }
   .cms-icon svg { width: 100%; height: 100%; }
 
-  .cms-image { margin: 0; }
   .cms-image img, .cms-image picture { display: block; width: 100%; height: auto; border-radius: inherit; }
   .cms-image figcaption, .cms-video figcaption, .cms-table caption { margin-top: 0.6em; font-size: var(--text-sm, 0.875rem); color: var(--color-muted, rgb(0 0 0 / 0.6)); }
-  .cms-video, .cms-embed { margin: 0; }
   .cms-ratio { position: relative; width: 100%; overflow: hidden; border-radius: var(--radius-md, 0.5rem); }
   .cms-ratio iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
   .cms-video video { display: block; width: 100%; height: 100%; object-fit: inherit; border-radius: inherit; }
 
-  .cms-quote { margin: 0; }
   .cms-quote blockquote { margin: 0; font-size: var(--text-xl, 1.25rem); line-height: var(--leading-snug, 1.35); }
   .cms-quote figcaption { margin-top: 0.75em; color: var(--color-muted, rgb(0 0 0 / 0.6)); font-size: var(--text-sm, 0.875rem); }
 
