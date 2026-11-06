@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.14.0 (2026-11-06)
+
 ### Changed
 
 - **Plugins → Store** is redesigned: search and sort sit above the categories, featured plugins come first, every plugin is a card of the same size with its icon and maker, and a plugin opens on a page with its screenshots, description, changelog, what it needs and links to its docs and code. Price only shows as a filter once the store sells something.
