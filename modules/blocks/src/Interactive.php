@@ -88,7 +88,7 @@ final class Interactive
     {
         $b = $d['block'];
 
-        return '<label '.$d['attrs'].' data-cms-filter-control><span class="cms-filter__legend">'.e((string) ($b['label'] ?? 'Search')).'</span><input type="search" name="q" placeholder="'.e((string) ($b['placeholder'] ?? '')).'" autocomplete="off"></label>';
+        return '<label '.$d['attrs'].' data-cms-filter-control><span class="'.self::legend($b).'">'.e((string) ($b['label'] ?? 'Search')).'</span><input type="search" name="q" placeholder="'.e((string) ($b['placeholder'] ?? '')).'" autocomplete="off"></label>';
     }
 
     public static function filterChoice(array $d): string
@@ -126,7 +126,13 @@ final class Interactive
             $options .= '<option value="'.e($value).'" data-field="'.e($field).'" data-direction="'.(($option['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc').'"'.($i === 0 ? ' selected' : '').'>'.e((string) ($option['label'] ?? '')).'</option>';
         }
 
-        return '<label '.$d['attrs'].' data-cms-filter-control><span class="cms-filter__legend">'.e((string) ($b['label'] ?? 'Sort')).'</span><select name="sort">'.$options.'</select></label>';
+        return '<label '.$d['attrs'].' data-cms-filter-control><span class="'.self::legend($b).'">'.e((string) ($b['label'] ?? 'Sort')).'</span><select name="sort">'.$options.'</select></label>';
+    }
+
+    /** A hidden label still names the field for screen readers. */
+    private static function legend(array $b): string
+    {
+        return ($b['show_label'] ?? true) === false ? 'cms-filter__legend cms-filter__legend--hidden' : 'cms-filter__legend';
     }
 
     public static function filterEmpty(array $d): string

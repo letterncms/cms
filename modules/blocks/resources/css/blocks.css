@@ -134,8 +134,14 @@
   [data-look="list"] .cms-filter__option:has(input:checked) { background: rgb(0 0 0 / 0.06); }
   [data-look="list"] .cms-filter__option:has(input:checked) > span { color: inherit; }
   .cms-filter-sort { display: block; }
-  .cms-filter-sort select { appearance: none; width: 100%; font: inherit; color: inherit; padding: .55em 2.2em .55em .8em; border: 1px solid var(--color-border, rgb(0 0 0 / 0.15)); border-radius: var(--radius-sm, .4rem); background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b6760' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") no-repeat right .7em center / 1em; cursor: pointer; }
-  .cms-filter-search input { width: 100%; font: inherit; color: inherit; padding: .55em .8em; border: 1px solid var(--color-border, rgb(0 0 0 / 0.15)); border-radius: var(--radius-sm, .4rem); background: transparent; }
+  .cms-filter__legend--hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
+  .cms-filter-search { display: block; }
+  .cms-filter-sort select, .cms-filter-search input { box-sizing: border-box; width: 100%; height: 2.75em; margin: 0; font: inherit; line-height: 1.25; color: inherit; border: 1px solid var(--color-border, rgb(0 0 0 / 0.15)); border-radius: var(--radius-sm, .4rem); background-color: var(--color-raised, #fff); transition: border-color 140ms ease, box-shadow 140ms ease; }
+  .cms-filter-sort select:hover, .cms-filter-search input:hover { border-color: color-mix(in srgb, currentColor 25%, transparent); }
+  .cms-filter-sort select:focus-visible, .cms-filter-search input:focus-visible { outline: none; border-color: color-mix(in srgb, currentColor 45%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent); }
+  .cms-filter-sort select { appearance: none; padding: 0 2.2em 0 .8em; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b6760' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .7em center; background-size: 1em; cursor: pointer; }
+  .cms-filter-search input { appearance: none; padding: 0 .8em; }
+  .cms-filter-search input::placeholder { color: inherit; opacity: .55; }
 
   .cms-box, .cms-repeat { min-width: 0; }
   a.cms-box, a.cms-link { color: inherit; text-decoration: none; }

@@ -387,6 +387,7 @@ final class CoreBlocks
                 'description' => 'A search field for the filter.',
                 'fields' => [
                     ['handle' => 'label', 'type' => 'text', 'label' => 'Label', 'default' => 'Search'],
+                    ['handle' => 'show_label', 'type' => 'toggle', 'label' => 'Show Label', 'default' => true, 'instructions' => 'Off: screen readers still read it.'],
                     ['handle' => 'placeholder', 'type' => 'text', 'label' => 'Placeholder'],
                 ],
                 'render' => Interactive::filterSearch(...),
@@ -407,6 +408,7 @@ final class CoreBlocks
                 'description' => 'Sort orders for the list.',
                 'fields' => [
                     ['handle' => 'label', 'type' => 'text', 'label' => 'Label', 'default' => 'Sort'],
+                    ['handle' => 'show_label', 'type' => 'toggle', 'label' => 'Show Label', 'default' => true, 'instructions' => 'Off: screen readers still read it.'],
                     ['handle' => 'options', 'type' => 'repeater', 'label' => 'Options', 'fields' => [
                         ['handle' => 'label', 'type' => 'text', 'label' => 'Label'],
                         ['handle' => 'field', 'type' => 'text', 'label' => 'Field', 'instructions' => 'One of the Repeat’s Sort By fields, e.g. title. Empty: the Repeat’s own order.'],
