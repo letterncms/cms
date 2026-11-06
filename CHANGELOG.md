@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.16.0 (2026-11-06)
+
 ### Added
 
 - **Design System → Form Fields** styles every field on the site once: the forms you build, the account pages, the checkout, list filters and the Input block. **All Fields** sets the height, fill, border, radius and text every boxed field shares; then each state (hover, focus, invalid, disabled), labels and help, spacing, and each kind of field has its own row: dropdowns, text areas, checkboxes (mark shape, weight and size), radio buttons (dot or ring), switches, sliders, tag fields, chips and file pickers. Empty controls show what applies, from your tokens.
