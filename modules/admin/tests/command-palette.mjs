@@ -45,7 +45,9 @@ const key = value => input().dispatchEvent(new KeyboardEvent('keydown',{key:valu
 const content = () => items().filter(el => el.dataset.value.startsWith('entry '))
 // Content lands below the commands; the arrow keys reach it.
 const choose = async (title) => { for (let i = 0; i < 20 && !selected()?.textContent.startsWith(title); i++) { key('ArrowDown'); await sleep(25) } assert(selected()?.textContent.startsWith(title), title + ' could not be selected') }
-const open = async () => { document.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:true,bubbles:true})); await wait(input,'palette did not open'); await wait(selected,'palette opened without a selection') }
+// ⌘K on a Mac, Ctrl+K elsewhere: the shortcut is mod+k.
+const mac = /Mac|iPhone|iPad/.test(navigator.platform)
+const open = async () => { document.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:mac,ctrlKey:!mac,bubbles:true})); await wait(input,'palette did not open'); await wait(selected,'palette opened without a selection') }
 try {
  await wait(()=>document.querySelector('main h1'),'shell did not load'); await open()
  await test('Blank input shows commands without Ask',async()=>{await sleep(50);assert(!ask(),'Ask visible for blank input')})

@@ -189,9 +189,12 @@ const gapInsert = async (parentId, index, text) => {
   const x = parentBox.left + parentBox.width / 2
   const y = beforeBox && afterBox ? (beforeBox.bottom + afterBox.top) / 2 : afterBox ? afterBox.top - 2 : beforeBox.bottom + 2
   const target = doc.elementFromPoint(x, y) ?? host
-  target.dispatchEvent(new doc.defaultView.PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true }))
+  // A resting pointer still moves a little: the move is repeated until the + shows, as one sent while the last chooser closes is ignored.
+  const move = () => target.dispatchEvent(new doc.defaultView.PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true }))
   const key = (parentId ?? '') + ':' + index
-  await wait(() => document.querySelector('[data-cms-inserter="' + key + '"]'), 'No between-block inserter at ' + key)
+  let polls = 0
+  move()
+  await wait(() => document.querySelector('[data-cms-inserter="' + key + '"]') || (++polls % 10 === 0 && move(), false), 'No between-block inserter at ' + key)
   const line = document.querySelector('[data-cms-insertion-line]').getBoundingClientRect(), edge = outerPoint(0, y).y
   assert(Math.abs(line.top - edge) < 40, 'The insertion line is not on its boundary at ' + key)
   document.querySelector('[data-cms-inserter="' + key + '"]').click()
