@@ -43,31 +43,38 @@ export function SizeField({ field, value, onChange, disabled }: FieldProps<Size 
 }
 
 /** What a font family falls back to: the system's own fonts of its kind. */
-const FALLBACKS = { sans: ['ui-sans-serif', 'system-ui', 'sans-serif'], serif: ['ui-serif', 'Georgia', 'serif'], mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'] } as const
-type Fallback = keyof typeof FALLBACKS
+export const FALLBACKS = { sans: ['ui-sans-serif', 'system-ui', 'sans-serif'], serif: ['ui-serif', 'Georgia', 'serif'], mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'] } as const
+export type Fallback = keyof typeof FALLBACKS
 const SYSTEM_FONTS = new Set<string>([...Object.values(FALLBACKS).flat(), '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', 'Times New Roman', 'Times', 'Courier New', 'Consolas', 'Monaco', 'cursive', 'fantasy'])
 
-function fallbackOf(stack: string[]): Fallback {
+export function fallbackOf(stack: string[]): Fallback {
   if (stack.includes('monospace')) return 'mono'
   return stack.includes('serif') ? 'serif' : 'sans'
 }
 
+/** A font token's value as a list: `["Inter", "ui-sans-serif", …]`, from an array or a CSS font stack. */
+export function fontStack(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String) : String(value ?? '').split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+}
+
+/** A font token with another fallback kind (sans, serif, mono), keeping its font. */
+export function withFallback(value: unknown, kind: Fallback): string[] {
+  const stack = fontStack(value)
+  return [...(stack[0] && !SYSTEM_FONTS.has(stack[0]) ? [stack[0]] : []), ...FALLBACKS[kind]]
+}
+
 /**
- * A font family token (`["Inter", "ui-sans-serif", "system-ui", "sans-serif"]`): the
- * site's font, or the system's, and what it falls back to. `families` are the fonts the
- * site serves.
+ * A font token (`["Inter", "ui-sans-serif", "system-ui", "sans-serif"]`): which of the site's
+ * fonts it uses, or the system's. Its fallback stays as it is (the row's menu changes it).
+ * `families` are the fonts in the site's library.
  */
 export function FontStackField({ field, value, onChange, disabled }: FieldProps<string[] | string | null>) {
-  const stack = Array.isArray(value) ? value : String(value ?? '').split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+  const stack = fontStack(value)
   const first = stack[0] && !SYSTEM_FONTS.has(stack[0]) ? stack[0] : ''
   const fallback = fallbackOf(stack)
   const families = [...new Set([...((field.families as string[] | undefined) ?? []), ...(first ? [first] : [])])]
-  const set = (family: string, kind: Fallback) => onChange([...(family ? [family] : []), ...FALLBACKS[kind]])
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1">
-      <Select id={fieldControlId(field)} size="sm" className="min-w-0 flex-[3]" aria-label={t('Font')} disabled={disabled} value={first || 'system'} onChange={(v) => set(v === 'system' || !v ? '' : v, fallback)} options={[{ value: 'system', label: t('System') }, ...families.map((family) => ({ value: family, label: family }))]} />
-      <Select size="sm" className="min-w-0 flex-[2]" aria-label={t('Fallback')} disabled={disabled} value={fallback} onChange={(v) => set(first, (v as Fallback) ?? 'sans')} options={[{ value: 'sans', label: t('Sans') }, { value: 'serif', label: t('Serif') }, { value: 'mono', label: t('Mono') }]} />
-    </div>
+    <Select id={fieldControlId(field)} size="sm" className="min-w-0 flex-1" aria-label={t('Font')} disabled={disabled} value={first || 'system'} onChange={(v) => onChange([...(v && v !== 'system' ? [v] : []), ...FALLBACKS[fallback]])} options={[{ value: 'system', label: t('System Font') }, ...families.map((family) => ({ value: family, label: family }))]} />
   )
 }
 
