@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.0 (2026-11-06)
+
 ### Changed
 
 - Filter Search and Filter Sort fields are white, the same height, and lighten their border on hover and focus. **Show Label** off hides a field's label from sight while screen readers still read it.
