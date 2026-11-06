@@ -1,6 +1,6 @@
 import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Fields, Icon, IconButton, Input, Popover, Select, Tooltip, cn } from '@letterncms/ui'
-import { forwardRef, useEffect, useState, type ButtonHTMLAttributes } from 'react'
+import { fieldControlId, Fields, Icon, IconButton, Input, Popover, Tooltip, cn } from '@letterncms/ui'
+import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 /* Field components of the design system editor — the controls core fields can't
    express: fluid sizes, font stacks, CSS declarations, easing curves, shadows and
@@ -63,18 +63,71 @@ export function withFallback(value: unknown, kind: Fallback): string[] {
   return [...(stack[0] && !SYSTEM_FONTS.has(stack[0]) ? [stack[0]] : []), ...FALLBACKS[kind]]
 }
 
+/** A font the site serves, as the picker lists it: its weights (400–600 · Italic) and whether a font token uses it. */
+export interface SiteFont {
+  family: string
+  styles: string
+  used: boolean
+}
+
 /**
- * A font token (`["Inter", "ui-sans-serif", "system-ui", "sans-serif"]`): which of the site's
- * fonts it uses, or the system's. Its fallback stays as it is (the row's menu changes it).
- * `families` are the fonts in the site's library.
+ * A font token (`["Inter", "ui-sans-serif", "system-ui", "sans-serif"]`): the font it uses, picked
+ * from the fonts on the site (each shown in itself) or the system's, or added right here from
+ * Google Fonts or a .woff2 file. Its fallback stays as it is (the row's menu changes it).
+ * `fonts` are the site's fonts; `onAdd(kind)` adds one and resolves to its family name;
+ * `onRemove(family)` deletes a font no token uses.
  */
 export function FontStackField({ field, value, onChange, disabled }: FieldProps<string[] | string | null>) {
+  const [open, setOpen] = useState(false)
   const stack = fontStack(value)
   const first = stack[0] && !SYSTEM_FONTS.has(stack[0]) ? stack[0] : ''
   const fallback = fallbackOf(stack)
-  const families = [...new Set([...((field.families as string[] | undefined) ?? []), ...(first ? [first] : [])])]
+  const fonts = (field.fonts as SiteFont[] | undefined) ?? []
+  const use = (family: string) => onChange([...(family ? [family] : []), ...FALLBACKS[fallback]])
+  const add = async (kind: 'google' | 'upload') => {
+    setOpen(false)
+    const family = await (field.onAdd as ((kind: string) => Promise<string | null>) | undefined)?.(kind)
+    if (family) use(family)
+  }
+  const option = (family: string, label: string, aside: string, extra?: ReactNode) => (
+    <div key={family || 'system'} className="group/font flex items-center gap-1 rounded-sm pr-1 hover:bg-hover">
+      <button type="button" onClick={() => { use(family); setOpen(false) }} className="flex min-h-9 min-w-0 flex-1 items-center gap-2 pl-2 text-left">
+        <span className="min-w-0 flex-1 truncate text-[15px] leading-tight text-ink" style={family ? { fontFamily: `"${family}"` } : undefined}>{label}</span>
+        {aside && <span className="shrink-0 text-2xs tabular-nums text-faint">{aside}</span>}
+      </button>
+      <span className="grid w-5 shrink-0 place-items-center">{family === first ? <Icon name="check" size={14} className="text-ink" /> : extra}</span>
+    </div>
+  )
+  const action = (icon: string, label: string, onClick: () => void) => (
+    <button type="button" onClick={onClick} className="flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left text-xs text-text hover:bg-hover hover:text-ink">
+      <Icon name={icon} size={14} className="shrink-0 text-faint" />
+      {label}
+    </button>
+  )
   return (
-    <Select id={fieldControlId(field)} size="sm" className="min-w-0 flex-1" aria-label={t('Font')} disabled={disabled} value={first || 'system'} onChange={(v) => onChange([...(v && v !== 'system' ? [v] : []), ...FALLBACKS[fallback]])} options={[{ value: 'system', label: t('System Font') }, ...families.map((family) => ({ value: family, label: family }))]} />
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      className="w-72 !p-1.5"
+      trigger={
+        <button type="button" id={fieldControlId(field)} disabled={disabled} className="cms-input flex h-7 w-full min-w-0 items-center gap-2 rounded-sm pl-2 pr-1.5 text-left text-sm">
+          <span className="min-w-0 flex-1 truncate" style={first ? { fontFamily: `"${first}"` } : undefined}>{first || t('System Font')}</span>
+          <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />
+        </button>
+      }
+    >
+      <div className="max-h-72 overflow-y-auto">
+        {option('', t('System Font'), '')}
+        {fonts.map((font) => option(font.family, font.family, font.styles, !font.used && (
+          <IconButton icon="trash" label={t('Remove {family}', { family: font.family })} size="xs" className="opacity-0 focus-visible:opacity-100 group-hover/font:opacity-100" onClick={() => (field.onRemove as ((family: string) => void) | undefined)?.(font.family)} />
+        )))}
+      </div>
+      <div className="mt-1 border-t border-border pt-1">
+        {action('search', t('Add a Google Font…'), () => void add('google'))}
+        {action('upload', t('Upload a .woff2 File…'), () => void add('upload'))}
+      </div>
+    </Popover>
   )
 }
 
