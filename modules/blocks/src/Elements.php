@@ -116,8 +116,12 @@ final class Elements
     {
         $b = $d['block'];
         $url = self::url($b['url'] ?? null);
-        $meta = ' data-variant="'.e((string) ($b['variant'] ?? 'primary')).'" data-size="'.e((string) ($b['size'] ?? 'md')).'"';
         $icon = ! empty($b['icon']) ? Icons::svg((string) $b['icon'], 'cms-button__icon') : '';
+        // An icon without words is a square (or, round, a circle) button, named for screen readers.
+        $alone = $icon !== '' && trim(strip_tags((string) ($b['label'] ?? ''))) === '' && empty($d['node']['children']);
+        $meta = ' data-variant="'.e((string) ($b['variant'] ?? 'primary')).'" data-size="'.e((string) ($b['size'] ?? 'md')).'"'
+            .(($b['shape'] ?? 'default') === 'round' ? ' data-shape="round"' : '')
+            .($alone ? ' data-icon-only aria-label="'.e((string) ($b['accessible_label'] ?? '')).'"' : '');
         $label = '<span'.self::editable($d, 'label').self::placeholder($d, 'label').'>'.($b['label'] ?? '').'</span>';
         $inner = ($b['icon_position'] ?? 'end') === 'start' ? $icon.$label : $label.$icon;
 

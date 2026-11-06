@@ -1,6 +1,6 @@
 import { t, type FieldDef } from '@letterncms/sdk'
 import { Fields, IconButton, Menu, Segmented } from '@letterncms/ui'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Disclosure, Group, css } from './design-parts'
 
 /** A property of a part, as the server describes it (FieldStyles::schema). */
@@ -76,7 +76,7 @@ function sections(): { key: string; label: string; parts: string[]; specimen: st
     { key: 'field', label: t('All Fields'), parts: ['field'], specimen: 'field' },
     { key: 'states', label: t('States'), parts: ['hover', 'focus', 'invalid', 'disabled'], specimen: 'states' },
     { key: 'label', label: t('Labels and Help'), parts: ['label', 'help'], specimen: 'labels' },
-    { key: 'spacing', label: t('Spacing'), parts: ['spacing'], specimen: 'overview' },
+    { key: 'spacing', label: t('Size and Spacing'), parts: ['spacing'], specimen: 'sizes' },
     { key: 'select', label: t('Dropdowns'), parts: ['select'], specimen: 'select' },
     { key: 'textarea', label: t('Text Areas'), parts: ['textarea'], specimen: 'textarea' },
     { key: 'checkbox', label: t('Checkboxes'), parts: ['checkbox'], specimen: 'checkbox' },
@@ -94,13 +94,13 @@ function label(part: string, key: string): string {
   const own: Record<string, string> = {
     'invalid.color': t('Color'), 'invalid.ringColor': t('Ring'), 'label.color': t('Color'), 'help.color': t('Color'), 'label.fontSize': t('Size'), 'help.fontSize': t('Size'),
     'label.fontWeight': t('Weight'), 'checkbox.background': t('Fill'), 'checkbox.borderColor': t('Border'), 'slider.fill': t('Filled Track'), 'tags.background': t('Tag Fill'),
-    'tags.color': t('Tag Text'), 'tags.radius': t('Tag Radius'), 'tags.height': t('Tag Height'), 'file.background': t('Button Fill'), 'file.color': t('Button Text'), 'file.radius': t('Button Radius'),
-    'spacing.label': t('Label to Field'), 'switch.knobShadow': t('Shadow'), 'slider.thumbShadow': t('Shadow'), 'switch.radius': t('Radius'), 'chips.background': t('Fill'), 'chips.borderColor': t('Border'),
+    'tags.color': t('Tag Text'), 'tags.radius': t('Tag Radius'), 'file.background': t('Button Fill'), 'file.color': t('Button Text'), 'file.radius': t('Button Radius'),
+    'spacing.label': t('Label and Field'), 'spacing.size': t('Form Size'), 'switch.knobShadow': t('Shadow'), 'slider.thumbShadow': t('Shadow'), 'switch.radius': t('Radius'), 'chips.background': t('Fill'), 'chips.borderColor': t('Border'),
   }
   const common: Record<string, string> = {
     height: t('Height'), paddingX: t('Padding'), background: t('Fill'), borderWidth: t('Border Width'), borderColor: t('Border'), radius: t('Radius'), color: t('Text'),
     fontSize: t('Text Size'), fontWeight: t('Weight'), placeholder: t('Placeholder'), shadow: t('Shadow'), ringWidth: t('Ring Width'), ringColor: t('Ring'), opacity: t('Opacity'),
-    required: t('Required Mark'), fields: t('Between Fields'), list: t('Between Options'), choice: t('Box to Text'), arrowColor: t('Arrow'), arrowSize: t('Arrow Size'),
+    required: t('Required Mark'), fields: t('Fields'), list: t('Options'), choice: t('Box and Text'), arrowColor: t('Arrow'), arrowSize: t('Arrow Size'),
     minHeight: t('Minimum Height'), resize: t('Resize'), size: t('Size'), checked: t('Checked'), markColor: t('Mark'), mark: t('Mark Shape'), markWeight: t('Mark Weight'),
     markSize: t('Mark Size'), style: t('Style'), dotColor: t('Dot'), dotSize: t('Dot Size'), width: t('Width'), off: t('Off'), on: t('On'), knob: t('Knob'), inset: t('Knob Inset'),
     knobShadow: t('Knob Shadow'), trackHeight: t('Track Height'), track: t('Track'), thumbSize: t('Thumb Size'), thumb: t('Thumb'), thumbBorder: t('Thumb Border'),
@@ -111,7 +111,7 @@ function label(part: string, key: string): string {
 
 function optionLabel(option: string): string {
   const names: Record<string, string> = {
-    vertical: t('Vertical'), none: t('Fixed'), check: t('Check'), square: t('Square'), dot: t('Dot'), light: t('Light'), regular: t('Regular'), bold: t('Bold'), ring: t('Ring'),
+    sm: t('S'), md: t('M'), lg: t('L'), vertical: t('Vertical'), none: t('Fixed'), check: t('Check'), square: t('Square'), dot: t('Dot'), light: t('Light'), regular: t('Regular'), bold: t('Bold'), ring: t('Ring'),
   }
   return names[option] ?? option
 }
@@ -200,17 +200,17 @@ export function fieldVars(schema: FieldSchema, values: FieldValues): string {
  * state and each kind of field, each opening on its controls. `onShow` says which part of
  * the specimen to draw: the open row's, or all of it.
  */
-export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpen }: { schema: FieldSchema; value: FieldValues; onChange: (next: FieldValues) => void; tokens: Token[]; dark: boolean; open: string | null; onOpen: (key: string | null) => void }) {
+export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpen, note }: { schema: FieldSchema; value: FieldValues; onChange: (next: FieldValues) => void; tokens: Token[]; dark: boolean; open: string | null; onOpen: (key: string | null) => void; note?: ReactNode }) {
   const [state, setState] = useState<State>('focus')
   const write = (part: string, next: Record<string, unknown>) => {
     const own = Object.fromEntries(Object.entries(next).filter(([, v]) => v !== null && v !== undefined && v !== ''))
     const rest = Object.fromEntries(Object.entries(value).filter(([key]) => key !== part))
     onChange(Object.keys(own).length ? { ...rest, [part]: own as Record<string, string | number> } : rest)
   }
-  const block = (part: string, title?: string) => {
-    const defs = controls(schema, value, part, tokens, dark).map((field) => ({ ...field, status: value[part]?.[field.handle] !== undefined ? 'own' : undefined, reset: () => write(part, { ...value[part], [field.handle]: null }) }))
+  const block = (part: string, title?: string, only?: string[]) => {
+    const defs = controls(schema, value, part, tokens, dark).filter((field) => !only || only.includes(field.handle)).map((field) => ({ ...field, status: value[part]?.[field.handle] !== undefined ? 'own' : undefined, reset: () => write(part, { ...value[part], [field.handle]: null }) }))
     return (
-      <div key={part} className={title ? 'mt-3 first:mt-0' : undefined}>
+      <div key={`${part}-${title ?? ''}`} className={title ? 'mt-3 first:mt-0' : undefined}>
         {title && <h4 className="m-0 mb-1 text-2xs font-medium uppercase tracking-wide text-faint">{title}</h4>}
         <Fields layout="inline" fields={defs.filter((field) => field.component !== 'blocks-shadows') as FieldDef[]} values={value[part] ?? {}} onChange={(handle, v) => write(part, { ...value[part], [handle]: v })} />
         {/* A shadow list brings its own label and add button. */}
@@ -224,6 +224,7 @@ export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpe
 
   return (
     <Group title={t('Form Fields')}>
+      {note}
       {sections().map((section) => (
         <Disclosure
           key={section.key}
@@ -246,6 +247,11 @@ export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpe
                 <Segmented size="xs" block aria-label={t('State')} value={state} onChange={setState} options={(['hover', 'focus', 'invalid', 'disabled'] as const).map((s) => ({ value: s, label: stateLabel(s) }))} />
               </div>
               {block(state)}
+            </>
+          ) : section.key === 'spacing' ? (
+            <>
+              {block('spacing', undefined, ['size'])}
+              {block('spacing', t('Space Between'), ['fields', 'label', 'list', 'choice'])}
             </>
           ) : section.key === 'label' ? (
             <>

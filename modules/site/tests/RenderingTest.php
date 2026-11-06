@@ -205,7 +205,7 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('--color-primary:#0f766e', $css);
         $this->assertStringContainsString('[data-theme=dark]{', $css);
         $this->assertStringContainsString('h1{font-size:var(--text-5xl);letter-spacing:-0.04em}', $css);
-        $this->assertStringContainsString('.cms-button.cms-button[data-variant="primary"]{background-color:var(--color-primary)}', $css);
+        $this->assertStringContainsString('.cms-button[data-variant="primary"]{background-color:var(--color-primary)}', $css);
         $this->assertStringContainsString('@view-transition{navigation:auto}', $css);
     }
 
@@ -216,7 +216,7 @@ final class RenderingTest extends TestCase
 
         // With nothing set, every field still looks finished, from the site's tokens.
         $css = $compile([]);
-        $this->assertStringContainsString(':root,[data-theme]{--field-height:2.75rem;', $css);
+        $this->assertStringContainsString(':root,[data-theme]{--field-background:', $css);
         $this->assertStringContainsString('--field-background:var(--color-raised, var(--color-background, transparent))', $css);
         $this->assertStringContainsString('--field-radius:var(--radius-md, 0.5rem)', $css);
         $this->assertStringContainsString('--field-checkbox-background:var(--field-background)', $css);
@@ -224,6 +224,7 @@ final class RenderingTest extends TestCase
 
         $css = $compile([
             'field' => ['height' => '3rem', 'radius' => 'token:radius.lg', 'borderWidth' => 2],
+            'spacing' => ['size' => 'lg'],
             'checkbox' => ['checked' => 'token:color.accent', 'mark' => 'dot', 'size' => 'field:switch.height'],
             'radio' => ['style' => 'ring'],
             'switch' => ['on' => 'url(https://example.com/x)', 'width' => ''],
@@ -231,7 +232,9 @@ final class RenderingTest extends TestCase
         ]);
 
         // One value reaches every kind of field; a part follows another with field:part.key.
-        $this->assertStringContainsString('--field-height:3rem;', $css);
+        // Size is the control scale's, not the look's: forms take the size the site picks.
+        $this->assertStringNotContainsString('--field-height', $css);
+        $this->assertStringContainsString('.cms-form:not([data-size]){--control-height:var(--control-lg-height);', $css);
         $this->assertStringContainsString('--field-radius:var(--radius-lg);', $css);
         $this->assertStringContainsString('--field-border-width:2px;', $css);
         $this->assertStringContainsString('--field-checkbox-checked:var(--color-accent);', $css);
@@ -256,6 +259,29 @@ final class RenderingTest extends TestCase
 
         $this->assertStringContainsString('data-part="primary"', $this->get('/__specimen/buttons')->assertOk()->getContent());
         $this->get('/__specimen/nothing')->assertNotFound();
+    }
+
+    public function test_buttons_and_fields_share_one_size_scale_and_variants_are_looks(): void
+    {
+        $context = \Cms\Abilities\AbilityContext::system('test');
+        $css = $this->cms()->abilities()->execute('design/preview', [
+            'tokens' => ['control.md-height' => '2.5rem'],
+            'buttons' => ['primary' => ['base' => ['backgroundColor' => 'token:color.primary', 'height' => '13.37rem', 'paddingInline' => '7.77rem', 'fontSize' => '9.99rem']]],
+        ], $context)['css'];
+
+        // The site's own size, the defaults for the rest, and the size in effect by data-size.
+        $this->assertStringContainsString('--control-md-height:2.5rem', $css);
+        $this->assertStringContainsString('--control-sm-height:2.25rem', $css);
+        $this->assertStringContainsString('--control-lg-text:var(--text-lg)', $css);
+        $this->assertStringContainsString('[data-size=sm]{--control-height:var(--control-sm-height);', $css);
+        $this->assertStringContainsString('.cms-button {', $css);
+        $this->assertStringContainsString('height: var(--control-height)', $css);
+        // A variant keeps its look and loses what would size it.
+        $this->assertStringContainsString('@layer components{@layer button-variants{.cms-button[data-variant="primary"]{background-color:var(--color-primary)}', $css);
+        $this->assertStringNotContainsString('13.37rem', $css);
+
+        $html = app(\Cms\Modules\Blocks\BlockRenderer::class)->render([['id' => 'b', 'type' => 'button', 'props' => ['label' => '', 'icon' => 'plus', 'shape' => 'round', 'accessible_label' => 'Add', 'size' => 'lg']]]);
+        $this->assertStringContainsString('data-size="lg" data-shape="round" data-icon-only aria-label="Add"', $html);
     }
 
     public function test_tokens_rename_with_their_references_and_dark_values_clear(): void

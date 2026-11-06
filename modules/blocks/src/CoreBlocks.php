@@ -325,7 +325,7 @@ final class CoreBlocks
             // ── Interactive ────────────────────────────────────────
             [
                 'name' => 'button', 'title' => 'Button', 'icon' => 'button', 'category' => 'interactive',
-                'description' => 'A link styled as a button.', 'keywords' => ['cta', 'link', 'action'],
+                'description' => 'A link styled as a button.', 'keywords' => ['cta', 'link', 'action', 'icon button'],
                 'inline' => ['label'], 'html' => 'a', 'placeholders' => ['label' => __('Button')],
                 'fields' => [
                     ['handle' => 'label', 'type' => 'richtext', 'label' => 'Label', 'inline' => true],
@@ -334,6 +334,8 @@ final class CoreBlocks
                     ['handle' => 'size', 'type' => 'select', 'label' => 'Size', 'options' => ['sm' => 'S', 'md' => 'M', 'lg' => 'L'], 'default' => 'md', 'display' => 'segmented'],
                     ['handle' => 'icon', 'type' => 'text', 'component' => 'blocks-icon', 'label' => 'Icon', 'placeholder' => 'None'],
                     ['handle' => 'icon_position', 'type' => 'select', 'label' => 'Icon Position', 'options' => ['start' => 'Before', 'end' => 'After'], 'default' => 'end', 'display' => 'segmented'],
+                    ['handle' => 'shape', 'type' => 'select', 'label' => 'Shape', 'options' => ['default' => 'Default', 'round' => 'Round'], 'default' => 'default', 'display' => 'segmented', 'instructions' => 'Round makes a pill, or a circle with only an icon.'],
+                    ['handle' => 'accessible_label', 'type' => 'text', 'label' => 'Name for Screen Readers', 'instructions' => 'For a button with only an icon: what it does, like “Search”.'],
                     ['handle' => 'new_tab', 'type' => 'toggle', 'label' => 'Open in New Tab'],
                     ['handle' => 'type', 'type' => 'select', 'label' => 'Button Type', 'options' => ['button' => 'Button', 'submit' => 'Submit'], 'default' => 'button', 'advanced' => true],
                 ],

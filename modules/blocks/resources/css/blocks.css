@@ -30,7 +30,6 @@
   .cms-reveal .cms-input { padding-right: 7.5rem; }
   .cms-reveal__button { position: absolute; inset-block: 0.25rem; right: 0.25rem; padding-inline: 0.625rem; font: inherit; font-size: 0.8125rem; color: var(--color-muted, inherit); background: none; border: 0; border-radius: var(--radius-sm, 0.25rem); cursor: pointer; }
   .cms-reveal__button:hover { color: var(--color-foreground, inherit); }
-  .cms-button[data-danger] { color: var(--color-danger, #b91c1c) !important; }
 
   /* Public account pages. */
   .cms-account-status { margin: 0 0 var(--space-4, 1rem); padding: var(--space-3, 0.75rem) var(--space-4, 1rem); font-size: var(--text-sm, 0.875rem); line-height: 1.5; background: var(--color-panel, transparent); border: 1px solid transparent; border-radius: var(--radius-md, 0.5rem); }
@@ -147,23 +146,10 @@
   a.cms-card { transition: transform 160ms ease, box-shadow 160ms ease; }
   a.cms-card:hover { transform: translateY(-2px); }
 
+  /* A row of buttons. Buttons themselves are the design system's (buttons.css). */
   .cms-buttons { display: flex; flex-wrap: wrap; gap: var(--space-3, 0.75rem); }
   .cms-buttons[data-justify="center"] { justify-content: center; }
   .cms-buttons[data-justify="end"] { justify-content: flex-end; }
-  .cms-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5em; font: inherit; font-weight: var(--font-weight-medium, 500); line-height: 1.2; text-decoration: none; border-radius: var(--radius-md, 0.5rem); border: 1px solid transparent; background: none; color: inherit; cursor: pointer; transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease, border-color 150ms ease, transform 150ms ease; white-space: nowrap; }
-  .cms-button:is(:active, [data-cms-state~=active]) { transform: translateY(1px); }
-  .cms-button[data-cms-state~=focus] { outline: 2px solid var(--color-focus, var(--color-primary, currentColor)); outline-offset: 3px; }
-  .cms-button:is(:disabled, [aria-disabled=true], [data-cms-state~=disabled]) { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .cms-button__icon { width: 1.1em; height: 1.1em; flex: none; }
-  .cms-button[data-size="sm"] { padding: 0.45em 0.9em; font-size: var(--text-sm, 0.875rem); }
-  .cms-button[data-size="md"] { padding: 0.7em 1.25em; }
-  .cms-button[data-size="lg"] { padding: 0.9em 1.6em; font-size: var(--text-lg, 1.125rem); }
-  .cms-button[data-variant="primary"] { background: var(--color-primary, #111); color: var(--color-primary-foreground, #fff); }
-  .cms-button[data-variant="primary"]:is(:hover, [data-cms-state~=hover]) { opacity: 0.9; }
-  .cms-button[data-variant="secondary"] { border-color: var(--color-border, rgb(0 0 0 / 0.15)); }
-  .cms-button[data-variant="secondary"]:is(:hover, [data-cms-state~=hover]) { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
-  .cms-button[data-variant="ghost"]:is(:hover, [data-cms-state~=hover]) { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
-  .cms-button[data-variant="link"] { padding-inline: 0; color: var(--color-primary, inherit); text-decoration: underline; text-underline-offset: 0.2em; }
 
   .cms-heading { scroll-margin-top: var(--cms-scroll-offset, 5rem); }
   .cms-heading__link { float: left; margin-left: -1.1em; width: 1.1em; color: var(--color-muted, rgb(0 0 0 / .45)); text-decoration: none; opacity: 0; transition: opacity 150ms ease; }

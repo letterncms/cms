@@ -24,7 +24,7 @@ final class DesignCompiler
 
     public const array ELEMENTS = [
         'html', 'body', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'a:hover', 'small', 'strong', 'em', 'mark', 'code', 'kbd', 'pre', 'blockquote',
-        'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', 'button', '::selection', ':focus-visible',
+        'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', '::selection', ':focus-visible',
         'h1 em', 'h2 em', 'h3 em', 'h1 strong', 'h2 strong',
     ];
 
@@ -70,7 +70,8 @@ final class DesignCompiler
         }
 
         $out[] = ':root{'.implode(';', $light).'}';
-        // Form fields read these; a section with its own theme works them out again from its own colors.
+        // Buttons and fields share one size scale; fields read their look from these, a themed section works them out again.
+        $out[] = ControlSizes::css($design);
         $out[] = FieldStyles::css($design->fields());
 
         if ($dark !== []) {
@@ -97,6 +98,8 @@ final class DesignCompiler
             $out[] = '@layer elements{'.implode('', $elements).'}';
         }
 
+        $out[] = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/buttons.css');
+        $out[] = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/fields.css');
         $buttons = [];
 
         foreach ($design->buttons() as $variant => $states) {
@@ -107,19 +110,18 @@ final class DesignCompiler
             $states = isset($states['base']) || isset($states['hover']) ? $states : ['base' => $states];
 
             foreach (['base' => '', 'hover' => ':hover', 'active' => ':active', 'focus-visible' => ':focus-visible'] as $state => $pseudo) {
-                if (is_array($states[$state] ?? null) && ($css = $this->declarations($states[$state])) !== '') {
-                    $selector = ".cms-button.cms-button[data-variant=\"{$variant}\"]";
-                    // The design system's specimen shows a state with data-cms-state, without a pointer.
+                // A variant is a look: its size is the control size scale's, so it sets no height, padding or text size.
+                if (is_array($states[$state] ?? null) && ($css = $this->declarations(array_filter($states[$state], fn ($key) => ! in_array($this->property((string) $key), self::SIZING, true), ARRAY_FILTER_USE_KEY))) !== '') {
+                    $selector = ".cms-button[data-variant=\"{$variant}\"]";
+                    // The specimen shows a state with data-cms-state, without a pointer.
                     $forced = $state === 'base' ? '' : ",{$selector}[data-cms-state~=".($state === 'focus-visible' ? 'focus' : $state).']';
                     $buttons[] = $state === 'hover' ? "@media (hover:hover){{$selector}{$pseudo}{{$css}}}{$selector}[data-cms-state~=hover]{{$css}}" : "{$selector}{$pseudo}{$forced}{{$css}}";
                 }
             }
         }
 
-        $out[] = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/fields.css');
-
         if ($buttons !== []) {
-            $out[] = '@layer components{'.implode('', $buttons).'}';
+            $out[] = '@layer components{@layer button-variants{'.implode('', $buttons).'}}';
         }
 
         $transition = $design->transition();
@@ -136,6 +138,14 @@ final class DesignCompiler
         }
 
         return implode("\n", $out)."\n";
+    }
+
+    /** What sizes a button: the control size scale's alone. */
+    private const array SIZING = ['height', 'min-height', 'max-height', 'width', 'min-width', 'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'padding-inline', 'padding-block', 'font-size', 'line-height'];
+
+    private function property(string $key): ?string
+    {
+        return self::SHORT[$key] ?? StyleCompiler::PROPERTIES[StyleCompiler::ALIASES[$key] ?? $key][0] ?? null;
     }
 
     /** camelCase (or short) keys → declarations. */

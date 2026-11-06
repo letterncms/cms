@@ -6,6 +6,7 @@ namespace Cms\Modules\Site\Design;
 
 use Cms\Cms;
 use Cms\Modules\Blocks\Elements;
+use Cms\Modules\Blocks\Icons;
 
 /**
  * The design system's specimens: every kind of form field, and every button, in each of
@@ -34,7 +35,7 @@ final class Specimen
             .'.specimen[data-active]{border-color:color-mix(in srgb,currentColor 32%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,currentColor 7%,transparent)}'
             .'.specimen-title{margin:0;font-size:11px;font-weight:600;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;color:var(--field-help-color)}'
             .'.specimen-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 20px}.specimen-cell{display:grid;justify-items:center;gap:8px}.specimen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 14px}'
-            .'.specimen-caption{font-size:11px;line-height:1.2;color:var(--field-help-color);white-space:nowrap}.specimen-rule{height:1px;background:color-mix(in srgb,currentColor 10%,transparent)}'
+            .'.specimen-caption{font-size:11px;line-height:1.2;color:var(--field-help-color);white-space:nowrap}.specimen-size{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}.specimen-rule{height:1px;background:color-mix(in srgb,currentColor 10%,transparent)}'
             .'@media (max-width:520px){.specimen-board{padding:16px}}';
 
         // A checkbox is only ever mixed by script.
@@ -63,10 +64,11 @@ final class Specimen
             .$this->group(__('Services'), 'chips', [__('Design'), __('Build'), __('Hosting'), __('Care')], 1)
             .$this->choice('switch', __('Send me the newsletter'), true)
             .$this->choice('checkbox', __('I agree to the privacy policy'), false)
-            .'<div><button type="button" class="cms-button" data-variant="primary" data-size="md">'.e(__('Send')).'</button></div>';
+            .'<div><button type="button" class="cms-button" data-variant="primary"><span>'.e(__('Send')).'</span></button></div>';
 
         return [
             'overview' => [__('Form'), '<div class="cms-form">'.$overview.'</div>'],
+            'sizes' => [__('Sizes'), implode('', array_map(fn ($size, $caption) => '<div class="specimen-size" data-size="'.$size.'"><input class="cms-input" type="text" aria-label="'.e($caption).'" placeholder="'.e($caption).'"><button type="button" class="cms-button" data-variant="primary"><span>'.e(__('Send')).'</span></button><button type="button" class="cms-button" data-variant="secondary" data-icon-only aria-label="'.e(__('Search')).'">'.Icons::svg('magnifying-glass', 'cms-button__icon').'</button></div>', ['sm', 'md', 'lg'], [__('Small'), __('Medium'), __('Large')]))],
             'field' => [__('All Fields'), '<div class="cms-form">'
                 .$text(__('Text'), ['placeholder' => __('Placeholder')])
                 .$this->field(__('Dropdown'), $select())
@@ -111,20 +113,27 @@ final class Specimen
     private function buttons(): array
     {
         $variants = $this->cms->hooks()->filter('fields.options.button-variants', []);
-        $button = static fn (string $variant, string $label, string $state = '', string $size = 'md') => '<button type="button" class="cms-button" data-variant="'.e($variant).'" data-size="'.$size.'"'.($state !== '' ? ' data-cms-state="'.$state.'"' : '').($state === 'disabled' ? ' disabled' : '').'>'.e($label).'</button>';
+        $icon = static fn (string $name) => Icons::svg($name, 'cms-button__icon');
+        // Sizes come from the control size scale; a button with only an icon is square, or round.
+        $button = static fn (string $variant, string $inner, string $attrs = '') => '<button type="button" class="cms-button" data-variant="'.e($variant).'"'.$attrs.'>'.$inner.'</button>';
+        $cells = static fn (array $cells) => '<div class="specimen-row" style="align-items:flex-end">'.implode('', array_map(static fn ($cell) => '<div class="specimen-cell">'.$cell[0].'<span class="specimen-caption">'.e($cell[1]).'</span></div>', $cells)).'</div>';
         $out = [];
 
         foreach ($variants as $variant => $name) {
             $variant = (string) $variant;
-            $out[$variant] = [(string) $name, '<div class="specimen-row">'.implode('', array_map(
-                fn ($state, $caption) => '<div class="specimen-cell">'.$button($variant, __('Get started'), $state).'<span class="specimen-caption">'.e($caption).'</span></div>',
-                ['', 'hover', 'active', 'focus', 'disabled'],
-                [__('Default'), __('Hover'), __('Pressed'), __('Focus'), __('Disabled')],
-            )).'</div><div class="specimen-rule"></div><div class="specimen-row" style="align-items:center">'.implode('', array_map(
-                fn ($size, $caption) => '<div class="specimen-cell">'.$button($variant, (string) $name, '', $size).'<span class="specimen-caption">'.e($caption).'</span></div>',
-                ['sm', 'md', 'lg'],
-                [__('Small'), __('Medium'), __('Large')],
-            )).'</div>'];
+            $label = '<span>'.e(__('Get started')).'</span>';
+            $out[$variant] = [(string) $name,
+                $cells(array_map(static fn ($state, $caption) => [$button($variant, $label, $state === '' ? '' : ' data-cms-state="'.$state.'"'.($state === 'disabled' ? ' disabled' : '')), $caption], ['', 'hover', 'active', 'focus', 'disabled'], [__('Default'), __('Hover'), __('Pressed'), __('Focus'), __('Disabled')]))
+                .'<div class="specimen-rule"></div>'
+                .$cells(array_map(static fn ($size, $caption) => [$button($variant, '<span>'.e((string) $name).'</span>', ' data-size="'.$size.'"'), $caption], ['sm', 'md', 'lg'], [__('Small'), __('Medium'), __('Large')]))
+                .($variant === 'link' ? '' : $cells([
+                    [$button($variant, $icon('plus'), ' data-size="sm" data-icon-only aria-label="'.e(__('Add')).'"'), __('Small')],
+                    [$button($variant, $icon('plus'), ' data-icon-only aria-label="'.e(__('Add')).'"'), __('Medium')],
+                    [$button($variant, $icon('plus'), ' data-size="lg" data-icon-only aria-label="'.e(__('Add')).'"'), __('Large')],
+                    [$button($variant, $icon('magnifying-glass'), ' data-icon-only data-shape="round" aria-label="'.e(__('Search')).'"'), __('Round')],
+                    [$button($variant, $label.$icon('arrow-right'), ' data-shape="round"'), __('Round, with an icon')],
+                ])),
+            ];
         }
 
         return $out;

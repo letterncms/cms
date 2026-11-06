@@ -1,6 +1,6 @@
 import { can, queryClient, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
 import { Button, EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar } from '@letterncms/ui'
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Disclosure, Group, css, px, variable } from './design-parts'
 import { FieldEditor, fieldVars, specimenPart, type FieldSchema, type FieldValues } from './form-fields'
 import { applyDraft, showPart } from './specimen'
@@ -33,6 +33,7 @@ interface ThemeInfo {
   buttons: Buttons
   fields: FieldValues
   fieldStyles: FieldSchema
+  controlSizes: Record<string, Record<string, string | string[]>>
   transition: { type: string; duration: number }
   elements: string[]
   css: string
@@ -275,6 +276,14 @@ export default function DesignTokens() {
     if (name) update((d) => retarget(d, token.path, `${token.group}.${name}`))
   }
   const actions = { rename, remove: removeToken }
+  /** A control size token, made when first set and removed when cleared (its default applies again). */
+  const setControl = (path: string, next: unknown) => update((d) => {
+    const empty = next === null || next === undefined || next === ''
+    const exists = d.tokens.some((x) => x.path === path)
+    if (empty) return { ...d, tokens: d.tokens.filter((x) => x.path !== path) }
+    if (exists) return { ...d, tokens: d.tokens.map((x) => (x.path === path ? { ...x, value: next } : x)) }
+    return { ...d, tokens: [...d.tokens, { path, group: 'control', name: path.split('.')[1], value: next, dark: null }] }
+  })
   /** A token's value as a field drawn with Fields: one control, one width, in every group (sizes bring their fluid switch into the room the others leave). */
   const value = (token: DraftToken, field: Partial<FieldDef>, key: 'value' | 'dark' = 'value') => (
     <Fields bare className={cn('flex min-w-0 flex-1', !['site-size', 'blocks-color'].includes(String(field.component)) && 'pr-8')} fields={[{ handle: `${token.path}:${key}`, type: 'text', label: token.name, size: 'sm', mono: true, ...field }]} values={{ [`${token.path}:${key}`]: token[key] }} onChange={(_, v) => setToken(token, { [key]: key === 'dark' ? v || null : v ?? token[key] })} />
@@ -381,6 +390,7 @@ export default function DesignTokens() {
                   </Row>
                 ))}
               </Group>
+              <ControlSizeTable defaults={theme.data.controlSizes ?? {}} tokens={tokens} onSet={setControl} />
               <Group title={t('Containers')} onAdd={() => add('container', '72rem')}>
                 {byGroup('container').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} after={<Bar value={token.value} of={byGroup('container')} />}>
@@ -453,8 +463,8 @@ export default function DesignTokens() {
             </>
           )}
 
-          {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
-          {section === 'fields' && <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} onChange={(fields) => update((d) => ({ ...d, fields }))} />}
+          {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onSizes={() => setSection('space')} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
+          {section === 'fields' && <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} note={<SizesNote onSizes={() => setSection('space')} />} onChange={(fields) => update((d) => ({ ...d, fields }))} />}
 
           {section === 'code' && <Code css={current.css} js={current.js} onChange={(code) => update((d) => ({ ...d, ...code }))} />}
         </div>
@@ -625,7 +635,7 @@ function elementLabel(selector: string): string {
     html: t('Page'), body: t('Body'), h1: t('Heading 1'), h2: t('Heading 2'), h3: t('Heading 3'), h4: t('Heading 4'), h5: t('Heading 5'), h6: t('Heading 6'),
     p: t('Paragraph'), a: t('Link'), 'a:hover': t('Link on Hover'), small: t('Small Text'), strong: t('Bold Text'), em: t('Italic Text'), mark: t('Highlight'),
     code: t('Code'), kbd: t('Keyboard Key'), pre: t('Code Block'), blockquote: t('Quote'), hr: t('Divider'), ul: t('Bulleted List'), ol: t('Numbered List'),
-    li: t('List Item'), img: t('Image'), figcaption: t('Caption'), table: t('Table'), th: t('Table Header'), td: t('Table Cell'), button: t('Form Button'),
+    li: t('List Item'), img: t('Image'), figcaption: t('Caption'), table: t('Table'), th: t('Table Header'), td: t('Table Cell'),
     '::selection': t('Selected Text'), ':focus-visible': t('Focus Ring'),
     'h1 em': t('Italic in Heading 1'), 'h2 em': t('Italic in Heading 2'), 'h3 em': t('Italic in Heading 3'), 'h1 strong': t('Bold in Heading 1'), 'h2 strong': t('Bold in Heading 2'),
   }
@@ -710,13 +720,17 @@ function StyleControls({ value, onChange, fields, tokens }: { value: Declaration
     <>
       <Fields
         layout="inline"
-        fields={defs}
+        fields={defs.filter((field) => field.component !== 'blocks-shadows')}
         values={values}
         onChange={(handle, v) => {
           const field = fields.find((f) => f.handle === handle)
           write(field?.fields ? Object.fromEntries(keysOf(field).map((k) => [k, (v as Record<string, unknown> | null)?.[k] ?? null])) : { [handle]: v })
         }}
       />
+      {/* A shadow list brings its own label and add button. */}
+      {defs.filter((field) => field.component === 'blocks-shadows').map((field) => (
+        <Fields key={field.handle} bare fields={[field]} values={values} onChange={(handle, v) => write({ [handle]: v })} />
+      ))}
       <Fields
         bare
         fields={[{ handle: 'css', type: 'json', component: 'site-declarations', label: t('CSS'), mono: false, tokens: tokens.map((token) => `token:${token.path}`) }]}
@@ -752,8 +766,57 @@ function StyleList({ title, value, onChange, options, tokens, vars }: { title: s
   )
 }
 
+/** Where buttons and fields get their size: a line that leads to Spacing → Control Sizes. */
+function SizesNote({ onSizes }: { onSizes: () => void }) {
+  return (
+    <p className="m-0 flex items-center gap-1.5 border-b border-border py-2.5 text-xs text-muted">
+      <Icon name="info" size={13} className="shrink-0 text-faint" />
+      <span className="min-w-0 flex-1">{t('Heights, padding and text size are the Control Sizes buttons and fields share.')}</span>
+      <button type="button" onClick={onSizes} className="shrink-0 cursor-pointer text-text underline decoration-faint underline-offset-2 hover:text-ink">{t('Edit Sizes')}</button>
+    </p>
+  )
+}
+
+/**
+ * The size scale of everything people click or type in (`control` tokens): each size's height,
+ * padding and text size. A button and a field of the same size line up.
+ */
+function ControlSizeTable({ defaults, tokens, onSet }: { defaults: Record<string, Record<string, string | string[]>>; tokens: Token[]; onSet: (path: string, value: unknown) => void }) {
+  const sizes: [string, string][] = [['sm', t('Small')], ['md', t('Medium')], ['lg', t('Large')]]
+  const columns: [string, string, Partial<FieldDef>][] = [
+    ['height', t('Height'), { unit: 'rem', units: ['rem', 'px'], step: 0.125, min: 0 }],
+    ['padding', t('Padding'), { unit: 'rem', units: ['rem', 'px', 'em'], step: 0.125, min: 0, group: 'space' }],
+    ['text', t('Text'), { unit: 'rem', units: ['rem', 'px'], step: 0.0625, min: 0, group: 'text' }],
+  ]
+  const shown = (fallback: string | string[] | undefined) => {
+    const first = Array.isArray(fallback) ? fallback.find((item) => !item.startsWith('token:') || tokens.some((token) => `token:${token.path}` === item)) : fallback
+    return String(first ?? '').replace(/^token:[a-z]+\./, '')
+  }
+  return (
+    <Group title={t('Control Sizes')}>
+      <p className="m-0 pb-1 pt-2 text-xs text-muted">{t('Buttons, form fields, tags and chips of the same size line up.')}</p>
+      <div className="grid grid-cols-[52px_repeat(3,minmax(0,1fr))] items-center gap-x-2 gap-y-1.5 py-2">
+        <span />
+        {columns.map(([key, label]) => <span key={key} className="text-2xs text-faint">{label}</span>)}
+        {sizes.map(([size, label]) => (
+          <Fragment key={size}>
+            <span className="text-xs text-text">{label}</span>
+            {columns.map(([key, columnLabel, extra]) => {
+              const path = `control.${size}-${key}`
+              const token = tokens.find((x) => x.path === path)
+              return (
+                <Fields key={key} bare fields={[{ handle: path, type: 'text', component: 'blocks-value', label: `${label} ${columnLabel}`, placeholder: shown(defaults[size]?.[key]), ...extra } as FieldDef]} values={{ [path]: token?.value ?? null }} onChange={(_, v) => onSet(path, v)} />
+              )
+            })}
+          </Fragment>
+        ))}
+      </div>
+    </Group>
+  )
+}
+
 /** Button variants (Primary, Secondary…) used by every Button block: each opens on its controls, state by state; the specimen above shows them. */
-function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Buttons; onChange: (v: Buttons) => void; tokens: Token[]; open: string | null; onOpen: (name: string | null) => void }) {
+function ButtonVariants({ value, onChange, tokens, open, onOpen, onSizes }: { value: Buttons; onChange: (v: Buttons) => void; tokens: Token[]; open: string | null; onOpen: (name: string | null) => void; onSizes: () => void }) {
   const [state, setState] = useState<'base' | 'hover' | 'active' | 'focus-visible'>('base')
   const add = async () => {
     const asked = await prompt({ title: t('New Button Variant'), fields: [{ handle: 'name', type: 'text', label: t('Name'), placeholder: 'outline', mono: true, autofocus: true }], confirm: t('Add') })
@@ -766,10 +829,12 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
   // A variant saved as plain declarations is its base state.
   const states = (variant: Record<string, Declarations>) => (['base', 'hover', 'active', 'focus-visible'].some((key) => key in variant) ? variant : { base: variant as unknown as Declarations })
   const label = (name: string) => name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, ' ')
-  const fields = [{ handle: 'height', type: 'text', component: 'blocks-value', label: t('Height'), unit: 'rem', units: ['rem', 'px', 'em'], step: 0.125, min: 0, placeholder: t('Auto') } as FieldDef, ...boxFields(), ...textFields(tokens).filter((f) => ['fontWeight', 'fontSize', 'letterSpacing', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' }]
+  // A variant is a look: how big a button is comes from the control sizes it shares with fields.
+  const fields = [...boxFields().filter((f) => f.handle !== 'padding'), ...textFields(tokens).filter((f) => ['fontWeight', 'letterSpacing', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'boxShadow', type: 'text', component: 'blocks-shadows', label: t('Shadow'), group: 'shadow' } as FieldDef, { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' } as FieldDef]
 
   return (
     <Group title={t('Button Variants')} onAdd={add}>
+      <SizesNote onSizes={onSizes} />
       {Object.keys(value).length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('No variants')}</p>}
       {Object.entries(value).map(([name, variant]) => (
         <Disclosure

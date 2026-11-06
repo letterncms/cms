@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added
+
+- **Control Sizes**, under **Spacing**: one Small, Medium and Large scale (height, padding, text size) for buttons, form fields, tag fields and chips. A button and a field of the same size line up. They are `control` tokens (`control.md-height`…), and `data-size` picks the size on an element or anything around it.
+- A Button with only an icon is square; **Shape** **Round** makes it a circle, or a labelled button a pill. **Name for Screen Readers** names an icon-only button.
+- **Form Fields → Size and Spacing → Form Size** sets the size of fields in forms, and their send button follows.
+
+### Changed
+
+- **Breaking.** Button variants are looks only: a variant's height, padding and text size are ignored, and a Button's **Size** always applies. Move them to **Control Sizes**. Button variants lose their Height and Padding controls and gain Shadow.
+- **Breaking.** `fields.field` no longer has `height`, `paddingX` or `fontSize`, nor `tags` and `chips` a `height`: fields take their size from the control sizes.
+- **Breaking.** `button` is no longer an element style; buttons are styled by their variants.
+- Disabled buttons use the same opacity as disabled fields. Chips in a List Filter are Small.
+
 ## 0.16.0 (2026-11-06)
 
 ### Added
