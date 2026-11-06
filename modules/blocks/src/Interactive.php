@@ -88,7 +88,7 @@ final class Interactive
     {
         $b = $d['block'];
 
-        return '<label '.$d['attrs'].' data-cms-filter-control><span class="'.self::legend($b).'">'.e((string) ($b['label'] ?? 'Search')).'</span><input type="search" name="q" placeholder="'.e((string) ($b['placeholder'] ?? '')).'" autocomplete="off"></label>';
+        return '<label '.$d['attrs'].' data-cms-filter-control><span class="'.self::legend($b).'">'.e((string) ($b['label'] ?? 'Search')).'</span><input class="cms-input" type="search" name="q" placeholder="'.e((string) ($b['placeholder'] ?? '')).'" autocomplete="off"></label>';
     }
 
     public static function filterChoice(array $d): string
@@ -103,16 +103,17 @@ final class Interactive
         }
 
         $total = $d['renderer']->filterItems[$facet] ?? array_sum(array_column($options, 'count'));
-        $option = static fn (string $value, string $label, int $count, bool $checked) => '<label class="cms-filter__option"><input type="radio" name="'.e($facet).'" value="'.e($value).'"'.($checked ? ' checked' : '').'><span>'.e($label).'</span> <span class="cms-filter__count">'.$count.'</span></label>';
+        $list = ($b['look'] ?? 'chips') === 'list';
+        $option = static fn (string $value, string $label, int $count, bool $checked) => '<label class="cms-filter__option'.($list ? '' : ' cms-chip').'"><input type="radio" name="'.e($facet).'" value="'.e($value).'"'.($checked ? ' checked' : '').'><span>'.e($label).'</span> <span class="cms-filter__count cms-chip__count">'.$count.'</span></label>';
         $html = $option('', (string) ($b['all_label'] ?? 'All'), (int) $total, true);
 
         foreach ($options as $value => $o) {
             $html .= $option((string) $value, $o['label'], $o['count'], false);
         }
 
-        $look = ($b['look'] ?? 'chips') === 'list' ? ' data-look="list"' : '';
+        $look = $list ? ' data-look="list"' : '';
 
-        return '<fieldset '.$d['attrs'].$look.' data-cms-filter-control data-facet="'.e($facet).'"><legend class="cms-filter__legend">'.e((string) ($b['label'] ?? $facet)).'</legend>'.$html.'</fieldset>';
+        return '<fieldset '.$d['attrs'].$look.' data-cms-filter-control data-facet="'.e($facet).'"><legend class="cms-label cms-filter__legend">'.e((string) ($b['label'] ?? $facet)).'</legend>'.$html.'</fieldset>';
     }
 
     public static function filterSort(array $d): string
@@ -126,13 +127,13 @@ final class Interactive
             $options .= '<option value="'.e($value).'" data-field="'.e($field).'" data-direction="'.(($option['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc').'"'.($i === 0 ? ' selected' : '').'>'.e((string) ($option['label'] ?? '')).'</option>';
         }
 
-        return '<label '.$d['attrs'].' data-cms-filter-control><span class="'.self::legend($b).'">'.e((string) ($b['label'] ?? 'Sort')).'</span><select name="sort">'.$options.'</select></label>';
+        return '<label '.$d['attrs'].' data-cms-filter-control><span class="'.self::legend($b).'">'.e((string) ($b['label'] ?? 'Sort')).'</span><select class="cms-input" name="sort">'.$options.'</select></label>';
     }
 
     /** A hidden label still names the field for screen readers. */
     private static function legend(array $b): string
     {
-        return ($b['show_label'] ?? true) === false ? 'cms-filter__legend cms-filter__legend--hidden' : 'cms-filter__legend';
+        return ($b['show_label'] ?? true) === false ? 'cms-label cms-filter__legend cms-filter__legend--hidden' : 'cms-label cms-filter__legend';
     }
 
     public static function filterEmpty(array $d): string

@@ -447,10 +447,10 @@ final class CoreBlocks
             ],
             [
                 'name' => 'input', 'title' => 'Input', 'icon' => 'textbox', 'category' => 'interactive',
-                'description' => 'A field for interactive pages.', 'keywords' => ['field', 'filter', 'range', 'slider', 'checkbox', 'select', 'search box'],
+                'description' => 'A field for interactive pages.', 'keywords' => ['field', 'filter', 'range', 'slider', 'checkbox', 'switch', 'toggle', 'select', 'search box'],
                 'html' => 'input',
                 'fields' => [
-                    ['handle' => 'type', 'type' => 'select', 'label' => 'Type', 'options' => ['text' => 'Text', 'search' => 'Search', 'email' => 'Email', 'password' => 'Password', 'number' => 'Number', 'range' => 'Slider', 'checkbox' => 'Checkbox', 'select' => 'Dropdown', 'textarea' => 'Long Text'], 'default' => 'text'],
+                    ['handle' => 'type', 'type' => 'select', 'label' => 'Type', 'options' => ['text' => 'Text', 'search' => 'Search', 'email' => 'Email', 'password' => 'Password', 'number' => 'Number', 'range' => 'Slider', 'date' => 'Date', 'checkbox' => 'Checkbox', 'switch' => 'Switch', 'select' => 'Dropdown', 'textarea' => 'Long Text'], 'default' => 'text'],
                     ['handle' => 'label', 'type' => 'text', 'label' => 'Accessible Label', 'required' => true, 'default' => 'Search'],
                     ['handle' => 'name', 'type' => 'text', 'label' => 'Name', 'mono' => true, 'instructions' => 'Sent with a form.'],
                     ['handle' => 'placeholder', 'type' => 'text', 'label' => 'Placeholder'],

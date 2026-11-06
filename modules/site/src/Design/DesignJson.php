@@ -15,6 +15,7 @@ use Cms\Support\Files;
  *   styles       element defaults: { body: {...}, h1: {...}, a: {...}, "a:hover": {...} } — camelCase CSS, tokens allowed
  *   prose        styles for long-form text inside Page content marked as prose: { h2: {...}, p: {...} }
  *   buttons      button variants: { primary: { base: {...}, hover: {...} }, secondary: {...} }
+ *   fields       every form field, part by part: { field: { height, background… }, checkbox: { checked… }, … } (FieldStyles)
  *   transition   page transitions between pages: { type: fade|slide|none, duration: 0.3 }
  */
 final class DesignJson
@@ -217,7 +218,7 @@ final class DesignJson
             $this->setDark((string) $path, $value);
         }
 
-        foreach (['styles', 'prose', 'buttons', 'fonts', 'transition'] as $section) {
+        foreach (['styles', 'prose', 'buttons', 'fields', 'fonts', 'transition'] as $section) {
             if (isset($in[$section])) {
                 $this->set($section, (array) $in[$section]);
             }
@@ -265,6 +266,12 @@ final class DesignJson
         return (array) ($this->data['buttons'] ?? []);
     }
 
+    /** @return array<string, array<string, string|int|float>> part => property => value (FieldStyles::PARTS) */
+    public function fields(): array
+    {
+        return FieldStyles::clean((array) ($this->data['fields'] ?? []));
+    }
+
     /** @return array{type: string, duration: float} */
     public function transition(): array
     {
@@ -276,10 +283,10 @@ final class DesignJson
         ];
     }
 
-    /** Replace a top-level section (styles, prose, buttons, transition, fonts). */
+    /** Replace a top-level section (styles, prose, buttons, fields, transition, fonts). */
     public function set(string $section, array $value): void
     {
-        if (! in_array($section, ['styles', 'prose', 'buttons', 'transition', 'fonts'], true)) {
+        if (! in_array($section, ['styles', 'prose', 'buttons', 'fields', 'transition', 'fonts'], true)) {
             throw new InvalidArgumentException(__('Unknown design section :section.', ['section' => $section]));
         }
 

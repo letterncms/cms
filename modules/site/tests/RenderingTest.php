@@ -209,6 +209,55 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('@view-transition{navigation:auto}', $css);
     }
 
+    public function test_form_fields_are_styled_once_from_the_design_system(): void
+    {
+        $context = \Cms\Abilities\AbilityContext::system('test');
+        $compile = fn (array $fields) => $this->cms()->abilities()->execute('design/preview', ['fields' => $fields], $context)['css'];
+
+        // With nothing set, every field still looks finished, from the site's tokens.
+        $css = $compile([]);
+        $this->assertStringContainsString(':root,[data-theme]{--field-height:2.75rem;', $css);
+        $this->assertStringContainsString('--field-background:var(--color-raised, var(--color-background, transparent))', $css);
+        $this->assertStringContainsString('--field-radius:var(--radius-md, 0.5rem)', $css);
+        $this->assertStringContainsString('--field-checkbox-background:var(--field-background)', $css);
+        $this->assertStringContainsString('.cms-check:is(:checked', $css);
+
+        $css = $compile([
+            'field' => ['height' => '3rem', 'radius' => 'token:radius.lg', 'borderWidth' => 2],
+            'checkbox' => ['checked' => 'token:color.accent', 'mark' => 'dot', 'size' => 'field:switch.height'],
+            'radio' => ['style' => 'ring'],
+            'switch' => ['on' => 'url(https://example.com/x)', 'width' => ''],
+            'nothing' => ['height' => '1px'],
+        ]);
+
+        // One value reaches every kind of field; a part follows another with field:part.key.
+        $this->assertStringContainsString('--field-height:3rem;', $css);
+        $this->assertStringContainsString('--field-radius:var(--radius-lg);', $css);
+        $this->assertStringContainsString('--field-border-width:2px;', $css);
+        $this->assertStringContainsString('--field-checkbox-checked:var(--color-accent);', $css);
+        $this->assertStringContainsString('--field-checkbox-size:var(--field-switch-height);', $css);
+        $this->assertStringContainsString("%3Ccircle%20cx%3D%278%27", $css);
+        $this->assertStringContainsString('--field-radio-on-background:var(--field-checkbox-background);--field-radio-on-dot:var(--field-radio-checked)', $css);
+        // What CSS can't take, a part that isn't there and an empty value keep the defaults.
+        $this->assertStringNotContainsString('example.com', $css);
+        $this->assertStringContainsString('--field-switch-width:2.25rem;', $css);
+    }
+
+    public function test_the_specimen_shows_every_field_and_button_to_the_admin_only(): void
+    {
+        $this->get('/__specimen/fields')->assertRedirect();
+
+        $this->actingAs($this->admin());
+        $html = $this->get('/__specimen/fields')->assertOk()->getContent();
+
+        foreach (['cms-input', 'cms-tags', 'cms-check', 'cms-radio', 'cms-switch', 'cms-range', 'cms-chip', 'type="file"', 'data-part="checkbox"', 'data-cms-state="focus"'] as $needle) {
+            $this->assertStringContainsString($needle, $html);
+        }
+
+        $this->assertStringContainsString('data-part="primary"', $this->get('/__specimen/buttons')->assertOk()->getContent());
+        $this->get('/__specimen/nothing')->assertNotFound();
+    }
+
     public function test_tokens_rename_with_their_references_and_dark_values_clear(): void
     {
         $abilities = $this->cms()->abilities();

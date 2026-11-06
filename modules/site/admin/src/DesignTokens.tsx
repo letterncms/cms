@@ -1,6 +1,9 @@
 import { can, queryClient, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
 import { Button, EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Disclosure, Group, css, px, variable } from './design-parts'
+import { FieldEditor, fieldVars, specimenPart, type FieldSchema, type FieldValues } from './form-fields'
+import { Specimen, applyDraft } from './specimen'
 
 interface Token {
   path: string
@@ -28,6 +31,8 @@ interface ThemeInfo {
   styles: Record<string, Declarations>
   prose: Record<string, Declarations>
   buttons: Buttons
+  fields: FieldValues
+  fieldStyles: FieldSchema
   transition: { type: string; duration: number }
   elements: string[]
   css: string
@@ -40,12 +45,13 @@ interface Draft {
   styles: Record<string, Declarations>
   prose: Record<string, Declarations>
   buttons: Buttons
+  fields: FieldValues
   transition: { type: string; duration: number }
   css: string
   js: string
 }
 
-const SECTIONS = ['color', 'type', 'space', 'shape', 'motion', 'elements', 'buttons', 'code'] as const
+const SECTIONS = ['color', 'type', 'space', 'shape', 'motion', 'elements', 'buttons', 'fields', 'code'] as const
 type SectionKey = (typeof SECTIONS)[number]
 
 function sections(): { group: string; items: { value: SectionKey; label: string; icon: string }[] }[] {
@@ -65,6 +71,7 @@ function sections(): { group: string; items: { value: SectionKey; label: string;
       items: [
         { value: 'elements', label: t('Elements'), icon: 'paragraph' },
         { value: 'buttons', label: t('Buttons'), icon: 'button' },
+        { value: 'fields', label: t('Form Fields'), icon: 'form-input' },
         { value: 'code', label: t('Custom Code'), icon: 'code' },
       ],
     },
@@ -109,34 +116,6 @@ function Preview({ viewport, desktop, children }: { viewport: Viewport; desktop:
   )
 }
 
-/** CSS custom property prefixes that differ from the group name — mirrors DesignJson::GROUPS. */
-const PREFIX: Record<string, string> = { weight: 'font-weight' }
-const variable = (group: string, name: string) => `--${PREFIX[group] ?? group}-${name}`
-
-/** CSS for a token value — mirrors the server's DesignCompiler (token references become var()). */
-function css(group: string, value: any): string {
-  if (value && typeof value === 'object' && !Array.isArray(value) && 'min' in value) return fluid(String(value.min), String(value.max))
-  if (group === 'font' && Array.isArray(value)) return value.map((f: string) => (/\s/.test(f) && !f.includes('"') ? `"${f}"` : f)).join(', ')
-  return String(value ?? '').replace(/token:([a-z]+)\.([a-z0-9-]+)(?:\/(\d{1,3}))?/g, (_, g: string, n: string, alpha?: string) => (alpha ? `color-mix(in srgb, var(${variable(g, n)}) ${alpha}%, transparent)` : `var(${variable(g, n)})`))
-}
-
-function fluid(min: string, max: string): string {
-  const rem = (v: string) => (v.endsWith('rem') ? parseFloat(v) : parseFloat(v) / 16)
-  const a = rem(min)
-  const b = rem(max)
-  const slope = (b - a) / (80 - 22.5)
-  const n = (x: number) => String(Math.round(x * 10000) / 10000)
-  return `clamp(${n(Math.min(a, b))}rem, ${n(a - slope * 22.5)}rem + ${n(slope * 100)}vw, ${n(Math.max(a, b))}rem)`
-}
-
-/** A length in px (fluid values: their desktop size), for bars and samples. */
-function px(value: any): number {
-  const v = value && typeof value === 'object' && 'max' in value ? value.max : value
-  const n = parseFloat(String(v ?? ''))
-  if (Number.isNaN(n)) return 0
-  return /r?em$/.test(String(v)) ? n * 16 : n
-}
-
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
 function initial(data: ThemeInfo): Draft {
@@ -145,6 +124,7 @@ function initial(data: ThemeInfo): Draft {
     styles: data.styles ?? {},
     prose: data.prose ?? {},
     buttons: data.buttons ?? {},
+    fields: data.fields ?? {},
     transition: data.transition ?? { type: 'none', duration: 0.3 },
     css: data.css ?? '',
     js: data.js ?? '',
@@ -160,6 +140,7 @@ function retarget(draft: Draft, from: string, to: string): Draft {
     styles: swap(draft.styles),
     prose: swap(draft.prose),
     buttons: swap(draft.buttons),
+    fields: swap(draft.fields),
     tokens: draft.tokens.map((token) => (token.path === from ? { ...token, path: to, name: to.split('.')[1] } : { ...token, value: swap(token.value), dark: swap(token.dark) })),
   }
 }
@@ -175,7 +156,7 @@ function changes(base: Draft, draft: Draft) {
     if (!was || !same(was.value, token.value)) input.tokens[token.path] = token.value
     if (!was || !same(was.dark || null, token.dark || null)) input.dark[token.path] = token.dark || null
   }
-  for (const key of ['styles', 'prose', 'buttons', 'transition'] as const) {
+  for (const key of ['styles', 'prose', 'buttons', 'fields', 'transition'] as const) {
     if (!same(base[key], draft[key])) input[key] = draft[key]
   }
   return input
@@ -197,6 +178,8 @@ export default function DesignTokens() {
   const [failed, setFailed] = useState<string | null>(null)
   const sidebar = useScreenSidebar()
   const [compiled, setCompiled] = useState<string | null>(null)
+  const [buttonOpen, setButtonOpen] = useState<string | null>(null)
+  const [fieldOpen, setFieldOpen] = useState<string | null>(null)
   const frame = useRef<HTMLIFrameElement>(null)
 
   const current = draft ?? base
@@ -221,34 +204,10 @@ export default function DesignTokens() {
   // Part 2: token values as custom properties, applied instantly while a value is dragged.
   const vars = useMemo(() => (current?.tokens ?? []).map((token) => `${variable(token.group, token.name)}:${css(token.group, mode === 'dark' && token.dark ? token.dark : token.value)}`).join(';'), [current, mode])
 
-  const inject = () => {
-    const doc = frame.current?.contentDocument
-    if (!doc?.head) return
-    const link = doc.querySelector<HTMLLinkElement>('link[rel="stylesheet"][href*="/_cms/site/design-"]')
-    let style = doc.getElementById('cms-design-preview') as HTMLStyleElement | null
-    if (compiled !== null) {
-      if (!style) {
-        style = doc.createElement('style')
-        style.id = 'cms-design-preview'
-        // In the stylesheet's place, so cascade layers keep their order.
-        link ? link.after(style) : doc.head.appendChild(style)
-      }
-      if (style.textContent !== compiled) style.textContent = compiled
-      if (link) link.disabled = true
-    } else {
-      style?.remove()
-      if (link) link.disabled = false
-    }
-    let tokens = doc.getElementById('cms-token-preview') as HTMLStyleElement | null
-    if (!tokens) {
-      tokens = doc.createElement('style')
-      tokens.id = 'cms-token-preview'
-      doc.head.appendChild(tokens)
-    }
-    const text = dirty ? `:root:root:root{${vars}}` : ''
-    if (tokens.textContent !== text) tokens.textContent = text
-    if (doc.documentElement.dataset.theme !== mode) doc.documentElement.dataset.theme = mode
-  }
+  // Part 3: the form fields' own values, as their custom properties.
+  const draftVars = dirty ? [vars, fieldVars(theme.data?.fieldStyles ?? {}, current?.fields ?? {})].filter(Boolean).join(';') : ''
+  const preview = { compiled, vars: draftVars, mode }
+  const inject = () => applyDraft(frame.current?.contentDocument, preview)
   useEffect(inject)
 
   // The site's fonts, so specimens here show them.
@@ -265,7 +224,7 @@ export default function DesignTokens() {
     setFailed(null)
     try {
       const change = changes(base, draft)
-      const tokensChanged = Object.keys(change.tokens).length + Object.keys(change.dark).length + Object.keys(change.rename).length + change.remove.length > 0 || ['styles', 'prose', 'buttons', 'transition'].some((key) => key in change)
+      const tokensChanged = Object.keys(change.tokens).length + Object.keys(change.dark).length + Object.keys(change.rename).length + change.remove.length > 0 || ['styles', 'prose', 'buttons', 'fields', 'transition'].some((key) => key in change)
       if (tokensChanged) await run('design/update', change)
       if (draft.css !== base.css || draft.js !== base.js) await run('design/code', { css: draft.css, ...(can('site.code') ? { js: draft.js } : {}) })
       await queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith('design/') })
@@ -489,7 +448,19 @@ export default function DesignTokens() {
             </>
           )}
 
-          {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} vars={siteVars} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
+          {/* Buttons and fields: what they look like in every state, drawn by the site, above their controls. */}
+          {section === 'buttons' && (
+            <>
+              <Specimen kind="buttons" show={buttonOpen} draft={preview} className="sticky top-2 z-10 mb-5 shadow-[0_0_0_8px_var(--cms-bg)]" />
+              <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />
+            </>
+          )}
+          {section === 'fields' && (
+            <>
+              <Specimen kind="fields" show={specimenPart(fieldOpen)} draft={preview} className="sticky top-2 z-10 mb-5 max-h-[42vh] overflow-y-auto shadow-[0_0_0_8px_var(--cms-bg)]" />
+              <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} onChange={(fields) => update((d) => ({ ...d, fields }))} />
+            </>
+          )}
 
           {section === 'code' && <Code css={current.css} js={current.js} onChange={(code) => update((d) => ({ ...d, ...code }))} />}
         </div>
@@ -507,24 +478,6 @@ export default function DesignTokens() {
         </div>
       </div>
     </div>
-  )
-}
-
-/** A titled list of rows — hairlines, no card. */
-function Group({ title, onAdd, action, children }: { title: string; onAdd?: () => void; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="mb-6">
-      <div className="flex h-9 items-center justify-between border-b border-border">
-        <h3 className="m-0 text-xs font-semibold text-ink">{title}</h3>
-        {action}
-        {onAdd && (
-          <Tooltip content={t('Add Token')}>
-            <IconButton icon="plus" label={t('Add Token')} size="xs" onClick={onAdd} />
-          </Tooltip>
-        )}
-      </div>
-      {children}
-    </section>
   )
 }
 
@@ -679,7 +632,7 @@ function elementLabel(selector: string): string {
     p: t('Paragraph'), a: t('Link'), 'a:hover': t('Link on Hover'), small: t('Small Text'), strong: t('Bold Text'), em: t('Italic Text'), mark: t('Highlight'),
     code: t('Code'), kbd: t('Keyboard Key'), pre: t('Code Block'), blockquote: t('Quote'), hr: t('Divider'), ul: t('Bulleted List'), ol: t('Numbered List'),
     li: t('List Item'), img: t('Image'), figcaption: t('Caption'), table: t('Table'), th: t('Table Header'), td: t('Table Cell'), button: t('Form Button'),
-    input: t('Text Input'), textarea: t('Text Area'), select: t('Dropdown'), label: t('Form Label'), '::selection': t('Selected Text'), ':focus-visible': t('Focus Ring'),
+    '::selection': t('Selected Text'), ':focus-visible': t('Focus Ring'),
     'h1 em': t('Italic in Heading 1'), 'h2 em': t('Italic in Heading 2'), 'h3 em': t('Italic in Heading 3'), 'h1 strong': t('Bold in Heading 1'), 'h2 strong': t('Bold in Heading 2'),
   }
   return names[selector] ?? selector
@@ -780,23 +733,6 @@ function StyleControls({ value, onChange, fields, tokens }: { value: Declaration
   )
 }
 
-/** A row that opens to show its controls. */
-function Disclosure({ open, onToggle, label, aside, menu, children }: { open: boolean; onToggle: () => void; label: ReactNode; aside?: ReactNode; menu?: ReactNode; children: ReactNode }) {
-  return (
-    <div className="group border-b border-border last:border-b-0">
-      <div className="flex min-h-10 items-center gap-2">
-        <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-h-10 min-w-0 flex-1 items-center gap-1.5 rounded-xs text-left text-xs text-text outline-offset-[-2px] hover:text-ink">
-          <Icon name="chevron-right" size={12} className={cn('shrink-0 text-faint transition-transform duration-120', open && 'rotate-90')} />
-          <span className="min-w-0 flex-1 truncate">{label}</span>
-          {aside}
-        </button>
-        {menu}
-      </div>
-      {open && <div className="pb-3 pl-[18px]">{children}</div>}
-    </div>
-  )
-}
-
 /** Elements (or prose elements) and their styles: a specimen each, its controls a click away. */
 function StyleList({ title, value, onChange, options, tokens, vars }: { title: string; value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties }) {
   const [open, setOpen] = useState<string | null>(null)
@@ -822,56 +758,39 @@ function StyleList({ title, value, onChange, options, tokens, vars }: { title: s
   )
 }
 
-/** Button variants (Primary, Secondary…) used by every Button block: each as it looks, its controls for each state a click away. */
-function ButtonVariants({ value, onChange, tokens, vars }: { value: Buttons; onChange: (v: Buttons) => void; tokens: Token[]; vars: CSSProperties }) {
-  const [open, setOpen] = useState<string | null>(null)
-  const [state, setState] = useState<'base' | 'hover'>('base')
+/** Button variants (Primary, Secondary…) used by every Button block: each opens on its controls, state by state; the specimen above shows them. */
+function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Buttons; onChange: (v: Buttons) => void; tokens: Token[]; open: string | null; onOpen: (name: string | null) => void }) {
+  const [state, setState] = useState<'base' | 'hover' | 'active' | 'focus-visible'>('base')
   const add = async () => {
     const asked = await prompt({ title: t('New Button Variant'), fields: [{ handle: 'name', type: 'text', label: t('Name'), placeholder: 'outline', mono: true, autofocus: true }], confirm: t('Add') })
     const name = String(asked?.name ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '')
     if (name && !(name in value)) {
       onChange({ ...value, [name]: { base: {}, hover: {} } })
-      setOpen(name)
+      onOpen(name)
     }
   }
-  const states = (variant: Record<string, Declarations>) => ({ base: variant.base ?? (!('hover' in variant) ? (variant as unknown as Declarations) : {}), hover: variant.hover ?? {} })
-  const sample: CSSProperties = { ...vars, display: 'inline-flex', alignItems: 'center', padding: '0.45em 0.9em', fontSize: 13, fontWeight: 'var(--font-weight-medium, 500)', lineHeight: 1.2, borderRadius: 'var(--radius-md, 0.5rem)', border: '1px solid transparent', fontFamily: 'var(--font-sans, inherit)', color: 'var(--color-foreground)', whiteSpace: 'nowrap' }
+  // A variant saved as plain declarations is its base state.
+  const states = (variant: Record<string, Declarations>) => (['base', 'hover', 'active', 'focus-visible'].some((key) => key in variant) ? variant : { base: variant as unknown as Declarations })
   const label = (name: string) => name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, ' ')
-  const fields = [...boxFields(), ...textFields(tokens).filter((f) => ['fontWeight', 'fontSize', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' }]
+  const fields = [{ handle: 'height', type: 'text', component: 'blocks-value', label: t('Height'), unit: 'rem', units: ['rem', 'px', 'em'], step: 0.125, min: 0, placeholder: t('Auto') } as FieldDef, ...boxFields(), ...textFields(tokens).filter((f) => ['fontWeight', 'fontSize', 'letterSpacing', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' }]
 
   return (
     <Group title={t('Button Variants')} onAdd={add}>
       {Object.keys(value).length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('No variants')}</p>}
-      {Object.entries(value).map(([name, variant]) => {
-        const { base, hover } = states(variant)
-        return (
-          <Disclosure
-            key={name}
-            open={open === name}
-            onToggle={() => setOpen(open === name ? null : name)}
-            label={<span className="inline-flex rounded-xs px-1.5 py-1" style={{ ...vars, background: 'var(--color-background)' }}><span style={{ ...sample, ...style(base), fontSize: 11 }}>{label(name)}</span></span>}
-            menu={<Menu trigger={<IconButton icon="more" label={t('Variant Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Delete'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== name))) }]} />}
-          >
-            {/* Each state as it looks; the one picked is the one the controls below edit. */}
-            <div role="radiogroup" aria-label={t('State')} className="mb-2 grid grid-cols-2 gap-2">
-              {(['base', 'hover'] as const).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="radio"
-                  aria-checked={state === key}
-                  onClick={() => setState(key)}
-                  className={cn('flex h-12 items-center justify-center rounded-sm border outline-offset-2 transition-[border-color,box-shadow] duration-120', state === key ? 'border-focus ring-1 ring-focus' : 'border-border hover:border-border-strong')}
-                  style={{ ...vars, background: 'var(--color-background)' }}
-                >
-                  <span style={{ ...sample, ...style(base), ...(key === 'hover' ? style(hover) : {}) }}>{key === 'base' ? t('Default') : t('Hover')}</span>
-                </button>
-              ))}
-            </div>
-            <StyleControls key={state} value={state === 'base' ? base : hover} fields={fields} tokens={tokens} onChange={(next) => onChange({ ...value, [name]: { ...states(variant), [state]: next } })} />
-          </Disclosure>
-        )
-      })}
+      {Object.entries(value).map(([name, variant]) => (
+        <Disclosure
+          key={name}
+          open={open === name}
+          onToggle={() => onOpen(open === name ? null : name)}
+          label={label(name)}
+          menu={<Menu trigger={<IconButton icon="more" label={t('Variant Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Delete'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== name))) }]} />}
+        >
+          <div className="mb-2">
+            <Segmented size="xs" block aria-label={t('State')} value={state} onChange={setState} options={[{ value: 'base', label: t('Default') }, { value: 'hover', label: t('Hover') }, { value: 'active', label: t('Pressed') }, { value: 'focus-visible', label: t('Focus') }]} />
+          </div>
+          <StyleControls key={state} value={states(variant)[state]} fields={fields} tokens={tokens} onChange={(next) => onChange({ ...value, [name]: { ...states(variant), [state]: next } })} />
+        </Disclosure>
+      ))}
     </Group>
   )
 }

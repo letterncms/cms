@@ -76,7 +76,7 @@ export function useColorPreview() {
 
 /**
  * `blocks-color` — a color value with a picker (HSV, alpha) and the theme's color tokens.
- * Core color has neither tokens nor alpha.
+ * Core color has neither tokens nor alpha. Empty, it shows `placeholder` beside a `swatch` (CSS) of what applies.
  */
 export function ColorField({ field, value: raw, onChange }: FieldProps<string | null>) {
   const [open, setOpen] = useState(false)
@@ -94,7 +94,7 @@ export function ColorField({ field, value: raw, onChange }: FieldProps<string | 
         className="w-64 !p-0"
         trigger={
           <button type="button" id={fieldControlId(field)} className={cn(inputClass, 'flex items-center gap-1.5 pl-1 text-left')}>
-            <Swatch color={preview(value)} className="!size-4" />
+            <Swatch color={value === undefined && typeof field.swatch === 'string' ? field.swatch : preview(value)} className="!size-4" />
             {chosen ? (
               <TokenChip token={chosen.token} alpha={chosen.alpha} />
             ) : (

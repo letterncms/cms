@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- **Design System → Form Fields** styles every field on the site once: the forms you build, the account pages, the checkout, list filters and the Input block. **All Fields** sets the height, fill, border, radius and text every boxed field shares; then each state (hover, focus, invalid, disabled), labels and help, spacing, and each kind of field has its own row: dropdowns, text areas, checkboxes (mark shape, weight and size), radio buttons (dot or ring), switches, sliders, tag fields, chips and file pickers. Empty controls show what applies, from your tokens.
+- A live specimen above **Form Fields** and **Buttons** shows every field or button variant in each of its states, drawn by your site's stylesheet, as you edit. You can click and type in it.
+- Checkboxes, radio buttons, switches and sliders are drawn by the design system instead of the browser, so they match the site in light and dark.
+- The **Input** block can be a **Switch** or a **Date**, and a slider fills its track up to the thumb.
+- Agents set fields with `fields` in `design/update`; `design/get` describes every property as `fieldStyles`. Your own markup gets the same look with the classes `cms-input`, `cms-label`, `cms-check`, `cms-radio`, `cms-switch`, `cms-range`, `cms-tags` and `cms-chip`.
+
+### Changed
+
+- **Breaking.** `input`, `textarea`, `select` and `label` are no longer element styles in `tokens.json`: they are `fields` (`field` and `label`).
+- Button variants are edited state by state (**Default**, **Hover**, **Pressed**, **Focus**), with **Height** and **Letter Spacing** controls.
+- List Filter options shown as chips, and Filter Search and Filter Sort, look like the site's other fields.
+
 ## 0.15.0 (2026-11-06)
 
 ### Changed

@@ -12,5 +12,6 @@ if (features.has('code')) tasks.push(import('./code').then((m) => m.start()))
 if (features.has('search')) tasks.push(import('./search').then((m) => m.start()))
 if (features.has('tabs')) tasks.push(import('./tabs').then((m) => m.start()))
 if (features.has('filter')) tasks.push(import('./filter').then((m) => m.start()))
+if (features.has('fields')) tasks.push(import('./fields').then((m) => m.start()))
 
 Promise.all(tasks).catch((error) => console.error('[cms]', error))

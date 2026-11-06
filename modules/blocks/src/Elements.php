@@ -268,8 +268,10 @@ final class Elements
     public static function input(array $d): string
     {
         $b = $d['block'];
-        $type = in_array($b['type'] ?? 'text', ['text', 'search', 'email', 'password', 'number', 'range', 'checkbox', 'select', 'textarea'], true) ? ($b['type'] ?? 'text') : 'text';
+        $type = in_array($b['type'] ?? 'text', ['text', 'search', 'email', 'password', 'number', 'date', 'range', 'checkbox', 'switch', 'select', 'textarea'], true) ? ($b['type'] ?? 'text') : 'text';
         $common = ' aria-label="'.e((string) ($b['label'] ?? '')).'"'.(! empty($b['name']) ? ' name="'.e((string) $b['name']).'"' : '');
+        // It looks like every other field of the site (the design system's `fields`); a checkbox, switch or slider has its own look there.
+        $attrs = static fn (string $class) => (string) preg_replace('/\bclass="/', 'class="'.$class.' ', (string) $d['attrs'], 1);
 
         if ($type === 'select') {
             $options = implode('', array_map(static fn ($o) => '<option'.((string) $o === (string) ($b['value'] ?? '') ? ' selected' : '').'>'.e((string) $o).'</option>', (array) ($b['options'] ?? [])));
@@ -281,6 +283,10 @@ final class Elements
             return '<textarea '.$d['attrs'].$common.' placeholder="'.e((string) ($b['placeholder'] ?? '')).'">'.e((string) ($b['value'] ?? '')).'</textarea>';
         }
 
+        if ($type === 'checkbox' || $type === 'switch') {
+            return '<input type="checkbox" '.$attrs($type === 'switch' ? 'cms-switch' : 'cms-check').($type === 'switch' ? ' role="switch"' : '').$common.(! empty($b['value']) ? ' checked' : '').'>';
+        }
+
         $extra = '';
 
         foreach (['min', 'max', 'step'] as $attr) {
@@ -289,11 +295,23 @@ final class Elements
             }
         }
 
-        if ($type === 'checkbox') {
-            return '<input type="checkbox" '.$d['attrs'].$common.(! empty($b['value']) ? ' checked' : '').'>';
+        if ($type === 'range') {
+            // The track fills up to the thumb: --cms-range holds where it is, and the runtime keeps it there.
+            $min = is_numeric($b['min'] ?? null) ? (float) $b['min'] : 0.0;
+            $max = is_numeric($b['max'] ?? null) ? (float) $b['max'] : 100.0;
+            $value = is_numeric($b['value'] ?? null) ? (float) $b['value'] : ($min + $max) / 2;
+            $d['renderer']->uses('fields');
+
+            return '<input type="range" '.$attrs('cms-range').$common.$extra.' value="'.e((string) $value).'" style="--cms-range:'.self::fraction($value, $min, $max).'">';
         }
 
         return '<input type="'.$type.'" '.$d['attrs'].$common.$extra.' placeholder="'.e((string) ($b['placeholder'] ?? '')).'" value="'.e((string) ($b['value'] ?? '')).'">';
+    }
+
+    /** Where a value sits between a minimum and a maximum, from 0 to 1: how far a slider's track fills. */
+    public static function fraction(float $value, float $min, float $max): string
+    {
+        return $max > $min ? rtrim(rtrim(number_format(max(0, min(1, ($value - $min) / ($max - $min))), 4, '.', ''), '0'), '.') ?: '0' : '0';
     }
 
     public static function search(array $d): string

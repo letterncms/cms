@@ -266,6 +266,7 @@
   "Dark Mode": "Donkere modus",
   "Dashed": "Gestreept",
   "Data": "Data",
+  "Date": "Datum",
   "Debounce": "Debounce",
   "Decoration": "Decoratie",
   "Decorative": "Decoratief",
@@ -632,6 +633,7 @@
   "Numbers": "Getallen",
   "Odd Items": "Oneven items",
   "Off: a section that is copied when inserted.": "Uit: een sectie die wordt gekopieerd bij invoegen.",
+  "Off: screen readers still read it.": "Uit: schermlezers lezen het nog steeds voor.",
   "Offered For": "Aangeboden voor",
   "Offset": "Verschuiving",
   "Offset in pixels, e.g. a sticky header’s height": "Verschuiving in pixels, bijv. de hoogte van een sticky header",
@@ -829,6 +831,7 @@
   "Show": "Tonen",
   "Show # Link on Hover": "#-link tonen bij hover",
   "Show Controls": "Bedieningselementen tonen",
+  "Show Label": "Label tonen",
   "Show Nothing": "Niets tonen",
   "Show on the Site": "Tonen op de site",
   "Show When": "Tonen als",
@@ -1030,7 +1033,5 @@
   "YouTube, Vimeo or a video file.": "YouTube, Vimeo of een videobestand.",
   "Z-index": "Z-index",
   "Zoom Image Inside": "Afbeelding binnenin zoomen",
-  "Zoom While Scrolling": "Zoomen tijdens scrollen",
-  "Show Label": "Label tonen",
-  "Off: screen readers still read it.": "Uit: schermlezers lezen het nog steeds voor."
+  "Zoom While Scrolling": "Zoomen tijdens scrollen"
 }

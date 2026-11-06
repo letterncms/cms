@@ -266,6 +266,7 @@
   "Dark Mode": "Mode sombre",
   "Dashed": "Tirets",
   "Data": "Données",
+  "Date": "Date",
   "Debounce": "Anti-rebond",
   "Decoration": "Décoration",
   "Decorative": "Décoratif",
@@ -632,6 +633,7 @@
   "Numbers": "Chiffres",
   "Odd Items": "Éléments impairs",
   "Off: a section that is copied when inserted.": "Désactivé : une section copiée lors de l’insertion.",
+  "Off: screen readers still read it.": "Désactivé : les lecteurs d’écran le lisent toujours.",
   "Offered For": "Proposé pour",
   "Offset": "Décalage",
   "Offset in pixels, e.g. a sticky header’s height": "Décalage en pixels, p. ex. la hauteur d’un en-tête fixe",
@@ -829,6 +831,7 @@
   "Show": "Afficher",
   "Show # Link on Hover": "Afficher le lien # au survol",
   "Show Controls": "Afficher les contrôles",
+  "Show Label": "Afficher le libellé",
   "Show Nothing": "Ne rien afficher",
   "Show on the Site": "Afficher sur le site",
   "Show When": "Afficher quand",
@@ -1030,7 +1033,5 @@
   "YouTube, Vimeo or a video file.": "YouTube, Vimeo ou un fichier vidéo.",
   "Z-index": "Z-index",
   "Zoom Image Inside": "Zoomer l’image à l’intérieur",
-  "Zoom While Scrolling": "Zoom au défilement",
-  "Show Label": "Afficher le libellé",
-  "Off: screen readers still read it.": "Désactivé : les lecteurs d’écran le lisent toujours."
+  "Zoom While Scrolling": "Zoom au défilement"
 }
