@@ -599,7 +599,9 @@ function Setting({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-h-9 items-center gap-2 border-b border-border py-1 last:border-b-0">
       <span className="w-[120px] shrink-0 truncate text-xs text-text">{label}</span>
-      <div className="flex w-60 shrink-0 pr-8 max-lg:w-52">{children}</div>
+      <div className="flex w-60 min-w-0 shrink pr-8 max-lg:w-52">{children}</div>
+      <span className="min-w-0 flex-1 max-sm:hidden" />
+      <span className="size-6 shrink-0" />
     </div>
   )
 }
@@ -607,6 +609,7 @@ function Setting({ label, children }: { label: string; children: ReactNode }) {
 /** A length as a bar, relative to the largest in its group. */
 function Bar({ value, of }: { value: any; of: Token[] }) {
   const max = Math.max(...of.map((token) => px(token.value)), 1)
+  if (px(value) <= 0) return null
   return <span className="h-1.5 min-w-px rounded-full bg-border-strong" style={{ width: `${(px(value) / max) * 100}%` }} />
 }
 
