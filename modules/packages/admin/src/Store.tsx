@@ -1,30 +1,14 @@
 import { invalidate, locale, run, t, useAbility, can, plural } from '@letterncms/sdk'
-import { Badge, Button, confirm, EmptyState, Icon, Input, NoMatches, prompt, Select, Skeleton, Slideover, Switch, toast } from '@letterncms/ui'
+import { Badge, Button, cn, confirm, EmptyState, Icon, IconButton, Input, Menu, NoMatches, prompt, Select, Skeleton, toast } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 import { driveJob, JobFailed, type Job } from './installing'
+import { StoreDetail } from './StoreDetail'
+import { Action, ItemIcon, priceLabel, type Item } from './storeItem'
 
-interface Item {
-  store: string
-  package: string
-  type: string
-  title: string
-  summary: string
-  icon: string | null
-  categories: string[]
-  pricing: string
-  first_party: boolean
-  author: { name: string; url: string }
-  listing_url: string | null
-  latest: string | null
-  installed: string | null
-  action: 'install' | 'update' | 'installed' | 'buy' | 'incompatible' | 'blocked'
-  access: { allowed?: boolean; reason?: string; message?: string; buy_url?: string }
-}
-
-interface Detail extends Item { description_html: string; screenshots: string[]; operator: string; capabilities: string[]; requires: { core?: string; php?: string } }
 interface Catalog { store: string; items: Item[]; freshness: 'ok' | 'stale' | 'expired' | 'clock' | 'none'; problem: string | null; error: string | null }
 interface StoreInfo { id: string; name: string; url: string | null; default: boolean; fingerprint: string | null; problem: string | null }
 interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[]; access: { allowed?: boolean; message?: string } }
+type Sort = 'popular' | 'name' | 'installed'
 
 const CHUNK = 2 * 1024 * 1024
 
@@ -47,30 +31,54 @@ async function uploadZip(file: File, allowUnsigned: boolean): Promise<Job> {
   return job!
 }
 
-const PRICE_LABEL = (item: Item) => (item.pricing === 'free' ? t('Free') : t('Paid'))
 
-/** Browse and install from a store: signed files, checked here. Works on every site, with nothing sold here at all. */
+/**
+ * Browse and install from a store: signed files, checked here. Works on every site, with nothing sold here at all.
+ * Search and sort sit above the categories; with nothing narrowed, featured plugins come first, then all of them
+ * in the store's own order. Every card is the same size.
+ */
 export function Store() {
   const [store, setStore] = useState('default')
   const stores = useAbility<{ items: StoreInfo[] }>('packages/stores')
   const catalog = useAbility<Catalog>('packages/catalog', { store })
   const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('')
   const [pricing, setPricing] = useState('all')
+  const [sort, setSort] = useState<Sort>('popular')
   const [open, setOpen] = useState<Item | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [step, setStep] = useState<string | null>(null)
   const [turnOn, setTurnOn] = useState(true)
   const file = useRef<HTMLInputElement>(null)
   const data = catalog.data
-  // What's installed here brings its own icon: the store's listing may have none.
+  // What's installed here brings its own icon: an older store's listing may have none.
   const local = useAbility<{ items: { name: string; icon: string }[] }>('packages/list', { type: 'all' })
   const icons = Object.fromEntries((local.data?.items ?? []).map((p) => [p.name, p.icon]))
   const current = stores.data?.items.find((s) => s.id === store)
+  const all = data?.items ?? []
+
+  // Only what this store has: no empty categories, and price only once something costs money.
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const item of all) for (const c of item.categories) counts.set(c, (counts.get(c) ?? 0) + 1)
+    return [...counts].sort((a, b) => a[0].localeCompare(b[0], locale()))
+  }, [all])
+  const sellsSomething = all.some((i) => i.pricing !== 'free') && all.some((i) => i.pricing === 'free')
 
   const items = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return (data?.items ?? []).filter((i) => (pricing === 'all' || i.pricing === pricing || (pricing === 'paid' && i.pricing !== 'free')) && (q === '' || `${i.title} ${i.summary} ${i.package} ${i.categories.join(' ')}`.toLowerCase().includes(q)))
-  }, [data, search, pricing])
+    const terms = search.trim().toLocaleLowerCase(locale()).split(/\s+/).filter(Boolean)
+    const found = all.filter((i) => {
+      const text = `${i.title} ${i.summary} ${i.package} ${i.author.name} ${i.categories.join(' ')}`.toLocaleLowerCase(locale())
+      return (!category || i.categories.includes(category)) && (pricing === 'all' || (pricing === 'free') === (i.pricing === 'free')) && terms.every((term) => text.includes(term))
+    })
+    if (sort === 'name') return [...found].sort((a, b) => a.title.localeCompare(b.title, locale()))
+    if (sort === 'installed') return [...found].sort((a, b) => Number(!!b.installed) - Number(!!a.installed))
+    return found
+  }, [all, search, category, pricing, sort])
+
+  const narrowed = search.trim() !== '' || category !== '' || pricing !== 'all'
+  const featured = !narrowed && sort === 'popular' ? all.filter((i) => i.featured) : []
+  const clear = () => { setSearch(''); setCategory(''); setPricing('all') }
 
   const after = async (message: string) => {
     invalidate('packages/')
@@ -84,7 +92,7 @@ export function Store() {
       const plan = await run<Plan>('packages/plan-install', { store: item.store, package: item.package, version: item.latest ?? undefined })
       const lines = plan.steps.filter((s) => !s.enable_only).map((s) => `${s.title} ${s.version}`)
       const yes = await confirm({
-        title: t('Install {name}?', { name: item.title }),
+        title: item.installed ? t('Update {name}?', { name: item.title }) : t('Install {name}?', { name: item.title }),
         description: [lines.length > 1 ? t('Also installs what it needs: {list}.', { list: lines.join(', ') }) : '', plan.capabilities.length ? t('It may use: {list}.', { list: plan.capabilities.join(', ') }) : '', t('This code runs with full access to your site.')].filter(Boolean).join(' '),
         confirm: item.installed ? t('Update') : t('Install'),
       })
@@ -151,6 +159,13 @@ export function Store() {
     }
   }
 
+  const removeStore = async () => {
+    if (!current || !(await confirm({ title: t('Remove {name}?', { name: current.name }), description: t('What it installed stays, without update offers.'), confirm: t('Remove Store'), danger: true }))) return
+    await run('packages/store-remove', { id: store })
+    setStore('default')
+    await stores.refetch()
+  }
+
   const refresh = async () => {
     setBusy('refresh')
     try {
@@ -174,125 +189,102 @@ export function Store() {
     : data.error ? t('Can’t reach the store. {error}', { error: data.error })
     : null
 
+  const card = (item: Item) => <Card key={item.package} item={item} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} onOpen={() => setOpen(item)} onInstall={() => void install(item)} />
+
   return (
     <div>
+      <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
+
+      {/* Find first: search and order, then what to narrow it to. */}
       <div className="mb-3 flex min-h-10 flex-wrap items-center gap-2">
-        {(stores.data?.items.length ?? 0) > 1 && <div className="w-36"><Select size="sm" value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} /></div>}
-        <Input size="sm" className="w-full sm:w-60" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}…', { items: t('Plugins').toLocaleLowerCase(locale()) })} aria-label={t('Search')} />
-        <div className="w-24"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('All') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>
-        <Switch checked={turnOn} onChange={setTurnOn} size="sm" label={t('Turn On After Install')} />
-        <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
-        {/* Every way to change what the store offers, in view. */}
-        <div className="ml-auto flex flex-wrap items-center gap-1">
-          <Button variant="ghost" icon="refresh" loading={busy === 'refresh'} disabled={busy !== null} onClick={() => void refresh()}>{t('Refresh')}</Button>
+        <Input size="sm" className="w-full sm:w-72" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}…', { items: t('Plugins').toLocaleLowerCase(locale()) })} aria-label={t('Search')} />
+        <div className="w-40"><Select size="sm" value={sort} onChange={(v) => setSort((v ?? 'popular') as Sort)} aria-label={t('Sort')} options={[{ value: 'popular', label: t('Most Popular') }, { value: 'name', label: t('Name') }, { value: 'installed', label: t('Installed First') }]} /></div>
+        {sellsSomething && <div className="w-28"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('Any Price') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>}
+        <div className="ml-auto flex items-center gap-1">
+          {(stores.data?.items.length ?? 0) > 1 && <div className="w-40"><Select size="sm" value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} /></div>}
           <Button variant="ghost" icon="upload" disabled={busy !== null} onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>
-          <Button variant="ghost" icon="plus" onClick={() => void addStore()}>{t('Add Store')}</Button>
-          {current && !current.default && <Button variant="ghost" icon="trash" className="!text-danger" onClick={async () => {
-            if (await confirm({ title: t('Remove {name}?', { name: current.name }), description: t('What it installed stays, without update offers.'), confirm: t('Remove Store'), danger: true })) {
-              await run('packages/store-remove', { id: store })
-              setStore('default')
-              await stores.refetch()
-            }
-          }}>{t('Remove Store')}</Button>}
+          <Menu
+            trigger={<IconButton icon="more" label={t('More')} />}
+            items={[
+              { label: t('Refresh'), icon: 'refresh', disabled: busy !== null, onSelect: () => void refresh() },
+              { label: t('Turn On After Install'), checked: turnOn, onSelect: () => setTurnOn((on) => !on) },
+              { separator: true, label: '' },
+              { label: t('Add Store'), icon: 'plus', onSelect: () => void addStore() },
+              current && !current.default && { label: t('Remove {name}', { name: current.name }), icon: 'trash', danger: true, onSelect: () => void removeStore() },
+            ]}
+          />
         </div>
       </div>
+
+      {categories.length > 1 && (
+        <div role="radiogroup" aria-label={t('Category')} className="mb-5 flex flex-wrap gap-1.5">
+          <Chip active={category === ''} onClick={() => setCategory('')} label={t('All')} count={all.length} />
+          {categories.map(([name, count]) => <Chip key={name} active={category === name} onClick={() => setCategory(category === name ? '' : name)} label={name} count={count} />)}
+        </div>
+      )}
 
       {step && <p role="status" className="mb-4 text-sm text-muted">{step}</p>}
       {notice && <p className="mb-4 flex items-center gap-2 border-y border-border py-3 text-sm text-text"><Icon name="info" size={16} className="shrink-0 text-muted" />{notice}</p>}
 
       {catalog.isLoading ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-36" />)}</div>
+        <Grid>{[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-44" />)}</Grid>
       ) : items.length === 0 ? (
-        search.trim() !== '' || pricing !== 'all'
-          ? <NoMatches onClear={() => { setSearch(''); setPricing('all') }} />
+        narrowed
+          ? <NoMatches onClear={clear} />
           : <EmptyState icon="download" title={t('Nothing in this store yet')} action={<Button onClick={() => file.current?.click()}>{t('Upload a Zip')}</Button>} />
       ) : (
         <>
-          <p className="mb-2 text-xs text-muted">{plural(items.length, '{count} plugin', '{count} plugins')}</p>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3">
-            {items.map((item) => <Card key={item.package} item={item} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} onOpen={() => setOpen(item)} onInstall={() => void install(item)} />)}
-          </div>
+          {featured.length > 0 && (
+            <section className="mb-8">
+              <SectionHeading title={t('Featured')} />
+              <Grid>{featured.map(card)}</Grid>
+            </section>
+          )}
+          <section>
+            <SectionHeading title={narrowed ? plural(items.length, '{count} result', '{count} results') : t('All Plugins')} count={narrowed ? undefined : items.length} />
+            <Grid>{items.map(card)}</Grid>
+          </section>
         </>
       )}
 
-      {open && <DetailPanel item={open} onClose={() => setOpen(null)} locked={busy !== null} onInstall={() => void install(open)} />}
+      {open && <StoreDetail item={all.find((i) => i.package === open.package) ?? open} icon={icons[open.package]} onClose={() => setOpen(null)} busy={busy === open.package} locked={busy !== null} onInstall={() => void install(open)} />}
     </div>
   )
 }
 
-/** The store's picture of it, else the icon it has here once installed, else a plugin's. */
-function ItemIcon({ item, icon }: { item: Item; icon?: string }) {
-  return item.icon ? <img src={item.icon} alt="" className="size-8 shrink-0 rounded-md object-cover" loading="lazy" /> : <span className="grid size-8 shrink-0 place-items-center rounded-md bg-sunken text-muted"><Icon name={icon || 'plugin'} size={16} /></span>
+function Grid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3">{children}</div>
 }
 
-function Action({ item, busy, locked, onInstall }: { item: Item; busy: boolean; locked: boolean; onInstall: () => void }) {
-  switch (item.action) {
-    case 'install':
-    case 'update':
-      return <Button size="sm" variant="primary" loading={busy} disabled={locked} onClick={onInstall}>{item.action === 'update' ? t('Update') : t('Install')}</Button>
-    case 'buy':
-      return item.listing_url ? <Button size="sm" onClick={() => window.open(item.listing_url!, '_blank', 'noopener')}>{t('Buy on Store')}</Button> : <span className="text-xs text-muted">{t('Paid Plugin')}</span>
-    case 'installed':
-      return <span className="text-xs text-muted">{t('Installed')}</span>
-    case 'blocked':
-      return <Badge tone="danger">{t('Blocked')}</Badge>
-    default:
-      return <span className="text-xs text-muted">{t('Not for this version')}</span>
-  }
+function SectionHeading({ title, count }: { title: string; count?: number }) {
+  return <h2 className="m-0 mb-3 flex items-baseline gap-2 text-sm font-medium text-ink">{title}{count !== undefined && <span className="text-xs font-normal text-muted">{count}</span>}</h2>
+}
+
+function Chip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button type="button" role="radio" aria-checked={active} onClick={onClick} className={cn('inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs transition-colors', active ? 'border-ink bg-ink text-ink-contrast' : 'border-border bg-transparent text-text hover:bg-hover')}>
+      {label}<span className={active ? 'opacity-70' : 'text-muted'}>{count}</span>
+    </button>
+  )
 }
 
 function Card({ item, icon, busy, locked, onOpen, onInstall }: { item: Item; icon?: string; busy: boolean; locked: boolean; onOpen: () => void; onInstall: () => void }) {
   return (
-    <article className="flex min-w-0 flex-col gap-2 rounded-lg border border-border p-3">
-      <div className="flex min-w-0 items-center gap-2.5">
+    <article className="group relative flex h-full min-w-0 flex-col rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-strong">
+      <div className="flex items-start justify-between gap-3">
         <ItemIcon item={item} icon={icon} />
-        <div className="min-w-0 flex-1">
-          <button type="button" onClick={onOpen} className="block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left text-sm font-medium text-ink hover:underline">{item.title}</button>
-          {/* Who made it, when that isn't the store's own. */}
-          {!item.first_party && <p className="m-0 truncate text-xs text-muted">{item.author.name || item.package}</p>}
-        </div>
-        <Badge>{PRICE_LABEL(item)}</Badge>
+        <Badge>{priceLabel(item)}</Badge>
       </div>
-      <p className="m-0 line-clamp-2 min-h-8 flex-1 text-xs text-text">{item.summary}</p>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted">{item.latest ?? '—'}</span>
+      {/* The whole card opens the plugin; the action keeps its own click. */}
+      <h3 className="m-0 mt-3 truncate text-sm font-medium text-ink">
+        <button type="button" onClick={onOpen} className="cursor-pointer border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:outline-none group-has-[:focus-visible]:after:outline-2 group-has-[:focus-visible]:after:outline-focus">{item.title}</button>
+      </h3>
+      <p className="m-0 truncate text-xs text-muted">{t('By {name}', { name: item.author.name || item.package })}</p>
+      <p className="m-0 mt-2 line-clamp-2 min-h-10 flex-1 text-xs leading-5 text-text">{item.summary}</p>
+      <div className="relative mt-3 flex min-h-7 items-center justify-between gap-2 border-t border-border pt-3">
+        <span className="truncate text-xs text-muted">{[item.categories[0], item.latest].filter(Boolean).join(' · ')}</span>
         <Action item={item} busy={busy} locked={locked} onInstall={onInstall} />
       </div>
     </article>
-  )
-}
-
-function DetailPanel({ item, onClose, locked, onInstall }: { item: Item; onClose: () => void; locked: boolean; onInstall: () => void }) {
-  const detail = useAbility<Detail>('packages/item', { store: item.store, package: item.package })
-  const d = detail.data
-  const [expanded, setExpanded] = useState(false)
-  const addKey = async () => {
-    const asked = await prompt({ title: t('Add Key'), fields: [{ handle: 'key', type: 'textarea', label: t('Key'), required: true }], confirm: t('Add Key') })
-    const key = asked?.key as string | undefined
-    if (!key) return
-    try {
-      await run('packages/add-key', { key })
-      invalidate('packages/')
-      toast.success(t('Key added'))
-      onClose()
-    } catch (e) {
-      toast.error(e)
-    }
-  }
-  return (
-    <Slideover id="store-item" open expanded={expanded} onExpandedChange={setExpanded} onOpenChange={(next) => { if (!next) onClose() }} title={item.title} icon="plugin">
-      <div className="space-y-4 p-4 text-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <Action item={item} busy={false} locked={locked} onInstall={onInstall} />
-          {item.access.message && <span className="text-xs text-muted">{item.access.message}</span>}
-          {item.action === 'buy' && <Button size="sm" disabled={locked} onClick={() => void addKey()}>{t('Add Key')}</Button>}
-        </div>
-        <p className="m-0 text-xs text-muted">{d ? t('Sold by {operator}, made by {author}', { operator: d.operator, author: item.author.name || item.package }) : item.package}</p>
-        {detail.isLoading ? <Skeleton className="h-32" /> : d?.description_html ? <div className="cms-store-description" dangerouslySetInnerHTML={{ __html: d.description_html }} /> : <p className="m-0">{item.summary}</p>}
-        {(d?.screenshots.length ?? 0) > 0 && <div className="grid gap-2">{d!.screenshots.map((src) => <img key={src} src={src} alt="" className="w-full rounded border border-border" loading="lazy" />)}</div>}
-        {d && d.capabilities.length > 0 && <p className="m-0"><span className="font-medium">{t('It may use')}: </span>{d.capabilities.join(', ')}</p>}
-        {d && (d.requires.core || d.requires.php) && <p className="m-0 text-xs text-muted">{[d.requires.core && t('Needs {brand} {version}', { version: d.requires.core }), d.requires.php && `PHP ${d.requires.php}`].filter(Boolean).join(' · ')}</p>}
-      </div>
-    </Slideover>
   )
 }

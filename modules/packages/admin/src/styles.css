@@ -3,3 +3,12 @@
 @import "@letterncms/admin/theme.css";
 
 @source "./";
+
+/* A store's description, cleaned on this site: its headings and paragraphs, in the admin's type. */
+.cms-store-description > * + * { margin-top: 0.75rem; }
+.cms-store-description h2, .cms-store-description h3 { margin: 1.5rem 0 0; font-size: 0.9375rem; font-weight: 500; color: var(--color-ink); }
+.cms-store-description > :first-child { margin-top: 0; }
+.cms-store-description p, .cms-store-description li { margin: 0.375rem 0 0; color: var(--color-text); line-height: 1.6; }
+.cms-store-description ul, .cms-store-description ol { padding-left: 1.25rem; }
+.cms-store-description a { color: var(--color-ink); text-decoration: underline; text-underline-offset: 2px; }
+.cms-store-description img { max-width: 100%; border-radius: 0.5rem; border: 1px solid var(--color-border); }

@@ -107,6 +107,8 @@ final class InteractiveBlocksTest extends TestCase
         $this->assertStringContainsString('<input type="radio" name="category" value="" checked><span>Everything</span> <span class="cms-filter__count">3</span>', $html);
         $this->assertStringContainsString('value="fruit"><span>Fruit</span> <span class="cms-filter__count">2</span>', $html);
         $this->assertStringContainsString('value="sweet"><span>sweet</span> <span class="cms-filter__count">2</span>', $html);
+        // An item with two tags is one item: All counts the items that have a tag, not the tags.
+        $this->assertStringContainsString('<input type="radio" name="tags" value="" checked><span>All</span> <span class="cms-filter__count">2</span>', $html);
         $this->assertStringContainsString('<li data-cms-fi data-cms-f-category="dessert" data-cms-f-tags="sweet french" data-cms-q="creme brulee" style="display:contents">', $html);
         $this->assertStringContainsString('data-cms-f-tags="" data-cms-q="lemon"', $html, 'an item without a value shows only under All');
         $this->assertMatchesRegularExpression('/data-cms-filter-empty hidden/', $html);
@@ -131,6 +133,18 @@ final class InteractiveBlocksTest extends TestCase
         $filter['children'][1]['props']['look'] = 'list';
 
         $this->assertStringContainsString('data-look="list"', $this->render([$filter]));
+    }
+
+    public function test_a_choice_with_one_option_waits_until_there_are_two(): void
+    {
+        $this->cms()->hooks()->addFilter('blocks.data-sources', static fn (array $sources) => [...$sources, 'free' => ['label' => 'Free', 'resolve' => static fn () => [['title' => 'One', 'cost' => 'Free'], ['title' => 'Two', 'cost' => 'Free']]]]);
+        $html = $this->render([['type' => 'list-filter', 'children' => [
+            ['type' => 'filter-choice', 'props' => ['facet' => 'cost', 'label' => 'Price']],
+            ['type' => 'repeat', 'props' => ['source' => 'free', 'filter_by' => 'item.cost'], 'children' => [['type' => 'paragraph', 'bind' => ['text' => 'item.title']]]],
+        ]]]);
+
+        $this->assertStringNotContainsString('name="cost"', $html);
+        $this->assertStringContainsString('data-cms-f-cost="free"', $html);
     }
 
     public function test_a_choice_without_values_does_not_show_and_a_plain_repeat_is_unchanged(): void
