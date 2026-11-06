@@ -5,7 +5,7 @@
 ### Added
 
 - **Design System → Form Fields** styles every field on the site once: the forms you build, the account pages, the checkout, list filters and the Input block. **All Fields** sets the height, fill, border, radius and text every boxed field shares; then each state (hover, focus, invalid, disabled), labels and help, spacing, and each kind of field has its own row: dropdowns, text areas, checkboxes (mark shape, weight and size), radio buttons (dot or ring), switches, sliders, tag fields, chips and file pickers. Empty controls show what applies, from your tokens.
-- A live specimen above **Form Fields** and **Buttons** shows every field or button variant in each of its states, drawn by your site's stylesheet, as you edit. You can click and type in it.
+- On **Form Fields** and **Buttons**, the preview shows every kind of field, or every button variant, in each of its states and sizes, drawn by your site's stylesheet as you edit, in light or dark and at each screen width. Opening a row brings its part into view. You can click and type in it.
 - Checkboxes, radio buttons, switches and sliders are drawn by the design system instead of the browser, so they match the site in light and dark.
 - The **Input** block can be a **Switch** or a **Date**, and a slider fills its track up to the thumb.
 - Agents set fields with `fields` in `design/update`; `design/get` describes every property as `fieldStyles`. Your own markup gets the same look with the classes `cms-input`, `cms-label`, `cms-check`, `cms-radio`, `cms-switch`, `cms-range`, `cms-tags` and `cms-chip`.
