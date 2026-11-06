@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.2 (2026-11-06)
+
 ### Fixed
 
 - **Design**: the ⋯ menu of every token row (fonts, type scale, spacing, shape, motion) no longer slips past the edge of the panel, which also caused a horizontal scroll, when the panel is narrow.
