@@ -1,6 +1,6 @@
 import { t, type FieldDef } from '@letterncms/sdk'
 import { Fields, IconButton, Menu, Segmented } from '@letterncms/ui'
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Disclosure, Group, css } from './design-parts'
 
 /** A property of a part, as the server describes it (FieldStyles::schema). */
@@ -200,7 +200,7 @@ export function fieldVars(schema: FieldSchema, values: FieldValues): string {
  * state and each kind of field, each opening on its controls. `onShow` says which part of
  * the specimen to draw: the open row's, or all of it.
  */
-export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpen, note }: { schema: FieldSchema; value: FieldValues; onChange: (next: FieldValues) => void; tokens: Token[]; dark: boolean; open: string | null; onOpen: (key: string | null) => void; note?: ReactNode }) {
+export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpen }: { schema: FieldSchema; value: FieldValues; onChange: (next: FieldValues) => void; tokens: Token[]; dark: boolean; open: string | null; onOpen: (key: string | null) => void }) {
   const [state, setState] = useState<State>('focus')
   const write = (part: string, next: Record<string, unknown>) => {
     const own = Object.fromEntries(Object.entries(next).filter(([, v]) => v !== null && v !== undefined && v !== ''))
@@ -224,7 +224,6 @@ export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpe
 
   return (
     <Group title={t('Form Fields')}>
-      {note}
       {sections().map((section) => (
         <Disclosure
           key={section.key}

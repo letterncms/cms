@@ -233,7 +233,7 @@ final class SiteModule extends Plugin
 
         Route::middleware(['web', 'auth:web', 'cms.admin'])->group(static function (): void {
             Route::get('/__preview/{id}', [SiteController::class, 'preview'])->where('id', '[0-9a-z]{26}');
-            Route::get('/__specimen/{kind}', [SiteController::class, 'specimen'])->whereIn('kind', ['fields', 'buttons']);
+            Route::get('/__specimen/{kind}', [SiteController::class, 'specimen'])->whereIn('kind', ['fields', 'buttons', 'sizes']);
             Route::post('/__preview', [SiteController::class, 'render']);
             Route::post('/__preview/{id}', [SiteController::class, 'render'])->where('id', '[0-9a-z]{26}');
         });
@@ -357,7 +357,7 @@ final class SiteModule extends Plugin
                 'rename' => ['type' => 'object', 'description' => 'old path => new path, within a group; references follow'],
                 'styles' => ['type' => 'object', 'description' => 'Element styles: {"h1": {"fontSize": "token:text.5xl"}}'],
                 'prose' => ['type' => 'object'],
-                'buttons' => ['type' => 'object', 'description' => 'Button variants, each a look by state: {"primary": {"base": {"backgroundColor": "token:color.primary", "borderRadius": "token:radius.md"}, "hover": {...}, "active": {...}, "focus-visible": {...}}}. Sizes are not set here: height, padding and text size come from the control tokens (control.sm-height, control.md-padding, control.lg-text…), which fields share.'],
+                'buttons' => ['type' => 'object', 'description' => 'Button variants, each a look by state: {"primary": {"base": {"backgroundColor": "token:color.primary", "borderRadius": "token:radius.md"}, "hover": {...}, "active": {...}, "focus-visible": {...}}}; `surface` names the background a variant is made for ("token:color.band"), where the Design System shows it. Sizes are not set here: height, padding and text size come from the control tokens (control.sm-height, control.md-padding, control.lg-text…), which fields share.'],
                 'fields' => ['type' => 'object', 'description' => 'Every form field of the site, part by part, over the defaults (design/get fieldStyles has each part, property, type and default): {"field": {"height": "3rem", "background": "token:color.raised", "radius": "token:radius.md"}, "checkbox": {"checked": "token:color.primary", "mark": "check"}, "switch": {"on": "token:color.primary"}}. Parts: field (every boxed field), hover, focus, invalid, disabled, label, help, spacing (with size: the control size of fields in forms), select, textarea, checkbox, radio, switch, slider, tags, chips, file. A value is CSS, a token, or field:part.key to follow another property.'],
                 'fonts' => ['type' => 'array'],
                 'transition' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['none', 'fade', 'slide', 'scale']], 'duration' => ['type' => 'number']]],
