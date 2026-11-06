@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.3 (2026-11-06)
+
 ### Fixed
 
 - **Design**: Page Transition's inputs line up with the token rows below them, and a spacing of 0 no longer draws a stray line beside its ⋯ menu.
