@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.1 (2026-11-06)
+
 ### Changed
 
 - **Typography** has one list of **Fonts**: the roles your site uses (sans, display, mono…), each a row with a sample and its font. Its picker shows the fonts on your site, each in itself with its weights, adds one from Google Fonts or a .woff2 file, and removes one nothing uses. What a font falls back to is in the row's menu. Font Families and Font Files are gone.
