@@ -148,6 +148,12 @@ final class BlockRenderer
     /** @var array<string, array<string, array{label: string, count: int}>> the options around the List Filter being rendered */
     public array $filterFacets = [];
 
+    /** @var array<string, int> The List Filter's: how many of its items each Choice counts as All. */
+    public array $filterItems = [];
+
+    /** @var array<string, int> How many items of the last faceted Repeat have a value for each facet. */
+    public array $facetItems = [];
+
     private int $ids = 0;
 
     /** An id unique on this page and the same on every build, for a block used more than once. */
@@ -167,14 +173,18 @@ final class BlockRenderer
         $scope = $this->currentScope();
         $as = (string) ($props['as'] ?? 'item') ?: 'item';
         $out = [];
+        $items = [];
 
         foreach (array_slice($this->sources->resolve((string) ($props['source'] ?? 'list'), $props, $scope), 0, 1000) as $item) {
             $inner = $scope->with([$as => $item]);
 
             foreach (Interactive::paths($props['filter_by'] ?? '') as $path) {
                 $key = Interactive::handle($path);
+                $values = $this->values($inner, $path);
+                // An item in two categories is one item: "All" counts items, not values.
+                $values !== [] && $items[$key] = ($items[$key] ?? 0) + 1;
 
-                foreach ($this->values($inner, $path) as $value) {
+                foreach ($values as $value) {
                     $slug = Interactive::slug($value);
                     $out[$key][$slug]['label'] = $value;
                     $out[$key][$slug]['count'] = ($out[$key][$slug]['count'] ?? 0) + 1;
@@ -185,6 +195,9 @@ final class BlockRenderer
         foreach ($out as &$options) {
             uasort($options, static fn (array $a, array $b) => strnatcasecmp($a['label'], $b['label']));
         }
+
+        unset($options);
+        $this->facetItems = $items;
 
         return $out;
     }

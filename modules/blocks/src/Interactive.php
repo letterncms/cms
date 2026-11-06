@@ -72,10 +72,11 @@ final class Interactive
         $repeat = self::findRepeat($children);
         $facets = $repeat ? $renderer->facets($repeat) : [];
 
-        $previous = $renderer->filterFacets;
-        $renderer->filterFacets = $facets;
+        $items = $repeat ? $renderer->facetItems : [];
+        [$previous, $previousItems] = [$renderer->filterFacets, $renderer->filterItems];
+        [$renderer->filterFacets, $renderer->filterItems] = [$facets, $items];
         $html = $renderer->children($children);
-        $renderer->filterFacets = $previous;
+        [$renderer->filterFacets, $renderer->filterItems] = [$previous, $previousItems];
         $renderer->uses('filter');
 
         $status = (string) ($d['block']['status'] ?? ':count of :total');
@@ -96,11 +97,12 @@ final class Interactive
         $facet = self::handle((string) ($b['facet'] ?? ''));
         $options = $d['renderer']->filterFacets[$facet] ?? [];
 
-        if ($options === [] && ! $d['editor']) {
+        // One choice is no choice: the control waits until the list has two, like a price once something costs money.
+        if (count($options) < 2 && ! $d['editor']) {
             return '';
         }
 
-        $total = array_sum(array_column($options, 'count'));
+        $total = $d['renderer']->filterItems[$facet] ?? array_sum(array_column($options, 'count'));
         $option = static fn (string $value, string $label, int $count, bool $checked) => '<label class="cms-filter__option"><input type="radio" name="'.e($facet).'" value="'.e($value).'"'.($checked ? ' checked' : '').'><span>'.e($label).'</span> <span class="cms-filter__count">'.$count.'</span></label>';
         $html = $option('', (string) ($b['all_label'] ?? 'All'), (int) $total, true);
 

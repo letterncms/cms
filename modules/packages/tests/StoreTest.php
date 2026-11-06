@@ -660,6 +660,27 @@ final class StoreTest extends TestCase
         $this->assertSame(['https://store.invalid/1.png'], $item['screenshots']);
     }
 
+    public function test_a_listing_brings_its_icon_gallery_releases_and_links(): void
+    {
+        $this->list('acme/maps', '1.0.0', item: ['glyph' => 'map-pin', 'featured' => true]);
+        $this->list('acme/odd', '1.0.0', item: ['glyph' => '<svg onload=x>']);
+        $this->remote->routes[self::STORE.'/api/store/v1/items/acme/maps.json'] = (string) json_encode([
+            'gallery' => [['url' => 'https://store.invalid/1.png', 'alt' => 'The map editor.'], ['url' => 'https://evil.example/2.png', 'alt' => 'x']],
+            'requirements' => ['A map key'], 'docs_url' => 'https://acme.example/docs', 'repository_url' => 'javascript:alert(1)',
+            'releases' => [['version' => '1.0.0', 'released_at' => '2026-11-01T10:00:00Z', 'notes' => "Added\n• Maps", 'security' => false]],
+        ]);
+
+        $items = array_column($this->client->catalog()['items'], null, 'package');
+        $this->assertSame(['map-pin', true], [$items['acme/maps']['glyph'], $items['acme/maps']['featured']]);
+        $this->assertSame([null, false], [$items['acme/odd']['glyph'], $items['acme/odd']['featured']]);
+
+        $item = $this->client->item(StoreClient::DEFAULT, 'acme/maps');
+        $this->assertSame([['url' => 'https://store.invalid/1.png', 'alt' => 'The map editor.']], $item['gallery']);
+        $this->assertSame(['A map key'], $item['requirements']);
+        $this->assertSame(['https://acme.example/docs', null], [$item['docs_url'], $item['repository_url']]);
+        $this->assertSame("Added\n• Maps", $item['releases'][0]['notes']);
+    }
+
     public function test_a_download_off_the_stores_own_origin_is_refused(): void
     {
         $entry = $this->list('acme/forms', '1.0.0');

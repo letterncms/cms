@@ -214,6 +214,12 @@ final class StoreClient
             ...$described,
             'description_html' => $html,
             'screenshots' => array_values(array_filter(array_map('strval', (array) ($detail['screenshots'] ?? [])), static fn (string $u) => self::origin($u) === $origin)),
+            // What each picture shows, from stores that say; older ones send addresses alone.
+            'gallery' => array_values(array_filter(array_map(static fn ($s) => is_array($s) ? ['url' => (string) ($s['url'] ?? ''), 'alt' => mb_substr((string) ($s['alt'] ?? ''), 0, 300)] : ['url' => (string) $s, 'alt' => ''], (array) ($detail['gallery'] ?? $detail['screenshots'] ?? [])), static fn (array $s) => self::origin($s['url']) === $origin)),
+            'requirements' => array_values(array_map(static fn ($r) => mb_substr((string) $r, 0, 200), array_slice((array) ($detail['requirements'] ?? []), 0, 20))),
+            'docs_url' => self::link($detail['docs_url'] ?? null),
+            'repository_url' => self::link($detail['repository_url'] ?? null),
+            'releases' => array_values(array_map(static fn ($r) => ['version' => mb_substr((string) ($r['version'] ?? ''), 0, 40), 'released_at' => mb_substr((string) ($r['released_at'] ?? ''), 0, 32), 'notes' => mb_substr((string) ($r['notes'] ?? ''), 0, 4000), 'security' => (bool) ($r['security'] ?? false)], array_filter(array_slice((array) ($detail['releases'] ?? []), 0, 20), 'is_array'))),
             'operator' => (string) ($detail['operator'] ?? parse_url((string) $payload['store'], PHP_URL_HOST)),
             'capabilities' => array_values(array_map('strval', (array) ($described['entry']['capabilities'] ?? []))),
             'requires' => (array) ($described['entry']['requires'] ?? []),
@@ -577,6 +583,9 @@ final class StoreClient
             'title' => mb_substr((string) ($item['title'] ?? $item['package']), 0, 120),
             'summary' => mb_substr((string) ($item['summary'] ?? ''), 0, 300),
             'icon' => self::origin($icon) === $origin ? $icon : null,
+            // A name from the icon set the admin draws, not a picture: nothing to fetch.
+            'glyph' => preg_match('/^[a-z0-9-]{1,60}$/', (string) ($item['glyph'] ?? '')) === 1 ? (string) $item['glyph'] : null,
+            'featured' => (bool) ($item['featured'] ?? false),
             'categories' => array_values(array_map('strval', (array) ($item['categories'] ?? []))),
             'pricing' => (string) ($item['pricing'] ?? 'free'),
             'first_party' => (bool) ($item['first_party'] ?? false),
@@ -856,6 +865,14 @@ final class StoreClient
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /** A web address to open in a new tab, or nothing. */
+    private static function link(mixed $url): ?string
+    {
+        $url = (string) $url;
+
+        return preg_match('#^https?://[^\s"<>]+$#', $url) === 1 ? mb_substr($url, 0, 500) : null;
     }
 
     private static function origin(string $url): ?string

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- **Plugins → Store** is redesigned: search and sort sit above the categories, featured plugins come first, every plugin is a card of the same size with its icon and maker, and a plugin opens on a page with its screenshots, description, changelog, what it needs and links to its docs and code. Price only shows as a filter once the store sells something.
+- A store's catalog can name each plugin's icon and mark it featured, and its detail can carry captioned screenshots, requirements, release notes and links. Stores that don't still work as before.
+- A List Filter's choice waits until it has two options, and its **All** counts items rather than values, so a plugin in two categories counts once.
+
 ## 0.13.0 (2026-11-05)
 
 ### Added
