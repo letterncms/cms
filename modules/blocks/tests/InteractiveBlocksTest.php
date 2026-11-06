@@ -127,6 +127,16 @@ final class InteractiveBlocksTest extends TestCase
         $this->assertStringContainsString('data-cms-s-title="Apple"', $html);
     }
 
+    public function test_a_search_and_sort_can_hide_their_label_from_sight_only(): void
+    {
+        $filter = $this->catalog(['sort_by' => 'item.title']);
+        $filter['children'][] = ['type' => 'filter-sort', 'props' => ['label' => 'Order', 'show_label' => false, 'options' => [['label' => 'Name', 'field' => 'item.title']]]];
+        $html = $this->render([$filter]);
+
+        $this->assertStringContainsString('<span class="cms-filter__legend">Find</span>', $html);
+        $this->assertStringContainsString('<span class="cms-filter__legend cms-filter__legend--hidden">Order</span>', $html);
+    }
+
     public function test_a_choice_can_be_a_list_rather_than_chips(): void
     {
         $filter = $this->catalog();

@@ -1030,5 +1030,7 @@
   "YouTube, Vimeo or a video file.": "YouTube, Vimeo ou un fichier vidéo.",
   "Z-index": "Z-index",
   "Zoom Image Inside": "Zoomer l’image à l’intérieur",
-  "Zoom While Scrolling": "Zoom au défilement"
+  "Zoom While Scrolling": "Zoom au défilement",
+  "Show Label": "Afficher le libellé",
+  "Off: screen readers still read it.": "Désactivé : les lecteurs d’écran le lisent toujours."
 }
