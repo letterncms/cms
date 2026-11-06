@@ -104,11 +104,11 @@ final class InteractiveBlocksTest extends TestCase
         $html = $this->render([$this->catalog()]);
 
         $this->assertStringContainsString('data-cms-filter ', $html);
-        $this->assertStringContainsString('<input type="radio" name="category" value="" checked><span>Everything</span> <span class="cms-filter__count">3</span>', $html);
-        $this->assertStringContainsString('value="fruit"><span>Fruit</span> <span class="cms-filter__count">2</span>', $html);
-        $this->assertStringContainsString('value="sweet"><span>sweet</span> <span class="cms-filter__count">2</span>', $html);
+        $this->assertStringContainsString('<input type="radio" name="category" value="" checked><span>Everything</span> <span class="cms-filter__count cms-chip__count">3</span>', $html);
+        $this->assertStringContainsString('value="fruit"><span>Fruit</span> <span class="cms-filter__count cms-chip__count">2</span>', $html);
+        $this->assertStringContainsString('value="sweet"><span>sweet</span> <span class="cms-filter__count cms-chip__count">2</span>', $html);
         // An item with two tags is one item: All counts the items that have a tag, not the tags.
-        $this->assertStringContainsString('<input type="radio" name="tags" value="" checked><span>All</span> <span class="cms-filter__count">2</span>', $html);
+        $this->assertStringContainsString('<input type="radio" name="tags" value="" checked><span>All</span> <span class="cms-filter__count cms-chip__count">2</span>', $html);
         $this->assertStringContainsString('<li data-cms-fi data-cms-f-category="dessert" data-cms-f-tags="sweet french" data-cms-q="creme brulee" style="display:contents">', $html);
         $this->assertStringContainsString('data-cms-f-tags="" data-cms-q="lemon"', $html, 'an item without a value shows only under All');
         $this->assertMatchesRegularExpression('/data-cms-filter-empty hidden/', $html);
@@ -133,8 +133,8 @@ final class InteractiveBlocksTest extends TestCase
         $filter['children'][] = ['type' => 'filter-sort', 'props' => ['label' => 'Order', 'show_label' => false, 'options' => [['label' => 'Name', 'field' => 'item.title']]]];
         $html = $this->render([$filter]);
 
-        $this->assertStringContainsString('<span class="cms-filter__legend">Find</span>', $html);
-        $this->assertStringContainsString('<span class="cms-filter__legend cms-filter__legend--hidden">Order</span>', $html);
+        $this->assertStringContainsString('<span class="cms-label cms-filter__legend">Find</span>', $html);
+        $this->assertStringContainsString('<span class="cms-label cms-filter__legend cms-filter__legend--hidden">Order</span>', $html);
     }
 
     public function test_a_choice_can_be_a_list_rather_than_chips(): void

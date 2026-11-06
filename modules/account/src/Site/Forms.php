@@ -13,7 +13,7 @@ use Cms\Users\UserFields;
 
 /**
  * The account pages' forms, as blocks. Plain HTML that works without JavaScript. They carry no
- * look of their own: input, label and button styles come from the site's design system, and a
+ * look of their own: fields and buttons look as the site's design system says, and a
  * designer styles and moves each block like any other.
  */
 final class Forms
@@ -180,11 +180,11 @@ final class Forms
         return match ($f['type']) {
             'hidden' => '<input type="hidden" name="'.e($name).'" value="'.e((string) $value).'">',
             'honeypot' => '<div class="cms-form__hp" aria-hidden="true"><label>'.$label.'<input type="text" name="'.e($name).'" tabindex="-1" autocomplete="off"></label></div>',
-            'checkbox' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label class="cms-choice"><input type="checkbox" id="'.e($id).'" name="'.e($name).'" value="1"'.($value ? ' checked' : '').$required.$described.$invalid.'> <span>'.$label.'</span></label>'.$note.'</div>',
-            'textarea' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label for="'.e($id).'">'.$label.'</label><textarea id="'.e($id).'" name="'.e($name).'" rows="4"'.$required.$described.$invalid.'>'.e((string) $value).'</textarea>'.$note.'</div>',
-            'select' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label for="'.e($id).'">'.$label.'</label><select id="'.e($id).'" name="'.e($name).'"'.$required.$described.$invalid.'><option value=""></option>'.implode('', array_map(static fn ($k, $v) => '<option value="'.e((string) $k).'"'.((string) $value === (string) $k ? ' selected' : '').'>'.e((string) $v).'</option>', array_keys($f['options']), $f['options'])).'</select>'.$note.'</div>',
-            'password' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label for="'.e($id).'">'.$label.'</label><div class="cms-reveal"><input type="password" id="'.e($id).'" name="'.e($name).'"'.$auto.$required.$described.$invalid.'>'.$this->reveal().'</div>'.$note.'</div>',
-            default => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label for="'.e($id).'">'.$label.'</label><input type="'.e((string) $f['type']).'" id="'.e($id).'" name="'.e($name).'"'.($value !== null ? ' value="'.e((string) $value).'"' : '').$auto.$required.$described.$invalid.'>'.$note.'</div>',
+            'checkbox' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label class="cms-choice"><input type="checkbox" class="cms-check" id="'.e($id).'" name="'.e($name).'" value="1"'.($value ? ' checked' : '').$required.$described.$invalid.'> <span>'.$label.'</span></label>'.$note.'</div>',
+            'textarea' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label class="cms-label" for="'.e($id).'">'.$label.'</label><textarea class="cms-input" id="'.e($id).'" name="'.e($name).'" rows="4"'.$required.$described.$invalid.'>'.e((string) $value).'</textarea>'.$note.'</div>',
+            'select' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label class="cms-label" for="'.e($id).'">'.$label.'</label><select class="cms-input" id="'.e($id).'" name="'.e($name).'"'.$required.$described.$invalid.'><option value=""></option>'.implode('', array_map(static fn ($k, $v) => '<option value="'.e((string) $k).'"'.((string) $value === (string) $k ? ' selected' : '').'>'.e((string) $v).'</option>', array_keys($f['options']), $f['options'])).'</select>'.$note.'</div>',
+            'password' => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label class="cms-label" for="'.e($id).'">'.$label.'</label><div class="cms-reveal"><input class="cms-input" type="password" id="'.e($id).'" name="'.e($name).'"'.$auto.$required.$described.$invalid.'>'.$this->reveal().'</div>'.$note.'</div>',
+            default => '<div data-field="'.e($name).'"'.($error !== null ? ' class="is-invalid"' : '').'><label class="cms-label" for="'.e($id).'">'.$label.'</label><input class="cms-input" type="'.e((string) $f['type']).'" id="'.e($id).'" name="'.e($name).'"'.($value !== null ? ' value="'.e((string) $value).'"' : '').$auto.$required.$described.$invalid.'>'.$note.'</div>',
         };
     }
 

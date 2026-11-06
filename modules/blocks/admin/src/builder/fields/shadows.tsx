@@ -64,7 +64,7 @@ export function ShadowsField({ field, value, onChange, context }: FieldProps<str
       {/* Like a value's: the token button shows while the row is pointed at, or when a token is chosen. */}
       <div className="group/value flex h-7 items-center gap-2">
         <RowLabel field={field} />
-        <span className="min-w-0 flex-1 truncate text-xs text-faint">{!chosen && !layers.length ? t('None') : ''}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-faint">{!chosen && !layers.length ? (typeof field.placeholder === 'string' && field.placeholder ? field.placeholder : t('None')) : ''}</span>
         {group && <TokenButton group={group} value={value} onPick={onChange} active={!!chosen} className="size-6" />}
         {!chosen && <AddButton label={text ? t('Add Text Shadow') : t('Add Shadow')} onClick={add} />}
       </div>

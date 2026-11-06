@@ -93,6 +93,21 @@ final class Renderer
         return $this->document($context, $nodes, fn () => $entry ? $this->body($entry) : '', $title ?: ($entry?->title ?? ''), templateDocument: $editorDocument);
     }
 
+    /** The design system's specimen of fields or buttons, as a page of this site: its stylesheets, fonts and scripts. */
+    public function specimen(\Closure $html, string $title): string
+    {
+        $context = new PageContext(null, 1, true, false, '/__specimen');
+
+        // Its words are the admin's, like the canvas's: the Design System is part of the admin.
+        return $this->document($context, [['id' => 'specimen', 'type' => 'outlet', 'props' => []]], function () use ($html) {
+            $this->blocks->uses('fields');
+            $translations = $this->cms->app()->make(Translations::class);
+            $translations->apply($this->adminLanguage($translations));
+
+            return $html();
+        }, $title);
+    }
+
     /** An entry's blocks as plain text-bearing blocks (components, Repeats and bindings resolved). */
     public function materialize(Entry $entry, array $nodes): array
     {

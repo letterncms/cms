@@ -17,35 +17,19 @@
   .cms-mc > :nth-child(10) { --i: 9; } .cms-mc > :nth-child(11) { --i: 10; } .cms-mc > :nth-child(12) { --i: 11; } .cms-mc > :nth-child(n+13) { --i: 12; }
   .cms-motion-toggle[hidden] { display: none; }
 
-  /* Forms on any page: type and color follow the design's input, label and button styles. */
-  .cms-form { display: grid; gap: var(--space-4, 1rem); }
-  .cms-form [data-field] { display: grid; gap: var(--space-1, 0.25rem); }
-  .cms-form [data-field] > label { font-weight: var(--font-weight-medium, 500); font-size: var(--text-sm, 0.875rem); }
-  .cms-form [data-field] input:not([type=checkbox]):not([type=radio]), .cms-form [data-field] select, .cms-form [data-field] textarea { width: 100%; font: inherit; color: inherit; padding: 0.65em 0.8em; border: 1px solid var(--color-border, rgb(0 0 0 / 0.2)); border-radius: var(--radius-sm, 0.4rem); background: var(--color-background, transparent); }
-  .cms-form .cms-choice { display: flex; gap: var(--space-2, 0.5rem); align-items: flex-start; font-weight: 400; }
-  .cms-form .cms-help { margin: 0; font-size: var(--text-xs, 0.8rem); color: var(--color-muted, inherit); }
-  .cms-form .cms-msg { margin: 0; font-size: var(--text-xs, 0.8rem); color: var(--color-danger, #b91c1c); }
-  .cms-form [data-field].is-invalid input, .cms-form [data-field].is-invalid textarea, .cms-form [data-field].is-invalid select { border-color: var(--color-danger, #b91c1c); }
+  /* Forms. Fields, and the space between them, are the design system's (`fields` in tokens.json, fields.css). */
   .cms-form__hp { position: absolute !important; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .cms-form__submit { justify-self: start; }
-
-  /* Stacked forms: the account pages and the checkout. Tall enough to tap, with borders that can be seen. */
-  .cms-form[data-look="stacked"] { font-size: var(--text-sm, 0.875rem); line-height: 1.5; }
-  .cms-form[data-look="stacked"] [data-field] > label { font-size: inherit; }
-  .cms-form[data-look="stacked"] [data-field] input:not([type=checkbox]):not([type=radio]), .cms-form[data-look="stacked"] [data-field] select { height: 2.75rem; padding-block: 0; padding-inline: 0.75rem; border-color: var(--color-faint, rgb(0 0 0 / 0.45)); border-radius: var(--radius-md, 0.5rem); background: var(--color-raised, transparent); font-size: var(--text-base, 1rem); }
-  .cms-form[data-look="stacked"] [data-field] select { appearance: none; padding-right: 2.25rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%236b6760' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; }
-  .cms-form[data-look="stacked"] [data-field] textarea { border-color: var(--color-faint, rgb(0 0 0 / 0.45)); border-radius: var(--radius-md, 0.5rem); background: var(--color-raised, transparent); font-size: var(--text-base, 1rem); }
-  .cms-form[data-look="stacked"] [data-field].is-invalid input, .cms-form[data-look="stacked"] [data-field].is-invalid select, .cms-form[data-look="stacked"] [data-field].is-invalid textarea { border-color: var(--color-danger, #b91c1c); box-shadow: inset 0 0 0 1px var(--color-danger, #b91c1c); }
-  .cms-form[data-look="stacked"] input:focus-visible, .cms-form[data-look="stacked"] select:focus-visible, .cms-form[data-look="stacked"] textarea:focus-visible { outline: 2px solid var(--color-focus, currentColor); outline-offset: 1px; }
-  .cms-form[data-look="stacked"] input[type=checkbox], .cms-form[data-look="stacked"] input[type=radio], .cms-licence__form input[type=checkbox] { flex: none; width: 1.125rem; height: 1.125rem; margin: 0.125rem 0 0; accent-color: var(--color-ink, currentColor); }
-  .cms-form[data-look="stacked"] .cms-help, .cms-form[data-look="stacked"] .cms-msg { font-size: 0.8125rem; line-height: 1.45; }
-  .cms-form[data-look="stacked"] .cms-choice { line-height: 1.45; cursor: pointer; }
-  .cms-form[data-look="stacked"] .cms-form__submit { justify-self: stretch; height: 2.75rem; padding-block: 0; }
   .cms-form__row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-3, 0.75rem); align-items: start; }
+
+  /* Stacked forms (the account pages, the checkout): smaller text, a submit button as wide as the fields. */
+  .cms-form[data-look="stacked"] { font-size: var(--text-sm, 0.875rem); line-height: 1.5; }
+  .cms-form[data-look="stacked"] .cms-form__submit { justify-self: stretch; }
+
   .cms-reveal { position: relative; }
-  .cms-reveal input { padding-right: 7.5rem !important; }
+  .cms-reveal .cms-input { padding-right: 7.5rem; }
   .cms-reveal__button { position: absolute; inset-block: 0.25rem; right: 0.25rem; padding-inline: 0.625rem; font: inherit; font-size: 0.8125rem; color: var(--color-muted, inherit); background: none; border: 0; border-radius: var(--radius-sm, 0.25rem); cursor: pointer; }
-  .cms-reveal__button:hover { color: var(--color-ink, inherit); }
+  .cms-reveal__button:hover { color: var(--color-foreground, inherit); }
   .cms-button[data-danger] { color: var(--color-danger, #b91c1c) !important; }
 
   /* Public account pages. */
@@ -118,30 +102,21 @@
   [data-cms-filter-empty][hidden] { display: none; }
   .cms-filter__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   fieldset.cms-filter-choice { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; min-inline-size: 0; }
-  .cms-filter__legend { font-size: .875em; opacity: .7; padding: 0; margin-bottom: .35rem; display: block; }
+  .cms-filter__legend { padding: 0; margin-bottom: var(--space-1, 0.375rem); }
   fieldset.cms-filter-choice > .cms-filter__legend { flex-basis: 100%; float: left; }
-  .cms-filter__option { position: relative; display: inline-flex; gap: .4em; align-items: baseline; padding: .35em .75em; border: 1px solid var(--color-border, rgb(0 0 0 / 0.15)); border-radius: var(--radius-full, 999px); cursor: pointer; }
+  /* Chips are the design system's (.cms-chip); the list look is the filter's own. */
+  .cms-filter__option { position: relative; cursor: pointer; }
   .cms-filter__option input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-  .cms-filter__option:has(input:checked) { background: currentColor; }
-  .cms-filter__option:has(input:checked) > span { color: var(--color-background, #fff); }
-  .cms-filter__option:has(input:focus-visible) { outline: 2px solid currentColor; outline-offset: 2px; }
-  .cms-filter__count { opacity: .65; font-size: .85em; }
+  .cms-filter__count { opacity: .65; font-size: .85em; font-variant-numeric: tabular-nums; }
   [data-carousel-to] { opacity: .6; transition: opacity 160ms ease; }
   [data-carousel-to]:hover, [data-carousel-to][data-current] { opacity: 1; }
   fieldset.cms-filter-choice[data-look="list"] { flex-direction: column; flex-wrap: nowrap; gap: .125rem; }
   [data-look="list"] .cms-filter__option { display: flex; justify-content: space-between; align-items: center; border: 0; border-radius: var(--radius-sm, .4rem); padding: .375rem .625rem; margin-inline: -.625rem; transition: background-color 160ms ease; }
   [data-look="list"] .cms-filter__option:hover { background: rgb(0 0 0 / 0.04); }
   [data-look="list"] .cms-filter__option:has(input:checked) { background: rgb(0 0 0 / 0.06); }
-  [data-look="list"] .cms-filter__option:has(input:checked) > span { color: inherit; }
-  .cms-filter-sort { display: block; }
+  [data-look="list"] .cms-filter__option:has(input:focus-visible) { outline: 2px solid currentColor; outline-offset: -2px; }
+  .cms-filter-sort, .cms-filter-search { display: grid; align-content: start; }
   .cms-filter__legend--hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
-  .cms-filter-search { display: block; }
-  .cms-filter-sort select, .cms-filter-search input { box-sizing: border-box; width: 100%; height: 2.75em; margin: 0; font: inherit; line-height: 1.25; color: inherit; border: 1px solid var(--color-border, rgb(0 0 0 / 0.15)); border-radius: var(--radius-sm, .4rem); background-color: var(--color-raised, #fff); transition: border-color 140ms ease, box-shadow 140ms ease; }
-  .cms-filter-sort select:hover, .cms-filter-search input:hover { border-color: color-mix(in srgb, currentColor 25%, transparent); }
-  .cms-filter-sort select:focus-visible, .cms-filter-search input:focus-visible { outline: none; border-color: color-mix(in srgb, currentColor 45%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent); }
-  .cms-filter-sort select { appearance: none; padding: 0 2.2em 0 .8em; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b6760' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .7em center; background-size: 1em; cursor: pointer; }
-  .cms-filter-search input { appearance: none; padding: 0 .8em; }
-  .cms-filter-search input::placeholder { color: inherit; opacity: .55; }
 
   .cms-box, .cms-repeat { min-width: 0; }
   a.cms-box, a.cms-link { color: inherit; text-decoration: none; }
@@ -176,26 +151,26 @@
   .cms-buttons[data-justify="center"] { justify-content: center; }
   .cms-buttons[data-justify="end"] { justify-content: flex-end; }
   .cms-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5em; font: inherit; font-weight: var(--font-weight-medium, 500); line-height: 1.2; text-decoration: none; border-radius: var(--radius-md, 0.5rem); border: 1px solid transparent; background: none; color: inherit; cursor: pointer; transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease, border-color 150ms ease, transform 150ms ease; white-space: nowrap; }
-  .cms-button:active { transform: translateY(1px); }
+  .cms-button:is(:active, [data-cms-state~=active]) { transform: translateY(1px); }
+  .cms-button[data-cms-state~=focus] { outline: 2px solid var(--color-focus, var(--color-primary, currentColor)); outline-offset: 3px; }
+  .cms-button:is(:disabled, [aria-disabled=true], [data-cms-state~=disabled]) { opacity: 0.5; cursor: not-allowed; transform: none; }
   .cms-button__icon { width: 1.1em; height: 1.1em; flex: none; }
   .cms-button[data-size="sm"] { padding: 0.45em 0.9em; font-size: var(--text-sm, 0.875rem); }
   .cms-button[data-size="md"] { padding: 0.7em 1.25em; }
   .cms-button[data-size="lg"] { padding: 0.9em 1.6em; font-size: var(--text-lg, 1.125rem); }
   .cms-button[data-variant="primary"] { background: var(--color-primary, #111); color: var(--color-primary-foreground, #fff); }
-  .cms-button[data-variant="primary"]:hover { opacity: 0.9; }
+  .cms-button[data-variant="primary"]:is(:hover, [data-cms-state~=hover]) { opacity: 0.9; }
   .cms-button[data-variant="secondary"] { border-color: var(--color-border, rgb(0 0 0 / 0.15)); }
-  .cms-button[data-variant="secondary"]:hover { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
-  .cms-button[data-variant="ghost"]:hover { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
+  .cms-button[data-variant="secondary"]:is(:hover, [data-cms-state~=hover]) { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
+  .cms-button[data-variant="ghost"]:is(:hover, [data-cms-state~=hover]) { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
   .cms-button[data-variant="link"] { padding-inline: 0; color: var(--color-primary, inherit); text-decoration: underline; text-underline-offset: 0.2em; }
 
   .cms-heading { scroll-margin-top: var(--cms-scroll-offset, 5rem); }
   .cms-heading__link { float: left; margin-left: -1.1em; width: 1.1em; color: var(--color-muted, rgb(0 0 0 / .45)); text-decoration: none; opacity: 0; transition: opacity 150ms ease; }
   .cms-heading:hover .cms-heading__link, .cms-heading__link:focus-visible { opacity: 1; }
 
-  .cms-input { width: 100%; min-height: 2.5rem; padding: 0.55em 0.8em; border: 1px solid var(--color-border, rgb(0 0 0 / .15)); border-radius: var(--radius-md, 0.5rem); background: var(--color-background, #fff); color: inherit; font: inherit; }
-  .cms-input:focus-visible { outline: 2px solid var(--color-primary, currentColor); outline-offset: 1px; }
-  input.cms-input[type="range"], input.cms-input[type="checkbox"] { width: auto; min-height: 0; padding: 0; border: 0; accent-color: var(--color-primary, auto); }
-  textarea.cms-input { min-height: 6rem; resize: vertical; }
+  /* The Input block looks like every other field (the design system's `fields`); a slider takes the width. */
+  input.cms-input[type="range"] { width: 100%; accent-color: var(--color-primary, auto); }
 
   .cms-icon { display: inline-flex; flex: none; width: 1.25em; height: 1.25em; line-height: 0; }
   .cms-icon svg { width: 100%; height: 100%; }

@@ -10,7 +10,7 @@ use Cms\Modules\Blocks\StyleCompiler;
 /**
  * Turns the design system into one stylesheet: a small reset, @font-face rules,
  * tokens as custom properties (+ dark mode), element defaults, prose styles,
- * button variants and page transitions. custom.css is appended by Design.
+ * form fields, button variants and page transitions. custom.css is appended by Design.
  */
 final class DesignCompiler
 {
@@ -24,7 +24,7 @@ final class DesignCompiler
 
     public const array ELEMENTS = [
         'html', 'body', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'a:hover', 'small', 'strong', 'em', 'mark', 'code', 'kbd', 'pre', 'blockquote',
-        'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', 'button', 'input', 'textarea', 'select', 'label', '::selection', ':focus-visible',
+        'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', 'button', '::selection', ':focus-visible',
         'h1 em', 'h2 em', 'h3 em', 'h1 strong', 'h2 strong',
     ];
 
@@ -70,6 +70,8 @@ final class DesignCompiler
         }
 
         $out[] = ':root{'.implode(';', $light).'}';
+        // Form fields read these; a section with its own theme works them out again from its own colors.
+        $out[] = FieldStyles::css($design->fields());
 
         if ($dark !== []) {
             $block = implode(';', $dark);
@@ -106,11 +108,15 @@ final class DesignCompiler
 
             foreach (['base' => '', 'hover' => ':hover', 'active' => ':active', 'focus-visible' => ':focus-visible'] as $state => $pseudo) {
                 if (is_array($states[$state] ?? null) && ($css = $this->declarations($states[$state])) !== '') {
-                    $rule = ".cms-button.cms-button[data-variant=\"{$variant}\"]{$pseudo}{{$css}}";
-                    $buttons[] = $state === 'hover' ? "@media (hover:hover){{$rule}}" : $rule;
+                    $selector = ".cms-button.cms-button[data-variant=\"{$variant}\"]";
+                    // The design system's specimen shows a state with data-cms-state, without a pointer.
+                    $forced = $state === 'base' ? '' : ",{$selector}[data-cms-state~=".($state === 'focus-visible' ? 'focus' : $state).']';
+                    $buttons[] = $state === 'hover' ? "@media (hover:hover){{$selector}{$pseudo}{{$css}}}{$selector}[data-cms-state~=hover]{{$css}}" : "{$selector}{$pseudo}{$forced}{{$css}}";
                 }
             }
         }
+
+        $out[] = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/fields.css');
 
         if ($buttons !== []) {
             $out[] = '@layer components{'.implode('', $buttons).'}';

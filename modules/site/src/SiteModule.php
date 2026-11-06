@@ -17,6 +17,7 @@ use Cms\Modules\Site\Build\SiteBuilder;
 use Cms\Modules\Site\Design\Design;
 use Cms\Modules\Site\Design\DesignCompiler;
 use Cms\Modules\Site\Design\DesignJson;
+use Cms\Modules\Site\Design\FieldStyles;
 use Cms\Modules\Site\Design\Fonts;
 use Cms\Modules\Site\Http\PublicPage;
 use Cms\Modules\Site\Http\SiteController;
@@ -231,6 +232,7 @@ final class SiteModule extends Plugin
 
         Route::middleware(['web', 'auth:web', 'cms.admin'])->group(static function (): void {
             Route::get('/__preview/{id}', [SiteController::class, 'preview'])->where('id', '[0-9a-z]{26}');
+            Route::get('/__specimen/{kind}', [SiteController::class, 'specimen'])->whereIn('kind', ['fields', 'buttons']);
             Route::post('/__preview', [SiteController::class, 'render']);
             Route::post('/__preview/{id}', [SiteController::class, 'render'])->where('id', '[0-9a-z]{26}');
         });
@@ -315,7 +317,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/get', [
             'label' => 'Design System',
-            'description' => 'The site’s design system (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
+            'description' => 'The site’s design system (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, form fields, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'handler' => function () use ($design) {
@@ -329,6 +331,8 @@ final class SiteModule extends Plugin
                     'styles' => (object) $json->styles(),
                     'prose' => (object) $json->prose(),
                     'buttons' => (object) $json->buttons(),
+                    'fields' => (object) $json->fields(),
+                    'fieldStyles' => FieldStyles::schema(),
                     'transition' => $json->transition(),
                     'breakpoints' => $json->breakpoints(),
                     'templates' => $this->app->make(Templates::class)->options(),
@@ -342,7 +346,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/update', [
             'label' => 'Update Design System',
-            'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, fonts or the page transition. Sections you pass replace the stored ones. The site rebuilds.',
+            'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, form fields, fonts or the page transition. Sections you pass replace the stored ones. The site rebuilds.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'tokens' => ['type' => 'object', 'description' => 'path => value'],
@@ -352,6 +356,7 @@ final class SiteModule extends Plugin
                 'styles' => ['type' => 'object', 'description' => 'Element styles: {"h1": {"fontSize": "token:text.5xl"}}'],
                 'prose' => ['type' => 'object'],
                 'buttons' => ['type' => 'object', 'description' => '{"primary": {"base": {...}, "hover": {...}}}'],
+                'fields' => ['type' => 'object', 'description' => 'Every form field of the site, part by part, over the defaults (design/get fieldStyles has each part, property, type and default): {"field": {"height": "3rem", "background": "token:color.raised", "radius": "token:radius.md"}, "checkbox": {"checked": "token:color.primary", "mark": "check"}, "switch": {"on": "token:color.primary"}}. Parts: field (every boxed field), hover, focus, invalid, disabled, label, help, spacing, select, textarea, checkbox, radio, switch, slider, tags, chips, file. A value is CSS, a token, or field:part.key to follow another property.'],
                 'fonts' => ['type' => 'array'],
                 'transition' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['none', 'fade', 'slide', 'scale']], 'duration' => ['type' => 'number']]],
             ]],
@@ -378,6 +383,7 @@ final class SiteModule extends Plugin
                 'styles' => ['type' => 'object'],
                 'prose' => ['type' => 'object'],
                 'buttons' => ['type' => 'object'],
+                'fields' => ['type' => 'object'],
                 'transition' => ['type' => 'object'],
                 'css' => ['type' => 'string', 'maxLength' => 200000],
             ]],
