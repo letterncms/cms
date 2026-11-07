@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.0 (2026-11-07)
+
 ### Changed
 
 - **Design System**: an element's or a button's style shows only what it sets, and starts empty. **Add a Property** offers every property, Font, Size and Margin first, and each row's ⋯ removes it.
