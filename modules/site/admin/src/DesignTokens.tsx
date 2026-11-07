@@ -37,6 +37,8 @@ interface ThemeInfo {
   controlSizes: Record<string, Record<string, string | string[]>>
   transition: { type: string; duration: number }
   elements: string[]
+  /** The elements prose styles, each in the prose sample. */
+  proseElements: string[]
   css: string
   js: string
 }
@@ -183,6 +185,7 @@ export default function DesignTokens() {
   const sidebar = useScreenSidebar()
   const [compiled, setCompiled] = useState<string | null>(null)
   const [buttonOpen, setButtonOpen] = useState<string | null>(null)
+  const [proseOpen, setProseOpen] = useState<string | null>(null)
   const [fieldOpen, setFieldOpen] = useState<string | null>(null)
   const frame = useRef<HTMLIFrameElement>(null)
 
@@ -215,7 +218,8 @@ export default function DesignTokens() {
   // Buttons and fields show beside their controls every variant and every kind of field, in each state,
   // drawn by the site: the part being edited is scrolled to and marked, and nothing else moves.
   const page = section === 'fields' || section === 'buttons' || section === 'sizes' || section === 'prose' ? `/__specimen/${section}` : '/'
-  const part = section === 'fields' ? specimenPart(fieldOpen) : section === 'buttons' ? buttonOpen : null
+  // The preview shows the part being edited: a field, a button variant, an element of prose (a link's hover is the link).
+  const part = section === 'fields' ? specimenPart(fieldOpen) : section === 'buttons' ? buttonOpen : section === 'prose' ? proseOpen?.replace(/:.*$/, '') || null : null
   useEffect(() => showPart(frame.current?.contentDocument, part, true), [part])
   useEffect(inject)
 
@@ -523,7 +527,7 @@ export default function DesignTokens() {
             </>
           )}
 
-          {section === 'prose' && <Prose value={current.prose} options={theme.data.elements ?? []} tokens={tokens} vars={siteVars} onChange={(prose) => update((d) => ({ ...d, prose }))} />}
+          {section === 'prose' && <Prose value={current.prose} options={theme.data.proseElements ?? []} tokens={tokens} vars={siteVars} open={proseOpen} onOpen={setProseOpen} onChange={(prose) => update((d) => ({ ...d, prose }))} />}
 
           {section === 'sizes' && <ControlSizeTable defaults={theme.data.controlSizes ?? {}} tokens={tokens} onSet={setControl} />}
           {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
@@ -703,8 +707,11 @@ function StyleControls({ value, onChange, fields }: { value: Declarations | unde
 }
 
 /** Elements (or prose elements) and their styles: a specimen each, its controls a click away. */
-function StyleList({ title, value, onChange, options, tokens, vars }: { title: string; value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties }) {
-  const [open, setOpen] = useState<string | null>(null)
+function StyleList({ title, value, onChange, options, tokens, vars, open: shown, onOpen }: { title: string; value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties; open?: string | null; onOpen?: (element: string | null) => void }) {
+  // The element open: held here, or by the screen when its preview follows it.
+  const [own, setOwn] = useState<string | null>(null)
+  const open = onOpen ? shown ?? null : own
+  const setOpen = onOpen ?? setOwn
   const free = options.filter((option) => !(option in value))
   const fields = [...textFields(tokens), ...boxFields()]
   return (
@@ -740,7 +747,7 @@ const PROSE_SPACING = (): [string, string, string][] => [
  * ones too), then how each element looks there. An element's top margin replaces the
  * spacing before it.
  */
-function Prose({ value, onChange, options, tokens, vars }: { value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties }) {
+function Prose({ value, onChange, options, tokens, vars, open, onOpen }: { value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties; open: string | null; onOpen: (element: string | null) => void }) {
   const { spacing = {}, ...elements } = value
   const write = (nextSpacing: Declarations, nextElements: Record<string, Declarations>) => onChange({ ...(Object.keys(nextSpacing).length ? { spacing: nextSpacing } : {}), ...nextElements })
   return (
@@ -763,7 +770,7 @@ function Prose({ value, onChange, options, tokens, vars }: { value: Record<strin
           </Setting>
         ))}
       </Group>
-      <StyleList title={t('Elements in Prose')} options={options} tokens={tokens} vars={vars} value={elements} onChange={(next) => write(spacing, next)} />
+      <StyleList title={t('Elements in Prose')} options={options} tokens={tokens} vars={vars} open={open} onOpen={onOpen} value={elements} onChange={(next) => write(spacing, next)} />
     </>
   )
 }

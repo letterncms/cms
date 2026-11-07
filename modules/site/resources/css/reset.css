@@ -18,15 +18,16 @@
 }
 @layer elements {
   /* Prose is a flow of blocks, whatever they are, spaced by the design system's Prose spacing. An element that only
-     holds blocks (data-cms-contents: Page Content without a box of its own) is looked through. */
+     holds blocks (data-cms-contents: Page Content without a box of its own) is looked through. A block inside keeps
+     its own layout: a Box or Repeat is not text (as a list or a link), and one with text of its own is Prose too. */
   .cms-prose > * + *, .cms-prose > [data-cms-contents] > * + *, .cms-prose > * + [data-cms-contents] > :first-child { margin-top: var(--prose-blocks, 1.1em); }
   .cms-prose > * + :is(h2, h3, h4, h5, h6), .cms-prose > [data-cms-contents] > * + :is(h2, h3, h4, h5, h6), .cms-prose > * + [data-cms-contents] > :is(h2, h3, h4, h5, h6):first-child { margin-top: var(--prose-headings, 1.8em); }
   .cms-prose > :is(h2, h3, h4, h5, h6) + *, .cms-prose > [data-cms-contents] > :is(h2, h3, h4, h5, h6) + *, .cms-prose > :is(h2, h3, h4, h5, h6) + [data-cms-contents] > :first-child { margin-top: var(--prose-after-headings, .6em); }
-  .cms-prose ul { list-style: disc; padding-left: 1.25em; }
-  .cms-prose ol { list-style: decimal; padding-left: 1.25em; }
-  .cms-prose li + li { margin-top: var(--prose-items, .35em); }
-  .cms-prose a { text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: .2em; }
-  .cms-prose a:hover { text-decoration-color: currentColor; }
+  .cms-prose ul:where(:not(.cms-box, .cms-repeat)) { list-style: disc; padding-left: 1.25em; }
+  .cms-prose ol:where(:not(.cms-box, .cms-repeat)) { list-style: decimal; padding-left: 1.25em; }
+  .cms-prose :where(ul:not(.cms-box, .cms-repeat), ol:not(.cms-box, .cms-repeat)) > li + li { margin-top: var(--prose-items, .35em); }
+  .cms-prose a:where(:not(.cms-box, .cms-repeat)) { text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: .2em; }
+  .cms-prose a:where(:not(.cms-box, .cms-repeat)):hover { text-decoration-color: currentColor; }
   .cms-prose :not(pre) > code { padding: .1em .35em; border-radius: .3em; background: var(--color-surface, rgb(0 0 0 / .05)); font-size: .9em; }
-  .cms-prose blockquote { padding-left: 1em; border-left: 2px solid var(--color-border, rgb(0 0 0 / .12)); }
+  .cms-prose blockquote:where(:not(.cms-box, .cms-repeat)) { padding-left: 1em; border-left: 2px solid var(--color-border, rgb(0 0 0 / .12)); }
 }

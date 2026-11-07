@@ -28,6 +28,11 @@ final class DesignCompiler
         'h1 em', 'h2 em', 'h3 em', 'h1 strong', 'h2 strong',
     ];
 
+    /** The elements prose styles: every one is in the Design System's prose sample. */
+    public const array PROSE_ELEMENTS = [
+        'h2', 'h3', 'h4', 'p', 'a', 'a:hover', 'strong', 'em', 'mark', 'small', 'code', 'kbd', 'pre', 'blockquote', 'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', '::selection',
+    ];
+
     /** @param callable(string): ?string $fontUrl resolves a font src to a public URL */
     public function css(DesignJson $design, callable $fontUrl): string
     {
@@ -111,12 +116,14 @@ final class DesignCompiler
             // Space above an element is part of the flow: it opens a gap after the block before, never above the first.
             $above = array_intersect_key($declarations, ['marginTop' => true]);
 
+            $text = self::proseText($selector);
+
             if (($css = $this->declarations(array_diff_key($declarations, $above))) !== '') {
-                $elements[] = ".cms-prose {$selector}{{$css}}";
+                $elements[] = ".cms-prose {$text}{{$css}}";
             }
 
             if ($above !== [] && ! str_contains($selector, ':') && ! str_contains($selector, ' ') && ($css = $this->declarations($above)) !== '') {
-                $elements[] = ".cms-prose > * + {$selector},.cms-prose > [data-cms-contents] > * + {$selector},.cms-prose > * + [data-cms-contents] > {$selector}:first-child{{$css}}";
+                $elements[] = ".cms-prose > * + {$text},.cms-prose > [data-cms-contents] > * + {$text},.cms-prose > * + [data-cms-contents] > {$text}:first-child{{$css}}";
             }
         }
 
@@ -175,6 +182,24 @@ final class DesignCompiler
     }
 
     /** camelCase (or short) keys → declarations. */
+    /**
+     * An element of prose as text: never a Box or a Repeat drawn as that element (a nav as a list, a card as
+     * a link), which are layout; the text inside them still is. `a:hover` → `a:where(:not(.cms-box, .cms-repeat)):hover`.
+     */
+    private static function proseText(string $selector): string
+    {
+        if (str_starts_with($selector, ':')) {
+            return $selector;
+        }
+
+        // A list item belongs to its list: the items of a list that is a Box or a Repeat are its layout too.
+        if ($selector === 'li') {
+            return ':where(ul:not(.cms-box, .cms-repeat), ol:not(.cms-box, .cms-repeat)) > li';
+        }
+
+        return (string) preg_replace('/^(.*?)([a-z][a-z0-9]*)((?::[a-z-]+)*)$/', '$1$2:where(:not(.cms-box, .cms-repeat))$3', $selector);
+    }
+
     public function declarations(array $declarations): string
     {
         $css = [];

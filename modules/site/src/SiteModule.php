@@ -342,6 +342,7 @@ final class SiteModule extends Plugin
                     'css' => $design()->customCss(),
                     'js' => $design()->customJs(),
                     'elements' => DesignCompiler::ELEMENTS,
+                    'proseElements' => DesignCompiler::PROSE_ELEMENTS,
                 ];
             },
         ]);
