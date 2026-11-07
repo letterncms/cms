@@ -1,5 +1,5 @@
 import { t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Fields, Icon, IconButton, Popover, cn } from '@letterncms/ui'
+import { Fields, Icon, IconButton, Menu, Popover, cn, type MenuItemDef } from '@letterncms/ui'
 import { useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
 import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
@@ -210,47 +210,91 @@ export function StyleSection({ s, group, title, open, empty, children }: { s: St
 }
 
 /**
- * `blocks-more` — the properties of a style no control above it covers (`hidden`), each with
- * its own control, and a + that adds one of `properties`. The value is the declarations.
+ * One row of a style in the Design System: its field, inline, and a ⋯ menu at the end
+ * (shown on hover) with what can be done to it. Every row keeps the menu's place, so
+ * controls line up whether or not a row has one.
+ */
+export function StyleRow({ field, value, onChange, actions, disabled, bare }: { field: FieldDef; value: unknown; onChange: (value: unknown) => void; actions: MenuItemDef[]; disabled?: boolean; bare?: boolean }) {
+  // A name longer than the label column sits above its control, whole. A shadow list (`bare`) brings its own label and add button.
+  const long = !bare && field.type !== 'group' && String(field.label).length > 14
+  return (
+    <div className="group/row flex items-start gap-1">
+      <Fields bare={bare} layout={long || bare ? undefined : 'inline'} className={cn('min-w-0 flex-1', long && 'gap-y-1')} disabled={disabled} fields={[field]} values={{ [field.handle]: value ?? null }} onChange={(_, v) => onChange(v)} />
+      <span className={cn('flex size-6 shrink-0 items-center justify-center', long ? 'mt-7' : 'mt-0.5')}>
+        {actions.length > 0 && !disabled && (
+          <Menu
+            trigger={<IconButton icon="more" label={t('Property Actions')} size="xs" className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />}
+            items={actions}
+          />
+        )}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * `blocks-more` — a style of the Design System, row by row: its `controls` first, then the
+ * properties no control covers, each with its own control, and a + that adds one. Each row
+ * has a ⋯ menu: Reset for a control that is set, Remove for an added property. `hidden`
+ * are properties drawn elsewhere. The value is the declarations.
  */
 export function MoreStylesField({ field, value, onChange, disabled }: FieldProps<Record<string, string | number> | null>) {
   const decl = value ?? {}
   const [adding, setAdding] = useState<string | null>(null)
-  const hidden = new Set((field.hidden as string[] | undefined) ?? [])
+  const controls = (field.controls as FieldDef[] | undefined) ?? []
+  const keysOf = (f: FieldDef) => ((f.fields as FieldDef[] | undefined) ?? [f]).map((sub) => sub.handle)
+  const hidden = new Set([...((field.hidden as string[] | undefined) ?? []), ...controls.flatMap(keysOf)])
   const shown = [...Object.keys(decl).filter((key) => !hidden.has(key)), ...(adding && !(adding in decl) ? [adding] : [])]
   const more = moreStyles()
   // A style of the Design System can take what has no control there: the panels' extra properties, and these the inspector has rows for.
   const offered = [...Object.keys(more).filter((key) => more[key].group !== 'item' && more[key].group !== 'layout'), ...Object.keys(designStyles())].filter((key) => !hidden.has(key) && !shown.includes(key))
+  const write = (patch: Record<string, unknown>) => {
+    const next: Record<string, string | number> = { ...decl }
+    for (const [key, v] of Object.entries(patch)) {
+      if (v === null || v === undefined || v === '') delete next[key]
+      else next[key] = v as string | number
+    }
+    onChange(next)
+  }
+  const remove = (key: string) => {
+    if (key === adding) setAdding(null)
+    if (key in decl) write({ [key]: null })
+  }
   return (
-    <>
-      {shown.map((key) => {
-        const def = { ...fieldOf(key, more), status: key in decl ? 'own' : undefined, reset: () => { setAdding(null); onChange(Object.fromEntries(Object.entries(decl).filter(([k]) => k !== key))) } } as FieldDef
-        return (
-          <Fields
-            key={key}
-            // A name longer than the label column sits above its control, whole.
-            layout={String(def.label).length > 14 ? undefined : 'inline'}
-            className={String(def.label).length > 14 ? 'py-1' : undefined}
-            disabled={disabled}
-            fields={[def]}
-            values={{ [key]: decl[key] ?? null }}
-            onChange={(_, v) => {
-              if (key === adding) setAdding(null)
-              onChange(v === null || v === undefined || v === '' ? Object.fromEntries(Object.entries(decl).filter(([k]) => k !== key)) : { ...decl, [key]: v as string })
-            }}
-          />
-        )
+    <div className="space-y-1">
+      {controls.map((control) => {
+        const keys = keysOf(control)
+        const set = keys.some((key) => key in decl)
+        const reset = () => write(Object.fromEntries(keys.map((key) => [key, null])))
+        const actions: MenuItemDef[] = set ? [{ label: t('Reset'), icon: 'undo', onSelect: reset }] : []
+        const def = { ...control, status: set ? 'own' : undefined, reset } as FieldDef
+        const current = control.fields ? Object.fromEntries(keys.map((key) => [key, decl[key] ?? null])) : decl[control.handle]
+        const change = (v: unknown) => write(control.fields ? Object.fromEntries(keys.map((key) => [key, (v as Record<string, unknown> | null)?.[key] ?? null])) : { [control.handle]: v })
+        return <StyleRow key={control.handle} field={def} value={current} disabled={disabled} actions={actions} bare={control.component === 'blocks-shadows'} onChange={change} />
       })}
+      {shown.map((key) => (
+        <StyleRow
+          key={key}
+          field={fieldOf(key, more)}
+          value={decl[key]}
+          disabled={disabled}
+          actions={[{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => remove(key) }]}
+          onChange={(v) => {
+            if (key === adding) setAdding(null)
+            write({ [key]: v })
+          }}
+        />
+      ))}
       {!disabled && offered.length > 0 && (
         <div className="flex h-8 items-center">
           <AddStyle properties={offered} onPick={setAdding}>
-            <button type="button" className="flex h-7 items-center gap-1.5 rounded-sm px-1.5 -ml-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
+            <button type="button" className="-ml-1.5 flex h-7 items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
               <Icon name="b-plus" size={12} />
               {t('Add a Property')}
             </button>
           </AddStyle>
         </div>
       )}
-    </>
+    </div>
   )
 }
