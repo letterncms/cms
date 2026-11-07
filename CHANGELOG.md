@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.1 (2026-11-07)
+
 ### Changed
 
 - **Prose**: opening an element in **Elements in Prose** shows it in the preview, an article with every element prose can style; **+** offers just those.
