@@ -17,6 +17,8 @@ export interface FieldsProps {
   bare?: boolean
   /** `stacked` (default): labels above, a 6-column grid. `inline`: compact rows with the label left — for inspectors and toolbars. */
   layout?: 'stacked' | 'inline'
+  /** `inline`: the label column's width in px (88, the inspector's, unless a screen lines its rows up to another). */
+  labelWidth?: number
 }
 
 /** Conditional fields: `if: { otherField: value | [values] }`. */
@@ -32,7 +34,7 @@ export function visible(field: FieldDef, values: Record<string, any>): boolean {
 const widths: Record<string, string> = { full: 'col-span-6', half: 'col-span-6 md:col-span-3', third: 'col-span-6 md:col-span-2', 'two-thirds': 'col-span-6 md:col-span-4' }
 
 /** Renders a blueprint: each field with the component registered for its type. */
-export function Fields({ fields, values, onChange, errors = {}, context = {}, disabled, className, bare, layout = 'stacked' }: FieldsProps) {
+export function Fields({ fields, values, onChange, errors = {}, context = {}, disabled, className, bare, layout = 'stacked', labelWidth }: FieldsProps) {
   useSyncExternalStore(registry.fields.subscribe, registry.fields.version)
   // Before sign-in there is no manifest: fields then render by their own type (core types are registered at start-up).
   const manifest = useManifestIfLoaded()
@@ -69,7 +71,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
           const stacked = !bare && field.type === 'select' && !field.component && segmented && options.length > 2 && options.some((o) => typeof o === 'string' || (o && typeof o === 'object' && 'label' in o && o.label))
           return (
             <div data-field={field.handle} key={field.handle} className={cn('flex min-w-0', stacked ? 'flex-col items-stretch gap-1 py-0.5' : 'items-center gap-2', field.className ? (field.className as string) : 'min-h-7')}>
-              {!bare && field.type !== 'toggle' && <InlineLabel field={accessible(field)} stacked={stacked} />}
+              {!bare && field.type !== 'toggle' && <InlineLabel field={accessible(field)} stacked={stacked} width={labelWidth} />}
               <div className={cn('min-w-0', !stacked && 'flex-1')}>
                 <Component field={accessible(field)} value={values[field.handle] ?? field.default ?? null} onChange={(v: unknown) => onChange(field.handle, v)} error={fieldError(field)} disabled={disabled} context={{ ...context, values, errors }} />
                 {fieldError(field) && <FieldError id={`${controlId(field)}-error`} className="mt-1">{fieldError(field)}</FieldError>}
@@ -132,20 +134,22 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
  * `status: 'own'` (set here) reads in ink, and with a `reset` function on the field clicking it
  * clears the value; `'inherited'` (from a breakpoint, state or component) stays muted with a small dot.
  */
-function InlineLabel({ field, stacked }: { field: FieldDef; stacked?: boolean }) {
+function InlineLabel({ field, stacked, width }: { field: FieldDef; stacked?: boolean; width?: number }) {
   const status = field.status as 'own' | 'inherited' | undefined
   const reset = field.reset as (() => void) | undefined
-  const className = cn('flex min-h-7 min-w-0 shrink-0 items-center gap-1 text-left text-xs', stacked ? '[overflow-wrap:anywhere]' : 'h-7 w-[88px]', status === 'own' ? 'text-ink' : 'text-muted')
-  const text = <span className={cn('min-w-0', !stacked && 'truncate')}>{field.label}</span>
+  const className = cn('flex min-h-7 min-w-0 shrink-0 items-center gap-1 text-left text-xs [overflow-wrap:anywhere]', !stacked && !width && 'w-[88px]', status === 'own' ? 'text-ink' : 'text-muted')
+  const style = !stacked && width ? { width } : undefined
+  // A name longer than the column wraps in it, beside its control.
+  const text = <span className={cn('min-w-0', !stacked && 'py-1 leading-[1.25]')}>{field.label}</span>
   if (status === 'own' && reset) {
     return (
       <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
-        <button type="button" onClick={reset} className={cn(className, 'decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</button>
+        <button type="button" onClick={reset} style={style} className={cn(className, 'decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</button>
       </Tooltip>
     )
   }
   return (
-    <label htmlFor={fieldControlId(field)} className={className} title={status === 'inherited' ? t('Inherited from a larger screen, another state or the component') : field.instructions}>
+    <label htmlFor={fieldControlId(field)} className={className} style={style} title={status === 'inherited' ? t('Inherited from a larger screen, another state or the component') : field.instructions}>
       {text}
       {status === 'inherited' && <span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden />}
     </label>

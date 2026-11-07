@@ -26,9 +26,9 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
       alignContent: choice(t('Align Content'), ['normal', 'start', 'center', 'end', 'space-between', 'space-around', 'space-evenly', 'stretch']),
       placeItems: value(t('Place Items'), 'center'),
       placeContent: value(t('Place Content'), 'center'),
-      gridTemplateAreas: value(t('Grid Template Areas'), '"a b" "c c"'),
-      gridAutoColumns: value(t('Grid Auto Columns'), 'auto'),
-      gridAutoRows: value(t('Grid Auto Rows'), 'auto'),
+      gridTemplateAreas: value(t('Grid Areas'), '"a b" "c c"'),
+      gridAutoColumns: value(t('Auto Columns'), 'auto'),
+      gridAutoRows: value(t('Auto Rows'), 'auto'),
       columns: number(t('Columns'), { placeholder: t('Auto'), min: 1 }),
       columnRule: value(t('Column Rule'), '1px solid'),
       boxSizing: choice(t('Box Sizing'), ['border-box', 'content-box']),
@@ -50,32 +50,32 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
     ...of('size', {
       overflowX: choice(t('Overflow X'), ['visible', 'hidden', 'clip', 'scroll', 'auto']),
       overflowY: choice(t('Overflow Y'), ['visible', 'hidden', 'clip', 'scroll', 'auto']),
-      overscrollBehavior: choice(t('Overscroll Behavior'), ['auto', 'contain', 'none']),
-      scrollSnapType: choice(t('Scroll Snap Type'), ['none', 'x mandatory', 'x proximity', 'y mandatory', 'y proximity', 'both mandatory']),
-      scrollSnapAlign: choice(t('Scroll Snap Align'), ['none', 'start', 'center', 'end']),
-      scrollMarginTop: length(t('Scroll Margin Top')),
+      overscrollBehavior: choice(t('Overscroll'), ['auto', 'contain', 'none']),
+      scrollSnapType: choice(t('Snap Type'), ['none', 'x mandatory', 'x proximity', 'y mandatory', 'y proximity', 'both mandatory']),
+      scrollSnapAlign: choice(t('Snap Align'), ['none', 'start', 'center', 'end']),
+      scrollMarginTop: length(t('Scroll Margin')),
       scrollPadding: length(t('Scroll Padding')),
-      scrollbarWidth: choice(t('Scrollbar Width'), ['auto', 'thin', 'none']),
+      scrollbarWidth: choice(t('Scrollbar'), ['auto', 'thin', 'none']),
     }),
     ...of('typography', {
-      textDecorationColor: color(t('Text Decoration Color')),
-      textDecorationThickness: length(t('Text Decoration Thickness'), { placeholder: t('Auto') }),
-      textUnderlineOffset: length(t('Text Underline Offset'), { unit: 'em', units: ['em', 'px'], step: 0.05, placeholder: t('Auto') }),
+      textDecorationColor: color(t('Decoration Color')),
+      textDecorationThickness: length(t('Line Thickness'), { placeholder: t('Auto') }),
+      textUnderlineOffset: length(t('Underline Offset'), { unit: 'em', units: ['em', 'px'], step: 0.05, placeholder: t('Auto') }),
       whiteSpace: choice(t('White Space'), ['normal', 'nowrap', 'pre', 'pre-wrap', 'pre-line', 'break-spaces']),
       wordBreak: choice(t('Word Break'), ['normal', 'break-all', 'keep-all', 'break-word']),
       overflowWrap: choice(t('Overflow Wrap'), ['normal', 'anywhere', 'break-word']),
       hyphens: choice(t('Hyphens'), ['manual', 'auto', 'none']),
-      textIndent: length(t('Text Indent'), { unit: 'em', units: ['em', 'px', 'rem'] }),
+      textIndent: length(t('Indent'), { unit: 'em', units: ['em', 'px', 'rem'] }),
       textOverflow: choice(t('Text Overflow'), ['clip', 'ellipsis']),
-      fontVariantNumeric: choice(t('Font Variant Numeric'), ['normal', 'tabular-nums', 'proportional-nums', 'lining-nums', 'oldstyle-nums', 'slashed-zero']),
-      fontFeatureSettings: value(t('Font Feature Settings'), '"ss01"'),
-      fontVariationSettings: value(t('Font Variation Settings'), '"wght" 500'),
+      fontVariantNumeric: choice(t('Numbers'), ['normal', 'tabular-nums', 'proportional-nums', 'lining-nums', 'oldstyle-nums', 'slashed-zero']),
+      fontFeatureSettings: value(t('Font Features'), '"ss01"'),
+      fontVariationSettings: value(t('Font Variations'), '"wght" 500'),
       listStyle: choice(t('List Style'), ['none', 'disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-alpha', 'upper-alpha', 'lower-roman', 'upper-roman']),
       verticalAlign: choice(t('Vertical Align'), ['baseline', 'top', 'middle', 'bottom', 'text-top', 'text-bottom', 'sub', 'super']),
     }),
     ...of('fill', {
       background: value(t('Background'), 'none'),
-      backgroundBlendMode: choice(t('Background Blend Mode'), BLEND),
+      backgroundBlendMode: choice(t('Blend Mode'), BLEND),
     }),
     ...of('effects', {
       userSelect: choice(t('User Select'), ['auto', 'none', 'text', 'all']),
@@ -88,15 +88,15 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
       content: value(t('Content'), '""'),
     }),
     ...of('transform', {
-      perspectiveOrigin: value(t('Perspective Origin'), 'center'),
+      perspectiveOrigin: value(t('Vanishing Point'), 'center'),
       transformStyle: choice(t('Transform Style'), ['flat', 'preserve-3d']),
-      backfaceVisibility: choice(t('Backface Visibility'), ['visible', 'hidden']),
+      backfaceVisibility: choice(t('Backface'), ['visible', 'hidden']),
     }),
     ...of('transition', {
-      transitionProperty: value(t('Transition Property'), 'all'),
-      transitionDuration: value(t('Transition Duration'), '200ms'),
-      transitionTimingFunction: value(t('Transition Timing Function'), 'ease'),
-      transitionDelay: value(t('Transition Delay'), '0ms'),
+      transitionProperty: value(t('Property'), 'all'),
+      transitionDuration: value(t('Duration'), '200ms'),
+      transitionTimingFunction: value(t('Easing'), 'ease'),
+      transitionDelay: value(t('Delay'), '0ms'),
       willChange: value(t('Will Change'), 'auto'),
     }),
   }
@@ -108,13 +108,13 @@ function designStyles(): Record<string, Partial<FieldDef>> {
     display: choice(t('Display'), ['block', 'inline', 'inline-block', 'flex', 'grid', 'none']),
     width: length(t('Width'), { unit: 'rem', units: ['rem', 'px', '%', 'ch'], placeholder: t('Auto') }),
     maxWidth: length(t('Max Width'), { unit: 'rem', units: ['rem', 'px', '%', 'ch'], placeholder: t('None') }),
-    textAlign: choice(t('Text Align'), ['left', 'center', 'right', 'justify']),
-    fontStyle: choice(t('Font Style'), ['normal', 'italic']),
-    textTransform: choice(t('Text Transform'), ['none', 'uppercase', 'lowercase', 'capitalize']),
-    textDecoration: choice(t('Text Decoration'), ['none', 'underline', 'line-through', 'overline']),
-    textWrap: choice(t('Text Wrap'), ['wrap', 'balance', 'pretty', 'nowrap']),
+    textAlign: choice(t('Align'), ['left', 'center', 'right', 'justify']),
+    fontStyle: choice(t('Style'), ['normal', 'italic']),
+    textTransform: choice(t('Case'), ['none', 'uppercase', 'lowercase', 'capitalize']),
+    textDecoration: choice(t('Decoration'), ['none', 'underline', 'line-through', 'overline']),
+    textWrap: choice(t('Wrap'), ['wrap', 'balance', 'pretty', 'nowrap']),
     textShadow: value(t('Text Shadow'), '0 1px 2px rgb(0 0 0 / 0.2)'),
-    boxShadow: value(t('Box Shadow'), '0 4px 16px rgb(0 0 0 / 0.1)'),
+    boxShadow: value(t('Shadow'), '0 4px 16px rgb(0 0 0 / 0.1)'),
     opacity: number(t('Opacity'), { percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' }),
     borderStyle: choice(t('Border Style'), ['solid', 'dashed', 'dotted', 'double', 'none']),
     borderTop: value(t('Border Top'), '1px solid'),
@@ -136,14 +136,14 @@ function fieldOf(property: string, more = moreStyles()): FieldDef {
   return { handle: property, type: 'text', size: 'sm', commit: 'blur', mono: true, label: words.charAt(0).toUpperCase() + words.slice(1), ...(more[property]?.field ?? designStyles()[property]) } as FieldDef
 }
 
-/** The + that adds one of `properties` (by its name), searched as you type. */
-export function AddStyle({ properties, onPick, label = t('Add a Property'), children }: { properties: string[]; onPick: (property: string) => void; label?: string; children?: ReactNode }) {
+/** The + that adds one of `properties` (by its name, or its label in `labels`), in their order, searched as you type. */
+export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Property'), children }: { properties: string[]; labels?: Record<string, string>; onPick: (property: string) => void; label?: string; children?: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const more = moreStyles()
   const q = query.trim().toLowerCase()
-  const options = properties.map((property) => ({ property, label: String(fieldOf(property, more).label) })).filter((o) => !q || o.label.toLowerCase().includes(q)).sort((a, b) => a.label.localeCompare(b.label))
+  const options = properties.map((property) => ({ property, label: labels[property] ?? String(fieldOf(property, more).label) })).filter((o) => !q || o.label.toLowerCase().includes(q) || o.property.toLowerCase().includes(q.replace(/[\s-]/g, '')))
   const pick = (property: string | undefined) => {
     if (!property) return
     setOpen(false)
@@ -192,6 +192,9 @@ export function AddStyle({ properties, onPick, label = t('Add a Property'), chil
   )
 }
 
+/** Properties in the order of their names. */
+const byLabel = (properties: string[], more = moreStyles()) => [...properties].sort((a, b) => String(fieldOf(a, more).label).localeCompare(String(fieldOf(b, more).label)))
+
 /**
  * A Design tab panel: its own rows, then the rest of its group's properties that are set
  * (or just added), each with its control. Its + adds one; clicking a row's label clears it.
@@ -202,7 +205,7 @@ export function StyleSection({ s, group, title, open, empty, children }: { s: St
   const mine = Object.keys(more).filter((key) => more[key].group === group)
   const shown = mine.filter((key) => s.value(key) !== undefined || key === adding)
   return (
-    <Section title={title} open={open} empty={empty && shown.length === 0} actions={<AddStyle properties={mine.filter((key) => !shown.includes(key))} onPick={setAdding} />}>
+    <Section title={title} open={open} empty={empty && shown.length === 0} actions={<AddStyle properties={byLabel(mine.filter((key) => !shown.includes(key)), more)} onPick={setAdding} />}>
       {children}
       {shown.length > 0 && <StyleFields s={s} fields={shown.map((key) => ({ ...fieldOf(key, more), set: (v: unknown) => { if (key === adding) setAdding(null); s.set(key, v as string) } }) as StyleField)} />}
     </Section>
@@ -215,12 +218,12 @@ export function StyleSection({ s, group, title, open, empty, children }: { s: St
  * controls line up whether or not a row has one.
  */
 export function StyleRow({ field, value, onChange, actions, disabled, bare }: { field: FieldDef; value: unknown; onChange: (value: unknown) => void; actions: MenuItemDef[]; disabled?: boolean; bare?: boolean }) {
-  // A name longer than the label column sits above its control, whole. A shadow list (`bare`) brings its own label and add button.
-  const long = !bare && field.type !== 'group' && String(field.label).length > 14
+  // A shadow list (`bare`) brings its own label and add button.
   return (
     <div className="group/row flex items-start gap-1">
-      <Fields bare={bare} layout={long || bare ? undefined : 'inline'} className={cn('min-w-0 flex-1', long && 'gap-y-1')} disabled={disabled} fields={[field]} values={{ [field.handle]: value ?? null }} onChange={(_, v) => onChange(v)} />
-      <span className={cn('flex size-6 shrink-0 items-center justify-center', long ? 'mt-7' : 'mt-0.5')}>
+      {/* The Design System's label column, as its other rows (Page Transition, Prose spacing) have it. */}
+      <Fields bare={bare} layout={bare ? undefined : 'inline'} labelWidth={120} className="min-w-0 flex-1" disabled={disabled} fields={[field]} values={{ [field.handle]: value ?? null }} onChange={(_, v) => onChange(v)} />
+      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center">
         {actions.length > 0 && !disabled && (
           <Menu
             trigger={<IconButton icon="more" label={t('Property Actions')} size="xs" className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />}
@@ -233,10 +236,10 @@ export function StyleRow({ field, value, onChange, actions, disabled, bare }: { 
 }
 
 /**
- * `blocks-more` — a style of the Design System, row by row: its `controls` first, then the
- * properties no control covers, each with its own control, and a + that adds one. Each row
- * has a ⋯ menu: Reset for a control that is set, Remove for an added property. `hidden`
- * are properties drawn elsewhere. The value is the declarations.
+ * `blocks-more` — a style of the Design System: only what it sets, row by row, each with
+ * its control and a ⋯ menu to remove it, and a + that adds a property, its `controls`
+ * (Font, Size, Margin…) first and then every other one. A new style starts empty.
+ * `hidden` are properties drawn elsewhere. The value is the declarations.
  */
 export function MoreStylesField({ field, value, onChange, disabled }: FieldProps<Record<string, string | number> | null>) {
   const decl = value ?? {}
@@ -244,10 +247,7 @@ export function MoreStylesField({ field, value, onChange, disabled }: FieldProps
   const controls = (field.controls as FieldDef[] | undefined) ?? []
   const keysOf = (f: FieldDef) => ((f.fields as FieldDef[] | undefined) ?? [f]).map((sub) => sub.handle)
   const hidden = new Set([...((field.hidden as string[] | undefined) ?? []), ...controls.flatMap(keysOf)])
-  const shown = [...Object.keys(decl).filter((key) => !hidden.has(key)), ...(adding && !(adding in decl) ? [adding] : [])]
   const more = moreStyles()
-  // A style of the Design System can take what has no control there: the panels' extra properties, and these the inspector has rows for.
-  const offered = [...Object.keys(more).filter((key) => more[key].group !== 'item' && more[key].group !== 'layout'), ...Object.keys(designStyles())].filter((key) => !hidden.has(key) && !shown.includes(key))
   const write = (patch: Record<string, unknown>) => {
     const next: Record<string, string | number> = { ...decl }
     for (const [key, v] of Object.entries(patch)) {
@@ -256,29 +256,33 @@ export function MoreStylesField({ field, value, onChange, disabled }: FieldProps
     }
     onChange(next)
   }
-  const remove = (key: string) => {
-    if (key === adding) setAdding(null)
-    if (key in decl) write({ [key]: null })
-  }
+  // A control is a row while it sets something, or since it was just added.
+  const setControls = controls.filter((control) => keysOf(control).some((key) => key in decl) || control.handle === adding)
+  const extras = [...Object.keys(decl).filter((key) => !hidden.has(key)), ...(adding && !(adding in decl) && !controls.some((c) => c.handle === adding) ? [adding] : [])]
+  // A style of the Design System can take what has no control there: the panels' extra properties, and these the inspector has rows for.
+  const others = [...Object.keys(more).filter((key) => more[key].group !== 'item' && more[key].group !== 'layout'), ...Object.keys(designStyles())].filter((key) => !hidden.has(key) && !extras.includes(key))
+  const offered = [...controls.filter((control) => !setControls.includes(control)).map((control) => control.handle), ...byLabel(others, more)]
+  const labels = Object.fromEntries(controls.map((control) => [control.handle, String(control.label)]))
+  const removeAction = (keys: string[], handle: string): MenuItemDef[] => [{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => { if (handle === adding) setAdding(null); write(Object.fromEntries(keys.map((key) => [key, null]))) } }]
   return (
     <div className="space-y-1">
-      {controls.map((control) => {
+      {setControls.map((control) => {
         const keys = keysOf(control)
-        const set = keys.some((key) => key in decl)
-        const reset = () => write(Object.fromEntries(keys.map((key) => [key, null])))
-        const actions: MenuItemDef[] = set ? [{ label: t('Reset'), icon: 'undo', onSelect: reset }] : []
-        const def = { ...control, status: set ? 'own' : undefined, reset } as FieldDef
         const current = control.fields ? Object.fromEntries(keys.map((key) => [key, decl[key] ?? null])) : decl[control.handle]
-        const change = (v: unknown) => write(control.fields ? Object.fromEntries(keys.map((key) => [key, (v as Record<string, unknown> | null)?.[key] ?? null])) : { [control.handle]: v })
-        return <StyleRow key={control.handle} field={def} value={current} disabled={disabled} actions={actions} bare={control.component === 'blocks-shadows'} onChange={change} />
+        const change = (v: unknown) => {
+          if (control.handle === adding) setAdding(null)
+          write(control.fields ? Object.fromEntries(keys.map((key) => [key, (v as Record<string, unknown> | null)?.[key] ?? null])) : { [control.handle]: v })
+        }
+        const set = keys.some((key) => key in decl)
+        return <StyleRow key={control.handle} field={{ ...control, status: set ? 'own' : undefined, reset: () => write(Object.fromEntries(keys.map((key) => [key, null]))) } as FieldDef} value={current} disabled={disabled} actions={removeAction(keys, control.handle)} bare={control.component === 'blocks-shadows'} onChange={change} />
       })}
-      {shown.map((key) => (
+      {extras.map((key) => (
         <StyleRow
           key={key}
-          field={fieldOf(key, more)}
+          field={{ ...fieldOf(key, more), status: key in decl ? 'own' : undefined, reset: () => write({ [key]: null }) } as FieldDef}
           value={decl[key]}
           disabled={disabled}
-          actions={[{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => remove(key) }]}
+          actions={removeAction([key], key)}
           onChange={(v) => {
             if (key === adding) setAdding(null)
             write({ [key]: v })
@@ -287,7 +291,7 @@ export function MoreStylesField({ field, value, onChange, disabled }: FieldProps
       ))}
       {!disabled && offered.length > 0 && (
         <div className="flex h-8 items-center">
-          <AddStyle properties={offered} onPick={setAdding}>
+          <AddStyle properties={offered} labels={labels} onPick={setAdding}>
             <button type="button" className="-ml-1.5 flex h-7 items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
               <Icon name="b-plus" size={12} />
               {t('Add a Property')}

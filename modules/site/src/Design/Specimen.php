@@ -145,21 +145,33 @@ final class Specimen
         return $out;
     }
 
-    /** @return array<string, array{string, string}> long-form text with a block of its own in it: the flow of prose between blocks of any kind */
+    /**
+     * Long-form text with every element prose can style, and a block of its own in it: the flow of prose
+     * between blocks of any kind. An element styled in the Design System is always here to see.
+     *
+     * @return array<string, array{string, string}>
+     */
     private function prose(): array
     {
-        $p = static fn (string $text) => '<p>'.e($text).'</p>';
+        $p = static fn (string $html) => '<p>'.$html.'</p>';
         $box = 'padding:1.25rem;border-radius:var(--radius-lg,.75rem);background:var(--color-surface,rgb(0 0 0 / .05))';
+        $image = 'data:image/svg+xml,'.rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="280"><rect width="640" height="280" fill="#8882"/></svg>');
 
         return ['prose' => [__('Prose'), '<div class="cms-prose">'
-            .$p(__('Long-form text reads best when every block keeps the same distance from the next, whatever kind of block it is.'))
+            .$p(e(__('Long-form text reads best when every block keeps the same distance from the next, whatever kind of block it is.')).' <a href="#">'.e(__('A link')).'</a>, <strong>'.e(__('strong')).'</strong>, <em>'.e(__('emphasis')).'</em>, <mark>'.e(__('a highlight')).'</mark>, <code>inline code</code>, <kbd>⌘K</kbd> '.e(__('and')).' <small>'.e(__('small print')).'</small>.')
             .'<h2>'.e(__('A heading opens a new part')).'</h2>'
-            .$p(__('The space before a heading is larger than between paragraphs, and the space after it is smaller, so it belongs to what follows.'))
+            .$p(e(__('The space before a heading is larger than between paragraphs, and the space after it is smaller, so it belongs to what follows.')))
             .'<ul><li>'.e(__('Lists keep their own rhythm')).'</li><li>'.e(__('between their items')).'</li></ul>'
+            .'<ol><li>'.e(__('A numbered list')).'</li><li>'.e(__('counts its items')).'</li></ol>'
             .'<div style="'.$box.'">'.e(__('A block of its own, such as a callout, keeps the same spacing as the text around it.')).'</div>'
             .'<h3>'.e(__('A smaller heading')).'</h3>'
-            .$p(__('Links, inline code and quotes take their look from the prose styles.'))
             .'<blockquote><p>'.e(__('A quote sits in the flow like any other block.')).'</p></blockquote>'
+            .'<pre><code>php cms build</code></pre>'
+            .'<figure><img src="'.e($image).'" alt="" width="640" height="280"><figcaption>'.e(__('A picture, with its caption')).'</figcaption></figure>'
+            .'<h4>'.e(__('A fourth-level heading')).'</h4>'
+            .'<table><thead><tr><th>'.e(__('Plan')).'</th><th>'.e(__('Sites')).'</th></tr></thead><tbody><tr><td>'.e(__('Free')).'</td><td>1</td></tr><tr><td>'.e(__('Agency')).'</td><td>25</td></tr></tbody></table>'
+            .'<hr>'
+            .$p(e(__('Links, inline code and quotes take their look from the prose styles.')))
             .'</div>']];
     }
 

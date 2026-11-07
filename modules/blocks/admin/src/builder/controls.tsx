@@ -76,8 +76,9 @@ export function RowLabel({ field, children, htmlFor, className }: { field: Field
   const status = field.status as 'own' | 'inherited' | undefined
   const reset = field.reset as (() => void) | undefined
   const label = children ?? field.label
-  const base = cn('flex h-7 min-w-0 shrink-0 items-center gap-1 text-left text-xs', labelColumn, status === 'own' ? 'text-ink' : 'text-muted', className)
-  const text = <span className="min-w-0 truncate">{label}</span>
+  const base = cn('flex min-h-7 min-w-0 shrink-0 items-center gap-1 text-left text-xs', labelColumn, status === 'own' ? 'text-ink' : 'text-muted', className)
+  // A name longer than the column wraps in it: every row keeps its label beside its control.
+  const text = <span className="min-w-0 py-1 leading-[1.25] [overflow-wrap:anywhere]">{label}</span>
   if (status === 'own' && reset) {
     return (
       <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
@@ -96,9 +97,6 @@ export function RowLabel({ field, children, htmlFor, className }: { field: Field
   return <label htmlFor={htmlFor} className={base} title={field.instructions as string | undefined}>{text}</label>
 }
 
-/** About how many characters of a label fit its column. */
-const LABEL_FITS = 15
-
 /**
  * Whether a field's label goes above its control rather than beside it: controls that
  * need the panel's width (or say so: `stack`), and choices with words (icon groups and two
@@ -106,8 +104,6 @@ const LABEL_FITS = 15
  */
 export function stacks(field: FieldDef): boolean {
   if (field.stack === true || (wideFieldTypes.includes(field.type) && !field.component)) return true
-  // A label longer than its column (often in translation) gets the row above instead of an ellipsis.
-  if (field.type !== 'toggle' && String(field.label ?? '').length > LABEL_FITS) return true
   if (field.type !== 'select' || field.component || field.display !== 'segmented') return false
   const options = Object.values(field.options ?? {})
   const words = options.map((o) => (typeof o === 'string' ? o : o && typeof o === 'object' && 'label' in o ? String(o.label ?? '') : '')).filter(Boolean)

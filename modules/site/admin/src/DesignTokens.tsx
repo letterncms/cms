@@ -763,7 +763,7 @@ function Prose({ value, onChange, options, tokens, vars }: { value: Record<strin
           </Setting>
         ))}
       </Group>
-      <StyleList title={t('Elements')} options={options} tokens={tokens} vars={vars} value={elements} onChange={(next) => write(spacing, next)} />
+      <StyleList title={t('Elements in Prose')} options={options} tokens={tokens} vars={vars} value={elements} onChange={(next) => write(spacing, next)} />
     </>
   )
 }
@@ -840,7 +840,7 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
         >
           {/* The end keeps the place of the style rows' ⋯, so this lines up with them. */}
           <div className="mb-2 flex items-center gap-1">
-            <Fields layout="inline" className="min-w-0 flex-1" fields={[{ handle: 'surface', type: 'color', component: 'blocks-color', label: t('Shown On'), placeholder: t('Page Background') }]} values={{ surface: split(variant).surface ?? null }} onChange={(_, v) => write(name, (v as string | null) || undefined, split(variant).states)} />
+            <Fields layout="inline" labelWidth={120} className="min-w-0 flex-1" fields={[{ handle: 'surface', type: 'color', component: 'blocks-color', label: t('Shown On'), placeholder: t('Page Background') }]} values={{ surface: split(variant).surface ?? null }} onChange={(_, v) => write(name, (v as string | null) || undefined, split(variant).states)} />
             <span className="size-6 shrink-0" />
           </div>
           <div className="mb-2">
