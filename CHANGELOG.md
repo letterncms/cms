@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.1 (2026-11-07)
+
 ### Fixed
 
 - **Design System**: every row of an element's or a button's style has a ⋯ menu on hover: **Remove** for a property you added, **Reset** for a control that is set. A property you add keeps the same spacing as the rows above it, and **Shown On** lines up with them.

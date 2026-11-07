@@ -2,7 +2,7 @@
     "name": "letterncms/dashboard",
     "description": "The Dashboard: widgets from every module in two columns, arranged by admins.",
     "type": "cms-plugin",
-    "version": "0.19.0",
+    "version": "0.19.1",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"
