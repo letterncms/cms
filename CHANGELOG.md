@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- **Prose**: opening an element in **Elements in Prose** shows it in the preview, an article with every element prose can style; **+** offers just those.
+
+### Fixed
+
+- Prose styles text, not layout: a **Box** or **Repeat** inside prose drawn as a list or a link (a nav, tags, a card) no longer takes prose's list spacing or link underline. A box with paragraphs of its own spaces them once **Prose** is on for it too.
+
 ## 0.20.0 (2026-11-07)
 
 ### Changed

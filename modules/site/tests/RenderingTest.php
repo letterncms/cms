@@ -225,7 +225,7 @@ final class RenderingTest extends TestCase
     public function test_prose_spacing_is_the_flow_between_its_blocks(): void
     {
         $this->cms()->abilities()->execute('design/update', [
-            'prose' => ['spacing' => ['blocks' => '1.25em', 'headings' => 'token:space.12'], 'h2' => ['fontSize' => '2rem', 'marginTop' => '3rem']],
+            'prose' => ['spacing' => ['blocks' => '1.25em', 'headings' => 'token:space.12'], 'h2' => ['fontSize' => '2rem', 'marginTop' => '3rem'], 'a:hover' => ['color' => 'red'], 'li' => ['color' => 'blue'], '::selection' => ['color' => 'green']],
         ], \Cms\Abilities\AbilityContext::system('test'));
 
         $design = $this->app->make(\Cms\Modules\Site\Design\Design::class);
@@ -233,8 +233,12 @@ final class RenderingTest extends TestCase
         $css = (string) file_get_contents(public_path(ltrim($design->stylesheet(), '/')));
 
         $this->assertStringContainsString('.cms-prose{--prose-blocks:1.25em;--prose-headings:var(--space-12)}', $css);
-        $this->assertStringContainsString('.cms-prose h2{font-size:2rem}', $css);
-        $this->assertStringContainsString('.cms-prose > * + h2,.cms-prose > [data-cms-contents] > * + h2,.cms-prose > * + [data-cms-contents] > h2:first-child{margin-top:3rem}', $css);
+        $this->assertStringContainsString('.cms-prose h2:where(:not(.cms-box, .cms-repeat)){font-size:2rem}', $css);
+        $this->assertStringContainsString('.cms-prose > * + h2:where(:not(.cms-box, .cms-repeat)),.cms-prose > [data-cms-contents] > * + h2:where(:not(.cms-box, .cms-repeat)),.cms-prose > * + [data-cms-contents] > h2:where(:not(.cms-box, .cms-repeat)):first-child{margin-top:3rem}', $css);
+        // Prose styles text: a Box or Repeat drawn as a link or a list is layout, and so are the items of such a list.
+        $this->assertStringContainsString('.cms-prose a:where(:not(.cms-box, .cms-repeat)):hover{color:red}', $css);
+        $this->assertStringContainsString('.cms-prose :where(ul:not(.cms-box, .cms-repeat), ol:not(.cms-box, .cms-repeat)) > li{color:blue}', $css);
+        $this->assertStringContainsString('.cms-prose ::selection{color:green}', $css);
         $this->assertArrayHasKey('spacing', (array) $this->cms()->abilities()->execute('design/get', [], \Cms\Abilities\AbilityContext::system('test'))['prose']);
     }
 

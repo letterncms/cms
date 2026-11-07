@@ -476,5 +476,7 @@
   "Plan": "Formule",
   "Sites": "Sites",
   "small print": "petits caractères",
-  "strong": "gras"
+  "strong": "gras",
+  "With Prose on, its own paragraphs are spaced the same way.": "Avec Texte courant activé, ses propres paragraphes sont espacés de la même façon.",
+  "A button keeps its own look in prose.": "Un bouton garde son propre style dans le texte courant."
 }

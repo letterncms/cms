@@ -476,5 +476,7 @@
   "Plan": "Abonnement",
   "Sites": "Sites",
   "small print": "kleine letters",
-  "strong": "vet"
+  "strong": "vet",
+  "With Prose on, its own paragraphs are spaced the same way.": "Met Lopende tekst aan krijgen de eigen alinea’s dezelfde ruimte.",
+  "A button keeps its own look in prose.": "Een knop houdt in lopende tekst zijn eigen uiterlijk."
 }

@@ -35,6 +35,8 @@ final class Specimen
             .'.specimen{display:grid;gap:16px;scroll-margin:32px}'
             .'.specimen-title{margin:0;font-size:11px;font-weight:600;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;color:var(--field-help-color);transition:color .2s ease}'
             .'.specimen[data-active] .specimen-title{color:var(--color-foreground,currentColor)}'
+            // The element of prose being edited.
+            .'.cms-prose [data-part][data-active]{outline:2px solid var(--color-primary,#2563eb);outline-offset:4px;border-radius:2px}'
             .'.specimen-rows{display:grid;gap:16px}.specimen-surface{display:grid;gap:16px;padding:20px;margin-inline:-20px}.specimen-surface .specimen-caption{color:inherit;opacity:.7}'
             .'.specimen-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 20px}.specimen-cell{display:grid;justify-items:center;gap:8px}.specimen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 14px}'
             .'.specimen-caption{font-size:11px;line-height:1.2;color:var(--field-help-color);white-space:nowrap}.specimen-size{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}'
@@ -146,32 +148,34 @@ final class Specimen
     }
 
     /**
-     * Long-form text with every element prose can style, and a block of its own in it: the flow of prose
-     * between blocks of any kind. An element styled in the Design System is always here to see.
+     * An article with every element prose can style (DesignCompiler::PROSE_ELEMENTS), each marked as the part the
+     * Design System shows while it is edited, and blocks of their own in it: a callout that is prose too, with
+     * paragraphs of its own, and a button, which keeps its look.
      *
      * @return array<string, array{string, string}>
      */
     private function prose(): array
     {
-        $p = static fn (string $html) => '<p>'.$html.'</p>';
+        $p = static fn (string $html, string $part = '') => '<p'.($part !== '' ? ' data-part="'.$part.'"' : '').'>'.$html.'</p>';
         $box = 'padding:1.25rem;border-radius:var(--radius-lg,.75rem);background:var(--color-surface,rgb(0 0 0 / .05))';
         $image = 'data:image/svg+xml,'.rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="280"><rect width="640" height="280" fill="#8882"/></svg>');
 
         return ['prose' => [__('Prose'), '<div class="cms-prose">'
-            .$p(e(__('Long-form text reads best when every block keeps the same distance from the next, whatever kind of block it is.')).' <a href="#">'.e(__('A link')).'</a>, <strong>'.e(__('strong')).'</strong>, <em>'.e(__('emphasis')).'</em>, <mark>'.e(__('a highlight')).'</mark>, <code>inline code</code>, <kbd>⌘K</kbd> '.e(__('and')).' <small>'.e(__('small print')).'</small>.')
-            .'<h2>'.e(__('A heading opens a new part')).'</h2>'
+            .$p(e(__('Long-form text reads best when every block keeps the same distance from the next, whatever kind of block it is.')).' <a data-part="a" href="#">'.e(__('A link')).'</a>, <strong data-part="strong">'.e(__('strong')).'</strong>, <em data-part="em">'.e(__('emphasis')).'</em>, <mark data-part="mark">'.e(__('a highlight')).'</mark>, <code data-part="code">inline code</code>, <kbd data-part="kbd">⌘K</kbd> '.e(__('and')).' <small data-part="small">'.e(__('small print')).'</small>.', 'p')
+            .'<h2 data-part="h2">'.e(__('A heading opens a new part')).'</h2>'
             .$p(e(__('The space before a heading is larger than between paragraphs, and the space after it is smaller, so it belongs to what follows.')))
-            .'<ul><li>'.e(__('Lists keep their own rhythm')).'</li><li>'.e(__('between their items')).'</li></ul>'
-            .'<ol><li>'.e(__('A numbered list')).'</li><li>'.e(__('counts its items')).'</li></ol>'
-            .'<div style="'.$box.'">'.e(__('A block of its own, such as a callout, keeps the same spacing as the text around it.')).'</div>'
-            .'<h3>'.e(__('A smaller heading')).'</h3>'
-            .'<blockquote><p>'.e(__('A quote sits in the flow like any other block.')).'</p></blockquote>'
-            .'<pre><code>php cms build</code></pre>'
-            .'<figure><img src="'.e($image).'" alt="" width="640" height="280"><figcaption>'.e(__('A picture, with its caption')).'</figcaption></figure>'
-            .'<h4>'.e(__('A fourth-level heading')).'</h4>'
-            .'<table><thead><tr><th>'.e(__('Plan')).'</th><th>'.e(__('Sites')).'</th></tr></thead><tbody><tr><td>'.e(__('Free')).'</td><td>1</td></tr><tr><td>'.e(__('Agency')).'</td><td>25</td></tr></tbody></table>'
-            .'<hr>'
-            .$p(e(__('Links, inline code and quotes take their look from the prose styles.')))
+            .'<ul data-part="ul"><li data-part="li">'.e(__('Lists keep their own rhythm')).'</li><li>'.e(__('between their items')).'</li></ul>'
+            .'<ol data-part="ol"><li>'.e(__('A numbered list')).'</li><li>'.e(__('counts its items')).'</li></ol>'
+            .'<div class="cms-box cms-prose" style="'.$box.'"><p>'.e(__('A block of its own, such as a callout, keeps the same spacing as the text around it.')).'</p><p>'.e(__('With Prose on, its own paragraphs are spaced the same way.')).'</p></div>'
+            .'<h3 data-part="h3">'.e(__('A smaller heading')).'</h3>'
+            .'<blockquote data-part="blockquote"><p>'.e(__('A quote sits in the flow like any other block.')).'</p></blockquote>'
+            .'<pre data-part="pre"><code>php cms build</code></pre>'
+            .'<figure><img data-part="img" src="'.e($image).'" alt="" width="640" height="280"><figcaption data-part="figcaption">'.e(__('A picture, with its caption')).'</figcaption></figure>'
+            .'<h4 data-part="h4">'.e(__('A fourth-level heading')).'</h4>'
+            .'<table data-part="table"><thead><tr><th data-part="th">'.e(__('Plan')).'</th><th>'.e(__('Sites')).'</th></tr></thead><tbody><tr><td data-part="td">'.e(__('Free')).'</td><td>1</td></tr><tr><td>'.e(__('Agency')).'</td><td>25</td></tr></tbody></table>'
+            .'<hr data-part="hr">'
+            .$p(e(__('A button keeps its own look in prose.')))
+            .'<div><a href="#" class="cms-button" data-variant="primary"><span>'.e(__('Get started')).'</span></a></div>'
             .'</div>']];
     }
 
