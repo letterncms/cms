@@ -695,52 +695,11 @@ function boxFields(): FieldDef[] {
 
 /**
  * Declarations edited with controls: each field's handle is the property it sets (a
- * group's sub-fields are); a set row's label resets it. Any other property is added
- * below with its own control, as in the canvas inspector's sections.
+ * group's sub-fields are). Any other property is added below with its own control; a
+ * row's ⋯ menu resets or removes it.
  */
 function StyleControls({ value, onChange, fields }: { value: Declarations | undefined; onChange: (next: Declarations) => void; fields: FieldDef[] }) {
-  const declarations = longhand(value)
-  const keysOf = (field: FieldDef) => ((field.fields as FieldDef[] | undefined) ?? [field]).map((f) => f.handle)
-  const known = new Set(fields.flatMap(keysOf))
-  const write = (patch: Record<string, unknown>) => {
-    const next: Declarations = { ...declarations }
-    for (const [key, v] of Object.entries(patch)) {
-      if (v === null || v === undefined || v === '') delete next[key]
-      else next[key] = v as string | number
-    }
-    onChange(next)
-  }
-  const values: Record<string, unknown> = {}
-  const defs = fields.map((field) => {
-    const keys = keysOf(field)
-    values[field.handle] = field.fields ? Object.fromEntries(keys.map((k) => [k, declarations[k] ?? null])) : declarations[field.handle] ?? null
-    return { ...field, status: keys.some((k) => k in declarations) ? 'own' : undefined, reset: () => write(Object.fromEntries(keys.map((k) => [k, null]))) } as FieldDef
-  })
-  const rest = Object.fromEntries(Object.entries(declarations).filter(([key]) => !known.has(key)))
-
-  return (
-    <>
-      <Fields
-        layout="inline"
-        fields={defs.filter((field) => field.component !== 'blocks-shadows')}
-        values={values}
-        onChange={(handle, v) => {
-          const field = fields.find((f) => f.handle === handle)
-          write(field?.fields ? Object.fromEntries(keysOf(field).map((k) => [k, (v as Record<string, unknown> | null)?.[k] ?? null])) : { [handle]: v })
-        }}
-      />
-      {/* A shadow list brings its own label and add button. */}
-      {defs.filter((field) => field.component === 'blocks-shadows').map((field) => (
-        <Fields key={field.handle} bare fields={[field]} values={values} onChange={(handle, v) => write({ [handle]: v })} />
-      ))}
-      <Fields
-        bare
-        fields={[{ handle: 'more', type: 'json', component: 'blocks-more', label: t('More'), hidden: [...known] }]}
-        values={{ more: rest }}
-        onChange={(_, d) => onChange({ ...Object.fromEntries(Object.entries(declarations).filter(([key]) => known.has(key))), ...(d ?? {}) })}
-      />
-    </>
-  )
+  return <Fields bare fields={[{ handle: 'style', type: 'json', component: 'blocks-more', label: t('Style'), controls: fields }]} values={{ style: longhand(value) }} onChange={(_, next) => onChange((next ?? {}) as Declarations)} />
 }
 
 /** Elements (or prose elements) and their styles: a specimen each, its controls a click away. */
@@ -879,7 +838,11 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
           label={label(name)}
           menu={<Menu trigger={<IconButton icon="more" label={t('Variant Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Delete'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== name))) }]} />}
         >
-          <Fields layout="inline" className="mb-2" fields={[{ handle: 'surface', type: 'color', component: 'blocks-color', label: t('Shown On'), placeholder: t('Page Background') }]} values={{ surface: split(variant).surface ?? null }} onChange={(_, v) => write(name, (v as string | null) || undefined, split(variant).states)} />
+          {/* The end keeps the place of the style rows' ⋯, so this lines up with them. */}
+          <div className="mb-2 flex items-center gap-1">
+            <Fields layout="inline" className="min-w-0 flex-1" fields={[{ handle: 'surface', type: 'color', component: 'blocks-color', label: t('Shown On'), placeholder: t('Page Background') }]} values={{ surface: split(variant).surface ?? null }} onChange={(_, v) => write(name, (v as string | null) || undefined, split(variant).states)} />
+            <span className="size-6 shrink-0" />
+          </div>
           <div className="mb-2">
             <Segmented size="xs" block aria-label={t('State')} value={state} onChange={setState} options={[{ value: 'base', label: t('Default') }, { value: 'hover', label: t('Hover') }, { value: 'active', label: t('Pressed') }, { value: 'focus-visible', label: t('Focus') }]} />
           </div>
