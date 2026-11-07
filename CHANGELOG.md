@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- **Design System**: an element's or a button's style shows only what it sets, and starts empty. **Add a Property** offers every property, Font, Size and Margin first, and each row's ⋯ removes it.
+- Properties have short names that fit their row (**Decoration Color**, **Underline Offset**, **Snap Align**; **Duration**, **Delay** and **Easing** under Transition). A name that still doesn't fit, as in a translation, wraps beside its control instead of moving above it, in the inspector and the Design System.
+- The Design System's style rows share the label column of its other rows.
+- **Prose**: its element styles are **Elements in Prose**, which apply only there (Elements apply everywhere), and its preview shows every element you can style: lists, quotes, code, a picture with its caption, a table and a rule.
+
 ## 0.19.1 (2026-11-07)
 
 ### Fixed
