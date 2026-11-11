@@ -14,6 +14,9 @@ export interface SessionState {
 
 export const entryContent = (entry: Entry): EntryContent => ({ title: entry.title, slug: entry.slug, data: entry.data, authorId: entry.authorId })
 
+/** The server names a field's error by its path in the input (data.summary); the form knows the field by its handle. */
+const fieldErrors = (details: Record<string, string>) => Object.fromEntries(Object.entries(details).map(([path, message]) => [path.replace(/^data\./, ''), message]))
+
 const sameContent = (a: EntryContent, b: EntryContent) => a.title === b.title && a.slug === b.slug && a.authorId === b.authorId && JSON.stringify(a.data) === JSON.stringify(b.data)
 
 /** One working-copy owner. Requests serialize and acknowledge only the edits they captured. */
@@ -53,7 +56,7 @@ export class EntrySession {
 
   private fail(error: unknown) {
     const failure = (error instanceof Error ? error : new Error(String(error))) as Failure
-    this.emit({ phase: 'error', error: failure, errors: failure.type === 'invalid_input' ? failure.details ?? {} : {}, conflict: failure.type === 'conflict' ? { message: failure.message, version: failure.details?.version } : null })
+    this.emit({ phase: 'error', error: failure, errors: failure.type === 'invalid_input' ? fieldErrors(failure.details ?? {}) : {}, conflict: failure.type === 'conflict' ? { message: failure.message, version: failure.details?.version } : null })
   }
 
   save(options: SaveOptions = {}): Promise<Entry | null> {

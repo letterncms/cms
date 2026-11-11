@@ -23,6 +23,9 @@ final class ContentAbilities
 
     private const array VERSION = ['type' => 'string', 'pattern' => '^[a-f0-9]{64}$'];
 
+    /** Why collections/schema leaves an ability's input open: it is JSON Schema itself, in whatever keywords the ability and the fields use. */
+    private const string INPUT_SCHEMA = 'A JSON Schema, open by nature: the ability\'s own input schema (abilities/list has it), with `data` as this collection\'s draft schema and `collection` fixed to its handle.';
+
     private const array HANDLE = ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,63}$'];
 
     private const array LIST_FIELDS = ['type' => 'array', 'items' => ['type' => 'string', 'pattern' => '^[a-z][a-z0-9_]{0,63}$'], 'maxItems' => 30, 'description' => 'Data fields to include per entry under `values` (relations come with their titles and names).'];
@@ -211,17 +214,12 @@ final class ContentAbilities
 
         $a->register('collections/get', [
             'label' => 'Get Collection',
-            'description' => 'A collection definition with its fields, the JSON schema entry data must follow, and its settings as fields.',
+            'description' => 'A collection definition with its fields, the JSON Schema entry data must follow (`schema`; collections/schema has more), and its settings as fields.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
             'output' => Shapes::collection([
                 'count' => Shape::INTEGER, 'deletable' => Shape::BOOLEAN,
-                'schema' => [
-                    'type' => Shape::enum('object'),
-                    'properties?' => Shape::map(Shape::open('The JSON Schema of one field\'s value, with the field\'s label as `title`: what the field\'s type and config make of it.')),
-                    'required?' => [Shape::STRING],
-                ],
                 'settings' => [Shapes::field()],
             ]),
             'handler' => function (array $in) {
@@ -231,8 +229,21 @@ final class ContentAbilities
                 $collection = $c->toArray();
 
                 // Field labels in the user's language (built-in collections' blueprints are written in English).
-                return [...$collection, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(), 'deletable' => $c->deletable(), 'resolvedFields' => $t->fields($collection['resolvedFields']), 'schema' => $c->blueprint()->schema(), 'settings' => $t->fields($this->cms->collections()->settingsFields($c))];
+                return [...$collection, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(), 'deletable' => $c->deletable(), 'resolvedFields' => $t->fields($collection['resolvedFields']), 'settings' => $t->fields($this->cms->collections()->settingsFields($c))];
             },
+        ]);
+
+        $a->register('collections/schema', [
+            'label' => 'Collection Schema',
+            'description' => 'JSON Schema for the entries of one collection: `data` is what an entry\'s data must follow to be published, `draft` what a draft may be (required fields may be empty), and `create` and `update` are the whole input of entries/create and entries/update for this collection. Validation errors name the same paths (data.summary, data.blocks.0.props.text).',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
+            'output' => Shape::of([
+                'handle' => Shape::STRING, 'title' => Shape::STRING, 'data' => Shapes::dataSchema(), 'draft' => Shapes::dataSchema(),
+                'create' => Shape::open(self::INPUT_SCHEMA), 'update' => Shape::open(self::INPUT_SCHEMA),
+            ]),
+            'handler' => fn (array $in) => self::schemaOf($this->cms, $this->cms->collections()->find($in['handle']) ?? throw new AbilityException('Collection not found.', 'not_found')),
         ]);
 
         $a->register('fields/types', [
@@ -385,7 +396,7 @@ final class ContentAbilities
             'label' => 'Create Entry',
             // Unless a call publishes or schedules it, what this changes isn't live and stays in the history.
             'annotations' => ['draft' => true],
-            'description' => 'Create an entry. `data` keys are the collection\'s field handles (see collections/get for the schema). Created as a draft unless status is "published".',
+            'description' => 'Create an entry. `data` keys are the collection\'s field handles (collections/schema has its JSON Schema, and this input with it in place). Created as a draft unless status is "published".',
             'permission' => function (?User $user, array $in) {
                 $ok = $this->allowed($user, (string) $in['collection'], 'create');
 
@@ -416,7 +427,7 @@ final class ContentAbilities
         $a->register('entries/update', [
             'label' => 'Update Entry',
             'annotations' => ['draft' => true],
-            'description' => 'Change an entry. `data` is merged into existing data. For published entries changes are saved as a draft until published (or pass publish: true).',
+            'description' => 'Change an entry. `data` is merged into existing data and follows the collection\'s schema (collections/schema). For published entries changes are saved as a draft until published (or pass publish: true).',
             'permission' => function (?User $user, array $in) {
                 $collection = $this->collectionOf((string) $in['id']);
 
@@ -728,6 +739,28 @@ final class ContentAbilities
 
             return $item;
         }, $entries, $data);
+    }
+
+    /**
+     * What entries of a collection must look like, as JSON Schema: their data, and the input of entries/create
+     * and entries/update with that data in place of the free object the abilities declare for every collection.
+     */
+    public static function schemaOf(Cms $cms, Collection $collection): array
+    {
+        $data = $collection->blueprint()->schema();
+        $draft = $collection->blueprint()->schema(partial: true);
+        $input = static function (string $ability) use ($cms, $collection, $draft): array {
+            $schema = $cms->abilities()->get($ability)?->input() ?? ['type' => 'object'];
+            $schema['properties']['data'] = [...$draft, 'description' => 'Field values by handle. To publish, required fields must be filled (see `data`).'];
+
+            if (isset($schema['properties']['collection'])) {
+                $schema['properties']['collection'] = ['const' => $collection->handle];
+            }
+
+            return $schema;
+        };
+
+        return ['handle' => $collection->handle, 'title' => $collection->title, 'data' => $data, 'draft' => $draft, 'create' => $input('entries/create'), 'update' => $input('entries/update')];
     }
 
     /** An entry as a list screen has it: its summary, the languages it is in (multilingual sites) and the `fields` asked for. */

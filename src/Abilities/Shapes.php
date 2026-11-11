@@ -77,6 +77,19 @@ final class Shapes
     }
 
     /**
+     * Blueprint::schema(): the JSON Schema of field values by handle. Each field's own schema is open by nature:
+     * its type and config write it, in any JSON Schema keywords.
+     */
+    public static function dataSchema(): Shape
+    {
+        return Shape::of([
+            'type' => Shape::enum('object'),
+            'properties?' => Shape::map(Shape::open('The JSON Schema of one field\'s value, with the field\'s label as `title`: what the field\'s type and config make of it.')),
+            'required?' => [Shape::STRING],
+        ]);
+    }
+
+    /**
      * Collection::toArray(): a collection's definition as its YAML has it, with the fields its imports resolve to.
      * `$more` names what an ability adds to it (an open shape takes no with()).
      */
@@ -89,7 +102,7 @@ final class Shapes
             'section?' => Shape::STRING, 'system?' => Shape::BOOLEAN,
             'fields' => [Shape::open('A field as written (handle, type and what its type takes: fields/types), or the import of a fieldset ({import, prefix?}); `resolvedFields` has them with the imports expanded.')],
             'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'default_view' => Shape::enum('table', 'grid', 'calendar'),
-            'default_columns' => Shape::nullable([Shape::STRING]), 'resolvedFields' => [self::field()],
+            'default_columns' => Shape::nullable([Shape::STRING]), 'resolvedFields' => [self::field()], 'schema' => self::dataSchema(),
             ...$more,
         ])->andMore('Whatever else the collection\'s YAML holds, as written: the settings plugins add (the `settings` of collections/get lists them as fields), `routes` by language, `published_at` and `updated_at`.');
     }
