@@ -2,10 +2,13 @@ import { Toaster as Sonner, toast as sonner } from 'sonner'
 import { CmsError, t } from '@letterncms/sdk'
 import type { CSSProperties } from 'react'
 import { Icon } from './Icon'
+import { useSaveBarOpen } from './SaveBar'
 import { Spinner } from './Spinner'
 
 /** Toasts lie at the bottom right of the sheet (bottom centre on a phone): a float with one line and at most one action, gone after 4s unless pointed at. */
 export function Toaster() {
+  // Over an open save bar (48px, 16px above the sheet's foot; 8px above the screen's on a phone), with 8px between.
+  const raised = useSaveBarOpen()
   return (
     <Sonner
       position="bottom-right"
@@ -14,8 +17,8 @@ export function Toaster() {
       visibleToasts={3}
       duration={4000}
       // 16px from the corner of the sheet, which lies 8px in from the window.
-      offset={24}
-      mobileOffset={16}
+      offset={raised ? { top: 24, right: 24, bottom: 96, left: 24 } : 24}
+      mobileOffset={raised ? { top: 16, right: 16, bottom: 64, left: 16 } : 16}
       style={{ '--width': '360px' } as CSSProperties}
       icons={{ success: <Icon name="check-circle" size={16} />, error: <Icon name="error" size={16} />, warning: <Icon name="warning" size={16} />, info: <Icon name="info" size={16} />, loading: <Spinner size={16} /> }}
       toastOptions={{

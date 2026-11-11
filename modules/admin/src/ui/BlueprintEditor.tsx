@@ -9,7 +9,7 @@ import { NotFoundState } from './EmptyState'
 import { Notice } from './Notice'
 import { QueryError } from './QueryError'
 import { Fields } from './Fields'
-import { Page, type Crumb } from './Page'
+import { Page, Section, type Crumb } from './Page'
 import { SaveBar } from './SaveBar'
 import { Spinner } from './Spinner'
 import { toast } from './toast'
@@ -251,16 +251,15 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
             </>
           ) : (
             <div>
-              {/* A rule between two sections, none after the last: what follows draws its own. */}
-              <div className="divide-y divide-border">
+              {/* The kit's sections, one under the other in the form's width: the settings of every other screen are laid out so. */}
+              <div className="max-w-[640px]">
               {[...kind.settingsSections, { title: t('More Settings'), handles: settings.filter((f) => !kind.settingsSections!.some((s) => s.handles.includes(f.handle))).map((f) => f.handle), bare: false }].map((section) => {
                 const fields = section.handles.flatMap((h) => settings.filter((f) => f.handle === h))
                 if (!fields.length) return null
                 return (
-                  <section key={section.title} className="grid grid-cols-1 gap-4 py-6 first:pt-0 last:pb-0 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-8">
-                    <h2 className="m-0 text-sm font-semibold text-ink">{section.title}</h2>
+                  <Section key={section.title} title={section.title}>
                     <Fields bare={section.bare} fields={fields} values={def} context={{ blueprintFields: source.data?.resolvedFields?.filter((f: FieldDef) => !source.data.fields?.some((own: RawField) => own.handle === f.handle)) }} onChange={(h, v) => patch({ [h]: v })} disabled={saving} />
-                  </section>
+                  </Section>
                 )
               })}
               </div>
