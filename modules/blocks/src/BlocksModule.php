@@ -416,7 +416,7 @@ final class BlocksModule extends Plugin
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
             'input' => ['type' => 'object', 'properties' => ['markdown' => ['type' => 'string', 'maxLength' => 500000]], 'required' => ['markdown']],
             'output' => Shape::of([self::nodeShape()]),
-            'handler' => fn (array $in) => $document()->normalize($this->app->make(MarkdownCodec::class)->decode($in['markdown'])),
+            'handler' => fn (array $in) => Document::jsonable($document()->normalize($this->app->make(MarkdownCodec::class)->decode($in['markdown']))),
         ]);
 
         $a->register('blocks/to-markdown', [
@@ -437,7 +437,7 @@ final class BlocksModule extends Plugin
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['working' => ['type' => 'boolean', 'default' => false]]],
             'output' => Shape::of([self::patternShape()]),
-            'handler' => fn (array $in) => array_values($patterns()->all((bool) ($in['working'] ?? false))),
+            'handler' => fn (array $in) => array_values(array_map(static fn (array $pattern) => [...$pattern, 'blocks' => Document::jsonable($pattern['blocks'])], $patterns()->all((bool) ($in['working'] ?? false)))),
         ]);
 
         $a->register('components/save', [

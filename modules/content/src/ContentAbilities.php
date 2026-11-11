@@ -382,7 +382,7 @@ final class ContentAbilities
 
                 $shared = $entry->originId === null ? [] : $entry->blueprint()->shared();
 
-                return [...$entry->toArray(), 'translations' => $translations ?: (object) [], ...($shared === [] ? [] : ['sharedFields' => $shared])];
+                return [...$this->presented($entry), 'translations' => $translations ?: (object) [], ...($shared === [] ? [] : ['sharedFields' => $shared])];
             },
         ]);
 
@@ -440,7 +440,7 @@ final class ContentAbilities
 
                 return [$this->change($entry->status === 'published' ? 'create-published' : 'create', $entry, ['slug' => $entry->slug, 'locale' => $entry->locale, 'status' => $entry->status, 'uri' => $entry->uri], id: false)];
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $create($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($create($in, $ctx)),
         ]);
 
         $a->register('entries/update', [
@@ -472,7 +472,7 @@ final class ContentAbilities
 
                 return $this->withTranslations([$this->change($in['publish'] ? 'update-published' : 'update', $entry, ['fields' => self::changed($before, $entry->working(), array_keys($in['data'] ?? []))])]);
             }),
-            'handler' => fn (array $in, AbilityContext $ctx) => $update($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($update($in, $ctx)),
         ]);
 
         $a->register('entries/publish', [
@@ -487,7 +487,7 @@ final class ContentAbilities
 
                 return $this->withTranslations([$this->change($entry->isScheduled() ? 'schedule' : 'publish', $entry, ['at' => $entry->publishedAt?->toIso8601String(), 'expiresAt' => $entry->expiresAt?->toIso8601String(), 'uri' => $entry->uri])]);
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $publish($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($publish($in, $ctx)),
         ]);
 
         $a->register('entries/unpublish', [
@@ -498,7 +498,7 @@ final class ContentAbilities
             'answer' => $this->answer('unpublished'),
             'output' => Shapes::entry(),
             'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->withTranslations([$this->change('unpublish', $this->dry(fn () => $unpublish($in, $ctx)))]),
-            'handler' => fn (array $in, AbilityContext $ctx) => $unpublish($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($unpublish($in, $ctx)),
         ]);
 
         $a->register('entries/discard-draft', [
@@ -516,7 +516,7 @@ final class ContentAbilities
 
                 return [$this->change('discard-draft', $entry, ['removes' => self::changed($before, $entry->working())])];
             }),
-            'handler' => fn (array $in, AbilityContext $ctx) => $discard($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($discard($in, $ctx)),
         ]);
 
         $a->register('entries/delete', [
@@ -550,7 +550,7 @@ final class ContentAbilities
 
                 return [$this->change('duplicate', $copy, ['from' => $in['id'], 'slug' => $copy->slug, 'locale' => $copy->locale, 'status' => $copy->status, 'uri' => $copy->uri], id: false)];
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $duplicate($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($duplicate($in, $ctx)),
         ]);
 
         $a->register('entries/move', [
@@ -567,7 +567,7 @@ final class ContentAbilities
 
                 return [$this->change('move', $entry, ['parentId' => $entry->parentId, 'position' => $entry->position, 'uri' => $entry->uri])];
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $move($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($move($in, $ctx)),
         ]);
 
         $a->register('entries/reorder', [
@@ -632,7 +632,7 @@ final class ContentAbilities
 
                 return $this->withTranslations([$this->change('restore', $entry, ['revisionId' => $in['revisionId'], 'fields' => self::changed($before, $entry->working())])]);
             }),
-            'handler' => fn (array $in, AbilityContext $ctx) => $restore($in, $ctx)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($restore($in, $ctx)),
         ]);
 
         $a->register('entries/get-many', [
@@ -1008,6 +1008,20 @@ final class ContentAbilities
         }
 
         return $changed;
+    }
+
+    /**
+     * An entry as an answer carries it: toArray(), with its data as JSON must have it (Blueprint::export), so a
+     * map that is empty, a block's props above all, leaves as {} and not as the [] PHP's empty array becomes.
+     *
+     * @return array<string, mixed>
+     */
+    private function presented(Entry $entry): array
+    {
+        $out = $entry->toArray();
+        $out['data'] = $entry->blueprint()->export((array) $out['data']);
+
+        return $out;
     }
 
     private function allowed(?User $user, string $collection, string $action): bool

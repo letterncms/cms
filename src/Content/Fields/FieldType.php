@@ -58,6 +58,16 @@ abstract class FieldType
         return $value;
     }
 
+    /**
+     * Value as JSON must carry it. PHP has one array for lists and maps, and an empty one leaves as `[]`:
+     * a type whose value holds maps that can be empty (a block's `props`) makes them objects here.
+     * For what is sent, never for what is stored or rendered.
+     */
+    public function export(mixed $value, Field $field): mixed
+    {
+        return $value;
+    }
+
     /** The start of a value, for readers without access (see EntryGate). What is left out never reaches the page. */
     public function teaser(mixed $value, Field $field, int $words): mixed
     {
