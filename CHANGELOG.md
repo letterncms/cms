@@ -35,6 +35,7 @@
 
 - **Breaking.** The CMS no longer uses a proxy from the server's environment (`http_proxy`, `https_proxy`, `ALL_PROXY`) for anything it fetches: updates, the store, remote media, fonts, Sync. A proxy would connect to an address nobody checked. A server that can only reach the internet through a proxy can no longer fetch these.
 - Everything the CMS fetches goes only to public addresses, judged more strictly: shared, multicast and site-local ranges and the IPv6 forms that carry an IPv4 address (IPv4-compatible, local-use NAT64, 6to4, Teredo) are refused, an IPv4-mapped or NAT64 address is judged as the IPv4 address it carries, and the address the connection really reached is checked against the one that was vetted before anything is sent.
+- `packages/plan-install` no longer answers with the license token: for a paid package its `access` carried the `X-Cms-License` header and query the download is fetched with. It now has only `allowed`, `reason`, `message` and `buy_url`, as the catalog does.
 
 ## 0.21.0 (2026-11-11)
 
