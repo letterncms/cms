@@ -69,6 +69,18 @@ class Repeater extends Group
         return array_map(static fn ($item) => $blueprint->augment((array) $item), (array) $value);
     }
 
+    /** Each item through its own fields: a blocks field inside a row has maps that can be empty too. */
+    public function export(mixed $value, Field $field): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $blueprint = $this->blueprint($field);
+
+        return array_map(static fn ($item) => is_array($item) ? $blueprint->export($item) : $item, $value);
+    }
+
     public function toText(mixed $value, Field $field): string
     {
         $blueprint = $this->blueprint($field);

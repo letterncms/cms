@@ -304,6 +304,35 @@ final class Document
         return $out;
     }
 
+    /**
+     * A tree as JSON must carry it: every node's `props`, and a component's `values`, are objects even when empty.
+     *
+     * @param  list<mixed>  $nodes
+     * @return list<mixed>
+     */
+    public static function jsonable(array $nodes): array
+    {
+        return array_map(static function (mixed $node) {
+            if (! is_array($node)) {
+                return $node;
+            }
+
+            if (array_key_exists('props', $node) && is_array($node['props'])) {
+                if (is_array($node['props']['values'] ?? null) && $node['props']['values'] === []) {
+                    $node['props']['values'] = new \stdClass;
+                }
+
+                $node['props'] === [] && $node['props'] = new \stdClass;
+            }
+
+            if (is_array($node['children'] ?? null)) {
+                $node['children'] = self::jsonable($node['children']);
+            }
+
+            return $node;
+        }, $nodes);
+    }
+
     /** Plain text of a tree (search, excerpts, word counts). */
     /** Props that hold settings, not words a reader sees. */
     private const array NON_TEXT = [
