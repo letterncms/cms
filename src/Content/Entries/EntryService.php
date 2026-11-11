@@ -198,9 +198,12 @@ final class EntryService
         return $this->write(fn () => $this->updateUnlocked($id, $input, $user, $publish));
     }
 
-    public function publish(string $id, ?User $user = null, ?string $at = null, ?string $expectedVersion = null): Entry
+    /**
+     * @param  string|false|null  $expiresAt  When it stops being published; null takes the date away, false leaves it as it is.
+     */
+    public function publish(string $id, ?User $user = null, ?string $at = null, ?string $expectedVersion = null, string|false|null $expiresAt = false): Entry
     {
-        return $this->write(fn () => $this->publishUnlocked($id, $user, $at, $expectedVersion));
+        return $this->write(fn () => $this->publishUnlocked($id, $user, $at, $expectedVersion, $expiresAt));
     }
 
     public function unpublish(string $id, ?User $user = null, ?string $expectedVersion = null): Entry
@@ -251,7 +254,7 @@ final class EntryService
      */
     private function createUnlocked(string $collectionHandle, array $input, ?User $user = null, bool $allowMissingAuthor = false, bool $copied = false): Entry
     {
-        if (array_diff(array_keys($input), ['collection', 'title', 'slug', 'data', 'locale', 'parentId', 'position', 'status', 'at', 'originId', 'authorId']) !== []) {
+        if (array_diff(array_keys($input), ['collection', 'title', 'slug', 'data', 'locale', 'parentId', 'position', 'status', 'at', 'expiresAt', 'originId', 'authorId']) !== []) {
             throw AbilityException::invalid(__('Unsupported entry properties.'));
         }
         $collection = $this->collections->findOrFail($collectionHandle);
@@ -271,7 +274,7 @@ final class EntryService
 
         $data = array_replace($collection->blueprint()->defaults(), (array) ($input['data'] ?? []));
         $publish = ($input['status'] ?? 'draft') === 'published';
-        if (isset($input['at']) && ! $publish) {
+        if ((isset($input['at']) || isset($input['expiresAt'])) && ! $publish) {
             throw AbilityException::invalid(__('A publication time requires publishing the entry.'));
         }
 
@@ -288,7 +291,7 @@ final class EntryService
             parentId: $parentId,
             position: $input['position'] ?? $this->nextPosition($collection, $parentId, $locale),
             authorId: $this->authorId(array_key_exists('authorId', $input) ? $input['authorId'] : $user?->getKey(), allowMissing: $allowMissingAuthor),
-            publishedAt: isset($input['at']) ? CarbonImmutable::parse($input['at']) : null,
+            publishedAt: isset($input['at']) ? CarbonImmutable::parse($input['at'])->utc() : null,
         );
 
         $entry->slug = $this->uniqueSlug($collection, $entry, $input['slug'] ?? null);
@@ -296,6 +299,7 @@ final class EntryService
         if ($publish) {
             $entry->status = 'published';
             $entry->publishedAt ??= CarbonImmutable::now();
+            $entry->expiresAt = $this->expiryTime($input['expiresAt'] ?? null, $entry->publishedAt);
         }
 
         $this->persist($entry, $collection);
@@ -317,11 +321,11 @@ final class EntryService
      */
     private function updateUnlocked(string $id, array $input, ?User $user = null, bool $publish = false): Entry
     {
-        $unsupported = array_diff(array_keys($input), ['title', 'slug', 'data', 'authorId', 'expectedVersion', 'at']);
+        $unsupported = array_diff(array_keys($input), ['title', 'slug', 'data', 'authorId', 'expectedVersion', 'at', 'expiresAt']);
         if ($unsupported !== []) {
             throw AbilityException::invalid(__('Use the move or publication action to change structure or publication timing.'));
         }
-        if (isset($input['at']) && ! $publish) {
+        if ((isset($input['at']) || array_key_exists('expiresAt', $input)) && ! $publish) {
             throw AbilityException::invalid(__('A publication time requires publishing the entry.'));
         }
         $entry = $this->findOrFail($id);
@@ -351,6 +355,7 @@ final class EntryService
             $entry->applyContent($working);
             $entry->status = 'published';
             $entry->publishedAt = $when;
+            $entry->expiresAt = $this->expiryTime(array_key_exists('expiresAt', $input) ? $input['expiresAt'] : $this->keptExpiry($entry), $when);
         }
         $this->persist($entry, $collection);
         if ($entry->uri !== $previousUri) {
@@ -365,7 +370,7 @@ final class EntryService
         return $entry;
     }
 
-    private function publishUnlocked(string $id, ?User $user = null, ?string $at = null, ?string $expectedVersion = null): Entry
+    private function publishUnlocked(string $id, ?User $user = null, ?string $at = null, ?string $expectedVersion = null, string|false|null $expiresAt = false): Entry
     {
         $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $expectedVersion);
@@ -378,6 +383,7 @@ final class EntryService
         $entry->applyContent($working);
         $entry->status = 'published';
         $entry->publishedAt = $when;
+        $entry->expiresAt = $this->expiryTime($expiresAt === false ? $this->keptExpiry($entry) : $expiresAt, $when);
 
         $this->persist($entry, $collection);
 
@@ -399,6 +405,8 @@ final class EntryService
         $scheduled = $entry->isScheduled();
         $entry = $entry->withWorkingCopy();
         $entry->status = 'draft';
+        // An end date belongs to one publication: what is taken off the site has none.
+        $entry->expiresAt = null;
         if ($scheduled) {
             $entry->publishedAt = null;
         }
@@ -754,9 +762,35 @@ final class EntryService
 
     private function publicationTime(Entry $entry, ?string $at): CarbonImmutable
     {
-        $when = $at ? CarbonImmutable::parse($at) : ($entry->isScheduled() ? CarbonImmutable::now() : ($entry->publishedAt ?? CarbonImmutable::now()));
+        // Kept in UTC: the database stores a moment without its offset.
+        $when = $at ? CarbonImmutable::parse($at)->utc() : ($entry->isScheduled() ? CarbonImmutable::now() : ($entry->publishedAt ?? CarbonImmutable::now()));
         if ($entry->isLive() && $when->isFuture()) {
             throw AbilityException::invalid(__('Unpublish this entry before scheduling it for a future date.'), ['at' => __('Live entries cannot be scheduled again.')]);
+        }
+
+        return $when;
+    }
+
+    /**
+     * The end date an entry keeps when it is published again without one being given. One that has passed is
+     * dropped: an entry that ran out (and that the scheduler has not unpublished yet) is published anew, without end.
+     */
+    private function keptExpiry(Entry $entry): ?string
+    {
+        return $entry->expiresAt?->isFuture() ? $entry->expiresAt->toIso8601String() : null;
+    }
+
+    /** When a publication ends: after it starts and not already past, or never (null). */
+    private function expiryTime(?string $at, ?CarbonImmutable $from): ?CarbonImmutable
+    {
+        if ($at === null || $at === '') {
+            return null;
+        }
+
+        $when = CarbonImmutable::parse($at)->utc();
+
+        if (! $when->isFuture() || ($from !== null && $when->lessThanOrEqualTo($from))) {
+            throw AbilityException::invalid(__('The end date must be in the future and after the publication date.'), ['expiresAt' => __('Must be later.')]);
         }
 
         return $when;

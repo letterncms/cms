@@ -10,13 +10,13 @@ final class SchedulePublishCommand extends Command
 {
     protected $signature = 'publish:scheduled';
 
-    protected $description = 'Activate scheduled entries that are due';
+    protected $description = 'Activate scheduled entries that are due and unpublish expired ones';
 
     public function handle(\Cms\Content\Entries\ScheduledPublisher $publisher): int
     {
         $count = $publisher->run();
-        $this->components->info($count.' scheduled entr'.($count === 1 ? 'y' : 'ies').' activated.');
+        $this->components->info($count.' scheduled entr'.($count === 1 ? 'y' : 'ies').' activated, '.$publisher->expired.' expired entr'.($publisher->expired === 1 ? 'y' : 'ies').' unpublished.');
 
-        return $this->done(['activated' => $count]);
+        return $this->done(['activated' => $count, 'expired' => $publisher->expired]);
     }
 }

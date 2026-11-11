@@ -99,6 +99,7 @@ final class DatabaseDriver implements EntryDriver
             'draft' => $entry->draft === null ? null : json_encode($entry->draft, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
             'author_id' => $entry->authorId,
             'published_at' => $entry->publishedAt,
+            'expires_at' => $entry->expiresAt,
             'created_at' => $entry->createdAt,
             'updated_at' => $entry->updatedAt,
         ]], ['id']);
@@ -120,7 +121,8 @@ final class DatabaseDriver implements EntryDriver
         match ($query->status) {
             'published' => $builder->where('status', 'published'),
             'draft' => $builder->where('status', 'draft'),
-            'live' => $builder->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now())),
+            'live' => $builder->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()))
+                ->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now())),
             default => null,
         };
 
@@ -234,6 +236,7 @@ final class DatabaseDriver implements EntryDriver
             authorId: $row->author_id,
             blueprint: $row->blueprint,
             publishedAt: $row->published_at ? CarbonImmutable::parse($row->published_at) : null,
+            expiresAt: $row->expires_at ? CarbonImmutable::parse($row->expires_at) : null,
             createdAt: $row->created_at ? CarbonImmutable::parse($row->created_at) : null,
             updatedAt: $row->updated_at ? CarbonImmutable::parse($row->updated_at) : null,
         );

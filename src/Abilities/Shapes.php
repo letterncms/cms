@@ -42,7 +42,7 @@ final class Shapes
             'data' => Shape::open('Field values by field handle; what each may be is the collection\'s schema (collections/get).'),
             'originId' => Shape::STRING_OR_NULL, 'parentId' => Shape::STRING_OR_NULL, 'position' => Shape::INTEGER, 'authorId' => Shape::STRING_OR_NULL,
             'author' => Shape::nullable(self::person()), 'version' => Shape::STRING, 'publishedAt' => Shape::STRING_OR_NULL,
-            'createdAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
+            'expiresAt' => Shape::STRING_OR_NULL, 'createdAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
         ]);
     }
 
@@ -63,7 +63,7 @@ final class Shapes
             'id' => Shape::STRING, 'collection' => Shape::STRING, 'locale' => Shape::STRING, 'title' => Shape::STRING, 'slug' => Shape::STRING,
             'uri' => Shape::STRING_OR_NULL, 'status' => Shape::STRING, 'displayStatus' => Shape::STRING, 'parentId' => Shape::STRING_OR_NULL,
             'position' => Shape::INTEGER, 'authorId' => Shape::STRING_OR_NULL, 'author?' => Shape::nullable(self::person()), 'version' => Shape::STRING,
-            'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
+            'publishedAt' => Shape::STRING_OR_NULL, 'expiresAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
         ];
     }
 

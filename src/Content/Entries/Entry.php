@@ -32,6 +32,8 @@ final class Entry
         public ?string $authorId = null,
         public ?string $blueprint = null,
         public ?CarbonImmutable $publishedAt = null,
+        /** When it stops being published: from then on it is not live, and the scheduler unpublishes it. */
+        public ?CarbonImmutable $expiresAt = null,
         public ?CarbonImmutable $createdAt = null,
         public ?CarbonImmutable $updatedAt = null,
     ) {}
@@ -54,10 +56,16 @@ final class Entry
         return $this->isPublished() && $this->publishedAt !== null && $this->publishedAt->isFuture();
     }
 
+    /** Published, and its time is up: no longer on the site, and unpublished the next time the scheduler runs. */
+    public function isExpired(): bool
+    {
+        return $this->isPublished() && $this->expiresAt !== null && ! $this->expiresAt->isFuture();
+    }
+
     /** Published and visible right now. */
     public function isLive(): bool
     {
-        return $this->isPublished() && ! $this->isScheduled();
+        return $this->isPublished() && ! $this->isScheduled() && ! $this->isExpired();
     }
 
     public function hasDraft(): bool
@@ -119,7 +127,7 @@ final class Entry
             'content' => $this->content(), 'draft' => $this->draft === null ? null : $this->working(),
             'status' => $this->status, 'parentId' => $this->parentId, 'position' => $this->position,
             'originId' => $this->originId, 'blueprint' => $this->blueprint, 'uri' => $this->uri,
-            'publishedAt' => $this->publishedAt?->getTimestamp(),
+            'publishedAt' => $this->publishedAt?->getTimestamp(), 'expiresAt' => $this->expiresAt?->getTimestamp(),
         ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
     }
 
@@ -133,6 +141,7 @@ final class Entry
     public function displayStatus(): string
     {
         return match (true) {
+            $this->isExpired() => 'expired',
             $this->isScheduled() => 'scheduled',
             $this->isPublished() && $this->hasDraft() => 'changed',
             default => $this->status,
@@ -162,6 +171,7 @@ final class Entry
             'author' => $this->author($withDraft),
             'version' => $this->version(),
             'publishedAt' => $this->publishedAt?->toIso8601String(),
+            'expiresAt' => $this->expiresAt?->toIso8601String(),
             'createdAt' => $this->createdAt?->toIso8601String(),
             'updatedAt' => $this->updatedAt?->toIso8601String(),
         ];
@@ -187,6 +197,7 @@ final class Entry
             ...($withAuthor ? ['author' => $this->author()] : []),
             'version' => $this->version(),
             'publishedAt' => $this->publishedAt?->toIso8601String(),
+            'expiresAt' => $this->expiresAt?->toIso8601String(),
             'updatedAt' => $this->updatedAt?->toIso8601String(),
         ];
     }

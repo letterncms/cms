@@ -12,7 +12,7 @@ final class EntryFilter
     /** @param list<Entry> $entries */
     public static function apply(array $entries, EntryQuery $query): array
     {
-        $now = time();
+        $now = now()->getTimestamp();
 
         return array_values(array_filter($entries, static function (Entry $entry) use ($query, $now): bool {
             if ($query->locale !== null && $entry->locale !== $query->locale) {
@@ -22,7 +22,7 @@ final class EntryFilter
             $ok = match ($query->status) {
                 'published' => $entry->status === 'published',
                 'draft' => $entry->status === 'draft',
-                'live' => $entry->status === 'published' && ($entry->publishedAt === null || $entry->publishedAt->getTimestamp() <= $now),
+                'live' => $entry->status === 'published' && ($entry->publishedAt === null || $entry->publishedAt->getTimestamp() <= $now) && ($entry->expiresAt === null || $entry->expiresAt->getTimestamp() > $now),
                 default => true,
             };
 
@@ -130,6 +130,7 @@ final class EntryFilter
             'author_id' => $content['authorId'],
             'origin_id' => $entry->originId,
             'published_at' => $entry->publishedAt?->toIso8601String(),
+            'expires_at' => $entry->expiresAt?->toIso8601String(),
             'created_at' => $entry->createdAt?->toIso8601String(),
             'updated_at' => $entry->updatedAt?->toIso8601String(),
             default => data_get($content['data'], $field),

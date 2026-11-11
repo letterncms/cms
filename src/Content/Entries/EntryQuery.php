@@ -12,7 +12,7 @@ use InvalidArgumentException;
  */
 final class EntryQuery
 {
-    public const array COLUMNS = ['id', 'title', 'slug', 'uri', 'status', 'locale', 'parent_id', 'position', 'author_id', 'origin_id', 'published_at', 'created_at', 'updated_at'];
+    public const array COLUMNS = ['id', 'title', 'slug', 'uri', 'status', 'locale', 'parent_id', 'position', 'author_id', 'origin_id', 'published_at', 'expires_at', 'created_at', 'updated_at'];
 
     /** Columns compared without regard to case when sorting. */
     public const array TEXT_COLUMNS = ['title', 'slug', 'uri', 'status', 'locale'];

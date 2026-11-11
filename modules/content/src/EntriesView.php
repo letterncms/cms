@@ -60,7 +60,7 @@ final class EntriesView
             'open' => ['label' => __('Open'), 'to' => $open],
             'actions' => [
                 // A page someone can see is a click away.
-                ['label' => __('View on Site'), 'icon' => 'external', 'inline' => true, 'href' => '{row.uri}', 'when' => '{row.uri}', 'unless' => '{row.displayStatus} is draft, scheduled'],
+                ['label' => __('View on Site'), 'icon' => 'external', 'inline' => true, 'href' => '{row.uri}', 'when' => '{row.uri}', 'unless' => '{row.displayStatus} is draft, scheduled, expired'],
                 ['label' => __('Open'), 'icon' => 'edit', 'to' => $open],
                 ['label' => __('Duplicate'), 'icon' => 'copy', 'ability' => 'entries/duplicate', 'input' => $entry, 'then' => 'open', 'to' => "/content/{$handle}/{result.id}", 'can' => "entries.{$handle}.create"],
                 ['label' => __('Publish'), 'icon' => 'rocket', 'ability' => 'entries/publish', 'input' => $entry, 'success' => __('Published'), 'when' => '{row.displayStatus} is draft, changed', 'can' => "entries.{$handle}.publish"],
