@@ -55,6 +55,91 @@ final class SafeFetcher
     }
 
     /**
+     * Send a body as it is, with the caller's headers (a signature, a content type), and read the
+     * answer whatever its status. Refuses to follow a redirect, like postJson. With `$truncate`
+     * an answer longer than `$maxBytes` is cut there instead of refused: for a log that keeps its start.
+     *
+     * @param  list<string>  $headers  "Name: value"
+     * @return array{status: int, body: string}
+     */
+    public static function post(string $url, string $body, array $headers = [], int $timeout = 3, int $maxBytes = 65_536, bool $truncate = false): array
+    {
+        foreach ($headers as $header) {
+            // One header per line, and never the ones that say where the request goes or how long it is: those are curl's.
+            if (! is_string($header) || preg_match('/[\r\n\0]/', $header) || ! preg_match('/^[A-Za-z0-9!#$%&\'*+.^_`|~-]+:/', $header) || preg_match('/^(host|content-length|transfer-encoding)\s*:/i', $header)) {
+                throw new RuntimeException(__('That header is not allowed.'));
+            }
+        }
+
+        $answer = '';
+        $read = 0;
+        $sink = static function (string $chunk) use (&$answer, &$read, $maxBytes, $truncate): ?bool {
+            $read += strlen($chunk);
+
+            if (strlen($answer) < $maxBytes) {
+                $answer .= $truncate ? substr($chunk, 0, $maxBytes - strlen($answer)) : $chunk;
+            }
+
+            if (! $truncate) {
+                return strlen($answer) <= $maxBytes;
+            }
+
+            // Cut off, the rest is read and dropped. After a megabyte reading stops: what was posted
+            // has arrived and its status is known, so that is the answer, not a failure.
+            return $read <= max($maxBytes, 1_000_000) ? true : null;
+        };
+
+        ['status' => $status] = self::send('POST', $url, $headers, $body, $sink, static function () use (&$answer, &$read): void {
+            $answer = '';
+            $read = 0;
+        }, $timeout, 0, null, anyStatus: true);
+
+        return ['status' => $status, 'body' => $answer];
+    }
+
+    /**
+     * Whether an address is on the public internet: not loopback, private, link-local, shared
+     * (100.64/10) or reserved, and not an IPv6 form that carries an IPv4 address inside
+     * (IPv4-mapped and NAT64's 64:ff9b::/96, which a DNS64 network answers with, are judged as that
+     * address; IPv4-compatible, local-use NAT64, 6to4 and Teredo are refused).
+     */
+    public static function isPublic(string $ip): bool
+    {
+        $packed = @inet_pton($ip);
+
+        if ($packed === false) {
+            return false;
+        }
+
+        // Multicast and what lies above it is nobody's server.
+        if ((strlen($packed) === 4 && ord($packed[0]) >= 224) || (strlen($packed) === 16 && $packed[0] === "\xff")) {
+            return false;
+        }
+
+        if (strlen($packed) === 16) {
+            // ::ffff:0:0/96 and 64:ff9b::/96 are an IPv4 address by another name.
+            if (str_starts_with($packed, "\0\0\0\0\0\0\0\0\0\0\xff\xff") || str_starts_with($packed, "\x00\x64\xff\x9b\0\0\0\0\0\0\0\0")) {
+                return self::isPublic((string) inet_ntop(substr($packed, 12)));
+            }
+
+            // Site-local, fec0::/10: deprecated, and never public.
+            if ($packed[0] === "\xfe" && (ord($packed[1]) & 0xc0) === 0xc0) {
+                return false;
+            }
+
+            // ::/96, 64:ff9b:1::/48, 2002::/16, 2001::/32
+            foreach (["\0\0\0\0\0\0\0\0\0\0\0\0", "\x00\x64\xff\x9b\x00\x01", "\x20\x02", "\x20\x01\x00\x00"] as $prefix) {
+                if (str_starts_with($packed, $prefix)) {
+                    return false;
+                }
+            }
+        }
+
+        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) !== false
+            && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+    }
+
+    /**
      * Stream a URL to a file without holding it in memory. A partial file left by an interrupted
      * step is continued when the server allows it. Headers go only to the URL's own origin:
      * a redirect elsewhere drops them, and a redirect from https to http is refused.
@@ -99,7 +184,7 @@ final class SafeFetcher
 
     /**
      * @param  list<string>  $headers
-     * @param  callable(string): bool  $sink  false stops the transfer
+     * @param  callable(string): ?bool  $sink  false refuses the answer as too large; null stops reading and keeps what there is
      * @param  callable(): void  $restart  Forget what the sink has: a redirect's body, or a server that ignored Range
      * @return array{status: int, type: string, url: string}
      */
@@ -113,6 +198,8 @@ final class SafeFetcher
             $received = [];
             $status = 0;
             $accepted = true;
+            $stopped = false;
+            $refused = false;
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => false,
@@ -120,8 +207,10 @@ final class SafeFetcher
                 CURLOPT_TIMEOUT => $timeout,
                 CURLOPT_CONNECTTIMEOUT => min(5, $timeout),
                 CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                // Never through a proxy from the environment: it would connect somewhere nobody vetted.
+                CURLOPT_PROXY => '',
                 // Pin the vetted IP so DNS cannot change between check and connect.
-                CURLOPT_RESOLVE => ["{$host}:{$port}:{$ip}"],
+                CURLOPT_RESOLVE => ["{$host}:{$port}:".(str_contains($ip, ':') ? "[{$ip}]" : $ip)],
                 CURLOPT_USERAGENT => $userAgent ?? Brand::get().'/'.\Cms\Cms::VERSION.' ('.Brand::get('product_url').')',
                 CURLOPT_HTTPHEADER => self::origin($url) === $origin ? $headers : array_values(array_filter($headers, static fn (string $h) => str_starts_with($h, 'Range:'))),
                 CURLOPT_HEADERFUNCTION => static function ($ch, string $line) use (&$received, &$status): int {
@@ -135,7 +224,7 @@ final class SafeFetcher
 
                     return strlen($line);
                 },
-                CURLOPT_WRITEFUNCTION => static function ($ch, string $chunk) use ($sink, &$status, &$received, &$accepted, &$resumed, $restart, $anyStatus): int {
+                CURLOPT_WRITEFUNCTION => static function ($ch, string $chunk) use ($sink, &$status, &$received, &$accepted, &$stopped, &$resumed, $restart, $anyStatus): int {
                     if ($status >= 300 && $status < 400 && isset($received['location'])) {
                         return strlen($chunk);
                     }
@@ -154,11 +243,24 @@ final class SafeFetcher
                         $restart();
                     }
 
-                    $accepted = $sink($chunk);
+                    $took = $sink($chunk);
+                    // Null: enough has been read. The transfer ends there, with the status it has.
+                    $stopped = $took === null;
+                    $accepted = $took !== false;
 
-                    return $accepted ? strlen($chunk) : 0;
+                    return $took === true ? strlen($chunk) : 0;
                 },
             ]);
+
+            // The address the socket really reached is the one that was vetted, and nothing else.
+            if (defined('CURLOPT_PREREQFUNCTION')) {
+                curl_setopt($ch, CURLOPT_PREREQFUNCTION, static function ($ch, string $reached) use ($ip, &$refused): int {
+                    self::$reached = $reached;
+                    $refused = ! self::mayConnect($reached, $ip);
+
+                    return $refused ? CURL_PREREQFUNC_ABORT : CURL_PREREQFUNC_OK;
+                });
+            }
 
             if ($method === 'POST') {
                 curl_setopt($ch, CURLOPT_POST, true);
@@ -170,6 +272,14 @@ final class SafeFetcher
 
             if (! $accepted) {
                 throw new RuntimeException(__('The file is too large.'));
+            }
+
+            if ($stopped && ! $refused) {
+                return ['status' => $status, 'type' => (string) ($received['content-type'] ?? ''), 'url' => $url];
+            }
+
+            if ($refused) {
+                throw new RuntimeException(__('That address is not allowed.'));
             }
 
             if ($ok === false) {
@@ -213,7 +323,7 @@ final class SafeFetcher
     {
         $parts = parse_url($url);
         $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        $host = (string) ($parts['host'] ?? '');
+        $host = trim((string) ($parts['host'] ?? ''), '[]');
 
         if (! in_array($scheme, ['http', 'https'], true) || $host === '' || isset($parts['user']) || isset($parts['pass'])) {
             throw new RuntimeException(__('Only plain http(s) URLs are allowed.'));
@@ -232,7 +342,7 @@ final class SafeFetcher
         }
 
         foreach (self::$allowPrivate ? [] : $ips as $ip) {
-            if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) || str_starts_with($ip, '169.254.') || $ip === '0.0.0.0' || str_starts_with(strtolower($ip), 'fe80:') || str_starts_with(strtolower($ip), 'fc') || str_starts_with(strtolower($ip), 'fd')) {
+            if (! self::isPublic($ip)) {
                 throw new RuntimeException(__('That address is not allowed.'));
             }
         }
@@ -240,9 +350,37 @@ final class SafeFetcher
         return [$host, $ips[0], $port];
     }
 
+    /** The address the last request connected to, as curl reports it before anything is sent. */
+    public static ?string $reached = null;
+
+    /**
+     * Whether a connection may be used: it reached the address that was vetted and pinned, and that
+     * address is public. Asked once the socket is open and before the request goes out, so a
+     * resolver or a route that led elsewhere after the check gets nothing.
+     */
+    public static function mayConnect(string $reached, string $vetted): bool
+    {
+        return self::$allowPrivate || (self::same($reached, $vetted) && self::isPublic($reached));
+    }
+
+    /** The same address, however it is written. */
+    private static function same(string $a, string $b): bool
+    {
+        $a = @inet_pton($a);
+
+        return $a !== false && $a === @inet_pton($b);
+    }
+
+    /** For tests: answers for a host instead of DNS. */
+    public static ?\Closure $resolver = null;
+
     /** @return list<string> Some hosts disable dns_get_record; gethostbynamel still answers there. */
     private static function resolve(string $host): array
     {
+        if (self::$resolver !== null) {
+            return array_values((self::$resolver)($host));
+        }
+
         if (function_exists('dns_get_record')) {
             $found = array_merge(
                 array_column(@dns_get_record($host, DNS_A) ?: [], 'ip'),
