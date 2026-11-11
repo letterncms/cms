@@ -140,6 +140,8 @@ final class OpenApi
         $collection = ['name' => 'collection', 'in' => 'path', 'required' => true, self::ABOUT => 'The handle of a collection the site serves: one with `api: true`, or one whose entries have pages.', 'schema' => ['type' => 'string']];
         $locale = ['name' => 'locale', 'in' => 'query', 'required' => false, self::ABOUT => 'One of the site\'s languages; any other value is read as the default language.', 'schema' => ['type' => 'string']];
         $entry = ['$ref' => '#/components/schemas/Entry'];
+        $fields = ['name' => 'fields', 'in' => 'query', 'required' => false, self::ABOUT => 'Only these of each entry, separated by commas: id (always given), collection, locale, title, slug, uri, parentId, publishedAt, updatedAt, data (all fields) or fields of the collection by handle, which come under `data`.', 'schema' => ['type' => 'string']];
+        $expand = ['name' => 'expand', 'in' => 'query', 'required' => false, self::ABOUT => 'Relation fields to give as entries instead of ids, separated by commas, at most two levels deep: author,related.author; a relation in a group is group.field. One answer expands at most 200 entries and answers 422 beyond that. Only published entries this request may read, of collections the API serves, are given; the others are left out.', 'schema' => ['type' => 'string']];
         $missing = ['$ref' => '#/components/responses/NotFound'];
 
         return [
@@ -153,17 +155,24 @@ final class OpenApi
                     $collection,
                     $locale,
                     ['name' => 'q', 'in' => 'query', 'required' => false, self::ABOUT => 'Words to search for.', 'schema' => ['type' => 'string']],
-                    ['name' => 'sort', 'in' => 'query', 'required' => false, self::ABOUT => 'A field to order by, with a leading - for descending (-publishedAt). Without it, the collection\'s own order.', 'schema' => ['type' => 'string']],
-                    ['name' => 'filter', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries whose field has this value: filter[category]=news. For a relation or terms field, the id or the slug of what it names: filter[topics]=news.', 'style' => 'deepObject', 'explode' => true, 'schema' => ['type' => 'object', 'additionalProperties' => ['type' => 'string']]],
+                    ['name' => 'sort', 'in' => 'query', 'required' => false, self::ABOUT => 'Fields to order by, separated by commas, each with a leading - for descending: -publishedAt,title. One of id, title, slug, uri, parentId, publishedAt, updatedAt, position, or a field of the collection. Without it, the collection\'s own order.', 'schema' => ['type' => 'string']],
+                    ['name' => 'filter', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries whose field matches. filter[category]=news is "equals"; filter[field][operator]=value compares with ne, lt, lte, gt, gte, in (values separated by commas), contains (a list has the value, a text has it in it; any other kind of field answers 422) or exists (true or false). A field that is missing or empty equals only nothing (filter[field]=), is unequal to every value and is neither less nor more than any. Fields are id, title, slug, uri, parentId, publishedAt, updatedAt, position, a field of the collection, or what is inside one after a dot (place.address). A relation or terms field takes the id or the slug of what it names: filter[topics]=news. An unknown field or operator answers 422.', 'style' => 'deepObject', 'explode' => true, 'schema' => ['type' => 'object', 'additionalProperties' => ['oneOf' => [['type' => 'string'], ['type' => 'object', 'properties' => array_fill_keys(['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in', 'contains', 'exists'], ['type' => 'string']), 'additionalProperties' => false]]]]],
+                    $fields,
+                    $expand,
                     ['name' => 'references', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries that name the published entry with this id: in a relation or terms field at any depth, a link field or a link in a block. The posts of an author, the projects of a client.', 'schema' => ['type' => 'string']],
                     ['name' => 'references_field', 'in' => 'query', 'required' => false, self::ABOUT => 'With references: only inside this field.', 'schema' => ['type' => 'string']],
                     ['name' => 'limit', 'in' => 'query', 'required' => false, self::ABOUT => 'Entries per page. Without it, the collection\'s own page size.', 'schema' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200]],
-                    ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'minimum' => 1, 'default' => 1]],
+                    ['name' => 'page', 'in' => 'query', 'required' => false, self::ABOUT => 'A page past the last one answers 422.', 'schema' => ['type' => 'integer', 'minimum' => 1, 'default' => 1]],
                 ],
                 'responses' => ['200' => $this->json(['type' => 'object', 'properties' => [
                     'data' => ['type' => 'array', 'items' => $entry],
-                    'meta' => ['type' => 'object', 'properties' => ['total' => ['type' => 'integer'], 'page' => ['type' => 'integer'], 'perPage' => ['type' => 'integer'], 'pages' => ['type' => 'integer']], 'required' => ['total', 'page', 'perPage', 'pages']],
-                ], 'required' => ['data', 'meta']]), '404' => $missing],
+                    'meta' => ['type' => 'object', 'properties' => [
+                        'total' => ['type' => 'integer'], 'page' => ['type' => 'integer'], 'perPage' => ['type' => 'integer'], 'pages' => ['type' => 'integer'],
+                        'count' => ['type' => 'integer', self::ABOUT => 'Entries on this page.'], 'from' => ['type' => ['integer', 'null'], self::ABOUT => 'The place of the first entry of this page among all, from 1.'],
+                        'to' => ['type' => ['integer', 'null']], 'hasMore' => ['type' => 'boolean'],
+                    ], 'required' => ['total', 'page', 'perPage', 'pages', 'count', 'from', 'to', 'hasMore']],
+                    'links' => ['type' => 'object', self::ABOUT => 'This page and the ones around it, as addresses with the same query.', 'properties' => array_fill_keys(['self', 'first', 'prev', 'next', 'last'], ['type' => ['string', 'null']]), 'required' => ['self', 'first', 'prev', 'next', 'last']],
+                ], 'required' => ['data', 'meta', 'links']]), '404' => $missing, '422' => ['$ref' => self::ERROR]],
             ]],
             '/content/{collection}/{slug}' => ['get' => [
                 'operationId' => 'content.get',
@@ -171,8 +180,8 @@ final class OpenApi
                 self::ABOUT => 'One published entry by its slug. Answers may be cached for a minute.',
                 'tags' => ['content'],
                 'security' => [],
-                'parameters' => [$collection, ['name' => 'slug', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'string']], $locale],
-                'responses' => ['200' => $this->json(['type' => 'object', 'properties' => ['data' => $entry], 'required' => ['data']]), '404' => $missing],
+                'parameters' => [$collection, ['name' => 'slug', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'string']], $locale, $fields, $expand],
+                'responses' => ['200' => $this->json(['type' => 'object', 'properties' => ['data' => $entry], 'required' => ['data']]), '404' => $missing, '422' => ['$ref' => self::ERROR]],
             ]],
         ];
     }
@@ -190,12 +199,13 @@ final class OpenApi
             'title' => $text,
             'slug' => $text,
             'uri' => [...$maybe, self::ABOUT => 'The path of the entry\'s page, when it has one.'],
-            'data' => ['type' => 'object', 'additionalProperties' => true, self::ABOUT => 'The values of the collection\'s fields.'],
+            'data' => ['type' => 'object', 'additionalProperties' => true, self::ABOUT => 'The values of the collection\'s fields. A relation named in `expand` is a list of entries as given here instead of ids.'],
             'parentId' => $maybe,
             'publishedAt' => [...$maybe, 'format' => 'date-time'],
             'updatedAt' => [...$maybe, 'format' => 'date-time'],
             'gated' => ['type' => 'boolean', 'const' => true, self::ABOUT => 'Present when the entry is for signed-in visitors and only its teaser is given.'],
-        ], 'required' => ['id', 'collection', 'locale', 'title', 'slug', 'uri', 'data', 'parentId', 'publishedAt', 'updatedAt']];
+        // With `fields`, only id and what was asked for.
+        ], 'required' => ['id']];
     }
 
     private function path(Ability $ability): array

@@ -144,19 +144,39 @@ final class EntryFilter
             $actual = $actual === null ? null : strtotime((string) $actual);
         }
 
+        // Nothing there (missing, null, empty) equals only nothing, is unequal to everything else, is in no list
+        // and is neither less nor more than anything: what DatabaseDriver asks of its JSON.
+        if (($actual === null || $actual === '' || $actual === []) && ! in_array($operator, ['null', 'not null'], true)) {
+            $blank = $expected === null || $expected === '';
+
+            return match ($operator) {
+                '=' => $blank,
+                '!=' => ! $blank,
+                'not in' => true,
+                default => false,
+            };
+        }
+
+        $scalar = is_scalar($actual);
+
         return match ($operator) {
             '=' => $actual == $expected,
             '!=' => $actual != $expected,
-            '<' => $actual < $expected,
-            '>' => $actual > $expected,
-            '<=' => $actual <= $expected,
-            '>=' => $actual >= $expected,
+            '<' => $scalar && $actual < $expected,
+            '>' => $scalar && $actual > $expected,
+            '<=' => $scalar && $actual <= $expected,
+            '>=' => $scalar && $actual >= $expected,
             'in' => in_array($actual, (array) $expected, false),
             'not in' => ! in_array($actual, (array) $expected, false),
             'null' => $actual === null,
             'not null' => $actual !== null,
-            'contains' => is_array($actual) ? in_array($expected, $actual, false) : str_contains(mb_strtolower((string) $actual), mb_strtolower((string) $expected)),
-            'like' => (bool) preg_match('/^'.str_replace(['%', '_'], ['.*', '.'], preg_quote((string) $expected, '/')).'$/iu', (string) $actual),
+            // A list has the value; a text has it in it; anything else (a number, a place) has nothing in it.
+            'contains' => match (true) {
+                is_array($actual) => array_is_list($actual) && in_array($expected, $actual, false),
+                is_string($actual) => is_scalar($expected) && str_contains(mb_strtolower($actual), mb_strtolower((string) $expected)),
+                default => false,
+            },
+            'like' => $scalar && (bool) preg_match('/^'.str_replace(['%', '_'], ['.*', '.'], preg_quote((string) $expected, '/')).'$/iu', (string) $actual),
             default => false,
         };
     }
