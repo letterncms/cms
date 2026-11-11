@@ -22,6 +22,18 @@ final class DesignCompiler
         'background' => 'background-color', 'radius' => 'border-radius',
     ];
 
+    /** A font weight as @font-face takes it: one number from 1 to 1000, or the two ends of a variable axis ("100 1000"). */
+    public const string WEIGHT = '/^[1-9]\d{0,3}( [1-9]\d{0,3})?$/D';
+
+    /** A font family's name: letters, digits, spaces and hyphens on one line. */
+    private const string FAMILY = '/^[\w -]{1,60}$/uD';
+
+    /** What a font face may say about the fallback drawn until it arrives (see fallbackFace). */
+    public const array FALLBACK = ['fallback', 'sizeAdjust', 'ascentOverride', 'descentOverride', 'lineGapOverride'];
+
+    /** @var array<string, true> families that have a fallback face, while compiling */
+    private array $fallbacks = [];
+
     public const array ELEMENTS = [
         'html', 'body', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'a:hover', 'small', 'strong', 'em', 'mark', 'code', 'kbd', 'pre', 'blockquote',
         'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', '::selection', ':focus-visible',
@@ -57,17 +69,25 @@ final class DesignCompiler
         $out = ['@layer theme, base, elements, components, utilities;'];
         $out[] = (string) file_get_contents(dirname(__DIR__, 2).'/resources/css/reset.css');
 
+        $this->fallbacks = [];
+
+        foreach ($design->fonts() as $font) {
+            if (($face = $this->fallbackFace($font)) !== null) {
+                $out[] = $face;
+            }
+        }
+
         foreach ($design->fonts() as $font) {
             $src = isset($font['src']) ? $fontUrl((string) $font['src']) : null;
 
-            if ($src === null || ! isset($font['family']) || ! preg_match('/^[\w\s-]{1,60}$/u', (string) $font['family'])) {
+            if ($src === null || ! isset($font['family']) || ! preg_match(self::FAMILY, (string) $font['family'])) {
                 continue;
             }
 
             $out[] = sprintf(
                 '@font-face{font-family:"%s";src:url("%s") format("woff2");font-weight:%s;font-style:%s;font-display:%s}',
                 $font['family'], str_replace('"', '', $src),
-                preg_match('/^\d{3}( \d{3})?$/', (string) ($font['weight'] ?? '400')) ? $font['weight'] ?? '400' : '400',
+                preg_match(self::WEIGHT, (string) ($font['weight'] ?? '400')) ? $font['weight'] ?? '400' : '400',
                 ($font['style'] ?? 'normal') === 'italic' ? 'italic' : 'normal',
                 // A face the page doesn't preload can arrive late: it must not move text that's already there.
                 in_array($font['display'] ?? null, ['swap', 'optional', 'fallback', 'block'], true) ? $font['display'] : (empty($font['preload']) ? 'optional' : 'swap'),
@@ -243,6 +263,20 @@ final class DesignCompiler
             return $this->fluid((string) $value['min'], (string) $value['max']);
         }
 
+        // A family with a fallback face is followed by it in every stack, so the text it replaces is the same size.
+        if ($token['group'] === 'font' && $this->fallbacks !== []) {
+            $list = is_array($value) ? $value : (is_string($value) && ! str_contains($value, '(') ? array_map(static fn (string $f) => trim($f, " \"'"), explode(',', $value)) : null);
+
+            if ($list !== null) {
+                $value = [];
+
+                foreach ($list as $name) {
+                    $value[] = $name;
+                    isset($this->fallbacks[(string) $name]) && ! in_array($name.' Fallback', $list, true) && $value[] = $name.' Fallback';
+                }
+            }
+        }
+
         if ($token['group'] === 'font' && is_array($value)) {
             $families = array_map(static fn ($f) => preg_match('/\s/', (string) $f) && ! str_contains((string) $f, '"') ? "\"{$f}\"" : (string) $f, $value);
             $value = implode(', ', $families);
@@ -253,6 +287,33 @@ final class DesignCompiler
         }
 
         return Css::value((string) $value);
+    }
+
+    /**
+     * A local font drawn at the web font's size until that arrives, so the text doesn't move when it does:
+     *   { family: "Hanken Grotesk", …, fallback: "Arial", sizeAdjust: "102%", ascentOverride: "98%", descentOverride: "26%", lineGapOverride: "0%" }
+     * becomes @font-face{font-family:"Hanken Grotesk Fallback";src:local("Arial");size-adjust:102%;…}, once per family and style.
+     */
+    private function fallbackFace(array $font): ?string
+    {
+        $family = (string) ($font['family'] ?? '');
+        $locals = array_filter(array_map('trim', is_array($font['fallback'] ?? null) ? $font['fallback'] : explode(',', (string) ($font['fallback'] ?? ''))), static fn ($name) => is_string($name) && preg_match(self::FAMILY, $name));
+        $style = ($font['style'] ?? 'normal') === 'italic' ? 'italic' : 'normal';
+
+        if ($locals === [] || ! preg_match(self::FAMILY, $family) || isset($this->fallbacks[$family.'|'.$style])) {
+            return null;
+        }
+
+        $this->fallbacks[$family] = $this->fallbacks[$family.'|'.$style] = true;
+        $css = ['font-family:"'.$family.' Fallback"', 'src:'.implode(',', array_map(static fn (string $name) => 'local("'.$name.'")', $locals)), 'font-style:'.$style];
+
+        foreach (['sizeAdjust' => 'size-adjust', 'ascentOverride' => 'ascent-override', 'descentOverride' => 'descent-override', 'lineGapOverride' => 'line-gap-override'] as $key => $property) {
+            if (is_string($font[$key] ?? null) && preg_match('/^\d{1,3}(\.\d{1,3})?%$/D', $font[$key])) {
+                $css[] = $property.':'.$font[$key];
+            }
+        }
+
+        return '@font-face{'.implode(';', $css).'}';
     }
 
     /** clamp() between 360px and 1280px viewports. */
