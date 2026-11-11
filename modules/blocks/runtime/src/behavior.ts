@@ -15,7 +15,10 @@
 export interface BehaviorContext {
   /** A design token's value where the element is: token('color.primary'), token('duration.fast'). '' when there is none. */
   token: (path: string) => string
-  /** The visitor asked for less motion. When that changes, the behaviour is unmounted and mounted again. */
+  /**
+   * The visitor asked for less motion: in their system's settings, or with the page's Motion Toggle.
+   * When that changes, the behaviour is unmounted and mounted again.
+   */
   reducedMotion: boolean
   /** Aborted when the element leaves: pass it to addEventListener and fetch, and nothing is left to undo. */
   signal: AbortSignal
@@ -49,6 +52,16 @@ const SELECTOR = '[data-cms-behavior]'
 const mounted = new Map<HTMLElement, Mounted[]>()
 const reduced = matchMedia('(prefers-reduced-motion: reduce)')
 
+/** Less motion: the system's setting, or the page's Motion Toggle (motion.ts), also before that script has started. */
+function calm(): boolean {
+  if (reduced.matches || document.documentElement.dataset.cmsMotion === 'paused') return true
+  try {
+    return !!document.querySelector('[data-cms-motion-toggle]') && localStorage.getItem('cms-motion-paused') === '1'
+  } catch {
+    return false
+  }
+}
+
 /** Token groups whose CSS variable isn't named after them (DesignJson::GROUPS). */
 const PREFIX: Record<string, string> = { weight: 'font-weight' }
 
@@ -77,7 +90,7 @@ async function run(el: HTMLElement, entry: Mounted, spec: Spec) {
     const module: Behavior = await import(/* @vite-ignore */ spec.src)
     if (entry.abort.signal.aborted) return
     entry.module = module
-    const cleanup = await (module.mount ?? module.default)?.(el, spec.props ?? {}, { token: (path) => token(el, path), reducedMotion: reduced.matches, signal: entry.abort.signal })
+    const cleanup = await (module.mount ?? module.default)?.(el, spec.props ?? {}, { token: (path) => token(el, path), reducedMotion: calm(), signal: entry.abort.signal })
     if (typeof cleanup !== 'function') return
     // It left while its mount was still at work: undo what that did.
     if (entry.abort.signal.aborted) cleanup()
@@ -133,8 +146,14 @@ export function unmount(el: HTMLElement) {
 
 const within = (node: Node): HTMLElement[] => (node instanceof HTMLElement ? [...(node.matches(SELECTOR) ? [node] : []), ...node.querySelectorAll<HTMLElement>(SELECTOR)] : [])
 
+let started = false
+
 export function start() {
+  // Asked again for every page that arrives without a page load: what is in the document is mounted (the
+  // observer has usually done it already), and the watching below is set up once.
   document.querySelectorAll<HTMLElement>(SELECTOR).forEach(mount)
+  if (started) return
+  started = true
 
   new MutationObserver((records) => {
     for (const record of records) {
@@ -144,10 +163,16 @@ export function start() {
     }
   }).observe(document.documentElement, { childList: true, subtree: true })
 
-  reduced.addEventListener('change', () => {
+  // One way in: when less motion starts or stops being asked for, every behaviour is mounted afresh with the new answer.
+  let was = calm()
+  const again = () => {
+    if (was === calm()) return
+    was = calm()
     for (const el of [...mounted.keys()]) {
       unmount(el)
       mount(el)
     }
-  })
+  }
+  reduced.addEventListener('change', again)
+  document.addEventListener('cms:motion', again)
 }

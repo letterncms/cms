@@ -232,6 +232,11 @@ export async function go(to: string | URL, { push = true, scroll = null as [numb
       document.title = next.title
       head(next)
       body(next)
+      // A pause belongs to a page that can undo it: one without a Motion Toggle starts moving, as it would on a page load.
+      if (document.documentElement.dataset.cmsMotion === 'paused' && !document.querySelector('[data-cms-motion-toggle]')) {
+        delete document.documentElement.dataset.cmsMotion
+        document.dispatchEvent(new CustomEvent('cms:motion', { detail: { paused: false } }))
+      }
       if (scroll) place(scroll[1], scroll[0])
       else place(0)
       const anchor = arrive(url.hash)
