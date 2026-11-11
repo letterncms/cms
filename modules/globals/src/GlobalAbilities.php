@@ -9,6 +9,7 @@ use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Admin\Translations;
 use Cms\Content\Fields\Blueprint;
+use Cms\Content\Fields\FieldProblems;
 use Cms\Content\Globals\GlobalSet;
 use Cms\Cms;
 use Cms\Modules\Workspace\Answers;
@@ -99,6 +100,8 @@ final class GlobalAbilities
                 $set = $this->cms->globals()->find($in['handle']) ?? new GlobalSet($in['handle'], $in['title'], $in['icon'] ?? 'globe', []);
                 $set->title = $in['title'];
                 $set->icon = $in['icon'] ?? $set->icon;
+                // What is wrong with a field is said by its path (`fields.2.handle`), for the editor to show beside it.
+                FieldProblems::refuse($in['fields']);
                 Blueprint::validate($in['fields']);
                 $set->fields = $in['fields'];
                 $this->cms->globals()->save($set);

@@ -391,5 +391,11 @@
   "You are not allowed to do this.": "Je hebt hier geen toestemming voor.",
   "You do not have access to the admin.": "Je hebt geen toegang tot de beheeromgeving.",
   "Your session expired. Reload the page.": "Je sessie is verlopen. Laad de pagina opnieuw.",
-  "Your sign-in expired. Please start again.": "Je inlogsessie is verlopen. Begin opnieuw."
+  "Your sign-in expired. Please start again.": "Je inlogsessie is verlopen. Begin opnieuw.",
+  "“:handle” is reserved. Choose another field handle.": "“:handle” is gereserveerd. Kies een andere veldsleutel.",
+  "A field needs a handle.": "Een veld heeft een sleutel nodig.",
+  "Another field uses this handle.": "Een ander veld gebruikt deze sleutel.",
+  "Sub-fields must be a list.": "Subvelden moeten een lijst zijn.",
+  "The field type “:type” is not available.": "Het veldtype “:type” is niet beschikbaar.",
+  "Use lowercase letters, digits and underscores, starting with a letter.": "Gebruik kleine letters, cijfers en underscores, en begin met een letter."
 }
