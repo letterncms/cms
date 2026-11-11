@@ -283,7 +283,20 @@ export function start() {
 
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-    const url = target((event.target as Element).closest?.('a') ?? null)
+    const link = (event.target as Element).closest?.('a') ?? null
+    // A link to the page one is on (the logo, the menu's current item): a browser would load it again, and what
+    // lives across pages would start over. Going to its top is what the click was for. Never with a query
+    // string on either side: /cart?add=5 from /cart does something, and is the browser's to send.
+    if (link?.href && !link.hasAttribute('download') && (!link.target || link.target === '_self') && !link.closest('[data-cms-reload]')) {
+      const same = new URL(link.href)
+      if (same.origin === location.origin && same.pathname === location.pathname && same.search === '' && location.search === '' && same.hash === '') {
+        event.preventDefault()
+        if (location.hash) history.pushState({ cms: true }, '', same.href)
+        window.scrollTo({ top: 0, behavior: reduced() ? 'instant' : 'smooth' })
+        return
+      }
+    }
+    const url = target(link)
     if (!url) return
     event.preventDefault()
     void go(url)
