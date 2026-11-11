@@ -8,7 +8,9 @@ const kind = (handle: string): BlueprintKind => ({
   remove: ['globals/delete', { handle }, t('Its values are deleted too.')],
   removeLabel: t('Delete Global Set'),
   back: { label: t('Globals'), to: '/globals', icon: 'globe' },
-  crumbs: (def) => [{ label: t('Globals'), to: '/globals', icon: 'globe' }, { label: def.title, to: `/globals/${handle}` }, { label: t('Edit Fields') }],
+  // The same screen a collection's fields are: Fields and Settings as tabs in one column, Delete at the foot of Settings,
+  // and the set's own name at the end of the trail on both tabs.
+  settingsSections: [{ title: t('General'), handles: ['title', 'icon'] }],
 })
 
 /** The fields of a global set: the `globals/fields` component its view is made of. */

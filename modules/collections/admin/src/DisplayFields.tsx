@@ -1,5 +1,5 @@
 import { t, useManifest, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Button, Checkbox, entryFieldColumns, entrySystemColumns, standardEntryColumns } from '@letterncms/ui'
+import { Button, Checkbox, Field, entryFieldColumns, entrySystemColumns, standardEntryColumns } from '@letterncms/ui'
 
 /** Configure the same column IDs used by the entry list's Display menu. */
 export default function DisplayFields({ value, onChange, context, disabled }: FieldProps<string[] | null>) {
@@ -26,14 +26,11 @@ export default function DisplayFields({ value, onChange, context, disabled }: Fi
       } />)}
     </div>
   )
-  return <div id="f-default_columns" role="group" aria-label={t('Default Display Fields')} className="rounded-sm border border-border px-4 py-3">
-    {choices(system)}
-    {fields.length > 0 && <div className="mt-3 border-t border-border pt-3">
-      <div className="cms-label mb-2.5">{t('Collection Fields')}</div>
-      {choices(fields)}
-    </div>}
-    {changed && <div className="mt-3 border-t border-border pt-3">
-      <Button size="sm" disabled={disabled} onClick={() => onChange(null)}>{t('Reset to Automatic Fields')}</Button>
-    </div>}
-  </div>
+  // Named for what they are, the list's columns, and drawn as a field: a box of its own read as a card inside the section.
+  return <Field label={t('Columns')} aside={changed && <Button size="xs" variant="ghost" disabled={disabled} onClick={() => onChange(null)}>{t('Reset Columns')}</Button>}>
+    <div id="f-default_columns" role="group" aria-label={t('Columns')}>
+      {/* One group: a field's handle beside its name says which are the collection's own. */}
+      {choices([...system, ...fields])}
+    </div>
+  </Field>
 }

@@ -1,6 +1,6 @@
 import { invalidate, CmsError, loadManifest, navigate, run, t, useAbility, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
 import { useState } from 'react'
-import { Dialog, Fields, Icon, QueryError, slugify, toast } from '@letterncms/ui'
+import { Dialog, Fields, Icon, Notice, QueryError, slugify, toast } from '@letterncms/ui'
 
 interface CollectionRow {
   handle: string
@@ -111,8 +111,8 @@ function NewCollectionDialog({ existing, onOpenChange }: { existing: CollectionR
           </summary>
           <Fields className="mt-4" fields={advanced} values={{ ...values, route: values.route ?? defaultRoute }} onChange={change} errors={errors} disabled={busy} />
         </details>
-        {handle && handleError && <p role="alert" className="m-0 text-xs text-danger">{handleError}</p>}
-        {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+        {handle && handleError && <Notice tone="danger">{handleError}</Notice>}
+        {error && <Notice tone="danger">{error}</Notice>}
       </div>
     </Dialog>
   )
