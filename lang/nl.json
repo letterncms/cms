@@ -252,6 +252,7 @@
   "Send 1–25 calls as {\"calls\": [{\"ability\": \"…\", \"input\": {}}]}.": "Stuur 1–25 aanroepen als {\"calls\": [{\"ability\": \"…\", \"input\": {}}]}.",
   "Set Up Your Site": "Je site instellen",
   "Several terms are called “:term”. Give the id of the one you mean.": "Meerdere termen heten “:term”. Geef de id van de term die je bedoelt.",
+  "Show Password": "Wachtwoord tonen",
   "Sidebar": "Zijbalk",
   "Site": "Site",
   "Site Name": "Sitenaam",

@@ -23,5 +23,9 @@ final class StandaloneStyleTest extends TestCase
         $this->assertStringNotContainsString('%font%', $css);
         $this->assertStringContainsString('/_cms/brand/InstrumentSans-Latin.woff2?v=', $css);
         $this->assertFileExists(public_path('_cms/brand/InstrumentSans-Latin.woff2'));
+        // The admin's own eye, for a password that can be looked at; a name it does not have is nothing.
+        $this->assertStringStartsWith('<svg ', StandaloneStyle::icon('eye'));
+        $this->assertStringStartsWith('<svg ', StandaloneStyle::icon('eye-off'));
+        $this->assertSame('', StandaloneStyle::icon('nothing'));
     }
 }

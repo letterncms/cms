@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 // @ts-expect-error — plain ESM helper shared with module builds
 import { layerVariants } from './vite.plugin.mjs'
 // @ts-expect-error — plain ESM helper, also run by the tests
-import { standaloneCss } from './scripts/standalone.mjs'
+import { standaloneCss, standaloneIcons } from './scripts/standalone.mjs'
 
 /**
  * Shared modules exposed to plugin modules through the import map.
@@ -51,6 +51,7 @@ function adminManifest(): Plugin {
       writeFileSync(resolve(options.dir!, 'admin.json'), JSON.stringify({ entry: files.main, css, fonts, imports, preload }, null, 2))
       // The pages outside the admin (installer, an app's consent) wear the same tokens: Cms\Admin\StandaloneStyle reads this.
       writeFileSync(resolve(options.dir!, 'standalone.css'), standaloneCss(resolve(import.meta.dirname, 'src/styles')))
+      writeFileSync(resolve(options.dir!, 'standalone-icons.json'), JSON.stringify(standaloneIcons(resolve(import.meta.dirname, 'src/lib'))))
     },
   }
 }

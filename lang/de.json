@@ -250,6 +250,7 @@
   "Send 1–25 calls as {\"calls\": [{\"ability\": \"…\", \"input\": {}}]}.": "Sende 1–25 Aufrufe als {\"calls\": [{\"ability\": \"…\", \"input\": {}}]}.",
   "Set Up Your Site": "Website einrichten",
   "Several terms are called “:term”. Give the id of the one you mean.": "Mehrere Begriffe heißen „:term“. Gib die id des gemeinten Begriffs an.",
+  "Show Password": "Passwort anzeigen",
   "Sidebar": "Seitenleiste",
   "Site": "Website",
   "Site Name": "Name der Website",

@@ -36,3 +36,16 @@ export function standaloneCss(styles) {
     tight(page),
   ].join('\n').replace(/;;+/g, ';') + '\n'
 }
+
+/**
+ * The few icons those pages show, as the admin draws them (src/lib/icon-data.ts): `{ name: '<svg …>' }`,
+ * 16px, in the colour of the words around them.
+ */
+export function standaloneIcons(lib, names = ['eye', 'eye-off']) {
+  const data = readFileSync(join(lib, 'icon-data.ts'), 'utf8')
+  const icons = JSON.parse(data.slice(data.indexOf('= {') + 2, data.lastIndexOf('}') + 1))
+  return Object.fromEntries(names.map((name) => {
+    const [body, width, height] = icons[name] ?? (() => { throw new Error(`No icon ${name}`) })()
+    return [name, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false">${body}</svg>`]
+  }))
+}
