@@ -5,6 +5,7 @@ import { Disclosure, Group, css, px, variable } from './design-parts'
 import { fallbackOf, fontStack, withFallback } from './fields'
 import { FieldEditor, fieldVars, specimenPart, type FieldSchema, type FieldValues } from './form-fields'
 import { applyDraft, showPart } from './specimen'
+import { CodeFiles } from './code-files'
 
 interface Token {
   path: string
@@ -35,7 +36,7 @@ interface ThemeInfo {
   fields: FieldValues
   fieldStyles: FieldSchema
   controlSizes: Record<string, Record<string, string | string[]>>
-  transition: { type: string; duration: number }
+  transition: { type: string; duration: number; navigation?: 'document' | 'client' }
   elements: string[]
   /** The elements prose styles, each in the prose sample. */
   proseElements: string[]
@@ -50,9 +51,11 @@ interface Draft {
   prose: Record<string, Declarations>
   buttons: Buttons
   fields: FieldValues
-  transition: { type: string; duration: number }
+  transition: { type: string; duration: number; navigation?: 'document' | 'client' }
   css: string
   js: string
+  /** Scripts and styles of the design as typed here, by path: written with the rest on save. */
+  files: Record<string, string>
 }
 
 const SECTIONS = ['color', 'type', 'space', 'sizes', 'shape', 'motion', 'elements', 'prose', 'buttons', 'fields', 'code'] as const
@@ -78,15 +81,15 @@ function sections(): { group: string; items: { value: SectionKey; label: string;
         { value: 'prose', label: t('Prose'), icon: 'article' },
         { value: 'buttons', label: t('Buttons'), icon: 'button' },
         { value: 'fields', label: t('Form Fields'), icon: 'form-input' },
-        { value: 'code', label: t('Custom Code'), icon: 'code' },
+        { value: 'code', label: t('Code'), icon: 'code' },
       ],
     },
   ]
 }
 
 /** The title of the dialog that adds a token to a group. */
-/** A row's ⋯: there on a touch screen, and on hover or focus where a pointer hovers. */
-const rowAction = 'shrink-0 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100'
+/** A row's ⋯: the kit's reveal, there on touch and on hover or focus where a pointer hovers. */
+const rowAction = 'cms-reveal shrink-0'
 
 /** What the button that adds a token of a group says: the dialog's title says what is new, its button what it does. */
 function addLabel(group: string): string {
@@ -146,6 +149,7 @@ function initial(data: ThemeInfo): Draft {
     transition: data.transition ?? { type: 'none', duration: 0.3 },
     css: data.css ?? '',
     js: data.js ?? '',
+    files: {},
   }
 }
 
@@ -264,7 +268,8 @@ export default function DesignTokens() {
       const tokensChanged = Object.keys(change.tokens).length + Object.keys(change.dark).length + Object.keys(change.rename).length + change.remove.length > 0 || ['styles', 'prose', 'buttons', 'fields', 'transition'].some((key) => key in change)
       if (tokensChanged) await run('design/update', change)
       if (draft.css !== base.css || draft.js !== base.js) await run('design-code/set-custom', { css: draft.css, ...(can('site.code') ? { js: draft.js } : {}) })
-      await queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith('design/') })
+      for (const [path, contents] of Object.entries(draft.files)) await run('design-code/save', { path, contents })
+      await queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith('design') })
       setDraft(null)
       frame.current?.contentWindow?.location.reload()
     } catch (e) {
@@ -409,12 +414,12 @@ export default function DesignTokens() {
           {section === 'color' && (
             <Group>
               {/* The section is this one list: its column heads are its head, with the way to add where each row has its menu. */}
-              <div className="flex h-9 items-center gap-2 border-b border-border text-2xs text-faint">
-                <span className="min-w-0 flex-1">{t('Name')}</span>
+              <div className="flex min-h-9 items-center gap-2 border-b border-border text-2xs text-faint max-sm:flex-wrap max-sm:py-1">
+                <span className="min-w-0 flex-1 max-sm:order-1 max-sm:basis-[calc(100%-2.5rem)]">{t('Name')}</span>
                 <span className={cn(COLOR, 'flex items-center gap-1')}><Icon name="sun" size={11} />{t('Light')}</span>
                 <span className={cn(COLOR, 'flex items-center gap-1')}><Icon name="moon" size={11} />{t('Dark')}</span>
                 <Tooltip content={addLabel('color')}>
-                  <IconButton icon="plus" label={addLabel('color')} title={undefined} size="xs" className="shrink-0" onClick={() => add('color', '#000000')} />
+                  <IconButton icon="plus" label={addLabel('color')} title={undefined} size="xs" className="shrink-0 max-sm:order-2" onClick={() => add('color', '#000000')} />
                 </Tooltip>
               </div>
               {byGroup('color').map((token) => (
@@ -533,6 +538,9 @@ export default function DesignTokens() {
                     <Fields bare className="flex min-w-0 flex-1" fields={[{ handle: 'duration', type: 'text', component: 'blocks-value', label: t('Duration'), unit: 'ms', units: ['ms'], step: 10, min: 50, max: 2000 }]} values={{ duration: `${Math.round(current.transition.duration * 1000)}ms` }} onChange={(_, v) => update((d) => ({ ...d, transition: { ...d.transition, duration: seconds(v, d.transition.duration) } }))} />
                   </Setting>
                 )}
+                <Setting label={t('Page Loads')}>
+                  <Fields bare className="flex min-w-0 flex-1" fields={[{ handle: 'navigation', type: 'select', label: t('Page Loads'), size: 'sm', required: true, options: { document: t('Full Page'), client: t('Instant') } }]} values={{ navigation: current.transition.navigation ?? 'document' }} onChange={(_, v) => update((d) => ({ ...d, transition: { ...d.transition, navigation: v === 'client' ? 'client' : 'document' } }))} />
+                </Setting>
               </Group>
               <Group title={t('Durations')} onAdd={() => add('duration', '300ms')} addLabel={addLabel('duration')}>
                 {byGroup('duration').map((token) => (
@@ -563,7 +571,7 @@ export default function DesignTokens() {
           {section === 'buttons' && <ButtonVariants value={current.buttons} tokens={tokens} open={buttonOpen} onOpen={setButtonOpen} onChange={(buttons) => update((d) => ({ ...d, buttons }))} />}
           {section === 'fields' && <FieldEditor schema={theme.data.fieldStyles ?? {}} value={current.fields} tokens={tokens} dark={mode === 'dark'} open={fieldOpen} onOpen={setFieldOpen} onChange={(fields) => update((d) => ({ ...d, fields }))} />}
 
-          {section === 'code' && <Code css={current.css} js={current.js} onChange={(code) => update((d) => ({ ...d, ...code }))} />}
+          {section === 'code' && <CodeFiles css={current.css} js={current.js} onCustom={(code) => update((d) => ({ ...d, ...code }))} edits={current.files} onEdit={(path, contents) => update((d) => ({ ...d, files: contents === null ? Object.fromEntries(Object.entries(d.files).filter(([key]) => key !== path)) : { ...d.files, [path]: contents } }))} />}
         </div>
 
         <div className={cn('flex min-w-0 flex-col bg-sunken', !previewing && 'max-md:hidden')}>
@@ -584,7 +592,7 @@ export default function DesignTokens() {
 }
 
 /** The width of a color column (light, dark). */
-const COLOR = 'w-[108px] shrink-0 max-sm:w-[92px]'
+const COLOR = 'w-[108px] shrink-0 max-sm:order-3 max-sm:w-auto max-sm:min-w-0 max-sm:flex-1 max-sm:basis-[40%]'
 
 /** A duration typed in the inspector's control (`250ms`, `0.3s`) in seconds, as the page transition stores it. */
 function seconds(value: unknown, fallback: number): number {
@@ -604,11 +612,12 @@ function Row({ token, sample, after, below, wide, rename, remove, extra, childre
   const reference = `token:${token.path}`
   const copy = () => void copyText(reference, { copied: t('Copied {reference}', { reference }) })
   return (
-    <div className="group border-b border-border last:border-b-0">
-      <div className="flex min-h-9 items-center gap-2 py-1">
+    <div className="cms-reveal-row group border-b border-border last:border-b-0">
+      {/* A phone gives a colour its name on one line and its two values, whole, on the next. */}
+      <div className={cn('flex min-h-9 items-center gap-2 py-1', wide && 'max-sm:flex-wrap')}>
         {sample !== undefined && <span className="grid w-7 shrink-0 place-items-center">{sample}</span>}
         <Tooltip content={<span className="font-mono">{reference}</span>}>
-          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference })} className={cn('!justify-start !bg-transparent !px-0 text-left !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
+          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference })} className={cn('!justify-start !bg-transparent !px-0 text-left !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink max-sm:order-1 max-sm:basis-[calc(100%-2.5rem)]' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
             <span className="truncate">{token.name}</span>
           </Button>
         </Tooltip>
@@ -616,7 +625,7 @@ function Row({ token, sample, after, below, wide, rename, remove, extra, childre
         {wide ? children : <div className="flex w-60 min-w-0 shrink max-lg:w-52 max-sm:w-auto max-sm:flex-1">{children}</div>}
         {!wide && <span className="flex min-w-0 flex-1 items-center max-sm:hidden">{after}</span>}
         <Menu
-          trigger={<IconButton icon="more" label={t('Token Actions')} size="xs" className={rowAction} />}
+          trigger={<IconButton icon="more" label={t('Token Actions')} size="xs" className={cn(rowAction, wide && 'max-sm:order-2')} />}
           items={[
             { label: t('Copy Reference'), icon: 'copy', onSelect: copy },
             { label: t('Rename…'), icon: 'edit', onSelect: () => rename(token) },
@@ -746,7 +755,7 @@ function StyleList({ title, value, onChange, options, tokens, vars, open: shown,
   const free = options.filter((option) => !(option in value))
   const fields = [...textFields(tokens), ...boxFields()]
   return (
-    <Group title={title} action={<Menu trigger={<IconButton icon="plus" label={t('Add Element')} size="xs" />} items={free.map((option) => ({ label: elementLabel(option), onSelect: () => { onChange({ ...value, [option]: {} }); setOpen(option) } }))} className="max-h-72 overflow-auto" />}>
+    <Group title={title} action={<Menu trigger={title ? <IconButton icon="plus" label={t('Add Element')} size="xs" /> : <Button variant="ghost" size="xs" icon="plus" className="-ml-1.5 !px-1.5 !font-normal !text-muted hover:!text-ink">{t('Add Element')}</Button>} items={free.map((option) => ({ label: elementLabel(option), onSelect: () => { onChange({ ...value, [option]: {} }); setOpen(option) } }))} className="max-h-72 overflow-auto" />}>
       {Object.keys(value).length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('No element styles')}</p>}
       {Object.entries(value).map(([element, declarations]) => (
         <Disclosure
@@ -823,7 +832,7 @@ function ControlSizeTable({ defaults, tokens, onSet }: { defaults: Record<string
   }
   return (
     <Group>
-      <div className="grid grid-cols-[52px_repeat(3,minmax(0,1fr))] items-center gap-x-2 gap-y-1.5 py-2">
+      <div className="grid grid-cols-[52px_repeat(3,minmax(0,1fr))] items-center gap-x-2 gap-y-1.5 py-2 [&_input]:placeholder:text-muted">
         <span />
         {columns.map(([key, label]) => <span key={key} className="text-2xs text-faint">{label}</span>)}
         {sizes.map(([size, label]) => (
@@ -888,24 +897,5 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
         </Disclosure>
       ))}
     </Group>
-  )
-}
-
-/** Custom CSS and JavaScript (content/design/custom.css|js), saved with everything else. */
-function Code({ css, js, onChange }: { css: string; js: string; onChange: (code: { css?: string; js?: string }) => void }) {
-  const allowed = can('site.code')
-  const field = (handle: 'css' | 'js', label: string, placeholder: string, value: string) => (
-    <Group title={label}>
-      <div className="py-2.5">
-        <Fields bare fields={[{ handle, type: 'code', label, rows: 14, placeholder }]} values={{ [handle]: value }} onChange={(_, v) => onChange({ [handle]: v ?? '' })} disabled={!allowed} />
-      </div>
-    </Group>
-  )
-  return (
-    <>
-      {field('css', t('Custom CSS'), '.cms-prose figure { margin-block: 2rem; }', css)}
-      {field('js', t('Custom JavaScript'), "document.addEventListener('cms:alpine', (e) => …)", js)}
-      {!allowed && <p className="m-0 text-2xs text-warning">{t('Editing code needs the “Edit custom CSS and JavaScript” permission.')}</p>}
-    </>
   )
 }
