@@ -169,16 +169,23 @@ final class DatabaseDriver implements EntryDriver
     }
 
     /**
-     * A list in the data has this value. @return array{0: string, 1: list<mixed>} SQL and its bindings.
+     * A list in the data has this value, or a text has it in it, as EntryFilter reads `contains`. Each is asked
+     * only of what it is: two blueprints of a collection can give one handle a list and a text, and SQLite
+     * refuses to look into a text as if it were a list.
+     *
+     * @return array{0: string, 1: list<mixed>} SQL and its bindings.
      */
     private function contains(string $field, mixed $value, bool $working): array
     {
-        $base = "json_extract(entries.data, '$.{$field}')";
-        $json = $working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data.{$field}') else {$base} end" : $base;
+        $document = $working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data') else entries.data end" : 'entries.data';
+
+        $part = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(is_scalar($value) ? (string) $value : "\0")).'%';
 
         return DB::connection()->getDriverName() === 'sqlite'
-            ? ["exists (select 1 from json_each({$json}) where json_each.value = ?)", [$value]]
-            : ["json_contains({$json}, ?)", [json_encode($value, JSON_THROW_ON_ERROR)]];
+            ? ["(exists (select 1 from json_each(case when json_type({$document}, '$.{$field}') = 'array' then json_extract({$document}, '$.{$field}') else '[]' end) where json_each.value = ?)"
+                ." or (json_type({$document}, '$.{$field}') = 'text' and lower(json_extract({$document}, '$.{$field}')) like ? escape '!'))", [$value, $part]]
+            : ["(case when json_type(json_extract({$document}, '$.{$field}')) = 'ARRAY' then json_contains(json_extract({$document}, '$.{$field}'), ?) else 0 end = 1"
+                ." or (json_type(json_extract({$document}, '$.{$field}')) = 'STRING' and lower(json_unquote(json_extract({$document}, '$.{$field}'))) like ? escape '!'))", [json_encode($value, JSON_THROW_ON_ERROR), $part]];
     }
 
     /**

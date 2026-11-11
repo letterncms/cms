@@ -162,7 +162,7 @@ final class EntryGate
         $collection = $entry->collection();
         $data = array_intersect_key($entry->data, array_flip([...self::ALWAYS_PUBLIC, ...$rule['fields']]));
         $body = $collection->body;
-        $field = $body ? $collection->blueprint()->field($body) : null;
+        $field = $body ? $entry->blueprint()->field($body) : null;
 
         if ($field && array_key_exists($body, $entry->data)) {
             $data[$body] = $this->cms->app()->make(FieldTypeRegistry::class)->resolve($field->type)->teaser($entry->data[$body], $field, $rule['words']);

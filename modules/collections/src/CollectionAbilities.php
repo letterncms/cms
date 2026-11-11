@@ -58,7 +58,7 @@ final class CollectionAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => self::HANDLE,
                 'createOnly' => ['type' => 'boolean', 'default' => false, 'description' => 'Reject an existing handle when creating a collection.'],
-                'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, body (the main content field handle; empty for fields only), section (default sidebar group), nav_order (default sidebar priority, lower first), fields[]'],
+                'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, body (the main content field handle; empty for fields only), section (default sidebar group), nav_order (default sidebar priority, lower first), fields[], blueprints (optional: {<handle>: {title, fields[]}} for a collection whose entries come in several kinds with fields of their own; an entry is made with one and keeps it)'],
             ], 'required' => ['handle', 'definition']],
             'output' => self::collection(),
             'handler' => function (array $in) {
@@ -69,10 +69,21 @@ final class CollectionAbilities
                 $reserved = ['id', 'title', 'slug', 'status', 'locale', 'uri', 'parent', 'position', 'author', 'origin', 'published_at', 'created_at', 'updated_at', 'blueprint'];
 
                 Blueprint::validate((array) ($in['definition']['fields'] ?? []));
+                $named = $in['definition']['blueprints'] ?? [];
 
-                foreach ($collection->blueprint()->fields() as $field) {
-                    if (in_array($field->handle, $reserved, true)) {
-                        throw AbilityException::invalid(__('“:handle” is reserved. Choose another field handle.', ['handle' => $field->handle]));
+                if (! is_array($named) || ($named !== [] && array_is_list($named)) || count($collection->blueprints()) !== count($named)) {
+                    throw AbilityException::invalid(__('Blueprints are given by handle, each with a title and its fields.'));
+                }
+
+                foreach ($collection->blueprints() as $name => $blueprint) {
+                    Blueprint::validate($blueprint['fields'], $name.': ');
+                }
+
+                foreach ([null, ...array_keys($collection->blueprints())] as $name) {
+                    foreach ($collection->blueprint($name)->fields() as $field) {
+                        if (in_array($field->handle, $reserved, true)) {
+                            throw AbilityException::invalid(__('“:handle” is reserved. Choose another field handle.', ['handle' => $field->handle]));
+                        }
                     }
                 }
 

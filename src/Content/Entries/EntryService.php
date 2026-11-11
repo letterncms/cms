@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Cms\Abilities\AbilityException;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Collections\CollectionRepository;
+use Cms\Content\Fields\Blueprint;
 use Cms\Content\Revisions\Revisions;
 use Cms\Extend\Hooks;
 use Cms\Support\Files;
@@ -30,6 +31,9 @@ final class EntryService
 
     /** @var array<string, ?Entry> What a dry run would have saved (null: deleted), read back in place of what is stored. */
     private array $staged = [];
+
+    /** @var array<string, Entry> The translations the last write or dry run rewrote because their original's shared fields changed. */
+    private array $shared = [];
 
     /** @var array<string, ?string> While primed() runs: the collection of each entry the record names, null for one that is not there. */
     private array $primed = [];
@@ -52,6 +56,7 @@ final class EntryService
 
         return $this->locked(function () use ($callback): mixed {
             $this->entries->flush();
+            $this->shared = [];
 
             return DB::transaction($callback);
         });
@@ -77,6 +82,7 @@ final class EntryService
 
         return $this->locked(function () use ($callback): mixed {
             $this->entries->flush();
+            $this->shared = [];
             $this->dry = true;
             DB::beginTransaction();
             try {
@@ -148,6 +154,17 @@ final class EntryService
         }
     }
 
+    /**
+     * The translations the last write, or dry run, saved because shared fields (`localizable: false`) of their
+     * original changed: what else a change to the original changes.
+     *
+     * @return list<Entry>
+     */
+    public function sharedWith(): array
+    {
+        return array_values($this->shared);
+    }
+
     /** The language of the entry being written, for field types that look things up in it (a term by its name). */
     private function writing(string $locale): void
     {
@@ -188,6 +205,7 @@ final class EntryService
     {
         return $this->write(function () use ($source, $input, $user): Entry {
             $input['authorId'] = $source->working()['authorId'];
+            $input['blueprint'] = $source->blueprint;
 
             return $this->createUnlocked($source->collection, $input, $user, allowMissingAuthor: true, copied: true);
         });
@@ -254,7 +272,7 @@ final class EntryService
      */
     private function createUnlocked(string $collectionHandle, array $input, ?User $user = null, bool $allowMissingAuthor = false, bool $copied = false): Entry
     {
-        if (array_diff(array_keys($input), ['collection', 'title', 'slug', 'data', 'locale', 'parentId', 'position', 'status', 'at', 'expiresAt', 'originId', 'authorId']) !== []) {
+        if (array_diff(array_keys($input), ['collection', 'blueprint', 'title', 'slug', 'data', 'locale', 'parentId', 'position', 'status', 'at', 'expiresAt', 'originId', 'authorId']) !== []) {
             throw AbilityException::invalid(__('Unsupported entry properties.'));
         }
         $collection = $this->collections->findOrFail($collectionHandle);
@@ -272,7 +290,16 @@ final class EntryService
         $parentId = $collection->isTree() ? ($input['parentId'] ?? null) : null;
         $this->assertParent($parentId, $collection, $locale);
 
-        $data = $this->withShared($collection, $input['originId'] ?? null, array_replace($collection->blueprint()->defaults(), (array) ($input['data'] ?? [])));
+        // A translation has the fields of what it translates.
+        $origin = isset($input['originId']) ? $this->find($input['originId']) : null;
+        $name = $origin && $origin->collection === $collection->handle ? $origin->blueprint : ($input['blueprint'] ?? null);
+
+        if ($name !== null && ! isset($collection->blueprints()[$name])) {
+            throw AbilityException::invalid(__('This collection has no blueprint “:name”.', ['name' => $name]), ['blueprint' => __('Choose one of: :names.', ['names' => implode(', ', array_keys($collection->blueprints())) ?: '—'])]);
+        }
+
+        $blueprint = $collection->blueprint($name);
+        $data = $this->withShared($blueprint, $input['originId'] ?? null, array_replace($blueprint->defaults(), (array) ($input['data'] ?? [])));
         $publish = ($input['status'] ?? 'draft') === 'published';
         if ((isset($input['at']) || isset($input['expiresAt'])) && ! $publish) {
             throw AbilityException::invalid(__('A publication time requires publishing the entry.'));
@@ -286,8 +313,9 @@ final class EntryService
             title: $title,
             status: 'draft',
             // A copy keeps what its source names, also what has since been deleted.
-            data: $this->process($collection, $data, full: $publish, previous: $copied ? $data : []),
+            data: $this->process($blueprint, $data, full: $publish, previous: $copied ? $data : []),
             originId: $input['originId'] ?? null,
+            blueprint: $name,
             parentId: $parentId,
             position: $input['position'] ?? $this->nextPosition($collection, $parentId, $locale),
             authorId: $this->authorId(array_key_exists('authorId', $input) ? $input['authorId'] : $user?->getKey(), allowMissing: $allowMissingAuthor),
@@ -337,7 +365,7 @@ final class EntryService
         if ($working['title'] === '') {
             throw AbilityException::invalid(__('A title is required.'), ['title' => __('Is required.')]);
         }
-        $working['data'] = $this->process($collection, $this->withShared($collection, $entry->originId, array_replace($working['data'], (array) ($input['data'] ?? []))), full: $publish, previous: $working['data']);
+        $working['data'] = $this->process($entry->blueprint(), $this->withShared($entry->blueprint(), $entry->originId, array_replace($working['data'], (array) ($input['data'] ?? []))), full: $publish, previous: $working['data']);
         if (array_key_exists('authorId', $input) && $input['authorId'] !== $working['authorId']) {
             $working['authorId'] = $this->authorId($input['authorId']);
         }
@@ -378,7 +406,7 @@ final class EntryService
         $when = $this->publicationTime($entry, $at);
         $this->writing($entry->locale);
         $working = $entry->working();
-        $working['data'] = $this->process($collection, $this->withShared($collection, $entry->originId, $working['data']), full: true);
+        $working['data'] = $this->process($entry->blueprint(), $this->withShared($entry->blueprint(), $entry->originId, $working['data']), full: true);
         $previousUri = $entry->uri;
         $entry->applyContent($working);
         $entry->status = 'published';
@@ -509,7 +537,7 @@ final class EntryService
         $source = array_replace($entry->working(), array_intersect_key($snapshot, array_flip(['title', 'slug', 'data', 'authorId'])), $snapshot['draft'] ?? []);
         $this->writing($entry->locale);
         // A restore replaces the content snapshot; absent later fields do not leak into it.
-        $source['data'] = $this->process($entry->collection(), $this->withShared($entry->collection(), $entry->originId, (array) $source['data']), full: false);
+        $source['data'] = $this->process($entry->blueprint(), $this->withShared($entry->blueprint(), $entry->originId, (array) $source['data']), full: false);
         $source['authorId'] = $this->authorId($source['authorId'], allowMissing: true);
         $probe = clone $entry;
         $probe->title = $source['title'];
@@ -583,9 +611,9 @@ final class EntryService
      * Fields with `localizable: false` hold one value for every language. The original entry (the one the
      * others translate) is where it is set; a translation takes the original's value whatever it is sent.
      */
-    private function withShared(Collection $collection, ?string $originId, array $data): array
+    private function withShared(Blueprint $blueprint, ?string $originId, array $data): array
     {
-        $shared = $originId === null ? [] : $collection->blueprint()->shared();
+        $shared = $originId === null ? [] : $blueprint->shared();
         $origin = $shared === [] ? null : $this->find($originId);
 
         foreach ($origin ? $shared : [] as $handle) {
@@ -601,7 +629,7 @@ final class EntryService
      */
     private function shareWithTranslations(Entry $entry, Collection $collection): void
     {
-        if ($entry->originId !== null || ($shared = $collection->blueprint()->shared()) === []) {
+        if ($entry->originId !== null || ($shared = $entry->blueprint()->shared()) === []) {
             return;
         }
 
@@ -622,19 +650,45 @@ final class EntryService
             $staged && $staged->originId === $entry->id && $translations[$id] = $staged;
         }
 
-        foreach ($translations as $translation) {
-            $same = static fn (array $data): bool => array_intersect_key($data, $values) + array_fill_keys(array_keys($values), null) == $values;
+        // The same values, key for key and type for type: 1 is not "1", and nothing is not an empty list.
+        $same = static function (array $data) use ($values): bool {
+            foreach ($values as $handle => $value) {
+                if (json_encode($data[$handle] ?? null) !== json_encode($value)) {
+                    return false;
+                }
+            }
 
-            if ($same($translation->data) && ($translation->draft === null || $same((array) ($translation->draft['data'] ?? [])))) {
+            return true;
+        };
+
+        foreach ($translations as $translation) {
+            // What a published translation serves only follows what the original serves. An original that is
+            // not published has been published by nobody: its values wait in the translation's draft, for
+            // someone who may publish it.
+            $waits = $translation->isPublished() && ! $entry->isPublished();
+
+            if ($waits ? $same((array) $translation->working()['data']) : $same($translation->data) && ($translation->draft === null || $same((array) ($translation->draft['data'] ?? [])))) {
                 continue;
             }
 
-            $translation->data = array_replace($translation->data, $values);
+            if ($waits) {
+                $working = $translation->working();
+                $working['data'] = array_replace((array) $working['data'], $values);
+                $translation->draft = $working;
+            } else {
+                $translation->data = array_replace($translation->data, $values);
 
-            if ($translation->draft !== null) {
-                $translation->draft['data'] = array_replace((array) ($translation->draft['data'] ?? []), $values);
+                if ($translation->draft !== null) {
+                    $translation->draft['data'] = array_replace((array) ($translation->draft['data'] ?? []), $values);
+                }
+
+                // A draft that only waited for these values has nothing left to wait for.
+                if ($translation->draft !== null && json_encode($translation->working()) === json_encode($translation->content())) {
+                    $translation->draft = null;
+                }
             }
 
+            $this->shared[$translation->id] = $translation;
             $this->persist($translation, $collection);
             $this->record($translation, 'shared', null, 'Shared fields changed in the original');
             $this->dispatch('entry.saved', $translation, null, 'shared');
@@ -731,11 +785,11 @@ final class EntryService
      *                            files they name must exist, except those the entry already named. Null: not checked
      *                            (publishing or restoring what was stored).
      */
-    private function process(Collection $collection, array $data, bool $full, ?array $previous = null): array
+    private function process(Blueprint $blueprint, array $data, bool $full, ?array $previous = null): array
     {
         try {
-            $data = $collection->blueprint()->process($data, partial: ! $full);
-            $previous === null || $collection->blueprint()->check($data, $previous);
+            $data = $blueprint->process($data, partial: ! $full);
+            $previous === null || $blueprint->check($data, $previous);
 
             return $data;
         } catch (SchemaException $e) {

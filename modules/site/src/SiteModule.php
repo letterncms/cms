@@ -248,7 +248,7 @@ final class SiteModule extends Plugin
                         $current = $entry($scope);
                         $named = [];
 
-                        foreach ($current ? $current->entry->collection()->blueprint()->relations() : [] as $path => $field) {
+                        foreach ($current ? $current->entry->blueprint()->relations() : [] as $path => $field) {
                             $field->get('taxonomy') === $taxonomy->handle && array_push($named, ...array_filter((array) data_get($current->entry->data, $path), 'is_string'));
                         }
 

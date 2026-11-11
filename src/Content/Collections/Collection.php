@@ -22,6 +22,9 @@ final class Collection
 
     private ?Blueprint $blueprint = null;
 
+    /** @var array<string, Blueprint> */
+    private array $named = [];
+
     public function __construct(
         public readonly string $handle,
         public readonly string $title,
@@ -103,9 +106,60 @@ final class Collection
         );
     }
 
-    public function blueprint(): Blueprint
+    /**
+     * The fields of its entries. A collection can have more than one set, by name:
+     *
+     *   blueprints:
+     *     video: { title: Video, fields: [...] }
+     *
+     * An entry is made with one (`Entry::$blueprint`) and keeps it. `fields` is the set of an entry that names
+     * none, and what an unknown name falls back to, so content survives a blueprint that was removed.
+     */
+    public function blueprint(?string $name = null): Blueprint
     {
+        if ($name !== null && isset($this->blueprints()[$name])) {
+            return $this->named[$name] ??= Blueprint::make($this->blueprints()[$name]['fields']);
+        }
+
         return $this->blueprint ??= Blueprint::make($this->fields);
+    }
+
+    /** @return array<string, array{title: string, fields: list<array>}> The named blueprints, beside the one in `fields`. */
+    public function blueprints(): array
+    {
+        $out = [];
+
+        foreach ((array) $this->get('blueprints', []) as $name => $blueprint) {
+            if (is_string($name) && Files::isHandle($name) && is_array($blueprint)) {
+                $out[$name] = ['title' => (string) ($blueprint['title'] ?? ucfirst(str_replace(['-', '_'], ' ', $name))), 'fields' => array_values((array) ($blueprint['fields'] ?? []))];
+            }
+        }
+
+        return $out;
+    }
+
+    /** A field by its handle, in whichever blueprint has it: `fields` first. */
+    public function field(string $handle): ?\Cms\Content\Fields\Field
+    {
+        foreach ([null, ...array_keys($this->blueprints())] as $name) {
+            if ($field = $this->blueprint($name)->field($handle)) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array<string, \Cms\Content\Fields\Field> The relation fields of every blueprint, by their path in the data. */
+    public function relations(): array
+    {
+        $out = $this->blueprint()->relations();
+
+        foreach (array_keys($this->blueprints()) as $name) {
+            $out += $this->blueprint($name)->relations();
+        }
+
+        return $out;
     }
 
     public function deletable(): bool
@@ -187,6 +241,10 @@ final class Collection
             'default_columns' => $this->defaultColumns,
             'resolvedFields' => $this->blueprint()->toArray(['collection' => $this]),
             'schema' => $this->blueprint()->schema(),
+            ...($this->blueprints() === [] ? [] : ['resolvedBlueprints' => array_map(fn (string $name, array $blueprint) => [
+                'handle' => $name, 'title' => $blueprint['title'],
+                'resolvedFields' => $this->blueprint($name)->toArray(['collection' => $this]), 'schema' => $this->blueprint($name)->schema(),
+            ], array_keys($this->blueprints()), $this->blueprints())]),
         ];
     }
 }
