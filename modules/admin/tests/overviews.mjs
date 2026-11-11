@@ -286,8 +286,8 @@ try {
     const grid = [...main().querySelectorAll('[role="radio"]')].find((radio) => radio.getAttribute('title') === 'Grid' || radio.textContent === 'Grid')
     grid.click(); await sleep(30)
     // Saving is the save bar's, as on every form.
-    await wait(() => document.querySelector('.cms-savebar[data-state="open"] .cms-savebar-save'), 'changes did not bring up the save bar')
-    document.querySelector('.cms-savebar-save').click()
+    await wait(() => document.querySelector('.cms-savebar[data-state="open"] [data-variant="primary"]'), 'changes did not bring up the save bar')
+    document.querySelector('.cms-savebar [data-variant="primary"]').click()
     await wait(() => !document.querySelector('.cms-savebar[data-state="open"]'), 'blueprint save did not finish')
     const saved = (await calls()).filter((r) => r.ability === 'collections/save').at(-1).input.definition
     assert(saved.default_view === 'grid' && JSON.stringify(saved.default_columns) === '["field:category"]', 'display settings did not reach the API')

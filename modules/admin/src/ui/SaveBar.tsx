@@ -1,11 +1,13 @@
 import { blockNavigation, t } from '@letterncms/sdk'
 import { useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+import { Button } from './Button'
 import { cn } from './cn'
 import { Icon } from './Icon'
 import { useShortcut } from './shortcuts'
 import { WorkspaceContext } from './Slideover'
 import { Spinner } from './Spinner'
+import { useTheme } from './theme'
 import { Tooltip } from './Tooltip'
 
 export interface SaveBarProps {
@@ -37,6 +39,7 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
  */
 export function SaveBar({ dirty, saving = false, error, onSave, onDiscard }: SaveBarProps) {
   const host = useContext(WorkspaceContext)?.host ?? null
+  const theme = useTheme()
   const id = useRef(0)
   if (!id.current) id.current = ++next
   useLayoutEffect(() => {
@@ -70,24 +73,25 @@ export function SaveBar({ dirty, saving = false, error, onSave, onDiscard }: Sav
   const discard = () => { if (all) all.forEach((bar) => bar.onDiscard()); else onDiscard() }
   const bar = (
     <div role="region" aria-label={t('Unsaved changes')} className="cms-savebar" data-state={dirty ? 'open' : 'closed'}>
+      {/* The bar is ink, the other theme's ground: what is on it is set in that theme, so its buttons are the kit's own. */}
+      <div data-theme={theme === 'dark' ? 'light' : 'dark'} className="contents">
       {failed ? (
         <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-          <Icon name="warning" size={16} className="shrink-0 text-ink-danger" />
+          <Icon name="warning" size={16} className="shrink-0 text-danger" />
           <span className="min-w-0 truncate" title={failed}>{failed}</span>
         </span>
       ) : (
-        <span className="flex min-w-0 flex-1 items-center gap-2.5 text-sm font-medium">
-          <span className="size-2 shrink-0 rounded-full bg-signal" aria-hidden />
-          <span className="truncate">{t('Unsaved changes')}</span>
-        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{t('Unsaved changes')}</span>
       )}
-      <button type="button" className="cms-savebar-discard" disabled={busy || !dirty} onClick={discard}>{t('Discard')}</button>
+      <Button variant="ghost" disabled={busy || !dirty} onClick={discard}>{t('Discard')}</Button>
       <Tooltip content={t('Save')} shortcut="mod+s">
-        <button type="button" className={cn('cms-savebar-save', busy && 'cursor-wait')} disabled={!dirty} aria-busy={busy || undefined} onClick={save}>
+        {/* Busy, not disabled: it keeps the focus while it saves. */}
+        <Button variant="primary" className={cn('relative', busy && 'cursor-wait')} disabled={!dirty} aria-busy={busy || undefined} onClick={save}>
           {busy && <Spinner size={14} className="absolute inset-0 m-auto" />}
           <span className={cn(busy && 'invisible')}>{t('Save')}</span>
-        </button>
+        </Button>
       </Tooltip>
+      </div>
     </div>
   )
   return host ? createPortal(bar, host) : bar
