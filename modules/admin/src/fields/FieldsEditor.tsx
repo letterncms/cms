@@ -3,8 +3,8 @@ import { DndContext } from '../ui/dnd'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { plural, t, useManifest, type FieldDef, type FieldProps, type FieldTypeDef } from '@letterncms/sdk'
-import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Badge, Button, EmptyState, FieldError, Fields, Icon, IconButton, List, Popover, Row, cn } from '../ui'
+import { createContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Badge, Button, EmptyState, FieldError, Fields, Icon, IconButton, List, Popover, Row, cn, toast, untilSaved } from '../ui'
 import { Conditions } from './BuilderFields'
 import { conditionCycles, followRename, nextCondition, type Sibling } from './conditions'
 
@@ -28,9 +28,10 @@ function commonOptions(depth: number, renamed: boolean, taken: string[]): FieldD
     // Typed freely and taken when the box is left: one rename, which the conditions beside it can follow.
     { handle: 'handle', type: 'text', component: 'handle-input', label: t('Handle'), width: 'half', taken, instructions: renamed ? t('Changing it orphans existing values.') : undefined },
     { handle: 'instructions', type: 'text', label: t('Instructions') },
-    { handle: 'required', type: 'toggle', label: t('Required'), width: 'third' },
-    ...(depth === 0 ? [{ handle: 'property', type: 'toggle', label: t('Show as Property'), width: 'third' as const }] : []),
-    { handle: 'width', type: 'select', label: t('Width'), display: 'segmented', width: 'third', options: { full: t('Full'), half: '½', third: '⅓' } },
+    { handle: 'width', type: 'select', label: t('Width'), display: 'segmented', options: { full: t('Full'), half: '½', third: '⅓' } },
+    // The two yes-or-no options have a row to themselves: beside a labelled control they hung under its label's line.
+    { handle: 'required', type: 'toggle', label: t('Required'), display: 'checkbox', width: 'half' },
+    ...(depth === 0 ? [{ handle: 'property', type: 'toggle', label: t('Show as Property'), display: 'checkbox', width: 'half' as const }] : []),
   ]
 }
 
@@ -130,6 +131,9 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
 
 function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, errors, path, saved }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; body?: string; depth: number; errors?: Record<string, string>; path: string; saved: Set<string> }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  // What Undo puts a removed field back into: the fields of the moment it is pressed.
+  const latest = useRef({ fields, onChange })
+  latest.current = { fields, onChange }
   const ids = fields.map((f, i) => f.handle ?? `import-${f.import}-${i}`)
   const cycles = useMemo(() => conditionCycles(fields), [fields])
   const onDragEnd = (e: DragEndEvent) => {
@@ -167,8 +171,16 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
                   }}
                   onRemove={() => {
                     const rest = fields.filter((_, j) => j !== i)
-                    onChange(field.handle ? followRename(rest, field.handle, null) : rest)
+                    const next = field.handle ? followRename(rest, field.handle, null) : rest
+                    onChange(next)
                     onOpen(null)
+                    // Removing acts at once, so it can be taken back at once. With nothing changed since, the fields are as they were, conditions
+                    // on the removed field included; otherwise the field goes back to its place among the fields as they are by then.
+                    // It is about the unsaved removal: saved or discarded, it goes (the save bar raises the toasts above itself meanwhile).
+                    untilSaved(toast(t('Removed “{name}”', { name: field.label || field.handle || t('Field') }), { action: { label: t('Undo'), onClick: () => {
+                      const now = latest.current.fields
+                      latest.current.onChange(now === next ? fields : [...now.slice(0, Math.min(i, now.length)), field, ...now.slice(Math.min(i, now.length))])
+                    } } }))
                   }}
                   onDuplicate={() => onChange([...fields.slice(0, i + 1), { ...field, handle: `${field.handle}_copy`, label: t('{label} copy', { label: field.label ?? field.handle }) }, ...fields.slice(i + 1)])}
                 />

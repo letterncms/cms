@@ -1,6 +1,7 @@
 import { blockNavigation, t } from '@letterncms/sdk'
 import { useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+import { toast } from 'sonner'
 import { Button } from './Button'
 import { cn } from './cn'
 import { Icon } from './Icon'
@@ -27,8 +28,25 @@ const bars = new Map<number, Bar>()
 const listeners = new Set<() => void>()
 let version = 0
 let next = 0
-const notify = () => { version++; listeners.forEach((l) => l()) }
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l) } }
+const anyDirty = () => [...bars.values()].some((bar) => bar.dirty)
+// Toasts about changes not saved yet ("Removed Title", with Undo): they go once nothing is left to save.
+const untilClean = new Set<string | number>()
+const notify = () => {
+  version++
+  if (!anyDirty()) { untilClean.forEach((id) => toast.dismiss(id)); untilClean.clear() }
+  listeners.forEach((l) => l())
+}
+
+/** Whether a save bar is up: the toasts rise above it, so none covers its Save. */
+export function useSaveBarOpen(): boolean {
+  return useSyncExternalStore(subscribe, anyDirty)
+}
+
+/** A toast about unsaved changes (one with Undo): it closes when they are saved or discarded. */
+export function untilSaved(id: string | number): void {
+  untilClean.add(id)
+}
 
 /**
  * The one way to save a form (settings, a screen's Settings tab, an account, a menu):
