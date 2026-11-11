@@ -63,10 +63,10 @@ final class Views
      */
     public static function notFound(string $icon, ?array $back = null): array
     {
-        $action = $back !== null ? ['label' => $back['label'], 'icon' => 'arrow-left', 'to' => $back['to']] : ['label' => __('Go Home'), 'to' => '/'];
+        $action = $back !== null ? ['label' => $back['label'], 'icon' => 'arrow-left', 'to' => $back['to']] : ['label' => __('Go to Dashboard'), 'to' => '/'];
 
         return ['type' => 'ui/page', 'props' => ['title' => __('Not Found'), 'icon' => $icon, ...($back !== null ? ['back' => $back] : [])], 'children' => [
-            ['type' => 'ui/empty', 'props' => ['icon' => $icon, 'title' => __('Not Found'), 'action' => $action]],
+            ['type' => 'ui/empty', 'props' => ['icon' => $icon, 'title' => __('Nothing at this address'), 'action' => $action]],
         ]];
     }
 

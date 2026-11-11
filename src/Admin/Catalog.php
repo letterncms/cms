@@ -29,7 +29,7 @@ final class Catalog
         $tone = ['type' => 'string', 'enum' => ['neutral', 'info', 'success', 'warning', 'danger']];
         $source = $this->object(['ability' => $id, 'input' => ['type' => 'object', 'default' => []]], ['ability']);
         $action = self::action();
-        $empty = $this->object(['icon' => $id, 'title' => $s, 'text' => $s, 'action' => $action, 'size' => ['type' => 'string', 'enum' => ['sm']]]);
+        $empty = $this->object(['icon' => $id, 'title' => $s, 'action' => $action, 'size' => ['type' => 'string', 'enum' => ['sm']]]);
         $column = $this->object([
             'key' => $id, 'label' => $s, 'format' => ['type' => 'string', 'enum' => self::FORMATS],
             'width' => $id, 'align' => ['type' => 'string', 'enum' => ['start', 'end']], 'hidden' => ['type' => 'boolean'],

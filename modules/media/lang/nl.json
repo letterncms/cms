@@ -1,4 +1,6 @@
 {
+  "No images yet": "Nog geen afbeeldingen",
+  "No videos yet": "Nog geen video’s",
   "{count} character": "{count} teken",
   "{count} characters": "{count} tekens",
   "{count} file uploaded": "{count} bestand geüpload",
@@ -39,7 +41,6 @@
   "Folder": "Map",
   "Image Quality": "Beeldkwaliteit",
   "Images": "Afbeeldingen",
-  "Images, videos and documents for your pages.": "Afbeeldingen, video’s en documenten voor je pagina’s.",
   "Import Media": "Media importeren",
   "Kind": "Soort",
   "Library": "Bibliotheek",

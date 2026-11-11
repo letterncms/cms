@@ -57,5 +57,5 @@ function tree(spec: SurfaceDocument['spec']): ViewNode | null {
 }
 
 function Unavailable() {
-  return <EmptyState compact icon="box" title={t('This component is no longer available')} description={t('Ask {brand} for a fresh view.')} />
+  return <EmptyState compact icon="box" title={t('This component is no longer available')} />
 }

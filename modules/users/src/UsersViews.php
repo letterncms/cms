@@ -33,10 +33,13 @@ final class UsersViews
         $person = ['type' => 'users/person', 'props' => ['id' => $open], 'can' => 'users.manage'];
         $invite = ['label' => __('Invite User'), 'icon' => 'user-plus', 'variant' => 'primary', 'component' => 'users/person', 'can' => 'users.manage'];
 
+        // Nobody can sign up until the site allows it: the empty list offers that, to whoever may change it.
+        $allow = $cms->accounts()->enabled() ? [] : ['action' => ['label' => __('Allow Visitor Accounts'), 'to' => '/users?tab=settings', 'can' => 'settings.manage']];
+
         return ['type' => 'ui/page', 'props' => ['title' => __('Users'), 'icon' => 'users'], 'children' => [
             ['type' => 'ui/tabs', 'children' => [
                 ['type' => 'ui/tab', 'props' => ['id' => 'team', 'label' => __('Team'), 'actions' => [$invite]], 'children' => [self::people($cms, 'team', ['icon' => 'users', 'title' => __('No users yet')]), ...($open ? [$person] : [])]],
-                ['type' => 'ui/tab', 'props' => ['id' => 'visitors', 'label' => __('Visitors')], 'children' => [self::people($cms, 'visitors', ['icon' => 'users', 'title' => __('No visitors yet')])]],
+                ['type' => 'ui/tab', 'props' => ['id' => 'visitors', 'label' => __('Visitors')], 'children' => [self::people($cms, 'visitors', ['icon' => 'users', 'title' => __('No visitors yet'), ...$allow])]],
                 ['type' => 'ui/tab', 'can' => 'collections.manage', 'props' => ['id' => 'fields', 'label' => __('Profile Fields')], 'children' => [['type' => 'users/profile-fields']]],
             ]],
         ]];

@@ -35,7 +35,7 @@ final class SyncViews
         return ['type' => 'ui/page', 'props' => ['title' => __('Sync'), 'icon' => 'sync', 'width' => 'narrow', 'actions' => $remotes === [] ? [] : [$connect]], 'children' => [
             ['type' => 'sync/progress'],
             ...($remotes === [] ? [['type' => 'ui/section', 'props' => ['title' => __('Sites')], 'children' => [
-                ['type' => 'ui/empty', 'props' => ['icon' => 'sync', 'title' => __('Connect another site'), 'text' => __('Copy the key from Sync on your other site and paste it here.'), 'action' => $connect]],
+                ['type' => 'ui/empty', 'props' => ['icon' => 'sync', 'title' => __('No sites connected'), 'action' => $connect]],
             ]]] : array_map(static fn (array $r) => self::remote($r, $running), $remotes)),
             ['type' => 'ui/section', 'props' => ['title' => __('This Site’s Key'), 'actions' => [
                 ['label' => __('Make a New Key'), 'icon' => 'refresh', 'variant' => 'ghost', 'ability' => 'sync/renew-key', 'success' => __('This site has a new key.'),

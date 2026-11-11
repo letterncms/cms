@@ -47,7 +47,7 @@ final class CollectionsViews
                     ['key' => 'count', 'label' => __('Entries'), 'width' => '90px', 'align' => 'end', 'format' => 'number'],
                 ],
                 'open' => ['label' => __('Open'), 'to' => '/collections/{row.handle}'],
-                'empty' => ['icon' => 'collection', 'title' => __('No collections yet'), 'text' => __('Collections define what you can write: pages, posts, products…'), 'action' => $new],
+                'empty' => ['icon' => 'collection', 'title' => __('No collections yet')],
             ]],
             ...($open ? [$open] : []),
         ]];

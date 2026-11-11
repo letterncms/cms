@@ -23,10 +23,11 @@ function filterFields(): FieldDef[] {
  */
 export function Library({ mode = 'manage', accept = '*', multiple = false, selected = [], onSelectionChange, autoUpload = false, bar = false }: { mode?: 'manage' | 'pick'; accept?: string; multiple?: boolean; selected?: string[]; onSelectionChange?: (ids: string[], items: MediaItem[]) => void; autoUpload?: boolean; bar?: boolean }) {
   const { query } = useLocation()
+  const startKind: Kind = accept.startsWith('image') ? 'image' : accept.startsWith('video') ? 'video' : accept === 'application/pdf' ? 'pdf' : 'all'
   // On the Media place the filters are in the address too: its count reads them (MediaModule::places), and a link keeps them.
   const [filters, setFilters] = useState<MediaFilters>(() => bar
     ? { search: query.search ?? '', kind: (KINDS as readonly string[]).includes(query.kind ?? '') ? query.kind as Kind : 'all', folder: query.folder || null }
-    : { search: '', kind: accept.startsWith('image') ? 'image' : accept.startsWith('video') ? 'video' : accept === 'application/pdf' ? 'pdf' : 'all', folder: null })
+    : { search: '', kind: startKind, folder: null })
   const { kind, folder } = filters
   useEffect(() => {
     if (bar) setQuery({ search: filters.search || null, kind: filters.kind === 'all' ? null : filters.kind, folder: filters.folder })
@@ -86,9 +87,11 @@ export function Library({ mode = 'manage', accept = '*', multiple = false, selec
     } finally { setDeleting(false) }
   }
   const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="absolute inset-0 size-full object-cover" style={{ objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : <div className="grid size-full place-items-center text-faint"><Icon name={item.kind === 'video' ? 'video' : item.kind === 'audio' ? 'file' : 'file-text'} size={24} /></div>
-  const filtered = !!filters.search || kind !== 'all' || folder !== null
+  // What a picker opens on (images, for an image field) is where it starts, not something someone filtered by:
+  // an empty library says so and offers the upload, never "No matches".
+  const filtered = !!filters.search || kind !== (bar ? 'all' : startKind) || folder !== null
   // An empty library is its empty state and the way to fill it (the top bar's Upload, or the picker's own): no filters, display or count yet.
-  const blank = !filtered && !list.isError && list.data?.total === 0
+  const blank = !filtered && kind === 'all' && !list.isError && list.data?.total === 0
   const body = (
     <div className="min-w-0">
       <DataView id="media" label={t('Media')} items={items} source={{ ability: 'media/list', input: mediaInput(filters, 1, sort), perPage: 60 }} rowKey={(item) => item.id} onRowClick={toggle} defaultView="grid" image={preview}
@@ -116,7 +119,7 @@ export function Library({ mode = 'manage', accept = '*', multiple = false, selec
           { label: t('Copy URL'), icon: 'copy', onSelect: () => void copyText(new URL(item.url, location.origin).href, { copied: t('URL copied'), failed: t('Couldn’t copy the URL') }) },
           mode === 'manage' && can('media.delete') && { label: t('Delete'), icon: 'trash', danger: true, disabled: deleting, onSelect: () => void deleteItems([item.id]) },
         ]} />}
-        empty={filtered ? <NoMatches onClear={() => { setFilters({ search: '', kind: 'all', folder: null }); setPage(1) }} /> : <EmptyState icon="media" title={t('No files yet')} description={allow ? t('Images, videos and documents for your pages.') : undefined} action={bar ? undefined : uploadButton()} />}
+        empty={filtered ? <NoMatches onClear={() => { setFilters({ search: '', kind: bar ? 'all' : startKind, folder: null }); setPage(1) }} /> : <EmptyState icon="media" title={kind === 'image' ? t('No images yet') : kind === 'video' ? t('No videos yet') : t('No files yet')} action={bar ? undefined : uploadButton()} />}
       />
 
       {/* Opened to upload (?upload=1): the picker, with the page's own button in its bar. */}

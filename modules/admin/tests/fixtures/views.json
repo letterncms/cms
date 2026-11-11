@@ -335,7 +335,14 @@
                                         },
                                         "empty": {
                                             "icon": "users",
-                                            "title": "No visitors yet"
+                                            "title": "No visitors yet",
+                                            "action": {
+                                                "label": "Allow Visitor Accounts",
+                                                "to": "/users?tab=settings",
+                                                "can": "settings.manage",
+                                                "input": [],
+                                                "props": []
+                                            }
                                         }
                                     }
                                 }
@@ -702,8 +709,7 @@
                         ],
                         "empty": {
                             "icon": "globe",
-                            "title": "No global sets yet",
-                            "text": "Site-wide values, like contact details or footer links."
+                            "title": "No global sets yet"
                         }
                     }
                 }
@@ -780,16 +786,7 @@
                         },
                         "empty": {
                             "icon": "collection",
-                            "title": "No collections yet",
-                            "text": "Collections define what you can write: pages, posts, products…",
-                            "action": {
-                                "label": "New Collection",
-                                "icon": "plus",
-                                "variant": "primary",
-                                "component": "collections/new",
-                                "input": [],
-                                "props": []
-                            }
+                            "title": "No collections yet"
                         }
                     }
                 }
