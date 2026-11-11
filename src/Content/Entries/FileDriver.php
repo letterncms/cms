@@ -18,7 +18,7 @@ use RuntimeException;
  */
 final class FileDriver implements EntryDriver
 {
-    private const array RESERVED = ['id', 'title', 'status', 'published_at', 'author', 'origin', 'position', 'blueprint', 'created_at', 'updated_at'];
+    private const array RESERVED = ['id', 'title', 'status', 'published_at', 'expires_at', 'author', 'origin', 'position', 'blueprint', 'created_at', 'updated_at'];
 
     /** @var array<string, array<string, array{entry: Entry, path: string}>> */
     private array $indexes = [];
@@ -220,6 +220,7 @@ final class FileDriver implements EntryDriver
             authorId: isset($meta['author']) ? (string) $meta['author'] : null,
             blueprint: isset($meta['blueprint']) ? (string) $meta['blueprint'] : null,
             publishedAt: $this->date($meta['published_at'] ?? null),
+            expiresAt: $this->date($meta['expires_at'] ?? null),
             createdAt: $this->date($meta['created_at'] ?? null),
             updatedAt: $this->date($meta['updated_at'] ?? null),
         );
@@ -266,6 +267,7 @@ final class FileDriver implements EntryDriver
             'title' => $entry->title,
             'status' => $entry->status,
             'published_at' => $entry->publishedAt?->toIso8601String(),
+            'expires_at' => $entry->expiresAt?->toIso8601String(),
             'author' => $entry->authorId,
             'origin' => $entry->originId,
             'position' => $collection->isTree() || $collection->structure === 'list' ? $entry->position : null,

@@ -35,6 +35,7 @@ final class Revisions
             'draft' => $entry->draft,
             'parentId' => $entry->parentId,
             'publishedAt' => $entry->publishedAt?->toIso8601String(),
+            'expiresAt' => $entry->expiresAt?->toIso8601String(),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $title = (string) ($entry->draft['title'] ?? $entry->title);

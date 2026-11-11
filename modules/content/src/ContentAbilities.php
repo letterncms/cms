@@ -272,7 +272,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'collection' => self::HANDLE,
                 'locale' => ['type' => 'string'],
-                'status' => ['type' => 'string', 'enum' => ['any', 'published', 'draft', 'live'], 'default' => 'any'],
+                'status' => ['type' => 'string', 'enum' => ['any', 'published', 'draft', 'live'], 'default' => 'any', 'description' => 'live: published, its time has come and its end date has not.'],
                 'search' => ['type' => 'string', 'maxLength' => 200],
                 'parentId' => ['type' => ['string', 'null'], 'description' => 'Tree collections: children of this entry; null for top level.'],
                 'sort' => ['type' => 'string', 'pattern' => '^-?[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$', 'description' => 'Field to sort by: title, slug, uri, status, locale, published_at, updated_at, created_at, position, author_id (by the author’s name) or a data field. Prefix with - for descending, e.g. -published_at. Empty values sort last.'],
@@ -380,7 +380,7 @@ final class ContentAbilities
         $content = fn () => $this->cms->entryService();
         $create = fn (array $in, AbilityContext $ctx): Entry => $content()->create($in['collection'], $in, $ctx->user);
         $update = fn (array $in, AbilityContext $ctx): Entry => $content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish']);
-        $publish = fn (array $in, AbilityContext $ctx): Entry => $content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null);
+        $publish = fn (array $in, AbilityContext $ctx): Entry => $content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null, array_key_exists('expiresAt', $in) ? $in['expiresAt'] : false);
         $unpublish = fn (array $in, AbilityContext $ctx): Entry => $content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
         $discard = fn (array $in, AbilityContext $ctx): Entry => $content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
         $duplicate = fn (array $in, AbilityContext $ctx): Entry => $content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
@@ -419,6 +419,7 @@ final class ContentAbilities
                 'status' => ['type' => 'string', 'enum' => ['draft', 'published'], 'default' => 'draft'],
                 'authorId' => ['type' => ['string', 'null'], 'format' => 'ulid'],
                 'at' => ['type' => 'string', 'format' => 'date-time', 'description' => 'Publication time; requires status published.'],
+                'expiresAt' => ['type' => ['string', 'null'], 'format' => 'date-time', 'description' => 'When it stops being published: from then on it is off the site, and a draft once the scheduler has run. Null takes the date away. Requires status published.'],
             ], 'required' => ['collection', 'title']],
             'answer' => $this->answer('created'),
             'output' => Shapes::entry(),
@@ -447,6 +448,7 @@ final class ContentAbilities
                 'data' => ['type' => 'object'],
                 'authorId' => ['type' => ['string', 'null'], 'format' => 'ulid'],
                 'at' => ['type' => 'string', 'format' => 'date-time', 'description' => 'Publication time; requires publish true.'],
+                'expiresAt' => ['type' => ['string', 'null'], 'format' => 'date-time', 'description' => 'When it stops being published: from then on it is off the site, and a draft once the scheduler has run. Null takes the date away. Requires publish true; left out, the date stays as it is.'],
                 'publish' => ['type' => 'boolean', 'default' => false],
                 'expectedVersion' => self::VERSION,
             ], 'required' => ['id']],
@@ -463,15 +465,15 @@ final class ContentAbilities
 
         $a->register('entries/publish', [
             'label' => 'Publish Entry',
-            'description' => 'Publish an entry (applying its draft). Pass `at` to schedule.',
+            'description' => 'Publish an entry (applying its draft). Pass `at` to schedule it, and `expiresAt` for when it comes off the site again: publish a live entry again to set, move or (null) remove that date.',
             'permission' => $entryPermission('publish'),
-            'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'at' => ['type' => 'string', 'format' => 'date-time'], 'expectedVersion' => self::VERSION], 'required' => ['id']],
+            'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'at' => ['type' => 'string', 'format' => 'date-time'], 'expiresAt' => ['type' => ['string', 'null'], 'format' => 'date-time', 'description' => 'When it stops being published: from then on it is off the site, and a draft once the scheduler has run. Null takes the date away. Left out, the date stays as it is.'], 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('published'),
             'output' => Shapes::entry(),
             'dryRun' => function (array $in, AbilityContext $ctx) use ($publish): array {
                 $entry = $this->dry(fn () => $publish($in, $ctx));
 
-                return [$this->change($entry->isScheduled() ? 'schedule' : 'publish', $entry, ['at' => $entry->publishedAt?->toIso8601String(), 'uri' => $entry->uri])];
+                return [$this->change($entry->isScheduled() ? 'schedule' : 'publish', $entry, ['at' => $entry->publishedAt?->toIso8601String(), 'expiresAt' => $entry->expiresAt?->toIso8601String(), 'uri' => $entry->uri])];
             },
             'handler' => fn (array $in, AbilityContext $ctx) => $publish($in, $ctx)->toArray(),
         ]);
@@ -599,7 +601,7 @@ final class ContentAbilities
                     'title' => Shape::STRING, 'slug' => Shape::STRING, 'status' => Shape::STRING, 'data' => self::values(), 'authorId' => Shape::STRING_OR_NULL,
                     // The working copy a published entry had beside it: what differed from the above.
                     'draft' => Shape::nullable(['title?' => Shape::STRING, 'slug?' => Shape::STRING, 'data?' => self::values(), 'authorId?' => Shape::STRING_OR_NULL]),
-                    'parentId' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL,
+                    'parentId' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL, 'expiresAt?' => Shape::STRING_OR_NULL,
                 ]), 'createdAt' => Shape::STRING]),
             'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->find($in['id']) ?? throw new AbilityException('Revision not found.', 'not_found'),
         ]);
