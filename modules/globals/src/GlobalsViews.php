@@ -8,7 +8,7 @@ use Cms\Admin\Views;
 use Cms\Cms;
 use Cms\Users\User;
 
-/** Globals as data: the sets, one set's values (one tab per language), and its fields in the blueprint editor (`globals/fields`). */
+/** Global sets as data: the sets, one set's values (one tab per language), and its fields in the blueprint editor (`globals/fields`). */
 final class GlobalsViews
 {
     public static function register(Cms $cms): void
@@ -25,7 +25,7 @@ final class GlobalsViews
 
     private static function list(): array
     {
-        return ['type' => 'ui/page', 'props' => ['title' => __('Globals'), 'icon' => 'globe', 'actions' => [
+        return ['type' => 'ui/page', 'props' => ['title' => __('Global Sets'), 'icon' => 'globe', 'actions' => [
             ['label' => __('New Global Set'), 'icon' => 'plus', 'variant' => 'primary', 'ability' => 'globals/save',
                 'form' => ['title' => __('New Global Set'), 'confirm' => __('Create Global Set'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'required' => true, 'autofocus' => true]]],
                 // A new set starts with one text field; its fields open next.
@@ -34,7 +34,7 @@ final class GlobalsViews
                 'then' => ['manifest', 'open'], 'to' => '/globals/{result.handle}/fields'],
         ]], 'children' => [
             ['type' => 'ui/records', 'props' => [
-                'id' => 'globals', 'label' => __('Globals'), 'key' => 'handle',
+                'id' => 'globals', 'label' => __('Global Sets'), 'key' => 'handle',
                 'source' => ['ability' => 'globals/list'],
                 'columns' => [
                     // One fact a row: its name. The handle is in its address and beside each field, for whoever builds templates.
@@ -56,7 +56,7 @@ final class GlobalsViews
         $set = $cms->globals()->find($handle);
 
         if ($set === null) {
-            return Views::notFound('globe', ['to' => '/globals', 'label' => __('Globals')]);
+            return Views::notFound('globe', ['to' => '/globals', 'label' => __('Global Sets')]);
         }
 
         $form = static fn (?string $locale) => ['type' => 'ui/form', 'props' => [
@@ -68,7 +68,7 @@ final class GlobalsViews
         ]];
         $locales = $cms->locales();
 
-        return ['type' => 'ui/page', 'props' => ['title' => $set->title, 'icon' => $set->icon ?: 'globe', 'width' => 'narrow', 'back' => ['to' => '/globals', 'label' => __('Globals')], 'actions' => [
+        return ['type' => 'ui/page', 'props' => ['title' => $set->title, 'icon' => $set->icon ?: 'globe', 'width' => 'narrow', 'back' => ['to' => '/globals', 'label' => __('Global Sets')], 'actions' => [
             // No icon: on a phone a bar's button with one is only its icon, and this is the only thing to do here.
             ['label' => __('Edit Fields'), 'to' => "/globals/{$handle}/fields", 'can' => 'globals.manage'],
         ]], 'children' => count($locales) > 1

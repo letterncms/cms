@@ -66,6 +66,6 @@ export function useDataPaths(node: BlockNode): DataPath[] {
   }
 
   out.push(...SITE())
-  for (const g of manifest.globals) out.push({ path: `globals.${g.handle}.`, label: t('{name} (add a field handle)', { name: g.title }), group: t('Globals') })
+  for (const g of manifest.globals) out.push({ path: `globals.${g.handle}.`, label: t('{name} (add a field handle)', { name: g.title }), group: t('Global Sets') })
   return out
 }

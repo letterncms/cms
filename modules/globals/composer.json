@@ -14,7 +14,7 @@
     },
     "extra": {
         "cms": {
-            "label": "Globals",
+            "label": "Global Sets",
             "icon": "globe",
             "provider": "Cms\\Modules\\Globals\\GlobalsModule"
         }

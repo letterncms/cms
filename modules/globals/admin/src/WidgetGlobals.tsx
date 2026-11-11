@@ -14,7 +14,7 @@ export default function WidgetGlobals() {
 
   return (
     <Widget
-      action={{ label: t('All Globals'), to: '/globals' }}
+      action={{ label: t('All Global Sets'), to: '/globals' }}
       query={sets}
       empty={sets.data?.length === 0 && { icon: 'globe', title: t('No global sets yet'), action: can('globals.manage') && <Button size="sm" icon="plus" onClick={() => navigate('/globals')}>{t('New Global Set')}</Button> }}
     >

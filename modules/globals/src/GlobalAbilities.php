@@ -26,7 +26,7 @@ final class GlobalAbilities
     public function register(AbilityRegistry $a): void
     {
         $a->register('globals/list', [
-            'label' => 'List Globals',
+            'label' => 'List Global Sets',
             'description' => 'Global sets (site-wide values like footer or contact details), with when each last changed.',
             'permission' => 'globals.view',
             'annotations' => ['readOnly' => true],
@@ -53,7 +53,7 @@ final class GlobalAbilities
         ]);
 
         $a->register('globals/set', [
-            'label' => 'Update Global Values',
+            'label' => 'Update Global Set Values',
             'permission' => 'globals.edit',
             'description' => 'Set values of a global set (merged into existing values). Returns the values as stored.',
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'values' => ['type' => 'object'], 'locale' => ['type' => 'string']], 'required' => ['handle', 'values']],

@@ -19,6 +19,7 @@
 - A calendar shows each record's status as a dot before its title.
 - On a phone every dialog is a sheet with a grip at its top: drag it down, flick it or press it and the sheet goes; let go early and it returns. The grip is the sheet's one way out, so the × beside it is gone there. The page builder's block panel has the same grip on a phone. `@letterncms/ui` exports `SheetHandle` for a sheet of your own, and `InspectorPanel` takes `sheet` to rise from the bottom edge with it.
 - On a touch screen the lines of a menu, a select and a picker are 44px tall.
+- Global sets have one name. The sidebar, the screen, its breadcrumb and the widget say **Global Sets** (they said "Globals"), the permissions are **View Global Sets** and **Edit Global Set Values**, and the abilities are labelled **List Global Sets** and **Update Global Set Values**. Addresses, ability names (`globals/…`) and the `globals` data path stay as they are.
 
 ### Fixed
 

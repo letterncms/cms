@@ -618,7 +618,7 @@
         "root": {
             "type": "ui/page",
             "props": {
-                "title": "Globals",
+                "title": "Global Sets",
                 "icon": "globe",
                 "actions": [
                     {
@@ -664,7 +664,7 @@
                     "type": "ui/records",
                     "props": {
                         "id": "globals",
-                        "label": "Globals",
+                        "label": "Global Sets",
                         "key": "handle",
                         "source": {
                             "ability": "globals/list",
