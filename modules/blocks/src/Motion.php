@@ -71,6 +71,13 @@ final class Motion
 
     private const float LOAD_SPREAD = 0.3;
 
+    /**
+     * Where a page load animation starts instead of fully transparent. A browser doesn't count what it draws at
+     * opacity 0, so the page's largest text would only count as painted (Largest Contentful Paint) once its
+     * animation shows it, a delay and a stagger later. This much is drawn, counted, and can't be seen.
+     */
+    private const float LOAD_OPACITY = 0.01;
+
     /** Loops that start by themselves stop by here, unless someone can pause them (WCAG 2.2.2). */
     private const float LOOP_LIMIT = 5.0;
 
@@ -272,6 +279,10 @@ final class Motion
         $seen = [];
 
         foreach (self::timeline($animation, $load) as ['step' => $step, 'start' => $start]) {
+            if ($load && isset($step['from']['opacity']) && (float) $step['from']['opacity'] < self::LOAD_OPACITY) {
+                $step['from']['opacity'] = self::LOAD_OPACITY;
+            }
+
             $frames = self::keyframes($step);
 
             if ($frames === null) {

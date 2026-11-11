@@ -55,7 +55,7 @@ for (let i = 0; i < 100; i++) {
 }
 
 /** A tab that speaks the DevTools Protocol. `media` emulates features such as prefers-reduced-motion. */
-async function open(path, { media = {}, script = true, site = 'plain', before = '' } = {}) {
+async function open(path, { media = {}, script = true, site = 'plain', before = '', slow = 1 } = {}) {
   const origin = sites[site].origin
   const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json()
   const ws = new WebSocket(target.webSocketDebuggerUrl)
@@ -77,6 +77,7 @@ async function open(path, { media = {}, script = true, site = 'plain', before = 
   await send('Page.enable')
   if (!script) await send('Emulation.setScriptExecutionDisabled', { value: true })
   if (before) await send('Page.addScriptToEvaluateOnNewDocument', { source: before })
+  if (slow > 1) await send('Emulation.setCPUThrottlingRate', { rate: slow })
   const features = Object.entries(media).map(([name, value]) => ({ name, value }))
   if (features.length) await send('Emulation.setEmulatedMedia', { features })
   const evaluate = async (expression) => {
@@ -249,6 +250,24 @@ const checks = {
     await off.goto('/two')
     equal(await off.evaluate('document.querySelector("h1").textContent'), 'Page two', 'the page is whole without JavaScript')
     await off.close()
+  },
+
+  /** A page load animation on the largest text doesn't keep the page from counting as painted. */
+  async lcp() {
+    // A slow phone: where a delayed paint shows.
+    const tab = await open('/lcp', { slow: 6 })
+    // When the heading starts to show: the animation's own start plus its delay, on the page's clock.
+    const shows = await tab.until(`(() => { const a = document.querySelector('h1')?.getAnimations()[0]; return a && a.startTime !== null && a.startTime + a.effect.getTiming().delay })()`)
+    await sleep(3500)
+    const seen = await tab.evaluate(`new Promise((resolve) => {
+      let lcp = null
+      new PerformanceObserver((list) => { for (const entry of list.getEntries()) lcp = { at: entry.startTime, tag: entry.element?.tagName } }).observe({ type: 'largest-contentful-paint', buffered: true })
+      setTimeout(() => resolve(lcp), 300)
+    })`)
+    equal(seen?.tag, 'H1', 'the heading is what the page is measured by')
+    equal(seen.at < shows, true, `it counts as painted before its animation shows it (largest paint ${Math.round(seen.at)} ms, the animation shows it from ${Math.round(shows)} ms)`)
+    equal(await tab.evaluate('getComputedStyle(document.querySelector("h1")).opacity'), '1', 'and the animation still ran to the end')
+    await tab.close()
   },
 
   /** Scroll animations: CSS where the browser can, the runtime where it can't or when they trail; pinning; lines. */
