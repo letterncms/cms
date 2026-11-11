@@ -1,5 +1,5 @@
 import { invalidate, loadManifest, run, t, useAbility, type SurfaceComponentProps } from '@letterncms/sdk'
-import { Dialog, Input, toast } from '@letterncms/ui'
+import { Dialog, Input, NoMatches, Spinner, toast } from '@letterncms/ui'
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { COMMON, localName, nativeName } from './names'
 
@@ -18,7 +18,9 @@ export default function AddLanguage({ close }: SurfaceComponentProps) {
   const exclude = (data.data?.languages ?? []).map((l) => l.code)
   const [search, setSearch] = useState('')
   const [index, setIndex] = useState(0)
-  const [busy, setBusy] = useState(false)
+  // The language being added: its row says so, and nothing else can be chosen meanwhile.
+  const [adding, setAdding] = useState<string | null>(null)
+  const busy = adding !== null
   const list = useRef<HTMLDivElement>(null)
   const query = search.trim().toLowerCase()
   const options = COMMON.filter((c) => !exclude.includes(c))
@@ -31,7 +33,7 @@ export default function AddLanguage({ close }: SurfaceComponentProps) {
 
   const choose = async (code: string) => {
     if (busy) return
-    setBusy(true)
+    setAdding(code)
     try {
       await run('languages/create', { code })
       invalidate('languages/', 'entries/', 'translations/')
@@ -41,7 +43,7 @@ export default function AddLanguage({ close }: SurfaceComponentProps) {
       close?.()
     } catch (e) {
       toast.error(e)
-      setBusy(false)
+      setAdding(null)
     }
   }
 
@@ -62,16 +64,18 @@ export default function AddLanguage({ close }: SurfaceComponentProps) {
       <Input size="sm" icon="search" autoFocus aria-label={t('Search Languages')} placeholder={t('Search Languages')} value={search} disabled={busy}
         onChange={(e) => { setSearch(e.target.value); setIndex(0) }} onKeyDown={keys}
         role="combobox" aria-expanded aria-controls="add-language-options" aria-activedescendant={choices[index] ? `add-language-${choices[index].code}` : undefined} />
-      <div ref={list} id="add-language-options" role="listbox" aria-label={t('Languages')} className="-mx-1 mt-2 max-h-72 overflow-y-auto">
-        {choices.map((o, i) => (
-          <button key={o.code} id={`add-language-${o.code}`} type="button" role="option" aria-selected={i === index} tabIndex={-1} disabled={busy} onMouseEnter={() => setIndex(i)} onClick={() => void choose(o.code)}
-            className="flex min-h-8 w-full items-center gap-2 rounded-xs px-2 py-1 text-left text-sm aria-selected:bg-hover">
-            <span className="min-w-0 flex-1 truncate">{o.name}{o.native !== o.name && <span className="text-muted"> · {o.native}</span>}</span>
-            <code className="shrink-0 text-xs text-faint">{o.code}</code>
-          </button>
-        ))}
-        {choices.length === 0 && <p className="m-0 px-2 py-3 text-xs text-muted">{t('No matches')}</p>}
-      </div>
+      {choices.length === 0 ? <NoMatches className="py-6" onClear={() => setSearch('')} /> : (
+        // A listbox the search field steers: the options are not stops of their own, the field names the one the keys are on.
+        <div ref={list} id="add-language-options" role="listbox" aria-label={t('Languages')} aria-busy={busy} className="-mx-1 mt-2 max-h-72 overflow-y-auto" inert={busy}>
+          {choices.map((o, i) => (
+            <div key={o.code} id={`add-language-${o.code}`} role="option" aria-selected={i === index} onMouseEnter={() => setIndex(i)} onClick={() => void choose(o.code)}
+              className="flex min-h-10 cursor-default items-center gap-3 rounded-xs px-2 text-sm text-text transition-colors duration-base aria-selected:bg-active max-sm:min-h-11">
+              <span className="min-w-0 flex-1 truncate">{o.name}{o.native !== o.name && <span className="text-muted"> · {o.native}</span>}</span>
+              {adding === o.code ? <Spinner size={14} /> : <code className="shrink-0 text-xs text-faint">{o.code}</code>}
+            </div>
+          ))}
+        </div>
+      )}
     </Dialog>
   )
 }
