@@ -60,6 +60,7 @@
 - A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.
 - A saved view kept with the **Published** filter before entries could have an end date lists published entries again, not every entry.
 - The content API's OpenAPI document says which entries it gives: published, their publication date come and their end date not passed.
+- On a phone a list's select filters take two to a row, so three of them no longer squeeze into one line with Display, and the Audit Log's rows say who, how and when without leading each with its column's name. A view's column can say it is `bare`. A value that is missing stays out of a phone's row in every list, not only a date.
 
 ### Security
 

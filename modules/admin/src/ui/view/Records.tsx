@@ -28,6 +28,8 @@ interface Column {
   key: string
   label: string
   format?: string
+  /** Says what it is without its heading (a person's name, a time ago): on a phone it is not led by the column's name. */
+  bare?: boolean
   width?: string
   /** Its width from the longest value, written in the type addresses are (`address`): it grows before the title gives way. */
   fit?: boolean
@@ -265,7 +267,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
         const options = f.options ?? (Array.isArray(at(response, f.at)) ? (at(response, f.at) as Row[]).map((o) => ({ value: String(at(o, f.value ?? 'value')), label: String(at(o, f.text ?? 'label')) })) : [])
         return (
           // On a phone the select filters share a row, half each, instead of stacking at half width beside nothing.
-          <span key={f.param} className="w-48 max-w-full max-sm:w-auto max-sm:min-w-0 max-sm:flex-1 max-sm:basis-[calc(50%-0.25rem)]">
+          <span key={f.param} className="w-48 max-w-full max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]">
             <Select size="sm" aria-label={f.label} value={chosen[f.param] ?? ''} onChange={(v) => { setChosen({ ...chosen, [f.param]: v ?? '' }); if (!address) setPage(1) }}
               options={[{ value: '', label: f.all ?? t('All') }, ...options.map((o) => ({ value: String(o.value), label: o.label }))]} />
           </span>
@@ -316,7 +318,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       // Days are read newest first.
       descFirst: ['date', 'datetime', 'ago'].includes(own.format ?? '') || (own.format === 'field' && ['date', 'number'].includes(own.field?.type ?? '')),
       // These say what they are without a heading: a dot and its word, an address, a face, badges, a switch.
-      bare: ['status', 'address', 'person', 'badges', 'switch', 'languages', 'media'].includes(own.format ?? ''),
+      bare: own.bare ?? ['status', 'address', 'person', 'badges', 'switch', 'languages', 'media'].includes(own.format ?? ''),
       control: own.format === 'switch',
       // The same dot and words as the column's own (formats.tsx): the tone from `tones`, the words from `labels`.
       status: own.format === 'status' ? (row: Row) => {

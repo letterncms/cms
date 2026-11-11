@@ -96,13 +96,15 @@
                                             {
                                                 "key": "who",
                                                 "label": "Who",
-                                                "width": "160px"
+                                                "width": "160px",
+                                                "bare": true
                                             },
                                             {
                                                 "key": "transport",
                                                 "label": "Via",
                                                 "width": "96px",
                                                 "format": "badge",
+                                                "bare": true,
                                                 "labels": {
                                                     "admin": "Admin",
                                                     "mcp": "Agent",
@@ -121,7 +123,8 @@
                                                 "label": "When",
                                                 "width": "140px",
                                                 "align": "end",
-                                                "format": "ago"
+                                                "format": "ago",
+                                                "bare": true
                                             }
                                         ],
                                         "open": {
