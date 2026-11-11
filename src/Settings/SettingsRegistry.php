@@ -230,18 +230,23 @@ final class SettingsRegistry
         return array_replace($values, (array) ($this->secrets()[$namespace] ?? []));
     }
 
-    /** @return list<string> */
+    /**
+     * What is secret in a namespace: its fields marked `secret`, as registered and as plugins left them, and
+     * whatever secrets.json holds for it. A field a plugin took away stays secret: masked, never in the YAML.
+     *
+     * @return list<string>
+     */
     private function secretKeys(string $namespace): array
     {
-        $keys = [];
+        $keys = array_keys((array) ($this->secrets()[$namespace] ?? []));
 
-        foreach ($this->fields($namespace) as $field) {
-            if (! empty($field['secret'])) {
+        foreach ([...($this->schemas[$namespace]['fields'] ?? []), ...$this->fields($namespace)] as $field) {
+            if (is_array($field) && ! empty($field['secret']) && isset($field['handle'])) {
                 $keys[] = (string) $field['handle'];
             }
         }
 
-        return $keys;
+        return array_values(array_unique(array_map('strval', $keys)));
     }
 
     /**

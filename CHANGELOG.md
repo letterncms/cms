@@ -52,6 +52,10 @@
 - A saved view kept with the **Published** filter before entries could have an end date lists published entries again, not every entry.
 - The content API's OpenAPI document says which entries it gives: published, their publication date come and their end date not passed.
 
+### Security
+
+- A secret of a settings page whose field a plugin takes away (as Brevo does with its key while the mail transport's serves) is still a secret: `settings/get` and `settings/update` answered with it in clear, and the next save wrote it into `config/<namespace>.yaml`. Every key that `storage/secrets.json` holds for a page, and every field registered as `secret`, is now masked in answers and kept out of the settings file.
+
 ## 0.23.0 (2026-11-11)
 
 ### Added
