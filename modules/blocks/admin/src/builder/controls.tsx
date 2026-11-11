@@ -1,6 +1,6 @@
 import { registry, t, useManifestIfLoaded, type FieldContext, type FieldDef } from '@letterncms/sdk'
-import { Icon, Tooltip, cn, fieldControlId, fieldVisible, wideFieldTypes } from '@letterncms/ui'
-import { useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Button, Icon, IconButton, Tooltip, cn, fieldControlId, fieldVisible, wideFieldTypes, type ButtonProps } from '@letterncms/ui'
+import { forwardRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 
 /* The inspector's frame, shared by every tab: sections with a title row, then rows of a
    label column and a control. One gutter (16px), one row (28px controls, 4px apart), one
@@ -39,11 +39,11 @@ export function Section({ title, children, open: initial = true, actions, empty 
   return (
     <section data-section={title} className="min-w-0 border-b border-border last:border-b-0">
       <header className="group/section flex h-10 items-center gap-1 pl-4 pr-3">
-        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className={cn('flex h-full min-w-0 flex-1 items-center gap-1 text-left text-xs font-semibold', empty ? 'text-muted' : 'text-ink')}>
+        <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open} className={cn('!h-full min-w-0 flex-1 shrink !justify-start !gap-1 !rounded-none !bg-transparent !px-0 text-left !text-xs !font-semibold focus-visible:!-outline-offset-2', empty ? '!text-muted' : '!text-ink')}>
           <span className="min-w-0 truncate">{title}</span>
           {/* Open sections show their caret on hover; a folded one keeps it, so it reads as one. */}
-          <Icon name="chevron-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-120', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
-        </button>
+          <Icon name="chevron-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-fast', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
+        </Button>
         {/* Adding something shows it: the section opens. */}
         {actions && <span className="contents" onClickCapture={() => !open && setOpen(true)}>{actions}</span>}
       </header>
@@ -82,7 +82,7 @@ export function RowLabel({ field, children, htmlFor, className }: { field: Field
   if (status === 'own' && reset) {
     return (
       <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
-        <button type="button" onClick={reset} className={cn(base, 'decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</button>
+        <Button variant="ghost" onClick={reset} className={cn(base, '!h-auto !justify-start !gap-1 !whitespace-normal !rounded-xs !bg-transparent !px-0 !text-xs !font-normal !text-ink decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</Button>
       </Tooltip>
     )
   }
@@ -157,20 +157,20 @@ export function Swatch({ color, dark, className }: { color: string; dark?: strin
     <span className={cn('relative inline-block size-4 shrink-0 overflow-hidden rounded-[4px] align-middle [background:repeating-conic-gradient(#ddd_0_25%,#fff_0_50%)_0_0/6px_6px]', className)}>
       <span className="absolute inset-0" style={{ background: color }} />
       {dark && <span className="absolute inset-0 [clip-path:polygon(100%_50%,100%_100%,50%_100%)]" style={{ background: dark }} />}
-      <span className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)]" />
+      <span className="absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-border-strong" />
     </span>
   )
 }
 
-/** The small square button of a row or a section title (+, −, link…). */
-export const iconButtonClass = 'grid size-6 shrink-0 place-items-center rounded-sm text-muted transition-colors duration-120 hover:bg-hover hover:text-ink'
+/** A quiet line that adds something under a list ("+ Add Step"): the kit's ghost button at a row's size. Takes a menu's trigger props. */
+export const AddRow = forwardRef<HTMLButtonElement, ButtonProps>(function AddRow({ className, children, ...props }, ref) {
+  return <Button ref={ref} variant="ghost" icon="plus" className={cn('w-full !justify-start !gap-1.5 !px-1.5 !text-xs !font-normal !text-muted hover:!text-ink', className)} {...props}>{children}</Button>
+})
 
 export function AddButton({ onClick, label = t('Add') }: { onClick: () => void; label?: string }) {
   return (
     <Tooltip content={label}>
-      <button type="button" onClick={onClick} className={iconButtonClass} aria-label={label}>
-        <Icon name="plus" size={14} />
-      </button>
+      <IconButton icon="plus" label={label} title={undefined} size="xs" onClick={onClick} />
     </Tooltip>
   )
 }
@@ -178,9 +178,7 @@ export function AddButton({ onClick, label = t('Add') }: { onClick: () => void; 
 export function RemoveButton({ onClick, label = t('Remove') }: { onClick: () => void; label?: string }) {
   return (
     <Tooltip content={label}>
-      <button type="button" onClick={onClick} className={cn(iconButtonClass, 'text-faint hover:text-danger')} aria-label={label}>
-        <Icon name="minus" size={14} />
-      </button>
+      <IconButton icon="minus" label={label} title={undefined} size="xs" onClick={onClick} className="!text-faint hover:!text-danger" />
     </Tooltip>
   )
 }

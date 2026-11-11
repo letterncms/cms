@@ -1,5 +1,5 @@
 import { events, plural, t, useScreenContext, type EntryEditorProps } from '@letterncms/sdk'
-import { Button, IconButton, InspectorPanel, Menu, Popover, QueryError, ScreenSidebar, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
+import { Button, Dialog, IconButton, InspectorPanel, Menu, Popover, QueryError, ScreenSidebar, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorProvider, useCatalog, useEditorContext, type DocRef } from './core/context'
@@ -41,8 +41,8 @@ export function BlocksWorkspace(props: EntryEditorProps) {
 }
 
 
-/** On a phone the panel rises from the bottom edge, so the block it is about stays in view above it. */
-const sheet = 'max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:h-[72dvh] max-sm:w-full max-sm:rounded-t-xl max-sm:border-l-0 max-sm:border-t max-sm:data-[starting-style]:translate-x-0 max-sm:data-[starting-style]:translate-y-full max-sm:data-[ending-style]:translate-x-0 max-sm:data-[ending-style]:translate-y-full'
+/** On a phone the panel is a sheet with a handle, risen from the bottom edge: the block it is about stays in view above it, undimmed (styles.css). */
+const sheet = "cms-block-sheet max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:h-[72dvh] max-sm:w-full max-sm:rounded-t-xl max-sm:border-l-0 max-sm:border-t max-sm:pb-[env(safe-area-inset-bottom)] max-sm:before:mx-auto max-sm:before:mt-2 max-sm:before:h-1 max-sm:before:w-9 max-sm:before:shrink-0 max-sm:before:rounded-full max-sm:before:bg-border-strong max-sm:before:content-[''] max-sm:data-[starting-style]:translate-x-0 max-sm:data-[starting-style]:translate-y-full max-sm:data-[ending-style]:translate-x-0 max-sm:data-[ending-style]:translate-y-full"
 
 /** The screens a page is previewed and styled for: one vocabulary everywhere (Desktop, Tablet, Phone). */
 export const screens = () => [
@@ -77,6 +77,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
   const [insert, setInsert] = useState(false)
   const [query, setQuery] = useState('')
   const wide = useWideInspector()
+  const [phone] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const selection = useEditor(store, selectionOf)
   // A phone-sized window edits the page as phones show it: a desktop page would be too small to write in.
   useEffect(() => { if (window.matchMedia('(max-width: 639px)').matches) store.setBreakpoint('mobile') }, [store])
@@ -96,7 +97,11 @@ function Workspace({ props }: { props: EntryEditorProps }) {
   // A sheet opened over the page (phone, tablet) with a block selected is that block's settings: the back arrow leads to the page's.
   useEffect(() => {
     if (!props.sidebarOpen) setInspecting(false)
-    else if (!wide && store.get().selected) setInspecting(true)
+    else if (!wide && store.get().selected) {
+      setInspecting(true)
+      // Under a phone's sheet only the top of the page shows: the block goes there.
+      if (window.matchMedia('(max-width: 639px)').matches) bus.emit('scroll-to', { node: store.get().selected!, top: true })
+    }
   }, [props.sidebarOpen])
   useEffect(() => { if (Object.keys(props.errors).length) setInspecting(false) }, [props.errors])
   useEffect(() => bus.on('preview-motion', () => events.emit('entry.preview')), [])
@@ -122,9 +127,15 @@ function Workspace({ props }: { props: EntryEditorProps }) {
   }
   return <div className="flex h-full min-h-0 flex-col" data-block-workspace>
     {props.toolbar && createPortal(<>
-      {!readOnly && <Popover open={insert} onOpenChange={setInsert} align="start" trigger={<IconButton icon="plus" label={t('Insert Block')} />} className="!p-0">
+      {/* A phone has no room for a popover under the bar: the blocks come up as a sheet. */}
+      {!readOnly && (phone ? <>
+        <IconButton icon="plus" label={t('Insert Block')} onClick={() => setInsert(true)} />
+        <Dialog open={insert} onOpenChange={setInsert} title={t('Insert Block')}>
+          <Inserter className="!max-h-none !w-full" types={[...types.values()]} query={query} onQuery={setQuery} onChoose={choose} onClose={() => setInsert(false)} allowed={(type) => !!destination(type.name)} />
+        </Dialog>
+      </> : <Popover open={insert} onOpenChange={setInsert} align="start" trigger={<IconButton icon="plus" label={t('Insert Block')} />} className="!p-0">
         <Inserter types={[...types.values()]} query={query} onQuery={setQuery} onChoose={choose} onClose={() => setInsert(false)} allowed={(type) => !!destination(type.name)} />
-      </Popover>}
+      </Popover>)}
       <IconButton icon="undo" label={t('Undo')} disabled={!undo} onClick={store.undo} />
       <IconButton icon="redo" label={t('Redo')} disabled={!redo} onClick={store.redo} />
       <Devices />

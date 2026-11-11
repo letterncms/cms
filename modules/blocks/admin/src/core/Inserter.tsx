@@ -1,4 +1,4 @@
-import { Fields, Icon, cn } from '@letterncms/ui'
+import { Button, Fields, Icon, cn } from '@letterncms/ui'
 import { t, useAbility } from '@letterncms/sdk'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useCatalog } from './context'
@@ -113,7 +113,7 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
     <div className={cn('flex max-h-[min(420px,60vh)] w-[300px] flex-col', className)} style={style}>
       {showSearch && (
         <div className="border-b border-border p-1.5">
-          <Fields bare fields={[{ handle: 'query', type: 'text', label: t('Search'), icon: 'search', size: 'sm', autofocus: true, placeholder: t('Search blocks and components…') }]} values={{ query }} onChange={(_, q) => onQuery?.(q ?? '')} />
+          <Fields bare fields={[{ handle: 'query', type: 'text', label: t('Search'), icon: 'search', size: 'sm', autofocus: true, placeholder: t('Search Blocks') }]} values={{ query }} onChange={(_, q) => onQuery?.(q ?? '')} />
         </div>
       )}
       <div ref={list} className="min-h-0 flex-1 overflow-y-auto p-1">
@@ -127,23 +127,24 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
           return (
             <div key={item.kind === 'block' ? item.type.name : `p-${item.pattern.handle}`}>
               {heading && <div className="cms-label px-2 pb-1 pt-2">{heading}</div>}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="md"
                 data-index={i}
+                // What a block is for is its tooltip: the list is names, so twice as many fit.
+                title={description || undefined}
                 // Moving, not entering: a menu that opens under a resting pointer keeps its first item.
                 onMouseMove={() => i !== active && setActive(i)}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onChoose(item)}
-                className={cn('flex w-full items-center gap-2.5 rounded-sm px-2 text-left', compact ? 'h-8' : 'py-1.5', i === active ? 'bg-hover' : '')}
+                data-active={i === active || undefined}
+                className={cn('w-full !justify-start !gap-2.5 !rounded-sm !px-2 text-left', !compact && '!h-9')}
               >
                 <span className="grid size-7 shrink-0 place-items-center rounded-xs border border-border bg-surface text-muted">
                   <Icon name={icon} size={14} />
                 </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-text">{title}</span>
-                  {!compact && description && <span className="block truncate text-xs text-faint">{description}</span>}
-                </span>
-              </button>
+                <span className="min-w-0 truncate">{title}</span>
+              </Button>
             </div>
           )
         })}

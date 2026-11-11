@@ -1,5 +1,6 @@
 import { t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Fields, Icon, IconButton, Menu, Popover, cn, type MenuItemDef } from '@letterncms/ui'
+import { Button, Fields, Icon, IconButton, Menu, Popover, type MenuItemDef } from '@letterncms/ui'
+import { AddRow } from '../controls'
 import { useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
 import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
@@ -175,17 +176,17 @@ export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Pro
           value={query}
           onChange={(e) => { setQuery(e.target.value); setActive(0) }}
           onKeyDown={onKey}
-          placeholder={t('Search…')}
-          aria-label={t('Search…')}
+          placeholder={t('Search')}
+          aria-label={t('Search')}
           className="h-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none"
         />
       </div>
       <div role="listbox" aria-label={label} className="max-h-64 overflow-y-auto overscroll-contain p-1">
         {options.length === 0 && <p className="m-0 px-2 py-3 text-sm text-muted">{t('No matches')}</p>}
         {options.map((o, i) => (
-          <button key={o.property} type="button" role="option" aria-selected={i === active} tabIndex={-1} onMouseEnter={() => setActive(i)} onClick={() => pick(o.property)} className={cn('flex h-7 w-full items-center rounded-xs px-2 text-left text-sm text-text', i === active && 'bg-hover text-ink')}>
+          <Button key={o.property} variant="ghost" role="option" aria-selected={i === active} tabIndex={-1} onMouseEnter={() => setActive(i)} onClick={() => pick(o.property)} data-active={i === active || undefined} className="w-full !justify-start !rounded-xs !px-2 text-left !font-normal">
             {o.label}
-          </button>
+          </Button>
         ))}
       </div>
     </Popover>
@@ -292,10 +293,7 @@ export function MoreStylesField({ field, value, onChange, disabled }: FieldProps
       {!disabled && offered.length > 0 && (
         <div className="flex h-8 items-center">
           <AddStyle properties={offered} labels={labels} onPick={setAdding}>
-            <button type="button" className="-ml-1.5 flex h-7 items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
-              <Icon name="plus" size={12} />
-              {t('Add a Property')}
-            </button>
+            <AddRow className="-ml-1.5 !w-auto">{t('Add a Property')}</AddRow>
           </AddStyle>
         </div>
       )}

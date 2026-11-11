@@ -1,11 +1,20 @@
 import { t, type FieldDef } from '@letterncms/sdk'
-import { Icon, Menu, Tooltip, cn } from '@letterncms/ui'
+import { Button, Icon, IconButton, Menu, Tooltip, cn } from '@letterncms/ui'
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useEditorContext, useTokens } from '../../core/context'
 import type { BlockNode, MotionDef, MotionStep } from '../../core/types'
 import { bus } from '../bus'
-import { RemoveButton, Section, PanelFields } from '../controls'
+import { AddRow, RemoveButton, RowLabel, Section, PanelFields } from '../controls'
 import { eases, groupLabel, presets, propertyLabels, triggers, type Preset } from './presets'
+
+/** A time in seconds, as a labelled row with its unit in the field. */
+const time = (handle: string, label: string, extra: Partial<FieldDef> = {}): FieldDef => ({ handle, type: 'text', component: 'blocks-value', label, unit: 's', units: ['s'], step: 0.05, min: 0, placeholder: '0', ...extra })
+
+/** What a pin distance may be, as the site keeps it (Motion.php PIN). */
+const PIN = /^\d{1,5}(\.\d{1,2})?(px|rem|vh|svh|lvh|dvh)$/
+const PIN_UNITS = ['vh', 'svh', 'lvh', 'dvh', 'px', 'rem']
+/** The triggers a script plays, so their text can be measured into lines first. */
+const MEASURED = ['appear', 'hover', 'press', 'event']
 
 /** Fields shown only when `on`. */
 const when = (on: unknown, ...fields: FieldDef[]): FieldDef[] => (on ? fields : [])
@@ -49,11 +58,7 @@ export function MotionPanel({ node }: { node: BlockNode }) {
       actions={
         <Menu
           align="end"
-          trigger={
-            <button type="button" className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('Add Animation')}>
-              <Icon name="plus" size={14} />
-            </button>
-          }
+          trigger={<IconButton icon="plus" label={t('Add Animation')} size="xs" />}
           items={[
             ...groups.flatMap((g) => [{ label: groupLabel(g), heading: true }, ...all.filter((p) => p.group === g && (!p.text || text)).map((p) => ({ label: p.name, icon: kinds[p.make().trigger.type]?.icon, onSelect: () => add(p) }))]),
             { separator: true, label: '' },
@@ -66,14 +71,12 @@ export function MotionPanel({ node }: { node: BlockNode }) {
         <div key={m.id} className={cn('rounded-sm border', open === m.id ? 'border-border-strong' : 'border-border')}>
           <div className="flex h-8 items-center gap-1.5 pl-2 pr-1">
             <Icon name={kinds[m.trigger.type]?.icon ?? 'wand'} size={13} className="shrink-0 text-muted" />
-            <button type="button" onClick={() => setOpen(open === m.id ? null : m.id)} aria-expanded={open === m.id} className="flex min-w-0 flex-1 items-baseline gap-1.5 text-left">
-              <span className="truncate text-xs font-medium text-ink">{m.name || kinds[m.trigger.type]?.label}</span>
-              <span className="shrink-0 text-xs text-faint">{kinds[m.trigger.type]?.label}</span>
-            </button>
+            <Button variant="ghost" onClick={() => setOpen(open === m.id ? null : m.id)} aria-expanded={open === m.id} className="min-w-0 flex-1 shrink !justify-start !gap-1.5 !bg-transparent !px-0 text-left !text-xs">
+              <span className="truncate font-medium text-ink">{m.name || kinds[m.trigger.type]?.label}</span>
+              <span className="shrink-0 font-normal text-faint">{kinds[m.trigger.type]?.label}</span>
+            </Button>
             <Tooltip content={t('Preview Animation')}>
-              <button type="button" onClick={() => bus.emit('preview-motion', { node: node.id, motion: m })} className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('Preview')}>
-                <Icon name="play" size={14} />
-              </button>
+              <IconButton icon="play" label={t('Preview Animation')} title={undefined} size="xs" onClick={() => bus.emit('preview-motion', { node: node.id, motion: m })} />
             </Tooltip>
             <RemoveButton onClick={() => save(list.filter((x) => x.id !== m.id))} label={t('Remove Animation')} />
           </div>
@@ -105,10 +108,10 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
     ),
     ...when(
       trigger.type === 'scroll',
-      { handle: 'start', type: 'select', size: 'sm', label: t('From'), placeholder: t('Enters the Screen'), options: [{ value: 'top bottom', label: t('Enters the Screen') }, { value: 'top 80%', label: t('Top at 80%') }, { value: 'top center', label: t('Top at Center') }, { value: 'top top', label: t('Top at Top') }, { value: 'center center', label: t('Centered') }] },
-      { handle: 'end', type: 'select', size: 'sm', label: t('To'), placeholder: t('Leaves the Screen'), options: [{ value: 'bottom top', label: t('Leaves the Screen') }, { value: 'center center', label: t('Centered') }, { value: 'top top', label: t('Top at Top') }, { value: 'bottom center', label: t('Bottom at Center') }, { value: 'bottom bottom', label: t('Bottom at Bottom') }] },
-      { handle: 'pin', type: 'text', component: 'blocks-value', label: t('Pin For'), unit: 'vh', units: ['vh', 'px', 'rem'], step: 10, min: 0, placeholder: t('Off') },
-      { handle: 'scrub', type: 'text', component: 'blocks-value', label: t('Trail (s)'), unit: '', step: 0.05, min: 0, max: 3, placeholder: '0' },
+      { handle: 'start', type: 'select', size: 'sm', label: t('Begins'), placeholder: t('Enters the Screen'), options: [{ value: 'top bottom', label: t('Enters the Screen') }, { value: 'top 80%', label: t('Top at 80%') }, { value: 'top center', label: t('Top at Center') }, { value: 'top top', label: t('Top at Top') }, { value: 'center center', label: t('Centered') }] },
+      { handle: 'end', type: 'select', size: 'sm', label: t('Ends'), placeholder: t('Leaves the Screen'), options: [{ value: 'bottom top', label: t('Leaves the Screen') }, { value: 'center center', label: t('Centered') }, { value: 'top top', label: t('Top at Top') }, { value: 'bottom center', label: t('Bottom at Center') }, { value: 'bottom bottom', label: t('Bottom at Bottom') }] },
+      { handle: 'pin', type: 'text', component: 'blocks-value', label: t('Pin Distance'), unit: 'vh', units: PIN_UNITS, step: 10, min: 0, max: 99999, placeholder: '0' },
+      time('scrub', t('Smoothing'), { max: 3 }),
     ),
     ...when(
       loop,
@@ -117,9 +120,6 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
       { handle: 'hold', type: 'number', size: 'sm', label: t('Loop as a Timeline, Resting (s)'), if: { repeat: '-1' }, instructions: t('On Appear: all steps loop together while on screen.') },
     ),
     ...when(trigger.type === 'scroll' || trigger.type === 'appear', { handle: 'watch', type: 'select', component: 'blocks-node', label: t('Watch'), placeholder: t('This Element'), exclude: node.id }),
-    { handle: 'desktop', type: 'toggle', size: 'sm', label: t('Plays on Desktop') },
-    { handle: 'tablet', type: 'toggle', size: 'sm', label: t('Plays on Tablet') },
-    { handle: 'mobile', type: 'toggle', size: 'sm', label: t('Plays on Phone') },
   ]
   const on = motion.on ?? ['desktop', 'tablet', 'mobile']
   const values = {
@@ -128,11 +128,8 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
     start: trigger.start,
     end: trigger.end,
     pin: trigger.pin,
-    scrub: trigger.scrub !== undefined ? String(trigger.scrub) : undefined,
+    scrub: trigger.scrub !== undefined ? `${trigger.scrub}s` : undefined,
     replay: trigger.once === false,
-    desktop: on.includes('desktop'),
-    tablet: on.includes('tablet'),
-    mobile: on.includes('mobile'),
     repeat: String(motion.repeat ?? (trigger.type === 'loop' ? -1 : 0)),
     yoyo: !!motion.yoyo,
     hold: motion.hold,
@@ -142,14 +139,10 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
     if (h === 'name') onChange({ name: v ?? '' })
     else if (h === 'type') v && setTrigger({ type: v })
     else if (h === 'start' || h === 'end') setTrigger({ [h]: v ?? undefined })
-    else if (h === 'pin') setTrigger({ pin: v && parseFloat(v) > 0 ? String(v) : undefined })
-    else if (h === 'scrub') setTrigger({ scrub: Number(v) > 0 ? Math.min(3, Number(v)) : undefined })
+    // Only what the site keeps: a distance in the units it knows, a smoothing between 0.05 and 3 seconds.
+    else if (h === 'pin') setTrigger({ pin: typeof v === 'string' && PIN.test(v.trim()) && parseFloat(v) > 0 ? v.trim() : undefined })
+    else if (h === 'scrub') setTrigger({ scrub: parseFloat(v) > 0 ? Math.min(3, Math.max(0.05, parseFloat(v))) : undefined })
     else if (h === 'replay') setTrigger({ once: v ? false : undefined })
-    else if (h === 'desktop' || h === 'tablet' || h === 'mobile') {
-      const next = v ? [...on, h] : on.filter((screen) => screen !== h)
-      // Off everywhere means nothing to edit: keep at least one.
-      if (next.length) onChange({ on: next.length === 3 ? undefined : next })
-    }
     else if (h === 'repeat') onChange({ repeat: Number(v ?? 0) })
     else if (h === 'yoyo') onChange({ yoyo: v || undefined })
     else if (h === 'hold') onChange({ hold: v === '' || v == null ? undefined : Number(v) })
@@ -163,6 +156,18 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
   return (
     <div className="space-y-2 border-t border-border p-2">
       <PanelFields fields={[...fields, ...after]} values={values} onChange={apply} />
+      {/* The screens it plays on, one switch each in a row. Off everywhere means nothing to edit: one stays on. */}
+      <div className="flex min-h-7 items-center">
+        <RowLabel field={{ handle: 'on', type: 'select', label: t('Plays On') }} />
+        <div role="group" aria-label={t('Plays On')} className="flex gap-0.5">
+          {([['desktop', 'monitor', t('Desktop')], ['tablet', 'tablet', t('Tablet')], ['mobile', 'phone', t('Phone')]] as const).map(([screen, icon, label]) => (
+            <IconButton key={screen} icon={icon} label={label} size="xs" aria-pressed={on.includes(screen)} onClick={() => {
+              const next = on.includes(screen) ? on.filter((other) => other !== screen) : [...on, screen]
+              if (next.length) onChange({ on: next.length === 3 ? undefined : next })
+            }} />
+          ))}
+        </div>
+      </div>
       {trigger.type === 'event' && (
         <p className="m-0 flex h-7 items-center gap-2 text-xs">
           <span className="w-[88px] shrink-0 text-muted">{t('Animation ID')}</span>
@@ -174,6 +179,7 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
         <StepEditor
           key={step}
           node={node}
+          trigger={trigger.type}
           step={motion.steps[step]}
           index={step}
           count={motion.steps.length}
@@ -245,11 +251,11 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
   return (
     <div className="rounded-md bg-active/60 py-1.5">
       <div className="mb-1 flex items-end pr-2">
-        <span className="w-16 shrink-0 pl-2 text-2xs font-medium text-faint">{t('Timeline')}</span>
+        <span className="w-24 shrink-0 pl-2 text-2xs font-medium text-faint">{t('Timeline')}</span>
         <div className="relative h-3 flex-1">
           {/* Every other tick is labeled when they would crowd the narrow panel. */}
           {ticks.filter((_, i) => ticks.length <= 5 || i % 2 === 0).map((s) => (
-            <span key={s} className="absolute -translate-x-1/2 font-mono text-[9px] leading-none text-faint first:translate-x-0 last:-translate-x-full" style={{ left: pct(s) }}>
+            <span key={s} className="absolute -translate-x-1/2 font-mono text-2xs leading-none text-faint first:translate-x-0 last:-translate-x-full" style={{ left: pct(s) }}>
               {s === 0 ? '0' : `${s}s`}
             </span>
           ))}
@@ -259,9 +265,9 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
         const b = bars[i]
         return (
           <div key={i} className={cn('flex h-7 items-center pr-2', i === active && 'bg-focus-soft')}>
-            <button type="button" onClick={() => onSelect(i)} className={cn('w-16 shrink-0 truncate pl-2 text-left text-2xs', i === active ? 'font-medium text-ink' : 'text-muted hover:text-text')}>
-              {targetLabel(s.target)}
-            </button>
+            <Button variant="ghost" size="xs" onClick={() => onSelect(i)} className={cn('w-24 !justify-start !bg-transparent !pl-2 !pr-0 text-left !text-2xs', i === active ? '!font-medium !text-ink' : '!font-normal !text-muted hover:!text-text')}>
+              <span className="truncate">{targetLabel(s.target)}</span>
+            </Button>
             <div data-track className="relative h-full flex-1">
               {ticks.map((x) => (
                 <span key={x} className="absolute inset-y-0 w-px bg-border/70" style={{ left: pct(x) }} />
@@ -281,28 +287,24 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
                   else if (s.at !== undefined) onChange(i, { at: snap(s.at + d) })
                   else onChange(i, { delay: snap((s.delay ?? 0) + d) || undefined })
                 }}
-                className={cn('cms-focus-ring group/bar absolute top-1 flex h-4 cursor-grab items-center rounded-[3px] active:cursor-grabbing', i === active ? 'bg-focus' : 'bg-focus/50 hover:bg-focus/70')}
+                className={cn('cms-focus-ring group/bar absolute top-1 flex h-4 cursor-grab items-center rounded-xs active:cursor-grabbing', i === active ? 'bg-focus' : 'bg-focus/50 hover:bg-focus/70')}
                 style={{ left: pct(b.start), width: `max(6px, ${pct(b.duration)})` }}
               >
-                <span className="pointer-events-none truncate px-1 font-mono text-[9px] leading-none text-white">{b.duration.toFixed(1)}s</span>
+                <span className="pointer-events-none truncate px-1 font-mono text-2xs leading-none text-white">{b.duration.toFixed(1)}s</span>
                 <span onPointerDown={(e) => startDrag(e, i, 'end')} className="absolute -right-1 inset-y-0 w-2 cursor-ew-resize" aria-hidden />
               </div>
-              {b.spread > 0 && <span className="pointer-events-none absolute top-1 h-4 rounded-r-[3px] bg-focus/20" style={{ left: pct(b.start + b.duration), width: pct(b.spread) }} />}
+              {b.spread > 0 && <span className="pointer-events-none absolute top-1 h-4 rounded-r-xs bg-focus/20" style={{ left: pct(b.start + b.duration), width: pct(b.spread) }} />}
             </div>
           </div>
         )
       })}
-      <button type="button" onClick={onAdd} className="ml-16 mt-0.5 flex h-6 items-center gap-1 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
-        <Icon name="plus" size={12} /> {t('Add Step')}
-      </button>
+      <AddRow size="xs" onClick={onAdd} className="ml-24 mt-0.5 !w-auto">{t('Add Step')}</AddRow>
     </div>
   )
 }
 
-/** A time in seconds: a value to type, nudge or scrub. */
-const seconds = (handle: string, title: string, icon: string, extra: Partial<FieldDef> = {}): FieldDef => ({ handle, type: 'text', component: 'blocks-value', label: title, title, prefixIcon: icon, unit: '', step: 0.05, min: 0, ...extra })
 
-function StepEditor({ node, step, index, count, onChange, onRemove }: { node: BlockNode; step: MotionStep; index: number; count: number; onChange: (patch: Partial<MotionStep>) => void; onRemove: () => void }) {
+function StepEditor({ node, trigger, step, index, count, onChange, onRemove }: { node: BlockNode; trigger: string; step: MotionStep; index: number; count: number; onChange: (patch: Partial<MotionStep>) => void; onRemove: () => void }) {
   const { catalog } = useEditorContext()
   const { byGroup } = useTokens()
   const target = step.target ?? 'self'
@@ -319,11 +321,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
           <span className="text-xs font-medium text-muted">{side === 'from' ? t('From') : t('To')}</span>
           <Menu
             align="end"
-            trigger={
-              <button type="button" className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={side === 'from' ? t('Add a Start Property') : t('Add an End Property')}>
-                <Icon name="plus" size={14} />
-              </button>
-            }
+            trigger={<IconButton icon="plus" label={side === 'from' ? t('Add a Start Property') : t('Add an End Property')} size="xs" />}
             items={props.filter((p) => !(p in values)).map((p) => ({ label: labels[p] ?? p, onSelect: () => add(p, catalog.motion.properties[p] === 'css' ? (p === 'clipPath' ? 'inset(0% 0% 0% 0%)' : 'token:color.primary') : p === 'opacity' || p.startsWith('scale') ? '1' : '0') }))}
           />
         </div>
@@ -367,7 +365,8 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
             size: 'sm',
             label: t('Target'),
             required: true,
-            options: [{ value: 'self', label: t('This Element') }, { value: 'children', label: t('Each Child in Turn') }, ...(text ? [{ value: 'words', label: t('Each Word') }, { value: 'lines', label: t('Each Line') }, { value: 'chars', label: t('Each Letter') }] : []), { value: 'other', label: t('Another Element') }],
+            options: [{ value: 'self', label: t('This Element') }, { value: 'children', label: t('Each Child in Turn') }, // Lines are found once the text is laid out: only what the script plays can wait for that (Motion.php).
+            ...(text ? [{ value: 'words', label: t('Each Word') }, ...(MEASURED.includes(trigger) || target === 'lines' ? [{ value: 'lines', label: t('Each Line') }] : []), { value: 'chars', label: t('Each Letter') }] : []), { value: 'other', label: t('Another Element') }],
           },
           ...when(target.startsWith('#'), { handle: 'element', type: 'select', component: 'blocks-node', label: t('Element') }),
           ...when(target === 'words' || target === 'chars', { handle: 'mask', type: 'toggle', size: 'sm', label: t('Rise from Behind a Line') }),
@@ -379,27 +378,18 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
       {sideEditor('to')}
       <PanelFields
         fields={[
-          {
-            handle: 'timing',
-            type: 'group',
-            component: 'blocks-group',
-            label: t('Timing'),
-            columns: 2,
-            fields: [
-              seconds('duration', t('Duration in Seconds'), 'timer'),
-              seconds('delay', t('Delay in Seconds'), 'clock', { placeholder: '0' }),
-              ...when(target !== 'self', seconds('stagger', t('Time between items in seconds'), 'more', { step: 0.01, placeholder: '0' })),
-              ...when(count > 1, seconds('at', t('Start in seconds into the timeline'), 'flow-arrow', { placeholder: t('After') })),
-            ],
-          },
+          time('duration', t('Duration')),
+          time('delay', t('Delay')),
+          ...when(target !== 'self', time('stagger', t('Stagger'), { step: 0.01 })),
+          ...when(count > 1, time('at', t('Starts At'), { placeholder: t('After') })),
           { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: [...(byGroup.get('ease') ?? []).map((ease) => ({ value: `token:${ease.path}`, label: ease.name, curve: String(ease.value) })), ...eases()] },
         ]}
-        values={{ timing: { duration: String(step.duration ?? 0.6), delay: step.delay !== undefined ? String(step.delay) : undefined, stagger: step.stagger !== undefined ? String(step.stagger) : undefined, at: step.at !== undefined ? String(step.at) : undefined }, ease: step.ease }}
-        onChange={(h, v) =>
-          h === 'ease'
-            ? onChange({ ease: v ?? undefined })
-            : onChange({ duration: Number(v.duration ?? 0.6), delay: v.delay ? Number(v.delay) : undefined, stagger: v.stagger ? Number(v.stagger) : undefined, at: v.at ? Number(v.at) : undefined })
-        }
+        values={{ duration: `${step.duration ?? 0.6}s`, delay: step.delay !== undefined ? `${step.delay}s` : undefined, stagger: step.stagger !== undefined ? `${step.stagger}s` : undefined, at: step.at !== undefined ? `${step.at}s` : undefined, ease: step.ease }}
+        onChange={(h, v) => {
+          if (h === 'ease') return onChange({ ease: v ?? undefined })
+          const n = parseFloat(v)
+          onChange({ [h]: h === 'duration' ? (n > 0 ? n : 0.6) : n > 0 || (h === 'at' && n === 0) ? n : undefined })
+        }}
       />
     </div>
   )

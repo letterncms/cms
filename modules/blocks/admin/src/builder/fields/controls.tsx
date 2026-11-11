@@ -263,8 +263,8 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
               }
             }}
             className={cn(inputClass, 'tabular-nums', numeric && !disabled && 'cursor-ew-resize focus:cursor-text', prefix !== undefined && '!pl-6')}
-            // Room for what sits at its end (the unit, the token button), measured: "rem" is wider than "px".
-            style={{ paddingRight: (value ? suffix : 0) + 6 }}
+            // Room for what sits at its end (the unit, the token button), measured: "rem" is wider than "px". The unit shows on an empty field too.
+            style={{ paddingRight: suffix + 6 }}
           />
         )}
         {(!chosen || draft !== null) && (
@@ -274,7 +274,7 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
               <Menu
                 align="end"
                 trigger={
-                  <button type="button" disabled={disabled} className={cn('pointer-events-auto h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink data-[popup-open]:opacity-100', !value && 'opacity-0 group-hover/value:opacity-100 group-focus-within/value:opacity-100')} aria-label={t('Unit')}>
+                  <button type="button" disabled={disabled} className={cn('pointer-events-auto h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink data-[popup-open]:opacity-100')} aria-label={t('Unit')}>
                     {shownUnit}
                   </button>
                 }

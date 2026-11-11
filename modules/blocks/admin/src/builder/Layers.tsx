@@ -2,7 +2,7 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { t } from '@letterncms/sdk'
-import { Icon, Tooltip, cn } from '@letterncms/ui'
+import { Icon, IconButton, Tooltip, cn } from '@letterncms/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
 import { selectionOf, useEditor } from '../core/store'
@@ -173,20 +173,20 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
       className={cn(
         'group relative flex h-7 pointer-coarse:h-10 cursor-default select-none items-center gap-1.5 rounded-md pr-1 text-sm outline-none focus-visible:shadow-[inset_0_0_0_1.5px_var(--cms-focus)]',
         selected ? 'bg-focus-soft text-ink' : hovered ? 'bg-hover text-text' : 'text-text',
-        isDragging && 'z-10 bg-bg opacity-80 shadow-pop',
+        isDragging && 'z-drag bg-bg opacity-80 shadow-pop',
       )}
     >
-      <button
-        type="button"
+      <IconButton
+        icon="chevron-down"
+        size="xs"
+        label={collapsed ? t('Expand') : t('Collapse')}
+        title={undefined}
         onClick={(e) => {
           e.stopPropagation()
           onToggle()
         }}
-        className={cn('-mr-1 grid size-4 shrink-0 place-items-center rounded-xs text-faint hover:text-ink', !hasChildren && 'invisible')}
-        aria-label={collapsed ? t('Expand') : t('Collapse')}
-      >
-        <Icon name="chevron-down" size={10} className={cn('transition-transform duration-120', collapsed && '-rotate-90')} />
-      </button>
+        className={cn('-mr-1 !size-4 !bg-transparent !text-faint hover:!text-ink [&_svg]:size-2.5 [&_svg]:transition-transform [&_svg]:duration-fast', collapsed && '[&_svg]:-rotate-90', !hasChildren && 'invisible')}
+      />
       <Icon name={component ? 'symbol' : type?.icon ?? 'square'} size={14} className={cn('shrink-0', node.hidden ? 'text-ghost' : selected ? 'text-ink' : component ? 'text-muted' : 'text-faint')} />
       {renaming ? (
         <div className="min-w-0 flex-1" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onKeyUp={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()} onBlur={() => setRenaming(false)}>
@@ -218,19 +218,19 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
         </Tooltip>
       ))}
       <Tooltip content={node.hidden ? t('Show') : t('Hide')}>
-        <button
-          type="button"
+        <IconButton
+          icon={node.hidden ? 'eye-off' : 'eye'}
+          size="xs"
+          label={node.hidden ? t('Show') : t('Hide')}
+          title={undefined}
           disabled={readOnly}
           onClick={(e) => {
             e.stopPropagation()
             store.updateNode(node.id, { hidden: !node.hidden || undefined })
           }}
           onPointerDown={(e) => e.stopPropagation()}
-          className={cn('grid size-6 shrink-0 place-items-center rounded-sm text-faint hover:bg-hover hover:text-ink', node.hidden ? 'grid' : 'hidden group-hover:grid group-focus-visible:grid')}
-          aria-label={node.hidden ? t('Show') : t('Hide')}
-        >
-          <Icon name={node.hidden ? 'eye-off' : 'eye'} size={14} />
-        </button>
+          className={cn('!text-faint hover:!text-ink', !node.hidden && '!hidden group-hover:!inline-flex group-focus-visible:!inline-flex [@media(hover:none)]:!inline-flex')}
+        />
       </Tooltip>
     </div>
   )

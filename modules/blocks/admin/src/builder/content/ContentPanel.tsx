@@ -1,5 +1,5 @@
-import { navigate, t, useAbility, type FieldDef } from '@letterncms/sdk'
-import { fieldControlId, Button, Fields, Icon, Tooltip, cn, wideFieldTypes } from '@letterncms/ui'
+import { can, navigate, t, useAbility, type FieldDef } from '@letterncms/sdk'
+import { fieldControlId, Button, Fields, IconButton, Tooltip, cn, wideFieldTypes } from '@letterncms/ui'
 import { useAnchors } from '../../core/anchors'
 import { useEditorContext } from '../../core/context'
 import type { PatternDef } from '../../core/Inserter'
@@ -48,14 +48,14 @@ function Prop({ field: given, value, bound, paths, onValue, onBind, extra }: { f
   if (toggle) return <div className="flex min-h-7 items-center">{control}</div>
   const connect = (
     <Tooltip content={bound ? t('Disconnect from Data') : t('Connect to Data')}>
-      <button
-        type="button"
+      <IconButton
+        icon="database"
+        size="xs"
+        label={bound ? t('Disconnect from Data') : t('Connect to Data')}
+        title={undefined}
         onClick={() => onBind(bound ? null : paths[0]?.path ?? 'entry.title')}
-        aria-label={bound ? t('Disconnect from Data') : t('Connect to Data')}
-        className={cn('grid h-6 shrink-0 place-items-center overflow-hidden rounded-sm hover:bg-hover', bound ? 'w-6 text-ink' : 'w-0 text-faint hover:text-ink focus-visible:w-6 group-hover/prop:w-6 [@media(hover:none)]:w-6')}
-      >
-        <Icon name="database" size={13} />
-      </button>
+        className={cn('overflow-hidden', bound ? '!text-ink' : '!w-0 !text-faint hover:!text-ink focus-visible:!w-6 group-hover/prop:!w-6 [@media(hover:none)]:!w-6')}
+      />
     </Tooltip>
   )
   const label = (
@@ -140,9 +140,11 @@ export function ContentPanel({ node }: { node: BlockNode }) {
         <PanelFields
           fields={[
             { handle: 'label', type: 'text', size: 'sm', commit: 'blur', label: t('Layer Name'), placeholder: type?.title },
-            { handle: 'anchor', type: 'text', size: 'sm', commit: 'blur', label: t('Anchor'), placeholder: t('None'), mono: true, instructions: t('Link to it with #anchor') },
+            // A block with an anchor of its own (a heading's, with its # link) has the one field for it.
+            ...(advanced.some((f) => f.handle === 'anchor') && !node.anchor ? [] : [{ handle: 'anchor', type: 'text', size: 'sm', commit: 'blur', label: t('Anchor'), placeholder: t('None'), mono: true, instructions: t('Link to it with #anchor') } as FieldDef]),
             { handle: 'class', type: 'text', size: 'sm', commit: 'blur', label: t('Classes'), placeholder: t('None'), mono: true, instructions: t('Extra CSS classes, styled in custom CSS') },
-            { handle: 'persist', type: 'text', size: 'sm', commit: 'blur', label: t('Keep Across Pages'), placeholder: t('None'), mono: true },
+            // The name pages share for an element that lives on when they swap; it carries what runs in it, so it needs the code permission.
+            ...(can('site.code') ? [{ handle: 'persist', type: 'text', size: 'sm', commit: 'blur', label: t('Persist As'), placeholder: 'player', mono: true } as FieldDef] : []),
           ]}
           values={{ label: node.label, anchor: node.anchor, class: node.class, persist: node.persist }}
           onChange={(h, v: string) => store.updateNode(node.id, { [h]: (h === 'anchor' ? v.toLowerCase().replace(/[^a-z0-9-]/g, '') : h === 'persist' ? v.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^[^a-z]+/, '').slice(0, 40) : v) || undefined })}
@@ -199,7 +201,6 @@ export function ContentPanel({ node }: { node: BlockNode }) {
             store.updateNode(node.id, { bind: Object.keys(all).length ? all : undefined }, `bind:${node.id}:states`)
           }}
         />
-        <p className="m-0 select-all pt-2 font-mono text-2xs text-faint">{node.id}</p>
       </Section>
     </div>
   )

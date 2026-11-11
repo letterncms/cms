@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Popover, cn } from '@letterncms/ui'
+import { Button, fieldControlId, Icon, IconButton, Popover, cn } from '@letterncms/ui'
 import { useState } from 'react'
 import type { DataPath } from './scope'
 import { inputClass } from '../controls'
@@ -44,9 +44,7 @@ export function BindField({ field, value: raw, onChange, disabled }: FieldProps<
         align="end"
         className="w-64 !p-1"
         trigger={
-          <button type="button" className="grid size-6 shrink-0 place-items-center rounded-xs text-muted hover:bg-hover hover:text-text" aria-label={t('Choose Data')}>
-            <Icon name="chevron-down" size={12} />
-          </button>
+          <IconButton icon="chevron-down" size="xs" label={t('Choose Data')} />
         }
       >
         <div className="max-h-80 overflow-y-auto">
@@ -54,19 +52,20 @@ export function BindField({ field, value: raw, onChange, disabled }: FieldProps<
             <div key={g} className="py-1">
               <p className="cms-label m-0 px-2 pb-1">{g}</p>
               {paths.filter((p) => p.group === g).map((p) => (
-                <button
+                <Button
                   key={p.path}
-                  type="button"
+                  variant="ghost"
+                  data-active={value === p.path || undefined}
                   onClick={() => {
                     onChange(p.path)
                     setOpen(false)
                   }}
-                  className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-xs hover:bg-hover', value === p.path && 'bg-active')}
+                  className="w-full !justify-start !gap-2 !rounded-xs !px-2 text-left !text-xs !font-normal"
                 >
                   <span className="min-w-0 flex-1 truncate">{p.label}</span>
                   <span className="max-w-[50%] shrink-0 truncate font-mono text-2xs text-faint">{p.path}</span>
                   {value === p.path && <Icon name="check" size={11} className="shrink-0" />}
-                </button>
+                </Button>
               ))}
             </div>
           ))}

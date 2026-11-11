@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, Menu, cn, prompt } from '@letterncms/ui'
+import { Button, Icon, IconButton, Menu, cn, prompt } from '@letterncms/ui'
 import { useEditorContext } from '../../core/context'
 import { useEditor } from '../../core/store'
 import * as tree from '../../core/tree'
@@ -72,25 +72,24 @@ export function StateBar({ node }: { node: BlockNode }) {
         {/* A track like a segmented control: the state being styled lies on it; one with styles of its own carries a dot. */}
         <div data-wrap className="flex min-w-0 flex-1 flex-wrap gap-0.5 rounded-md bg-active p-0.5" role="radiogroup" aria-label={t('State')}>
           {states.map((st) => (
-            <button
+            <Button
               key={st.value || 'default'}
-              type="button"
+              variant="ghost"
+              size="xs"
               role="radio"
               aria-checked={state === st.value}
               onClick={() => set(st.value)}
-              className={cn('relative flex h-6 flex-[1_0_auto] items-center justify-center gap-1 whitespace-nowrap rounded-[6px] px-1.5 text-xs font-medium transition-colors duration-120', state === st.value ? 'bg-float text-ink shadow-raise dark:bg-[color-mix(in_srgb,var(--cms-float),var(--cms-ink)_12%)]' : 'text-muted hover:text-text')}
+              className={cn('relative flex-[1_0_auto] !rounded-sm !px-1.5', state === st.value ? '!bg-float !text-ink shadow-raise dark:!bg-fill' : '!bg-transparent !text-muted hover:!text-text')}
             >
               <span>{st.label}</span>
               {st.value && used(st.value) && state !== st.value && <span className="size-1 shrink-0 rounded-full bg-current opacity-70" aria-hidden />}
-            </button>
+            </Button>
           ))}
         </div>
         <Menu
           align="end"
           trigger={
-            <button type="button" className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('More States')} title={t('More States')}>
-              <Icon name="plus" size={14} />
-            </button>
+            <IconButton icon="plus" label={t('More States')} />
           }
           items={[
             ...MORE().map((m) => ({ label: m.label, onSelect: () => set(m.value), checked: state === m.value })),
@@ -104,7 +103,7 @@ export function StateBar({ node }: { node: BlockNode }) {
         <div className="flex h-7 items-center gap-2 rounded-sm bg-bg px-2 text-xs text-text">
           <Icon name={breakpoint === 'mobile' ? 'phone' : 'tablet'} size={14} className="shrink-0 text-muted" />
           <span className="min-w-0 flex-1 truncate">{where}</span>
-          <button type="button" onClick={() => store.setBreakpoint('base')} className="shrink-0 rounded-xs px-1 text-muted hover:text-ink">{t('Back to Desktop')}</button>
+          <Button variant="ghost" size="xs" onClick={() => store.setBreakpoint('base')} className="!px-1 !font-normal !text-muted hover:!text-ink">{t('Back to Desktop')}</Button>
         </div>
       )}
     </div>

@@ -3,7 +3,8 @@ import type { MotionDef } from '../core/types'
 /** Block workspace events for selection and rendered previews. */
 type Events = {
   'preview-motion': { node: string; motion: MotionDef }
-  'scroll-to': { node: string }
+  /** Bring a block into view: in the middle, or at the `top` when a sheet covers the rest. */
+  'scroll-to': { node: string; top?: boolean }
   /** Select a block and open its inspector, as clicking it on the page does. */
   inspect: { node: string }
 }
