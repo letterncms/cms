@@ -15,7 +15,12 @@ final class SvgSanitizer
 
     private const array ATTRIBUTES = ['id', 'class', 'd', 'x', 'y', 'x1', 'x2', 'y1', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'width', 'height', 'viewbox', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'stroke-opacity', 'opacity', 'transform', 'points', 'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'clip-path', 'clip-rule', 'mask', 'font-family', 'font-size', 'font-weight', 'text-anchor', 'dominant-baseline', 'preserveaspectratio', 'xmlns', 'version', 'style', 'href', 'xlink:href', 'stddeviation', 'in', 'in2', 'result', 'mode', 'values', 'type', 'dx', 'dy', 'flood-color', 'flood-opacity', 'operator', 'patternunits', 'maskunits', 'role', 'aria-label', 'aria-hidden', 'focusable'];
 
-    public function clean(string $svg): string
+    /**
+     * With $inline, for an SVG that goes into the page itself (an Icon block's own): there a <style> is the
+     * page's stylesheet and a class takes the page's rules, so `style` elements and `class` and `style`
+     * attributes go, and the shapes keep what their own attributes say (fill, stroke, opacity…).
+     */
+    public function clean(string $svg, bool $inline = false): string
     {
         if (strlen($svg) > 2_000_000 || preg_match('/<!ENTITY|<!DOCTYPE/i', $svg)) {
             throw new RuntimeException(__('This SVG is not allowed.'));
@@ -30,21 +35,21 @@ final class SvgSanitizer
             throw new RuntimeException(__('Not a valid SVG file.'));
         }
 
-        $this->walk($doc->documentElement);
+        $this->walk($doc->documentElement, $inline);
 
         return (string) $doc->saveXML($doc->documentElement);
     }
 
-    private function walk(DOMElement $element): void
+    private function walk(DOMElement $element, bool $inline = false): void
     {
         foreach (iterator_to_array($element->childNodes) as $child) {
             if ($child instanceof DOMElement) {
-                if (! in_array(strtolower($child->localName), self::ELEMENTS, true)) {
+                if (! in_array(strtolower($child->localName), self::ELEMENTS, true) || ($inline && strtolower($child->localName) === 'style')) {
                     $element->removeChild($child);
                     continue;
                 }
 
-                $this->walk($child);
+                $this->walk($child, $inline);
             } elseif ($child->nodeType === XML_PI_NODE || $child->nodeType === XML_COMMENT_NODE) {
                 $element->removeChild($child);
             }
@@ -55,6 +60,7 @@ final class SvgSanitizer
             $value = trim($attr->nodeValue ?? '');
 
             $unsafe = ! in_array($name, self::ATTRIBUTES, true)
+                || ($inline && in_array($name, ['class', 'style'], true))
                 || str_starts_with($name, 'on')
                 || (in_array($name, ['href', 'xlink:href'], true) && ! str_starts_with($value, '#'))
                 || preg_match('/javascript:|expression\(|url\s*\(\s*["\']?\s*(?!#)/i', $value);
