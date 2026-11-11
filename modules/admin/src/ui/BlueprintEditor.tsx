@@ -1,6 +1,6 @@
 import { CmsError, invalidate, loadManifest, navigate, plural, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
 import { useEffect, useRef, useState } from 'react'
-import { FieldsEditor, type RawField } from '../fields/FieldsEditor'
+import { FieldsEditor, RowUsage, type RawField } from '../fields/FieldsEditor'
 import { PartName } from '../fields/BuilderFields'
 import { IconButton } from './Button'
 import { Button } from './Button'
@@ -50,6 +50,8 @@ export interface BlueprintKind {
    * the Fields tab then switches between them. Answers how many items were made with one.
    */
   blueprints?: (handle: string) => Promise<number>
+  /** Answers how many rows of one kind the items have in a matrix field: said before the row type is removed. */
+  rows?: (field: string, rowType: string) => Promise<number>
   /** What every item has without a field; null when nothing. */
   builtIn?: string | null
   /** Give complex blueprints separate fields and grouped settings views. */
@@ -215,6 +217,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       actions={kind.entries && <Button icon="arrow-up-right" onClick={() => navigate(kind.entries!)}>{t('Entries')}</Button>}
     >
       {removeError && <Notice tone="danger" className="mb-5" action={<Button size="xs" disabled={saving} loading={removing} onClick={remove}>{t('Try Again')}</Button>}>{removeError}</Notice>}
+      <RowUsage.Provider value={kind.rows ?? null}>
       <div inert={saving || removing}>
       {kind.settingsSections ? (
         <div className="max-w-[960px]">
@@ -282,6 +285,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         )}
       </div>}
       </div>
+      </RowUsage.Provider>
       <SaveBar dirty={dirty} saving={saving} error={saveError} onSave={() => void save()} onDiscard={discard} />
     </Page>
   )

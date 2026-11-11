@@ -3,10 +3,16 @@ import { DndContext } from '../ui/dnd'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { plural, t, useManifest, type FieldDef, type FieldProps, type FieldTypeDef } from '@letterncms/sdk'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Badge, Button, EmptyState, FieldError, Fields, Icon, IconButton, List, Popover, Row, cn } from '../ui'
 import { Conditions } from './BuilderFields'
 import { conditionCycles, followRename, nextCondition, type Sibling } from './conditions'
+
+/**
+ * How many rows of one kind a matrix field has in what is stored (`field` is its handle), where the thing
+ * being edited can say: asked before a row type is taken away. Null where there is nothing to count.
+ */
+export const RowUsage = createContext<((field: string, rowType: string) => Promise<number>) | null>(null)
 
 export type RawField = Record<string, any> & { handle?: string; type?: string; label?: string; import?: string }
 

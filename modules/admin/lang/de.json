@@ -14,6 +14,8 @@
   "{count} fields": "{count} Felder",
   "{count} item": "{count} Element",
   "{count} items": "{count} Elemente",
+  "{count} row was made with it. It keeps its values, without these fields.": "Damit wurde {count} Zeile erstellt. Die Werte bleiben erhalten, nur ohne diese Felder.",
+  "{count} rows were made with it. They keep their values, without these fields.": "Damit wurden {count} Zeilen erstellt. Die Werte bleiben erhalten, nur ohne diese Felder.",
   "{count} selected": "{count} ausgewählt",
   "{failed} of {total} failed.": "{failed} von {total} fehlgeschlagen.",
   "{from}–{to} of {total}": "{from}–{to} von {total}",

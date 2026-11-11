@@ -14,6 +14,7 @@
 - `@letterncms/ui`: `Pressable`, the control without a look, for the ones that draw themselves (a colour plane, a box of a spacing control, a card that opens, canvas chrome). It is a `<button type="button">`, or a link with `to`, with the kit's focus line, 44px to hit on a touch screen, `disabled` and `data-active`; `inset` puts the focus line inside its edge, `compact` leaves out the touch area. Everything it looks like is its `className`.
 - **Term archives**: a collection can have a page per term of a taxonomy that lists its own entries filed under the term, such as `/blog/topics/tides` beside the term's own page. Choose the taxonomy and the URL under **Term Archives** in the collection's settings, or write `archives: {topics: '/blog/topics/{slug}'}` in its definition, with a pattern per language under `routes`. The page shows the term and the entries, ten to a page. A template named `<collection>_archive`, or `archive` for every collection, designs it: the page is the term, with its fields, and the new Repeat source **Entries of This Term** lists the entries; on the term's own page that source lists the entries of every collection. Archives are built with the site and follow what changes: publishing, unpublishing or re-filing an entry and an end date that passes rebuild them, renaming or deleting a term moves or removes them. They are in the site's search and the sitemap, name their versions in other languages, leave out drafts and what a visitor may not read, and never share an address with a page: saving either where the other is, is refused with the address. `terms/list` answers with each term's `archives`.
 - `site.search.records` (filter): every record of the site's search index, to add pages that are no entry.
+- `collections/usage` counts the rows of one kind that a collection's entries have in a matrix field.
 
 ### Changed
 
@@ -21,6 +22,7 @@
 - A calendar shows each record's status as a dot before its title.
 - On a phone every dialog is a sheet with a grip at its top: drag it down, flick it or press it and the sheet goes; let go early and it returns. The grip is the sheet's one way out, so the × beside it is gone there. The page builder's block panel has the same grip on a phone. `@letterncms/ui` exports `SheetHandle` for a sheet of your own, and `InspectorPanel` takes `sheet` to rise from the bottom edge with it.
 - On a touch screen the lines of a menu, a select and a picker are 44px tall.
+- Removing a matrix row type in the blueprint builder says how many rows were made with it before it is taken away.
 
 ### Fixed
 

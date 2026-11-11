@@ -35,6 +35,46 @@ final class CollectionAbilities
             'handler' => fn (array $in, AbilityContext $ctx) => $this->overview($ctx),
         ]);
 
+        $a->register('collections/usage', [
+            'label' => 'Count Matrix Rows',
+            'description' => 'How many rows of one kind the entries of a collection have in a matrix field, drafts and every language included: what removing that row type from the field would leave without its fields. `field` is the matrix field\'s handle, wherever it is (in a group, a replicator, another matrix); `rowType` the handle of the row type.',
+            'permission' => 'collections.manage',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'field' => ['type' => 'string'], 'rowType' => ['type' => 'string']], 'required' => ['handle', 'field', 'rowType'], 'additionalProperties' => false],
+            'output' => Shape::of(['rows' => Shape::INTEGER, 'entries' => Shape::INTEGER]),
+            'handler' => function (array $in) {
+                $this->cms->collections()->find($in['handle']) ?? throw new AbilityException(__('Collection not found.'), 'not_found');
+                $rows = $entries = 0;
+                // Rows under this handle at any depth: [{type: <row type>, …}].
+                $count = static function (mixed $value) use (&$count, $in): int {
+                    if (! is_array($value)) {
+                        return 0;
+                    }
+
+                    $found = 0;
+
+                    foreach ($value as $key => $inner) {
+                        if ($key === $in['field'] && is_array($inner)) {
+                            $found += count(array_filter($inner, static fn ($row) => is_array($row) && ($row['type'] ?? null) === $in['rowType']));
+                        }
+
+                        $found += $count($inner);
+                    }
+
+                    return $found;
+                };
+
+                foreach ($this->cms->entries()->query()->collection($in['handle'])->get() as $entry) {
+                    // What is published and what is being worked on: a row in either is one that would be left.
+                    $n = max($count($entry->data), $count($entry->working()['data'] ?? []));
+                    $rows += $n;
+                    $entries += $n > 0 ? 1 : 0;
+                }
+
+                return ['rows' => $rows, 'entries' => $entries];
+            },
+        ]);
+
         $a->register('collections/editable', [
             'label' => 'List Editable Collections',
             'description' => 'The site\'s own collections, whose fields and settings are edited in the admin (not the system ones the CMS and its plugins bring), with how many entries each has.',
