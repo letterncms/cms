@@ -9,7 +9,9 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     manifest: 'manifest.json',
-    modulePreload: { polyfill: false },
+    // No preload helper: it asks for a chunk's dependencies at the site's root (/motion-….js), where they
+    // are not, and a chunk's own imports already fetch them from beside it.
+    modulePreload: false,
     rollupOptions: {
       input: 'runtime/src/index.ts',
       output: { entryFileNames: 'cms-[hash].js', chunkFileNames: '[name]-[hash].js' },

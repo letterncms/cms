@@ -17,6 +17,8 @@ if (!args.includes('--fixtures') || !root || !existsSync(root)) {
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' }
 const requests = []
+/** What a page asked for and the site doesn't have. No page may ask for any. */
+const missing = []
 /** Everything a page logged as an error, to say with a failure. */
 const logged = []
 
@@ -30,6 +32,7 @@ async function serve(site) {
     let file = join(folder, path)
     if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html')
     if (!file.startsWith(folder) || !existsSync(file)) {
+      missing.push(path)
       response.writeHead(404).end('Not found')
       return
     }
@@ -335,8 +338,10 @@ let failed = 0
 for (const [name, check] of Object.entries(checks)) {
   if (only.length && !only.includes(name)) continue
   logged.length = 0
+  missing.length = 0
   try {
     await check()
+    if (missing.length) throw new Error(`asked for what is not there: ${[...new Set(missing)].join(', ')}`)
     console.log(`ok    ${name}`)
   } catch (error) {
     failed++
