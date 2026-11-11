@@ -54,6 +54,7 @@
 - A page load animation that starts from transparent no longer makes the page count as slow to show: the text is drawn from the first frame at an opacity nobody can see, so the browser counts it (Largest Contentful Paint) when the page appears and not when the animation ends. Measured on a heading animated from opacity 0: largest paint at 1.6 s before this change and together with the first paint after it.
 - Pages with an animation no longer ask for two files that are not there: the site's script looked for its `motion` and `scroll` parts at the site's root (two 404s on every such page) before loading them from where they are.
 - With navigation without page loads, a link to the page you are on (the logo, the current menu item) scrolls to the top instead of loading the page again, which restarted whatever was kept across pages, such as a WebGL canvas.
+- In the builder, a block that a behaviour draws (a canvas, a chart) is no longer a blank: while it is empty it says which behaviour draws it and that the preview shows it. The canvas still runs no scripts.
 
 ## 0.22.0 (2026-11-11)
 
