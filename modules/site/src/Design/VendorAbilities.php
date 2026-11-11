@@ -85,6 +85,16 @@ final class VendorAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['import' => ['type' => 'string', 'maxLength' => 300]], 'required' => ['import']],
             'output' => Shape::of(['removed' => Shape::STRING, ...$imports]),
+            // Vendor::removable() is what remove() starts with: no such import, or one another import needs, is refused here too.
+            'dryRun' => static function (array $in) use ($vendor): array {
+                try {
+                    $import = $vendor()->removable((string) $in['import']);
+                } catch (Throwable $e) {
+                    throw AbilityException::invalid($e->getMessage());
+                }
+
+                return [['action' => 'delete', 'type' => 'design-vendor', 'import' => (string) $in['import'], 'package' => $import['package'], 'version' => $import['version'], 'removes' => ['files' => $import['files']]]];
+            },
             'handler' => static fn (array $in) => $change(static function () use ($in, $vendor) {
                 $vendor()->remove((string) $in['import']);
 

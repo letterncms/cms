@@ -72,6 +72,10 @@ final class CodeAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['path']],
             'output' => Shape::of(['deleted' => Shape::STRING]),
+            // A path that is no file's is refused as delete() refuses it; a file that is not there is nothing to remove.
+            'dryRun' => static fn (array $in): array => $guard(static fn () => $code()->file((string) $in['path']) === null ? [] : [
+                ['action' => 'delete', 'type' => 'design-code', 'path' => (string) $in['path'], 'removes' => ['file' => true, 'published' => true]],
+            ]),
             'handler' => static fn (array $in) => $guard(static function () use ($in, $code) {
                 $code()->delete((string) $in['path']);
 

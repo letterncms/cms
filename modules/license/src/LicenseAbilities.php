@@ -61,6 +61,8 @@ final class LicenseAbilities
             'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
             'output' => self::report(),
+            // Clearing never refuses; what goes is the key this site holds.
+            'dryRun' => static fn (): array => [['action' => 'remove', 'type' => 'license', 'host' => ($report = $service()->report()->toArray())['host'], 'state' => $report['token']]],
             'handler' => static fn () => $service()->clear()->toArray(),
         ]);
 

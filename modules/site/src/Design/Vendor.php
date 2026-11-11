@@ -152,20 +152,46 @@ final class Vendor
 
     public function remove(string $specifier): void
     {
+        $this->removable($specifier);
+
+        $lock = $this->all();
+        unset($lock[$specifier]);
+        $this->save($lock);
+    }
+
+    /**
+     * The import a removal is for and the files that go with it (those no other import keeps), refused when
+     * nothing is imported by that name or another import needs it. What remove() starts with.
+     *
+     * @return array{package: string, version: string, files: list<string>}
+     */
+    public function removable(string $specifier): array
+    {
         $lock = $this->all();
 
         if (! isset($lock[$specifier])) {
             throw new InvalidArgumentException(__('Nothing is imported as “:name”.', ['name' => $specifier]));
         }
 
+        $kept = [];
+
         foreach ($lock as $other => $entry) {
-            if ($other !== $specifier && in_array($lock[$specifier]['package'], $entry['requires'] ?? [], true) && $lock[$specifier]['file'] === null) {
+            if ($other === $specifier) {
+                continue;
+            }
+
+            if (in_array($lock[$specifier]['package'], $entry['requires'] ?? [], true) && $lock[$specifier]['file'] === null) {
                 throw new InvalidArgumentException(__('“:other” imports “:name”. Remove that first.', ['other' => $other, 'name' => $specifier]));
             }
+
+            $kept += $entry['files'];
         }
 
-        unset($lock[$specifier]);
-        $this->save($lock);
+        return [
+            'package' => $lock[$specifier]['package'],
+            'version' => $lock[$specifier]['version'],
+            'files' => array_keys(array_diff_key($lock[$specifier]['files'], $kept)),
+        ];
     }
 
     /**

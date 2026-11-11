@@ -269,6 +269,9 @@ final class OutputAccountsTest extends TestCase
         $this->assertIsString($installed['lid']);
         $this->assertSame('valid', $this->run_('license/status', [], $me)['token']);
 
+        // A dry run names the key that would go, and leaves it.
+        $this->assertSame([['action' => 'remove', 'type' => 'license', 'host' => $installed['host'], 'state' => 'valid']], $this->run_('license/clear', ['dryRun' => true], $me)['changes']);
+        $this->assertSame('valid', $this->run_('license/status', [], $me)['token']);
         $this->assertSame('none', $this->run_('license/clear', [], $me)['token']);
     }
 }

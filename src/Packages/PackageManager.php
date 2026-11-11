@@ -348,6 +348,22 @@ final class PackageManager
 
     public function enable(string $name): void
     {
+        $this->enableable($name);
+        $this->forgetFailure($name);
+        $this->writeEnabled([...$this->enabled(), $name]);
+    }
+
+    /** Disable a plugin or module. Its data is kept; nothing else breaks. Required modules stay on. */
+    public function disable(string $name): void
+    {
+        $this->disableable($name);
+        $this->forgetFailure($name);
+        $this->writeEnabled(array_values(array_diff($this->enabled(), [$name])));
+    }
+
+    /** The package enable() would turn on; refused as enable() refuses. What enable(), and a dry run of it, check. */
+    public function enableable(string $name): PackageManifest
+    {
         $package = $this->repository->find($name) ?? throw new RuntimeException(__('Package :name is not installed.', ['name' => $name]));
 
         $missing = array_filter(
@@ -359,15 +375,16 @@ final class PackageManager
             throw new RuntimeException(__(':package requires :packages. Enable those first.', ['package' => $package->label, 'packages' => implode(', ', $missing)]));
         }
 
-        $this->forgetFailure($name);
-        $this->writeEnabled([...$this->enabled(), $name]);
+        return $package;
     }
 
-    /** Disable a plugin or module. Its data is kept; nothing else breaks. Required modules stay on. */
-    public function disable(string $name): void
+    /** The package disable() would turn off (null when it is not installed); refused as disable() refuses. */
+    public function disableable(string $name): ?PackageManifest
     {
-        if ($this->repository->find($name)?->required) {
-            throw new RuntimeException(__(':package is part of how :brand works and cannot be disabled.', ['package' => $this->repository->find($name)->label]));
+        $package = $this->repository->find($name);
+
+        if ($package?->required) {
+            throw new RuntimeException(__(':package is part of how :brand works and cannot be disabled.', ['package' => $package->label]));
         }
 
         $dependents = $this->dependents($name);
@@ -376,8 +393,23 @@ final class PackageManager
             throw new RuntimeException(__('Disable these first: :packages.', ['packages' => implode(', ', $dependents)]));
         }
 
-        $this->forgetFailure($name);
-        $this->writeEnabled(array_values(array_diff($this->enabled(), [$name])));
+        return $package;
+    }
+
+    /** The plugin uninstall() would remove; refused as uninstall() refuses. */
+    public function uninstallable(string $name): PackageManifest
+    {
+        $package = $this->repository->find($name) ?? throw new RuntimeException(__('Package :name is not installed.', ['name' => $name]));
+
+        if ($package->core) {
+            throw new RuntimeException(__(':package ships with :brand; disable it instead.', ['package' => $package->label]));
+        }
+
+        if ($this->isEnabled($name)) {
+            $this->disableable($name);
+        }
+
+        return $package;
     }
 
     /** @return list<string> Enabled packages that hard-require $name. */
@@ -465,11 +497,7 @@ final class PackageManager
      */
     public function uninstall(string $name, bool $deleteFiles = false): void
     {
-        $package = $this->repository->find($name) ?? throw new RuntimeException(__('Package :name is not installed.', ['name' => $name]));
-
-        if ($package->core) {
-            throw new RuntimeException(__(':package ships with :brand; disable it instead.', ['package' => $package->label]));
-        }
+        $package = $this->uninstallable($name);
 
         if ($this->isEnabled($name)) {
             $this->disable($name);

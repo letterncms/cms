@@ -88,10 +88,17 @@ final class Code
         return $out;
     }
 
-    public function read(string $path): ?string
+    /** The file a path names, null when it is not there, refused when the path is not one a file may have. */
+    public function file(string $path): ?string
     {
         [$kind, $name] = self::parse($path);
-        $file = $this->files($kind)[$name] ?? null;
+
+        return $this->files($kind)[$name] ?? null;
+    }
+
+    public function read(string $path): ?string
+    {
+        $file = $this->file($path);
 
         return $file !== null ? (string) file_get_contents($file) : null;
     }

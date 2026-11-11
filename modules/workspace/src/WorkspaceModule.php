@@ -117,6 +117,8 @@ final class WorkspaceModule extends Plugin
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'output' => Shape::of(['deleted' => Shape::BOOLEAN]),
+            // Only your own chats: one that is not yours, or is gone, is nothing to delete (`deleted: false`).
+            'dryRun' => static fn (array $in, AbilityContext $c): array => $threads($c)->whereKey($in['id'])->get()->map(static fn (Thread $thread) => ['action' => 'delete', 'type' => 'thread', ...array_intersect_key($thread->summary(), ['id' => 1, 'title' => 1])])->all(),
             'handler' => static fn (array $in, AbilityContext $c) => ['deleted' => (bool) $threads($c)->whereKey($in['id'])->delete()],
         ]);
 

@@ -26,6 +26,11 @@ final class Answers
 
     public function command(Ability $ability, array $input, mixed $result, User $user): array
     {
+        // A dry run did nothing: its report is no result for the ability's `answer` ("Created…", "Saved…") or the `workspace.answer` filter.
+        if (Ability::isDryRun($result)) {
+            return $this->dryRun($result, $user);
+        }
+
         if ($ability->answer !== null) {
             try {
                 if ($view = $this->checked(($ability->answer)($result, $input, $user), $ability, $input, $result, $user)) {
@@ -45,6 +50,29 @@ final class Answers
         }
 
         return self::text(__('Done.'));
+    }
+
+    /** A dry run's report: that it was only checked, and what running it would change. */
+    private function dryRun(array $report, User $user): array
+    {
+        $changes = array_values(array_filter((array) $report['changes'], 'is_array'));
+        $text = match (true) {
+            $report['checked'] !== 'full' => __('The input and your permission were checked. What it would change is not known until it runs.'),
+            $changes === [] => __('Running it would change nothing.'),
+            default => null,
+        };
+        $view = ['type' => 'ui/stack', 'children' => array_values(array_filter([
+            self::done(__('Checked only: nothing was changed'), $text, tone: 'info')['children'][0],
+            $changes !== [] ? $this->records(__('Would Change'), array_slice($changes, 0, self::ROWS)) : null,
+        ]))];
+
+        try {
+            return $this->cms->views()->validate($view, $user) ?? self::text(__('Checked only: nothing was changed'));
+        } catch (Throwable $e) {
+            report($e);
+
+            return self::text(__('Checked only: nothing was changed'));
+        }
     }
 
     /** Sections of what was found, each a list that opens where its line leads. */

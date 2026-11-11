@@ -138,6 +138,20 @@ final class ContentAbilities
             },
         ]);
 
+        // The page's own entry, and whether this call made it. @return array{0: Entry, 1: bool}
+        $customise = function (array $in, AbilityContext $ctx) use ($registry, $own): array {
+            $group = $registry->get($in['group']) ?? throw AbilityException::notFound($in['group']);
+            $page = ($group['pages'])()[$in['handle']] ?? throw AbilityException::notFound($in['handle']);
+
+            if ($existing = $own($group, $in['handle'])) {
+                return [$existing, false];
+            }
+
+            $locale = $this->cms->defaultLocale();
+
+            return [$this->cms->content()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user), true];
+        };
+
         $a->register('pages/customise', [
             'label' => 'Customize a Built-in Page',
             'description' => 'Make a built-in page the site\'s own: creates a draft from its standard version and returns the entry to edit. An already customized page returns its entry, to anyone who may view it.',
@@ -146,18 +160,16 @@ final class ContentAbilities
                 && ($this->allowed($user, $group['collection'], 'create') || ($this->allowed($user, $group['collection'], 'view') && $own($group, (string) ($in['handle'] ?? '')) !== null)),
             'input' => ['type' => 'object', 'properties' => ['group' => self::HANDLE, 'handle' => ['type' => 'string', 'maxLength' => 64]], 'required' => ['group', 'handle']],
             'output' => Shape::of(['id' => Shape::STRING, 'collection' => Shape::STRING]),
-            'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
-                $group = $registry->get($in['group']) ?? throw AbilityException::notFound($in['group']);
-                $page = ($group['pages'])()[$in['handle']] ?? throw AbilityException::notFound($in['handle']);
+            // Nothing would change when the page is the site's own already.
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($customise): array {
+                [$entry, $created] = $this->dry(fn () => $customise($in, $ctx));
 
-                if ($existing = $own($group, $in['handle'])) {
-                    return ['id' => $existing->id, 'collection' => $group['collection']];
-                }
+                return $created ? [$this->change('create', $entry, ['slug' => $entry->slug, 'locale' => $entry->locale, 'status' => $entry->status, 'uri' => $entry->uri], id: false)] : [];
+            },
+            'handler' => function (array $in, AbilityContext $ctx) use ($customise) {
+                [$entry] = $customise($in, $ctx);
 
-                $locale = $this->cms->defaultLocale();
-                $entry = $this->cms->content()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user);
-
-                return ['id' => $entry->id, 'collection' => $group['collection']];
+                return ['id' => $entry->id, 'collection' => $entry->collection];
             },
         ]);
     }
@@ -346,6 +358,29 @@ final class ContentAbilities
             },
         ]);
 
+        // Each change, written once: the handler runs it, and a dry run runs the same in the service's dry mode
+        // (EntryService::dry()), so both are refused in the same place.
+        $content = fn () => $this->cms->content();
+        $create = fn (array $in, AbilityContext $ctx): Entry => $content()->create($in['collection'], $in, $ctx->user);
+        $update = fn (array $in, AbilityContext $ctx): Entry => $content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish']);
+        $publish = fn (array $in, AbilityContext $ctx): Entry => $content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null);
+        $unpublish = fn (array $in, AbilityContext $ctx): Entry => $content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
+        $discard = fn (array $in, AbilityContext $ctx): Entry => $content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
+        $duplicate = fn (array $in, AbilityContext $ctx): Entry => $content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
+        $move = fn (array $in, AbilityContext $ctx): Entry => $content()->move($in['id'], $in['parentId'], $in['position'] ?? null, $ctx->user, $in['expectedVersion'] ?? null);
+        $restore = fn (array $in, AbilityContext $ctx): Entry => $content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null);
+        $delete = function (array $in, AbilityContext $ctx) use ($content): array {
+            $title = $this->cms->entries()->find($in['id'])?->title;
+            $content()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
+
+            return ['deleted' => $in['id'], 'title' => $title];
+        };
+        $reorder = function (array $in, AbilityContext $ctx) use ($content): array {
+            $content()->reorder($in['collection'], $in['ids'], $in['parentId'], $ctx->user, $in['versions'] ?? []);
+
+            return ['ok' => true];
+        };
+
         $a->register('entries/create', [
             'label' => 'Create Entry',
             // Unless a call publishes or schedules it, what this changes isn't live and stays in the history.
@@ -370,7 +405,12 @@ final class ContentAbilities
             ], 'required' => ['collection', 'title']],
             'answer' => $this->answer('created'),
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->create($in['collection'], $in, $ctx->user)->toArray(),
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($create): array {
+                $entry = $this->dry(fn () => $create($in, $ctx));
+
+                return [$this->change($entry->status === 'published' ? 'create-published' : 'create', $entry, ['slug' => $entry->slug, 'locale' => $entry->locale, 'status' => $entry->status, 'uri' => $entry->uri], id: false)];
+            },
+            'handler' => fn (array $in, AbilityContext $ctx) => $create($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/update', [
@@ -395,7 +435,13 @@ final class ContentAbilities
             ], 'required' => ['id']],
             'answer' => $this->answer('saved'),
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish'])->toArray(),
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->dry(function () use ($in, $ctx, $update): array {
+                $before = $this->cms->entries()->find($in['id'])?->working() ?? [];
+                $entry = $update($in, $ctx);
+
+                return [$this->change($in['publish'] ? 'update-published' : 'update', $entry, ['fields' => self::changed($before, $entry->working(), array_keys($in['data'] ?? []))])];
+            }),
+            'handler' => fn (array $in, AbilityContext $ctx) => $update($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/publish', [
@@ -405,7 +451,12 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'at' => ['type' => 'string', 'format' => 'date-time'], 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('published'),
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null)->toArray(),
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($publish): array {
+                $entry = $this->dry(fn () => $publish($in, $ctx));
+
+                return [$this->change($entry->isScheduled() ? 'schedule' : 'publish', $entry, ['at' => $entry->publishedAt?->toIso8601String(), 'uri' => $entry->uri])];
+            },
+            'handler' => fn (array $in, AbilityContext $ctx) => $publish($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/unpublish', [
@@ -415,7 +466,8 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('unpublished'),
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => [$this->change('unpublish', $this->dry(fn () => $unpublish($in, $ctx)))],
+            'handler' => fn (array $in, AbilityContext $ctx) => $unpublish($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/discard-draft', [
@@ -426,7 +478,14 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('discarded'),
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            // What is thrown away: the fields whose unpublished value differs from what is live.
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->dry(function () use ($in, $ctx, $discard): array {
+                $before = $this->cms->entries()->find($in['id'])?->working() ?? [];
+                $entry = $discard($in, $ctx);
+
+                return [$this->change('discard-draft', $entry, ['removes' => self::changed($before, $entry->working())])];
+            }),
+            'handler' => fn (array $in, AbilityContext $ctx) => $discard($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/delete', [
@@ -437,12 +496,15 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('deleted'),
             'output' => Shape::of(['deleted' => Shape::STRING, 'title' => Shape::STRING_OR_NULL]),
-            'handler' => function (array $in, AbilityContext $ctx) {
-                $title = $this->cms->entries()->find($in['id'])?->title;
-                $this->cms->content()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
+            // What goes with it: its history, and for a tree how many entries under it move up a level.
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->dry(function () use ($in, $ctx, $delete): array {
+                $entry = $this->cms->entries()->find($in['id']);
+                $children = $entry && $entry->collection()->isTree() ? $this->cms->entries()->query()->collection($entry->collection)->locale($entry->locale)->parent($entry->id)->count() : 0;
+                $delete($in, $ctx);
 
-                return ['deleted' => $in['id'], 'title' => $title];
-            },
+                return [$this->change('delete', $entry, ['uri' => $entry->uri, 'live' => $entry->isLive(), 'revisions' => count(app(\Cms\Content\Revisions\Revisions::class)->list($entry->id, 1000)), 'childrenMovedUp' => $children])];
+            }),
+            'handler' => $delete,
         ]);
 
         $a->register('entries/duplicate', [
@@ -452,7 +514,12 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('duplicated'),
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($duplicate): array {
+                $copy = $this->dry(fn () => $duplicate($in, $ctx));
+
+                return [$this->change('duplicate', $copy, ['from' => $in['id'], 'slug' => $copy->slug, 'locale' => $copy->locale, 'status' => $copy->status, 'uri' => $copy->uri], id: false)];
+            },
+            'handler' => fn (array $in, AbilityContext $ctx) => $duplicate($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/move', [
@@ -464,7 +531,12 @@ final class ContentAbilities
                 'position' => ['type' => 'integer', 'minimum' => 0], 'expectedVersion' => self::VERSION,
             ], 'required' => ['id', 'parentId']],
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->move($in['id'], $in['parentId'], $in['position'] ?? null, $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($move): array {
+                $entry = $this->dry(fn () => $move($in, $ctx));
+
+                return [$this->change('move', $entry, ['parentId' => $entry->parentId, 'position' => $entry->position, 'uri' => $entry->uri])];
+            },
+            'handler' => fn (array $in, AbilityContext $ctx) => $move($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/reorder', [
@@ -479,11 +551,12 @@ final class ContentAbilities
                 'versions' => ['type' => 'object', 'additionalProperties' => self::VERSION],
             ], 'required' => ['collection', 'ids']],
             'output' => Shapes::ok(),
-            'handler' => function (array $in, AbilityContext $ctx) {
-                $this->cms->content()->reorder($in['collection'], $in['ids'], $in['parentId'], $ctx->user, $in['versions'] ?? []);
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($reorder): array {
+                $this->dry(fn () => $reorder($in, $ctx));
 
-                return ['ok' => true];
+                return [['action' => 'reorder', 'type' => 'entries', 'collection' => $in['collection'], 'parentId' => $in['parentId'], 'ids' => array_values(array_unique($in['ids']))]];
             },
+            'handler' => $reorder,
         ]);
 
         $a->register('entries/revisions', [
@@ -521,7 +594,14 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['revisionId' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['revisionId']],
             'answer' => $this->answer('restored'),
             'output' => Shapes::entry(),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->dry(function () use ($in, $ctx, $restore): array {
+                $revision = app(\Cms\Content\Revisions\Revisions::class)->find($in['revisionId']);
+                $before = $revision ? ($this->cms->entries()->find($revision['entryId'])?->working() ?? []) : [];
+                $entry = $restore($in, $ctx);
+
+                return [$this->change('restore', $entry, ['revisionId' => $in['revisionId'], 'fields' => self::changed($before, $entry->working())])];
+            }),
+            'handler' => fn (array $in, AbilityContext $ctx) => $restore($in, $ctx)->toArray(),
         ]);
 
         $a->register('entries/lookup', [
@@ -670,6 +750,40 @@ final class ContentAbilities
     private static function values(): Shape
     {
         return Shape::open('Field values by field handle; what each may be is the collection\'s schema (collections/get).');
+    }
+
+    /** For a dry run: what the handler does, done in the entry service's dry mode — checked the same, nothing written. */
+    private function dry(\Closure $run): mixed
+    {
+        return $this->cms->content()->dry($run);
+    }
+
+    /** One line of a dry run's report: what would happen to which entry, named as it would be afterwards. One not made yet has no id. */
+    private function change(string $action, Entry $entry, array $more = [], bool $id = true): array
+    {
+        return ['action' => $action, 'type' => 'entry', ...($id ? ['id' => $entry->id] : []), 'collection' => $entry->collection, 'title' => $entry->working()['title'], ...$more];
+    }
+
+    /**
+     * What differs between an entry's working content before and after: `title`, `slug`, `authorId` and the
+     * handles of its fields (of `$fields` only, when given: the ones a caller sent).
+     *
+     * @return list<string>
+     */
+    private static function changed(array $before, array $after, ?array $fields = null): array
+    {
+        $same = static fn (mixed $a, mixed $b): bool => json_encode($a) === json_encode($b);
+        $changed = array_values(array_filter(['title', 'slug', 'authorId'], static fn (string $key) => ! $same($before[$key] ?? null, $after[$key] ?? null)));
+        $was = (array) ($before['data'] ?? []);
+        $is = (array) ($after['data'] ?? []);
+
+        foreach ($fields ?? array_unique([...array_keys($was), ...array_keys($is)]) as $handle) {
+            if (! $same($was[$handle] ?? null, $is[$handle] ?? null)) {
+                $changed[] = (string) $handle;
+            }
+        }
+
+        return $changed;
     }
 
     private function allowed(?User $user, string $collection, string $action): bool

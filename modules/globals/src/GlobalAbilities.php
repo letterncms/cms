@@ -114,6 +114,10 @@ final class GlobalAbilities
             'description' => 'Delete a global set and its values.',
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
             'output' => Shape::of(['deleted' => Shape::STRING]),
+            // Deleting never refuses: a set that is not there is nothing to remove.
+            'dryRun' => fn (array $in): array => ($set = $this->cms->globals()->find($in['handle'])) === null ? [] : [
+                ['action' => 'delete', 'type' => 'global', 'handle' => $set->handle, 'title' => $set->title, 'removes' => ['fields' => count($set->fields), 'values' => true]],
+            ],
             'handler' => function (array $in) {
                 $this->cms->globals()->delete($in['handle']);
 

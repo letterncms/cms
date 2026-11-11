@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Content\Entries;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Cms\Abilities\AbilityException;
@@ -24,6 +25,12 @@ final class EntryService
 {
     private int $writeDepth = 0;
 
+    /** While dry() runs: every operation takes its usual path and checks, and writes nothing. */
+    private bool $dry = false;
+
+    /** @var array<string, ?Entry> What a dry run would have saved (null: deleted), read back in place of what is stored. */
+    private array $staged = [];
+
     public function __construct(
         private readonly EntryRepository $entries,
         private readonly CollectionRepository $collections,
@@ -39,6 +46,55 @@ final class EntryService
         if ($this->writeDepth > 0) {
             return $callback();
         }
+
+        return $this->locked(function () use ($callback): mixed {
+            $this->entries->flush();
+
+            return DB::transaction($callback);
+        });
+    }
+
+    /**
+     * Run writes without making them: what `$callback` does through this service (create, update, publish,
+     * move, delete…) takes the same path under the same lock, so it is refused exactly where the real run
+     * would be (fields, slugs and URLs, parents, authors, versions, permissions), and each call answers with
+     * the entry as it would be. Nothing is persisted: no entry is saved or deleted (a file cannot be rolled
+     * back, so it is never written), no revision is recorded and no `entry.*` action is dispatched; the
+     * `entry.creating` and `entry.saving` filters do run, since they shape and may refuse what is saved.
+     * What listeners write to the database meanwhile is rolled back.
+     */
+    public function dry(callable $callback): mixed
+    {
+        if ($this->dry) {
+            return $callback();
+        }
+        if ($this->writeDepth > 0) {
+            throw new \LogicException('A dry run cannot start inside a write.');
+        }
+
+        return $this->locked(function () use ($callback): mixed {
+            $this->entries->flush();
+            $this->dry = true;
+            DB::beginTransaction();
+            try {
+                return $callback();
+            } finally {
+                DB::rollBack();
+                $this->dry = false;
+                $this->staged = [];
+                // Entries read from files are the index's own objects: forget the ones this run changed in memory.
+                $this->entries->flush();
+            }
+        });
+    }
+
+    public function isDry(): bool
+    {
+        return $this->dry;
+    }
+
+    private function locked(callable $callback): mixed
+    {
         Files::ensureDir(storage_path('framework'));
         $lock = fopen(storage_path('framework/content-write.lock'), 'c');
         if (! $lock || ! flock($lock, LOCK_EX)) {
@@ -46,9 +102,7 @@ final class EntryService
         }
         $this->writeDepth++;
         try {
-            $this->entries->flush();
-
-            return DB::transaction($callback);
+            return $callback();
         } finally {
             $this->writeDepth--;
             flock($lock, LOCK_UN);
@@ -99,7 +153,7 @@ final class EntryService
     public function move(string $id, ?string $parentId, ?int $position = null, ?User $user = null, ?string $expectedVersion = null): Entry
     {
         return $this->write(function () use ($id, $parentId, $position, $user, $expectedVersion): Entry {
-            $entry = $this->entries->findOrFail($id);
+            $entry = $this->findOrFail($id);
             $this->assertVersion($entry, $expectedVersion);
             $this->assertStructuralPermission($entry, $user);
             $this->validateMove($entry, $parentId);
@@ -175,11 +229,11 @@ final class EntryService
         }
 
         $this->persist($entry, $collection);
-        $this->revisions->record($entry, $publish ? 'publish' : 'create', $user);
-        $this->hooks->dispatch('entry.saved', $entry, $user, 'create');
+        $this->record($entry, $publish ? 'publish' : 'create', $user);
+        $this->dispatch('entry.saved', $entry, $user, 'create');
 
         if ($publish) {
-            $this->hooks->dispatch('entry.published', $entry, $user);
+            $this->dispatch('entry.published', $entry, $user);
         }
 
         return $entry;
@@ -200,7 +254,7 @@ final class EntryService
         if (isset($input['at']) && ! $publish) {
             throw AbilityException::invalid(__('A publication time requires publishing the entry.'));
         }
-        $entry = $this->entries->findOrFail($id);
+        $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $input['expectedVersion'] ?? null);
         $collection = $entry->collection();
         $working = $entry->working();
@@ -231,10 +285,10 @@ final class EntryService
         if ($entry->uri !== $previousUri) {
             $this->refreshDescendants($entry, $collection);
         }
-        $this->revisions->record($entry, $publish ? 'publish' : 'save', $user);
-        $this->hooks->dispatch('entry.saved', $entry, $user, $publish ? 'publish' : 'save');
+        $this->record($entry, $publish ? 'publish' : 'save', $user);
+        $this->dispatch('entry.saved', $entry, $user, $publish ? 'publish' : 'save');
         if ($publish) {
-            $this->hooks->dispatch('entry.published', $entry, $user);
+            $this->dispatch('entry.published', $entry, $user);
         }
 
         return $entry;
@@ -242,7 +296,7 @@ final class EntryService
 
     private function publishUnlocked(string $id, ?User $user = null, ?string $at = null, ?string $expectedVersion = null): Entry
     {
-        $entry = $this->entries->findOrFail($id);
+        $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $expectedVersion);
         $collection = $entry->collection();
         $when = $this->publicationTime($entry, $at);
@@ -259,16 +313,16 @@ final class EntryService
             $this->refreshDescendants($entry, $collection);
         }
 
-        $this->revisions->record($entry, 'publish', $user);
-        $this->hooks->dispatch('entry.saved', $entry, $user, 'publish');
-        $this->hooks->dispatch('entry.published', $entry, $user);
+        $this->record($entry, 'publish', $user);
+        $this->dispatch('entry.saved', $entry, $user, 'publish');
+        $this->dispatch('entry.published', $entry, $user);
 
         return $entry;
     }
 
     private function unpublishUnlocked(string $id, ?User $user = null, ?string $expectedVersion = null): Entry
     {
-        $entry = $this->entries->findOrFail($id);
+        $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $expectedVersion);
         $scheduled = $entry->isScheduled();
         $entry = $entry->withWorkingCopy();
@@ -278,32 +332,32 @@ final class EntryService
         }
 
         $this->persist($entry, $entry->collection());
-        $this->revisions->record($entry, 'unpublish', $user);
-        $this->hooks->dispatch('entry.saved', $entry, $user, 'unpublish');
-        $this->hooks->dispatch('entry.unpublished', $entry, $user);
+        $this->record($entry, 'unpublish', $user);
+        $this->dispatch('entry.saved', $entry, $user, 'unpublish');
+        $this->dispatch('entry.unpublished', $entry, $user);
 
         return $entry;
     }
 
     private function discardDraftUnlocked(string $id, ?User $user = null, ?string $expectedVersion = null): Entry
     {
-        $entry = $this->entries->findOrFail($id);
+        $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $expectedVersion);
         $entry->draft = null;
         $this->persist($entry, $entry->collection());
-        $this->revisions->record($entry, 'discard', $user);
+        $this->record($entry, 'discard', $user);
 
         return $entry;
     }
 
     private function deleteUnlocked(string $id, ?User $user = null, ?string $expectedVersion = null): void
     {
-        $entry = $this->entries->findOrFail($id);
+        $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $expectedVersion);
         $collection = $entry->collection();
 
         if ($collection->isTree()) {
-            $children = $this->entries->query()->collection($collection->handle)->locale($entry->locale)->parent($entry->id)->get();
+            $children = $this->among($collection, $entry->locale, true, $entry->id);
             foreach ($children as $child) {
                 $this->validateMove($child, $entry->parentId);
             }
@@ -312,16 +366,20 @@ final class EntryService
             }
         }
 
-        $this->hooks->dispatch('entry.deleting', $entry, $user);
-        $this->entries->delete($entry);
-        $this->revisions->deleteFor($entry->id);
-        $this->hooks->dispatch('entry.deleted', $entry, $user);
+        $this->dispatch('entry.deleting', $entry, $user);
+        if ($this->dry) {
+            $this->staged[$entry->id] = null;
+        } else {
+            $this->entries->delete($entry);
+            $this->revisions->deleteFor($entry->id);
+        }
+        $this->dispatch('entry.deleted', $entry, $user);
     }
 
     public function duplicate(string $id, ?User $user = null, ?string $expectedVersion = null): Entry
     {
         return $this->write(function () use ($id, $user, $expectedVersion): Entry {
-            $entry = $this->entries->findOrFail($id);
+            $entry = $this->findOrFail($id);
             $this->assertVersion($entry, $expectedVersion);
             $working = $entry->working();
 
@@ -341,7 +399,7 @@ final class EntryService
         $entries = [];
         $slugs = [];
         foreach (array_values(array_unique($ids)) as $id) {
-            $entry = $this->entries->findOrFail($id);
+            $entry = $this->findOrFail($id);
             if ($entry->collection !== $collection->handle) {
                 throw AbilityException::invalid(__('Entry :id is not in :collection.', ['id' => $id, 'collection' => $collection->handle]));
             }
@@ -359,13 +417,13 @@ final class EntryService
         foreach ($entries as $position => $entry) {
             $this->moveEntry($entry, $collection->isTree() ? $parentId : null, $position, $user);
         }
-        $this->hooks->dispatch('entries.reordered', $collection, $ids, $user);
+        $this->dispatch('entries.reordered', $collection, $ids, $user);
     }
 
     private function restoreUnlocked(string $revisionId, ?User $user = null, ?string $expectedVersion = null): Entry
     {
         $revision = $this->revisions->find($revisionId) ?? throw AbilityException::invalid(__('Revision not found.'));
-        $entry = $this->entries->findOrFail($revision['entryId']);
+        $entry = $this->findOrFail($revision['entryId']);
         $this->assertVersion($entry, $expectedVersion);
         $snapshot = $revision['snapshot'];
         $source = array_replace($entry->working(), array_intersect_key($snapshot, array_flip(['title', 'slug', 'data', 'authorId'])), $snapshot['draft'] ?? []);
@@ -385,9 +443,9 @@ final class EntryService
         if ($entry->uri !== $previousUri) {
             $this->refreshDescendants($entry, $entry->collection());
         }
-        $this->hooks->dispatch('entry.saved', $entry, $user, 'restore');
+        $this->dispatch('entry.saved', $entry, $user, 'restore');
 
-        $this->revisions->record($entry, 'restore', $user, 'Restored revision from '.$revision['createdAt']);
+        $this->record($entry, 'restore', $user, 'Restored revision from '.$revision['createdAt']);
 
         return $entry;
     }
@@ -407,7 +465,7 @@ final class EntryService
             }
 
             foreach ($this->entries->query()->collection($c->handle)->get() as $entry) {
-                if ($this->uris->build($entry, $c, fn (string $pid) => $this->entries->find($pid)) !== $entry->uri) {
+                if ($this->uris->build($entry, $c, fn (string $pid) => $this->find($pid)) !== $entry->uri) {
                     $this->persist($entry, $c);
                     $changed++;
                 }
@@ -421,20 +479,22 @@ final class EntryService
     {
         $entry = $this->hooks->filter('entry.saving', $entry, $collection);
         $previousUri = $entry->uri;
-        $entry->uri = $this->uris->build($entry, $collection, fn (string $pid) => $this->entries->find($pid));
+        $entry->uri = $this->uris->build($entry, $collection, fn (string $pid) => $this->find($pid));
 
-        if ($entry->uri !== null) {
-            $clash = $this->entries->findByUri($entry->uri, $entry->locale);
+        if ($entry->uri !== null && ($clash = $this->clash($entry->uri, $entry))) {
+            throw AbilityException::conflict(__('The URL :uri is already used by “:title”.', ['uri' => $entry->uri, 'title' => $clash->title]));
+        }
 
-            if ($clash && $clash->id !== $entry->id) {
-                throw AbilityException::conflict(__('The URL :uri is already used by “:title”.', ['uri' => $entry->uri, 'title' => $clash->title]));
-            }
+        if ($this->dry) {
+            $this->staged[$entry->id] = $entry;
+
+            return;
         }
 
         $this->entries->save($entry);
 
         if ($previousUri !== null && $entry->uri !== null && $previousUri !== $entry->uri && $entry->isLive()) {
-            $this->hooks->dispatch('entry.uri-changed', $entry, $previousUri, $entry->uri);
+            $this->dispatch('entry.uri-changed', $entry, $previousUri, $entry->uri);
         }
     }
 
@@ -444,13 +504,82 @@ final class EntryService
             return;
         }
 
-        foreach ($this->entries->query()->collection($collection->handle)->locale($parent->locale)->parent($parent->id)->get() as $child) {
+        foreach ($this->among($collection, $parent->locale, true, $parent->id) as $child) {
             $before = $child->uri;
             $this->persist($child, $collection);
 
             if ($child->uri !== $before) {
                 $this->refreshDescendants($child, $collection);
             }
+        }
+    }
+
+    private function find(string $id): ?Entry
+    {
+        return array_key_exists($id, $this->staged) ? $this->staged[$id] : $this->entries->find($id);
+    }
+
+    private function findOrFail(string $id): Entry
+    {
+        return $this->find($id) ?? throw (new ModelNotFoundException)->setModel('Entry', [$id]);
+    }
+
+    /**
+     * The entries of a collection in one language, under one parent when `$under`: as stored, and in a dry run as
+     * they would be after what it has done so far.
+     *
+     * @return list<Entry>
+     */
+    private function among(Collection $collection, string $locale, bool $under = false, ?string $parentId = null): array
+    {
+        $query = $this->entries->query()->collection($collection->handle)->locale($locale);
+        if ($under) {
+            $query->parent($parentId);
+        }
+        $found = $query->get();
+        if ($this->staged === []) {
+            return $found;
+        }
+        $entries = [];
+        foreach ($found as $entry) {
+            if (! array_key_exists($entry->id, $this->staged)) {
+                $entries[$entry->id] = $entry;
+            }
+        }
+        foreach ($this->staged as $id => $entry) {
+            if ($entry && $entry->collection === $collection->handle && $entry->locale === $locale && (! $under || $entry->parentId === $parentId)) {
+                $entries[$id] = $entry;
+            }
+        }
+
+        return array_values($entries);
+    }
+
+    /** Another entry at this address in the entry's language, if there is one. */
+    private function clash(string $uri, Entry $entry): ?Entry
+    {
+        foreach ($this->staged as $other) {
+            if ($other && $other->id !== $entry->id && $other->uri === $uri && $other->locale === $entry->locale) {
+                return $other;
+            }
+        }
+        $found = $this->entries->findByUri($uri, $entry->locale);
+
+        // One a dry run has moved or deleted is no longer there.
+        return $found && $found->id !== $entry->id && ! array_key_exists($found->id, $this->staged) ? $found : null;
+    }
+
+    private function record(Entry $entry, string $action, ?User $user = null, ?string $message = null): void
+    {
+        if (! $this->dry) {
+            $this->revisions->record($entry, $action, $user, $message);
+        }
+    }
+
+    private function dispatch(string $action, mixed ...$args): void
+    {
+        if (! $this->dry) {
+            $this->hooks->dispatch($action, ...$args);
         }
     }
 
@@ -486,12 +615,8 @@ final class EntryService
 
     private function slugTaken(Collection $collection, Entry $entry, string $slug): bool
     {
-        $query = $this->entries->query()->collection($collection->handle)->locale($entry->locale)->where('id', '!=', $entry->id);
-        if ($collection->isTree()) {
-            $query->parent($entry->parentId);
-        }
-        foreach ($query->get() as $other) {
-            if (in_array($slug, [$other->slug, $other->working()['slug']], true)) {
+        foreach ($this->among($collection, $entry->locale, $collection->isTree(), $entry->parentId) as $other) {
+            if ($other->id !== $entry->id && in_array($slug, [$other->slug, $other->working()['slug']], true)) {
                 return true;
             }
         }
@@ -505,15 +630,9 @@ final class EntryService
             return 0;
         }
 
-        $query = $this->entries->query()->collection($collection->handle)->locale($locale);
+        $siblings = $this->among($collection, $locale, $collection->isTree(), $parentId);
 
-        if ($collection->isTree()) {
-            $query->parent($parentId);
-        }
-
-        $last = $query->orderBy('position', 'desc')->first();
-
-        return $last ? $last->position + 1 : 0;
+        return $siblings === [] ? 0 : max(array_map(static fn (Entry $e) => $e->position, $siblings)) + 1;
     }
 
     private function assertParent(?string $parentId, Collection $collection, string $locale, ?string $self = null): void
@@ -522,7 +641,7 @@ final class EntryService
             return;
         }
 
-        $parent = $this->entries->find($parentId);
+        $parent = $this->find($parentId);
 
         if (! $parent || $parent->collection !== $collection->handle || $parent->locale !== $locale) {
             throw AbilityException::invalid(__('The parent must be an entry in the same collection and language.'));
@@ -533,7 +652,7 @@ final class EntryService
                 throw AbilityException::invalid(__('An entry cannot be moved inside itself.'));
             }
 
-            $cursor = $cursor->parentId ? $this->entries->find($cursor->parentId) : null;
+            $cursor = $cursor->parentId ? $this->find($cursor->parentId) : null;
         }
     }
 
@@ -590,8 +709,8 @@ final class EntryService
             }
         }
         // Check cross-collection URL collisions before moving a file or writing a row.
-        $uri = $this->uris->build($probe, $collection, fn (string $id) => $this->entries->find($id));
-        if ($uri !== null && ($clash = $this->entries->findByUri($uri, $entry->locale)) && $clash->id !== $entry->id) {
+        $uri = $this->uris->build($probe, $collection, fn (string $id) => $this->find($id));
+        if ($uri !== null && ($clash = $this->clash($uri, $entry))) {
             throw AbilityException::conflict(__('The URL :uri is already used by “:title”.', ['uri' => $uri, 'title' => $clash->title]));
         }
     }
@@ -605,9 +724,9 @@ final class EntryService
         $entry->position = $position ?? $this->nextPosition($entry->collection(), $parentId, $entry->locale);
         $this->persist($entry, $entry->collection());
         $this->refreshDescendants($entry, $entry->collection());
-        $this->revisions->record($entry, 'move', $user);
-        $this->hooks->dispatch('entry.structure-changed', $entry, $user);
-        $this->hooks->dispatch('entry.saved', $entry, $user, 'move');
+        $this->record($entry, 'move', $user);
+        $this->dispatch('entry.structure-changed', $entry, $user);
+        $this->dispatch('entry.saved', $entry, $user, 'move');
 
         return $entry;
     }

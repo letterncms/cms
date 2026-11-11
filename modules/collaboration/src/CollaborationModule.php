@@ -145,6 +145,13 @@ final class CollaborationModule extends Plugin
             },
         ]);
 
+        // The comment a delete is for and its replies, refused to anyone but its author or a moderator.
+        $thread = function (array $in, AbilityContext $ctx): \Illuminate\Support\Collection {
+            $comment = $this->own(Comment::query()->findOrFail($in['id']), $ctx->user);
+
+            return Comment::query()->where('id', $comment->id)->orWhere('parent_id', $comment->id)->pluck('id');
+        };
+
         $a->register('comments/delete', [
             'label' => 'Delete Comment',
             'description' => 'Delete your comment (moderators can delete any). Deleting a thread’s first comment deletes its replies.',
@@ -152,9 +159,13 @@ final class CollaborationModule extends Plugin
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => $id], 'required' => ['id']],
             'output' => Shape::of(['deleted' => Shape::INTEGER]),
-            'handler' => function (array $in, AbilityContext $ctx) {
-                $comment = $this->own(Comment::query()->findOrFail($in['id']), $ctx->user);
-                $ids = Comment::query()->where('id', $comment->id)->orWhere('parent_id', $comment->id)->pluck('id');
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($thread): array {
+                $ids = $thread($in, $ctx);
+
+                return [['action' => 'delete', 'type' => 'comment', 'id' => $in['id'], 'removes' => ['comments' => count($ids), 'replies' => count($ids) - 1]]];
+            },
+            'handler' => function (array $in, AbilityContext $ctx) use ($thread) {
+                $ids = $thread($in, $ctx);
                 \Illuminate\Support\Facades\DB::table('comment_mentions')->whereIn('comment_id', $ids)->delete();
                 Comment::query()->whereIn('id', $ids)->delete();
 
