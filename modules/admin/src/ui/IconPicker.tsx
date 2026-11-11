@@ -1,4 +1,5 @@
 import { t } from '@letterncms/sdk'
+import { Pressable } from './Pressable'
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { phosphorName, storedName, useIconCatalog, type IconCatalog } from '../lib/iconCatalog'
 import { cn } from './cn'
@@ -72,8 +73,7 @@ export function IconPicker({ value, onChange, choices, disabled, invalid, id, cl
       onOpenChange={setOpen}
       className="w-[22rem] max-w-[calc(100vw-2rem)] p-0"
       trigger={
-        <button
-          type="button"
+        <Pressable
           id={id}
           aria-label={ariaLabel}
           aria-describedby={describedBy}
@@ -85,7 +85,7 @@ export function IconPicker({ value, onChange, choices, disabled, invalid, id, cl
           {/* An icon's name as words ("File Text"), not the key it is stored under. */}
           <span className={cn('flex-1 truncate', !value && 'text-ghost')}>{value ? value.replace(/^ph-/, '').split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : t('Choose an icon…')}</span>
           <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />
-        </button>
+        </Pressable>
       }
     >
       <IconPanel value={value} choices={choices} onPick={(icon) => { onChange(icon); setOpen(false) }} />
@@ -128,10 +128,9 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
   }
 
   const cell = (e: Entry, current = false) => (
-    <button
+    <Pressable compact
       key={e.id}
       ref={current ? (el) => { if (el && !scrolled.current) { scrolled.current = true; el.scrollIntoView({ block: 'center' }) } } : undefined}
-      type="button"
       data-icon={e.id}
       title={e.label}
       aria-label={e.label}
@@ -144,7 +143,7 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
       className={cn('grid aspect-square place-items-center rounded-md text-muted outline-offset-[-2px] transition-colors duration-base hover:bg-hover hover:text-ink', isSelected(e) && 'bg-active text-ink')}
     >
       <Icon name={e.id} size={20} />
-    </button>
+    </Pressable>
   )
 
   return (

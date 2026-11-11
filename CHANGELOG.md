@@ -9,6 +9,10 @@
 - **Design styles for a class.** The design’s element styles take a class a block carries, alone or on a tag: `".note em"`, `"span.note"`, `".card.is-open > a:hover"`, with the same safe properties, tokens and states as a tag. Give a block the class and style it in the Design System; a class no longer needs custom CSS. A key the design cannot style is refused by name when it is saved.
 - `@letterncms/ui`: `Pressable`, the control without a look, for the ones that draw themselves (a colour plane, a box of a spacing control, a card that opens, canvas chrome). It is a `<button type="button">`, or a link with `to`, with the kit's focus line, 44px to hit on a touch screen, `disabled` and `data-active`; `inset` puts the focus line inside its edge, `compact` leaves out the touch area. Everything it looks like is its `className`.
 
+### Fixed
+
+- A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.
+
 ## 0.23.0 (2026-11-11)
 
 ### Added

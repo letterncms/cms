@@ -1,4 +1,5 @@
 import { batch, locale, queryClient, registry, setQuery, t, useAbility, useLocation, type RecordTimestamps, type SurfaceComponentProps, type ViewAction } from '@letterncms/sdk'
+import { Pressable } from '../Pressable'
 import { Suspense, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType } from 'react'
 import { Button, IconButton } from '../Button'
 import { cn } from '../cn'
@@ -460,10 +461,10 @@ function Reason({ text }: { text: string }) {
   const [pinned, setPinned] = useState(false)
   return (
     <Tooltip content={text} open={hovered || pinned} onOpenChange={setHovered}>
-      <button type="button" aria-label={text} onClick={() => setPinned((p) => !p)} onBlur={() => setPinned(false)} onKeyDown={(e) => { if (e.key === 'Escape') setPinned(false) }}
+      <Pressable compact aria-label={text} onClick={() => setPinned((p) => !p)} onBlur={() => setPinned(false)} onKeyDown={(e) => { if (e.key === 'Escape') setPinned(false) }}
         className="relative z-raised grid size-5 shrink-0 cursor-help place-items-center rounded-xs text-muted transition-colors duration-base hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[popup-open]:bg-hover data-[popup-open]:text-text">
         <Icon name="lock" size={14} />
-      </button>
+      </Pressable>
     </Tooltip>
   )
 }
