@@ -78,6 +78,7 @@
 - Filters on entries answer the same on database and file collections, on SQLite and MySQL: "is not" also finds entries where the field is empty, "less than" and "more than" never do, and `contains` finds a value in a list and a part in a text. On MySQL a number in a field now sorts as a number, a switch filters as a switch, and search and `like` no longer mind capitals.
 - A page load animation that starts from transparent no longer makes the page count as slow to show: the text is drawn from the first frame at an opacity nobody can see, so the browser counts it (Largest Contentful Paint) when the page appears and not when the animation ends. Measured on a heading animated from opacity 0: largest paint at 1.6 s before this change and together with the first paint after it.
 - Pages with an animation no longer ask for two files that are not there: the site's script looked for its `motion` and `scroll` parts at the site's root (two 404s on every such page) before loading them from where they are.
+- With navigation without page loads, a link to the page you are on (the logo, the current menu item) scrolls to the top instead of loading the page again, which restarted whatever was kept across pages, such as a WebGL canvas.
 
 ## 0.22.0 (2026-11-11)
 
