@@ -9,6 +9,7 @@
   ":package requires :packages. Enable those first.": ":package heeft :packages nodig. Schakel die eerst in.",
   ":package ships with :brand; disable it instead.": ":package hoort bij :brand; schakel het in plaats daarvan uit.",
   "\":handle\" is part of every account; choose another field handle.": "\":handle\" hoort bij elk account; kies een andere veldsleutel.",
+  "Admin": "Admin",
   "Check Again": "Opnieuw controleren",
   "Database Name": "Databasenaam",
   "Expired||order": "Verlopen",

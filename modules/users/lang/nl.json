@@ -1,6 +1,11 @@
 {
+  "{label} copy": "{label} kopie",
   ":name invited you to edit :site.": ":name heeft je uitgenodigd om :site te bewerken.",
+  "Actions for {name}": "Acties voor {name}",
+  "All": "Alle",
+  "All Collections": "Alle collecties",
   "Allow Visitor Accounts": "Bezoekersaccounts toestaan",
+  "Duplicate Role": "Rol dupliceren",
   "Search People": "Personen zoeken",
   "{count} people": "{count} personen",
   "{count} people in all": "{count} mensen in totaal",

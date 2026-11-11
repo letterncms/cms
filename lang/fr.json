@@ -9,6 +9,7 @@
   ":package requires :packages. Enable those first.": ":package nécessite :packages. Activez-les d’abord.",
   ":package ships with :brand; disable it instead.": ":package est fourni avec :brand ; désactivez-le plutôt.",
   "\":handle\" is part of every account; choose another field handle.": "« :handle » fait partie de chaque compte ; choisissez un autre identifiant de champ.",
+  "Admin": "Admin",
   "Check Again": "Vérifier à nouveau",
   "Database Name": "Nom de la base de données",
   "Expired||order": "Expirée",

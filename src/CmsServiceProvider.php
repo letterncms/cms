@@ -206,7 +206,7 @@ final class CmsServiceProvider extends ServiceProvider
     {
         $p = $this->app->make(Permissions::class);
 
-        $p->register('admin.access', 'Access the Admin', 'General');
+        $p->register('admin.access', 'Access the Admin', 'Admin');
         $p->register('settings.manage', 'Manage Settings', 'System');
         $p->register('users.view', 'View Users', 'Users');
     }

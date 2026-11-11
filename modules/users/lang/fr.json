@@ -1,6 +1,11 @@
 {
+  "{label} copy": "{label} copie",
   ":name invited you to edit :site.": ":name vous invite à modifier :site.",
+  "Actions for {name}": "Actions pour {name}",
+  "All": "Tous",
+  "All Collections": "Toutes les collections",
   "Allow Visitor Accounts": "Autoriser les comptes visiteurs",
+  "Duplicate Role": "Dupliquer le rôle",
   "Search People": "Rechercher des personnes",
   "{count} people": "{count} personnes",
   "{count} people in all": "{count} personnes au total",

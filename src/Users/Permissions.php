@@ -15,7 +15,7 @@ final class Permissions
     private array $permissions = [];
 
     /** @param  list<string>  $roles */
-    public function register(string $name, string $label, string $group = 'General', string $description = '', bool $trusted = false, array $roles = []): void
+    public function register(string $name, string $label, string $group = 'Admin', string $description = '', bool $trusted = false, array $roles = []): void
     {
         $roles = array_values(array_map('strval', $roles));
         $this->permissions[$name] = compact('label', 'group', 'description', 'trusted', 'roles');
