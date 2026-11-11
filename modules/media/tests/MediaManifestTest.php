@@ -80,7 +80,7 @@ final class MediaManifestTest extends TestCase
         $id = $this->store()->id;
         MediaItem::query()->delete();
 
-        Artisan::call('sync');
+        Artisan::call('migrate');
 
         $this->assertNotNull(MediaItem::query()->find($id));
     }

@@ -46,7 +46,7 @@ $finish = static function () use (&$problems, $packages): never {
 };
 
 if ($action === 'seed') {
-    Artisan::call('migrate', ['--path' => $app->databasePath('migrations'), '--realpath' => true]);
+    \Cms\Update\Upgrader::migrateCore($app);
     $packages->sync();
     file_put_contents(storage_path('installed.json'), '{}');
     User::query()->create(['name' => 'Ada Admin', 'email' => 'ada@example.com', 'password' => 'secret-pass-123', 'roles' => ['admin'], 'super' => true]);

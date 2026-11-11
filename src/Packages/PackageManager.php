@@ -428,20 +428,35 @@ final class PackageManager
         return $out;
     }
 
-    /** Run migrations + install()/upgrade() for every active package that needs it. */
-    public function sync(): array
+    /**
+     * Run migrations + install()/upgrade() for every active package that needs it. A package at its version
+     * still gets the migrations it lacks: `migrate:rollback` takes tables away without a word to this record.
+     *
+     * @param  bool  $step  Record each migration as a batch of its own
+     */
+    public function sync(bool $step = false): array
     {
         $done = [];
 
         foreach ($this->active() as $package) {
             $installed = $this->installedVersion($package->name);
 
-            if ($installed === $package->version || self::rolledBack($installed, $package)) {
+            if (self::rolledBack($installed, $package)) {
                 continue;
             }
 
-            $this->guard($package, function () use ($package, $installed, &$done): void {
-                $this->migrate($package);
+            if ($installed === $package->version) {
+                $this->guard($package, function () use ($package, $step, &$done): void {
+                    if ($this->migrate($package, $step)) {
+                        $done[$package->name] = 'migrated';
+                    }
+                });
+
+                continue;
+            }
+
+            $this->guard($package, function () use ($package, $installed, $step, &$done): void {
+                $this->migrate($package, $step);
                 $provider = $this->providers[$package->name] ?? $this->lateProvider($package);
 
                 $installed === null ? $provider?->install() : $provider?->upgrade($installed);
@@ -771,14 +786,12 @@ final class PackageManager
         return $provider->setManifest($package);
     }
 
-    private function migrate(PackageManifest $package): void
+    /** Whether any migration ran. */
+    private function migrate(PackageManifest $package, bool $step = false): bool
     {
         $path = $package->path('database/migrations');
 
-        if (is_dir($path)) {
-            $migrator = $this->migrator();
-            $migrator->run([$path]);
-        }
+        return is_dir($path) && $this->migrator()->run([$path], ['step' => $step]) !== [];
     }
 
     private function migrator(): Migrator

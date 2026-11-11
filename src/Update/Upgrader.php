@@ -7,22 +7,40 @@ namespace Cms\Update;
 use Cms\Cms;
 use Cms\Foundation\Application;
 use Cms\Support\Files;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Database\Migrations\Migrator;
 
 /** The one upgrade routine: core tables, then every package, then what the old code cached. */
 final class Upgrader
 {
-    public static function migrateCore(Application $app): void
+    /** What the migrator needs before it runs anything: the SQLite file, and the table it keeps its own record in. */
+    public static function prepare(Application $app): Migrator
     {
-        Artisan::call('migrate', ['--force' => true, '--path' => $app->databasePath('migrations'), '--realpath' => true]);
+        if (config('database.default') === 'sqlite' && ($file = (string) config('database.connections.sqlite.database')) !== ':memory:' && $file !== '' && ! is_file($file)) {
+            Files::ensureDir(dirname($file));
+            touch($file);
+        }
+
+        $migrator = $app->make('migrator');
+
+        if (! $migrator->repositoryExists()) {
+            $migrator->getRepository()->createRepository();
+        }
+
+        return $migrator;
+    }
+
+    /** The migrator itself, not the framework's `migrate` command: `cms migrate` is this routine's own command. */
+    public static function migrateCore(Application $app, bool $step = false): void
+    {
+        self::prepare($app)->run([$app->databasePath('migrations')], ['step' => $step]);
     }
 
     /** @return array<string, string> What each package did */
-    public static function run(Application $app): array
+    public static function run(Application $app, bool $step = false): array
     {
-        self::migrateCore($app);
-        $done = $app->make(Cms::class)->packages()->sync();
-        $app->make(Cms::class)->hooks()->dispatch('cms.sync');
+        self::migrateCore($app, $step);
+        $done = $app->make(Cms::class)->packages()->sync($step);
+        $app->make(Cms::class)->hooks()->dispatch('cms.migrated');
         self::purgeCaches($app);
 
         return $done;

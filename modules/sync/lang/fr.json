@@ -191,7 +191,7 @@
   "That isn’t a connection key. Copy it from Sync on the other site: it starts with the site’s address.": "Ce n’est pas une clé de connexion. Copiez-la depuis Sync sur l’autre site : elle commence par l’adresse du site.",
   "That key belongs to this site. Paste the key of the other site.": "Cette clé appartient à ce site. Collez la clé de l’autre site.",
   "That sync can’t be undone any more.": "Cette synchronisation ne peut plus être annulée.",
-  "The :table table has a :column column on :has but not on :lacks. Bring both sites to the same versions and run php cms sync on each, then sync.": "La table :table a une colonne :column sur :has mais pas sur :lacks. Mettez les deux sites aux mêmes versions et exécutez php cms sync sur chacun, puis synchronisez.",
+  "The :table table has a :column column on :has but not on :lacks. Bring both sites to the same versions and run php cms migrate on each, then sync.": "La table :table a une colonne :column sur :has mais pas sur :lacks. Mettez les deux sites aux mêmes versions et exécutez php cms migrate sur chacun, puis synchronisez.",
   "The address has to start with http:// or https://.": "L’adresse doit commencer par http:// ou https://.",
   "The backup isn’t finished yet.": "La sauvegarde n’est pas encore terminée.",
   "the connection was refused": "la connexion a été refusée",
