@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security
+
+- `packages/plan-install` no longer answers with the license token: for a paid package its `access` carried the `X-Cms-License` header and query the download is fetched with. It now has only `allowed`, `reason`, `message` and `buy_url`, as the catalog does.
+
 ### Changed
 
 - **Design tokens**: motion and layering have small named scales that every admin module and plugin can use: `duration-fast`, `duration-base`, `duration-move` and `duration-slow`, and `z-raised`, `z-drag`, `z-sticky`, `z-bar`, `z-drawer`, `z-overlay` and `z-tooltip`. A transition without a duration takes `duration-base`. New colours for pointed-at and pressed fills (`ink-hover`, `danger-hover`, `signal-hover`, `float-hover` and their `-active`), `focus-hover`, `fill`, `border-hover` and `info`, the shadows `shadow-edge`, `shadow-focus` and `shadow-cursor`, and the size `text-display` for the title of an entry. The admin's own components use them, so dialogs, panels and toasts move at one speed.

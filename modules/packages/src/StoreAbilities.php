@@ -92,7 +92,13 @@ final class StoreAbilities
             'label' => 'Plan Install',
             'description' => 'What installing a package means here: dependencies in order, capabilities, access. Refused with the reason when it can\'t work.',
             'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200], 'version' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['package']],
-            'handler' => static fn (array $in) => $guard(static fn () => $client()->plan($in['store'], $in['package'], $in['version'] ?? null)),
+            // The gate also holds what the download is fetched with (the license token as a header, the query): never part of an answer.
+            'handler' => static fn (array $in) => $guard(static function () use ($client, $in): array {
+                $plan = $client()->plan($in['store'], $in['package'], $in['version'] ?? null);
+                $plan['access'] = array_intersect_key((array) ($plan['access'] ?? []), array_flip(['allowed', 'reason', 'message', 'buy_url']));
+
+                return $plan;
+            }),
         ]);
 
         $a->register('packages/install', [...$install,
