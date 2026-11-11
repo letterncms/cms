@@ -15,6 +15,7 @@ use Cms\Modules\Blocks\Templates;
 use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
 use Cms\Cms;
+use Cms\Modules\Site\Design\Code;
 use Cms\Modules\Site\Design\Design;
 
 /**
@@ -33,6 +34,7 @@ final class Renderer
         private readonly BlockRenderer $blocks,
         private readonly Hooks $hooks,
         private readonly HtmlMinifier $minifier,
+        private readonly Code $code,
     ) {}
 
     /**
@@ -45,6 +47,8 @@ final class Renderer
         $context = new PageContext($entry, $page, $preview, $editor, $entry->uri ?? '/');
         $template ??= $this->templates->resolve([(string) ($entry->data['template'] ?? ''), $entry->collection()->template], $preview) ?? self::fallback();
 
+        $context->addCode($this->code->for('templates', (string) ($template['handle'] ?? '')));
+
         $html = $this->document($context, $template['blocks'], fn () => $this->body($entry), $entry->title, $bodyDocument, $templateDocument);
 
         return ['html' => $html, 'status' => 200, 'context' => $context];
@@ -56,6 +60,7 @@ final class Renderer
         $locale = $this->hooks->filter('site.locale', null, $uri);
         $context = new PageContext(null, 1, $preview, false, $uri, is_string($locale) ? $locale : null);
         $template ??= $this->templates->find('404', $preview) ?? self::fallback404();
+        $context->addCode($this->code->for('templates', (string) ($template['handle'] ?? '')));
         $html = $this->document($context, $template['blocks'], static fn () => '', 'Page not found');
 
         return ['html' => $html, 'status' => 404, 'context' => $context];
@@ -72,6 +77,7 @@ final class Renderer
         $locale = $this->hooks->filter('site.locale', null, $uri);
         $context = new PageContext(null, 1, false, false, $uri, is_string($locale) ? $locale : null);
         $template = $this->templates->resolve(['error', 'default'], false) ?? self::fallback();
+        $context->addCode($this->code->for('templates', (string) ($template['handle'] ?? '')));
         $nodes = [['id' => 'msg', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => [
             ['id' => 'msgt', 'type' => 'heading', 'props' => ['text' => $title, 'level' => '1']],
             ['id' => 'msgp', 'type' => 'paragraph', 'props' => ['text' => $text]],
@@ -259,17 +265,33 @@ final class Renderer
         $head = [...$head, ...array_values($context->head)];
         $head = $this->hooks->filter('site.head', $head, $context);
 
+        // Stylesheets beside the design: the site's, then the template's, the components' and the blocks', in that order.
+        foreach ($this->codeUrls($context, 'styles') as $href) {
+            $head[] = '<link rel="stylesheet" href="'.e($href).'">';
+        }
+
         if ($context->styles !== []) {
             $head[] = '<style>'.$context->css().'</style>';
         }
 
         $foot = array_values($context->foot);
+        $modules = $context->editor ? [] : $this->codeUrls($context, 'scripts');
 
         if (! $context->editor && ($script = $this->design->script())) {
-            $foot[] = '<script type="module" src="'.e($script).'"></script>';
+            $modules[] = $script;
+        }
+
+        foreach ($modules as $src) {
+            $foot[] = '<script type="module" src="'.e($src).'"></script>';
         }
 
         $foot = $this->hooks->filter('site.foot', $foot, $context);
+
+        // An import map counts from the first module on: it goes in the head, on pages that load one of the design's.
+        if ((bool) $this->hooks->filter('site.modules', $modules !== [], $context) && ($map = $this->code->importMapTag()) !== '') {
+            $context->dependencies['design:importmap'] = true;
+            $head[] = $map;
+        }
         $skip = ! $context->editor && str_contains($body, 'id="main"') ? '<a class="cms-skip" href="#main">'.e(__('Skip to content')).'</a>' : '';
         $alpine = ! $context->editor && (! empty($this->blocks->features['logic']) || ! empty($this->blocks->features['ajax'])) ? ' x-data' : '';
 
@@ -277,6 +299,24 @@ final class Renderer
         $html = $this->hooks->filter('site.html', $html, $context);
 
         return $context->editor || config('app.debug') && $context->preview ? $html : $this->minifier->minify($html);
+    }
+
+    /**
+     * The published files of the page's scripts or styles. A name without a file is said once, where the build shows it.
+     *
+     * @return list<string>
+     */
+    private function codeUrls(PageContext $context, string $kind): array
+    {
+        $urls = [];
+
+        foreach (Code::limit([...$this->code->for('global')[$kind], ...$context->code[$kind]]) as $name) {
+            $context->dependencies["design:{$kind}/{$name}"] = true;
+            $url = $this->code->url($kind, $name);
+            $url !== null ? $urls[] = $url : $this->hooks->dispatch('render.warning', __('This page names :file, which is not in content/design.', ['file' => "{$kind}/{$name}.".Code::KINDS[$kind]]));
+        }
+
+        return $urls;
     }
 
     /** Used until a site has a `default` template: the content, nothing else. */

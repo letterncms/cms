@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Code beside the design**: ES modules in `content/design/scripts/` and stylesheets in `content/design/styles/` load on every page, with a template or with a component (`content/design/code.json`), or with one block (`code: {scripts, styles}`). One script imports another by path; each file is published with a hash in its name and cached forever, and changing one rebuilds only the pages that load it. `custom.css` and `custom.js` stay as they are. Agents use `design/code-files`, `design/code-read`, `design/code-write`, `design/code-delete` and `design/code-load`, and read `cms://site/code`.
+
 ### Changed
 
 - **Design tokens**: motion and layering have small named scales that every admin module and plugin can use: `duration-fast`, `duration-base`, `duration-move` and `duration-slow`, and `z-raised`, `z-drag`, `z-sticky`, `z-bar`, `z-drawer`, `z-overlay` and `z-tooltip`. A transition without a duration takes `duration-base`. New colours for pointed-at and pressed fills (`ink-hover`, `danger-hover`, `signal-hover`, `float-hover` and their `-active`), `focus-hover`, `fill`, `border-hover` and `info`, the shadows `shadow-edge`, `shadow-focus` and `shadow-cursor`, and the size `text-display` for the title of an entry. The admin's own components use them, so dialogs, panels and toasts move at one speed.
