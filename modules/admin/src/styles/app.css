@@ -344,6 +344,10 @@
     user-select: none;
     cursor: default;
   }
+  /* On a touch screen a line of a menu, a select or a picker is 44px to hit, like a button. */
+  @media (pointer: coarse) {
+    .cms-menu-item { min-height: 44px; }
+  }
   .cms-menu-item > svg:first-child { color: var(--cms-muted); flex-shrink: 0; }
   .cms-menu-item:is([data-highlighted], :hover:not([data-disabled], :disabled), :focus-visible) { background: var(--cms-hover); }
   .cms-menu-item:is([data-highlighted], :hover, :focus-visible) > svg:first-child { color: var(--cms-ink); }
