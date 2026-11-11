@@ -40,8 +40,8 @@ const STATE_TEXT = (state: string) =>
 
 const MANAGED_TEXT = (reason: string) =>
   ({
-    composer: t('Managed with Composer: run composer update.'),
-    git: t('Managed with Composer: run composer update.'),
+    composer: t('Updates come through Composer'),
+    git: t('Updates come through Composer'),
     file_mods: t('Updated through your deploy.'),
   })[reason] ?? reason
 
@@ -49,7 +49,7 @@ const MANAGED_TEXT = (reason: string) =>
 export function UpdatesPanel() {
   const updates = useAbility<Updates>('packages/updates')
   // Plugins by their names, as everywhere else, not their package handles.
-  const installed = useAbility<{ items: { name: string; label: string }[] }>('packages/list', { type: 'all' })
+  const installed = useAbility<{ items: { name: string; label: string }[] }>('packages/list', { type: 'plugin' })
   const labels = Object.fromEntries((installed.data?.items ?? []).map((p) => [p.name, p.label]))
   const [progress, setProgress] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -128,6 +128,9 @@ export function UpdatesPanel() {
   if (updates.isLoading || !data) return <Skeleton className="h-40" />
 
   const { core, status } = data
+  // How many plugins there are, and how many of them a store can answer for.
+  const plugins = installed.data?.items.length ?? 0
+  const tracked = Math.max(0, plugins - data.unverified.length)
   const release = core.update
 
   return (
@@ -168,13 +171,13 @@ export function UpdatesPanel() {
             ))}
           </List>
         ) : !core.managed && !core.trust ? (
-          <p className="m-0 mt-3 text-sm text-muted">{t('Up to date.')}</p>
+          <p className="m-0 mt-3 text-sm text-muted">{t('Up to date')}</p>
         ) : null}
 
         {status.state === 'done' && status.previous && (
-          <p className="m-0 mt-3 text-sm text-muted">
-            {t('Updated from {version}.', { version: status.previous })}{' '}
-            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-sm underline" disabled={busy !== null} onClick={async () => {
+          <p className="m-0 mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
+            {t('Updated from {version}.', { version: status.previous })}
+            <Button size="xs" variant="ghost" disabled={busy !== null} onClick={async () => {
               if (await confirm({ title: t('Go back to {version}?', { version: status.previous! }), description: t('The database stays as it is: updates within a major only add to it.'), confirm: t('Go Back'), danger: true })) {
                 try {
                   await run('packages/update-rollback')
@@ -183,7 +186,7 @@ export function UpdatesPanel() {
                   toast.error(e)
                 }
               }
-            }}>{t('Go Back')}</button>
+            }}>{t('Go Back')}</Button>
           </p>
         )}
 
@@ -209,10 +212,9 @@ export function UpdatesPanel() {
         </Section>
       )}
 
-      <Section title={t('Plugins')}>
-        {data.packages.length === 0 ? (
-          <EmptyState icon="check" title={t('All plugins are up to date')} className="py-8" />
-        ) : (
+      {/* Plugins a store answers for. With an update waiting they are listed; otherwise one line says how things stand, and it never claims more than was checked. */}
+      {data.packages.length > 0 ? (
+        <Section title={t('Plugins')}>
           <List>
             {data.packages.map((p) => (
               <Row key={p.package}>
@@ -226,9 +228,14 @@ export function UpdatesPanel() {
               </Row>
             ))}
           </List>
-        )}
-        {data.unverified.length > 0 && <p className="mt-3 text-xs text-muted">{t('Not from a store: {list}', { list: data.unverified.map((n) => labels[n] ?? n).join(', ') })}</p>}
-      </Section>
+          {data.unverified.length > 0 && <p className="mt-3 text-xs text-muted">{t('Not from a store: {list}', { list: data.unverified.map((n) => labels[n] ?? n).join(', ') })}</p>}
+        </Section>
+      ) : plugins > 0 && (
+        <Section>
+          <EmptyState compact icon={tracked > 0 ? 'check' : 'plugin'} title={tracked > 0 ? t('All plugins are up to date') : t('No plugins to check')} />
+          {tracked > 0 && data.unverified.length > 0 && <p className="mt-3 text-center text-xs text-muted">{t('Not from a store: {list}', { list: data.unverified.map((n) => labels[n] ?? n).join(', ') })}</p>}
+        </Section>
+      )}
     </div>
   )
 }

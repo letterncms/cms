@@ -1,5 +1,5 @@
 import { invalidate, locale, run, t, useAbility, can, plural } from '@letterncms/sdk'
-import { Badge, Button, cn, confirm, EmptyState, Icon, IconButton, Input, Menu, NoMatches, prompt, Select, Skeleton, toast } from '@letterncms/ui'
+import { Badge, Button, confirm, EmptyState, Icon, IconButton, Input, List, Menu, NoMatches, prompt, Select, Skeleton, toast } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 import { driveJob, JobFailed, type Job } from './installing'
 import { StoreDetail } from './StoreDetail'
@@ -77,7 +77,11 @@ export function Store() {
   }, [all, search, category, pricing, sort])
 
   const narrowed = search.trim() !== '' || category !== '' || pricing !== 'all'
-  const featured = !narrowed && sort === 'popular' ? all.filter((i) => i.featured) : []
+  // One list: what the store features leads it, in the store's own order, and is not listed a second time.
+  const listed = !narrowed && sort === 'popular' ? [...items.filter((i) => i.featured), ...items.filter((i) => !i.featured)] : items
+  // What every card would say alike is said by none: the price where nothing is sold, the author where there is one.
+  const priced = all.some((i) => i.pricing !== 'free')
+  const authored = new Set(all.map((i) => i.author.name || i.package)).size > 1
   const clear = () => { setSearch(''); setCategory(''); setPricing('all') }
 
   const after = async (message: string) => {
@@ -139,12 +143,12 @@ export function Store() {
   }
 
   const addStore = async () => {
-    const asked = await prompt({ title: t('Add a store'), description: t('Code from a store runs with full access to this site. Add it only if you trust who runs it.'), fields: [{ handle: 'url', type: 'text', label: t('Store address'), required: true, placeholder: 'https://' }], confirm: t('Continue') })
+    const asked = await prompt({ title: t('Add Store'), description: t('Code from a store runs with full access to this site. Add it only if you trust who runs it.'), fields: [{ handle: 'url', type: 'text', label: t('Store Address'), required: true, placeholder: 'https://' }], confirm: t('Check Store') })
     const url = asked?.url as string | undefined
     if (!url) return
     try {
       const first = await run<{ name: string; fingerprint: string; id: string }>('package-stores/create', { url })
-      const answer = await prompt({ title: t('Confirm {name}', { name: first.name }), description: t('Compare this key fingerprint with the one in the store’s own documentation, then type it here: {fingerprint}', { fingerprint: first.fingerprint }), fields: [{ handle: 'fingerprint', type: 'text', label: t('Key fingerprint'), required: true }], confirm: t('Add Store') })
+      const answer = await prompt({ title: t('Add {name}?', { name: first.name }), description: t('Compare this key fingerprint with the one in the store’s own documentation, then type it here: {fingerprint}', { fingerprint: first.fingerprint }), fields: [{ handle: 'fingerprint', type: 'text', label: t('Key Fingerprint'), required: true }], confirm: t('Add Store') })
       const typed = answer?.fingerprint as string | undefined
       if (!typed) return
       const done = await run<{ added: boolean; id: string }>('package-stores/create', { url, confirm: typed })
@@ -189,7 +193,7 @@ export function Store() {
     : data.error ? t('Can’t reach the store. {error}', { error: data.error })
     : null
 
-  const card = (item: Item) => <Card key={item.package} item={item} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} onOpen={() => setOpen(item)} onInstall={() => void install(item)} />
+  const card = (item: Item) => <Card key={item.package} item={item} priced={priced} authored={authored} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} onOpen={() => setOpen(item)} onInstall={() => void install(item)} />
 
   return (
     <div>
@@ -198,10 +202,11 @@ export function Store() {
       {/* Find first: search and order, then what to narrow it to. */}
       <div className="mb-3 flex min-h-10 flex-wrap items-center gap-2">
         <Input size="sm" className="w-full sm:w-72" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}', { items: t('Plugins') })} aria-label={t('Search')} />
-        <div className="w-40"><Select size="sm" value={sort} onChange={(v) => setSort((v ?? 'popular') as Sort)} aria-label={t('Sort')} options={[{ value: 'popular', label: t('Most Popular') }, { value: 'name', label: t('Name') }, { value: 'installed', label: t('Installed First') }]} /></div>
-        {sellsSomething && <div className="w-28"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('Any Price') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>}
+        <div className="w-40 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={sort} onChange={(v) => setSort((v ?? 'popular') as Sort)} aria-label={t('Sort')} options={[{ value: 'popular', label: t('Most Popular') }, { value: 'name', label: t('Name') }, { value: 'installed', label: t('Installed First') }]} /></div>
+        {categories.some(([, count]) => count > 1) && <div className="w-40 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={category || 'all'} onChange={(v) => setCategory(!v || v === 'all' ? '' : v)} aria-label={t('Category')} options={[{ value: 'all', label: t('All Categories') }, ...categories.map(([name]) => ({ value: name, label: name }))]} /></div>}
+        {sellsSomething && <div className="w-28 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('Any Price') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>}
         <div className="ml-auto flex items-center gap-1">
-          {(stores.data?.items.length ?? 0) > 1 && <div className="w-40"><Select size="sm" value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} /></div>}
+          {(stores.data?.items.length ?? 0) > 1 && <div className="w-40 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} /></div>}
           <Button variant="ghost" icon="upload" disabled={busy !== null} onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>
           <Menu
             trigger={<IconButton icon="more" label={t('More')} />}
@@ -216,34 +221,19 @@ export function Store() {
         </div>
       </div>
 
-      {categories.length > 1 && (
-        <div role="radiogroup" aria-label={t('Category')} className="mb-5 flex flex-wrap gap-1.5">
-          <Chip active={category === ''} onClick={() => setCategory('')} label={t('All')} count={all.length} />
-          {categories.map(([name, count]) => <Chip key={name} active={category === name} onClick={() => setCategory(category === name ? '' : name)} label={name} count={count} />)}
-        </div>
-      )}
-
       {step && <p role="status" className="mb-4 text-sm text-muted">{step}</p>}
       {notice && <p className="mb-4 flex items-center gap-2 border-y border-border py-3 text-sm text-text"><Icon name="info" size={16} className="shrink-0 text-muted" />{notice}</p>}
 
       {catalog.isLoading ? (
-        <Grid>{[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-44" />)}</Grid>
+        <List>{[0, 1, 2, 3].map((i) => <div key={i} role="listitem" className="flex min-h-16 items-center gap-3 px-3"><Skeleton className="size-10 rounded-lg" /><div className="flex-1 space-y-2"><Skeleton className="h-3 w-32" /><Skeleton className="h-3 w-64 max-w-full" /></div></div>)}</List>
       ) : items.length === 0 ? (
         narrowed
           ? <NoMatches onClear={clear} />
-          : <EmptyState icon="download" title={t('Nothing in this store yet')} action={<Button onClick={() => file.current?.click()}>{t('Upload a Zip')}</Button>} />
+          : <EmptyState icon="download" title={t('Nothing in this store yet')} action={<Button onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>} />
       ) : (
         <>
-          {featured.length > 0 && (
-            <section className="mb-8">
-              <SectionHeading title={t('Featured')} />
-              <Grid>{featured.map(card)}</Grid>
-            </section>
-          )}
-          <section>
-            <SectionHeading title={narrowed ? plural(items.length, '{count} result', '{count} results') : t('All Plugins')} count={narrowed ? undefined : items.length} />
-            <Grid>{items.map(card)}</Grid>
-          </section>
+          {narrowed && <h2 className="m-0 mb-3 text-sm font-medium text-ink">{plural(items.length, '{count} result', '{count} results')}</h2>}
+          <List>{listed.map(card)}</List>
         </>
       )}
 
@@ -252,39 +242,23 @@ export function Store() {
   )
 }
 
-function Grid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3">{children}</div>
-}
-
-function SectionHeading({ title, count }: { title: string; count?: number }) {
-  return <h2 className="m-0 mb-3 flex items-baseline gap-2 text-sm font-medium text-ink">{title}{count !== undefined && <span className="text-xs font-normal text-muted">{count}</span>}</h2>
-}
-
-function Chip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+/**
+ * One plugin as a row of the store's list: what it is, what it does in a line, its version, and the one thing
+ * to do with it here. Its name opens the plugin.
+ */
+function Card({ item, icon, priced, authored, busy, locked, onOpen, onInstall }: { item: Item; icon?: string; priced: boolean; authored: boolean; busy: boolean; locked: boolean; onOpen: () => void; onInstall: () => void }) {
   return (
-    <button type="button" role="radio" aria-checked={active} onClick={onClick} className={cn('inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs transition-colors', active ? 'border-ink bg-ink text-ink-contrast' : 'border-border bg-transparent text-text hover:bg-hover')}>
-      {label}<span className={active ? 'opacity-70' : 'text-muted'}>{count}</span>
-    </button>
-  )
-}
-
-function Card({ item, icon, busy, locked, onOpen, onInstall }: { item: Item; icon?: string; busy: boolean; locked: boolean; onOpen: () => void; onInstall: () => void }) {
-  return (
-    <article className="group relative flex h-full min-w-0 flex-col rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-strong">
-      <div className="flex items-start justify-between gap-3">
-        <ItemIcon item={item} icon={icon} />
-        <Badge>{priceLabel(item)}</Badge>
+    <div role="listitem" className="flex min-h-16 items-center gap-3 px-3 py-2">
+      <ItemIcon item={item} icon={icon} />
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button variant="ghost" className="-ml-2.5 min-w-0 font-medium text-ink" onClick={onOpen}><span className="truncate">{item.title}</span></Button>
+          {priced && <Badge>{priceLabel(item)}</Badge>}
+        </div>
+        <p className="m-0 truncate text-xs text-muted">{[authored && t('By {name}', { name: item.author.name || item.package }), item.summary].filter(Boolean).join(' · ')}</p>
       </div>
-      {/* The whole card opens the plugin; the action keeps its own click. */}
-      <h3 className="m-0 mt-3 truncate text-sm font-medium text-ink">
-        <button type="button" onClick={onOpen} className="cursor-pointer border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:outline-none group-has-[:focus-visible]:after:outline-2 group-has-[:focus-visible]:after:outline-focus">{item.title}</button>
-      </h3>
-      <p className="m-0 truncate text-xs text-muted">{t('By {name}', { name: item.author.name || item.package })}</p>
-      <p className="m-0 mt-2 line-clamp-2 min-h-10 flex-1 text-xs leading-5 text-text">{item.summary}</p>
-      <div className="relative mt-3 flex min-h-7 items-center justify-between gap-2 border-t border-border pt-3">
-        <span className="truncate text-xs text-muted">{[item.categories[0], item.latest].filter(Boolean).join(' · ')}</span>
-        <Action item={item} busy={busy} locked={locked} onInstall={onInstall} />
-      </div>
-    </article>
+      <span className="shrink-0 text-xs tabular-nums text-muted max-sm:hidden">{item.latest}</span>
+      <div className="shrink-0"><Action item={item} busy={busy} locked={locked} onInstall={onInstall} /></div>
+    </div>
   )
 }
