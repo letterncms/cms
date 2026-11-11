@@ -201,7 +201,7 @@ final class BlocksModule extends Plugin
     private function guardHtmlBlocks(): void
     {
         $this->cms()->hooks()->addFilter('ability.input', function (array $input, Ability $ability, AbilityContext $ctx) {
-            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'patterns/save', 'globals/set'], true)) {
+            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'components/save', 'globals/set'], true)) {
                 return $input;
             }
 
@@ -217,7 +217,7 @@ final class BlocksModule extends Plugin
 
             $existing = match ($ability->name) {
                 'entries/update' => ($entry = $this->cms()->entries()->find((string) ($input['id'] ?? ''))) ? $this->htmlBlocks($entry->working()) : [],
-                'patterns/save' => $this->htmlBlocks($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
+                'components/save' => $this->htmlBlocks($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
                 default => [],
             };
 
@@ -360,7 +360,7 @@ final class BlocksModule extends Plugin
         ]);
 
         // ── Components and templates (read helpers; edit them with the entries abilities) ──
-        $a->register('patterns/list', [
+        $a->register('components/list', [
             'label' => 'List Components and Sections',
             'description' => 'Entries of the components collection (plus plugin patterns). Synced ones are components: instances update everywhere and take property values. Others are sections copied on insert. Create and change them with entries/create and entries/update in the "components" collection.',
             'permission' => 'admin.access',
@@ -370,7 +370,7 @@ final class BlocksModule extends Plugin
             'handler' => fn (array $in) => array_values($patterns()->all((bool) ($in['working'] ?? false))),
         ]);
 
-        $a->register('patterns/save', [
+        $a->register('components/save', [
             'label' => 'Save as Component or Section',
             'description' => 'Create or replace an entry of the components collection by handle (slug). synced: true makes it a component. Saved as a draft of an existing one unless publish is true.',
             'permission' => fn (?\Cms\Users\User $user) => (bool) $user?->hasPermission('entries.'.Patterns::COLLECTION.'.create'),
@@ -511,7 +511,7 @@ final class BlocksModule extends Plugin
                 'behavior attaches a script of the design to one element, for what motion and logic can’t say (GSAP, WebGL, smooth scroll): {"behavior": {"module": "tilt", "props": {"max": 8}, "when": "visible"}} runs `export function mount(el, props, {token, reducedMotion, signal})` of content/design/scripts/tilt.js when the element is in the document, and the function it returns (and `export function unmount(el)`) when it leaves, page transitions included. token("color.primary") reads a design token where the element is; signal aborts on unmount. when: load (default), visible (fetched a screen before it is seen) or idle. Text in props may name data: "{props.speed}", "{entry.title}". Anyone who edits the page writes props, so a script treats them as untrusted input: never as HTML (innerHTML), code, or an address to load without checking it. Scripts never run in the editor.',
                 'persist keeps one element alive across pages when the design’s transition has navigation: "client": {"type": "box", "persist": "stage", "behavior": {"module": "scene"}} in the template is the same element, still mounted, on every page that has a block with that persist name (a WebGL canvas, a music player). Scripts hear `cms:before-leave` (cancelable; event.detail.waitUntil(promise) holds the swap for an animation out) and `cms:after-enter` on document, and can call window.cmsNavigate.go(url) and .prefetch(url). A link inside an element with the attribute data-cms-reload always loads the page, as does any link with a query string. With client navigation a module script runs once per visit, not once per page, and so does an inline script whose text a page before it already ran: do a page’s own work in a behaviour’s mount, or on cms:after-enter.',
                 'Templates and components are entries of the "templates" and "components" collections (body field: blocks). entries/update saves a draft; entries/publish (or publish: true) makes it live and rebuilds the pages that use it.',
-                'Prefer existing components and sections (patterns/list) to keep sites consistent. You can send entry data for a blocks field as Block Markdown (a string).',
+                'Prefer existing components and sections (components/list) to keep sites consistent. You can send entry data for a blocks field as Block Markdown (a string).',
             ],
             'blocks' => $this->app->make(BlockRegistry::class)->catalog(),
             'examples' => [

@@ -294,7 +294,7 @@ interface ComponentDef {
 export function ComponentBlock({ node }: { node: BlockNode }) {
   const { store } = useEditorContext()
   const { readOnly } = useWrite()
-  const list = useAbility<ComponentDef[]>('patterns/list', { working: true }, { staleTime: 30_000 })
+  const list = useAbility<ComponentDef[]>('components/list', { working: true }, { staleTime: 30_000 })
   const pattern = list.data?.find((p) => p.handle === node.props.ref)
   const values = (node.props.values ?? {}) as Record<string, unknown>
   const bind = node.bind ?? {}

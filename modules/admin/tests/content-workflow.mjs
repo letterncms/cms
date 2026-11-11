@@ -696,7 +696,7 @@ serve('Content workflow', async (req, res, url) => {
       entries.set(data.id, data)
     }
     else if (ability === 'blocks/types') data = catalog
-    else if (ability === 'patterns/list') data = realSources[0]?.patterns ?? [fixtureComponent]
+    else if (ability === 'components/list') data = realSources[0]?.patterns ?? [fixtureComponent]
     else if (ability === 'design/get') data = realSources[0]?.design ?? { tokens: [], breakpoints: { tablet: '820px', mobile: '390px' }, templates: {}, name: 'Fixture', fonts: [], stylesheet: '' }
     else if (ability === 'seo/analyze') data = { score: 100, checks: [{ id: 'title', status: 'pass', label: 'Title', message: 'Search title is available.' }], meta: { title: entries.get(input.id)?.title, description: 'A fixture description', canonical: '', image: null } }
     else if (ability === 'seo/markdown') data = { markdown: '# Fixture Markdown' }
