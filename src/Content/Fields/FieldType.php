@@ -104,6 +104,12 @@ abstract class FieldType
         return $markdown;
     }
 
+    /** A field's definition as the admin and agents get it: what the type adds to what was written. */
+    public function definition(array $definition): array
+    {
+        return $definition;
+    }
+
     /** Admin component key the admin theme renders this field with. */
     public function component(): string
     {

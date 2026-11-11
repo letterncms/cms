@@ -131,6 +131,15 @@ final class Collection
         return $this->structure === 'tree';
     }
 
+    /**
+     * A vocabulary other entries are filed under (`taxonomy: true`): its entries are the terms, which `terms`
+     * fields pick from. Everything else about it is a collection: a tree for nested terms, a route for term pages.
+     */
+    public function isTaxonomy(): bool
+    {
+        return (bool) $this->get('taxonomy', false);
+    }
+
     public function isDated(): bool
     {
         return $this->structure === 'dated';

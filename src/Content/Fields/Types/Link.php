@@ -113,12 +113,12 @@ class Link extends FieldType
         }
 
         if (($value['type'] ?? '') === 'entry') {
-            $entry = app(EntryRepository::class)->find((string) $value['value']);
+            $collection = app(\Cms\Content\Entries\EntryService::class)->known([(string) $value['value']])[(string) $value['value']] ?? null;
             $takes = array_values(array_filter((array) $field->get('collections'), 'is_string'));
 
             return match (true) {
-                $entry === null => ['value' => __('This entry does not exist.')],
-                $takes !== [] && ! in_array($entry->collection, $takes, true) => ['value' => __('Must be an entry of: :collections.', ['collections' => implode(', ', $takes)])],
+                $collection === null => ['value' => __('This entry does not exist.')],
+                $takes !== [] && ! in_array($collection, $takes, true) => ['value' => __('Must be an entry of: :collections.', ['collections' => implode(', ', $takes)])],
                 default => [],
             };
         }

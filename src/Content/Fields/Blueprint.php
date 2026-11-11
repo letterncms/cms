@@ -125,8 +125,8 @@ final class Blueprint
 
     /**
      * The fields that hold entries (the `entries` type and types built on it), by their path in the data: fields
-     * of a group as `group.field`. Rows of a repeater are not searched: a query cannot reach into them the same
-     * way on every driver.
+     * of a group as `group.field`. These are the ones a query can filter by and an API can expand; rows of a
+     * repeater or a matrix are not among them (EntryQuery::references() finds what they name all the same).
      *
      * @return array<string, Field>
      */
@@ -266,7 +266,10 @@ final class Blueprint
     /** @throws SchemaException When a value names something that is not there. */
     public function check(array $data, array $previous = []): void
     {
-        if (($errors = $this->violations($data, $previous)) !== []) {
+        // Every entry the record names is looked up in one go, not once per field and row.
+        $errors = app(\Cms\Content\Entries\EntryService::class)->primed($data, fn () => $this->violations($data, $previous));
+
+        if ($errors !== []) {
             throw new SchemaException($errors);
         }
     }
@@ -299,7 +302,9 @@ final class Blueprint
     /** @param array<string, mixed> $context The owner supplied by the schema host. */
     public function toArray(array $context = []): array
     {
-        return array_map(static fn (Field $f) => self::withOptions($f->toArray(), $context), $this->fields);
+        $types = self::types();
+
+        return array_map(static fn (Field $f) => self::withOptions($types->resolve($f->type)->definition($f->toArray()), $context), $this->fields);
     }
 
     /**

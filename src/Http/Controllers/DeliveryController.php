@@ -31,10 +31,21 @@ final class DeliveryController
             ($teasers = $this->cms->entries()->gate()->teaserIds()) && $query->where('id', 'not in', $teasers);
         }
 
+        $relations = $collection->blueprint()->relations();
+
         foreach ((array) $request->query('filter', []) as $field => $value) {
-            if (is_string($field) && is_scalar($value)) {
-                $query->where($field, (string) $value);
+            if (! is_string($field) || ! is_scalar($value)) {
+                continue;
             }
+
+            // A relation holds ids: filter[topics]=news finds the entries filed under the term with that slug (or id).
+            if (isset($relations[$field])) {
+                $query->where($field, 'contains', $this->related($relations[$field], (string) $value, $locale));
+
+                continue;
+            }
+
+            $query->where($field, (string) $value);
         }
 
         // The reverse of a relation: entries that name this one. An entry this reader may not read matches nothing.
@@ -70,6 +81,20 @@ final class DeliveryController
         abort_if($collection === null || ! ($collection->get('api', $collection->routable())), 404);
 
         return $collection;
+    }
+
+    /** The id a relation filter means: the value itself, or the published entry of the field's collections with that slug. */
+    private function related(\Cms\Content\Fields\Field $field, string $value, string $locale): string
+    {
+        if (preg_match('/^[0-9a-z]{26}$/i', $value)) {
+            return strtolower($value);
+        }
+
+        $type = $this->cms->fields()->resolve($field->type);
+        $handles = $type instanceof \Cms\Content\Fields\Types\Entries ? $type->collections($field) : [];
+        $query = $this->cms->entries()->query()->live()->locale($locale)->where('slug', $value);
+
+        return ($handles === [] ? $query : $query->collection(...$handles))->first()?->id ?? '';
     }
 
     private function locale(Request $request): string

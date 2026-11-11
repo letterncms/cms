@@ -218,6 +218,64 @@ final class SiteModule extends Plugin
                 },
             ];
 
+            $taxonomies = array_map(static fn ($c) => $c->title, array_filter($this->cms()->collections()->all(), static fn ($c) => $c->isTaxonomy()));
+
+            $sources['terms'] = [
+                'label' => 'Taxonomy Terms',
+                'description' => __('The terms of a taxonomy with how many published entries are filed under each: a category list, a tag cloud.'),
+                'fields' => [
+                    ['handle' => 'taxonomy', 'type' => 'select', 'label' => 'Taxonomy', 'options' => $taxonomies, 'required' => true],
+                    ['handle' => 'sort', 'type' => 'select', 'label' => 'Sort Order', 'options' => ['title' => __('Title A–Z'), '-count' => __('Most Used First'), 'position' => __('Manual Order')], 'default' => 'title'],
+                    ['handle' => 'limit', 'type' => 'number', 'label' => 'How Many', 'min' => 1, 'max' => 200, 'default' => 50],
+                    ['handle' => 'of', 'type' => 'select', 'label' => 'Of', 'options' => ['' => __('All Terms'), 'current' => __('This Page')]],
+                    ['handle' => 'hideEmpty', 'type' => 'toggle', 'label' => 'Leave Out Unused Terms'],
+                ],
+                'item' => ['title' => __('Title'), 'url' => __('Link'), 'count' => __('How Many Entries'), 'entry' => __('The term (any field: item.entry.description)')],
+                'resolve' => function (array $props, Scope $scope) use ($entry) {
+                    $taxonomy = $this->cms()->collections()->find((string) ($props['taxonomy'] ?? ''));
+
+                    if (! $taxonomy?->isTaxonomy()) {
+                        return [];
+                    }
+
+                    $locale = PageContext::current()?->locale() ?? $this->cms()->defaultLocale();
+                    $sort = (string) ($props['sort'] ?? 'title');
+                    $query = new EntryQueryProxy($this->cms()->entries()->query()->collection($taxonomy->handle)->locale($locale)->live()->orderBy($sort === '-count' ? 'title' : $sort));
+                    $terms = $query->get();
+
+                    // The terms this page is filed under: every term its terms fields of this taxonomy name.
+                    if (($props['of'] ?? '') === 'current') {
+                        $current = $entry($scope);
+                        $named = [];
+
+                        foreach ($current ? $current->entry->collection()->blueprint()->relations() : [] as $path => $field) {
+                            $field->get('taxonomy') === $taxonomy->handle && array_push($named, ...array_filter((array) data_get($current->entry->data, $path), 'is_string'));
+                        }
+
+                        $terms = array_values(array_filter($terms, static fn (AugmentedEntry $term) => in_array($term->id, $named, true)));
+                    }
+
+                    // A count changes when any entry that can be filed under a term does.
+                    foreach (array_keys($this->cms()->collections()->all()) as $handle) {
+                        PageContext::depend('collection:'.$handle);
+                    }
+
+                    // One pass over the published entries for every term's count.
+                    $counts = $this->cms()->entries()->query()->live()->locale($locale)->referenceCounts(array_map(static fn (AugmentedEntry $term) => $term->id, $terms));
+                    $items = array_map(static fn (AugmentedEntry $term) => ['id' => $term->id, 'title' => $term->title, 'slug' => $term->slug, 'url' => $term->url, 'count' => $counts[$term->id] ?? 0, 'entry' => $term], $terms);
+
+                    if (! empty($props['hideEmpty'])) {
+                        $items = array_values(array_filter($items, static fn (array $item) => $item['count'] > 0));
+                    }
+
+                    if ($sort === '-count') {
+                        usort($items, static fn (array $a, array $b) => [$b['count'], $a['title']] <=> [$a['count'], $b['title']]);
+                    }
+
+                    return array_slice($items, 0, max(1, min(200, (int) ($props['limit'] ?? 50))));
+                },
+            ];
+
             $sources['children'] = [
                 'label' => 'Child Pages',
                 'description' => __('Pages below this page (or below the outer item) in a tree collection.'),
