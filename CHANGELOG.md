@@ -50,6 +50,8 @@
 - A row of a list shows the focus ring when you reach it with the keyboard, and a field that has the focus is clear to see in the dark theme.
 - On a touch screen every button is at least 44px to hit, whatever its size, and a dialog's buttons on a phone are 44px tall with more room between and under them.
 - `GET /api/v1/abilities/{name}` reads numbers and booleans from the query string (`?perPage=5`, `?force=true`) as the ability's schema asks for them, instead of refusing them as text.
+- **Users** and the **Audit Log** keep their tabs when you open their Settings tab.
+- On a phone a screen inside another (a collection's fields, a menu, a section of the design) has a way back to the one above it, the top bar's last button sits as far from the edge as its first, and the sidebar button and the way back are far enough apart to hit the right one.
 
 ### Security
 

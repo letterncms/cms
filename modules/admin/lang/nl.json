@@ -1,4 +1,5 @@
 {
+  "Missing Type": "Type ontbreekt",
   "{count} field": "{count} veld",
   "{count} fields": "{count} velden",
   "{count} item": "{count} item",
@@ -143,7 +144,6 @@
   "Match System Appearance": "Systeemweergave volgen",
   "Minimize": "Minimaliseren",
   "Missing page": "Ontbrekende pagina",
-  "Missing type: {type}": "Type ontbreekt: {type}",
   "More": "Meer",
   "More Settings": "Meer instellingen",
   "Move Down": "Omlaag",

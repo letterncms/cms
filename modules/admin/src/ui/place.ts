@@ -73,7 +73,15 @@ function settingsPlace(manifest: Manifest, path: string): boolean {
 
 /** Whether a path is one of the settings sidebar's places (or belongs to one), or the screen tab on view that was opened as one. */
 export function inSettings(manifest: Manifest, path: string): boolean {
-  if (settingsPlace(manifest, path)) return true
+  return settingsPlace(manifest, path) || openedAsSettings(manifest, path)
+}
+
+/**
+ * Whether the screen tab on view is a plugin's Settings tab opened from its row of the settings sidebar:
+ * then it is that settings page alone. A screen that is itself a settings place (Users, the Audit Log)
+ * never is: its Settings tab is one of its tabs.
+ */
+export function openedAsSettings(manifest: Manifest, path: string): boolean {
   return here.side === 'settings' && path === here.path && !!settingsTabAt(manifest, here.path, here.search)
 }
 
@@ -108,4 +116,26 @@ export function wayBack(manifest: Manifest, fallback: { to: string; label: strin
   const from = cameFrom()
   const item = from ? placeAt(manifest.nav, from.split('?')[0]) : undefined
   return from && item ? { to: from, label: item.label } : fallback
+}
+
+/**
+ * The screen above the one on view (its parent crumb), for the one way back a phone's top bar has:
+ * a screen says it, the shell's back button by the sidebar button leads there.
+ */
+export interface Way { to: string; label: string }
+const above = { way: null as Way | null, listeners: new Set<() => void>() }
+
+export function noteParent(way: Way | null) {
+  if (above.way?.to === way?.to && above.way?.label === way?.label) return
+  above.way = way
+  above.listeners.forEach((listener) => listener())
+}
+
+export function subscribeParent(listener: () => void): () => void {
+  above.listeners.add(listener)
+  return () => above.listeners.delete(listener)
+}
+
+export function parentWay(): Way | null {
+  return above.way
 }

@@ -187,14 +187,16 @@ function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onCh
         {dragHandle}
         <span className="grid size-6 shrink-0 place-items-center rounded-xs bg-active text-muted"><Icon name={type?.icon ?? 'field'} size={14} /></span>
         <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <span className="truncate text-sm font-medium">{field.label || field.handle}</span>
-          <span className="truncate font-mono text-xs text-faint">{field.handle}</span>
+          {/* The name wins the room: on a phone the handle steps aside for it. */}
+          <span className="min-w-[4ch] truncate text-sm font-medium">{field.label || field.handle}</span>
+          <span className="truncate font-mono text-xs text-faint max-sm:hidden">{field.handle}</span>
         </button>
         {isBody && <Badge>{t('Body')}</Badge>}
         {field.required && <Badge>{t('Required')}</Badge>}
         {field.section === 'sidebar' && <Badge>{t('Property')}</Badge>}
         {Array.isArray(field.fields) && <span className="text-xs text-faint">{plural(field.fields.length, '{count} field', '{count} fields')}</span>}
-        {!type && <Badge tone="warning">{t('Missing type: {type}', { type: field.type })}</Badge>}
+        {/* Which type is said beside it, once. */}
+        {!type && <Badge tone="warning">{t('Missing Type')}</Badge>}
         <span className="w-20 text-right text-xs text-faint">{type?.label ?? field.type}</span>
         <IconButton icon={open ? 'chevron-up' : 'chevron-down'} label={open ? t('Collapse') : t('Edit')} size="xs" onClick={onToggle} />
       </div>
