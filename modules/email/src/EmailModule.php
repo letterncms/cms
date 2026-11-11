@@ -44,13 +44,12 @@ final class EmailModule extends Plugin
             ['handle' => 'transport', 'type' => 'select', 'label' => 'Send With', 'options' => array_map(static fn ($t) => $t['label'], $transports), 'default' => 'log', 'display' => 'dropdown'],
             ['handle' => 'from_address', 'type' => 'email', 'label' => 'From Address', 'width' => 'half'],
             ['handle' => 'from_name', 'type' => 'text', 'label' => 'From Name', 'width' => 'half'],
+            ['handle' => 'footer', 'type' => 'text', 'label' => 'Email Footer'],
         ];
 
         foreach ($transports as $key => $transport) {
             array_push($fields, ...array_map(static fn ($f) => [...$f, 'if' => ['transport' => $key]], $transport['fields']));
         }
-
-        $fields[] = ['handle' => 'footer', 'type' => 'text', 'label' => 'Email Footer'];
 
         // After boot, so out of the module's scope: it names itself.
         $this->cms()->settingsRegistry()->register('email', fields: $fields, icon: 'mail', description: 'How :brand sends email.', package: $this->manifest->name, order: 40, section: 'system');
