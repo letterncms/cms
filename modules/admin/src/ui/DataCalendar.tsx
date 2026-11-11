@@ -94,6 +94,6 @@ export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date
         })}</div>
       </div>
     </div>
-    {!loading && undated.length > 0 && <div className="mt-6"><h3 className="cms-label m-0 mb-2">{t('No date')}</h3><div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">{undated.map(record)}</div></div>}
+    {!loading && undated.length > 0 && <div className="mt-6"><h3 className="cms-label m-0 mb-2">{t('No Date')}</h3><div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">{undated.map(record)}</div></div>}
   </section>
 }

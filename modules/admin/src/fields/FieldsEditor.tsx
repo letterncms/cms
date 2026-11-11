@@ -79,7 +79,7 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
 
   return (
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ('') }} side="bottom" align={align} keepSide collisionPadding={8} className="w-[288px] max-w-[calc(100vw-16px)] p-2" trigger={<Button size="sm" icon="plus" variant={nested ? 'ghost' : 'secondary'}>{label ?? t('Add Field')}</Button>}>
-      <Fields bare layout="inline" className="mb-2" fields={[{ handle: 'q', type: 'text', label: t('Field Type'), icon: 'search', size: 'sm', placeholder: t('Search…') }]} values={{ q }} onChange={(_, v) => setQ(v ?? '')} />
+      <Fields bare layout="inline" className="mb-2" fields={[{ handle: 'q', type: 'text', label: t('Field Type'), icon: 'search', size: 'sm', placeholder: t('Search') }]} values={{ q }} onChange={(_, v) => setQ(v ?? '')} />
       <div className="max-h-[360px] overflow-y-auto">
         {groups.map(([group, list]) => (
           <div key={group} className="mb-2">

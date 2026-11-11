@@ -197,7 +197,7 @@ export function Store() {
 
       {/* Find first: search and order, then what to narrow it to. */}
       <div className="mb-3 flex min-h-10 flex-wrap items-center gap-2">
-        <Input size="sm" className="w-full sm:w-72" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}…', { items: t('Plugins').toLocaleLowerCase(locale()) })} aria-label={t('Search')} />
+        <Input size="sm" className="w-full sm:w-72" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}', { items: t('Plugins') })} aria-label={t('Search')} />
         <div className="w-40"><Select size="sm" value={sort} onChange={(v) => setSort((v ?? 'popular') as Sort)} aria-label={t('Sort')} options={[{ value: 'popular', label: t('Most Popular') }, { value: 'name', label: t('Name') }, { value: 'installed', label: t('Installed First') }]} /></div>
         {sellsSomething && <div className="w-28"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('Any Price') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>}
         <div className="ml-auto flex items-center gap-1">

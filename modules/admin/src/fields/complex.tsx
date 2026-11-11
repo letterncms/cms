@@ -125,7 +125,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
             </button>
           }
         >
-          <Input icon="search" size="sm" placeholder={t('Search…')} value={query} onChange={(e) => setQuery(e.target.value)} className="mb-1" />
+          <Input icon="search" size="sm" placeholder={t('Search')} value={query} onChange={(e) => setQuery(e.target.value)} className="mb-1" />
           {(results.isFetching || recent.isFetching) && <div className="flex justify-center py-3 text-faint"><Spinner /></div>}
           {options.map((e) => (
             <button

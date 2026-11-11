@@ -59,7 +59,7 @@ export default function AddLanguage({ close }: SurfaceComponentProps) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && !busy && close?.()} size="sm" title={t('Add Language')}>
-      <Input size="sm" icon="search" autoFocus aria-label={t('Search languages')} placeholder={t('Search languages…')} value={search} disabled={busy}
+      <Input size="sm" icon="search" autoFocus aria-label={t('Search Languages')} placeholder={t('Search Languages')} value={search} disabled={busy}
         onChange={(e) => { setSearch(e.target.value); setIndex(0) }} onKeyDown={keys}
         role="combobox" aria-expanded aria-controls="add-language-options" aria-activedescendant={choices[index] ? `add-language-${choices[index].code}` : undefined} />
       <div ref={list} id="add-language-options" role="listbox" aria-label={t('Languages')} className="-mx-1 mt-2 max-h-72 overflow-y-auto">

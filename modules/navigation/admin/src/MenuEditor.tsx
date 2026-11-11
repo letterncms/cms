@@ -42,7 +42,7 @@ const levels = (): FieldDef => ({ handle: 'maxDepth', type: 'select', label: t('
   { value: '2', label: t('One Level') },
   ...[3, 4, 5].map((n) => ({ value: String(n), label: t('{count} Levels', { count: n - 1 }) })),
 ] })
-const search = (): FieldDef => ({ handle: 'query', type: 'text', label: t('Search Content'), autofocus: true, placeholder: t('Search pages and posts…') })
+const search = (): FieldDef => ({ handle: 'query', type: 'text', label: t('Search Content'), autofocus: true, placeholder: t('Search Pages and Posts') })
 
 /** What is saved of a menu: its items without what is looked up for showing them, and nothing empty. */
 const clean = (list: Item[]): Record<string, unknown>[] =>

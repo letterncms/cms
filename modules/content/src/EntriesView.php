@@ -48,7 +48,7 @@ final class EntriesView
             'id' => "entries.{$handle}", 'label' => __($collection->title), 'key' => 'id', 'address' => true,
             'source' => ['ability' => 'entries/list', 'input' => [...$plain, 'status' => '{query.status}']],
             'columns' => $columns,
-            'search' => ['param' => 'search', 'placeholder' => __('Search {items}…', ['items' => mb_strtolower(__($collection->title))])],
+            'search' => ['param' => 'search', 'placeholder' => __('Search :items', ['items' => __($collection->title)])],
             'filters' => [
                 ['param' => 'status', 'label' => __('Status'), 'display' => 'segmented', 'default' => 'any', 'options' => array_map(static fn ($value, $label) => ['value' => $value, 'label' => $label], ['any', 'published', 'draft'], [__('All'), __('Published'), __('Drafts')])],
                 ...(count($locales) > 1 ? [['param' => 'locale', 'label' => __('Language'), 'display' => 'segmented', 'default' => $this->cms->defaultLocale(), 'options' => array_map(fn (string $code) => ['value' => $code, 'label' => strtoupper($code), 'title' => self::languageName($code)], $locales)]] : []),
@@ -78,7 +78,7 @@ final class EntriesView
                     'confirm' => ['title' => ['one' => __('Delete {count} entry?'), 'other' => __('Delete {count} entries?')], 'text' => __('This cannot be undone.'), 'confirm' => __('Delete'), 'danger' => true],
                     'success' => ['one' => __('Deleted {count} entry'), 'other' => __('Deleted {count} entries')]],
             ],
-            'empty' => ['icon' => $collection->icon, 'title' => __('No {items} yet', ['items' => mb_strtolower(__($collection->title))])],
+            'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => mb_strtolower(__($collection->title))])],
             'defaultView' => in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
             ...($dated ? ['calendar' => [
                 'dated' => ['sort' => '{field}', 'filters' => [['field' => '{field}', 'operator' => '>=', 'value' => '{start}'], ['field' => '{field}', 'operator' => '<', 'value' => '{end}']]],

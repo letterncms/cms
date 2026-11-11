@@ -166,7 +166,7 @@ function SearchableSelect({ value, onChange, options, placeholder, valueHint, si
             {/* The search sits flush in the popup: the popup already shows where focus is. */}
             <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">
               <Icon name="search" size={14} className="shrink-0 text-faint" />
-              <Combobox.Input aria-label={t('Search…')} placeholder={t('Search…')} className="h-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none [@media(pointer:coarse)]:text-base" />
+              <Combobox.Input aria-label={t('Search')} placeholder={t('Search')} className="h-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none [@media(pointer:coarse)]:text-base" />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
               {defaultLabel !== undefined && clearable ? (

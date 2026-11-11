@@ -141,7 +141,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
 
   return <div ref={scope}>
     {!blank && (searchable || toolbar || display || (!plain && views.length > 1)) && <TableToolbar>
-      {searchable && <Fields bare layout="inline" className="w-full sm:w-60" fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder: searchPlaceholder ?? t('Search {items}…', { items: label.toLocaleLowerCase(locale()) }) }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} />}
+      {searchable && <Fields bare layout="inline" className="w-full sm:w-60" fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder: searchPlaceholder ?? t('Search {items}', { items: label }) }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} />}
       {toolbar}
       {!plain && controls}
     </TableToolbar>}

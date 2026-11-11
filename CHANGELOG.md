@@ -21,6 +21,7 @@
 
 ### Changed
 
+- One word for one thing: the command palette lists what you can make under **New**, a row's drag handle says "Drag to Reorder", a calendar's undated records stand under "No Date", and the buttons that make a menu or a global set say **Create Menu** and **Create Global Set**.
 - An empty screen says what is missing and offers one thing to do, nothing more: the sentences under "No files yet", "No collections yet", "Not Found" and the others are gone, and small empty lists (API tokens, redirects) are drawn like every other one. The way out of a page that isn't there is **Go to Dashboard**.
 - **Breaking.** `@letterncms/ui`: `EmptyState` and `NotFoundState` no longer take a `description`, and a view's `empty` (and `ui/empty`) no longer has a `text`: a view that sends one is refused. Something that failed is a `QueryError` (`title`, `message`).
 - `@letterncms/ui`: actions that wait for the pointer are `cms-reveal` inside a `cms-reveal-row` (add `cms-reveal-over` to lay them over the end of the row, so they take no room from what it says). `Row` and `DataView` use them; they show on hover, on focus inside the row, while their menu is open, and always on a touch screen.
@@ -55,6 +56,7 @@
 - `GET /api/v1/abilities/{name}` reads numbers and booleans from the query string (`?perPage=5`, `?force=true`) as the ability's schema asks for them, instead of refusing them as text.
 - A calendar shows a record's title across the whole day: its actions lie over the end of the title while you point at the record or reach it with the keyboard.
 - On a touch screen a segmented control's options, a page's tabs and a widget's link are 44px tall to hit, and what a row can do is always on view. With a keyboard a row's actions show as soon as the row has the focus.
+- The search field of a collection's list names the list ("Search Pages") instead of reading "Search …", and an empty collection says "No pages yet" instead of "No {items} yet". Search fields in lists, pickers, the store, the menu editor and the command palette say "Search" or name what they search ("Search People"), without an ellipsis.
 - Choosing an image for a field while the library has none says "No images yet" and offers the upload, not "No matches".
 - **Users** and the **Audit Log** keep their tabs when you open their Settings tab.
 - On a phone a screen inside another (a collection's fields, a menu, a section of the design) has a way back to the one above it, the top bar's last button sits as far from the edge as its first, and the sidebar button and the way back are far enough apart to hit the right one.

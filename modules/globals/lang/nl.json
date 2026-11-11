@@ -2,7 +2,7 @@
   "A global set with this handle already exists.": "Er bestaat al een globale set met deze handle.",
   "All Globals": "Alle globale gegevens",
   "Content": "Inhoud",
-  "Create": "Maken",
+  "Create Global Set": "Globale set maken",
   "Created :name": ":name aangemaakt",
   "Delete": "Verwijderen",
   "Delete :name?": ":name verwijderen?",

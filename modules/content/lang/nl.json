@@ -1,4 +1,6 @@
 {
+  "No :items yet": "Nog geen :items",
+  "Search :items": "Zoeken in :items",
   "{count} properties": "{count} eigenschappen",
   "{count} property": "{count} eigenschap",
   "{name} Details": "{name}-details",
@@ -107,7 +109,6 @@
   "New Page": "Nieuwe pagina",
   "New Post": "Nieuw bericht",
   "New Template": "Nieuw sjabloon",
-  "No {items} yet": "Nog geen {items}",
   "No history yet.": "Nog geen geschiedenis.",
   "No pages": "Geen pagina’s",
   "None": "Geen",
@@ -145,7 +146,6 @@
   "Schedule": "Inplannen",
   "Schedule…": "Inplannen…",
   "Scheduled": "Ingepland",
-  "Search {items}…": "Zoeken in {items}…",
   "Search Content": "Inhoud zoeken",
   "Shown inside other pages": "Getoond in andere pagina’s",
   "Site": "Site",

@@ -131,7 +131,7 @@ export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, 
 function Row({ id, depth, indent, ghost, children }: { id: string; depth: number; indent: number; ghost: boolean; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
   const handle = (
-    <button type="button" {...attributes} {...listeners} className="grid size-6 shrink-0 cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing" aria-label={t('Drag to Move')}>
+    <button type="button" {...attributes} {...listeners} className="grid size-6 shrink-0 cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing" aria-label={t('Drag to Reorder')}>
       <Icon name="drag" size={14} />
     </button>
   )

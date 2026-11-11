@@ -231,7 +231,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   const toolbar = (server || filters.length > 0) && (
     <span className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents">
       {(server || segmented.length > 0) && <Fields bare layout="inline" className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents" fields={[
-        ...(server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search…'), className: 'w-full sm:w-60' }] : []),
+        ...(server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search'), className: 'w-full sm:w-60' }] : []),
         ...segmented.map((f) => ({ handle: f.param, type: 'select', label: f.label, display: 'segmented', required: true, className: 'shrink-0', options: (f.options ?? []).map((o) => ({ value: String(o.value), label: o.label, title: o.title })) })),
       ]} values={{ __search: text, ...Object.fromEntries(segmented.map((f) => [f.param, chosen[f.param] || f.default || ''])) }} onChange={(h, v) => {
         if (h === '__search') { setText(String(v ?? '')); if (!address) setPage(1); return }

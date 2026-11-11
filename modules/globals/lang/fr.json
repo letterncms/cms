@@ -2,7 +2,7 @@
   "A global set with this handle already exists.": "Un ensemble global avec cet identifiant existe déjà.",
   "All Globals": "Toutes les données globales",
   "Content": "Contenu",
-  "Create": "Créer",
+  "Create Global Set": "Créer l’ensemble global",
   "Created :name": ":name créé",
   "Delete": "Supprimer",
   "Delete :name?": "Supprimer :name ?",

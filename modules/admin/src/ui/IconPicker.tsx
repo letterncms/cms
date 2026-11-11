@@ -154,8 +154,8 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
           icon="search"
           size="sm"
           type="search"
-          aria-label={t('Search icons…')}
-          placeholder={t('Search icons…')}
+          aria-label={t('Search Icons')}
+          placeholder={t('Search Icons')}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setLimit(PAGE); grid.current?.scrollTo({ top: 0 }) }}
           onKeyDown={(e) => {
