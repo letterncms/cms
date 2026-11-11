@@ -1,4 +1,5 @@
 import { Link, t } from '@letterncms/sdk'
+import { Pressable } from './Pressable'
 import type { ReactNode } from 'react'
 import { cn } from './cn'
 import { Checkbox } from './Switch'
@@ -26,7 +27,7 @@ export function DataCard({ title, href, onClick, icon, image, children, footer, 
     <div className="flex flex-1 flex-col p-3">
       <div className={cn('flex items-start gap-2', !!actions && image === undefined && 'pr-12')}>
         {image === undefined && (icon || onSelect) && <span className="mt-0.5 size-3.5 shrink-0 text-faint">{icon && <Icon name={icon} size={14} />}</span>}
-        {href ? <Link to={href} className={linkClass}>{title}</Link> : onClick ? <button type="button" onClick={onClick} className={linkClass}>{title}</button> : <div className={linkClass}>{title}</div>}
+        {href ? <Link to={href} className={linkClass}>{title}</Link> : onClick ? <Pressable compact onClick={onClick} className={linkClass}>{title}</Pressable> : <div className={linkClass}>{title}</div>}
       </div>
       {children}
       {footer && <div className="mt-auto flex items-center gap-2 pt-3 text-xs text-muted">{footer}</div>}

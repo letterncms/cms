@@ -1,4 +1,5 @@
 import { Link, locale, t } from '@letterncms/sdk'
+import { Pressable } from './Pressable'
 import { createContext, useContext, useId, type ReactNode } from 'react'
 import { cn } from './cn'
 import { EmptyState } from './EmptyState'
@@ -87,9 +88,9 @@ export function Widget({ title, action, query, loading, skeleton, empty, childre
                 <Icon name="chevron-right" size={12} className="text-faint" />
               </Link>
             ) : (
-              <button type="button" onClick={action.onClick} className="cms-touch -mr-1.5 h-6 shrink-0 rounded-xs px-1.5 text-xs text-muted transition-colors duration-base hover:bg-hover hover:text-text">
+              <Pressable onClick={action.onClick} className="-mr-1.5 h-6 shrink-0 rounded-xs px-1.5 text-xs text-muted transition-colors duration-base hover:bg-hover hover:text-text">
                 {action.label}
-              </button>
+              </Pressable>
             )
           ) : (
             action && <div className="-mr-1 flex shrink-0 items-center gap-1">{action}</div>
@@ -149,7 +150,7 @@ export function WidgetRow({ to, onClick, href, icon, leading, title, description
 
   if (to) return <Link to={to} className={cls}>{body}</Link>
   if (href) return <a href={href} target="_blank" rel="noreferrer" className={cls}>{body}</a>
-  if (onClick) return <button type="button" onClick={onClick} className={cn(cls, 'w-[calc(100%+1.5rem)]')}>{body}</button>
+  if (onClick) return <Pressable compact inset onClick={onClick} className={cn(cls, 'w-[calc(100%+1.5rem)]')}>{body}</Pressable>
   return <div className={cls}>{body}</div>
 }
 

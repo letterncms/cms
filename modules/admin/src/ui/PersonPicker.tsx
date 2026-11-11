@@ -1,4 +1,5 @@
 import { abilityKey, run, t, useAbility, type Page, type PersonSummary } from '@letterncms/sdk'
+import { Pressable } from './Pressable'
 import { useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { Avatar } from './Avatar'
@@ -46,9 +47,8 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
   }
 
   const trigger = single ? (
-    <button
+    <Pressable
       id={id}
-      type="button"
       // What it does, then the name it shows: someone who speaks to the screen says the name they see.
       aria-label={value.length ? `${label}: ${personName(value[0])}` : label}
       aria-describedby={describedBy}
@@ -60,7 +60,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
         {value.length ? personName(value[0]) : disabled ? '—' : label}
       </span>
       {!disabled && <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />}
-    </button>
+    </Pressable>
   ) : (
     <Button id={id} aria-describedby={describedBy} size={small ? 'xs' : 'sm'} disabled={disabled || value.length >= max}>
       {value.length === 0 ? disabled ? '—' : label : t('Add People')}
@@ -89,10 +89,10 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
             ) : (
               <>
                 {(options.data?.items ?? []).map((person) => (
-                  <button type="button" key={person.id} aria-label={person.name} disabled={value.includes(person.id)} onClick={() => choose(person)} className="cms-menu-item min-h-9 w-full py-1">
+                  <Pressable compact key={person.id} aria-label={person.name} disabled={value.includes(person.id)} onClick={() => choose(person)} className="cms-menu-item min-h-9 w-full py-1">
                     <Avatar name={person.name} initials={person.initials} src={person.avatar} size={20} />
                     <span className="min-w-0 flex-1 truncate">{person.name}</span>
-                  </button>
+                  </Pressable>
                 ))}
                 {options.data?.items.length === 0 && (search ? <NoMatches className="py-3" /> : <p className="px-2 py-3 text-xs text-muted">{t('No people yet')}</p>)}
                 {(options.data?.pages ?? 0) > 1 && (

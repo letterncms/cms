@@ -1,4 +1,5 @@
 import { Link, locale, t } from '@letterncms/sdk'
+import { Pressable } from './Pressable'
 import { useState, type ReactNode } from 'react'
 import { Button, IconButton } from './Button'
 import { calendarDayKey, calendarRange } from './calendar'
@@ -54,7 +55,7 @@ export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date
     const className = 'min-w-0 flex-1 truncate text-left text-inherit no-underline'
     return <div key={rowKey(item)} data-entry={rowKey(item)} className={cn('group/event cms-reveal-row relative flex min-h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-text transition-colors duration-base hover:bg-hover', cursor === rowKey(item) && 'bg-hover shadow-cursor', selection?.ids.has(rowKey(item)) && 'bg-active')} title={iso && Number.isFinite(Date.parse(iso)) ? longDate(iso) : undefined}>
       {selection && <span className={cn('flex shrink-0', !choosing && '[@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover/event:flex [@media(hover:hover)]:group-focus-within/event:flex')}><Checkbox checked={selection.ids.has(rowKey(item))} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([rowKey(item)], on, items)} /></span>}
-      {rowHref?.(item) ? <Link className={className} to={rowHref(item)!}>{title(item)}</Link> : onRowClick ? <button type="button" className={className} onClick={() => onRowClick(item)}>{title(item)}</button> : <span className={className}>{title(item)}</span>}
+      {rowHref?.(item) ? <Link className={className} to={rowHref(item)!}>{title(item)}</Link> : onRowClick ? <Pressable compact className={className} onClick={() => onRowClick(item)}>{title(item)}</Pressable> : <span className={className}>{title(item)}</span>}
       {/* A day is 160px wide at best: what a record can do lies over the end of its title while the record is pointed at or has the focus, and takes none of its room. */}
       {actions && <div className="cms-reveal cms-reveal-over flex shrink-0 items-center">{actions(item)}</div>}
     </div>

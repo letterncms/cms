@@ -1,4 +1,5 @@
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
+import { Pressable } from './Pressable'
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { t } from '@letterncms/sdk'
@@ -131,9 +132,9 @@ export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, 
 function Row({ id, depth, indent, ghost, children }: { id: string; depth: number; indent: number; ghost: boolean; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
   const handle = (
-    <button type="button" {...attributes} {...listeners} className="grid size-6 shrink-0 cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing" aria-label={t('Drag to Reorder')}>
+    <Pressable compact {...attributes} {...listeners} className="grid size-6 shrink-0 cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing" aria-label={t('Drag to Reorder')}>
       <Icon name="drag" size={14} />
-    </button>
+    </Pressable>
   )
   return (
     <div

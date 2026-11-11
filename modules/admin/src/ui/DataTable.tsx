@@ -1,4 +1,5 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { Pressable } from './Pressable'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Link, t } from '@letterncms/sdk'
@@ -161,10 +162,10 @@ export function TableHeader({ label, align, direction, onSort, hiddenLabel }: { 
   return <div role="columnheader" data-align={align} aria-sort={onSort ? direction ?? 'none' : undefined} className={cn('flex min-w-0 items-center', align === 'end' && 'justify-end')}>
     {/* A sortable header shows its caret on hover, and keeps it while it sorts the list. Right-aligned, the caret goes before
         the label, so the label lines up with the numbers under it. */}
-    {onSort ? <button type="button" onClick={onSort} title={t('Sort by {column}', { column: label })} className={cn('group/sort -mx-1.5 flex h-6 min-w-0 items-center gap-1 rounded-xs px-1.5 transition-colors duration-base hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-focus', align === 'end' && 'flex-row-reverse', direction && 'text-text')}>
+    {onSort ? <Pressable compact onClick={onSort} title={t('Sort by {column}', { column: label })} className={cn('group/sort -mx-1.5 flex h-6 min-w-0 items-center gap-1 rounded-xs px-1.5 transition-colors duration-base hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-focus', align === 'end' && 'flex-row-reverse', direction && 'text-text')}>
       <span className="truncate">{label}</span>
       <Icon name={direction === 'ascending' ? 'chevron-up' : 'chevron-down'} size={12} className={cn('shrink-0 transition-opacity duration-base', direction ? 'opacity-100' : 'opacity-0 group-hover/sort:opacity-100 group-focus-visible/sort:opacity-100')} />
-    </button> : <span className={hiddenLabel ? 'sr-only' : 'truncate'}>{label}</span>}
+    </Pressable> : <span className={hiddenLabel ? 'sr-only' : 'truncate'}>{label}</span>}
   </div>
 }
 
@@ -278,7 +279,7 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
       {nested && <span role="none" className="max-sm:hidden" />}
       <div role="cell" className="flex min-w-0 items-center py-2 font-medium text-ink max-sm:flex-1 max-sm:py-0" style={depth ? { paddingLeft: depth * INDENT } : undefined}>
         {extra?.expander}
-        {href ? <Link to={href} className={LINK}>{first.render(item)}</Link> : onRowClick ? <button type="button" onClick={() => onRowClick(item)} className={LINK}>{first.render(item)}</button> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
+        {href ? <Link to={href} className={LINK}>{first.render(item)}</Link> : onRowClick ? <Pressable compact onClick={() => onRowClick(item)} className={LINK}>{first.render(item)}</Pressable> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
       </div>
       <TableMeta>{first.note?.(item) ? <div data-row-note="" className="shrink-0 sm:hidden">{first.note(item)}</div> : null}{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
         <div className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
@@ -339,10 +340,10 @@ function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setC
         const children = tree.children(node) ?? []
         const open = !collapsed[key]
         // Sits in the room left of the title, so titles line up whatever they hold.
-        const expander = children.length > 0 && <button type="button" onClick={() => setCollapsed((c) => ({ ...c, [key]: open }))} aria-expanded={open} aria-label={open ? t('Collapse') : t('Expand')}
+        const expander = children.length > 0 && <Pressable compact onClick={() => setCollapsed((c) => ({ ...c, [key]: open }))} aria-expanded={open} aria-label={open ? t('Collapse') : t('Expand')}
           className="relative z-raised -ml-5 mr-0 grid size-5 shrink-0 -translate-x-0.5 place-items-center rounded-xs text-faint transition-colors duration-base hover:bg-hover hover:text-text">
           <Icon name="chevron-right" size={12} className={cn('transition-transform duration-base', open && 'rotate-90')} />
-        </button>
+        </Pressable>
         return <SortableRow key={key} id={key} disabled={!tree.reorder}>
           {(handle) => <>
             {row(node, depth, { expander, handle })}
@@ -356,10 +357,10 @@ function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setC
 
 function SortableRow({ id, disabled, children }: { id: string; disabled?: boolean; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled })
-  const handle = <button type="button" {...attributes} {...listeners} aria-label={t('Drag to Reorder')}
+  const handle = <Pressable compact {...attributes} {...listeners} aria-label={t('Drag to Reorder')}
     className="grid size-6 cursor-grab place-items-center rounded-xs text-faint transition-colors duration-base hover:bg-hover hover:text-text active:cursor-grabbing max-sm:hidden">
     <Icon name="drag" size={14} />
-  </button>
+  </Pressable>
   return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-drag bg-bg shadow-pop')}>
     {children(disabled ? null : handle)}
   </div>
