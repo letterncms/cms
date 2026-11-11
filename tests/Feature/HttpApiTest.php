@@ -82,6 +82,22 @@ final class HttpApiTest extends TestCase
         $this->actingAs($user)->get('/admin')->assertOk()->assertDontSee('"manifest":', false);
     }
 
+    public function test_the_admin_page_opens_in_the_theme_the_account_keeps(): void
+    {
+        $admin = $this->admin();
+
+        // Nothing chosen: this browser's own choice, else the system's.
+        $this->actingAs($admin)->get('/admin')->assertOk()->assertSee('var a=null,p=a||localStorage', false);
+
+        $this->cms()->abilities()->execute('account/update', ['preferences' => ['theme' => 'dark']], \Cms\Abilities\AbilityContext::forUser($admin, 'admin'));
+        // Set before the first paint, in a browser that has never seen it, and kept there.
+        $this->actingAs($admin->refresh())->get('/admin')->assertOk()->assertSee('var a="dark",p=a||localStorage', false);
+
+        // Only a theme is ever written into the page.
+        $this->cms()->abilities()->execute('account/update', ['preferences' => ['theme' => '";alert(1);//']], \Cms\Abilities\AbilityContext::forUser($admin, 'admin'));
+        $this->actingAs($admin->refresh())->get('/admin')->assertOk()->assertSee('var a=null,p=a||localStorage', false);
+    }
+
     public function test_delivery_api_serves_only_live_content(): void
     {
         $content = $this->cms()->entryService();
