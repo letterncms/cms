@@ -24,11 +24,11 @@ final class SyncViews
         $overview = ['ability' => 'sync/overview'];
         $connect = ['label' => __('Connect a Site'), 'icon' => 'plus', 'variant' => 'primary', 'name' => 'connect', 'ability' => 'sync/connect', 'success' => __('Connected to {result.label}.'),
             'input' => ['key' => '{values.key}', 'name' => '{values.name}', 'other' => '{values.other}', 'url' => '{values.url}'],
-            'form' => ['title' => __('Connect a Site'), 'text' => __('On the other site, open Sync and copy its key. It starts with that site’s address.'), 'confirm' => __('Connect'), 'fields' => [
+            'form' => ['title' => __('Connect a Site'), 'confirm' => __('Connect Site'), 'fields' => [
                 ['handle' => 'key', 'type' => 'text', 'label' => __('Connection Key'), 'required' => true, 'placeholder' => 'https://example.com#…'],
-                ['handle' => 'name', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Production'), 'instructions' => __('Guessed from its address if empty.')],
+                ['handle' => 'name', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Production')],
                 ['handle' => 'other', 'type' => 'toggle', 'label' => __('This Server Reaches It at Another Address')],
-                ['handle' => 'url', 'type' => 'text', 'label' => __('Address'), 'placeholder' => 'http://host.docker.internal:8000', 'instructions' => __('Only for local setups, like Docker.'), 'if' => ['other' => true]],
+                ['handle' => 'url', 'type' => 'text', 'label' => __('Address'), 'placeholder' => 'http://host.docker.internal:8000', 'if' => ['other' => true]],
             ]]];
 
         // With no site yet, the way to connect one is in the words that say so; after that, in the bar.
@@ -38,8 +38,8 @@ final class SyncViews
                 ['type' => 'ui/empty', 'props' => ['icon' => 'sync', 'title' => __('No sites connected'), 'action' => $connect]],
             ]]] : array_map(static fn (array $r) => self::remote($r, $running), $remotes)),
             ['type' => 'ui/section', 'props' => ['title' => __('This Site’s Key'), 'actions' => [
-                ['label' => __('Make a New Key'), 'icon' => 'refresh', 'variant' => 'ghost', 'ability' => 'sync/renew-key', 'success' => __('This site has a new key.'),
-                    'confirm' => ['title' => __('Make a new key?'), 'text' => __('Sites connected with the current key can’t reach this one until they’re given the new key.'), 'confirm' => __('New Key'), 'danger' => true]],
+                ['label' => __('Replace Key'), 'icon' => 'refresh', 'variant' => 'ghost', 'ability' => 'sync/renew-key', 'success' => __('This site has a new key.'),
+                    'confirm' => ['title' => __('Replace this site’s key?'), 'text' => __('Sites connected with the current key can’t reach this one until they’re given the new key.'), 'confirm' => __('Replace Key'), 'danger' => true]],
             ]], 'children' => [['type' => 'ui/stack', 'children' => [
                 ['type' => 'sync/key'],
                 // Who may reach this site waits for the save bar, like every other setting.

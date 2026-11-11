@@ -42,7 +42,7 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
     { handle: 'name', type: 'text', label: t('Name'), required: true, width: 'half' },
     { handle: 'email', type: 'email', label: t('Email'), required: true, width: 'half' },
     ...(self ? [] : [{ handle: 'roles', type: 'select', label: t('Roles'), multiple: true, options: Object.fromEntries(offered.map(([k, r]) => [k, r.label ? t(r.label) : k])) }]),
-    ...(manifest.user.super && !self && !visitor ? [{ handle: 'super', type: 'toggle', label: t('Super Admin'), instructions: t('Bypasses every permission.') }] : []),
+    ...(manifest.user.super && !self && !visitor ? [{ handle: 'super', type: 'toggle', label: t('Super Admin') }] : []),
   ]
 
   const submit = async () => {
@@ -92,12 +92,12 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
   }
 
   const remove = async (u: User) => {
-    if (!(await confirm({ title: t('Remove {name}?', { name: u.name }), description: t('They lose access immediately. Their content stays.'), confirm: t('Remove User'), danger: true }))) return
+    if (!(await confirm({ title: t('Delete {name}?', { name: u.name }), description: t('They lose access immediately. Their content stays.'), confirm: t('Delete User'), danger: true }))) return
     setBusy('remove')
     try {
       await run('users/delete', { id: u.id })
       invalidate('users/', 'people/')
-      toast.success(t('{name} removed', { name: u.name }))
+      toast.success(t('{name} deleted', { name: u.name }))
       onClose()
     } catch (e) {
       toast.error(e)
@@ -110,10 +110,9 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
       open
       onOpenChange={(o) => !o && onClose()}
       title={user ? t('Edit User') : t('Invite User')}
-      description={user ? undefined : t('They get an email to set a password.')}
       footer={<>
         {others && user && <>
-          <Button variant="destructive" className="mr-auto max-sm:mr-0" loading={busy === 'remove'} disabled={!!busy} onClick={() => void remove(user)}>{t('Remove User')}</Button>
+          <Button variant="destructive" className="mr-auto max-sm:mr-0" loading={busy === 'remove'} disabled={!!busy} onClick={() => void remove(user)}>{t('Delete User')}</Button>
           <Button loading={busy === 'suspend'} disabled={!!busy} onClick={() => void suspend(user)}>{user.status === 'suspended' ? t('Reactivate') : t('Suspend')}</Button>
           {!user.lastLoginAt && !visitor && <Button loading={busy === 'invite'} disabled={!!busy} onClick={() => void invite(user)}>{t('Resend Invitation')}</Button>}
         </>}
@@ -166,7 +165,7 @@ function Access({ id, value, onChange }: { id: string; value: { add: string[]; r
       {manage && (
         <form className="mt-2 flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); add() }}>
           <Fields bare layout="inline" className="w-48 max-w-full" fields={[{ handle: 'access', type: 'text', label: t('Access Name'), size: 'sm', placeholder: t('magazine') }]} values={{ access: name }} onChange={(_, v) => setName(v ?? '')} />
-          <Button size="sm" type="submit" disabled={name.trim() === ''}>{t('Add')}</Button>
+          <Button size="sm" type="submit" disabled={name.trim() === ''}>{t('Add Access')}</Button>
         </form>
       )}
     </section>

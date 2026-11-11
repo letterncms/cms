@@ -41,10 +41,10 @@ final class AccountModule extends Plugin
     {
         // With the Users screen, these are its Settings tab; without it, a settings page of their own.
         $this->cms()->settingsRegistry()->register(Accounts::SETTINGS, 'Visitor Accounts', [
-            ['handle' => 'enabled', 'type' => 'toggle', 'label' => 'Allow Visitor Accounts', 'default' => false, 'instructions' => 'Sign-up and password resets need working email.'],
+            ['handle' => 'enabled', 'type' => 'toggle', 'label' => 'Allow Visitor Accounts', 'default' => false],
             ['handle' => 'sign_up', 'type' => 'select', 'label' => 'Who Can Sign Up', 'options' => ['open' => 'Anyone', 'closed' => 'Only People You Add'], 'default' => 'open', 'if' => ['enabled' => true]],
             ['handle' => 'default_role', 'type' => 'select', 'label' => 'Role for New Visitors', 'dynamic' => 'visitor-roles', 'default' => 'visitor', 'if' => ['enabled' => true]],
-            ['handle' => 'terms_url', 'type' => 'url', 'label' => 'Terms to Agree To', 'instructions' => 'Signing up then asks to agree.', 'if' => ['enabled' => true]],
+            ['handle' => 'terms_url', 'type' => 'url', 'label' => 'Terms to Agree To', 'if' => ['enabled' => true]],
             ['handle' => 'after_sign_in', 'type' => 'text', 'label' => 'Page After Sign-In', 'default' => '/account', 'if' => ['enabled' => true]],
             ['handle' => 'remember', 'type' => 'toggle', 'label' => 'Offer “Keep Me Signed In”', 'default' => true, 'if' => ['enabled' => true]],
         ], icon: 'users', description: 'Sign-up and sign-in for visitors.', order: 30, section: 'people', home: 'users');
@@ -168,7 +168,7 @@ final class AccountModule extends Plugin
                 'keywords' => ['account', 'login', 'members'],
                 'styles' => ['layout', 'size', 'spacing', 'typography'],
                 'fields' => match ($form) {
-                    'nav' => [['handle' => 'layout', 'type' => 'select', 'label' => 'Links', 'options' => ['row' => 'In a Row', 'column' => 'In a Column'], 'default' => 'row', 'instructions' => 'In a column for a sidebar. On a phone they stay in a row.']],
+                    'nav' => [['handle' => 'layout', 'type' => 'select', 'label' => 'Links', 'options' => ['row' => 'In a Row', 'column' => 'In a Column'], 'default' => 'row']],
                     'overview', 'gate-notice' => [],
                     default => [['handle' => 'submit', 'type' => 'text', 'label' => 'Button Label']],
                 },

@@ -34,10 +34,10 @@ final class AssistantModule extends Plugin
         $this->cms()->admin()->widget('assistant-ask', ['label' => 'Ask {brand}', 'description' => 'Ask the assistant from the Dashboard.', 'icon' => 'sparkle', 'column' => 'side', 'order' => 15, 'permission' => 'assistant.use', 'assistant' => false]);
 
         $this->cms()->settingsRegistry()->register('assistant', fields: [
-            ['handle' => 'api_key', 'type' => 'text', 'label' => 'Anthropic API Key', 'secret' => true, 'instructions' => 'From console.anthropic.com.'],
+            ['handle' => 'api_key', 'type' => 'text', 'label' => 'Anthropic API Key', 'secret' => true],
             ['handle' => 'model', 'type' => 'select', 'label' => 'Default Model', 'options' => array_map(static fn (array $model) => $model['name'], Claude::models()), 'default' => Claude::DEFAULT_MODEL, 'required' => true, 'display' => 'dropdown', 'width' => 'half'],
             ['handle' => 'effort', 'type' => 'select', 'label' => 'Effort', 'options' => Claude::efforts(), 'default' => 'medium', 'display' => 'dropdown', 'width' => 'half'],
-            ['handle' => 'small_model', 'type' => 'select', 'label' => 'Model for Small Tasks', 'instructions' => 'Names chats. A fast model is enough.', 'options' => array_map(static fn (array $model) => $model['name'], Claude::models()), 'default' => Claude::DEFAULT_SMALL_MODEL, 'required' => true, 'display' => 'dropdown', 'width' => 'half'],
+            ['handle' => 'small_model', 'type' => 'select', 'label' => 'Model for Small Tasks', 'options' => array_map(static fn (array $model) => $model['name'], Claude::models()), 'default' => Claude::DEFAULT_SMALL_MODEL, 'required' => true, 'display' => 'dropdown', 'width' => 'half'],
             ['handle' => 'approval', 'type' => 'select', 'label' => 'Ask Before', 'options' => ['destructive' => __('Deletes and Admin Changes'), 'writes' => __('Every Change')], 'default' => 'destructive', 'display' => 'radio'],
         ], icon: 'sparkle', description: 'API key, models and approvals.', order: 60, section: 'system');
 

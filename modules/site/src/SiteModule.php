@@ -384,10 +384,10 @@ final class SiteModule extends Plugin
             }
 
             return [...$fields,
-                ['handle' => 'favicon', 'type' => 'media', 'label' => 'Favicon', 'max' => 1, 'instructions' => 'SVG or PNG, square.'],
+                ['handle' => 'favicon', 'type' => 'media', 'label' => 'Favicon', 'max' => 1],
                 ['handle' => 'static', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Build a Static Site', 'default' => true],
                 ['handle' => 'auto_build', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Rebuild Automatically on Publish', 'default' => true],
-                ['handle' => 'search_index', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Publish a Search Index', 'default' => true, 'instructions' => 'For the Search block.'],
+                ['handle' => 'search_index', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Publish a Search Index', 'default' => true],
             ];
         });
     }

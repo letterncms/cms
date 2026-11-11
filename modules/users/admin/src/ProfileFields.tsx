@@ -1,4 +1,4 @@
-import { invalidate, loadManifest, run, t, useAbility } from '@letterncms/sdk'
+import { invalidate, loadManifest, run, useAbility } from '@letterncms/sdk'
 import { useRef, useState } from 'react'
 import { FieldsEditor, SaveBar, Spinner, useTabDirty, type RawField } from '@letterncms/ui'
 
@@ -34,8 +34,8 @@ export default function ProfileFields() {
   return (
     <>
       {!source.data ? <div className="grid place-items-center py-10 text-faint"><Spinner /></div> : (
-        <div className="mx-auto w-full max-w-[760px] pb-24">
-          <FieldsEditor fields={fields ?? source.data.fields ?? []} onChange={setFields} builtIn={t('Name, email and roles are built in.')} />
+        <div className="mx-auto w-full max-w-[640px] pb-24">
+          <FieldsEditor fields={fields ?? source.data.fields ?? []} onChange={setFields} />
         </div>
       )}
       <SaveBar dirty={dirty} saving={saving} error={failed} onSave={() => void save()} onDiscard={() => { setFields(null); setFailed(null) }} />

@@ -83,7 +83,7 @@ final class UsersModule extends Plugin
         });
 
         $hooks->addFilter('collections.settings', static function (array $settings, ?Collection $collection = null) use ($fields) {
-            return $collection?->system ? $settings : [...$settings, ['handle' => 'gate', 'type' => 'group', 'label' => 'Who Can Read This', 'instructions' => 'For every entry that does not say otherwise.', 'fields' => $fields]];
+            return $collection?->system ? $settings : [...$settings, ['handle' => 'gate', 'type' => 'group', 'label' => 'Who Can Read This', 'fields' => $fields]];
         });
     }
 
@@ -91,9 +91,9 @@ final class UsersModule extends Plugin
     {
         return [
             ['handle' => 'mode', 'type' => 'select', 'label' => 'Access', 'default' => 'inherit', 'options' => ['inherit' => 'Same as Above', 'public' => 'Everyone', 'teaser' => 'Everyone Reads the Start', 'locked' => 'Only People with Access']],
-            ['handle' => 'access', 'type' => 'tags', 'label' => 'Who Has Access', 'instructions' => 'Roles or access names. Empty: any account.'],
+            ['handle' => 'access', 'type' => 'tags', 'label' => 'Who Has Access', 'placeholder' => 'Any Account'],
             ['handle' => 'teaser_words', 'type' => 'number', 'label' => 'Words in the Teaser', 'min' => 0, 'placeholder' => '120'],
-            ['handle' => 'teaser_fields', 'type' => 'tags', 'label' => 'Fields in the Teaser', 'instructions' => 'Field names everyone may see, like excerpt.'],
+            ['handle' => 'teaser_fields', 'type' => 'tags', 'label' => 'Fields in the Teaser', 'placeholder' => 'excerpt'],
         ];
     }
 }
