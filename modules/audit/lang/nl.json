@@ -16,6 +16,7 @@
   "Also Record Reads": "Ook leesacties vastleggen",
   "Any Time": "Altijd",
   "API": "API",
+  "Applied Site Kit": "Sitekit toegepast",
   "Assistant": "Assistent",
   "Audit Log": "Auditlog",
   "Cancelled Sync": "Synchronisatie geannuleerd",
@@ -60,6 +61,8 @@
   "Export Audit Log": "Auditlog exporteren",
   "Export CSV": "CSV exporteren",
   "Exported Audit Log": "Auditlog geëxporteerd",
+  "Exported Site as a Kit": "Site als kit geëxporteerd",
+  "Forever": "Oneindig",
   "Gave Access": "Toegang gegeven",
   "Hid the Guided Start": "Begeleide start verborgen",
   "Imported Media": "Media geïmporteerd",
@@ -156,6 +159,5 @@
   "When": "Wanneer",
   "Who": "Wie",
   "Who changed what across the site, and when.": "Wie wat heeft gewijzigd op de site, en wanneer.",
-  "Forever": "Oneindig",
   "Wrote Schema Files": "Schemabestanden geschreven"
 }

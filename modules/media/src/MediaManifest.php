@@ -172,8 +172,12 @@ final class MediaManifest
         });
     }
 
-    /** Why a record may not be imported, or null. The same bar as an upload. */
-    public function validate(array $record): ?string
+    /**
+     * Why a record may not be imported, or null. The same bar as an upload.
+     *
+     * @param  ?string  $root  the folder its file is under when that is not this site's public/ (a kit's)
+     */
+    public function validate(array $record, ?string $root = null): ?string
     {
         $path = $record['path'] ?? null;
 
@@ -182,13 +186,17 @@ final class MediaManifest
         }
 
         try {
-            $file = Files::within(public_path(), $path);
+            $file = Files::within($root ?? public_path(), $path);
         } catch (Throwable) {
             return 'invalid_path';
         }
 
         if (! is_file($file)) {
             return null;
+        }
+
+        if (is_link($file)) {
+            return 'invalid_path';
         }
 
         $mime = $this->detect($file, $path);

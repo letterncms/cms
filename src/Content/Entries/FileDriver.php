@@ -187,12 +187,48 @@ final class FileDriver implements EntryDriver
         return EntryFilter::apply($entries, $query);
     }
 
-    private function parse(Collection $collection, string $relative, string $document): Entry
+    /**
+     * The entries a folder holds in this layout, wherever it is: `<root>/[<locale>/][<parent>/]<slug>.md`.
+     * What a site kit carries for a collection, whatever driver the collection it lands in uses. Parents come
+     * from the folders, as in a site; there are no working copies and no URLs, and `$locales` says which
+     * first folders are languages (the first of them is the one entries without a folder are in).
+     *
+     * @param  list<string>  $locales
+     * @return array<string, Entry> by path without `.md`
+     */
+    public function read(Collection $collection, string $root, array $locales): array
+    {
+        $entries = $ids = [];
+
+        foreach (is_dir($root) ? $this->scan($root) : [] as $relative) {
+            $entry = $this->parse($collection, $relative, (string) file_get_contents($root.'/'.$relative), $locales);
+            $entries[substr($relative, 0, -3)] = $entry;
+        }
+
+        foreach ($entries as $path => $entry) {
+            // A slug of digits ("404") is an integer key.
+            $entry->parentId = ($entries[dirname((string) $path)] ?? null)?->id;
+        }
+
+        return $entries;
+    }
+
+    /** An entry as the file it would be in this layout: the path under its collection's folder, and the document. */
+    public function document(Entry $entry, Collection $collection, array $ancestors = [], ?string $defaultLocale = null): array
+    {
+        $segments = $entry->locale !== ($defaultLocale ?? (string) config('app.locale', 'en')) ? [$entry->locale] : [];
+
+        return [implode('/', [...$segments, ...$ancestors, $entry->slug.'.md']), $this->serialize($entry, $collection)];
+    }
+
+    /** @param  ?list<string>  $locales  The languages of a folder that is not the site's own (read()). */
+    private function parse(Collection $collection, string $relative, string $document, ?array $locales = null): Entry
     {
         [$meta, $body] = Frontmatter::parse($document);
-        $defaultLocale = (string) config('app.locale', 'en');
+        $defaultLocale = $locales[0] ?? (string) config('app.locale', 'en');
         $segments = explode('/', $relative);
-        $locale = count($segments) > 1 && $this->isLocaleDir($segments[0]) ? $segments[0] : $defaultLocale;
+        $isLocale = $locales === null ? $this->isLocaleDir($segments[0]) : in_array($segments[0], array_slice($locales, 1), true);
+        $locale = count($segments) > 1 && $isLocale ? $segments[0] : $defaultLocale;
         $slug = basename($relative, '.md');
 
         $data = array_diff_key($meta, array_flip(self::RESERVED));
@@ -202,8 +238,9 @@ final class FileDriver implements EntryDriver
             $data[$collection->body] = $type->serializesToMarkdown() ? $type->fromMarkdown($body, $field) : ($data[$collection->body] ?? null);
         }
 
-        $id = strtolower((string) ($meta['id'] ?? throw new RuntimeException("Entry {$relative} in {$collection->handle} has no id.")));
-        $draft = is_file($this->draftFile($id)) ? json_decode((string) file_get_contents($this->draftFile($id)), true) : null;
+        // A file written by hand for a kit may leave its id out: nothing can name it, and it gets a new one anyway.
+        $id = strtolower((string) ($meta['id'] ?? ($locales !== null ? \Illuminate\Support\Str::ulid() : throw new RuntimeException("Entry {$relative} in {$collection->handle} has no id."))));
+        $draft = $locales === null && is_file($this->draftFile($id)) ? json_decode((string) file_get_contents($this->draftFile($id)), true) : null;
 
         return new Entry(
             id: $id,
@@ -272,10 +309,10 @@ final class FileDriver implements EntryDriver
             'origin' => $entry->originId,
             'position' => $collection->isTree() || $collection->structure === 'list' ? $entry->position : null,
             'blueprint' => $entry->blueprint,
-        ], static fn ($v) => $v !== null) + array_filter($data, static fn ($v) => $v !== null && $v !== [] && $v !== '') + [
+        ], static fn ($v) => $v !== null) + array_filter($data, static fn ($v) => $v !== null && $v !== [] && $v !== '') + array_filter([
             'created_at' => $entry->createdAt?->toIso8601String(),
             'updated_at' => $entry->updatedAt?->toIso8601String(),
-        ];
+        ]);
 
         return Frontmatter::dump($meta, $body);
     }

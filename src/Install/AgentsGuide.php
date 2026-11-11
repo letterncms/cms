@@ -141,6 +141,11 @@ final class AgentsGuide
                 .($has('design-code/save') ? ' JavaScript and CSS of the site\'s own live in `content/design/scripts` and `content/design/styles`: read and write them with `design-code/list`, `design-code/get` and `design-code/save`.' : '');
         }
 
+        if ($has('kits/apply')) {
+            $kit = Installer::kit();
+            $lines[] = '- '.($kit !== null ? "This site started from the site kit `{$kit}`: a copy, which it owns, with no link back. " : '').'A kit is a whole site to start from (content, design, code). `php cms kit:list` lists the ones here, `php cms kit:apply <handle> --mode=design --dry-run` says every file and entry it would create, replace or skip, and nothing that exists is overwritten unless `--clash=skip|replace|rename` says so. `php cms kit:export <folder>` makes this site into one; as abilities: `kits/list`, `kits/get`, `kits/apply`, `kits/export`.';
+        }
+
         $lines[] = '- `.env` and `storage/` hold secrets. Don\'t print, copy or commit them.';
         $lines[] = '- Docs: '.cms_brand('docs_url').' (agents: '.cms_brand('docs_url').'/agents/abilities).';
 
@@ -175,6 +180,7 @@ final class AgentsGuide
             'content/media/' => 'Media records, one YAML file per item (the files are in `public/media/`); `php cms migrate` reads them in',
             'config/' => 'Settings, one YAML file per group: `site.yaml` (name, URL, languages), `plugins.yaml` (what is on)',
             'plugins/' => 'Installed plugins. Composer or the store puts them here',
+            'kits/' => 'Site kits this site can apply (`php cms kit:list`); Composer or the store puts them here',
             'public/' => 'The built site and uploaded media. Rebuilt, never edited',
             'storage/' => 'Runtime files of this machine; its secrets are in `.env` beside it',
             'vendor/' => cms_brand().' and its libraries',

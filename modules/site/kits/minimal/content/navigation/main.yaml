@@ -1,0 +1,9 @@
+title: Main
+max_depth: 3
+items:
+  -
+    id: main0001
+    entry: 01kitminimal00000000000002
+  -
+    id: main0002
+    entry: 01kitminimal00000000000003

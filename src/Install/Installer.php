@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Cms\Abilities\AbilityException;
 use Cms\Foundation\Application;
+use Cms\Modules\Site\Kits\Kits;
 use Cms\Cms;
 use Cms\Content\Schemas\SchemaFiles;
 use Cms\Packages\PackageManager;
@@ -27,7 +28,18 @@ final class Installer
     /** What a new site gets unless someone chooses otherwise. Everything else is a click away in the store. */
     public const array RECOMMENDED = ['letterncms/seo', 'letterncms/forms'];
 
+    /** A setup that asks for no kit starts with an empty site. */
+    public const string NO_KIT = 'none';
+
     public function __construct(private readonly Application $app) {}
+
+    /** The kit this site's setup chose to start from, or null for none. */
+    public static function kit(): ?string
+    {
+        $kit = Files::readJson(storage_path('installed.json'))['kit'] ?? Kits::DEFAULT;
+
+        return is_string($kit) && $kit !== self::NO_KIT && Files::isHandle($kit) ? $kit : null;
+    }
 
     public static function installed(): bool
     {
@@ -96,6 +108,8 @@ final class Installer
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:254'],
             'password' => ['required', 'string', ...Passwords::rules()],
+            'kit' => ['nullable', 'string', 'max:64', 'regex:/^[a-z0-9][a-z0-9_-]{0,63}$/'],
+            'kit_from_store' => ['nullable', 'boolean'],
         ];
     }
 
@@ -118,6 +132,14 @@ final class Installer
             if (! $check['ok']) {
                 throw AbilityException::invalid(__('Requirement not met: :requirement.', ['requirement' => $check['label']]));
             }
+        }
+
+        // The kit is fetched, if it has to be, once the site exists; one that is here is checked now.
+        $kit = (string) ($input['kit'] ?? '') ?: Kits::DEFAULT;
+        $store = (bool) ($input['kit_from_store'] ?? false);
+
+        if ($kit !== self::NO_KIT && ! $store && $this->app->make(Kits::class)->find($kit) === null) {
+            throw AbilityException::invalid(__('There is no kit “:handle” here.', ['handle' => $kit]), ['kit' => __('Choose one of: :names.', ['names' => implode(', ', array_keys($this->app->make(Kits::class)->all()))])]);
         }
 
         $env = $this->databaseEnv($input);
@@ -164,14 +186,14 @@ final class Installer
 
         cms()->hooks()->dispatch('cms.migrated');
 
-        Files::putJson(storage_path('installed.json'), ['version' => Cms::VERSION, 'installedAt' => now()->toIso8601String()]);
+        Files::putJson(storage_path('installed.json'), ['version' => Cms::VERSION, 'installedAt' => now()->toIso8601String(), 'kit' => $kit]);
 
         return $user;
     }
 
     /**
      * The last step of a setup, on a request that booted with the plugins it pulled: what they
-     * start a new site with (the Site module's starter kit), a first build, and the site's `AGENTS.md`.
+     * start a new site with (the site kit the setup chose), a first build, and the site's `AGENTS.md`.
      */
     public function finish(User $user): void
     {
@@ -189,7 +211,7 @@ final class Installer
         $this->app->make(SchemaFiles::class)->refresh();
 
         // Last, so it names what the plugins brought: the site's guide for AI agents, unless it has one.
-        // On its own: a starter kit that failed above must not cost the site its guide, nor the guide the install.
+        // On its own: a kit that failed above must not cost the site its guide, nor the guide the install.
         try {
             $this->app->make(AgentsGuide::class)->write();
         } catch (Throwable $e) {

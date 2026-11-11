@@ -108,35 +108,7 @@ final class CollectionAbilities
                 if (($in['createOnly'] ?? false) && $this->cms->collections()->find($in['handle'])) {
                     throw AbilityException::invalid(__('A collection with this handle already exists.'));
                 }
-                $reserved = ['id', 'title', 'slug', 'status', 'locale', 'uri', 'parent', 'position', 'author', 'origin', 'published_at', 'created_at', 'updated_at', 'blueprint'];
-                // What is wrong with a field is said by its path (`fields.2.handle`), for the editor to show beside it.
-                FieldProblems::refuse((array) ($in['definition']['fields'] ?? []), $reserved);
-                $collection = Collection::fromArray($in['handle'], $in['definition']);
-
-                Blueprint::validate((array) ($in['definition']['fields'] ?? []));
-                $named = $in['definition']['blueprints'] ?? [];
-
-                if (! is_array($named) || ($named !== [] && array_is_list($named)) || count($collection->blueprints()) !== count($named)) {
-                    throw AbilityException::invalid(__('Blueprints are given by handle, each with a title and its fields.'));
-                }
-
-                foreach ($collection->blueprints() as $name => $blueprint) {
-                    Blueprint::validate($blueprint['fields'], $name.': ');
-                }
-
-                foreach ([null, ...array_keys($collection->blueprints())] as $name) {
-                    foreach ($collection->blueprint($name)->fields() as $field) {
-                        if (in_array($field->handle, $reserved, true)) {
-                            throw AbilityException::invalid(__('“:handle” is reserved. Choose another field handle.', ['handle' => $field->handle]));
-                        }
-                    }
-                }
-
-                // Its term archives: by a taxonomy, at addresses nothing else has.
-                if (($problem = app(\Cms\Content\Collections\Archives::class)->problem($collection)) !== null) {
-                    throw AbilityException::invalid($problem, ['definition.archives' => $problem]);
-                }
-
+                $collection = self::check((string) $in['handle'], (array) $in['definition']);
                 $this->cms->collections()->save($collection);
 
                 return $this->cms->collections()->findOrFail($collection->handle)->toArray();
@@ -207,6 +179,44 @@ final class CollectionAbilities
                 return $this->cms->fieldsets()->all()[$in['handle']] ?? null;
             },
         ]);
+    }
+
+    /**
+     * What saving a collection definition checks before anything is written: its fields and their handles, its
+     * blueprints and its term archives. The same for collections/save and for a site kit's collections.
+     */
+    public static function check(string $handle, array $definition): Collection
+    {
+        $reserved = ['id', 'title', 'slug', 'status', 'locale', 'uri', 'parent', 'position', 'author', 'origin', 'published_at', 'created_at', 'updated_at', 'blueprint'];
+        // What is wrong with a field is said by its path (`fields.2.handle`), for the editor to show beside it.
+        FieldProblems::refuse((array) ($definition['fields'] ?? []), $reserved);
+        $collection = Collection::fromArray($handle, $definition);
+
+        Blueprint::validate((array) ($definition['fields'] ?? []));
+        $named = $definition['blueprints'] ?? [];
+
+        if (! is_array($named) || ($named !== [] && array_is_list($named)) || count($collection->blueprints()) !== count($named)) {
+            throw AbilityException::invalid(__('Blueprints are given by handle, each with a title and its fields.'));
+        }
+
+        foreach ($collection->blueprints() as $name => $blueprint) {
+            Blueprint::validate($blueprint['fields'], $name.': ');
+        }
+
+        foreach ([null, ...array_keys($collection->blueprints())] as $name) {
+            foreach ($collection->blueprint($name)->fields() as $field) {
+                if (in_array($field->handle, $reserved, true)) {
+                    throw AbilityException::invalid(__('“:handle” is reserved. Choose another field handle.', ['handle' => $field->handle]));
+                }
+            }
+        }
+
+        // Its term archives: by a taxonomy, at addresses nothing else has.
+        if (($problem = app(\Cms\Content\Collections\Archives::class)->problem($collection)) !== null) {
+            throw AbilityException::invalid($problem, ['definition.archives' => $problem]);
+        }
+
+        return $collection;
     }
 
     /**

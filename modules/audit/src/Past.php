@@ -53,6 +53,8 @@ final class Past
             'globals/delete' => __('Deleted Global Set'),
             'globals/save' => __('Saved Global Set'),
             'globals/set' => __('Updated Global Set Values'),
+            'kits/apply' => __('Applied Site Kit'),
+            'kits/export' => __('Exported Site as a Kit'),
             'languages/create' => __('Added Language'),
             'languages/delete' => __('Removed Language'),
             'languages/set-default' => __('Made Language the Default'),

@@ -87,6 +87,17 @@ final class Menus
         return $this->find($handle);
     }
 
+    /**
+     * What save() checks of a menu, without writing it and without asking whether the entries it links to
+     * exist: for a menu whose entries are made in the same go (a site kit's).
+     */
+    public function check(array $menu): void
+    {
+        $maxDepth = max(1, min(5, (int) ($menu['maxDepth'] ?? 3)));
+        $count = 0;
+        $this->validate(array_values((array) ($menu['items'] ?? [])), 1, $maxDepth, $count);
+    }
+
     public function delete(string $handle): bool
     {
         $file = content_path("navigation/{$handle}.yaml");

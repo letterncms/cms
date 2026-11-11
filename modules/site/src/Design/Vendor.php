@@ -72,14 +72,19 @@ final class Vendor
      */
     public function all(): array
     {
-        if ($this->lock !== null) {
-            return $this->lock;
-        }
+        return $this->lock ??= self::locked(Files::readJson($this->path('lock.json')));
+    }
 
+    /**
+     * What a lock.json holds, of this site or of a kit, with only what it may hold: nothing in it is trusted to be a path.
+     *
+     * @return array<string, array{package: string, version: string, file: ?string, source: string, path: string, files: array<string, string>, requires: list<string>}>
+     */
+    public static function locked(array $json): array
+    {
         $out = [];
 
-        foreach ((array) (Files::readJson($this->path('lock.json'))['imports'] ?? []) as $specifier => $entry) {
-            // The lock is a file anybody can edit: nothing in it is trusted to be a path.
+        foreach ((array) ($json['imports'] ?? []) as $specifier => $entry) {
             if (! is_string($specifier) || ! preg_match(self::SPECIFIER, $specifier) || ! is_array($entry)
                 || ! preg_match(self::PACKAGE, (string) ($entry['package'] ?? '')) || ! preg_match(self::VERSION, (string) ($entry['version'] ?? ''))
                 || (isset($entry['file']) && ! preg_match(self::FILE, (string) $entry['file']))) {
@@ -100,7 +105,7 @@ final class Vendor
 
         ksort($out);
 
-        return $this->lock = $out;
+        return $out;
     }
 
     /**
@@ -209,6 +214,34 @@ final class Vendor
         }
 
         return $this->add($entry['package'].'@'.$version, $entry['file'], $specifier);
+    }
+
+    /**
+     * Take in libraries another lock names (a kit's), from the folder that holds their files: each file is
+     * checked against its hash before it is kept, and the lock gets the entries. An import this site already
+     * has is replaced by the one given.
+     *
+     * @param  array<string, array>  $entries  import name => entry, as locked() gives them
+     */
+    public function adopt(array $entries, string $from): void
+    {
+        $lock = $this->all();
+
+        foreach ($entries as $specifier => $entry) {
+            foreach ($entry['files'] as $file => $hash) {
+                $contents = is_file($source = Files::within($from, $file)) && ! is_link($source) ? (string) file_get_contents($source) : '';
+
+                if (! hash_equals($hash, self::hash($contents))) {
+                    throw new RuntimeException(__('The library “:name” is not what its lock.json says.', ['name' => $specifier]));
+                }
+
+                Files::put(Files::within($this->path(), $file), $contents);
+            }
+
+            $lock[$specifier] = $entry;
+        }
+
+        $this->save($lock);
     }
 
     /**

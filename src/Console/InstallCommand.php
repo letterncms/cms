@@ -8,6 +8,7 @@ use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 use Cms\Abilities\AbilityException;
 use Cms\Install\Installer;
+use Cms\Modules\Site\Kits\Kits;
 use Cms\Modules\Packages\StoreClient;
 use Cms\Packages\Install\PackageJobs;
 use Cms\Packages\PackageManager;
@@ -24,7 +25,8 @@ final class InstallCommand extends Command
         {--site-name=} {--site-url=}
         {--db=} {--db-host=127.0.0.1} {--db-port=} {--db-database=} {--db-username=} {--db-password=} {--db-prefix=}
         {--name=} {--email=} {--password=}
-        {--plugins= : Comma-separated plugin names to add, "recommended" (the default) or "none"}';
+        {--plugins= : Comma-separated plugin names to add, "recommended" (the default) or "none"}
+        {--kit= : The site kit to start from: minimal (the default), one in kits/, a kit package to fetch (letterncms/fathomline), or none}';
 
     protected $description = 'Install the CMS (database, first admin)';
 
@@ -50,6 +52,9 @@ final class InstallCommand extends Command
             'password' => $this->option('password') ?: password('Password (10+ characters, letters and numbers)', required: true),
         ];
 
+        [$input['kit'], $kitPackage] = $this->kit();
+        $input['kit_from_store'] = $kitPackage !== null;
+
         if ($db !== 'sqlite') {
             $input += [
                 'db_host' => $this->option('db-host'),
@@ -68,7 +73,7 @@ final class InstallCommand extends Command
         }
 
         $packages = app(PackageManager::class);
-        $wanted = $this->wanted();
+        $wanted = [...$this->wanted(), ...($kitPackage !== null ? [$kitPackage] : [])];
         $missing = array_values(array_filter($wanted, static fn (string $name) => ! $packages->repository()->find($name)));
 
         if ($missing !== [] && ! $this->pull($missing)) {
@@ -84,6 +89,26 @@ final class InstallCommand extends Command
         return $finish->isSuccessful()
             ? $this->done(['installed' => true, 'email' => $user->email, 'admin' => $input['site_url'].'/admin', 'missing' => $missing])
             : $this->failure('The site is installed, but its plugins could not finish setting it up.', details: ['output' => trim($finish->getOutput().$finish->getErrorOutput())]);
+    }
+
+    /**
+     * The kit to start from, and the package to fetch it from when it isn't here: a name alone is one of
+     * ours, as Composer and the store name it (letterncms/<name> lands in kits/<name>).
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    private function kit(): array
+    {
+        $kit = trim((string) ($this->option('kit') ?? '')) ?: Kits::DEFAULT;
+
+        if ($kit === Installer::NO_KIT) {
+            return [$kit, null];
+        }
+
+        [$vendor, $name] = str_contains($kit, '/') ? explode('/', strtolower($kit), 2) : [PackageManifest::VENDOR, $kit];
+        $handle = $vendor === PackageManifest::VENDOR ? $name : "{$vendor}-{$name}";
+
+        return [$handle, app(Kits::class)->find($handle) !== null ? null : "{$vendor}/{$name}"];
     }
 
     /** @return list<string> */
