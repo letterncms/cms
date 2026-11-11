@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\License\Console;
 
 use Cms\Modules\License\LicenseService;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 
 final class LicenseClearCommand extends Command
 {
@@ -21,6 +21,6 @@ final class LicenseClearCommand extends Command
         $service->clear();
         $this->components->info('Removed.');
 
-        return self::SUCCESS;
+        return $this->done(['cleared' => true]);
     }
 }

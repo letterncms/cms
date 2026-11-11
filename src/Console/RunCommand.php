@@ -4,21 +4,30 @@ declare(strict_types=1);
 
 namespace Cms\Console;
 
-use Illuminate\Console\Command;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Users\User;
+use Symfony\Component\Console\Input\InputInterface;
 
+/**
+ * Runs an ability. Always answers as `--json` does, one document on stdout: `{"data": …}`, or
+ * `{"error": {"type", "message", "details"}}` and a non-zero exit. Only `--list` is a table for people.
+ */
 final class RunCommand extends Command
 {
     protected $signature = 'run {ability? : e.g. entries/list}
         {input?* : key=value pairs (values may be JSON)}
-        {--json= : Input as a JSON object}
+        {--input= : The whole input as a JSON object}
         {--as= : Run as this user (email) instead of the system}
         {--list : List abilities}';
 
     protected $description = 'Run any ability from the command line';
+
+    protected function wantsJson(InputInterface $input): bool
+    {
+        return parent::wantsJson($input) || ! $input->hasParameterOption('--list', true);
+    }
 
     public function handle(AbilityRegistry $abilities): int
     {
@@ -28,10 +37,18 @@ final class RunCommand extends Command
                 array_values($abilities->all('cli'))
             ));
 
-            return self::SUCCESS;
+            return $this->done(array_values(array_map(static fn ($a) => $a->toArray(), $abilities->all('cli'))));
         }
 
-        $input = $this->option('json') ? (array) json_decode((string) $this->option('json'), true, 64, JSON_THROW_ON_ERROR) : [];
+        $input = [];
+
+        if ($this->option('input') !== null) {
+            $input = json_decode((string) $this->option('input'), true, 64);
+
+            if (! is_array($input) || ($input !== [] && array_is_list($input))) {
+                return $this->failure('--input takes a JSON object.', 'invalid_input');
+            }
+        }
 
         foreach ((array) $this->argument('input') as $pair) {
             [$key, $value] = array_pad(explode('=', (string) $pair, 2), 2, '');
@@ -44,28 +61,16 @@ final class RunCommand extends Command
             $user = User::query()->where('email', strtolower((string) $email))->first();
 
             if (! $user) {
-                $this->error("No user {$email}.");
-
-                return self::FAILURE;
+                return $this->failure("No user {$email}.", 'not_found');
             }
 
             $context = AbilityContext::forUser($user, 'cli');
         }
 
         try {
-            $result = $abilities->execute((string) $this->argument('ability'), $input, $context);
+            return $this->done($abilities->execute((string) $this->argument('ability'), $input, $context));
         } catch (AbilityException $e) {
-            $this->error($e->getMessage());
-
-            foreach ($e->details as $path => $message) {
-                $this->line("  {$path}: {$message}");
-            }
-
-            return self::FAILURE;
+            return $this->failure($e);
         }
-
-        $this->line(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-
-        return self::SUCCESS;
     }
 }

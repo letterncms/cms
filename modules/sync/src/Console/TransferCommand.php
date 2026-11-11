@@ -8,7 +8,7 @@ use Cms\Modules\Sync\Connections;
 use Cms\Modules\Sync\Preview;
 use Cms\Modules\Sync\Receiver;
 use Cms\Modules\Sync\Transfer;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 use Throwable;
 
 /** `php cms pull` and `php cms push`: the same preview, question and progress as the admin. */
@@ -26,18 +26,16 @@ abstract class TransferCommand extends Command
         try {
             if ($current = $transfer->current()) {
                 if ($current['remote'] !== $remote || $current['direction'] !== $direction) {
-                    $this->components->error(__('A :direction with :site is still going. Finish it, or cancel it from the admin, first.', ['direction' => $current['direction'], 'site' => $current['remote_label']]));
-
-                    return self::FAILURE;
+                    return $this->failure(__('A :direction with :site is still going. Finish it, or cancel it from the admin, first.', ['direction' => $current['direction'], 'site' => $current['remote_label']]), 'conflict');
                 }
 
                 $this->components->warn(__('A :direction with :site stopped at :percent%.', ['direction' => $direction, 'site' => $current['remote_label'], 'percent' => $current['percent']]));
 
-                if (! $this->option('yes') && ! $this->confirm(__('Carry on where it stopped?'), true)) {
+                if (! $this->agreed(__('Carry on where it stopped?'), true)) {
                     $transfer->cancel($current['id']);
                     $this->components->info(__('Canceled. Neither site changed.'));
 
-                    return self::SUCCESS;
+                    return $this->done(['status' => 'canceled']);
                 }
 
                 return $this->follow($transfer, $transfer->resume($current['id']));
@@ -48,7 +46,8 @@ abstract class TransferCommand extends Command
             $this->show($preview);
 
             if ($preview['problems'] !== []) {
-                return self::FAILURE;
+                // A person has read them above.
+                return $this->json() ? $this->failure(implode(' ', $preview['problems']), 'conflict', ['problems' => $preview['problems']]) : self::FAILURE;
             }
 
             $groups = $what === [] ? array_column(array_filter($preview['groups'], static fn (array $g) => $g['selected']), 'id') : $what;
@@ -56,9 +55,7 @@ abstract class TransferCommand extends Command
 
             foreach ($groups as $group) {
                 if (! in_array($group, $known, true)) {
-                    $this->components->error(__('There’s nothing called :what to sync. Choose from: :list.', ['what' => $group, 'list' => implode(', ', $known)]));
-
-                    return self::FAILURE;
+                    return $this->failure(__('There’s nothing called :what to sync. Choose from: :list.', ['what' => $group, 'list' => implode(', ', $known)]), 'invalid_input');
                 }
             }
 
@@ -67,22 +64,20 @@ abstract class TransferCommand extends Command
             $this->newLine();
 
             if ($this->option('dry-run')) {
-                return self::SUCCESS;
+                return $this->done(['dryRun' => true, 'groups' => array_values($groups), 'collections' => $collections, 'preview' => $preview]);
             }
 
             $question = $direction === 'pull'
                 ? __('Replace these on this site with :site’s? A backup is made first.', ['site' => $source->label()])
                 : __('Replace these on :site with this site’s? A backup is made there first.', ['site' => $dest->label()]);
 
-            if (! $this->option('yes') && ! $this->confirm($question, false)) {
-                return self::SUCCESS;
+            if (! $this->agreed($question)) {
+                return $this->done(['status' => 'declined']);
             }
 
             return $this->follow($transfer, $transfer->start($remote, $direction, ['groups' => $groups, 'collections' => $collections, 'rewrite' => $rewrite]));
         } catch (Throwable $e) {
-            $this->components->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e);
         }
     }
 
@@ -147,25 +142,23 @@ abstract class TransferCommand extends Command
         $this->newLine(2);
 
         return match ($progress['status']) {
-            'done' => $this->done($progress),
+            'done' => $this->finished($progress),
             'paused' => $this->failWith(__('The other site stopped answering: :message Run the same command again to carry on.', ['message' => $progress['message']])),
             default => $this->failWith((string) ($progress['error'] ?? __('The sync stopped.')).' '.__('Neither site changed.')),
         };
     }
 
-    private function done(array $progress): int
+    private function finished(array $progress): int
     {
         $this->components->info(__('Done: :rows rows and :files files from :from to :to.', ['rows' => number_format($progress['rows']), 'files' => number_format($progress['files']), 'from' => $progress['from'], 'to' => $progress['to']]));
         $undo = $progress['direction'] === 'pull' ? 'php cms sync:undo' : 'php cms sync:undo --remote='.$progress['remote'];
         $this->line('  '.__('Changed your mind? :command puts back what was there.', ['command' => $undo]));
 
-        return self::SUCCESS;
+        return $this->done($progress);
     }
 
     private function failWith(string $message): int
     {
-        $this->components->error($message);
-
-        return self::FAILURE;
+        return $this->failure($message);
     }
 }
