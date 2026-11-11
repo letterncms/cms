@@ -61,7 +61,8 @@ final class EntriesView
             'actions' => [
                 // A page someone can see is a click away.
                 ['label' => __('View on Site'), 'icon' => 'external', 'inline' => true, 'href' => '{row.uri}', 'when' => '{row.uri}', 'unless' => '{row.displayStatus} is draft, scheduled, expired'],
-                ['label' => __('Open'), 'icon' => 'edit', 'to' => $open],
+                // The row itself opens it; in the menu, beside a pencil, the act has its name, for those who may do it.
+                ['label' => __('Edit'), 'icon' => 'edit', 'to' => $open, 'can' => "entries.{$handle}.edit"],
                 ['label' => __('Duplicate'), 'icon' => 'copy', 'ability' => 'entries/duplicate', 'input' => $entry, 'then' => 'open', 'to' => "/content/{$handle}/{result.id}", 'can' => "entries.{$handle}.create"],
                 ['label' => __('Publish'), 'icon' => 'rocket', 'ability' => 'entries/publish', 'input' => $entry, 'success' => __('Published'), 'when' => '{row.displayStatus} is draft, changed', 'can' => "entries.{$handle}.publish"],
                 ['label' => __('Unpublish'), 'icon' => 'eye-off', 'ability' => 'entries/unpublish', 'input' => $entry, 'success' => __('Unpublished'), 'unless' => '{row.displayStatus} is draft', 'can' => "entries.{$handle}.publish"],
@@ -134,7 +135,7 @@ final class EntriesView
             'open' => $open,
             'actions' => [
                 ['label' => __('View on Site'), 'icon' => 'external', 'inline' => true, 'href' => '{row.href}', 'when' => '{row.href}'],
-                ['icon' => 'edit', ...$open],
+                ['icon' => 'edit', ...$open, 'label' => __('Edit')],
                 ['label' => __('Copy URL'), 'icon' => 'link', 'copy' => '{origin}{row.href}', 'success' => __('URL copied'), 'when' => '{row.href}'],
                 // Back to what the feature ships: the site's own version goes, with its history.
                 ['label' => __('Use Standard Version'), 'icon' => 'undo', 'variant' => 'danger', 'ability' => 'entries/delete', 'input' => $entry, 'success' => __('Back to the standard version'), 'when' => '{row.restorable}',

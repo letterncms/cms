@@ -113,8 +113,8 @@ final class ContentModule extends Plugin
         }
 
         $view = new EntriesView($this->cms(), self::PER_PAGE);
-        // The count follows what the list shows: its language, status and search.
-        $count = ['source' => ['ability' => 'entries/list', 'input' => ['collection' => $handle, 'locale' => '{query.locale}', 'status' => '{query.status}', 'search' => '{query.search}', 'perPage' => 1, 'fields' => []]], 'at' => 'total'];
+        // How many there are in the language on view, whatever narrows the list: "0" beside a name read as "there are none", next to a filter that found nothing.
+        $count = ['source' => ['ability' => 'entries/list', 'input' => ['collection' => $handle, 'locale' => '{query.locale}', 'perPage' => 1, 'fields' => []]], 'at' => 'total'];
         $new = [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'to' => "/content/{$handle}/new?locale={query.locale}", 'key' => 'c', 'can' => "entries.{$handle}.create"]];
         $records = ['type' => 'ui/records', 'props' => $view->records($collection, $user)];
         $page = ['title' => __($collection->title), 'icon' => $collection->icon];
