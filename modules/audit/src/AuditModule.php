@@ -50,7 +50,9 @@ final class AuditModule extends Plugin
             $title = $this->subjects[$key = self::call($ability, $input)] ?? null;
             unset($this->subjects[$key]);
 
-            if ((! $ability->isReadOnly() || $this->setting('reads', false)) && ! self::unrecorded($ability->name, $input)) {
+            // A plugin leaves out what it calls over and over for one change (`audit.unrecorded`): Import's turns, say.
+            if ((! $ability->isReadOnly() || $this->setting('reads', false)) && ! self::unrecorded($ability->name, $input)
+                && ! $this->cms()->hooks()->filter('audit.unrecorded', false, $ability->name, $input, $result)) {
                 $this->record($ability, $title === null ? $input : [...$input, AuditAbilities::SUBJECT => $title], $context);
             }
         });
