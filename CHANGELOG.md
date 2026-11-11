@@ -8,6 +8,8 @@
 
 ### Added
 
+- `GET /api/v1/openapi.json` is the REST API as an OpenAPI 3.1 document. Without a token it says how the API works: the generic paths (`/abilities`, `/abilities/{name}`, `/batch`), the error shape, bearer authentication, and the public content API (`/content/{collection}`, `/content/{collection}/{slug}`) with its query parameters and answers. It names no ability, so it does not say which plugins a site runs. With a token it has a path for every ability that token may run (plugins' included), each with its input and output schema. `GET /api/v1` links to it.
+- A read ability called with `GET` reads its query string as its schema asks: `?perPage=5` is a number and `?ids[]=a&ids[]=b` a list; a map or a list of maps is one value, as JSON.
 - `collections/schema` and the MCP resource `cms://collections/{handle}/schema` give one collection's JSON Schema: what an entry's `data` must follow as a draft and to be published, and the whole input of `entries/create` and `entries/update` for that collection. Every collection an ability answers with carries its `schema`. Resources can be families now (`cms()->context()->template()`), listed by MCP's `resources/templates/list`.
 - `navigation/remove-item` removes one item of a menu by its id, with what is nested under it, beside `navigation/add-item`.
 - Dry runs: every ability that changes something takes `dryRun: true` (`cms run … --dry-run`). Nothing is written, run or recorded, and the answer is `{dryRun, ability, checked, input, changes}`. `checked` says how far it went: `"full"` when the dry run is refused exactly where the real run would be and `changes` lists what would change or be removed, `"input"` when only the input and your permission were checked (`changes` is null, and the real run may still refuse). Entries (create, update, publish, unpublish, discard, delete, duplicate, move, reorder, restore, `pages/customize`), `settings/update` and every ability marked destructive or asking first (deleting a collection, file, user, global set, menu, comment, chat or token, removing a language, switching or uninstalling a plugin, starting or undoing a sync) are checked in full, by the same code the real run uses. A plugin's ability says the same with a `dryRun` callback; `Cms\Content\Entries\EntryService::dry()` runs entry writes without making them. In the workspace and for the assistant a dry run is shown as a check, not as a change.
@@ -16,6 +18,7 @@
 ### Fixed
 
 - `fieldsets/save` refuses a field of a type that does not exist, a handle used twice and fields nested too deep, as `collections/save` does. It checked handles only, so a fieldset could be saved that no collection could then import.
+- A number given as text (a query string, `cms run --key=value`) that is too large to be one is refused as invalid input. It was silently cut down to the largest integer.
 
 ### Changed
 
@@ -40,6 +43,10 @@
 
 - A row of a list shows the focus ring when you reach it with the keyboard, and a field that has the focus is clear to see in the dark theme.
 - On a touch screen every button is at least 44px to hit, whatever its size, and a dialog's buttons on a phone are 44px tall with more room between and under them.
+
+### Fixed
+
+- `GET /api/v1/abilities/{name}` reads numbers and booleans from the query string (`?perPage=5`, `?force=true`) as the ability's schema asks for them, instead of refusing them as text.
 
 ## 0.21.0 (2026-11-11)
 

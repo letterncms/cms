@@ -95,7 +95,7 @@ final class AbilityRegistry
         }
 
         try {
-            $input = Validator::validate($input, $ability->input, coerce: $context->transport === 'cli');
+            $input = Validator::validate($input, $ability->input, coerce: $context->transport === 'cli' || $context->strings);
         } catch (SchemaException $e) {
             throw AbilityException::invalid($e->getMessage(), $e->errors);
         }

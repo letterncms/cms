@@ -11,6 +11,7 @@ final readonly class AbilityContext
 {
     /**
      * @param  list<string>|null  $scopes  Token scopes (ability name patterns); null = unrestricted
+     * @param  bool  $strings  The input came as text (a query string, a shell): "5" is read as 5 and "true" as true where the schema asks for it
      */
     public function __construct(
         public ?User $user,
@@ -18,6 +19,7 @@ final readonly class AbilityContext
         public bool $system = false,
         public ?array $scopes = null,
         public ?string $requestId = null,
+        public bool $strings = false,
     ) {}
 
     public static function system(string $transport = 'internal'): self
@@ -25,9 +27,9 @@ final readonly class AbilityContext
         return new self(null, $transport, system: true);
     }
 
-    public static function forUser(?User $user, string $transport = 'internal', ?array $scopes = null): self
+    public static function forUser(?User $user, string $transport = 'internal', ?array $scopes = null, bool $strings = false): self
     {
-        return new self($user, $transport, scopes: $scopes);
+        return new self($user, $transport, scopes: $scopes, strings: $strings);
     }
 
     public function can(string $permission): bool

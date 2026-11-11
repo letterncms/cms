@@ -360,6 +360,7 @@ final class CmsServiceProvider extends ServiceProvider
         // Stateless API for integrations and agents (Bearer token).
         Route::prefix('api/v1')->middleware(['api', 'throttle:cms-api'])->group(function () {
             Route::get('/', [Http\Controllers\AbilityController::class, 'describe']);
+            Route::get('openapi.json', [Http\Controllers\AbilityController::class, 'openapi']);
             Route::middleware('auth:token')->group(function () {
                 Route::get('abilities', [Http\Controllers\AbilityController::class, 'index']);
                 Route::match(['get', 'post'], 'abilities/{name}', [Http\Controllers\AbilityController::class, 'run'])->where('name', '[a-z0-9-]+/[a-z0-9.-]+');
