@@ -1,4 +1,5 @@
 {
+  "Insert Block": "Blok invoegen",
   "“{title}” is now a component": "“{title}” is nu een component",
   "{brand}: abilities": "{brand}: acties",
   "{brand}: abilities by namespace": "{brand}: acties per namespace",
@@ -71,7 +72,6 @@
   "Add Animation": "Animatie toevoegen",
   "Add Attribute": "Attribuut toevoegen",
   "Add Below": "Hieronder toevoegen",
-  "Add Block": "Blok toevoegen",
   "Add Condition": "Voorwaarde toevoegen",
   "Add Custom HTML Blocks": "Aangepaste HTML-blokken toevoegen",
   "Add Event": "Gebeurtenis toevoegen",
@@ -460,7 +460,6 @@
   "Input Value": "Invoerwaarde",
   "Insert After": "Hierna invoegen",
   "Insert Before": "Hiervoor invoegen",
-  "Insert block": "Blok invoegen",
   "Inset": "Inzet",
   "Inside": "Binnen",
   "Installed Packages": "Geïnstalleerde pakketten",

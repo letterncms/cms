@@ -1,4 +1,5 @@
 {
+  "Insert Block": "Insérer un bloc",
   "“{title}” is now a component": "“{title}” est maintenant un composant",
   "{brand}: abilities": "{brand} : actions",
   "{brand}: abilities by namespace": "{brand} : actions par espace de noms",
@@ -71,7 +72,6 @@
   "Add Animation": "Ajouter une animation",
   "Add Attribute": "Ajouter un attribut",
   "Add Below": "Ajouter en dessous",
-  "Add Block": "Ajouter un bloc",
   "Add Condition": "Ajouter une condition",
   "Add Custom HTML Blocks": "Ajouter des blocs HTML personnalisés",
   "Add Event": "Ajouter un événement",
@@ -460,7 +460,6 @@
   "Input Value": "Valeur du champ",
   "Insert After": "Insérer après",
   "Insert Before": "Insérer avant",
-  "Insert block": "Insérer un bloc",
   "Inset": "Intérieure",
   "Inside": "À l’intérieur",
   "Installed Packages": "Paquets installés",
