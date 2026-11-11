@@ -33,8 +33,8 @@ export function SelectionBar({ count, children, onClear }: { count: number; chil
       style={pane ? { left: pane.center, maxWidth: pane.width - 32 } : undefined}
       // A float at the bottom of the sheet, the shape of the save bar: what's selected, what to do with it, and a way out.
       className={cn(
-        'fixed bottom-4 left-1/2 z-30 flex min-h-11 max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 gap-y-1 rounded-lg border border-border-float bg-float py-1.5 pl-4 pr-1.5 text-sm text-text shadow-pop transition-[opacity,translate] duration-160 ease-out max-sm:bottom-[calc(8px+env(safe-area-inset-bottom))]',
-        open ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0 duration-120',
+        'fixed bottom-4 left-1/2 z-bar flex min-h-11 max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 gap-y-1 rounded-lg border border-border-float bg-float py-1.5 pl-4 pr-1.5 text-sm text-text shadow-pop transition-[opacity,translate] duration-move ease-out max-sm:bottom-[calc(8px+env(safe-area-inset-bottom))]',
+        open ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0 duration-base',
       )}
     >
       <span className="mr-2 whitespace-nowrap font-medium tabular-nums text-ink">{t('{count} selected', { count: last })}</span>

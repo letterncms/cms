@@ -39,8 +39,8 @@ export function InspectorPanel({ open, onOpenChange, title, children, className,
   )
   return <Base.Root open={open} onOpenChange={onOpenChange}>
     <Base.Portal>
-      <Base.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-160 ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-      <Base.Popup className={cn('fixed inset-y-0 right-0 z-50 flex w-[min(100vw,var(--cms-inspector-width))] flex-col border-l border-border-modal bg-float shadow-dialog outline-none transition-[translate] duration-180 ease-out data-[ending-style]:pointer-events-none data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full', className)}>
+      <Base.Backdrop className="fixed inset-0 z-overlay bg-overlay transition-opacity duration-move ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+      <Base.Popup className={cn('fixed inset-y-0 right-0 z-overlay flex w-[min(100vw,var(--cms-inspector-width))] flex-col border-l border-border-modal bg-float shadow-dialog outline-none transition-[translate] duration-move ease-out data-[ending-style]:pointer-events-none data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full', className)}>
         <Base.Title className="sr-only">{title}</Base.Title>
         {children}
       </Base.Popup>

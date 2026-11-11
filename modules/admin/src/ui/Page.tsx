@@ -38,7 +38,7 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const claimed = useContext(WorkspaceContext)?.sidebar?.claimed
   const way = back && manifest ? wayBack(manifest, back) : back
   return (
-    <header className={cn('cms-topbar sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-2', className)}>
+    <header className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-2', className)}>
       <div className="flex min-w-0 items-center gap-3">
         {way && !claimed && (
           <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className="flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text">

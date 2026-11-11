@@ -130,7 +130,7 @@ function Languages({ has, locales }: { has: string[]; locales: string[] }) {
   const present = new Set(has)
   return <span className="flex items-center gap-1">
     {locales.map((code) => <span key={code} title={present.has(code) ? undefined : t('Not translated')}
-      className={cn('inline-flex h-4.5 w-[22px] items-center justify-center rounded-xs font-mono text-[10px] uppercase', present.has(code) ? 'bg-sunken text-text' : 'text-faint/70')}>{code}</span>)}
+      className={cn('inline-flex h-4.5 w-[22px] items-center justify-center rounded-xs font-mono text-2xs uppercase', present.has(code) ? 'bg-sunken text-text' : 'text-faint/70')}>{code}</span>)}
   </span>
 }
 

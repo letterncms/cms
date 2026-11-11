@@ -139,7 +139,7 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
       onMouseLeave={() => setHovered(null)}
       onFocus={() => setHovered(e.label)}
       onBlur={() => setHovered(null)}
-      className={cn('grid aspect-square place-items-center rounded-md text-muted outline-offset-[-2px] transition-colors duration-120 hover:bg-hover hover:text-ink', isSelected(e) && 'bg-active text-ink')}
+      className={cn('grid aspect-square place-items-center rounded-md text-muted outline-offset-[-2px] transition-colors duration-base hover:bg-hover hover:text-ink', isSelected(e) && 'bg-active text-ink')}
     >
       <Icon name={e.id} size={20} />
     </button>

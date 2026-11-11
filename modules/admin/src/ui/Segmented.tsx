@@ -46,12 +46,12 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
             event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus()
           }}
           className={cn(
-            'inline-flex min-w-0 max-w-full items-center justify-center gap-1.5 font-medium transition-colors duration-120 ease-out disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-offset-0',
+            'inline-flex min-w-0 max-w-full items-center justify-center gap-1.5 font-medium transition-colors duration-base ease-out disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-offset-0',
             fit ? 'flex-[1_1_auto]' : block && 'flex-[1_0_auto]',
-            size === 'xs' ? 'min-h-5 rounded-xs text-xs' : 'min-h-6 rounded-[6px] text-sm',
+            size === 'xs' ? 'min-h-5 rounded-xs text-xs' : 'min-h-6 rounded-xs text-sm',
             // One padding per option: an icon alone is a square, a label that must fit gives up some room.
             !o.label && !block ? (size === 'xs' ? 'w-6 px-0' : 'w-7 px-0') : fit && o.label ? 'px-1.5' : size === 'xs' ? 'px-2' : 'px-2.5',
-            value === o.value ? 'bg-float text-ink shadow-raise dark:bg-[color-mix(in_srgb,var(--cms-float),var(--cms-ink)_12%)]' : implied === o.value ? 'bg-float/55 text-text' : 'text-muted hover:text-text',
+            value === o.value ? 'bg-float text-ink shadow-raise dark:bg-fill' : implied === o.value ? 'bg-float/55 text-text' : 'text-muted hover:text-text',
           )}
         >
           {o.icon && <Icon name={o.icon} size={size === 'xs' ? 14 : 16} className="shrink-0" />}
@@ -109,7 +109,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
               onChange(tabs[next].value)
               e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus()
             }}
-            className={cn('flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap font-medium outline-offset-[-2px] transition-[color,box-shadow] duration-120 ease-out', size === 'xs' ? 'text-xs' : 'text-sm', value === t.value ? 'text-ink shadow-[inset_0_-2px_0_var(--cms-ink)]' : 'text-muted hover:text-text')}
+            className={cn('flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap font-medium outline-offset-[-2px] transition-[color,box-shadow] duration-base ease-out', size === 'xs' ? 'text-xs' : 'text-sm', value === t.value ? 'text-ink shadow-[inset_0_-2px_0_var(--cms-ink)]' : 'text-muted hover:text-text')}
           >
             {iconOnly ? <Icon name={t.icon!} size={16} /> : t.label}
             {t.indicator && <><span className="size-1.5 shrink-0 rounded-full bg-signal" aria-hidden /><span className="sr-only">{translate('Unsaved changes')}</span></>}

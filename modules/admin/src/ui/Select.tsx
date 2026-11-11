@@ -75,7 +75,7 @@ export function Select(props: SelectProps) {
         <Base.Icon render={<Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />} />
       </Base.Trigger>
       <Base.Portal>
-        <Base.Positioner sideOffset={4} alignItemWithTrigger={false} className="z-50">
+        <Base.Positioner sideOffset={4} alignItemWithTrigger={false} className="z-overlay">
           <Base.Popup className={popupClass}>
             {fallback ? (
               <Base.Item value={null} className={itemClass}>
@@ -159,7 +159,7 @@ function SearchableSelect({ value, onChange, options, placeholder, valueHint, si
         <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />
       </Combobox.Trigger>
       <Combobox.Portal>
-        <Combobox.Positioner sideOffset={4} align="start" className="z-50">
+        <Combobox.Positioner sideOffset={4} align="start" className="z-overlay">
           <Combobox.Popup aria-label={ariaLabel} className={cn(popupClass, 'flex flex-col overflow-hidden !p-0')}>
             {/* The search sits flush in the popup: the popup already shows where focus is. */}
             <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">

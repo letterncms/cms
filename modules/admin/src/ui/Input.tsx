@@ -23,7 +23,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ i
   return (
     // As wide as its place, also in a row beside other controls, unless the caller gives it a width.
     <div className={cn('relative flex min-w-0 items-center', !/(^|\s)([\w-]+:)*!?w-/.test(className ?? '') && 'w-full', className)}>
-      {icon && <Icon name={icon} size={size === 'xs' ? 12 : 14} className={cn('pointer-events-none absolute z-[1] text-faint', iconAt)} />}
+      {icon && <Icon name={icon} size={size === 'xs' ? 12 : 14} className={cn('pointer-events-none absolute z-raised text-faint', iconAt)} />}
       <input ref={ref} aria-invalid={invalid || undefined} className={cn(base, appearance === 'quiet' && 'cms-input-quiet', heights[size], icon ? withIcon : left, suffix ? 'pr-16' : right)} {...props} />
       {suffix && <div className="absolute right-2 flex items-center gap-1 text-xs text-faint">{suffix}</div>}
     </div>

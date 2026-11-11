@@ -34,7 +34,7 @@ export function TitleField({ field, value, onChange, error, disabled }: FieldPro
       disabled={disabled}
       aria-label={field.label}
       invalid={!!error}
-      className="text-[34px] font-semibold leading-[42px] tracking-[-0.025em] text-ink placeholder:text-faint/60"
+      className="text-display font-semibold text-ink placeholder:text-faint/60"
     />
   )
 }

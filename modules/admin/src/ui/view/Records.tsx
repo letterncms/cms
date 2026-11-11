@@ -419,7 +419,7 @@ function Reason({ text }: { text: string }) {
   return (
     <Tooltip content={text} open={hovered || pinned} onOpenChange={setHovered}>
       <button type="button" aria-label={text} onClick={() => setPinned((p) => !p)} onBlur={() => setPinned(false)} onKeyDown={(e) => { if (e.key === 'Escape') setPinned(false) }}
-        className="relative z-10 grid size-5 shrink-0 cursor-help place-items-center rounded-xs text-muted transition-colors duration-120 hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[popup-open]:bg-hover data-[popup-open]:text-text">
+        className="relative z-raised grid size-5 shrink-0 cursor-help place-items-center rounded-xs text-muted transition-colors duration-base hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[popup-open]:bg-hover data-[popup-open]:text-text">
         <Icon name="lock" size={14} />
       </button>
     </Tooltip>

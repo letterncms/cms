@@ -72,7 +72,7 @@ export function SaveBar({ dirty, saving = false, error, onSave, onDiscard }: Sav
     <div role="region" aria-label={t('Unsaved changes')} className="cms-savebar" data-state={dirty ? 'open' : 'closed'}>
       {failed ? (
         <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-          <Icon name="warning" size={16} className="shrink-0 text-[#f2685d]" />
+          <Icon name="warning" size={16} className="shrink-0 text-ink-danger" />
           <span className="min-w-0 truncate" title={failed}>{failed}</span>
         </span>
       ) : (

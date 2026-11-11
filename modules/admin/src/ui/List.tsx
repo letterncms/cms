@@ -9,7 +9,7 @@ export function List({ children, className }: { children: ReactNode; className?:
 
 export function Row({ to, onClick, children, selected, className, actions }: { to?: string; onClick?: () => void; children: ReactNode; selected?: boolean; className?: string; actions?: ReactNode }) {
   const body = <div className="flex min-w-0 flex-1 items-center gap-3">{children}</div>
-  const cls = cn('group flex min-h-10 items-center gap-3 px-3 text-sm no-underline text-text transition-colors duration-120', (to || onClick) && 'hover:bg-hover', selected && 'bg-focus-soft hover:bg-[color-mix(in_srgb,var(--cms-focus)_14%,transparent)]', className)
+  const cls = cn('group flex min-h-10 items-center gap-3 px-3 text-sm no-underline text-text transition-colors duration-base', (to || onClick) && 'hover:bg-hover', selected && 'bg-focus-soft hover:bg-focus-hover', className)
   return (
     <div role="listitem" className={cls}>
       {to ? (
@@ -24,7 +24,7 @@ export function Row({ to, onClick, children, selected, className, actions }: { t
         body
       )}
       {/* With a pointer, actions show on hover or focus; on touch they are always there. */}
-      {actions && <div className="flex shrink-0 items-center gap-1 transition-opacity duration-120 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 has-[[data-popup-open]]:opacity-100">{actions}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-1 transition-opacity duration-base [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 has-[[data-popup-open]]:opacity-100">{actions}</div>}
     </div>
   )
 }

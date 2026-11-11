@@ -141,7 +141,7 @@ function Row({ id, depth, indent, ghost, children }: { id: string; depth: number
       role="treeitem"
       aria-level={depth + 1}
       style={{ transform: CSS.Translate.toString(transform), transition, paddingLeft: depth * indent }}
-      className={cn('transition-[padding] duration-120', ghost && 'opacity-40')}
+      className={cn('transition-[padding] duration-base', ghost && 'opacity-40')}
     >
       {children(handle)}
     </div>

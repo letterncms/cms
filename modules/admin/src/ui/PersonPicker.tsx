@@ -78,7 +78,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
         )
       })}
       {/* One field: the trigger and its clear button share the border, and it lights up as a field does while the list is open. */}
-      <div data-focus={(single && open) || undefined} data-disabled={(single && disabled) || undefined} className={cn(single && 'cms-input flex min-w-0 items-center pr-1', single && (small ? 'h-7 rounded-sm' : 'h-8 rounded-md'), single && 'focus-within:border-focus focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_18%,transparent)]')}>
+      <div data-focus={(single && open) || undefined} data-disabled={(single && disabled) || undefined} className={cn(single && 'cms-input flex min-w-0 items-center pr-1', single && (small ? 'h-7 rounded-sm' : 'h-8 rounded-md'), single && 'focus-within:border-focus focus-within:shadow-focus')}>
         <Popover open={open && !disabled} onOpenChange={(next) => !disabled && setOpen(next)} className="w-72 max-w-[calc(100vw-24px)]" trigger={trigger}>
           <Input size="sm" icon="search" aria-label={t('Search people')} placeholder={t('Search people…')} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} />
           <div className="mt-1 max-h-64 overflow-y-auto">
