@@ -391,5 +391,11 @@
   "You are not allowed to do this.": "Vous n’êtes pas autorisé à effectuer cette action.",
   "You do not have access to the admin.": "Vous n’avez pas accès à l’administration.",
   "Your session expired. Reload the page.": "Votre session a expiré. Rechargez la page.",
-  "Your sign-in expired. Please start again.": "Votre connexion a expiré. Recommencez."
+  "Your sign-in expired. Please start again.": "Votre connexion a expiré. Recommencez.",
+  "“:handle” is reserved. Choose another field handle.": "« :handle » est réservé. Choisissez un autre identifiant de champ.",
+  "A field needs a handle.": "Un champ a besoin d’un identifiant.",
+  "Another field uses this handle.": "Un autre champ utilise cet identifiant.",
+  "Sub-fields must be a list.": "Les sous-champs doivent être une liste.",
+  "The field type “:type” is not available.": "Le type de champ « :type » n’est pas disponible.",
+  "Use lowercase letters, digits and underscores, starting with a letter.": "Utilisez des minuscules, des chiffres et des tirets bas, en commençant par une lettre."
 }

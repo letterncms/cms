@@ -10,6 +10,7 @@ use Cms\Abilities\AbilityRegistry;
 use Cms\Abilities\Shapes;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Fields\Blueprint;
+use Cms\Content\Fields\FieldProblems;
 use Cms\Cms;
 use Cms\Support\Schema\Shape;
 
@@ -67,8 +68,10 @@ final class CollectionAbilities
                 if (($in['createOnly'] ?? false) && $this->cms->collections()->find($in['handle'])) {
                     throw AbilityException::invalid(__('A collection with this handle already exists.'));
                 }
-                $collection = Collection::fromArray($in['handle'], $in['definition']);
                 $reserved = ['id', 'title', 'slug', 'status', 'locale', 'uri', 'parent', 'position', 'author', 'origin', 'published_at', 'created_at', 'updated_at', 'blueprint'];
+                // What is wrong with a field is said by its path (`fields.2.handle`), for the editor to show beside it.
+                FieldProblems::refuse((array) ($in['definition']['fields'] ?? []), $reserved);
+                $collection = Collection::fromArray($in['handle'], $in['definition']);
 
                 Blueprint::validate((array) ($in['definition']['fields'] ?? []));
                 $named = $in['definition']['blueprints'] ?? [];
@@ -153,6 +156,7 @@ final class CollectionAbilities
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'title' => ['type' => 'string', 'maxLength' => 120], 'fields' => ['type' => 'array', 'items' => ['type' => 'object']]], 'required' => ['handle', 'title', 'fields']],
             'output' => Shape::nullable(self::fieldset()),
             'handler' => function (array $in) {
+                FieldProblems::refuse($in['fields']);
                 $this->cms->fieldsets()->save($in['handle'], $in['title'], $in['fields']);
 
                 return $this->cms->fieldsets()->all()[$in['handle']] ?? null;
