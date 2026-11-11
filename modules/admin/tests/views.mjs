@@ -173,13 +173,6 @@ function entries(summary, def, manifest) {
       undated: { sort: '-updated_at', filters: [{ field: '{field}', operator: 'null' }] },
     } } : {}),
     ...(tree ? { tree: { source: { ability: 'entries/tree', input: plain }, version: 'version', ...(can.edit ? { reorder: { label: 'Drag to Reorder', ability: 'entries/reorder', input: { collection: handle, ids: '{ids}', parentId: '{parent}', versions: '{versions}' }, ...(can.publish ? {} : { when: '{row.status} is not published' }) } } : {}) } } : {}),
-    ...(handle === 'pages' ? { appendix: {
-      label: 'Built-in Pages', source: { ability: 'pages/builtin', input: {} }, groups: { rows: 'pages' }, key: 'handle',
-      open: { label: 'Open', to: '/content/{row.collection}/{row.id}', when: '{row.id}' },
-      actions: [{ label: 'Customize', ability: 'pages/customise', input: { group: '{row.group}', handle: '{row.handle}' }, then: 'open', to: '/content/{result.collection}/{result.id}', when: '{row.customisable}' }],
-      columns: { title: { key: 'label' }, uri: { key: 'path', empty: 'Shown inside other pages' }, displayStatus: { key: 'status', format: 'status', tones: { standard: 'neutral', conflict: 'warning', customised: 'published', draft: 'draft' }, labels: { standard: 'Standard', conflict: 'A page has this address', customised: 'Published', draft: 'Draft' } },
-        ...Object.fromEntries(columns.filter((c) => !['uri', 'displayStatus'].includes(c.key)).map((c) => [c.key, { blank: true }])) },
-    } } : {}),
   }
 }
 

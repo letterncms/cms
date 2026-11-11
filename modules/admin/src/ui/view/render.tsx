@@ -17,7 +17,7 @@ import { ActionButton, shown } from './actions'
 import { TabContext, useView, ViewContext } from './context'
 import { Form, SettingsView } from './Form'
 import { formatValue, type FormatOptions } from './formats'
-import { Records } from './Records'
+import { Records, type RecordsProps } from './Records'
 import { at, fill, input, safeUrl } from './scope'
 
 type Renderer = ComponentType<{ node: ViewNode; path: string }>
@@ -35,9 +35,9 @@ export function ViewNodeView({ node, path }: { node: ViewNode; path: string }) {
 
 /** Props as shown: words and values filled in, while `source`, actions and dialogs keep their templates for when they run. */
 function fillShown(props: Record<string, any>, scope: Record<string, unknown>): Record<string, any> {
-  // A list's literal `rows` are values as they were found, never templates. A list's calendar, tree
-  // and appendix fill in with their month and their rows.
-  const kept = new Set(['source', 'rows', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'empty', 'count', 'calendar', 'tree', 'appendix'])
+  // A list's literal `rows` are values as they were found, never templates. A list's calendar and tree
+  // fill in with their month and their rows.
+  const kept = new Set(['source', 'rows', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'empty', 'count', 'calendar', 'tree'])
   return Object.fromEntries(Object.entries(props ?? {}).map(([k, v]) => [k, kept.has(k) ? v : fill(v, scope)]))
 }
 
@@ -325,7 +325,8 @@ const builtins: Record<string, Renderer> = {
   'ui/action': SurfaceAction,
   'ui/links': Links,
   'ui/actions': ({ node }) => <div className="flex flex-wrap items-center gap-2"><Buttons actions={node.props.items} /></div>,
-  'ui/records': ({ node }) => <Records {...(node.props as any)} />,
+  // `key` names the rows' key, which React would take as its own.
+  'ui/records': ({ node }) => { const { key, ...props } = node.props as RecordsProps; return <Records {...props} rowKey={key} /> },
   'ui/form': ({ node }) => <Form {...(node.props as any)} />,
   'ui/settings': ({ node }) => <SettingsView namespace={String(node.props.namespace)} />,
 }

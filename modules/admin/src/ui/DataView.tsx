@@ -7,7 +7,7 @@ import { useOverviewSource, type OverviewSource } from './overviewSource'
 import { DataCard, DataGrid } from './DataGrid'
 import { EmptyState, NoMatches } from './EmptyState'
 import { Fields } from './Fields'
-import { DataTable, TableToolbar, flattenTree, tableTemplate, type DataColumn, type DataSelection, type DataTree } from './DataTable'
+import { DataTable, TableToolbar, flattenTree, type DataColumn, type DataSelection, type DataTree } from './DataTable'
 import { OverviewControls, nextTableSort, type OverviewView } from './ViewControls'
 import { useRecordNavigation } from './recordNavigation'
 import { useViewPrefs, type CalendarDate, type ViewPrefs, type ViewPrefsChange } from './viewPrefs'
@@ -56,8 +56,6 @@ interface BaseDataViewProps<T> {
   calendarSource?: (date: CalendarDate, month: string | undefined) => { dated: OverviewSource; undated?: OverviewSource }
   /** The view, sort and columns, when the caller keeps them (its loading depends on them). */
   prefs?: [ViewPrefs, (change: ViewPrefsChange) => void]
-  /** Drawn under the table, in its columns and lined up with it: another set of rows that belongs here. */
-  appendix?: (columns: DataColumn<T>[], align: { template: string; nested: boolean }) => ReactNode
 }
 
 /** Ordinary records must provide the standard metadata; wrappers supply a typed accessor. */
@@ -71,7 +69,7 @@ const FEW = 8
 const isDate = (iso: string | null | undefined) => !!iso && Number.isFinite(Date.parse(iso))
 
 /** Search, display preferences and selection use the same components as Content collections. */
-export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, tree, calendarSource, prefs: kept, appendix }: DataViewProps<T>) {
+export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, tree, calendarSource, prefs: kept }: DataViewProps<T>) {
   // A tree's records, each before the ones it holds: what is selected, searched and shown as cards.
   const every = flattenTree(items, tree?.children)
   // Date columns and the calendar only for dates the records have.
@@ -130,8 +128,6 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
   const state = failed ? <EmptyState icon="warning" title={t('Could not load data')} action={retry && <Button onClick={retry}>{t('Retry')}</Button>} /> : view !== 'calendar' && !busy && rows.length === 0 ? query ? <NoMatches onClear={() => setSearch('')} /> : empty : null
   // The tree as it is, while nothing narrows or reorders it.
   const asTree = tree && !query && !(sort && !onSort) ? tree : undefined
-  const nested = !!asTree && items.some((item) => asTree.children(item)?.length > 0)
-  const align = appendix ? { template: tableTemplate(visible, { actions: true, nested, reorder: !!asTree?.reorder }), nested } : undefined
   const pictures = !!image && (!imageColumn || shown.has(imageColumn))
   const isSelected = (item: T) => selection?.ids.has(rowKey(item)) || selected?.(item)
 
@@ -156,9 +152,8 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
         {visible.slice(1).filter((c) => c.card === 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="m-0 mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{c.render(item)}</div>)}
         <dl className="m-0 mt-3 space-y-1 text-xs text-muted">{visible.slice(1).filter((c) => c.card !== 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="flex min-w-0 gap-2"><dt className="shrink-0 text-faint">{c.label}</dt><dd className="m-0 ml-auto min-w-0 truncate">{c.render(item)}</dd></div>)}</dl>
       </DataCard>)}
-    </DataGrid> : <DataTable label={label} columns={visible} items={asTree ? items : rows} tree={asTree} align={align} rowKey={rowKey} rowHref={rowHref} onRowClick={onRowClick} selected={isSelected} selection={selection} actions={actions} loading={loading} stale={stale} cursor={cursor} state={state} sort={sort} onSort={(column) => changeSort(nextTableSort(column.sort ?? column.id, sort, column.descFirst))} sortable={new Set(sortable.map((c) => c.id))} />}
+    </DataGrid> : <DataTable label={label} columns={visible} items={asTree ? items : rows} tree={asTree} rowKey={rowKey} rowHref={rowHref} onRowClick={onRowClick} selected={isSelected} selection={selection} actions={actions} loading={loading} stale={stale} cursor={cursor} state={state} sort={sort} onSort={(column) => changeSort(nextTableSort(column.sort ?? column.id, sort, column.descFirst))} sortable={new Set(sortable.map((c) => c.id))} />}
 
-    {view === 'table' && !state && align && appendix?.(visible, align)}
     {view !== 'calendar' && pagination && <PagePagination {...pagination} />}
   </div>
 }

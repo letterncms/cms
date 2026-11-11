@@ -81,14 +81,15 @@ final class ContentAbilities
 
         $a->register('pages/builtin', [
             'label' => 'Built-in Pages',
-            'description' => 'Pages features bring at addresses of their own (sign in and account pages, checkout), by group: each page\'s path, and whether the site has its own version (an entry of the group\'s collection) or uses the standard one.',
+            'description' => 'Pages features bring at addresses of their own (sign in and account pages, checkout), by group (`group` for one): each page\'s path, and whether the site has its own version (an entry of the group\'s collection) or uses the standard one. `displayStatus` says what is live as the site\'s pages do: standard, published, changed (a version waits to be published), scheduled, or conflict (a page of the site has this address).',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['group' => self::HANDLE]],
             'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
                 $groups = [];
 
                 foreach ($registry->all() as $group) {
-                    if (! $this->allowed($ctx->user, $group['collection'], 'view')) {
+                    if (! $this->allowed($ctx->user, $group['collection'], 'view') || (isset($in['group']) && $in['group'] !== $group['id'])) {
                         continue;
                     }
 
@@ -103,12 +104,23 @@ final class ContentAbilities
                             default => 'draft',
                         };
                         // Where it opens once it is the site's own, and whether this person may make it so.
-                        $pages[] = ['handle' => (string) $handle, 'label' => __($page['label']), 'path' => $page['path'] ?? null, 'id' => $entry?->id, 'status' => $status,
-                            'group' => $group['id'], 'collection' => $group['collection'], 'customisable' => $status === 'standard' && $this->allowed($ctx->user, $group['collection'], 'create')];
+                        // Listed as the site's pages are: what is live, and when it last changed. The standard version is live until the site's own is published.
+                        $display = match (true) {
+                            $status === 'conflict' || $entry === null => $status,
+                            $entry->isLive() => $entry->displayStatus(),
+                            default => 'changed',
+                        };
+                        $pages[] = ['handle' => (string) $handle, 'label' => __($page['label']), 'path' => $page['path'] ?? null, 'id' => $entry?->id, 'version' => $entry?->version(), 'status' => $status, 'displayStatus' => $display,
+                            'publishedAt' => $entry?->publishedAt?->toIso8601String(), 'updatedAt' => $entry?->updatedAt?->toIso8601String(),
+                            // A page on view at an address of its own; one with a placeholder (`/store/{slug}`) is many.
+                            'href' => isset($page['path']) && ! str_contains((string) $page['path'], '{') && $status !== 'conflict' ? $page['path'] : null,
+                            'group' => $group['id'], 'collection' => $group['collection'], 'customisable' => $status === 'standard' && $this->allowed($ctx->user, $group['collection'], 'create'),
+                            'opens' => $entry !== null || $this->allowed($ctx->user, $group['collection'], 'create'),
+                            'restorable' => $entry !== null && $this->allowed($ctx->user, $group['collection'], 'delete')];
                     }
 
                     // Named after what brought them: a plugin's own name, the way its screen and settings are called.
-                    $groups[] = ['id' => $group['id'], 'label' => __(\Cms\Packages\PackageRepository::labelOf($group['package']) ?? $group['label']), 'collection' => $group['collection'], 'canCustomise' => $this->allowed($ctx->user, $group['collection'], 'create'), 'pages' => $pages];
+                    $groups[] = ['id' => $group['id'], 'label' => __(\Cms\Packages\PackageRepository::labelOf($group['package']) ?? $group['label']), 'collection' => $group['collection'], 'canCustomise' => $this->allowed($ctx->user, $group['collection'], 'create'), 'total' => count($pages), 'pages' => $pages];
                 }
 
                 return $groups;
@@ -117,9 +129,10 @@ final class ContentAbilities
 
         $a->register('pages/customise', [
             'label' => 'Customize a Built-in Page',
-            'description' => 'Make a built-in page the site\'s own: creates a draft from its standard version and returns the entry to edit. An already customized page returns its entry.',
+            'description' => 'Make a built-in page the site\'s own: creates a draft from its standard version and returns the entry to edit. An already customized page returns its entry, to anyone who may view it.',
             'annotations' => ['draft' => true],
-            'permission' => fn (?User $user, array $in) => ($group = $registry->get((string) $in['group'])) !== null && $this->allowed($user, $group['collection'], 'create'),
+            'permission' => fn (?User $user, array $in) => ($group = $registry->get((string) $in['group'])) !== null
+                && ($this->allowed($user, $group['collection'], 'create') || ($this->allowed($user, $group['collection'], 'view') && $own($group, (string) ($in['handle'] ?? '')) !== null)),
             'input' => ['type' => 'object', 'properties' => ['group' => self::HANDLE, 'handle' => ['type' => 'string', 'maxLength' => 64]], 'required' => ['group', 'handle']],
             'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
                 $group = $registry->get($in['group']) ?? throw AbilityException::notFound($in['group']);

@@ -87,7 +87,9 @@ function listOf(manifest: ReturnType<typeof useManifest>, handle: string, locale
   const within = manifest.collections.find((c) => c.handle === summary?.within)
   const shown = within ?? summary
   const other = locale && locale !== manifest.site.defaultLocale && manifest.site.locales.includes(locale)
-  return { path: `/content/${shown?.handle ?? handle}${other ? `?locale=${locale}` : ''}`, label: shown?.title ?? '', within }
+  // A built-in page goes back to its feature's tab; the site's pages keep their language.
+  const query = summary?.tab ? `?tab=${summary.tab}` : other ? `?locale=${locale}` : ''
+  return { path: `/content/${shown?.handle ?? handle}${query}`, label: shown?.title ?? '', within }
 }
 
 function useEntryQuery(id: string, skip: boolean) {

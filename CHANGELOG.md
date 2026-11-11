@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Changed
+
+- **Pages**: the pages a feature brings, like sign-in and checkout, have a tab beside your own pages, one per feature (**Site**, **Account**, **Market**, and any plugin's), instead of a section under the list. Each tab is the same list: search, the same columns and the same statuses, where **Standard** is the version the feature ships and **Changes** means your version waits to be published.
+- Clicking a built-in page opens it in the editor, made from its standard version the first time. **Use Standard Version** in its ⋯ menu deletes your version and goes back to the standard one. Back from the editor returns to its tab.
+- **Breaking.** `ui/records` no longer takes `appendix`: a list of other rows is a `ui/tab` of its own. `pages/builtin` takes a `group` and says for each page its `displayStatus`, dates, `version`, `href` and whether it opens (`opens`) or can go back to standard (`restorable`); each group has its `total`.
+
+### Fixed
+
+- Lists that are a tree, like **Pages**, keep their 40px rows when the table is too narrow for every column: the drag handle no longer counts as a column that gives way, which wrapped each row's actions onto a second line.
+- A list's `key` (the field that tells its rows apart) is used; rows were always told apart by `id`.
+- A `ui/records` list's `at` finds its rows in an answer that is itself a list.
+
 ## 0.20.2 (2026-11-11)
 
 ### Fixed

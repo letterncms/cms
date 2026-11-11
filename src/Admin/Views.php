@@ -208,12 +208,9 @@ final class Views
             if ($action === null) unset($props['empty']['action']); else $props['empty']['action'] = $action;
         }
 
-        // A tree's reordering and the rows under a list are actions like the rest.
+        // A tree's reordering is an action like the rest.
         if (is_array($props['tree']['reorder'] ?? null) && $this->action($props['tree']['reorder'], $user, $depth) === null) {
             unset($props['tree']['reorder']);
-        }
-        if (isset($props['appendix']) && is_array($props['appendix'])) {
-            $props['appendix'] = $this->actions($props['appendix'], $user, $depth);
         }
 
         foreach (['open', 'action'] as $key) {

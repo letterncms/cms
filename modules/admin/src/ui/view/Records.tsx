@@ -4,7 +4,7 @@ import { Button, IconButton } from '../Button'
 import { Icon } from '../Icon'
 import type { Tone } from '../Badge'
 import { calendarRange } from '../calendar'
-import { DataTable, flattenTree, type DataColumn, type DataTree } from '../DataTable'
+import { flattenTree, type DataColumn, type DataTree } from '../DataTable'
 import { DataView } from '../DataView'
 import { confirm } from '../Dialog'
 import { EmptyState, NoMatches } from '../EmptyState'
@@ -61,8 +61,6 @@ interface Column {
   field?: { type: string; options?: unknown }
   /** With `format: languages`: every language there is. */
   locales?: string[]
-  /** Nothing in this column for these rows (an appendix's). */
-  blank?: boolean
 }
 
 interface Filter {
@@ -90,9 +88,11 @@ export interface RecordsProps {
   /** Where the records load from; or literal `rows`, what a command or search found. */
   source?: Source
   rows?: Row[]
-  /** Where the records are in the response (`items` unless it is a list itself). */
+  /** Where the records are in the response (`0.pages`); without it, the response when it is a list, otherwise its `items`. */
   at?: string
   key?: string
+  /** `key`, as the renderer hands it on. */
+  rowKey?: string
   columns: Column[]
   /** By the ability with a `param`, among what is loaded without one, or `false` for no search. */
   search?: { param?: string; placeholder?: string } | false
@@ -116,18 +116,6 @@ export interface RecordsProps {
   address?: boolean
   /** `false`: read as it is, a ranked list: no Display menu, no sorting by its headers. */
   display?: boolean
-  /** Rows that belong under the list, in its columns (built-in pages under the site's pages), while nothing narrows it. */
-  appendix?: {
-    label: string
-    source: Source
-    /** Groups in the response, each with its heading and its rows. */
-    groups?: { label?: string; rows?: string }
-    key?: string
-    open?: ViewAction
-    actions?: ViewAction[]
-    /** What a column shows for these rows, by its key: another key, other words. */
-    columns?: Record<string, Partial<Column>>
-  }
 }
 
 type Row = Record<string, unknown>
@@ -176,7 +164,7 @@ const fitTrack = (values: unknown[]) => `minmax(120px,${Math.min(360, Math.max(1
  * that opens and the actions of each row. The same component as every overview, so every
  * list looks and works alike.
  */
-export function Records({ id, label, source, rows, at: path, key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, address, display = true, appendix }: RecordsProps) {
+export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, address, display = true }: RecordsProps) {
   const { scope, act } = useView()
   const { query: location } = useLocation()
   const [ownText, setOwnText] = useState('')
@@ -210,7 +198,9 @@ export function Records({ id, label, source, rows, at: path, key = 'id', columns
   const response = rows ?? (asTree ? treeData.data : data.data)
   const children = tree?.children ?? 'children'
   const items = useMemo(() => {
-    const list = Array.isArray(response) ? response : at(response, asTree ? tree?.at : path ?? 'items')
+    // Where the rows are, when the answer says; otherwise the answer itself or its `items`.
+    const where = asTree ? tree?.at : path
+    const list = where ? at(response, where) : Array.isArray(response) ? response : at(response, 'items')
     return Array.isArray(list) ? (list as Row[]) : []
   }, [response, path, asTree, tree?.at])
   const every = asTree ? flattenTree(items, (row) => (at(row, children) as Row[] | undefined) ?? []) : items
@@ -227,22 +217,14 @@ export function Records({ id, label, source, rows, at: path, key = 'id', columns
   const selectionKey = JSON.stringify([listId, page, text, chosen, sortKey])
   useEffect(() => { setPicked(new Set()); setFailures([]) }, [selectionKey])
 
-  const extra = useAbility<unknown>(appendix?.source.ability ?? 'abilities/list', input(appendix?.source.input, scope), { enabled: !!appendix && !filtered })
-  const groups = useMemo(() => {
-    if (!appendix || !Array.isArray(extra.data)) return []
-    const list = extra.data as Row[]
-    if (!appendix.groups) return [{ label: appendix.label, rows: list }]
-    return list.map((group) => ({ label: String(at(group, appendix.groups!.label ?? 'label') ?? ''), rows: (at(group, appendix.groups!.rows ?? 'rows') as Row[] | undefined) ?? [] })).filter((group) => group.rows.length > 0)
-  }, [appendix, extra.data])
-
   // Thumbnails for the media on view, in one lookup.
   const mediaKeys = columns.filter((c) => c.format === 'media' || (c.format === 'field' && c.field?.type === 'media')).map((c) => c.key)
   const ids = [...new Set(every.flatMap((row) => mediaKeys.flatMap((k) => mediaIds(at(row, k)))))].filter((id) => /^[0-9a-z]{26}$/i.test(id))
   const lookup = useAbility<{ items: MediaThumb[] }>('media/lookup', { ids }, { enabled: ids.length > 0, staleTime: 300_000, placeholderData: (p) => p })
   const media = useMemo(() => new Map((lookup.data?.items ?? []).map((m) => [m.id.toLowerCase(), m])), [lookup.data])
 
-  // Columns that fit their longest value, here and in the rows under the list.
-  const fits = Object.fromEntries(columns.filter((c) => c.fit).map((c) => [c.key, fitTrack([...every.map((row) => at(row, c.key)), ...groups.flatMap((g) => g.rows.map((row) => at(row, appendix?.columns?.[c.key]?.key ?? c.key)))])]))
+  // Columns that fit their longest value.
+  const fits = Object.fromEntries(columns.filter((c) => c.fit).map((c) => [c.key, fitTrack(every.map((row) => at(row, c.key)))]))
 
   const segmented = filters.filter((f) => f.display === 'segmented')
   const toolbar = (server || filters.length > 0) && (
@@ -290,8 +272,7 @@ export function Records({ id, label, source, rows, at: path, key = 'id', columns
     </>
   }
 
-  const toColumns = (list: Column[], overrides?: Record<string, Partial<Column>>): DataColumn<Row>[] => list.map((own) => {
-    const c = { ...own, ...overrides?.[own.key] }
+  const toColumns = (list: Column[]): DataColumn<Row>[] => list.map((own) => {
     return {
       id: own.key,
       label: own.label,
@@ -304,7 +285,7 @@ export function Records({ id, label, source, rows, at: path, key = 'id', columns
       value: paged || sorting || own.sort === false || !display ? undefined : (row: Row) => plainValue(at(row, own.key), own.labels),
       // Days are read newest first.
       descFirst: ['date', 'datetime', 'ago'].includes(own.format ?? '') || (own.format === 'field' && ['date', 'number'].includes(own.field?.type ?? '')),
-      render: (row: Row) => <Cell row={row} column={c} media={media} />,
+      render: (row: Row) => <Cell row={row} column={own} media={media} />,
     }
   })
 
@@ -394,18 +375,6 @@ export function Records({ id, label, source, rows, at: path, key = 'id', columns
       error={!rows && loaded.isError}
       onRetry={() => void loaded.refetch()}
       columns={toColumns(columns)}
-      appendix={appendix && groups.length > 0 && !filtered ? (visible, align) => {
-        const appendixColumns = toColumns(columns, appendix.columns).filter((c) => visible.some((v) => v.id === c.id))
-        const appendixHref = hrefFor(appendix.open)
-        return <section className="mt-10" aria-label={appendix.label}>
-          <h2 className="m-0 mb-3 text-sm font-semibold text-ink">{appendix.label}</h2>
-          <div className="space-y-6">{groups.map((group, i) => <div key={i}>
-            {appendix.groups && <div className="cms-label mb-1.5">{group.label}</div>}
-            <DataTable<Row> label={group.label} items={group.rows} columns={appendixColumns} align={align} rowKey={(row) => String(at(row, appendix.key ?? 'id'))} rowHref={appendixHref}
-              actions={(row) => <>{shown(appendix.actions, rowScope(row)).map((a, j) => <ActionButton key={j} action={a} size="sm" variant={a.variant ?? 'ghost'} scope={{ row }} />)}</>} actionsInView />
-          </div>)}</div>
-        </section>
-      } : undefined}
       empty={filtered
         ? <NoMatches onClear={() => { if (address) setQuery({ [searchParam]: null, page: null, ...Object.fromEntries(filters.map((f) => [f.param, null])) }); else { setOwnText(''); setOwnChosen({}); setOwnPage(1) } }} />
         : empty?.size === 'sm' ? <p className="m-0 py-3 text-sm text-muted">{empty.title ?? t('Nothing here yet')}</p>
@@ -423,7 +392,6 @@ export function Records({ id, label, source, rows, at: path, key = 'id', columns
 
 /** One cell: the value as its format writes it, with the row's icon, a quieter second value or its problem. */
 function Cell({ row, column: c, media }: { row: Row; column: Column; media: Map<string, MediaThumb> }) {
-  if (c.blank) return null
   if (c.format === 'switch') return <SwitchCell row={row} column={c} />
   const raw = at(row, c.key)
   const value = c.empty && (raw === null || raw === undefined || raw === '') ? <span className="text-muted">{c.empty}</span> : formatValue(raw, { format: c.format, tones: c.tones, labels: c.labels, currency: c.currency ? String(at(row, c.currency) ?? c.currency) : undefined, field: c.field, locales: c.locales, media })

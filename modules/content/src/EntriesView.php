@@ -12,8 +12,9 @@ use Cms\Users\User;
 /**
  * A collection's entries as the catalog's `ui/records`: search, status and language, the tree
  * (dragged into order) or a sort, table, grid or calendar, the columns its fields offer, what
- * each row and a selection can do, and, under the site's pages, the built-in pages. Drawn by
- * the same renderer as every other list, so a plugin's lists work exactly like these.
+ * each row and a selection can do. Drawn by the same renderer as every other list, so a
+ * plugin's lists work exactly like these. The pages a feature brings get a list of their own
+ * beside the site's pages, in the same columns.
  */
 final class EntriesView
 {
@@ -94,23 +95,6 @@ final class EntriesView
             ]];
         }
 
-        if ($handle === 'pages') {
-            // Built-in pages under the site's own, in the same columns.
-            $records['appendix'] = [
-                'label' => __('Built-in Pages'), 'source' => ['ability' => 'pages/builtin'], 'groups' => ['rows' => 'pages'], 'key' => 'handle',
-                'open' => ['label' => __('Open'), 'to' => '/content/{row.collection}/{row.id}', 'when' => '{row.id}'],
-                'actions' => [['label' => __('Customize'), 'ability' => 'pages/customise', 'input' => ['group' => '{row.group}', 'handle' => '{row.handle}'], 'then' => 'open', 'to' => '/content/{result.collection}/{result.id}', 'when' => '{row.customisable}']],
-                'columns' => [
-                    'title' => ['key' => 'label'],
-                    'uri' => ['key' => 'path', 'empty' => __('Shown inside other pages')],
-                    'displayStatus' => ['key' => 'status', 'format' => 'status',
-                        'tones' => ['standard' => 'neutral', 'conflict' => 'warning', 'customised' => 'published', 'draft' => 'draft'],
-                        'labels' => ['standard' => __('Standard'), 'conflict' => __('A page has this address'), 'customised' => __('Published'), 'draft' => __('Draft')]],
-                    ...array_fill_keys(array_values(array_diff(array_column($columns, 'key'), ['title', 'uri', 'displayStatus'])), ['blank' => true]),
-                ],
-            ];
-        }
-
         // Cards show the first picture.
         if ($media !== []) {
             foreach ($records['columns'] as $i => $column) {
@@ -121,6 +105,41 @@ final class EntriesView
         }
 
         return $records;
+    }
+
+    /**
+     * The pages one feature brings (sign in, checkout), as a list beside the site's own pages: the
+     * same columns and statuses, where "Standard" is the version the feature ships. A row opens the
+     * site's own version, made from the standard one the first time.
+     */
+    public function builtin(array $group): array
+    {
+        $page = ['group' => $group['id'], 'handle' => '{row.handle}'];
+        $entry = ['id' => '{row.id}', 'expectedVersion' => '{row.version}'];
+        $open = ['label' => __('Open'), 'ability' => 'pages/customise', 'input' => $page, 'then' => 'open', 'to' => '/content/{result.collection}/{result.id}', 'when' => '{row.opens}'];
+
+        return [
+            'id' => "builtin.{$group['id']}", 'label' => __($group['label']), 'key' => 'handle', 'display' => false,
+            'source' => ['ability' => 'pages/builtin', 'input' => ['group' => $group['id']]], 'at' => '0.pages',
+            'columns' => [
+                ['key' => 'label', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)'],
+                ['key' => 'path', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'empty' => __('Shown inside other pages')],
+                ['key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '104px',
+                    'tones' => ['standard' => 'neutral', 'conflict' => 'warning'], 'labels' => ['standard' => __('Standard'), 'conflict' => __('Address Taken')]],
+                ['key' => 'published', 'label' => __('Published')],
+                ['key' => 'updated', 'label' => __('Updated')],
+            ],
+            'open' => $open,
+            'actions' => [
+                ['label' => __('View on Site'), 'icon' => 'external', 'inline' => true, 'href' => '{row.href}', 'when' => '{row.href}'],
+                ['icon' => 'edit', ...$open],
+                ['label' => __('Copy URL'), 'icon' => 'link', 'copy' => '{origin}{row.href}', 'success' => __('URL copied'), 'when' => '{row.href}'],
+                // Back to what the feature ships: the site's own version goes, with its history.
+                ['label' => __('Use Standard Version'), 'icon' => 'undo', 'variant' => 'danger', 'ability' => 'entries/delete', 'input' => $entry, 'success' => __('Back to the standard version'), 'when' => '{row.restorable}',
+                    'confirm' => ['title' => str_replace('{title}', '{row.label}', __('Use the standard “{title}”?')), 'text' => __('Your version and its history are deleted. The page shows what comes with the feature.'), 'confirm' => __('Use Standard Version'), 'danger' => true]],
+            ],
+            'empty' => ['icon' => 'page', 'title' => __('No pages')],
+        ];
     }
 
     /** @return list<array> the collection's fields, named in the user's language */

@@ -115,12 +115,6 @@ final class Catalog
                 'dates' => $this->object(['published' => $id, 'updated' => $id]),
                 'defaultView' => ['type' => 'string', 'enum' => ['table', 'grid', 'calendar']],
                 'empty' => $empty, 'address' => ['type' => 'boolean'], 'display' => ['type' => 'boolean'],
-                // Rows under the list, in its columns, while nothing narrows it: built-in pages under the site's own.
-                'appendix' => $this->object([
-                    'label' => $s, 'source' => $source, 'groups' => $this->object(['label' => $id, 'rows' => $id]), 'key' => $id,
-                    'open' => $action, 'actions' => ['type' => 'array', 'maxItems' => 4, 'items' => $action],
-                    'columns' => ['type' => 'object', 'additionalProperties' => ['type' => 'object']],
-                ], ['label', 'source']),
             ], ['label', 'columns'])],
             'ui/form' => ['label' => 'A form loaded from one ability and saved with another, with the save bar', 'children' => false, 'props' => $this->object([
                 'source' => $source, 'fieldsAt' => $id, 'valuesAt' => $id, 'into' => $id,

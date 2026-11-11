@@ -182,16 +182,22 @@ final class AdminTest extends TestCase
         // Not an item of its own: it belongs to the pages, and the editor goes back there.
         $nav = array_column($this->cms()->navigation()->forUser($this->admin())['nav'], null, 'id');
         $this->assertSame('collection.pages', $nav['collection.shop-pages']['home']);
-        $this->assertSame('pages', array_column($this->app->make(Manifest::class)->build($this->admin())['collections'], 'within', 'handle')['shop-pages']);
+        $collections = array_column($this->app->make(Manifest::class)->build($this->admin())['collections'], null, 'handle');
+        $this->assertSame(['pages', 'shop'], [$collections['shop-pages']['within'], $collections['shop-pages']['tab']]);
 
         $groups = array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id');
-        $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'status' => 'standard', 'group' => 'shop', 'collection' => 'shop-pages', 'customisable' => true]], $groups['shop']['pages']);
+        $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'version' => null, 'status' => 'standard', 'displayStatus' => 'standard', 'publishedAt' => null, 'updatedAt' => null,
+            'href' => '/basket', 'group' => 'shop', 'collection' => 'shop-pages', 'customisable' => true, 'opens' => true, 'restorable' => false]], $groups['shop']['pages']);
+        $this->assertSame(1, $groups['shop']['total']);
+        $this->assertSame(['shop'], array_column($this->cms()->abilities()->execute('pages/builtin', ['group' => 'shop'], $ctx), 'id'), 'One group, asked by its id');
 
         $made = $this->cms()->abilities()->execute('pages/customise', ['group' => 'shop', 'handle' => 'basket'], $ctx);
         $entry = $this->cms()->entries()->find($made['id']);
         $this->assertSame(['shop-pages', 'basket', 'Standard basket en'], [$entry->collection, $entry->slug, $entry->data['blocks'][0]['props']['text']]);
         $this->assertSame($made['id'], $this->cms()->abilities()->execute('pages/customise', ['group' => 'shop', 'handle' => 'basket'], $ctx)['id'], 'Once is enough');
-        $this->assertSame('draft', array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id')['shop']['pages'][0]['status']);
+        // The standard version is live until the site's own is published: a version waits, as on a page with changes.
+        $page = array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id')['shop']['pages'][0];
+        $this->assertSame(['draft', 'changed', true], [$page['status'], $page['displayStatus'], $page['restorable']]);
     }
 
     public function test_settings_have_a_sidebar_of_their_own(): void
