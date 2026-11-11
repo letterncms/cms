@@ -39,6 +39,17 @@ final class BrowserFixturesTest extends TestCase
             Files::put(content_path('design/'.$path), $contents);
         }
 
+        // Every page: links to two pages, and a stage that both keep.
+        $this->cms()->content()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
+            ['type' => 'box', 'props' => ['tag' => 'nav'], 'children' => [
+                ['type' => 'link', 'anchor' => 'to-one', 'props' => ['label' => 'One', 'url' => '/one']],
+                ['type' => 'link', 'anchor' => 'to-two', 'props' => ['label' => 'Two', 'url' => '/two#deep']],
+            ]],
+            ['type' => 'box', 'anchor' => 'stage', 'persist' => 'stage', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'stage']], 'children' => []],
+            ['type' => 'box', 'props' => ['tag' => 'main'], 'anchor' => 'main', 'children' => [['type' => 'outlet']]],
+        ]]]);
+        $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
+
         foreach ($this->pages() as $title => $blocks) {
             $this->cms()->content()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
         }
@@ -47,10 +58,19 @@ final class BrowserFixturesTest extends TestCase
         $this->assertSame([], $status['errors']);
         $this->assertSame([], $status['warnings']);
 
-        if ($target = getenv('CMS_BROWSER_FIXTURES')) {
+        $target = getenv('CMS_BROWSER_FIXTURES');
+
+        if ($target) {
             Files::deleteDirectory($target);
-            Files::copyDirectory(public_path(), $target);
+            Files::copyDirectory(public_path(), $target.'/plain');
         }
+
+        // The same site, navigating without page loads.
+        $this->cms()->abilities()->execute('design/update', ['transition' => ['type' => 'fade', 'duration' => 0.2, 'navigation' => 'client']], \Cms\Abilities\AbilityContext::system('test'));
+        $status = $this->app->make(SiteBuilder::class)->buildAll();
+        $this->assertSame([], $status['errors']);
+        $this->assertStringContainsString('navigate', (string) file_get_contents(public_path('one/index.html')));
+        $target && Files::copyDirectory(public_path(), $target.'/client');
     }
 
     /** @return array<string, string> path under content/design => contents */
@@ -71,6 +91,7 @@ final class BrowserFixturesTest extends TestCase
                   document.documentElement.dataset.unmounted = el.dataset.mounted ? 'yes' : 'no'
                 }
                 JS,
+            'styles/one.css' => ".only-one{outline:3px solid rgb(4, 5, 6)}\n",
             'styles/hero.css' => ".hero{outline:3px solid rgb(1, 2, 3)}\n",
         ];
     }
@@ -80,6 +101,17 @@ final class BrowserFixturesTest extends TestCase
     {
         return [
             'Code' => [['type' => 'box', 'class' => 'hero', 'code' => ['scripts' => ['hero'], 'styles' => ['hero']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Hero']]]]],
+            'One' => [
+                ['type' => 'heading', 'props' => ['text' => 'Page one', 'level' => '1']],
+                ['type' => 'box', 'anchor' => 'leaving', 'class' => 'only-one', 'code' => ['styles' => ['one']], 'behavior' => ['module' => 'probe', 'props' => ['name' => 'leaving']], 'children' => []],
+                ['type' => 'box', 'style' => ['base' => ['height' => '300vh']], 'children' => []],
+            ],
+            'Two' => [
+                ['type' => 'heading', 'props' => ['text' => 'Page two', 'level' => '1']],
+                ['type' => 'box', 'style' => ['base' => ['height' => '150vh']], 'children' => []],
+                ['type' => 'paragraph', 'anchor' => 'deep', 'props' => ['text' => 'Deep in page two']],
+                ['type' => 'box', 'style' => ['base' => ['height' => '150vh']], 'children' => []],
+            ],
             'Behavior' => [
                 ['type' => 'box', 'anchor' => 'first', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'first', 'title' => '{entry.title}']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'First']]]],
                 ['type' => 'box', 'style' => ['base' => ['height' => '400vh']], 'children' => []],

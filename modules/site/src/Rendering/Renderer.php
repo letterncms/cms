@@ -285,10 +285,15 @@ final class Renderer
             $foot[] = '<script type="module" src="'.e($src).'"></script>';
         }
 
+        // Pages swapped without a page load: every public page brings the script that does it, and the same import map,
+        // since a page can't take another's place when its modules would resolve differently.
+        $client = $context->mode !== PageContext::EDITOR && $context->mode !== PageContext::PREVIEW && $design->transition()['navigation'] === 'client';
+        $client && $this->blocks->uses('navigate');
+
         $foot = $this->hooks->filter('site.foot', $foot, $context);
 
         // An import map counts from the first module on: it goes in the head, on pages that load one of the design's.
-        if ((bool) $this->hooks->filter('site.modules', $modules !== [] || $context->modules, $context) && ($map = $this->code->importMapTag()) !== '') {
+        if ((bool) $this->hooks->filter('site.modules', $modules !== [] || $context->modules || $client, $context) && ($map = $this->code->importMapTag()) !== '') {
             $context->dependencies['design:importmap'] = true;
             $head[] = $map;
         }

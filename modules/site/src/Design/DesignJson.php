@@ -18,7 +18,9 @@ use Cms\Support\Files;
  *                above it, after the block before) and `spacing`, the flow between its blocks: { blocks, headings, afterHeadings, items }
  *   buttons      button variants, each a look: { primary: { base: {...}, hover: {...} }, secondary: {...} } (sizes are control tokens)
  *   fields       every form field, part by part: { field: { height, background… }, checkbox: { checked… }, … } (FieldStyles)
- *   transition   page transitions between pages: { type: fade|slide|none, duration: 0.3 }
+ *   transition   page transitions between pages: { type: fade|slide|scale|none, duration: 0.3, navigation: document|client }
+ *                navigation "client" swaps pages without a page load (the runtime's `navigate`), so elements with
+ *                `persist` live on across pages; "document" (the default) leaves every link to the browser
  */
 final class DesignJson
 {
@@ -285,7 +287,7 @@ final class DesignJson
         return FieldStyles::clean((array) ($this->data['fields'] ?? []));
     }
 
-    /** @return array{type: string, duration: float} */
+    /** @return array{type: string, duration: float, navigation: string} */
     public function transition(): array
     {
         $t = (array) ($this->data['transition'] ?? []);
@@ -293,6 +295,7 @@ final class DesignJson
         return [
             'type' => in_array($t['type'] ?? 'none', ['none', 'fade', 'slide', 'scale'], true) ? ($t['type'] ?? 'none') : 'none',
             'duration' => max(0.05, min(2, (float) ($t['duration'] ?? 0.3))),
+            'navigation' => ($t['navigation'] ?? null) === 'client' ? 'client' : 'document',
         ];
     }
 

@@ -17,21 +17,28 @@ if (!args.includes('--fixtures') || !root || !existsSync(root)) {
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' }
 const requests = []
+/** Everything a page logged as an error, to say with a failure. */
+const logged = []
 
 // Static files the way the site's .htaccess serves them: /about is public/about/index.html.
-const server = createServer((request, response) => {
-  const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname))
-  requests.push(path)
-  let file = join(root, path)
-  if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html')
-  if (!file.startsWith(root) || !existsSync(file)) {
-    response.writeHead(404).end('Not found')
-    return
-  }
-  response.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file))
-})
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
-const origin = `http://127.0.0.1:${server.address().port}`
+// Two builds of the same site: `plain`, and `client`, which navigates without page loads.
+async function serve(site) {
+  const folder = join(root, site)
+  const server = createServer((request, response) => {
+    const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname))
+    requests.push(path)
+    let file = join(folder, path)
+    if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html')
+    if (!file.startsWith(folder) || !existsSync(file)) {
+      response.writeHead(404).end('Not found')
+      return
+    }
+    response.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file))
+  })
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+  return { server, origin: `http://127.0.0.1:${server.address().port}` }
+}
+const sites = { plain: await serve('plain'), client: await serve('client') }
 
 const chrome = [process.env.CHROME, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find((path) => path && existsSync(path))
 if (!chrome) {
@@ -48,7 +55,8 @@ for (let i = 0; i < 100; i++) {
 }
 
 /** A tab that speaks the DevTools Protocol. `media` emulates features such as prefers-reduced-motion. */
-async function open(path, { media = {}, script = true } = {}) {
+async function open(path, { media = {}, script = true, site = 'plain' } = {}) {
+  const origin = sites[site].origin
   const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json()
   const ws = new WebSocket(target.webSocketDebuggerUrl)
   await new Promise((resolve, reject) => ((ws.onopen = resolve), (ws.onerror = reject)))
@@ -61,8 +69,8 @@ async function open(path, { media = {}, script = true } = {}) {
       const { resolve, reject } = waiting.get(data.id)
       waiting.delete(data.id)
       data.error ? reject(new Error(data.error.message)) : resolve(data.result)
-    } else if (data.method === 'Runtime.exceptionThrown') errors.push(data.params.exceptionDetails.exception?.description ?? data.params.exceptionDetails.text)
-    else if (data.method === 'Runtime.consoleAPICalled' && data.params.type === 'error') errors.push(data.params.args.map((a) => a.value ?? a.description).join(' '))
+    } else if (data.method === 'Runtime.exceptionThrown') logged.push(data.params.exceptionDetails.exception?.description ?? data.params.exceptionDetails.text), errors.push(data.params.exceptionDetails.exception?.description ?? data.params.exceptionDetails.text)
+    else if (data.method === 'Runtime.consoleAPICalled' && data.params.type === 'error') logged.push(data.params.args.map((a) => a.value ?? a.description).join(' ')), errors.push(data.params.args.map((a) => a.value ?? a.description).join(' '))
   }
   const send = (method, params = {}) => new Promise((resolve, reject) => (waiting.set(++id, { resolve, reject }), ws.send(JSON.stringify({ id, method, params }))))
   await send('Runtime.enable')
@@ -145,22 +153,96 @@ const checks = {
     equal(await calm.evaluate('document.documentElement.dataset.cleaned'), 'first', 'mounted again when that changes')
     await calm.close()
   },
+
+  /** Client-side navigation: the page changes without a page load, what both pages keep stays, and the browser's own manners hold. */
+  async navigate() {
+    const tab = await open('/one', { site: 'client' })
+    await tab.until('window.cmsNavigate && document.getElementById("stage").dataset.mounted && document.getElementById("leaving").dataset.mounted')
+    equal(await tab.evaluate('getComputedStyle(document.querySelector(".only-one")).outlineColor'), 'rgb(4, 5, 6)', 'page one has its stylesheet')
+    await tab.evaluate(`
+      window.__same = true
+      window.__stage = document.getElementById('stage')
+      window.__events = []
+      document.addEventListener('cms:before-leave', (e) => {
+        window.__events.push(['leave', new URL(e.detail.from).pathname, new URL(e.detail.to).pathname, document.querySelector('h1').textContent])
+        e.detail.waitUntil(new Promise((resolve) => setTimeout(() => (window.__events.push(['waited']), resolve()), 150)))
+      })
+      document.addEventListener('cms:after-enter', (e) => window.__events.push(['enter', new URL(e.detail.to).pathname, document.querySelector('h1')?.textContent]))
+    `)
+
+    // A pointer resting on a link fetches the page before the click.
+    requests.length = 0
+    await tab.evaluate('document.getElementById("to-two").dispatchEvent(new PointerEvent("pointerover", { bubbles: true }))')
+    for (let i = 0; i < 40 && !requests.includes('/two'); i++) await sleep(50)
+    equal(requests.includes('/two'), true, 'the link was fetched ahead')
+
+    await tab.evaluate('window.scrollTo(0, 900)')
+    await sleep(300)
+    await tab.evaluate('document.getElementById("to-two").click()')
+    await tab.until('document.querySelector("h1").textContent === "Page two" && window.__events.length === 3')
+    equal(requests.filter((path) => path === '/two').length, 1, 'and not fetched again')
+    equal(await tab.evaluate('[window.__same, location.pathname + location.hash, document.title]'), [true, '/two#deep', 'Two · Test site'], 'the same document, at the new address')
+    equal(await tab.evaluate('window.__events'), [['leave', '/one', '/two', 'Page one'], ['waited'], ['enter', '/two', 'Page two']], 'events, and the swap waited')
+    equal(await tab.evaluate('[document.getElementById("stage") === window.__stage, window.__stage.isConnected, JSON.parse(window.__stage.dataset.mounted).props.name]'), [true, true, 'stage'], 'the persisted element is the same element')
+    equal(await tab.evaluate('[document.documentElement.dataset.cleaned, document.getElementById("leaving")]'), ['leaving', null], 'what only the old page had was unmounted')
+    equal(await tab.evaluate('window.__mounts'), 2, 'the stage was not mounted again')
+    equal(await tab.evaluate('document.querySelectorAll("link[rel=stylesheet][href*=\'/styles/one-\']").length'), 0, 'the old page’s stylesheet left with it')
+    equal(await tab.evaluate('Math.abs(document.getElementById("deep").getBoundingClientRect().top) < 5'), true, 'scrolled to the link’s anchor')
+    equal(await tab.evaluate('document.activeElement.id'), 'deep', 'focus moved into the new page')
+    equal(await tab.until('document.querySelector("[data-cms-announcer]").textContent'), 'Two · Test site', 'the new title is announced')
+    equal(await tab.evaluate('document.querySelectorAll("[data-cms-persist]").length'), 1, 'one stage, not two')
+
+    // Back: the page and where it was scrolled to.
+    await tab.evaluate('history.back()')
+    await tab.until('document.querySelector("h1").textContent === "Page one"')
+    await sleep(100)
+    equal(await tab.evaluate('[window.__same, location.pathname, Math.round(scrollY), document.getElementById("stage") === window.__stage]'), [true, '/one', 900, true], 'back restores the page and its scroll')
+    equal(await tab.until('document.getElementById("leaving")?.dataset.mounted && getComputedStyle(document.querySelector(".only-one")).outlineColor'), 'rgb(4, 5, 6)', 'its behaviour and stylesheet are back')
+    await tab.evaluate('history.forward()')
+    await tab.until('document.querySelector("h1").textContent === "Page two"')
+
+    // A script can refuse to leave, and can go somewhere itself.
+    await tab.evaluate('document.addEventListener("cms:before-leave", (e) => e.preventDefault(), { once: true }); document.getElementById("to-one").click()')
+    await sleep(300)
+    equal(await tab.evaluate('location.pathname'), '/two', 'a refused navigation stays')
+    await tab.evaluate('window.cmsNavigate.go("/behavior")')
+    await tab.until('location.pathname === "/behavior" && document.getElementById("first")?.dataset.mounted')
+    equal(await tab.evaluate('window.__same'), true, 'still the same document')
+    equal(tab.errors, [], 'no errors')
+    await tab.close()
+
+    // Less motion: the same navigation, without the transition.
+    const calm = await open('/one', { site: 'client', media: { 'prefers-reduced-motion': 'reduce' } })
+    await calm.until('window.cmsNavigate')
+    await calm.evaluate('window.__same = true; document.getElementById("to-two").click()')
+    await calm.until('document.querySelector("h1").textContent === "Page two"')
+    equal(await calm.evaluate('window.__same'), true, 'navigates with reduced motion')
+    await calm.close()
+
+    // No script: links are links.
+    const off = await open('/one', { site: 'client', script: false })
+    equal(await off.evaluate('document.getElementById("to-two").getAttribute("href")'), '/two#deep', 'a plain link')
+    await off.goto('/two')
+    equal(await off.evaluate('document.querySelector("h1").textContent'), 'Page two', 'the page is whole without JavaScript')
+    await off.close()
+  },
 }
 
 let failed = 0
 for (const [name, check] of Object.entries(checks)) {
   if (only.length && !only.includes(name)) continue
+  logged.length = 0
   try {
     await check()
     console.log(`ok    ${name}`)
   } catch (error) {
     failed++
-    console.log(`FAIL  ${name}\n      ${error.message}`)
+    console.log(`FAIL  ${name}\n      ${error.message}${logged.length ? '\n      logged: ' + logged.join('\n      ') : ''}`)
   }
 }
 
 browser.kill()
-server.close()
+Object.values(sites).forEach((site) => site.server.close())
 try {
   rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 } catch {}

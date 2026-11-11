@@ -758,6 +758,12 @@ final class BlockRenderer
             $attrs['data-cms-motion'] = (string) json_encode($compiled['runtime'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
 
+        if (! $this->editor && is_string($node['persist'] ?? null) && preg_match(Document::PERSIST, $node['persist'])) {
+            $attrs['data-cms-persist'] = $node['persist'];
+            // Its own layer in a view transition: it stays put while the page around it changes.
+            $this->hooks->dispatch('render.style', 'cms-persist-'.$node['persist'], '[data-cms-persist="'.$node['persist'].'"]{view-transition-name:cms-persist-'.$node['persist'].'}', 4998);
+        }
+
         foreach ($this->editor ? [] : $this->behavior($node) as $name => $value) {
             $attrs[$name] = $value;
         }
