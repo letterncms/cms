@@ -47,9 +47,9 @@ export function savePattern(store: EditorStore, canReference: boolean) {
       if (!title.trim()) return
       setBusy(true)
       try {
-        const existing = await run<{ handle: string }[]>('patterns/list')
+        const existing = await run<{ handle: string }[]>('components/list')
         const handle = patternHandle(title, new Set(existing.map((p) => p.handle)))
-        await run('patterns/save', { handle, title: title.trim(), description: description.trim(), category: category.trim() || undefined, synced, blocks: nodes })
+        await run('components/save', { handle, title: title.trim(), description: description.trim(), category: category.trim() || undefined, synced, blocks: nodes })
         invalidate('patterns/')
         if (synced) store.replaceSelection([{ id: newId(), type: 'pattern', props: { ref: handle } }])
         toast.success(synced ? t('“{title}” is now a component', { title: title.trim() }) : t('Saved “{title}” as a section', { title: title.trim() }))

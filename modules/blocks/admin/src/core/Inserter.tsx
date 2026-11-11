@@ -23,7 +23,7 @@ export type InsertItem = { kind: 'block'; type: BlockTypeDef; group: string } | 
 
 /** Blocks, then components and sections, that match `query` and fit where they would go. */
 export function useInsertItems(types: BlockTypeDef[], query: string, allowed?: (t: BlockTypeDef) => boolean, withPatterns = true): { items: InsertItem[]; loading: boolean } {
-  const patterns = useAbility<PatternDef[]>('patterns/list', {}, { staleTime: 60_000 })
+  const patterns = useAbility<PatternDef[]>('components/list', {}, { staleTime: 60_000 })
   const { catalog } = useCatalog()
   const items = useMemo(() => {
     const categories = catalog?.categories ?? []
