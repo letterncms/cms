@@ -40,7 +40,7 @@ final class EntryFilter
 
             foreach ($query->references as $reference) {
                 $data = ($query->working ? $entry->working() : $entry->content())['data'];
-                $within = $reference['field'] === null ? $data : data_get($data, $reference['field']);
+                $within = $reference['field'] === null ? $data : array_map(static fn (string $field) => data_get($data, $field), (array) $reference['field']);
 
                 if ($reference['id'] === null || $reference['id'] === $entry->id || ! str_contains(strtolower((string) json_encode($within)), $reference['id'])) {
                     return false;

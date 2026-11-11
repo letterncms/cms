@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Cms\Cms;
+use Cms\Content\Collections\Archives;
 use Cms\Content\Entries\Entry;
 use Cms\Content\Entries\EntryGate;
 use Cms\Content\Entries\UriBuilder;
@@ -45,6 +46,9 @@ final class SiteController
         }
 
         $entry = $this->cms->entries()->findByUri($path);
+        // No page of its own: a term's archive of a collection, which is the term seen at another address.
+        $archive = $entry ? null : app(Archives::class)->at($path);
+        $entry ??= $archive ? $this->cms->entries()->find($archive['term']) : null;
 
         if (! $entry || ! $entry->isLive()) {
             $result = $this->renderer->notFound($path);
@@ -64,7 +68,7 @@ final class SiteController
                 return $this->cms->accounts()->enabled() ? app(Screens::class)->respond('denied', $entry->locale, 403) : $this->respond($this->renderer->notFound($path)['html'], 404);
         }
 
-        $result = $this->renderer->entry($gate->view($entry), $page);
+        $result = $archive ? $this->renderer->archive($gate->view($entry), $archive, $page) : $this->renderer->entry($gate->view($entry), $page);
 
         if ($page > $result['context']->pages) {
             return $this->respond($this->renderer->notFound($path)['html'], 404);

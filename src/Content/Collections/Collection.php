@@ -194,6 +194,35 @@ final class Collection
         return (bool) $this->get('taxonomy', false);
     }
 
+    /**
+     * The taxonomies whose terms get an archive of this collection's entries, with the address of each:
+     * `archives: {topics: /blog/topics/{slug}}`, or `{route, routes: {de: …}}` where a language has its own.
+     *
+     * @return array<string, array{route: string, routes: array<string, string>}>
+     */
+    public function archives(): array
+    {
+        $out = [];
+
+        foreach ((array) $this->get('archives', []) as $taxonomy => $archive) {
+            $route = is_array($archive) ? ($archive['route'] ?? null) : $archive;
+
+            if (is_string($taxonomy) && is_string($route) && $route !== '') {
+                $out[$taxonomy] = ['route' => $route, 'routes' => array_filter(is_array($archive) ? (array) ($archive['routes'] ?? []) : [], static fn ($r) => is_string($r) && $r !== '')];
+            }
+        }
+
+        return $out;
+    }
+
+    /** The URL pattern of a taxonomy's archive in a language, or null when this collection has none for it. */
+    public function archiveRoute(string $taxonomy, string $locale): ?string
+    {
+        $archive = $this->archives()[$taxonomy] ?? null;
+
+        return $archive === null ? null : ($archive['routes'][$locale] ?? $archive['route']);
+    }
+
     public function isDated(): bool
     {
         return $this->structure === 'dated';

@@ -79,9 +79,13 @@ final class Templates
     public function options(?string $collection = null): array
     {
         $out = [];
+        // Not a page's to choose: the page nothing is at, and what designs a term's archive (`archive`, and
+        // `<collection>_archive` of a collection that has archives). Any other name is a template like any.
+        $archived = array_keys(array_filter(cms()->collections()->all(), static fn ($c) => $c->archives() !== []));
+        $hidden = ['404', ...($archived !== [] ? ['archive'] : []), ...array_map(static fn (string $handle) => $handle.'_archive', $archived)];
 
         foreach ($this->all(true) as $handle => $template) {
-            if ((string) $handle !== '404' && ($collection === null || $template['collections'] === [] || in_array($collection, $template['collections'], true))) {
+            if (! in_array((string) $handle, $hidden, true) && ($collection === null || $template['collections'] === [] || in_array($collection, $template['collections'], true))) {
                 $out[(string) $handle] = $template['title'];
             }
         }

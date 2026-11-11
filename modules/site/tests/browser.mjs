@@ -290,6 +290,25 @@ const checks = {
   },
 
   /** A page load animation on the largest text doesn't keep the page from counting as painted. */
+  // A term's archive, built: the posts filed under the term, ten to a page, and the way between its pages.
+  async archive() {
+    const state = '[location.pathname, document.querySelector("main h1")?.textContent, document.querySelectorAll("main .cms-repeat a").length, [...document.querySelectorAll("main .cms-section__inner > a")].map((a) => a.textContent + " " + a.getAttribute("href"))]'
+    for (const site of ['plain', 'client']) {
+      const page = await open('/posts/topics/tides', { site })
+      equal(await page.evaluate(state), ['/posts/topics/tides', 'Tides', 10, ['Next /posts/topics/tides/page/2']], `${site}: the first page of the archive`)
+      equal(await page.evaluate('[...document.querySelectorAll("main .cms-repeat a")].some((a) => a.textContent === "Unfiled")'), false, `${site}: only what is filed under the term`)
+      await page.evaluate('[...document.querySelectorAll("main .cms-section__inner > a")].find((a) => a.textContent === "Next").click()')
+      await page.until('location.pathname === "/posts/topics/tides/page/2" && document.querySelectorAll("main .cms-repeat a").length === 2')
+      equal(await page.evaluate(state), ['/posts/topics/tides/page/2', 'Tides', 2, ['Previous /posts/topics/tides']], `${site}: the second page`)
+      await page.evaluate('document.querySelector("main .cms-repeat a").click()')
+      await page.until('location.pathname.startsWith("/posts/tide-")')
+      // Chrome says so itself when it skips a page transition between two loads (the new page arrived before
+      // its stylesheet could opt in): the page is there all the same, and nothing of the site's went wrong.
+      equal(page.errors.filter((error) => !/ViewTransition opt-in disabled/.test(error)), [], `${site}: nothing logged`)
+      await page.close()
+    }
+  },
+
   async lcp() {
     // A slow phone: where a delayed paint shows.
     const tab = await open('/lcp', { slow: 6 })

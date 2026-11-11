@@ -682,7 +682,7 @@ final class ContentAbilities
 
         $a->register('terms/list', [
             'label' => 'List Terms',
-            'description' => 'The terms of a taxonomy (a collection marked `taxonomy: true`) with how many entries are filed under each: `count` counts the entries of any collection that name the term in a relation field, drafts included. Terms are entries: create, rename, translate, nest and delete them with the entries abilities, in the taxonomy\'s collection.',
+            'description' => 'The terms of a taxonomy (a collection marked `taxonomy: true`) with how many entries are filed under each: `count` counts the entries of any collection that name the term in a relation field, drafts included, and `archives` the archive pages of the term: one per collection that has them for this taxonomy (`archives` in its definition), each listing the entries of that collection filed under the term. Terms are entries: create, rename, translate, nest and delete them with the entries abilities, in the taxonomy\'s collection.',
             'permission' => fn (?User $user, array $in) => $this->allowed($user, (string) ($in['taxonomy'] ?? ''), 'view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => [
@@ -692,7 +692,7 @@ final class ContentAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 50],
             ], 'required' => ['taxonomy']],
-            'output' => Shape::page(Shapes::entrySummary()->with(['count' => Shape::INTEGER]), ['perPage' => Shape::INTEGER]),
+            'output' => Shape::page(Shapes::entrySummary()->with(['count' => Shape::INTEGER, 'archives' => [Shape::of(['collection' => Shape::STRING, 'uri' => Shape::STRING])]]), ['perPage' => Shape::INTEGER]),
             'handler' => function (array $in) use ($taxonomy) {
                 $collection = $taxonomy($in['taxonomy']);
                 $page = $this->cms->entries()->query()->working()->ungated()->collection($collection->handle)->locale($in['locale'] ?? $this->cms->defaultLocale())
@@ -701,7 +701,12 @@ final class ContentAbilities
                 // Every term of the page counted in one pass over the entries, not a query per term.
                 $counts = $this->cms->entries()->query()->working()->ungated()->referenceCounts(array_map(static fn (Entry $term) => $term->id, $page['items']));
 
-                return [...$page, 'items' => array_map(static fn (Entry $term) => [...$term->toSummary(), 'count' => $counts[$term->id] ?? 0], $page['items'])];
+                $archives = app(\Cms\Content\Collections\Archives::class);
+
+                return [...$page, 'items' => array_map(static fn (Entry $term) => [
+                    ...$term->toSummary(), 'count' => $counts[$term->id] ?? 0,
+                    'archives' => array_map(static fn (array $a) => ['collection' => $a['collection'], 'uri' => $a['uri']], $archives->of($term)),
+                ], $page['items'])];
             },
         ]);
 

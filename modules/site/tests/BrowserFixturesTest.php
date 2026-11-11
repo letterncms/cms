@@ -22,7 +22,12 @@ final class BrowserFixturesTest extends TestCase
 
     protected function collections(): array
     {
-        return ['pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]]];
+        return [
+            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
+            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'fields' => []],
+            // Posts have a page per topic: the term's archive.
+            'posts' => ['title' => 'Posts', 'route' => '/posts/{slug}', 'fields' => [['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics']], 'archives' => ['topics' => '/posts/topics/{slug}']],
+        ];
     }
 
     public function test_the_fixture_site_builds(): void
@@ -55,6 +60,15 @@ final class BrowserFixturesTest extends TestCase
             $this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
         }
 
+        // A topic with more posts than one page of its archive lists.
+        $tides = $this->cms()->entryService()->create('topics', ['title' => 'Tides', 'status' => 'published']);
+
+        foreach (range(1, 12) as $n) {
+            $this->cms()->entryService()->create('posts', ['title' => sprintf('Tide %02d', $n), 'status' => 'published', 'data' => ['topics' => [$tides->id]]]);
+        }
+
+        $this->cms()->entryService()->create('posts', ['title' => 'Unfiled', 'status' => 'published']);
+
         // The design styles emphasis inside a heading, which needs a selector two tags deep.
         $this->cms()->abilities()->execute('design/update', ['styles' => [...$this->app->make(\Cms\Modules\Site\Design\Design::class)->json()->styles(), 'h2 em' => ['fontStyle' => 'normal', 'color' => 'rgb(7, 8, 9)']]], \Cms\Abilities\AbilityContext::system('test'));
 
@@ -67,6 +81,8 @@ final class BrowserFixturesTest extends TestCase
             ['id' => 'drawn', 'type' => 'box', 'anchor' => 'drawn', 'behavior' => ['module' => 'probe'], 'children' => []],
             ['id' => 'filled', 'type' => 'box', 'anchor' => 'filled', 'behavior' => ['module' => 'probe'], 'children' => [['id' => 'p1', 'type' => 'paragraph', 'props' => ['text' => 'Words']]]],
         ]));
+
+        $this->assertFileExists(public_path('posts/topics/tides/page/2/index.html'));
 
         $target = getenv('CMS_BROWSER_FIXTURES');
 
