@@ -14,7 +14,7 @@ use Cms\Support\Files;
  *                control holds the size scale of buttons and fields: control.sm-height, control.md-padding, control.lg-text…
  *   fonts        self-hosted fonts: [{family, src: "fonts/Inter.woff2", weight: "100 900", style, preload}]
  *                a face may name what is drawn until it arrives, at its size, so text doesn't move:
- *                {…, fallback: "Arial", sizeAdjust: "102%", ascentOverride: "98%", descentOverride: "26%", lineGapOverride: "0%"}
+ *                {…, fallback: "Arial", sizeAdjust: "102%", ascentOverride: "98%", descentOverride: "26%", lineGapOverride: "0%"} (an import fills these in: FontMetrics)
  *   styles       element defaults: { body: {...}, h1: {...}, a: {...}, "a:hover": {...} } — camelCase CSS, tokens allowed
  *   prose        long-form text, in any block styled as prose: element styles { h2: {...}, p: {...} } (marginTop is the space
  *                above it, after the block before) and `spacing`, the flow between its blocks: { blocks, headings, afterHeadings, items }

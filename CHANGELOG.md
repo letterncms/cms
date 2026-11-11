@@ -5,6 +5,7 @@
 ### Added
 
 - **Repeat**'s **Previous and Next Entry** source tells each item which side it is on: `item.side` is `previous` or `next`, and `item.previous` and `item.following` are that as yes or no. One Repeat now renders both neighbours with the right label and arrow (`bind: {"visible": "item.following"}`, `{"state:next": "item.following"}`, or `item.side|is:next`).
+- **Fonts that do not move the text.** Adding a Google Font now reads the font’s own tables and gives each face the fallback that stands in for it until it arrives: Arial, Times New Roman or Courier New, drawn at the size and line height that match (`sizeAdjust`, `ascentOverride`, `descentOverride`, `lineGapOverride`). Nobody types those numbers any more; the ones you change in `fonts` stay when the family is imported again.
 
 ## 0.23.0 (2026-11-11)
 

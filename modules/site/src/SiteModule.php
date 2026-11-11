@@ -582,7 +582,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/fonts-import', [
             'label' => 'Add a Google Font',
-            'description' => 'Download a Google Fonts family (latin) into content/design/fonts so it is self-hosted, and add it to the design system: the weights its variable axis really spans as one file, or the static weights it has; upright, italic or both. Then use it in a font token. To keep text from moving when the font arrives, give its faces a fallback with design/update `fonts`: {"fallback": "Arial", "sizeAdjust": "102%", "ascentOverride": "98%", "descentOverride": "26%", "lineGapOverride": "0%"} draws that local font at the web font’s size first; the font tokens that name the family get it by themselves.',
+            'description' => 'Download a Google Fonts family (latin) into content/design/fonts so it is self-hosted, and add it to the design system: the weights its variable axis really spans as one file, or the static weights it has; upright, italic or both. Then use it in a font token. Text does not move when the font arrives: each face gets a fallback read from the font’s own tables, {"fallback": "Arial", "sizeAdjust": "103.63%", "ascentOverride": "88.48%", "descentOverride": "24.32%", "lineGapOverride": "0%"} (Arial for a sans, Times New Roman for a serif, Courier New for a monospace family), which draws that local font at the web font’s size first; the font tokens that name the family get it by themselves. Change those numbers with design/update `fonts`: importing the family again keeps what its faces say.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
@@ -590,7 +590,7 @@ final class SiteModule extends Plugin
                 'italic' => ['type' => 'boolean', 'description' => 'The same as style: "both", when style is not given.'],
                 'weights' => ['type' => 'array', 'items' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 1000], 'maxItems' => 9, 'description' => 'Static weights to take when the family has no weight axis; 400, 500, 600 and 700 of what it has when left out.'],
             ], 'required' => ['family']],
-            'output' => Shape::of(['fonts' => [['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic'), 'preload' => Shape::BOOLEAN]]]),
+            'output' => Shape::of(['fonts' => [['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic'), 'preload' => Shape::BOOLEAN, 'fallback?' => Shape::STRING, 'sizeAdjust?' => Shape::STRING, 'ascentOverride?' => Shape::STRING, 'descentOverride?' => Shape::STRING, 'lineGapOverride?' => Shape::STRING]]]),
             'handler' => function (array $in) use ($design) {
                 $fonts = $this->app->make(Fonts::class)->import((string) $in['family'], (string) ($in['style'] ?? (! empty($in['italic']) ? 'both' : 'normal')), array_map('intval', (array) ($in['weights'] ?? [])));
                 $design()->saved();
@@ -781,7 +781,7 @@ final class SiteModule extends Plugin
         - Motion, scripts and page transitions are data on blocks and in the design, not theme files: read cms://blocks for `motion` (load, appear, scroll with pin, scrub and progress), `behavior` (a script of the design mounted on a block, one or several), `persist` and `code`, and cms://site/code for the scripts, styles and libraries beside the design (design-code/list, design-code/save, design-vendor/create).
         - A scroll animation with progress: true (or with scrub) tells its element how far along it is (--cms-progress, and a cms:progress event), so a number that counts with the scroll needs a few lines in a behaviour and no library.
         - design/update changes the page transition one setting at a time ({"transition": {"navigation": "client"}} keeps its type and duration); the other sections it takes are replaced whole.
-        - design/fonts-import brings a Google Fonts family as it is (style: normal, italic or both); give its faces a `fallback` with size and ascent metrics through design/update `fonts` so text doesn’t move when the font arrives.
+        - design/fonts-import brings a Google Fonts family as it is (style: normal, italic or both) and fills in each face's fallback (Arial, Times New Roman or Courier New, with sizeAdjust and the ascent, descent and line gap overrides) from the font's own tables, so text doesn’t move when it arrives: nothing to type. Change one through design/update `fonts` only to correct it; a value you set stays when the family is imported again.
         - Element styles reach a tag inside a tag ("h1 em", "nav a:hover"); what needs a class is custom CSS (design-code/set-custom) or a stylesheet beside the design.
         TXT);
     }
