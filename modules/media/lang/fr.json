@@ -16,7 +16,6 @@
   "Audio": "Audio",
   "Cancel": "Annuler",
   "Caption": "Légende",
-  "Choose": "Choisir",
   "Choose File": "Choisir un fichier",
   "Choose Files": "Choisir des fichiers",
   "Choose Image": "Choisir une image",
@@ -79,7 +78,6 @@
   "This file is still used by :where.": "Ce fichier est encore utilisé par :where.",
   "This image could not be read.": "Cette image n’a pas pu être lue.",
   "This SVG is not allowed.": "Ce SVG n’est pas autorisé.",
-  "Type": "Type",
   "Unsupported image format.": "Format d’image non pris en charge.",
   "Update Media": "Mettre à jour un média",
   "Upload": "Importer",
@@ -162,5 +160,15 @@
   "Image": "Image",
   "Texture": "Texture",
   "Textures": "Textures",
-  "Video": "Vidéo"
+  "Video": "Vidéo",
+  "Bottom Edge": "Bord inférieur",
+  "Current": "Actuel",
+  "Drop to Upload": "Déposez pour importer",
+  "Drop to Upload to {folder}": "Déposez pour importer dans {folder}",
+  "Freeform": "Libre",
+  "Left Edge": "Bord gauche",
+  "Original": "Original",
+  "Right Edge": "Bord droit",
+  "Shape": "Forme",
+  "Top Edge": "Bord supérieur"
 }

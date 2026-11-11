@@ -18,6 +18,9 @@ export const kindOptions = () => ({ image: t('Images'), video: t('Videos'), audi
 /** What a file is, as people say it: its extension, or the player's name where the extension says less (a Lottie is a .json). */
 export const fileTag = (item: Pick<MediaItem, 'mime' | 'filename'>) => item.mime === 'application/json' ? 'Lottie' : item.mime === 'application/vnd.rive' ? 'Rive' : item.filename.includes('.') ? item.filename.slice(item.filename.lastIndexOf('.') + 1).toUpperCase() : ''
 
+/** What a file is, as one thing: its kind and what it is called ("Image · JPG", "Animation · Lottie"). Never a media type. */
+export const kindWords = (item: Pick<MediaItem, 'kind' | 'mime' | 'filename'>) => [kindLabel(item.kind), item.kind === 'pdf' ? '' : fileTag(item)].filter(Boolean).join(' · ')
+
 /** The kind a field's `accept` fixes, if it takes one kind only. */
 export const acceptKind = (accept: string): MediaKind | 'all' => accept.startsWith('image') ? 'image' : accept.startsWith('video') ? 'video' : accept.startsWith('audio') ? 'audio' : accept === 'application/pdf' ? 'pdf' : accept.startsWith('model') ? 'model' : 'all'
 

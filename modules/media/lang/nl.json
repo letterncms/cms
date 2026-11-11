@@ -16,7 +16,6 @@
   "Audio": "Audio",
   "Cancel": "Annuleren",
   "Caption": "Bijschrift",
-  "Choose": "Kiezen",
   "Choose File": "Bestand kiezen",
   "Choose Files": "Bestanden kiezen",
   "Choose Image": "Afbeelding kiezen",
@@ -79,7 +78,6 @@
   "This file is still used by :where.": "Dit bestand wordt nog gebruikt door :where.",
   "This image could not be read.": "Deze afbeelding kon niet worden gelezen.",
   "This SVG is not allowed.": "Deze SVG is niet toegestaan.",
-  "Type": "Type",
   "Unsupported image format.": "Niet-ondersteund afbeeldingsformaat.",
   "Update Media": "Media bijwerken",
   "Upload": "Uploaden",
@@ -162,5 +160,15 @@
   "Image": "Afbeelding",
   "Texture": "Textuur",
   "Textures": "Texturen",
-  "Video": "Video"
+  "Video": "Video",
+  "Bottom Edge": "Onderrand",
+  "Current": "Huidig",
+  "Drop to Upload": "Laat los om te uploaden",
+  "Drop to Upload to {folder}": "Laat los om te uploaden naar {folder}",
+  "Freeform": "Vrij",
+  "Left Edge": "Linkerrand",
+  "Original": "Origineel",
+  "Right Edge": "Rechterrand",
+  "Shape": "Vorm",
+  "Top Edge": "Bovenrand"
 }

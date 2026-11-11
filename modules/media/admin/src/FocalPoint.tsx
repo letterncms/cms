@@ -39,8 +39,8 @@ export function FocalPoint({ src, value, onChange, disabled }: { src: string; va
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => { if (!disabled) e.currentTarget.setPointerCapture(e.pointerId) }}
         onPointerMove={drag}
-        // Over any picture: a white ring with a dark hairline around it, and the focus line when the keys have it.
-        className={cn('absolute size-6 after:absolute after:-inset-2.5 after:content-[\'\'] -translate-x-1/2 -translate-y-1/2 touch-none rounded-full border-2 border-white bg-white/25 ring-1 ring-black/50', !disabled && 'cursor-grab active:cursor-grabbing')}
+        // Over any picture, light or dark: a dark ring with a white ring inside it, and the focus line when the keys have it.
+        className={cn('absolute size-7 -translate-x-1/2 -translate-y-1/2 touch-none rounded-full border-2 border-black/80 before:absolute before:inset-0 before:rounded-full before:border-2 before:border-white before:content-[\'\'] after:absolute after:-inset-2 after:content-[\'\']', !disabled && 'cursor-grab active:cursor-grabbing')}
         style={{ left: `${value.x}%`, top: `${value.y}%` }}
       />
     </div>

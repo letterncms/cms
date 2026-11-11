@@ -1,9 +1,9 @@
 import { can, locale, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
-import { Badge, Button, DataView, EmptyState, Fields, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, formatBytes, readViewPrefs } from '@letterncms/ui'
+import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, formatBytes, readViewPrefs } from '@letterncms/ui'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { deleteFiles } from './actions'
 import { FileDialog } from './FileDialog'
-import { FileTile, KINDS, acceptKind, kindOptions, type MediaKind } from './kinds'
+import { FileTile, KINDS, acceptKind, kindOptions, kindWords, type MediaKind } from './kinds'
 import { FolderTree, MoveDialog, folderActions, folderAfter, folderName } from './Folders'
 import { libraryFolder, uploadAll, type MediaItem } from './upload'
 
@@ -119,15 +119,21 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
   const blank = !filtered && folder === null && !list.isError && list.data?.total === 0
   // A field that takes one kind shows that kind: nothing to switch.
   const fixed = !bar && startKind !== 'all'
+  // The tree, wherever there are folders. Before the first one, New Folder is in the Media bar, beside Upload.
+  const tree = folders.length > 0
+  // A picker is thumbnails and names to choose from: no menus, no checkboxes, no display choices.
+  const pick = mode === 'pick'
   return (
-    <div className={cn('relative min-w-0', folders.length > 0 && 'md:grid md:grid-cols-[200px_minmax(0,1fr)] md:items-start md:gap-6', dropping && 'rounded-lg outline-2 -outline-offset-2 outline-focus')} {...drop}>
+    <div className={cn('relative min-w-0', tree && 'md:grid md:grid-cols-[200px_minmax(0,1fr)] md:items-start md:gap-6', dropping && 'rounded-lg outline-2 -outline-offset-2 outline-focus')} {...drop}>
       {/* The folders, to browse: a tree beside the files; on a phone a select above them, so it stays one column. */}
-      {folders.length > 0 && (
+      {tree && (
         <nav aria-label={t('Folders')} className="mt-1.5 max-md:hidden">
           <FolderTree folders={folders} value={folder} onChange={(to) => filter('folder', to)} root={{ value: null, label: t('All Files') }}
             actions={manages ? (path) => <Menu trigger={<IconButton icon="more" label={t('Actions for {name}', { name: folderName(path) })} size="xs" />} items={folderMenu(path)} /> : undefined} />
         </nav>
       )}
+      {/* Files held over the library: where they will land. */}
+      {dropping && <div className="pointer-events-none absolute inset-0 z-sticky flex justify-center rounded-lg bg-bg/80"><span className="sticky top-[30vh] mt-[20vh] flex h-fit items-center gap-2 rounded-md bg-float px-3 py-2 text-sm font-medium text-ink shadow-pop ring-1 ring-border-strong"><Icon name="upload" size={16} />{folder ? t('Drop to Upload to {folder}', { folder: folderName(folder) }) : t('Drop to Upload')}</span></div>}
       <div className="min-w-0">
       <DataView id="media" label={t('Media')} items={items} source={{ ability: 'media/list', input: mediaInput(filters, 1, sort, only), perPage: 60 }} rowKey={(item) => item.id} onRowClick={toggle} defaultView="grid" image={preview}
         pagination={list.data && { page: list.data.page, pages: list.data.pages, total: list.data.total, perPage: 60, onPage: setPage }}
@@ -135,28 +141,31 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
         // Uploaded is a column of its own; a file is never "published".
         dates={(item) => ({ publishedAt: null, updatedAt: item.updatedAt })}
         sort={sort} dateSort={{ updated: 'updated_at' }} onSort={(sort) => { setPage(1); setSort(sort) }}
-        selection={{ ids: mode === 'manage' ? chosen : new Set(selected), onSelect: select }}
-        selected={(item) => open?.id === item.id}
+        selection={pick ? undefined : { ids: chosen, onSelect: select }}
+        // The file that is open has its sheet over it: its tile is not marked as selected, which is what the checkboxes are for.
+        selected={pick ? (item) => selected.includes(item.id) : undefined}
+        plain={pick}
         toolbar={blank ? undefined : <>
           <Fields layout="inline" bare className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full" fields={[...filterFields(!fixed), ...(folders.length ? [{ handle: 'folder', type: 'select', label: t('Folder'), size: 'sm' as const, placeholder: t('All Files'), options: folders.map((f) => ({ value: f, label: '\u00a0\u00a0'.repeat(f.split('/').length - 1) + folderName(f), icon: 'folder' })), className: 'w-full sm:w-44 md:hidden' }] : [])]} values={{ ...filters, kind: kind === 'all' ? null : kind }} onChange={filter} />
           {manages && folder && <Menu trigger={<IconButton icon="more" label={t('Actions for {name}', { name: folderName(folder) })} size="sm" className="md:hidden" />} items={folderMenu(folder)} />}
           {!bar && uploadButton(autoUpload)}
         </>}
-        columns={[
+        columns={pick ? [{ id: 'name', label: t('Name'), render: (item) => item.name }] : [
           { id: 'name', label: t('Name'), sort: 'name', render: (item) => item.name },
-          { id: 'type', label: t('Type'), width: '160px', render: (item) => item.mime },
+          // What it is, in words: "Image · JPG", not a media type.
+          { id: 'type', label: t('Kind'), width: '160px', render: (item) => kindWords(item) },
           { id: 'size', label: t('Size'), width: '100px', align: 'end', sort: 'size', render: (item) => formatBytes(item.size) },
-          { id: 'folder', label: t('Folder'), width: '160px', sort: 'folder', render: (item) => item.folder || '—' },
+          { id: 'folder', label: t('Folder'), hiddenByDefault: true, width: '160px', sort: 'folder', render: (item) => item.folder || '—' },
           { id: 'alt', label: t('Alt Text'), hiddenByDefault: true, width: '120px', render: (item) => item.kind === 'image' ? item.alt ? <Badge tone="success">{t('Added')}</Badge> : <Badge tone="warning">{t('No alt text')}</Badge> : '—' },
-          { id: 'created', label: t('Uploaded'), width: '120px', sort: 'created_at', render: (item) => new Date(item.createdAt).toLocaleDateString(locale(), { dateStyle: 'medium' }) },
+          { id: 'created', label: t('Uploaded'), hiddenByDefault: true, width: '120px', sort: 'created_at', render: (item) => new Date(item.createdAt).toLocaleDateString(locale(), { dateStyle: 'medium' }) },
         ]}
-        actions={(item) => <Menu trigger={<IconButton icon="more" label={t('Actions for {name}', { name: item.name })} size="xs" />} items={[
-          { label: mode === 'pick' ? t('Choose') : t('Open'), icon: 'edit', onSelect: () => toggle(item) },
+        actions={pick ? undefined : (item) => <Menu trigger={<IconButton icon="more" label={t('Actions for {name}', { name: item.name })} size="xs" />} items={[
+          { label: t('Open'), icon: 'edit', onSelect: () => toggle(item) },
           { label: t('Copy URL'), icon: 'copy', onSelect: () => void copyText(new URL(item.url, location.origin).href, { copied: t('URL copied'), failed: t('Couldn’t copy the URL') }) },
           manages && { label: t('Move to Folder'), icon: 'folder', onSelect: () => setMoving([item]) },
           mode === 'manage' && can('media.delete') && { label: t('Delete'), icon: 'trash', danger: true, disabled: deleting, onSelect: () => void deleteItems([item.id]) },
         ]} />}
-        empty={filtered ? <NoMatches onClear={() => { setFilters((f) => ({ search: '', kind: bar ? 'all' : startKind, folder: f.folder })); setPage(1) }} /> : <EmptyState icon={folder === null ? 'media' : 'folder'} title={folder !== null ? t('No files in this folder') : kind === 'image' ? t('No images yet') : kind === 'video' ? t('No videos yet') : t('No files yet')} action={uploadButton(false, 'secondary')} />}
+        empty={filtered ? <NoMatches onClear={() => { setFilters((f) => ({ search: '', kind: bar ? 'all' : startKind, folder: f.folder })); setPage(1) }} /> : <EmptyState icon={folder === null ? 'media' : 'folder'} title={folder !== null ? t('No files in this folder') : kind === 'image' ? t('No images yet') : kind === 'video' ? t('No videos yet') : t('No files yet')} action={bar ? undefined : uploadButton(false, 'secondary')} />}
       />
 
       {/* Opened to upload (?upload=1): the picker, with the page's own button in its bar. */}
