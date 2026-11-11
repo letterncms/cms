@@ -47,7 +47,7 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
         </div>
       ) : null}
       {fields.length === 0 ? (
-        depth === 0 ? <EmptyState icon="field" title={t('No fields yet')} description={emptyText ?? t('Add fields for everything else.')} /> : <p className="m-0 mb-2 rounded-md border border-dashed border-border-strong px-3 py-3 text-xs text-faint">{emptyText ?? t('No fields yet.')}</p>
+        depth === 0 ? <EmptyState icon="field" title={t('No fields yet')} /> : <p className="m-0 mb-2 rounded-md border border-dashed border-border-strong px-3 py-3 text-xs text-faint">{emptyText ?? t('No fields yet.')}</p>
       ) : (
         <FieldList fields={fields} types={types} openIndex={open} onOpen={setOpen} onChange={onChange} body={body} depth={depth} />
       )}

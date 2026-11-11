@@ -61,7 +61,7 @@ export default function EntryEditor({ params }: { params: Record<string, string>
     return (
       <Page crumbs={crumbs}>
         {failure?.type === 'forbidden'
-          ? <EmptyState icon="lock" title={t('Access denied')} description={failure.message} action={back} />
+          ? <><QueryError title={t('Access denied')} message={failure.message} />{back && <div className="mt-4">{back}</div>}</>
           : <NotFoundState icon={listed?.icon ?? 'file'} action={back} />}
       </Page>
     )

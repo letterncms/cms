@@ -23,7 +23,7 @@ Build screens from `@letterncms/ui` (`modules/admin/src/ui`). One component per 
 | Save | `SaveBar`. No Save button on a screen. |
 | Destructive action | `<Button variant="destructive">`, then `confirm({ title, confirm: t('Delete'), danger: true })`. `variant="danger"` is only that confirm's last button. In a menu: an item with `danger`. |
 | Error | `QueryError` (`title`, `message`, `onRetry`, `retrying`; `compact` in a panel or widget). `message` is plain words for the person: an exception's text goes to the console. Never `EmptyState` with a warning icon. A field's own error is `Field`'s `error`. |
-| Empty | `EmptyState` (`compact` in a panel or widget), a title and one action, no sentence explaining it; `NoMatches` when a search or filter finds nothing; `NotFoundState` when the thing isn't there. |
+| Empty | `EmptyState` (`compact` in a panel, a widget or a dialog): a title and one action. It takes no sentence, and nothing is drawn as bare words instead. `NoMatches` only when someone searched or filtered and nothing was found: a list with nothing in it at all is an `EmptyState`. `NotFoundState` when the thing isn't there. |
 | Alert | `Notice` on a screen or in a dialog; `Banner` above the sheet, for the shell only; `toast` for the result of an action. |
 | Loading | `Skeleton` in the shape of what is coming; `Spinner` where there is no shape; `loading` on the `Button` that started it. |
 

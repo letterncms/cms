@@ -68,7 +68,7 @@ export const views = {
     columns: [{ key: 'title', label: 'Name' }, { key: 'handle', label: 'Handle', width: 'minmax(200px,1fr)', format: 'code' }],
     open: { label: 'Edit', to: '/globals/{row.handle}' },
     actions: [{ label: 'Edit', icon: 'edit', to: '/globals/{row.handle}' }, { label: 'Edit Fields', icon: 'field', to: '/globals/{row.handle}/fields' }],
-    empty: { icon: 'globe', title: 'No global sets yet', text: 'Site-wide values, like contact details or footer links.' },
+    empty: { icon: 'globe', title: 'No global sets yet' },
   } }], { actions: [{ label: 'New Global Set', icon: 'plus', variant: 'primary', ability: 'globals/save', form: { title: 'New Global Set', confirm: 'Create', fields: [{ handle: 'title', type: 'text', label: 'Name', required: true }] }, input: { title: '{values.title}', fields: [{ handle: 'text', type: 'text', label: 'Text' }] }, then: 'open', to: '/globals/{result.handle}/fields' }] }),
   collections: () => collections(),
   'collections-new': () => collections({ type: 'collections/new', props: {} }),
@@ -105,7 +105,7 @@ function collections(open) {
       { key: 'count', label: 'Entries', width: '90px', align: 'end', format: 'number' },
     ],
     open: { label: 'Open', to: '/collections/{row.handle}' },
-    empty: { icon: 'collection', title: 'No collections yet', text: 'Collections define what you can write: pages, posts, products…' },
+    empty: { icon: 'collection', title: 'No collections yet' },
   } }, ...(open ? [open] : [])], { actions: [{ label: 'New Collection', icon: 'plus', variant: 'primary', component: 'collections/new' }] })
 }
 

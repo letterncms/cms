@@ -106,7 +106,8 @@ export interface RecordsProps {
   actions?: RowAction[]
   /** What can be done with the rows selected: each gets `{ids}` (and `{rows}`), or, with `each`, runs once per row with `{row}`. Offering any makes rows selectable. */
   bulk?: BulkAction[]
-  empty?: { icon?: string; title?: string; text?: string; action?: ViewAction; size?: 'sm' }
+  /** Nothing in it yet: a title and one action, as `EmptyState` draws them (`size: 'sm'`: compact, inside a section). */
+  empty?: { icon?: string; title?: string; action?: ViewAction; size?: 'sm' }
   /** Offers a calendar; with `dated` (and `undated`), it loads a month at a time, filled with `{field}`, `{start}` and `{end}`. */
   calendar?: boolean | { dated: Record<string, unknown>; undated?: Record<string, unknown> }
   /** What the ability sorts the dates by, which makes them sortable and names the calendar's `{field}`. */
@@ -377,8 +378,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       columns={toColumns(columns)}
       empty={filtered
         ? <NoMatches onClear={() => { if (address) setQuery({ [searchParam]: null, page: null, ...Object.fromEntries(filters.map((f) => [f.param, null])) }); else { setOwnText(''); setOwnChosen({}); setOwnPage(1) } }} />
-        : empty?.size === 'sm' ? <p className="m-0 py-3 text-sm text-muted">{empty.title ?? t('Nothing here yet')}</p>
-          : <EmptyState icon={empty?.icon ?? 'inbox'} title={empty?.title ?? t('Nothing here yet')} description={empty?.text} action={empty?.action && <ActionButton action={empty.action} />} />}
+        : <EmptyState compact={empty?.size === 'sm'} icon={empty?.icon ?? 'inbox'} title={empty?.title ?? t('Nothing here yet')} action={empty?.action && <ActionButton action={empty.action} />} />}
     />
     {selection && (
       <SelectionBar count={picked.size} onClear={() => setPicked(new Set())}>

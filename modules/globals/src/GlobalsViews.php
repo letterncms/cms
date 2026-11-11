@@ -48,7 +48,7 @@ final class GlobalsViews
                     ['label' => __('Edit'), 'icon' => 'edit', 'to' => '/globals/{row.handle}', 'can' => 'globals.manage'],
                     ['label' => __('Edit Fields'), 'icon' => 'field', 'to' => '/globals/{row.handle}/fields', 'can' => 'globals.manage'],
                 ],
-                'empty' => ['icon' => 'globe', 'title' => __('No global sets yet'), 'text' => __('Site-wide values, like contact details or footer links.')],
+                'empty' => ['icon' => 'globe', 'title' => __('No global sets yet')],
             ]],
         ]];
     }

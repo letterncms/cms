@@ -1,5 +1,5 @@
 import { can, queryClient, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
-import { EmptyState, Fields, Icon, IconButton, Menu, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar, type MenuItemDef } from '@letterncms/ui'
+import { Fields, Icon, IconButton, Menu, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar, type MenuItemDef } from '@letterncms/ui'
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Disclosure, Group, css, px, variable } from './design-parts'
 import { fallbackOf, fontStack, withFallback } from './fields'
@@ -255,7 +255,7 @@ export default function DesignTokens() {
     return (
       <div className="flex h-full flex-col">
         <Topbar crumbs={[{ label: t('Design System'), icon: 'palette' }]} />
-        <EmptyState icon="palette" title={t('The design system could not be loaded')} description={theme.error?.message} />
+        <QueryError title={t('The design system could not be loaded')} onRetry={() => void theme.refetch()} />
       </div>
     )
   }

@@ -1,4 +1,6 @@
 {
+  "No images yet": "Aucune image pour l’instant",
+  "No videos yet": "Aucune vidéo pour l’instant",
   "{count} character": "{count} caractère",
   "{count} characters": "{count} caractères",
   "{count} file uploaded": "{count} fichier importé",
@@ -39,7 +41,6 @@
   "Folder": "Dossier",
   "Image Quality": "Qualité d’image",
   "Images": "Images",
-  "Images, videos and documents for your pages.": "Images, vidéos et documents pour vos pages.",
   "Import Media": "Importer un média",
   "Kind": "Type",
   "Library": "Bibliothèque",

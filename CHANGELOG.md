@@ -21,6 +21,8 @@
 
 ### Changed
 
+- An empty screen says what is missing and offers one thing to do, nothing more: the sentences under "No files yet", "No collections yet", "Not Found" and the others are gone, and small empty lists (API tokens, redirects) are drawn like every other one. The way out of a page that isn't there is **Go to Dashboard**.
+- **Breaking.** `@letterncms/ui`: `EmptyState` and `NotFoundState` no longer take a `description`, and a view's `empty` (and `ui/empty`) no longer has a `text`: a view that sends one is refused. Something that failed is a `QueryError` (`title`, `message`).
 - `@letterncms/ui`: actions that wait for the pointer are `cms-reveal` inside a `cms-reveal-row` (add `cms-reveal-over` to lay them over the end of the row, so they take no room from what it says). `Row` and `DataView` use them; they show on hover, on focus inside the row, while their menu is open, and always on a touch screen.
 - **Breaking.** The role a visitor's account gets is `visitor` (was `member`), the word everything else already used for it: the role's label, `kind: visitors` in `users/list`, the **Visitor Accounts** settings. `cms migrate` renames it in what a site has stored: accounts with the role `member` get `visitor`, as do **Role for New Visitors**, a `member` role in the site's own roles, and **Who Has Access** of every collection and entry that named it, so visitors read what they could before. A site whose roles already have a `visitor` of their own is left as it is. Plugins and templates that name the role `member` need the new id.
 - **Breaking.** MCP speaks two protocol revisions: `2026-07-28`, where every request names the revision, and `2025-11-25` for clients that start with the `initialize` handshake. The older `2025-06-18` and `2025-03-26` are gone: `initialize` answers them with `2025-11-25`, and a request that names one is told which revisions are spoken.
@@ -53,6 +55,7 @@
 - `GET /api/v1/abilities/{name}` reads numbers and booleans from the query string (`?perPage=5`, `?force=true`) as the ability's schema asks for them, instead of refusing them as text.
 - A calendar shows a record's title across the whole day: its actions lie over the end of the title while you point at the record or reach it with the keyboard.
 - On a touch screen a segmented control's options, a page's tabs and a widget's link are 44px tall to hit, and what a row can do is always on view. With a keyboard a row's actions show as soon as the row has the focus.
+- Choosing an image for a field while the library has none says "No images yet" and offers the upload, not "No matches".
 - **Users** and the **Audit Log** keep their tabs when you open their Settings tab.
 - On a phone a screen inside another (a collection's fields, a menu, a section of the design) has a way back to the one above it, the top bar's last button sits as far from the edge as its first, and the sidebar button and the way back are far enough apart to hit the right one.
 

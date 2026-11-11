@@ -1,5 +1,5 @@
 import { can, invalidate, run, t, useAbility, useManifest, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
-import { Badge, Button, EmptyState, Fields, Icon, IconButton, Popover, SaveBar, Skeleton, SortableTree, Spinner, cn } from '@letterncms/ui'
+import { Badge, Button, NotFoundState, Fields, Icon, IconButton, Popover, SaveBar, Skeleton, SortableTree, Spinner, cn } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 interface Target {
@@ -66,7 +66,7 @@ export default function MenuEditor({ props }: SurfaceComponentProps<{ handle: st
   const menu = useAbility<Menu>('navigation/get', { handle: props.handle }, { refetchOnWindowFocus: false })
 
   if (menu.isLoading) return <Skeleton className="h-40" />
-  if (!menu.data) return <EmptyState icon="list-tree" title={t('Not Found')} description={t('It may have been moved or deleted.')} />
+  if (!menu.data) return <NotFoundState icon="list-tree" />
 
   return <Editor key={menu.data.handle} menu={menu.data} />
 }

@@ -5,7 +5,7 @@ import { Button } from '../Button'
 import { cn } from '../cn'
 import { ComponentBoundary } from '../ComponentBoundary'
 import { DataTable } from '../DataTable'
-import { EmptyState, NoMatches } from '../EmptyState'
+import { EmptyState } from '../EmptyState'
 import { Icon } from '../Icon'
 import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
@@ -256,7 +256,7 @@ function LiteralTable({ node }: { node: ViewNode }) {
   const items = rows.map((values, id) => ({ id: String(id), values }))
   return <DataTable<(typeof items)[number]> label={t('Results')} items={items} rowKey={(row) => row.id} columns={columns.map((label, i) => ({
     id: String(i), label, width: 'minmax(120px,1fr)', render: (row) => row.values[i] === null ? '—' : String(row.values[i]),
-  }))} state={!rows.length && <NoMatches className="py-3" />} />
+  }))} state={!rows.length && <EmptyState compact title={t('Nothing here yet')} />} />
 }
 
 /** An assistant reply's button: reports itself, and the server runs what it stands for through approvals. */
@@ -319,9 +319,7 @@ const builtins: Record<string, Renderer> = {
   'ui/diff': Diff,
   'ui/preview': ({ node }) => safeUrl(node.props.url) ? <iframe src={safeUrl(node.props.url)!} title={node.props.title ?? t('Preview')} sandbox="allow-same-origin allow-scripts allow-forms" className="w-full rounded-lg border border-border bg-white" style={{ height: node.props.height ?? 480 }} /> : null,
   'ui/redirect': Redirect,
-  'ui/empty': ({ node }) => node.props.size === 'sm'
-    ? <p className="m-0 py-3 text-sm text-muted">{node.props.title ?? t('Nothing here yet')}</p>
-    : <EmptyState icon={node.props.icon ?? 'inbox'} title={node.props.title ?? t('Nothing here yet')} description={node.props.text} action={node.props.action && <ActionButton action={node.props.action} />} />,
+  'ui/empty': ({ node }) => <EmptyState compact={node.props.size === 'sm'} icon={node.props.icon ?? 'inbox'} title={node.props.title ?? t('Nothing here yet')} action={node.props.action && <ActionButton action={node.props.action} />} />,
   'ui/action': SurfaceAction,
   'ui/links': Links,
   'ui/actions': ({ node }) => <div className="flex flex-wrap items-center gap-2"><Buttons actions={node.props.items} /></div>,
