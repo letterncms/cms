@@ -98,6 +98,31 @@ final class Blueprint
         return null;
     }
 
+    /**
+     * The fields that hold entries (the `entries` type and types built on it), by their path in the data: fields
+     * of a group as `group.field`. Rows of a repeater are not searched: a query cannot reach into them the same
+     * way on every driver.
+     *
+     * @return array<string, Field>
+     */
+    public function relations(string $prefix = ''): array
+    {
+        $types = self::types();
+        $out = [];
+
+        foreach ($this->fields as $field) {
+            $type = $types->resolve($field->type);
+
+            if ($type instanceof Types\Entries) {
+                $out[$prefix.$field->handle] = $field;
+            } elseif ($type instanceof Types\Group && ! $type instanceof Types\Repeater) {
+                $out += self::make((array) $field->get('fields', []))->relations($prefix.$field->handle.'.');
+            }
+        }
+
+        return $out;
+    }
+
     /** JSON schema of the data. Partial schemas (drafts) accept empty required fields. */
     public function schema(bool $partial = false): array
     {
@@ -165,6 +190,39 @@ final class Blueprint
         }
 
         return Validator::validate($data, $this->schema($partial));
+    }
+
+    /**
+     * What the schema cannot check: that the entries, people and files the values name exist and are of the
+     * kind the field allows. What `$previous` already named passes, so stored content with a relation to
+     * something since deleted stays editable.
+     *
+     * @return array<string, string> Path => message.
+     */
+    public function violations(array $data, array $previous = []): array
+    {
+        $types = self::types();
+        $errors = [];
+
+        foreach ($this->fields as $field) {
+            if (! isset($data[$field->handle])) {
+                continue;
+            }
+
+            foreach ($types->resolve($field->type)->check($data[$field->handle], $field, $previous[$field->handle] ?? null) as $path => $message) {
+                $errors[$path === '' ? $field->handle : $field->handle.'.'.$path] = $message;
+            }
+        }
+
+        return $errors;
+    }
+
+    /** @throws SchemaException When a value names something that is not there. */
+    public function check(array $data, array $previous = []): void
+    {
+        if (($errors = $this->violations($data, $previous)) !== []) {
+            throw new SchemaException($errors);
+        }
     }
 
     public function augment(array $data): array

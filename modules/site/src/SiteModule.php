@@ -158,6 +158,7 @@ final class SiteModule extends Plugin
                     ['handle' => 'offset', 'type' => 'number', 'label' => 'Skip', 'min' => 0, 'max' => 200],
                     ['handle' => 'parent', 'type' => 'select', 'label' => 'Level', 'options' => ['any' => __('All'), 'top' => __('Top Level Only'), 'current' => __('Children of This Page'), 'item' => __('Children of the Outer Item')], 'default' => 'any'],
                     ['handle' => 'hasTag', 'type' => 'text', 'label' => 'Only with Tag'],
+                    ['handle' => 'references', 'type' => 'select', 'label' => 'Only Entries Linking To', 'options' => ['' => __('Any'), 'current' => __('This Page'), 'item' => __('The Outer Item')]],
                     ['handle' => 'where', 'type' => 'json', 'component' => 'blocks-conditions', 'stack' => true, 'label' => 'Only Entries Where'],
                     ['handle' => 'skipCurrent', 'type' => 'toggle', 'label' => 'Leave Out This Page'],
                     ['handle' => 'paginate', 'type' => 'toggle', 'label' => 'Split into Pages'],
@@ -180,6 +181,12 @@ final class SiteModule extends Plugin
                         'item' => $query->parent(($scope->get('item') instanceof AugmentedEntry) ? $scope->get('item')->id : '-'),
                         default => null,
                     };
+
+                    // The reverse of a relation: posts by this author, projects of this client.
+                    if (in_array($props['references'] ?? '', ['current', 'item'], true)) {
+                        $to = $props['references'] === 'item' ? $scope->get('item') : $entry($scope);
+                        $query->references($to instanceof AugmentedEntry ? $to->id : '');
+                    }
 
                     if (! empty($props['hasTag'])) {
                         $query->where('tags', 'contains', (string) $props['hasTag']);

@@ -33,6 +33,9 @@ final class EntryQuery
     /** @var list<array{0: string, 1: string}> */
     public array $orders = [];
 
+    /** @var list<array{id: ?string, field: ?string}> Only entries that name these (see references()); a null id matches nothing. */
+    public array $references = [];
+
     public ?string $search = null;
 
     public bool $relevance = false;
@@ -122,6 +125,53 @@ final class EntryQuery
     public function parent(?string $parentId): self
     {
         return $this->where('parent_id', $parentId === null ? 'null' : '=', $parentId);
+    }
+
+    /**
+     * Only entries that name this entry: the reverse of a relation. An entry names another when the other's id is
+     * anywhere in its data — a relation or terms field at any depth (in a group, in the rows of a repeater or a
+     * matrix), a link field, a link or a relation in a block. With `$field`, only inside that field (`author`,
+     * `meta.related`, `sections`). An entry never names itself, and an id that is no entry matches nothing.
+     *
+     * Both drivers look for the id in the stored JSON, so they agree: an id is 26 characters nobody types by chance.
+     */
+    public function references(string $id, ?string $field = null): self
+    {
+        if ($field !== null && ! preg_match('/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/', $field)) {
+            throw new InvalidArgumentException(__('Invalid field :field.', ['field' => $field]));
+        }
+
+        $this->references[] = ['id' => $this->repository->find($id)?->id, 'field' => $field];
+
+        return $this;
+    }
+
+    /**
+     * How many of this query's entries name each of these entries, in one pass over them: for counts beside a
+     * list of terms, where a query per term would be one too many.
+     *
+     * @param  list<string>  $ids
+     * @return array<string, int> id => count, for every id given
+     */
+    public function referenceCounts(array $ids): array
+    {
+        $counts = array_fill_keys(array_map('strtolower', $ids), 0);
+
+        if ($counts === []) {
+            return [];
+        }
+
+        foreach ($this->get() as $entry) {
+            $json = strtolower((string) json_encode(($this->working ? $entry->working() : $entry->content())['data']));
+
+            if (preg_match_all('/[0-9a-z]{26}/', $json, $found)) {
+                foreach (array_unique($found[0]) as $id) {
+                    isset($counts[$id]) && $id !== $entry->id && $counts[$id]++;
+                }
+            }
+        }
+
+        return $counts;
     }
 
     public function search(?string $term): self

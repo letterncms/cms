@@ -39,6 +39,29 @@ class Repeater extends Group
         return [];
     }
 
+    /** Rows move, so what any row named before passes in every row. */
+    public function check(mixed $value, Field $field, mixed $previous = null): array
+    {
+        $blueprint = $this->blueprint($field);
+        $before = [];
+
+        foreach (array_filter((array) $previous, 'is_array') as $row) {
+            foreach ($row as $handle => $stored) {
+                $before[$handle] = is_array($stored) && is_array($before[$handle] ?? []) ? [...($before[$handle] ?? []), ...array_values($stored)] : $stored;
+            }
+        }
+
+        $errors = [];
+
+        foreach (array_values((array) $value) as $i => $row) {
+            foreach ($blueprint->violations((array) $row, $before) as $path => $message) {
+                $errors[$i.'.'.$path] = $message;
+            }
+        }
+
+        return $errors;
+    }
+
     public function augment(mixed $value, Field $field): mixed
     {
         $blueprint = $this->blueprint($field);

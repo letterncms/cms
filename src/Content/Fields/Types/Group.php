@@ -36,6 +36,11 @@ class Group extends FieldType
         return $this->blueprint($field)->defaults();
     }
 
+    public function check(mixed $value, Field $field, mixed $previous = null): array
+    {
+        return $this->blueprint($field)->violations((array) $value, (array) $previous);
+    }
+
     public function augment(mixed $value, Field $field): mixed
     {
         return $this->blueprint($field)->augment((array) $value);

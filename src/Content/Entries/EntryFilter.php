@@ -36,6 +36,15 @@ final class EntryFilter
                 }
             }
 
+            foreach ($query->references as $reference) {
+                $data = ($query->working ? $entry->working() : $entry->content())['data'];
+                $within = $reference['field'] === null ? $data : data_get($data, $reference['field']);
+
+                if ($reference['id'] === null || $reference['id'] === $entry->id || ! str_contains(strtolower((string) json_encode($within)), $reference['id'])) {
+                    return false;
+                }
+            }
+
             if ($query->search !== null) {
                 $content = $query->working ? $entry->working() : $entry->content();
                 $haystack = mb_strtolower($content['title'].' '.$content['slug'].' '.json_encode($content['data'], JSON_UNESCAPED_UNICODE));

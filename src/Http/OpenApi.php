@@ -155,6 +155,8 @@ final class OpenApi
                     ['name' => 'q', 'in' => 'query', 'required' => false, self::ABOUT => 'Words to search for.', 'schema' => ['type' => 'string']],
                     ['name' => 'sort', 'in' => 'query', 'required' => false, self::ABOUT => 'A field to order by, with a leading - for descending (-publishedAt). Without it, the collection\'s own order.', 'schema' => ['type' => 'string']],
                     ['name' => 'filter', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries whose field has this value: filter[category]=news.', 'style' => 'deepObject', 'explode' => true, 'schema' => ['type' => 'object', 'additionalProperties' => ['type' => 'string']]],
+                    ['name' => 'references', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries that name the published entry with this id: in a relation or terms field at any depth, a link field or a link in a block. The posts of an author, the projects of a client.', 'schema' => ['type' => 'string']],
+                    ['name' => 'references_field', 'in' => 'query', 'required' => false, self::ABOUT => 'With references: only inside this field.', 'schema' => ['type' => 'string']],
                     ['name' => 'limit', 'in' => 'query', 'required' => false, self::ABOUT => 'Entries per page. Without it, the collection\'s own page size.', 'schema' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200]],
                     ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'minimum' => 1, 'default' => 1]],
                 ],

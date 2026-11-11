@@ -44,6 +44,45 @@ final class MediaField extends FieldType
         return [];
     }
 
+    /** Every id is a file of the library, of a kind the field takes (`accept`). A URL is not checked. */
+    public function check(mixed $value, Field $field, mixed $previous = null): array
+    {
+        $isId = static fn ($v) => is_string($v) && preg_match('/^[0-9a-z]{26}$/i', $v) === 1;
+        $new = array_diff(array_filter((array) $value, $isId), array_filter((array) $previous, 'is_string'));
+
+        if ($new === []) {
+            return [];
+        }
+
+        $found = MediaItem::query()->whereIn('id', array_map('strtolower', array_values($new)))->pluck('mime', 'id');
+        $accept = (string) $field->get('accept', '*');
+        $errors = [];
+
+        foreach ($new as $i => $id) {
+            $mime = $found[strtolower($id)] ?? null;
+
+            if ($mime === null) {
+                $errors[(string) $i] = __('This file does not exist.');
+            } elseif (! self::accepts($accept, (string) $mime)) {
+                $errors[(string) $i] = __('This kind of file is not allowed here.');
+            }
+        }
+
+        return $errors;
+    }
+
+    /** `image/*`, `application/pdf`, several separated by commas, or `*` for anything. */
+    public static function accepts(string $accept, string $mime): bool
+    {
+        foreach (array_filter(array_map('trim', explode(',', $accept))) ?: ['*'] as $pattern) {
+            if ($pattern === '*' || $pattern === '*/*' || $pattern === $mime || (str_ends_with($pattern, '/*') && str_starts_with($mime, substr($pattern, 0, -1)))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Ids become images, in the order given. A URL stays a URL. */
     public function augment(mixed $value, Field $field): mixed
     {

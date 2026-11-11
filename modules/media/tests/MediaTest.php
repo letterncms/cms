@@ -70,6 +70,32 @@ final class MediaTest extends TestCase
         $this->assertSame('/media/a.webp', $type->augment(['/media/a.webp'], $one));
     }
 
+    public function test_a_media_field_takes_files_that_exist_and_are_of_its_kind(): void
+    {
+        $image = app(MediaStore::class)->store($this->jpeg(), 'a.jpg');
+        $text = MediaItem::query()->create(['name' => 'Notes', 'filename' => 'notes.txt', 'path' => 'media/notes.txt', 'mime' => 'text/plain', 'size' => 5, 'hash' => hash('sha256', 'notes'), 'folder' => 'tests']);
+        $type = new \Cms\Modules\Media\MediaField;
+        $images = \Cms\Content\Fields\Field::fromArray(['handle' => 'images', 'type' => 'media', 'accept' => 'image/*']);
+        $any = \Cms\Content\Fields\Field::fromArray(['handle' => 'files', 'type' => 'media']);
+
+        $this->assertSame([], $type->check([$image->id, '/media/a.webp', 'https://example.com/b.png'], $images));
+        $this->assertSame([1, 2], array_keys($type->check([$image->id, $text->id, '01hzzzzzzzzzzzzzzzzzzzzzzz'], $images)));
+        $this->assertSame([], $type->check([$image->id, $text->id], $any));
+        // What the field already held is not judged again.
+        $this->assertSame([], $type->check([$text->id, '01hzzzzzzzzzzzzzzzzzzzzzzz'], $images, [$text->id, '01hzzzzzzzzzzzzzzzzzzzzzzz']));
+
+        $this->cms()->abilities()->execute('globals/save', ['handle' => 'brand', 'title' => 'Brand', 'fields' => [['handle' => 'logo', 'type' => 'media', 'accept' => 'image/*', 'max' => 1]]], AbilityContext::system());
+
+        try {
+            $this->cms()->abilities()->execute('globals/set', ['handle' => 'brand', 'values' => ['logo' => [$text->id]]], AbilityContext::system());
+            $this->fail('A text file went into an image field.');
+        } catch (AbilityException $e) {
+            $this->assertSame(['logo.0'], array_keys($e->details));
+        }
+
+        $this->assertSame([$image->id], $this->cms()->abilities()->execute('globals/set', ['handle' => 'brand', 'values' => ['logo' => [$image->id]]], AbilityContext::system())['logo']);
+    }
+
     public function test_stores_images_with_dimensions_and_dedupes(): void
     {
         $store = app(MediaStore::class);

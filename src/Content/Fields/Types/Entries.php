@@ -33,7 +33,43 @@ class Entries extends FieldType
 
     public function normalize(mixed $value, Field $field): mixed
     {
-        return array_values(array_unique(array_filter((array) $value, 'is_string')));
+        return array_values(array_unique(array_map(static fn (string $id) => preg_match('/^[0-9a-z]{26}$/i', $id) ? strtolower($id) : $id, array_filter((array) $value, 'is_string'))));
+    }
+
+    /** Every id is an entry, of a collection this field takes. */
+    public function check(mixed $value, Field $field, mixed $previous = null): array
+    {
+        $ids = array_values(array_filter((array) $value, 'is_string'));
+        $new = array_diff($ids, array_filter((array) $previous, 'is_string'));
+
+        if ($new === []) {
+            return [];
+        }
+
+        $found = [];
+
+        foreach (app(EntryRepository::class)->findMany(array_values($new)) as $entry) {
+            $found[$entry->id] = $entry->collection;
+        }
+
+        $allowed = $this->collections($field);
+        $errors = [];
+
+        foreach ($new as $i => $id) {
+            if (! isset($found[$id])) {
+                $errors[(string) $i] = __('This entry does not exist.');
+            } elseif ($allowed !== [] && ! in_array($found[$id], $allowed, true)) {
+                $errors[(string) $i] = __('Must be an entry of: :collections.', ['collections' => implode(', ', $allowed)]);
+            }
+        }
+
+        return $errors;
+    }
+
+    /** @return list<string> The collections this field takes entries of; none means any. */
+    public function collections(Field $field): array
+    {
+        return array_values(array_filter((array) $field->get('collections'), 'is_string'));
     }
 
     public function defaultValue(Field $field): mixed

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Cms\Content\Collections\Collection;
+use Cms\Content\Collections\CollectionRepository;
 
 final class DatabaseDriver implements EntryDriver
 {
@@ -127,14 +128,7 @@ final class DatabaseDriver implements EntryDriver
             $column = DB::raw($this->expression($builder, $field, $query->working));
 
             if ($operator === 'contains' && ! EntryQuery::isColumn($field)) {
-                $path = '$.'.$field;
-                $base = "json_extract(entries.data, '{$path}')";
-                $json = $query->working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data.{$field}') else {$base} end" : $base;
-                if (DB::connection()->getDriverName() === 'sqlite') {
-                    $builder->whereRaw("exists (select 1 from json_each({$json}) where json_each.value = ?)", [$value]);
-                } else {
-                    $builder->whereRaw("json_contains({$json}, ?)", [json_encode($value, JSON_THROW_ON_ERROR)]);
-                }
+                $builder->whereRaw(...$this->contains($field, $value, $query->working));
                 continue;
             }
             match ($operator) {
@@ -148,6 +142,19 @@ final class DatabaseDriver implements EntryDriver
             };
         }
 
+        foreach ($query->references as $reference) {
+            if ($reference['id'] === null) {
+                $builder->whereRaw('0 = 1');
+
+                continue;
+            }
+
+            // The id anywhere in the entry's data, or in one field of it: as EntryFilter reads it.
+            $data = $query->working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data') else entries.data end" : 'entries.data';
+            $within = $reference['field'] === null ? $data : "json_extract({$data}, '$.{$reference['field']}')";
+            $builder->where('entries.id', '!=', $reference['id'])->whereRaw("lower(cast({$within} as char)) like ?", ['%'.$reference['id'].'%']);
+        }
+
         if ($query->search !== null) {
             $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query->search).'%';
             $title = $this->expression($builder, 'title', $query->working);
@@ -157,6 +164,19 @@ final class DatabaseDriver implements EntryDriver
         }
 
         return $builder;
+    }
+
+    /**
+     * A list in the data has this value. @return array{0: string, 1: list<mixed>} SQL and its bindings.
+     */
+    private function contains(string $field, mixed $value, bool $working): array
+    {
+        $base = "json_extract(entries.data, '$.{$field}')";
+        $json = $working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data.{$field}') else {$base} end" : $base;
+
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? ["exists (select 1 from json_each({$json}) where json_each.value = ?)", [$value]]
+            : ["json_contains({$json}, ?)", [json_encode($value, JSON_THROW_ON_ERROR)]];
     }
 
     /**

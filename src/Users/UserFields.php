@@ -69,7 +69,9 @@ final class UserFields
     public function fill(User $user, array $values): void
     {
         try {
-            $user->data = $this->blueprint()->process(array_replace((array) ($user->data ?? []), $values), partial: true);
+            $stored = (array) ($user->data ?? []);
+            $user->data = $this->blueprint()->process(array_replace($stored, $values), partial: true);
+            $this->blueprint()->check($user->data, $stored);
         } catch (SchemaException $e) {
             throw AbilityException::invalid($e->getMessage(), $e->errors);
         }
