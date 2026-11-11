@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.22.0 (2026-11-11)
+
 ### Added
 
 - **Keyboard shortcuts**: press `?` anywhere in the admin for the keys that work on the screen you are on: in the editor that includes Save, Publish and the details panel. It is also in the command palette. Plugins list their own by giving `useShortcut` a label: `useShortcut('mod+shift+p', publish, true, t('Publish'))`; a registered command or a sidebar item with a `shortcut` is listed too.
