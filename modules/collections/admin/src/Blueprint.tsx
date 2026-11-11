@@ -21,7 +21,7 @@ const kind = (handle: string): BlueprintKind => ({
     // Not "Entries", the button in the bar that leaves this screen, and not "Structure", the label of its first field.
     { title: t('Content'), handles: ['structure', 'body', 'taxonomy'] },
     { title: t('Default Display'), handles: ['default_view', 'default_columns'], bare: true },
-    { title: t('Publishing'), handles: ['route', 'template'] },
+    { title: t('Publishing'), handles: ['route', 'template', 'archives'] },
   ],
 })
 

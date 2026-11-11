@@ -24,8 +24,12 @@ const fields = [
     { handle: 'facts', label: 'Facts', fields: [{ handle: 'title', type: 'text', label: 'Title' }] },
   ] },
 ]
-const settings = [{ handle: 'title', type: 'text', label: 'Name', required: true }, { handle: 'singular', type: 'text', label: 'Entry Name' }]
-const definition = { ...collection, fields, resolvedFields: fields, settings }
+const settings = [
+  { handle: 'title', type: 'text', label: 'Name', required: true }, { handle: 'singular', type: 'text', label: 'Entry Name' },
+  // The taxonomies there are to archive by, as the kernel offers them.
+  { handle: 'archives', type: 'json', component: 'collection-archives', label: 'Term Archives', options: { topics: 'Topics', authors: 'Authors' } },
+]
+const definition = { ...collection, fields, resolvedFields: fields, settings, archives: { topics: '/news/topics/{slug}' } }
 const own = { ...manifest, fieldTypes }
 let saved = null
 const api = abilities((ability, input) => {
@@ -138,6 +142,20 @@ try {
   await until(() => kindsOf().length === 2, 'A blueprint nobody saved needs no question')
   assert(!document.querySelector('[role="alertdialog"]'), 'A blueprint nobody saved was asked about')
   check('A new blueprint goes without a question')
+
+  // A collection's term archives are rows in its settings: a taxonomy and an address each.
+  ;[...document.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent.trim() === 'Settings').click()
+  const archives = await until(() => document.querySelector('[data-archives]'), 'The settings have no term archives')
+  const routes = () => [...archives.querySelectorAll('input')].map((input) => input.value).filter((value) => value.startsWith('/'))
+  assert(routes().join() === '/news/topics/{slug}', 'The archive the collection has is not a row: ' + routes().join())
+  press('Add Archive', archives).click()
+  await until(() => routes().length === 2, 'Add Archive added no row')
+  assert(routes()[1] === '/news/authors/{slug}' && !press('Add Archive', archives), 'The new row is not the taxonomy that was free, or one is still offered: ' + routes().join())
+  press('Remove Archive', archives).click()
+  await until(() => routes().length === 1, 'Remove Archive removed no row')
+  definition = await savedDefinition()
+  assert(JSON.stringify(definition.archives) === JSON.stringify({ authors: '/news/authors/{slug}' }), 'The archives were not saved as they are written: ' + JSON.stringify(definition.archives))
+  check('Term archives are rows in the settings of a collection')
   await report()
 } catch (error) {
   output.textContent += '\\nFAIL ' + error.message

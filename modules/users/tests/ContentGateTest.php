@@ -34,6 +34,12 @@ final class ContentGateTest extends TestCase
                 ['handle' => 'secret_note', 'type' => 'text'],
                 ['handle' => 'blocks', 'type' => 'blocks'],
             ]],
+            // News filed under topics, with a page per topic: the term's archive.
+            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'fields' => []],
+            'news' => ['title' => 'News', 'structure' => 'dated', 'route' => '/news/{slug}', 'template' => 'news', 'body' => 'blocks', 'archives' => ['topics' => '/news/topics/{slug}'], 'fields' => [
+                ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics'],
+                ['handle' => 'blocks', 'type' => 'blocks'],
+            ]],
             'guides' => ['title' => 'Guides', 'driver' => 'files', 'route' => '/guides/{slug}', 'body' => 'body', 'fields' => [['handle' => 'body', 'type' => 'markdown']]],
         ];
     }
@@ -216,6 +222,58 @@ final class ContentGateTest extends TestCase
         $this->assertSame('', (string) $read($locked->id)->raw('blocks', ''));
         $this->assertNull($read($teaser->id)->raw('secret_note'));
         $this->assertSame('Public bit', $read($teaser->id)->raw('excerpt'));
+    }
+
+    public function test_a_locked_entry_is_in_no_archive_and_a_locked_term_has_none_for_a_stranger(): void
+    {
+        $tides = $this->entry('topics', 'Tides');
+        $secret = $this->entry('topics', 'Secret Topic', ['gate' => ['mode' => 'locked']]);
+        $this->entry('news', 'Open News', ['topics' => [$tides->id, $secret->id]]);
+        $this->entry('news', 'Members News', ['topics' => [$tides->id], 'gate' => ['mode' => 'locked']]);
+
+        // A stranger: the archive without what is closed, and no archive of a closed term.
+        $archive = $this->get('/news/topics/tides')->assertOk();
+        $this->assertStringContainsString('Open News', $archive->getContent());
+        $this->assertStringNotContainsString('Members News', $archive->getContent());
+        $this->assertStringContainsString('public', (string) $archive->headers->get('Cache-Control'));
+        $this->get('/news/topics/secret-topic')->assertRedirect();
+
+        foreach (['/search.json', '/sitemap.xml'] as $file) {
+            $body = $this->get($file)->assertOk()->getContent();
+            $this->assertStringContainsString('/news/topics/tides', $body, $file);
+            $this->assertStringNotContainsString('/news/topics/secret-topic', $body, $file);
+            $this->assertStringNotContainsString('Members News', $body, $file);
+        }
+
+        $listed = array_column(cms()->abilities()->execute('terms/list', ['taxonomy' => 'topics'], \Cms\Abilities\AbilityContext::system())['items'], 'archives', 'title');
+        $this->assertSame([['collection' => 'news', 'uri' => '/news/topics/secret-topic']], $listed['Secret Topic'], 'The team sees where it is.');
+
+        // A member: all of it, and never from a cache.
+        $this->as($this->member());
+        $archive = $this->get('/news/topics/tides')->assertOk();
+        $this->assertStringContainsString('Members News', $archive->getContent());
+        $this->assertStringContainsString('no-store', (string) $archive->headers->get('Cache-Control'));
+        $this->assertStringContainsString('Open News', $this->get('/news/topics/secret-topic')->assertOk()->getContent());
+        $this->as(null);
+
+        // As files: the open archive without the closed entry, the closed term's not at all.
+        cms()->settingsRegistry()->save('site', ['static' => true]);
+        $status = app(\Cms\Modules\Site\Build\SiteBuilder::class)->buildAll();
+        $this->assertSame([], $status['errors']);
+        $built = (string) file_get_contents(public_path('news/topics/tides/index.html'));
+        $this->assertStringContainsString('Open News', $built);
+        $this->assertStringNotContainsString('Members News', $built);
+        $this->assertFileDoesNotExist(public_path('news/topics/secret-topic/index.html'));
+
+        // Closing the term afterwards takes its archive off the disk.
+        cms()->entryService()->update($tides->id, ['data' => ['gate' => ['mode' => 'locked']]], publish: true);
+        $builder = app(\Cms\Modules\Site\Build\SiteBuilder::class);
+
+        while ($builder->hasWork()) {
+            $builder->process(10_000);
+        }
+
+        $this->assertFileDoesNotExist(public_path('news/topics/tides/index.html'));
     }
 
     public function test_a_gated_entry_never_becomes_a_file_and_stops_being_one(): void

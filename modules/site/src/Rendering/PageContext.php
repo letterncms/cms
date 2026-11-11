@@ -49,6 +49,14 @@ final class PageContext
 
     public int $pages = 1;
 
+    /**
+     * Set on a term archive: the page lists the entries of `collection` filed under the term, which is the
+     * page's entry (at the archive's address, not its own).
+     *
+     * @var array{collection: string, taxonomy: string, term: string}|null
+     */
+    public ?array $archive = null;
+
     /** @var array{current?: int, total?: int, prev?: ?string, next?: ?string, count?: int} set by a paginated Repeat */
     public array $pagination = [];
 

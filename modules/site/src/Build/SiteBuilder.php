@@ -6,6 +6,7 @@ namespace Cms\Modules\Site\Build;
 
 use Cms\Support\Brand;
 use Closure;
+use Cms\Content\Collections\Archives;
 use Cms\Content\Entries\Entry;
 use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Extend\Hooks;
@@ -35,6 +36,7 @@ final class SiteBuilder implements SiteBuilderContract
         private readonly Cms $cms,
         private readonly Renderer $renderer,
         private readonly Hooks $hooks,
+        private readonly Archives $archives,
     ) {}
 
     public function available(): bool
@@ -92,6 +94,15 @@ final class SiteBuilder implements SiteBuilderContract
 
         if ($entry->uri !== null) {
             $uris[] = $entry->uri;
+        }
+
+        // A term's archives: the ones built (a renamed term's old address is found gone and removed) and the ones it has now.
+        foreach ($manifest['pages'] as $uri => $page) {
+            ($page['archive'] ?? null) === $entry->id && $uris[] = (string) $uri;
+        }
+
+        foreach ($this->archives->of($entry) as $archive) {
+            $uris[] = $archive['uri'];
         }
 
         $this->queue(array_values(array_unique($uris)), $reason ?: __('Updated “:title”', ['title' => $entry->title]));
@@ -278,9 +289,17 @@ final class SiteBuilder implements SiteBuilderContract
 
     public function forgetEntry(Entry $entry): void
     {
+        $archives = null;
+
         foreach ($this->readManifest()['pages'] as $uri => $page) {
             if (($page['entry'] ?? null) === $entry->id && ($uri !== $entry->uri || ! $this->buildable($entry))) {
                 $this->forget((string) $uri);
+            }
+
+            // A term's archives go with it: when it is deleted or no longer on the site for everybody, or the address moved.
+            if (($page['archive'] ?? null) === $entry->id) {
+                $archives ??= $this->buildable($entry) && $this->cms->entries()->find($entry->id) !== null ? array_column($this->archives->of($entry), 'uri') : [];
+                in_array((string) $uri, $archives, true) || $this->forget((string) $uri);
             }
         }
     }
@@ -310,6 +329,15 @@ final class SiteBuilder implements SiteBuilderContract
                 if ($entry->uri !== null && $this->buildable($entry)) {
                     $items[] = 'uri:'.$entry->uri.'#'.$entry->locale;
                 }
+            }
+        }
+
+        // Every live term's archive of every collection that has one.
+        foreach ($this->archives->all() as $archive) {
+            $term = $this->archives->term($archive['term']);
+
+            if ($term && $this->buildable($term)) {
+                $items[] = 'uri:'.$archive['uri'].'#'.$archive['locale'];
             }
         }
 
@@ -355,6 +383,9 @@ final class SiteBuilder implements SiteBuilderContract
         }
 
         $entry = $this->cms->entries()->findByUri($uri, $locale ?: null);
+        // Not a page of its own: a term's archive, built for as long as the term is on the site.
+        $archive = $entry ? null : $this->archives->at($uri, $locale ?: null);
+        $entry ??= $archive ? $this->cms->entries()->find($archive['term']) : null;
         $key = $page > 1 ? rtrim($uri, '/')."/page/{$page}" : $uri;
 
         if (! $entry || ! $this->buildable($entry)) {
@@ -363,12 +394,22 @@ final class SiteBuilder implements SiteBuilderContract
             return [];
         }
 
-        $result = $this->renderer->entry($entry, $page);
+        $result = $archive ? $this->renderer->archive($entry, $archive, $page) : $this->renderer->entry($entry, $page);
+
+        // A page number past the last one (the list got shorter since it was queued) is no page.
+        if ($page > 1 && $page > $result['context']->pages) {
+            $this->forgetIn($manifest, $key);
+
+            return [];
+        }
+
         $file = $this->fileFor($key);
         $this->write($file, $result['html']);
 
-        $manifest['pages'][$key] = ['file' => $file, 'entry' => $entry->id, 'deps' => array_keys($result['context']->dependencies), 'builtAt' => now()->toIso8601String(), 'generation' => $generation];
-        $this->hooks->dispatch('site.page.built', $key, $entry, $file, $page);
+        // An archive is the term's page at another address: it is the term's to rebuild, not its own page to move.
+        $manifest['pages'][$key] = ['file' => $file, 'entry' => $archive ? null : $entry->id, ...($archive ? ['archive' => $archive['term']] : []), 'deps' => array_values(array_unique([...array_keys($result['context']->dependencies), ...($archive ? ['entry:'.$entry->id] : [])])), 'builtAt' => now()->toIso8601String(), 'generation' => $generation];
+        // Who writes something beside the page (a Markdown version) gets the page's entry: on an archive, the term at the archive's address.
+        $this->hooks->dispatch('site.page.built', $key, $archive ? ($result['context']->entry ?? $entry) : $entry, $file, $page);
 
         $follow = [];
 
