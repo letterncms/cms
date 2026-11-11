@@ -544,5 +544,12 @@
   "Vendored Libraries": "Bibliothèques embarquées",
   "Libraries are only fetched from :hosts.": "Les bibliothèques ne sont récupérées que depuis :hosts.",
   ":url did not answer with the file itself.": ":url n’a pas répondu avec le fichier lui-même.",
-  "“:name” has the name of something a server runs.": "« :name » porte le nom de quelque chose qu’un serveur exécute."
+  "“:name” has the name of something a server runs.": "« :name » porte le nom de quelque chose qu’un serveur exécute.",
+  "Previous and Next Entry": "Entrée précédente et suivante",
+  "The entries before and after this one in its collection, for a detail page: newest last in a dated collection, the tree’s reading order, else the collection’s own order.": "Les entrées avant et après celle-ci dans sa collection, pour une page de détail : la plus récente en dernier dans une collection datée, l’ordre de lecture de l’arborescence, sinon l’ordre de la collection.",
+  "Previous and Next": "Précédente et suivante",
+  "Previous": "Précédente",
+  "Next": "Suivante",
+  "Show": "Afficher",
+  "Go Round at the Ends": "Boucler aux extrémités"
 }

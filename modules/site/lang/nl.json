@@ -544,5 +544,12 @@
   "Vendored Libraries": "Meegeleverde bibliotheken",
   "Libraries are only fetched from :hosts.": "Bibliotheken worden alleen opgehaald van :hosts.",
   ":url did not answer with the file itself.": ":url antwoordde niet met het bestand zelf.",
-  "“:name” has the name of something a server runs.": "‘:name’ heeft de naam van iets dat een server uitvoert."
+  "“:name” has the name of something a server runs.": "‘:name’ heeft de naam van iets dat een server uitvoert.",
+  "Previous and Next Entry": "Vorig en volgend item",
+  "The entries before and after this one in its collection, for a detail page: newest last in a dated collection, the tree’s reading order, else the collection’s own order.": "De items voor en na dit item in zijn collectie, voor een detailpagina: nieuwste laatst in een collectie met datum, de leesvolgorde van de boom, anders de volgorde van de collectie zelf.",
+  "Previous and Next": "Vorige en volgende",
+  "Previous": "Vorige",
+  "Next": "Volgende",
+  "Show": "Tonen",
+  "Go Round at the Ends": "Rondgaan aan de uiteinden"
 }
