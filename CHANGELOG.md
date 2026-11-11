@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Templates**: **Offered For** lists the sign-in and account pages, and any other pages that pick a template, so a template made for them saves instead of saying the collection must be one of the others.
+
 ## 0.20.1 (2026-11-07)
 
 ### Changed

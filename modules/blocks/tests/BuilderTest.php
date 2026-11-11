@@ -264,6 +264,24 @@ final class BuilderTest extends TestCase
         $this->assertSame(['post' => 'Post'], app(Templates::class)->options('pages'));
     }
 
+    public function test_templates_are_offered_for_every_collection_whose_pages_choose_one(): void
+    {
+        // Like the account and store pages: a system collection whose pages pick a template.
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('screens', ['title' => 'Account Pages', 'system' => true, 'body' => 'blocks', 'fields' => [
+            ['handle' => 'blocks', 'type' => 'blocks'], ['handle' => 'template', 'type' => 'select', 'dynamic' => 'templates'],
+        ]]));
+        $offered = array_column($this->cms()->collections()->find('templates')->blueprint()->toArray(), 'options', 'handle')['collections'];
+
+        $this->assertSame('Account Pages', $offered['screens']);
+        $this->assertArrayHasKey('pages', $offered);
+        $this->assertArrayNotHasKey('templates', $offered);
+        $this->assertArrayNotHasKey('components', $offered);
+
+        $template = $this->cms()->content()->create('templates', ['title' => 'Account', 'slug' => 'account', 'status' => 'published', 'data' => ['collections' => ['screens'], 'blocks' => [['type' => 'outlet']]]]);
+        $this->assertSame(['screens'], $template->data['collections']);
+        $this->assertSame(['account' => 'Account'], array_intersect_key(app(Templates::class)->options('screens'), ['account' => true]));
+    }
+
     public function test_agents_cannot_smuggle_scripts_through_attributes_or_bindings(): void
     {
         $nodes = app(Document::class)->normalize([[

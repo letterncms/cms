@@ -238,8 +238,12 @@ final class CmsServiceProvider extends ServiceProvider
 
         $hooks->addFilter('fields.options.admin-languages', fn (array $options) => [...$options, ...$this->app->make(Admin\Translations::class)->languages()]);
         $hooks->addFilter('fields.options.timezones', static fn (array $options) => [...$options, ...timezone_identifiers_list()]);
-        // Every collection that holds content of its own: not the system ones (templates, components, account screens).
-        $hooks->addFilter('fields.options.collections', fn (array $options) => [...$options, ...array_map(static fn ($c) => $c->title, array_filter($this->app->make(CollectionRepository::class)->all(), static fn ($c) => ! $c->system))]);
+        // Every collection that holds content of its own, and the system ones whose pages choose a template
+        // (account and store pages): not templates or components.
+        $hooks->addFilter('fields.options.collections', fn (array $options) => [...$options, ...array_map(static fn ($c) => $c->title, array_filter(
+            $this->app->make(CollectionRepository::class)->all(),
+            static fn ($c) => ! $c->system || in_array('template', array_column($c->fields, 'handle'), true),
+        ))]);
 
         $hooks->addFilter('settings.saving', function (array $values, string $namespace, array $stored) {
             return match ($namespace) {
