@@ -299,5 +299,6 @@
   "Write in Markdown…": "Écrire en Markdown…",
   "Yes": "Oui",
   "You are not allowed to do this": "Vous n’êtes pas autorisé à effectuer cette action",
-  "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe."
+  "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe.",
+  "{type} Options": "Options de {type}"
 }
