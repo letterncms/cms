@@ -18,15 +18,13 @@ final class GlobalsViews
         ]]);
 
         $views = $cms->views();
-        $views->register('globals', '/globals', static fn (User $user) => self::list($user), permission: 'globals.view');
+        $views->register('globals', '/globals', static fn () => self::list(), permission: 'globals.view');
         $views->register('globals-set', '/globals/:handle', static fn (User $user, array $params) => self::set($cms, (string) ($params['handle'] ?? '')), permission: 'globals.view');
         $views->register('globals-fields', '/globals/:handle/fields', static fn (User $user, array $params) => ['type' => 'globals/fields', 'props' => ['handle' => (string) ($params['handle'] ?? '')]], permission: 'globals.manage');
     }
 
-    private static function list(User $user): array
+    private static function list(): array
     {
-        $manage = $user->hasPermission('globals.manage');
-
         return ['type' => 'ui/page', 'props' => ['title' => __('Globals'), 'icon' => 'globe', 'actions' => [
             ['label' => __('New Global Set'), 'icon' => 'plus', 'variant' => 'primary', 'ability' => 'globals/save',
                 'form' => ['title' => __('New Global Set'), 'confirm' => __('Create Global Set'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'required' => true, 'autofocus' => true]]],
@@ -39,9 +37,8 @@ final class GlobalsViews
                 'id' => 'globals', 'label' => __('Globals'), 'key' => 'handle',
                 'source' => ['ability' => 'globals/list'],
                 'columns' => [
+                    // One fact a row: its name. The handle is in its address and beside each field, for whoever builds templates.
                     ['key' => 'title', 'label' => __('Name'), 'icon' => 'icon'],
-                    // The handle is for whoever builds the site's templates, not for those who fill in the values.
-                    ...($manage ? [['key' => 'handle', 'label' => __('Handle'), 'width' => 'minmax(200px,1fr)', 'format' => 'code']] : []),
                 ],
                 'open' => ['label' => __('Edit'), 'to' => '/globals/{row.handle}'],
                 'actions' => [
@@ -72,9 +69,18 @@ final class GlobalsViews
         $locales = $cms->locales();
 
         return ['type' => 'ui/page', 'props' => ['title' => $set->title, 'icon' => $set->icon ?: 'globe', 'width' => 'narrow', 'back' => ['to' => '/globals', 'label' => __('Globals')], 'actions' => [
-            ['label' => __('Edit Fields'), 'icon' => 'field', 'to' => "/globals/{$handle}/fields", 'can' => 'globals.manage'],
+            // No icon: on a phone a bar's button with one is only its icon, and this is the only thing to do here.
+            ['label' => __('Edit Fields'), 'to' => "/globals/{$handle}/fields", 'can' => 'globals.manage'],
         ]], 'children' => count($locales) > 1
-            ? [['type' => 'ui/tabs', 'children' => array_map(static fn (string $l) => ['type' => 'ui/tab', 'props' => ['id' => $l, 'label' => strtoupper($l)], 'children' => [$form($l)]], $locales)]]
+            ? [['type' => 'ui/tabs', 'children' => array_map(static fn (string $l) => ['type' => 'ui/tab', 'props' => ['id' => $l, 'label' => self::languageName($l)], 'children' => [$form($l)]], $locales)]]
             : [$form(null)]];
+    }
+
+    /** "Deutsch" for "de", in the language itself: a tab says which language it holds, not its code. */
+    private static function languageName(string $code): string
+    {
+        $name = class_exists(\Locale::class) ? (string) \Locale::getDisplayName(str_replace('-', '_', $code), str_replace('-', '_', $code)) : '';
+
+        return $name !== '' && $name !== $code ? mb_strtoupper(mb_substr($name, 0, 1)).mb_substr($name, 1) : strtoupper($code);
     }
 }

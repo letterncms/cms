@@ -351,7 +351,7 @@ final class LanguagesModule extends Plugin
     {
         return [...$l,
             'path' => $l['prefix'] !== '' ? '/'.$l['prefix'].'/…' : null,
-            'prefixLabel' => $l['prefix'] !== '' ? '/'.$l['prefix'].'/…' : __('None'),
+            'prefixLabel' => $l['prefix'] !== '' ? '/'.$l['prefix'].'/…' : __('No Prefix'),
             'badge' => $l['default'] ? __('Default') : null,
             'directionName' => $l['direction'] === 'rtl' ? __('Right to Left') : __('Left to Right'),
             'removable' => ! $l['default'] && $l['entries'] === 0,
@@ -380,18 +380,20 @@ final class LanguagesModule extends Plugin
         $remove = ['label' => __('Remove'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'languages/delete', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'disabled' => '{row.entries}', 'success' => __('{row.name} removed'),
             'confirm' => ['title' => __('Remove {row.name}?'), 'text' => __('Visitors will no longer see this language. You can add it again later.'), 'confirm' => __('Remove'), 'danger' => true]];
 
-        return ['type' => 'ui/page', 'props' => ['title' => __('Languages'), 'icon' => 'translate', 'width' => 'narrow', 'actions' => [
+        return ['type' => 'ui/page', 'props' => ['title' => __('Languages'), 'icon' => 'translate', 'actions' => [
             // A searchable list chosen with the keyboard, which takes any other xx-YY code too.
+            // Where translating is set up, beside adding a language: not a row of its own under the list.
+            ...($assistant && ! $translator ? [['label' => __('Set Up Automatic Translation'), 'icon' => 'sparkle', 'to' => '/settings/assistant', 'can' => 'settings.manage']] : []),
             ['label' => __('Add Language'), 'name' => 'add-language', 'icon' => 'plus', 'variant' => 'primary', 'can' => 'settings.manage', 'component' => 'languages/add-language'],
-        ]], 'children' => [['type' => 'ui/stack', 'children' => [
+        ]], 'children' => [
             ['type' => 'ui/records', 'props' => [
                 'id' => 'languages', 'label' => __('Languages'), 'key' => 'code',
                 'source' => ['ability' => 'languages/list'], 'at' => 'languages',
                 'columns' => [
-                    ['key' => 'name', 'label' => __('Name'), 'muted' => 'badge'],
+                    ['key' => 'name', 'label' => __('Name'), 'badge' => 'badge'],
                     ['key' => 'code', 'label' => __('Code'), 'width' => '72px', 'format' => 'code'],
-                    ['key' => 'path', 'label' => __('URL Prefix'), 'width' => '120px', 'format' => 'code', 'empty' => __('None')],
-                    ['key' => 'entries', 'label' => __('Entries'), 'width' => '80px', 'align' => 'end', 'format' => 'number'],
+                    ['key' => 'path', 'label' => __('URL Prefix'), 'width' => '120px', 'format' => 'code', 'empty' => __('No Prefix')],
+                    ['key' => 'entries', 'label' => __('Entries'), 'width' => '80px', 'align' => 'end', 'format' => 'number', 'unit' => ['one' => __('{count} Entry'), 'other' => __('{count} Entries')]],
                 ],
                 'open' => ['label' => __('Open'), 'dialog' => ['title' => '{row.name}', 'text' => '{row.note}', 'body' => [
                     ['type' => 'ui/detail', 'props' => ['items' => [
@@ -404,10 +406,7 @@ final class LanguagesModule extends Plugin
                 'actions' => [$makeDefault, ...$prefix, $remove],
                 'empty' => ['icon' => 'translate', 'title' => __('Languages are not available')],
             ]],
-            ...($translator
-                ? [['type' => 'ui/text', 'props' => ['text' => __('Translate a page from its language menu.'), 'muted' => true]]]
-                : ($assistant ? [['type' => 'ui/actions', 'can' => 'settings.manage', 'props' => ['items' => [['label' => __('Set Up Automatic Translation'), 'icon' => 'sparkle', 'variant' => 'ghost', 'to' => '/settings/assistant']]]]] : [])),
-        ]]]];
+        ]];
     }
 
     private function count(string $locale): int
