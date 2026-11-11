@@ -131,10 +131,10 @@ final class LanguagesTest extends TestCase
         $about = $this->page('About');
         $this->ability('translations/create', ['id' => $about['id'], 'locale' => 'de']);
 
-        $this->ability('languages/save', ['default' => 'en', 'languages' => ['en', 'de', 'fr'], 'prefixDefault' => true]);
+        $this->ability('languages/update', ['default' => 'en', 'languages' => ['en', 'de', 'fr'], 'prefixDefault' => true]);
         $this->assertSame('/en/about', $this->cms()->entries()->find($about['id'])->uri);
 
-        $this->ability('languages/save', ['default' => 'en', 'languages' => ['en', 'de'], 'prefixDefault' => false]);
+        $this->ability('languages/update', ['default' => 'en', 'languages' => ['en', 'de'], 'prefixDefault' => false]);
         $this->assertSame('/about', $this->cms()->entries()->find($about['id'])->uri);
 
         $languages = $this->ability('languages/list')['languages'];
@@ -143,7 +143,7 @@ final class LanguagesTest extends TestCase
         $this->assertSame(1, $languages[1]['entries']);
 
         try {
-            $this->ability('languages/save', ['default' => 'en', 'languages' => ['en']]);
+            $this->ability('languages/update', ['default' => 'en', 'languages' => ['en']]);
             $this->fail('A language with entries cannot be removed.');
         } catch (AbilityException $e) {
             $this->assertStringContainsString('de still has 1 entry', $e->getMessage());
@@ -225,16 +225,16 @@ final class LanguagesTest extends TestCase
         $view = $this->cms()->abilities()->execute('views/get', ['id' => 'languages'], AbilityContext::forUser($this->admin(), 'admin'))['root'];
         $this->assertSame('ui/records', $view['children'][0]['children'][0]['type']);
 
-        $this->ability('languages/add', ['code' => 'fr']);
+        $this->ability('languages/create', ['code' => 'fr']);
         $this->assertSame(['en', 'de', 'fr'], $this->cms()->locales());
         $this->ability('languages/default', ['code' => 'de']);
         $this->ability('languages/prefix', ['prefixDefault' => true]);
         $languages = $this->ability('languages/list')['languages'];
         $this->assertSame(['/de/…', true, false], [$languages[0]['path'], $languages[0]['prefixed'], $languages[0]['removable']]);
-        $this->ability('languages/remove', ['code' => 'en']);
+        $this->ability('languages/delete', ['code' => 'en']);
         $this->assertSame(['de', 'fr'], $this->cms()->locales());
 
         $this->expectException(AbilityException::class);
-        $this->ability('languages/remove', ['code' => 'de']);
+        $this->ability('languages/delete', ['code' => 'de']);
     }
 }

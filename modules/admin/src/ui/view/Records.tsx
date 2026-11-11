@@ -220,7 +220,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   // Thumbnails for the media on view, in one lookup.
   const mediaKeys = columns.filter((c) => c.format === 'media' || (c.format === 'field' && c.field?.type === 'media')).map((c) => c.key)
   const ids = [...new Set(every.flatMap((row) => mediaKeys.flatMap((k) => mediaIds(at(row, k)))))].filter((id) => /^[0-9a-z]{26}$/i.test(id))
-  const lookup = useAbility<{ items: MediaThumb[] }>('media/lookup', { ids }, { enabled: ids.length > 0, staleTime: 300_000, placeholderData: (p) => p })
+  const lookup = useAbility<{ items: MediaThumb[] }>('media/get-many', { ids }, { enabled: ids.length > 0, staleTime: 300_000, placeholderData: (p) => p })
   const media = useMemo(() => new Map((lookup.data?.items ?? []).map((m) => [m.id.toLowerCase(), m])), [lookup.data])
 
   // Columns that fit their longest value.

@@ -189,7 +189,7 @@ final class MediaModule extends Plugin
             },
         ]);
 
-        $a->register('media/lookup', [
+        $a->register('media/get-many', [
             'label' => 'Look Up Media',
             'description' => 'Details for media ids.',
             'permission' => 'admin.access',

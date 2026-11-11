@@ -108,7 +108,7 @@ final class OutputSiteTest extends TestCase
 
     public function test_media_abilities_answer_as_described(): void
     {
-        $this->assertSame([], $this->ability('media/lookup', ['ids' => []])['items']);
+        $this->assertSame([], $this->ability('media/get-many', ['ids' => []])['items']);
         $this->assertSame(0, $this->ability('media/report')['items']);
 
         $im = imagecreatetruecolor(40, 30);
@@ -124,7 +124,7 @@ final class OutputSiteTest extends TestCase
         $this->assertSame(['x' => 10, 'y' => 90], $updated['focal']);
         $this->assertSame($text['id'], $this->ability('media/update', ['id' => $text['id']])['id']);
 
-        $this->assertSame([$text['id'], $image['id']], array_column($this->ability('media/lookup', ['ids' => [$text['id'], 'nothing', $image['id']]])['items'], 'id'));
+        $this->assertSame([$text['id'], $image['id']], array_column($this->ability('media/get-many', ['ids' => [$text['id'], 'nothing', $image['id']]])['items'], 'id'));
         $this->assertCount(2, $this->ability('media/list', ['folder' => null])['items']);
 
         // One file in use, one reference to nothing, one record without a file.

@@ -171,7 +171,7 @@ final class LanguagesModule extends Plugin
             },
         ]);
 
-        $a->register('languages/save', [
+        $a->register('languages/update', [
             'label' => 'Save Languages',
             'description' => 'Set the site’s languages and the default one. Languages that still have entries cannot be removed.',
             'permission' => 'settings.manage',
@@ -191,7 +191,7 @@ final class LanguagesModule extends Plugin
 
         // One change at a time, as the Languages screen makes them.
         $one = ['type' => 'object', 'properties' => ['code' => $code], 'required' => ['code']];
-        $a->register('languages/add', [
+        $a->register('languages/create', [
             'label' => 'Add Language',
             'description' => 'Add a language to the site.',
             'permission' => 'settings.manage',
@@ -201,7 +201,7 @@ final class LanguagesModule extends Plugin
             'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), [...$languages()->codes(), $in['code']]),
         ]);
 
-        $a->register('languages/remove', [
+        $a->register('languages/delete', [
             'label' => 'Remove Language',
             'description' => 'Remove a language that has no entries. The default language cannot be removed.',
             'permission' => 'settings.manage',
@@ -360,7 +360,7 @@ final class LanguagesModule extends Plugin
                 'confirm' => ['title' => __('Remove the URL prefix of {row.name}?'), 'text' => __('Its pages move to the root URL.'), 'confirm' => __('Remove Prefix')]],
         ];
         // Shown while it still has entries, but not possible: the dialog says why.
-        $remove = ['label' => __('Remove'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'languages/remove', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'disabled' => '{row.entries}', 'success' => __('{row.name} removed'),
+        $remove = ['label' => __('Remove'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'languages/delete', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'disabled' => '{row.entries}', 'success' => __('{row.name} removed'),
             'confirm' => ['title' => __('Remove {row.name}?'), 'text' => __('Visitors will no longer see this language. You can add it again later.'), 'confirm' => __('Remove'), 'danger' => true]];
 
         return ['type' => 'ui/page', 'props' => ['title' => __('Languages'), 'icon' => 'translate', 'width' => 'narrow', 'actions' => [

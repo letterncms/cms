@@ -72,15 +72,15 @@ final class AbilityOutputTest extends TestCase
         $this->assertSame($parent['id'], $run('entries/revision', ['id' => $revisions[0]['id']])['entryId']);
         $this->assertSame($parent['id'], $run('entries/restore', ['revisionId' => $revisions[count($revisions) - 1]['id']])['id']);
 
-        $this->assertSame([$child['id'], $parent['id']], array_column($run('entries/lookup', ['ids' => [$child['id'], $parent['id']]]), 'id'));
+        $this->assertSame([$child['id'], $parent['id']], array_column($run('entries/get-many', ['ids' => [$child['id'], $parent['id']]]), 'id'));
         $this->assertNotSame([], $run('content/recent'));
         $this->assertNotSame([], $run('content/search', ['query' => 'Child']));
         $this->assertNotSame([], $run('fields/types'));
         $this->assertNotSame([], $run('entries/tree', ['collection' => 'pages', 'fields' => ['summary']]));
         $this->assertSame('pages', $run('collections/get', ['handle' => 'pages'])['handle']);
-        $this->assertSame('Test site', $run('site/get')['name']);
+        $this->assertSame('Test site', $run('settings/get', ['namespace' => 'site'])['values']['name']);
         $this->assertSame(PHP_VERSION, $run('system/info')['php']);
-        $this->assertNotSame([], $run('users/lookup', ['search' => 'Ada'])['items']);
+        $this->assertNotSame([], $run('people/list', ['search' => 'Ada'])['items']);
         $this->assertContains('entries/create', array_column($run('abilities/list'), 'name'));
     }
 

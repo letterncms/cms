@@ -131,7 +131,7 @@ function Action({ node }: { node: BlockNode }) {
 export function useImageUrl(value: unknown): string | null {
   const id = Array.isArray(value) ? value[0] : value
   const isUrl = typeof id === 'string' && /^(https?:|\/)/.test(id)
-  const media = useAbility<{ items: { id: string; url: string; thumb?: string }[] }>('media/lookup', { ids: [id] }, { enabled: typeof id === 'string' && !isUrl && id.length > 0, staleTime: 300_000, retry: false })
+  const media = useAbility<{ items: { id: string; url: string; thumb?: string }[] }>('media/get-many', { ids: [id] }, { enabled: typeof id === 'string' && !isUrl && id.length > 0, staleTime: 300_000, retry: false })
   if (isUrl) return id as string
   const item = media.data?.items?.[0]
   return item ? item.url ?? item.thumb : null

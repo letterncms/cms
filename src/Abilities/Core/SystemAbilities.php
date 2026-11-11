@@ -67,9 +67,7 @@ final class SystemAbilities
             ],
         ]);
 
-        $this->site($a);
-
-        $a->register('users/lookup', [
+        $a->register('people/list', [
             'label' => 'Look Up People',
             'description' => 'Safe person identities for authors and user relations, without account details.',
             'permission' => 'admin.access',
@@ -138,25 +136,6 @@ final class SystemAbilities
 
                 return ['items' => array_map($listed, $page->items()), 'total' => $page->total(), 'page' => $page->currentPage(), 'pages' => $page->lastPage()];
             },
-        ]);
-    }
-
-    private function site(AbilityRegistry $a): void
-    {
-        $a->register('site/get', [
-            'label' => 'Site Settings',
-            'description' => 'Name, URL, timezone, locales and themes. Change them with settings/update (namespace "site").',
-            'permission' => 'admin.access',
-            'annotations' => ['readOnly' => true],
-            'output' => Shape::of(['name' => Shape::STRING_OR_NULL, 'url' => Shape::STRING, 'timezone' => Shape::STRING, 'locale' => Shape::STRING, 'locales' => [Shape::STRING]]),
-            'handler' => fn () => [
-                'name' => config('app.name'),
-                'url' => $this->cms->url(),
-                'timezone' => config('app.timezone'),
-                'locale' => $this->cms->defaultLocale(),
-                'locales' => $this->cms->locales(),
-                ...array_diff_key($this->cms->site(), array_flip(['name', 'url', 'timezone', 'locale', 'locales'])),
-            ],
         ]);
     }
 }

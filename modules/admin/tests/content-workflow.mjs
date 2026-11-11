@@ -681,11 +681,11 @@ serve('Content workflow', async (req, res, url) => {
     if (ability === 'collections/get') data = definition(input.handle)
     else if (ability === 'entries/get') data = entries.get(input.id)
     else if (ability === 'entries/create') { const id = `new-${++sequence}`; data = { ...makeEntry(id, input.collection, input.title), ...input, id, version: `v-${sequence}`, author: people.find((person) => person.id === input.authorId) ?? null }; entries.set(id, data) }
-    else if (ability === 'entries/lookup') data = input.ids.map(id => entries.get(id)).filter(Boolean)
+    else if (ability === 'entries/get-many') data = input.ids.map(id => entries.get(id)).filter(Boolean)
     else if (ability === 'entries/list') data = page([...entries.values()].filter((entry) => entry.collection === input.collection && (!input.search || entry.title.includes(input.search))), input.page ?? 1, input.perPage ?? 50)
     else if (ability === 'entries/tree') data = [...entries.values()].filter((entry) => entry.collection === input.collection)
     else if (ability === 'entries/revisions') data = revisions(entries.get(input.id))
-    else if (ability === 'users/lookup') data = page(people.filter((person) => (!input.ids || input.ids.includes(person.id)) && (!input.search || person.name.toLowerCase().includes(input.search.toLowerCase()))), input.page ?? 1, input.perPage ?? 25)
+    else if (ability === 'people/list') data = page(people.filter((person) => (!input.ids || input.ids.includes(person.id)) && (!input.search || person.name.toLowerCase().includes(input.search.toLowerCase()))), input.page ?? 1, input.perPage ?? 25)
     else if (ability === 'entries/move' || ability === 'entries/update' || ability === 'entries/publish' || ability === 'entries/unpublish' || ability === 'entries/discard-draft' || ability === 'entries/restore') {
       const current = entries.get(input.id ?? input.revisionId?.replace(/-revision-\d+$/, ''))
       if (input.expectedVersion && input.expectedVersion !== current.version) return json(res, 409, { error: { message: 'Another editor saved this entry.', type: 'conflict', details: { version: current.version } } })

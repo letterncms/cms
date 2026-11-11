@@ -30,6 +30,7 @@ final class AgentGuide
         3. Prefer patterns (patterns/list) for common sections so the site stays consistent.
 
         Conventions:
+        - Names are thing/verb. list, get, create, update and delete mean the same everywhere (get-many takes ids); save creates or replaces a definition by its handle (collections/save, fieldsets/save, globals/save, patterns/save), where update changes values or content (entries/update, globals/update, settings/update).
         - Anything that changes the site takes dryRun: true: it is checked as usual, nothing is written, and the answer says what would change. Use it before a change you are unsure of.
         - Entries are drafts until published (entries/publish, or status "published" on create).
         - Block styles only use design tokens (token:space.8, token:color.primary…), never raw colors or pixel values.

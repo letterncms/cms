@@ -326,7 +326,7 @@ try {
     assert(dialog.querySelectorAll('article').length === 60, 'picker lacks shared cards')
     dialog.querySelector('article [role="checkbox"]').click(); await wait(() => !document.querySelector('[role="dialog"]'), 'single selection did not commit')
     await wait(() => main().querySelector('img'), 'selected file missing from the field')
-    assert((await calls()).some((r) => r.ability === 'media/lookup' && r.input.ids?.length === 1), 'field did not look up the chosen file')
+    assert((await calls()).some((r) => r.ability === 'media/get-many' && r.input.ids?.length === 1), 'field did not look up the chosen file')
   })
   await test('Redirects stay editable in the shared table', async () => {
     await open('/settings/seo?tab=redirects', '301')
@@ -463,7 +463,7 @@ serve('Overview', async (req, res, url) => {
       const sorted = (emptyMedia ? [] : [...media]).sort((a, b) => { const x = a[key], y = b[key]; const order = typeof x === 'number' ? x - y : String(x).localeCompare(String(y)); return (input.sort ?? '-created_at').startsWith('-') ? -order : order })
       const items = sorted.filter((m) => (!input.search || m.name.includes(input.search)) && (!input.kind || input.kind === 'all' || m.kind === input.kind) && (!input.folder || m.folder === input.folder)); const current = input.page ?? 1, perPage = input.perPage ?? 60
       data = { ...page(items.slice((current - 1) * perPage, current * perPage), items.length, current, perPage), folders: emptyMedia ? [] : ['Projects'] }
-    } else if (ability === 'media/lookup') data = { items: media.filter((item) => input.ids.includes(item.id)) }
+    } else if (ability === 'media/get-many') data = { items: media.filter((item) => input.ids.includes(item.id)) }
     else if (ability === 'navigation/list') data = [{ handle: 'main', title: 'Main menu', count: 4, maxDepth: 2 }]
     else if (ability === 'users/list') data = page([{ id: 'ada', name: 'Ada Example', email: 'ada@example.invalid', initials: 'AE', roles: ['editor'], super: false, twoFactor: true, lastLoginAt: null }, { id: 'grace', name: 'Grace with a longer display name', email: 'a.very.long.email.address@example.invalid', initials: 'GE', roles: ['editor', 'content_manager'], super: true, twoFactor: false, lastLoginAt: null }].map((u) => ({ ...u, person: { id: u.id, name: u.name, initials: u.initials, avatar: null }, you: null, badges: [...(u.super ? ['super'] : []), ...u.roles] })))
     else if (ability === 'roles/list') data = { roles: { editor: { label: 'Editor', permissions: [] } }, permissions: {} }

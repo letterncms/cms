@@ -83,7 +83,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
   const collections = (field.collections as string[] | undefined) ?? []
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const selected = useAbility<EntrySummary[]>('entries/lookup', { ids }, { enabled: ids.length > 0 })
+  const selected = useAbility<EntrySummary[]>('entries/get-many', { ids }, { enabled: ids.length > 0 })
   const results = useAbility<EntrySummary[]>('content/search', { query: query || ' ', collections: collections.length ? collections : undefined, limit: 12 }, { enabled: open && query.trim().length > 0 })
   const recent = useAbility<{ items: EntrySummary[] }>('entries/list', { collection: collections[0] ?? '', sort: '-updated_at', perPage: 12 }, { enabled: open && !query && collections.length > 0 })
 

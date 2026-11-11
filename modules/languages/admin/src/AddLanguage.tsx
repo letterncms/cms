@@ -33,7 +33,7 @@ export default function AddLanguage({ close }: SurfaceComponentProps) {
     if (busy) return
     setBusy(true)
     try {
-      await run('languages/add', { code })
+      await run('languages/create', { code })
       invalidate('languages/', 'entries/', 'translations/')
       // The admin's language filters read the manifest.
       await loadManifest()

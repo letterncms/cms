@@ -22,7 +22,7 @@ export interface FormatOptions {
   media?: Map<string, MediaThumb>
 }
 
-/** A file as `media/lookup` gives it. */
+/** A file as `media/get-many` gives it. */
 export interface MediaThumb { id: string; thumb: string | null; url: string; alt?: string | null; kind?: string }
 
 const NONE = <span className="text-faint">—</span>

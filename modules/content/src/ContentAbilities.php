@@ -138,7 +138,7 @@ final class ContentAbilities
             },
         ]);
 
-        $a->register('pages/customise', [
+        $a->register('pages/customize', [
             'label' => 'Customize a Built-in Page',
             'description' => 'Make a built-in page the site\'s own: creates a draft from its standard version and returns the entry to edit. An already customized page returns its entry, to anyone who may view it.',
             'annotations' => ['draft' => true],
@@ -550,7 +550,7 @@ final class ContentAbilities
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
-        $a->register('entries/lookup', [
+        $a->register('entries/get-many', [
             'label' => 'Look Up Entries',
             'description' => 'Summaries for a list of entry ids (any collection you can view), in the given order.',
             'permission' => 'admin.access',
