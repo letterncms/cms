@@ -106,7 +106,8 @@ final class AccountAbilities
                 }
 
                 if (isset($in['preferences'])) {
-                    $user->preferences = array_replace((array) ($user->preferences ?? []), $in['preferences']);
+                    // Saved views are kept under `views` by their own abilities (saved-views/…), which check them: not written from here.
+                    $user->preferences = array_replace((array) ($user->preferences ?? []), array_diff_key($in['preferences'], ['views' => true]));
                 }
 
                 if (isset($in['data'])) {

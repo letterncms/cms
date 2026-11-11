@@ -45,6 +45,8 @@ final class ContentModule extends Plugin
         });
 
         $this->app->make(ContentAbilities::class)->register($cms->abilities());
+        $this->app->make(SavedViews::class)->register($cms->abilities());
+        $cms->hooks()->on('collection.deleted', fn (string $handle) => $this->app->make(SavedViews::class)->forget($handle));
         $this->skills($cms);
 
         // One sidebar item per collection, in the collection's own section (templates and components in Design).
@@ -87,6 +89,12 @@ final class ContentModule extends Plugin
         );
 
         $cms->admin()->widget('recent', ['label' => 'Recently Edited', 'description' => 'Entries you and your team changed last.', 'icon' => 'clock', 'column' => 'main', 'enabled' => true, 'order' => 10]);
+        $cms->admin()->component('content/views', ['label' => 'Saved Views', 'description' => 'A person\'s saved views of one list, as a menu in the list\'s toolbar: apply one, or keep the list as it is under a name.', 'surface' => false, 'props' => [
+            'type' => 'object', 'additionalProperties' => false, 'required' => ['list', 'params'], 'properties' => [
+                'list' => ['type' => 'string', 'maxLength' => 120], 'params' => ['type' => 'array', 'maxItems' => 20, 'items' => ['type' => 'string', 'maxLength' => 60]],
+                'defaultView' => ['type' => 'string', 'enum' => ['table', 'grid', 'calendar']],
+            ],
+        ]]);
         $cms->views()->register('content', '/content/:collection', fn (User $user, array $params) => $this->view((string) ($params['collection'] ?? ''), $user));
         $this->adminModule();
     }
