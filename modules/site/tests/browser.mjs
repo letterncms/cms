@@ -281,6 +281,26 @@ const checks = {
     await tab.close()
   },
 
+  /** The Motion Toggle tells scripts too: an attribute, an event, and reducedMotion in behaviours. */
+  async toggle() {
+    const tab = await open('/toggle')
+    await tab.until('!document.getElementById("toggle").hidden && document.getElementById("heard").dataset.mounted')
+    equal(JSON.parse(await tab.evaluate('document.getElementById("heard").dataset.mounted')).reducedMotion, false, 'motion runs to begin with')
+    await tab.evaluate('window.__heard = []; document.addEventListener("cms:motion", (e) => window.__heard.push(e.detail.paused)); document.getElementById("toggle").click()')
+    await tab.until('JSON.parse(document.getElementById("heard").dataset.mounted).reducedMotion === true')
+    equal(await tab.evaluate('[document.documentElement.dataset.cmsMotion, window.__heard]'), ['paused', [true]], 'the page says so, once')
+
+    // The choice is kept: the next page load starts paused, for the behaviour as well.
+    await tab.goto('/toggle')
+    await tab.until('document.getElementById("heard").dataset.mounted && document.documentElement.dataset.cmsMotion === "paused"')
+    equal(JSON.parse(await tab.evaluate('document.getElementById("heard").dataset.mounted')).reducedMotion, true, 'a paused page mounts its behaviours calm')
+    await tab.evaluate('window.__heard = []; document.addEventListener("cms:motion", (e) => window.__heard.push(e.detail.paused)); document.getElementById("toggle").click()')
+    await tab.until('JSON.parse(document.getElementById("heard").dataset.mounted).reducedMotion === false')
+    equal(await tab.evaluate('[document.documentElement.dataset.cmsMotion ?? null, window.__heard]'), [null, [false]], 'and playing again says so too')
+    equal(tab.errors, [], 'no errors')
+    await tab.close()
+  },
+
   /** Scroll animations: CSS where the browser can, the runtime where it can't or when they trail; pinning; lines. */
   async motion() {
     const near = (actual, expected, by, what) => {

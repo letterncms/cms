@@ -299,6 +299,12 @@ function toggles() {
     toggled.add(button)
     const set = (paused: boolean) => {
       paused ? pauseAll() : resumeAll()
+      // For what this script doesn't move (a canvas, a behaviour's own loop): <html data-cms-motion="paused">
+      // to style and to read, and an event to hear. Behaviours get it as reducedMotion.
+      const before = document.documentElement.dataset.cmsMotion === 'paused'
+      if (paused) document.documentElement.dataset.cmsMotion = 'paused'
+      else delete document.documentElement.dataset.cmsMotion
+      if (before !== paused) document.dispatchEvent(new CustomEvent('cms:motion', { detail: { paused } }))
       button.setAttribute('aria-pressed', String(paused))
       button.textContent = (paused ? button.dataset.playLabel : button.dataset.pauseLabel) ?? ''
     }
@@ -306,12 +312,13 @@ function toggles() {
     set(stored())
     button.addEventListener('click', () => {
       const paused = button.getAttribute('aria-pressed') !== 'true'
-      set(paused)
+      // Kept first: whoever hears the change may ask what is kept.
       try {
         paused ? localStorage.setItem(key, '1') : localStorage.removeItem(key)
       } catch {
         // Storage blocked: the choice lasts for this page.
       }
+      set(paused)
     })
   })
 }

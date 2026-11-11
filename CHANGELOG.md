@@ -26,6 +26,7 @@
 - **Reverse relations**: `EntryQuery::references($id, $field = null)` finds the entries that name an entry, on both drivers: wherever its id is in their data, so in a relation field at any depth (a group, the rows of a repeater), a link or a block. Agents read it with `references/list` (what links to an entry, across collections, with the fields that name it) and `references` on `entries/list`; the content API takes `?references=<id>` (and `references_field=`), and the Repeat block's **Collection Entries** source has **Only Entries Linking To** this page or the outer item: the posts of an author, the projects of a client.
 - A block behaviour can wait for the whole page: `when: "loaded"` mounts it after the page's load event and its fonts, for a script that measures text or layout. Beside `load`, `visible` and `idle`.
 - A block can carry several behaviours: `behavior` takes a list, `[{module: "tilt"}, {module: "cue", props: {…}}]`, and each is mounted and undone by itself, in order. One behaviour is written as before.
+- The **Motion Toggle** block tells scripts: pausing sets `<html data-cms-motion="paused">` and dispatches `cms:motion` on `document` (`event.detail.paused`), and a block behaviour's `reducedMotion` is true while motion is paused, with the behaviour mounted again when that changes. A canvas or a script's own loop can now stop with everything else.
 
 ### Changed
 

@@ -133,6 +133,12 @@ final class BrowserFixturesTest extends TestCase
                 ['type' => 'heading', 'anchor' => 'lines', 'props' => ['text' => 'One two three four five six seven eight nine ten eleven twelve', 'level' => '2'], 'style' => ['base' => ['width' => '260px', 'marginTop' => '150vh']], 'motion' => [['trigger' => ['type' => 'appear'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 110], 'duration' => 0.4, 'stagger' => 0.1]]]]],
                 ['type' => 'box', 'style' => ['base' => ['height' => '120vh']], 'children' => []],
             ],
+            // A Motion Toggle, and a behaviour that should hear it.
+            'Toggle' => [
+                ['type' => 'motion-toggle', 'anchor' => 'toggle'],
+                ['type' => 'box', 'anchor' => 'heard', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'heard']], 'children' => []],
+                ['type' => 'box', 'style' => ['base' => ['width' => '40px', 'height' => '40px']], 'motion' => [['trigger' => ['type' => 'loop'], 'steps' => [['from' => ['rotate' => 0], 'to' => ['rotate' => 360], 'duration' => 2, 'ease' => 'none']], 'repeat' => -1]], 'children' => []],
+            ],
             'Behavior' => [
                 ['type' => 'box', 'anchor' => 'first', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'first', 'title' => '{entry.title}']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'First']]]],
                 ['type' => 'box', 'anchor' => 'both', 'behavior' => [['module' => 'probe', 'props' => ['name' => 'one-of-two']], ['module' => 'tag', 'props' => ['word' => 'tagged']]], 'children' => []],
