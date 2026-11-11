@@ -114,6 +114,16 @@ final class ConditionalFieldsTest extends TestCase
             }
         }
 
+        // Two fields that wait for each other, directly or through a third.
+        foreach ([[['a' => ['b' => 1]], ['b' => ['a' => 1]]], [['a' => ['b' => 1]], ['b' => ['c' => 1]], ['c' => ['a' => 1]]]] as $rules) {
+            try {
+                Blueprint::validate(array_map(static fn (array $rule, string $key) => ['handle' => array_key_first($rule), 'type' => 'text', $key => $rule[array_key_first($rule)]], $rules, array_slice(['if', 'required_if', 'if'], 0, count($rules))));
+                $this->fail('Took a circle of conditions.');
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('depend on the field itself', $e->getMessage());
+            }
+        }
+
         try {
             $this->ability('collections/save', ['handle' => 'clips', 'definition' => ['title' => 'Clips', 'fields' => [['handle' => 'a', 'type' => 'text', 'required_if' => ['b' => 1]]]]]);
             $this->fail('Saved a condition on a field that is not there.');

@@ -364,6 +364,8 @@ export interface FieldProps<T = any> {
 }
 
 export interface FieldContext {
+  /** In the blueprint builder: the fields beside the one being edited, for what a condition can name. */
+  siblings?: { handle: string; label: string; type: string }[]
   /** Path to the containing group/repeater value; the field handle is appended by Fields. */
   path?: string[]
   errors?: Record<string, string>

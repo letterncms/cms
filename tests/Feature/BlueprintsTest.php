@@ -93,6 +93,11 @@ final class BlueprintsTest extends TestCase
         $this->assertSame(['Plain', 'Tagged'], array_column($this->ability('entries/list', ['collection' => 'news', 'sort' => 'title', 'filters' => [['field' => 'summary', 'operator' => 'contains', 'value' => 'None yet.']]])['items'], 'title'));
         $this->assertSame(['Plain'], array_column($this->ability('entries/list', ['collection' => 'news', 'filters' => [['field' => 'summary', 'operator' => 'contains', 'value' => 'none']]])['items'], 'title'));
 
+        // How many entries were made with a blueprint: what the builder says before one is removed.
+        $made = fn (?string $blueprint) => $this->ability('entries/list', ['collection' => 'news', 'perPage' => 1, 'filters' => [$blueprint === null ? ['field' => 'blueprint', 'operator' => 'null'] : ['field' => 'blueprint', 'value' => $blueprint]]])['total'];
+        $this->assertSame([2, 3], [$made('gallery'), $made('video')]);
+        $this->assertGreaterThan(0, $made(null));
+
         $listed = $this->ability('entries/list', ['collection' => 'news', 'fields' => ['source', 'about'], 'sort' => 'title']);
         $this->assertSame('About', array_column($listed['items'], 'values', 'title')['Pictures']->about[0]['title']);
     }

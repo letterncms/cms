@@ -156,7 +156,7 @@ class Matrix extends FieldType
     public function configFields(): array
     {
         return [
-            ['handle' => 'types', 'type' => 'json', 'label' => 'Row Types'],
+            ['handle' => 'types', 'type' => 'json', 'component' => 'matrix-types', 'label' => 'Row Types'],
             ['handle' => 'max', 'type' => 'number', 'label' => 'Maximum Items'],
         ];
     }

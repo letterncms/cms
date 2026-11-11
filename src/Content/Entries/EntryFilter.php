@@ -127,6 +127,7 @@ final class EntryFilter
             'uri' => $entry->uri,
             'status' => $entry->status,
             'locale' => $entry->locale,
+            'blueprint' => $entry->blueprint,
             'parent_id' => $entry->parentId,
             'position' => $entry->position,
             'author_id' => $content['authorId'],
