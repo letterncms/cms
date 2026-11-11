@@ -146,8 +146,18 @@ try {
     const list = () => dock().querySelector('nav[aria-label="Chats"]')
     const from = (await state()).requests.length
     assert(historyRows().length === 30, 'more than one page listed before scrolling')
-    list().scrollTop = list().scrollHeight; await wait(() => historyRows().length === 60, 'second page did not load')
-    list().scrollTop = list().scrollHeight; await wait(() => historyRows().length === 70, 'last page did not load')
+    // Scrolled to the end, and back a little, until the page arrives: the list asks when its end comes into view, and
+    // a scroll while it still lays out the page before, on a busy machine, brings nothing new into view.
+    let turn = 0
+    const scrolled = (count) => async () => {
+      for (const end = Date.now() + 20000; historyRows().length !== count; await sleep(150)) {
+        if (Date.now() > end) return false
+        list().scrollTop = turn++ % 2 ? list().scrollHeight - list().clientHeight - 400 : list().scrollHeight
+      }
+      return true
+    }
+    assert(await scrolled(60)(), 'second page did not load')
+    assert(await scrolled(70)(), 'last page did not load')
     list().scrollTop = list().scrollHeight; await sleep(300)
     const offsets = (await state()).requests.slice(from).filter(r => r.ability === 'threads/list').map(r => r.input.offset)
     assert(offsets.includes(30) && offsets.includes(60) && offsets.every(offset => [30, 60].includes(offset)) && historyRows().length === 70, 'paging asked for the wrong pages: ' + offsets)
@@ -252,7 +262,7 @@ try {
   await test('Switching chats during a stream cannot leak late text into the new chat', async () => {
     fill('slow stream'); await sleep(30); composer().form.requestSubmit()
     await wait(() => control('Stop'), 'stream did not start')
-    await open('chat-2'); await sleep(700)
+    await open('chat-2'); await sleep(1700)
     assert(!dock().textContent.includes('LATE STREAM') && dock().textContent.includes('Reply for chat-2'), 'old stream leaked')
     assert(!spinning(), 'aborted stream kept spinning')
   })
@@ -605,7 +615,9 @@ serve('Chat', async (req, res, url) => {
       }
       event('done', { thread: { id, title: 'Content overview' } }); return res.end()
     }
-    await new Promise(r => setTimeout(r, input.message === 'slow stream' ? 500 : 200))
+    // Long enough that a check sees a reply still streaming, also on a busy machine: the first send, and a slow
+    // stream through navigating away and closing the chat.
+    await new Promise(r => setTimeout(r, input.message === 'slow stream' || input.message === 'A new conversation' ? 1500 : 200))
     event('text', { delta: input.message === 'slow stream' ? 'LATE STREAM' : 'Streamed answer' })
     event('done', { thread: chats.find(c => c.id === id), agent: { model: null } }); return res.end()
   }
