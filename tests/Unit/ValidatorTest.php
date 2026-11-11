@@ -56,6 +56,42 @@ final class ValidatorTest extends TestCase
         $this->assertTrue($out['meta']['x']);
     }
 
+    public function test_a_number_too_large_to_hold_is_not_coerced(): void
+    {
+        $schema = ['type' => 'object', 'properties' => ['n' => ['type' => 'integer'], 'x' => ['type' => 'number'], 'maybe' => ['type' => ['integer', 'null']]]];
+        $read = static fn (string $key, string $text): mixed => Validator::validate([$key => $text], $schema, coerce: true)[$key];
+
+        // What fits is the number, to the last one that fits.
+        $this->assertSame(5, $read('n', '5'));
+        $this->assertSame(-7, $read('n', '-7'));
+        $this->assertSame(7, $read('n', '007'));
+        $this->assertSame(PHP_INT_MAX, $read('n', (string) PHP_INT_MAX));
+        $this->assertSame(PHP_INT_MIN, $read('n', (string) PHP_INT_MIN));
+        $this->assertSame(1.5, $read('x', '1.5'));
+        $this->assertSame(3, $read('x', '3'));
+        $this->assertSame(1.0e20, $read('x', '1e20'));
+
+        // What does not stays text and is reported: never PHP_INT_MAX, a rounded float or INF.
+        foreach ([
+            ['n', '9223372036854775808'], ['n', '-9223372036854775809'], ['n', '99999999999999999999999999'],
+            ['maybe', '9223372036854775808'],
+            ['x', '9223372036854775808'], ['x', '1e999'], ['x', '-1e999'],
+        ] as [$key, $text]) {
+            try {
+                Validator::validate([$key => $text], $schema, coerce: true);
+                $this->fail("{$key}: {$text} was accepted");
+            } catch (SchemaException $e) {
+                $this->assertSame([$key], array_keys($e->errors), $text);
+                $this->assertStringContainsString('got string', $e->errors[$key]);
+            }
+        }
+
+        // A list of them is read one by one.
+        $this->assertSame([1, 2], Validator::validate(['1', '2'], ['type' => 'array', 'items' => ['type' => 'integer']], coerce: true));
+        $this->expectException(SchemaException::class);
+        Validator::validate(['1', '9223372036854775808'], ['type' => 'array', 'items' => ['type' => 'integer']], coerce: true);
+    }
+
     public function test_page_links_may_be_empty_unless_required(): void
     {
         $schema = fn (bool $required) => (new Url)->schema(Field::fromArray(['handle' => 'link', 'type' => 'url', 'reference' => true, 'required' => $required]));

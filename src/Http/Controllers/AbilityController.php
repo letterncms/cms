@@ -11,6 +11,8 @@ use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Cms;
+use Cms\Http\OpenApi;
+use Cms\Users\ApiToken;
 
 /**
  * One endpoint for everything: the admin SPA (/api/admin) and integrations
@@ -31,9 +33,26 @@ final class AbilityController
                 'run' => url('/api/v1/abilities/{name}'),
                 'batch' => url('/api/v1/batch'),
                 'content' => url('/api/v1/content/{collection}'),
+                'openapi' => url('/api/v1/openapi.json'),
             ],
             'auth' => 'Bearer token (create one under Account → API tokens).',
         ]);
+    }
+
+    /**
+     * The API as OpenAPI 3.1, for tools that generate clients and for agents that read it. Anyone gets how the
+     * API works; which abilities there are says which plugins a site runs, so those are only for a token, and
+     * then the ones that token may run.
+     */
+    public function openapi(Request $request, OpenApi $openapi): JsonResponse
+    {
+        // The route takes no token, so it is read here: the document is public, a token only adds to it.
+        $token = ($plain = $request->bearerToken()) ? ApiToken::findByPlain($plain) : null;
+        $user = $token?->user;
+
+        return response()
+            ->json($user === null ? $openapi->public() : $openapi->document(AbilityContext::forUser($user, 'rest', $token?->scopes)), 200, [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ->setVary('Authorization');
     }
 
     public function index(Request $request): JsonResponse
@@ -100,6 +119,8 @@ final class AbilityController
             $request->user(),
             $request->is('api/admin/*') ? 'admin' : 'rest',
             $token?->scopes,
+            // A query string has only text: ?perPage=5 is the number the schema asks for.
+            strings: $request->isMethod('GET'),
         );
     }
 

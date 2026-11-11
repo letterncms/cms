@@ -209,12 +209,19 @@ final class Validator
         return match (true) {
             in_array('boolean', $types, true) && in_array(strtolower($value), ['true', '1', 'yes', 'on'], true) => true,
             in_array('boolean', $types, true) && in_array(strtolower($value), ['false', '0', 'no', 'off', ''], true) => false,
-            in_array('integer', $types, true) && preg_match('/^-?\d+$/', $value) === 1 => (int) $value,
-            in_array('number', $types, true) && is_numeric($value) => $value + 0,
+            // A number PHP cannot hold stays the text it came as, and is refused as that: never a clamped or rounded one.
+            in_array('integer', $types, true) && preg_match('/^-?\d+$/', $value) === 1 && is_int($value + 0) => $value + 0,
+            in_array('number', $types, true) && is_numeric($value) && is_finite($value + 0) && ! $this->lossy($value) => $value + 0,
             in_array('null', $types, true) && ($value === '' || $value === 'null') => null,
             (in_array('array', $types, true) || in_array('object', $types, true)) && json_validate($value) => json_decode($value, true),
             default => $value,
         };
+    }
+
+    /** Whether a run of digits is too long for an integer, so reading it as a number would round it. */
+    private function lossy(string $value): bool
+    {
+        return preg_match('/^\s*[+-]?\d+\s*$/', $value) === 1 && ! is_int($value + 0);
     }
 
     private function matchesFormat(string $value, string $format): bool
