@@ -5,6 +5,9 @@
 ### Changed
 
 - **Design tokens**: motion and layering have small named scales that every admin module and plugin can use: `duration-fast`, `duration-base`, `duration-move` and `duration-slow`, and `z-raised`, `z-drag`, `z-sticky`, `z-bar`, `z-drawer`, `z-overlay` and `z-tooltip`. A transition without a duration takes `duration-base`. New colours for pointed-at and pressed fills (`ink-hover`, `danger-hover`, `signal-hover`, `float-hover` and their `-active`), `focus-hover`, `fill`, `border-hover` and `info`, the shadows `shadow-edge`, `shadow-focus` and `shadow-cursor`, and the size `text-display` for the title of an entry. The admin's own components use them, so dialogs, panels and toasts move at one speed.
+- Everything that fails says so the same way, with **Try Again**: a list, a form, a widget, a screen, the admin itself. A crash says so in plain words and keeps its technical message for the console. Every search that finds nothing says **No matches**. Short status lines no longer end in a period.
+- A button that deletes or removes something looks the same everywhere: red words, no fill, until you point at it.
+- **Breaking.** `@letterncms/ui`: `WidgetMessage` is gone, use `<EmptyState compact>`. `QueryError` takes a `title` and `className`, its button says **Try Again**, and it is the one component for anything that failed. `Button` has `variant="destructive"` for the way into deleting something; `danger` stays the last step of its confirm.
 
 ## 0.21.0 (2026-11-11)
 

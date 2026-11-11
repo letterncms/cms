@@ -1,7 +1,6 @@
 import { getManifest, prefetchAbility, setQuery, t, useAbility, useLocation, useManifest, type RouteDef, type ViewAction, type ViewDocument, type ViewNode } from '@letterncms/sdk'
 import { useCallback, useEffect, useMemo, type ComponentType } from 'react'
-import { Button } from '../Button'
-import { EmptyState } from '../EmptyState'
+import { QueryError } from '../QueryError'
 import { Page } from '../Page'
 import { Spinner } from '../Spinner'
 import { Widget } from '../Widget'
@@ -61,7 +60,7 @@ function ViewScreen({ id, params }: { id: string; params: Record<string, string>
   if (view.isError) {
     return (
       <Page crumbs={[{ label: t('Not Found') }]}>
-        <EmptyState icon="warning" title={view.error.type === 'forbidden' ? t('You are not allowed to do this.') : t('Something went wrong')} description={view.error.message} action={<Button onClick={() => void view.refetch()}>{t('Try Again')}</Button>} />
+        <QueryError title={view.error.type === 'forbidden' ? t('You are not allowed to do this') : t('Something went wrong')} message={view.error.message} onRetry={() => void view.refetch()} />
       </Page>
     )
   }

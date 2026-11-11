@@ -1,8 +1,9 @@
 import { Link, locale, t } from '@letterncms/sdk'
 import { createContext, useContext, useId, type ReactNode } from 'react'
-import { Button } from './Button'
 import { cn } from './cn'
+import { EmptyState } from './EmptyState'
 import { Icon } from './Icon'
+import { QueryError } from './QueryError'
 import { Skeleton } from './Spinner'
 
 /**
@@ -98,9 +99,9 @@ export function Widget({ title, action, query, loading, skeleton, empty, childre
       {isLoading ? (
         <div aria-busy="true">{skeleton ?? <WidgetSkeleton />}</div>
       ) : failed ? (
-        <WidgetMessage icon="warning" title={t('This widget could not load.')} action={query?.refetch && <Button size="xs" variant="ghost" icon="refresh" onClick={() => query.refetch?.()}>{t('Try Again')}</Button>} />
+        <QueryError compact onRetry={query?.refetch && (() => query.refetch?.())} />
       ) : empty ? (
-        <WidgetMessage {...empty} />
+        <EmptyState compact {...empty} />
       ) : (
         children
       )}
@@ -124,20 +125,6 @@ export function WidgetSkeleton({ rows = 4 }: { rows?: number }) {
           <Skeleton className="ml-auto h-3 w-10" />
         </div>
       ))}
-    </div>
-  )
-}
-
-/** The quiet empty (or error) state inside a widget: what it is, and one action. */
-export function WidgetMessage({ icon = 'inbox', title, description, action }: WidgetEmpty) {
-  return (
-    <div className="flex flex-col items-center px-4 py-7 text-center">
-      <span className="mb-3 grid size-8 place-items-center rounded-md border border-border bg-bg text-muted">
-        <Icon name={icon} size={16} />
-      </span>
-      <p className="m-0 text-sm font-medium text-text">{title}</p>
-      {description && <p className="m-0 mt-0.5 max-w-64 text-xs text-muted">{description}</p>}
-      {action && <div className="mt-3">{action}</div>}
     </div>
   )
 }

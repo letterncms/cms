@@ -5,13 +5,13 @@ import { Button } from '../Button'
 import { cn } from '../cn'
 import { ComponentBoundary } from '../ComponentBoundary'
 import { DataTable } from '../DataTable'
-import { EmptyState } from '../EmptyState'
+import { EmptyState, NoMatches } from '../EmptyState'
 import { Icon } from '../Icon'
 import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
 import { useShortcut } from '../shortcuts'
 import { Spinner } from '../Spinner'
-import { Stat, WidgetMessage } from '../Widget'
+import { Stat } from '../Widget'
 import { WidgetSlot } from '../WidgetSlot'
 import { ActionButton, shown } from './actions'
 import { TabContext, useView, ViewContext } from './context'
@@ -256,7 +256,7 @@ function LiteralTable({ node }: { node: ViewNode }) {
   const items = rows.map((values, id) => ({ id: String(id), values }))
   return <DataTable<(typeof items)[number]> label={t('Results')} items={items} rowKey={(row) => row.id} columns={columns.map((label, i) => ({
     id: String(i), label, width: 'minmax(120px,1fr)', render: (row) => row.values[i] === null ? '—' : String(row.values[i]),
-  }))} state={!rows.length && <p className="py-3 text-center text-xs text-muted">{t('No results')}</p>} />
+  }))} state={!rows.length && <NoMatches className="py-3" />} />
 }
 
 /** An assistant reply's button: reports itself, and the server runs what it stands for through approvals. */
@@ -352,5 +352,5 @@ function RegisteredWidget({ id }: { id: string }) {
 }
 
 export function Unavailable() {
-  return <WidgetMessage icon="box" title={t('This component is no longer available.')} />
+  return <EmptyState compact icon="box" title={t('This component is no longer available')} />
 }

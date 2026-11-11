@@ -524,7 +524,7 @@ try {
     button('Cancel', leaving()).click()
     await wait(() => !leaving(), 'Staying did not close the question')
     assert(location.pathname.endsWith('/posts/post-1'), 'Failed save did not protect navigation')
-    await configure({ failures: [] }); button('Retry').click()
+    await configure({ failures: [] }); button('Try Again').click()
     await waitAsync(async () => (await state()).entries['post-1'].title === 'Unsaved title remains', 'Retry did not save retained edits')
     await wait(() => document.querySelector('header [role="status"]')?.textContent === 'Saved', 'Retry did not settle')
   })
@@ -543,7 +543,7 @@ try {
     document.querySelector('#entry-sidebar-history').click()
     await wait(() => document.querySelector('#entry-sidebar-history-panel [role="alert"]'), 'History error did not render')
     await wait(() => liveDoc()?.querySelector('#fixture-entry-title')?.textContent === 'Latest title', 'History error replaced the rendered document')
-    await configure({ failures: [] }); button('Retry', document.querySelector('#entry-sidebar-history-panel')).click()
+    await configure({ failures: [] }); button('Try Again', document.querySelector('#entry-sidebar-history-panel')).click()
     await wait(() => document.querySelector('#entry-sidebar-history-panel')?.textContent.includes('Created'), 'History retry did not recover')
   })
   await test('Publication scheduling uses the site timezone and guarded version', async () => {
@@ -593,10 +593,10 @@ try {
     await configure({ failures: ['entries/list'] })
     await queryClient.invalidateQueries({ queryKey: ['entries/list'] })
     // The list says it couldn't load, as every list drawn from data does.
-    await wait(() => document.querySelector('#cms').textContent.includes('Could not load data'), 'List request failure appeared empty')
+    await wait(() => document.querySelector('#cms').textContent.includes('Couldn’t load this content'), 'List request failure appeared empty')
     assert(!document.querySelector('#cms').textContent.includes('No posts yet'), 'List failure masquerades as an empty collection')
-    await configure({ failures: [] }); button('Retry').click()
-    await wait(() => !document.querySelector('#cms').textContent.includes('Could not load data'), 'List retry failed')
+    await configure({ failures: [] }); button('Try Again').click()
+    await wait(() => !document.querySelector('#cms').textContent.includes('Couldn’t load this content'), 'List retry failed')
   })
   await test('Bulk failures report individual reasons and retain only failed selections', async () => {
     await wait(() => document.querySelectorAll('[role="table"] [role="row"] a').length === 2, 'Both list rows did not load')

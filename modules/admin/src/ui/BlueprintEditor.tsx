@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { FieldsEditor, type RawField } from '../fields/FieldsEditor'
 import { Button } from './Button'
 import { confirm } from './Dialog'
-import { EmptyState, NotFoundState } from './EmptyState'
+import { NotFoundState } from './EmptyState'
+import { Notice } from './Notice'
+import { QueryError } from './QueryError'
 import { Fields } from './Fields'
 import { Page, type Crumb } from './Page'
 import { SaveBar } from './SaveBar'
@@ -131,7 +133,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
   }
 
   if (source.isLoading || (!def && source.data)) return <div className="grid h-full place-items-center text-faint"><Spinner /></div>
-  if (source.isError && !def) return <Page crumbs={[kind.back]}><EmptyState title={t('Could not load this blueprint')} description={source.error?.message} action={<Button onClick={() => void source.refetch()} loading={source.isFetching}>{t('Retry')}</Button>} /></Page>
+  if (source.isError && !def) return <Page crumbs={[kind.back]}><QueryError message={source.error?.message} onRetry={() => void source.refetch()} retrying={source.isFetching} /></Page>
   if (!def) return <Page crumbs={[kind.back, { label: t('Not Found') }]}><NotFoundState icon={kind.back.icon} action={<Button onClick={() => navigate(kind.back.to)}>{t('Back to {label}', { label: kind.back.label })}</Button>} /></Page>
 
   // Deleting is there to see, at the end of the page, never next to Save.
@@ -141,7 +143,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         <h2 className="m-0 text-sm font-semibold text-ink">{kind.removeLabel ?? t('Delete')}</h2>
         {typeof kind.remove !== 'function' && kind.remove?.[2] && <p className="m-0 mt-0.5 text-xs text-muted">{kind.remove[2]}</p>}
       </div>
-      <Button icon="trash" className="!text-danger" disabled={saving} loading={removing} onClick={remove}>{kind.removeLabel ?? t('Delete')}</Button>
+      <Button variant="destructive" icon="trash" disabled={saving} loading={removing} onClick={remove}>{kind.removeLabel ?? t('Delete')}</Button>
     </section>
   )
 
@@ -152,10 +154,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       crumbs={kind.crumbs?.(def) ?? [kind.back, { label: kind.remove ? def.title : t('Profile Fields') }]}
       actions={kind.entries && <Button icon="arrow-up-right" onClick={() => navigate(kind.entries!)}>{t('Entries')}</Button>}
     >
-      {removeError && <div role="alert" className="mb-5 flex items-center gap-3 rounded-sm border border-danger/30 p-3 text-sm">
-        <span className="min-w-0 flex-1 text-danger">{removeError}</span>
-        <Button size="sm" disabled={saving} loading={removing} onClick={remove}>{t('Retry')}</Button>
-      </div>}
+      {removeError && <Notice tone="danger" className="mb-5" action={<Button size="xs" disabled={saving} loading={removing} onClick={remove}>{t('Try Again')}</Button>}>{removeError}</Notice>}
       <div inert={saving || removing}>
       {kind.settingsSections ? (
         <div className="max-w-[960px]">

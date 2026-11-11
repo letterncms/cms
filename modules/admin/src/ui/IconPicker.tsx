@@ -2,6 +2,7 @@ import { t } from '@letterncms/sdk'
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { phosphorName, storedName, useIconCatalog, type IconCatalog } from '../lib/iconCatalog'
 import { cn } from './cn'
+import { NoMatches } from './EmptyState'
 import { Icon } from './Icon'
 import { Input } from './Input'
 import { Popover } from './Popover'
@@ -172,7 +173,7 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
         {loading ? (
           <div className="grid h-full place-items-center text-faint"><Spinner size={18} /></div>
         ) : !found.length ? (
-          <p className="grid h-full place-items-center px-6 text-center text-sm text-faint">{t('No icons match “{query}”', { query })}</p>
+          <NoMatches className="h-full justify-center" />
         ) : (
           <>
             {suggested.length > 0 && (

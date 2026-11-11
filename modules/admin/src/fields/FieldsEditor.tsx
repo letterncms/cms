@@ -219,7 +219,7 @@ function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onCh
           )}
           <div className="flex justify-between border-t border-border pt-3">
             <Button size="sm" variant="ghost" icon="copy" onClick={onDuplicate}>{t('Duplicate')}</Button>
-            <Button size="sm" variant="ghost" icon="trash" className="text-danger hover:bg-danger-soft" onClick={onRemove}>{t('Remove Field')}</Button>
+            <Button size="sm" variant="destructive" icon="trash" onClick={onRemove}>{t('Remove Field')}</Button>
           </div>
         </div>
       )}

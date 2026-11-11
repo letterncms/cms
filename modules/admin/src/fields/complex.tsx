@@ -141,7 +141,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
               <span className="text-xs text-faint">{e.collection}</span>
             </button>
           ))}
-          {!results.isFetching && !recent.isFetching && options.length === 0 && <div className="px-2 py-3 text-center text-xs text-faint">{query ? t('Nothing found') : t('Type to search')}</div>}
+          {!results.isFetching && !recent.isFetching && options.length === 0 && <div className="px-2 py-3 text-center text-xs text-faint">{query ? t('No matches') : t('Type to search')}</div>}
         </Popover>
       )}
     </div>

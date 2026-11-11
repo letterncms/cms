@@ -258,7 +258,7 @@ function AddPage({ onPick }: { onPick: (e: Found) => void }) {
         {results.isFetching && !results.data ? (
           <div className="grid place-items-center py-6 text-faint"><Spinner size={14} /></div>
         ) : routable.length === 0 ? (
-          <p className="m-0 px-3 py-6 text-center text-sm text-faint">{debounced ? t('Nothing found') : t('No pages yet')}</p>
+          <p className="m-0 px-3 py-6 text-center text-sm text-faint">{debounced ? t('No matches') : t('No pages yet')}</p>
         ) : (
           <>
             {!debounced && <div className="cms-label px-2 pb-1 pt-1.5">{t('Recently Edited')}</div>}

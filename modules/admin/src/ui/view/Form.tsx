@@ -1,7 +1,6 @@
 import { abilityKey, CmsError, loadManifest, queryClient, run, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
 import { useContext, useEffect, useState } from 'react'
-import { Button } from '../Button'
-import { EmptyState } from '../EmptyState'
+import { QueryError } from '../QueryError'
 import { Fields } from '../Fields'
 import { changedFrom, GroupedFields } from '../GroupedFields'
 import { SaveBar } from '../SaveBar'
@@ -79,7 +78,7 @@ export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields:
     }
   }
 
-  if (source && data.isError) return <EmptyState icon="warning" title={t('Something went wrong')} description={data.error.message} action={<Button onClick={() => void data.refetch()}>{t('Try Again')}</Button>} />
+  if (source && data.isError) return <QueryError title={t('Something went wrong')} message={data.error.message} onRetry={() => void data.refetch()} />
   if (source && (data.isLoading || !data.data)) return <div className="grid place-items-center py-10 text-faint"><Spinner /></div>
 
   return (

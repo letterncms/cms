@@ -4,8 +4,21 @@ import { Button } from './Button'
 import { cn } from './cn'
 import { Icon } from './Icon'
 
-/** Nothing here yet: the collection's own icon on a small tile, what's missing in a line, and one way forward. No illustrations. */
-export function EmptyState({ icon = 'inbox', title, description, action, className }: { icon?: string; title: string; description?: ReactNode; action?: ReactNode; className?: string }) {
+/**
+ * Nothing here yet: the collection's own icon on a small tile, what's missing in a line, and one way forward. No illustrations.
+ * `compact` is the same thing inside a widget or a panel. Something that failed is a `QueryError`, never this.
+ */
+export function EmptyState({ icon = 'inbox', title, description, action, compact, className }: { icon?: string; title: string; description?: ReactNode; action?: ReactNode; compact?: boolean; className?: string }) {
+  if (compact) return (
+    <div className={cn('flex flex-col items-center px-4 py-7 text-center', className)}>
+      <span className="mb-3 grid size-8 place-items-center rounded-md border border-border bg-bg text-muted">
+        <Icon name={icon} size={16} />
+      </span>
+      <p className="m-0 text-sm font-medium text-text">{title}</p>
+      {description && <p className="m-0 mt-0.5 max-w-64 text-xs text-muted">{description}</p>}
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  )
   return (
     // Without a className of its own it sits a little above the middle of the content area.
     <div className={cn('mx-auto flex max-w-[320px] flex-col items-center justify-center px-6 text-center', className ?? 'pb-16 pt-[min(15vh,128px)]')}>

@@ -3,7 +3,7 @@ import { useId, useMemo } from 'react'
 import { ComponentBoundary } from './ComponentBoundary'
 import { ViewContext } from './view/context'
 import { ViewNodeView } from './view/render'
-import { WidgetMessage } from './Widget'
+import { EmptyState } from './EmptyState'
 
 /**
  * An assistant reply drawn from the same catalog and renderer as the admin's views. Its
@@ -57,5 +57,5 @@ function tree(spec: SurfaceDocument['spec']): ViewNode | null {
 }
 
 function Unavailable() {
-  return <WidgetMessage icon="box" title={t('This component is no longer available.')} description={t('Ask {brand} for a fresh view.')} />
+  return <EmptyState compact icon="box" title={t('This component is no longer available')} description={t('Ask {brand} for a fresh view.')} />
 }

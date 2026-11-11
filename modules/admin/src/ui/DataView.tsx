@@ -1,11 +1,11 @@
 import { locale, navigate, setQuery, t, useLocation, type RecordTimestamps } from '@letterncms/sdk'
 import { useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { PagePagination } from './PagePagination'
-import { Button } from './Button'
 import { DataCalendar } from './DataCalendar'
 import { useOverviewSource, type OverviewSource } from './overviewSource'
 import { DataCard, DataGrid } from './DataGrid'
-import { EmptyState, NoMatches } from './EmptyState'
+import { NoMatches } from './EmptyState'
+import { QueryError } from './QueryError'
 import { Fields } from './Fields'
 import { DataTable, TableToolbar, flattenTree, type DataColumn, type DataSelection, type DataTree } from './DataTable'
 import { OverviewControls, nextTableSort, type OverviewView } from './ViewControls'
@@ -125,7 +125,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
     else onRowClick?.(item)
   }
   const cursor = useRecordNavigation({ scope, resetKey: `${id}:${search}:${sort}:${rows.map(rowKey).join(',')}`, selection: selection ? { ...selection, onSelect: (ids, on) => selection.onSelect(ids, on, rows) } : undefined, onOpen: rowHref || onRowClick ? openRecord : undefined, enabled: !busy && !stale })
-  const state = failed ? <EmptyState icon="warning" title={t('Could not load data')} action={retry && <Button onClick={retry}>{t('Retry')}</Button>} /> : view !== 'calendar' && !busy && rows.length === 0 ? query ? <NoMatches onClear={() => setSearch('')} /> : empty : null
+  const state = failed ? <QueryError onRetry={retry} /> : view !== 'calendar' && !busy && rows.length === 0 ? query ? <NoMatches onClear={() => setSearch('')} /> : empty : null
   // The tree as it is, while nothing narrows or reorders it.
   const asTree = tree && !query && !(sort && !onSort) ? tree : undefined
   const pictures = !!image && (!imageColumn || shown.has(imageColumn))

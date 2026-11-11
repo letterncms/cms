@@ -13,7 +13,7 @@ export function Avatar({ name, initials, src, size = 24, className }: { name: st
     <span
       title={name}
       className={cn('inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold leading-none text-text', tone, className)}
-      style={{ width: size, height: size, fontSize: size >= 28 ? 12.5 : size >= 20 ? 11.5 : Math.max(8, Math.round(size * 0.5)) }}
+      style={{ width: size, height: size, fontSize: size >= 28 ? 12.5 : size >= 24 ? 11.5 : size >= 20 ? 10 : Math.max(8, Math.round(size * 0.5)) }}
     >
       {letters}
     </span>
@@ -23,7 +23,7 @@ export function Avatar({ name, initials, src, size = 24, className }: { name: st
 export function AvatarStack({ people, max = 4, size = 22 }: { people: { name: string; initials?: string; avatar?: string | null }[]; max?: number; size?: number }) {
   const shown = people.slice(0, max)
   return (
-    <div className="flex -space-x-1.5">
+    <div className="flex -space-x-1">
       {shown.map((p, i) => (
         <Avatar key={i} name={p.name} initials={p.initials} src={p.avatar} size={size} className="ring-2 ring-bg" />
       ))}
