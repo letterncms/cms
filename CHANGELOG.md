@@ -11,6 +11,7 @@
 - **Motion**: a scroll animation can pin its element (`trigger.pin: "150vh"`: it holds at the top of the screen for that much scrolling while its steps play) and trail the scroll (`trigger.scrub: 0.6`). Steps can target `chars` (letters, split inside their words; the block is still read as its text by screen readers) and `lines` (real lines for appear, hover, press and event). Text in a script that joins its letters, such as Arabic, and text with links in it animate by word instead. An `ease` can be a curve of the design: `token:ease.<name>`. Scroll animations stay CSS where the browser has scroll-driven animations; a small script now moves the same keyframes where it hasn't. All of it is off for people who ask for less motion.
 - New sites come with one block behaviour: a soft light behind the home page's first section that follows the pointer (`content/design/scripts/spotlight.js` and `content/design/styles/spotlight.css`). It shows where a site's own scripts and styles go and how a block names them; delete the two files and the block's `behavior` and `code` to be rid of it.
 - **Media** keeps what scenes and animation players load: 3D models (`.glb`, and `.gltf` with its data embedded), environment maps (`.hdr`), GPU textures (`.ktx2`), Lottie animations (`.json`) and Rive files (`.riv`). Each is recognised by its contents and has a size limit of its own (64, 8, 32, 32, 4 and 16 MB). A Lottie animation with expressions, fonts to load or images that aren't embedded, and a model that points at other files, are refused with the reason, also when the file arrives by git or FTP. Every site, existing ones included, serves media with the right type, `nosniff` and a long cache from a `public/media/.htaccess` the CMS writes and keeps current.
+- `SafeFetcher::post()` sends a body as it is with the caller's own headers, such as a signature, and can keep the start of a long answer instead of refusing it. `SafeFetcher::isPublic()` says whether an address is on the public internet. Plugins that call other servers use these instead of a check of their own.
 
 ### Changed
 
@@ -21,19 +22,19 @@
 - **Breaking.** `@letterncms/ui`: `confirm()` and `prompt()` require `confirm`, the label of the button that goes through with it, as a verb ("Delete", "Rename"): the "Confirm" and "OK" fallbacks are gone.
 - The save bar's **Discard** and **Save** are the same buttons as everywhere else, its warning reads in the dark theme, and it no longer has a yellow dot: yellow is for publishing. `data-theme` on an element inside the admin sets that piece in the theme it names; `useTheme()` says which theme is on view.
 
-### Added
+### Removed
 
-- `SafeFetcher::post()` sends a body as it is with the caller's own headers, such as a signature, and can keep the start of a long answer instead of refusing it. `SafeFetcher::isPublic()` says whether an address is on the public internet. Plugins that call other servers use these instead of a check of their own.
-
-### Security
-
-- **Breaking.** The CMS no longer uses a proxy from the server's environment (`http_proxy`, `https_proxy`, `ALL_PROXY`) for anything it fetches: updates, the store, remote media, fonts, Sync. A proxy would connect to an address nobody checked. A server that can only reach the internet through a proxy can no longer fetch these.
-- Everything the CMS fetches goes only to public addresses, judged more strictly: shared, multicast and site-local ranges and the IPv6 forms that carry an IPv4 address (IPv4-compatible, local-use NAT64, 6to4, Teredo) are refused, an IPv4-mapped or NAT64 address is judged as the IPv4 address it carries, and the address the connection really reached is checked against the one that was vetted before anything is sent.
+- **Breaking.** Style keys are CSS properties by their own names. The shorthands `direction`, `wrap`, `justify`, `align`, `paddingX`, `paddingY`, `marginX`, `marginY`, `radius`, `shadow`, `colSpan` and `bg` are no longer understood in a block's `style`, in `bind` (`style:<property>`) or in the design's element styles; write `flexDirection`, `flexWrap`, `justifyContent`, `alignItems`, `paddingInline`, `paddingBlock`, `marginInline`, `marginBlock`, `borderRadius`, `boxShadow`, `gridColumn` and `backgroundColor`. Styles saved through the CMS already hold the full names. A binding saved as `style:bg` or another shorthand was stored as written: it now does nothing until it is saved under the full name. `blocks/types` no longer lists `aliases`.
 
 ### Fixed
 
 - A row of a list shows the focus ring when you reach it with the keyboard, and a field that has the focus is clear to see in the dark theme.
 - On a touch screen every button is at least 44px to hit, whatever its size, and a dialog's buttons on a phone are 44px tall with more room between and under them.
+
+### Security
+
+- **Breaking.** The CMS no longer uses a proxy from the server's environment (`http_proxy`, `https_proxy`, `ALL_PROXY`) for anything it fetches: updates, the store, remote media, fonts, Sync. A proxy would connect to an address nobody checked. A server that can only reach the internet through a proxy can no longer fetch these.
+- Everything the CMS fetches goes only to public addresses, judged more strictly: shared, multicast and site-local ranges and the IPv6 forms that carry an IPv4 address (IPv4-compatible, local-use NAT64, 6to4, Teredo) are refused, an IPv4-mapped or NAT64 address is judged as the IPv4 address it carries, and the address the connection really reached is checked against the one that was vetted before anything is sent.
 
 ## 0.21.0 (2026-11-11)
 

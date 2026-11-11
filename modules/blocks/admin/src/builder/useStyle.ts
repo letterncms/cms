@@ -10,21 +10,18 @@ export type ValueStatus = 'own' | 'inherited' | 'none'
  * then phone, tablet and all screens.
  */
 export function useStyle(node: BlockNode) {
-  const { store, catalog } = useEditorContext()
+  const { store } = useEditorContext()
   const breakpoint = useEditor(store, (s) => s.breakpoint)
   const state = useEditor(store, (s) => s.state)
   const variant = variantKey(breakpoint, state)
   const chain = variantChain(breakpoint, state)
   const style: StyleMap = node.style ?? {}
-  const aliases = catalog.aliases ?? {}
 
   const lookup = (key: string): { value: string | undefined; from: string | null } => {
     for (const v of chain) {
       const layer = style[v]
       if (!layer) continue
-      for (const k of [key, ...Object.entries(aliases).filter(([, to]) => to === key).map(([from]) => from)]) {
-        if (layer[k] !== undefined) return { value: String(layer[k]), from: v }
-      }
+      if (layer[key] !== undefined) return { value: String(layer[key]), from: v }
     }
     return { value: undefined, from: null }
   }
@@ -38,7 +35,6 @@ export function useStyle(node: BlockNode) {
   const write = (patch: Record<string, string | number | null | undefined>, group?: string) => {
     const layer: Record<string, string | number> = { ...(style[variant] ?? {}) }
     for (const [key, v] of Object.entries(patch)) {
-      for (const [alias, to] of Object.entries(aliases)) if (to === key) delete layer[alias]
       if (v === null || v === undefined || v === '') delete layer[key]
       else layer[key] = v
     }
