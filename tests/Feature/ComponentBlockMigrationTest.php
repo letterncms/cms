@@ -58,7 +58,8 @@ final class ComponentBlockMigrationTest extends TestCase
         foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->site, \FilesystemIterator::SKIP_DOTS)) as $file) {
             $path = substr($file->getPathname(), strlen($this->site) + 1);
 
-            if ($file->isFile() && ! $file->isLink() && preg_match('#^(content|config|storage/drafts)/#', $path)) {
+            // Not content/schemas: `cms migrate` writes those after every run, whatever a migration did.
+            if ($file->isFile() && ! $file->isLink() && preg_match('#^(content|config|storage/drafts)/#', $path) && ! str_starts_with($path, 'content/schemas/')) {
                 $out[$path] = (string) file_get_contents($file->getPathname());
             }
         }

@@ -67,6 +67,7 @@ final class CmsServiceProvider extends ServiceProvider
         Revisions::class => Revisions::class,
         GlobalRepository::class => GlobalRepository::class,
         Content\BuiltinPages::class => Content\BuiltinPages::class,
+        Content\Schemas\SchemaFiles::class => Content\Schemas\SchemaFiles::class,
         Permissions::class => Permissions::class,
         Roles::class => Roles::class,
         Users\Accounts::class => Users\Accounts::class,
@@ -156,6 +157,7 @@ final class CmsServiceProvider extends ServiceProvider
                 Console\UserCommand::class,
                 Console\TokenCommand::class,
                 Console\SchedulePublishCommand::class,
+                Console\SchemasCommand::class,
             ]);
         }
     }
@@ -254,6 +256,24 @@ final class CmsServiceProvider extends ServiceProvider
                 default => $values,
             };
         });
+
+        // The model as JSON Schema files (content/schemas) follows every definition: see SchemaFiles.
+        $schemas = fn () => $this->app->make(Content\Schemas\SchemaFiles::class)->refresh();
+
+        // A package was turned on or off in an earlier request: this one runs with what it defines.
+        $this->app->booted(fn () => $this->app->make(Content\Schemas\SchemaFiles::class)->refreshIfStale());
+
+        // A collection that imports a fieldset has other fields once the fieldset changes: read again, in this request too.
+        $hooks->on('fieldset.saved', fn () => $this->app->make(CollectionRepository::class)->flush(), 80);
+
+        foreach (['collection.saved', 'collection.deleted', 'fieldset.saved', 'global-set.saved', 'global-set.deleted', 'cms.migrated'] as $action) {
+            $hooks->on($action, $schemas, 90);
+        }
+
+        // Entries of a collection the system keeps are choices of a field: a new template is one more value of `template`.
+        foreach (['entry.saved', 'entry.deleted'] as $action) {
+            $hooks->on($action, static fn ($entry) => $entry->collection()->system && $schemas(), 90);
+        }
 
         $hooks->on('settings.saved', static function (string $namespace, array $values): void {
             if ($namespace === 'site') {

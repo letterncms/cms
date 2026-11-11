@@ -60,7 +60,7 @@ final class AgentsGuide
             '|---|---|',
         ];
 
-        foreach ($this->places($has('design/get')) as $path => $holds) {
+        foreach ($this->places($has('design/get'), $has('blocks/types')) as $path => $holds) {
             $lines[] = "| `{$path}` | {$holds} |";
         }
 
@@ -88,6 +88,7 @@ final class AgentsGuide
         if ($has('collections/schema')) {
             $handle = isset($collections['pages']) ? 'pages' : (array_key_first($collections) ?? 'pages');
             $lines[] = "php cms run collections/schema handle={$handle}   # what an entry of a collection must look like";
+            $lines[] = 'php cms schemas --check                         # the same as files: content/schemas/ is current, or says what is not';
         }
 
         if ($has('entries/create')) {
@@ -114,7 +115,7 @@ final class AgentsGuide
             );
 
             $lines[] = '';
-            $lines[] = 'Publishing an entry rebuilds its pages. Run both commands after you change files in `content/` by hand, and before you say the work is done.';
+            $lines[] = 'Publishing an entry rebuilds its pages. Run both commands after you change files in `content/` by hand, and before you say the work is done. The build also writes `public/llms.txt`, a map of the public pages for language models.';
         }
 
         if ($this->hasRoute('mcp')) {
@@ -129,7 +130,7 @@ final class AgentsGuide
 
         array_push($lines, '', '## Rules', '');
         $lines[] = '- Change content, settings, users and design through abilities. Never write to the database, and never edit `public/`, `vendor/`, `storage/` or a plugin Composer or the store installed.';
-        $lines[] = '- Read before you write: the collection\'s schema'.($has('blocks/types') ? ', `blocks/types` for the blocks' : '').($has('design/get') ? ', `design/get` for the tokens' : '').'. Reuse what the site has before adding something new.';
+        $lines[] = '- Read before you write: the collection\'s schema (`content/schemas/collections/<handle>.json`, or `collections/schema`)'.($has('blocks/types') ? ', `blocks/types` for the blocks' : '').($has('design/get') ? ', `design/get` for the tokens' : '').'. Reuse what the site has before adding something new.';
 
         if ($has('blocks/types')) {
             $lines[] = '- Entries kept as files are Markdown with YAML front matter; a field of blocks is written as Block Markdown ('.cms_brand('docs_url').'/reference/block-markdown), not as HTML. After editing a file, build.';
@@ -163,13 +164,14 @@ final class AgentsGuide
     }
 
     /** @return array<string, string> The folders of this site that exist or will, and what each holds. */
-    private function places(bool $design): array
+    private function places(bool $design, bool $blocks): array
     {
         $places = [
             'content/collections/' => 'Each collection\'s definition (`<handle>.yaml`: fields, route, driver) and, for collections kept in files, its entries (`<handle>/*.md`)',
             'content/design/' => 'The design system: `tokens.json`, `fonts/`, and the site\'s own `scripts/` and `styles/`',
             'content/globals/' => 'Site-wide values such as the footer\'s, one file per set',
             'content/navigation/' => 'Menus',
+            'content/schemas/' => 'The content model as JSON Schema, one file per collection, blueprint and global set'.($blocks ? ', and `blocks.json` for what a blocks field holds' : '').'. The site writes them whenever a definition changes: read them, never edit them',
             'content/media/' => 'Media records, one YAML file per item (the files are in `public/media/`); `php cms migrate` reads them in',
             'config/' => 'Settings, one YAML file per group: `site.yaml` (name, URL, languages), `plugins.yaml` (what is on)',
             'plugins/' => 'Installed plugins. Composer or the store puts them here',
@@ -183,7 +185,7 @@ final class AgentsGuide
         }
 
         // A folder a site doesn't have yet is still where that thing goes; the ones named here always matter.
-        $always = ['content/collections/', 'content/design/', 'config/', 'plugins/', 'public/', 'storage/', 'vendor/'];
+        $always = ['content/collections/', 'content/schemas/', 'content/design/', 'config/', 'plugins/', 'public/', 'storage/', 'vendor/'];
 
         return array_filter($places, fn (string $holds, string $path) => in_array($path, $always, true) || file_exists($this->app->sitePath(rtrim($path, '/'))), ARRAY_FILTER_USE_BOTH);
     }

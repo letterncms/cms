@@ -361,8 +361,17 @@ final class SiteBuilder implements SiteBuilderContract
                 }
             }
 
+            $ours = array_map(static fn ($path) => ltrim((string) $path, '/'), $manifest['extras']);
+
             foreach ($extras as $key => $extra) {
-                $this->write(ltrim($extra['path'], '/'), ($extra['render'])());
+                $path = ltrim($extra['path'], '/');
+
+                // A file there the build never wrote is the site's own (an llms.txt written by hand): it stays.
+                if (! in_array($path, $ours, true) && is_file(Files::within(public_path(), $path))) {
+                    continue;
+                }
+
+                $this->write($path, ($extra['render'])());
                 $manifest['extras'][$key] = $extra['path'];
             }
 

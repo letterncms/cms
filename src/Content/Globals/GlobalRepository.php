@@ -92,6 +92,8 @@ final class GlobalRepository
         $set->timestamps = RecordTimestamps::api(RecordTimestamps::saved(is_file($file) ? Yaml::read($file) : null));
         Yaml::write(content_path("globals/{$set->handle}.yaml"), $set->toYaml());
         $this->sets = null;
+        // The set's definition, where `globals.saved` is its values.
+        $this->hooks->dispatch('global-set.saved', $set);
     }
 
     public function delete(string $handle): void
@@ -101,5 +103,6 @@ final class GlobalRepository
         }
 
         $this->sets = null;
+        $this->hooks->dispatch('global-set.deleted', $handle);
     }
 }

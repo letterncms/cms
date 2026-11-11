@@ -10,6 +10,7 @@ use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Abilities\Shapes;
 use Cms\Cms;
+use Cms\Content\Schemas\SchemaFiles;
 use Cms\Packages\PackageManifest;
 use Cms\Support\Schema\Shape;
 use Cms\Users\User;
@@ -58,6 +59,34 @@ final class SystemAbilities
                 ], 'children?', \Cms\Admin\Views::DEPTH),
             ]),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->views()->resolve($in['id'], $ctx->user, $in['params']),
+        ]);
+
+        $files = Shape::of(['path' => Shape::STRING, 'state' => Shape::STRING]);
+
+        $a->register('schemas/status', [
+            'label' => 'Schema Files',
+            'description' => 'The JSON Schema files of the content model in content/schemas/: one per collection (collections/<handle>.json), per blueprint of a collection (collections/<handle>.<blueprint>.json) and per global set (globals/<handle>.json), and what modules add (blocks.json). Each file\'s `state` is `current`, `missing`, `changed` (the definitions give another file) or `stale` (no definition gives it any more). The site writes them itself whenever a definition changes: `current` is false only after a file was edited or removed by hand.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'output' => Shape::of(['current' => Shape::BOOLEAN, 'folder' => Shape::STRING, 'files' => [$files]]),
+            'handler' => fn () => $this->cms->app()->make(SchemaFiles::class)->status(),
+        ]);
+
+        $a->register('schemas/refresh', [
+            'label' => 'Write Schema Files',
+            'description' => 'Write the JSON Schema files of the content model (content/schemas/) from the definitions as they are now, and delete the ones no definition gives any more. Files that are already right are left as they are. Answers with what was written and deleted (`changes`) and the folder as it then stands.',
+            'permission' => 'collections.manage',
+            'annotations' => ['idempotent' => true],
+            'output' => Shape::of([
+                'changes' => [Shape::of(['action' => Shape::STRING, 'type' => Shape::STRING, 'path' => Shape::STRING])],
+                'current' => Shape::BOOLEAN, 'folder' => Shape::STRING, 'files' => [$files],
+            ]),
+            'dryRun' => fn () => $this->cms->app()->make(SchemaFiles::class)->changes(),
+            'handler' => function () {
+                $schemas = $this->cms->app()->make(SchemaFiles::class);
+
+                return ['changes' => $schemas->write(), ...$schemas->status()];
+            },
         ]);
 
         $a->register('system/info', [
