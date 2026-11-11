@@ -230,7 +230,6 @@
   "Paste a link or search pages": "Plak een link of zoek pagina’s",
   "Path": "Pad",
   "People who pinned their own sidebar keep theirs.": "Wie zelf onderdelen vastzette, houdt de eigen zijbalk.",
-  "Phone": "Telefoon",
   "Pick a Color": "Kies een kleur",
   "Pin {label}": "{label} vastzetten",
   "Pin to Sidebar": "Vastzetten in zijbalk",
@@ -340,5 +339,6 @@
   "You are not allowed to do this": "Je hebt hier geen toestemming voor",
   "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord.",
   "{type} Options": "Opties voor {type}",
-  "Choose": "Kiezen"
+  "Choose": "Kiezen",
+  "Phone||number": "Telefoon"
 }

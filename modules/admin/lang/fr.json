@@ -230,7 +230,6 @@
   "Paste a link or search pages": "Collez un lien ou recherchez des pages",
   "Path": "Chemin",
   "People who pinned their own sidebar keep theirs.": "Les personnes qui ont épinglé leur propre barre latérale la conservent.",
-  "Phone": "Téléphone",
   "Pick a Color": "Choisir une couleur",
   "Pin {label}": "Épingler {label}",
   "Pin to Sidebar": "Épingler dans la barre latérale",
@@ -340,5 +339,6 @@
   "You are not allowed to do this": "Vous n’êtes pas autorisé à effectuer cette action",
   "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe.",
   "{type} Options": "Options de {type}",
-  "Choose": "Choisir"
+  "Choose": "Choisir",
+  "Phone||number": "Téléphone"
 }

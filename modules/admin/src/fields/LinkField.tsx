@@ -216,7 +216,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
     const out = options
     // What was typed is an address, an email or a phone number: offered when the field takes that.
     if (direct && offers(direct.kind === 'email' || direct.kind === 'phone' ? direct.kind : 'url')) {
-      const label = { url: t('Web Address'), email: t('Email'), phone: t('Phone'), anchor: t('Section'), path: t('Path'), file: t('File') }[direct.kind as string] ?? t('Link')
+      const label = { url: t('Web Address'), email: t('Email'), phone: t('Phone||number'), anchor: t('Section'), path: t('Path'), file: t('File') }[direct.kind as string] ?? t('Link')
       out.push({ key: 'typed', group: '', icon: KIND_ICON[direct.kind] ?? 'link', label: direct.label, detail: direct.invalid ?? label, value: direct.value, invalid: direct.invalid })
     }
     for (const e of offers('entry') ? pages : []) {

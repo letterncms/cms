@@ -4,6 +4,7 @@
 
 ### Added
 
+- **A word can say which of its meanings it is**: `t('Light||weight')`, `__('Expired||order')`. English is the key of every translation and one dictionary is read for every package, so until now one English word had one translation, also where another language needs two (the views of a page and the saved views of a list, a phone number and a phone's screen). A `||` at the end of a key followed by plain lowercase words is the context: part of the key, never shown. A language that has no translation for it says the word as it translates the key without it, and only then in English. Placeholders are filled after the lookup, so a value holding `||` is shown whole. For plugins too, from this version on. `./dev check` refuses a context that no language uses.
 - **Repeat**'s **Previous and Next Entry** source tells each item which side it is on: `item.side` is `previous` or `next`, and `item.previous` and `item.following` are that as yes or no. One Repeat now renders both neighbours with the right label and arrow (`bind: {"visible": "item.following"}`, `{"state:next": "item.following"}`, or `item.side|is:next`).
 - **Fonts that do not move the text.** Adding a Google Font now reads the font’s own tables and gives each face the fallback that stands in for it until it arrives: Arial, Times New Roman or Courier New, drawn at the size and line height that match (`sizeAdjust`, `ascentOverride`, `descentOverride`, `lineGapOverride`). Nobody types those numbers any more; the ones you change in `fonts` stay when the family is imported again.
 - **Design styles for a class.** The design’s element styles take a class a block carries, alone or on a tag: `".note em"`, `"span.note"`, `".card.is-open > a:hover"`, with the same safe properties, tokens and states as a tag. Give a block the class and style it in the Design System; a class no longer needs custom CSS. A key the design cannot style is refused by name when it is saved.
@@ -19,6 +20,7 @@
 
 ### Changed
 
+- **Breaking.** A string of your own that ends in `||` and lowercase words (`'Cats||dogs and birds'`, in `__()`, `t()`, a field's label or options) now shows only the words before the `||`: write it differently, or give it a translation. Any other `||` stays part of the text.
 - A list on a phone names its values: each one in a row is led by its column's name ("Updated last week", "Entries 3"), unless it says what it is (a status, an address, a person). A date the status already tells and a value that is missing stay out of the row.
 - A calendar shows each record's status as a dot before its title.
 - On a phone every dialog is a sheet with a grip at its top: drag it down, flick it or press it and the sheet goes; let go early and it returns. The grip is the sheet's one way out, so the × beside it is gone there. The page builder's block panel has the same grip on a phone. `@letterncms/ui` exports `SheetHandle` for a sheet of your own, and `InspectorPanel` takes `sheet` to rise from the bottom edge with it.
@@ -33,6 +35,7 @@
 
 ### Fixed
 
+- Words that read wrong in German, French or Dutch because they shared a key with another meaning now have their own: in the builder, **Fill**, **Fit**, **Float**, **Clear**, **Justify**, **Light**, **Lines**, **Row**, **Repeat**, **Switch**, **To**, **Add**, **After**, **Ease** and the **Message** shape; **Outline** for a page's structure against a border's outline; a link's **Phone** number against the phone's screen; **Previous** and **Next** entry against paging (French "Précédente", "Suivante"; German "Vorheriger", "Nächster"); a shadow's **Custom** in German. German says "Ohne" for **None**, which fits whatever it stands beside.
 - The rows of the Display menu are all the same height, ticked or not.
 - Dragging with a screen reader is announced in the admin's language (Dutch, French, German) instead of English, in words that say what happened and the position in the list, not an id. Every module and plugin gets it: the shared `@dnd-kit/core` hands out a `DndContext` that speaks.
 - A name read together with its value ("Author: Anna") takes the language's separator: French sets a narrow no-break space before the colon. `labelled(label, value)` in `@letterncms/ui`.

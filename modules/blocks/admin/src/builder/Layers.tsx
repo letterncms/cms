@@ -93,7 +93,7 @@ function kindOf(node: BlockNode, title: string): string {
   if (tags[tag]) return tags[tag]
   const base = (node.style?.base ?? {}) as Record<string, unknown>
   if (base.display === 'grid') return t('Grid')
-  if (base.display === 'flex' || base.display === 'inline-flex') return /column/.test(String(base.flexDirection ?? '')) ? t('Stack') : t('Row')
+  if (base.display === 'flex' || base.display === 'inline-flex') return /column/.test(String(base.flexDirection ?? '')) ? t('Stack') : t('Row||layout')
   return title
 }
 

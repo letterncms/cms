@@ -17,7 +17,7 @@ const SHAPES: { id: string; label: () => string; value: string }[] = [
   { id: 'arrow', label: () => t('Arrow'), value: 'polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%)' },
   { id: 'chevron', label: () => t('Chevron'), value: 'polygon(75% 0%, 100% 50%, 75% 100%, 0% 100%, 25% 50%, 0% 0%)' },
   { id: 'star', label: () => t('Star'), value: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' },
-  { id: 'message', label: () => t('Message'), value: 'polygon(0% 0%, 100% 0%, 100% 75%, 75% 75%, 75% 100%, 50% 75%, 0% 75%)' },
+  { id: 'message', label: () => t('Message||shape'), value: 'polygon(0% 0%, 100% 0%, 100% 75%, 75% 75%, 75% 100%, 50% 75%, 0% 75%)' },
   { id: 'slant', label: () => t('Slanted Edge'), value: 'polygon(0 0, 100% 0, 100% 85%, 0 100%)' },
   { id: 'wedge', label: () => t('Wedge'), value: 'polygon(0 0, 100% 0, 100% 100%, 0 85%)' },
 ]

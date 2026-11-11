@@ -179,7 +179,7 @@ class Link extends FieldType
     public function configFields(): array
     {
         return [
-            ['handle' => 'types', 'type' => 'select', 'label' => 'Link To', 'multiple' => true, 'options' => ['entry' => __('Page'), 'url' => __('Address'), 'email' => __('Email'), 'phone' => __('Phone'), 'media' => __('File')]],
+            ['handle' => 'types', 'type' => 'select', 'label' => 'Link To', 'multiple' => true, 'options' => ['entry' => __('Page'), 'url' => __('Address'), 'email' => __('Email'), 'phone' => __('Phone||number'), 'media' => __('File')]],
             ['handle' => 'collections', 'type' => 'select', 'label' => 'Collections', 'multiple' => true, 'options' => array_map(
                 static fn ($c) => $c->title,
                 app(\Cms\Content\Collections\CollectionRepository::class)->all()

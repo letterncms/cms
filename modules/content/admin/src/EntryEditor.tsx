@@ -43,7 +43,7 @@ export default function EntryEditor({ params }: { params: Record<string, string>
   // An editor with a workspace of its own (the builder) holds the sidebar from the first frame, so nothing slides away once it has loaded.
   const bodyField = collection?.resolvedFields.find((field) => field.handle === collection.body)
   const holds = !!bodyField && panelsFor('entry.editor', { bodyField } as EntryEditorProps).length > 0
-  const hold = holds && <ScreenSidebar title={t('Outline')} backTo={list.path} backLabel={list.label}>{null}</ScreenSidebar>
+  const hold = holds && <ScreenSidebar title={t('Outline||structure')} backTo={list.path} backLabel={list.label}>{null}</ScreenSidebar>
 
   if (isLoading || (!isNew && entryQuery.isLoading)) {
     return (

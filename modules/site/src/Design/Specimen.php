@@ -64,7 +64,7 @@ final class Specimen
             .$this->slider(__('Budget'), 4000, 1000, 10000, 500, '€')
             .$this->field(__('Topics'), $this->tags($topics, __('Add a topic')))
             .$this->field(__('Message'), '<textarea class="cms-input" rows="3"'.$this->attrs(['placeholder' => __('Tell us about it')]).'></textarea>')
-            .$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone'), __('Either')], 0)
+            .$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone||number'), __('Either')], 0)
             .$this->group(__('Services'), 'chips', [__('Design'), __('Build'), __('Hosting'), __('Care')], 1)
             .$this->choice('switch', __('Send me the newsletter'), true)
             .$this->choice('checkbox', __('I agree to the privacy policy'), false)
@@ -98,11 +98,11 @@ final class Specimen
                 .$this->field(__('Several at once'), '<select class="cms-input" multiple size="3"><option selected>'.e(__('Website')).'</option><option>'.e(__('Online store')).'</option><option selected>'.e(__('Something else')).'</option></select>')
                 .'</div>'],
             'textarea' => [__('Text Areas'), '<div class="cms-form">'.$this->field(__('Message'), '<textarea class="cms-input" rows="4">'.e(__('Hello! We are planning a new website for the spring and would love to hear how you work.')).'</textarea>', __('A few lines are enough.')).'</div>'],
-            'checkbox' => [__('Checkboxes'), $states(fn ($state) => '<input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'"'.$this->state($state).'>')
+            'checkbox' => [__('Checkboxes||controls'), $states(fn ($state) => '<input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'"'.$this->state($state).'>')
                 .'<div class="specimen-row"><div class="specimen-cell"><input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'" data-cms-indeterminate><span class="specimen-caption">'.e(__('Some')).'</span></div><div class="specimen-cell"><input type="checkbox" class="cms-check" aria-label="'.e(__('Checkbox')).'" aria-invalid="true"><span class="specimen-caption">'.e(__('Invalid')).'</span></div></div>'
                 .$this->group(__('Services'), 'checkbox', [__('Design'), __('Build'), __('Hosting')], 0, 2)],
             'radio' => [__('Radio Buttons'), $states(fn ($state) => '<input type="radio" class="cms-radio" aria-label="'.e(__('Radio')).'"'.$this->state($state).'>')
-                .$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone'), __('Either')], 0)],
+                .$this->group(__('Reply by'), 'radio', [__('Email'), __('Phone||number'), __('Either')], 0)],
             'switch' => [__('Switches'), $states(fn ($state) => '<input type="checkbox" role="switch" class="cms-switch" aria-label="'.e(__('Switch')).'"'.$this->state($state).'>')
                 .'<div class="cms-form">'.$this->choice('switch', __('Send me the newsletter'), true).$this->choice('switch', __('Remember this device'), false).'</div>'],
             'slider' => [__('Sliders'), '<div class="cms-form">'.$this->slider(__('Budget'), 4000, 1000, 10000, 500, '€', true).$this->slider(__('Focus'), 30, 0, 100, 1, '', false, 'focus').$this->slider(__('Disabled'), 70, 0, 100, 1, '', false, 'disabled').'</div>'],

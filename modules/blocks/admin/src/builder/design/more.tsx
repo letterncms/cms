@@ -33,8 +33,8 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
       columns: number(t('Columns'), { placeholder: t('Auto'), min: 1 }),
       columnRule: value(t('Column Rule'), '1px solid'),
       boxSizing: choice(t('Box Sizing'), ['border-box', 'content-box']),
-      float: choice(t('Float'), ['none', 'left', 'right']),
-      clear: choice(t('Clear'), ['none', 'left', 'right', 'both']),
+      float: choice(t('Float||CSS property'), ['none', 'left', 'right']),
+      clear: choice(t('Clear||CSS property'), ['none', 'left', 'right', 'both']),
       containerType: choice(t('Container Type'), ['normal', 'inline-size', 'size']),
     }),
     ...of('item', {

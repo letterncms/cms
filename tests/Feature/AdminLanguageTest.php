@@ -42,6 +42,42 @@ final class AdminLanguageTest extends TestCase
         $this->assertNotContains('', $translations->messages('de'));
     }
 
+    public function test_one_english_word_has_a_translation_per_meaning_and_its_context_is_never_shown(): void
+    {
+        $translations = app(Translations::class);
+
+        // English, and any language that has no word for it: the words before the context.
+        $this->assertSame('Views', __('Views||page views'));
+        $this->assertSame('Phone', $translations->label('Phone||number'));
+        $this->assertSame('Delete “About”?', __('Delete “:title”?||entry', ['title' => 'About']));
+        $this->assertSame('a || b', \Cms\Support\BrandedTranslator::words('a || b||where'));
+
+        $translations->apply('nl');
+        app('translator')->addLines(['*.Views' => 'Weergaven', '*.Views||page views' => 'Paginaweergaven'], 'nl');
+
+        $this->assertSame('Weergaven', __('Views'));
+        $this->assertSame('Paginaweergaven', __('Views||page views'));
+        $this->assertSame('Expired', __('Expired||nobody translated this'));
+        // A meaning this language lacks: its word for the plain key, before the English.
+        $this->assertSame('Weergaven', __('Views||list views'));
+
+        // Only a trailing `||` with plain lowercase words is a context: a label someone writes keeps its `||`,
+        // and a value filled in that holds one is never cut.
+        $this->assertSame('A || B', __('A || B'));
+        $this->assertSame('Yes||No', $translations->label('Yes||No'));
+        $this->assertSame('Delete “a||b”?', __('Delete “:title”?||entry', ['title' => 'a||b']));
+        $this->assertSame('Kept “x||y”', __('Kept “:title”', ['title' => 'x||y']));
+
+        // The dictionaries the core ships: a field's telephone number and a screen's phone are two words in German.
+        $translations->apply('de');
+        $this->assertSame('Telefon', __('Phone||number'));
+        $this->assertSame('Ohne', $translations->messages('de')['None']);
+
+        $options = $translations->fields([['handle' => 'kind', 'type' => 'select', 'label' => 'This || That', 'options' => ['phone' => 'Phone||number', 'other' => 'Other||nobody translated this', 'or' => 'Red||Blue']]])[0];
+        $this->assertSame(['phone' => 'Telefon', 'other' => 'Andere', 'or' => 'Red||Blue'], $options['options'], 'A meaning German lacks reads as German says the word.');
+        $this->assertSame('This || That', $options['label']);
+    }
+
     public function test_a_language_cms_does_not_speak_falls_back_to_english(): void
     {
         $admin = $this->admin();
