@@ -70,17 +70,49 @@ final class MotionTest extends TestCase
         $this->assertSame('Hello there world', trim(strip_tags($page['html'])));
     }
 
-    public function test_lines_and_letters_read_as_masked_words_and_words(): void
+    public function test_lines_in_css_are_masked_words_and_the_runtime_finds_real_ones(): void
     {
-        $clean = Motion::sanitize([['trigger' => ['type' => 'load'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 108]], ['target' => 'chars', 'from' => ['y' => 8]]]]]);
-
+        // CSS runs before there is a layout to ask: a line is each of its words, rising from behind its edge.
+        $clean = Motion::sanitize([['trigger' => ['type' => 'load'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 108]]]]]);
         $this->assertSame('words', $clean[0]['steps'][0]['target']);
         $this->assertTrue($clean[0]['steps'][0]['mask']);
-        $this->assertSame('words', $clean[0]['steps'][1]['target']);
-        $this->assertArrayNotHasKey('mask', $clean[0]['steps'][1]);
 
-        $html = $this->render([$this->animated('load', ['target' => 'lines', 'from' => ['yPercent' => 108]], type: 'heading')])['html'];
-        $this->assertStringContainsString('cms-w--mask', $html);
+        // What waits for the visitor has a layout: the runtime gives the words of a line one turn.
+        $page = $this->render([$this->animated('appear', ['target' => 'lines', 'from' => ['yPercent' => 108], 'stagger' => 0.08], type: 'heading')]);
+        $this->assertStringContainsString('cms-w--mask', $page['html']);
+        $this->assertStringContainsString('&quot;t&quot;:&quot;lines&quot;', $page['html']);
+        $this->assertSame('Hello there world', trim(strip_tags($page['html'])), 'the words stay where they are');
+    }
+
+    public function test_letters_are_split_inside_their_word_and_the_block_says_its_text_once(): void
+    {
+        $page = $this->render([$this->animated('load', ['target' => 'chars', 'stagger' => 0.02], type: 'heading')]);
+
+        $this->assertStringContainsString(' aria-label="Hello there world"', $page['html']);
+        $this->assertStringContainsString('<span class="cms-w" aria-hidden="true"><span class="cms-w__i" style="--i:0"><span class="cms-c" style="--i:0">H</span><span class="cms-c" style="--i:1">e</span>', $page['html']);
+        $this->assertStringContainsString('</span></span> <span class="cms-w" aria-hidden="true">', $page['html'], 'spaces stay between words');
+        $this->assertStringContainsString(' .cms-c{animation:', $page['css']);
+        $this->assertStringContainsString('var(--i,0)*20ms', $page['css']);
+        // A crawler or a reader mode reads the text nodes: each word is there once.
+        $this->assertSame('Hello there world', trim(strip_tags($page['html'])));
+        $this->assertSame(0, preg_match('/<h\d[^>]*>.*?(?<!aria-hidden="true">)<span class="cms-w__i"/', $page['html']), 'every split word is hidden from assistive technology');
+
+        $split = TextSplit::html('<p>R&amp;D 👩‍🚀 &quot;$1&quot;</p>', false, true);
+        $this->assertStringStartsWith('<p aria-label="R&amp;D 👩‍🚀 &quot;$1&quot;">', $split);
+        $this->assertStringContainsString('<span class="cms-c" style="--i:1">&amp;</span>', $split, 'an entity is one letter');
+        $this->assertStringContainsString('<span class="cms-c" style="--i:3">👩‍🚀</span>', $split, 'so is an emoji made of several');
+
+        // Where hiding would take something away, or a letter alone is another letter, the words animate.
+        foreach (['a link' => '<p>Read <a href="/x">this</a></p>', 'Arabic' => '<p>مرحبا بالعالم</p>', 'Devanagari' => '<p>नमस्ते दुनिया</p>', 'a name of its own' => '<p aria-label="Greeting">Hello</p>', 'no element' => 'Hello there'] as $why => $html) {
+            $words = TextSplit::html($html, false, true);
+            $this->assertStringNotContainsString('cms-c', $words, $why);
+            $this->assertStringNotContainsString('aria-hidden', $words, $why);
+            $this->assertStringContainsString('cms-w__i', $words, $why);
+        }
+
+        $long = '<p>'.str_repeat('abcdefghij ', 61).'</p>';
+        $this->assertStringNotContainsString('cms-c', TextSplit::html($long, false, true), 'too many letters: the words animate');
+        $this->assertStringNotContainsString('aria-hidden', TextSplit::html($long, false, true));
     }
 
     public function test_the_text_split_leaves_markup_and_entities_alone(): void
@@ -97,15 +129,64 @@ final class MotionTest extends TestCase
         $this->assertSame($long, TextSplit::html($long), 'too many words: left alone');
     }
 
-    public function test_scroll_follows_the_scroll_with_css_for_browsers_that_can(): void
+    public function test_scroll_follows_the_scroll_with_css_and_describes_itself_for_browsers_that_cannot(): void
     {
-        $page = $this->render([$this->animated('scroll', ['from' => ['scale' => 0.97], 'to' => ['scale' => 1], 'ease' => 'none'], ['trigger' => ['start' => 'top 70%', 'end' => 'top 5%', 'scrub' => 0.5, 'pin' => true]])]);
+        $page = $this->render([$this->animated('scroll', ['from' => ['scale' => 0.97], 'to' => ['scale' => 1], 'ease' => 'none'], ['trigger' => ['start' => 'top 70%', 'end' => 'top 5%']])]);
 
-        $this->assertSame([], $page['features']);
+        $this->assertSame(['scroll' => true], $page['features'], 'the runtime only fetches its scroll chunk where CSS can’t do it');
         $this->assertStringContainsString('@supports (animation-timeline:view()){', $page['css']);
         $this->assertStringContainsString('animation-timeline:view()', $page['css']);
         $this->assertStringContainsString('animation-range:cover calc((30vh) + 0 * ((95vh) - (30vh)) ) cover calc((30vh) + 1 * ((95vh) - (30vh)) )', $page['css']);
         $this->assertStringContainsString('{from{transform:scale(0.97)}to{transform:scale(1)}}', $page['css']);
+
+        preg_match('/data-cms-scroll="([^"]+)"/', $page['html'], $m);
+        [$described] = json_decode(html_entity_decode($m[1]), true);
+        $this->assertSame(['top 70%', 'top 5%'], [$described['start'], $described['end']]);
+        $this->assertSame([['transform' => 'scale(0.97)', 'offset' => 0], ['transform' => 'scale(1)', 'offset' => 1]], $described['steps'][0]['k']);
+        $this->assertArrayNotHasKey('scrub', $described);
+    }
+
+    public function test_scrub_trails_the_scroll_which_only_the_runtime_does(): void
+    {
+        $page = $this->render([$this->animated('scroll', ['from' => ['y' => 80]], ['trigger' => ['scrub' => 0.6]])]);
+
+        $this->assertStringNotContainsString('animation-timeline', $page['css']);
+        $this->assertStringContainsString('&quot;scrub&quot;:0.6', $page['html']);
+        $this->assertSame(['scroll' => true], $page['features']);
+    }
+
+    public function test_pin_holds_the_element_in_a_wrapper_it_is_scrolled_through(): void
+    {
+        $page = $this->render([$this->animated('scroll', ['from' => ['opacity' => 0]], ['trigger' => ['pin' => '150vh']])]);
+
+        $this->assertStringContainsString('<div class="cms-pin" data-cms-pin="node1"><div class="cms-box', $page['html']);
+        $this->assertStringContainsString('@media (prefers-reduced-motion:no-preference){[data-cms-pin="node1"]{display:block;view-timeline:--cms-p-node1}[data-cms-pin="node1"]::after{content:"";display:block;height:150vh}[data-cms-pin="node1"]>*{position:sticky;top:0}}', $page['css'], 'no script, and not for people who asked for less motion');
+        $this->assertStringContainsString('animation-timeline:--cms-p-node1;animation-range:cover calc((100vh) + 0 * ((100vh + 150vh) - (100vh)) ) cover calc((100vh) + 1 * ((100vh + 150vh) - (100vh)) )', $page['css'], 'from the wrapper’s top at the top of the screen, for the distance');
+        $this->assertStringContainsString(':root{timeline-scope:--cms-p-node1}', $page['css']);
+        $this->assertStringContainsString('&quot;pin&quot;:1', $page['html']);
+
+        $this->assertSame('100vh', Motion::sanitize([['trigger' => ['type' => 'scroll', 'pin' => true], 'steps' => [['from' => ['y' => 1]]]]])[0]['trigger']['pin']);
+        $this->assertArrayNotHasKey('pin', Motion::sanitize([['trigger' => ['type' => 'scroll', 'pin' => '100vh}body{display:none'], 'steps' => [['from' => ['y' => 1]]]]])[0]['trigger']);
+        $this->assertArrayNotHasKey('pin', Motion::sanitize([['trigger' => ['type' => 'appear', 'pin' => true, 'scrub' => 1], 'steps' => [['from' => ['y' => 1]]]]])[0]['trigger'], 'only scroll pins');
+
+        $canvas = app(BlockRenderer::class);
+        $canvas->editor = true;
+        $this->assertStringNotContainsString('cms-pin', $canvas->render(app(Document::class)->normalize([$this->animated('scroll', ['from' => ['opacity' => 0]], ['trigger' => ['pin' => true]])])));
+        $canvas->editor = false;
+    }
+
+    public function test_an_ease_can_be_a_curve_of_the_design(): void
+    {
+        $this->cms()->hooks()->addFilter('blocks.eases', fn (array $eases) => [...$eases, 'brand' => 'cubic-bezier(0.2, 0.8, 0.2, 1)', 'bad' => 'url(x)']);
+        $motion = Motion::sanitize([['trigger' => ['type' => 'appear'], 'steps' => [['ease' => 'token:ease.brand', 'from' => ['y' => 1]], ['ease' => 'token:ease.bad', 'from' => ['y' => 1]], ['ease' => 'token:color.x', 'from' => ['y' => 1]]]]]);
+
+        $this->assertSame('token:ease.brand', $motion[0]['steps'][0]['ease']);
+        $this->assertArrayNotHasKey('ease', $motion[0]['steps'][2]);
+
+        $page = $this->render([['id' => 'n', 'type' => 'box', 'motion' => $motion], $this->animated('load', ['ease' => 'token:ease.brand'])]);
+        $this->assertStringContainsString('&quot;e&quot;:&quot;cubic-bezier(0.2, 0.8, 0.2, 1)&quot;', $page['html'], 'the runtime gets the curve itself');
+        $this->assertStringNotContainsString('url(x)', $page['html'], 'a token that is no curve falls back');
+        $this->assertStringContainsString('900ms cubic-bezier(0.2, 0.8, 0.2, 1)', $page['css']);
     }
 
     public function test_scroll_can_watch_another_element_and_timelines_share_one_scope(): void
@@ -216,7 +297,7 @@ final class MotionTest extends TestCase
 
     public function test_sanitize_drops_what_no_longer_exists(): void
     {
-        $clean = Motion::sanitize([['trigger' => ['type' => 'scroll', 'scrub' => 1, 'pin' => true, 'start' => 'top+=100 80%'], 'steps' => [['from' => ['width' => '10px', 'transformPerspective' => 400, 'opacity' => 0], 'ease' => 'nonsense(']]]]);
+        $clean = Motion::sanitize([['trigger' => ['type' => 'scroll', 'scrub' => true, 'pin' => 'auto', 'markers' => true, 'start' => 'top+=100 80%'], 'steps' => [['from' => ['width' => '10px', 'transformPerspective' => 400, 'opacity' => 0], 'ease' => 'nonsense(']]]]);
 
         $this->assertSame(['type' => 'scroll'], $clean[0]['trigger']);
         $this->assertSame(['opacity' => 0.0], $clean[0]['steps'][0]['from']);

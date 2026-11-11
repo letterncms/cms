@@ -4,7 +4,7 @@
 //   <h1 data-cms="b1" data-cms-motion='[{"id":"m1","type":"appear","steps":[{"t":"self","k":[{"opacity":0,"offset":0}],"d":800}]}]'>
 
 interface Step {
-  t: string // self, children, words or #<node id>
+  t: string // self, children, words, lines, chars or #<node id>
   k: Keyframe[]
   d: number // duration
   w?: number // start
@@ -54,7 +54,8 @@ declare global {
 function targets(el: HTMLElement, target: string): Element[] {
   if (target === 'self') return [el]
   if (target === 'children') return [...el.children]
-  if (target === 'words') return [...el.querySelectorAll('.cms-w__i')]
+  if (target === 'words' || target === 'lines') return [...el.querySelectorAll('.cms-w__i')]
+  if (target === 'chars') return [...el.querySelectorAll('.cms-c')]
   return [...document.querySelectorAll(`[data-cms="${CSS.escape(target.slice(1))}"]`)]
 }
 
@@ -64,17 +65,37 @@ function own(item: Element, frames: Keyframe[]): Keyframe[] {
   return frames.map((frame) => Object.fromEntries(Object.entries(frame).map(([key, value]) => [key, value === null ? style[key] : value])) as Keyframe)
 }
 
+/**
+ * Which line each word is on, as the text is laid out now: words that share a top share a line.
+ * The words stay where they are in the HTML; a line is only the turn they take together.
+ */
+function lines(words: Element[]): number[] {
+  let line = -1
+  let top = NaN
+  return words.map((word) => {
+    const at = Math.round(word.parentElement!.getBoundingClientRect().top)
+    if (!(Math.abs(at - top) < 2)) {
+      line++
+      top = at
+    }
+    return line
+  })
+}
+
 /** The animations of a step, created paused. */
-function create(el: HTMLElement, animation: Animation): globalThis.Animation[] {
+export function create(el: HTMLElement, animation: Animation): globalThis.Animation[] {
   const out: globalThis.Animation[] = []
   for (const step of animation.steps) {
     const items = targets(el, step.t)
-    const stagger = Math.min(step.s ?? 0, items.length > 1 ? SPREAD / (items.length - 1) : 0)
+    // Each item's turn: its own, or its line's.
+    const turns = step.t === 'lines' ? lines(items) : items.map((_, i) => i)
+    const last = turns.length ? turns[turns.length - 1] : 0
+    const stagger = Math.min(step.s ?? 0, last > 0 ? SPREAD / last : 0)
     items.forEach((item, i) => {
       const a = item.animate(step.c ? own(item, step.k) : step.k, {
         duration: step.d,
-        delay: (step.w ?? 0) + i * stagger,
-        endDelay: (step.r ?? 0) + (items.length - 1 - i) * stagger,
+        delay: (step.w ?? 0) + turns[i] * stagger,
+        endDelay: (step.r ?? 0) + (last - turns[i]) * stagger,
         easing: step.e ?? 'linear',
         fill: step.f,
         iterations: step.i === -1 ? Infinity : step.i ?? 1,
