@@ -83,7 +83,11 @@ final class ContentModule extends Plugin
         $this->adminModule();
     }
 
-    /** One collection's place: its name and size, its New button, and its entries. */
+    /**
+     * One collection's place: its name and size, its New button, and its entries. The site's pages
+     * have a tab beside them for each feature that brings pages of its own (sign in, checkout),
+     * named after it, with the same list.
+     */
     private function view(string $handle, User $user): array
     {
         $collection = $this->cms()->collections()->all()[$handle] ?? null;
@@ -92,12 +96,34 @@ final class ContentModule extends Plugin
             return Views::notFound('collection');
         }
 
-        return ['type' => 'ui/page', 'props' => [
-            'title' => __($collection->title), 'icon' => $collection->icon,
-            // The count follows what the list shows: its language, status and search.
-            'count' => ['source' => ['ability' => 'entries/list', 'input' => ['collection' => $handle, 'locale' => '{query.locale}', 'status' => '{query.status}', 'search' => '{query.search}', 'perPage' => 1, 'fields' => []]], 'at' => 'total'],
-            'actions' => [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'to' => "/content/{$handle}/new?locale={query.locale}", 'key' => 'c', 'can' => "entries.{$handle}.create"]],
-        ], 'children' => [['type' => 'ui/records', 'props' => (new EntriesView($this->cms(), self::PER_PAGE))->records($collection, $user)]]];
+        $view = new EntriesView($this->cms(), self::PER_PAGE);
+        // The count follows what the list shows: its language, status and search.
+        $count = ['source' => ['ability' => 'entries/list', 'input' => ['collection' => $handle, 'locale' => '{query.locale}', 'status' => '{query.status}', 'search' => '{query.search}', 'perPage' => 1, 'fields' => []]], 'at' => 'total'];
+        $new = [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'to' => "/content/{$handle}/new?locale={query.locale}", 'key' => 'c', 'can' => "entries.{$handle}.create"]];
+        $records = ['type' => 'ui/records', 'props' => $view->records($collection, $user)];
+        $page = ['title' => __($collection->title), 'icon' => $collection->icon];
+        $features = $handle === 'pages' ? $this->builtinGroups($user) : [];
+
+        if ($features === []) {
+            return ['type' => 'ui/page', 'props' => [...$page, 'count' => $count, 'actions' => $new], 'children' => [$records]];
+        }
+
+        return ['type' => 'ui/page', 'props' => $page, 'children' => [['type' => 'ui/tabs', 'children' => [
+            ['type' => 'ui/tab', 'props' => ['id' => 'site', 'label' => __('Site'), 'count' => $count, 'actions' => $new], 'children' => [$records]],
+            ...array_map(static fn (array $group) => ['type' => 'ui/tab', 'props' => [
+                'id' => $group['id'], 'label' => __($group['label']),
+                'count' => ['source' => ['ability' => 'pages/builtin', 'input' => ['group' => $group['id']]], 'at' => '0.total'],
+            ], 'children' => [['type' => 'ui/records', 'props' => $view->builtin($group)]]], $features),
+        ]]]];
+    }
+
+    /** The features with pages of their own this person may see, named as the plugin is. */
+    private function builtinGroups(User $user): array
+    {
+        return array_values(array_map(
+            static fn (array $group) => ['id' => $group['id'], 'label' => \Cms\Packages\PackageRepository::labelOf($group['package']) ?? $group['label']],
+            array_filter($this->cms()->builtinPages()->all(), static fn (array $group) => $user->hasPermission("entries.{$group['collection']}.view") && ($group['pages'])() !== []),
+        ));
     }
 
     /** The collection whose list shows this one's entries: the site's pages, for built-in pages. */
@@ -106,6 +132,18 @@ final class ContentModule extends Plugin
         $cms = $this->cms();
 
         return $handle !== 'pages' && $cms->builtinPages()->holds($handle) && isset($cms->collections()->all()['pages']) ? 'pages' : null;
+    }
+
+    /** The tab of Pages that lists a collection of built-in pages. */
+    private function tabOf(string $handle): ?string
+    {
+        foreach ($this->within($handle) === null ? [] : $this->cms()->builtinPages()->all() as $group) {
+            if ($group['collection'] === $handle) {
+                return $group['id'];
+            }
+        }
+
+        return null;
     }
 
     /** @return list<array> The collections this user may view, with what they may do in each. */
@@ -121,7 +159,7 @@ final class ContentModule extends Plugin
             // Names read like the sidebar's: in the user's language when the dictionaries know them.
             $out[] = [
                 'handle' => $c->handle, 'title' => __($c->title), 'singular' => __($c->singular), 'newLabel' => self::newLabel($c->singular), 'icon' => $c->icon,
-                'structure' => $c->structure, 'routable' => $c->routable(), 'driver' => $c->driver, 'defaultView' => $c->defaultView, 'within' => $this->within($c->handle),
+                'structure' => $c->structure, 'routable' => $c->routable(), 'driver' => $c->driver, 'defaultView' => $c->defaultView, 'within' => $this->within($c->handle), 'tab' => $this->tabOf($c->handle),
                 'can' => array_combine(['create', 'edit', 'publish', 'delete'], array_map(static fn ($a) => $user->hasPermission("entries.{$c->handle}.{$a}"), ['create', 'edit', 'publish', 'delete'])),
             ];
         }

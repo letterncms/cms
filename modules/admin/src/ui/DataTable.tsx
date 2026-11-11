@@ -41,13 +41,13 @@ function shrunk(track: string): string {
 
 /**
  * The columns that give way, right to left, when a row doesn't fit: those after the title (the first
- * flexible track), but not a narrow last one (the row's actions).
+ * flexible track), but not a narrow last one (the row's actions, with a tree's drag handle).
  */
 function yielding(tracks: string[]): number[] {
   const title = tracks.findIndex((track) => track.includes('fr'))
   if (title < 0) return []
   const last = tracks.length - 1
-  const actions = /^[\d.]+px$/.test(tracks[last]) && leastOf(tracks[last]) <= 64 ? last : -1
+  const actions = /^[\d.]+px$/.test(tracks[last]) && leastOf(tracks[last]) <= 76 ? last : -1
   const order: number[] = []
   for (let i = last; i > title; i--) if (i !== actions) order.push(i)
   return order
@@ -77,7 +77,8 @@ function markColumns(table: HTMLElement, hidden: Set<number>) {
   for (const row of table.querySelectorAll<HTMLElement>('[role="row"]')) {
     let column = 0
     for (const child of row.children) {
-      const cells = child.getAttribute('role') === 'none' ? [...child.children] : [child]
+      // A tree's spacer is a track of its own; only the row's meta lays out cells of its own.
+      const cells = child.hasAttribute('data-row-meta') ? [...child.children] : [child]
       for (const cell of cells) {
         // A row's checkbox lies in the gutter, outside the tracks.
         if (cell.hasAttribute('data-row-check')) continue
@@ -237,10 +238,6 @@ interface DataTableProps<T> {
   selection?: DataSelection<T>
   actions?: (item: T) => ReactNode
   tree?: DataTree<T>
-  /** The row's actions always in view, not only on hover: what these rows are there to offer. */
-  actionsInView?: boolean
-  /** Another table's tracks, to line up under it (with its room for toggles). */
-  align?: { template: string; nested: boolean }
   loading?: boolean
   stale?: boolean
   state?: ReactNode
@@ -254,15 +251,15 @@ const INDENT = 20
 const LINK = 'min-w-0 flex-1 truncate text-left text-inherit no-underline outline-none after:absolute after:inset-0 after:content-[\'\'] focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus'
 
 /** The admin's one table: every list, flat or a tree, is drawn by it, so they look and work alike. */
-export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClick, selected, selection, actions, tree, actionsInView, align, loading, stale, state, sort, sortable, onSort, cursor }: DataTableProps<T>) {
+export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClick, selected, selection, actions, tree, loading, stale, state, sort, sortable, onSort, cursor }: DataTableProps<T>) {
   const all = flattenTree(items, tree?.children)
   const rowIds = all.map(rowKey)
   const chosen = rowIds.filter((key) => selection?.ids.has(key)).length
   // Room for the toggles only when something in the tree holds something.
-  const nested = align?.nested ?? (!!tree && items.some((item) => tree.children(item)?.length > 0))
+  const nested = !!tree && items.some((item) => tree.children(item)?.length > 0)
   // Content must never decide a row's tracks: identical tracks keep headers, rows and skeletons aligned.
-  const template = align?.template ?? tableTemplate(columns, { actions: !!actions, nested, reorder: !!tree?.reorder })
-  const hasActions = !!actions || !!tree?.reorder || !!align
+  const template = tableTemplate(columns, { actions: !!actions, nested, reorder: !!tree?.reorder })
+  const hasActions = !!actions || !!tree?.reorder
   const count = columns.length + (hasActions ? 1 : 0)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   // An empty or failed list is its message alone, without headers above it.
@@ -282,7 +279,7 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
       <TableMeta>{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
         <div className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
       </div>)}</TableMeta>
-      {hasActions && <div role="cell" data-table-actions className={actionsInView ? 'relative z-10 flex min-w-0 items-center justify-end gap-0.5 [&>*]:shrink-0' : rowActionsClass}>{extra?.handle}{actions?.(item)}</div>}
+      {hasActions && <div role="cell" data-table-actions className={rowActionsClass}>{extra?.handle}{actions?.(item)}</div>}
     </TableRow>
   }
 

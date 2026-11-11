@@ -178,6 +178,8 @@ export interface CollectionSummary {
   driver: 'database' | 'files'
   /** The collection whose list shows these entries (built-in pages are listed with the site's pages), when not their own. */
   within?: string | null
+  /** The tab of that list these entries are on (`market` for the checkout pages). */
+  tab?: string | null
   can: { create: boolean; edit: boolean; publish: boolean; delete: boolean }
 }
 

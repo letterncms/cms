@@ -53,7 +53,8 @@ export function formatValue(value: unknown, { format = 'text', tones, labels, cu
     case 'badge': return <Badge tone={tones?.[String(value)] ?? 'neutral'}>{word(value, labels)}</Badge>
     case 'badges': return <span className="flex flex-wrap items-center gap-1">{(Array.isArray(value) ? value : [value]).map((v) => <Badge key={String(v)} tone={tones?.[String(v)] ?? 'neutral'}>{word(v, labels)}</Badge>)}</span>
     // A dot and a word: the dot's tone from `tones` (or the value, for content's own states), the word from `labels`.
-    case 'status': return <StatusDot status={tones?.[String(value)] ?? String(value)} label={labels?.[String(value)] ?? (tones ? String(value) : undefined)} />
+    // A state the tones name is shown as its tone, in the words given; any other keeps its own (Published, Changes).
+    case 'status': return <StatusDot status={tones?.[String(value)] ?? String(value)} label={labels?.[String(value)] ?? (tones?.[String(value)] !== undefined ? String(value) : undefined)} />
     case 'date': return <span title={date(String(value), { dateStyle: 'full', timeStyle: 'short' })}>{date(String(value), { dateStyle: 'medium' })}</span>
     case 'datetime': return date(String(value), { dateStyle: 'medium', timeStyle: 'short' })
     case 'ago': return <span title={date(String(value), { dateStyle: 'medium', timeStyle: 'short' })}>{timeAgo(String(value))}</span>
