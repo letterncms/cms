@@ -101,6 +101,9 @@ final class MediaManifest
      */
     public function import(?float $budget = null): array
     {
+        // The media folder's own rules (types, nosniff) are the CMS's to keep current, on every site.
+        app(MediaStore::class)->protect();
+
         return $this->locked(function () use ($budget): array {
             $report = ['added' => [], 'updated' => [], 'removed' => [], 'exported' => [], 'missing_files' => [], 'refused' => [], 'parse_errors' => [], 'finished' => true];
             $deadline = $budget !== null ? microtime(true) + $budget : null;
@@ -197,6 +200,11 @@ final class MediaManifest
 
         if ($mime === 'image/svg+xml' && $this->svg->clean((string) file_get_contents($file)) !== (string) file_get_contents($file)) {
             return 'unsafe_svg';
+        }
+
+        // A model or an animation that came in with git or FTP passes the same checks as an upload.
+        if (app(MediaStore::class)->unsafe($mime, $file) !== null) {
+            return 'unsafe_asset';
         }
 
         return null;
