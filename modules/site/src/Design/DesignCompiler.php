@@ -28,6 +28,24 @@ final class DesignCompiler
         'h1 em', 'h2 em', 'h3 em', 'h1 strong', 'h2 strong',
     ];
 
+    /** The tags a style's selector may name, after `html` and `body`, which only stand alone. */
+    private const string TAG = 'h[1-6]|p|a|small|strong|em|mark|code|kbd|pre|blockquote|hr|ul|ol|li|img|figure|figcaption|table|th|td|span|sup|sub|abbr|cite|q|time|dl|dt|dd|button|label|summary|nav|header|footer|main|section|article|aside';
+
+    /**
+     * Is this a selector the design may style? ELEMENTS are the ones the Design System offers; beside them a small
+     * grammar covers what a site otherwise wrote custom CSS for, and nothing that could select by class, id or
+     * attribute or break out of the rule:
+     *
+     *   tag                       "figcaption"
+     *   tag tag, tag > tag        "h1 em", "li > a", up to three deep
+     *   … with a state at the end "a:hover", "nav a:focus-visible", "li:first-child"
+     */
+    public static function selectable(mixed $selector): bool
+    {
+        return is_string($selector) && (in_array($selector, self::ELEMENTS, true)
+            || preg_match('/^(?:'.self::TAG.')(?: (?:> )?(?:'.self::TAG.')){0,2}(?::hover|:focus-visible|:active|:first-child|:last-child|::before|::after|::marker|::placeholder)?$/D', $selector) === 1);
+    }
+
     /** The elements prose styles: every one is in the Design System's prose sample. */
     public const array PROSE_ELEMENTS = [
         'h2', 'h3', 'h4', 'p', 'a', 'a:hover', 'strong', 'em', 'mark', 'small', 'code', 'kbd', 'pre', 'blockquote', 'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', '::selection',
@@ -88,7 +106,7 @@ final class DesignCompiler
         $elements = [];
 
         foreach ($design->styles() as $selector => $declarations) {
-            if (in_array($selector, self::ELEMENTS, true) && is_array($declarations) && ($css = $this->declarations($declarations)) !== '') {
+            if (self::selectable($selector) && is_array($declarations) && ($css = $this->declarations($declarations)) !== '') {
                 $elements[] = "{$selector}{{$css}}";
             }
         }
@@ -109,7 +127,7 @@ final class DesignCompiler
         }
 
         foreach ($design->prose() as $selector => $declarations) {
-            if (! in_array($selector, self::ELEMENTS, true) || ! is_array($declarations)) {
+            if (! self::selectable($selector) || ! is_array($declarations)) {
                 continue;
             }
 
@@ -197,7 +215,7 @@ final class DesignCompiler
             return ':where(ul:not(.cms-box, .cms-repeat), ol:not(.cms-box, .cms-repeat)) > li';
         }
 
-        return (string) preg_replace('/^(.*?)([a-z][a-z0-9]*)((?::[a-z-]+)*)$/', '$1$2:where(:not(.cms-box, .cms-repeat))$3', $selector);
+        return (string) preg_replace('/^(.*?)([a-z][a-z0-9]*)((?:::?[a-z-]+)*)$/', '$1$2:where(:not(.cms-box, .cms-repeat))$3', $selector);
     }
 
     public function declarations(array $declarations): string

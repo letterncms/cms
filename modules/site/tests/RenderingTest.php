@@ -259,6 +259,50 @@ final class RenderingTest extends TestCase
         $this->assertArrayHasKey('spacing', (array) $this->cms()->abilities()->execute('design/get', [], \Cms\Abilities\AbilityContext::system('test'))['prose']);
     }
 
+    public function test_element_styles_take_a_small_grammar_of_selectors_and_nothing_else(): void
+    {
+        $compiler = \Cms\Modules\Site\Design\DesignCompiler::class;
+
+        foreach (['h1 em', 'h2 > strong', 'nav a:hover', 'li::marker', 'figure figcaption', 'ul li > a:focus-visible', 'a:hover', '::selection', 'body'] as $selector) {
+            $this->assertTrue($compiler::selectable($selector), $selector);
+        }
+
+        foreach (['.hero em', '#main p', 'h1[title]', 'h1, body', 'h1{color:red}body', 'h1 em strong a', 'body em', 'a:has(img)', 'h1 em:hover:active', 'p}', 'script', '*', '', 'h1  em', ['h1']] as $selector) {
+            $this->assertFalse($compiler::selectable($selector), json_encode($selector));
+        }
+
+        $context = \Cms\Abilities\AbilityContext::system('test');
+        $css = $this->cms()->abilities()->execute('design/preview', [
+            'styles' => ['h1 em' => ['fontStyle' => 'italic', 'color' => 'rgb(7, 8, 9)'], 'nav a:hover' => ['color' => 'red']],
+            'prose' => ['spacing' => ['blocks' => '1em'], 'li::marker' => ['color' => 'green'], 'blockquote p' => ['color' => 'teal']],
+        ], $context)['css'];
+
+        // What can't be styled is refused by name when it is saved, not kept and dropped in silence.
+        foreach ([['styles', '.x'], ['styles', 'h1}body{display:none'], ['prose', '#lead p']] as [$section, $selector]) {
+            foreach (['design/update', 'design/preview'] as $ability) {
+                try {
+                    $this->cms()->abilities()->execute($ability, [$section => [$selector => ['color' => 'blue']]], $context);
+                    $this->fail("{$ability} took {$selector}");
+                } catch (\Cms\Abilities\AbilityException $e) {
+                    $this->assertStringContainsString($selector, $e->getMessage());
+                }
+            }
+        }
+
+        // A file written by hand can still hold one: it compiles to nothing.
+        \Cms\Support\Files::putJson(content_path('design/tokens.json'), ['styles' => ['.x' => ['color' => 'blue'], 'p' => ['color' => 'teal']]]);
+        $this->app->make(\Cms\Modules\Site\Design\Design::class)->saved();
+        $stored = (string) file_get_contents(public_path(ltrim($this->app->make(\Cms\Modules\Site\Design\Design::class)->stylesheet(), '/')));
+        $this->assertStringNotContainsString('blue', $stored);
+        $this->assertStringContainsString('p{color:teal}', $stored);
+
+        $this->assertStringContainsString('h1 em{font-style:italic;color:rgb(7, 8, 9)}', $css);
+        $this->assertStringContainsString('nav a:hover{color:red}', $css);
+        $this->assertStringNotContainsString('blue', $css);
+        $this->assertStringContainsString('.cms-prose li:where(:not(.cms-box, .cms-repeat))::marker{color:green}', $css);
+        $this->assertStringContainsString('.cms-prose blockquote p:where(:not(.cms-box, .cms-repeat)){color:teal}', $css);
+    }
+
     public function test_form_fields_are_styled_once_from_the_design_system(): void
     {
         $context = \Cms\Abilities\AbilityContext::system('test');
