@@ -140,7 +140,7 @@ try {
     await wait(() => row('Refine the launch page')?.textContent.includes('Draft'), 'the list does not mark the reply draft')
     row('Refine the launch page').click(); await wait(() => composer().value === 'Reply draft', 'reply draft was discarded')
     fill(''); await sleep(30)
-    command.perform(); await wait(() => welcome() && heading() === 'New Chat', 'the New Chat command kept a finished chat')
+    command.perform(); await wait(() => welcome() && heading() === 'Chat', 'the New Chat command kept a finished chat')
   })
   await test('Older chats load in pages as the list scrolls, without losing the active conversation', async () => {
     const list = () => dock().querySelector('nav[aria-label="Chats"]')
@@ -363,7 +363,7 @@ try {
     navigate('/content/pages'); await wait(() => !isFull() && screen() === 'Pages', 'CMS did not open')
     await sleep(600)
     assert(location.pathname === '/admin/content/pages' && !isFull(), 'deletion pulled the user back into the full-size chat')
-    assert(heading() === 'New Chat' && welcome(), 'the dock kept showing the deleted chat')
+    assert(heading() === 'Chat' && welcome(), 'the dock kept showing the deleted chat')
   })
   await test('Generated UI uses the shared view renderer with metrics, tables, widgets and plugin components', async () => {
     await open('surfaces')

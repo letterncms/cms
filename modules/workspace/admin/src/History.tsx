@@ -1,5 +1,5 @@
 import { run, t, timeAgo, useAction } from '@letterncms/sdk'
-import { IconButton, SidebarRow, Spinner, Tooltip, confirm, toast } from '@letterncms/ui'
+import { IconButton, QueryError, SidebarRow, Spinner, Tooltip, confirm, toast } from '@letterncms/ui'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Rename } from './Rename'
@@ -41,6 +41,7 @@ function ChatRow({ chat, remove, renaming, onRename }: { chat: Summary; remove: 
   return (
     <div data-chat-row={chat.id}><SidebarRow
       label={chat.title || t('New Chat')}
+      icon="comment"
       title={`${chat.title} · ${timeAgo(chat.updatedAt)}`}
       onClick={() => panel.select(chat.id)}
       active={thread === chat.id}
@@ -141,7 +142,7 @@ export function History() {
         </section>
       ))}
       {history.isPending && <div className="grid h-24 place-items-center text-faint"><Spinner /></div>}
-      {history.isError && <button type="button" onClick={() => void history.refetch()} className="px-2 py-1.5 text-left text-xs text-muted hover:text-text">{t('Could not load chats. Try again')}</button>}
+      {history.isError && <QueryError compact message={t('Couldn’t load your chats')} onRetry={() => void history.refetch()} retrying={history.isRefetching} />}
       {history.hasNextPage && <div ref={more} className="grid h-10 place-items-center text-faint">{history.isFetchingNextPage && <Spinner size={14} />}</div>}
     </nav>
   )
