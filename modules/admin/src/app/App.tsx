@@ -1,4 +1,4 @@
-import { brand, confirmLeaving, events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useLocation, useManifest, useScreen, useScreenContext, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
+import { brand, confirmLeaving, events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useManifest, useScreen, useScreenContext, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { NotFound } from '../screens/NotFound'
 import { cn, confirm, IconButton, ShortcutsDialog, SHORTCUTS_KEY, Tooltip } from '../ui'
@@ -7,7 +7,7 @@ import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Sidebar, StateBack, type OwnSidebar } from './Sidebar'
 import { isPinned, leaveSettings, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
-import { inSettings, itemAt, noteLocation, noteSide, placeAt } from '../ui/place'
+import { inSettings, itemAt, noteLocation, placeAt } from '../ui/place'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/Slideover'
 import { dockState, type DockState } from '../ui/Dock'
@@ -151,9 +151,6 @@ export function App() {
   }, [leading])
 
   const manifest = useManifest()
-  // Which sidebar the address belongs to, as soon as it changes: the sidebar follows at once, the screen once it is ready.
-  const address = useLocation()
-  noteSide(manifest, address.path, address.search)
   const settings = inSettings(manifest, location.path)
   const place = placeAt(manifest.nav, location.path)
   // Sections of one screen (the design system's) go under its row, where the screen was opened; the sidebar stays the one it was.

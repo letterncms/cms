@@ -30,14 +30,14 @@ final class SettingsRegistry
     public function __construct(private readonly Encrypter $encrypter) {}
 
     /**
-     * A settings page. A plugin's is listed under Plugins in the settings
-     * sidebar, by the plugin's name: leave out `label` and `section`. The core's
-     * modules name their section: `site` (what the site is), `people` or
-     * `system` (how the installation runs).
-     *
-     * `home` is the sidebar item of a screen of the plugin's own (`forms`):
-     * the page is then that screen's Settings tab (see `ScreenTabs`), and
-     * /settings/<namespace> leads there. Everything a plugin adds is in one place.
+     * A settings page. Settings have one home. A plugin or module with a
+     * screen of its own names that screen's sidebar item as `home` (`forms`):
+     * the page is then that screen's Settings tab (see `ScreenTabs`), it is
+     * not repeated in the settings sidebar, and /settings/<namespace> leads
+     * to the tab. Without a screen, the page is listed in the settings
+     * sidebar: a plugin's under Plugins, by the plugin's name (leave out
+     * `label` and `section`); the core's modules name their section, `site`
+     * (what the site is), `people` or `system` (how the installation runs).
      *
      * `page: false` keeps values that are set where they are used (the default
      * sidebar, from Customize Sidebar): they are read and saved like any

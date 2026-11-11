@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import { Dialog as Base } from '@base-ui/react/dialog'
 import { Fields, Icon, IconButton, Kbd, NoMatches, Spinner, StatusDot, toast } from '../ui'
 import { getThemePreference, setThemePreference, useTheme } from '../ui/theme'
-import { settingsIds } from '../ui/place'
 import { openSettings, SETTINGS_SHORTCUT } from './sidebarStore'
 
 function useDebounced<T>(value: T, ms = 180): T {
@@ -57,9 +56,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   }
 
   const pages = useMemo(
-    () => { const listed = settingsIds(manifest); return [
-      // A screen's Settings tab is a place of its own only where the settings sidebar lists it (a plugin's); otherwise it is a tab of a place already here.
-      ...manifest.nav.filter((n) => !n.home || (n.id.startsWith('settings.') && listed.has(n.id))).map((n) => ({ id: n.id, label: n.home && n.id.startsWith('settings.') ? t('{name} Settings', { name: manifest.nav.find((h) => h.id === n.home)?.label ?? n.label }) : n.label, icon: n.icon, path: n.path })),
+    () => { return [
+      // A screen's Settings tab is in no sidebar (settings have one home), so it is found here by the screen's name: "Media Settings".
+      ...manifest.nav.filter((n) => !n.home || n.id.startsWith('settings.')).map((n) => ({ id: n.id, label: n.home && n.id.startsWith('settings.') ? t('{name} Settings', { name: manifest.nav.find((h) => h.id === n.home)?.label ?? n.label }) : n.label, icon: n.icon, path: n.path })),
       ...manifest.globals.map((g) => ({ id: `g-${g.handle}`, label: g.title, icon: g.icon, path: `/globals/${g.handle}` })),
     ] },
     [manifest],

@@ -151,10 +151,10 @@ final class AdminTest extends TestCase
         $settings = array_column($this->cms()->adminNav()->forUser($this->admin())['settingsNav'], null, 'id');
 
         $this->assertArrayNotHasKey('plugins', $settings);
-        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit', 'sync', 'settings.shop'], $settings['account']['items']);
+        $this->assertSame(['account', 'settings.site', 'settings.email', 'audit', 'sync', 'settings.shop'], $settings['account']['items']);
     }
 
-    public function test_a_page_with_a_home_is_that_screens_settings_tab_and_listed_in_settings(): void
+    public function test_a_page_with_a_home_is_that_screens_settings_tab_and_in_no_sidebar(): void
     {
         $this->cms()->admin()->nav('shop', ['label' => 'Shop', 'path' => '/shop', 'pinned' => true]);
         $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']], home: 'shop');
@@ -164,8 +164,8 @@ final class AdminTest extends TestCase
 
         $this->assertSame('shop', $nav['settings.shop']['home']);
         $this->assertSame('/shop?tab=settings', $nav['settings.shop']['path']);
-        // Found in settings with every other page, and never pinned on its own.
-        $this->assertContains('settings.shop', array_merge(...array_column($result['settingsNav'], 'items')));
+        // One home: the screen's tab. The settings sidebar doesn't repeat it, and it is never pinned on its own.
+        $this->assertNotContains('settings.shop', array_merge(...array_column($result['settingsNav'], 'items')));
         $this->assertNotContains('settings.shop', array_merge(...array_column($result['sidebar']['sections'], 'items')));
         $this->assertSame('shop', array_column($this->app->make(Manifest::class)->build($this->admin())['settings'], 'home', 'namespace')['shop']);
     }
@@ -207,7 +207,7 @@ final class AdminTest extends TestCase
 
         // Your account, General, the Audit Log and Sync without a group name; then People.
         $this->assertSame(['account', 'people'], array_keys($settings));
-        $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit', 'sync'], $settings['account']['items']);
+        $this->assertSame(['account', 'settings.site', 'settings.email', 'audit', 'sync'], $settings['account']['items']);
         $this->assertSame(['users', 'settings.roles'], $settings['people']['items']);
         // Settings kept with a screen are its Settings tab, reached through the screen's row when that is in settings.
         $this->assertSame('/audit?tab=settings', array_column($result['nav'], 'path', 'id')['settings.audit']);

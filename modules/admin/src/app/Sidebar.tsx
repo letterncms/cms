@@ -7,7 +7,7 @@ import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, type 
 import { BrandMark } from './Brand'
 import { setThemePreference, useThemePreference } from '../ui/theme'
 import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
-import { inSettings, parentWay, placeAt, settingsRowAt, subscribeParent, wayBack } from '../ui/place'
+import { inSettings, parentWay, placeAt, subscribeParent, wayBack } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {
@@ -47,7 +47,7 @@ export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate }
   const { path, search } = useLocation()
   const settings = inSettings(manifest, path)
   const state = own ? 'screen' : settings ? 'settings' : 'main'
-  const active = (settings ? settingsRowAt(manifest, path, search) : placeAt(manifest.nav, path))?.id
+  const active = placeAt(manifest.nav, path)?.id
 
   useEffect(() => remember(manifest, path, search), [manifest, path, search])
   // Switching states moves the list, in from the side it leads to (deeper: settings, then a screen's own) and back from the other; the admin opening does not.

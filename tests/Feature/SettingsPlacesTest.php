@@ -9,9 +9,10 @@ use Cms\Support\Files;
 use Cms\Tests\TestCase;
 
 /**
- * Where a plugin's settings are: under Plugins in the settings sidebar, named by
- * the plugin, wherever it asked to go; for a plugin with a screen of its own, that
- * screen's Settings tab, which its row there and /settings/<namespace> lead to.
+ * Where a plugin's settings are, in one place each: for a plugin with a screen of
+ * its own, that screen's Settings tab, which /settings/<namespace> leads to and the
+ * settings sidebar does not repeat; without one, under Plugins in the settings
+ * sidebar, named by the plugin, wherever it asked to go.
  */
 final class SettingsPlacesTest extends TestCase
 {
@@ -57,11 +58,11 @@ final class SettingsPlacesTest extends TestCase
         $result = $this->cms()->adminNav()->forUser($this->admin());
         $settings = array_column($result['settingsNav'], null, 'id');
 
-        // The core's groups, then Plugins: alphabetical, whatever order or group they were registered with,
-        // with the settings a plugin keeps on its own screen among them.
+        // The core's groups, then Plugins: alphabetical, whatever order or group they were registered with.
+        // The settings a plugin keeps on its own screen are not among them.
         $this->assertSame(['account', 'people', 'plugins'], array_keys($settings));
         $this->assertSame('Plugins', $settings['plugins']['label']);
-        $this->assertSame(['settings.clicks', 'settings.links', 'redirects', 'settings.shortener'], $settings['plugins']['items']);
+        $this->assertSame(['settings.links', 'redirects', 'settings.shortener'], $settings['plugins']['items']);
         $this->assertNotContains('settings.shortener', $settings['account']['items']);
         $this->assertNotContains('redirects', $settings['people']['items']);
 
@@ -76,10 +77,10 @@ final class SettingsPlacesTest extends TestCase
         $result = $this->cms()->adminNav()->forUser($this->admin());
         $nav = array_column($result['nav'], null, 'id');
 
-        // Its place is the screen's Settings tab: /settings/clicks, its row under Plugins and every link to it lead there.
+        // Its one place is the screen's Settings tab: /settings/clicks and every link to it lead there, and no sidebar lists it.
         $this->assertSame('/clicks?tab=settings', $nav['settings.clicks']['path']);
         $this->assertSame('clicks', $nav['settings.clicks']['home']);
-        $this->assertContains('settings.clicks', array_column($result['settingsNav'], 'items', 'id')['plugins']);
+        $this->assertNotContains('settings.clicks', array_merge(...array_column($result['settingsNav'], 'items')));
         $this->assertNotContains('settings.clicks', array_merge(...array_column($result['sidebar']['sections'], 'items')));
         $this->assertSame('clicks', array_column($this->app->make(Manifest::class)->build($this->admin())['settings'], 'home', 'namespace')['clicks']);
     }

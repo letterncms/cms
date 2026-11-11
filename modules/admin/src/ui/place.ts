@@ -26,68 +26,17 @@ export function settingsIds(manifest: Manifest): Set<string> {
   return new Set(manifest.settingsNav.flatMap((s) => s.items))
 }
 
-/**
- * A plugin's settings kept as its screen's Settings tab (`/analytics?tab=settings`) are a row of the
- * settings sidebar too: the row for that location, if it is one.
- */
-export function settingsTabAt(manifest: Manifest, path: string, search: string): NavItem | undefined {
-  if (new URLSearchParams(search).get('tab') !== 'settings') return undefined
-  const ids = settingsIds(manifest)
-  return manifest.nav.find((n) => !!n.home && ids.has(n.id) && n.path.split('?')[0] === path)
-}
-
-/**
- * Which sidebar the location on view belongs to. A screen's Settings tab is in both: opened from the
- * settings sidebar it is a settings page, its row active there; opened on the screen, the screen's tab,
- * and the sidebar stays as it was. So it keeps the side it was reached from (for this tab, across a reload).
- */
-const SIDE = 'cms.side'
-const here = { path: '', search: '', side: readSide() }
-
-function readSide(): 'app' | 'settings' {
-  try {
-    return sessionStorage.getItem(SIDE) === 'settings' ? 'settings' : 'app'
-  } catch {
-    return 'app'
-  }
-}
-
-/** For the admin: called with the location on view, before anything asks `inSettings` about it. */
-export function noteSide(manifest: Manifest, path: string, search: string) {
-  here.path = path
-  here.search = search
-  if (settingsTabAt(manifest, path, search)) return
-  // /settings/<namespace> leads to the tab it is kept as: it is reached from settings.
-  const side = settingsPlace(manifest, path) || path === '/settings' || path.startsWith('/settings/') ? 'settings' : 'app'
-  if (side === here.side) return
-  here.side = side
-  try {
-    sessionStorage.setItem(SIDE, side)
-  } catch { /* private window: not kept */ }
-}
-
 function settingsPlace(manifest: Manifest, path: string): boolean {
   const item = placeAt(manifest.nav, path)
   return !!item && settingsIds(manifest).has(item.id)
 }
 
-/** Whether a path is one of the settings sidebar's places (or belongs to one), or the screen tab on view that was opened as one. */
-export function inSettings(manifest: Manifest, path: string): boolean {
-  return settingsPlace(manifest, path) || openedAsSettings(manifest, path)
-}
-
 /**
- * Whether the screen tab on view is a plugin's Settings tab opened from its row of the settings sidebar:
- * then it is that settings page alone. A screen that is itself a settings place (Users, the Audit Log)
- * never is: its Settings tab is one of its tabs.
+ * Whether a path is one of the settings sidebar's places (or belongs to one). A screen's Settings tab is
+ * a tab of that screen, wherever the screen is: settings have one home, so no location is in both sidebars.
  */
-export function openedAsSettings(manifest: Manifest, path: string): boolean {
-  return here.side === 'settings' && path === here.path && !!settingsTabAt(manifest, here.path, here.search)
-}
-
-/** The settings sidebar's row for the location on view. */
-export function settingsRowAt(manifest: Manifest, path: string, search: string): NavItem | undefined {
-  return (inSettings(manifest, path) ? settingsTabAt(manifest, path, search) : undefined) ?? placeAt(manifest.nav, path)
+export function inSettings(manifest: Manifest, path: string): boolean {
+  return settingsPlace(manifest, path)
 }
 
 /**
