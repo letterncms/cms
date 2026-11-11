@@ -88,7 +88,7 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
               dangerouslySetInnerHTML={{ __html: icon.svg }}
             />
           ))}
-          {!results.isFetching && results.data?.length === 0 && <p className="col-span-8 m-0 py-6 text-center text-xs text-faint">{t('No icons found')}</p>}
+          {!results.isFetching && results.data?.length === 0 && <p className="col-span-8 m-0 py-6 text-center text-xs text-faint">{t('No matches')}</p>}
         </div>
       </Popover>
       {name && !disabled && (

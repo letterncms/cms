@@ -113,7 +113,7 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
       description={user ? undefined : t('They get an email to set a password.')}
       footer={<>
         {others && user && <>
-          <Button variant="ghost" className="mr-auto text-danger! max-sm:mr-0" loading={busy === 'remove'} disabled={!!busy} onClick={() => void remove(user)}>{t('Remove User')}</Button>
+          <Button variant="destructive" className="mr-auto max-sm:mr-0" loading={busy === 'remove'} disabled={!!busy} onClick={() => void remove(user)}>{t('Remove User')}</Button>
           <Button loading={busy === 'suspend'} disabled={!!busy} onClick={() => void suspend(user)}>{user.status === 'suspended' ? t('Reactivate') : t('Suspend')}</Button>
           {!user.lastLoginAt && !visitor && <Button loading={busy === 'invite'} disabled={!!busy} onClick={() => void invite(user)}>{t('Resend Invitation')}</Button>}
         </>}

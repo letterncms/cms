@@ -4,7 +4,6 @@
   "{count} plugins are invalid": "{count} plugins zijn ongeldig",
   "Add Widget": "Widget toevoegen",
   "Add Widgets": "Widgets toevoegen",
-  "Add widgets for what you want to keep an eye on.": "Voeg widgets toe voor wat je in de gaten wilt houden.",
   "Ask {name}": "Vraag het {name}",
   "Cancel": "Annuleren",
   "Chat": "Chat",
@@ -22,7 +21,7 @@
   "Make this everyone’s Dashboard?": "Dit het dashboard van iedereen maken?",
   "Move {widget}": "{widget} verplaatsen",
   "New Entry in a List": "Nieuw item in een lijst",
-  "No widget matches “{search}”": "Geen widget gevonden voor “{search}”",
+  "No matches": "Geen resultaten",
   "People who customized their own Dashboard keep theirs.": "Wie een eigen dashboard heeft ingedeeld, houdt dat.",
   "Publish": "Publiceren",
   "Remove {widget}": "{widget} verwijderen",
@@ -45,5 +44,5 @@
   "Updated": "Bijgewerkt",
   "Widgets": "Widgets",
   "Working late, {name}": "Laat aan het werk, {name}",
-  "Your Dashboard is empty": "Je dashboard is leeg"
+  "Your dashboard is empty": "Je dashboard is leeg"
 }

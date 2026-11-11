@@ -2,7 +2,7 @@ import { Command, defaultFilter } from 'cmdk'
 import { can, events, loadManifest, navigate, prefetch, registry, run, t, useAbility, useManifest, type EntrySummary } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Dialog as Base } from '@base-ui/react/dialog'
-import { Fields, Icon, Kbd, Spinner, StatusDot, toast } from '../ui'
+import { Fields, Icon, Kbd, NoMatches, Spinner, StatusDot, toast } from '../ui'
 import { setThemePreference } from '../ui/theme'
 import { openSettings, SETTINGS_SHORTCUT } from './sidebarStore'
 
@@ -146,7 +146,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               <Kbd keys="esc" />
             </div>
             <Command.List className="max-h-[min(440px,60vh)] overflow-y-auto p-2 [&_[cmdk-group-heading]]:cms-label [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2">
-              {groups.length === 0 && !isSearching && <Command.Empty className="px-3 py-8 text-center text-sm text-faint">{t('No matches')}</Command.Empty>}
+              {groups.length === 0 && !isSearching && <Command.Empty><NoMatches className="py-8" /></Command.Empty>}
               {groups.map((group) => (
                 <Command.Group key={group.heading} heading={group.heading}>
                   {group.items.map((item) => (

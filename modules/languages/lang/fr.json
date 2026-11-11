@@ -46,7 +46,7 @@
   "Multilingual sites: languages, translations linked to their original, localized URLs, hreflang, language switcher and AI translation.": "Sites multilingues : langues, traductions liées à l’original, URL localisées, hreflang, sélecteur de langue et traduction par IA.",
   "Name": "Nom",
   "No content to translate yet": "Aucun contenu à traduire pour l’instant",
-  "No languages match your search.": "Aucune langue ne correspond à votre recherche.",
+  "No matches": "Aucun résultat",
   "No translator is set up. Enable the assistant (with an API key) to translate automatically.": "Aucun traducteur n’est configuré. Activez l’assistant (avec une clé API) pour traduire automatiquement.",
   "None": "Aucun",
   "One Language": "Une seule langue",

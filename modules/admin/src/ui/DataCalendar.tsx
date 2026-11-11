@@ -4,7 +4,7 @@ import { Button, IconButton } from './Button'
 import { calendarDayKey, calendarRange } from './calendar'
 import { cn } from './cn'
 import type { DataSelection } from './DataTable'
-import { EmptyState } from './EmptyState'
+import { QueryError } from './QueryError'
 import { longDate } from './recordDates'
 import { Skeleton } from './Spinner'
 import { Checkbox } from './Switch'
@@ -58,7 +58,7 @@ export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date
       {actions && <div className="flex shrink-0 items-center">{actions(item)}</div>}
     </div>
   }
-  if (error) return <EmptyState icon="warning" title={t('Could not load data')} action={onRetry && <Button onClick={onRetry}>{t('Retry')}</Button>} />
+  if (error) return <QueryError onRetry={onRetry} />
   return <section aria-label={label} aria-busy={!!loading || !!stale} data-calendar>
     <div className="mb-3 flex items-center gap-2">
       <h2 className="m-0 text-sm font-semibold text-ink">{new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(first)}</h2>

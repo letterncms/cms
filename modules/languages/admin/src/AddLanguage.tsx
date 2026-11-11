@@ -70,7 +70,7 @@ export default function AddLanguage({ close }: SurfaceComponentProps) {
             <code className="shrink-0 text-xs text-faint">{o.code}</code>
           </button>
         ))}
-        {choices.length === 0 && <p className="m-0 px-2 py-3 text-xs text-muted">{t('No languages match your search.')}</p>}
+        {choices.length === 0 && <p className="m-0 px-2 py-3 text-xs text-muted">{t('No matches')}</p>}
       </div>
     </Dialog>
   )

@@ -404,10 +404,10 @@ try {
     queryClient.setQueryData(key, undefined)
     await fetch('/__test/fail', { method: 'POST' })
     await queryClient.resetQueries({ queryKey: key })
-    await wait(() => text().includes('Could not load data'), 'error state missing')
+    await wait(() => text().includes('Couldn’t load this content'), 'error state missing')
     assert(!main().querySelector('[role="table"]'), 'error shown under empty headers')
     await fetch('/__test/recover', { method: 'POST' })
-    button('Retry').click(); await wait(() => text().includes('Quote Request'), 'retry failed')
+    button('Try Again').click(); await wait(() => text().includes('Quote Request'), 'retry failed')
   })
   output.textContent += '\\nAll ' + results.length + ' overview checks passed.'
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results, viewport: innerWidth }) })

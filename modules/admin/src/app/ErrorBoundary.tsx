@@ -1,6 +1,6 @@
 import { t } from '@letterncms/sdk'
 import { Component, type ReactNode } from 'react'
-import { Button, EmptyState } from '../ui'
+import { QueryError } from '../ui'
 
 /** Keeps a failing screen (core or plugin) from taking down the whole admin. */
 export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -17,17 +17,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   render() {
     if (!this.state.error) return this.props.children
     return (
-      <EmptyState
-        icon="warning"
-        title={t('Something went wrong')}
-        description={this.state.error.message}
-        action={
-          <Button size="sm" onClick={() => this.setState({ error: null })}>
-            {t('Try Again')}
-          </Button>
-        }
-        className="h-full min-h-60"
-      />
+      <div className="grid h-full min-h-60 place-items-center p-6">
+        <QueryError className="w-full max-w-md" message={t('Something went wrong')} onRetry={() => this.setState({ error: null })} />
+      </div>
     )
   }
 }

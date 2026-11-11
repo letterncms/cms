@@ -136,7 +136,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
             <span className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-ink">{plural(count, '{count} block selected', '{count} blocks selected')}</span>
             <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={() => props.setSidebarOpen(false)} />
           </div>
-          {!readOnly && <div className="px-2 py-3"><Button variant="ghost" size="sm" icon="trash" className="text-danger" onClick={() => store.removeSelection()}>{t('Delete')}</Button></div>}
+          {!readOnly && <div className="px-2 py-3"><Button variant="destructive" size="sm" icon="trash" onClick={() => store.removeSelection()}>{t('Delete')}</Button></div>}
         </> : <Inspector node={selected} onBack={entryDetails} backLabel={props.collection.singular} onClose={() => props.setSidebarOpen(false)} /> : props.sidebar}
       </InspectorPanel>
     </div>

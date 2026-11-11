@@ -3,6 +3,7 @@ import { Select as Base } from '@base-ui/react/select'
 import { navigate, t } from '@letterncms/sdk'
 import { useState, type ReactNode } from 'react'
 import { cn } from './cn'
+import { NoMatches } from './EmptyState'
 import { Icon } from './Icon'
 
 export interface SelectOption {
@@ -51,7 +52,8 @@ export interface SelectAction {
 const SEARCHABLE = 12
 
 const triggerSizes = { xs: 'h-6 gap-1.5 rounded-xs pl-1.5 pr-1 text-xs', sm: 'h-7 gap-2 rounded-sm pl-2 pr-1.5 text-sm', md: 'h-8 gap-2 rounded-md pl-2.5 pr-2 text-sm' }
-const triggerClass = 'cms-input flex w-full min-w-0 items-center text-left'
+// Clipped: squeezed to nothing in a row, its chevrons stay inside its edge.
+const triggerClass = 'cms-input flex w-full min-w-0 items-center overflow-hidden text-left'
 const popupClass = 'cms-pop max-h-[min(360px,var(--available-height))] min-w-[max(var(--anchor-width),200px)] max-w-[var(--available-width)] overflow-auto overscroll-contain p-1 outline-none'
 const itemClass = 'cms-menu-item py-1'
 
@@ -175,7 +177,7 @@ function SearchableSelect({ value, onChange, options, placeholder, valueHint, si
               ) : clearable && current && (
                 <button type="button" className={cn(itemClass, 'w-full text-muted')} onClick={() => { onChange(null); setOpen(false) }}>{clearLabel ?? t('Clear')}</button>
               )}
-              <Combobox.Empty><p className="m-0 px-2 py-3 text-sm text-muted">{t('No matches')}</p></Combobox.Empty>
+              <Combobox.Empty><NoMatches className="py-3" /></Combobox.Empty>
               <Combobox.List>
                 {(o: SelectOption) => (
                   <Combobox.Item key={o.value} value={o} className={itemClass}>

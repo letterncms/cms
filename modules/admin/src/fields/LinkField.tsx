@@ -279,7 +279,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
           )
         })}
         {!loading && options.length === 0 && (
-          <p className="m-0 px-3 py-6 text-center text-sm text-faint">{debounced ? t('No pages found') : t('Search pages, or paste a web address, email or phone number')}</p>
+          <p className="m-0 px-3 py-6 text-center text-sm text-faint">{debounced ? t('No matches') : t('Search pages, or paste a web address, email or phone number')}</p>
         )}
       </div>
       {(onNewTab || onClear) && (

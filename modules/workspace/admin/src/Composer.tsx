@@ -168,7 +168,7 @@ function Picker({ id, trigger, groups, loading, active, onActive, onPick }: { id
       ))}
       {groups.length === 0 && (
         <div className="flex h-8 items-center gap-2 px-2 text-sm text-muted">
-          {loading ? <><Spinner size={12} /> {t('Looking…')}</> : t('Nothing found')}
+          {loading ? <><Spinner size={12} /> {t('Looking…')}</> : t('No matches')}
         </div>
       )}
     </div>

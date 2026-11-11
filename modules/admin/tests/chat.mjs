@@ -390,7 +390,7 @@ try {
   })
   await test('Unloading and restoring a plugin updates its generated components', async () => {
     const registrations = unregister('fixture')
-    await wait(() => dock().textContent.includes('This component is no longer available.'), 'unloaded component did not get a fallback')
+    await wait(() => dock().textContent.includes('This component is no longer available'), 'unloaded component did not get a fallback')
     assert(!dock().textContent.includes('A live record from the plugin'), 'unloaded widget remained visible')
     reregister('fixture', registrations)
     await wait(() => dock().textContent.includes('A live record from the plugin'), 'widget did not return after reactivation')

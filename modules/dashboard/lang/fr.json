@@ -4,7 +4,6 @@
   "{count} plugins are invalid": "{count} plugins ne sont pas valides",
   "Add Widget": "Ajouter un widget",
   "Add Widgets": "Ajouter des widgets",
-  "Add widgets for what you want to keep an eye on.": "Ajoutez des widgets pour ce que vous voulez suivre.",
   "Ask {name}": "Demander à {name}",
   "Cancel": "Annuler",
   "Chat": "Discussion",
@@ -22,7 +21,7 @@
   "Make this everyone’s Dashboard?": "En faire le tableau de bord de tous ?",
   "Move {widget}": "Déplacer {widget}",
   "New Entry in a List": "Nouvelle entrée dans une liste",
-  "No widget matches “{search}”": "Aucun widget ne correspond à « {search} »",
+  "No matches": "Aucun résultat",
   "People who customized their own Dashboard keep theirs.": "Les personnes qui ont personnalisé leur tableau de bord conservent le leur.",
   "Publish": "Publier",
   "Remove {widget}": "Retirer {widget}",
@@ -45,5 +44,5 @@
   "Updated": "Mis à jour",
   "Widgets": "Widgets",
   "Working late, {name}": "Vous travaillez tard, {name}",
-  "Your Dashboard is empty": "Votre tableau de bord est vide"
+  "Your dashboard is empty": "Votre tableau de bord est vide"
 }

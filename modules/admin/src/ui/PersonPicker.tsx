@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { Avatar } from './Avatar'
 import { Button, IconButton } from './Button'
+import { NoMatches } from './EmptyState'
 import { Icon } from './Icon'
 import { Input } from './Input'
 import { Popover } from './Popover'
@@ -83,7 +84,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
           <Input size="sm" icon="search" aria-label={t('Search people')} placeholder={t('Search people…')} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} />
           <div className="mt-1 max-h-64 overflow-y-auto">
             {options.isLoading ? <div className="grid place-items-center py-5"><Spinner /></div> : options.isError ? (
-              <QueryError compact message={t('Couldn’t load people.')} onRetry={() => void options.refetch()} />
+              <QueryError compact message={t('Couldn’t load people')} onRetry={() => void options.refetch()} />
             ) : (
               <>
                 {(options.data?.items ?? []).map((person) => (
@@ -92,7 +93,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
                     <span className="min-w-0 flex-1 truncate">{person.name}</span>
                   </button>
                 ))}
-                {options.data?.items.length === 0 && <p className="px-2 py-3 text-xs text-muted">{search ? t('No people match your search.') : t('No people available.')}</p>}
+                {options.data?.items.length === 0 && (search ? <NoMatches className="py-3" /> : <p className="px-2 py-3 text-xs text-muted">{t('No people yet')}</p>)}
                 {(options.data?.pages ?? 0) > 1 && (
                   <div className="flex items-center justify-between border-t border-border py-2">
                     <Button size="xs" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t('Previous')}</Button>
@@ -106,7 +107,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
         </Popover>
         {single && value.length > 0 && !disabled && <IconButton size="xs" icon="close" label={t('Remove Person')} onClick={() => onChange([])} />}
       </div>
-      {failed && value.length > 0 && <Button size="xs" onClick={() => selected.filter((query) => query.isError).forEach((query) => void query.refetch())}>{t('Retry')}</Button>}
+      {failed && value.length > 0 && <Button size="xs" onClick={() => selected.filter((query) => query.isError).forEach((query) => void query.refetch())}>{t('Try Again')}</Button>}
     </div>
   )
 }

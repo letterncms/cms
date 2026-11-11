@@ -202,8 +202,7 @@ function Details({ item, onClose }: { item: MediaItem; onClose: () => void }) {
         {can('media.delete') ? (
           <Button
             size="sm"
-            variant="ghost"
-            className="text-danger"
+            variant="destructive"
             icon="trash"
             onClick={async () => {
               if (!(await confirm({ title: t('Delete “{name}”?', { name: item.name }), description: t('Pages that use it will show nothing in its place.'), confirm: t('Delete'), danger: true }))) return

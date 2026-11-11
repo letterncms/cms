@@ -27,7 +27,7 @@ export function Gallery({ open, onOpenChange, widgets, shown, onAdd, onRemove }:
     >
       <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search Widgets'), placeholder: t('Search widgets…'), icon: 'search', autofocus: true }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} className="mb-4" />
 
-      {matches.length === 0 && <p className="m-0 py-10 text-center text-sm text-muted">{t('No widget matches “{search}”', { search })}</p>}
+      {matches.length === 0 && <p className="m-0 py-10 text-center text-sm text-muted">{t('No matches')}</p>}
 
       {/* One stable list: a widget keeps its place when it is added or taken off. */}
       <Grid widgets={matches} shown={shown} onAdd={onAdd} onRemove={onRemove} />

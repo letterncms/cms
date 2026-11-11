@@ -3,7 +3,7 @@ import { cn } from './cn'
 import { Icon } from './Icon'
 import { Spinner } from './Spinner'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'publish'
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'danger' | 'publish'
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -20,6 +20,8 @@ const variants: Record<ButtonVariant, string> = {
   // A sheet of its own: a hairline ring and the slightest lift.
   secondary: 'bg-float text-text shadow-raise ring-1 ring-border-strong hover:bg-float-hover active:bg-float-active',
   ghost: 'bg-transparent text-text hover:bg-hover active:bg-active',
+  // The way into deleting or removing something: red words on nothing. It opens a confirm, which ends in `danger`.
+  destructive: 'bg-transparent text-danger hover:bg-danger-soft active:bg-danger-soft',
   // The last step of a destructive confirm, nothing else.
   danger: 'bg-danger text-white dark:text-ink-contrast hover:bg-danger-hover active:bg-danger-active',
   // The brand's yellow is for going live: Publish, Publish site, Go live.
@@ -49,9 +51,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       data-variant={variant}
       disabled={disabled || loading}
       className={cn(
-        'group/button inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-medium transition-[background-color,color,opacity,box-shadow] duration-base ease-out disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+        'group/button inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-medium transition-[background-color,color,opacity,box-shadow] duration-base ease-out disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
         // Pressed (a toggle that is on, the place on view): the same pressed fill on every variant, winning over its resting fill.
         'aria-pressed:bg-active! aria-pressed:text-ink! data-active:bg-active! data-active:text-ink!',
+        // Busy is not off: a button that is loading keeps its tone, so its spinner reads.
+        !loading && 'disabled:opacity-45',
         variants[variant],
         sizes[size],
         loading && !icon && 'relative',

@@ -245,7 +245,7 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
         </button>
       }
     >
-      {groups.length === 0 && <p className="m-0 px-2 py-1.5 text-sm text-muted">{t('Everything is pinned.')}</p>}
+      {groups.length === 0 && <p className="m-0 px-2 py-1.5 text-sm text-muted">{t('Everything is pinned')}</p>}
       {groups.map((group) => (
         <div key={group.id} role="group" aria-label={group.label || undefined} className="space-y-px">
           {group.label && <div className="cms-label px-2 pb-1 pt-2">{group.label}</div>}

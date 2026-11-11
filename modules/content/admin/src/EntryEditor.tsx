@@ -575,7 +575,7 @@ function SaveFeedback({ error, conflict, dirty, onReload, onKeepMine, onRetry }:
             <Button size="xs" variant="ghost" onClick={onReload}>{t('Load Their Version')}</Button>
             {dirty && <Button size="xs" variant="ghost" onClick={onKeepMine}>{t('Keep Mine')}</Button>}
           </>
-        ) : error.type !== 'invalid_input' && <Button size="xs" variant="ghost" onClick={onRetry}>{t('Retry')}</Button>}
+        ) : error.type !== 'invalid_input' && <Button size="xs" variant="ghost" onClick={onRetry}>{t('Try Again')}</Button>}
       </div>
     </div>
   )

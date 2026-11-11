@@ -3,7 +3,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordi
 import { CSS } from '@dnd-kit/utilities'
 import { can, loadManifest, locale, plural, registry, run, setPreference, setQuery, t, useLocation, useManifest, type Arrangement, type WidgetInfo } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { Button, Icon, IconButton, Notice, Page, WidgetSlot, WidgetMessage, cn, confirm, toast, useShortcut } from '@letterncms/ui'
+import { Button, Icon, IconButton, Notice, Page, WidgetSlot, EmptyState, cn, confirm, toast, useShortcut } from '@letterncms/ui'
 import { Gallery } from './Gallery'
 
 function greeting(name: string): string {
@@ -163,7 +163,7 @@ export default function Dashboard() {
         <EditGrid widgets={widgets} shown={shown} setDraft={setDraft} columnOf={columnOf} onRemove={remove} onAdd={setGallery} />
       ) : columns.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border-strong">
-          <WidgetMessage icon="layout" title={t('Your Dashboard is empty')} description={t('Add widgets for what you want to keep an eye on.')} action={<Button icon="plus" onClick={() => { customize(); setGallery('default') }}>{t('Add Widgets')}</Button>} />
+          <EmptyState compact icon="layout" title={t('Your dashboard is empty')} action={<Button icon="plus" onClick={() => { customize(); setGallery('default') }}>{t('Add Widgets')}</Button>} />
         </div>
       ) : (
         <div className={cn(GRID, columns.length > 1 && COLUMNS)}>

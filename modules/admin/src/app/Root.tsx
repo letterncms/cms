@@ -3,7 +3,7 @@ import { boot, loadManifest, navigate, onManifest, onUnauthorized, queryClient, 
 import { useCallback, useEffect, useState } from 'react'
 import { registerCoreFields } from '../fields'
 import { AuthScreen } from '../screens/auth/AuthScreen'
-import { Button, Icon, Spinner, Toaster, TooltipProvider } from '../ui'
+import { QueryError, Spinner, Toaster, TooltipProvider } from '../ui'
 import { App, screenReady } from './App'
 import { followManifest, reportFailed, syncModules } from './modules'
 
@@ -18,7 +18,6 @@ registerCoreFields()
 
 export function Root() {
   const [state, setState] = useState<State>('loading')
-  const [error, setError] = useState<string>('')
   const { path } = useLocation()
 
   const start = useCallback(async () => {
@@ -53,7 +52,7 @@ export function Root() {
       await screenReady(window.location.pathname.slice(boot.base.length) || '/', window.location.search)
       setState('ready')
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      console.error('[cms] the admin could not start', e)
       setState('error')
     }
   }, [])
@@ -73,14 +72,7 @@ export function Root() {
         {state === 'guest' && <AuthScreen path={path} onAuthenticated={start} />}
         {state === 'error' && (
           <div className="grid h-screen place-items-center bg-bg p-6">
-            <div className="flex max-w-sm flex-col items-center text-center">
-              <Icon name="warning" size={18} className="mb-3 text-muted" />
-              <p className="m-0 text-sm font-medium text-ink">{t('The admin could not start')}</p>
-              <p className="m-0 mt-1 text-sm text-muted">{error}</p>
-              <Button size="sm" className="mt-4" onClick={() => void start()}>
-                {t('Try Again')}
-              </Button>
-            </div>
+            <QueryError className="w-full max-w-md" message={t('The admin could not start')} onRetry={() => void start()} />
           </div>
         )}
         {state === 'ready' && <App />}
