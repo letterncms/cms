@@ -262,7 +262,8 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       {filters.filter((f) => f.display !== 'segmented').map((f) => {
         const options = f.options ?? (Array.isArray(at(response, f.at)) ? (at(response, f.at) as Row[]).map((o) => ({ value: String(at(o, f.value ?? 'value')), label: String(at(o, f.text ?? 'label')) })) : [])
         return (
-          <span key={f.param} className="w-48 max-w-full">
+          // On a phone the select filters share a row, half each, instead of stacking at half width beside nothing.
+          <span key={f.param} className="w-48 max-w-full max-sm:w-auto max-sm:min-w-0 max-sm:flex-1 max-sm:basis-[calc(50%-0.25rem)]">
             <Select size="sm" aria-label={f.label} value={chosen[f.param] ?? ''} onChange={(v) => { setChosen({ ...chosen, [f.param]: v ?? '' }); if (!address) setPage(1) }}
               options={[{ value: '', label: f.all ?? t('All') }, ...options.map((o) => ({ value: String(o.value), label: o.label }))]} />
           </span>
