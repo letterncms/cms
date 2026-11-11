@@ -27,6 +27,7 @@
 
 - **Breaking.** The content API refuses what it does not know with `422 invalid_input` instead of answering as if it had not been asked: a filter or sort on something that is not a field of the collection (or on a column that is not public, such as `status` or `author_id`), an unknown operator, an unknown name in `fields`, an `expand` that is no relation or deeper than two levels, `contains` on a field that is neither a list nor a text, a `page` past the last one, and a `page` or `limit` that is no number in range.
 - The `url` field type is called **URL** in the field picker; **Link** is the new `link` type.
+- Lists on a phone: a row has one menu, in the middle of its two lines at the end, and what stood beside it as an icon (**View on Site**) is the first item of that menu. A number says what it counts ("3 Links"), and what is said beside a title starts the line under it, so a long title cannot push it out. **Display** calls the order of a list you arrange by hand **Manual Order**. A view's column takes `badge` (a key of the row, drawn as a badge after the value) and `unit` (`{one, other}` with `{count}`, said with a number where no header is on view).
 
 ### Fixed
 

@@ -382,7 +382,8 @@ try {
       }
       for (const cell of table.querySelectorAll('[data-table-actions]')) {
         const bounds = cell.getBoundingClientRect()
-        for (const control of cell.querySelectorAll('button')) { const box = control.getBoundingClientRect(); assert(box.width >= 24 && box.left >= bounds.left - 1 && box.right <= bounds.right + 1, path + ': action button is clipped') }
+        // A control drawn only at another width (a phone's one menu) is not there to clip.
+        for (const control of [...cell.querySelectorAll('button')].filter((button) => button.getClientRects().length)) { const box = control.getBoundingClientRect(); assert(box.width >= 24 && box.left >= bounds.left - 1 && box.right <= bounds.right + 1, path + ': action button is clipped') }
       }
       const actions = cells.find((cell) => cell.textContent === 'Actions')
       if (actions) assert(actions.querySelector('.sr-only'), path + ': visible Actions heading')

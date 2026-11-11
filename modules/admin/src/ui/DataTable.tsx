@@ -139,7 +139,7 @@ export function TableFrame({ template, label, busy, children }: { template: stri
 export function TableRow({ children, header, selected, active, className, recordId }: { children: ReactNode; header?: boolean; selected?: boolean; active?: boolean; className?: string; recordId?: string }) {
   return <div role="row" data-entry={recordId} className={cn(
     'grid items-center gap-x-5 border-b border-border px-3 [grid-template-columns:var(--cols)]',
-    header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group cms-reveal-row relative min-h-10 text-sm transition-colors duration-base hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
+    header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group cms-reveal-row relative min-h-10 max-sm:has-[[data-table-actions]]:pr-14 text-sm transition-colors duration-base hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
     // Chosen rows lie pressed in, like the sidebar's place on view: the checkbox says the rest. No colour of their own.
     selected && 'bg-active hover:bg-active',
     active && !selected && 'bg-hover',
@@ -148,13 +148,14 @@ export function TableRow({ children, header, selected, active, className, record
   )}>{children}</div>
 }
 
-/** The cells after the title: columns of the row on a wide screen, one line under the title on a phone (the first one gives way). */
+/** The cells after the title: columns of the row on a wide screen, one line under the title on a phone (the first one gives way; a note before it is said whole). */
 export function TableMeta({ children }: { children: ReactNode }) {
-  return <div role="none" data-row-meta="" className={cn('contents max-sm:order-last max-sm:flex max-sm:min-w-0 max-sm:basis-full max-sm:items-center max-sm:gap-x-3 max-sm:overflow-hidden max-sm:text-xs max-sm:text-muted max-sm:[&>[role=cell]]:shrink-0 max-sm:[&>[role=cell]:first-child]:min-w-0 max-sm:[&>[role=cell]:first-child]:shrink max-sm:[&>[role=cell]]:justify-start max-sm:[&>[role=cell]]:py-0 max-sm:[&>[role=cell]:has(>:empty)]:hidden max-sm:[&>[role=cell]:empty]:hidden')}>{children}</div>
+  return <div role="none" data-row-meta="" className={cn('contents max-sm:order-last max-sm:flex max-sm:min-w-0 max-sm:basis-full max-sm:items-center max-sm:gap-x-3 max-sm:overflow-hidden max-sm:text-xs max-sm:text-muted max-sm:[&>[role=cell]]:shrink-0 max-sm:[&>[role=cell]:first-child]:min-w-0 max-sm:[&>[role=cell]:first-child]:shrink max-sm:[&>[data-row-note]+[role=cell]]:min-w-0 max-sm:[&>[data-row-note]+[role=cell]]:shrink max-sm:[&>[role=cell]]:justify-start max-sm:[&>[role=cell]]:py-0 max-sm:[&>[role=cell]:has(>:empty)]:hidden max-sm:[&>[role=cell]:empty]:hidden')}>{children}</div>
 }
 
 /** Row actions: on a screen with a pointer they show on hover or focus, so the list stays quiet. */
-export const rowActionsClass = 'cms-reveal relative z-raised flex min-w-0 items-center justify-end gap-0.5 [&>*]:shrink-0'
+// On a phone the row is two lines and its menu stands in the middle of them, at the end.
+export const rowActionsClass = 'cms-reveal relative z-raised flex min-w-0 items-center justify-end gap-0.5 max-sm:absolute max-sm:right-4 max-sm:top-1/2 max-sm:-translate-y-1/2 [&>*]:shrink-0'
 
 export function TableHeader({ label, align, direction, onSort, hiddenLabel }: { label: string; align?: 'end'; direction?: 'ascending' | 'descending'; onSort?: () => void; hiddenLabel?: boolean }) {
   return <div role="columnheader" data-align={align} aria-sort={onSort ? direction ?? 'none' : undefined} className={cn('flex min-w-0 items-center', align === 'end' && 'justify-end')}>
@@ -195,6 +196,8 @@ export interface DataColumn<T> {
   card?: 'text'
   /** Hidden in the table at first, but shown on cards (a picture, an excerpt). */
   cardByDefault?: boolean
+  /** Of the first column: what is said beside the title, quieter. On a phone it starts the line under the title, so a long title cannot push it out. */
+  note?: (item: T) => ReactNode
 }
 
 export interface DataSelection<T = unknown> {
@@ -277,7 +280,7 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
         {extra?.expander}
         {href ? <Link to={href} className={LINK}>{first.render(item)}</Link> : onRowClick ? <button type="button" onClick={() => onRowClick(item)} className={LINK}>{first.render(item)}</button> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
       </div>
-      <TableMeta>{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
+      <TableMeta>{first.note?.(item) ? <div data-row-note="" className="shrink-0 sm:hidden">{first.note(item)}</div> : null}{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
         <div className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
       </div>)}</TableMeta>
       {hasActions && <div role="cell" data-table-actions className={rowActionsClass}>{extra?.handle}{actions?.(item)}</div>}
