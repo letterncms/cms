@@ -334,7 +334,7 @@ function Editor({ collection, initial, can }: EditorProps) {
           fit
           className="h-full min-w-0 flex-1"
         />
-        <IconButton icon="close" label={t('Close Panel')} size="xs" onClick={() => setSidebarOpen(false)} />
+        <IconButton icon="close" label={t('Close Panel')} onClick={() => setSidebarOpen(false)} />
       </div>
       <div
         role="tabpanel"
@@ -400,6 +400,16 @@ function Editor({ collection, initial, can }: EditorProps) {
       phase === 'error' || titleError ? 'bg-danger' : busy || dirty ? 'bg-faint' : 'bg-transparent')} />
   )
 
+  const failed = phase === 'error' || titleError
+  // The title with its dot; what went wrong is said in words, since a dot's tooltip needs a pointer.
+  const titled = (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="truncate">{shownTitle}</span>
+      {saveState}
+      {failed && <span className="shrink-0 text-xs font-normal text-danger">{saveText}</span>}
+    </span>
+  )
+
   // Said by name, so `?` lists them: each only while it would do something for this person.
   useShortcut('mod+s', () => { if (editable) void save() }, true, editable ? t('Save') : undefined)
   useShortcut('mod+shift+p', () => { if (actions.publish && !upToDate && working.title.trim()) void publish() }, true, actions.publish ? t('Publish') : undefined)
@@ -430,11 +440,13 @@ function Editor({ collection, initial, can }: EditorProps) {
   return (
     <div className="relative flex h-full flex-col">
       <Topbar
+        // A phone's bar has no room for the chat's toggle beside the tools: it is first in More Actions there.
+        className="max-sm:[&_[data-workspace-toggle]]:hidden"
         back={{ to: listPath, label: list.label }}
-        title={<span className="relative block truncate pr-3.5">{shownTitle}<span className="absolute right-0 top-1/2 -translate-y-1/2">{saveState}</span></span>}
+        title={titled}
         children={<>
           {/* Narrow windows have no room in the middle: the title leads the bar instead (a phone has only room for where it stands). */}
-          <span className="relative min-w-0 truncate pr-3.5 text-sm font-medium text-ink max-sm:hidden lg:hidden">{shownTitle}<span className="absolute right-0 top-1/2 -translate-y-1/2">{saveState}</span></span>
+          <span className="min-w-0 text-sm font-medium text-ink max-sm:hidden lg:hidden">{titled}</span>
           {workspace && <div ref={setToolHost} className="flex shrink-0 items-center gap-0.5 empty:hidden" />}
         </>}
         actions={
@@ -498,6 +510,11 @@ function Editor({ collection, initial, can }: EditorProps) {
           </>
         }
       />
+      {/* A phone's bar holds the tools; what is being edited and how its saving stands is the line under it. */}
+      <div className="flex h-8 shrink-0 items-center gap-3 border-b border-border px-4 sm:hidden">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{shownTitle}</span>
+        <span aria-hidden="true" className={cn('shrink-0 text-xs', failed ? 'text-danger' : 'text-faint')}>{saveText}</span>
+      </div>
       {placement.error && (
         <Notice tone="danger" className="m-3">{placement.error}</Notice>
       )}

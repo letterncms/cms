@@ -31,7 +31,7 @@ export function BlocksWorkspace(props: EntryEditorProps) {
   // The inspector holds its place while the catalog loads: the canvas never changes width when it arrives.
   if (isLoading) return <div className="flex h-full min-h-0">
     <div className="grid min-w-0 flex-1 place-items-center"><Spinner /></div>
-    <InspectorPanel open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={props.collection.singular}>{props.sidebar}</InspectorPanel>
+    <InspectorPanel className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={props.collection.singular}>{props.sidebar}</InspectorPanel>
   </div>
   if (!catalog) return <QueryError message={error?.message} onRetry={retry} />
   return <EditorProvider value={{ store, catalog, types, entryId: props.entry?.id ?? null, fieldHandle: field, allowed: props.bodyField.allowed as string[] ?? [], getValues: () => values.current, title: props.title, doc, readOnly: !props.editable }}>
@@ -40,6 +40,9 @@ export function BlocksWorkspace(props: EntryEditorProps) {
   </EditorProvider>
 }
 
+
+/** On a phone the panel rises from the bottom edge, so the block it is about stays in view above it. */
+const sheet = 'max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:h-[72dvh] max-sm:w-full max-sm:rounded-t-xl max-sm:border-l-0 max-sm:border-t max-sm:data-[starting-style]:translate-x-0 max-sm:data-[starting-style]:translate-y-full max-sm:data-[ending-style]:translate-x-0 max-sm:data-[ending-style]:translate-y-full'
 
 /** The screens a page is previewed and styled for: one vocabulary everywhere (Desktop, Tablet, Phone). */
 export const screens = () => [
@@ -90,7 +93,11 @@ function Workspace({ props }: { props: EntryEditorProps }) {
     // Writing in a block makes it the active block too; it never opens a closed sidebar or a sheet over the text.
     else if (selected && wide && props.sidebarOpen) setInspecting(true)
   }, [selected?.id, blockMode, wide])
-  useEffect(() => { if (!props.sidebarOpen) setInspecting(false) }, [props.sidebarOpen])
+  // A sheet opened over the page (phone, tablet) with a block selected is that block's settings: the back arrow leads to the page's.
+  useEffect(() => {
+    if (!props.sidebarOpen) setInspecting(false)
+    else if (!wide && store.get().selected) setInspecting(true)
+  }, [props.sidebarOpen])
   useEffect(() => { if (Object.keys(props.errors).length) setInspecting(false) }, [props.errors])
   useEffect(() => bus.on('preview-motion', () => events.emit('entry.preview')), [])
   // A block picked in the outline opens its inspector even when it was already the selected one.
@@ -115,11 +122,11 @@ function Workspace({ props }: { props: EntryEditorProps }) {
   }
   return <div className="flex h-full min-h-0 flex-col" data-block-workspace>
     {props.toolbar && createPortal(<>
-      {!readOnly && <Popover open={insert} onOpenChange={setInsert} align="start" trigger={<IconButton icon="plus" label={t('Insert block')} className="max-sm:hidden" />} className="!p-0">
+      {!readOnly && <Popover open={insert} onOpenChange={setInsert} align="start" trigger={<IconButton icon="plus" label={t('Insert Block')} />} className="!p-0">
         <Inserter types={[...types.values()]} query={query} onQuery={setQuery} onChoose={choose} onClose={() => setInsert(false)} allowed={(type) => !!destination(type.name)} />
       </Popover>}
-      <IconButton icon="undo" label={t('Undo')} disabled={!undo} onClick={store.undo} className="max-sm:hidden" />
-      <IconButton icon="redo" label={t('Redo')} disabled={!redo} onClick={store.redo} className="max-sm:hidden" />
+      <IconButton icon="undo" label={t('Undo')} disabled={!undo} onClick={store.undo} />
+      <IconButton icon="redo" label={t('Redo')} disabled={!redo} onClick={store.redo} />
       <Devices />
     </>, props.toolbar)}
     <ScreenSidebar title={t('Outline')} backTo={props.listPath} backLabel={props.listLabel ?? props.collection.title}><Layers /></ScreenSidebar>
@@ -129,7 +136,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
         {props.errors[props.bodyField.handle] && <p id={`${fieldControlId(props.bodyField)}-error`} role="alert" className="m-0 shrink-0 px-3 py-2 text-xs text-danger">{props.errors[props.bodyField.handle]}</p>}
         <div className="max-h-[30vh] shrink-0 overflow-y-auto">{props.footer}</div>
       </main>
-      <InspectorPanel open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={inspecting && selected ? types.get(selected.type)?.title ?? t('Block') : props.collection.singular}>
+      <InspectorPanel className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={inspecting && selected ? types.get(selected.type)?.title ?? t('Block') : props.collection.singular}>
         {inspecting && selected ? count > 1 ? <>
           <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border pl-2 pr-3">
             <IconButton icon="arrow-left" label={t('Back to {name}', { name: props.collection.singular })} size="sm" onClick={entryDetails} />

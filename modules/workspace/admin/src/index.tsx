@@ -10,6 +10,8 @@ import { agent, panel } from './store'
 registry.panels.set('workspace', { slot: 'shell.dock', component: WorkspacePanel })
 registry.panels.set('workspace-toggle', { slot: 'topbar.end', component: ChatToggle })
 registry.panels.set('workspace-new-chat', { slot: 'sidebar.start', component: NewChatRow })
+// An editor's bar on a phone has no room for the toggle: the chat is first in its More Actions there.
+registry.entryActions.set('workspace-chat', { label: t('Chat'), icon: 'comment', order: 0, when: () => window.matchMedia('(max-width: 639px)').matches, perform: () => panel.open() })
 // A thread's own URL is the dock at full size, over the page it came from. The dock owns streaming, so the route draws nothing.
 registry.routes.set('/chat/:id', { path: '/chat/:id', component: () => null, overlay: true })
 

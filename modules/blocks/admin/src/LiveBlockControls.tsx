@@ -20,7 +20,7 @@ export function BoundaryInserter({ target, position, ...picker }: PickerProps & 
   const rect = position(target.rect)
   return <>
     <div data-cms-insertion-line className={cn('pointer-events-none absolute z-10 rounded-full bg-focus', target.axis === 'x' ? 'cms-block-line-y' : 'cms-block-line-x')} style={{ ...rect, minWidth: 2, minHeight: 2 }} />
-    <Picker {...picker} label={t('Add Block')} className="cms-block-plus absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-xs bg-focus text-white shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + rect.height / 2 }}
+    <Picker {...picker} label={t('Insert Block')} className="cms-block-plus absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-xs bg-focus text-white shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + rect.height / 2 }}
       data={{ 'data-cms-inserter': `${target.parentId ?? ''}:${target.index}` }} />
   </>
 }
@@ -28,7 +28,7 @@ export function BoundaryInserter({ target, position, ...picker }: PickerProps & 
 /** The `+` inside an empty container's drop area. */
 export function ContainerAppender({ target, position, ...picker }: PickerProps & { target: InsertionTarget; position: (rect: Rect) => Rect }) {
   const rect = position(target.hitRect)
-  return <Picker {...picker} label={t('Add Block')} className="cms-block-chrome absolute size-7 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-border-strong bg-bg text-muted shadow-sm hover:border-focus hover:text-focus"
+  return <Picker {...picker} label={t('Insert Block')} className="cms-block-chrome absolute size-7 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-border-strong bg-bg text-muted shadow-sm hover:border-focus hover:text-focus"
     style={{ left: rect.left + rect.width / 2, top: rect.top + Math.min(rect.height / 2, 40) }} data={{ 'data-cms-appender': target.parentId ?? '' }} />
 }
 
@@ -37,7 +37,7 @@ export function DocumentAppender({ target, position, onWrite, ...picker }: Picke
   const rect = position(target.hitRect)
   return <div data-cms-document-appender className="cms-block-chrome pointer-events-auto absolute z-10 flex h-10 whitespace-nowrap -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-md border border-dashed border-border-strong bg-bg/90 py-1 pl-3 pr-1 shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + Math.max(24, Math.min(rect.height / 2, 120)) }}>
     {onWrite && <button type="button" onClick={onWrite} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Write, or press “/” for blocks')}</button>}
-    <Picker {...picker} label={t('Add Block')} className="size-8 rounded-xs text-muted hover:bg-hover hover:text-text" />
+    <Picker {...picker} label={t('Insert Block')} className="size-8 rounded-xs text-muted hover:bg-hover hover:text-text" />
   </div>
 }
 
