@@ -30,8 +30,8 @@ final class AbilityNamesTest extends TestCase
         'set', 'set-default', 'set-prefix', 'set-custom', 'set-load',
         // One item of a menu.
         'add-item', 'remove-item',
-        // Files and fonts brought in from elsewhere.
-        'import', 'fonts-import', 'fonts-upload', 'upload',
+        // Files and fonts brought in from elsewhere, and a copy taken out (the audit log, which records who took it).
+        'import', 'fonts-import', 'fonts-upload', 'upload', 'export',
         // A file's contents: another in its place, or its picture rotated and cropped.
         'replace', 'transform',
         // Finding and going.

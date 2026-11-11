@@ -17,6 +17,15 @@ use Throwable;
  */
 final class AuditModule extends Plugin
 {
+    /** @var array<string, ?string> The titles of what the abilities running now act on, by call. */
+    private array $subjects = [];
+
+    /** One call of an ability, told apart from another running at the same time by what it was given. */
+    private static function call(Ability $ability, array $input): string
+    {
+        return $ability->name.' '.md5((string) json_encode($input, JSON_PARTIAL_OUTPUT_ON_ERROR));
+    }
+
     public function boot(): void
     {
         $cms = $this->cms();
@@ -29,9 +38,20 @@ final class AuditModule extends Plugin
             ['handle' => 'reads', 'type' => 'toggle', 'label' => 'Also Record Reads', 'default' => false],
         ], icon: 'activity', description: 'What is recorded and for how long.', order: 85, section: 'system', home: 'audit');
 
+        // What the log calls each change once it has happened; plugins add theirs to the same filter.
+        $cms->hooks()->addFilter('audit.past', static fn (array $past): array => $past + Past::labels());
+
+        // What a change was made to, while it is still there to be named: a deleted entry has no title afterwards.
+        $cms->hooks()->on('ability.executing', function (Ability $ability, array $input): void {
+            $this->subjects[self::call($ability, $input)] = $this->app->make(AuditAbilities::class)->entryTitle($ability->name, $input);
+        });
+
         $cms->hooks()->on('ability.executed', function (Ability $ability, array $input, mixed $result, AbilityContext $context): void {
+            $title = $this->subjects[$key = self::call($ability, $input)] ?? null;
+            unset($this->subjects[$key]);
+
             if ((! $ability->isReadOnly() || $this->setting('reads', false)) && ! self::unrecorded($ability->name, $input)) {
-                $this->record($ability, $input, $context);
+                $this->record($ability, $title === null ? $input : [...$input, AuditAbilities::SUBJECT => $title], $context);
             }
         });
 
@@ -44,9 +64,18 @@ final class AuditModule extends Plugin
     /** The Audit Log: every change, newest first, narrowed to a person or an action; a change opens with what was sent. */
     private static function view(): array
     {
+        $periods = [
+            ['value' => 'today', 'label' => __('Today')], ['value' => '7d', 'label' => __('Last 7 Days')],
+            ['value' => '30d', 'label' => __('Last 30 Days')], ['value' => '90d', 'label' => __('Last 90 Days')],
+        ];
+        // What is narrowed on the screen is what is exported.
+        $narrowed = ['userId' => '{query.userId}', 'ability' => '{query.ability}', 'period' => '{query.period}'];
+
         return ['type' => 'ui/page', 'props' => ['title' => __('Audit Log'), 'icon' => 'activity'], 'children' => [
             ['type' => 'ui/tabs', 'children' => [
-                ['type' => 'ui/tab', 'props' => ['id' => 'log', 'label' => __('Log')], 'children' => [
+                ['type' => 'ui/tab', 'props' => ['id' => 'log', 'label' => __('Log'), 'actions' => [
+                    ['label' => __('Export CSV'), 'icon' => 'download', 'ability' => 'audit/export', 'input' => $narrowed, 'then' => 'download'],
+                ]], 'children' => [
                     ['type' => 'ui/records', 'props' => [
                         'id' => 'audit', 'label' => __('Audit Log'), 'address' => true,
                         'source' => ['ability' => 'audit/list'],
@@ -54,6 +83,7 @@ final class AuditModule extends Plugin
                         'filters' => [
                             ['param' => 'userId', 'label' => __('Person'), 'all' => __('Everyone'), 'at' => 'filters.people', 'value' => 'id', 'text' => 'name'],
                             ['param' => 'ability', 'label' => __('Action'), 'all' => __('All Actions'), 'at' => 'filters.actions'],
+                            ['param' => 'period', 'label' => __('When'), 'all' => __('Any Time'), 'options' => $periods],
                         ],
                         'columns' => [
                             ['key' => 'label', 'label' => __('Change'), 'muted' => 'subject'],

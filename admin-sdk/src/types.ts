@@ -41,7 +41,8 @@ export interface ViewNode {
 }
 
 /** What follows an ability that worked: load again, reload the manifest, go back, or open `to` (with `{result}`). */
-export type ViewThen = 'refresh' | 'manifest' | 'back' | 'open'
+/** After an action: `download` saves the file its ability answers with (`{name, type, content}`). */
+export type ViewThen = 'refresh' | 'manifest' | 'back' | 'open' | 'download'
 
 /** A button or row action: an ability to run, a place to go, a dialog of nodes, or a catalog component in a dialog. */
 export interface ViewAction {

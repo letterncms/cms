@@ -22,6 +22,7 @@
 - `site.search.records` (filter): every record of the site's search index, to add pages that are no entry.
 - `collections/usage` counts the rows of one kind that a collection's entries have in a matrix field.
 - **Used By** in the lists of templates and components: a template names the collections it frames and how many entries chose it themselves, a component how many entries hold it, and one nobody uses says "Nothing". `entries/list` carries `usedBy` for them.
+- Audit Log: a **When** filter (Today, Last 7 Days, Last 30 Days, Last 90 Days), and **Export CSV**, which downloads what is narrowed as a CSV file (more than 10,000 changes is refused, never cut short, and no cell can start a spreadsheet formula); the export is itself recorded. `audit/list` takes `period`, `from` and `to`, and `audit/export` is new. A view's action can `then: 'download'` the file its ability answers with (`{name, type, content}`).
 
 ### Changed
 
@@ -37,6 +38,7 @@
 - The fields editor: removing a field can be undone from the message that confirms it, which puts it back in its place without touching what you changed since. While the save bar is up, messages rise above it instead of covering Save, and the one with Undo closes once the change is saved or discarded (`untilSaved` and `useSaveBarOpen` in `@letterncms/ui`). A field's **Required** and **Show as Property** are two checkboxes on a row of their own, under **Width**, instead of switches hanging beside it. A collection's and a global set's settings are laid out like every other settings form: one column, a heading over each group.
 - **Rename View** and **Delete View** work for any of your saved views, not only the one the list is in: with several, they ask which, starting on the current one, and Delete View is that dialog's red button. `prompt` in `@letterncms/ui` takes `danger`.
 - The tab of the pages a plugin brings, beside **Site** under Pages, is named for what it lists (the label the plugin registers its pages under), not after the plugin. Those pages have a **Version** column, Standard or Customized, and a status that says how that version stands: the standard one is Published. `pages/builtin` answers with `displayStatus: "published"` for it, where it said "standard". In a list of fields, a group has a folder for its icon instead of the blocks field's four squares. The lists of templates and components keep the title to its words, with the status beside it, and show **Updated**.
+- The Audit Log says what happened, in the past tense: **Published Entry**, **Deleted Collection**, **Sent Test Email**. A deleted entry is named by the title it had, and turning automatic security updates on or off says which. A plugin names its own changes through the `audit.past` filter (ability name => words). `audit/list` items carry `publishedAt` and `updatedAt` as null, so Display offers no Updated column: `createdAt` is when it happened.
 
 ### Fixed
 
