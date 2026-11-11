@@ -78,6 +78,8 @@ final class BehaviorTest extends TestCase
     {
         $this->assertSame([], Document::behavior(['module' => '../../x']));
         $this->assertSame([], Document::behavior(['module' => 'https://evil.example/x.js']));
+        $this->assertSame(['module' => 'tilt', 'when' => 'loaded'], Document::behavior(['module' => 'tilt', 'when' => 'loaded']));
+        $this->assertSame(['module' => 'tilt'], Document::behavior(['module' => 'tilt', 'when' => 'whenever']));
         $this->assertSame(['module' => 'lib/tilt'], Document::behavior(['module' => 'lib/tilt', 'when' => 'load', 'props' => ['a', 'b']]));
         $this->assertSame(
             ['module' => 'tilt', 'props' => ['max' => 8, 'on' => true, 'list' => [1, 'two']], 'when' => 'idle'],

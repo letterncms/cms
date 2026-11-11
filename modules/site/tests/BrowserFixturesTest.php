@@ -82,7 +82,7 @@ final class BrowserFixturesTest extends TestCase
             // Says on the element what it was handed, and on the page what it undid.
             'scripts/probe.js' => <<<'JS'
                 export function mount(el, props, { token, reducedMotion, signal }) {
-                  el.dataset.mounted = JSON.stringify({ props, primary: token('color.primary'), reducedMotion })
+                  el.dataset.mounted = JSON.stringify({ props, primary: token('color.primary'), reducedMotion, ready: document.readyState, fonts: document.fonts.status })
                   window.__mounts = (window.__mounts ?? 0) + 1
                   signal.addEventListener('abort', () => (document.documentElement.dataset.aborted = props.name))
                   return () => (document.documentElement.dataset.cleaned = props.name)
@@ -134,6 +134,7 @@ final class BrowserFixturesTest extends TestCase
             ],
             'Behavior' => [
                 ['type' => 'box', 'anchor' => 'first', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'first', 'title' => '{entry.title}']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'First']]]],
+                ['type' => 'box', 'anchor' => 'settled', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'settled'], 'when' => 'loaded'], 'children' => []],
                 ['type' => 'box', 'style' => ['base' => ['height' => '400vh']], 'children' => []],
                 ['type' => 'box', 'anchor' => 'later', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'later'], 'when' => 'visible'], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Later']]]],
             ],
