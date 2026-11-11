@@ -300,6 +300,25 @@ const checks = {
     await tab.close()
   },
 
+  /** A block's `dark` styles apply when the visitor's system is dark, and when the page is told to be. */
+  async dark() {
+    const background = (id) => `getComputedStyle(document.getElementById('${id}')).backgroundColor`
+    const light = await open('/dark')
+    equal(await light.evaluate(background('plain')), 'rgb(250, 250, 250)', 'light to begin with')
+    await light.evaluate('document.documentElement.dataset.theme = "dark"')
+    equal(await light.evaluate(background('plain')), 'rgb(1, 2, 3)', 'dark when the page is switched')
+    await light.close()
+
+    const system = await open('/dark', { media: { 'prefers-color-scheme': 'dark' } })
+    equal(await system.evaluate(background('plain')), 'rgb(1, 2, 3)', 'dark when the system is, with no switch')
+    equal(await system.evaluate('getComputedStyle(document.getElementById("hovered")).color'), 'rgb(200, 200, 200)', 'next to a hover style too')
+    await system.send('Emulation.setDeviceMetricsOverride', { width: 500, height: 800, deviceScaleFactor: 1, mobile: false })
+    equal(await system.evaluate(background('narrow')), 'rgb(4, 5, 6)', 'and together with a screen size')
+    await system.evaluate('document.documentElement.dataset.theme = "light"')
+    equal(await system.evaluate(background('plain')), 'rgb(250, 250, 250)', 'light when the visitor chose light on a dark system')
+    await system.close()
+  },
+
   /** The Motion Toggle tells scripts too: an attribute, an event, and reducedMotion in behaviours. */
   async toggle() {
     const tab = await open('/toggle')
