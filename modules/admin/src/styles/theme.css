@@ -1,7 +1,8 @@
 /* The admin's design tokens as Tailwind names, shared with plugin admin modules (import "@letterncms/admin/theme.css").
    Their values live in tokens.css, defined once by the admin, so a module never overrides them. */
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Dark, unless a piece inside is set in light. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *):not(:where([data-theme="dark"] [data-theme="light"], [data-theme="dark"] [data-theme="light"] *)));
 
 @theme inline {
   /* Instrument Sans: a compact grotesque with a little warmth, set for the interface; its x-height runs small, so the scale sits half a pixel above the usual. */
@@ -68,7 +69,6 @@
   --color-warning-soft: var(--cms-warning-soft);
   --color-danger: var(--cms-danger);
   --color-danger-soft: var(--cms-danger-soft);
-  --color-ink-danger: var(--cms-ink-danger);
   --color-ink-hover: var(--cms-ink-hover);
   --color-ink-active: var(--cms-ink-active);
   --color-danger-hover: var(--cms-danger-hover);

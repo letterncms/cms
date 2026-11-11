@@ -95,7 +95,8 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 export interface ConfirmOptions {
   title: string
   description?: ReactNode
-  confirm?: string
+  /** The button that goes through with it, as a verb: "Delete", "Publish", "Discard". Never "OK" or "Confirm". */
+  confirm: string
   cancel?: string
   danger?: boolean
 }
@@ -103,7 +104,7 @@ export interface ConfirmOptions {
 /** The confirmation on view: a second one never stacks on it (a double click asks once). */
 let asking = false
 
-/** Imperative confirmation dialog: `if (await confirm({...})) …` */
+/** Imperative confirmation dialog: `if (await confirm({ title, confirm, danger: true })) …` */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
   if (asking) return Promise.resolve(false)
   asking = true
@@ -138,7 +139,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
             <>
               <Button onClick={() => done(false)} autoFocus={options.danger}>{options.cancel ?? t('Cancel')}</Button>
               <Button variant={options.danger ? 'danger' : 'primary'} onClick={() => done(true)} autoFocus={!options.danger}>
-                {options.confirm ?? t('Confirm')}
+                {options.confirm}
               </Button>
             </>
           }
@@ -156,10 +157,11 @@ export interface PromptOptions {
   /** What to ask, as fields — drawn by Fields like every other form. */
   fields: FieldDef[]
   values?: Record<string, any>
-  confirm?: string
+  /** The button that submits it, as a verb: "Rename", "Add". Never "OK". */
+  confirm: string
 }
 
-/** Imperative form dialog: `const values = await prompt({ title, fields })` — null when canceled. */
+/** Imperative form dialog: `const values = await prompt({ title, fields, confirm })` — null when canceled. */
 export function prompt(options: PromptOptions): Promise<Record<string, any> | null> {
   return new Promise((resolve) => {
     const host = document.createElement('div')
@@ -185,7 +187,7 @@ export function prompt(options: PromptOptions): Promise<Record<string, any> | nu
           title={options.title}
           description={options.description}
           onSubmit={() => done(values)}
-          submitLabel={options.confirm ?? t('OK')}
+          submitLabel={options.confirm}
         >
           <Fields fields={options.fields.map((f, i) => ({ autofocus: i === 0, ...f }))} values={values} onChange={(h, v) => setValues((current) => ({ ...current, [h]: v }))} />
         </Dialog>

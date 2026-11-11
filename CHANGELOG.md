@@ -8,6 +8,8 @@
 - Everything that fails says so the same way, with **Try Again**: a list, a form, a widget, a screen, the admin itself. A crash says so in plain words and keeps its technical message for the console. Every search that finds nothing says **No matches**. Short status lines no longer end in a period.
 - A button that deletes or removes something looks the same everywhere: red words, no fill, until you point at it.
 - **Breaking.** `@letterncms/ui`: `WidgetMessage` is gone, use `<EmptyState compact>`. `QueryError` takes a `title` and `className`, its button says **Try Again**, and it is the one component for anything that failed. `Button` has `variant="destructive"` for the way into deleting something; `danger` stays the last step of its confirm.
+- **Breaking.** `@letterncms/ui`: `confirm()` and `prompt()` require `confirm`, the label of the button that goes through with it, as a verb ("Delete", "Rename"): the "Confirm" and "OK" fallbacks are gone.
+- The save bar's **Discard** and **Save** are the same buttons as everywhere else, its warning reads in the dark theme, and it no longer has a yellow dot: yellow is for publishing. `data-theme` on an element inside the admin sets that piece in the theme it names; `useTheme()` says which theme is on view.
 
 ## 0.21.0 (2026-11-11)
 

@@ -31,8 +31,10 @@
   --cms-z-tooltip: 60;
 }
 
-/* Roles matter: signal = brand, publish and highlight only; focus = selection and focus only. */
-:root {
+/* Roles matter: signal = brand, publish and highlight only; focus = selection and focus only.
+   Colours and shadows only: `data-theme` on a piece inside the admin sets that piece in the theme it names
+   (the save bar is set in the other one), and that turns these around and nothing else. */
+:root, [data-theme="light"] {
   /* Layers, deepest first: desk (sidebar, panels), page (the sheet), float (menus, popovers, dialogs). */
   --cms-surface: #f4f3ef;
   --cms-sunken: #f8f7f4;
@@ -73,8 +75,6 @@
   --cms-warning-soft: rgb(212 124 18 / 0.12);
   --cms-danger: #cd2b1f;
   --cms-danger-soft: rgb(205 43 31 / 0.09);
-  /* Danger on an ink fill (the save bar): the other theme's red, as the fill is the other theme's ground. */
-  --cms-ink-danger: #f2685d;
 
   /* The solid fills pointed at and pressed: mixes, not films, so a button reads the same on the sheet, the desk and a float. */
   --cms-ink-hover: color-mix(in srgb, var(--cms-ink) 88%, var(--cms-bg));
@@ -139,7 +139,6 @@
   --cms-warning-soft: rgb(240 165 64 / 0.14);
   --cms-danger: #f2685d;
   --cms-danger-soft: rgb(242 104 93 / 0.14);
-  --cms-ink-danger: #cd2b1f;
 
   --cms-ink-hover: color-mix(in srgb, var(--cms-ink) 88%, var(--cms-bg));
   --cms-ink-active: color-mix(in srgb, var(--cms-ink) 80%, var(--cms-bg));
