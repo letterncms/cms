@@ -1,7 +1,7 @@
 import { t, type FieldDef } from '@letterncms/sdk'
 import { Icon, Menu, Tooltip, cn } from '@letterncms/ui'
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { useEditorContext } from '../../core/context'
+import { useEditorContext, useTokens } from '../../core/context'
 import type { BlockNode, MotionDef, MotionStep } from '../../core/types'
 import { bus } from '../bus'
 import { RemoveButton, Section, PanelFields } from '../controls'
@@ -19,7 +19,7 @@ const nextId = (list: MotionDef[]) => {
 }
 
 const targetLabel = (target = 'self') =>
-  target.startsWith('#') ? t('Another Element') : ({ self: t('This Element'), children: t('Children'), words: t('Words') } as Record<string, string>)[target] ?? target
+  target.startsWith('#') ? t('Another Element') : ({ self: t('This Element'), children: t('Children'), words: t('Words'), lines: t('Lines'), chars: t('Letters') } as Record<string, string>)[target] ?? target
 
 /** Animations: Framer-style effects with presets, and a timeline of steps when one effect is not enough. */
 export function MotionPanel({ node }: { node: BlockNode }) {
@@ -107,6 +107,8 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
       trigger.type === 'scroll',
       { handle: 'start', type: 'select', size: 'sm', label: t('From'), placeholder: t('Enters the Screen'), options: [{ value: 'top bottom', label: t('Enters the Screen') }, { value: 'top 80%', label: t('Top at 80%') }, { value: 'top center', label: t('Top at Center') }, { value: 'top top', label: t('Top at Top') }, { value: 'center center', label: t('Centered') }] },
       { handle: 'end', type: 'select', size: 'sm', label: t('To'), placeholder: t('Leaves the Screen'), options: [{ value: 'bottom top', label: t('Leaves the Screen') }, { value: 'center center', label: t('Centered') }, { value: 'top top', label: t('Top at Top') }, { value: 'bottom center', label: t('Bottom at Center') }, { value: 'bottom bottom', label: t('Bottom at Bottom') }] },
+      { handle: 'pin', type: 'text', component: 'blocks-value', label: t('Pin For'), unit: 'vh', units: ['vh', 'px', 'rem'], step: 10, min: 0, placeholder: t('Off') },
+      { handle: 'scrub', type: 'text', component: 'blocks-value', label: t('Trail (s)'), unit: '', step: 0.05, min: 0, max: 3, placeholder: '0' },
     ),
     ...when(
       loop,
@@ -125,6 +127,8 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
     type: trigger.type,
     start: trigger.start,
     end: trigger.end,
+    pin: trigger.pin,
+    scrub: trigger.scrub !== undefined ? String(trigger.scrub) : undefined,
     replay: trigger.once === false,
     desktop: on.includes('desktop'),
     tablet: on.includes('tablet'),
@@ -138,6 +142,8 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
     if (h === 'name') onChange({ name: v ?? '' })
     else if (h === 'type') v && setTrigger({ type: v })
     else if (h === 'start' || h === 'end') setTrigger({ [h]: v ?? undefined })
+    else if (h === 'pin') setTrigger({ pin: v && parseFloat(v) > 0 ? String(v) : undefined })
+    else if (h === 'scrub') setTrigger({ scrub: Number(v) > 0 ? Math.min(3, Number(v)) : undefined })
     else if (h === 'replay') setTrigger({ once: v ? false : undefined })
     else if (h === 'desktop' || h === 'tablet' || h === 'mobile') {
       const next = v ? [...on, h] : on.filter((screen) => screen !== h)
@@ -298,6 +304,7 @@ const seconds = (handle: string, title: string, icon: string, extra: Partial<Fie
 
 function StepEditor({ node, step, index, count, onChange, onRemove }: { node: BlockNode; step: MotionStep; index: number; count: number; onChange: (patch: Partial<MotionStep>) => void; onRemove: () => void }) {
   const { catalog } = useEditorContext()
+  const { byGroup } = useTokens()
   const target = step.target ?? 'self'
   const labels = propertyLabels()
   const props = Object.keys(catalog.motion?.properties ?? labels)
@@ -360,10 +367,10 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
             size: 'sm',
             label: t('Target'),
             required: true,
-            options: [{ value: 'self', label: t('This Element') }, { value: 'children', label: t('Each Child in Turn') }, ...(text ? [{ value: 'words', label: t('Each Word') }] : []), { value: 'other', label: t('Another Element') }],
+            options: [{ value: 'self', label: t('This Element') }, { value: 'children', label: t('Each Child in Turn') }, ...(text ? [{ value: 'words', label: t('Each Word') }, { value: 'lines', label: t('Each Line') }, { value: 'chars', label: t('Each Letter') }] : []), { value: 'other', label: t('Another Element') }],
           },
           ...when(target.startsWith('#'), { handle: 'element', type: 'select', component: 'blocks-node', label: t('Element') }),
-          ...when(target === 'words', { handle: 'mask', type: 'toggle', size: 'sm', label: t('Rise from Behind a Line') }),
+          ...when(target === 'words' || target === 'chars', { handle: 'mask', type: 'toggle', size: 'sm', label: t('Rise from Behind a Line') }),
         ]}
         values={{ target: target.startsWith('#') ? 'other' : target, element: target.slice(1), mask: !!step.mask }}
         onChange={(h, v) => (h === 'mask' ? onChange({ mask: v || undefined }) : onChange({ target: h === 'target' ? (v === 'other' ? `#${node.id}` : v ?? 'self') : v ? `#${v}` : 'self' }))}
@@ -385,7 +392,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
               ...when(count > 1, seconds('at', t('Start in seconds into the timeline'), 'b-flow-arrow', { placeholder: t('After') })),
             ],
           },
-          { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: eases() },
+          { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: [...(byGroup.get('ease') ?? []).map((ease) => ({ value: `token:${ease.path}`, label: ease.name, curve: String(ease.value) })), ...eases()] },
         ]}
         values={{ timing: { duration: String(step.duration ?? 0.6), delay: step.delay !== undefined ? String(step.delay) : undefined, stagger: step.stagger !== undefined ? String(step.stagger) : undefined, at: step.at !== undefined ? String(step.at) : undefined }, ease: step.ease }}
         onChange={(h, v) =>

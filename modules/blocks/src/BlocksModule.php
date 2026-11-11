@@ -44,6 +44,7 @@ final class BlocksModule extends Plugin
         $this->cms()->admin()->widget('blocks-design', ['label' => 'Components and Templates', 'description' => 'Components and templates changed last.', 'icon' => 'palette', 'column' => 'main', 'order' => 50, 'permission' => 'entries.components.view']);
         $this->collections();
         $this->guardHtmlBlocks();
+        $this->guardBlockCode();
         $this->cms()->hooks()->addFilter('blocks.data-sources', fn (array $sources) => [...$sources, ...$this->app->make(CmsSources::class)->sources()]);
         $this->frontend();
         $this->abilities();
@@ -227,6 +228,75 @@ final class BlocksModule extends Plugin
 
             return $input;
         });
+    }
+
+    /**
+     * Only people with site.code may put the design's code on a block: its `behavior` (a script mounted on it),
+     * its `code` (scripts and styles it loads) and `persist` (kept across pages, with whatever runs in it).
+     * Without it a block keeps what it has: saved back unchanged it passes, added or changed it is refused.
+     */
+    private function guardBlockCode(): void
+    {
+        $this->cms()->hooks()->addFilter('ability.input', function (array $input, Ability $ability, AbilityContext $ctx) {
+            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'components/save', 'globals/set'], true)) {
+                return $input;
+            }
+
+            if ($ctx->user?->hasPermission('site.code')) {
+                return $input;
+            }
+
+            $incoming = $this->blockCode($input);
+
+            if ($incoming === []) {
+                return $input;
+            }
+
+            $existing = match ($ability->name) {
+                'entries/update' => ($entry = $this->cms()->entries()->find((string) ($input['id'] ?? ''))) ? $this->blockCode($entry->working()) : [],
+                'components/save' => $this->blockCode($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
+                default => [],
+            };
+
+            if (array_diff($incoming, $existing) !== []) {
+                throw AbilityException::forbidden('You are not allowed to add or change a block’s scripts, styles or behavior.');
+            }
+
+            return $input;
+        });
+    }
+
+    /**
+     * What each block carries of the design's code, as the document keeps it, one fingerprint per block that has any.
+     *
+     * @return list<string>
+     */
+    private function blockCode(array $data): array
+    {
+        $found = [];
+
+        $walk = static function ($value) use (&$walk, &$found): void {
+            if (! is_array($value)) {
+                return;
+            }
+
+            if (is_string($value['type'] ?? null) && (isset($value['behavior']) || isset($value['code']) || isset($value['persist']))) {
+                $kept = array_filter([
+                    'behavior' => Document::behavior($value['behavior'] ?? null),
+                    'code' => Document::code($value['code'] ?? null),
+                    'persist' => is_string($value['persist'] ?? null) && preg_match(Document::PERSIST, $value['persist']) ? $value['persist'] : null,
+                ]);
+                // What the document would drop anyway (a name that is no name) is nothing added.
+                $kept !== [] && $found[] = hash('sha256', (string) json_encode($kept));
+            }
+
+            foreach ($value as $child) {
+                $walk($child);
+            }
+        };
+        $walk($data);
+
+        return $found;
     }
 
     /** @return list<string> */

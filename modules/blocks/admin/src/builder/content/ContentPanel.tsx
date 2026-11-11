@@ -135,16 +135,17 @@ export function ContentPanel({ node }: { node: BlockNode }) {
         />
       </Section>
 
-      <Section title={t('Advanced')} open={false} empty={!node.anchor && !node.attrs && !node.class && !advanced.some((f) => node.props?.[f.handle] !== undefined && node.props?.[f.handle] !== f.default)}>
+      <Section title={t('Advanced')} open={false} empty={!node.anchor && !node.attrs && !node.class && !node.persist && !advanced.some((f) => node.props?.[f.handle] !== undefined && node.props?.[f.handle] !== f.default)}>
         {repeat ? <RepeatAdvanced node={node} /> : advanced.map(prop)}
         <PanelFields
           fields={[
             { handle: 'label', type: 'text', size: 'sm', commit: 'blur', label: t('Layer Name'), placeholder: type?.title },
             { handle: 'anchor', type: 'text', size: 'sm', commit: 'blur', label: t('Anchor'), placeholder: t('None'), mono: true, instructions: t('Link to it with #anchor') },
             { handle: 'class', type: 'text', size: 'sm', commit: 'blur', label: t('Classes'), placeholder: t('None'), mono: true, instructions: t('Extra CSS classes, styled in custom CSS') },
+            { handle: 'persist', type: 'text', size: 'sm', commit: 'blur', label: t('Keep Across Pages'), placeholder: t('None'), mono: true },
           ]}
-          values={{ label: node.label, anchor: node.anchor, class: node.class }}
-          onChange={(h, v: string) => store.updateNode(node.id, { [h]: (h === 'anchor' ? v.toLowerCase().replace(/[^a-z0-9-]/g, '') : v) || undefined })}
+          values={{ label: node.label, anchor: node.anchor, class: node.class, persist: node.persist }}
+          onChange={(h, v: string) => store.updateNode(node.id, { [h]: (h === 'anchor' ? v.toLowerCase().replace(/[^a-z0-9-]/g, '') : h === 'persist' ? v.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^[^a-z]+/, '').slice(0, 40) : v) || undefined })}
         />
         <SubHeading title={t('Attributes')} action={<AddButton label={t('Add Attribute')} onClick={() => store.updateNode(node.id, { attrs: { ...(node.attrs ?? {}), 'aria-label': '' } })} />} />
         <PanelFields

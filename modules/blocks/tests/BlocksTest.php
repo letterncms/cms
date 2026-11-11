@@ -169,6 +169,56 @@ final class BlocksTest extends TestCase
         $this->cms()->abilities()->execute('entries/create', ['collection' => 'pages', 'title' => 'X', 'data' => ['content' => [['type' => 'html', 'props' => ['html' => '<script>x</script>']]]]], $ctx);
     }
 
+    public function test_a_blocks_scripts_styles_and_behavior_need_the_code_permission(): void
+    {
+        $admin = $this->admin();
+        $editor = AbilityContext::forUser($this->userWithRole('editor'), 'rest');
+        $abilities = $this->cms()->abilities();
+        $block = static fn (array $extra = [], string $text = 'Hi') => ['id' => 'b1', 'type' => 'paragraph', 'props' => ['text' => $text], ...$extra];
+        $code = ['behavior' => ['module' => 'tilt', 'props' => ['max' => 8], 'when' => 'visible'], 'code' => ['scripts' => ['tilt']], 'persist' => 'player'];
+        $refused = function (array $input, string $ability = 'entries/update') use ($abilities, $editor): void {
+            try {
+                $abilities->execute($ability, $input, $editor);
+                $this->fail('block code was accepted from someone without site.code');
+            } catch (AbilityException $e) {
+                $this->assertSame('forbidden', $e->type);
+            }
+        };
+
+        // Each of the three is refused on its own, on a new entry and on an existing one.
+        foreach (['behavior', 'code', 'persist'] as $key) {
+            $refused(['collection' => 'pages', 'title' => 'X', 'data' => ['content' => [$block([$key => $code[$key]])]]], 'entries/create');
+        }
+
+        $plain = $this->cms()->entryService()->create('pages', ['title' => 'Plain', 'data' => ['content' => [$block()]]], $admin);
+        $refused(['id' => $plain->id, 'data' => ['content' => [$block(['behavior' => $code['behavior']])]]]);
+
+        // Someone with the permission puts it there; an editor then changes the words and the code survives untouched.
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Coded', 'data' => ['content' => [$block($code)]]], $admin);
+        $saved = $this->cms()->entries()->find($entry->id)->working()['data']['content'];
+        $saved[0]['props']['text'] = 'Changed words';
+        $abilities->execute('entries/update', ['id' => $entry->id, 'data' => ['content' => $saved]], $editor);
+        $after = $this->cms()->entries()->find($entry->id)->working()['data']['content'][0];
+        $this->assertSame('Changed words', $after['props']['text']);
+        $this->assertSame($code['behavior'], $after['behavior']);
+        $this->assertSame($code['code'], $after['code']);
+        $this->assertSame('player', $after['persist']);
+
+        // Changing any of it is refused; taking the block away is ordinary editing.
+        $changed = $saved;
+        $changed[0]['behavior']['module'] = 'other';
+        $refused(['id' => $entry->id, 'data' => ['content' => $changed]]);
+        $changed = $saved;
+        $changed[0]['persist'] = 'elsewhere';
+        $refused(['id' => $entry->id, 'data' => ['content' => $changed]]);
+        $abilities->execute('entries/update', ['id' => $entry->id, 'data' => ['content' => [$block()]]], $editor);
+        $this->assertArrayNotHasKey('behavior', $this->cms()->entries()->find($entry->id)->working()['data']['content'][0]);
+
+        // With the permission it goes through.
+        $abilities->execute('entries/update', ['id' => $plain->id, 'data' => ['content' => [$block($code)]]], AbilityContext::forUser($admin, 'rest'));
+        $this->assertSame('tilt', $this->cms()->entries()->find($plain->id)->working()['data']['content'][0]['behavior']['module']);
+    }
+
     public function test_headings_get_stable_unique_anchors(): void
     {
         $nodes = [
