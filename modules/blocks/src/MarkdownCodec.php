@@ -43,7 +43,7 @@ use League\CommonMark\Renderer\HtmlRenderer;
 final class MarkdownCodec
 {
     /** Node keys besides type, props and children that a directive carries. */
-    private const array META = ['id', 'label', 'style', 'attrs', 'bind', 'logic', 'motion', 'code', 'behavior', 'anchor', 'class', 'hidden'];
+    private const array META = ['id', 'label', 'style', 'attrs', 'bind', 'logic', 'motion', 'code', 'behavior', 'persist', 'anchor', 'class', 'hidden'];
 
     /** The ids reading gives blocks that have none in the file (see `stableIds`). */
     private const string READ_ID = '/^m[0-9a-f]{10}$/';

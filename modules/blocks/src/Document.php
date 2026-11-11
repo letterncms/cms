@@ -129,6 +129,11 @@ final class Document
                 $clean['behavior'] = $behavior;
             }
 
+            // The same element across pages, when the site navigates without page loads: a canvas, a player.
+            if (is_string($node['persist'] ?? null) && preg_match(self::PERSIST, $node['persist'])) {
+                $clean['persist'] = $node['persist'];
+            }
+
             if (! empty($node['hidden'])) {
                 $clean['hidden'] = true;
             }
@@ -166,6 +171,9 @@ final class Document
 
         return $out;
     }
+
+    /** The name two pages know a kept element by. */
+    public const string PERSIST = '/^[a-z][a-z0-9-]{0,39}$/D';
 
     /** When a behaviour's script is fetched and mounted: with the page, a screen before the element is seen, or once the browser is idle. */
     public const array BEHAVIOR_WHEN = ['load', 'visible', 'idle'];

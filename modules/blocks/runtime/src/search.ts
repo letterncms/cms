@@ -89,19 +89,25 @@ function dialog(config: { placeholder: string; empty: string }): HTMLDialogEleme
   return el
 }
 
+const done = new WeakSet<Element>()
+let el: HTMLDialogElement | null = null
+let shortcut = false
+
 export function start() {
-  const buttons = [...document.querySelectorAll<HTMLElement>('[data-cms-search]')]
+  const buttons = [...document.querySelectorAll<HTMLElement>('[data-cms-search]')].filter((b) => !done.has(b))
   if (!buttons.length) return
+  buttons.forEach((b) => done.add(b))
   const config = { placeholder: 'Search…', empty: 'No results', shortcut: true, ...JSON.parse(buttons[0].dataset.cmsSearch || '{}') }
-  let el: HTMLDialogElement | null = null
   const open = () => {
-    el ??= dialog(config)
+    // The dialog lives in the page: one that a page transition took away is made again.
+    if (!el?.isConnected) el = dialog(config)
     void load()
     el.showModal()
     el.querySelector('input')!.select()
   }
   buttons.forEach((b) => b.addEventListener('click', open))
-  if (config.shortcut) {
+  if (config.shortcut && !shortcut) {
+    shortcut = true
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()

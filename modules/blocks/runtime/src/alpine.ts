@@ -14,7 +14,12 @@ declare global {
   }
 }
 
+let started = false
+
 export function start() {
+  // Alpine watches the document by itself: markup that arrives later needs nothing from here.
+  if (started) return
+  started = true
   Alpine.plugin(intersect)
   Alpine.plugin(collapse)
   Alpine.plugin(focus)
