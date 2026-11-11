@@ -237,6 +237,15 @@ final class BlockRenderer
     /** @var array<string, true> node ids other nodes point at (they get data-cms / id attributes) */
     private array $referenced = [];
 
+    /**
+     * Attributes that name other elements by id. In one of them `#<block id>` stands for whatever id that
+     * block has on the page: its anchor, a heading's own, or one made for the purpose.
+     */
+    public const array ID_REFERENCES = ['aria-labelledby', 'aria-describedby', 'aria-controls', 'aria-owns', 'aria-details', 'aria-flowto', 'aria-activedescendant', 'aria-errormessage', 'for'];
+
+    /** @var array<string, string> block id => the id its element has on the page, as each is rendered */
+    private array $domIds = [];
+
     private ?Anchors $anchors = null;
 
     /** @var list<array<string, mixed>> script state of the elements being rendered (the canvas shows initial states) */
@@ -263,6 +272,7 @@ final class BlockRenderer
         $this->styles->reset();
         $this->features = [];
         $this->referenced = [];
+        $this->domIds = [];
         $this->timelines = [];
         $this->ids = 0;
     }
@@ -277,7 +287,14 @@ final class BlockRenderer
         $this->collectReferences($nodes);
 
         try {
-            return $this->children($nodes);
+            $html = $this->children($nodes);
+
+            // Once everything is rendered, every block knows its id: fill in the places that named one.
+            return $outer && str_contains($html, "\x1Bref:") ? (string) preg_replace_callback('/\x1Bref:([A-Za-z0-9_-]+)\x1B/', function (array $m) {
+                isset($this->domIds[$m[1]]) || $this->hooks->dispatch('render.warning', __('An attribute names the block #:id, which is not on this page.', ['id' => $m[1]]));
+
+                return $this->domIds[$m[1]] ?? '';
+            }, $html) : $html;
         } finally {
             $this->scope = $previous;
             $outer && $this->anchors = null;
@@ -390,7 +407,7 @@ final class BlockRenderer
                 'node' => $node,
                 'type' => $type,
                 'content' => new HtmlString($children),
-                'attrs' => new HtmlString($this->attributes($node, $type, $classes, $extra, $conditional, $motion)),
+                'attrs' => new HtmlString($attributes = $this->attributes($node, $type, $classes, $extra, $conditional, $motion)),
                 'classes' => $classes,
                 'editor' => $this->editor,
                 'editable' => $this->editor && $this->editorDocument !== null,
@@ -398,6 +415,11 @@ final class BlockRenderer
                 'renderer' => $this,
                 'placeholders' => $this->editor ? $this->placeholders($type, $props, $bind) : [],
             ];
+
+            // The id this block has on the page, for whoever names it.
+            if (isset($this->referenced[(string) ($node['id'] ?? '')])) {
+                $this->domIds[(string) $node['id']] = preg_match('/(?:^| )id="([^"]+)"/', $attributes, $own) ? html_entity_decode($own[1]) : (string) ($props['anchor'] ?? '');
+            }
 
             $data = $this->hooks->filter('blocks.render.data', $data, $type);
 
@@ -727,7 +749,9 @@ final class BlockRenderer
         }
 
         foreach ((array) ($node['attrs'] ?? []) as $name => $value) {
-            $attrs[$name] = (string) $value;
+            $attrs[$name] = in_array($name, self::ID_REFERENCES, true)
+                ? (string) preg_replace('/(?<![^\s])#([A-Za-z0-9_-]{1,40})(?![^\s])/', "\x1Bref:$1\x1B", (string) $value)
+                : (string) $value;
         }
 
         foreach ($extra['attrs'] as $name => $value) {
@@ -792,7 +816,8 @@ final class BlockRenderer
             $attrs['data-cms'] = $id;
         }
 
-        if ($referenced && ! isset($attrs['id'])) {
+        // A heading has an id of its own (its text as a slug), which links may already point at.
+        if ($referenced && ! isset($attrs['id']) && $type->name !== 'heading') {
             $attrs['id'] = 'cms-'.$id;
         }
 
@@ -867,6 +892,19 @@ final class BlockRenderer
         ], static fn ($v) => $v !== null);
     }
 
+    /** @return list<string> the block ids a node's attributes name (`aria-controls: "#panel"`) */
+    private static function attributeReferences(array $attrs): array
+    {
+        $ids = [];
+
+        foreach (array_intersect_key($attrs, array_flip(self::ID_REFERENCES)) as $value) {
+            preg_match_all('/(?<![^\s])#([A-Za-z0-9_-]{1,40})(?![^\s])/', (string) $value, $m);
+            array_push($ids, ...$m[1]);
+        }
+
+        return $ids;
+    }
+
     private function collectReferences(array $nodes): void
     {
         foreach ($nodes as $node) {
@@ -874,7 +912,7 @@ final class BlockRenderer
                 continue;
             }
 
-            foreach ([...Logic::references((array) ($node['logic'] ?? [])), ...Motion::references((array) ($node['motion'] ?? []))] as $id) {
+            foreach ([...Logic::references((array) ($node['logic'] ?? [])), ...Motion::references((array) ($node['motion'] ?? [])), ...self::attributeReferences((array) ($node['attrs'] ?? []))] as $id) {
                 $this->referenced[$id] = true;
             }
 

@@ -95,6 +95,34 @@ final class BlocksTest extends TestCase
         $this->assertStringNotContainsString('background', $html);
     }
 
+    public function test_an_attribute_names_another_block_by_its_id(): void
+    {
+        $warnings = [];
+        $this->cms()->hooks()->on('render.warning', function (string $message) use (&$warnings) {
+            $warnings[] = $message;
+        });
+        $renderer = app(\Cms\Modules\Blocks\BlockRenderer::class);
+        $renderer->begin();
+        $html = $renderer->render(app(Document::class)->normalize([
+            ['id' => 'region', 'type' => 'box', 'props' => ['tag' => 'section'], 'attrs' => ['aria-labelledby' => '#title', 'aria-describedby' => '#lede written-by-hand #gone', 'title' => '#title'], 'children' => [
+                ['id' => 'title', 'type' => 'heading', 'props' => ['text' => 'Maps that move', 'level' => '2']],
+                ['id' => 'lede', 'type' => 'paragraph', 'props' => ['text' => 'A lede']],
+            ]],
+            ['id' => 'opener', 'type' => 'box', 'props' => ['tag' => 'button'], 'attrs' => ['aria-controls' => '#panel'], 'children' => []],
+            ['id' => 'panel', 'type' => 'box', 'anchor' => 'details', 'children' => []],
+        ]));
+
+        $this->assertStringContainsString('aria-labelledby="maps-that-move"', $html, 'a heading keeps the id links already point at');
+        $this->assertStringContainsString('<h2 class="cms-heading" data-cms="title" id="maps-that-move">', $html);
+        $this->assertStringContainsString('aria-describedby="cms-lede written-by-hand "', $html, 'a block without an id gets one; a word written by hand stays');
+        $this->assertStringContainsString('<p class="cms-paragraph" data-cms="lede" id="cms-lede">', $html);
+        $this->assertStringContainsString('aria-controls="details"', $html, 'a block with an anchor is named by it');
+        $this->assertStringContainsString('title="#title"', $html, 'only attributes that name elements are read this way');
+        $this->assertStringNotContainsString("\x1B", $html);
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString('#gone', $warnings[0]);
+    }
+
     public function test_document_sanitizes_text_and_styles(): void
     {
         $nodes = app(Document::class)->normalize([

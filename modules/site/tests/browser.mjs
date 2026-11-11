@@ -214,6 +214,7 @@ const checks = {
       await tab.until('document.getElementById("opener").getAttribute("aria-expanded") === "true" && getComputedStyle(document.getElementById("opened")).display !== "none"')
     }
     await alpine('first arrival')
+    equal(await tab.evaluate('document.getElementById(document.getElementById("opener").getAttribute("aria-controls"))?.id'), 'opened', 'the button names the block it opens by that block’s id on the page')
 
     // A link that could do something is never fetched ahead, and never in place of a page load.
     requests.length = 0
