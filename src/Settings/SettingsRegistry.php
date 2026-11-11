@@ -128,18 +128,24 @@ final class SettingsRegistry
      */
     public function save(string $namespace, array $values): array
     {
-        $merged = $this->prepare($namespace, $values);
-        $secretKeys = $this->secretKeys($namespace);
-        $public = array_diff_key($merged, array_flip($secretKeys));
-        Yaml::write(site_path("config/{$namespace}.yaml"), $public);
+        // One save at a time, on what is stored now: secrets.json holds every namespace's secrets, and a request
+        // that read it before another one saved would otherwise write the other's secret back as it was.
+        $this->exclusively(function () use ($namespace, $values): void {
+            $this->secrets = null;
+            $merged = $this->prepare($namespace, $values);
+            $secretKeys = $this->secretKeys($namespace);
+            $public = array_diff_key($merged, array_flip($secretKeys));
+            // Refused before anything is written: a file of secrets this key can't open would lose them all.
+            $secrets = $secretKeys === [] ? [] : $this->secrets(strict: true);
+            Yaml::write(site_path("config/{$namespace}.yaml"), $public);
 
-        if ($secretKeys !== []) {
-            $secrets = $this->secrets();
-            $secrets[$namespace] = array_intersect_key($merged, array_flip($secretKeys));
-            $this->writeSecrets($secrets);
-        }
+            if ($secretKeys !== []) {
+                $secrets[$namespace] = array_intersect_key($merged, array_flip($secretKeys));
+                $this->writeSecrets($secrets);
+            }
+        });
 
-        unset($this->cache[$namespace]);
+        $this->cache = [];
         cms()->hooks()->dispatch('settings.saved', $namespace, $this->get($namespace));
 
         return $this->get($namespace);
@@ -238,9 +244,13 @@ final class SettingsRegistry
         return $keys;
     }
 
-    private function secrets(): array
+    /**
+     * Every namespace's secrets. A file this key can't open (the app key changed, the file is damaged) reads as
+     * none, so the site keeps running; a save refuses it ($strict), since writing would drop every secret in it.
+     */
+    private function secrets(bool $strict = false): array
     {
-        if ($this->secrets !== null) {
+        if ($this->secrets !== null && ! $strict) {
             return $this->secrets;
         }
 
@@ -251,9 +261,36 @@ final class SettingsRegistry
         }
 
         try {
-            return $this->secrets = (array) json_decode($this->encrypter->decryptString((string) file_get_contents($file)), true);
-        } catch (Throwable) {
+            $secrets = json_decode($this->encrypter->decryptString((string) file_get_contents($file)), true, 64, JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            if ($strict) {
+                throw AbilityException::conflict(__('The saved secrets can’t be read with this site’s key, so nothing was saved. Restore storage/secrets.json or the APP_KEY it was written with.'));
+            }
+
             return $this->secrets = [];
+        }
+
+        return $this->secrets = is_array($secrets) ? $secrets : [];
+    }
+
+    /** Runs the callback holding storage/settings.lock, which every save of settings takes. */
+    private function exclusively(callable $callback): void
+    {
+        Files::ensureDir(storage_path());
+        $lock = fopen(storage_path('settings.lock'), 'c');
+
+        if ($lock === false) {
+            $callback();
+
+            return;
+        }
+
+        try {
+            flock($lock, LOCK_EX);
+            $callback();
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
     }
 

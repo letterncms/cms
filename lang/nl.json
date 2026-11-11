@@ -408,5 +408,6 @@
   "Another field uses this handle.": "Een ander veld gebruikt deze sleutel.",
   "Sub-fields must be a list.": "Subvelden moeten een lijst zijn.",
   "The field type “:type” is not available.": "Het veldtype “:type” is niet beschikbaar.",
-  "Use lowercase letters, digits and underscores, starting with a letter.": "Gebruik kleine letters, cijfers en underscores, en begin met een letter."
+  "Use lowercase letters, digits and underscores, starting with a letter.": "Gebruik kleine letters, cijfers en underscores, en begin met een letter.",
+  "The saved secrets can’t be read with this site’s key, so nothing was saved. Restore storage/secrets.json or the APP_KEY it was written with.": "De opgeslagen geheimen zijn niet te lezen met de sleutel van deze site, dus er is niets opgeslagen. Zet storage/secrets.json terug of de APP_KEY waarmee ze zijn geschreven."
 }
