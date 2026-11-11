@@ -35,6 +35,7 @@ final class AgentGuide
         - Entries are drafts until published (entries/publish, or status "published" on create).
         - A relation field (entries, users, media) takes ids that exist: an entries field only entries of its `collections`. What names an entry (in a relation at any depth, a link field or a block) is read with references/list, or `references` on entries/list: read it before deleting an entry.
         - A field of a collection can depend on the fields beside it: `if: {kind: video}` (or a list of values) shows it only then, and a required field with `if` is required only then; `required_if: {…}` keeps it on view. The collection's schema says it as allOf/if/then.
+        - A matrix field is a list of rows of several kinds (`types`, each with a handle and fields of its own): a row is `{type: <handle>, …its fields}`. Use it for sections that differ; a repeater when every row has the same fields.
         - Block styles only use design tokens (token:space.8, token:color.primary…), never raw colors or pixel values.
         - A blocks field also accepts Block Markdown (Markdown plus ::: directives) as a string.
         - Every image needs alt text. Add files with media/import (url or base64) and use the returned id.

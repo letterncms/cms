@@ -69,6 +69,7 @@ final class Blueprint
                 self::validate($sub, $name.'.', $depth + 1);
             }
 
+            $types->get($field->type)->validateDefinition($field, $name, $depth);
             $conditional[$name] = $field;
         }
 
