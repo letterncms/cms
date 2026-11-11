@@ -140,7 +140,8 @@ export function TableRow({ children, header, selected, active, className, record
   return <div role="row" data-entry={recordId} className={cn(
     'grid items-center gap-x-5 border-b border-border px-3 [grid-template-columns:var(--cols)]',
     header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group cms-reveal-row relative min-h-10 text-sm transition-colors duration-base hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
-    selected && 'bg-focus-soft hover:bg-focus-hover',
+    // Chosen rows lie pressed in, like the sidebar's place on view: the checkbox says the rest. No colour of their own.
+    selected && 'bg-active hover:bg-active',
     active && !selected && 'bg-hover',
     active && 'shadow-cursor',
     className,

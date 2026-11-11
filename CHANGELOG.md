@@ -21,6 +21,8 @@
 
 ### Changed
 
+- Chosen rows are a quiet grey instead of blue, and **Delete** in the selection bar is red like every other way into deleting. A list you can read at a glance (fewer than eight rows, nothing filtered) has no search or status filter; a language switch always stays. A row's menu button is the same size and in the same place on every row.
+- The command palette starts with what you can make and do; places come last, without the screen you are on. It offers only the theme you are not in, and a screen's Settings tab is listed only where Settings lists it. On a phone it fills the screen and has a Close button.
 - One word for one thing: the command palette lists what you can make under **New**, a row's drag handle says "Drag to Reorder", a calendar's undated records stand under "No Date", and the buttons that make a menu or a global set say **Create Menu** and **Create Global Set**.
 - An empty screen says what is missing and offers one thing to do, nothing more: the sentences under "No files yet", "No collections yet", "Not Found" and the others are gone, and small empty lists (API tokens, redirects) are drawn like every other one. The way out of a page that isn't there is **Go to Dashboard**.
 - **Breaking.** `@letterncms/ui`: `EmptyState` and `NotFoundState` no longer take a `description`, and a view's `empty` (and `ui/empty`) no longer has a `text`: a view that sends one is refused. Something that failed is a `QueryError` (`title`, `message`).
@@ -57,6 +59,7 @@
 - A calendar shows a record's title across the whole day: its actions lie over the end of the title while you point at the record or reach it with the keyboard.
 - On a touch screen a segmented control's options, a page's tabs and a widget's link are 44px tall to hit, and what a row can do is always on view. With a keyboard a row's actions show as soon as the row has the focus.
 - The search field of a collection's list names the list ("Search Pages") instead of reading "Search …", and an empty collection says "No pages yet" instead of "No {items} yet". Search fields in lists, pickers, the store, the menu editor and the command palette say "Search" or name what they search ("Search People"), without an ellipsis.
+- The selection bar stays on one line on a phone, and a main button that is off is pale with quiet words, in light and dark, instead of a faded copy of itself.
 - Choosing an image for a field while the library has none says "No images yet" and offers the upload, not "No matches".
 - **Users** and the **Audit Log** keep their tabs when you open their Settings tab.
 - On a phone a screen inside another (a collection's fields, a menu, a section of the design) has a way back to the one above it, the top bar's last button sits as far from the edge as its first, and the sidebar button and the way back are far enough apart to hit the right one.

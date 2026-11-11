@@ -5,7 +5,7 @@ import { Icon } from '../Icon'
 import type { Tone } from '../Badge'
 import { calendarRange } from '../calendar'
 import { flattenTree, type DataColumn, type DataTree } from '../DataTable'
-import { DataView } from '../DataView'
+import { DataView, FEW } from '../DataView'
 import { confirm } from '../Dialog'
 import { EmptyState, NoMatches } from '../EmptyState'
 import { Fields } from '../Fields'
@@ -62,6 +62,9 @@ interface Column {
   /** With `format: languages`: every language there is. */
   locales?: string[]
 }
+
+/** A filter whose resting value shows everything ("All", "Any"): it narrows the list. Any other splits it in parts, such as a language. */
+const narrows = (f: Filter) => f.all !== undefined || ['', 'any', 'all'].includes(String(f.default ?? ''))
 
 interface Filter {
   param: string
@@ -228,11 +231,21 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   const fits = Object.fromEntries(columns.filter((c) => c.fit).map((c) => [c.key, fitTrack(every.map((row) => at(row, c.key)))]))
 
   const segmented = filters.filter((f) => f.display === 'segmented')
+  // A list read at a glance has nothing to search or narrow, as in `DataView`: its search and the filters that
+  // narrow it (All, Published, Drafts) stay away. A filter that splits the list in parts (a language) is never
+  // hidden: one part is always on view, and it is the only way to the others.
+  const glance = !!response && !filtered && pages <= 1 && (asTree || total === undefined ? every.length : total) < FEW
+  // Once its search is there it stays, so it never goes from under someone who empties it. Kept per list.
+  const [searching, setSearching] = useState({ id, on: false })
+  if (searching.id !== id) setSearching({ id, on: false })
+  else if (!searching.on && response && !glance) setSearching({ id, on: true })
+  const narrow = searching.id === id && searching.on
+  const offered = segmented.filter((f) => narrow || !narrows(f))
   const toolbar = (server || filters.length > 0) && (
     <span className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents">
-      {(server || segmented.length > 0) && <Fields bare layout="inline" className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents" fields={[
-        ...(server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search'), className: 'w-full sm:w-60' }] : []),
-        ...segmented.map((f) => ({ handle: f.param, type: 'select', label: f.label, display: 'segmented', required: true, className: 'shrink-0', options: (f.options ?? []).map((o) => ({ value: String(o.value), label: o.label, title: o.title })) })),
+      {((narrow && server) || offered.length > 0) && <Fields bare layout="inline" className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents" fields={[
+        ...(narrow && server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search'), className: 'w-full sm:w-60' }] : []),
+        ...offered.map((f) => ({ handle: f.param, type: 'select', label: f.label, display: 'segmented', required: true, className: 'shrink-0', options: (f.options ?? []).map((o) => ({ value: String(o.value), label: o.label, title: o.title })) })),
       ]} values={{ __search: text, ...Object.fromEntries(segmented.map((f) => [f.param, chosen[f.param] || f.default || ''])) }} onChange={(h, v) => {
         if (h === '__search') { setText(String(v ?? '')); if (!address) setPage(1); return }
         const f = segmented.find((x) => x.param === h)
@@ -265,11 +278,11 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     const menu = all.filter((a) => !(a.inline && a.icon))
     const name = plainValue(at(row, columns[0].key), columns[0].labels)
     // A row with nothing to do keeps the room a menu takes, so every row's cells line up.
-    if (all.length === 0) return <span aria-hidden className="inline-block size-7" />
+    if (all.length === 0) return <span aria-hidden className="inline-block size-6" />
     return <>
       {inline.map((a, i) => <IconButton key={i} icon={a.icon!} size="xs" label={a.label} onClick={() => void act(a, { row }).catch(() => {})} />)}
-      {/* Beside a button of its own, both are small, to fit the row's room for actions. */}
-      {menu.length > 0 && <Menu trigger={<IconButton icon="more" size={inline.length || tree?.reorder ? 'xs' : 'sm'} label={name ? t('Actions for {name}', { name: String(name) }) : t('Actions')} />} items={menu.map((a) => ({ label: a.label, icon: a.icon, danger: a.variant === 'danger', disabled: a.disabled !== undefined && holds(a.disabled, rowScope(row)), onSelect: () => void act(a, { row }).catch(() => {}) }))} />}
+      {/* One size whether or not a button of its own stands before it: the menu is in the same place on every row. */}
+      {menu.length > 0 && <Menu trigger={<IconButton icon="more" size="xs" label={name ? t('Actions for {name}', { name: String(name) }) : t('Actions')} />} items={menu.map((a) => ({ label: a.label, icon: a.icon, danger: a.variant === 'danger', disabled: a.disabled !== undefined && holds(a.disabled, rowScope(row)), onSelect: () => void act(a, { row }).catch(() => {}) }))} />}
     </>
   }
 
@@ -383,7 +396,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     {selection && (
       <SelectionBar count={picked.size} onClear={() => setPicked(new Set())}>
         {(bulk ?? []).filter((a) => shown([a as ViewAction], { ...scope, ids: [...picked], rows: pickedRows }).length > 0 && (a.some === undefined || pickedRows.some((row) => holds(a.some, rowScope(row))))).map((a, i) =>
-          <Button key={i} size="sm" icon={a.icon} variant={a.variant === 'danger' ? 'ghost' : a.variant === 'default' || !a.variant ? 'ghost' : a.variant} disabled={bulkBusy || (!rows && loaded.isPlaceholderData)} onClick={() => void runBulk(a)}>{a.label}</Button>)}
+          <Button key={i} size="sm" icon={a.icon} variant={a.variant === 'danger' || (typeof a.confirm === 'object' && a.confirm?.danger) ? 'destructive' : a.variant === 'default' || !a.variant ? 'ghost' : a.variant} disabled={bulkBusy || (!rows && loaded.isPlaceholderData)} onClick={() => void runBulk(a)}>{a.label}</Button>)}
       </SelectionBar>
     )}
     </>

@@ -55,7 +55,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         // Pressed (a toggle that is on, the place on view): the same pressed fill on every variant, winning over its resting fill.
         'aria-pressed:bg-active! aria-pressed:text-ink! data-active:bg-active! data-active:text-ink!',
         // Busy is not off: a button that is loading keeps its tone, so its spinner reads.
-        !loading && 'disabled:opacity-45',
+        // Faded ink still looks like something to press (and in the dark it is the brightest thing there): a primary that is off is a pale fill with quiet words.
+        !loading && (variant === 'primary' ? 'disabled:bg-fill disabled:text-faint disabled:shadow-none' : 'disabled:opacity-45'),
         variants[variant],
         sizes[size],
         loading && !icon && 'relative',

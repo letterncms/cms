@@ -91,8 +91,8 @@ const test = async (name, fn) => { if (layoutOnly && !name.startsWith('Every ove
 try {
   await wait(() => text().includes('Quote Request'), 'forms did not load')
   await test('Short lists stay plain tables: no search, views, display menu or empty date columns', async () => {
-    // Users and submissions search on the server, so their own search field stays.
-    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/navigation', 'Main menu'], ['/users', 'Ada Example', true], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/settings/seo?tab=redirects', '301'], ['/forms/contact?tab=submissions', 'Received', true]]
+    // Users and submissions search on the server; a handful of them is still read at a glance.
+    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/navigation', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/settings/seo?tab=redirects', '301'], ['/forms/contact?tab=submissions', 'Received']]
     for (const [path, expected, ownSearch] of routes) {
       await open(path, expected)
       assert(main().querySelector('[role="table"]'), path + ': missing shared table')
