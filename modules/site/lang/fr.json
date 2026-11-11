@@ -547,8 +547,8 @@
   "Previous and Next Entry": "Entrée précédente et suivante",
   "The entries before and after this one in its collection, for a detail page: newest last in a dated collection, the tree’s reading order, else the collection’s own order.": "Les entrées avant et après celle-ci dans sa collection, pour une page de détail : la plus récente en dernier dans une collection datée, l’ordre de lecture de l’arborescence, sinon l’ordre de la collection.",
   "Previous and Next": "Précédente et suivante",
-  "Previous": "Précédente",
-  "Next": "Suivante",
+  "Previous": "Précédent",
+  "Next": "Suivant",
   "Show": "Afficher",
   "Go Round at the Ends": "Boucler aux extrémités"
 }
