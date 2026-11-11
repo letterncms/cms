@@ -6,6 +6,7 @@ namespace Cms\Modules\Media\Http;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Modules\Media\MediaItem;
 use Cms\Modules\Media\MediaStore;
@@ -15,12 +16,17 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class MediaController
 {
-    /** Multipart upload (admin session or API token). */
+    /**
+     * Multipart upload (admin session or API token): a new file, or with `replace` another file for an item
+     * there is. A replacement goes through the `media/replace` ability like every change to what is there:
+     * its permission, its record in the Audit Log and its hooks are the ability's, not a second copy here.
+     */
     public function upload(Request $request, MediaStore $store): JsonResponse
     {
         $user = $request->user();
+        $replace = $request->filled('replace') ? strtolower((string) $request->input('replace')) : null;
 
-        if (! $user?->hasPermission('media.upload')) {
+        if (! $user?->hasPermission($replace !== null ? 'media.edit' : 'media.upload')) {
             return response()->json(['error' => ['type' => 'forbidden', 'message' => 'You may not upload files.']], 403);
         }
 
@@ -30,17 +36,24 @@ final class MediaController
             return response()->json(['error' => ['type' => 'invalid_input', 'message' => $file?->getErrorMessage() ?? __('No file was uploaded.')]], 422);
         }
 
-        $tmp = storage_path('app/uploads/'.bin2hex(random_bytes(12)));
+        $token = bin2hex(random_bytes(12));
+        $tmp = storage_path('app/uploads/'.$token);
         @mkdir(dirname($tmp), 0o775, true);
         $file->move(dirname($tmp), basename($tmp));
 
         try {
-            $item = $store->store($tmp, $file->getClientOriginalName(), $user, (string) $request->input('folder', ''));
+            if ($replace !== null) {
+                return response()->json(['data' => cms()->abilities()->execute('media/replace', ['id' => $replace, 'upload' => $token, 'filename' => $file->getClientOriginalName()], AbilityContext::forUser($user, 'admin'))]);
+            }
+
+            return response()->json(['data' => $store->store($tmp, $file->getClientOriginalName(), $user, (string) $request->input('folder', ''))->toPublic()], 201);
         } catch (AbilityException $e) {
             return response()->json(['error' => $e->toArray()], $e->status());
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return response()->json(['error' => ['type' => 'not_found', 'message' => __('Not found.')]], 404);
+        } finally {
+            is_file($tmp) && @unlink($tmp);
         }
-
-        return response()->json(['data' => $item->toPublic()], 201);
     }
 
     /** Generate an image variant on first request; it is a static file afterwards. */

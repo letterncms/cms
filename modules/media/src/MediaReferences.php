@@ -145,6 +145,52 @@ final class MediaReferences
         return array_values($used);
     }
 
+    /**
+     * A file got another address (its bytes changed, and files are cached for a year by their address): what
+     * names it by that address (`/media/2026/11/photo-ab12.jpg`, with or without a query) names the new one.
+     * References by id need nothing. `$write: false` only says what would be rewritten.
+     *
+     * @return list<array{action: string, type: string, id: string, path: string}> each place rewritten, once
+     */
+    public function repoint(string $from, string $to, bool $write = true): array
+    {
+        $changes = [];
+        $is = static fn (mixed $value): bool => is_string($value) && str_starts_with($value, '/media/') && ltrim((string) parse_url($value, PHP_URL_PATH), '/') === $from;
+        $swap = static function (mixed $value) use (&$swap, $is, $from, $to) {
+            if (is_array($value)) {
+                return array_map($swap, $value);
+            }
+
+            return $is($value) ? '/'.$to.substr($value, strlen('/'.$from)) : $value;
+        };
+        $uses = array_filter($this->all(), static fn (array $r) => $is($r['id']));
+
+        foreach ($uses as $use) {
+            $changes[$use['where']['kind'].':'.$use['where']['id']] ??= ['action' => 'update', 'type' => $use['where']['kind'], 'id' => $use['where']['id'], 'path' => $use['where']['path']];
+        }
+
+        if (! $write || $changes === []) {
+            return array_values($changes);
+        }
+
+        foreach ($changes as $change) {
+            if ($change['type'] === 'entry' && ($entry = cms()->entries()->find($change['id']))) {
+                $entry->data = $swap($entry->data);
+                $entry->draft = $entry->draft === null ? null : $swap($entry->draft);
+                cms()->entries()->save($entry);
+            } elseif ($change['type'] === 'global' && is_file($file = content_path("globals/{$change['id']}.yaml"))) {
+                Yaml::write($file, $swap(Yaml::read($file)));
+            } elseif ($change['type'] === 'design' && is_file($file = content_path('design/tokens.json'))) {
+                file_put_contents($file, json_encode($swap((array) json_decode((string) file_get_contents($file), true)), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n");
+            }
+        }
+
+        $this->forget();
+        cms()->entries()->flush();
+
+        return array_values($changes);
+    }
+
     private function walk(mixed $value, array $where, string $path, array &$found, bool $styles = false): void
     {
         if (is_string($value)) {
