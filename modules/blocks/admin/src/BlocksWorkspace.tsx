@@ -31,7 +31,7 @@ export function BlocksWorkspace(props: EntryEditorProps) {
   // The inspector holds its place while the catalog loads: the canvas never changes width when it arrives.
   if (isLoading) return <div className="flex h-full min-h-0">
     <div className="grid min-w-0 flex-1 place-items-center"><Spinner /></div>
-    <InspectorPanel className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={props.collection.singular}>{props.sidebar}</InspectorPanel>
+    <InspectorPanel sheet className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={props.collection.singular}>{props.sidebar}</InspectorPanel>
   </div>
   if (!catalog) return <QueryError message={error?.message} onRetry={retry} />
   return <EditorProvider value={{ store, catalog, types, entryId: props.entry?.id ?? null, fieldHandle: field, allowed: props.bodyField.allowed as string[] ?? [], getValues: () => values.current, title: props.title, doc, readOnly: !props.editable }}>
@@ -41,8 +41,8 @@ export function BlocksWorkspace(props: EntryEditorProps) {
 }
 
 
-/** On a phone the panel is a sheet with a handle, risen from the bottom edge: the block it is about stays in view above it, undimmed (styles.css). */
-const sheet = "cms-block-sheet max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:h-[72dvh] max-sm:w-full max-sm:rounded-t-xl max-sm:border-l-0 max-sm:border-t max-sm:pb-[env(safe-area-inset-bottom)] max-sm:before:mx-auto max-sm:before:mt-2 max-sm:before:h-1 max-sm:before:w-9 max-sm:before:shrink-0 max-sm:before:rounded-full max-sm:before:bg-border-strong max-sm:before:content-[''] max-sm:data-[starting-style]:translate-x-0 max-sm:data-[starting-style]:translate-y-full max-sm:data-[ending-style]:translate-x-0 max-sm:data-[ending-style]:translate-y-full"
+/** On a phone the panel is the kit's sheet, risen from the bottom edge with its grip: the block it is about stays in view above it, undimmed (styles.css). */
+const sheet = 'cms-block-sheet'
 
 /** The screens a page is previewed and styled for: one vocabulary everywhere (Desktop, Tablet, Phone). */
 export const screens = () => [
@@ -147,7 +147,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
         {props.errors[props.bodyField.handle] && <p id={`${fieldControlId(props.bodyField)}-error`} role="alert" className="m-0 shrink-0 px-3 py-2 text-xs text-danger">{props.errors[props.bodyField.handle]}</p>}
         <div className="max-h-[30vh] shrink-0 overflow-y-auto">{props.footer}</div>
       </main>
-      <InspectorPanel className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={inspecting && selected ? types.get(selected.type)?.title ?? t('Block') : props.collection.singular}>
+      <InspectorPanel sheet className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={inspecting && selected ? types.get(selected.type)?.title ?? t('Block') : props.collection.singular}>
         {inspecting && selected ? count > 1 ? <>
           <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border pl-2 pr-3">
             <IconButton icon="arrow-left" label={t('Back to {name}', { name: props.collection.singular })} size="sm" onClick={entryDetails} />

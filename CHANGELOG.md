@@ -7,6 +7,11 @@
 - Design tokens: `shadow-rule` (a hairline along the bottom of a row of tabs) and `shadow-underline` (the tab on view), and `text-on-success`, `text-on-warning` and `text-on-danger` for words on their own wash.
 - `@letterncms/ui`: `Pressable`, the control without a look, for the ones that draw themselves (a colour plane, a box of a spacing control, a card that opens, canvas chrome). It is a `<button type="button">`, or a link with `to`, with the kit's focus line, 44px to hit on a touch screen, `disabled` and `data-active`; `inset` puts the focus line inside its edge, `compact` leaves out the touch area. Everything it looks like is its `className`.
 
+### Changed
+
+- On a phone every dialog is a sheet with a grip at its top: drag it down, flick it or press it and the sheet goes; let go early and it returns. The grip is the sheet's one way out, so the × beside it is gone there. The page builder's block panel has the same grip on a phone. `@letterncms/ui` exports `SheetHandle` for a sheet of your own, and `InspectorPanel` takes `sheet` to rise from the bottom edge with it.
+- On a touch screen the lines of a menu, a select and a picker are 44px tall.
+
 ### Fixed
 
 - A group of avatars shows one initial per person, so the next circle never cuts a letter, and its count grows into a pill instead of losing digits; a single avatar shows two letters at most, with air around them.
