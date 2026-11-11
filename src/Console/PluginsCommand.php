@@ -10,7 +10,7 @@ final class PluginsCommand extends Command
 {
     protected $signature = 'plugins';
 
-    protected $description = 'List plugins and themes';
+    protected $description = 'List plugins';
 
     public function handle(PackageManager $packages): int
     {

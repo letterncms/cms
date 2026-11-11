@@ -84,13 +84,59 @@ final class McpTest extends TestCase
         $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'], ['Authorization' => "Bearer {$token}", 'Origin' => 'https://evil.example'])->assertForbidden();
     }
 
-    public function test_legacy_initialize_and_resources(): void
+    public function test_a_client_that_starts_with_initialize_is_served(): void
+    {
+        [, $token] = ApiToken::issue($this->admin(), 'a');
+        $headers = ['Authorization' => "Bearer {$token}"];
+        $send = fn (array $message, array $more = []): \Illuminate\Testing\TestResponse => $this->postJson('/mcp', ['jsonrpc' => '2.0', ...$message], [...$headers, ...$more]);
+
+        $hello = $send(['id' => 1, 'method' => 'initialize', 'params' => ['protocolVersion' => '2025-11-25', 'capabilities' => [], 'clientInfo' => ['name' => 't', 'version' => '1']]])->assertOk();
+        $hello->assertJsonPath('result.protocolVersion', '2025-11-25')
+            ->assertJsonPath('result.serverInfo.name', 'cms')
+            ->assertJsonPath('result.capabilities.tools.listChanged', false)
+            ->assertJsonMissingPath('result.resultType');
+        $this->assertStringContainsString('entries.create', $hello->json('result.instructions'));
+
+        // A notification has no id and gets no answer.
+        $this->assertSame('', $send(['method' => 'notifications/initialized'])->assertStatus(202)->getContent());
+
+        // After the handshake the requests carry no version of their own: without the header, and with it.
+        foreach ([[], ['MCP-Protocol-Version' => '2025-11-25']] as $more) {
+            $list = $send(['id' => 2, 'method' => 'tools/list'], $more)->assertOk();
+            $this->assertContains('entries.create', array_column($list->json('result.tools'), 'name'));
+            $list->assertJsonMissingPath('result.resultType')->assertJsonMissingPath('result._meta');
+
+            $send(['id' => 3, 'method' => 'tools/call', 'params' => ['name' => 'entries.list', 'arguments' => ['collection' => 'pages']]], $more)
+                ->assertOk()->assertJsonPath('result.isError', false)->assertJsonMissingPath('error');
+        }
+
+        $send(['id' => 4, 'method' => 'ping'])->assertOk()->assertExactJson(['jsonrpc' => '2.0', 'id' => 4, 'result' => []]);
+    }
+
+    public function test_the_older_revisions_are_not_spoken(): void
     {
         [, $token] = ApiToken::issue($this->admin(), 'a');
 
-        $this->rpc($token, 'initialize', ['protocolVersion' => '2025-11-25', 'capabilities' => [], 'clientInfo' => ['name' => 't', 'version' => '1']], modern: false)
-            ->assertJsonPath('result.protocolVersion', '2025-11-25')
-            ->assertJsonPath('result.serverInfo.name', 'cms');
+        // The handshake answers a revision it dropped with the one it has; the client decides whether it can speak it.
+        foreach (['2025-06-18', '2025-03-26', '2026-07-28', ''] as $asked) {
+            $this->rpc($token, 'initialize', ['protocolVersion' => $asked], modern: false)->assertOk()->assertJsonPath('result.protocolVersion', '2025-11-25');
+        }
+
+        $this->rpc($token, 'server/discover')->assertJsonPath('result.supportedVersions', ['2026-07-28', '2025-11-25']);
+
+        // A request that names its version names one that is spoken, in `_meta` or in the header.
+        foreach (['2025-06-18', '2025-03-26', '1999-01-01'] as $dropped) {
+            $this->rpc($token, 'tools/list', ['_meta' => ['io.modelcontextprotocol/protocolVersion' => $dropped]], modern: false)
+                ->assertJsonPath('error.code', -32022)
+                ->assertJsonPath('error.data.supported', ['2026-07-28', '2025-11-25'])
+                ->assertJsonPath('error.data.requested', $dropped);
+            $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'], ['Authorization' => "Bearer {$token}", 'MCP-Protocol-Version' => $dropped])->assertJsonPath('error.code', -32022);
+        }
+    }
+
+    public function test_resources_and_prompts(): void
+    {
+        [, $token] = ApiToken::issue($this->admin(), 'a');
 
         $uris = array_column($this->rpc($token, 'resources/list')->json('result.resources'), 'uri');
         $this->assertContains('cms://collections', $uris);

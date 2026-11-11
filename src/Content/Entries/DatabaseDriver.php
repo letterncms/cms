@@ -189,12 +189,8 @@ final class DatabaseDriver implements EntryDriver
         };
         $draft = $grammar->wrap('entries.draft->'.$path);
         if ($field === 'author_id') {
-            // Old working copies did not store authorship; explicit JSON null clears it.
-            $has = DB::connection()->getDriverName() === 'sqlite'
-                ? "json_type(entries.draft, '$.authorId') is not null"
-                : "json_contains_path(entries.draft, 'one', '$.authorId')";
-
-            return "case when {$has} then nullif({$draft}, 'null') else {$base} end";
+            // A working copy always says who the author is; JSON null means nobody.
+            return "case when entries.draft is not null then nullif({$draft}, 'null') else {$base} end";
         }
 
         return "case when entries.draft is not null then {$draft} else {$base} end";
