@@ -181,6 +181,9 @@ export function TableToolbar({ children }: { children: ReactNode }) {
 }
 
 
+/** How a record stands: content's own state (`published`, `draft`…), or a tone and the words for it. */
+export type RecordStatus = string | { tone: string; label: string }
+
 export interface DataColumn<T> {
   id: string
   label: string
@@ -198,6 +201,10 @@ export interface DataColumn<T> {
   card?: 'text'
   /** Hidden in the table at first, but shown on cards (a picture, an excerpt). */
   cardByDefault?: boolean
+  /** Its value says what it is (a status, an address, a person): on a phone, where a row has no headings, it stands without its label. Every other value there is led by its column's name. */
+  bare?: boolean
+  /** The record's status (`published`, `draft`…, or a tone with the words it is shown in), when this column shows one: a calendar marks each record with its dot. */
+  status?: (item: T) => RecordStatus | null | undefined
   /** Of the first column: what is said beside the title, quieter. On a phone it starts the line under the title, so a long title cannot push it out. */
   note?: (item: T) => ReactNode
 }
@@ -283,7 +290,8 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
         {href ? <Link to={href} className={LINK}>{first.render(item)}</Link> : onRowClick ? <Pressable compact onClick={() => onRowClick(item)} className={LINK}>{first.render(item)}</Pressable> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
       </div>
       <TableMeta>{first.note?.(item) ? <div data-row-note="" className="shrink-0 sm:hidden">{first.note(item)}</div> : null}{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
-        <div className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
+        {/* On a phone the headings are gone: a value is led by its column's name (app.css, `data-label`), unless it says what it is. */}
+        <div data-label={c.bare ? undefined : c.label} className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
       </div>)}</TableMeta>
       {hasActions && <div role="cell" data-table-actions className={rowActionsClass}>{extra?.handle}{actions?.(item)}</div>}
     </TableRow>

@@ -218,6 +218,19 @@
     }
   }
 
+  /* A table's row on a phone is its title and, under it, its values without their headings: each is led by
+     its column's name, quieter, unless it has nothing to say. */
+  @media (max-width: 639px) {
+    [data-row-meta] [data-label]:not(:empty)::before {
+      content: attr(data-label);
+      margin-inline-end: 4px;
+      color: var(--cms-faint);
+    }
+    /* What is worth a column but not a place in the row (`data-wide`: a date the status already tells, a value that is missing) stays out. */
+    /* `!important`: the cell's own `flex` is a utility, and those lie over this layer. */
+    [data-row-meta] [role="cell"]:has([data-wide]) { display: none !important; }
+  }
+
   /* What a row can do (`cms-reveal` inside a `cms-reveal-row`): out of the way until the row is pointed at,
      holds the focus or has a menu of its own open. Where nothing hovers (a touch screen) it is always there.
      Never `display: none`: it stays in the page for a keyboard and a screen reader, only out of sight. */
