@@ -225,7 +225,7 @@
                                                     "admin": "Administrator",
                                                     "editor": "Editor",
                                                     "author": "Author",
-                                                    "member": "Visitor",
+                                                    "visitor": "Visitor",
                                                     "suspended": "Suspended",
                                                     "super": "Super Admin",
                                                     "twoFactor": "Two-Factor"
@@ -306,7 +306,7 @@
                                                     "admin": "Administrator",
                                                     "editor": "Editor",
                                                     "author": "Author",
-                                                    "member": "Visitor",
+                                                    "visitor": "Visitor",
                                                     "suspended": "Suspended",
                                                     "super": "Super Admin",
                                                     "twoFactor": "Two-Factor"

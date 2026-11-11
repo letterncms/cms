@@ -177,7 +177,7 @@ final class Accounts
     /** The roles a new visitor gets: never one that opens the admin. */
     public function visitorRoles(): array
     {
-        $role = (string) $this->cms->setting(self::SETTINGS, 'default_role', 'member');
+        $role = (string) $this->cms->setting(self::SETTINGS, 'default_role', 'visitor');
         $definition = $this->cms->roles()->all()[$role] ?? null;
 
         return $definition && ! self::opensAdmin($definition['permissions']) ? [$role] : [];
