@@ -373,12 +373,15 @@ final class DeliveryController
     {
         $budget = self::EXPAND_LIMIT;
         $presented = $this->expand(array_map($this->present(...), $entries), $entries, $shape['expand'], $budget);
+        // Maps leave as objects, empty ones too: an entry's data, a block's props, at every depth.
+        $presented = array_map(fn (array $present, Entry $entry) => $this->jsonable($present, $entry->collection), $presented, $entries);
 
         if ($shape['fields'] === null) {
             return $presented;
         }
 
         return array_map(static function (array $present) use ($shape): array {
+            $present['data'] = (array) $present['data'];
             $out = ['id' => $present['id']];
             $data = [];
 
@@ -463,6 +466,38 @@ final class DeliveryController
         }
 
         return $presented;
+    }
+
+    /**
+     * A presented entry with its data as JSON must carry it (Blueprint::export), and the same for every
+     * entry expanded inside it.
+     */
+    private function jsonable(array $present, string $collection): array
+    {
+        $data = is_array($present['data'] ?? null) ? $present['data'] : [];
+
+        foreach ($data as $key => $value) {
+            $data[$key] = $this->expanded($value);
+        }
+
+        $blueprint = $this->cms->collections()->find($collection)?->blueprint();
+        $present['data'] = $blueprint ? $blueprint->export($data) : ($data === [] ? new \stdClass : $data);
+
+        return $present;
+    }
+
+    /** A field's value with the entries expanded in it made ready: one, or a list of them. */
+    private function expanded(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (isset($value['id'], $value['collection']) && is_string($value['collection']) && array_key_exists('data', $value)) {
+            return $this->jsonable($value, $value['collection']);
+        }
+
+        return array_map($this->expanded(...), $value);
     }
 
     private function present(Entry $entry): array

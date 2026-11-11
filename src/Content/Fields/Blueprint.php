@@ -291,6 +291,23 @@ final class Blueprint
         return $data;
     }
 
+    /**
+     * An entry's data as JSON must carry it (FieldType::export): an object also when it has no fields.
+     * Keys this blueprint doesn't know are left as they are.
+     */
+    public function export(array $data): array|\stdClass
+    {
+        $types = self::types();
+
+        foreach ($this->fields as $field) {
+            if (array_key_exists($field->handle, $data)) {
+                $data[$field->handle] = $types->resolve($field->type)->export($data[$field->handle], $field);
+            }
+        }
+
+        return $data === [] ? new \stdClass : $data;
+    }
+
     public function toText(array $data): string
     {
         $types = self::types();
