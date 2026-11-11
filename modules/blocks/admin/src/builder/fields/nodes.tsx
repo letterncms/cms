@@ -4,6 +4,7 @@ import { useEditor } from '../../core/store'
 import * as tree from '../../core/tree'
 import { RemoveButton } from '../controls'
 import { SubField } from './controls'
+import { Pressable } from '@letterncms/ui'
 
 /** `blocks-node` — core select over the document's elements (animation targets, play and load actions). Options: `exclude` (an id), placeholder. */
 export function NodeField({ field, ...props }: FieldProps<string | null>) {
@@ -27,9 +28,9 @@ export function NodesField({ field, value, onChange, disabled, context }: FieldP
           <RemoveButton onClick={() => onChange(list.filter((_, j) => j !== i))} />
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...list, field.addValue as string])} className="text-xs text-muted hover:text-text">
+      <Pressable compact onClick={() => onChange([...list, field.addValue as string])} className="text-xs text-muted hover:text-text">
         + {(field.add as string) ?? t('Element')}
-      </button>
+      </Pressable>
     </div>
   )
 }

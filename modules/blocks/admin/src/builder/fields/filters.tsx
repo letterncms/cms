@@ -1,5 +1,5 @@
 import { t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Icon, Menu } from '@letterncms/ui'
+import { Icon, Menu, Pressable } from '@letterncms/ui'
 import { RemoveButton } from '../controls'
 import { splitValue } from '../css'
 import { RowLabel, SubField } from './controls'
@@ -56,9 +56,9 @@ export function FiltersField({ field, value, onChange, context, disabled }: Fiel
           <Menu
             align="end"
             trigger={
-              <button type="button" disabled={disabled} className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('Add a Filter')} title={t('Add a Filter')}>
+              <Pressable compact disabled={disabled} className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('Add a Filter')} title={t('Add a Filter')}>
                 <Icon name="plus" size={14} />
-              </button>
+              </Pressable>
             }
             items={missing.map((f) => ({ label: f.label(), icon: f.icon, onSelect: () => set([...parts, { name: f.name, value: f.initial }]) }))}
           />

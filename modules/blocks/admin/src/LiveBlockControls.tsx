@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, IconButton, Menu, Popover, Tooltip, cn } from '@letterncms/ui'
+import { Icon, IconButton, Menu, Popover, Pressable, Tooltip, cn } from '@letterncms/ui'
 import { useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import type { InsertionTarget, Rect } from './core/insertionTargets'
 import type { BlockDrag } from './core/useBlockDrag'
@@ -19,7 +19,7 @@ interface PickerProps {
 export function BoundaryInserter({ target, position, ...picker }: PickerProps & { target: InsertionTarget; position: (rect: Rect) => Rect }) {
   const rect = position(target.rect)
   return <>
-    <div data-cms-insertion-line className={cn('pointer-events-none absolute z-10 rounded-full bg-focus', target.axis === 'x' ? 'cms-block-line-y' : 'cms-block-line-x')} style={{ ...rect, minWidth: 2, minHeight: 2 }} />
+    <div data-cms-insertion-line className={cn('pointer-events-none absolute z-raised rounded-full bg-focus', target.axis === 'x' ? 'cms-block-line-y' : 'cms-block-line-x')} style={{ ...rect, minWidth: 2, minHeight: 2 }} />
     <Picker {...picker} label={t('Insert Block')} className="cms-block-plus absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-xs bg-focus text-white shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + rect.height / 2 }}
       data={{ 'data-cms-inserter': `${target.parentId ?? ''}:${target.index}` }} />
   </>
@@ -35,15 +35,15 @@ export function ContainerAppender({ target, position, ...picker }: PickerProps &
 /** An empty document: start writing, or pick a block. */
 export function DocumentAppender({ target, position, onWrite, ...picker }: PickerProps & { target: InsertionTarget; position: (rect: Rect) => Rect; onWrite?: () => void }) {
   const rect = position(target.hitRect)
-  return <div data-cms-document-appender className="cms-block-chrome pointer-events-auto absolute z-10 flex h-10 whitespace-nowrap -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-md border border-dashed border-border-strong bg-bg/90 py-1 pl-3 pr-1 shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + Math.max(24, Math.min(rect.height / 2, 120)) }}>
-    {onWrite && <button type="button" onClick={onWrite} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Write, or press “/” for blocks')}</button>}
+  return <div data-cms-document-appender className="cms-block-chrome pointer-events-auto absolute z-raised flex h-10 whitespace-nowrap -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-md border border-dashed border-border-strong bg-bg/90 py-1 pl-3 pr-1 shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + Math.max(24, Math.min(rect.height / 2, 120)) }}>
+    {onWrite && <Pressable compact onClick={onWrite} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Write, or press “/” for blocks')}</Pressable>}
     <Picker {...picker} label={t('Insert Block')} className="size-8 rounded-xs text-muted hover:bg-hover hover:text-text" />
   </div>
 }
 
 function Picker({ open, onOpenChange, returnFocus, children, label, className, style, data }: PickerProps & { label: string; className: string; style?: React.CSSProperties; data?: Record<string, string> }) {
   return <Popover open={open} onOpenChange={onOpenChange} side="bottom" align="center" className="!overflow-hidden !p-0" returnFocus={returnFocus}
-    trigger={<button type="button" {...data} aria-label={open ? t('Close') : label} aria-expanded={open} className={cn('cms-focus-ring pointer-events-auto z-20 grid place-items-center', className)} style={style}><Icon name="plus" size={14} className={cn('cms-block-plus-icon', open && 'rotate-45')} /></button>}>
+    trigger={<Pressable compact {...data} aria-label={open ? t('Close') : label} aria-expanded={open} className={cn('cms-focus-ring pointer-events-auto z-drag grid place-items-center', className)} style={style}><Icon name="plus" size={14} className={cn('cms-block-plus-icon', open && 'rotate-45')} /></Pressable>}>
     {open && children}
   </Popover>
 }
@@ -88,8 +88,8 @@ export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp
   // Its left edge first, then its right: above, below, then inside the block's top.
   const places = [above, below, inside].flatMap((y) => [{ left: start, top: y }, { left: end, top: y }])
   const { left, top } = places.find((at) => fits(at.top) && !covers?.({ ...at, width, height: BAR })) ?? { left: start, top: fits(above) ? above : inside }
-  return <div ref={bar} data-cms-block-controls={id} role="toolbar" aria-label={t('Block Actions')} className="cms-block-chrome pointer-events-auto absolute z-30 flex h-8 items-center gap-0.5 rounded-sm border border-border bg-bg pl-0.5 pr-1 shadow-pop" style={{ left, top }}>
-    <button type="button" aria-label={t('Drag to Reorder')} title={t('Drag to Reorder')} className="cms-focus-ring grid h-6 w-4 touch-none cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-muted active:cursor-grabbing" onPointerDown={onDrag}><Icon name="drag" size={12} /></button>
+  return <div ref={bar} data-cms-block-controls={id} role="toolbar" aria-label={t('Block Actions')} className="cms-block-chrome pointer-events-auto absolute z-bar flex h-8 items-center gap-0.5 rounded-sm border border-border bg-bg pl-0.5 pr-1 shadow-pop" style={{ left, top }}>
+    <Pressable compact aria-label={t('Drag to Reorder')} title={t('Drag to Reorder')} className="cms-focus-ring grid h-6 w-4 touch-none cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-muted active:cursor-grabbing" onPointerDown={onDrag}><Icon name="drag" size={12} /></Pressable>
     {parent && <Tooltip content={t('Select {block}', { block: parent.label })}><IconButton size="xs" icon="arrow-elbow-left-up" label={t('Select {block}', { block: parent.label })} onClick={onSelectParent} /></Tooltip>}
     <span className="mx-0.5 h-4 border-l border-border" />
     <span className="flex h-6 max-w-40 items-center gap-1.5 px-1 text-xs font-medium text-text"><Icon name={icon} size={14} className="shrink-0 text-muted" /><span className="truncate">{label}</span></span>
@@ -109,8 +109,8 @@ export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp
 
 export function LiveDragPreview({ drag, position }: { drag: BlockDrag; position: (rect: Rect) => Rect }) {
   return <>
-    <div data-cms-drag-overlay className="pointer-events-auto absolute inset-0 z-30 cursor-grabbing touch-none" />
-    {drag.target && <div data-cms-drop-indicator className="pointer-events-none absolute z-40 rounded-full bg-focus" style={{ ...position(drag.target.rect), minWidth: 2, minHeight: 2 }} />}
-    <div data-cms-drag-ghost className="pointer-events-none fixed z-[80] flex max-w-56 items-center gap-2 truncate rounded-sm border border-border-strong bg-bg px-3 py-2 text-xs text-ink shadow-pop" style={{ left: Math.max(8, Math.min(window.innerWidth - 232, drag.point.x + 16)), top: Math.max(8, Math.min(window.innerHeight - 40, drag.point.y + 16)) }}><Icon name="drag" size={14} /><span className="truncate">{drag.label}</span></div>
+    <div data-cms-drag-overlay className="pointer-events-auto absolute inset-0 z-bar cursor-grabbing touch-none" />
+    {drag.target && <div data-cms-drop-indicator className="pointer-events-none absolute z-drawer rounded-full bg-focus" style={{ ...position(drag.target.rect), minWidth: 2, minHeight: 2 }} />}
+    <div data-cms-drag-ghost className="pointer-events-none fixed z-tooltip flex max-w-56 items-center gap-2 truncate rounded-sm border border-border-strong bg-bg px-3 py-2 text-xs text-ink shadow-pop" style={{ left: Math.max(8, Math.min(window.innerWidth - 232, drag.point.x + 16)), top: Math.max(8, Math.min(window.innerHeight - 40, drag.point.y + 16)) }}><Icon name="drag" size={14} /><span className="truncate">{drag.label}</span></div>
   </>
 }

@@ -53,7 +53,7 @@ export default function WidgetDesign() {
       })}
       <div className="mt-2 flex items-center gap-4 border-t border-border pt-2.5">
         {links.map((l) => (
-          <Link key={l.handle} to={`/content/${l.handle}`} className="flex items-center gap-1.5 text-xs text-muted no-underline transition-colors duration-120 hover:text-text">
+          <Link key={l.handle} to={`/content/${l.handle}`} className="flex items-center gap-1.5 text-xs text-muted no-underline transition-colors duration-base hover:text-text">
             <Icon name={collection(l.handle)?.icon ?? 'symbol'} size={13} className="text-faint" />
             {l.label(l.total ?? 0)}
           </Link>

@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Popover, cn } from '@letterncms/ui'
+import { Popover, cn, Pressable } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTokens } from '../../core/context'
 import { SubField } from './controls'
@@ -50,7 +50,7 @@ export function SpacingField({ field, value, onChange, context }: FieldProps<Rec
         {side('margin', 0)}
         <span />
         {side('margin', 3)}
-        <div className="relative grid grid-cols-[44px_1fr_44px] grid-rows-[24px_20px_24px] rounded-sm bg-bg shadow-[0_0_0_1px_var(--cms-border)]">
+        <div className="relative grid grid-cols-[44px_1fr_44px] grid-rows-[24px_20px_24px] rounded-sm bg-bg ring-1 ring-border">
           <span className="pointer-events-none absolute left-2 top-1 text-2xs text-faint">{t('Padding')}</span>
           <span />
           {side('padding', 0)}
@@ -123,9 +123,7 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
       align="center"
       className="w-60 !p-2"
       trigger={
-        <button
-          type="button"
-          onPointerDown={down}
+        <Pressable compact onPointerDown={down}
           onClick={(e) => setSides(reach(index, e))}
           aria-label={title(box, [index])}
           title={`${title(box, [index])}${chosen ? ` · ${chosen.token.path}` : ''}\n${t('Drag to change. Alt: opposite side too, Shift: all sides.')}`}
@@ -136,8 +134,8 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
             (open || dragging) ? 'bg-active' : 'hover:bg-hover',
           )}
         >
-          <span className={cn('truncate', chosen && 'rounded-[3px] px-1 leading-4', chosen && 'bg-active')}>{shown}</span>
-        </button>
+          <span className={cn('truncate', chosen && 'rounded-xs px-1 leading-4', chosen && 'bg-active')}>{shown}</span>
+        </Pressable>
       }
     >
       <SideEditor box={box} sides={sides} value={value} onChange={(v) => onChange(sides, v)} close={() => setOpen(false)} context={context} />
@@ -171,9 +169,9 @@ function SideEditor({ box, sides, value, onChange, close, context }: { box: Box;
       <p className="m-0 mb-1.5 flex items-center justify-between text-xs font-semibold text-ink">
         {title(box, sides)}
         {value !== undefined && (
-          <button type="button" onClick={() => pick(null)} className="rounded-xs px-1 text-2xs font-normal text-muted hover:bg-hover hover:text-text">
+          <Pressable compact onClick={() => pick(null)} className="rounded-xs px-1 text-2xs font-normal text-muted hover:bg-hover hover:text-text">
             {t('Reset')}
-          </button>
+          </Pressable>
         )}
       </p>
       <SubField
@@ -187,31 +185,29 @@ function SideEditor({ box, sides, value, onChange, close, context }: { box: Box;
           <p className="cms-label m-0 mb-1 mt-2.5 !text-2xs">{t('Space Tokens')}</p>
           <div className="flex flex-wrap gap-1">
             {tokens.map((token) => (
-              <button
-                key={token.path}
-                type="button"
+              <Pressable compact key={token.path}
                 title={`${token.path} · ${typeof token.value === 'object' && token.value ? Object.values(token.value).join('–') : String(token.value)}`}
                 onClick={() => pick(`token:${token.path}`)}
                 className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === `token:${token.path}` ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}
               >
                 {token.name}
-              </button>
+              </Pressable>
             ))}
           </div>
         </>
       ) : (
         <div className="mt-2 flex flex-wrap gap-1">
           {PRESETS.map((p) => (
-            <button key={p} type="button" onClick={() => pick(p)} className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === p ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
+            <Pressable compact key={p} onClick={() => pick(p)} className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === p ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
               {p.replace('px', '')}
-            </button>
+            </Pressable>
           ))}
         </div>
       )}
       {box === 'margin' && (
-        <button type="button" onClick={() => pick('auto')} className={cn('mt-1 h-6 rounded-xs px-1.5 text-2xs', value === 'auto' ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
+        <Pressable compact onClick={() => pick('auto')} className={cn('mt-1 h-6 rounded-xs px-1.5 text-2xs', value === 'auto' ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
           {t('Auto')}
-        </button>
+        </Pressable>
       )}
     </div>
   )

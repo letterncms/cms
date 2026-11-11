@@ -117,6 +117,11 @@
 }
 
 @layer components {
+  /* Under a colour that may be see-through: a checkerboard in the admin's own greys, so it shows in dark too. `--checker` is a square's size. */
+  .cms-checkerboard { background: repeating-conic-gradient(var(--cms-sunken) 0 25%, var(--cms-bg) 0 50%) 0 0 / var(--checker, 8px) var(--checker, 8px); }
+  /* A hairline on the inside of a swatch's edge, rounded as the swatch is. */
+  .cms-swatch-edge { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--cms-border-strong); pointer-events: none; }
+
   .cms-slideover {
     position: fixed;
     z-index: var(--cms-z-overlay);

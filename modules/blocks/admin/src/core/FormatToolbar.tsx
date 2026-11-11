@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Fields, Icon, Tooltip, cn } from '@letterncms/ui'
+import { Fields, Icon, Pressable, Tooltip, cn } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnchors } from './anchors'
@@ -91,9 +91,9 @@ export function FormatToolbar({ root = document, offset }: { root?: Document; of
 
   const btn = (icon: string, label: string, shortcut: string, onClick: () => void) => (
     <Tooltip key={icon} content={label} shortcut={shortcut}>
-      <button type="button" aria-label={label} aria-pressed={!!marks[icon] || (icon === 'link' && linking)} onMouseDown={(e) => e.preventDefault()} onClick={onClick} className={cn('grid size-7 place-items-center rounded-xs hover:bg-white/12 hover:text-ink-contrast', marks[icon] || (icon === 'link' && linking) ? 'bg-white/14 text-ink-contrast' : 'text-ink-contrast/75')}>
+      <Pressable compact aria-label={label} aria-pressed={!!marks[icon] || (icon === 'link' && linking)} onMouseDown={(e) => e.preventDefault()} onClick={onClick} className={cn('grid size-7 place-items-center rounded-xs hover:bg-white/12 hover:text-ink-contrast', marks[icon] || (icon === 'link' && linking) ? 'bg-white/14 text-ink-contrast' : 'text-ink-contrast/75')}>
         <Icon name={icon} size={14} />
-      </button>
+      </Pressable>
     </Tooltip>
   )
 
@@ -111,7 +111,7 @@ export function FormatToolbar({ root = document, offset }: { root?: Document; of
 
   return createPortal(
     <div
-      className="fixed z-[70] flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md bg-ink p-1 shadow-pop"
+      className="fixed z-overlay flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-md bg-ink p-1 shadow-pop"
       style={{ left: pos.x, top: pos.y - 8 }}
       onMouseDown={(e) => !linking && e.preventDefault()}
       onKeyDown={(e) => e.key === 'Escape' && cancelLink()}

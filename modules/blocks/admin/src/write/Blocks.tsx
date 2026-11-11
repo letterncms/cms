@@ -1,5 +1,5 @@
 import { navigate, t, useAbility, type FieldDef } from '@letterncms/sdk'
-import { Button, Fields, Icon, IconButton, Popover, cn } from '@letterncms/ui'
+import { Button, Fields, Icon, IconButton, Popover, cn, Pressable } from '@letterncms/ui'
 import { useState } from 'react'
 import { useEditorContext } from '../core/context'
 import { InlineEditable } from '../core/InlineEditable'
@@ -101,14 +101,12 @@ function Action({ node }: { node: BlockNode }) {
           align="start"
           className="w-80 !p-3"
           trigger={
-            <button
-              type="button"
-              aria-label={t('Edit Link')}
+            <Pressable aria-label={t('Edit Link')}
               title={url || t('Add a Link')}
               className={cn('absolute -right-2.5 -top-2.5 grid size-6 place-items-center rounded-full border border-border bg-bg text-muted shadow-pop transition-opacity hover:text-text', open ? 'opacity-100' : 'opacity-0 group-hover/action:opacity-100 focus-visible:opacity-100')}
             >
               <Icon name="link" size={12} />
-            </button>
+            </Pressable>
           }
         >
           <div className="space-y-3" onKeyDown={(e) => e.key === 'Enter' && !e.defaultPrevented && (e.target as HTMLElement).tagName === 'INPUT' && setOpen(false)}>
@@ -183,13 +181,13 @@ export function MediaCard({ node, type }: { node: BlockNode; type?: BlockTypeDef
   const host = url ? url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0] : ''
   return (
     <figure className="cms-block-figure m-0 py-1">
-      <button type="button" onClick={() => settings(node.id)} className="flex h-14 w-full items-center gap-3 rounded-md bg-surface px-4 text-left hover:bg-hover">
+      <Pressable onClick={() => settings(node.id)} className="flex h-14 w-full items-center gap-3 rounded-md bg-surface px-4 text-left hover:bg-hover">
         <Icon name={type?.icon ?? 'embed'} size={18} className="text-muted" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm text-text">{node.props.title || host || (node.type === 'video' ? t('Add a video link') : t('Add a link to embed'))}</span>
           {host && node.props.title && <span className="block truncate text-xs text-faint">{host}</span>}
         </span>
-      </button>
+      </Pressable>
       {type?.inline?.includes('caption') && <Caption node={node} />}
     </figure>
   )
@@ -203,9 +201,9 @@ export function CodeBlock({ node }: { node: BlockNode }) {
   return (
     <div className="group/code relative py-1" onFocus={() => store.select(node.id)}>
       <Fields bare disabled={readOnly} fields={[{ handle: 'code', type: 'code', label: t('Code'), placeholder: t('Code'), rows: 3 }]} values={{ code: node.props.code ?? '' }} onChange={(_, code) => store.updateProps(node.id, { code: code ?? '' }, `code:${node.id}`)} />
-      <button type="button" onClick={() => settings(node.id)} className="absolute right-2 top-2.5 rounded-xs px-1.5 font-mono text-2xs text-faint hover:bg-hover hover:text-text">
+      <Pressable onClick={() => settings(node.id)} className="absolute right-2 top-2.5 rounded-xs px-1.5 font-mono text-2xs text-faint hover:bg-hover hover:text-text">
         {node.props.language && node.props.language !== 'plain' ? node.props.language : t('Plain Text')}
-      </button>
+      </Pressable>
     </div>
   )
 }
@@ -262,7 +260,7 @@ export function AccordionBlock({ node }: { node: BlockNode }) {
           <div key={i} className="py-3">
             <div className="flex items-start gap-2">
               <Icon name="chevron-down" size={14} className="mt-1 shrink-0 text-faint" />
-              <InlineEditable html={escapeHtml(item.question ?? '')} singleLine disabled={readOnly} placeholder={t('Question')} className="min-w-0 flex-1 text-[15px] font-medium leading-6" onChange={(html) => set(i, { question: toText(html) })} onFocus={() => store.select(node.id)} />
+              <InlineEditable html={escapeHtml(item.question ?? '')} singleLine disabled={readOnly} placeholder={t('Question')} className="min-w-0 flex-1 text-base font-medium leading-6" onChange={(html) => set(i, { question: toText(html) })} onFocus={() => store.select(node.id)} />
               {!readOnly && items.length > 1 && (
                 <IconButton icon="close" label={t('Remove Question')} size="xs" className="opacity-0 group-hover/faq:opacity-100" onClick={() => store.updateProps(node.id, { items: items.filter((_, j) => j !== i) })} />
               )}
@@ -307,9 +305,9 @@ export function ComponentBlock({ node }: { node: BlockNode }) {
       <span className="truncate font-medium text-muted">{component?.title ?? (list.isLoading ? '…' : t('Missing component'))}</span>
       <span className="flex-1" />
       {component?.id && (
-        <button type="button" onClick={() => navigate(`/content/components/${component.id}`)} className="rounded-xs px-1.5 text-faint opacity-0 transition-opacity hover:bg-hover hover:text-text group-hover/component:opacity-100">
+        <Pressable onClick={() => navigate(`/content/components/${component.id}`)} className="rounded-xs px-1.5 text-faint opacity-0 transition-opacity hover:bg-hover hover:text-text group-hover/component:opacity-100">
           {t('Edit Component')}
-        </button>
+        </Pressable>
       )}
     </div>
   )
@@ -321,9 +319,9 @@ export function ComponentBlock({ node }: { node: BlockNode }) {
         <Icon name="symbol" size={14} />
         <span className="truncate text-muted">{component?.title ?? (list.isLoading ? '…' : t('Missing component'))}</span>
         {component?.id && (
-          <button type="button" onClick={() => navigate(`/content/components/${component.id}`)} className="shrink-0 rounded-xs px-1 text-xs text-faint hover:bg-hover hover:text-text">
+          <Pressable onClick={() => navigate(`/content/components/${component.id}`)} className="shrink-0 rounded-xs px-1 text-xs text-faint hover:bg-hover hover:text-text">
             {t('Edit Component')}
-          </button>
+          </Pressable>
         )}
       </div>
     )
@@ -369,13 +367,13 @@ export function BlockCard({ node, type }: { node: BlockNode; type?: BlockTypeDef
   const { settings } = useWrite()
   const text = tree.summary(node, 80)
   return (
-    <button type="button" onClick={() => settings(node.id)} className="my-1 flex w-full items-center gap-3 rounded-md bg-surface px-3 py-2.5 text-left hover:bg-hover">
+    <Pressable onClick={() => settings(node.id)} className="my-1 flex w-full items-center gap-3 rounded-md bg-surface px-3 py-2.5 text-left hover:bg-hover">
       <Icon name={type?.icon ?? 'square'} size={16} className="shrink-0 text-muted" />
       <span className="min-w-0 flex-1">
         <span className="block text-sm text-text">{type?.title ?? node.type}</span>
         {(text || !type) && <span className="block truncate text-xs text-faint">{type ? text : t('Its plugin is off — the content is kept')}</span>}
       </span>
-    </button>
+    </Pressable>
   )
 }
 

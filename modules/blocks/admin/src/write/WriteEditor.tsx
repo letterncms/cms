@@ -1,6 +1,6 @@
 import { DndContext, DragOverlay, PointerSensor, closestCenter, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
 import { t, useAbility } from '@letterncms/sdk'
-import { Icon, IconButton, InspectorPanel, Menu, Popover, cn, type MenuItemDef } from '@letterncms/ui'
+import { Icon, IconButton, InspectorPanel, Menu, Popover, cn, Pressable, type MenuItemDef } from '@letterncms/ui'
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { caretRect } from '../core/caret'
@@ -136,7 +136,7 @@ export function WriteEditor({ onInspect }: { onInspect?: (id: string) => void } 
           </DropContext.Provider>
           {createPortal(<DragOverlay dropAnimation={null}>{dragging && <DragGhost row={dragging} />}</DragOverlay>, document.body)}
         </DndContext>
-        {!readOnly && <button type="button" tabIndex={-1} aria-label={t('Continue Writing')} onClick={continueWriting} className="block h-28 w-full cursor-text" />}
+        {!readOnly && <Pressable compact tabIndex={-1} aria-label={t('Continue Writing')} onClick={continueWriting} className="block h-28 w-full cursor-text" />}
         <FormatToolbar />
         <SlashMenu />
         {settings && !onInspect && <InspectorPanel open onOpenChange={(open) => !open && setSettings(null)} title={t('Block')}>{tree.find(nodes, settings) && <Inspector node={tree.find(nodes, settings)!} onClose={() => setSettings(null)} />}</InspectorPanel>}
@@ -160,7 +160,7 @@ function SectionView({ section, spaced }: { section: Section; spaced: boolean })
   return (
     <section className={cn('group/section relative', spaced && 'mt-10')}>
       {section.label && (
-        <div className="pointer-events-none absolute right-[calc(100%+76px)] top-[5px] max-w-40 truncate whitespace-nowrap text-2xs text-faint opacity-0 transition-opacity duration-150 group-focus-within/section:opacity-100 group-hover/section:opacity-100 max-xl:hidden">
+        <div className="pointer-events-none absolute right-[calc(100%+76px)] top-[5px] max-w-40 truncate whitespace-nowrap text-2xs text-faint opacity-0 transition-opacity duration-base group-focus-within/section:opacity-100 group-hover/section:opacity-100 max-xl:hidden">
           {section.label}
         </div>
       )}
@@ -217,9 +217,9 @@ function RowView({ row, first, nested }: { row: Row; first: boolean; nested?: bo
         }
       }}
     >
-      {drop?.id === id && <div className={cn('pointer-events-none absolute inset-x-0 z-10 h-0.5 rounded-full bg-focus', drop.side === 'before' ? '-top-px' : '-bottom-px')} />}
+      {drop?.id === id && <div className={cn('pointer-events-none absolute inset-x-0 z-raised h-0.5 rounded-full bg-focus', drop.side === 'before' ? '-top-px' : '-bottom-px')} />}
       {!readOnly && <Gutter row={row} handle={draggable} nested={nested} />}
-      <div className={cn('rounded-sm transition-[background-color,box-shadow] duration-100', picked && 'bg-focus/10 shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_10%,transparent)]')}>
+      <div className={cn('rounded-sm transition-[background-color,box-shadow] duration-fast', picked && 'bg-focus/10 ring-3 ring-focus/10')}>
         <RowContent row={row} />
       </div>
     </div>
@@ -235,7 +235,7 @@ function RowContent({ row }: { row: Row }) {
   if (row.kind === 'container') {
     const type = types.get(row.node.type)
     return <div className="rounded-md border border-border/70 px-4 pb-3 pt-2">
-      <button type="button" onClick={() => settings(row.node.id)} className="mb-2 flex max-w-full items-center gap-1.5 text-xs text-faint hover:text-text"><Icon name={type?.icon ?? 'square'} size={12} /><span className="truncate">{row.node.label || type?.title || row.node.type}</span></button>
+      <Pressable compact onClick={() => settings(row.node.id)} className="mb-2 flex max-w-full items-center gap-1.5 text-xs text-faint hover:text-text"><Icon name={type?.icon ?? 'square'} size={12} /><span className="truncate">{row.node.label || type?.title || row.node.type}</span></Pressable>
       {row.rows.length ? row.rows.map((child, i) => <RowView key={rowId(child)} row={child} first={i === 0} nested />) : <EmptyColumn column={row.node} />}
     </div>
   }
@@ -282,9 +282,7 @@ function EmptyColumn({ column }: { column: BlockNode }) {
   const { readOnly } = useWrite()
   if (readOnly || !accepts(column, 'paragraph', types, [])) return null
   return (
-    <button
-      type="button"
-      onClick={() => {
+    <Pressable compact onClick={() => {
         const p = paragraph()
         store.insert(column.id, 0, [p])
         store.focus(p.id, 'start')
@@ -292,7 +290,7 @@ function EmptyColumn({ column }: { column: BlockNode }) {
       className={cn(PROSE, 'block w-full cursor-text py-[3px] text-left text-faint opacity-0 hover:opacity-100')}
     >
       {t('Write here')}
-    </button>
+    </Pressable>
   )
 }
 
@@ -318,7 +316,7 @@ function Gutter({ row, handle, nested }: { row: Row; handle: ReturnType<typeof u
   return (
     <div
       className={cn(
-        'absolute top-[3px] z-10 flex h-[var(--line)] items-center gap-0.5 opacity-0 transition-opacity duration-100 focus-within:opacity-100',
+        'absolute top-[3px] z-raised flex h-[var(--line)] items-center gap-0.5 opacity-0 transition-opacity duration-fast focus-within:opacity-100',
         // In a column only the handle, in the gap beside it; the columns' own gutter steps back meanwhile.
         nested ? '-left-[22px] group-hover/nested:opacity-100' : '-left-[54px] group-hover/row:opacity-100 group-has-[[data-nested]:hover]/row:!opacity-0',
         (inserting || picked) && '!opacity-100',
@@ -341,16 +339,14 @@ function Gutter({ row, handle, nested }: { row: Row; handle: ReturnType<typeof u
       <Menu
         align="start"
         trigger={
-          <button
-            type="button"
-            ref={handle.setActivatorNodeRef}
+          <Pressable compact ref={handle.setActivatorNodeRef}
             {...handle.attributes}
             {...handle.listeners}
             aria-label={t('Drag to move, click for options')}
             className="grid h-6 w-[18px] cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing"
           >
             <Icon name="drag" size={14} />
-          </button>
+          </Pressable>
         }
         items={rowMenu(store, row, types, allowed, api)}
       />
@@ -457,7 +453,7 @@ function SlashMenu() {
 
   const { maxHeight, ...place } = slashPlacement(rect)
   return createPortal(
-    <div data-cms-slash className="cms-pop fixed z-[60] overflow-hidden !p-0" style={place}>
+    <div data-cms-slash className="cms-pop fixed z-overlay overflow-hidden !p-0" style={place}>
       <Inserter
         types={[...types.values()]}
         query={slash.query}

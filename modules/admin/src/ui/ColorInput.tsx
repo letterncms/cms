@@ -4,6 +4,8 @@ import { Input, type InputProps } from './Input'
 
 /** What the system's picker starts on when the value is no hex colour (a token, a named colour, nothing): it needs one. */
 const PICKER_START = '#000000'
+/** A new colour, before anyone chose one (a design token just added), and the shape a typed hex colour takes: black. */
+export const NEW_COLOR = PICKER_START
 /** What a colour looks like when typed, as the field's hint. */
 const EXAMPLE = '#ff5a1f'
 

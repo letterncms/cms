@@ -154,10 +154,10 @@ export function display(v: unknown): string {
 /** A color chip on a checkerboard (so transparency shows). `dark` shows the dark-mode value in its corner. */
 export function Swatch({ color, dark, className }: { color: string; dark?: string | null; className?: string }) {
   return (
-    <span className={cn('relative inline-block size-4 shrink-0 overflow-hidden rounded-[4px] align-middle [background:repeating-conic-gradient(#ddd_0_25%,#fff_0_50%)_0_0/6px_6px]', className)}>
+    <span className={cn('relative inline-block size-4 shrink-0 overflow-hidden rounded-xs align-middle cms-checkerboard [--checker:6px]', className)}>
       <span className="absolute inset-0" style={{ background: color }} />
       {dark && <span className="absolute inset-0 [clip-path:polygon(100%_50%,100%_100%,50%_100%)]" style={{ background: dark }} />}
-      <span className="absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-border-strong" />
+      <span className="cms-swatch-edge" />
     </span>
   )
 }
