@@ -131,8 +131,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   return (
     <Base.Root open={open} onOpenChange={(o) => onOpenChange(o)}>
       <Base.Portal>
-        <Base.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-        <Base.Popup className="fixed left-1/2 top-[14vh] z-50 w-[calc(100vw-32px)] max-w-[620px] -translate-x-1/2 overflow-hidden rounded-xl border border-border-modal bg-bg shadow-dialog outline-none transition-[opacity,transform] duration-150 ease-out data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
+        <Base.Backdrop className="fixed inset-0 z-overlay bg-overlay transition-opacity duration-move data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Base.Popup className="fixed left-1/2 top-[14vh] z-overlay w-[calc(100vw-32px)] max-w-[620px] -translate-x-1/2 overflow-hidden rounded-xl border border-border-modal bg-bg shadow-dialog outline-none transition-[opacity,transform] duration-move ease-out data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
           <Base.Title className="sr-only">{t('Command Palette')}</Base.Title>
           <Command label={t('Command Palette')} loop shouldFilter={false} value={selected} onValueChange={(value) => {
             setSelection({ query, value: value ?? '' })

@@ -196,7 +196,7 @@ function Greeting() {
   return (
     <div className="mb-10">
       <p className="m-0 text-sm text-muted">{new Date().toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-      <h1 className="m-0 mt-1 text-[28px] font-semibold leading-9 tracking-[-0.025em] text-ink">{greeting(firstName)}</h1>
+      <h1 className="m-0 mt-1 text-3xl font-semibold text-ink">{greeting(firstName)}</h1>
     </div>
   )
 }

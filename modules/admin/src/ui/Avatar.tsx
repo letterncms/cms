@@ -1,7 +1,7 @@
 import { cn } from './cn'
 
 /** Initials sit on a film of ink over the page, solid so stacked avatars don't show through: a step stronger in dark mode, where the page is close to the desk. */
-const tone = 'bg-[color-mix(in_srgb,var(--cms-bg),var(--cms-ink)_8%)] dark:bg-[color-mix(in_srgb,var(--cms-bg),var(--cms-ink)_13%)]'
+const tone = 'bg-fill'
 
 /** A person: their picture, or their initials. Circles at 20, 24 or 32. */
 export function Avatar({ name, initials, src, size = 24, className }: { name: string; initials?: string; src?: string | null; size?: number; className?: string }) {

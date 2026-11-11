@@ -29,6 +29,10 @@
   --text-3xl: 30px;
   --text-3xl--line-height: 36px;
   --text-3xl--letter-spacing: -0.024em;
+  /* The title of the thing being written, and nothing else. */
+  --text-display: 34px;
+  --text-display--line-height: 42px;
+  --text-display--letter-spacing: -0.025em;
 
   --radius-xs: 5px;
   --radius-sm: 7px;
@@ -57,28 +61,60 @@
   --color-signal-soft: var(--cms-signal-soft);
   --color-focus: var(--cms-focus);
   --color-focus-soft: var(--cms-focus-soft);
+  --color-focus-hover: var(--cms-focus-hover);
   --color-success: var(--cms-success);
   --color-success-soft: var(--cms-success-soft);
   --color-warning: var(--cms-warning);
   --color-warning-soft: var(--cms-warning-soft);
   --color-danger: var(--cms-danger);
   --color-danger-soft: var(--cms-danger-soft);
+  --color-ink-danger: var(--cms-ink-danger);
+  --color-ink-hover: var(--cms-ink-hover);
+  --color-ink-active: var(--cms-ink-active);
+  --color-danger-hover: var(--cms-danger-hover);
+  --color-danger-active: var(--cms-danger-active);
+  --color-signal-hover: var(--cms-signal-hover);
+  --color-signal-active: var(--cms-signal-active);
+  --color-float-hover: var(--cms-float-hover);
+  --color-float-active: var(--cms-float-active);
+  --color-fill: var(--cms-fill);
+  --color-border-hover: var(--cms-border-hover);
+  --color-info: var(--cms-info);
   --color-overlay: var(--cms-overlay);
 
   --shadow-raise: var(--cms-shadow-raise);
   --shadow-sheet: var(--cms-shadow-sheet);
   --shadow-pop: var(--cms-shadow-pop);
   --shadow-dialog: var(--cms-shadow-dialog);
+  --shadow-edge: var(--cms-shadow-edge);
+  --shadow-focus: var(--cms-shadow-focus);
+  --shadow-cursor: var(--cms-shadow-cursor);
 
   /* Things that answer the pointer move out fast and settle; nothing moves by itself. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.32, 1.25, 0.5, 1);
+
+  /* duration-fast, -base, -move, -slow. A transition without a duration is base. */
+  --transition-duration-fast: var(--cms-duration-fast);
+  --transition-duration-base: var(--cms-duration-base);
+  --transition-duration-move: var(--cms-duration-move);
+  --transition-duration-slow: var(--cms-duration-slow);
+  --default-transition-duration: var(--cms-duration-base);
 }
+
+/* Layers by name: z-raised and z-drag inside a component, z-sticky, z-bar, z-drawer, z-overlay and z-tooltip in the window. */
+@utility z-raised { z-index: var(--cms-z-raised); }
+@utility z-drag { z-index: var(--cms-z-drag); }
+@utility z-sticky { z-index: var(--cms-z-sticky); }
+@utility z-bar { z-index: var(--cms-z-bar); }
+@utility z-drawer { z-index: var(--cms-z-drawer); }
+@utility z-overlay { z-index: var(--cms-z-overlay); }
+@utility z-tooltip { z-index: var(--cms-z-tooltip); }
 
 /* The label over a group of things (menu groups, panel sections): the same as the sidebar's, in sentence case like every other heading. */
 @utility cms-label {
-  font-size: 12.5px;
-  line-height: 16px;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
   font-weight: 500;
   color: var(--cms-muted);
 }

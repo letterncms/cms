@@ -31,7 +31,7 @@ export function Banner({ tone = 'warning', children, action, onDismiss }: Banner
       <Icon name="warning" size={16} className={cn('shrink-0', tones[tone])} />
       <span className="min-w-0 flex-1 line-clamp-2 leading-snug">{children}</span>
       {action && (
-        <Link to={action.to} className="shrink-0 rounded-xs px-1 font-medium text-ink underline decoration-muted decoration-1 underline-offset-[3px] transition-colors duration-120 hover:decoration-ink">
+        <Link to={action.to} className="shrink-0 rounded-xs px-1 font-medium text-ink underline decoration-muted decoration-1 underline-offset-[3px] transition-colors duration-base hover:decoration-ink">
           {action.label}
         </Link>
       )}

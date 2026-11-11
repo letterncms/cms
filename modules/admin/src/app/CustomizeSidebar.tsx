@@ -79,7 +79,7 @@ function Item({ item, pinned }: { item: NavItem; pinned: boolean }) {
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform && { ...transform, x: 0 }), transition }}
-      className={cn('flex h-9 items-center gap-2 rounded-md px-1 hover:bg-hover', isDragging && 'relative z-10 bg-bg shadow-pop')}
+      className={cn('flex h-9 items-center gap-2 rounded-md px-1 hover:bg-hover', isDragging && 'relative z-drag bg-bg shadow-pop')}
     >
       <button
         ref={setActivatorNodeRef}

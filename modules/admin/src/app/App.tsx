@@ -261,7 +261,7 @@ export function App() {
         <a href="#cms-content" className="cms-skip" onClick={(e) => { e.preventDefault(); content.current?.focus({ preventScroll: true }) }}>{t('Skip to Content')}</a>
         {/* One place, above whatever is there: the sidebar coming and going never moves these. First for the keyboard too, as they are on view. */}
         {!(dock.open && narrow) && (
-          <div ref={setLeading} data-drawer={narrow && expanded ? '' : undefined} className={cn('cms-leading absolute flex max-w-[232px] items-center gap-1', narrow && expanded ? 'z-[51]' : 'z-30')}>
+          <div ref={setLeading} data-drawer={narrow && expanded ? '' : undefined} className={cn('cms-leading absolute flex max-w-[232px] items-center gap-1', narrow && expanded ? 'z-tooltip' : 'z-bar')}>
             <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
               <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
             </Tooltip>
@@ -271,8 +271,8 @@ export function App() {
         {narrow ? (
           expanded && (
             <>
-              <div className="fixed inset-0 z-40 bg-overlay" onClick={() => setExpanded(false)} aria-hidden="true" />
-              <div className="cms-sidebar-drawer fixed inset-y-0 left-0 z-50 flex">
+              <div className="fixed inset-0 z-drawer bg-overlay" onClick={() => setExpanded(false)} aria-hidden="true" />
+              <div className="cms-sidebar-drawer fixed inset-y-0 left-0 z-overlay flex">
                 {sidebar(() => setExpanded(false))}
               </div>
             </>

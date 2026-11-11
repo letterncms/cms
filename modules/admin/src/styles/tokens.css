@@ -8,10 +8,31 @@
  * Blue is for focus and selection, nothing else. Edges are hairlines; shadows only lift what floats.
  */
 
-/* Roles matter: signal = brand, publish and highlight only; focus = selection and focus only. */
+/* Sizes, motion and layers: the same in light and dark, so they are set once, here. */
 :root {
   --cms-inspector-width: 320px;
 
+  /* Motion. fast: something leaving. base: a state answering the pointer.
+     move: something that travels (a panel, a dialog, a toast). slow: a value changing (a meter filling). */
+  --cms-duration-fast: 80ms;
+  --cms-duration-base: 120ms;
+  --cms-duration-move: 180ms;
+  --cms-duration-slow: 300ms;
+
+  /* What lies over what. raised and drag order the pieces of one component;
+     the rest order the window: sticky (the top bar, the dock), bar (bars over the sheet: save, selection, progress),
+     drawer (a panel over the workspace on a small window), overlay (dialogs, menus, popovers), tooltip (above everything). */
+  --cms-z-raised: 1;
+  --cms-z-drag: 2;
+  --cms-z-sticky: 20;
+  --cms-z-bar: 30;
+  --cms-z-drawer: 40;
+  --cms-z-overlay: 50;
+  --cms-z-tooltip: 60;
+}
+
+/* Roles matter: signal = brand, publish and highlight only; focus = selection and focus only. */
+:root {
   /* Layers, deepest first: desk (sidebar, panels), page (the sheet), float (menus, popovers, dialogs). */
   --cms-surface: #f4f3ef;
   --cms-sunken: #f8f7f4;
@@ -44,12 +65,32 @@
   --cms-signal-soft: #fff6b8;
   --cms-focus: #2563eb;
   --cms-focus-soft: rgb(37 99 235 / 0.1);
+  /* A selected row that is pointed at: a step deeper than the wash. */
+  --cms-focus-hover: rgb(37 99 235 / 0.14);
   --cms-success: #18794e;
   --cms-success-soft: rgb(24 121 78 / 0.1);
   --cms-warning: #a8590b;
   --cms-warning-soft: rgb(212 124 18 / 0.12);
   --cms-danger: #cd2b1f;
   --cms-danger-soft: rgb(205 43 31 / 0.09);
+  /* Danger on an ink fill (the save bar): the other theme's red, as the fill is the other theme's ground. */
+  --cms-ink-danger: #f2685d;
+
+  /* The solid fills pointed at and pressed: mixes, not films, so a button reads the same on the sheet, the desk and a float. */
+  --cms-ink-hover: color-mix(in srgb, var(--cms-ink) 88%, var(--cms-bg));
+  --cms-ink-active: color-mix(in srgb, var(--cms-ink) 80%, var(--cms-bg));
+  --cms-danger-hover: color-mix(in srgb, var(--cms-danger) 90%, var(--cms-signal-ink));
+  --cms-danger-active: color-mix(in srgb, var(--cms-danger) 82%, var(--cms-signal-ink));
+  --cms-signal-hover: color-mix(in srgb, var(--cms-signal) 92%, var(--cms-signal-ink));
+  --cms-signal-active: color-mix(in srgb, var(--cms-signal) 86%, var(--cms-signal-ink));
+  --cms-float-hover: var(--cms-sunken);
+  --cms-float-active: color-mix(in srgb, var(--cms-float), var(--cms-ink) 7%);
+  /* A solid tint for what lies on the page and must not show through: initials, the chosen option of a segmented control in the dark. */
+  --cms-fill: color-mix(in srgb, var(--cms-bg), var(--cms-ink) 8%);
+  /* The edge of a field or a switch that is pointed at. */
+  --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
+  /* Blue as text on its own wash (an info badge): a step toward ink so it still reads. */
+  --cms-info: color-mix(in srgb, var(--cms-focus) 84%, var(--cms-ink));
 
   --cms-overlay: rgb(28 27 24 / 0.22);
   /* raise: a control that sits on the page (secondary button, segmented thumb, the active sidebar row). */
@@ -58,6 +99,11 @@
   --cms-shadow-sheet: 0 0 0 1px rgb(42 38 30 / 0.06), 0 1px 3px rgb(42 38 30 / 0.04);
   --cms-shadow-pop: 0 1px 2px rgb(42 38 30 / 0.05), 0 4px 12px -2px rgb(42 38 30 / 0.08), 0 12px 32px -8px rgb(42 38 30 / 0.12);
   --cms-shadow-dialog: 0 2px 4px rgb(42 38 30 / 0.04), 0 12px 24px -6px rgb(42 38 30 / 0.1), 0 32px 64px -16px rgb(42 38 30 / 0.18);
+  /* edge: the lit top edge of an ink fill. focus: the halo of a field that has the focus. cursor: the row the keyboard is on. */
+  --cms-shadow-edge: inset 0 1px 0 rgb(255 255 255 / 0.1);
+  --cms-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+  --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
+
   color-scheme: light;
 }
 
@@ -86,17 +132,34 @@
   --cms-signal-soft: rgb(255 225 0 / 0.16);
   --cms-focus: #5c8dff;
   --cms-focus-soft: rgb(92 141 255 / 0.16);
+  --cms-focus-hover: rgb(92 141 255 / 0.22);
   --cms-success: #4cc38a;
   --cms-success-soft: rgb(76 195 138 / 0.14);
   --cms-warning: #f0a540;
   --cms-warning-soft: rgb(240 165 64 / 0.14);
   --cms-danger: #f2685d;
   --cms-danger-soft: rgb(242 104 93 / 0.14);
+  --cms-ink-danger: #cd2b1f;
+
+  --cms-ink-hover: color-mix(in srgb, var(--cms-ink) 88%, var(--cms-bg));
+  --cms-ink-active: color-mix(in srgb, var(--cms-ink) 80%, var(--cms-bg));
+  --cms-danger-hover: color-mix(in srgb, var(--cms-danger) 90%, var(--cms-signal-ink));
+  --cms-danger-active: color-mix(in srgb, var(--cms-danger) 82%, var(--cms-signal-ink));
+  --cms-signal-hover: color-mix(in srgb, var(--cms-signal) 92%, var(--cms-signal-ink));
+  --cms-signal-active: color-mix(in srgb, var(--cms-signal) 86%, var(--cms-signal-ink));
+  --cms-float-hover: color-mix(in srgb, var(--cms-float), var(--cms-ink) 5.5%);
+  --cms-float-active: color-mix(in srgb, var(--cms-float), var(--cms-ink) 9%);
+  --cms-fill: color-mix(in srgb, var(--cms-float), var(--cms-ink) 12%);
+  --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
+  --cms-info: color-mix(in srgb, var(--cms-focus) 60%, var(--cms-ink));
 
   --cms-overlay: rgb(0 0 0 / 0.5);
   --cms-shadow-raise: 0 1px 1px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.04);
   --cms-shadow-sheet: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 3px rgb(0 0 0 / 0.3);
   --cms-shadow-pop: 0 0 0 1px rgb(0 0 0 / 0.2), 0 4px 12px -2px rgb(0 0 0 / 0.35), 0 12px 32px -8px rgb(0 0 0 / 0.45);
   --cms-shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.25), 0 12px 24px -6px rgb(0 0 0 / 0.4), 0 32px 64px -16px rgb(0 0 0 / 0.55);
+  --cms-shadow-edge: 0 0 #0000;
+  --cms-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+  --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
   color-scheme: dark;
 }

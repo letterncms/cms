@@ -81,12 +81,12 @@ export function Widget({ title, action, query, loading, skeleton, empty, childre
           </h2>
           {action && isActionLink(action) ? (
             action.to ? (
-              <Link to={action.to} className="-mr-1.5 flex h-6 shrink-0 items-center gap-0.5 rounded-xs px-1.5 text-xs text-muted no-underline transition-colors duration-120 hover:bg-hover hover:text-text">
+              <Link to={action.to} className="-mr-1.5 flex h-6 shrink-0 items-center gap-0.5 rounded-xs px-1.5 text-xs text-muted no-underline transition-colors duration-base hover:bg-hover hover:text-text">
                 {action.label}
                 <Icon name="chevron-right" size={12} className="text-faint" />
               </Link>
             ) : (
-              <button type="button" onClick={action.onClick} className="-mr-1.5 h-6 shrink-0 rounded-xs px-1.5 text-xs text-muted transition-colors duration-120 hover:bg-hover hover:text-text">
+              <button type="button" onClick={action.onClick} className="-mr-1.5 h-6 shrink-0 rounded-xs px-1.5 text-xs text-muted transition-colors duration-base hover:bg-hover hover:text-text">
                 {action.label}
               </button>
             )
@@ -158,7 +158,7 @@ export function WidgetRow({ to, onClick, href, icon, leading, title, description
     </>
   )
   // Rows reach to 4px from the tile's edge, so the hover lies inside it.
-  const cls = cn('-mx-3 flex items-center gap-3 rounded-md px-3 text-left text-sm no-underline', description ? 'min-h-11 py-1.5' : 'h-9', (to || onClick || href) && 'transition-colors duration-120 hover:bg-hover', className)
+  const cls = cn('-mx-3 flex items-center gap-3 rounded-md px-3 text-left text-sm no-underline', description ? 'min-h-11 py-1.5' : 'h-9', (to || onClick || href) && 'transition-colors duration-base hover:bg-hover', className)
 
   if (to) return <Link to={to} className={cls}>{body}</Link>
   if (href) return <a href={href} target="_blank" rel="noreferrer" className={cls}>{body}</a>
@@ -233,7 +233,7 @@ export function Meter({ value, tone = 'ink', className, label }: { value: number
   const pct = Math.max(0, Math.min(1, value)) * 100
   return (
     <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label={label} className={cn('h-1.5 overflow-hidden rounded-full bg-active', className)}>
-      <div className={cn('h-full rounded-full transition-[width] duration-300 ease-out', fill)} style={{ width: `${pct}%` }} />
+      <div className={cn('h-full rounded-full transition-[width] duration-slow ease-out', fill)} style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -242,7 +242,7 @@ export function Meter({ value, tone = 'ink', className, label }: { value: number
 export function BarRow({ label, value, share, icon, to, href }: { label: ReactNode; value: ReactNode; share: number; icon?: ReactNode; to?: string; href?: string }) {
   const body = (
     <>
-      <span aria-hidden="true" className="absolute inset-y-0.5 left-0 rounded-xs bg-active transition-[width,background-color] duration-300 ease-out" style={{ width: `${Math.max(0.5, Math.min(1, share) * 100)}%` }} />
+      <span aria-hidden="true" className="absolute inset-y-0.5 left-0 rounded-xs bg-active transition-[width,background-color] duration-slow ease-out" style={{ width: `${Math.max(0.5, Math.min(1, share) * 100)}%` }} />
       <span className="relative flex min-w-0 flex-1 items-center gap-2 pl-2">
         {icon}
         <span className="truncate text-text">{label}</span>
@@ -251,7 +251,7 @@ export function BarRow({ label, value, share, icon, to, href }: { label: ReactNo
     </>
   )
   const cls = 'relative flex h-8 items-center gap-3 text-sm no-underline'
-  if (to) return <Link to={to} className={cn(cls, 'hover:[&>span:first-child]:bg-[color-mix(in_srgb,var(--cms-ink)_11%,transparent)]')}>{body}</Link>
-  if (href) return <a href={href} target="_blank" rel="noreferrer" className={cn(cls, 'hover:[&>span:first-child]:bg-[color-mix(in_srgb,var(--cms-ink)_11%,transparent)]')}>{body}</a>
+  if (to) return <Link to={to} className={cn(cls, 'hover:[&>span:first-child]:bg-border-strong')}>{body}</Link>
+  if (href) return <a href={href} target="_blank" rel="noreferrer" className={cn(cls, 'hover:[&>span:first-child]:bg-border-strong')}>{body}</a>
   return <div className={cls}>{body}</div>
 }

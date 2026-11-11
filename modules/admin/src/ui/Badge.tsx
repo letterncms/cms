@@ -10,7 +10,7 @@ const tones: Record<Tone, string> = {
   success: 'bg-success-soft text-success',
   warning: 'bg-warning-soft text-warning',
   danger: 'bg-danger-soft text-danger',
-  info: 'bg-focus-soft text-[color-mix(in_srgb,var(--cms-focus)_84%,var(--cms-ink))]',
+  info: 'bg-focus-soft text-info',
   signal: 'bg-signal text-signal-ink',
 }
 

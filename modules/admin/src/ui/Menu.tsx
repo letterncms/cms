@@ -25,7 +25,7 @@ export function Menu({ trigger, items, align = 'end', side = 'bottom', className
     <Base.Root>
       <Base.Trigger render={trigger} />
       <Base.Portal>
-        <Base.Positioner side={side} align={align} sideOffset={6} className="z-50">
+        <Base.Positioner side={side} align={align} sideOffset={6} className="z-overlay">
           <Base.Popup className={cn(popupClass, className)}>
             <Items items={items} parts={Base} />
           </Base.Popup>
@@ -41,7 +41,7 @@ export function ContextMenu({ children, items, className }: { children: ReactEle
     <BaseContext.Root>
       <BaseContext.Trigger render={children} />
       <BaseContext.Portal>
-        <BaseContext.Positioner className="z-50">
+        <BaseContext.Positioner className="z-overlay">
           <BaseContext.Popup className={cn(popupClass, className)}>
             <Items items={items} parts={BaseContext} />
           </BaseContext.Popup>

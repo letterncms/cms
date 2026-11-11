@@ -53,7 +53,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   return (
     <Base.Root open={open} onOpenChange={(o) => { if (!busy || o) onOpenChange(o) }}>
       <Base.Portal>
-        <Base.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-160 ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[ending-style]:duration-100 data-[starting-style]:opacity-0" />
+        <Base.Backdrop className="fixed inset-0 z-overlay bg-overlay transition-opacity duration-move ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[ending-style]:duration-fast data-[starting-style]:opacity-0" />
         <Base.Popup
           ref={popup}
           {...(alert ? { role: 'alertdialog' } : {})}
@@ -71,7 +71,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           }}
           className={cn(
             // A sheet lifted off the page; on a phone, a sheet rising from the bottom edge.
-            'fixed left-1/2 top-[12vh] z-50 flex max-h-[76vh] w-[calc(100vw-32px)] -translate-x-1/2 flex-col rounded-xl border border-border-modal bg-float shadow-dialog outline-none transition-[opacity,scale] duration-160 ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[ending-style]:duration-100 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0',
+            'fixed left-1/2 top-[12vh] z-overlay flex max-h-[76vh] w-[calc(100vw-32px)] -translate-x-1/2 flex-col rounded-xl border border-border-modal bg-float shadow-dialog outline-none transition-[opacity,scale] duration-move ease-out data-[ending-style]:pointer-events-none data-[ending-style]:opacity-0 data-[ending-style]:duration-fast data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0',
             'max-sm:transition-[opacity,translate] max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:max-h-[90dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:data-[starting-style]:scale-100 max-sm:data-[starting-style]:translate-y-4',
             widths[size],
             className,

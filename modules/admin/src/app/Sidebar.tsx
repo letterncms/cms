@@ -196,7 +196,7 @@ function PinnedRow({ item, section, index, last, active, dragged, onNavigate, ne
       ref={setNodeRef}
       {...listeners}
       style={{ transform: CSS.Translate.toString(transform && { ...transform, x: 0 }), transition }}
-      className={cn('relative', isDragging && 'z-10 cursor-grabbing opacity-90')}
+      className={cn('relative', isDragging && 'z-drag cursor-grabbing opacity-90')}
       onClickCapture={(e) => {
         if (!dragged.current) return
         e.preventDefault()

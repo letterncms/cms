@@ -139,10 +139,10 @@ export function TableFrame({ template, label, busy, children }: { template: stri
 export function TableRow({ children, header, selected, active, className, recordId }: { children: ReactNode; header?: boolean; selected?: boolean; active?: boolean; className?: string; recordId?: string }) {
   return <div role="row" data-entry={recordId} className={cn(
     'grid items-center gap-x-5 border-b border-border px-3 [grid-template-columns:var(--cols)]',
-    header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group relative min-h-10 text-sm transition-colors duration-120 hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
-    selected && 'bg-focus-soft hover:bg-[color-mix(in_srgb,var(--cms-focus)_14%,transparent)]',
+    header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group relative min-h-10 text-sm transition-colors duration-base hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
+    selected && 'bg-focus-soft hover:bg-focus-hover',
     active && !selected && 'bg-hover',
-    active && 'shadow-[inset_2px_0_0_var(--cms-focus)]',
+    active && 'shadow-cursor',
     className,
   )}>{children}</div>
 }
@@ -153,15 +153,15 @@ export function TableMeta({ children }: { children: ReactNode }) {
 }
 
 /** Row actions: on a screen with a pointer they show on hover or focus, so the list stays quiet. */
-export const rowActionsClass = 'relative z-10 flex min-w-0 items-center justify-end gap-0.5 transition-opacity duration-120 [&>*]:shrink-0 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 has-[[data-popup-open]]:opacity-100'
+export const rowActionsClass = 'relative z-raised flex min-w-0 items-center justify-end gap-0.5 transition-opacity duration-base [&>*]:shrink-0 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 has-[[data-popup-open]]:opacity-100'
 
 export function TableHeader({ label, align, direction, onSort, hiddenLabel }: { label: string; align?: 'end'; direction?: 'ascending' | 'descending'; onSort?: () => void; hiddenLabel?: boolean }) {
   return <div role="columnheader" data-align={align} aria-sort={onSort ? direction ?? 'none' : undefined} className={cn('flex min-w-0 items-center', align === 'end' && 'justify-end')}>
     {/* A sortable header shows its caret on hover, and keeps it while it sorts the list. Right-aligned, the caret goes before
         the label, so the label lines up with the numbers under it. */}
-    {onSort ? <button type="button" onClick={onSort} title={t('Sort by {column}', { column: label })} className={cn('group/sort -mx-1.5 flex h-6 min-w-0 items-center gap-1 rounded-xs px-1.5 transition-colors duration-120 hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-focus', align === 'end' && 'flex-row-reverse', direction && 'text-text')}>
+    {onSort ? <button type="button" onClick={onSort} title={t('Sort by {column}', { column: label })} className={cn('group/sort -mx-1.5 flex h-6 min-w-0 items-center gap-1 rounded-xs px-1.5 transition-colors duration-base hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-focus', align === 'end' && 'flex-row-reverse', direction && 'text-text')}>
       <span className="truncate">{label}</span>
-      <Icon name={direction === 'ascending' ? 'chevron-up' : 'chevron-down'} size={12} className={cn('shrink-0 transition-opacity duration-120', direction ? 'opacity-100' : 'opacity-0 group-hover/sort:opacity-100 group-focus-visible/sort:opacity-100')} />
+      <Icon name={direction === 'ascending' ? 'chevron-up' : 'chevron-down'} size={12} className={cn('shrink-0 transition-opacity duration-base', direction ? 'opacity-100' : 'opacity-0 group-hover/sort:opacity-100 group-focus-visible/sort:opacity-100')} />
     </button> : <span className={hiddenLabel ? 'sr-only' : 'truncate'}>{label}</span>}
   </div>
 }
@@ -209,7 +209,7 @@ export interface DataTree<T> {
 }
 
 /** A row's checkbox: in the sheet's gutter, left of the row, on a wide screen, so titles line up with the search above; before the title on a phone. */
-export const GUTTER = 'relative z-10 flex items-center max-sm:w-4 max-sm:shrink-0 sm:absolute sm:right-full sm:top-1/2 sm:-translate-y-1/2 md:mr-1 [&_label]:gap-0'
+export const GUTTER = 'relative z-raised flex items-center max-sm:w-4 max-sm:shrink-0 sm:absolute sm:right-full sm:top-1/2 sm:-translate-y-1/2 md:mr-1 [&_label]:gap-0'
 
 /** Every record of a tree, each before the ones it holds. */
 export function flattenTree<T>(items: T[], children?: (item: T) => T[]): T[] {
@@ -290,7 +290,7 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
       {columns.map((c) => <TableHeader key={c.id} label={c.label} align={c.align} direction={sort?.replace(/^-/, '') === (c.sort ?? c.id) ? sort.startsWith('-') ? 'descending' : 'ascending' : undefined} onSort={onSort && (sortable ? sortable.has(c.id) : c.sort) ? () => onSort(c) : undefined} />)}
       {hasActions && <TableHeader label={t('Actions')} hiddenLabel />}
     </TableRow>
-    {loading ? <TableSkeleton columns={count} /> : <div role="rowgroup" className={cn('transition-opacity duration-180', stale && 'opacity-60')}>
+    {loading ? <TableSkeleton columns={count} /> : <div role="rowgroup" className={cn('transition-opacity duration-move', stale && 'opacity-60')}>
       {tree ? <TreeLevel nodes={items} parent={null} depth={0} tree={tree} rowKey={rowKey} row={row} collapsed={collapsed} setCollapsed={setCollapsed} /> : items.map((item) => row(item))}
     </div>}
   </TableFrame>
@@ -335,8 +335,8 @@ function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setC
         const open = !collapsed[key]
         // Sits in the room left of the title, so titles line up whatever they hold.
         const expander = children.length > 0 && <button type="button" onClick={() => setCollapsed((c) => ({ ...c, [key]: open }))} aria-expanded={open} aria-label={open ? t('Collapse') : t('Expand')}
-          className="relative z-10 -ml-5 mr-0 grid size-5 shrink-0 -translate-x-0.5 place-items-center rounded-xs text-faint transition-colors duration-120 hover:bg-hover hover:text-text">
-          <Icon name="chevron-right" size={12} className={cn('transition-transform duration-120', open && 'rotate-90')} />
+          className="relative z-raised -ml-5 mr-0 grid size-5 shrink-0 -translate-x-0.5 place-items-center rounded-xs text-faint transition-colors duration-base hover:bg-hover hover:text-text">
+          <Icon name="chevron-right" size={12} className={cn('transition-transform duration-base', open && 'rotate-90')} />
         </button>
         return <SortableRow key={key} id={key} disabled={!tree.reorder}>
           {(handle) => <>
@@ -352,10 +352,10 @@ function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setC
 function SortableRow({ id, disabled, children }: { id: string; disabled?: boolean; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled })
   const handle = <button type="button" {...attributes} {...listeners} aria-label={t('Drag to Reorder')}
-    className="grid size-6 cursor-grab place-items-center rounded-xs text-faint transition-colors duration-120 hover:bg-hover hover:text-text active:cursor-grabbing max-sm:hidden">
+    className="grid size-6 cursor-grab place-items-center rounded-xs text-faint transition-colors duration-base hover:bg-hover hover:text-text active:cursor-grabbing max-sm:hidden">
     <Icon name="drag" size={14} />
   </button>
-  return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-20 bg-bg shadow-pop')}>
+  return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-drag bg-bg shadow-pop')}>
     {children(disabled ? null : handle)}
   </div>
 }

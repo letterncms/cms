@@ -24,7 +24,7 @@ export function Popover({ trigger, children, side = 'bottom', align = 'start', o
     <Base.Root open={open} onOpenChange={(o) => onOpenChange?.(o)} modal={modal}>
       <Base.Trigger ref={anchor} render={trigger} />
       <Base.Portal>
-        <Base.Positioner side={side} align={align} sideOffset={6} collisionPadding={collisionPadding} collisionAvoidance={keepSide ? { side: 'none', align: 'shift', fallbackAxisSide: 'none' } : undefined} className="z-50">
+        <Base.Positioner side={side} align={align} sideOffset={6} collisionPadding={collisionPadding} collisionAvoidance={keepSide ? { side: 'none', align: 'shift', fallbackAxisSide: 'none' } : undefined} className="z-overlay">
           <Base.Popup ref={popup} initialFocus={(interaction) => {
             const target = interaction === 'touch' ? popup.current : popup.current?.querySelector<HTMLElement>('input:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex="0"]') ?? popup.current
             target?.focus({ preventScroll: true })

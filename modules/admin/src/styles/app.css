@@ -119,7 +119,7 @@
 @layer components {
   .cms-slideover {
     position: fixed;
-    z-index: 50;
+    z-index: var(--cms-z-overlay);
     top: 12px;
     right: 12px;
     display: flex;
@@ -132,7 +132,7 @@
     background: var(--cms-float);
     box-shadow: var(--cms-shadow-dialog);
     outline: none;
-    transition: transform 200ms var(--ease-out), opacity 160ms var(--ease-out);
+    transition: transform var(--cms-duration-move) var(--ease-out), opacity var(--cms-duration-move) var(--ease-out);
   }
 
   .cms-slideover[hidden] { display: none; }
@@ -188,7 +188,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .cms-slideover { transition: opacity 120ms linear; }
+    .cms-slideover { transition: opacity var(--cms-duration-base) linear; }
     .cms-slideover[data-starting-style],
     .cms-slideover[data-ending-style] { transform: none; }
   }
@@ -199,7 +199,7 @@
   .cms-focus-ring:focus-visible,
   .cms-focus-ring[data-focus] {
     border-color: var(--cms-focus);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+    box-shadow: var(--cms-shadow-focus);
   }
 
   /* Every control that holds a value (text fields, select triggers): a white field with a hairline that firms up on hover. */
@@ -208,10 +208,10 @@
     background-color: var(--cms-bg);
     color: var(--cms-text);
     outline: none;
-    transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out), background-color 120ms var(--ease-out);
+    transition: border-color var(--cms-duration-base) var(--ease-out), box-shadow var(--cms-duration-base) var(--ease-out), background-color var(--cms-duration-base) var(--ease-out);
   }
   .cms-input:hover {
-    border-color: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
+    border-color: var(--cms-border-hover);
   }
   .cms-input-quiet {
     border-color: transparent;
@@ -229,7 +229,7 @@
   .cms-input:is(:focus-visible, [data-focus], [data-popup-open]):hover {
     border-color: var(--cms-focus);
     background-color: var(--cms-bg);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+    box-shadow: var(--cms-shadow-focus);
   }
   .cms-input[aria-invalid="true"],
   .cms-input[aria-invalid="true"]:is(:hover, :focus-visible) {
@@ -253,7 +253,7 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--cms-shadow-pop);
     transform-origin: var(--transform-origin);
-    transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
+    transition: opacity var(--cms-duration-base) var(--ease-out), transform var(--cms-duration-base) var(--ease-out);
   }
   /* Opens from the trigger's side; closes by fading out, quicker. */
   .cms-pop[data-starting-style] {
@@ -262,7 +262,7 @@
   }
   .cms-pop[data-ending-style] {
     opacity: 0;
-    transition-duration: 80ms;
+    transition-duration: var(--cms-duration-fast);
   }
 
   /* A row in a menu, a select or a picker: 30px, the highlight a film, its icon coming up to ink. */
@@ -322,7 +322,7 @@
     border: 0;
     background: var(--cms-bg);
     box-shadow: 0 0 0 1px var(--cms-border-strong), 0 1px 3px rgb(0 0 0 / 0.16);
-    transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
+    transition: box-shadow var(--cms-duration-base) var(--ease-out), transform var(--cms-duration-base) var(--ease-out);
   }
   .cms-range::-moz-range-thumb {
     width: 12px;
@@ -371,11 +371,11 @@
    At full size the panel grows over the workspace, which keeps its size, so nothing on it reflows. Small windows: over the workspace. */
 @layer components {
   /* Everything at the sides of the workspace moves at this speed. */
-  .cms-shell { --cms-panel-speed: 180ms; }
+  .cms-shell { --cms-panel-speed: var(--cms-duration-move); }
 
   .cms-dock {
     position: relative;
-    z-index: 20;
+    z-index: var(--cms-z-sticky);
     flex: none;
     width: 0;
     visibility: hidden;
@@ -411,7 +411,7 @@
     position: absolute;
     inset-block: 0;
     left: 0;
-    z-index: 1;
+    z-index: var(--cms-z-raised);
     width: 7px;
     cursor: col-resize;
     touch-action: none;
@@ -425,20 +425,20 @@
     width: 2px;
     background: var(--cms-focus);
     opacity: 0;
-    transition: opacity 120ms var(--ease-out) 80ms;
+    transition: opacity var(--cms-duration-base) var(--ease-out) var(--cms-duration-fast);
   }
   .cms-dock-handle:hover::after, .cms-dock[data-resizing] .cms-dock-handle::after { opacity: 1; }
 
   @media (max-width: 1099px) {
     .cms-dock[data-open] { width: 0; }
-    .cms-dock { z-index: 40; }
+    .cms-dock { z-index: var(--cms-z-drawer); }
     .cms-dock-panel { width: 0; }
     .cms-dock[data-open] .cms-dock-panel { width: min(var(--cms-dock-width), 100vw); box-shadow: inset 1px 0 var(--cms-border), var(--cms-shadow-dialog); }
     .cms-dock[data-full] .cms-dock-panel { width: calc(100vw - var(--cms-sidebar-width, 0px)); }
     .cms-dock-handle { display: none; }
   }
   @media (max-width: 767px) {
-    .cms-dock { z-index: 50; }
+    .cms-dock { z-index: var(--cms-z-drawer); }
     .cms-dock-panel { position: fixed; inset-block: 0; right: 0; height: 100dvh; }
     .cms-dock[data-open] .cms-dock-panel, .cms-dock[data-full] .cms-dock-panel { width: 100vw; box-shadow: none; }
     .cms-dock-inner { min-width: 100vw; }
@@ -447,7 +447,7 @@
   /* Detached: a card over the page, which doesn't move. It stays at the right of the canvas until dragged, clear of an inspector. */
   .cms-shell:has([data-cms-inspector]) { --cms-dock-inset: var(--cms-inspector-width); }
   @media (min-width: 768px) {
-    .cms-dock[data-floating], .cms-dock[data-floating][data-open] { z-index: 40; width: 0; }
+    .cms-dock[data-floating], .cms-dock[data-floating][data-open] { z-index: var(--cms-z-drawer); width: 0; }
     .cms-dock[data-floating] .cms-dock-panel {
       position: fixed;
       inset: auto calc(var(--cms-dock-inset, 0px) + 16px) 16px auto;
@@ -481,7 +481,7 @@
   .cms-topbar {
     padding-left: calc(1rem + var(--cms-sidebar-toggle, 0px));
     border-bottom: 1px solid transparent;
-    transition: padding-left var(--cms-panel-speed) var(--ease-out), border-color 120ms var(--ease-out);
+    transition: padding-left var(--cms-panel-speed) var(--ease-out), border-color var(--cms-duration-base) var(--ease-out);
   }
   [data-cms-screen][data-scrolled] .cms-topbar { border-bottom-color: var(--cms-border); }
   .cms-topbar-title { left: 50%; }
@@ -523,7 +523,7 @@
   /* Skip to the screen: out of sight until the keyboard reaches it, first thing. */
   .cms-skip {
     position: absolute;
-    z-index: 60;
+    z-index: var(--cms-z-tooltip);
     top: 8px;
     left: 8px;
     padding: 6px 10px;
@@ -550,7 +550,7 @@
   /* The one way to save a form: up while there are changes, over the bottom of the sheet. */
   .cms-savebar {
     position: absolute;
-    z-index: 25;
+    z-index: var(--cms-z-bar);
     left: 50%;
     bottom: 16px;
     display: flex;
@@ -564,7 +564,7 @@
     color: var(--cms-ink-contrast);
     box-shadow: var(--cms-shadow-dialog);
     translate: -50% 0;
-    transition: opacity 120ms var(--ease-out), translate 160ms var(--ease-out);
+    transition: opacity var(--cms-duration-base) var(--ease-out), translate var(--cms-duration-move) var(--ease-out);
   }
   @starting-style {
     .cms-savebar[data-state='open'] { opacity: 0; translate: -50% 8px; }
@@ -599,11 +599,11 @@
   .cms-progress {
     position: absolute;
     inset: 0 0 auto;
-    z-index: 30;
+    z-index: var(--cms-z-bar);
     height: 2px;
     overflow: hidden;
     pointer-events: none;
-    animation: cms-appear 160ms var(--ease-out, ease-out) 180ms both;
+    animation: cms-appear var(--cms-duration-move) var(--ease-out, ease-out) var(--cms-duration-move) both;
   }
   .cms-progress::after {
     content: "";
@@ -616,19 +616,19 @@
   }
 
   .cms-appear-late {
-    animation: cms-appear 240ms var(--ease-out, ease-out) 600ms both;
+    animation: cms-appear var(--cms-duration-slow) var(--ease-out, ease-out) 600ms both;
   }
 
   /* The sidebar switching states: a deeper one (settings, a screen's own) comes in from the side it leads to, the way back from the other. */
   @media (prefers-reduced-motion: no-preference) {
-    .cms-sidebar-mode[data-direction] { animation: cms-sidebar-in 180ms var(--ease-out, ease-out) both; }
+    .cms-sidebar-mode[data-direction] { animation: cms-sidebar-in var(--cms-duration-move) var(--ease-out, ease-out) both; }
     .cms-sidebar-mode[data-direction='in'] { --cms-sidebar-from: 12px; }
     .cms-sidebar-mode[data-direction='out'] { --cms-sidebar-from: -12px; }
   }
 
   /* Loading placeholders stay out of sight for loads too quick to notice, so a screen never flickers gray. */
   .cms-skeleton {
-    animation: cms-appear 160ms var(--ease-out, ease-out) 160ms both, cms-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 320ms infinite;
+    animation: cms-appear var(--cms-duration-move) var(--ease-out, ease-out) var(--cms-duration-move) both, cms-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) calc(2 * var(--cms-duration-move)) infinite;
   }
 }
 
@@ -731,9 +731,9 @@
 }
 
 /* Toasts (sonner, whose own styles sit outside any layer, so these do too): they rise 8px as they fade in and
-   fade out where they are, quicker; the stack closes up over the same 160ms. */
+   fade out where they are, quicker; the stack closes up at the same speed. */
 [data-sonner-toaster] [data-sonner-toast].cms-toast {
-  transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), height 160ms var(--ease-out);
+  transition: transform var(--cms-duration-move) var(--ease-out), opacity var(--cms-duration-move) var(--ease-out), height var(--cms-duration-move) var(--ease-out);
 }
 [data-sonner-toaster] [data-sonner-toast].cms-toast:not([data-mounted="true"]) {
   --y: translateY(8px);
@@ -741,13 +741,13 @@
 [data-sonner-toaster] [data-sonner-toast].cms-toast[data-removed="true"][data-swipe-out="false"] {
   --y: translateY(calc(var(--lift) * var(--offset, 0px)));
   opacity: 0;
-  transition-duration: 100ms;
+  transition-duration: var(--cms-duration-fast);
 }
 
 @layer components {
   /* Tables: a row's checkbox keeps its column but shows only on hover or focus, or for every row once one is ticked. Touch screens always show it. */
   @media (hover: hover) {
-    .cms-table [role="checkbox"] { transition: opacity 120ms var(--ease-out); }
+    .cms-table [role="checkbox"] { transition: opacity var(--cms-duration-base) var(--ease-out); }
     .cms-table:not(:has([role="checkbox"]:is([data-checked], [data-indeterminate]))) [role="row"]:not(:hover, :focus-within) [role="checkbox"] { opacity: 0; }
   }
 }
