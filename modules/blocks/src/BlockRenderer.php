@@ -237,6 +237,29 @@ final class BlockRenderer
     /** @var array<string, true> node ids other nodes point at (they get data-cms / id attributes) */
     private array $referenced = [];
 
+    /**
+     * Attributes that name other elements by id. In one of them `#<block id>` stands for whatever id that
+     * block has on the page: its anchor, a heading's own, or one made for the purpose.
+     */
+    public const array ID_REFERENCES = ['aria-labelledby', 'aria-describedby', 'aria-controls', 'aria-owns', 'aria-details', 'aria-flowto', 'aria-activedescendant', 'aria-errormessage', 'for'];
+
+    /** @var array<string, string> block id => the id its element has on the page, as each is rendered */
+    private array $domIds = [];
+
+    /** @var array<string, true> block ids an attribute names: the ones whose made-up id differs per Repeat item */
+    private array $named = [];
+
+    /** Which item of which Repeat is being rendered ("-2", "-2-1" inside another): it makes a made-up id unique. */
+    private string $iteration = '';
+
+    /**
+     * The blocks the Page content block will render, for whoever renders a template around them: a block of
+     * the template that the page names must know so before it is rendered, and the page comes after it.
+     *
+     * @var (Closure(): list<array>)|null
+     */
+    public ?Closure $outletNodes = null;
+
     private ?Anchors $anchors = null;
 
     /** @var list<array<string, mixed>> script state of the elements being rendered (the canvas shows initial states) */
@@ -263,6 +286,9 @@ final class BlockRenderer
         $this->styles->reset();
         $this->features = [];
         $this->referenced = [];
+        $this->domIds = [];
+        $this->named = [];
+        $this->iteration = '';
         $this->timelines = [];
         $this->ids = 0;
     }
@@ -274,14 +300,52 @@ final class BlockRenderer
         $outer && $this->anchors = new Anchors;
         $previous = $this->scope;
         $this->scope = $scope ?? $this->scope ?? new Scope((array) $this->hooks->filter('blocks.scope', []));
-        $this->collectReferences($nodes);
+        // The whole page at once when this is its outermost document: a block is rendered before the
+        // component or the page content after it that names it, and has to know by then.
+        if ($outer) {
+            $seen = [];
+            $this->collectReferences($nodes, $seen);
+        } else {
+            $this->collectReferences($nodes);
+        }
 
         try {
-            return $this->children($nodes);
+            $html = $this->children($nodes);
+
+            // Once everything is rendered, every block knows its id: fill in the places that named one.
+            return $outer ? $this->fill($html, $this->domIds, true) : $html;
         } finally {
             $this->scope = $previous;
             $outer && $this->anchors = null;
         }
+    }
+
+    /**
+     * Put the ids of the blocks named into the attributes that named them. Each is escaped here: an id can
+     * come from data (`bind: {"attr:id": …}`) and lands inside another element's attribute. With $final,
+     * a block that isn't on the page leaves nothing and a warning; otherwise its marker waits for the outer pass.
+     *
+     * @param  array<string, string>  $ids
+     */
+    private function fill(string $html, array $ids, bool $final): string
+    {
+        if (! str_contains($html, "\x1Bref:")) {
+            return $html;
+        }
+
+        return (string) preg_replace_callback('/\x1Bref:([A-Za-z0-9_-]+)\x1B/', function (array $m) use ($ids, $final) {
+            if (isset($ids[$m[1]])) {
+                return e($ids[$m[1]]);
+            }
+
+            if (! $final) {
+                return $m[0];
+            }
+
+            $this->hooks->dispatch('render.warning', __('An attribute names the block #:id, which is not on this page.', ['id' => $m[1]]));
+
+            return '';
+        }, $html);
     }
 
     /** Render a list of sibling nodes in the current scope. */
@@ -390,7 +454,7 @@ final class BlockRenderer
                 'node' => $node,
                 'type' => $type,
                 'content' => new HtmlString($children),
-                'attrs' => new HtmlString($this->attributes($node, $type, $classes, $extra, $conditional, $motion)),
+                'attrs' => new HtmlString($attributes = $this->attributes($node, $type, $classes, $extra, $conditional, $motion)),
                 'classes' => $classes,
                 'editor' => $this->editor,
                 'editable' => $this->editor && $this->editorDocument !== null,
@@ -398,6 +462,11 @@ final class BlockRenderer
                 'renderer' => $this,
                 'placeholders' => $this->editor ? $this->placeholders($type, $props, $bind) : [],
             ];
+
+            // The id this block has on the page, for whoever names it.
+            if (isset($this->referenced[(string) ($node['id'] ?? '')])) {
+                $this->domIds[(string) $node['id']] = preg_match('/(?:^| )id="([^"]*)"/', $attributes, $own) ? html_entity_decode($own[1], ENT_QUOTES | ENT_HTML5) : (string) ($props['anchor'] ?? '');
+            }
 
             $data = $this->hooks->filter('blocks.render.data', $data, $type);
 
@@ -462,6 +531,11 @@ final class BlockRenderer
         foreach (array_slice($items, 0, $limit) as $i => $item) {
             $ghost = $this->ghost;
             $sample && $i > 0 && $this->ghost = $this->depth + 1;
+            // Each item is its own small page for blocks that name each other: an item's button opens that
+            // item's panel. What an item names outside itself is left for whoever renders around it.
+            [$outside, $iteration] = [$this->domIds, $this->iteration];
+            $this->domIds = [];
+            $this->iteration = $iteration.'-'.($i + 1);
 
             try {
                 $inner = $scope->with([
@@ -471,9 +545,13 @@ final class BlockRenderer
                     'last' => $i === $count - 1,
                 ]);
                 $item = $this->withInstanceProperties([], fn () => $this->withPrototypes($this->editorDocument ?? $this->prototypeDocument, fn () => $this->withEditorDocument(null, fn () => $this->children($children, $inner))));
+                $item = $this->fill($item, $this->domIds, false);
                 $html[] = ! $this->editor && (! empty($props['filter_by']) || ! empty($props['search_in']) || ! empty($props['sort_by'])) ? $this->filterable($item, $props, $inner) : $item;
             } finally {
                 $this->ghost = $ghost;
+                // From outside, a block in a list is the one in its first item.
+                $this->domIds = $outside + $this->domIds;
+                $this->iteration = $iteration;
             }
         }
 
@@ -722,7 +800,9 @@ final class BlockRenderer
         }
 
         foreach ((array) ($node['attrs'] ?? []) as $name => $value) {
-            $attrs[$name] = (string) $value;
+            $attrs[$name] = in_array($name, self::ID_REFERENCES, true)
+                ? (string) preg_replace('/(?<![^\s])#([A-Za-z0-9_-]{1,40})(?![^\s])/', "\x1Bref:$1\x1B", (string) $value)
+                : (string) $value;
         }
 
         foreach ($extra['attrs'] as $name => $value) {
@@ -787,8 +867,10 @@ final class BlockRenderer
             $attrs['data-cms'] = $id;
         }
 
-        if ($referenced && ! isset($attrs['id'])) {
-            $attrs['id'] = 'cms-'.$id;
+        // A heading has an id of its own (its text as a slug), which links may already point at.
+        if ($referenced && ! isset($attrs['id']) && $type->name !== 'heading') {
+            // In a Repeat the id is made once per item, for a block an attribute names: an id is one element's.
+            $attrs['id'] = 'cms-'.$id.(isset($this->named[$id]) ? $this->iteration : '');
         }
 
         foreach (['data-cms-node', 'data-cms-document', 'data-cms-editor-root', 'data-cms-type', 'data-cms-prop', 'data-cms-index', 'data-cms-entry-field', 'data-cms-instance-document', 'data-cms-instance-node', 'data-cms-instance-prop', 'data-cms-instance-type', 'data-cms-instance-format', 'data-cms-instance-value', 'data-cms-proto', 'data-cms-proto-document'] as $managed) {
@@ -862,7 +944,26 @@ final class BlockRenderer
         ], static fn ($v) => $v !== null);
     }
 
-    private function collectReferences(array $nodes): void
+    /** @return list<string> the block ids a node's attributes name (`aria-controls: "#panel"`) */
+    private static function attributeReferences(array $attrs): array
+    {
+        $ids = [];
+
+        foreach (array_intersect_key($attrs, array_flip(self::ID_REFERENCES)) as $value) {
+            preg_match_all('/(?<![^\s])#([A-Za-z0-9_-]{1,40})(?![^\s])/', (string) $value, $m);
+            array_push($ids, ...$m[1]);
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Which blocks others point at. With $seen (the outermost document of a page) it follows components and
+     * the Page content block too, so everything the page will render is known before any of it is.
+     *
+     * @param  array<string, true>|null  $seen  components already followed
+     */
+    private function collectReferences(array $nodes, ?array &$seen = null): void
     {
         foreach ($nodes as $node) {
             if (! is_array($node)) {
@@ -873,8 +974,26 @@ final class BlockRenderer
                 $this->referenced[$id] = true;
             }
 
+            foreach (self::attributeReferences((array) ($node['attrs'] ?? [])) as $id) {
+                $this->referenced[$id] = $this->named[$id] = true;
+            }
+
             if (! empty($node['children'])) {
-                $this->collectReferences((array) $node['children']);
+                $this->collectReferences((array) $node['children'], $seen);
+            }
+
+            if ($seen === null) {
+                continue;
+            }
+
+            $ref = ($node['type'] ?? null) === 'pattern' ? (string) ($node['props']['ref'] ?? '') : '';
+
+            if ($ref !== '' && ! isset($seen[$ref])) {
+                $seen[$ref] = true;
+                $this->collectReferences((array) ($this->patterns->find($ref, $this->editor || $this->working)['blocks'] ?? []), $seen);
+            } elseif (($node['type'] ?? null) === 'outlet' && $this->outletNodes !== null && ! isset($seen["\0outlet"])) {
+                $seen["\0outlet"] = true;
+                $this->collectReferences(($this->outletNodes)(), $seen);
             }
         }
     }

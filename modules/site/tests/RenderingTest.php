@@ -259,6 +259,33 @@ final class RenderingTest extends TestCase
         $this->assertArrayHasKey('spacing', (array) $this->cms()->abilities()->execute('design/get', [], \Cms\Abilities\AbilityContext::system('test'))['prose']);
     }
 
+    public function test_blocks_name_each_other_across_the_template_a_component_and_the_page(): void
+    {
+        $this->cms()->entryService()->create('components', ['title' => 'Aside', 'slug' => 'aside', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [
+            ['id' => 'aside', 'type' => 'box', 'props' => ['tag' => 'aside'], 'attrs' => ['aria-labelledby' => '#frame-title', 'aria-describedby' => '#lede'], 'children' => []],
+        ]]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Named', 'slug' => 'named', 'status' => 'published', 'data' => ['blocks' => [
+            // Rendered first, named by what comes after it: the page's content and a component.
+            ['id' => 'frame-title', 'type' => 'paragraph', 'props' => ['text' => 'Frame']],
+            ['id' => 'region', 'type' => 'box', 'props' => ['tag' => 'section'], 'attrs' => ['aria-labelledby' => '#page-title'], 'children' => [['type' => 'outlet']]],
+            ['type' => 'pattern', 'props' => ['ref' => 'aside']],
+        ]]]);
+        $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
+        $this->app->make(\Cms\Modules\Blocks\Patterns::class)->flush();
+        $page = $this->cms()->entryService()->create('pages', ['title' => 'Named page', 'status' => 'published', 'data' => ['template' => 'named', 'content' => [
+            ['id' => 'page-title', 'type' => 'heading', 'props' => ['text' => 'A page title', 'level' => '1']],
+            ['id' => 'lede', 'type' => 'paragraph', 'props' => ['text' => 'Lede'], 'attrs' => ['aria-details' => '#frame-title']],
+        ]]]);
+
+        $html = $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($page->id))['html'];
+
+        $this->assertStringContainsString('<p class="cms-paragraph" data-cms="frame-title" id="cms-frame-title">Frame</p>', $html, 'a template block named only from the page and a component has its id');
+        $this->assertStringContainsString('aria-labelledby="a-page-title"', $html, 'the template names a heading of the page');
+        $this->assertStringContainsString('aria-details="cms-frame-title"', $html, 'the page names a block of the template');
+        $this->assertStringContainsString('aria-labelledby="cms-frame-title" aria-describedby="cms-lede"', $html, 'a component names both');
+        $this->assertStringNotContainsString("\x1B", $html);
+    }
+
     public function test_element_styles_take_a_small_grammar_of_selectors_and_nothing_else(): void
     {
         $compiler = \Cms\Modules\Site\Design\DesignCompiler::class;
