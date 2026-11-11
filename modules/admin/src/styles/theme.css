@@ -81,6 +81,9 @@
   --color-thumb: var(--cms-thumb);
   --color-border-hover: var(--cms-border-hover);
   --color-info: var(--cms-info);
+  --color-on-success: var(--cms-on-success);
+  --color-on-warning: var(--cms-on-warning);
+  --color-on-danger: var(--cms-on-danger);
   --color-overlay: var(--cms-overlay);
 
   --shadow-raise: var(--cms-shadow-raise);
@@ -90,6 +93,8 @@
   --shadow-edge: var(--cms-shadow-edge);
   --shadow-focus: var(--cms-shadow-focus);
   --shadow-cursor: var(--cms-shadow-cursor);
+  --shadow-rule: var(--cms-shadow-rule);
+  --shadow-underline: var(--cms-shadow-underline);
 
   /* Things that answer the pointer move out fast and settle; nothing moves by itself. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
