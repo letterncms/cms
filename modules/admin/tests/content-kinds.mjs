@@ -28,13 +28,16 @@ export const entry = {
   originId: null, parentId: null, position: 0, authorId: 'test', author: { id: 'test', name: 'Test User', initials: 'TU', avatar: null }, version: 'a'.repeat(64),
   publishedAt: '2026-11-01T09:00:00+00:00', expiresAt: null, createdAt: '2026-10-30T09:00:00+00:00', updatedAt: '2026-11-10T09:00:00+00:00', translations: {},
 }
+/** Its German translation: the length, the credit and the body are the original's (`localizable: false`). */
+export const translation = { ...entry, id: '01htranslation000000000000', locale: 'de', title: 'Der Film', slug: 'der-film', uri: '/de/news/der-film', originId: entry.id,
+  translations: { en: entry.id, de: '01htranslation000000000000' }, sharedFields: ['length', 'credit', 'body'] }
 export const manifest = {
   views: mounted, cms: { version: 'test', debug: false },
   site: { name: 'Fixture', url: '', locales: ['en', 'de'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Test User', email: 'test@example.invalid', initials: 'TU', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
   packages: { active: ['cms/admin', 'letterncms/content', 'letterncms/collections'], pending: {} },
   modules: ['content', 'collections'].map((name) => ({ id: `cms/${name}`, url: `/_cms/assets/cms-${name}/admin.js`, package: `cms/${name}` })),
-  styles: [], settings: [], collections: [summary], globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [],
+  styles: ['/_cms/assets/cms-content/admin.css', '/_cms/assets/cms-collections/admin.css'], settings: [], collections: [summary], globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [],
   config: { content: { autosave: 0, perPage: 50 } },
   nav: [{ id: 'news', label: 'News', path: '/content/news', icon: 'article', section: 'main' }],
   sidebar: { sections: [{ id: 'main', label: '', items: ['news'] }], hidden: [], personal: false }, settingsNav: [], brand,
@@ -50,7 +53,7 @@ export const abilities = (more = () => undefined) => async (req, res, url) => {
     if (own !== undefined) return json(res, 200, { data: own })
     if (ability === 'views/get') { const view = viewResponse(input, manifest, () => collection); return json(res, view.status, view.body) }
     if (ability === 'collections/get') return json(res, 200, { data: collection })
-    if (ability === 'entries/get') return json(res, 200, { data: entry })
+    if (ability === 'entries/get') return json(res, 200, { data: input.id === translation.id ? translation : entry })
     if (ability === 'entries/list') return json(res, 200, { data: { items: [{ ...entry, values: {} }], total: 1, page: 1, perPage: 50, pages: 1 } })
     if (ability === 'admin/arrangement') return json(res, 200, { data: { items: [{ id: 'news', label: 'News', icon: 'article' }], layout: { sections: [{ id: 'main', label: 'Main', items: ['news'] }], hidden: [] }, fixed: false, customized: false } })
     if (ability === 'people/list') return json(res, 200, { data: [manifest.user] })
@@ -95,6 +98,21 @@ try {
   navigate('/content/news/new?blueprint=')
   await until(() => words('*', 'Kind') && !words('*', 'Video Address'), 'The collection\\'s own kind did not open on its own fields')
   check('The collection\\'s own fields are a kind too')
+
+  // On a translation, what holds one value for every language is closed wherever it is drawn: a property, a row of the details, the body.
+  navigate('/content/news/${translation.id}?locale=de')
+  const control = (handle) => document.querySelector('[data-field="' + handle + '"] input, [data-field="' + handle + '"] textarea')
+  await until(() => control('length') && control('credit') && control('body') && control('summary'), 'The translation\\'s fields are not on view')
+  for (const handle of ['length', 'credit', 'body']) assert(control(handle).disabled, 'A shared field can be typed into on a translation: ' + handle)
+  assert(!control('summary').disabled && !control('source').disabled, 'A field of the translation\\'s own is closed')
+  const marks = [...document.querySelectorAll('.sr-only')].filter((el) => el.textContent === 'Set in English')
+  assert(marks.length === 3, 'Each shared field says where its value is set: ' + marks.length)
+  check('Shared fields are closed on a translation, in properties, details and body')
+
+  // The original has them open.
+  navigate('/content/news/${entry.id}')
+  await until(() => control('length') && !control('length').disabled && !document.querySelector('.sr-only[data-none]') && ![...document.querySelectorAll('.sr-only')].some((el) => el.textContent === 'Set in English'), 'The original\\'s fields are closed')
+  check('The original edits them')
   await report()
 } catch (error) {
   output.textContent += '\\nFAIL ' + error.message

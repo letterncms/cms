@@ -1,5 +1,5 @@
 import { can, locale, t, useAbility, useManifest, type Entry, type EntryContent, type EntryPanelProps, type EntrySummary, type FieldDef } from '@letterncms/sdk'
-import { Button, Dialog, Fields, PersonPicker, QueryError, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes } from '@letterncms/ui'
+import { Button, Dialog, Fields, PersonPicker, QueryError, SharedMark, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 
 /** The pages features bring (sign in, checkout), as `pages/builtin` gives them, by what brought them. */
@@ -173,7 +173,7 @@ function PanelRow({ field, error, children }: { field: FieldDef; error?: string;
   const toggle = field.type === 'toggle'
   const wide = wideFieldTypes.includes(field.type)
   const help = !error && field.instructions ? <p className="m-0 mt-1 text-xs text-muted">{field.instructions}</p> : null
-  const label = <label htmlFor={fieldControlId(field)} className={cn('flex h-7 min-w-0 shrink-0 items-center text-xs text-muted', !wide && 'w-[88px]')}><span className="truncate">{field.label}</span></label>
+  const label = <label htmlFor={fieldControlId(field)} className={cn('flex h-7 min-w-0 shrink-0 items-center text-xs text-muted', !wide && 'w-[88px]')}><span className="truncate">{field.label}</span>{typeof field.shared === 'string' && <SharedMark from={field.shared} className="ml-1.5" />}</label>
   if (toggle) return <div className="py-1">{children}{help}</div>
   if (wide) return <div className="pb-1">{label}{children}{help}</div>
   return (

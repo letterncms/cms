@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { cn } from './cn'
+import { locale, t } from '@letterncms/sdk'
 import { Icon } from './Icon'
+import { Tooltip } from './Tooltip'
 
 /** Label + control + help/error. Every form row in the admin uses this. */
 export function Field({ label, htmlFor, instructions, error, required, children, className, aside }: { label?: ReactNode; htmlFor?: string; instructions?: ReactNode; error?: string; required?: boolean; children: ReactNode; className?: string; aside?: ReactNode }) {
@@ -30,5 +32,23 @@ export function FieldError({ id, children, className }: { id?: string; children:
       <Icon name="error" size={14} className="shrink-0" />
       <span className="min-w-0">{children}</span>
     </p>
+  )
+}
+
+/**
+ * Beside the label of a field whose value is set in another language of the entry: a lock, and that
+ * language's code. The field itself is closed here; the tooltip names the language.
+ */
+export function SharedMark({ from, className }: { from: string; className?: string }) {
+  let language = from.toUpperCase()
+  try { language = new Intl.DisplayNames([locale()], { type: 'language' }).of(from) ?? language } catch { /* a code the browser does not know stays a code */ }
+  return (
+    <Tooltip content={t('Set in {language}', { language })}>
+      <span tabIndex={0} className={cn('inline-flex shrink-0 cursor-default items-center gap-1 rounded-xs text-2xs font-medium uppercase text-faint', className)}>
+        <Icon name="lock" size={12} />
+        <span className="sr-only">{t('Set in {language}', { language })}</span>
+        <span aria-hidden="true">{from}</span>
+      </span>
+    </Tooltip>
   )
 }
