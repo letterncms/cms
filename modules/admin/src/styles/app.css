@@ -242,6 +242,20 @@
     }
   }
 
+  /* `Pressable`: a control that draws itself. What every control has and nothing to see; a component rule,
+     so any utility the caller gives it (a cursor, an outline of its own, a colour) wins. */
+  .cms-pressable {
+    color: inherit;
+    text-align: start;
+    text-decoration: none;
+    cursor: default;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cms-pressable:focus-visible { outline: 2px solid var(--cms-focus); outline-offset: 2px; }
+  .cms-pressable[data-inset]:focus-visible { outline-offset: -2px; }
+  .cms-pressable:disabled { pointer-events: none; }
+
   .cms-focus-ring {
     outline: none;
   }
