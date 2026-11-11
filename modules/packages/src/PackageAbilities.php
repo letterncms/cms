@@ -53,7 +53,6 @@ final class PackageAbilities
                 $timestamps = $manager->timestamps();
                 $settings = $this->cms->settingsRegistry()->schemas();
                 $inactive = $manager->inactive();
-                $problems = $manager->problems();
                 $locale = app(Translations::class)->current();
                 $out = [];
 
@@ -74,7 +73,7 @@ final class PackageAbilities
                     }
 
                     $translated = self::translated($package, $locale);
-                    $problem = $inactive[$package->name] ?? $problems[$package->name] ?? null;
+                    $problem = $inactive[$package->name] ?? null;
                     $dependents = $manager->dependents($package->name);
                     $enabled = $manager->isEnabled($package->name);
                     $settingsOf = array_keys(array_filter($settings, static fn ($s) => $s['package'] === $package->name));

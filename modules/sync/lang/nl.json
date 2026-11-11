@@ -18,7 +18,6 @@
   ":site pushed to this site": ":site heeft naar deze site verstuurd",
   ":site ran into an error: :message": ":site liep tegen een fout aan: :message",
   ":site turned down a request for being too big. Raise post_max_size there, or ask its host to.": ":site weigerde een verzoek omdat het te groot was. Verhoog daar post_max_size, of vraag het aan de host.",
-  "Connect another site": "Verbind een andere site",
   "No sites connected": "Geen sites verbonden",
   "{count} file": "{count} bestand",
   "{count} files": "{count} bestanden",

@@ -15,7 +15,6 @@ final class PluginsCommand extends Command
     public function handle(PackageManager $packages): int
     {
         $inactive = $packages->inactive();
-        $problems = $packages->problems();
         $rows = [];
         $data = [];
 
@@ -26,18 +25,16 @@ final class PluginsCommand extends Command
                 'version' => $p->version,
                 'source' => $source,
                 'status' => match (true) {
-                    isset($problems[$p->name]) => 'invalid',
                     $packages->isActive($p->name) => 'active',
                     default => 'off',
                 },
-                'reason' => $problems[$p->name] ?? $inactive[$p->name] ?? null,
+                'reason' => $inactive[$p->name] ?? null,
             ];
             $rows[] = [
                 $p->name,
                 $p->version,
                 $source,
                 match (true) {
-                    isset($problems[$p->name]) => '<fg=red>invalid</> '.$problems[$p->name],
                     $packages->isActive($p->name) => '<fg=green>active</>',
                     default => $inactive[$p->name] ?? 'off',
                 },
@@ -50,9 +47,6 @@ final class PluginsCommand extends Command
             $this->warn($error);
         }
 
-        // Invalid plugins keep running; the exit code lets CI catch them.
-        return $problems === []
-            ? $this->done(['plugins' => $data, 'errors' => array_values($packages->repository()->errors())])
-            : $this->failure(count($problems) === 1 ? 'A plugin is invalid.' : count($problems).' plugins are invalid.', 'failed', $problems);
+        return $this->done(['plugins' => $data, 'errors' => array_values($packages->repository()->errors())]);
     }
 }

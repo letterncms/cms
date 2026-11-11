@@ -47,7 +47,6 @@ final class SettingsPlacesTest extends TestCase
                     // A screen of its own in the sidebar, which keeps its settings as a tab.
                     $this->cms()->admin()->nav('clicks', ['label' => 'Clicks', 'path' => '/clicks', 'section' => 'content']);
                     $settings->register('clicks', 'Clicks', [['handle' => 'days', 'type' => 'number', 'label' => 'Days']], home: 'clicks');
-                    $this->cms()->admin()->widget('links-recent', ['label' => 'Links', 'description' => 'Recent links.']);
                 }
             }
             PHP);
@@ -83,6 +82,19 @@ final class SettingsPlacesTest extends TestCase
         $this->assertNotContains('settings.clicks', array_merge(...array_column($result['settingsNav'], 'items')));
         $this->assertNotContains('settings.clicks', array_merge(...array_column($result['sidebar']['sections'], 'items')));
         $this->assertSame('clicks', array_column($this->app->make(Manifest::class)->build($this->admin())['settings'], 'home', 'namespace')['clicks']);
+    }
+
+    public function test_a_plugin_without_a_home_screen_widget_has_no_problem(): void
+    {
+        // Links registers no widget: it has nothing worth a glance, and nothing holds that against it.
+        $this->assertSame([], array_filter($this->cms()->admin()->widgets(), static fn (array $w) => $w['package'] === 'acme/links'));
+
+        $plugins = array_column($this->cms()->abilities()->execute('packages/list', ['type' => 'plugin'], \Cms\Abilities\AbilityContext::forUser($this->admin(), 'admin'))['items'], null, 'name');
+        $this->assertNull($plugins['acme/links']['problem']);
+        $this->assertTrue($plugins['acme/links']['active']);
+
+        $this->assertSame(0, \Illuminate\Support\Facades\Artisan::call('plugins'));
+        $this->assertArrayNotHasKey('problems', $this->app->make(Manifest::class)->build($this->admin())['home']);
     }
 
     public function test_a_plugins_screen_is_in_the_sidebar_from_the_start(): void

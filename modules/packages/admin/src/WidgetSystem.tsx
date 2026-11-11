@@ -1,5 +1,5 @@
-import { brand, invalidate, loadManifest, plural, run, t, useAbility, useManifest } from '@letterncms/sdk'
-import { Button, Icon, Stat, Widget, WidgetRow, cn, toast } from '@letterncms/ui'
+import { invalidate, loadManifest, plural, run, t, useAbility } from '@letterncms/sdk'
+import { Button, Icon, Widget, WidgetRow, cn, toast } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 
 interface Pkg {
@@ -14,15 +14,13 @@ interface Pkg {
   installedVersion: string | null
 }
 
-/** Home-screen widget: the state of the installation — version, database updates and plugins that need attention. */
+/** Home-screen widget: what about the installation needs attention — database updates waiting, plugins that failed. Nothing while all is well: the version and the plugins are on Plugins. */
 export default function WidgetSystem() {
-  const manifest = useManifest()
   const list = useAbility<{ items: Pkg[]; errors: string[] }>('packages/list', { type: 'all' })
   const [updating, setUpdating] = useState(false)
   const all = list.data?.items ?? []
 
   const extensions = all
-  const plugins = extensions.filter((p) => !p.core && p.active).length
   const pending = all.filter((p) => p.active && p.installedVersion !== p.version)
   const troubled = extensions.filter((p) => p.enabled && p.problem)
   const broken = list.data?.errors ?? []
@@ -41,27 +39,21 @@ export default function WidgetSystem() {
     }
   }
 
+  if (!list.isError && (!list.data || (pending.length === 0 && troubled.length === 0 && broken.length === 0))) return null
+
   return (
     <Widget action={{ label: t('Plugins'), to: '/plugins' }} query={list}>
       {list.data && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <Stat size="sm" label={brand().name} value={manifest.cms.version} />
-            <Stat size="sm" label={t('Plugins')} value={plugins} />
-          </div>
-
-          <div className="border-t border-border pt-1">
-            <Check
-              tone={pending.length ? 'warning' : 'success'}
-              label={t('Database')}
-              value={pending.length ? plural(pending.length, '{count} update pending', '{count} updates pending') : t('Up to date')}
-              action={pending.length > 0 && <Button size="xs" variant="primary" loading={updating} onClick={update}>{t('Run Updates')}</Button>}
-            />
-            <Check
-              tone={troubled.length || broken.length ? 'warning' : 'success'}
-              label={t('Health')}
-              value={troubled.length || broken.length ? plural(troubled.length + broken.length, '{count} needs attention', '{count} need attention') : t('All working')}
-            />
+        <div>
+          <div>
+            {pending.length > 0 && (
+              <Check
+                tone="warning"
+                label={t('Database')}
+                value={plural(pending.length, '{count} update pending', '{count} updates pending')}
+                action={<Button size="xs" variant="primary" loading={updating} onClick={update}>{t('Run Updates')}</Button>}
+              />
+            )}
             {troubled.slice(0, 3).map((p) => (
               <WidgetRow key={p.name} to="/plugins" leading={<Icon name="warning" size={14} className="shrink-0 text-warning" />} title={p.label} description={p.problem} />
             ))}

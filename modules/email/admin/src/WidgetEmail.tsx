@@ -10,7 +10,7 @@ interface EmailStatus {
   latest: { id: string; to: string; subject: string; tag: string | null; status: 'sent' | 'failed'; error: string | null; createdAt: string }[]
 }
 
-/** Home-screen widget: how email is sent, whether it gets out, and the latest messages. */
+/** Home-screen widget: whether email gets out, and the latest messages. Nothing while email is set up and none was sent: how it is sent is on the Email settings. */
 export default function WidgetEmail() {
   const manifest = useManifest()
   const status = useAbility<EmailStatus>('email/status', { limit: 4 }, { refetchInterval: 60_000 })
@@ -42,6 +42,8 @@ export default function WidgetEmail() {
     </div>
   )
 
+  if (!status.isError && (!s || (s.transport.delivers && s.sent === 0 && s.failed === 0 && s.latest.length === 0))) return null
+
   return (
     <Widget action={{ label: t('Settings'), to: '/settings/email' }} query={status}>
       {s && (
@@ -59,17 +61,17 @@ export default function WidgetEmail() {
             {testButton(true)}
           </div>
 
-          <div className="grid grid-cols-2 gap-4 @md:grid-cols-4">
-            <Stat size="sm" label={t('Sent (7 days)')} value={compactNumber(s.sent)} />
-            <Stat size="sm" label={t('Failed (7 days)')} value={compactNumber(s.failed)} />
-          </div>
+          {(s.sent > 0 || s.failed > 0) && (
+            <div className="grid grid-cols-2 gap-4 @md:grid-cols-4">
+              <Stat size="sm" label={t('Sent (7 days)')} value={compactNumber(s.sent)} />
+              {s.failed > 0 && <Stat size="sm" label={t('Failed (7 days)')} value={compactNumber(s.failed)} />}
+            </div>
+          )}
 
-          <div>
-            <p className="m-0 mb-1 text-xs text-muted">{t('Latest')}</p>
-            {s.latest.length === 0 ? (
-              <p className="m-0 py-2 text-sm text-faint">{t('No email sent yet')}</p>
-            ) : (
-              s.latest.map((m) => (
+          {s.latest.length > 0 && (
+            <div>
+              <p className="m-0 mb-1 text-xs text-muted">{t('Latest')}</p>
+              {s.latest.map((m) => (
                 <WidgetRow
                   key={m.id}
                   leading={<Icon name={m.status === 'failed' ? 'warning' : 'mail'} size={15} className={cn('shrink-0', m.status === 'failed' ? 'text-danger' : 'text-faint')} />}
@@ -77,9 +79,9 @@ export default function WidgetEmail() {
                   description={m.status === 'failed' ? <span title={m.error ?? undefined}>{t('Not sent to {recipient}', { recipient: m.to })}</span> : m.to}
                   meta={timeAgo(m.createdAt)}
                 />
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
 
           {testButton(false)}
         </div>

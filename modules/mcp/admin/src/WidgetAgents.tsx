@@ -1,5 +1,5 @@
-import { navigate, t, timeAgo, useAbility } from '@letterncms/sdk'
-import { Button, Widget, WidgetRow } from '@letterncms/ui'
+import { t, timeAgo, useAbility } from '@letterncms/sdk'
+import { Widget, WidgetRow } from '@letterncms/ui'
 
 interface Agents {
   agents: { name: string; connectedAt: string | null; lastUsedAt: string | null }[]
@@ -7,24 +7,15 @@ interface Agents {
   activity: { id: string; ability: string; label: string; subject: string | null; createdAt: string }[]
 }
 
-/** Home-screen widget: the AI agents signed in to your account, and what they changed lately. */
+/** Home-screen widget: the AI agents signed in to your account, and what they changed lately. Nothing while there are none. */
 export default function WidgetAgents() {
   const agents = useAbility<Agents>('mcp/agents', { limit: 4 }, { refetchInterval: 60_000 })
   const a = agents.data
 
+  if (!agents.isError && (!a || (a.agents.length === 0 && a.activity.length === 0))) return null
+
   return (
-    <Widget
-      action={{ label: t('Connect'), to: '/account#mcp' }}
-      query={agents}
-      empty={
-        a?.agents.length === 0 &&
-        a.activity.length === 0 && {
-          icon: 'mcp',
-          title: t('No agents connected'),
-          action: <Button size="sm" icon="plus" onClick={() => navigate('/account#mcp')}>{t('Connect an Agent')}</Button>,
-        }
-      }
-    >
+    <Widget action={{ label: t('Connect'), to: '/account#mcp' }} query={agents}>
       {a && (
         <>
           {a.agents.map((agent) => (
