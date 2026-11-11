@@ -285,6 +285,12 @@ final class SavedViews
     private static function state(array $state, ?array $offers = null): array
     {
         $query = array_filter((array) ($state['query'] ?? []), static fn ($v) => is_string($v) && $v !== '');
+
+        // "Published" meant every published entry until some could have run out: a view kept then means the ones still on the site.
+        if (($query['status'] ?? null) === 'published') {
+            $query['status'] = 'active';
+        }
+
         $columns = is_array($state['columns'] ?? null) ? array_values(array_filter($state['columns'], 'is_string')) : null;
         $sort = is_string($state['sort'] ?? null) && preg_match('/'.ContentAbilities::SORT.'/', $state['sort']) ? $state['sort'] : null;
         $view = in_array($state['view'] ?? null, ['table', 'grid', 'calendar'], true) ? $state['view'] : 'table';

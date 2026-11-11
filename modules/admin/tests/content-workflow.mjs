@@ -550,14 +550,20 @@ try {
     await details(); button('More Actions').click()
     await wait(() => [...document.querySelectorAll('[role="menuitem"]')].some(item => item.textContent.trim() === 'Schedule…'), 'Schedule action missing'); [...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent.trim() === 'Schedule…').click()
     await wait(() => document.querySelector('#f-at'), 'Publication dialog missing')
-    assert(document.querySelector('[role="dialog"]').textContent.includes('Europe/Brussels'), 'Site timezone is hidden')
-    setInput(document.querySelector('#f-at'), new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 16))
+    // The site's timezone is named under the start and under the end: both are on the site's clock.
+    assert(document.querySelector('[role="dialog"]').textContent.split('Europe/Brussels').length === 3, 'The site timezone is not under both dates: ' + document.querySelector('[role="dialog"]').textContent)
+    // The same clock time a day apart in both controls is a day apart on the site's clock: both read the site's zone.
+    const wall = (days) => { const d = new Date(Date.now() + days * 86400000); return d.toISOString().slice(0, 11) + '09:30' }
+    setInput(document.querySelector('#f-at'), wall(2))
+    setInput(document.querySelector('#f-ends'), wall(3))
     await wait(() => button('Schedule', document.querySelector('[role="dialog"]')), 'Schedule confirmation not ready')
     button('Schedule', document.querySelector('[role="dialog"]')).click()
     await waitAsync(async () => (await state()).entries['post-1'].displayStatus === 'scheduled', 'Scheduling did not persist')
     await wait(() => !document.querySelector('#f-at'), 'Publication dialog did not close')
     const last = (await state()).requests.filter((request) => request.ability === 'entries/update').at(-1)
     assert(last.input.at?.endsWith('Z') && last.input.expectedVersion, 'Scheduling omitted UTC instant or concurrency guard')
+    const inBrussels = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Brussels', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
+    assert(inBrussels(last.input.at) === '09:30' && inBrussels(last.input.expiresAt) === '09:30', 'Start and end are not both the site\'s clock: ' + last.input.at + ' / ' + last.input.expiresAt)
   })
   await test('Read-only block workspace remains inspectable without mutation controls or keyboard writes', async () => {
     await open('/content/viewer/view-1', 'A read-only page'); await details()

@@ -196,8 +196,9 @@ final class EntriesView
         }
         $columns[] = ['id' => 'author', 'key' => 'author', 'label' => __('Author'), 'format' => 'person', 'width' => '132px', 'sort' => 'author_id', 'empty' => __('Unassigned')];
         $columns[] = ['id' => 'published', 'key' => 'published', 'label' => __('Published')];
-        // When its publication ends, for those it does: a column to show, off until asked for.
-        $columns[] = ['id' => 'ends', 'key' => 'expiresAt', 'label' => __('Ends'), 'format' => 'date', 'width' => '112px', 'sort' => 'expires_at'];
+        // When its publication ends, for those it does: a column to show, off until asked for. A date as the
+        // dates beside it are written: short, and marked while it is still to come.
+        $columns[] = ['id' => 'ends', 'key' => 'expiresAt', 'label' => __('Ends'), 'format' => 'field', 'field' => ['type' => 'date'], 'empty' => '—', 'width' => '112px', 'sort' => 'expires_at'];
         $columns[] = ['id' => 'updated', 'key' => 'updated', 'label' => __('Updated')];
 
         // Default Display Fields name columns as collection settings do (`field:<handle>`, `uri`, `author`).

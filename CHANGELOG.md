@@ -35,6 +35,8 @@
 - A group of avatars shows one initial per person, so the next circle never cuts a letter, and its count grows into a pill instead of losing digits; a single avatar shows two letters at most, with air around them.
 - Green, amber and red badges read at 4.5:1 or more wherever they stand, in light and dark: their words are a step toward ink, as the blue one's already were.
 - A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.
+- A saved view kept with the **Published** filter before entries could have an end date lists published entries again, not every entry.
+- The content API's OpenAPI document says which entries it gives: published, their publication date come and their end date not passed.
 
 ## 0.23.0 (2026-11-11)
 
