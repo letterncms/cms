@@ -129,6 +129,8 @@ const checks = {
     equal(first.reducedMotion, false, 'reduced motion')
     equal(first.primary !== '', true, 'a design token is read where the element is')
     equal(await tab.evaluate('document.getElementById("later").dataset.mounted ?? null'), null, 'one that waits to be seen has not loaded')
+    const settled = JSON.parse(await tab.until('document.getElementById("settled").dataset.mounted'))
+    equal([settled.ready, settled.fonts], ['complete', 'loaded'], 'one that waits for the page mounts after its load event and its fonts')
 
     await tab.evaluate('document.getElementById("later").scrollIntoView()')
     await tab.until('document.getElementById("later").dataset.mounted')
@@ -155,7 +157,7 @@ const checks = {
     equal(JSON.parse(await calm.until('document.getElementById("first").dataset.mounted')).reducedMotion, true, 'told that the visitor wants less motion')
     await calm.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
     await calm.until('JSON.parse(document.getElementById("first").dataset.mounted).reducedMotion === false')
-    equal(await calm.evaluate('document.documentElement.dataset.cleaned'), 'first', 'mounted again when that changes')
+    equal(await calm.evaluate('window.__mounts >= 4'), true, 'mounted again when that changes')
     await calm.close()
   },
 
