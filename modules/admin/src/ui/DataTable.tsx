@@ -139,7 +139,7 @@ export function TableFrame({ template, label, busy, children }: { template: stri
 export function TableRow({ children, header, selected, active, className, recordId }: { children: ReactNode; header?: boolean; selected?: boolean; active?: boolean; className?: string; recordId?: string }) {
   return <div role="row" data-entry={recordId} className={cn(
     'grid items-center gap-x-5 border-b border-border px-3 [grid-template-columns:var(--cols)]',
-    header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group relative min-h-10 text-sm transition-colors duration-base hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
+    header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group cms-reveal-row relative min-h-10 text-sm transition-colors duration-base hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
     selected && 'bg-focus-soft hover:bg-focus-hover',
     active && !selected && 'bg-hover',
     active && 'shadow-cursor',
@@ -153,7 +153,7 @@ export function TableMeta({ children }: { children: ReactNode }) {
 }
 
 /** Row actions: on a screen with a pointer they show on hover or focus, so the list stays quiet. */
-export const rowActionsClass = 'relative z-raised flex min-w-0 items-center justify-end gap-0.5 transition-opacity duration-base [&>*]:shrink-0 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 has-[[data-popup-open]]:opacity-100'
+export const rowActionsClass = 'cms-reveal relative z-raised flex min-w-0 items-center justify-end gap-0.5 [&>*]:shrink-0'
 
 export function TableHeader({ label, align, direction, onSort, hiddenLabel }: { label: string; align?: 'end'; direction?: 'ascending' | 'descending'; onSort?: () => void; hiddenLabel?: boolean }) {
   return <div role="columnheader" data-align={align} aria-sort={onSort ? direction ?? 'none' : undefined} className={cn('flex min-w-0 items-center', align === 'end' && 'justify-end')}>

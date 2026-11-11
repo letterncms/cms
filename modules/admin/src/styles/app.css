@@ -195,6 +195,17 @@
 
   /* Touch: a button is at least 44px to hit, whatever its size to see. */
   @media (pointer: coarse) {
+    /* Options that stand side by side (a segmented control) reach up and down only: sideways each one's area would lie over its neighbour. */
+    .cms-touch-y { position: relative; }
+    .cms-touch-y::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: max(100%, 44px);
+      translate: 0 -50%;
+    }
     .cms-touch { position: relative; }
     .cms-touch::after {
       content: "";
@@ -204,6 +215,30 @@
       width: max(100%, 44px);
       height: max(100%, 44px);
       translate: -50% -50%;
+    }
+  }
+
+  /* What a row can do (`cms-reveal` inside a `cms-reveal-row`): out of the way until the row is pointed at,
+     holds the focus or has a menu of its own open. Where nothing hovers (a touch screen) it is always there.
+     Never `display: none`: it stays in the page for a keyboard and a screen reader, only out of sight. */
+  .cms-reveal { transition: opacity var(--cms-duration-base) var(--ease-out); }
+  @media (hover: hover) {
+    .cms-reveal { opacity: 0; }
+    .cms-reveal-row:hover .cms-reveal,
+    .cms-reveal-row:focus-within .cms-reveal,
+    .cms-reveal:focus-within,
+    .cms-reveal:has([data-popup-open]),
+    .cms-reveal[data-popup-open] { opacity: 1; }
+    /* `cms-reveal-over` lies over the end of its row instead of beside what the row says: a narrow cell's
+       title keeps its whole width, and is covered there only while the actions show. The row is `relative`. */
+    .cms-reveal-over {
+      position: absolute;
+      inset-block: 0;
+      inset-inline-end: 0;
+      padding-inline-start: 4px;
+      border-radius: inherit;
+      /* The row's own hover fill, opaque: the page with the film of ink over it. */
+      background: linear-gradient(var(--cms-hover), var(--cms-hover)), var(--cms-bg);
     }
   }
 

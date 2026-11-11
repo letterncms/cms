@@ -82,12 +82,12 @@ export function Widget({ title, action, query, loading, skeleton, empty, childre
           </h2>
           {action && isActionLink(action) ? (
             action.to ? (
-              <Link to={action.to} className="-mr-1.5 flex h-6 shrink-0 items-center gap-0.5 rounded-xs px-1.5 text-xs text-muted no-underline transition-colors duration-base hover:bg-hover hover:text-text">
+              <Link to={action.to} className="cms-touch -mr-1.5 flex h-6 shrink-0 items-center gap-0.5 rounded-xs px-1.5 text-xs text-muted no-underline transition-colors duration-base hover:bg-hover hover:text-text">
                 {action.label}
                 <Icon name="chevron-right" size={12} className="text-faint" />
               </Link>
             ) : (
-              <button type="button" onClick={action.onClick} className="-mr-1.5 h-6 shrink-0 rounded-xs px-1.5 text-xs text-muted transition-colors duration-base hover:bg-hover hover:text-text">
+              <button type="button" onClick={action.onClick} className="cms-touch -mr-1.5 h-6 shrink-0 rounded-xs px-1.5 text-xs text-muted transition-colors duration-base hover:bg-hover hover:text-text">
                 {action.label}
               </button>
             )

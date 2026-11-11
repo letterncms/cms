@@ -46,9 +46,10 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
             event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus()
           }}
           className={cn(
-            'inline-flex min-w-0 max-w-full items-center justify-center gap-1.5 font-medium transition-colors duration-base ease-out disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-offset-0',
+            'cms-touch-y inline-flex min-w-0 max-w-full items-center justify-center gap-1.5 font-medium transition-colors duration-base ease-out disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-offset-0',
             fit ? 'flex-[1_1_auto]' : block && 'flex-[1_0_auto]',
-            size === 'xs' ? 'min-h-5 rounded-xs text-xs' : 'min-h-6 rounded-xs text-sm',
+            // On a touch screen the track is taller and every option 44px tall to hit (`cms-touch-y`: never over its neighbour).
+            size === 'xs' ? 'min-h-5 rounded-xs text-xs [@media(pointer:coarse)]:min-h-7' : 'min-h-6 rounded-xs text-sm [@media(pointer:coarse)]:min-h-8',
             // One padding per option: an icon alone is a square, a label that must fit gives up some room.
             !o.label && !block ? (size === 'xs' ? 'w-6 px-0' : 'w-7 px-0') : fit && o.label ? 'px-1.5' : size === 'xs' ? 'px-2' : 'px-2.5',
             value === o.value ? 'bg-float text-ink shadow-raise dark:bg-fill' : implied === o.value ? 'bg-float/55 text-text' : 'text-muted hover:text-text',
@@ -86,7 +87,8 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
   return (
     // Many plugin tabs scroll sideways rather than wrapping their labels. The rule is an inset shadow the active underline covers, so nothing overflows vertically.
     // A page's tabs sit 20px apart on their hairline; unbordered ones (in a panel's own header row) 16px.
-    <div ref={row} role="tablist" className={cn('flex min-h-9 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none]', bordered ? 'gap-5 shadow-[inset_0_-1px_0_var(--cms-border)]' : 'gap-4', className)}>
+    // The row clips what reaches outside it, so on a touch screen a tab is 44px tall itself.
+    <div ref={row} role="tablist" className={cn('flex min-h-9 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [@media(pointer:coarse)]:min-h-11', bordered ? 'gap-5 shadow-[inset_0_-1px_0_var(--cms-border)]' : 'gap-4', className)}>
       {tabs.map((t, index) => {
         const iconOnly = compact && !!t.icon
         const tab = (

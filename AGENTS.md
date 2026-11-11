@@ -31,7 +31,8 @@ Build screens from `@letterncms/ui` (`modules/admin/src/ui`). One component per 
 - Use the tokens in `modules/admin/src/styles/theme.css`: `text-2xs` to `text-3xl` and `text-display`, `rounded-xs` to `rounded-xl`, the named colours and shadows, `duration-fast|base|move|slow`, `z-raised|drag|sticky|bar|drawer|overlay|tooltip`. A new token goes in `styles/tokens.css` with a dark value.
 - `./dev check` fails on exactly these in admin code: a raw `<button`, `text-[…]`, `rounded-[…]`, `z-[…]` and `z-10`, `duration-[…]` and `duration-150`, `shadow-[…]`, `bg-[…]`, and hex colours. A justified exception goes in `workspace/tools/ui-lint-allow.txt` with its reason; that file only shrinks (`node tools/ui-lint.mjs --prune`), never grows for new code.
 - Focus is a 2px line of the focus colour: leave the default ring on a button, inset it on a row or a tab (`-outline-offset-2`), and give a field `cms-input`. `outline-none` only where the focus shows another way or on a popup that hands the focus on. A menu item under the arrow keys shows its fill, no ring.
-- `Button` is 44px to hit on a touch screen whatever its size; a control of your own needs the same.
+- `Button` is 44px to hit on a touch screen whatever its size, and so are a `Segmented` option and a tab; a control of your own needs the same (`cms-touch`).
+- Actions that show only when a row is pointed at are `cms-reveal` inside a `cms-reveal-row` (`Row` and `DataView` do it for you): they also show when the row holds the focus or has a menu open, and always on a touch screen. Never `opacity-0 group-hover:opacity-100` by hand.
 - Look at what you built in light, dark and at phone width before the pull request.
 
 Copy:
