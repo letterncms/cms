@@ -203,6 +203,8 @@ export interface DataColumn<T> {
   cardByDefault?: boolean
   /** Its value says what it is (a status, an address, a person): on a phone, where a row has no headings, it stands without its label. Every other value there is led by its column's name. */
   bare?: boolean
+  /** A control (a switch): centred on the row's line, and on a phone at the end of the line under the title, so the rows' controls stand in one column. */
+  control?: boolean
   /** The record's status (`published`, `draft`…, or a tone with the words it is shown in), when this column shows one: a calendar marks each record with its dot. */
   status?: (item: T) => RecordStatus | null | undefined
   /** Of the first column: what is said beside the title, quieter. On a phone it starts the line under the title, so a long title cannot push it out. */
@@ -291,9 +293,9 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
       </div>
       {/* What moves the row is at its start, where a list is taken hold of, in the room before its title. */}
       {extra?.handle && <span data-row-handle="" className="cms-reveal absolute -left-1 top-1/2 z-raised -translate-y-1/2 max-sm:hidden">{extra.handle}</span>}
-      <TableMeta>{first.note?.(item) ? <div data-row-note="" className="shrink-0 sm:hidden">{first.note(item)}</div> : null}{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
+      <TableMeta>{first.note?.(item) ? <div data-row-note="" className="max-w-full shrink-0 truncate sm:hidden">{first.note(item)}</div> : null}{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums', c.control && 'max-sm:ml-auto')}>
         {/* On a phone the headings are gone: a value is led by its column's name (app.css, `data-label`), unless it says what it is. */}
-        <div data-label={c.bare ? undefined : c.label} className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
+        <div data-label={c.bare ? undefined : c.label} className={cn('w-full min-w-0', c.control ? 'flex items-center justify-end' : 'truncate', c.align === 'end' && !c.control && 'text-right max-sm:text-left')}>{c.render(item)}</div>
       </div>)}</TableMeta>
       {hasActions && <div role="cell" data-table-actions className={rowActionsClass}>{actions?.(item)}</div>}
     </TableRow>

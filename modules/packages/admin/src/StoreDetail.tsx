@@ -1,7 +1,7 @@
-import { invalidate, locale, run, t, useAbility } from '@letterncms/sdk'
-import { Badge, Button, cn, Icon, IconButton, prompt, Skeleton, Slideover, Tabs, toast } from '@letterncms/ui'
+import { locale, t, useAbility } from '@letterncms/sdk'
+import { Badge, Button, cn, Icon, IconButton, Pressable, Skeleton, Slideover, Tabs } from '@letterncms/ui'
 import { useState } from 'react'
-import { Action, ItemIcon, priceLabel, type Item } from './storeItem'
+import { Action, addLicenseKey, ItemIcon, priceLabel, type Item } from './storeItem'
 
 interface Detail extends Item {
   description_html: string
@@ -33,19 +33,7 @@ export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { 
   const [expanded, setExpanded] = useState(true)
   const [tab, setTab] = useState<'overview' | 'changelog'>('overview')
 
-  const addKey = async () => {
-    const asked = await prompt({ title: t('Add Key'), fields: [{ handle: 'key', type: 'textarea', label: t('Key'), required: true }], confirm: t('Add Key') })
-    const key = asked?.key as string | undefined
-    if (!key) return
-    try {
-      await run('packages/add-key', { key })
-      invalidate('packages/')
-      toast.success(t('Key added'))
-      onClose()
-    } catch (e) {
-      toast.error(e)
-    }
-  }
+  const addKey = async () => { if (await addLicenseKey()) onClose() }
 
   const releases = d?.releases ?? []
   const facts: [string, React.ReactNode][] = [
@@ -71,13 +59,14 @@ export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { 
       <div className="mx-auto max-w-5xl p-4 sm:p-6">
         <header className="flex flex-wrap items-start gap-4">
           <ItemIcon item={item} icon={icon} size="lg" />
-          <div className="min-w-0 flex-1">
+          {/* Its words keep a column's width: on a phone the buttons go under them instead of squeezing them to a word a line. */}
+          <div className="min-w-0 flex-1 basis-56">
             <h2 className="m-0 text-xl font-medium text-ink">{item.title}</h2>
             <p className="m-0 mt-0.5 text-sm text-muted">{t('By {name}', { name: item.author.name || item.package })}</p>
             <p className="m-0 mt-2 max-w-2xl text-sm text-text">{item.summary}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {item.action === 'buy' && <Button disabled={locked} onClick={() => void addKey()}>{t('Add Key')}</Button>}
+            {item.action === 'buy' && <Button disabled={locked} onClick={() => void addKey()}>{t('Add License Key')}</Button>}
             <Action item={item} busy={busy} locked={locked} onInstall={onInstall} size="md" />
           </div>
         </header>
@@ -170,9 +159,9 @@ function Gallery({ shots }: { shots: { url: string; alt: string }[] }) {
       {shots.length > 1 && (
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
           {shots.map((s, i) => (
-            <button key={s.url} type="button" onClick={() => setAt(i)} aria-label={t('Show picture {n}', { n: i + 1 })} aria-current={i === at || undefined} className={cn('w-24 shrink-0 cursor-pointer overflow-hidden rounded-md border bg-transparent p-0 transition-opacity', i === at ? 'border-ink opacity-100' : 'border-border opacity-60 hover:opacity-100')}>
+            <Pressable key={s.url} onClick={() => setAt(i)} aria-label={t('Show picture {n}', { n: i + 1 })} aria-current={i === at || undefined} className={cn('w-24 shrink-0 overflow-hidden rounded-md border transition-opacity duration-base', i === at ? 'border-ink opacity-100' : 'border-border opacity-60 hover:opacity-100')}>
               <img src={s.url} alt="" className="block aspect-[16/10] w-full object-cover object-top" loading="lazy" />
-            </button>
+            </Pressable>
           ))}
         </div>
       )}

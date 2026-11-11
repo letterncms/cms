@@ -16,7 +16,7 @@
   "Get Global Set": "Globalen Inhalt abrufen",
   "Global Set Fields": "Felder eines globalen Inhalts",
   "Global Sets": "Globale Inhalte",
-  "Global sets: site-wide values such as contact details or a footer, with their own fields.": "Globale Inhalte: Werte für die ganze Website, etwa Kontaktdaten oder eine Fußzeile, mit eigenen Feldern.",
+  "Site-wide values such as contact details or a footer, in global sets with fields of their own.": "Werte für die ganze Website, etwa Kontaktdaten oder eine Fußzeile, in globalen Sets mit eigenen Feldern.",
   "Icon": "Icon",
   "Its values are deleted too.": "Die zugehörigen Werte werden ebenfalls gelöscht.",
   "List Global Sets": "Globale Inhalte auflisten",

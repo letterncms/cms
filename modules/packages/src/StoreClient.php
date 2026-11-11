@@ -799,6 +799,16 @@ final class StoreClient
     }
 
     /** @return array<string, mixed> The verified catalog, or nothing */
+    /** Whether a store's catalog, as last fetched, lists this package. Never asks the store: a list of plugins can't wait on it. */
+    public function lists(string $package, string $id = self::DEFAULT): bool
+    {
+        try {
+            return $this->find($this->payload($id), $package) !== null;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     private function payload(string $id): array
     {
         $file = $this->catalogFile($id);
