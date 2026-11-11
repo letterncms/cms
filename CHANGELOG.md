@@ -5,6 +5,7 @@
 ### Added
 
 - **Code beside the design**: ES modules in `content/design/scripts/` and stylesheets in `content/design/styles/` load on every page, with a template or with a component (`content/design/code.json`), or with one block (`code: {scripts, styles}`). One script imports another by path; each file is published with a hash in its name and cached forever, and changing one rebuilds only the pages that load it. `custom.css` and `custom.js` stay as they are. Agents use `design/code-files`, `design/code-read`, `design/code-write`, `design/code-delete` and `design/code-load`, and read `cms://site/code`.
+- **Libraries without a bundler**: `cms vendor add gsap@3.12.5` fetches a package's ES module at one exact version into `content/design/vendor/`, records its version and hash in `content/design/vendor/lock.json`, and puts it in the import map of pages that load a script, so scripts write `import gsap from "gsap"`. `--file=` takes one file of a package and `--as=` names the import; `cms vendor list`, `remove` and `update` do the rest, as do the abilities `design/vendor-list`, `design/vendor-add`, `design/vendor-remove` and `design/vendor-update`. After the fetch nothing loads from another server, and a file that no longer matches its hash is not published.
 
 ## 0.21.0 (2026-11-11)
 

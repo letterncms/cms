@@ -14,6 +14,7 @@ use InvalidArgumentException;
  *
  *   content/design/scripts/<name>.js   ES modules; folders allowed: scripts/lib/ease.js is "lib/ease"
  *   content/design/styles/<name>.css   stylesheets
+ *   content/design/vendor/             libraries the scripts import by name (Vendor)
  *   content/design/code.json           which of them load where:
  *     { "scripts": ["smooth"], "styles": ["base"],                          every page
  *       "templates":  { "post":   { "scripts": [...], "styles": [...] } },   pages with this template
@@ -38,6 +39,8 @@ final class Code
 
     private ?array $map = null;
 
+    public function __construct(private readonly Vendor $vendor) {}
+
     public function path(string $relative = ''): string
     {
         return content_path('design'.($relative !== '' ? '/'.ltrim($relative, '/') : ''));
@@ -48,6 +51,7 @@ final class Code
     {
         $this->urls = [];
         $this->config = $this->map = null;
+        $this->vendor->flush();
     }
 
     /** "scripts/lib/ease.js" => ["scripts", "lib/ease"], or an error naming what a path may be. */
@@ -193,10 +197,11 @@ final class Code
     }
 
     /**
-     * The page's import map: one script reaches another by its path ("./ease.js", "../lib/ease.js"),
-     * which the map sends to the published file. Publishes every script.
+     * The page's import map. A library is imported by its name (`import gsap from "gsap"`, see Vendor),
+     * with the hash its file must have; one script reaches another by its path ("./ease.js",
+     * "../lib/ease.js"), which the map sends to the published file. Publishes every script and library.
      *
-     * @return array{imports?: array<string, string>}
+     * @return array{imports?: array<string, string>, integrity?: array<string, string>}
      */
     public function importMap(): array
     {
@@ -204,13 +209,13 @@ final class Code
             return $this->map;
         }
 
-        $imports = [];
+        ['imports' => $imports, 'integrity' => $integrity] = $this->vendor->map();
 
         foreach (array_keys($this->files('scripts')) as $name) {
             $imports["/_cms/site/scripts/{$name}.js"] = (string) $this->url('scripts', $name);
         }
 
-        return $this->map = $imports === [] ? [] : ['imports' => $imports];
+        return $this->map = array_filter(['imports' => $imports, 'integrity' => $integrity]);
     }
 
     /** The import map as the element a page carries before its first module, or '' when there is nothing to map. */
@@ -239,6 +244,8 @@ final class Code
         }
 
         is_file($config = $this->path('code.json')) && $out['code.json'] = (string) hash_file('xxh128', $config);
+        // Under scripts/, so the pages with an import map are the ones built again.
+        is_file($lock = $this->vendor->path('lock.json')) && $out['scripts/@vendor'] = (string) hash_file('xxh128', $lock);
 
         return $out;
     }
@@ -256,7 +263,7 @@ final class Code
 
         is_file($config = $this->path('code.json')) && $parts[] = 'code.json:'.filesize($config).':'.filemtime($config);
 
-        return md5(implode('|', $parts));
+        return md5(implode('|', [...$parts, $this->vendor->stamp()]));
     }
 
     /** The whole list a page may carry of one kind, without repeats. */

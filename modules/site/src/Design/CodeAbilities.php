@@ -98,6 +98,7 @@ final class CodeAbilities
                     'content/design/code.json says where they load: top-level "scripts" and "styles" on every page, "templates": {<handle>: {scripts, styles}} with a template, "components": {<handle>: {scripts, styles}} on pages that show that component.',
                     'A block loads its own: {"type": "box", "code": {"scripts": ["hero"], "styles": ["hero"]}}.',
                     'Scripts load as <script type="module"> at the end of the page, never in the editor. One script imports another by path: import { ease } from "./lib/ease.js".',
+                    'Libraries come from `cms vendor add <name>@<version>` or design/vendor-add (see design/vendor-list): kept in content/design/vendor, pinned in its lock.json, and imported by name: import gsap from "gsap". Never load a library from a CDN.',
                     'Files are published under /_cms/site/ with a hash in their name and cached forever; changing one rebuilds the pages that load it.',
                 ],
                 ...$list(),
