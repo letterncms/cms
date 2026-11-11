@@ -478,5 +478,13 @@
   "small print": "kleine letters",
   "strong": "vet",
   "With Prose on, its own paragraphs are spaced the same way.": "Met Lopende tekst aan krijgen de eigen alinea’s dezelfde ruimte.",
-  "A button keeps its own look in prose.": "Een knop houdt in lopende tekst zijn eigen uiterlijk."
+  "A button keeps its own look in prose.": "Een knop houdt in lopende tekst zijn eigen uiterlijk.",
+  "A file is scripts/<name>.js or styles/<name>.css: lowercase letters, digits, - and _, in up to three folders.": "Een bestand is scripts/<naam>.js of styles/<naam>.css: kleine letters, cijfers, - en _, in hooguit drie mappen.",
+  "This page names :file, which is not in content/design.": "Deze pagina noemt :file, dat niet in content/design staat.",
+  "Design code changed": "Code van het ontwerp gewijzigd",
+  "Design Scripts and Styles": "Scripts en stijlen van het ontwerp",
+  "Read a Design Script or Style": "Een script of stijl van het ontwerp lezen",
+  "Write a Design Script or Style": "Een script of stijl van het ontwerp schrijven",
+  "Delete a Design Script or Style": "Een script of stijl van het ontwerp verwijderen",
+  "Where Design Scripts and Styles Load": "Waar scripts en stijlen van het ontwerp laden"
 }

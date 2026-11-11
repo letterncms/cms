@@ -372,6 +372,8 @@ final class BlockRenderer
             }
 
             $motion = $this->editor ? null : $this->motion($node);
+            // The scripts and styles this block names come with it to whichever page shows it.
+            ! empty($node['code']) && $this->hooks->dispatch('render.code', Document::code($node['code']));
 
             $classes = trim(implode(' ', array_filter([
                 'cms-'.str_replace('/', '-', $type->name),
@@ -835,6 +837,7 @@ final class BlockRenderer
         }
 
         $this->rendering[$ref] = true;
+        $this->hooks->dispatch('render.component', $ref);
         $this->propLabels[] = array_column(array_filter((array) ($pattern['props'] ?? []), 'is_array'), 'label', 'handle');
 
         try {

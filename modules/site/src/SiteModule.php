@@ -14,6 +14,8 @@ use Cms\Content\Entries\Entry;
 use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Packages\Plugin;
 use Cms\Modules\Site\Build\SiteBuilder;
+use Cms\Modules\Site\Design\Code;
+use Cms\Modules\Site\Design\CodeAbilities;
 use Cms\Modules\Site\Design\Design;
 use Cms\Modules\Site\Design\DesignCompiler;
 use Cms\Modules\Site\Design\DesignJson;
@@ -36,7 +38,7 @@ final class SiteModule extends Plugin
     {
         require_once __DIR__.'/helpers.php';
 
-        foreach ([Design::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class] as $service) {
+        foreach ([Design::class, Code::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class] as $service) {
             $this->app->singleton($service);
         }
 
@@ -60,6 +62,7 @@ final class SiteModule extends Plugin
         $this->routes();
         $this->settingsSchema();
         $this->abilities();
+        CodeAbilities::register($this->cms(), fn () => $this->app->make(Code::class));
         $this->buildTriggers();
         $this->adminUi();
         $this->agentContext();
@@ -80,6 +83,10 @@ final class SiteModule extends Plugin
         $hooks->on('render.style', static fn (string $key, string $css, int $order = 0) => PageContext::current()?->addStyle($key, $css, $order));
         $hooks->on('render.head', static fn (string $key, string $html) => PageContext::current()?->addHead($key, $html));
         $hooks->on('render.foot', static fn (string $key, string $html) => PageContext::current()?->addFoot($key, $html));
+        $code = fn () => $this->app->make(Code::class);
+        $hooks->on('render.code', static fn (array $names) => PageContext::current()?->addCode($names));
+        $hooks->on('render.component', static fn (string $handle) => PageContext::current()?->addCode($code()->for('components', $handle)));
+        $hooks->on('design.saved', static fn () => $code()->flush());
         $hooks->on('render.depend', static fn (string $key) => PageContext::depend($key));
         // Mail wears the site's colours, from whichever tokens this design has.
         $hooks->addFilter('email.colors', static function (array $colors) use ($design) {

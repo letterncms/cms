@@ -11,6 +11,7 @@ use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Extend\Hooks;
 use Cms\Cms;
 use Cms\Modules\Media\MediaManifest;
+use Cms\Modules\Site\Design\Code;
 use Cms\Modules\Site\Rendering\PageContext;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Support\Files;
@@ -130,7 +131,54 @@ final class SiteBuilder implements SiteBuilderContract
             return true;
         }
 
-        return false;
+        return $this->available() && $this->codeChanged();
+    }
+
+    /**
+     * Scripts and styles beside the design change on disk (an editor, git, an agent) with nobody
+     * telling the CMS. Pages say which they load, so only those are built again: a stylesheet's
+     * pages, and for a script every page with an import map, since any script may import it.
+     */
+    private function codeChanged(): bool
+    {
+        $code = $this->cms->app()->make(Code::class);
+        $seen = Files::readJson(storage_path('build/code.json'));
+
+        if (($seen['stamp'] ?? null) === ($stamp = $code->stamp())) {
+            return false;
+        }
+
+        $code->flush();
+        $files = $this->rememberCode($code, $stamp);
+
+        if (! is_file(storage_path('build/manifest.json')) || ! $this->cms->settings('site', 'auto_build', true)) {
+            return false;
+        }
+
+        $before = (array) ($seen['files'] ?? []);
+        $changed = array_keys(array_diff_assoc($files, $before) + array_diff_key($before, $files));
+
+        if (in_array('code.json', $changed, true)) {
+            $this->queue(null, __('Design code changed'));
+
+            return true;
+        }
+
+        $dependencies = array_map(static fn (string $file) => 'design:'.$file, $changed);
+        array_filter($changed, static fn (string $file) => str_starts_with($file, 'scripts/')) !== [] && $dependencies[] = 'design:importmap';
+        $pages = $this->readManifest()['pages'];
+        $uris = array_keys(array_filter($pages, static fn (array $page) => array_intersect($dependencies, $page['deps'] ?? []) !== []));
+        $uris !== [] && $this->queue(array_map('strval', $uris), __('Design code changed'));
+
+        return $uris !== [];
+    }
+
+    /** @return array<string, string> what each file beside the design holds now */
+    private function rememberCode(Code $code, ?string $stamp = null): array
+    {
+        Files::putJson(storage_path('build/code.json'), ['stamp' => $stamp ?? $code->stamp(), 'files' => $files = $code->fingerprints()]);
+
+        return $files;
     }
 
     /** Process queued work for up to $budgetMs milliseconds. */
@@ -160,6 +208,7 @@ final class SiteBuilder implements SiteBuilderContract
 
         if (! empty($queue['all']) || (! empty($queue['full']) && ! isset($queue['generation']))) {
             $queue = $this->expandFull($queue, $manifest);
+            $this->rememberCode($this->cms->app()->make(Code::class));
             Files::put(storage_path('build/signature'), $this->signature());
         }
 
@@ -194,6 +243,8 @@ final class SiteBuilder implements SiteBuilderContract
 
             $manifest['builtAt'] = now()->toIso8601String();
             $queue = ['all' => false, 'items' => [], 'done' => $queue['done'], 'total' => $queue['done'], 'state' => 'done', 'reason' => $queue['reason'] ?? '', 'errors' => $queue['errors'] ?? [], 'warnings' => $queue['warnings'] ?? []];
+            // Every page now names the current scripts and styles: the versions before them can go.
+            $this->cms->app()->make(Code::class)->sweep();
             $this->hooks->dispatch('site.built', $manifest);
         }
 

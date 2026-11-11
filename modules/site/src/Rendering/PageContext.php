@@ -41,6 +41,9 @@ final class PageContext
     /** @var array<string, array{0: int, 1: string}> rule key => [order, CSS] */
     public array $styles = [];
 
+    /** @var array{scripts: list<string>, styles: list<string>} files beside the design this page loads, by name (Design\Code) */
+    public array $code = ['scripts' => [], 'styles' => []];
+
     public int $pages = 1;
 
     /** @var array{current?: int, total?: int, prev?: ?string, next?: ?string, count?: int} set by a paginated Repeat */
@@ -114,6 +117,18 @@ final class PageContext
     public function addFoot(string $key, string $html): void
     {
         $this->foot[$key] = $html;
+    }
+
+    /** Scripts and styles a template, a component or a block brings: { scripts: [...], styles: [...] }. */
+    public function addCode(array $code): void
+    {
+        foreach (['scripts', 'styles'] as $kind) {
+            foreach ((array) ($code[$kind] ?? []) as $name) {
+                if (is_string($name) && ! in_array($name, $this->code[$kind], true)) {
+                    $this->code[$kind][] = $name;
+                }
+            }
+        }
     }
 
     public function addStyle(string $key, string $css, int $order = 0): void

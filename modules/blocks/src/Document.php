@@ -121,6 +121,10 @@ final class Document
                 $clean['motion'] = $motion;
             }
 
+            if (($code = self::code($node['code'] ?? null)) !== []) {
+                $clean['code'] = $code;
+            }
+
             if (! empty($node['hidden'])) {
                 $clean['hidden'] = true;
             }
@@ -131,6 +135,29 @@ final class Document
             }
 
             $out[] = $clean;
+        }
+
+        return $out;
+    }
+
+    /** A script or stylesheet beside the design, by its path without the extension: "hero", "lib/ease". */
+    public const string CODE_NAME = '/^[a-z0-9][a-z0-9_-]{0,39}(\/[a-z0-9][a-z0-9_-]{0,39}){0,3}$/D';
+
+    /**
+     * The scripts and styles a block brings to its page: { scripts: ["hero"], styles: ["hero"] }.
+     *
+     * @return array{scripts?: list<string>, styles?: list<string>}
+     */
+    public static function code(mixed $code): array
+    {
+        $out = [];
+
+        foreach (['scripts', 'styles'] as $kind) {
+            $names = array_values(array_unique(array_filter(
+                is_array($code) && is_array($code[$kind] ?? null) ? array_slice($code[$kind], 0, 20) : [],
+                static fn ($name) => is_string($name) && preg_match(self::CODE_NAME, $name),
+            )));
+            $names !== [] && $out[$kind] = $names;
         }
 
         return $out;
