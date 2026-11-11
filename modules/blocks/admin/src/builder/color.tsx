@@ -187,7 +187,7 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
                 <Swatch color={String(token.value)} dark={token.dark ? String(token.dark) : undefined} className="!size-4" />
                 <span className="min-w-0 flex-1 truncate text-text">{token.name}</span>
                 <span className="max-w-[45%] shrink-0 truncate font-mono text-2xs text-faint">{String(token.value)}</span>
-                {current === token.path ? <Icon name="b-check" size={12} className="shrink-0 text-focus" /> : <span className="w-3 shrink-0" />}
+                {current === token.path ? <Icon name="check" size={12} className="shrink-0 text-focus" /> : <span className="w-3 shrink-0" />}
               </button>
             ))}
           </div>

@@ -166,7 +166,7 @@ export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Pro
       onOpenChange={(next) => { setOpen(next); setQuery(''); setActive(0) }}
       align="end"
       className="flex w-60 flex-col overflow-hidden !p-0"
-      trigger={(children as ReactElement | undefined) ?? <IconButton icon="b-plus" size="xs" label={label} />}
+      trigger={(children as ReactElement | undefined) ?? <IconButton icon="plus" size="xs" label={label} />}
     >
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">
         <Icon name="search" size={14} className="shrink-0 text-faint" />
@@ -293,7 +293,7 @@ export function MoreStylesField({ field, value, onChange, disabled }: FieldProps
         <div className="flex h-8 items-center">
           <AddStyle properties={offered} labels={labels} onPick={setAdding}>
             <button type="button" className="-ml-1.5 flex h-7 items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
-              <Icon name="b-plus" size={12} />
+              <Icon name="plus" size={12} />
               {t('Add a Property')}
             </button>
           </AddStyle>

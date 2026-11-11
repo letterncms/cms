@@ -37,8 +37,8 @@ export function Transform({ s }: { s: StyleApi }) {
         s={s}
         fields={[
           { handle: 'move', type: 'group', component: 'blocks-group', label: t('Move'), keys: ['translate'], fields: axes('px'), get: () => move, set: (v) => Object.entries(changed(move, v)).forEach(([k, x]) => setTranslate(k === 'x' ? 0 : 1, x ?? null)) },
-          { handle: 'rotate', type: 'text', component: 'blocks-value', label: t('Rotate'), unit: 'deg', prefixIcon: 'b-arrow-clockwise', placeholder: '0' },
-          { handle: 'scale', type: 'text', component: 'blocks-value', label: t('Scale'), unit: '', step: 0.01, prefixIcon: 'b-arrows-out-simple', placeholder: '1' },
+          { handle: 'rotate', type: 'text', component: 'blocks-value', label: t('Rotate'), unit: 'deg', prefixIcon: 'redo', placeholder: '0' },
+          { handle: 'scale', type: 'text', component: 'blocks-value', label: t('Scale'), unit: '', step: 0.01, prefixIcon: 'arrows-out-simple', placeholder: '1' },
           {
             handle: 'skew',
             type: 'group',
@@ -50,7 +50,7 @@ export function Transform({ s }: { s: StyleApi }) {
             set: (v) => Object.entries(changed(skew, v)).forEach(([k, x]) => setSkew(k as 'X' | 'Y', x ?? null)),
           },
           { handle: 'transformOrigin', type: 'json', component: 'blocks-origin', label: t('Origin'), className: 'items-start py-0.5 [&>label]:leading-6' },
-          { handle: 'perspective', type: 'text', component: 'blocks-value', label: t('Perspective'), prefixIcon: 'b-perspective', placeholder: 'none', keywords: ['none'], instructions: t('Depth for children rotated in 3D') },
+          { handle: 'perspective', type: 'text', component: 'blocks-value', label: t('Perspective'), prefixIcon: 'perspective', placeholder: 'none', keywords: ['none'], instructions: t('Depth for children rotated in 3D') },
         ]}
       />
     </StyleSection>

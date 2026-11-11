@@ -57,6 +57,7 @@
 
 ### Removed
 
+- **Breaking.** The builder no longer registers a second set of icons under `b-<name>` (`b-trash`, `b-plus`): the block editor uses the admin's own icon names, and its bundle is half the size. A plugin that named one writes the admin's name (`trash`) or the Phosphor name instead.
 - **Breaking.** Style keys are CSS properties by their own names. The shorthands `direction`, `wrap`, `justify`, `align`, `paddingX`, `paddingY`, `marginX`, `marginY`, `radius`, `shadow`, `colSpan` and `bg` are no longer understood in a block's `style`, in `bind` (`style:<property>`) or in the design's element styles; write `flexDirection`, `flexWrap`, `justifyContent`, `alignItems`, `paddingInline`, `paddingBlock`, `marginInline`, `marginBlock`, `borderRadius`, `boxShadow`, `gridColumn` and `backgroundColor`. Styles saved through the CMS already hold the full names. A binding saved as `style:bg` or another shorthand was stored as written: it now does nothing until it is saved under the full name. `blocks/types` no longer lists `aliases`.
 
 ### Fixed

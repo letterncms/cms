@@ -64,13 +64,13 @@ export function TokenList({ group, value, onPick, detach }: { group: string; val
             {group === 'radius' && <span className="size-3.5 shrink-0 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: String(token.value) }} />}
             <span className="min-w-0 truncate font-mono text-2xs">{token.path}</span>
             <span className="ml-auto max-w-[45%] shrink-0 truncate font-mono text-2xs text-faint">{tokenValue(token)}</span>
-            {current === token.path && <Icon name="b-check" size={12} className="shrink-0 text-focus" />}
+            {current === token.path && <Icon name="check" size={12} className="shrink-0 text-focus" />}
           </button>
         ))}
       </div>
       {current && detach && (
         <button type="button" onClick={detach} className="mt-1 flex h-7 w-full items-center gap-2 rounded-xs border-t border-border px-2 text-xs text-muted hover:bg-hover hover:text-text">
-          <Icon name="b-link-break" size={12} />
+          <Icon name="unlink" size={12} />
           {t('Detach Token')}
         </button>
       )}
@@ -108,7 +108,7 @@ export function TokenButton({ group, value, onPick, active, className, trigger }
             aria-label={t('Design Tokens')}
             title={t('Design Tokens')}
           >
-            <Icon name="b-diamonds-four" size={10} />
+            <Icon name="symbol" size={10} />
           </button>
         )
       }

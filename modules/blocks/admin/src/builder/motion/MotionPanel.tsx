@@ -51,13 +51,13 @@ export function MotionPanel({ node }: { node: BlockNode }) {
           align="end"
           trigger={
             <button type="button" className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('Add Animation')}>
-              <Icon name="b-plus" size={14} />
+              <Icon name="plus" size={14} />
             </button>
           }
           items={[
             ...groups.flatMap((g) => [{ label: groupLabel(g), heading: true }, ...all.filter((p) => p.group === g && (!p.text || text)).map((p) => ({ label: p.name, icon: kinds[p.make().trigger.type]?.icon, onSelect: () => add(p) }))]),
             { separator: true, label: '' },
-            { label: t('Custom Animation'), icon: 'b-magic-wand', onSelect: () => add() },
+            { label: t('Custom Animation'), icon: 'wand', onSelect: () => add() },
           ]}
         />
       }
@@ -65,14 +65,14 @@ export function MotionPanel({ node }: { node: BlockNode }) {
       {list.map((m) => (
         <div key={m.id} className={cn('rounded-sm border', open === m.id ? 'border-border-strong' : 'border-border')}>
           <div className="flex h-8 items-center gap-1.5 pl-2 pr-1">
-            <Icon name={kinds[m.trigger.type]?.icon ?? 'b-magic-wand'} size={13} className="shrink-0 text-muted" />
+            <Icon name={kinds[m.trigger.type]?.icon ?? 'wand'} size={13} className="shrink-0 text-muted" />
             <button type="button" onClick={() => setOpen(open === m.id ? null : m.id)} aria-expanded={open === m.id} className="flex min-w-0 flex-1 items-baseline gap-1.5 text-left">
               <span className="truncate text-xs font-medium text-ink">{m.name || kinds[m.trigger.type]?.label}</span>
               <span className="shrink-0 text-xs text-faint">{kinds[m.trigger.type]?.label}</span>
             </button>
             <Tooltip content={t('Preview Animation')}>
               <button type="button" onClick={() => bus.emit('preview-motion', { node: node.id, motion: m })} className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('Preview')}>
-                <Icon name="b-play" size={14} />
+                <Icon name="play" size={14} />
               </button>
             </Tooltip>
             <RemoveButton onClick={() => save(list.filter((x) => x.id !== m.id))} label={t('Remove Animation')} />
@@ -293,7 +293,7 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
         )
       })}
       <button type="button" onClick={onAdd} className="ml-16 mt-0.5 flex h-6 items-center gap-1 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
-        <Icon name="b-plus" size={12} /> {t('Add Step')}
+        <Icon name="plus" size={12} /> {t('Add Step')}
       </button>
     </div>
   )
@@ -321,7 +321,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
             align="end"
             trigger={
               <button type="button" className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={side === 'from' ? t('Add a Start Property') : t('Add an End Property')}>
-                <Icon name="b-plus" size={14} />
+                <Icon name="plus" size={14} />
               </button>
             }
             items={props.filter((p) => !(p in values)).map((p) => ({ label: labels[p] ?? p, onSelect: () => add(p, catalog.motion.properties[p] === 'css' ? (p === 'clipPath' ? 'inset(0% 0% 0% 0%)' : 'token:color.primary') : p === 'opacity' || p.startsWith('scale') ? '1' : '0') }))}
@@ -386,10 +386,10 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
             label: t('Timing'),
             columns: 2,
             fields: [
-              seconds('duration', t('Duration in Seconds'), 'b-timer'),
-              seconds('delay', t('Delay in Seconds'), 'b-clock', { placeholder: '0' }),
-              ...when(target !== 'self', seconds('stagger', t('Time between items in seconds'), 'b-dots-three', { step: 0.01, placeholder: '0' })),
-              ...when(count > 1, seconds('at', t('Start in seconds into the timeline'), 'b-flow-arrow', { placeholder: t('After') })),
+              seconds('duration', t('Duration in Seconds'), 'timer'),
+              seconds('delay', t('Delay in Seconds'), 'clock', { placeholder: '0' }),
+              ...when(target !== 'self', seconds('stagger', t('Time between items in seconds'), 'more', { step: 0.01, placeholder: '0' })),
+              ...when(count > 1, seconds('at', t('Start in seconds into the timeline'), 'flow-arrow', { placeholder: t('After') })),
             ],
           },
           { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: [...(byGroup.get('ease') ?? []).map((ease) => ({ value: `token:${ease.path}`, label: ease.name, curve: String(ease.value) })), ...eases()] },

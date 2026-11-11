@@ -85,7 +85,7 @@ export function GradientField({ value, onChange, context }: FieldProps<string | 
         </div>
       ))}
       <button type="button" onClick={() => set({ ...gradient, stops: [...gradient.stops, { color: 'token:color.foreground', at: '' }] })} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
-        <Icon name="b-plus" size={14} /> {t('Add Stop')}
+        <Icon name="plus" size={14} /> {t('Add Stop')}
       </button>
     </div>
   )
@@ -140,11 +140,11 @@ export function AlignField({ field, value, onChange, context }: FieldProps<{ jus
             size: 'sm',
             label: t('Align'),
             options: [
-              { value: 'flex-start', icon: row ? 'b-align-top' : 'b-align-left', title: t('Start') },
-              { value: 'center', icon: row ? 'b-align-center-vertical' : 'b-align-center-horizontal', title: t('Center') },
-              { value: 'flex-end', icon: row ? 'b-align-bottom' : 'b-align-right', title: t('End') },
-              { value: 'stretch', icon: row ? 'b-arrows-out-line-vertical' : 'b-arrows-out-line-horizontal', title: t('Stretch') },
-              { value: 'baseline', icon: 'b-text-t', title: t('Baseline') },
+              { value: 'flex-start', icon: row ? 'align-top' : 'justify-start', title: t('Start') },
+              { value: 'center', icon: row ? 'align-middle' : 'justify-center', title: t('Center') },
+              { value: 'flex-end', icon: row ? 'align-bottom' : 'justify-end', title: t('End') },
+              { value: 'stretch', icon: row ? 'arrows-out-line-vertical' : 'spacing', title: t('Stretch') },
+              { value: 'baseline', icon: 'text', title: t('Baseline') },
             ],
           },
         ]}

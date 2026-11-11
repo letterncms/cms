@@ -20,7 +20,7 @@ export function BindField({ field, value: raw, onChange, disabled }: FieldProps<
   return (
     <Control>
       <div className="relative flex min-w-0 flex-1 items-center">
-        <Icon name="b-database" size={13} className="pointer-events-none absolute left-2 text-ink" />
+        <Icon name="database" size={13} className="pointer-events-none absolute left-2 text-ink" />
         <input
           id={fieldControlId(field)}
           value={draft ?? value ?? ''}
@@ -45,7 +45,7 @@ export function BindField({ field, value: raw, onChange, disabled }: FieldProps<
         className="w-64 !p-1"
         trigger={
           <button type="button" className="grid size-6 shrink-0 place-items-center rounded-xs text-muted hover:bg-hover hover:text-text" aria-label={t('Choose Data')}>
-            <Icon name="b-caret-down" size={12} />
+            <Icon name="chevron-down" size={12} />
           </button>
         }
       >

@@ -35,21 +35,21 @@ const MODS = () => [
 ]
 
 const ACTIONS = (): { value: string; label: string; icon: string }[] => [
-  { value: 'set', label: t('Set State'), icon: 'b-pencil-simple' },
-  { value: 'toggle', label: t('Toggle State'), icon: 'b-toggle-left' },
-  { value: 'add', label: t('Add to Number'), icon: 'b-plus' },
-  { value: 'if', label: t('If … Then … Else'), icon: 'b-git-branch' },
-  { value: 'play', label: t('Play Animation'), icon: 'b-play' },
-  { value: 'scroll', label: t('Scroll To'), icon: 'b-mouse-scroll' },
-  { value: 'fetch', label: t('Load Page Part'), icon: 'b-arrow-square-out' },
-  { value: 'copy', label: t('Copy to Clipboard'), icon: 'b-copy' },
-  { value: 'go', label: t('Go to Link'), icon: 'b-link' },
-  { value: 'theme', label: t('Light or Dark Mode'), icon: 'b-moon' },
-  { value: 'focus', label: t('Focus Element'), icon: 'b-crosshair' },
-  { value: 'lock', label: t('Lock Page Scrolling'), icon: 'b-lock-simple' },
-  { value: 'wait', label: t('Wait'), icon: 'b-timer' },
-  { value: 'dispatch', label: t('Send Event'), icon: 'b-broadcast' },
-  { value: 'run', label: t('Expression'), icon: 'b-brackets-curly' },
+  { value: 'set', label: t('Set State'), icon: 'edit' },
+  { value: 'toggle', label: t('Toggle State'), icon: 'toggle-left' },
+  { value: 'add', label: t('Add to Number'), icon: 'plus' },
+  { value: 'if', label: t('If … Then … Else'), icon: 'github' },
+  { value: 'play', label: t('Play Animation'), icon: 'play' },
+  { value: 'scroll', label: t('Scroll To'), icon: 'mouse-scroll' },
+  { value: 'fetch', label: t('Load Page Part'), icon: 'external' },
+  { value: 'copy', label: t('Copy to Clipboard'), icon: 'copy' },
+  { value: 'go', label: t('Go to Link'), icon: 'link-chain' },
+  { value: 'theme', label: t('Light or Dark Mode'), icon: 'moon' },
+  { value: 'focus', label: t('Focus Element'), icon: 'position' },
+  { value: 'lock', label: t('Lock Page Scrolling'), icon: 'lock' },
+  { value: 'wait', label: t('Wait'), icon: 'timer' },
+  { value: 'dispatch', label: t('Send Event'), icon: 'broadcast' },
+  { value: 'run', label: t('Expression'), icon: 'braces' },
 ]
 
 /** Variables in scope for an element: its own state and every ancestor's. */
@@ -238,7 +238,7 @@ export function LogicPanel({ node }: { node: BlockNode }) {
         })}
         {!logic.init && (logic.on?.length ?? 0) > 0 && (
           <button type="button" onClick={() => save({ init: [] })} className="flex h-7 w-full items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
-            <Icon name="b-plus" size={14} /> {t('When the Page Loads')}
+            <Icon name="plus" size={14} /> {t('When the Page Loads')}
           </button>
         )}
       </Section>
@@ -343,12 +343,12 @@ function Handler({ title, mods, onMods, actions, onActions, onRemove, variables,
   return (
     <div className="space-y-1.5 rounded-sm border border-border p-1.5">
       <div className="flex items-center gap-1">
-        <Icon name="b-lightning" size={14} className="shrink-0 text-muted" />
+        <Icon name="zap" size={14} className="shrink-0 text-muted" />
         {typeof title === 'string' ? <span className="min-w-0 flex-1 text-xs font-medium [overflow-wrap:anywhere]">{title}</span> : title}
         {onMods && (
           <Menu
             align="end"
-            trigger={<button type="button" className={cn('grid size-6 shrink-0 place-items-center rounded-sm hover:bg-hover hover:text-ink', mods?.length ? 'text-ink' : 'text-muted')} aria-label={t('Event Options')}><Icon name="b-faders" size={14} /></button>}
+            trigger={<button type="button" className={cn('grid size-6 shrink-0 place-items-center rounded-sm hover:bg-hover hover:text-ink', mods?.length ? 'text-ink' : 'text-muted')} aria-label={t('Event Options')}><Icon name="faders" size={14} /></button>}
             items={MODS().map((m) => ({ label: m.label, checked: mods?.includes(m.value), onSelect: () => onMods(mods?.includes(m.value) ? mods.filter((x) => x !== m.value) : [...(mods ?? []), m.value]) }))}
           />
         )}
@@ -388,7 +388,7 @@ function Actions({ actions, onChange, variables, node, depth = 0 }: { actions: L
       {actions.map((a, i) => (
         <div key={i} className="space-y-1 rounded-md bg-active/60 p-1.5">
           <div className="flex items-center gap-1">
-            <Icon name={ACTIONS().find((x) => x.value === a.do)?.icon ?? 'b-dot-outline'} size={14} className="shrink-0 text-muted" />
+            <Icon name={ACTIONS().find((x) => x.value === a.do)?.icon ?? 'dot-outline'} size={14} className="shrink-0 text-muted" />
             <span className="min-w-0 flex-1 text-xs font-medium text-text [overflow-wrap:anywhere]">{ACTIONS().find((x) => x.value === a.do)?.label ?? a.do}</span>
             <RemoveButton onClick={() => onChange(actions.filter((_, j) => j !== i))} label={t('Remove Action')} />
           </div>
@@ -397,7 +397,7 @@ function Actions({ actions, onChange, variables, node, depth = 0 }: { actions: L
       ))}
       <Menu
         align="start"
-        trigger={<button type="button" className="flex h-7 w-full items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink"><Icon name="b-plus" size={14} /> {t('Add Action')}</button>}
+        trigger={<button type="button" className="flex h-7 w-full items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink"><Icon name="plus" size={14} /> {t('Add Action')}</button>}
         items={ACTIONS().map((x) => ({ label: x.label, icon: x.icon, onSelect: () => add(x.value) }))}
       />
     </div>

@@ -38,7 +38,7 @@ export function Transition({ s }: { s: StyleApi }) {
     <StyleSection s={s} group="transition" title={t('Transition')} open={!!tr} empty={!tr}>
       {!tr ? (
         <button type="button" onClick={() => set({})} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
-          <Icon name="b-plus" size={14} />
+          <Icon name="plus" size={14} />
           {t('Animate State Changes')}
         </button>
       ) : (
@@ -55,8 +55,8 @@ export function Transition({ s }: { s: StyleApi }) {
               get: () => ({ duration: tr.duration, delay: tr.delay }),
               set: (v) => set(v.duration !== tr.duration ? { duration: v.duration ?? '200ms' } : { delay: v.delay ?? undefined }),
               fields: [
-                { handle: 'duration', type: 'text', component: 'blocks-value', label: t('Duration'), unit: 'ms', step: 10, min: 0, group: 'duration', prefixIcon: 'b-timer' },
-                { handle: 'delay', type: 'text', component: 'blocks-value', label: t('Delay'), unit: 'ms', step: 10, min: 0, prefixIcon: 'b-pause', placeholder: t('Delay') },
+                { handle: 'duration', type: 'text', component: 'blocks-value', label: t('Duration'), unit: 'ms', step: 10, min: 0, group: 'duration', prefixIcon: 'timer' },
+                { handle: 'delay', type: 'text', component: 'blocks-value', label: t('Delay'), unit: 'ms', step: 10, min: 0, prefixIcon: 'pause', placeholder: t('Delay') },
               ],
             },
             {

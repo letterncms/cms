@@ -90,7 +90,7 @@ export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp
   const { left, top } = places.find((at) => fits(at.top) && !covers?.({ ...at, width, height: BAR })) ?? { left: start, top: fits(above) ? above : inside }
   return <div ref={bar} data-cms-block-controls={id} role="toolbar" aria-label={t('Block Actions')} className="cms-block-chrome pointer-events-auto absolute z-30 flex h-8 items-center gap-0.5 rounded-sm border border-border bg-bg pl-0.5 pr-1 shadow-pop" style={{ left, top }}>
     <button type="button" aria-label={t('Drag to Move')} title={t('Drag to Move')} className="cms-focus-ring grid h-6 w-4 touch-none cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-muted active:cursor-grabbing" onPointerDown={onDrag}><Icon name="drag" size={12} /></button>
-    {parent && <Tooltip content={t('Select {block}', { block: parent.label })}><IconButton size="xs" icon="b-arrow-elbow-left-up" label={t('Select {block}', { block: parent.label })} onClick={onSelectParent} /></Tooltip>}
+    {parent && <Tooltip content={t('Select {block}', { block: parent.label })}><IconButton size="xs" icon="arrow-elbow-left-up" label={t('Select {block}', { block: parent.label })} onClick={onSelectParent} /></Tooltip>}
     <span className="mx-0.5 h-4 border-l border-border" />
     <span className="flex h-6 max-w-40 items-center gap-1.5 px-1 text-xs font-medium text-text"><Icon name={icon} size={14} className="shrink-0 text-muted" /><span className="truncate">{label}</span></span>
     <IconButton size="xs" icon="chevron-up" label={t('Move Up')} disabled={!canMoveUp} onClick={() => onMove(-1)} />

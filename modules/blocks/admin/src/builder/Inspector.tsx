@@ -76,7 +76,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
       {/* The first row lines up with the sheet's top bar: the way back, what is selected, and what to do with it. */}
       <div className={cn('flex h-12 shrink-0 items-center gap-1 pr-3', onBack ? 'pl-2' : 'pl-4')}>
         {onBack && <IconButton icon="arrow-left" label={backLabel ? t('Back to {name}', { name: backLabel }) : t('Back')} size="sm" onClick={onBack} />}
-        <Icon name={node.type === 'pattern' ? 'b-diamonds-four' : type?.icon ?? 'square'} size={16} className="ml-1 shrink-0 text-muted" />
+        <Icon name={node.type === 'pattern' ? 'symbol' : type?.icon ?? 'square'} size={16} className="ml-1 shrink-0 text-muted" />
         {renaming ? (
           <div className="min-w-0 flex-1 pl-1" onBlur={() => setRenaming(false)} onKeyUp={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()}>
             <PanelFields
@@ -95,18 +95,18 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
           align="end"
           trigger={<IconButton icon="more" label={t('Block Actions')} size="sm" />}
           items={[
-            { label: t('Rename'), icon: 'b-pencil-simple', disabled: readOnly, onSelect: () => setRenaming(true) },
-            { label: t('Duplicate'), icon: 'b-copy', shortcut: 'mod+d', disabled: readOnly, onSelect: () => store.duplicate(node.id) },
+            { label: t('Rename'), icon: 'edit', disabled: readOnly, onSelect: () => setRenaming(true) },
+            { label: t('Duplicate'), icon: 'copy', shortcut: 'mod+d', disabled: readOnly, onSelect: () => store.duplicate(node.id) },
             component && {
               label: t('Make a Component'),
-              icon: 'b-diamonds-four',
+              icon: 'symbol',
               onSelect: () => {
                 if (!store.selection().includes(node.id)) store.select(node.id)
                 savePattern(store, patternFits(store, types, allowed))
               },
             },
             { separator: true, label: '' },
-            { label: t('Delete'), icon: 'b-trash', shortcut: '⌫', danger: true, disabled: readOnly, onSelect: () => store.remove(node.id) },
+            { label: t('Delete'), icon: 'trash', shortcut: '⌫', danger: true, disabled: readOnly, onSelect: () => store.remove(node.id) },
           ]}
         />
         {onClose && <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={onClose} />}

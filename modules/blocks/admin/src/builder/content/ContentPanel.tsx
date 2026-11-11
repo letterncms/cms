@@ -54,7 +54,7 @@ function Prop({ field: given, value, bound, paths, onValue, onBind, extra }: { f
         aria-label={bound ? t('Disconnect from Data') : t('Connect to Data')}
         className={cn('grid h-6 shrink-0 place-items-center overflow-hidden rounded-sm hover:bg-hover', bound ? 'w-6 text-ink' : 'w-0 text-faint hover:text-ink focus-visible:w-6 group-hover/prop:w-6 [@media(hover:none)]:w-6')}
       >
-        <Icon name="b-database" size={13} />
+        <Icon name="database" size={13} />
       </button>
     </Tooltip>
   )
@@ -242,8 +242,8 @@ function ComponentInstance({ node, paths, setBind, anchors }: { node: BlockNode;
         />
       ))}
       <div className="-ml-2 flex gap-1 pt-1">
-        {pattern?.id && <Button size="sm" variant="ghost" icon="b-pencil-simple" onClick={() => navigate(`/content/components/${pattern.id}`)}>{t('Edit Component')}</Button>}
-        <Button size="sm" variant="ghost" icon="b-scissors" onClick={detach} disabled={!pattern}>
+        {pattern?.id && <Button size="sm" variant="ghost" icon="edit" onClick={() => navigate(`/content/components/${pattern.id}`)}>{t('Edit Component')}</Button>}
+        <Button size="sm" variant="ghost" icon="scissors" onClick={detach} disabled={!pattern}>
           {t('Detach')}
         </Button>
       </div>
