@@ -102,5 +102,13 @@
   "Use File": "Bestand gebruiken",
   "Videos": "Video’s",
   "View the Media Library": "De mediabibliotheek bekijken",
-  "Your server allows up to :size MB.": "Je server staat tot :size MB toe."
+  "Your server allows up to :size MB.": "Je server staat tot :size MB toe.",
+  "A .:ext file can be :size MB at most.": "Een .:ext-bestand mag hooguit :size MB zijn.",
+  "JSON files are kept when they are a Lottie animation or a glTF model. This one is neither.": "JSON-bestanden worden bewaard als ze een Lottie-animatie of een glTF-model zijn. Dit is geen van beide.",
+  "This model points at other files, which it won’t find here. Export it as one .glb with everything inside.": "Dit model verwijst naar andere bestanden, die het hier niet vindt. Exporteer het als één .glb met alles erin.",
+  "This file could not be read.": "Dit bestand kon niet worden gelezen.",
+  "This .glb could not be read.": "Deze .glb kon niet worden gelezen.",
+  "This Lottie animation has expressions, which run as code in the visitor’s browser. Export it without expressions.": "Deze Lottie-animatie bevat expressies, die als code in de browser van de bezoeker draaien. Exporteer haar zonder expressies.",
+  "This Lottie animation loads a font from an address. Export it with its text converted to shapes, or with fonts the page already has.": "Deze Lottie-animatie laadt een lettertype van een adres. Exporteer haar met de tekst omgezet naar vormen, of met lettertypen die de pagina al heeft.",
+  "This Lottie animation loads images from another server. Export it with its images embedded.": "Deze Lottie-animatie laadt afbeeldingen van een andere server. Exporteer haar met de afbeeldingen ingesloten."
 }

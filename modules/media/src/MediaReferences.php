@@ -83,7 +83,8 @@ final class MediaReferences
             foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS)) as $file) {
                 $relative = 'media/'.ltrim(str_replace('\\', '/', substr($file->getPathname(), strlen($root))), '/');
 
-                if ($file->isFile() && ! isset($paths[$relative]) && ! isset($usedPaths[$relative])) {
+                // The folder's own .htaccess is the CMS's, not somebody's forgotten file.
+                if ($file->isFile() && $relative !== 'media/.htaccess' && ! isset($paths[$relative]) && ! isset($usedPaths[$relative])) {
                     $orphans[] = $relative;
                 }
             }

@@ -38,7 +38,8 @@ class MediaItem extends Model
 
     public function isImage(): bool
     {
-        return str_starts_with($this->mime, 'image/') && $this->mime !== 'image/svg+xml';
+        // An environment map or a GPU texture is an image by name only: nothing here can draw or resize it.
+        return str_starts_with($this->mime, 'image/') && $this->mime !== 'image/svg+xml' && ! isset(MediaStore::ASSETS[$this->mime]);
     }
 
     public function isSvg(): bool
@@ -54,6 +55,7 @@ class MediaItem extends Model
     public function kind(): string
     {
         return match (true) {
+            isset(MediaStore::ASSETS[$this->mime]) => 'file',
             str_starts_with($this->mime, 'image/') => 'image',
             str_starts_with($this->mime, 'video/') => 'video',
             str_starts_with($this->mime, 'audio/') => 'audio',

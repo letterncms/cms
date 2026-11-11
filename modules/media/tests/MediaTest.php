@@ -10,6 +10,7 @@ use Cms\Modules\Media\MediaItem;
 use Cms\Modules\Media\MediaStore;
 use Cms\Modules\Media\SvgSanitizer;
 use Cms\Modules\Media\Variants;
+use Cms\Support\Files;
 use Cms\Tests\TestCase;
 
 final class MediaTest extends TestCase
@@ -86,6 +87,115 @@ final class MediaTest extends TestCase
     {
         $this->expectException(AbilityException::class);
         app(MediaStore::class)->store($this->tmp("<?php echo 'pwned';"), 'image.jpg');
+    }
+
+    public function test_keeps_what_scenes_and_animation_players_load(): void
+    {
+        $store = app(MediaStore::class);
+        $lottie = (string) json_encode(['v' => '5.9.0', 'fr' => 30, 'ip' => 0, 'op' => 60, 'w' => 200, 'h' => 200, 'layers' => [['ty' => 4, 'ks' => ['o' => ['a' => 0, 'k' => 100], 'p' => ['a' => 0, 'k' => [100, 100, 0]]]]], 'assets' => [['id' => 'i', 'p' => 'data:image/png;base64,AAAA', 'u' => '', 'e' => 1]]]);
+        $gltf = (string) json_encode(['asset' => ['version' => '2.0'], 'scenes' => [['nodes' => [0]]], 'nodes' => [[]], 'buffers' => [['uri' => 'data:application/octet-stream;base64,AAAA', 'byteLength' => 3]]]);
+        $files = [
+            'model/gltf-binary' => ['glb', $this->glb(['asset' => ['version' => '2.0'], 'buffers' => [['byteLength' => 4]], 'images' => [['bufferView' => 0, 'mimeType' => 'image/png']]])],
+            'model/gltf+json' => ['gltf', $gltf],
+            'image/vnd.radiance' => ['hdr', "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 1\n\x80\x80\x80\x80"],
+            'image/ktx2' => ['ktx2', "\xABKTX 20\xBB\r\n\x1A\n".str_repeat("\x00", 68)],
+            'application/json' => ['json', $lottie],
+            'application/vnd.rive' => ['riv', "RIVE\x07\x00\xB9\x01\x00\x00\x00\x00\x00\x17"],
+        ];
+
+        foreach ($files as $mime => [$ext, $bytes]) {
+            // The name says nothing: the bytes decide what a file is.
+            $item = $store->store($this->tmp($bytes), "Scene one.bin");
+
+            $this->assertSame($mime, $item->mime);
+            $this->assertStringEndsWith('.'.$ext, $item->path);
+            $this->assertSame('file', $item->kind(), 'not an image to resize, whatever its type starts with');
+            $this->assertFalse($item->isImage());
+            $this->assertSame([null, null], [$item->width, $item->height]);
+            $this->assertSame($bytes, file_get_contents(public_path($item->path)));
+        }
+    }
+
+    public function test_refuses_assets_that_carry_code_point_away_or_are_too_large(): void
+    {
+        $store = app(MediaStore::class);
+        $lottie = ['v' => '5.9.0', 'fr' => 30, 'ip' => 0, 'op' => 60, 'w' => 200, 'h' => 200, 'layers' => []];
+        $refused = [
+            'expressions' => (string) json_encode([...$lottie, 'layers' => [['ks' => ['r' => ['a' => 0, 'k' => 0, 'x' => 'var $bm_rt; $bm_rt = fetch("https://evil.test")']]]]]),
+            'another server' => (string) json_encode([...$lottie, 'assets' => [['id' => 'i', 'u' => 'https://evil.test/', 'p' => 'pixel.png']]]),
+            'neither' => '{"name": "just some json", "private": true}',
+            'points at other files' => (string) json_encode(['asset' => ['version' => '2.0'], 'scenes' => [], 'buffers' => [['uri' => '../../../config/site.yaml']]]),
+            'won’t find here' => $this->glb(['asset' => ['version' => '2.0'], 'images' => [['uri' => 'https://evil.test/track.png']]]),
+            '.glb could not be read' => "glTF\x02\x00\x00\x00".pack('V', 20).str_repeat("\x00", 8),
+            'loads a font' => (string) json_encode([...$lottie, 'fonts' => ['list' => [['fName' => 'X', 'fFamily' => 'X', 'origin' => 3, 'fPath' => 'https://evil.test/x.js']]]]),
+            'a font from' => (string) json_encode([...$lottie, 'fonts' => ['list' => [['fName' => 'X', 'origin' => 1, 'fPath' => 'x.css']]]]),
+            '4 MB at most' => (string) json_encode([...$lottie, 'nm' => str_repeat('x', 4 * 1024 * 1024 + 1)]),
+        ];
+
+        foreach ($refused as $why => $bytes) {
+            try {
+                $store->store($this->tmp($bytes), 'animation.json');
+                $this->fail("kept: {$why}");
+            } catch (AbilityException $e) {
+                $this->assertStringContainsString($why, $e->getMessage());
+            }
+        }
+
+        // Every way of writing "somewhere else" in an asset's path.
+        foreach (['//evil.test/', '\\\\evil.test\\x', '/\\evil.test/x', "ht\ttps://evil.test/", "https:\n//evil.test/", ' https://evil.test/', 'javascript:alert(1)', '/abs/path.png'] as $address) {
+            foreach (['u', 'p'] as $key) {
+                try {
+                    $store->store($this->tmp((string) json_encode([...$lottie, 'assets' => [['id' => 'i', $key => $address]]])), 'animation.json');
+                    $this->fail('kept an asset at '.json_encode($address));
+                } catch (AbilityException $e) {
+                    $this->assertStringContainsString('another server', $e->getMessage());
+                }
+            }
+        }
+
+        // Embedded, or a plain name beside it: fine.
+        $kept = $store->store($this->tmp((string) json_encode([...$lottie, 'assets' => [['id' => 'i', 'u' => 'images/', 'p' => 'img_0.png'], ['id' => 'j', 'u' => '', 'p' => 'data:image/png;base64,AAAA']]])), 'ok.json');
+        $this->assertSame('application/json', $kept->mime);
+
+        // A script that calls itself a model is still a script.
+        foreach (['model.glb' => "<?php echo 'pwned';", 'anim.riv' => 'RIVE is just text here', 'env.hdr' => '<script>alert(1)</script>'] as $name => $bytes) {
+            try {
+                $item = $store->store($this->tmp($bytes), $name);
+                $this->assertStringEndsWith('.txt', $item->path, "{$name} is kept as the text it is");
+            } catch (AbilityException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_a_file_that_arrives_by_git_passes_the_same_checks_and_the_folder_keeps_its_rules(): void
+    {
+        $lottie = ['v' => '5.9.0', 'fr' => 30, 'ip' => 0, 'op' => 60, 'w' => 200, 'h' => 200, 'layers' => [['ks' => ['r' => ['a' => 0, 'k' => 0, 'x' => 'fetch("https://evil.test")']]]]];
+        Files::put(public_path('media/2026/11/anim.json'), (string) json_encode($lottie));
+        Files::put(public_path('media/2026/11/fine.json'), (string) json_encode([...$lottie, 'layers' => []]));
+        $manifest = app(\Cms\Modules\Media\MediaManifest::class);
+
+        $this->assertSame('unsafe_asset', $manifest->validate(['path' => 'media/2026/11/anim.json']));
+        $this->assertNull($manifest->validate(['path' => 'media/2026/11/fine.json']));
+
+        @unlink(public_path('media/.htaccess'));
+        $manifest->import();
+        $rules = (string) file_get_contents(public_path('media/.htaccess'));
+        $this->assertStringContainsString('Header set X-Content-Type-Options "nosniff"', $rules);
+        $this->assertStringContainsString('AddType model/gltf-binary .glb', $rules);
+
+        file_put_contents(public_path('media/.htaccess'), 'an older version');
+        app(MediaStore::class)->store($this->jpeg(), 'photo.jpg');
+        $this->assertSame($rules, file_get_contents(public_path('media/.htaccess')), 'kept current, on sites that already had one');
+    }
+
+    /** A .glb: the header, then one chunk with the model's JSON. */
+    private function glb(array $json): string
+    {
+        $chunk = (string) json_encode($json);
+        $chunk .= str_repeat(' ', (4 - strlen($chunk) % 4) % 4);
+
+        return 'glTF'.pack('V', 2).pack('V', 20 + strlen($chunk)).pack('V', strlen($chunk)).'JSON'.$chunk;
     }
 
     public function test_svg_is_sanitized(): void
