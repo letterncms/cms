@@ -210,6 +210,8 @@ export interface PromptOptions {
   values?: Record<string, any>
   /** The button that submits it, as a verb: "Rename", "Add". Never "OK". */
   confirm: string
+  /** What it submits can't be undone (Delete View): its button is red, and it is the confirmation. */
+  danger?: boolean
 }
 
 /** Imperative form dialog: `const values = await prompt({ title, fields, confirm })` — null when canceled. */
@@ -239,6 +241,7 @@ export function prompt(options: PromptOptions): Promise<Record<string, any> | nu
           description={options.description}
           onSubmit={() => done(values)}
           submitLabel={options.confirm}
+          danger={options.danger}
         >
           <Fields fields={options.fields.map((f, i) => ({ autofocus: i === 0, ...f }))} values={values} onChange={(h, v) => setValues((current) => ({ ...current, [h]: v }))} />
         </Dialog>
