@@ -6,7 +6,6 @@ namespace Cms\Console;
 
 use Cms\Install\Installer;
 use Cms\Users\User;
-use Illuminate\Console\Command;
 
 /** The setup's last step, in a process that booted with the plugins it pulled. */
 final class InstallFinishCommand extends Command
@@ -22,6 +21,6 @@ final class InstallFinishCommand extends Command
         $user = User::query()->where('email', strtolower((string) $this->argument('email')))->firstOrFail();
         $installer->finish($user);
 
-        return self::SUCCESS;
+        return $this->done(['email' => $user->email]);
     }
 }

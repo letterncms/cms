@@ -6,7 +6,6 @@ namespace Cms\Console;
 
 use Cms\Update\CoreUpdate;
 use Cms\Update\ReleaseFeed;
-use Illuminate\Console\Command;
 use RuntimeException;
 
 /** Check and update from the command line. In cron, `--security-only` is what an admin's visit does without one. */
@@ -28,7 +27,7 @@ final class PackagesUpdateCommand extends Command
         if ($this->option('check')) {
             $this->line((string) json_encode($offer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-            return self::SUCCESS;
+            return $this->done($offer);
         }
 
         try {
@@ -39,13 +38,13 @@ final class PackagesUpdateCommand extends Command
 
                 $this->components->info('Security update: '.($step['state'] ?? $step['reason'] ?? 'nothing to do').'.');
 
-                return ($step['state'] ?? '') === 'failed' ? self::FAILURE : self::SUCCESS;
+                return ($step['state'] ?? '') === 'failed' ? $this->failure('The security update failed.', details: $step) : $this->done($step);
             }
 
             if (! $release) {
                 $this->components->info('Up to date: '.$offer['current'].'.');
 
-                return self::SUCCESS;
+                return $this->done(['state' => 'current', 'current' => $offer['current']]);
             }
 
             $update->start((string) $release['version']);
@@ -58,19 +57,17 @@ final class PackagesUpdateCommand extends Command
                 $state = $update->finishFromCli();
             }
         } catch (RuntimeException $e) {
-            $this->components->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e);
         }
 
         $status = $update->status();
         $this->components->twoColumnDetail('State', $state);
         $this->components->twoColumnDetail('Running', (string) $status['current']);
 
-        if (! empty($status['error'])) {
-            $this->components->error((string) $status['error']);
+        if ($state !== 'done') {
+            return $this->failure((string) ($status['error'] ?? 'The update stopped.'), details: ['state' => $state, 'current' => (string) $status['current']]);
         }
 
-        return $state === 'done' ? self::SUCCESS : self::FAILURE;
+        return $this->done(['state' => $state, 'current' => (string) $status['current']]);
     }
 }

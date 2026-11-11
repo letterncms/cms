@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Console;
 
-use Illuminate\Console\Command;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 use Cms\Abilities\AbilityException;
@@ -34,7 +33,7 @@ final class InstallCommand extends Command
         if (Installer::installed()) {
             $this->components->info(__(':brand is already installed.'));
 
-            return self::SUCCESS;
+            return $this->done(['installed' => false]);
         }
 
         foreach ($installer->requirements() as $check) {
@@ -65,9 +64,7 @@ final class InstallCommand extends Command
         try {
             $user = $installer->install($input);
         } catch (AbilityException $e) {
-            $this->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e);
         }
 
         $packages = app(PackageManager::class);
@@ -84,7 +81,9 @@ final class InstallCommand extends Command
 
         $this->components->info("Installed. Sign in at {$input['site_url']}/admin as {$user->email}.");
 
-        return $finish->isSuccessful() ? self::SUCCESS : self::FAILURE;
+        return $finish->isSuccessful()
+            ? $this->done(['installed' => true, 'email' => $user->email, 'admin' => $input['site_url'].'/admin', 'missing' => $missing])
+            : $this->failure('The site is installed, but its plugins could not finish setting it up.', details: ['output' => trim($finish->getOutput().$finish->getErrorOutput())]);
     }
 
     /** @return list<string> */

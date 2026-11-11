@@ -8,7 +8,7 @@ use Cms\Cms;
 use Cms\Modules\Site\Starter;
 use Cms\Support\Files;
 use Cms\Users\User;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -22,9 +22,7 @@ final class StarterRefreshCommand extends Command
     public function handle(Cms $cms, Starter $starter): int
     {
         if (! $this->option('force')) {
-            $this->error('This replaces the kit\'s content. Say --force.');
-
-            return self::FAILURE;
+            return $this->failure('This replaces the kit\'s content. Say --force.', 'invalid_input');
         }
 
         $user = $this->option('as')
@@ -32,9 +30,7 @@ final class StarterRefreshCommand extends Command
             : User::query()->where('super', true)->orderBy('created_at')->first();
 
         if (! $user || ! $user->super) {
-            $this->error('This needs an existing super administrator.');
-
-            return self::FAILURE;
+            return $this->failure('This needs an existing super administrator.', 'not_found');
         }
 
         $backup = storage_path('backups/starter-refresh-'.gmdate('Ymd-His').'-'.bin2hex(random_bytes(3)));
@@ -56,6 +52,6 @@ final class StarterRefreshCommand extends Command
 
         $this->components->info("{$count} entries created. The snapshot is in {$backup}.");
 
-        return self::SUCCESS;
+        return $this->done(['created' => $count, 'backup' => $backup]);
     }
 }

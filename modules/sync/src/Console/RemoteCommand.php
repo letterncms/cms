@@ -7,7 +7,7 @@ namespace Cms\Modules\Sync\Console;
 use Cms\Modules\Sync\Connections;
 use Cms\Modules\Sync\Remotes;
 use Cms\Modules\Sync\Site;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 use Throwable;
 
 final class RemoteCommand extends Command
@@ -30,12 +30,10 @@ final class RemoteCommand extends Command
                 'remove' => $this->remove($remotes),
                 'key' => $this->key($site),
                 'allow' => $this->allow($site),
-                default => $this->fail('Choose add, remove, key or allow.'),
+                default => $this->failure('Choose add, remove, key or allow.', 'invalid_input'),
             };
         } catch (Throwable $e) {
-            $this->components->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e);
         }
     }
 
@@ -46,7 +44,7 @@ final class RemoteCommand extends Command
         if ($all === []) {
             $this->components->info(__('No sites connected yet. Copy the key from Sync on the other site, then run php cms remote add <name> <key>.'));
 
-            return self::SUCCESS;
+            return $this->done(['remotes' => []]);
         }
 
         foreach ($all as $remote) {
@@ -54,13 +52,17 @@ final class RemoteCommand extends Command
             $this->components->twoColumnDetail('<fg=green>'.$remote['name'].'</>', $remote['url'].$last);
         }
 
-        return self::SUCCESS;
+        return $this->done(['remotes' => array_values(array_map(static fn (array $remote) => array_intersect_key($remote, array_flip(['name', 'url', 'last'])), $all))]);
     }
 
     private function add(Connections $connections): int
     {
         $name = (string) $this->argument('name');
         $key = (string) ($this->argument('key') ?? '');
+
+        if ($key === '' && $this->json()) {
+            return $this->failure('Pass the connection key as the third argument: with --json nothing is asked.', 'invalid_input');
+        }
 
         if ($key === '') {
             $key = (string) $this->secret(__('Paste the connection key from Sync on the other site'));
@@ -70,7 +72,7 @@ final class RemoteCommand extends Command
         $this->components->info(__('Connected :name: :site at :url, version :version.', ['name' => $result['remote']['name'], 'site' => $result['hello']['name'], 'url' => $result['hello']['url'], 'version' => $result['hello']['cms']]));
         $this->line('  '.__('Next: php cms pull :name, or php cms push :name', ['name' => $result['remote']['name']]));
 
-        return self::SUCCESS;
+        return $this->done(['name' => $result['remote']['name'], 'site' => $result['hello']['name'], 'url' => $result['hello']['url'], 'cms' => $result['hello']['cms']]);
     }
 
     private function remove(Remotes $remotes): int
@@ -80,7 +82,7 @@ final class RemoteCommand extends Command
         $remotes->remove($name);
         $this->components->info(__(':name is no longer connected. Nothing changed there.', ['name' => $name]));
 
-        return self::SUCCESS;
+        return $this->done(['removed' => $name]);
     }
 
     private function key(Site $site): int
@@ -95,7 +97,7 @@ final class RemoteCommand extends Command
         $this->newLine();
         $this->line('  '.__('Pulls :pull, pushes :push.', ['pull' => $settings['allow_pull'] ? __('allowed') : __('turned off'), 'push' => $settings['allow_push'] ? __('allowed') : __('turned off')]));
 
-        return self::SUCCESS;
+        return $this->done(['key' => $site->key(), 'allowPull' => (bool) $settings['allow_pull'], 'allowPush' => (bool) $settings['allow_push']]);
     }
 
     private function allow(Site $site): int
@@ -105,6 +107,6 @@ final class RemoteCommand extends Command
         $site->allow($what, $on);
         $this->components->info($what === 'pull' ? ($on ? __('Other sites can pull from this one.') : __('Other sites can no longer pull from this one.')) : ($on ? __('Other sites can push to this one.') : __('Other sites can no longer push to this one.')));
 
-        return self::SUCCESS;
+        return $this->done(['allow' => $what, 'on' => $on]);
     }
 }

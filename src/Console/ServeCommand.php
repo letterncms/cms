@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Cms\Console;
 
 use Cms\Support\Brand;
-use Illuminate\Console\Command;
 use Symfony\Component\Process\Process;
 
 /** Development server that mimics the production .htaccess routing. */
