@@ -27,6 +27,7 @@ final class AccountAbilities
     public function register(AbilityRegistry $a): void
     {
         $this->account($a);
+        $this->sessions($a);
         $this->tokens($a);
 
         // Everyone's own account page shows these, with or without the Users module.
@@ -172,6 +173,60 @@ final class AccountAbilities
                 return ['enabled' => false];
             },
         ]);
+    }
+
+    /** Where the signed-in person is signed in, and signing out there. Only from the admin: a token has no session to keep. */
+    private function sessions(AbilityRegistry $a): void
+    {
+        $signedIn = static fn (?User $user) => $user !== null;
+        $sessions = fn () => $this->cms->app()->make(Sessions::class);
+
+        $a->register('sessions/list', [
+            'label' => 'Where I Am Signed In',
+            'description' => 'Your sessions: the browser and system each was opened on, where from, when you signed in and when it was last used. `current` is the one this request runs in.',
+            'permission' => $signedIn,
+            'expose' => Ability::ADMIN_ONLY,
+            'annotations' => ['readOnly' => true],
+            'output' => Shape::of([['id' => Shape::STRING, 'device' => Shape::STRING, 'ip' => Shape::STRING_OR_NULL, 'signedInAt' => Shape::STRING_OR_NULL, 'lastActiveAt' => Shape::STRING_OR_NULL, 'current' => Shape::BOOLEAN, 'currentLabel' => Shape::STRING_OR_NULL]]),
+            'handler' => fn (array $in, AbilityContext $ctx) => $sessions()->of($ctx->user),
+        ]);
+
+        $a->register('sessions/delete', [
+            'label' => 'Sign Out',
+            'description' => 'Sign yourself out of one session (`id`, from sessions/list), or of every one but this (`others: true`), which also ends "keep me signed in" on every browser. The session this request runs in is never ended here.',
+            'permission' => $signedIn,
+            'expose' => Ability::ADMIN_ONLY,
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 64], 'others' => ['type' => 'boolean', 'const' => true]]],
+            'output' => Shape::of(['ended' => Shape::INTEGER]),
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($sessions) {
+                $list = array_filter($sessions()->of($ctx->user), static fn ($s) => ! $s['current'] && (isset($in['others']) || $s['id'] === ($in['id'] ?? null)));
+                self::oneOrOthers($in, $list);
+
+                return array_values(array_map(static fn ($s) => ['action' => 'delete', 'type' => 'session', 'id' => $s['id'], 'title' => $s['device']], $list));
+            },
+            'handler' => function (array $in, AbilityContext $ctx) use ($sessions) {
+                self::oneOrOthers($in, array_filter($sessions()->of($ctx->user), static fn ($s) => ! $s['current'] && (isset($in['others']) || $s['id'] === ($in['id'] ?? null))));
+
+                return ['ended' => $sessions()->end($ctx->user, isset($in['others']) ? null : [$in['id']])];
+            },
+        ]);
+    }
+
+    /** Exactly one of `id` and `others`, and an `id` that is one of your other sessions, where sessions can be read at all. */
+    private static function oneOrOthers(array $in, array $found): void
+    {
+        if (! Sessions::listable()) {
+            throw AbilityException::invalid('This site keeps its sessions where they can’t be listed (its session driver), so you can’t sign out of them here. Changing your password signs you out everywhere.');
+        }
+
+        if (isset($in['id']) === isset($in['others'])) {
+            throw AbilityException::invalid('Name one session (id) or all the others (others: true).');
+        }
+
+        if (isset($in['id']) && $found === []) {
+            throw AbilityException::invalid('That is not one of your other sessions.', ['id' => 'Is not one of your other sessions.']);
+        }
     }
 
     private function tokens(AbilityRegistry $a): void
