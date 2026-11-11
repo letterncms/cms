@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Abilities;
 
 use Closure;
+use Cms\Support\Schema\Shape;
 use InvalidArgumentException;
 
 /**
@@ -15,7 +16,7 @@ final class Ability
 {
     /**
      * @param  array<string, mixed>  $input  JSON schema for the input object
-     * @param  array<string, mixed>|null  $output  JSON schema for the result
+     * @param  array<string, mixed>|Shape|null  $output  JSON schema for the result, or its short form (see Shape). Read it with output()
      * @param  string|Closure|null  $permission  Permission name (supports {placeholders} from input) or fn(?User, array $input): bool
      * @param  Closure|string|array  $handler  fn(array $input, AbilityContext $ctx): mixed, "Class@method", invokable class, or [Class, method]
      * @param  array{readOnly?: bool, destructive?: bool, idempotent?: bool, openWorld?: bool, trustedOutput?: bool, draft?: bool}  $annotations
@@ -31,7 +32,7 @@ final class Ability
         public readonly string $description,
         public readonly Closure|string|array $handler,
         public readonly array $input = ['type' => 'object', 'properties' => []],
-        public readonly ?array $output = null,
+        private readonly array|Shape|null $output = null,
         public readonly string|Closure|null $permission = null,
         public readonly string $category = 'general',
         public readonly array $annotations = [],
@@ -60,6 +61,12 @@ final class Ability
             package: $config['package'] ?? \Cms\Packages\Scope::$current,
             answer: $config['answer'] ?? null,
         );
+    }
+
+    /** JSON Schema of what the ability answers with, as it is serialized to JSON; null when it does not say. */
+    public function output(): ?array
+    {
+        return $this->output instanceof Shape ? $this->output->toSchema() : $this->output;
     }
 
     public function exposedTo(string $transport): bool
@@ -92,7 +99,7 @@ final class Ability
             'description' => $this->description,
             'category' => $this->category,
             'input' => $this->input === [] ? ['type' => 'object'] : $this->input,
-            'output' => $this->output,
+            'output' => $this->output(),
             'annotations' => $this->annotations ?: null,
             'package' => $this->package,
         ], static fn ($v) => $v !== null);

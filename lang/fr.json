@@ -193,6 +193,7 @@
   "Options": "Options",
   "Package :name is not installed.": "Le paquet :name n’est pas installé.",
   "Paid": "Payant",
+  "Pass --yes: with --json nothing is asked.": "Passez --yes : avec --json, rien n’est demandé.",
   "Password": "Mot de passe",
   "People": "Personnes",
   "PHP 8.4 or newer": "PHP 8.4 ou plus récent",

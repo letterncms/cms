@@ -7,8 +7,10 @@ namespace Cms\Modules\Collaboration;
 use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
+use Cms\Abilities\Shapes;
 use Cms\Content\Entries\Entry;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 
 final class CollaborationModule extends Plugin
@@ -59,6 +61,11 @@ final class CollaborationModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => ['entryId' => $id, 'editing' => ['type' => 'boolean', 'default' => false], 'leave' => ['type' => 'boolean', 'default' => false]], 'required' => ['entryId']],
+            'output' => Shape::of([
+                'others' => [Shapes::person()->with(['editing' => Shape::BOOLEAN, 'since' => Shape::INTEGER])],
+                'updatedAt?' => Shape::STRING_OR_NULL,
+                'updatedBy?' => Shape::nullable(['id' => Shape::STRING, 'name' => Shape::STRING, 'initials' => Shape::STRING]),
+            ]),
             'handler' => function (array $in, AbilityContext $ctx) use ($entry) {
                 $presence = $this->app->make(Presence::class);
                 $target = $entry($in['entryId']);
@@ -85,6 +92,7 @@ final class CollaborationModule extends Plugin
             'permission' => $on('comments.view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['entryId' => $id, 'resolved' => ['type' => 'boolean', 'default' => true, 'description' => 'Include resolved threads']], 'required' => ['entryId']],
+            'output' => Shape::of([self::comment()]),
             'handler' => fn (array $in, AbilityContext $ctx) => $comments()->threads($entry($in['entryId']), $ctx->user, $in['resolved']),
         ]);
 
@@ -103,6 +111,7 @@ final class CollaborationModule extends Plugin
                 ],
                 'required' => ['entryId', 'body'],
             ],
+            'output' => self::comment(),
             'handler' => fn (array $in, AbilityContext $ctx) => $comments()->create($entry($in['entryId']), $ctx->user, $in['body'], $in['mentions'], $in['parentId'] ?? null, $in['blockId'] ?? null)->toPublic($ctx->user),
         ]);
 
@@ -112,6 +121,7 @@ final class CollaborationModule extends Plugin
             'permission' => $on('comments.create'),
             'annotations' => ['idempotent' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => $id, 'body' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 5000]], 'required' => ['id', 'body']],
+            'output' => self::comment(),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $comment = $this->own(Comment::query()->findOrFail($in['id']), $ctx->user);
                 $comment->update(['body' => trim($in['body'])]);
@@ -125,6 +135,7 @@ final class CollaborationModule extends Plugin
             'description' => 'Mark a thread as resolved (or reopen it with resolved: false).',
             'permission' => $on('comments.create'),
             'input' => ['type' => 'object', 'properties' => ['id' => $id, 'resolved' => ['type' => 'boolean', 'default' => true]], 'required' => ['id']],
+            'output' => Shape::of(['id' => Shape::STRING, 'resolved' => Shape::BOOLEAN]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $comment = Comment::query()->findOrFail($in['id']);
                 $thread = $comment->parent_id ? Comment::query()->findOrFail($comment->parent_id) : $comment;
@@ -140,6 +151,7 @@ final class CollaborationModule extends Plugin
             'permission' => $on('comments.create'),
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => $id], 'required' => ['id']],
+            'output' => Shape::of(['deleted' => Shape::INTEGER]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $comment = $this->own(Comment::query()->findOrFail($in['id']), $ctx->user);
                 $ids = Comment::query()->where('id', $comment->id)->orWhere('parent_id', $comment->id)->pluck('id');
@@ -156,6 +168,7 @@ final class CollaborationModule extends Plugin
             'permission' => $on('comments.create'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['entryId' => $id], 'required' => ['entryId']],
+            'output' => Shape::of([Shapes::person()]),
             'handler' => fn (array $in) => $comments()->people($entry($in['entryId'])),
         ]);
 
@@ -165,8 +178,25 @@ final class CollaborationModule extends Plugin
             'permission' => 'comments.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10]]],
+            'output' => Shape::of([self::comment()->with([
+                'threadId' => Shape::STRING,
+                'entry' => ['id' => Shape::STRING, 'title' => Shape::STRING, 'collection' => Shape::STRING],
+                'reason' => Shape::enum('mention', 'yours'),
+            ])]),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->inbox($ctx->user, $in['limit']),
         ]);
+    }
+
+    /** Comment::toPublic(): a comment; a thread's first comment carries its replies when they were loaded. */
+    private static function comment(): Shape
+    {
+        $comment = [
+            'id' => Shape::STRING, 'entryId' => Shape::STRING, 'blockId' => Shape::STRING_OR_NULL, 'parentId' => Shape::STRING_OR_NULL, 'body' => Shape::STRING,
+            'author' => Shape::nullable(Shapes::person()), 'mentions' => [Shapes::person()], 'resolved' => Shape::BOOLEAN, 'resolvedAt' => Shape::STRING_OR_NULL,
+            'mine' => Shape::BOOLEAN, 'createdAt' => Shape::STRING_OR_NULL, 'editedAt' => Shape::STRING_OR_NULL,
+        ];
+
+        return Shape::of([...$comment, 'replies' => [[...$comment, 'replies' => Shape::LIST]]]);
     }
 
     private function own(Comment $comment, ?User $user): Comment

@@ -12,6 +12,8 @@ use Cms\Content\Fields\Blueprint;
 use Cms\Content\Globals\GlobalSet;
 use Cms\Cms;
 use Cms\Modules\Workspace\Answers;
+use Cms\Abilities\Shapes;
+use Cms\Support\Schema\Shape;
 
 /** Global sets: their values, and their fields. */
 final class GlobalAbilities
@@ -27,6 +29,7 @@ final class GlobalAbilities
             'description' => 'Global sets (site-wide values like footer or contact details), with when each last changed.',
             'permission' => 'globals.view',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([['handle' => Shape::STRING, 'title' => Shape::STRING, 'icon' => Shape::STRING, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL]]),
             'handler' => fn () => array_values(array_map(static fn (GlobalSet $g) => [
                 'handle' => $g->handle, 'title' => $g->title, 'icon' => $g->icon, ...$g->timestamps,
             ], $this->cms->globals()->all())),
@@ -38,6 +41,7 @@ final class GlobalAbilities
             'description' => 'A global set with its fields and values.',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'locale' => ['type' => 'string']], 'required' => ['handle']],
+            'output' => self::set()->with(['settings' => [Shapes::field()]]),
             'handler' => fn (array $in) => [
                 ...$this->cms->globals()->findOrFail($in['handle'])->toArray($in['locale'] ?? null),
                 'settings' => app(Translations::class)->fields(Blueprint::make([
@@ -61,6 +65,7 @@ final class GlobalAbilities
                     ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/globals/'.$in['handle']],
                 ]);
             },
+            'output' => Shape::of(Shape::OBJECT),
             'handler' => fn (array $in) => $this->cms->globals()->updateValues($in['handle'], $in['values'], $in['locale'] ?? null)->values($in['locale'] ?? null),
         ]);
 
@@ -77,6 +82,7 @@ final class GlobalAbilities
                 ...(isset($in['handle']) ? [] : [['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'ghost', 'ability' => 'globals/delete', 'input' => ['handle' => $set['handle']],
                     'confirm' => ['title' => Answers::literal(__('Delete :name?', ['name' => $set['title']])), 'confirm' => __('Delete'), 'danger' => true], 'success' => __('Deleted')]]),
             ]),
+            'output' => self::set(),
             'handler' => function (array $in) {
                 if (! isset($in['handle'])) {
                     $in['handle'] = substr(Str::slug($in['title'], '_'), 0, 64);
@@ -107,11 +113,21 @@ final class GlobalAbilities
             'annotations' => ['destructive' => true],
             'description' => 'Delete a global set and its values.',
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
+            'output' => Shape::of(['deleted' => Shape::STRING]),
             'handler' => function (array $in) {
                 $this->cms->globals()->delete($in['handle']);
 
                 return ['deleted' => $in['handle']];
             },
+        ]);
+    }
+
+    /** GlobalSet::toArray(): a set with its fields and its values (`data` follows the fields). */
+    private static function set(): Shape
+    {
+        return Shape::of([
+            'handle' => Shape::STRING, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'title' => Shape::STRING, 'icon' => Shape::STRING,
+            'fields' => [Shapes::field()], 'resolvedFields' => [Shapes::field()], 'data' => Shape::OBJECT,
         ]);
     }
 }

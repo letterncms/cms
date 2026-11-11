@@ -170,6 +170,7 @@ final class Server
             'title' => $ability->label,
             'description' => $ability->description ?: $ability->label,
             'inputSchema' => $schema,
+            'outputSchema' => self::structuredSchema($ability->output()),
             'annotations' => array_filter([
                 'title' => $ability->label,
                 'readOnlyHint' => $ability->isReadOnly(),
@@ -199,11 +200,41 @@ final class Server
 
         $text = is_string($result) ? $result : (string) json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        return array_filter([
+        return [
             'content' => [['type' => 'text', 'text' => $text]],
-            'structuredContent' => is_array($result) ? (array_is_list($result) ? ['items' => $result] : $result) : null,
+            'structuredContent' => self::structured(json_decode((string) json_encode($result, JSON_PARTIAL_OUTPUT_ON_ERROR), true)),
             'isError' => false,
-        ], static fn ($v) => $v !== null);
+        ];
+    }
+
+    /**
+     * A tool's structured content is always an object: an ability that answers with an object gives it as it is,
+     * a list goes under `items`, and anything else (a string, a number, null) under `result`.
+     */
+    public static function structured(mixed $result): array|object
+    {
+        return match (true) {
+            is_array($result) && $result !== [] && array_is_list($result) => ['items' => $result],
+            is_array($result) => $result === [] ? (object) [] : $result,
+            default => ['result' => $result],
+        };
+    }
+
+    /** The ability's output schema, wrapped the way structured() wraps its result. */
+    public static function structuredSchema(?array $output): ?array
+    {
+        if ($output === null) {
+            return null;
+        }
+
+        $types = (array) ($output['type'] ?? []);
+
+        return match (true) {
+            $types === ['object'] => $output,
+            $types === ['array'] => ['type' => 'object', 'properties' => ['items' => $output]],
+            // A list or an object, or something that isn't either: whichever wrapping the result gets.
+            default => ['type' => 'object'],
+        };
     }
 
     private function read(array $params, AbilityContext $context): array

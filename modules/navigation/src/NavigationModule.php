@@ -10,6 +10,7 @@ use Cms\Content\Entries\Entry;
 use Cms\Modules\Workspace\Answers;
 use Cms\Users\User;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 use Illuminate\Support\Str;
 
 final class NavigationModule extends Plugin
@@ -130,6 +131,7 @@ final class NavigationModule extends Plugin
             'description' => 'Menus with their item counts.',
             'permission' => 'navigation.view',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([['handle' => Shape::STRING, 'title' => Shape::STRING, 'icon' => Shape::STRING, 'maxDepth' => Shape::INTEGER, 'count' => Shape::INTEGER, 'links' => Shape::STRING, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL]]),
             'handler' => fn () => array_values(array_map(static fn ($m) => ['handle' => $m['handle'], 'title' => $m['title'], 'icon' => 'list-tree', 'maxDepth' => $m['maxDepth'], 'count' => $count = self::count($m['items']), 'links' => $count === 1 ? __('1 link') : __(':count links', ['count' => $count]), 'publishedAt' => $m['publishedAt'], 'updatedAt' => $m['updatedAt']], $menus()->all())),
         ]);
 
@@ -139,6 +141,7 @@ final class NavigationModule extends Plugin
             'permission' => 'navigation.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle']],
+            'output' => self::menuShape(),
             'handler' => fn (array $in) => $this->describe($menus()->find($in['handle']) ?? throw new AbilityException(__('Menu not found.'), 'not_found')),
         ]);
 
@@ -152,6 +155,7 @@ final class NavigationModule extends Plugin
                 ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'ghost', 'ability' => 'navigation/delete', 'input' => ['handle' => $menu['handle']], 'success' => __('Menu deleted'),
                     'confirm' => ['title' => Answers::literal(__('Delete “:title”?', ['title' => $menu['title']])), 'confirm' => __('Delete'), 'danger' => true]],
             ]),
+            'output' => self::menuShape(),
             'handler' => function (array $in) use ($menus) {
                 $handle = substr(trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower(Str::ascii($in['title']))), '-'), 0, 64);
 
@@ -186,6 +190,7 @@ final class NavigationModule extends Plugin
             'answer' => static fn (array $menu) => Answers::done(__('Saved :name', ['name' => $menu['title']]), null, [
                 ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/navigation/'.$menu['handle']],
             ]),
+            'output' => self::menuShape(),
             'handler' => fn (array $in) => $this->describe($menus()->save($in['handle'], [...array_intersect_key($menus()->find($in['handle']) ?? [], array_flip(['title', 'maxDepth', 'items'])), ...$in])),
         ]);
 
@@ -202,6 +207,7 @@ final class NavigationModule extends Plugin
             'answer' => static fn (array $menu, array $in) => Answers::done(__('Added to :name', ['name' => $menu['title']]), null, [
                 ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/navigation/'.$menu['handle']],
             ]),
+            'output' => self::menuShape(),
             'handler' => function (array $in) use ($menus) {
                 $menu = $menus()->find($in['menu']) ?? throw new AbilityException(__('Menu not found.'), 'not_found', ['menu' => __('Menu not found.')]);
                 if (empty($in['entry']) && empty($in['url'])) {
@@ -219,6 +225,7 @@ final class NavigationModule extends Plugin
             'permission' => 'navigation.manage',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle']],
+            'output' => Shape::of(['deleted' => Shape::BOOLEAN]),
             'handler' => fn (array $in) => ['deleted' => $menus()->delete($in['handle'])],
         ]);
     }
@@ -275,6 +282,21 @@ final class NavigationModule extends Plugin
         };
 
         return [...$menu, 'items' => $walk($menu['items'])];
+    }
+
+    /** describe(): a menu with its items, those that link to an entry with what they point at (`target`). */
+    private static function menuShape(): Shape
+    {
+        $item = static fn (mixed $children) => [
+            'id' => Shape::STRING, 'entry?' => Shape::STRING, 'url?' => Shape::STRING, 'label?' => Shape::STRING, 'newTab?' => Shape::BOOLEAN, 'locales?' => Shape::OBJECT,
+            'target?' => ['title' => Shape::STRING_OR_NULL, 'uri' => Shape::STRING_OR_NULL, 'status' => Shape::STRING, 'collection' => Shape::STRING_OR_NULL],
+            'children' => [$children],
+        ];
+
+        return Shape::of([
+            'handle' => Shape::STRING, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'title' => Shape::STRING, 'maxDepth' => Shape::INTEGER,
+            'items' => [$item($item(Shape::OBJECT))],
+        ]);
     }
 
     private static function without(array $items, string $entryId): array

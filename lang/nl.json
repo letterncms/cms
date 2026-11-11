@@ -193,6 +193,7 @@
   "Options": "Opties",
   "Package :name is not installed.": "Pakket :name is niet geïnstalleerd.",
   "Paid": "Betaald",
+  "Pass --yes: with --json nothing is asked.": "Geef --yes mee: met --json wordt er niets gevraagd.",
   "Password": "Wachtwoord",
   "People": "Mensen",
   "PHP 8.4 or newer": "PHP 8.4 of nieuwer",

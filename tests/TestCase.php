@@ -100,6 +100,9 @@ abstract class TestCase extends BaseTestCase
         Artisan::call('migrate', ['--path' => $this->app->databasePath('migrations'), '--realpath' => true]);
         $this->app->make(\Cms\Packages\PackageManager::class)->sync();
         file_put_contents(storage_path('installed.json'), '{}');
+
+        // Every result an ability gives in any test is held against its output schema.
+        $this->cms()->abilities()->verifyOutput = true;
     }
 
     protected function tearDown(): void

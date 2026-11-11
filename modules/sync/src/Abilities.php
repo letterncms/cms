@@ -7,6 +7,8 @@ namespace Cms\Modules\Sync;
 use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
+use Cms\Abilities\Shapes;
+use Cms\Support\Schema\Shape;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use RuntimeException;
@@ -31,11 +33,19 @@ final class Abilities
         $id = ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 26]], 'required' => ['id']];
         $pairs = ['type' => 'array', 'maxItems' => 20, 'items' => ['type' => 'array', 'maxItems' => 2, 'items' => ['type' => 'string', 'maxLength' => 500]]];
         $base = ['permission' => 'sync.manage', 'expose' => Ability::ADMIN_ONLY];
+        $side = ['label' => Shape::STRING, 'name' => Shape::STRING, 'url' => Shape::STRING, 'cms' => Shape::STRING, 'driver' => Shape::STRING];
 
         $a->register('sync/overview', [...$base,
             'label' => 'Sync Overview',
             'description' => 'This site’s connection key, the sites it is connected to, a sync that is going on, and what came in lately.',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'site' => self::siteShape(),
+                'remotes' => [self::remoteShape()],
+                'current' => Shape::nullable(self::progressShape()),
+                'busy' => Shape::nullable(['job' => Shape::STRING, 'kind' => Shape::STRING, 'since' => Shape::INTEGER, 'touched' => Shape::INTEGER]),
+                'history' => [self::syncedShape()],
+            ]),
             'handler' => static function () {
                 $remotes = app(Remotes::class)->all();
 
@@ -53,6 +63,7 @@ final class Abilities
             'label' => 'Connect a Site',
             'description' => 'Connects another site by its connection key, after checking it answers.',
             'input' => ['type' => 'object', 'properties' => ['key' => ['type' => 'string', 'maxLength' => 600], 'name' => ['type' => 'string', 'maxLength' => 40], 'url' => ['type' => 'string', 'maxLength' => 500], 'other' => ['type' => 'boolean', 'description' => 'False: this server reaches it at the key’s own address, and url is left out.']], 'required' => ['key']],
+            'output' => self::remoteShape(),
             'handler' => static fn (array $in) => $guard(static fn () => app(Connections::class)->connect(self::key((string) $in['key']), isset($in['name']) && trim((string) $in['name']) !== '' ? trim((string) $in['name']) : null, isset($in['url']) && ($in['other'] ?? true) !== false && trim((string) $in['url']) !== '' ? trim((string) $in['url']) : null)['remote']),
         ]);
 
@@ -61,6 +72,7 @@ final class Abilities
             'description' => 'Forgets a connected site. The other site is not changed.',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => $remote], 'required' => ['name']],
+            'output' => Shapes::ok(),
             'handler' => static function (array $in) {
                 app(Remotes::class)->remove((string) $in['name']);
 
@@ -72,6 +84,7 @@ final class Abilities
             'label' => 'Allow Pulls or Pushes',
             'description' => 'Whether sites with this site’s key may pull from it, or push to it.',
             'input' => ['type' => 'object', 'properties' => ['what' => $direction, 'on' => ['type' => 'boolean'], 'allow_pull' => ['type' => 'boolean'], 'allow_push' => ['type' => 'boolean']], 'description' => 'One of them by `what` and `on`, or both as allow_pull and allow_push.'],
+            'output' => self::siteShape(),
             'handler' => static fn (array $in) => $guard(static function () use ($in) {
                 $changes = isset($in['what']) ? [(string) $in['what'] => (bool) ($in['on'] ?? false)] : array_filter(['pull' => $in['allow_pull'] ?? null, 'push' => $in['allow_push'] ?? null], static fn ($v) => $v !== null);
 
@@ -87,6 +100,7 @@ final class Abilities
             'label' => 'New Connection Key',
             'description' => 'Replaces this site’s key. Sites connected with the old one stop reaching it until they get the new one.',
             'annotations' => ['destructive' => true],
+            'output' => Shape::of(['key' => Shape::STRING]),
             'handler' => static function () {
                 app(Site::class)->renew();
 
@@ -99,6 +113,18 @@ final class Abilities
             'description' => 'What a pull or push would change on the receiving site, and anything in its way. Changes nothing.',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['remote' => $remote, 'direction' => $direction, 'rewrite' => $pairs], 'required' => ['remote', 'direction']],
+            'output' => Shape::of([
+                'direction' => Shape::enum('pull', 'push'), 'from' => $side, 'to' => $side, 'problems' => [Shape::STRING], 'notes' => [Shape::STRING],
+                'groups' => [[
+                    'id' => Shape::STRING, 'label' => Shape::STRING, 'description' => Shape::STRING, 'selected' => Shape::BOOLEAN, 'available' => Shape::BOOLEAN, 'reason' => Shape::STRING_OR_NULL,
+                    'tables' => [['table' => Shape::STRING, 'from' => Shape::INTEGER, 'to' => Shape::INTEGER, 'bytes' => Shape::INTEGER]],
+                    'areas' => [Shape::STRING],
+                    'files' => Shape::nullable(['add' => Shape::INTEGER, 'change' => Shape::INTEGER, 'remove' => Shape::INTEGER, 'bytes' => Shape::INTEGER]),
+                    'bytes' => Shape::INTEGER,
+                    'collections?' => [['handle' => Shape::STRING, 'from' => Shape::INTEGER, 'to' => Shape::INTEGER]],
+                ]],
+                'rewrite' => [[Shape::STRING]],
+            ]),
             'handler' => static fn (array $in) => $guard(static function () use ($in) {
                 [$source, $dest] = app(Connections::class)->ends((string) $in['remote'], (string) $in['direction']);
 
@@ -116,6 +142,7 @@ final class Abilities
                 'collections' => ['type' => ['array', 'null'], 'maxItems' => 500, 'items' => ['type' => 'string', 'maxLength' => 64]],
                 'rewrite' => $pairs,
             ], 'required' => ['remote', 'direction', 'groups']],
+            'output' => self::progressShape(),
             'handler' => static fn (array $in) => $guard(static fn () => app(Transfer::class)->start((string) $in['remote'], (string) $in['direction'], $in)),
         ]);
 
@@ -123,6 +150,7 @@ final class Abilities
             'label' => 'Continue a Sync',
             'description' => 'Does the next few seconds of a sync and says where it stands.',
             'input' => $id,
+            'output' => self::progressShape(),
             'handler' => static fn (array $in) => $guard(static fn () => app(Transfer::class)->step((string) $in['id'], 2.5)),
         ]);
 
@@ -130,6 +158,7 @@ final class Abilities
             'label' => 'Resume a Sync',
             'description' => 'Carries on with a sync that paused after the other site stopped answering.',
             'input' => $id,
+            'output' => self::progressShape(),
             'handler' => static fn (array $in) => $guard(static fn () => app(Transfer::class)->resume((string) $in['id'])),
         ]);
 
@@ -137,6 +166,7 @@ final class Abilities
             'label' => 'Cancel a Sync',
             'description' => 'Stops a sync before it switches anything over. Neither site changes.',
             'input' => $id,
+            'output' => self::progressShape(),
             'handler' => static fn (array $in) => $guard(static fn () => app(Transfer::class)->cancel((string) $in['id'])),
         ]);
 
@@ -145,6 +175,7 @@ final class Abilities
             'description' => 'What came into this site, or into a connected one, and which of it can be undone.',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['remote' => $remote]],
+            'output' => Shape::of([self::syncedShape()]),
             'handler' => static fn (array $in) => $guard(static fn () => isset($in['remote']) && $in['remote'] !== '' ? app(Connections::class)->remote((string) $in['remote'])->history() : array_map(static fn (array $s) => self::synced($s, app(Remotes::class)->all()), app(Receiver::class)->history())),
         ]);
 
@@ -153,6 +184,7 @@ final class Abilities
             'description' => 'Puts back what a sync replaced, from its backup, on this site or a connected one. Call again until done.',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 26], 'remote' => $remote], 'required' => ['id']],
+            'output' => Shape::of(['done' => Shape::BOOLEAN, 'at?' => Shape::INTEGER, 'tables?' => Shape::INTEGER]),
             'handler' => static fn (array $in) => $guard(static function () use ($in) {
                 if (! isset($in['remote']) || $in['remote'] === '') {
                     return app(Receiver::class)->undo((string) $in['id']);
@@ -167,6 +199,39 @@ final class Abilities
 
                 return $result;
             }),
+        ]);
+    }
+
+    /** site(): this site as the Sync screen shows it. */
+    private static function siteShape(): Shape
+    {
+        return Shape::of(['name' => Shape::STRING, 'url' => Shape::STRING, 'key' => Shape::STRING, 'allow_pull' => Shape::BOOLEAN, 'allow_push' => Shape::BOOLEAN]);
+    }
+
+    /** A connected site, without its secret. `last` is the last sync with it: direction, at, id, groups. */
+    private static function remoteShape(): Shape
+    {
+        return Shape::of(['name' => Shape::STRING, 'label' => Shape::STRING, 'url' => Shape::STRING, 'site_id' => Shape::STRING, 'added_at' => Shape::STRING, 'last' => Shape::OBJECT_OR_NULL]);
+    }
+
+    /** Transfer::progress(): where a sync stands. */
+    private static function progressShape(): Shape
+    {
+        return Shape::of([
+            'id' => Shape::STRING, 'remote' => Shape::STRING, 'remote_label' => Shape::STRING, 'direction' => Shape::enum('pull', 'push'), 'groups' => [Shape::STRING],
+            'from' => Shape::STRING, 'to' => Shape::STRING, 'status' => Shape::enum('running', 'waiting', 'paused', 'done', 'failed', 'cancelled'), 'phase' => Shape::STRING,
+            'label' => Shape::STRING, 'percent' => Shape::INTEGER, 'eta' => Shape::INTEGER_OR_NULL, 'rows' => Shape::INTEGER, 'files' => Shape::INTEGER, 'bytes' => Shape::INTEGER,
+            'message' => Shape::STRING_OR_NULL, 'error' => Shape::STRING_OR_NULL, 'result' => Shape::OBJECT_OR_NULL, 'started_at' => Shape::STRING, 'finished_at' => Shape::STRING_OR_NULL,
+        ]);
+    }
+
+    /** A sync a site received. This site's own carry the words synced() adds; a connected site's come as it keeps them. */
+    private static function syncedShape(): Shape
+    {
+        return Shape::of([
+            'id' => Shape::STRING, 'at' => Shape::STRING, 'from?' => Shape::OBJECT, 'direction?' => Shape::STRING, 'tables?' => [Shape::STRING], 'files?' => Shape::INTEGER,
+            'undone_at?' => Shape::STRING_OR_NULL, 'can_undo?' => Shape::BOOLEAN,
+            'title?' => Shape::STRING, 'summary?' => Shape::STRING, 'undone?' => Shape::STRING_OR_NULL, 'undoable?' => Shape::BOOLEAN,
         ]);
     }
 

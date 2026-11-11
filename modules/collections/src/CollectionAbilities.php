@@ -7,9 +7,11 @@ namespace Cms\Modules\Collections;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
+use Cms\Abilities\Shapes;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Fields\Blueprint;
 use Cms\Cms;
+use Cms\Support\Schema\Shape;
 
 /** Creating and changing collections and reusable fieldsets. */
 final class CollectionAbilities
@@ -25,6 +27,10 @@ final class CollectionAbilities
             'description' => 'Each content collection you can view with how many entries it has in the default language, how many of them are drafts, and when one last changed.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([[
+                'handle' => Shape::STRING, 'title' => Shape::STRING, 'singular' => Shape::STRING, 'icon' => Shape::STRING,
+                'total' => Shape::INTEGER, 'drafts' => Shape::INTEGER, 'updatedAt' => Shape::STRING_OR_NULL,
+            ]]),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->overview($ctx),
         ]);
 
@@ -34,6 +40,10 @@ final class CollectionAbilities
             'permission' => 'collections.manage',
             'annotations' => ['readOnly' => true],
             'expose' => ['mcp' => false, 'assistant' => false],
+            'output' => Shape::of([[
+                'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'handle' => Shape::STRING, 'title' => Shape::STRING, 'icon' => Shape::STRING,
+                'structure' => Shape::STRING, 'route' => Shape::STRING_OR_NULL, 'count' => Shape::INTEGER,
+            ]]),
             'handler' => fn () => array_values(array_map(fn ($c) => [
                 ...\Cms\Support\RecordTimestamps::api($c->extra),
                 'handle' => $c->handle, 'title' => $c->title, 'icon' => $c->icon, 'structure' => $c->structure, 'route' => $c->route,
@@ -50,6 +60,8 @@ final class CollectionAbilities
                 'createOnly' => ['type' => 'boolean', 'default' => false, 'description' => 'Reject an existing handle when creating a collection.'],
                 'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, body (the main content field handle; empty for fields only), section (default sidebar group), nav_order (default sidebar priority, lower first), fields[]'],
             ], 'required' => ['handle', 'definition']],
+            // `fields` are the definitions as written: a field, or an import of a fieldset (`resolvedFields` has what they come to).
+            'output' => Shapes::collection()->with(['fields' => [Shape::OBJECT]]),
             'handler' => function (array $in) {
                 if (($in['createOnly'] ?? false) && $this->cms->collections()->find($in['handle'])) {
                     throw AbilityException::invalid(__('A collection with this handle already exists.'));
@@ -77,6 +89,7 @@ final class CollectionAbilities
             'permission' => 'collections.manage',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'deleteEntries' => ['type' => 'boolean', 'default' => false]], 'required' => ['handle']],
+            'output' => Shape::of(['deleted' => Shape::STRING, 'deletedEntries' => Shape::INTEGER]),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->write(function () use ($in, $ctx) {
                 $collection = $this->cms->collections()->findOrFail($in['handle']);
 
@@ -105,6 +118,7 @@ final class CollectionAbilities
             'description' => 'Reusable field groups that collections can import.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::map(self::fieldset()),
             'handler' => fn () => $this->cms->fieldsets()->all(),
         ]);
 
@@ -113,12 +127,19 @@ final class CollectionAbilities
             'permission' => 'collections.manage',
             'description' => 'Create or update a reusable fieldset (content/fieldsets/<handle>.yaml).',
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'title' => ['type' => 'string', 'maxLength' => 120], 'fields' => ['type' => 'array', 'items' => ['type' => 'object']]], 'required' => ['handle', 'title', 'fields']],
+            'output' => Shape::nullable(self::fieldset()),
             'handler' => function (array $in) {
                 $this->cms->fieldsets()->save($in['handle'], $in['title'], $in['fields']);
 
                 return $this->cms->fieldsets()->all()[$in['handle']] ?? null;
             },
         ]);
+    }
+
+    /** Fieldsets::all(): a fieldset's title, its field definitions as written (a field, or an import of another fieldset) and where it comes from: `file`, `code` or a package. */
+    private static function fieldset(): Shape
+    {
+        return Shape::of(['title' => Shape::STRING, 'fields' => [Shape::OBJECT], 'source' => Shape::STRING]);
     }
 
     /** The cache key of a collection's counts; CollectionsModule forgets it when an entry changes. */

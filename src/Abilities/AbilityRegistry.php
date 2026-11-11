@@ -17,6 +17,9 @@ final class AbilityRegistry
     /** @var array<string, Ability> */
     private array $abilities = [];
 
+    /** Check every result against its ability's output schema and fail when it differs. On in the tests, so the schemas stay true. */
+    public bool $verifyOutput = false;
+
     public function __construct(
         private readonly Container $container,
         private readonly Hooks $hooks,
@@ -112,7 +115,29 @@ final class AbilityRegistry
 
         $this->hooks->dispatch('ability.executed', $ability, $input, $result, $context);
 
-        return $this->hooks->filter('ability.result', $result, $ability, $input, $context);
+        $result = $this->hooks->filter('ability.result', $result, $ability, $input, $context);
+
+        if ($this->verifyOutput) {
+            $this->verify($ability, $result);
+        }
+
+        return $result;
+    }
+
+    /** The result as its JSON, against the schema the ability declares. */
+    private function verify(Ability $ability, mixed $result): void
+    {
+        if (($schema = $ability->output()) === null) {
+            return;
+        }
+
+        $json = json_decode((string) json_encode($result, JSON_PARTIAL_OUTPUT_ON_ERROR), true);
+
+        try {
+            Validator::validate($json, $schema);
+        } catch (SchemaException $e) {
+            throw new \LogicException("{$ability->name} answered with something its output schema does not describe: ".implode('; ', array_map(static fn ($path, $message) => "{$path}: {$message}", array_keys($e->errors), $e->errors)));
+        }
     }
 
     private function allowed(Ability $ability, AbilityContext $context, array $input, bool $strict): bool

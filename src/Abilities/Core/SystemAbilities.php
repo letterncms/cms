@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\DB;
 use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityRegistry;
+use Cms\Abilities\Shapes;
 use Cms\Cms;
 use Cms\Packages\PackageManifest;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 
 /** What the kernel itself answers: discovery, system information, the site and its people. */
@@ -24,6 +26,10 @@ final class SystemAbilities
             'description' => 'Every action this site supports for you, with input schemas.',
             'permission' => static fn (?User $u) => $u !== null,
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([[
+                'name' => Shape::STRING, 'label' => Shape::STRING, 'description' => Shape::STRING, 'category' => Shape::STRING, 'input' => Shape::OBJECT,
+                'output?' => Shape::OBJECT, 'annotations?' => Shape::OBJECT, 'package?' => Shape::STRING,
+            ]]),
             'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_map(static fn (Ability $x) => $x->toArray(), $a->available($ctx))),
         ]);
 
@@ -38,6 +44,7 @@ final class SystemAbilities
                 'id' => ['type' => 'string', 'maxLength' => 120],
                 'params' => ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'default' => []],
             ], 'required' => ['id']],
+            'output' => Shape::of(Shape::OBJECT),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->views()->resolve($in['id'], $ctx->user, $in['params']),
         ]);
 
@@ -46,6 +53,10 @@ final class SystemAbilities
             'description' => 'CMS version, PHP, database, packages and pending upgrades.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'cms' => Shape::STRING, 'php' => Shape::STRING, 'database' => Shape::STRING, 'environment' => Shape::STRING,
+                'packages' => [['name' => Shape::STRING, 'version' => Shape::STRING]], 'pending' => Shape::either(Shape::LIST, Shape::OBJECT),
+            ]),
             'handler' => fn () => [
                 'cms' => Cms::VERSION,
                 'php' => PHP_VERSION,
@@ -69,6 +80,7 @@ final class SystemAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 25],
             ]],
+            'output' => Shape::page(Shapes::person(), ['perPage' => Shape::INTEGER]),
             'handler' => function (array $in) {
                 $query = User::query()->orderBy('name')->orderBy('id');
                 if (isset($in['ids'])) $query->whereIn('id', $in['ids']);
@@ -95,6 +107,7 @@ final class SystemAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
             ]],
+            'output' => Shape::page(Shapes::user()->with(['person' => Shapes::person(), 'you' => Shape::STRING_OR_NULL, 'badges' => [Shape::STRING]])),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $query = User::query()->orderBy('name');
 
@@ -135,6 +148,7 @@ final class SystemAbilities
             'description' => 'Name, URL, timezone, locales and themes. Change them with settings/update (namespace "site").',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of(['name' => Shape::STRING_OR_NULL, 'url' => Shape::STRING, 'timezone' => Shape::STRING, 'locale' => Shape::STRING, 'locales' => [Shape::STRING]]),
             'handler' => fn () => [
                 'name' => config('app.name'),
                 'url' => $this->cms->url(),

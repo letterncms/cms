@@ -11,6 +11,7 @@ use Cms\Abilities\AbilityException;
 use Cms\Admin\Translations;
 use Cms\Modules\Workspace\Http\TurnController;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 
 /**
@@ -67,6 +68,7 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100], 'offset' => ['type' => 'integer', 'minimum' => 0]]],
+            'output' => Shape::of([self::thread()]),
             'handler' => static fn (array $in, AbilityContext $c) => $threads($c)->latest('updated_at')->orderByDesc('id')->offset($in['offset'] ?? 0)->limit($in['limit'] ?? 30)->get()->map->summary()->all(),
         ]);
 
@@ -77,6 +79,15 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => self::thread()->with([
+                'turns' => [[
+                    'id' => Shape::STRING, 'role' => Shape::enum('user', 'answer'), 'at' => Shape::STRING, 'kind?' => Shape::STRING, 'text?' => Shape::STRING, 'command?' => Shape::OBJECT,
+                    'attached?' => Shape::LIST, 'replaces?' => Shape::STRING, 'parts?' => [['type' => Shape::STRING]], 'agent?' => Shape::STRING,
+                ]],
+                'awaiting' => [Shape::OBJECT],
+                'agent' => Shape::OBJECT_OR_NULL,
+                'usage' => Shape::nullable(Shape::map(Shape::INTEGER)),
+            ]),
             'handler' => static fn (array $in, AbilityContext $c) => $workspace()->show($threads($c)->findOrFail($in['id']), $c->user),
         ]);
 
@@ -86,6 +97,7 @@ final class WorkspaceModule extends Plugin
             'permission' => 'admin.access',
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120]], 'required' => ['id']],
+            'output' => self::thread(),
             'handler' => static function (array $in, AbilityContext $c) use ($threads, $workspace) {
                 $thread = $threads($c)->findOrFail($in['id']);
                 $agent = $workspace()->agent();
@@ -107,6 +119,7 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['destructive' => true],
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => Shape::of(['deleted' => Shape::BOOLEAN]),
             'handler' => static fn (array $in, AbilityContext $c) => ['deleted' => (bool) $threads($c)->whereKey($in['id'])->delete()],
         ]);
 
@@ -117,6 +130,9 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => ['query' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 200]], 'required' => ['query']],
+            'output' => Shape::of(['query' => Shape::STRING, 'sections' => [[
+                'id' => Shape::STRING, 'title' => Shape::STRING, 'items' => [['label' => Shape::STRING, 'detail?' => Shape::STRING, 'icon?' => Shape::STRING, 'to' => Shape::STRING]],
+            ]]]),
             'handler' => fn (array $in, AbilityContext $c) => $this->app->make(Search::class)->run($in['query'], $c->user ?? throw new AbilityException(__('Authentication required.'), 'unauthenticated')),
         ]);
 
@@ -131,6 +147,7 @@ final class WorkspaceModule extends Plugin
                 'to' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 300],
                 'label' => ['type' => 'string', 'maxLength' => 120],
             ], 'required' => ['to']],
+            'output' => Shape::of(['to' => Shape::STRING, 'label' => Shape::STRING]),
             'handler' => fn (array $in, AbilityContext $c) => $this->app->make(Places::class)->open((string) $in['to'], $c->user ?? throw new AbilityException(__('Authentication required.'), 'unauthenticated'), $in['label'] ?? null),
         ]);
 
@@ -140,8 +157,18 @@ final class WorkspaceModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'expose' => $mine,
+            'output' => Shape::of([[
+                'name' => Shape::STRING, 'label' => Shape::STRING, 'group' => Shape::STRING, 'icon' => Shape::STRING, 'input' => Shape::OBJECT,
+                'destructive' => Shape::BOOLEAN, 'readOnly' => Shape::BOOLEAN,
+            ]]),
             'handler' => fn (array $in, AbilityContext $c) => $this->runnable($c),
         ]);
+    }
+
+    /** Thread::summary(): a chat in a list. */
+    private static function thread(): Shape
+    {
+        return Shape::of(['id' => Shape::STRING, 'title' => Shape::STRING, 'updatedAt' => Shape::STRING_OR_NULL]);
     }
 
     /** A schema's names for people (`title`, and the `x-labels` of a choice) in their language. */

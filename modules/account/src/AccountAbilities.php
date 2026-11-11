@@ -16,6 +16,8 @@ use Cms\Users\Passwords;
 use Cms\Users\Totp;
 use Cms\Users\User;
 use Cms\Users\UserFields;
+use Cms\Abilities\Shapes;
+use Cms\Support\Schema\Shape;
 
 /** The signed-in person's own account and API tokens. */
 final class AccountAbilities
@@ -33,6 +35,7 @@ final class AccountAbilities
             'description' => 'The fields every user profile has beyond name and email (content/users.yaml), as stored and resolved.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of(['title' => Shape::STRING, 'fields' => [Shapes::field()], 'resolvedFields' => [Shapes::field()], 'settings' => [Shapes::field()]]),
             'handler' => fn () => [
                 'title' => 'Users',
                 'fields' => $this->cms->app()->make(UserFields::class)->stored(),
@@ -51,6 +54,7 @@ final class AccountAbilities
             'description' => 'The signed-in user.',
             'permission' => $signedIn,
             'annotations' => ['readOnly' => true],
+            'output' => Shapes::user()->with(['preferences' => Shape::OBJECT]),
             'handler' => fn (array $in, AbilityContext $ctx) => [...$ctx->user->toPublic(), 'preferences' => $ctx->user->preferences ?? (object) []],
         ]);
 
@@ -69,6 +73,7 @@ final class AccountAbilities
                 'currentPassword' => ['type' => 'string'],
                 'password' => ['type' => 'string'],
             ]],
+            'output' => Shapes::user(),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = $ctx->user;
 
@@ -119,6 +124,7 @@ final class AccountAbilities
             'description' => 'Generate a TOTP secret. Confirm with account/two-factor-confirm.',
             'permission' => $signedIn,
             'expose' => Ability::ADMIN_ONLY,
+            'output' => Shape::of(['secret' => Shape::STRING, 'uri' => Shape::STRING]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $secret = Totp::secret();
                 $ctx->user->forceFill(['two_factor_secret' => $secret, 'two_factor_confirmed_at' => null])->save();
@@ -133,6 +139,7 @@ final class AccountAbilities
             'permission' => $signedIn,
             'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => ['code' => ['type' => 'string', 'maxLength' => 12]], 'required' => ['code']],
+            'output' => Shape::of(['enabled' => Shape::BOOLEAN, 'recoveryCodes' => [Shape::STRING]]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = $ctx->user;
 
@@ -153,6 +160,7 @@ final class AccountAbilities
             'permission' => $signedIn,
             'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => ['password' => ['type' => 'string']], 'required' => ['password']],
+            'output' => Shape::of(['enabled' => Shape::BOOLEAN]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 if (! Hash::check($in['password'], $ctx->user->password)) {
                     throw AbilityException::invalid('Your password is not correct.', ['password' => 'Is incorrect.']);
@@ -173,6 +181,7 @@ final class AccountAbilities
             'description' => 'Personal access tokens for the REST API and MCP.',
             'annotations' => ['readOnly' => true],
             'expose' => ['mcp' => false, 'assistant' => false],
+            'output' => Shape::of([self::token()]),
             'handler' => fn (array $in, AbilityContext $ctx) => $ctx->user->tokens()->latest()->get()->map(static fn (ApiToken $t) => $t->toPublic())->all(),
         ]);
 
@@ -186,6 +195,7 @@ final class AccountAbilities
                 'scopes' => ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 120], 'default' => ['*']],
                 'expiresInDays' => ['type' => ['integer', 'null'], 'minimum' => 1, 'maximum' => 3650],
             ], 'required' => ['name']],
+            'output' => self::token()->with(['token' => Shape::STRING]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 [$token, $plain] = ApiToken::issue($ctx->user, $in['name'], $in['scopes'], isset($in['expiresInDays']) ? now()->addDays($in['expiresInDays']) : null);
 
@@ -200,11 +210,21 @@ final class AccountAbilities
             'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => Shape::of(['revoked' => Shape::STRING]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $ctx->user->tokens()->whereKey($in['id'])->delete();
 
                 return ['revoked' => $in['id']];
             },
+        ]);
+    }
+
+    /** ApiToken::toPublic(): a token without its secret. */
+    private static function token(): Shape
+    {
+        return Shape::of([
+            'id' => Shape::STRING, 'name' => Shape::STRING, 'scopes' => [Shape::STRING],
+            'lastUsedAt' => Shape::STRING_OR_NULL, 'expiresAt' => Shape::STRING_OR_NULL, 'createdAt' => Shape::STRING_OR_NULL,
         ]);
     }
 }

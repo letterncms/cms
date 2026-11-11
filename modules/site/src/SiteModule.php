@@ -13,6 +13,7 @@ use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 use Cms\Modules\Site\Build\SiteBuilder;
 use Cms\Modules\Site\Design\Design;
 use Cms\Modules\Site\Design\DesignCompiler;
@@ -301,6 +302,7 @@ final class SiteModule extends Plugin
             'label' => 'Publish Site',
             'description' => 'Rebuild the static site (all pages). Work continues in the background; poll site/build-status.',
             'permission' => 'site.build',
+            'output' => self::buildShape(),
             'handler' => function () use ($builder) {
                 $builder()->queue(null, __('Manual Rebuild'));
 
@@ -313,6 +315,7 @@ final class SiteModule extends Plugin
             'description' => 'Progress of the static build. Calling it also advances queued work.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => self::buildShape(),
             'handler' => fn () => $builder()->process(1500),
         ]);
 
@@ -321,6 +324,23 @@ final class SiteModule extends Plugin
             'description' => 'The site’s design system (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, form fields, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'name' => Shape::STRING,
+                'tokens' => [['path' => Shape::STRING, 'group' => Shape::STRING, 'name' => Shape::STRING, 'value' => Shape::MIXED, 'dark' => Shape::MIXED, 'type' => Shape::STRING_OR_NULL, 'description' => Shape::STRING_OR_NULL]],
+                'fonts' => [['family?' => Shape::STRING, 'src?' => Shape::STRING, 'weight?' => Shape::MIXED, 'style?' => Shape::STRING, 'preload?' => Shape::BOOLEAN, 'display?' => Shape::STRING]],
+                'fontFiles' => [Shape::STRING],
+                'styles' => Shape::map(Shape::OBJECT),
+                'prose' => Shape::map(Shape::OBJECT),
+                'buttons' => Shape::map(Shape::OBJECT),
+                'fields' => Shape::map(Shape::OBJECT),
+                'fieldStyles' => Shape::map(Shape::map(['type' => Shape::STRING, 'variable' => Shape::STRING, 'default?' => Shape::MIXED, 'inherits?' => Shape::STRING, 'hint?' => Shape::STRING, 'tokens?' => Shape::STRING, 'unit?' => Shape::STRING, 'options?' => Shape::MIXED])),
+                'controlSizes' => Shape::map(['height' => Shape::STRING, 'padding' => Shape::STRING, 'text' => [Shape::STRING]]),
+                'transition' => ['type' => Shape::enum('none', 'fade', 'slide', 'scale'), 'duration' => Shape::NUMBER],
+                'breakpoints' => Shape::map(Shape::STRING),
+                'templates' => Shape::map(Shape::STRING),
+                'stylesheet' => Shape::STRING, 'css' => Shape::STRING, 'js' => Shape::STRING,
+                'elements' => [Shape::STRING], 'proseElements' => [Shape::STRING],
+            ]),
             'handler' => function () use ($design) {
                 $json = $design()->json();
 
@@ -363,6 +383,7 @@ final class SiteModule extends Plugin
                 'fonts' => ['type' => 'array'],
                 'transition' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['none', 'fade', 'slide', 'scale']], 'duration' => ['type' => 'number']]],
             ]],
+            'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
             'handler' => function (array $in) use ($design) {
                 $json = $design()->json();
                 $json->apply($in);
@@ -390,6 +411,7 @@ final class SiteModule extends Plugin
                 'transition' => ['type' => 'object'],
                 'css' => ['type' => 'string', 'maxLength' => 200000],
             ]],
+            'output' => Shape::of(['css' => Shape::STRING]),
             'handler' => function (array $in) use ($design) {
                 $json = DesignJson::fromArray($design()->json()->toArray());
                 $json->apply($in);
@@ -403,6 +425,7 @@ final class SiteModule extends Plugin
             'description' => 'Replace the site’s custom.css or custom.js (content/design). CSS is appended after everything else; JS loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component.',
             'permission' => 'site.code',
             'input' => ['type' => 'object', 'properties' => ['css' => ['type' => 'string', 'maxLength' => 200000], 'js' => ['type' => 'string', 'maxLength' => 200000]]],
+            'output' => Shape::of(['saved' => [Shape::enum('css', 'js')]]),
             'handler' => function (array $in) use ($design) {
                 foreach (['css', 'js'] as $kind) {
                     if (isset($in[$kind])) {
@@ -424,6 +447,7 @@ final class SiteModule extends Plugin
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
                 'italic' => ['type' => 'boolean', 'default' => false],
             ], 'required' => ['family']],
+            'output' => Shape::of(['fonts' => [['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic'), 'preload' => Shape::BOOLEAN]]]),
             'handler' => function (array $in) use ($design) {
                 $fonts = $this->app->make(Fonts::class)->import((string) $in['family'], (bool) ($in['italic'] ?? false));
                 $design()->saved();
@@ -443,6 +467,7 @@ final class SiteModule extends Plugin
                 'weight' => ['type' => 'string', 'default' => '400'],
                 'style' => ['type' => 'string', 'enum' => ['normal', 'italic'], 'default' => 'normal'],
             ], 'required' => ['family', 'data']],
+            'output' => Shape::of(['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic')]),
             'handler' => function (array $in) use ($design) {
                 $font = $this->app->make(Fonts::class)->upload((string) $in['family'], (string) ($in['name'] ?? $in['family']), (string) $in['data'], (string) ($in['weight'] ?? '400'), (string) ($in['style'] ?? 'normal'));
                 $design()->saved();
@@ -457,6 +482,7 @@ final class SiteModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'format' => 'ulid']], 'required' => ['id']],
+            'output' => Shape::of(['url' => Shape::STRING]),
             'handler' => fn (array $in) => ['url' => url('/__preview/'.strtolower($in['id']))],
         ]);
 
@@ -483,6 +509,15 @@ final class SiteModule extends Plugin
                 ...$this->templatePicker($collection),
             ]];
         });
+    }
+
+    /** SiteBuilder::status(): how far the static build is. */
+    private static function buildShape(): Shape
+    {
+        return Shape::of([
+            'state' => Shape::STRING, 'progress' => Shape::NUMBER, 'message' => Shape::STRING, 'pending' => Shape::INTEGER, 'finishedAt' => Shape::STRING_OR_NULL,
+            'pages' => Shape::INTEGER, 'errors' => [Shape::STRING], 'warnings' => [['uri' => Shape::STRING_OR_NULL, 'message' => Shape::STRING]], 'enabled' => Shape::BOOLEAN,
+        ]);
     }
 
     /** Collection settings inherit the site default; entry fields inherit their collection. */

@@ -14,6 +14,8 @@ use Cms\Content\Fields\Blueprint;
 use Cms\Cms;
 use Cms\Modules\Workspace\Answers;
 use Cms\Users\User;
+use Cms\Abilities\Shapes;
+use Cms\Support\Schema\Shape;
 
 /** Settings namespaces of the kernel, modules and plugins, and the admin arrangement. */
 final class SettingsAbilities
@@ -30,6 +32,7 @@ final class SettingsAbilities
             'description' => 'Settings namespaces registered by the core and plugins.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([['namespace' => Shape::STRING, 'label' => Shape::STRING, 'icon' => Shape::STRING, 'description' => Shape::STRING, 'package' => Shape::STRING_OR_NULL, 'permission' => Shape::STRING]]),
             'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_filter(array_map(
                 static fn ($ns, $s) => ['namespace' => $ns, 'label' => $s['label'], 'icon' => $s['icon'], 'description' => $s['description'], 'package' => $s['package'], 'permission' => $s['permission']],
                 array_keys($registry->schemas()),
@@ -43,6 +46,11 @@ final class SettingsAbilities
             'permission' => static fn (?User $u, array $in) => $u?->hasPermission($permissionFor((string) $in['namespace'])) ?? false,
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['namespace' => ['type' => 'string']], 'required' => ['namespace']],
+            'output' => Shape::of([
+                'namespace' => Shape::STRING, 'label' => Shape::STRING, 'icon' => Shape::STRING, 'description' => Shape::STRING, 'fields' => [Shapes::field()],
+                'permission' => Shape::STRING, 'package' => Shape::STRING_OR_NULL, 'order' => Shape::INTEGER, 'section' => Shape::STRING,
+                'home' => Shape::STRING_OR_NULL, 'page' => Shape::BOOLEAN, 'values' => Shape::OBJECT,
+            ]),
             'handler' => function (array $in) use ($registry) {
                 $schema = $registry->schemas()[$in['namespace']] ?? throw new AbilityException('Unknown settings.', 'not_found');
 
@@ -59,6 +67,11 @@ final class SettingsAbilities
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['of' => ['type' => 'string', 'description' => 'sidebar, or dashboard when letterncms/dashboard is on'], 'layout' => ['type' => ['object', 'null']]], 'required' => ['of']],
+            'output' => Shape::of([
+                'items' => [['id' => Shape::STRING, 'label' => Shape::STRING, 'icon?' => Shape::STRING_OR_NULL, 'description?' => Shape::STRING_OR_NULL, 'path?' => Shape::STRING_OR_NULL, 'section?' => Shape::STRING_OR_NULL, 'package?' => Shape::STRING_OR_NULL]],
+                'layout' => ['sections' => [['id' => Shape::STRING, 'label' => Shape::STRING, 'items' => [Shape::STRING]]], 'hidden' => [Shape::STRING]],
+                'customized' => Shape::BOOLEAN, 'fixed' => Shape::BOOLEAN,
+            ]),
             'handler' => function (array $in) {
                 // Parts come and go with their modules, so they are looked up when asked.
                 $part = Arranged::all()[$in['of']] ?? throw new AbilityException(__('Nothing called “:name” is arranged here.', ['name' => $in['of']]), 'not_found');
@@ -93,6 +106,7 @@ final class SettingsAbilities
                     ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/settings/'.$in['namespace']],
                 ]);
             },
+            'output' => Shape::of(Shape::OBJECT),
             'handler' => function (array $in, AbilityContext $ctx) use ($registry) {
                 if (! $registry->has($in['namespace'])) {
                     throw new AbilityException('Unknown settings.', 'not_found');
