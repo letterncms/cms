@@ -16,6 +16,8 @@ import { Icon, Popover, Spinner, Switch, cn } from '../ui'
  *   newTab / onNewTab   show "Open in New Tab" in the picker and report changes
  *   autofocus / onClose  open the picker at once (a toolbar's link button) and hear when it closes
  *   collections   limit page search to these collections
+ *   kinds         offer only these: entry, url, email, phone, media (a `link` field's `types`)
+ *   fileIds       a file is picked as `media:<id>` instead of its address (a `link` field keeps the id)
  */
 export function LinkField({ field, value, onChange, disabled }: FieldProps<string | null>) {
   // `autofocus` (a link being added from a toolbar) opens the picker right away.
@@ -187,7 +189,9 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
   const list = useRef<HTMLDivElement>(null)
   const reference = !!field.reference
   const collections = (field.collections as string[] | undefined) ?? undefined
-  const media = can('media.view') && field.files !== false
+  const kinds = Array.isArray(field.kinds) && field.kinds.length ? (field.kinds as string[]) : null
+  const offers = (kind: string) => !kinds || kinds.includes(kind)
+  const media = can('media.view') && field.files !== false && offers('media')
   const current = parse(value)
 
   useEffect(() => {
@@ -211,16 +215,17 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
   const options: Option[] = []
   {
     const out = options
-    if (direct) {
+    // What was typed is an address, an email or a phone number: offered when the field takes that.
+    if (direct && offers(direct.kind === 'email' || direct.kind === 'phone' ? direct.kind : 'url')) {
       const label = { url: t('Web Address'), email: t('Email'), phone: t('Phone'), anchor: t('Section'), path: t('Path'), file: t('File') }[direct.kind as string] ?? t('Link')
       out.push({ key: 'typed', group: '', icon: KIND_ICON[direct.kind] ?? 'link', label: direct.label, detail: direct.invalid ?? label, value: direct.value, invalid: direct.invalid })
     }
-    for (const e of pages) {
+    for (const e of offers('entry') ? pages : []) {
       const target = reference ? `entry:${e.id}` : e.uri ?? ''
       out.push({ key: `e-${e.id}`, group: debounced ? t('Pages') : t('Recent Pages'), icon: iconOf(e.collection), label: e.title || t('Untitled'), detail: e.uri ?? '', value: target, active: (current.kind === 'entry' && current.id === e.id) || value === e.uri })
     }
-    for (const a of anchors) out.push({ key: `a-${a.id}`, group: t('On This Page'), icon: 'hash', label: a.label, detail: `#${a.id}`, value: `#${a.id}`, active: value === `#${a.id}` })
-    if (searching) for (const f of files.data?.items ?? []) out.push({ key: `f-${f.id}`, group: t('Files'), icon: f.kind === 'image' ? 'image' : 'file', label: f.name || f.filename, detail: f.filename, value: f.url, active: value === f.url })
+    for (const a of offers('url') ? anchors : []) out.push({ key: `a-${a.id}`, group: t('On This Page'), icon: 'hash', label: a.label, detail: `#${a.id}`, value: `#${a.id}`, active: value === `#${a.id}` })
+    if (searching) for (const f of files.data?.items ?? []) out.push({ key: `f-${f.id}`, group: t('Files'), icon: f.kind === 'image' ? 'image' : 'file', label: f.name || f.filename, detail: f.filename, value: field.fileIds ? `media:${f.id}` : f.url, active: value === f.url })
   }
 
   const choose = (o: Option | undefined) => o && !o.invalid && onPick(o.value)

@@ -49,6 +49,18 @@ final class MediaTest extends TestCase
         $this->assertSame(['Zulu', 'Bravo'], array_column($list(['sort' => '-size', 'perPage' => 2])['items'], 'name'));
         $this->assertSame(['Bravo'], array_column($list(['sort' => 'name', 'search' => 'Bravo'])['items'], 'name'));
 
+        // A picker asks for what its field takes: types and families of types, and what to leave out.
+        MediaItem::query()->create(['name' => 'Photo', 'filename' => 'photo.jpg', 'path' => 'media/photo.jpg', 'mime' => 'image/jpeg', 'size' => 5, 'hash' => hash('sha256', 'photo'), 'folder' => 'tests']);
+        MediaItem::query()->create(['name' => 'Menu', 'filename' => 'menu.pdf', 'path' => 'media/menu.pdf', 'mime' => 'application/pdf', 'size' => 5, 'hash' => hash('sha256', 'menu'), 'folder' => 'tests']);
+        $names = static fn (array $page) => array_column($page['items'], 'name');
+        $this->assertSame(['Alpha', 'Bravo', 'Menu', 'Zulu'], $names($list(['sort' => 'name', 'except' => 'image/*'])));
+        $this->assertSame(['Menu'], $names($list(['sort' => 'name', 'accept' => 'application/pdf, video/*', 'except' => 'image/*'])));
+        $this->assertSame(['Alpha', 'Bravo', 'Photo', 'Zulu'], $names($list(['sort' => 'name', 'accept' => 'text/*, image/jpeg'])));
+        $this->assertSame(5, $list(['accept' => '*'])['total']);
+        $file = array_column($this->cms()->abilities()->execute('fields/types', [], $ctx), null, 'key')['file'];
+        $this->assertSame('media', $file['component']);
+        $this->assertSame(['accept' => '*', 'handle' => 'docs', 'type' => 'file', 'except' => 'image/*'], array_intersect_key((new \Cms\Modules\Media\FileField)->definition(['handle' => 'docs', 'type' => 'file']), array_flip(['accept', 'handle', 'type', 'except'])));
+
         $this->expectException(AbilityException::class);
         $list(['sort' => 'arbitrary_sql']);
     }

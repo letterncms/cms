@@ -3,7 +3,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities'
 import { t, useAbility, type EntrySummary, type FieldProps } from '@letterncms/sdk'
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Fields, Icon, IconButton, Input, Popover, PersonPicker, fieldControlId, Spinner, StatusDot, cn } from '../ui'
+import { Button, Fields, Icon, IconButton, Input, Menu, Popover, PersonPicker, fieldControlId, Spinner, StatusDot, cn } from '../ui'
 
 export function TagsField({ field, value, onChange, disabled }: FieldProps<string[]>) {
   const tags = Array.isArray(value) ? value : []
@@ -254,6 +254,72 @@ function RepeaterTable({ field, items, onChange, disabled, context, max, fields 
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+type Kind = { handle: string; label?: string; fields?: any[] }
+
+/** `matrix` — rows of several kinds, each with the fields of its kind; a row is `{type, …its fields}`. */
+export function MatrixField({ field, value, onChange, disabled, context }: FieldProps<Record<string, any>[]>) {
+  const rows = Array.isArray(value) ? value : []
+  const kinds = (Array.isArray(field.types) ? field.types : []) as Kind[]
+  const max = (field.max as number) || Infinity
+  const keys = useRef<string[]>([])
+  while (keys.current.length < rows.length) keys.current.push(Math.random().toString(36).slice(2))
+  keys.current.length = rows.length
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const labelOf = (kind: Kind | undefined, handle: string) => (kind?.label ? t(kind.label) : handle.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()))
+  const add = (kind: Kind) => onChange([...rows, { type: kind.handle, ...Object.fromEntries((kind.fields ?? []).filter((f) => f.default !== undefined).map((f) => [f.handle, f.default])) }])
+
+  return (
+    <div className="space-y-2">
+      <SortableList
+        disabled={disabled}
+        items={rows.map((row, i) => ({ row, key: keys.current[i] }))}
+        getId={(x) => x.key}
+        onReorder={(next) => {
+          keys.current = next.map((x) => x.key)
+          onChange(next.map((x) => x.row))
+        }}
+        render={({ row, key }, i, handle) => {
+          const kind = kinds.find((k) => k.handle === row.type)
+          const first = (kind?.fields ?? []).find((f) => ['text', 'textarea'].includes(f.type))
+          const summary = first && typeof row[first.handle] === 'string' ? row[first.handle] : ''
+          return (
+            <div className="rounded-lg border border-border bg-bg">
+              <div className="flex min-h-9 items-center gap-1 pl-1 pr-1.5">
+                {handle}
+                <Button variant="ghost" icon={collapsed[key] ? 'chevron-right' : 'chevron-down'} aria-expanded={!collapsed[key]} onClick={() => setCollapsed((c) => ({ ...c, [key]: !c[key] }))} className="min-w-0 flex-1 justify-start">
+                  <span className="truncate">{labelOf(kind, String(row.type ?? ''))}</span>
+                  {summary && <span className="min-w-0 truncate font-normal text-faint">{summary}</span>}
+                </Button>
+                <IconButton
+                  icon="trash"
+                  label={t('Remove')}
+                  size="xs"
+                  disabled={disabled}
+                  onClick={() => {
+                    keys.current.splice(i, 1)
+                    onChange(rows.filter((_, j) => j !== i))
+                  }}
+                />
+              </div>
+              {!collapsed[key] && (kind?.fields ?? []).length > 0 && (
+                <div className="border-t border-border p-4">
+                  <Fields fields={kind?.fields ?? []} values={row} onChange={(h, v) => onChange(rows.map((it, j) => (j === i ? { ...it, [h]: v } : it)))} context={{ ...context, path: [...(context.path ?? []), field.handle, String(i)] }} errors={context.errors} disabled={disabled} />
+                </div>
+              )}
+            </div>
+          )
+        }}
+      />
+      {rows.length < max && kinds.length === 1 && (
+        <Button variant="ghost" icon="plus" disabled={disabled} onClick={() => add(kinds[0])}>{t('Add {type}', { type: labelOf(kinds[0], kinds[0].handle) })}</Button>
+      )}
+      {rows.length < max && kinds.length > 1 && (
+        <Menu align="start" trigger={<Button variant="ghost" icon="plus" disabled={disabled}>{t('Add Row')}</Button>} items={kinds.map((kind) => ({ label: labelOf(kind, kind.handle), onSelect: () => add(kind) }))} />
       )}
     </div>
   )
