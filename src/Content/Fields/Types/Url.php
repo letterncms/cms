@@ -11,7 +11,7 @@ class Url extends Text
 {
     public function key(): string { return 'url'; }
 
-    public function label(): string { return __('Link'); }
+    public function label(): string { return __('URL'); }
 
     public function description(): string { return __('A web address or a relative link.'); }
 

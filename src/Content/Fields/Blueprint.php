@@ -176,6 +176,11 @@ final class Blueprint
                 $field = Field::fromArray([...$field->toArray(), 'required' => false]);
             }
 
+            // A draft is told it is one: a type whose value has parts (a date range) lets a draft hold some of them.
+            if ($partial) {
+                $field = Field::fromArray([...$field->toArray(), 'draft' => true]);
+            }
+
             $schema = $types->resolve($field->type)->schema($field);
 
             $properties[$field->handle] = ['title' => $field->label, ...$schema];
