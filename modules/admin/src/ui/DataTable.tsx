@@ -230,12 +230,12 @@ export function flattenTree<T>(items: T[], children?: (item: T) => T[]): T[] {
 }
 
 /**
- * One table's tracks: the title and the columns, then the row's actions (with room for a drag
- * handle in a tree that can be reordered). A tree with anything nested has a track of no width
+ * One table's tracks: the title and the columns, then the row's actions (a tree's drag handle
+ * stands at the row's start, in its padding). A tree with anything nested has a track of no width
  * before the title, whose gap holds the toggles. Two tables built alike line up exactly.
  */
-export function tableTemplate<T>(columns: DataColumn<T>[], { actions, nested, reorder }: { actions?: boolean; nested?: boolean; reorder?: boolean } = {}): string {
-  return [...(nested ? ['0px'] : []), ...columns.map((c, i) => c.width ?? (i === 0 ? 'minmax(240px,2fr)' : 'minmax(160px,1fr)')), ...(reorder ? ['76px'] : actions ? ['52px'] : [])].join(' ')
+export function tableTemplate<T>(columns: DataColumn<T>[], { actions, nested }: { actions?: boolean; nested?: boolean } = {}): string {
+  return [...(nested ? ['0px'] : []), ...columns.map((c, i) => c.width ?? (i === 0 ? 'minmax(240px,2fr)' : 'minmax(160px,1fr)')), ...(actions ? ['52px'] : [])].join(' ')
 }
 
 interface DataTableProps<T> {
@@ -271,8 +271,8 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
   // Room for the toggles only when something in the tree holds something.
   const nested = !!tree && items.some((item) => tree.children(item)?.length > 0)
   // Content must never decide a row's tracks: identical tracks keep headers, rows and skeletons aligned.
-  const template = tableTemplate(columns, { actions: !!actions, nested, reorder: !!tree?.reorder })
-  const hasActions = !!actions || !!tree?.reorder
+  const template = tableTemplate(columns, { actions: !!actions, nested })
+  const hasActions = !!actions
   const count = columns.length + (hasActions ? 1 : 0)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   // An empty or failed list is its message alone, without headers above it.
@@ -289,11 +289,13 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
         {extra?.expander}
         {href ? <Link to={href} className={LINK}>{first.render(item)}</Link> : onRowClick ? <Pressable compact onClick={() => onRowClick(item)} className={LINK}>{first.render(item)}</Pressable> : <div className="w-full min-w-0 truncate">{first.render(item)}</div>}
       </div>
+      {/* What moves the row is at its start, where a list is taken hold of, in the room before its title. */}
+      {extra?.handle && <span data-row-handle="" className="cms-reveal absolute -left-1 top-1/2 z-raised -translate-y-1/2 max-sm:hidden">{extra.handle}</span>}
       <TableMeta>{first.note?.(item) ? <div data-row-note="" className="shrink-0 sm:hidden">{first.note(item)}</div> : null}{rest.map((c) => <div key={c.id} role="cell" data-align={c.align} className={cn('flex min-w-0 items-center py-2 text-muted', c.align === 'end' && 'justify-end tabular-nums')}>
         {/* On a phone the headings are gone: a value is led by its column's name (app.css, `data-label`), unless it says what it is. */}
         <div data-label={c.bare ? undefined : c.label} className={cn('w-full min-w-0 truncate', c.align === 'end' && 'text-right max-sm:text-left')}>{c.render(item)}</div>
       </div>)}</TableMeta>
-      {hasActions && <div role="cell" data-table-actions className={rowActionsClass}>{extra?.handle}{actions?.(item)}</div>}
+      {hasActions && <div role="cell" data-table-actions className={rowActionsClass}>{actions?.(item)}</div>}
     </TableRow>
   }
 
@@ -367,7 +369,7 @@ function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setC
 function SortableRow({ id, disabled, children }: { id: string; disabled?: boolean; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled })
   const handle = <Pressable compact {...attributes} {...listeners} aria-label={t('Drag to Reorder')}
-    className="grid size-6 cursor-grab place-items-center rounded-xs text-faint transition-colors duration-base hover:bg-hover hover:text-text active:cursor-grabbing max-sm:hidden">
+    className="grid h-6 w-3 cursor-grab place-items-center rounded-xs text-faint transition-colors duration-base hover:bg-hover hover:text-text active:cursor-grabbing max-sm:hidden">
     <Icon name="drag" size={14} />
   </Pressable>
   return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-drag bg-bg shadow-pop')}>
