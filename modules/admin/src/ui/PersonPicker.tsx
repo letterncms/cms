@@ -62,7 +62,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
     </button>
   ) : (
     <Button id={id} aria-describedby={describedBy} size={small ? 'xs' : 'sm'} disabled={disabled || value.length >= max}>
-      {value.length === 0 ? disabled ? '—' : label : t('Add people')}
+      {value.length === 0 ? disabled ? '—' : label : t('Add People')}
     </Button>
   )
 
@@ -81,7 +81,7 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
       {/* One field: the trigger and its clear button share the border, and it lights up as a field does while the list is open. */}
       <div data-focus={(single && open) || undefined} data-disabled={(single && disabled) || undefined} className={cn(single && 'cms-input flex min-w-0 items-center pr-1', single && (small ? 'h-7 rounded-sm' : 'h-8 rounded-md'), single && 'focus-within:border-focus focus-within:shadow-focus')}>
         <Popover open={open && !disabled} onOpenChange={(next) => !disabled && setOpen(next)} className="w-72 max-w-[calc(100vw-24px)]" trigger={trigger}>
-          <Input size="sm" icon="search" aria-label={t('Search people')} placeholder={t('Search people…')} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} />
+          <Input size="sm" icon="search" aria-label={t('Search People')} placeholder={t('Search People')} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} />
           <div className="mt-1 max-h-64 overflow-y-auto">
             {options.isLoading ? <div className="grid place-items-center py-5"><Spinner /></div> : options.isError ? (
               <QueryError compact message={t('Couldn’t load people')} onRetry={() => void options.refetch()} />

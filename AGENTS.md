@@ -42,4 +42,10 @@ Copy:
 - Short status lines in sentence case without a period: "No matches", "Unsaved changes", "Your dashboard is empty".
 - Buttons start with a verb and name what they do: "Delete Page", never "OK", "Yes" or "Confirm".
 - Retry is always "Try Again". An empty search is always "No matches".
+- One word for one act, on every screen:
+  - **New** makes a record of its own that then stands in a list (New Page, New Collection, New Role, New Token, New Menu); the dialog's button is "Create Page". **Add** puts one more part into the thing on screen, or picks from what exists (Add Field, Add Link, Add Widget, Add Language, Add Plugin); its button repeats it, "Add Field". Never a bare "Create", "Add" or "Continue".
+  - **Delete** ends something for good (a page, a collection, a role, a file). **Remove** takes it out of where it is while it lives on, or was only a part (a widget from the dashboard, a file from a field, a person from a page, a filter). A plugin is uninstalled: "Uninstall".
+  - **Rename** changes a name where it stands (a menu item, a dialog whose button is "Rename"): not "Edit Name" or "Change Name".
+  - A handle that moves a row is "Drag to Reorder".
+- A search field says "Search", or "Search Pages" where it has a list of its own: Title Case, no ellipsis.
 - Every string goes through `t()`, with a translation in each `lang/*.json`: `./dev i18n`, then `./dev check`.

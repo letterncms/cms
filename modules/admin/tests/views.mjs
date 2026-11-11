@@ -69,7 +69,7 @@ export const views = {
     open: { label: 'Edit', to: '/globals/{row.handle}' },
     actions: [{ label: 'Edit', icon: 'edit', to: '/globals/{row.handle}' }, { label: 'Edit Fields', icon: 'field', to: '/globals/{row.handle}/fields' }],
     empty: { icon: 'globe', title: 'No global sets yet' },
-  } }], { actions: [{ label: 'New Global Set', icon: 'plus', variant: 'primary', ability: 'globals/save', form: { title: 'New Global Set', confirm: 'Create', fields: [{ handle: 'title', type: 'text', label: 'Name', required: true }] }, input: { title: '{values.title}', fields: [{ handle: 'text', type: 'text', label: 'Text' }] }, then: 'open', to: '/globals/{result.handle}/fields' }] }),
+  } }], { actions: [{ label: 'New Global Set', icon: 'plus', variant: 'primary', ability: 'globals/save', form: { title: 'New Global Set', confirm: 'Create Global Set', fields: [{ handle: 'title', type: 'text', label: 'Name', required: true }] }, input: { title: '{values.title}', fields: [{ handle: 'text', type: 'text', label: 'Text' }] }, then: 'open', to: '/globals/{result.handle}/fields' }] }),
   collections: () => collections(),
   'collections-new': () => collections({ type: 'collections/new', props: {} }),
   'collections-collection': ({ handle }) => ({ type: 'collections/blueprint', props: { handle } }),
@@ -77,7 +77,7 @@ export const views = {
 
 function users(open) {
   const people = (kind, title) => ({ type: 'ui/records', props: {
-    id: 'users', label: 'Users', source: { ability: 'users/list', input: { kind } }, search: { param: 'search', placeholder: 'Search people…' }, paged: { perPage: 100 },
+    id: 'users', label: 'Users', source: { ability: 'users/list', input: { kind } }, search: { param: 'search', placeholder: 'Search People' }, paged: { perPage: 100 },
     columns: [
       { key: 'person', label: 'Name', format: 'person', muted: 'you' },
       { key: 'email', label: 'Email', width: 'minmax(200px,1fr)' },
@@ -142,7 +142,7 @@ function entries(summary, def, manifest) {
     id: `entries.${handle}`, label: summary.title, key: 'id', address: true,
     source: { ability: 'entries/list', input: { ...plain, status: '{query.status}' } },
     columns: [{ key: 'title', label: 'Title', width: 'minmax(200px,1fr)', sort: 'title', empty: 'Untitled' }, ...columns],
-    search: { param: 'search', placeholder: `Search ${summary.title.toLowerCase()}…` },
+    search: { param: 'search', placeholder: `Search ${summary.title}` },
     filters: [
       { param: 'status', label: 'Status', display: 'segmented', default: 'any', options: [{ value: 'any', label: 'All' }, { value: 'published', label: 'Published' }, { value: 'draft', label: 'Drafts' }] },
       ...(locales.length > 1 ? [{ param: 'locale', label: 'Language', display: 'segmented', default: manifest.site.defaultLocale, options: locales.map((code) => ({ value: code, label: code.toUpperCase(), title: code })) }] : []),

@@ -55,7 +55,7 @@ final class UsersViews
         return ['type' => 'ui/records', 'props' => [
             'id' => 'users', 'label' => __('Users'),
             'source' => ['ability' => 'users/list', 'input' => ['kind' => $kind]],
-            'search' => ['param' => 'search', 'placeholder' => __('Search people…')],
+            'search' => ['param' => 'search', 'placeholder' => __('Search People')],
             'paged' => ['perPage' => 100],
             'columns' => [
                 ['key' => 'person', 'label' => __('Name'), 'format' => 'person', 'muted' => 'you'],

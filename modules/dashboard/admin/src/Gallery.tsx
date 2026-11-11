@@ -25,7 +25,7 @@ export function Gallery({ open, onOpenChange, widgets, shown, onAdd, onRemove }:
       title={t('Widgets')}
       description={t('{count} on your Dashboard', { count: shown.size })}
     >
-      <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search Widgets'), placeholder: t('Search widgets…'), icon: 'search', autofocus: true }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} className="mb-4" />
+      <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search Widgets'), placeholder: t('Search Widgets'), icon: 'search', autofocus: true }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} className="mb-4" />
 
       {matches.length === 0 && <p className="m-0 py-10 text-center text-sm text-muted">{t('No matches')}</p>}
 

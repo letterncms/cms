@@ -1,4 +1,6 @@
 {
+  "No :items yet": "Aucune entrée pour l’instant",
+  "Search :items": "Rechercher dans :items",
   "{count} properties": "{count} propriétés",
   "{count} property": "{count} propriété",
   "{name} Details": "Détails : {name}",
@@ -107,7 +109,6 @@
   "New Page": "Nouvelle page",
   "New Post": "Nouvel article",
   "New Template": "Nouveau modèle",
-  "No {items} yet": "Aucune entrée pour l’instant",
   "No history yet.": "Pas encore d’historique.",
   "No pages": "Aucune page",
   "None": "Aucun",
@@ -145,7 +146,6 @@
   "Schedule": "Programmer",
   "Schedule…": "Programmer…",
   "Scheduled": "Planifié",
-  "Search {items}…": "Rechercher dans {items}…",
   "Search Content": "Rechercher du contenu",
   "Shown inside other pages": "Affichée dans d’autres pages",
   "Site": "Site",

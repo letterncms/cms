@@ -79,7 +79,7 @@ final class NavigationModule extends Plugin
 
         $this->cms()->views()->register('navigation', '/navigation', static fn () => ['type' => 'ui/page', 'props' => ['title' => __('Navigation'), 'icon' => 'list-tree', 'actions' => [
             ['label' => __('New Menu'), 'icon' => 'plus', 'variant' => 'primary', 'ability' => 'navigation/create', 'input' => ['title' => '{values.title}'], 'then' => 'open', 'to' => '/navigation/{result.handle}',
-                'form' => ['title' => __('New Menu'), 'confirm' => __('Create'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'instructions' => __('For example Main, Footer or Legal.'), 'required' => true, 'autofocus' => true]]]],
+                'form' => ['title' => __('New Menu'), 'confirm' => __('Create Menu'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'instructions' => __('For example Main, Footer or Legal.'), 'required' => true, 'autofocus' => true]]]],
         ]], 'children' => [
             ['type' => 'ui/records', 'props' => [
                 'id' => 'navigation', 'label' => __('Menus'), 'key' => 'handle',

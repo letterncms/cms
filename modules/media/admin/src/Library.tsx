@@ -11,7 +11,7 @@ const mediaInput = (filters: MediaFilters, page: number, sort: string | null) =>
 
 function filterFields(): FieldDef[] {
   return [
-    { handle: 'search', type: 'text', label: t('Search Files'), icon: 'search', size: 'sm', placeholder: t('Search files…'), className: 'w-full sm:w-60' },
+    { handle: 'search', type: 'text', label: t('Search Files'), icon: 'search', size: 'sm', placeholder: t('Search Files'), className: 'w-full sm:w-60' },
     { handle: 'kind', type: 'select', label: t('Kind'), display: 'segmented', required: true, options: { all: t('All'), image: t('Images'), video: t('Videos'), audio: t('Audio'), pdf: 'PDF', file: t('Other') } },
   ]
 }

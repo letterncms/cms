@@ -72,8 +72,8 @@ const sortBy = async (label) => { const target = header(label)?.querySelector('b
 const rows = () => [...main().querySelectorAll('[role="rowgroup"] [role="row"][data-entry]')]
 const cards = () => [...main().querySelectorAll('article')]
 const cardTerms = () => [...main().querySelectorAll('article dt')].map((term) => term.textContent)
-// A list's search says what it searches ("Search plugins…"): any of them, unless one is named.
-const searchBox = (placeholder) => main().querySelector(placeholder ? 'input[placeholder="' + placeholder + '"]' : 'input[placeholder^="Search "][placeholder$="…"]')
+// A list's search says what it searches ("Search Plugins"): any of them, unless one is named.
+const searchBox = (placeholder) => main().querySelector(placeholder ? 'input[placeholder="' + placeholder + '"]' : 'input[placeholder^="Search"]')
 const type = (input, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })) }
 const noMatches = () => main().querySelector('[role="status"]')
 const selectionBar = () => document.querySelector('[role="toolbar"][aria-label="Selection"]')
@@ -110,7 +110,7 @@ try {
     assert(searchBox() && button('Display'), 'long plugin list lacks search or display')
     assert(!views().length, 'plugins without pictures offer other views')
     await open('/media', 'Project image')
-    assert(searchBox('Search files…') && button('Display'), 'media lacks search or display')
+    assert(searchBox('Search Files') && button('Display'), 'media lacks search or display')
     assert(views().join() === 'Table,Grid', 'media views: ' + views().join())
     assert(view('Grid').getAttribute('aria-checked') === 'true' && cards().length === 60, 'media does not start as a grid of its first page')
     await open('/content/posts', 'Beta post')
@@ -210,11 +210,11 @@ try {
     assert(rows()[0].textContent.includes('A very long image name'), 'server order not shown')
   })
   await test('Media search finds nothing with the shared No matches and recovers', async () => {
-    type(searchBox('Search files…'), 'does-not-exist')
+    type(searchBox('Search Files'), 'does-not-exist')
     await wait(() => noMatches()?.textContent.includes('No matches'), 'media no-match state missing')
     button('Clear Filters').click()
     await wait(() => rows().length === 60, 'media clear filters failed')
-    assert(searchBox('Search files…').value === '', 'media search not cleared')
+    assert(searchBox('Search Files').value === '', 'media search not cleared')
   })
   await test('Media view, columns and sort survive navigation and reset to the grid', async () => {
     await open('/forms', 'Quote Request')
@@ -319,7 +319,7 @@ try {
     navigate('/picker'); await wait(() => text().includes('Choose Image'), 'picker fixture did not open')
     button('Choose Image').click(); await wait(() => document.querySelector('[role="dialog"] article, [role="dialog"] [role="table"]'), 'media picker did not render shared views')
     const dialog = document.querySelector('[role="dialog"]')
-    assert(dialog.querySelector('input[placeholder="Search files…"]'), 'picker lacks search')
+    assert(dialog.querySelector('input[placeholder="Search Files"]'), 'picker lacks search')
     const table = dialog.querySelector('[role="radio"][title="Table"]'); assert(table, 'picker lacks the view switch'); table.click(); await sleep(50)
     assert(dialog.querySelector('[role="table"]'), 'picker lacks the shared table')
     dialog.querySelector('[role="radio"][title="Grid"]').click(); await sleep(50)

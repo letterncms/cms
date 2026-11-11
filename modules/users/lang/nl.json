@@ -1,6 +1,7 @@
 {
   ":name invited you to edit :site.": ":name heeft je uitgenodigd om :site te bewerken.",
   "Allow Visitor Accounts": "Bezoekersaccounts toestaan",
+  "Search People": "Personen zoeken",
   "{count} people": "{count} personen",
   "{count} people in all": "{count} mensen in totaal",
   "{count} person": "{count} persoon",
@@ -73,7 +74,6 @@
   "Save": "Opslaan",
   "Save User Profile Fields": "Profielvelden opslaan",
   "Saved": "Opgeslagen",
-  "Search people…": "Mensen zoeken…",
   "Send Invitation": "Uitnodiging versturen",
   "Set your password": "Stel je wachtwoord in",
   "Set your password: :link": "Stel je wachtwoord in: :link",

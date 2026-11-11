@@ -29,7 +29,7 @@ final class GlobalsViews
 
         return ['type' => 'ui/page', 'props' => ['title' => __('Globals'), 'icon' => 'globe', 'actions' => [
             ['label' => __('New Global Set'), 'icon' => 'plus', 'variant' => 'primary', 'ability' => 'globals/save',
-                'form' => ['title' => __('New Global Set'), 'confirm' => __('Create'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'required' => true, 'autofocus' => true]]],
+                'form' => ['title' => __('New Global Set'), 'confirm' => __('Create Global Set'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'required' => true, 'autofocus' => true]]],
                 // A new set starts with one text field; its fields open next.
                 'input' => ['title' => '{values.title}', 'fields' => [['handle' => 'text', 'type' => 'text', 'label' => __('Text')]]],
                 // The new set is in the manifest (the sidebar, the field pickers) before its fields open.

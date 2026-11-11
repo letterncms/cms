@@ -71,7 +71,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     { heading: t('Jump To'), items: pages.map((p) => ({
       value: `go ${p.label}`, icon: p.icon, label: p.label, path: p.path, perform: () => navigate(p.path),
     })) },
-    { heading: t('Create'), items: manifest.collections.filter((c) => c.can.create && !c.within).map((c) => ({
+    { heading: t('New'), items: manifest.collections.filter((c) => c.can.create && !c.within).map((c) => ({
       value: `new ${c.singular} create`, icon: 'plus', label: c.newLabel, perform: () => navigate(`/content/${c.handle}/new`),
     })) },
     { heading: t('Commands'), items: [
@@ -141,7 +141,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           }} className="flex flex-col">
             <div className="flex h-12 items-center gap-2.5 border-b border-border px-4">
               <Icon name="search" size={16} className="text-faint" />
-              <Fields bare layout="inline" className="flex-1" fields={[{ handle: 'query', type: 'text', label: t('Search'), component: 'command-query', placeholder: queryCommands.length > 0 ? t('Search, jump to, or ask {brand}…') : t('Search or jump to…'), autofocus: true }]} values={{ query }} onChange={(_, v) => setQuery(v ?? '')} />
+              <Fields bare layout="inline" className="flex-1" fields={[{ handle: 'query', type: 'text', label: t('Search'), component: 'command-query', placeholder: queryCommands.length > 0 ? t('Search or Ask {brand}') : t('Search'), autofocus: true }]} values={{ query }} onChange={(_, v) => setQuery(v ?? '')} />
               {isSearching && <Spinner size={14} className="text-faint" />}
               <Kbd keys="esc" />
             </div>

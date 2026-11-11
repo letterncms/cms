@@ -1,6 +1,7 @@
 {
   ":name invited you to edit :site.": ":name vous invite à modifier :site.",
   "Allow Visitor Accounts": "Autoriser les comptes visiteurs",
+  "Search People": "Rechercher des personnes",
   "{count} people": "{count} personnes",
   "{count} people in all": "{count} personnes au total",
   "{count} person": "{count} personne",
@@ -73,7 +74,6 @@
   "Save": "Enregistrer",
   "Save User Profile Fields": "Enregistrer les champs du profil",
   "Saved": "Enregistré",
-  "Search people…": "Rechercher des personnes…",
   "Send Invitation": "Envoyer l’invitation",
   "Set your password": "Définir votre mot de passe",
   "Set your password: :link": "Définir votre mot de passe : :link",

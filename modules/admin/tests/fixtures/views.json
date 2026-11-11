@@ -199,7 +199,7 @@
                                         },
                                         "search": {
                                             "param": "search",
-                                            "placeholder": "Search people…"
+                                            "placeholder": "Search People"
                                         },
                                         "paged": {
                                             "perPage": 100
@@ -280,7 +280,7 @@
                                         },
                                         "search": {
                                             "param": "search",
-                                            "placeholder": "Search people…"
+                                            "placeholder": "Search People"
                                         },
                                         "paged": {
                                             "perPage": 100
@@ -628,7 +628,7 @@
                         "ability": "globals/save",
                         "form": {
                             "title": "New Global Set",
-                            "confirm": "Create",
+                            "confirm": "Create Global Set",
                             "fields": [
                                 {
                                     "handle": "title",
@@ -1018,7 +1018,7 @@
                         "to": "/navigation/{result.handle}",
                         "form": {
                             "title": "New Menu",
-                            "confirm": "Create",
+                            "confirm": "Create Menu",
                             "fields": [
                                 {
                                     "handle": "title",
