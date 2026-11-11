@@ -61,7 +61,7 @@ final class CollectionAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => self::HANDLE,
                 'createOnly' => ['type' => 'boolean', 'default' => false, 'description' => 'Reject an existing handle when creating a collection.'],
-                'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, body (the main content field handle; empty for fields only), section (default sidebar group), nav_order (default sidebar priority, lower first), fields[], blueprints (optional: {<handle>: {title, fields[]}} for a collection whose entries come in several kinds with fields of their own; an entry is made with one and keeps it)'],
+                'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, body (the main content field handle; empty for fields only), section (default sidebar group), nav_order (default sidebar priority, lower first), fields[], archives (optional: {<taxonomy handle>: "/blog/topics/{slug}"} or {<taxonomy>: {route, routes: {<locale>: pattern}}}: every term of that taxonomy gets a page listing the entries of this collection filed under it, at an address no page has), blueprints (optional: {<handle>: {title, fields[]}} for a collection whose entries come in several kinds with fields of their own; an entry is made with one and keeps it)'],
             ], 'required' => ['handle', 'definition']],
             'output' => self::collection(),
             'handler' => function (array $in) {
@@ -90,6 +90,11 @@ final class CollectionAbilities
                             throw AbilityException::invalid(__('“:handle” is reserved. Choose another field handle.', ['handle' => $field->handle]));
                         }
                     }
+                }
+
+                // Its term archives: by a taxonomy, at addresses nothing else has.
+                if (($problem = app(\Cms\Content\Collections\Archives::class)->problem($collection)) !== null) {
+                    throw AbilityException::invalid($problem, ['definition.archives' => $problem]);
                 }
 
                 $this->cms->collections()->save($collection);

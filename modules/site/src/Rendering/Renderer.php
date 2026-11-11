@@ -66,6 +66,53 @@ final class Renderer
         return ['html' => $html, 'status' => 200, 'context' => $context];
     }
 
+    /**
+     * Render a term archive: the page of a term that lists one collection's entries filed under it, at the
+     * archive's own address. The site designs it as the template `<collection>_archive`, or `archive` for every
+     * collection: a template like any other, whose entry is the term (its title and fields) and whose Repeat
+     * source "Entries of This Term" is the list. Without one, the site's default template frames a plain list.
+     *
+     * @param  array{collection: string, taxonomy: string, term: string, locale: string, uri: string}  $archive
+     * @return array{html: string, status: int, context: PageContext}
+     */
+    public function archive(Entry $term, array $archive, int $page = 1, bool $preview = false): array
+    {
+        // The term as the page it is here: everything that asks the page where it is (links to its other pages,
+        // a canonical address) gets the archive's address.
+        $view = clone $term;
+        $view->uri = $archive['uri'];
+        $context = new PageContext($view, $page, $preview, false, $archive['uri']);
+        $context->archive = ['collection' => $archive['collection'], 'taxonomy' => $archive['taxonomy'], 'term' => $term->id];
+        // A template made or changed later is this page's to follow, whichever it has now.
+        $context->dependencies['collection:'.Templates::COLLECTION] = true;
+        $own = $this->templates->find($archive['collection'].'_archive', $preview) ?? $this->templates->find('archive', $preview);
+        $template = $own ?? $this->templates->resolve([], $preview) ?? self::fallback();
+        $context->addCode($this->code->for('templates', (string) ($template['handle'] ?? '')));
+        $this->blocks->outletNodes = fn (): array => $own ? [] : self::archiveList();
+
+        try {
+            // A template of the site's own has the term's body in its Page content; the default template gets the list there.
+            $html = $this->document($context, $template['blocks'], fn () => $own ? $this->body($view) : $this->blocks->render(self::archiveList()), $term->title);
+        } finally {
+            $this->blocks->outletNodes = null;
+        }
+
+        return ['html' => $html, 'status' => 200, 'context' => $context];
+    }
+
+    /** What an archive shows until the site designs one: the term, the entries filed under it as links, and the way to the next page. */
+    public static function archiveList(): array
+    {
+        return [['id' => 'arch', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => [
+            ['id' => 'archh', 'type' => 'heading', 'props' => ['level' => '1'], 'bind' => ['text' => 'entry.title']],
+            ['id' => 'archr', 'type' => 'repeat', 'props' => ['source' => 'archive', 'paginate' => true], 'children' => [
+                ['id' => 'archl', 'type' => 'link', 'bind' => array_combine(['label', 'url'], ['item.title', 'item.url']), 'style' => ['base' => ['display' => 'block']]],
+            ]],
+            ['id' => 'archp', 'type' => 'link', 'props' => ['label' => (string) __('Previous')], 'bind' => ['url' => 'pagination.prev', 'visible' => 'pagination.prev'], 'style' => ['base' => ['display' => 'inline-block', 'marginTop' => '1rem', 'marginRight' => '1rem']]],
+            ['id' => 'archn', 'type' => 'link', 'props' => ['label' => (string) __('Next')], 'bind' => ['url' => 'pagination.next', 'visible' => 'pagination.next'], 'style' => ['base' => ['display' => 'inline-block', 'marginTop' => '1rem']]],
+        ]]];
+    }
+
     /** @return array{html: string, status: int, context: PageContext} */
     public function notFound(string $uri = '/404', bool $preview = false, ?array $template = null): array
     {
@@ -144,7 +191,23 @@ final class Renderer
             'entry' => $entry,
             'globals' => new LazyGlobals(fn () => $this->globals()),
             'page' => ['uri' => $context->uri, 'number' => $context->page, 'preview' => $context->preview],
+            // On a term archive: the collection whose entries it lists (`archive.title`, `archive.url`), and the term's own page.
+            ...($context->archive ? ['archive' => $this->archiveScope($context)] : []),
         ], $context));
+    }
+
+    /** @return array{collection: string, title: string, taxonomy: string, url: string, term_url: ?string} */
+    private function archiveScope(PageContext $context): array
+    {
+        $collection = $this->cms->collections()->find($context->archive['collection']);
+
+        return [
+            'collection' => $context->archive['collection'],
+            'title' => (string) __((string) $collection?->title),
+            'taxonomy' => $context->archive['taxonomy'],
+            'url' => $context->uri,
+            'term_url' => $this->cms->entries()->find($context->archive['term'])?->uri,
+        ];
     }
 
     public function site(): array

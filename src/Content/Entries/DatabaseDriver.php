@@ -160,8 +160,20 @@ final class DatabaseDriver implements EntryDriver
 
             // The id anywhere in the entry's data, or in one field of it: as EntryFilter reads it.
             $data = $query->working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data') else entries.data end" : 'entries.data';
-            $within = $reference['field'] === null ? $data : "json_extract({$data}, '$.{$reference['field']}')";
-            $builder->where('entries.id', '!=', $reference['id'])->whereRaw("lower(cast({$within} as char)) like ?", ['%'.$reference['id'].'%']);
+            $fields = $reference['field'] === null ? [null] : (array) $reference['field'];
+
+            if ($fields === []) {
+                $builder->whereRaw('0 = 1');
+
+                continue;
+            }
+
+            $builder->where('entries.id', '!=', $reference['id'])->where(static function (Builder $q) use ($fields, $data, $reference): void {
+                foreach ($fields as $field) {
+                    $within = $field === null ? $data : "json_extract({$data}, '$.{$field}')";
+                    $q->orWhereRaw("lower(cast({$within} as char)) like ?", ['%'.$reference['id'].'%']);
+                }
+            });
         }
 
         if ($query->search !== null) {

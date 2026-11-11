@@ -65,6 +65,7 @@ final class SiteModule extends Plugin
 
         $this->renderHooks();
         $this->dataSources();
+        $this->archives();
         $this->routes();
         $this->settingsSchema();
         $this->abilities();
@@ -273,6 +274,53 @@ final class SiteModule extends Plugin
                     }
 
                     return array_slice($items, 0, max(1, min(200, (int) ($props['limit'] ?? 50))));
+                },
+            ];
+
+            $sources['archive'] = [
+                'label' => 'Entries of This Term',
+                'description' => __('On a term’s archive: the entries of its collection filed under the term. On the term’s own page: those of every collection.'),
+                'fields' => [
+                    ['handle' => 'sort', 'type' => 'select', 'label' => 'Sort Order', 'options' => ['-published_at' => __('Newest First'), 'published_at' => __('Oldest First'), 'title' => __('Title A–Z'), '-title' => __('Title Z–A')], 'default' => '-published_at'],
+                    ['handle' => 'limit', 'type' => 'number', 'label' => 'How Many', 'min' => 1, 'max' => 200, 'default' => 10],
+                    ['handle' => 'paginate', 'type' => 'toggle', 'label' => 'Split into Pages'],
+                ],
+                'item' => ['title' => __('Title'), 'url' => __('Link'), 'date' => __('Published'), 'excerpt' => __('A field (any field handle)')],
+                'resolve' => function (array $props, Scope $scope) use ($entry) {
+                    $term = $entry($scope);
+                    $context = PageContext::current();
+
+                    if (! $term) {
+                        return [];
+                    }
+
+                    // The archive's collection; on the term's own page, every collection with pages.
+                    $handles = $context?->archive ? [$context->archive['collection']] : array_keys(array_filter($this->cms()->collections()->all(), static fn ($c) => $c->routable() && ! $c->isTaxonomy()));
+
+                    if ($handles === []) {
+                        return [];
+                    }
+
+                    // Filed under it through a terms field of its taxonomy; a link in a body names the term but files nothing.
+                    $archives = $this->app->make(\Cms\Content\Collections\Archives::class);
+                    $own = $archives->term($term->id) ?? $this->cms()->entries()->find($term->id);
+
+                    if (! $own) {
+                        return [];
+                    }
+
+                    $query = new EntryQueryProxy($archives->filed($own, $handles));
+                    $query->orderBy((string) ($props['sort'] ?? '-published_at'))->orderBy('title');
+                    $limit = max(1, min(200, (int) ($props['limit'] ?? 10)));
+
+                    if (empty($props['paginate'])) {
+                        return $query->limit($limit)->get();
+                    }
+
+                    $page = $query->paginate($limit);
+                    $context && $context->pagination = ['current' => $page['page'], 'total' => $page['pages'], 'prev' => $page['prev'], 'next' => $page['next'], 'count' => $page['total']];
+
+                    return $page['items'];
                 },
             ];
 
@@ -694,6 +742,73 @@ final class SiteModule extends Plugin
             'fallbackHandle' => $fallback['handle'] ?? null,
             'defaultHandle' => '',
         ];
+    }
+
+    /**
+     * Term archives beyond the page itself: in the search index, in the sitemap (the SEO plugin's `seo.sitemap`),
+     * and with the other languages' archives as their alternates.
+     */
+    private function archives(): void
+    {
+        $hooks = $this->cms()->hooks();
+        $archives = fn () => $this->app->make(\Cms\Content\Collections\Archives::class);
+        // The archives a visitor may open: of terms that are live and not behind the gate, in a language when one is asked for.
+        $open = function (?string $locale = null) use ($archives): array {
+            $gate = $this->cms()->entries()->gate();
+            $out = [];
+
+            foreach ($archives()->all() as $archive) {
+                $term = $locale === null || $archive['locale'] === $locale ? $archives()->term($archive['term']) : null;
+
+                if ($term && $term->isLive() && ! $gate->isGated($term)) {
+                    $out[] = [...$archive, 'entry' => $term];
+                }
+            }
+
+            return $out;
+        };
+
+        $hooks->addFilter('site.search.records', fn (array $records) => [...$records, ...array_map(fn (array $archive) => [
+            'id' => $archive['collection'].':'.$archive['term'],
+            'title' => $archive['entry']->title,
+            'url' => $archive['uri'],
+            'section' => (string) __((string) $this->cms()->collections()->find($archive['collection'])?->title),
+            'collection' => $archive['collection'],
+            'locale' => $archive['locale'],
+            'description' => is_string($archive['entry']->data['description'] ?? null) ? $archive['entry']->data['description'] : '',
+            'headings' => [],
+            'text' => '',
+        ], $open())]);
+
+        // Per language where the sitemap is: `$locale` is null for a site with one.
+        $hooks->addFilter('seo.sitemap', fn (array $urls, ?string $locale = null) => [...$urls, ...array_map(static fn (array $archive) => [
+            'uri' => $archive['uri'], 'updated' => $archive['entry']->updatedAt?->toDateString(), 'locale' => $archive['locale'],
+            // The term the archive is: for what the sitemap says of it (whether it is indexed, its other languages).
+            'entry' => $archive['entry'],
+        ], $open($locale))]);
+
+        // On an archive, the other languages' versions are the same term's archives of the same collection.
+        $hooks->addFilter('seo.alternates', function (array $alternates, Entry $entry) use ($archives) {
+            // The page's entry is the term at the archive's address.
+            $archive = $entry->uri === null ? null : $archives()->at($entry->uri, $entry->locale);
+            $collection = $archive && $archive['term'] === $entry->id ? $this->cms()->collections()->find($archive['collection']) : null;
+
+            if (! $collection) {
+                return $alternates;
+            }
+
+            return array_values(array_filter(array_map(function (array $alternate) use ($archives, $collection, $entry) {
+                // This page's own line already has the archive's address.
+                if ($alternate['uri'] === $entry->uri) {
+                    return $alternate;
+                }
+
+                $version = $this->cms()->entries()->findByUri((string) $alternate['uri'], $alternate['locale'] === 'x-default' ? $this->cms()->defaultLocale() : (string) $alternate['locale']);
+                $uri = $version ? $archives()->uri($collection, $version) : null;
+
+                return $uri === null ? null : [...$alternate, 'uri' => $uri];
+            }, $alternates)));
+        }, priority: 50);
     }
 
     private function buildTriggers(): void

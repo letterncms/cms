@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Cms\Abilities\AbilityException;
+use Cms\Content\Collections\Archives;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Collections\CollectionRepository;
 use Cms\Content\Fields\Blueprint;
@@ -44,6 +45,7 @@ final class EntryService
         private readonly UriBuilder $uris,
         private readonly Revisions $revisions,
         private readonly Hooks $hooks,
+        private readonly Archives $archives,
     ) {}
 
 
@@ -480,6 +482,7 @@ final class EntryService
         } else {
             $this->entries->delete($entry);
             $this->revisions->deleteFor($entry->id);
+            $this->archives->flush();
         }
         $this->dispatch('entry.deleted', $entry, $user);
     }
@@ -594,10 +597,13 @@ final class EntryService
             throw AbilityException::conflict(__('The URL :uri is already used by “:title”.', ['uri' => $entry->uri, 'title' => $clash->title]));
         }
 
+        $this->assertNoArchiveClash($entry);
+
         if ($this->dry) {
             $this->staged[$entry->id] = $entry;
         } else {
             $this->entries->save($entry);
+            $this->archives->flush();
 
             if ($previousUri !== null && $entry->uri !== null && $previousUri !== $entry->uri && $entry->isLive()) {
                 $this->dispatch('entry.uri-changed', $entry, $previousUri, $entry->uri);
@@ -692,6 +698,30 @@ final class EntryService
             $this->persist($translation, $collection);
             $this->record($translation, 'shared', null, 'Shared fields changed in the original');
             $this->dispatch('entry.saved', $translation, null, 'shared');
+        }
+    }
+
+    /**
+     * A page and a term's archive cannot share an address. Checked from both sides: the entry's own address
+     * against the archives there are, and, for a term, the addresses its archives get against the pages and
+     * the other archives there are.
+     */
+    private function assertNoArchiveClash(Entry $entry): void
+    {
+        if ($entry->uri !== null && ($archive = $this->archives->at($entry->uri, $entry->locale)) && $archive['term'] !== $entry->id) {
+            throw AbilityException::conflict(__('The URL :uri is already used by an archive of “:title”.', ['uri' => $entry->uri, 'title' => $this->find($archive['term'])?->title ?? $archive['taxonomy']]));
+        }
+
+        foreach ($this->archives->of($entry) as $own) {
+            if ($clash = $this->clash($own['uri'], $entry)) {
+                throw AbilityException::conflict(__('The archive URL :uri is already used by “:title”.', ['uri' => $own['uri'], 'title' => $clash->title]));
+            }
+
+            $other = $this->archives->at($own['uri'], $entry->locale);
+
+            if ($other && ($other['term'] !== $entry->id || $other['collection'] !== $own['collection'])) {
+                throw AbilityException::conflict(__('The archive URL :uri is already used by another archive.', ['uri' => $own['uri']]));
+            }
         }
     }
 

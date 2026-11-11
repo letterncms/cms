@@ -58,6 +58,7 @@ final class CmsServiceProvider extends ServiceProvider
         FieldTypeRegistry::class => FieldTypeRegistry::class,
         Fieldsets::class => Fieldsets::class,
         CollectionRepository::class => CollectionRepository::class,
+        \Cms\Content\Collections\Archives::class => \Cms\Content\Collections\Archives::class,
         DatabaseDriver::class => DatabaseDriver::class,
         FileDriver::class => FileDriver::class,
         EntryRepository::class => EntryRepository::class,

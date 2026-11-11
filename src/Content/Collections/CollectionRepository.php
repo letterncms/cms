@@ -79,6 +79,13 @@ final class CollectionRepository
             ['handle' => 'default_columns', 'type' => 'json', 'component' => 'collection-display-fields', 'label' => 'Default Display Fields'],
         ];
 
+        // A page per term of a taxonomy, listing this collection's entries: offered where there is a taxonomy to archive by.
+        $taxonomies = array_map(static fn (Collection $c) => $c->title, array_filter($this->all(), static fn (Collection $c) => $c->isTaxonomy() && $c->handle !== $collection?->handle));
+
+        if ($taxonomies !== [] && $collection?->routable()) {
+            $fields[] = ['handle' => 'archives', 'type' => 'json', 'component' => 'collection-archives', 'label' => 'Term Archives', 'options' => $taxonomies];
+        }
+
         if ($bodies !== []) {
             $fields[] = ['handle' => 'body', 'type' => 'select', 'label' => 'Body Field', 'placeholder' => 'None', 'options' => $bodies];
         }
@@ -106,6 +113,7 @@ final class CollectionRepository
         }
         Yaml::write($this->file($collection->handle), [...$collection->toYaml(), ...RecordTimestamps::saved($existing?->toYaml())]);
         $this->collections = null;
+        app(Archives::class)->flush();
         $this->hooks->dispatch('collection.saved', $collection);
     }
 
@@ -113,6 +121,7 @@ final class CollectionRepository
     {
         @unlink($this->file($handle));
         $this->collections = null;
+        app(Archives::class)->flush();
         $this->hooks->dispatch('collection.deleted', $handle);
     }
 

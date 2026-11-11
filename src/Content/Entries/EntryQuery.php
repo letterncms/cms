@@ -33,7 +33,7 @@ final class EntryQuery
     /** @var list<array{0: string, 1: string}> */
     public array $orders = [];
 
-    /** @var list<array{id: ?string, field: ?string}> Only entries that name these (see references()); a null id matches nothing. */
+    /** @var list<array{id: ?string, field: string|list<string>|null}> Only entries that name these (see references()); a null id matches nothing. */
     public array $references = [];
 
     public ?string $search = null;
@@ -131,14 +131,19 @@ final class EntryQuery
      * Only entries that name this entry: the reverse of a relation. An entry names another when the other's id is
      * anywhere in its data — a relation or terms field at any depth (in a group, in the rows of a repeater or a
      * matrix), a link field, a link or a relation in a block. With `$field`, only inside that field (`author`,
-     * `meta.related`, `sections`). An entry never names itself, and an id that is no entry matches nothing.
+     * `meta.related`, `sections`), or with a list, inside any of them (an empty list matches nothing). An entry
+     * never names itself, and an id that is no entry matches nothing.
      *
      * Both drivers look for the id in the stored JSON, so they agree: an id is 26 characters nobody types by chance.
+     *
+     * @param  string|list<string>|null  $field
      */
-    public function references(string $id, ?string $field = null): self
+    public function references(string $id, string|array|null $field = null): self
     {
-        if ($field !== null && ! preg_match('/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/', $field)) {
-            throw new InvalidArgumentException(__('Invalid field :field.', ['field' => $field]));
+        foreach ($field === null ? [] : (array) $field as $one) {
+            if (! is_string($one) || ! preg_match('/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/', $one)) {
+                throw new InvalidArgumentException(__('Invalid field :field.', ['field' => is_string($one) ? $one : '?']));
+            }
         }
 
         $this->references[] = ['id' => $this->repository->find($id)?->id, 'field' => $field];

@@ -47,7 +47,8 @@ final class SearchIndex
             }
         }
 
-        return $records;
+        // Pages that are no entry's own: term archives, and what plugins add.
+        return array_values((array) $this->hooks->filter('site.search.records', $records));
     }
 
     private function record(Entry $entry): array
