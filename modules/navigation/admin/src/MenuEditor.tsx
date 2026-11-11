@@ -120,7 +120,7 @@ function Editor({ menu }: { menu: Menu }) {
     setBusy(true)
     setFailed(null)
     try {
-      const stored = await run<Menu>('navigation/save', { handle: menu.handle, maxDepth, items: clean(items) })
+      const stored = await run<Menu>('navigation/update', { handle: menu.handle, maxDepth, items: clean(items) })
       setItems(stored.items)
       setMaxDepth(stored.maxDepth)
       setSaved(snapshot(stored.maxDepth, stored.items))

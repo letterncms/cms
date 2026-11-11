@@ -34,7 +34,7 @@ final class PackagesViews
             ['type' => 'ui/tabs', 'children' => [
                 ['type' => 'ui/tab', 'props' => ['id' => 'installed', 'label' => __('Installed'), 'count' => ['source' => $plugins, 'at' => 'total']], 'children' => [
                     ...($pending ? [['type' => 'ui/notice', 'props' => ['tone' => 'warning', 'title' => __('Database updates are waiting'),
-                        'action' => ['label' => __('Update'), 'variant' => 'primary', 'ability' => 'packages/sync', 'success' => __('Database is up to date'), 'then' => 'manifest']]]] : []),
+                        'action' => ['label' => __('Update'), 'variant' => 'primary', 'ability' => 'packages/migrate', 'success' => __('Database is up to date'), 'then' => 'manifest']]]] : []),
                     self::installed($plugins),
                     // What the repository couldn't read, as it says it (data, not words of this view).
                     ...array_map(static fn (string $error) => ['type' => 'ui/notice', 'props' => ['tone' => 'danger', 'title' => $error]], $packages->repository()->errors()),

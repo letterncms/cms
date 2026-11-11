@@ -435,7 +435,7 @@ final class SiteModule extends Plugin
             },
         ]);
 
-        $abilities->register('design/code', [
+        $abilities->register('design/set-code', [
             'label' => 'Custom CSS and JavaScript',
             'description' => 'Replace the site’s custom.css or custom.js (content/design). CSS is appended after everything else; JS loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component.',
             'permission' => 'site.code',

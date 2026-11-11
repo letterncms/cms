@@ -191,10 +191,10 @@ final class AdminTest extends TestCase
         $this->assertSame(1, $groups['shop']['total']);
         $this->assertSame(['shop'], array_column($this->cms()->abilities()->execute('pages/builtin', ['group' => 'shop'], $ctx), 'id'), 'One group, asked by its id');
 
-        $made = $this->cms()->abilities()->execute('pages/customise', ['group' => 'shop', 'handle' => 'basket'], $ctx);
+        $made = $this->cms()->abilities()->execute('pages/customize', ['group' => 'shop', 'handle' => 'basket'], $ctx);
         $entry = $this->cms()->entries()->find($made['id']);
         $this->assertSame(['shop-pages', 'basket', 'Standard basket en'], [$entry->collection, $entry->slug, $entry->data['blocks'][0]['props']['text']]);
-        $this->assertSame($made['id'], $this->cms()->abilities()->execute('pages/customise', ['group' => 'shop', 'handle' => 'basket'], $ctx)['id'], 'Once is enough');
+        $this->assertSame($made['id'], $this->cms()->abilities()->execute('pages/customize', ['group' => 'shop', 'handle' => 'basket'], $ctx)['id'], 'Once is enough');
         // The standard version is live until the site's own is published: a version waits, as on a page with changes.
         $page = array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id')['shop']['pages'][0];
         $this->assertSame(['draft', 'changed', true], [$page['status'], $page['displayStatus'], $page['restorable']]);
@@ -297,7 +297,7 @@ final class AdminTest extends TestCase
     {
         $admin = $this->admin();
         $ctx = AbilityContext::forUser($admin, 'admin');
-        $this->cms()->abilities()->execute('users/fields-save', ['fields' => [
+        $this->cms()->abilities()->execute('user-fields/save', ['fields' => [
             ['handle' => 'bio', 'type' => 'textarea', 'label' => 'Bio'],
             ['handle' => 'role_title', 'type' => 'text', 'label' => 'Job title', 'required' => true],
         ]], $ctx);
@@ -311,7 +311,7 @@ final class AdminTest extends TestCase
         $this->assertSame('Editor-in-chief', $user['data']->role_title);
 
         $this->expectException(AbilityException::class);
-        $this->cms()->abilities()->execute('users/fields-save', ['fields' => [['handle' => 'email', 'type' => 'text']]], $ctx);
+        $this->cms()->abilities()->execute('user-fields/save', ['fields' => [['handle' => 'email', 'type' => 'text']]], $ctx);
     }
 
     public function test_roles_are_settings_and_the_admin_role_stays(): void

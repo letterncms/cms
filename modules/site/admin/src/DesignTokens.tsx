@@ -239,7 +239,7 @@ export default function DesignTokens() {
       const change = changes(base, draft)
       const tokensChanged = Object.keys(change.tokens).length + Object.keys(change.dark).length + Object.keys(change.rename).length + change.remove.length > 0 || ['styles', 'prose', 'buttons', 'fields', 'transition'].some((key) => key in change)
       if (tokensChanged) await run('design/update', change)
-      if (draft.css !== base.css || draft.js !== base.js) await run('design/code', { css: draft.css, ...(can('site.code') ? { js: draft.js } : {}) })
+      if (draft.css !== base.css || draft.js !== base.js) await run('design/set-code', { css: draft.css, ...(can('site.code') ? { js: draft.js } : {}) })
       await queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith('design/') })
       setDraft(null)
       frame.current?.contentWindow?.location.reload()

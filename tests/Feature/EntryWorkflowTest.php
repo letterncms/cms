@@ -166,11 +166,11 @@ final class EntryWorkflowTest extends TestCase
     {
         $person = $this->admin(['name' => 'Lookup Person']);
         $editor = $this->userWithRole('editor');
-        $result = $this->execute('users/lookup', ['search' => 'Lookup', 'perPage' => 1], $editor);
+        $result = $this->execute('people/list', ['search' => 'Lookup', 'perPage' => 1], $editor);
         $this->assertSame(1, $result['total']);
         $this->assertSame(['id', 'name', 'initials', 'avatar'], array_keys($result['items'][0]));
-        $this->assertSame($person->id, $this->execute('users/lookup', ['ids' => [$person->id]], $editor)['items'][0]['id']);
-        $this->assertSame([], $this->execute('users/lookup', ['ids' => [str_repeat('0', 26)]], $editor)['items']);
+        $this->assertSame($person->id, $this->execute('people/list', ['ids' => [$person->id]], $editor)['items'][0]['id']);
+        $this->assertSame([], $this->execute('people/list', ['ids' => [str_repeat('0', 26)]], $editor)['items']);
         $this->fails(fn () => $this->execute('users/list', [], $editor), 'forbidden');
     }
 

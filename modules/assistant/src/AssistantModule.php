@@ -78,7 +78,7 @@ final class AssistantModule extends Plugin
             ], $this->cms()->skills()->all($c->user))),
         ]);
 
-        $a->register('assistant/resources', [
+        $a->register('assistant-resources/list', [
             'label' => 'List Assistant Resources',
             'description' => 'What @ offers in a thread besides content: the context resources this person may read.',
             'permission' => 'assistant.use',
@@ -88,7 +88,7 @@ final class AssistantModule extends Plugin
             'handler' => fn (array $in, AbilityContext $c) => array_map(static fn (array $resource) => ['uri' => $resource['uri'], 'name' => __($resource['name'])], $this->cms()->context()->list($c->user)),
         ]);
 
-        $a->register('assistant/resource', [
+        $a->register('assistant-resources/get', [
             'label' => 'Read Assistant Resource',
             'description' => 'One context resource, for a message that attaches it.',
             'permission' => 'assistant.use',

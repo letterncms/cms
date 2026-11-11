@@ -94,12 +94,12 @@ final class Starter
             $create((array) $items, (string) $collection, null);
         }
 
-        if ($this->cms->abilities()->has('navigation/save')) {
+        if ($this->cms->abilities()->has('navigation/update')) {
             foreach ((array) ($seed['menus'] ?? []) as $handle => $items) {
                 $items = array_values(array_filter(array_map(static fn (array $i) => isset($i['page'])
                     ? (isset($ids[$i['page']]) ? array_filter(['entry' => $ids[$i['page']], 'label' => $i['label'] ?? null]) : null)
                     : $i, (array) $items)));
-                $this->cms->abilities()->execute('navigation/save', ['handle' => (string) $handle, 'items' => $items], AbilityContext::system('install'));
+                $this->cms->abilities()->execute('navigation/update', ['handle' => (string) $handle, 'items' => $items], AbilityContext::system('install'));
             }
         }
 

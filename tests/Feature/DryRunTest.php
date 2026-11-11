@@ -167,8 +167,8 @@ final class DryRunTest extends TestCase
 
         $this->assertSame([], $missing, 'An ability annotated destructive or confirm needs a `dryRun` callback that names what would be removed.');
 
-        foreach (['entries/delete', 'entries/discard-draft', 'collections/delete', 'globals/delete', 'navigation/delete', 'media/delete', 'users/delete', 'users/revoke', 'tokens/revoke', 'comments/delete', 'threads/delete',
-            'languages/remove', 'packages/enable', 'packages/disable', 'packages/switch', 'packages/uninstall', 'sync/start', 'sync/undo', 'sync/disconnect', 'sync/renew-key'] as $name) {
+        foreach (['entries/delete', 'entries/discard-draft', 'collections/delete', 'globals/delete', 'navigation/delete', 'media/delete', 'users/delete', 'users/revoke', 'tokens/delete', 'comments/delete', 'threads/delete',
+            'languages/delete', 'packages/enable', 'packages/disable', 'packages/switch', 'packages/uninstall', 'sync/start', 'sync/undo', 'sync/disconnect', 'sync/renew-key'] as $name) {
             $this->assertArrayHasKey($name, $asking, "{$name} asks first");
         }
     }
@@ -180,7 +180,7 @@ final class DryRunTest extends TestCase
         $note = $this->run_('entries/create', ['collection' => 'notes', 'title' => 'Kept', 'data' => ['body' => 'As it is.'], 'status' => 'published']);
         $under = $this->run_('entries/create', ['collection' => 'notes', 'title' => 'Under', 'parentId' => $note['id']]);
         $this->run_('entries/update', ['id' => $page['id'], 'title' => 'Parent, changed']);
-        $revision = $this->run_('entries/revisions', ['id' => $page['id']])[0]['id'];
+        $revision = $this->run_('revisions/list', ['entryId' => $page['id']])[0]['id'];
 
         $fired = [];
         foreach (['ability.executing', 'ability.executed', 'entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleting', 'entry.deleted', 'entry.structure-changed', 'entry.uri-changed', 'entries.reordered', 'settings.saved', 'navigation.saved'] as $hook) {
@@ -198,7 +198,7 @@ final class DryRunTest extends TestCase
             'entries/duplicate' => ['id' => $note['id']],
             'entries/move' => ['id' => $under['id'], 'parentId' => null],
             'entries/reorder' => ['collection' => 'pages', 'ids' => [$child['id'], $page['id']]],
-            'entries/restore' => ['revisionId' => $revision],
+            'revisions/restore' => ['revisionId' => $revision],
             'entries/delete' => ['id' => $note['id']],
             'collections/delete' => ['handle' => 'notes', 'deleteEntries' => true],
             'settings/update' => ['namespace' => 'site', 'values' => ['name' => 'Renamed']],
@@ -254,14 +254,14 @@ final class DryRunTest extends TestCase
         $this->assertBothRefuse('invalid_input', 'entries/publish', ['id' => $parent['id'], 'at' => '2031-01-01T00:00:00Z']);
 
         // Changed since it was read, or gone.
-        $revision = $this->run_('entries/revisions', ['id' => $other['id']])[0]['id'];
+        $revision = $this->run_('revisions/list', ['entryId' => $other['id']])[0]['id'];
 
         foreach (['entries/update' => ['title' => 'x'], 'entries/publish' => [], 'entries/unpublish' => [], 'entries/discard-draft' => [], 'entries/delete' => [], 'entries/duplicate' => [], 'entries/move' => ['parentId' => null]] as $name => $more) {
             $this->assertBothRefuse('conflict', $name, ['id' => $other['id'], 'expectedVersion' => $stale, ...$more]);
             $this->assertBothRefuse('not_found', $name, ['id' => self::GONE, ...$more]);
         }
 
-        $this->assertBothRefuse('conflict', 'entries/restore', ['revisionId' => $revision, 'expectedVersion' => $stale]);
+        $this->assertBothRefuse('conflict', 'revisions/restore', ['revisionId' => $revision, 'expectedVersion' => $stale]);
         $this->assertBothRefuse('conflict', 'entries/reorder', ['collection' => 'pages', 'ids' => [$other['id']], 'versions' => [$other['id'] => $stale]]);
 
         // The permission, before any of it.
@@ -306,8 +306,8 @@ final class DryRunTest extends TestCase
         $this->assertSame(['action' => 'reorder', 'type' => 'entries', 'collection' => 'pages', 'parentId' => null, 'ids' => [$copy['id'], $parent['id']]], $report['changes'][0]);
 
         $this->run_('entries/update', ['id' => $child['id'], 'title' => 'The Team']);
-        $first = last($this->run_('entries/revisions', ['id' => $child['id']]))['id'];
-        [$report, $restored] = $this->assertBothPass('entries/restore', ['revisionId' => $first]);
+        $first = last($this->run_('revisions/list', ['entryId' => $child['id']]))['id'];
+        [$report, $restored] = $this->assertBothPass('revisions/restore', ['revisionId' => $first]);
         $this->assertSame(['restore', ['title']], [$report['changes'][0]['action'], $report['changes'][0]['fields']]);
         $this->assertSame('Team', $restored['title']);
 
@@ -321,10 +321,10 @@ final class DryRunTest extends TestCase
         // A built-in page made the site's own, once: the second time there is nothing to change.
         $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('shop-pages', ['title' => 'Shop Pages', 'fields' => [['handle' => 'blocks', 'type' => 'blocks']]]));
         $this->cms()->builtinPages()->register('shop', 'Shop', 'shop-pages', static fn () => ['basket' => ['label' => 'Basket', 'path' => '/basket']], static fn () => []);
-        $this->assertBothRefuse('not_found', 'pages/customise', ['group' => 'shop', 'handle' => 'nothing']);
-        [$report] = $this->assertBothPass('pages/customise', ['group' => 'shop', 'handle' => 'basket']);
+        $this->assertBothRefuse('not_found', 'pages/customize', ['group' => 'shop', 'handle' => 'nothing']);
+        [$report] = $this->assertBothPass('pages/customize', ['group' => 'shop', 'handle' => 'basket']);
         $this->assertSame(['create', 'shop-pages', 'basket'], [$report['changes'][0]['action'], $report['changes'][0]['collection'], $report['changes'][0]['slug']]);
-        $this->assertSame([], $this->dry('pages/customise', ['group' => 'shop', 'handle' => 'basket'])['changes']);
+        $this->assertSame([], $this->dry('pages/customize', ['group' => 'shop', 'handle' => 'basket'])['changes']);
     }
 
     public function test_settings_are_checked_as_a_save_checks_them(): void
@@ -364,8 +364,8 @@ final class DryRunTest extends TestCase
         [$report] = $this->assertBothPass('users/revoke', ['id' => $author->id, 'access' => 'members']);
         $this->assertSame(['revoke', 'members', 1], [$report['changes'][0]['action'], $report['changes'][0]['access'], $report['changes'][0]['removes']['grants']]);
         $mine = $author->tokens()->first();
-        $this->assertSame([], $this->dry('tokens/revoke', ['id' => $mine->id])['changes'], 'another person\'s token is not there to revoke');
-        [$report] = $this->assertBothPass('tokens/revoke', ['id' => $mine->id], $this->userWithToken($author));
+        $this->assertSame([], $this->dry('tokens/delete', ['id' => $mine->id])['changes'], 'another person\'s token is not there to revoke');
+        [$report] = $this->assertBothPass('tokens/delete', ['id' => $mine->id], $this->userWithToken($author));
         $this->assertSame([['action' => 'revoke', 'type' => 'token', 'id' => (string) $mine->id, 'name' => $mine->name]], $report['changes']);
         [$report] = $this->assertBothPass('users/delete', ['id' => $author->id]);
         $this->assertSame(['delete', 'user', $author->id, 1], [$report['changes'][0]['action'], $report['changes'][0]['type'], $report['changes'][0]['id'], $report['changes'][0]['removes']['tokens']]);
@@ -375,18 +375,18 @@ final class DryRunTest extends TestCase
         $this->assertSame([], $this->dry('globals/delete', ['handle' => 'nothing'])['changes']);
         [$report] = $this->assertBothPass('globals/delete', ['handle' => 'footer']);
         $this->assertSame([['action' => 'delete', 'type' => 'global', 'handle' => 'footer', 'title' => 'Footer', 'removes' => ['fields' => 1, 'values' => true]]], $report['changes']);
-        $this->run_('navigation/save', ['handle' => 'main', 'title' => 'Main', 'items' => [['url' => '/a', 'label' => 'A'], ['url' => '/b', 'label' => 'B']]]);
+        $this->run_('navigation/update', ['handle' => 'main', 'title' => 'Main', 'items' => [['url' => '/a', 'label' => 'A'], ['url' => '/b', 'label' => 'B']]]);
         $this->assertSame([], $this->dry('navigation/delete', ['handle' => 'nothing'])['changes']);
         [$report, $gone] = $this->assertBothPass('navigation/delete', ['handle' => 'main']);
         $this->assertSame(['delete', 'menu', 'main'], [$report['changes'][0]['action'], $report['changes'][0]['type'], $report['changes'][0]['handle']]);
         $this->assertTrue($gone['deleted']);
 
         // A language: not the default, and not while it has entries.
-        $this->assertBothRefuse('invalid_input', 'languages/remove', ['code' => 'en']);
+        $this->assertBothRefuse('invalid_input', 'languages/delete', ['code' => 'en']);
         $german = $this->run_('entries/create', ['collection' => 'posts', 'title' => 'Hallo', 'locale' => 'de']);
-        $this->assertBothRefuse('invalid_input', 'languages/remove', ['code' => 'de']);
+        $this->assertBothRefuse('invalid_input', 'languages/delete', ['code' => 'de']);
         $this->run_('entries/delete', ['id' => $german['id']]);
-        [$report] = $this->assertBothPass('languages/remove', ['code' => 'de']);
+        [$report] = $this->assertBothPass('languages/delete', ['code' => 'de']);
         $this->assertSame([['action' => 'remove', 'type' => 'language', 'code' => 'de', 'remaining' => ['en']]], $report['changes']);
 
         // Comments and chats: your own.
@@ -518,7 +518,7 @@ final class DryRunTest extends TestCase
         $this->assertSame(0, $this->cms()->entries()->query()->collection('pages')->count());
     }
 
-    /** The person themselves, as tokens/revoke wants them: it is only for one's own tokens. */
+    /** The person themselves, as tokens/delete wants them: it is only for one's own tokens. */
     private function userWithToken(User $user): User
     {
         return $user->forceFill(['super' => true]);

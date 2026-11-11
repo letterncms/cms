@@ -171,7 +171,7 @@ final class LanguagesModule extends Plugin
             },
         ]);
 
-        $a->register('languages/save', [
+        $a->register('languages/update', [
             'label' => 'Save Languages',
             'description' => 'Set the site’s languages and the default one. Languages that still have entries cannot be removed.',
             'permission' => 'settings.manage',
@@ -191,7 +191,7 @@ final class LanguagesModule extends Plugin
 
         // One change at a time, as the Languages screen makes them.
         $one = ['type' => 'object', 'properties' => ['code' => $code], 'required' => ['code']];
-        $a->register('languages/add', [
+        $a->register('languages/create', [
             'label' => 'Add Language',
             'description' => 'Add a language to the site.',
             'permission' => 'settings.manage',
@@ -210,7 +210,7 @@ final class LanguagesModule extends Plugin
             return array_values(array_diff($languages()->codes(), [$in['code']]));
         };
 
-        $a->register('languages/remove', [
+        $a->register('languages/delete', [
             'label' => 'Remove Language',
             'description' => 'Remove a language that has no entries. The default language cannot be removed.',
             'permission' => 'settings.manage',
@@ -227,7 +227,7 @@ final class LanguagesModule extends Plugin
             'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), $without($in)),
         ]);
 
-        $a->register('languages/default', [
+        $a->register('languages/set-default', [
             'label' => 'Make Language the Default',
             'description' => 'Make one of the site’s languages the default: its pages move to the root URL.',
             'permission' => 'settings.manage',
@@ -239,7 +239,7 @@ final class LanguagesModule extends Plugin
                 : throw AbilityException::invalid(__('Add the language first.')),
         ]);
 
-        $a->register('languages/prefix', [
+        $a->register('languages/set-prefix', [
             'label' => 'Prefix the Default Language',
             'description' => 'Whether the default language’s pages are under a prefix (/en/…) too.',
             'permission' => 'settings.manage',
@@ -368,16 +368,16 @@ final class LanguagesModule extends Plugin
         $assistant = $this->cms()->isActive('letterncms/assistant');
         $translator = $this->app->make(Translations::class)->canTranslate();
         // A language's own actions: in its row's menu, and under it once opened. Only the default has a prefix to change.
-        $makeDefault = ['label' => __('Make Default'), 'icon' => 'star', 'ability' => 'languages/default', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'success' => __('{row.name} is now the default'),
+        $makeDefault = ['label' => __('Make Default'), 'icon' => 'star', 'ability' => 'languages/set-default', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'success' => __('{row.name} is now the default'),
             'confirm' => ['title' => __('Make {row.name} the default?'), 'text' => __('Its pages move to the root URL and :current gets a prefix. Old URLs redirect automatically.', ['current' => $fallback]), 'confirm' => __('Make Default')]];
         $prefix = [
-            ['label' => __('Add URL Prefix'), 'icon' => 'link', 'ability' => 'languages/prefix', 'input' => ['prefixDefault' => true], 'then' => 'manifest', 'when' => '{row.prefixable}', 'success' => __('{row.name} now has a URL prefix'),
+            ['label' => __('Add URL Prefix'), 'icon' => 'link', 'ability' => 'languages/set-prefix', 'input' => ['prefixDefault' => true], 'then' => 'manifest', 'when' => '{row.prefixable}', 'success' => __('{row.name} now has a URL prefix'),
                 'confirm' => ['title' => __('Give {row.name} a URL prefix?'), 'text' => __('Its pages move to /{row.code}/….'), 'confirm' => __('Add Prefix')]],
-            ['label' => __('Remove URL Prefix'), 'icon' => 'link', 'ability' => 'languages/prefix', 'input' => ['prefixDefault' => false], 'then' => 'manifest', 'when' => '{row.prefixed}', 'success' => __('{row.name} is now at the root URL'),
+            ['label' => __('Remove URL Prefix'), 'icon' => 'link', 'ability' => 'languages/set-prefix', 'input' => ['prefixDefault' => false], 'then' => 'manifest', 'when' => '{row.prefixed}', 'success' => __('{row.name} is now at the root URL'),
                 'confirm' => ['title' => __('Remove the URL prefix of {row.name}?'), 'text' => __('Its pages move to the root URL.'), 'confirm' => __('Remove Prefix')]],
         ];
         // Shown while it still has entries, but not possible: the dialog says why.
-        $remove = ['label' => __('Remove'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'languages/remove', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'disabled' => '{row.entries}', 'success' => __('{row.name} removed'),
+        $remove = ['label' => __('Remove'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'languages/delete', 'input' => ['code' => '{row.code}'], 'then' => 'manifest', 'unless' => '{row.default}', 'disabled' => '{row.entries}', 'success' => __('{row.name} removed'),
             'confirm' => ['title' => __('Remove {row.name}?'), 'text' => __('Visitors will no longer see this language. You can add it again later.'), 'confirm' => __('Remove'), 'danger' => true]];
 
         return ['type' => 'ui/page', 'props' => ['title' => __('Languages'), 'icon' => 'translate', 'width' => 'narrow', 'actions' => [

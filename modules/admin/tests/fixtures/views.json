@@ -1078,7 +1078,7 @@
                             {
                                 "label": "Rename",
                                 "icon": "edit",
-                                "ability": "navigation/save",
+                                "ability": "navigation/update",
                                 "input": {
                                     "handle": "{row.handle}",
                                     "title": "{values.title}"
@@ -1230,7 +1230,7 @@
                                                 "label": "Remove",
                                                 "icon": "trash",
                                                 "variant": "danger",
-                                                "ability": "languages/remove",
+                                                "ability": "languages/delete",
                                                 "input": {
                                                     "code": "{row.code}"
                                                 },
@@ -1248,7 +1248,7 @@
                                             {
                                                 "label": "Add URL Prefix",
                                                 "icon": "link",
-                                                "ability": "languages/prefix",
+                                                "ability": "languages/set-prefix",
                                                 "input": {
                                                     "prefixDefault": true
                                                 },
@@ -1264,7 +1264,7 @@
                                             {
                                                 "label": "Remove URL Prefix",
                                                 "icon": "link",
-                                                "ability": "languages/prefix",
+                                                "ability": "languages/set-prefix",
                                                 "input": {
                                                     "prefixDefault": false
                                                 },
@@ -1280,7 +1280,7 @@
                                             {
                                                 "label": "Make Default",
                                                 "icon": "star",
-                                                "ability": "languages/default",
+                                                "ability": "languages/set-default",
                                                 "input": {
                                                     "code": "{row.code}"
                                                 },
@@ -1302,7 +1302,7 @@
                                     {
                                         "label": "Make Default",
                                         "icon": "star",
-                                        "ability": "languages/default",
+                                        "ability": "languages/set-default",
                                         "input": {
                                             "code": "{row.code}"
                                         },
@@ -1319,7 +1319,7 @@
                                     {
                                         "label": "Add URL Prefix",
                                         "icon": "link",
-                                        "ability": "languages/prefix",
+                                        "ability": "languages/set-prefix",
                                         "input": {
                                             "prefixDefault": true
                                         },
@@ -1336,7 +1336,7 @@
                                     {
                                         "label": "Remove URL Prefix",
                                         "icon": "link",
-                                        "ability": "languages/prefix",
+                                        "ability": "languages/set-prefix",
                                         "input": {
                                             "prefixDefault": false
                                         },
@@ -1354,7 +1354,7 @@
                                         "label": "Remove",
                                         "icon": "trash",
                                         "variant": "danger",
-                                        "ability": "languages/remove",
+                                        "ability": "languages/delete",
                                         "input": {
                                             "code": "{row.code}"
                                         },

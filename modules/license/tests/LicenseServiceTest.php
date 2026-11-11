@@ -280,7 +280,7 @@ final class LicenseServiceTest extends TestCase
 
         $this->assertIsArray($abilities->execute('license/status', [], $admin));
 
-        foreach (['license/status' => [], 'license/install' => ['token' => 'x'], 'license/clear' => []] as $name => $input) {
+        foreach (['license/status' => [], 'license/install' => ['token' => 'x'], 'license/delete' => []] as $name => $input) {
             try {
                 $abilities->execute($name, $input, $editor);
                 $this->fail("An editor ran {$name}.");

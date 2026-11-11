@@ -30,7 +30,7 @@ export default function WidgetSystem() {
   const update = async () => {
     setUpdating(true)
     try {
-      await run('packages/sync')
+      await run('packages/migrate')
       await Promise.all([loadManifest(), list.refetch()])
       invalidate('packages/')
       toast.success(t('Database is up to date'))

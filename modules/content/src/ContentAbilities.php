@@ -155,7 +155,7 @@ final class ContentAbilities
             return [$this->cms->content()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user), true];
         };
 
-        $a->register('pages/customise', [
+        $a->register('pages/customize', [
             'label' => 'Customize a Built-in Page',
             'description' => 'Make a built-in page the site\'s own: creates a draft from its standard version and returns the entry to edit. An already customized page returns its entry, to anyone who may view it.',
             'annotations' => ['draft' => true],
@@ -570,22 +570,22 @@ final class ContentAbilities
             'handler' => $reorder,
         ]);
 
-        $a->register('entries/revisions', [
+        $a->register('revisions/list', [
             'label' => 'Entry History',
-            'description' => 'Revisions of an entry, newest first.',
-            'permission' => $entryPermission('view'),
+            'description' => 'Revisions of an entry (entryId), newest first.',
+            'permission' => fn (?User $user, array $in) => $this->allowed($user, $this->collectionOf((string) ($in['entryId'] ?? '')), 'view'),
             'annotations' => ['readOnly' => true],
-            'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
+            'input' => ['type' => 'object', 'properties' => ['entryId' => self::ID], 'required' => ['entryId']],
             'output' => Shape::of([[
                 'id' => Shape::STRING, 'action' => Shape::STRING, 'title' => Shape::STRING_OR_NULL, 'message' => Shape::STRING_OR_NULL,
                 'user' => Shape::nullable(['id' => Shape::STRING, 'name' => Shape::STRING, 'initials' => Shape::STRING]), 'createdAt' => Shape::STRING,
             ]]),
-            'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->list($in['id']),
+            'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->list($in['entryId']),
         ]);
 
-        $a->register('entries/revision', [
+        $a->register('revisions/get', [
             'label' => 'Get Revision',
-            'description' => 'A single revision snapshot.',
+            'description' => 'A single revision snapshot, by the revision\'s id (revisions/list has them).',
             'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['id'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
@@ -598,7 +598,7 @@ final class ContentAbilities
             'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->find($in['id']) ?? throw new AbilityException('Revision not found.', 'not_found'),
         ]);
 
-        $a->register('entries/restore', [
+        $a->register('revisions/restore', [
             'label' => 'Restore Revision',
             'description' => 'Restore an entry to a previous revision (as a draft for published entries).',
             'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['revisionId'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'edit'),
@@ -615,7 +615,7 @@ final class ContentAbilities
             'handler' => fn (array $in, AbilityContext $ctx) => $restore($in, $ctx)->toArray(),
         ]);
 
-        $a->register('entries/lookup', [
+        $a->register('entries/get-many', [
             'label' => 'Look Up Entries',
             'description' => 'Summaries for a list of entry ids (any collection you can view), in the given order.',
             'permission' => 'admin.access',

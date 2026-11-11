@@ -44,7 +44,7 @@ final class LicenseViews
                     'save' => ['ability' => 'license/install', 'as' => '*'], 'after' => 'manifest', 'width' => 'wide',
                 ]],
                 ...($keyed ? [['type' => 'ui/actions', 'props' => ['items' => [
-                    ['label' => __('Remove Key'), 'icon' => 'trash', 'ability' => 'license/clear', 'success' => __('License key removed'), 'then' => 'manifest',
+                    ['label' => __('Remove Key'), 'icon' => 'trash', 'ability' => 'license/delete', 'success' => __('License key removed'), 'then' => 'manifest',
                         'confirm' => ['title' => __('Remove the license key?'), 'text' => __('The site keeps working.'), 'confirm' => __('Remove Key'), 'danger' => true]],
                 ]]]] : []),
             ]],

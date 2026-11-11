@@ -138,7 +138,7 @@ final class OutputSiteTest extends TestCase
         $this->assertSame([], $this->ability('navigation/create', ['title' => 'Main'])['items']);
 
         $page = $this->cms()->content()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published']);
-        $menu = $this->ability('navigation/save', ['handle' => 'main', 'maxDepth' => 3, 'items' => [
+        $menu = $this->ability('navigation/update', ['handle' => 'main', 'maxDepth' => 3, 'items' => [
             ['entry' => $page->id, 'locales' => ['de' => ['label' => 'Über uns']], 'children' => [
                 ['url' => '/jobs', 'label' => 'Jobs', 'newTab' => true, 'locales' => ['de' => ['label' => 'Stellen', 'url' => '/de/jobs'], 'pt-BR' => ['url' => '/pt/jobs']], 'children' => [['url' => '#top', 'label' => 'Top']]],
             ]],
@@ -147,7 +147,7 @@ final class OutputSiteTest extends TestCase
         $this->assertSame(['label' => 'Stellen', 'url' => '/de/jobs'], $menu['items'][0]['children'][0]['locales']['de']);
         $this->assertSame('Top', $menu['items'][0]['children'][0]['children'][0]['label']);
 
-        $this->assertCount(2, $this->ability('navigation/add', ['menu' => 'main', 'url' => 'https://example.com', 'label' => 'Elsewhere'])['items']);
+        $this->assertCount(2, $this->ability('navigation/add-item', ['menu' => 'main', 'url' => 'https://example.com', 'label' => 'Elsewhere'])['items']);
         $this->assertSame(4, $this->ability('navigation/list')[0]['count']);
 
         // A hand-written file may link to an entry that is gone.
@@ -161,8 +161,8 @@ final class OutputSiteTest extends TestCase
 
     public function test_design_abilities_answer_as_described(): void
     {
-        $this->assertSame([], $this->ability('design/code')['saved']);
-        $this->assertSame(['css', 'js'], $this->ability('design/code', ['css' => 'body { color: red }', 'js' => 'console.log(1)'])['saved']);
+        $this->assertSame([], $this->ability('design/set-code')['saved']);
+        $this->assertSame(['css', 'js'], $this->ability('design/set-code', ['css' => 'body { color: red }', 'js' => 'console.log(1)'])['saved']);
 
         $font = $this->ability('design/fonts-upload', ['family' => 'Test Sans', 'data' => base64_encode('wOF2'.str_repeat("\0", 40))]);
         $this->assertSame('fonts/test-sans-400.woff2', $font['src']);
@@ -215,7 +215,7 @@ final class OutputSiteTest extends TestCase
 
     public function test_media_abilities_answer_as_described(): void
     {
-        $this->assertSame([], $this->ability('media/lookup', ['ids' => []])['items']);
+        $this->assertSame([], $this->ability('media/get-many', ['ids' => []])['items']);
         $this->assertSame(0, $this->ability('media/report')['items']);
 
         $im = imagecreatetruecolor(40, 30);
@@ -231,7 +231,7 @@ final class OutputSiteTest extends TestCase
         $this->assertSame(['x' => 10, 'y' => 90], $updated['focal']);
         $this->assertSame($text['id'], $this->ability('media/update', ['id' => $text['id']])['id']);
 
-        $this->assertSame([$text['id'], $image['id']], array_column($this->ability('media/lookup', ['ids' => [$text['id'], 'nothing', $image['id']]])['items'], 'id'));
+        $this->assertSame([$text['id'], $image['id']], array_column($this->ability('media/get-many', ['ids' => [$text['id'], 'nothing', $image['id']]])['items'], 'id'));
         $this->assertCount(2, $this->ability('media/list', ['folder' => null])['items']);
         $listed = $this->ability('media/list', ['kind' => 'image', 'folder' => 'icons', 'search' => 'Dot']);
         $this->assertSame(['icons'], $listed['folders']);

@@ -72,7 +72,7 @@ final class UsersViewsTest extends TestCase
         $ctx = AbilityContext::forUser($admin, 'admin');
         $set = $this->cms()->abilities()->execute('globals/save', ['title' => 'Opening Hours', 'fields' => [['handle' => 'text', 'type' => 'text', 'label' => 'Text']]], $ctx);
         $this->assertSame('opening_hours', $set['handle']);
-        $this->assertSame(['text' => 'Mon–Fri'], array_intersect_key($this->cms()->abilities()->execute('globals/update', ['handle' => 'opening_hours', 'values' => ['text' => 'Mon–Fri']], $ctx), ['text' => true]));
+        $this->assertSame(['text' => 'Mon–Fri'], array_intersect_key($this->cms()->abilities()->execute('globals/set', ['handle' => 'opening_hours', 'values' => ['text' => 'Mon–Fri']], $ctx), ['text' => true]));
 
         $this->assertSame('Opening Hours', $this->resolved('globals-set', $admin, ['handle' => 'opening_hours'])['props']['title']);
         $this->assertSame('globals/fields', $this->resolved('globals-fields', $admin, ['handle' => 'opening_hours'])['type']);

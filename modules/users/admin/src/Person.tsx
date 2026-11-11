@@ -12,7 +12,7 @@ type RolesResponse = { roles: Record<string, { label: string; description: strin
 export default function Person({ props, close }: SurfaceComponentProps<{ id?: string | null; user?: User }>) {
   const id = props.user ? undefined : props.id && props.id !== 'new' ? props.id : undefined
   const roles = useAbility<RolesResponse>('roles/list')
-  const profile = useAbility<{ resolvedFields: FieldDef[] }>('users/fields')
+  const profile = useAbility<{ resolvedFields: FieldDef[] }>('user-fields/get')
   const loaded = useAbility<User>('users/get', { id }, { enabled: !!id })
   const done = close ?? (() => navigate('/users', { replace: true }))
   // Someone who isn't there (any more): back to the list.
@@ -55,7 +55,7 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
         for (const name of access.remove) await run('users/revoke', { id: user.id, access: name })
         for (const name of access.add) await run('users/grant', { id: user.id, access: name })
       } else await run('users/create', input)
-      invalidate('users/')
+      invalidate('users/', 'people/')
       toast.success(user ? t('Saved') : t('Invitation sent to {email}', { email: values.email }))
       onClose()
     } catch (e) {
@@ -69,7 +69,7 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
     setBusy('suspend')
     try {
       await run('users/update', { id: u.id, suspended: u.status !== 'suspended' })
-      invalidate('users/')
+      invalidate('users/', 'people/')
       toast.success(u.status === 'suspended' ? t('{name} reactivated', { name: u.name }) : t('{name} suspended', { name: u.name }))
       onClose()
     } catch (e) {
@@ -96,7 +96,7 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
     setBusy('remove')
     try {
       await run('users/delete', { id: u.id })
-      invalidate('users/')
+      invalidate('users/', 'people/')
       toast.success(t('{name} removed', { name: u.name }))
       onClose()
     } catch (e) {

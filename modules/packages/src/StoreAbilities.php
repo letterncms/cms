@@ -40,14 +40,14 @@ final class StoreAbilities
         $install = ['expose' => ['mcp' => false, 'assistant' => false], 'permission' => 'packages.manage'];
         $read = ['annotations' => ['readOnly' => true], 'permission' => 'packages.manage'];
 
-        $a->register('packages/stores', [...$read,
+        $a->register('package-stores/list', [...$read,
             'label' => 'List Stores',
             'description' => 'The stores this site installs from, each with the fingerprint of its root key.',
             'output' => Shape::of(['items' => [['id' => Shape::STRING, 'url' => Shape::STRING_OR_NULL, 'name' => Shape::STRING, 'default' => Shape::BOOLEAN, 'fingerprint' => Shape::STRING_OR_NULL, 'problem' => Shape::STRING_OR_NULL]]]),
             'handler' => static fn () => ['items' => $client()->stores()],
         ]);
 
-        $a->register('packages/store-add', [...$install,
+        $a->register('package-stores/create', [...$install,
             'label' => 'Add Store',
             'description' => 'Read a store\'s name and root key fingerprint. Pinned only when confirm repeats that fingerprint. Code from a store runs with full access to this site.',
             'input' => ['type' => 'object', 'properties' => ['url' => ['type' => 'string', 'maxLength' => 500], 'confirm' => ['type' => 'string', 'maxLength' => 100]], 'required' => ['url']],
@@ -55,7 +55,7 @@ final class StoreAbilities
             'handler' => static fn (array $in) => $guard(static fn () => $client()->addStore($in['url'], $in['confirm'] ?? null)),
         ]);
 
-        $a->register('packages/store-remove', [...$install,
+        $a->register('package-stores/delete', [...$install,
             'label' => 'Remove Store',
             'description' => 'Forget a store. What it installed stays.',
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['id']],

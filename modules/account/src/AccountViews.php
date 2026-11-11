@@ -64,7 +64,7 @@ final class AccountViews
                         ['key' => 'expiresAt', 'label' => __('Expires'), 'format' => 'date', 'width' => '110px', 'empty' => __('Never')],
                     ],
                     'actions' => [
-                        ['label' => __('Revoke'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'tokens/revoke', 'input' => ['id' => '{row.id}'], 'success' => __('Token revoked'),
+                        ['label' => __('Revoke'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'tokens/delete', 'input' => ['id' => '{row.id}'], 'success' => __('Token revoked'),
                             'confirm' => ['title' => __('Revoke “{row.name}”?'), 'text' => __('Anything using it stops working immediately.'), 'confirm' => __('Revoke'), 'danger' => true]],
                     ],
                     'empty' => ['size' => 'sm', 'title' => __('No tokens yet')],

@@ -116,7 +116,7 @@ final class EntriesView
     {
         $page = ['group' => $group['id'], 'handle' => '{row.handle}'];
         $entry = ['id' => '{row.id}', 'expectedVersion' => '{row.version}'];
-        $open = ['label' => __('Open'), 'ability' => 'pages/customise', 'input' => $page, 'then' => 'open', 'to' => '/content/{result.collection}/{result.id}', 'when' => '{row.opens}'];
+        $open = ['label' => __('Open'), 'ability' => 'pages/customize', 'input' => $page, 'then' => 'open', 'to' => '/content/{result.collection}/{result.id}', 'when' => '{row.opens}'];
 
         return [
             'id' => "builtin.{$group['id']}", 'label' => __($group['label']), 'key' => 'handle', 'display' => false,
