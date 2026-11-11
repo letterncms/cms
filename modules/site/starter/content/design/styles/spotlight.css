@@ -1,0 +1,13 @@
+/* The light behind a block with the class `spotlight`. It rests at the top;
+   scripts/spotlight.js moves it with the pointer by setting --spot-x and --spot-y. */
+.spotlight { position: relative; isolation: isolate; }
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(32rem circle at var(--spot-x, 50%) var(--spot-y, 0%), color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 70%);
+  /* Fades out before the block ends, so the light has no edge. */
+  mask-image: linear-gradient(#000 50%, transparent);
+}
