@@ -1096,5 +1096,6 @@
   "Snap Type": "Type d’accroche",
   "Underline Offset": "Décalage du soulignement",
   "Vanishing Point": "Point de fuite",
-  "Drawn by “:name” on the site. Open the preview to see it.": "Dessiné par « :name » sur le site. Ouvrez l’aperçu pour le voir."
+  "Drawn by “:name” on the site. Open the preview to see it.": "Dessiné par « :name » sur le site. Ouvrez l’aperçu pour le voir.",
+  "An attribute names the block #:id, which is not on this page.": "Un attribut nomme le bloc #:id, qui n’est pas sur cette page."
 }

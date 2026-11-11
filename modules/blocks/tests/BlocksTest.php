@@ -95,6 +95,78 @@ final class BlocksTest extends TestCase
         $this->assertStringNotContainsString('background', $html);
     }
 
+    public function test_an_attribute_names_another_block_by_its_id(): void
+    {
+        $warnings = [];
+        $this->cms()->hooks()->on('render.warning', function (string $message) use (&$warnings) {
+            $warnings[] = $message;
+        });
+        $renderer = app(\Cms\Modules\Blocks\BlockRenderer::class);
+        $renderer->begin();
+        $html = $renderer->render(app(Document::class)->normalize([
+            ['id' => 'region', 'type' => 'box', 'props' => ['tag' => 'section'], 'attrs' => ['aria-labelledby' => '#title', 'aria-describedby' => '#lede written-by-hand #gone', 'title' => '#title'], 'children' => [
+                ['id' => 'title', 'type' => 'heading', 'props' => ['text' => 'Maps that move', 'level' => '2']],
+                ['id' => 'lede', 'type' => 'paragraph', 'props' => ['text' => 'A lede']],
+            ]],
+            ['id' => 'opener', 'type' => 'box', 'props' => ['tag' => 'button'], 'attrs' => ['aria-controls' => '#panel'], 'children' => []],
+            ['id' => 'panel', 'type' => 'box', 'anchor' => 'details', 'children' => []],
+        ]));
+
+        $this->assertStringContainsString('aria-labelledby="maps-that-move"', $html, 'a heading keeps the id links already point at');
+        $this->assertStringContainsString('<h2 class="cms-heading" data-cms="title" id="maps-that-move">', $html);
+        $this->assertStringContainsString('aria-describedby="cms-lede written-by-hand "', $html, 'a block without an id gets one; a word written by hand stays');
+        $this->assertStringContainsString('<p class="cms-paragraph" data-cms="lede" id="cms-lede">', $html);
+        $this->assertStringContainsString('aria-controls="details"', $html, 'a block with an anchor is named by it');
+        $this->assertStringContainsString('title="#title"', $html, 'only attributes that name elements are read this way');
+        $this->assertStringNotContainsString("\x1B", $html);
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString('#gone', $warnings[0]);
+    }
+
+    public function test_an_id_that_comes_from_data_is_escaped_where_it_is_named(): void
+    {
+        $renderer = app(\Cms\Modules\Blocks\BlockRenderer::class);
+        $renderer->begin();
+        $html = $renderer->render(app(Document::class)->normalize([
+            ['id' => 'opener', 'type' => 'box', 'props' => ['tag' => 'button'], 'attrs' => ['aria-controls' => '#panel'], 'children' => []],
+            ['id' => 'panel', 'type' => 'box', 'bind' => ['attr:id' => 'entry.title'], 'children' => []],
+        ]), new \Cms\Modules\Blocks\Scope(['entry' => ['title' => 'x" onmouseover="alert(1)']]));
+
+        $this->assertStringContainsString('aria-controls="x&quot; onmouseover=&quot;alert(1)"', $html);
+        $this->assertStringNotContainsString('" onmouseover="', $html, 'nothing breaks out of the attribute');
+        // As a browser reads it: one attribute holding the whole text, and no handler.
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<meta charset="utf-8">'.$html);
+        $button = $dom->getElementsByTagName('button')->item(0);
+        $this->assertSame('x" onmouseover="alert(1)', $button->getAttribute('aria-controls'));
+        $this->assertFalse($button->hasAttribute('onmouseover'));
+    }
+
+    public function test_in_a_repeat_each_item_names_its_own_blocks_under_ids_of_its_own(): void
+    {
+        $renderer = app(\Cms\Modules\Blocks\BlockRenderer::class);
+        $renderer->begin();
+        $html = $renderer->render(app(Document::class)->normalize([
+            ['id' => 'label', 'type' => 'paragraph', 'props' => ['text' => 'Outside']],
+            ['id' => 'rows', 'type' => 'repeat', 'props' => ['source' => 'list', 'path' => 'rows'], 'children' => [
+                ['id' => 'opener', 'type' => 'box', 'props' => ['tag' => 'button'], 'attrs' => ['aria-controls' => '#panel', 'aria-describedby' => '#label'], 'children' => []],
+                ['id' => 'panel', 'type' => 'box', 'children' => [['id' => 'text', 'type' => 'paragraph', 'bind' => ['text' => 'item.t']]]],
+            ]],
+            ['id' => 'after', 'type' => 'box', 'attrs' => ['aria-owns' => '#panel'], 'children' => []],
+        ]), new \Cms\Modules\Blocks\Scope(['rows' => [['t' => 'A'], ['t' => 'B'], ['t' => 'C']]]));
+
+        preg_match_all('/<button[^>]*aria-controls="([^"]+)" aria-describedby="([^"]+)"/', $html, $buttons);
+        preg_match_all('/<div class="cms-box" data-cms="panel" id="([^"]+)"><p[^>]*>([ABC])</', $html, $panels);
+        $this->assertSame(['cms-panel-1', 'cms-panel-2', 'cms-panel-3'], $panels[1], 'one id per item');
+        $this->assertSame(['A', 'B', 'C'], $panels[2]);
+        $this->assertSame($panels[1], $buttons[1], 'each button names the panel of its own item');
+        $this->assertSame(['cms-label', 'cms-label', 'cms-label'], $buttons[2], 'what is outside the list is named from every item');
+        $this->assertStringContainsString('aria-owns="cms-panel-1"', $html, 'from outside, a block in a list is the first item’s');
+        $this->assertStringNotContainsString("\x1B", $html);
+        preg_match_all('/ id="([^"]+)"/', $html, $ids);
+        $this->assertSame($ids[1], array_values(array_unique($ids[1])), 'no id twice');
+    }
+
     public function test_document_sanitizes_text_and_styles(): void
     {
         $nodes = app(Document::class)->normalize([

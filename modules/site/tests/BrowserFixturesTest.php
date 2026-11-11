@@ -123,8 +123,8 @@ final class BrowserFixturesTest extends TestCase
                 ['type' => 'paragraph', 'anchor' => 'deep', 'props' => ['text' => 'Deep in page two']],
                 // Alpine, on a page reached without a page load.
                 ['type' => 'box', 'logic' => ['data' => ['open' => false]], 'children' => [
-                    ['type' => 'box', 'props' => ['tag' => 'button'], 'anchor' => 'opener', 'logic' => ['attrs' => ['aria-expanded' => 'open'], 'on' => [['event' => 'click', 'actions' => [['do' => 'toggle', 'var' => 'open']]]]], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Open']]]],
-                    ['type' => 'box', 'anchor' => 'opened', 'logic' => ['show' => 'open'], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Now you see it']]]],
+                    ['type' => 'box', 'props' => ['tag' => 'button'], 'anchor' => 'opener', 'attrs' => ['aria-controls' => '#shown'], 'logic' => ['attrs' => ['aria-expanded' => 'open'], 'on' => [['event' => 'click', 'actions' => [['do' => 'toggle', 'var' => 'open']]]]], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Open']]]],
+                    ['id' => 'shown', 'type' => 'box', 'anchor' => 'opened', 'logic' => ['show' => 'open'], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Now you see it']]]],
                 ]],
                 ['type' => 'link', 'anchor' => 'with-query', 'props' => ['label' => 'Sign out', 'url' => '/one?signout=1']],
                 ['type' => 'link', 'anchor' => 'same-query', 'props' => ['label' => 'Add', 'url' => '/two?add=5']],

@@ -1096,5 +1096,6 @@
   "Snap Type": "Snap-type",
   "Underline Offset": "Afstand onderstreping",
   "Vanishing Point": "Verdwijnpunt",
-  "Drawn by “:name” on the site. Open the preview to see it.": "Getekend door ‘:name’ op de site. Open het voorbeeld om het te zien."
+  "Drawn by “:name” on the site. Open the preview to see it.": "Getekend door ‘:name’ op de site. Open het voorbeeld om het te zien.",
+  "An attribute names the block #:id, which is not on this page.": "Een attribuut noemt het blok #:id, dat niet op deze pagina staat."
 }

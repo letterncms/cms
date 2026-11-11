@@ -49,7 +49,19 @@ final class Renderer
 
         $context->addCode($this->code->for('templates', (string) ($template['handle'] ?? '')));
 
-        $html = $this->document($context, $template['blocks'], fn () => $this->body($entry), $entry->title, $bodyDocument, $templateDocument);
+        // What the template's Page content will render, for the blocks that name each other across the two.
+        $this->blocks->outletNodes = function () use ($entry): array {
+            $field = $entry->collection()->body;
+            $value = $field ? (new AugmentedEntry($entry))->field($field) : null;
+
+            return $value instanceof BlocksDocument ? $value->nodes : [];
+        };
+
+        try {
+            $html = $this->document($context, $template['blocks'], fn () => $this->body($entry), $entry->title, $bodyDocument, $templateDocument);
+        } finally {
+            $this->blocks->outletNodes = null;
+        }
 
         return ['html' => $html, 'status' => 200, 'context' => $context];
     }
