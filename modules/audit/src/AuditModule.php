@@ -87,11 +87,11 @@ final class AuditModule extends Plugin
                         ],
                         'columns' => [
                             ['key' => 'label', 'label' => __('Change'), 'muted' => 'subject'],
-                            ['key' => 'who', 'label' => __('Who'), 'width' => '160px'],
-                            ['key' => 'transport', 'label' => __('Via'), 'width' => '96px', 'format' => 'badge',
+                            ['key' => 'who', 'label' => __('Who'), 'width' => '160px', 'bare' => true],
+                            ['key' => 'transport', 'label' => __('Via'), 'width' => '96px', 'format' => 'badge', 'bare' => true,
                                 'labels' => ['admin' => __('Admin'), 'mcp' => __('Agent'), 'assistant' => __('Assistant'), 'rest' => __('API'), 'cli' => __('CLI'), 'install' => __('Installation')],
                                 'tones' => ['mcp' => 'info', 'assistant' => 'info']],
-                            ['key' => 'createdAt', 'label' => __('When'), 'width' => '140px', 'align' => 'end', 'format' => 'ago'],
+                            ['key' => 'createdAt', 'label' => __('When'), 'width' => '140px', 'align' => 'end', 'format' => 'ago', 'bare' => true],
                         ],
                         'open' => ['label' => __('Open'), 'dialog' => [
                             'title' => '{row.label}', 'text' => '{row.subject}', 'size' => 'lg',

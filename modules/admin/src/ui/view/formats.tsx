@@ -25,7 +25,8 @@ export interface FormatOptions {
 /** A file as `media/get-many` gives it. */
 export interface MediaThumb { id: string; thumb: string | null; url: string; alt?: string | null; kind?: string }
 
-const NONE = <span className="text-faint">—</span>
+// Nothing to say: a dash in its column, and on a phone no place in the row at all (app.css, `data-wide`).
+const NONE = <span data-wide="" className="text-faint">—</span>
 
 const empty = (value: unknown) => value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)
 
