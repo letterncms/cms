@@ -5,7 +5,7 @@ import { boot, events, Link, navigate, panelsFor, registry, request, t, useLocat
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
 import { BrandMark } from './Brand'
-import { getThemePreference, setThemePreference, type ThemePreference } from '../ui/theme'
+import { setThemePreference, useThemePreference } from '../ui/theme'
 import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
 import { inSettings, parentWay, placeAt, settingsRowAt, subscribeParent, wayBack } from '../ui/place'
 
@@ -341,17 +341,14 @@ function SettingsSidebar({ onNavigate, active }: { onNavigate?: () => void; acti
 /** Who is signed in, their menu, and the way into settings — the same in both states. */
 function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () => void }) {
   const manifest = useManifest()
-  const [theme, setTheme] = useState<ThemePreference>(getThemePreference())
+  const theme = useThemePreference()
 
   const signOut = async () => {
     await request('POST', 'auth/logout')
     window.location.href = boot.base
   }
 
-  const chooseTheme = (value: ThemePreference) => {
-    setThemePreference(value)
-    setTheme(value)
-  }
+  const chooseTheme = setThemePreference
 
   const toggleSettings = () => {
     if (settings) leaveSettings()

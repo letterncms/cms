@@ -22,6 +22,7 @@
 
 ### Changed
 
+- The admin's light, dark or system theme is kept on your account, so it is the same in every browser you sign in to, from the first paint. The account menu and the command palette show the same choice.
 - Chosen rows are a quiet grey instead of blue, and **Delete** in the selection bar is red like every other way into deleting. A list you can read at a glance (fewer than eight rows, nothing filtered) has no search or status filter; a language switch always stays. A row's menu button is the same size and in the same place on every row.
 - The command palette starts with what you can make and do; places come last, without the screen you are on. It offers only the theme you are not in, and a screen's Settings tab is listed only where Settings lists it. On a phone it fills the screen and has a Close button.
 - One word for one thing: the command palette lists what you can make under **New**, a row's drag handle says "Drag to Reorder", a calendar's undated records stand under "No Date", and the buttons that make a menu or a global set say **Create Menu** and **Create Global Set**.

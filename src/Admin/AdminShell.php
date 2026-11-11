@@ -79,8 +79,11 @@ final class AdminShell
         $title = e(config('app.name').' · Admin');
         $favicon = e(Brand::asset('mark.svg'));
         $noscript = e(__('The :brand admin needs JavaScript.'));
-        // Light or dark before the first paint (the person's choice, else the system's), so a dark admin never flashes white.
-        $scheme = "try{var p=localStorage.getItem('cms.theme');document.documentElement.dataset.theme=p==='dark'||(p!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}";
+        // Light or dark before the first paint, so a dark admin never flashes white: what the person's account says
+        // (their choice follows them to a browser that has never seen it), else what this browser kept, else the system's.
+        $theirs = $admin ? (((array) ($user->preferences ?? []))['theme'] ?? null) : null;
+        $theirs = json_encode(in_array($theirs, ['light', 'dark', 'system'], true) ? $theirs : null);
+        $scheme = "try{var a={$theirs},p=a||localStorage.getItem('cms.theme');if(a)localStorage.setItem('cms.theme',a);document.documentElement.dataset.theme=p==='dark'||(p!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}";
 
         $html = <<<HTML
 <!doctype html>
