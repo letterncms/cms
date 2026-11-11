@@ -54,6 +54,11 @@
 - **Settings say less.** The notes under fields are gone from General, Email, Assistant, the Audit Log's settings, visitor accounts, a collection's **Who Can Read This** and Sync's **Connect a Site**: a placeholder shows the shape where one helps (**Keep Entries For** reads **Forever** when empty). The password rule stays, because it must be met.
 - One word for one act on the system screens: a user is deleted with **Delete User** (it was Remove User), an access name is added with **Add Access**, Sync's dialog button is **Connect Site**, and **Replace Key** (it was Make a New Key, confirmed with New Key) says what it does to this site's key. **Send Test Email** carries the send icon instead of a second envelope. Profile Fields sits at the width of every other form and no longer explains itself.
 - **Users**: Edit User and Invite User are one form with the dialog's own **Save** or **Send Invitation**; **Suspend**, **Resend Invitation** and **Delete User** sit under it, and the dialog shows its shape while a person loads instead of nothing. What a person may read beyond their roles is one field, **Page Access**, at the size of the others. **Roles**: the list of roles is the admin's own list, keyboard and touch sized, each role says how many people hold it in words, permission groups are headed like every section, and **Delete Role** is the red button deleting has everywhere.
+- **Plugins › Store** is one list of rows, like every list of the admin, instead of a grid of cards: what the store features leads it instead of standing a second time under All Plugins. A row says only what differs: no price badge where nothing is sold, no author where there is one. Categories are a select, shown once a category holds more than one plugin. Adding a store asks in the admin's words (**Add Store**, **Store Address**, **Check Store**, **Key Fingerprint**).
+
+### Fixed
+
+- **Plugins › Updates** no longer says "All plugins are up to date" above a list of plugins no store can check: with none from a store it says **No plugins to check**, and plugins that are not from a store are named only beside ones that are. A site updated with Composer says so in four words, not an instruction.
 
 ### Fixed
 
