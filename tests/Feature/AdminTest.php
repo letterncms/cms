@@ -190,7 +190,7 @@ final class AdminTest extends TestCase
         $this->assertSame(['pages', 'shop'], [$collections['shop-pages']['within'], $collections['shop-pages']['tab']]);
 
         $groups = array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id');
-        $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'version' => null, 'status' => 'standard', 'displayStatus' => 'standard', 'publishedAt' => null, 'updatedAt' => null,
+        $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'version' => null, 'status' => 'standard', 'displayStatus' => 'published', 'publishedAt' => null, 'updatedAt' => null,
             'href' => '/basket', 'group' => 'shop', 'collection' => 'shop-pages', 'customisable' => true, 'opens' => true, 'restorable' => false]], $groups['shop']['pages']);
         $this->assertSame(1, $groups['shop']['total']);
         $this->assertSame(['shop'], array_column($this->cms()->abilities()->execute('pages/builtin', ['group' => 'shop'], $ctx), 'id'), 'One group, asked by its id');

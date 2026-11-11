@@ -1,4 +1,6 @@
 {
+  ":count collections": ":count collecties",
+  ":count entries": ":count items",
   "“{title}” is now a component": "“{title}” is nu een component",
   "{brand}: abilities": "{brand}: acties",
   "{brand}: abilities by namespace": "{brand}: acties per namespace",
@@ -21,6 +23,7 @@
   "{name} (add a field handle)": "{name} (voeg een veldhandle toe)",
   "{name} Details": "{name}-details",
   "&::placeholder": "&::placeholder",
+  "1 entry": "1 item",
   "1:1 square": "1:1 vierkant",
   "2XL": "2XL",
   "3 or 1fr 2fr": "3 of 1fr 2fr",
@@ -618,6 +621,7 @@
   "Missing component": "Ontbrekend component",
   "Missing component “:name”": "Ontbrekend component “:name”",
   "Missing image: :image": "Afbeelding ontbreekt: :image",
+  "Missing pages": "Ontbrekende pagina’s",
   "Mode": "Modus",
   "More Block Actions": "Meer blokacties",
   "More States": "Meer statussen",

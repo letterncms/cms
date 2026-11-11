@@ -122,8 +122,10 @@ final class ContentAbilities
                         };
                         // Where it opens once it is the site's own, and whether this person may make it so.
                         // Listed as the site's pages are: what is live, and when it last changed. The standard version is live until the site's own is published.
+                        // Which version the site shows is `status`; how that version stands is `displayStatus`, and the standard one is published.
                         $display = match (true) {
-                            $status === 'conflict' || $entry === null => $status,
+                            $status === 'conflict' => $status,
+                            $entry === null => 'published',
                             $entry->isLive() => $entry->displayStatus(),
                             default => 'changed',
                         };
@@ -962,6 +964,7 @@ final class ContentAbilities
             ...Shapes::entrySummaryKeys(), 'author' => Shape::nullable(Shapes::person()),
             'translations?' => [Shape::STRING],
             'editingBy?' => Shape::STRING,
+            'usedBy?' => Shape::STRING,
             'values?' => Shape::open('The data fields asked for with `fields`, by handle: a users field as a list of people ({id, name, initials, avatar}), an entries field as a list of {id, collection, title}, any other as it is stored (the collection\'s schema is in collections/get).'),
         ];
     }

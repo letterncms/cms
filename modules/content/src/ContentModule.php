@@ -102,7 +102,7 @@ final class ContentModule extends Plugin
     /**
      * One collection's place: its name and size, its New button, and its entries. The site's pages
      * have a tab beside them for each feature that brings pages of its own (sign in, checkout),
-     * named after it, with the same list.
+     * named for what it lists, with the same list.
      */
     private function view(string $handle, User $user): array
     {
@@ -141,11 +141,11 @@ final class ContentModule extends Plugin
         ]]]];
     }
 
-    /** The features with pages of their own this person may see, named as the plugin is. */
+    /** The features with pages of their own this person may see, each named for what it lists (the label it registered them under), not after its plugin: a tab called like a sidebar item reads as a second door to it. */
     private function builtinGroups(User $user): array
     {
         return array_values(array_map(
-            static fn (array $group) => ['id' => $group['id'], 'label' => \Cms\Packages\PackageRepository::labelOf($group['package']) ?? $group['label']],
+            static fn (array $group) => ['id' => $group['id'], 'label' => $group['label']],
             array_filter($this->cms()->builtinPages()->all(), static fn (array $group) => $user->hasPermission("entries.{$group['collection']}.view") && ($group['pages'])() !== []),
         ));
     }

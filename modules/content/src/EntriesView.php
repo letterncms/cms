@@ -127,8 +127,12 @@ final class EntriesView
             'columns' => [
                 ['key' => 'label', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)'],
                 ['key' => 'path', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'empty' => __('Shown inside other pages')],
-                ['key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '104px',
-                    'tones' => ['standard' => 'neutral', 'conflict' => 'warning'], 'labels' => ['standard' => __('Standard'), 'conflict' => __('Address Taken')]],
+                // Which version the site shows is one thing, how that version stands another: the standard one is live, so it is Published. A customized
+                // version only drafted is not on the site yet: the site still shows the Standard one.
+                ['key' => 'status', 'label' => __('Version'), 'width' => '120px',
+                    'labels' => ['standard' => __('Standard'), 'conflict' => __('Standard'), 'customised' => __('Customized'), 'draft' => __('Standard')]],
+                ['key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '128px',
+                    'tones' => ['conflict' => 'warning'], 'labels' => ['conflict' => __('Address Taken')]],
                 ['key' => 'published', 'label' => __('Published')],
                 ['key' => 'updated', 'label' => __('Updated')],
             ],
@@ -164,9 +168,9 @@ final class EntriesView
         $routable = $collection->routable();
         $excerpt = self::excerpt($fields);
         $media = array_values(array_filter($fields, static fn ($f) => $f['type'] === 'media'))[0] ?? null;
-        $shown = $collection->defaultColumns ?? [
+        $shown = [...($collection->defaultColumns ?? [
             ...($routable ? ['uri'] : []), 'status', 'published', 'updated',
-        ];
+        ]), ...($collection->system && ! $routable ? ['used', 'updated'] : [])];
         // Cards show the picture and a few lines too, unless the collection says what to show.
         $cards = $collection->defaultColumns === null ? array_filter([$media ? "field:{$media['handle']}" : null, $excerpt ? "field:{$excerpt['handle']}" : null]) : [];
 
@@ -175,6 +179,13 @@ final class EntriesView
 
         if ($routable) {
             $columns[] = ['id' => 'uri', 'key' => 'uri', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'sort' => 'uri'];
+        }
+        // What a site is built from (its templates, its components) is not a page of its own: its list has few columns, so the
+        // title keeps to its words and the state stands beside it, and it says where each one is used (`usedBy`, from whoever knows).
+        $parts = $collection->system && ! $routable;
+        if ($parts) {
+            $columns[0]['width'] = 'minmax(200px,420px)';
+            $columns[] = ['id' => 'used', 'key' => 'usedBy', 'label' => __('Used By'), 'width' => 'minmax(160px,1fr)', 'empty' => __('Nothing')];
         }
         $columns[] = ['id' => 'status', 'key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '104px', 'sort' => 'status'];
 
