@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.21.0 (2026-11-11)
+
 ### Changed
 
 - **Pages**: the pages a feature brings, like sign-in and checkout, have a tab beside your own pages, one per feature (**Site**, **Account**, **Market**, and any plugin's), instead of a section under the list. Each tab is the same list: search, the same columns and the same statuses, where **Standard** is the version the feature ships and **Changes** means your version waits to be published.
