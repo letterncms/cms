@@ -49,6 +49,7 @@
 - **Breaking.** `@letterncms/ui`: `confirm()` and `prompt()` require `confirm`, the label of the button that goes through with it, as a verb ("Delete", "Rename"): the "Confirm" and "OK" fallbacks are gone.
 - The chat: a chat that has nothing in it yet is titled **Chat** (New Chat is the action), a site without an assistant asks "What are you looking for?" above its search field, past chats carry an icon so they read as chats, and a list that fails to load says so with **Try Again**.
 - The save bar's **Discard** and **Save** are the same buttons as everywhere else, its warning reads in the dark theme, and it no longer has a yellow dot: yellow is for publishing. `data-theme` on an element inside the admin sets that piece in the theme it names; `useTheme()` says which theme is on view.
+- **History** shows a version before it restores it: an older version opens to what restoring it would change, field by field, the words that go beside the words that come back, with **Restore Version** under it. A version opens with a click, a tap or the keyboard; Restore no longer waits for a pointer to rest on the row.
 
 ### Removed
 
