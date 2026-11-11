@@ -1,7 +1,7 @@
 import { registry, t, useManifestIfLoaded, type FieldContext, type FieldDef } from '@letterncms/sdk'
 import { useSyncExternalStore } from 'react'
 import { cn } from './cn'
-import { Field, FieldError } from './Field'
+import { Field, FieldError, SharedMark } from './Field'
 import { fieldControlId } from './fieldIdentity'
 import { Tooltip } from './Tooltip'
 
@@ -47,6 +47,8 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
   const controlId = (field: FieldDef) => fieldControlId(field, context.path)
   const fieldError = (field: FieldDef) => errors[[...(context.path ?? []), field.handle].join('.')]
   const accessible = (field: FieldDef): FieldDef => ({ ...field, id: controlId(field), describedBy: fieldError(field) ? `${controlId(field)}-error` : field.instructions && !bare && layout !== 'inline' ? `${controlId(field)}-help` : undefined })
+  // One field of a form can be closed while the others are open (`readOnly`): a value that is set elsewhere. In every layout.
+  const closed = (field: FieldDef) => disabled || field.readOnly === true
   const shown = fields.filter((field) => visible(field, values))
   if (bare && layout === 'stacked' && shown.length === 1) {
     const field = shown[0]
@@ -55,7 +57,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
     if (!Component) return null
     return (
       <div data-field={field.handle} className={cn(className, field.className as string | undefined)}>
-        <Component field={accessible(field)} value={values[field.handle] ?? field.default ?? null} onChange={(v: unknown) => onChange(field.handle, v)} error={fieldError(field)} disabled={disabled} context={{ ...context, values, errors }} />
+        <Component field={accessible(field)} value={values[field.handle] ?? field.default ?? null} onChange={(v: unknown) => onChange(field.handle, v)} error={fieldError(field)} disabled={closed(field)} context={{ ...context, values, errors }} />
         {fieldError(field) && <FieldError id={`${controlId(field)}-error`}>{fieldError(field)}</FieldError>}
       </div>
     )
@@ -77,7 +79,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
             <div data-field={field.handle} key={field.handle} className={cn('flex min-w-0', stacked ? 'flex-col items-stretch gap-1 py-0.5' : 'items-center gap-2', field.className ? (field.className as string) : 'min-h-7')}>
               {!bare && field.type !== 'toggle' && <InlineLabel field={accessible(field)} stacked={stacked} width={labelWidth} />}
               <div className={cn('min-w-0', !stacked && 'flex-1')}>
-                <Component field={accessible(field)} value={values[field.handle] ?? field.default ?? null} onChange={(v: unknown) => onChange(field.handle, v)} error={fieldError(field)} disabled={disabled} context={{ ...context, values, errors }} />
+                <Component field={accessible(field)} value={values[field.handle] ?? field.default ?? null} onChange={(v: unknown) => onChange(field.handle, v)} error={fieldError(field)} disabled={closed(field)} context={{ ...context, values, errors }} />
                 {fieldError(field) && <FieldError id={`${controlId(field)}-error`} className="mt-1">{fieldError(field)}</FieldError>}
               </div>
             </div>
@@ -100,7 +102,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
             value={values[field.handle] ?? field.default ?? null}
             onChange={(v: unknown) => onChange(field.handle, v)}
             error={fieldError(field)}
-            disabled={disabled}
+            disabled={closed(field)}
             context={{ ...context, values, errors }}
           />
         )
@@ -122,7 +124,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
               </>
             ) : (
               // A single select always holds a value: marking it required tells nobody anything.
-              <Field label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} required={(field.required || (!!field.required_if && holds(field.required_if, values))) && !(field.type === 'select' && !field.multiple)}>
+              <Field label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} aside={typeof field.shared === 'string' ? <SharedMark from={field.shared} /> : undefined} required={(field.required || (!!field.required_if && holds(field.required_if, values))) && !(field.type === 'select' && !field.multiple)}>
                 {control}
               </Field>
             )}

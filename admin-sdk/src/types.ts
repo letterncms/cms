@@ -341,6 +341,8 @@ export interface Entry extends EntrySummary {
   /** The blueprint it was made with, in a collection that has several; null for the collection's own fields. */
   blueprint?: string | null
   translations?: Record<string, string>
+  /** On a translation: the fields that hold one value for every language and follow the original (`originId`). */
+  sharedFields?: string[]
 }
 
 export interface Page<T> {

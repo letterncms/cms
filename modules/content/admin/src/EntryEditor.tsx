@@ -6,7 +6,7 @@ import {
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import {
   Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, NotFoundState, Notice, Page, QueryError,
-  ScreenSidebar, Spinner, StatusDot, Tabs, statusLabel, Tooltip, Topbar, confirm, cn, entryActionAvailability,
+  ScreenSidebar, SharedMark, Spinner, StatusDot, Tabs, statusLabel, Tooltip, Topbar, confirm, cn, entryActionAvailability,
   copyText, fieldControlId, toast, useShortcut, useWideInspector,
 } from '@letterncms/ui'
 import { useCollection, withBlueprint, type CollectionDef } from './useCollection'
@@ -28,7 +28,13 @@ export default function EntryEditor({ params }: { params: Record<string, string>
   const blueprint = isNew ? (defined?.resolvedBlueprints?.some((b) => b.handle === query.blueprint) ? query.blueprint! : null) : entryQuery.data?.blueprint ?? null
   // Wherever New was pressed (the list, the command palette, a widget): with several kinds and none chosen yet, that is asked first.
   const asks = isNew && !!defined?.resolvedBlueprints?.length && query.blueprint === undefined
-  const collection = useMemo(() => defined && withBlueprint(defined, blueprint), [defined, blueprint])
+  // On a translation, the fields that hold one value for every language are the original's: shown, not changed here.
+  const shared = entryQuery.data?.sharedFields
+  const origin = Object.entries(entryQuery.data?.translations ?? {}).find(([, id]) => id === entryQuery.data?.originId)?.[0] ?? manifest.site.defaultLocale
+  const collection = useMemo(() => {
+    const own = defined && withBlueprint(defined, blueprint)
+    return own && shared?.length ? { ...own, resolvedFields: own.resolvedFields.map((field) => shared.includes(field.handle) ? { ...field, readOnly: true, shared: origin } : field) } : own
+  }, [defined, blueprint, shared?.join(','), origin])
   const list = listOf(manifest, params.collection, entryQuery.data?.locale ?? query.locale)
   const retryLoad = () => {
     void entryQuery.refetch()
@@ -562,7 +568,11 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
             <article className="mx-auto w-full max-w-[784px] px-6 pb-24 pt-12 md:px-8 md:pt-16">
               {header}
               {bodyField?.type === 'blocks' ? <EmptyState icon="blocks" title={t('Block editor unavailable')} /> : bodyField && (
-                <div className="mt-8" data-cms-body><Fields bare fields={[bodyField]} values={working.data} onChange={setValue} errors={errors} disabled={!panelProps.editable} context={{ ...fieldContext, title: working.title }} /></div>
+                <div className="mt-8" data-cms-body>
+                  {/* The body has no label to carry the mark: it stands above it. */}
+                  {typeof bodyField.shared === 'string' && <SharedMark from={bodyField.shared} className="mb-2" />}
+                  <Fields bare fields={[bodyField]} values={working.data} onChange={setValue} errors={errors} disabled={!panelProps.editable} context={{ ...fieldContext, title: working.title }} />
+                </div>
               )}
               {bodyPanels.map((panel) => <panel.component key={panel.id} {...panelProps} />)}
             </article>
@@ -688,8 +698,9 @@ interface PropertyRowProps {
 function PropertyRow({ field, value, onChange, error, disabled, context, values }: PropertyRowProps) {
   return (
     <div className="grid grid-cols-[148px_minmax(0,1fr)] items-start gap-3 py-0.5">
-      <div className="flex h-8 items-center truncate text-sm text-muted" title={field.instructions ?? field.label}>
-        {field.label}
+      <div className="flex h-8 min-w-0 items-center gap-1.5 text-sm text-muted" title={field.instructions ?? field.label}>
+        <span className="truncate">{field.label}</span>
+        {typeof field.shared === 'string' && <SharedMark from={field.shared} />}
       </div>
       <div className="min-w-0">
         <Fields
