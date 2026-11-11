@@ -171,7 +171,9 @@ final class SettingsRegistry
 
         if ($schema) {
             try {
-                $merged = Blueprint::make($this->fields($namespace))->process($merged);
+                $blueprint = Blueprint::make($this->fields($namespace));
+                $merged = $blueprint->process($merged);
+                $blueprint->check($merged, $stored);
             } catch (SchemaException $e) {
                 throw AbilityException::invalid($e->getMessage(), $e->errors);
             }

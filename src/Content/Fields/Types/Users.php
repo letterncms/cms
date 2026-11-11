@@ -35,6 +35,19 @@ class Users extends FieldType
         return [];
     }
 
+    public function check(mixed $value, Field $field, mixed $previous = null): array
+    {
+        $new = array_diff(array_filter((array) $value, 'is_string'), array_filter((array) $previous, 'is_string'));
+
+        if ($new === []) {
+            return [];
+        }
+
+        $found = User::query()->whereIn('id', array_values($new))->pluck('id')->flip();
+
+        return array_map(static fn () => __('This person does not exist.'), array_filter($new, static fn (string $id) => ! isset($found[$id])));
+    }
+
     public function augment(mixed $value, Field $field): mixed
     {
         $users = User::query()->whereIn('id', (array) $value)->get(['id', 'name', 'avatar'])->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'avatar' => $u->avatar])->all();

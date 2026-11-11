@@ -62,7 +62,9 @@ final class GlobalRepository
         $set = $this->findOrFail($handle);
 
         try {
-            $values = $set->blueprint()->process(array_replace($set->values($locale), $values));
+            $stored = $set->values($locale);
+            $values = $set->blueprint()->process(array_replace($stored, $values));
+            $set->blueprint()->check($values, $stored);
         } catch (SchemaException $e) {
             throw AbilityException::invalid($e->getMessage(), $e->errors);
         }

@@ -121,7 +121,7 @@ final class EntryService
         return $this->write(function () use ($source, $input, $user): Entry {
             $input['authorId'] = $source->working()['authorId'];
 
-            return $this->createUnlocked($source->collection, $input, $user, allowMissingAuthor: true);
+            return $this->createUnlocked($source->collection, $input, $user, allowMissingAuthor: true, copied: true);
         });
     }
 
@@ -181,7 +181,7 @@ final class EntryService
     /**
      * @param  array{title: string, slug?: ?string, data?: array, locale?: ?string, parentId?: ?string, position?: ?int, status?: ?string, at?: ?string, originId?: ?string, authorId?: ?string}  $input
      */
-    private function createUnlocked(string $collectionHandle, array $input, ?User $user = null, bool $allowMissingAuthor = false): Entry
+    private function createUnlocked(string $collectionHandle, array $input, ?User $user = null, bool $allowMissingAuthor = false, bool $copied = false): Entry
     {
         if (array_diff(array_keys($input), ['collection', 'title', 'slug', 'data', 'locale', 'parentId', 'position', 'status', 'at', 'originId', 'authorId']) !== []) {
             throw AbilityException::invalid(__('Unsupported entry properties.'));
@@ -213,7 +213,8 @@ final class EntryService
             slug: '',
             title: $title,
             status: 'draft',
-            data: $this->process($collection, $data, full: $publish),
+            // A copy keeps what its source names, also what has since been deleted.
+            data: $this->process($collection, $data, full: $publish, previous: $copied ? $data : []),
             originId: $input['originId'] ?? null,
             parentId: $parentId,
             position: $input['position'] ?? $this->nextPosition($collection, $parentId, $locale),
@@ -262,7 +263,7 @@ final class EntryService
         if ($working['title'] === '') {
             throw AbilityException::invalid(__('A title is required.'), ['title' => __('Is required.')]);
         }
-        $working['data'] = $this->process($collection, array_replace($working['data'], (array) ($input['data'] ?? [])), full: $publish);
+        $working['data'] = $this->process($collection, array_replace($working['data'], (array) ($input['data'] ?? [])), full: $publish, previous: $working['data']);
         if (array_key_exists('authorId', $input) && $input['authorId'] !== $working['authorId']) {
             $working['authorId'] = $this->authorId($input['authorId']);
         }
@@ -583,10 +584,18 @@ final class EntryService
         }
     }
 
-    private function process(Collection $collection, array $data, bool $full): array
+    /**
+     * @param  ?array  $previous  The data stored before, when this is a write of new values: the entries, people and
+     *                            files they name must exist, except those the entry already named. Null: not checked
+     *                            (publishing or restoring what was stored).
+     */
+    private function process(Collection $collection, array $data, bool $full, ?array $previous = null): array
     {
         try {
-            return $collection->blueprint()->process($data, partial: ! $full);
+            $data = $collection->blueprint()->process($data, partial: ! $full);
+            $previous === null || $collection->blueprint()->check($data, $previous);
+
+            return $data;
         } catch (SchemaException $e) {
             // Paths as the caller sent them: a field's value is under `data`, as the collection's schema says (collections/schema).
             $e = $e->under('data');

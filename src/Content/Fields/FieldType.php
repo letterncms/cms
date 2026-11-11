@@ -39,6 +39,19 @@ abstract class FieldType
         return $field->default;
     }
 
+    /**
+     * What a schema cannot say: that what a value names is there (an entry, a person, a file). Called on a
+     * normalized value where records are written.
+     *
+     * @param  mixed  $previous  The value stored before: what it already named is not checked again, so a record
+     *                           that points at something since deleted can still be saved.
+     * @return array<string, string> Path below the field ('' for the field itself) => message.
+     */
+    public function check(mixed $value, Field $field, mixed $previous = null): array
+    {
+        return [];
+    }
+
     /** Value as templates see it (e.g. relations resolved, markdown rendered). */
     public function augment(mixed $value, Field $field): mixed
     {

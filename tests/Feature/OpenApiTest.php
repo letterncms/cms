@@ -178,7 +178,7 @@ final class OpenApiTest extends TestCase
         // Public: no token, said per operation.
         $this->assertSame([], $list['security']);
         $this->assertSame([], $show['security']);
-        $this->assertSame(['collection', 'locale', 'q', 'sort', 'filter', 'limit', 'page'], array_column($list['parameters'], 'name'));
+        $this->assertSame(['collection', 'locale', 'q', 'sort', 'filter', 'references', 'references_field', 'limit', 'page'], array_column($list['parameters'], 'name'));
         $this->assertSame(['collection', 'slug', 'locale'], array_column($show['parameters'], 'name'));
 
         $content = $this->cms()->entryService();

@@ -27,7 +27,7 @@ final class DeliveryController
         $sort = ltrim((string) $request->query('sort', $collection->sort), '-');
 
         // Searching, filtering or sorting on withheld text would reveal it one guess at a time.
-        if ($request->filled('q') || $request->query('filter') || ! EntryQuery::isColumn($sort)) {
+        if ($request->filled('q') || $request->query('filter') || $request->filled('references') || ! EntryQuery::isColumn($sort)) {
             ($teasers = $this->cms->entries()->gate()->teaserIds()) && $query->where('id', 'not in', $teasers);
         }
 
@@ -35,6 +35,13 @@ final class DeliveryController
             if (is_string($field) && is_scalar($value)) {
                 $query->where($field, (string) $value);
             }
+        }
+
+        // The reverse of a relation: entries that name this one. An entry this reader may not read matches nothing.
+        if (is_string($id = $request->query('references')) && $id !== '') {
+            $target = $this->cms->entries()->query()->live()->where('id', strtolower($id))->first();
+            $field = $request->query('references_field');
+            $query->references($target && $target->gated !== 'locked' ? $target->id : '', is_string($field) && preg_match('/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/', $field) ? $field : null);
         }
 
         $query->orderBy((string) $request->query('sort', $collection->sort));

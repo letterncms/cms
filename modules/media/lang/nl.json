@@ -83,6 +83,7 @@
   "The file is larger than the server allows.": "Het bestand is groter dan de server toestaat.",
   "The image is too large to process (over 60 megapixels).": "De afbeelding is te groot om te verwerken (meer dan 60 megapixels).",
   "The latest files in the media library.": "De nieuwste bestanden in de mediabibliotheek.",
+  "This file does not exist.": "Dit bestand bestaat niet.",
   "This file is still used by :where.": "Dit bestand wordt nog gebruikt door :where.",
   "This image could not be read.": "Deze afbeelding kon niet worden gelezen.",
   "This SVG is not allowed.": "Deze SVG is niet toegestaan.",
@@ -108,6 +109,7 @@
   "This model points at other files, which it won’t find here. Export it as one .glb with everything inside.": "Dit model verwijst naar andere bestanden, die het hier niet vindt. Exporteer het als één .glb met alles erin.",
   "This file could not be read.": "Dit bestand kon niet worden gelezen.",
   "This .glb could not be read.": "Deze .glb kon niet worden gelezen.",
+  "This kind of file is not allowed here.": "Dit soort bestand is hier niet toegestaan.",
   "This Lottie animation has expressions, which run as code in the visitor’s browser. Export it without expressions.": "Deze Lottie-animatie bevat expressies, die als code in de browser van de bezoeker draaien. Exporteer haar zonder expressies.",
   "This Lottie animation loads a font from an address. Export it with its text converted to shapes, or with fonts the page already has.": "Deze Lottie-animatie laadt een lettertype van een adres. Exporteer haar met de tekst omgezet naar vormen, of met lettertypen die de pagina al heeft.",
   "This Lottie animation loads images from another server. Export it with its images embedded.": "Deze Lottie-animatie laadt afbeeldingen van een andere server. Exporteer haar met de afbeeldingen ingesloten."

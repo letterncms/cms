@@ -281,6 +281,8 @@ final class ContentAbilities
                 'filters' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'field' => ['type' => 'string'], 'operator' => ['type' => 'string', 'default' => '='], 'value' => ['description' => 'Value to compare against; any type.'],
                 ], 'required' => ['field']]],
+                'references' => [...self::ID, 'description' => 'Only entries that name this entry anywhere in their data: relation and terms fields at any depth, link fields, links in blocks (the reverse of a relation). references/list does the same across every collection.'],
+                'referencesField' => ['type' => 'string', 'pattern' => '^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$', 'description' => 'With `references`: only inside this field (a group\'s as group.field).'],
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 25],
             ], 'required' => ['collection']],
@@ -299,6 +301,10 @@ final class ContentAbilities
 
                 foreach ($in['filters'] ?? [] as $filter) {
                     $query->where($filter['field'], $filter['operator'] ?? '=', $filter['value'] ?? null);
+                }
+
+                if (isset($in['references'])) {
+                    $query->references($in['references'], $in['referencesField'] ?? null);
                 }
 
                 $sort = ($in['sort'] ?? '') !== '' ? $in['sort'] : $collection->sort;
@@ -626,6 +632,36 @@ final class ContentAbilities
                 static fn (Entry $e) => $e->toSummary(),
                 array_filter($this->cms->entries()->findMany($in['ids']), fn (Entry $e) => $ctx->system || $this->allowed($ctx->user, $e->collection, 'view'))
             )),
+        ]);
+
+        $a->register('references/list', [
+            'label' => 'List References',
+            'description' => 'The entries that name an entry, across the collections you can view: what links to it. An entry names another when its data has the other\'s id anywhere: a relation or terms field at any depth (groups, rows of a repeater or a matrix), a link field, a link or a relation in a block. Read it before deleting an entry others point at. `fields` says in which of its fields each one names it.',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'id' => self::ID,
+                'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
+                'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 25],
+            ], 'required' => ['id']],
+            'output' => Shape::page(Shapes::entrySummary()->with(['fields' => [Shape::STRING]]), ['perPage' => Shape::INTEGER]),
+            'handler' => function (array $in, AbilityContext $ctx) {
+                $target = $this->cms->entries()->find($in['id']) ?? throw new AbilityException(__('This entry no longer exists.'), 'not_found');
+                $handles = array_values(array_filter(array_keys($this->cms->collections()->all()), fn ($h) => $ctx->system || $this->allowed($ctx->user, $h, 'view')));
+
+                if ($handles === []) {
+                    return ['items' => [], 'total' => 0, 'page' => 1, 'perPage' => $in['perPage'], 'pages' => 1];
+                }
+
+                $page = $this->cms->entries()->query()->working()->ungated()->collection(...$handles)->references($target->id)->orderBy('title')->paginate($in['perPage'], $in['page']);
+                // The top-level fields whose value has the id somewhere in it.
+                $fields = static fn (Entry $e): array => array_values(array_map('strval', array_keys(array_filter(
+                    (array) $e->working()['data'],
+                    static fn (mixed $value) => str_contains(strtolower((string) json_encode($value)), $target->id),
+                ))));
+
+                return [...$page, 'items' => array_map(static fn (Entry $e) => [...$e->toSummary(), 'fields' => $fields($e)], $page['items'])];
+            },
         ]);
 
         $a->register('content/recent', [

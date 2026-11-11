@@ -168,6 +168,23 @@ final class RenderingTest extends TestCase
         $this->assertSame('Built for agencies Launch notes', $text);
     }
 
+    public function test_a_repeat_lists_the_entries_that_link_to_the_page(): void
+    {
+        $content = $this->cms()->entryService();
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('posts', [...$this->collections()['posts'], 'fields' => [...$this->collections()['posts']['fields'], ['handle' => 'about', 'type' => 'entries', 'collections' => ['pages']]]]));
+        $page = $content->create('pages', ['title' => 'Topic', 'slug' => 'topic', 'status' => 'published', 'data' => ['content' => [
+            ['type' => 'repeat', 'props' => ['source' => 'entries', 'collection' => 'posts', 'sort' => 'title', 'references' => 'current'], 'children' => [['type' => 'paragraph', 'bind' => ['text' => 'item.title']]]],
+        ]]]);
+        $content->create('posts', ['title' => 'On topic', 'status' => 'published', 'data' => ['about' => [$page->id]]]);
+        $content->create('posts', ['title' => 'Also on topic', 'status' => 'published', 'data' => ['about' => [$page->id]]]);
+        $content->create('posts', ['title' => 'Elsewhere', 'status' => 'published', 'data' => []]);
+
+        $entry = $this->cms()->entries()->find($page->id);
+        $nodes = $this->app->make(Renderer::class)->materialize($entry, $entry->data['content']);
+
+        $this->assertSame('Also on topic On topic', $this->app->make(\Cms\Modules\Blocks\Document::class)->text($nodes));
+    }
+
     public function test_without_templates_a_page_still_renders_its_content(): void
     {
         $page = $this->cms()->entryService()->create('pages', ['title' => 'Bare', 'slug' => 'bare', 'status' => 'published', 'data' => ['content' => [['type' => 'heading', 'props' => ['text' => 'Hello', 'level' => '1']]]]]);
