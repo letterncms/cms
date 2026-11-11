@@ -55,6 +55,9 @@ final class BrowserFixturesTest extends TestCase
             $this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
         }
 
+        // The design styles emphasis inside a heading, which needs a selector two tags deep.
+        $this->cms()->abilities()->execute('design/update', ['styles' => [...$this->app->make(\Cms\Modules\Site\Design\Design::class)->json()->styles(), 'h2 em' => ['fontStyle' => 'normal', 'color' => 'rgb(7, 8, 9)']]], \Cms\Abilities\AbilityContext::system('test'));
+
         $status = $this->app->make(SiteBuilder::class)->buildAll();
         $this->assertSame([], $status['errors']);
         $this->assertSame([], $status['warnings']);
@@ -143,6 +146,8 @@ final class BrowserFixturesTest extends TestCase
             ],
             // Styles for dark, on a site that follows the visitor's system.
             'Dark' => [
+                ['type' => 'heading', 'anchor' => 'water', 'props' => ['text' => 'Land and <em>water</em>', 'level' => '2']],
+                ['type' => 'paragraph', 'anchor' => 'prose-em', 'props' => ['text' => 'Plain <em>emphasis</em>']],
                 ['type' => 'box', 'anchor' => 'plain', 'style' => ['base' => ['backgroundColor' => 'rgb(250, 250, 250)', 'height' => '40px'], 'dark' => ['backgroundColor' => 'rgb(1, 2, 3)']], 'children' => []],
                 ['type' => 'box', 'anchor' => 'narrow', 'style' => ['base' => ['backgroundColor' => 'rgb(250, 250, 250)', 'height' => '40px'], 'mobile' => ['backgroundColor' => 'rgb(240, 240, 240)'], 'mobile:dark' => ['backgroundColor' => 'rgb(4, 5, 6)']], 'children' => []],
                 ['type' => 'box', 'anchor' => 'hovered', 'style' => ['base' => ['color' => 'rgb(10, 10, 10)'], 'hover' => ['color' => 'rgb(20, 20, 20)'], 'dark' => ['color' => 'rgb(200, 200, 200)']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Text']]]],

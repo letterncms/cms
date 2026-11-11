@@ -314,6 +314,9 @@ const checks = {
     const background = (id) => `getComputedStyle(document.getElementById('${id}')).backgroundColor`
     const light = await open('/dark')
     equal(await light.evaluate(background('plain')), 'rgb(250, 250, 250)', 'light to begin with')
+    // The design's own styles reach a tag inside a tag ("h2 em"), and only there.
+    equal(await light.evaluate('[getComputedStyle(document.querySelector("#water em")).color, getComputedStyle(document.querySelector("#water em")).fontStyle]'), ['rgb(7, 8, 9)', 'normal'], 'emphasis inside a heading has the design’s style for it')
+    equal(await light.evaluate('getComputedStyle(document.querySelector("#prose-em em")).color === "rgb(7, 8, 9)"'), false, 'emphasis elsewhere does not')
     await light.evaluate('document.documentElement.dataset.theme = "dark"')
     equal(await light.evaluate(background('plain')), 'rgb(1, 2, 3)', 'dark when the page is switched')
     await light.close()
