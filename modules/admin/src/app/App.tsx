@@ -261,11 +261,11 @@ export function App() {
         <a href="#cms-content" className="cms-skip" onClick={(e) => { e.preventDefault(); content.current?.focus({ preventScroll: true }) }}>{t('Skip to Content')}</a>
         {/* One place, above whatever is there: the sidebar coming and going never moves these. First for the keyboard too, as they are on view. */}
         {!(dock.open && narrow) && (
-          <div ref={setLeading} data-drawer={narrow && expanded ? '' : undefined} className={cn('cms-leading absolute flex max-w-[232px] items-center gap-1', narrow && expanded ? 'z-tooltip' : 'z-bar')}>
+          <div ref={setLeading} data-drawer={narrow && expanded ? '' : undefined} className={cn('cms-leading absolute flex max-w-[232px] items-center gap-1 [@media(pointer:coarse)]:gap-4', narrow && expanded ? 'z-tooltip' : 'z-bar')}>
             <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
               <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
             </Tooltip>
-            {!dock.full && <StateBack own={own} onNavigate={() => setExpanded(false)} />}
+            {!dock.full && <StateBack own={own} drawer={narrow && expanded} onNavigate={() => setExpanded(false)} />}
           </div>
         )}
         {narrow ? (

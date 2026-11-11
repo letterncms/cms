@@ -1,8 +1,8 @@
 import { Link, panelsFor, registry, t, useLocation, useManifestIfLoaded, useScreenContext, useTab } from '@letterncms/sdk'
-import { Fragment, Suspense, isValidElement, useContext, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Fragment, Suspense, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
-import { homedSettings, inSettings, placeAt, wayBack } from './place'
+import { homedSettings, inSettings, noteParent, openedAsSettings, placeAt, wayBack } from './place'
 import { WorkspaceContext } from './Slideover'
 import { Tabs } from './Segmented'
 import { Spinner } from './Spinner'
@@ -16,9 +16,11 @@ export interface Crumb {
 /**
  * Sticky 48px bar at the top of every screen, its one header: where you are on the left,
  * what can be done on the right. `crumbs` lead to the screen; the last one is the screen
- * itself, its name in ink. On a phone only that last one shows. A screen about one thing has `back` (its list), which returns to where it was opened
+ * itself, its name in ink. On a phone only that last one shows, behind a way back to the crumb before it.
+ * A screen about one thing has `back` (its list), which returns to where it was opened
  * from in this visit when that was elsewhere; on a screen with a state of the sidebar,
- * the way back is the one by the sidebar button, so `back` shows none of its own.
+ * the way back is the one by the sidebar button, so `back` shows none of its own
+ * (and on a phone that one leads to the crumb before the screen).
  * `title` stands in the middle of the window (an editor's document).
  */
 export function Topbar({ crumbs: own = [], back, title, actions, children, className }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string }) {
@@ -37,13 +39,31 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const ends = panelsFor('topbar.end', {})
   const claimed = useContext(WorkspaceContext)?.sidebar?.claimed
   const way = back && manifest ? wayBack(manifest, back) : back
+  // A phone shows the screen's own crumb only, so the one before it is a way back there. Settings itself is no screen to go back to.
+  const before = crumbs.slice(settings ? 1 : 0, -1).reverse().find((c) => c.to)
+  const upTo = before?.to
+  const upLabel = firstText(before?.label)
+  // Where the sidebar button has a way back beside it (settings, a state of the sidebar), that one leads there: never two chevrons.
+  const shellBack = !!claimed || settings
+  useEffect(() => {
+    if (!shellBack || !upTo || !upLabel) return
+    noteParent({ to: upTo, label: upLabel })
+    return () => noteParent(null)
+  }, [shellBack, upTo, upLabel])
+  const ownBack = way && !claimed
   return (
-    <header className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-2', className)}>
-      <div className="flex min-w-0 items-center gap-3">
-        {way && !claimed && (
-          <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className="flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text">
-            <Icon name="chevron-left" size={14} className="shrink-0" />
+    <header className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-4', className)}>
+      <div className="flex min-w-0 items-center gap-3 max-sm:gap-1">
+        {ownBack && (
+          <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className="cms-touch flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text max-sm:px-1.5">
+            <Icon name="chevron-left" size={14} className="shrink-0 max-sm:size-4" />
             <span className="truncate max-sm:hidden">{way.label}</span>
+          </Link>
+        )}
+        {!ownBack && !shellBack && upTo && upLabel && (
+          <Link to={upTo} aria-label={t('Back to {label}', { label: upLabel })} className="cms-touch ml-1 flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline transition-colors hover:bg-hover hover:text-ink sm:hidden">
+            {/* The weight of the sidebar button beside it. */}
+            <Icon name="chevron-left" size={16} />
           </Link>
         )}
         {crumbs.length > 0 && (
@@ -156,8 +176,9 @@ export function ScreenTabs<T extends string>({ value, onChange, tabs, className,
   const [opened, setOpened] = useState(false)
   if (settings && !opened) setOpened(true)
   const all = [...tabs, ...(namespace ? [{ value: 'settings' as const, label: t('Settings'), indicator: dirty }] : [])]
-  // Opened as a place of the settings sidebar, the screen is its settings alone: its own tabs belong to the main sidebar's place.
-  const alone = settings && !!manifest && inSettings(manifest, path)
+  // Opened from its row of the settings sidebar, a plugin's screen is its settings alone: its own tabs belong to the main sidebar's place.
+  // A screen that lives in settings (Users, the Audit Log) keeps its tabs: Settings is one of them.
+  const alone = settings && !!manifest && openedAsSettings(manifest, path)
   return (
     <>
       {all.length > 1 && !alone && <Tabs id="screen-tabs" className={cn('mb-6', className)} value={value} onChange={onChange} tabs={all} />}

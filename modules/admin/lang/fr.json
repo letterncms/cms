@@ -1,4 +1,5 @@
 {
+  "Missing Type": "Type manquant",
   "{count} field": "{count} champ",
   "{count} fields": "{count} champs",
   "{count} item": "{count} élément",
@@ -143,7 +144,6 @@
   "Match System Appearance": "Suivre l’apparence du système",
   "Minimize": "Réduire",
   "Missing page": "Page manquante",
-  "Missing type: {type}": "Type manquant : {type}",
   "More": "Plus",
   "More Settings": "Autres réglages",
   "Move Down": "Descendre",

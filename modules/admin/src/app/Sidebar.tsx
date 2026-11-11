@@ -1,13 +1,13 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, events, navigate, panelsFor, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
+import { boot, events, Link, navigate, panelsFor, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
 import { BrandMark } from './Brand'
 import { getThemePreference, setThemePreference, type ThemePreference } from '../ui/theme'
 import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
-import { inSettings, placeAt, settingsRowAt, wayBack } from '../ui/place'
+import { inSettings, parentWay, placeAt, settingsRowAt, subscribeParent, wayBack } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {
@@ -282,9 +282,11 @@ function StateTitle({ children }: { children: ReactNode }) {
  * where the main state has the site's name. It returns to where you came from: out of settings, the last screen before
  * them; from a screen's own sidebar, the screen it was opened from (else the one it names, its list).
  */
-export function StateBack({ own, onNavigate }: Pick<SidebarProps, 'own' | 'onNavigate'>) {
+export function StateBack({ own, onNavigate, drawer }: Pick<SidebarProps, 'own' | 'onNavigate' | 'drawer'>) {
   const manifest = useManifest()
   const { path } = useLocation()
+  // On a phone the top bar shows the screen's own crumb only: back is then one screen up, to the crumb before it.
+  const parent = useSyncExternalStore(subscribeParent, parentWay)
   if (!own && !inSettings(manifest, path)) return null
   const way = own ? wayBack(manifest, { to: own.backTo, label: own.backLabel }) : { to: lastApp(), label: placeAt(manifest.nav, lastApp().split('?')[0])?.label ?? t('Dashboard') }
   const label = way.label
@@ -293,13 +295,23 @@ export function StateBack({ own, onNavigate }: Pick<SidebarProps, 'own' | 'onNav
     else leaveSettings()
     onNavigate?.()
   }
+  const up = parent && !drawer ? parent : null
+  const button = 'cms-touch flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text'
   return (
-    <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
-      <button type="button" aria-label={t('Back to {label}', { label })} onClick={back} className="flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text">
-        <Icon name="chevron-left" size={14} className="shrink-0" />
-        <span className="truncate max-sm:hidden">{label}</span>
-      </button>
-    </Tooltip>
+    <>
+      <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
+        <button type="button" aria-label={t('Back to {label}', { label })} onClick={back} className={cn(button, up && 'max-sm:hidden')}>
+          <Icon name="chevron-left" size={14} className={cn('shrink-0', !drawer && 'max-sm:size-4')} />
+          <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{label}</span>
+        </button>
+      </Tooltip>
+      {up && (
+        <Link to={up.to} aria-label={t('Back to {label}', { label: up.label })} className="cms-touch flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline outline-offset-[-2px] transition-colors hover:bg-hover hover:text-ink sm:hidden">
+          {/* The weight of the sidebar button beside it. */}
+          <Icon name="chevron-left" size={16} />
+        </Link>
+      )}
+    </>
   )
 }
 
