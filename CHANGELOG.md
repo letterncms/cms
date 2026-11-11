@@ -21,6 +21,10 @@
 - **Breaking.** `@letterncms/ui`: `confirm()` and `prompt()` require `confirm`, the label of the button that goes through with it, as a verb ("Delete", "Rename"): the "Confirm" and "OK" fallbacks are gone.
 - The save bar's **Discard** and **Save** are the same buttons as everywhere else, its warning reads in the dark theme, and it no longer has a yellow dot: yellow is for publishing. `data-theme` on an element inside the admin sets that piece in the theme it names; `useTheme()` says which theme is on view.
 
+### Removed
+
+- **Breaking.** Style keys are CSS properties by their own names. The shorthands `direction`, `wrap`, `justify`, `align`, `paddingX`, `paddingY`, `marginX`, `marginY`, `radius`, `shadow`, `colSpan` and `bg` are no longer understood in a block's `style`, in `bind` (`style:<property>`) or in the design's element styles; write `flexDirection`, `flexWrap`, `justifyContent`, `alignItems`, `paddingInline`, `paddingBlock`, `marginInline`, `marginBlock`, `borderRadius`, `boxShadow`, `gridColumn` and `backgroundColor`. Styles saved through the CMS already hold the full names. A binding saved as `style:bg` or another shorthand was stored as written: it now does nothing until it is saved under the full name. `blocks/types` no longer lists `aliases`.
+
 ### Fixed
 
 - A row of a list shows the focus ring when you reach it with the keyboard, and a field that has the focus is clear to see in the dark theme.
