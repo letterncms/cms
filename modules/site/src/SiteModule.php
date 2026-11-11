@@ -119,6 +119,14 @@ final class SiteModule extends Plugin
         $hooks->addFilter('site.build.extras', fn (array $extras) => $this->cms()->settings('site', 'search_index', true)
             ? [...$extras, 'search' => ['path' => 'search.json', 'render' => fn () => $this->app->make(Search\SearchIndex::class)->json()]]
             : $extras);
+        // An animation's ease can be a curve of the design: token:ease.<name>.
+        $hooks->addFilter('blocks.eases', static function (array $eases) use ($design) {
+            foreach ($design()->json()->tokens() as $token) {
+                $token['group'] === 'ease' && is_string($token['value']) && $eases[$token['name']] = $token['value'];
+            }
+
+            return $eases;
+        });
         $hooks->addFilter('blocks.breakpoints', static fn (array $bp) => $design()->json()->breakpoints() ?: $bp);
         $hooks->addFilter('fields.options.button-variants', static function (array $options) use ($design) {
             foreach (array_keys($design()->json()->buttons()) as $variant) {

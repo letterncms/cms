@@ -10,12 +10,15 @@ namespace Cms\Modules\Blocks;
  *   motion: [{
  *     id: "m1", name: "Fade Up",
  *     trigger: { type: "appear", start: "top 85%", once: true, node: "#b1" },   appear · scroll · hover · press · load · loop · event
+ *              { type: "scroll", pin: "150vh", scrub: 0.6 },                     scroll: pin holds the element in place for that much scrolling while
+ *                                                                                the steps play; scrub lets them trail the scroll by about that many seconds
  *     on: ["desktop", "tablet"],                                                 absent = every screen size
  *     steps: [{
- *       target: "self",                                                          self · children · words · #<node id>
- *       mask: false,                                                             words: clip each word, so it rises from behind a line
+ *       target: "self",                                                          self · children · words · lines · chars · #<node id>
+ *       mask: false,                                                             words, lines, chars: clip each word, so it rises from behind a line
  *       from: { opacity: 0, y: 32 }, to: {},                                     empty side = the element's own styles
- *       duration: 0.8, delay: 0, ease: "expo.out", stagger: 0.05, at: null,
+ *       duration: 0.8, delay: 0, ease: "expo.out", stagger: 0.05, at: null,      ease: a name below, cubic-bezier(), linear(), steps(), or a curve of
+ *                                                                                the design: "token:ease.brand"
  *     }],
  *     repeat: 0, yoyo: false,                                                    repeat -1 = forever
  *     hold: 2,                                                                   with appear and repeat -1: the steps play as one timeline that loops, resting this long
@@ -26,6 +29,12 @@ namespace Cms\Modules\Blocks;
  * event become a Web Animations description for the small `motion` runtime chunk, which
  * shows everything as designed if it never runs. Scroll start and end read "<element
  * edge> <viewport position>": "top 80%", "center center", "bottom top".
+ *
+ * scroll is CSS where the browser has scroll-driven animations. Where it hasn't, or when the
+ * animation asks to trail the scroll (scrub), the runtime's `scroll` chunk moves the same keyframes
+ * by the same range. Pinning is `position: sticky` in a wrapper as tall as the element plus the
+ * distance, so it holds without a script. Lines are found by the runtime once the text is laid out
+ * (appear, hover, press, event); what is CSS can't wait for that and animates masked words.
  */
 final class Motion
 {
@@ -79,6 +88,17 @@ final class Motion
 
     private const string NODE = '/^#[a-z0-9_-]{1,40}$/i';
 
+    /** How far a pinned element is scrolled past while it stays. */
+    private const string PIN = '/^\d{1,5}(\.\d{1,2})?(px|rem|vh|svh|lvh|dvh)$/';
+
+    private const string TOKEN_EASE = '/^token:ease\.([a-z0-9][a-z0-9-]{0,40})$/';
+
+    /** A timing function as CSS and element.animate() both take it. */
+    private const string TIMING = '/^(ease|ease-in|ease-out|ease-in-out|linear|cubic-bezier\(\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*-?[\d.]+\s*\)|linear\([\d.,% -]{1,800}\)|steps\(\s*\d{1,3}\s*(,\s*(start|end|jump-[a-z]+)\s*)?\))$/';
+
+    /** @var array<string, string> the design's own curves while compiling: name => timing function */
+    private static array $curves = [];
+
     public static function sanitize(mixed $motion): array
     {
         if (! is_array($motion) || ! array_is_list($motion)) {
@@ -106,7 +126,11 @@ final class Motion
                 'end' => self::position($trigger['end'] ?? null),
                 'once' => isset($trigger['once']) ? (bool) $trigger['once'] : null,
                 'node' => is_string($trigger['node'] ?? null) && preg_match(self::NODE, $trigger['node']) ? $trigger['node'] : null,
+                'pin' => $type === 'scroll' ? self::pin($trigger['pin'] ?? null) : null,
+                'scrub' => $type === 'scroll' && is_numeric($trigger['scrub'] ?? null) && (float) $trigger['scrub'] > 0 ? self::number($trigger['scrub'], 0.05, 3) : null,
             ], static fn ($v) => $v !== null);
+            // The runtime lays out lines; what compiles to CSS runs before there is a script to ask.
+            $measured = in_array($type, ['appear', 'hover', 'press', 'event'], true);
 
             $screens = array_values(array_intersect(self::SCREENS, array_filter((array) ($animation['on'] ?? []), 'is_string')));
             $screens !== [] && count($screens) < 3 && $clean['on'] = $screens;
@@ -119,14 +143,14 @@ final class Motion
                 }
 
                 $target = $step['target'] ?? 'self';
-                // Lines can't be known before layout, and letters cost too much: they read as masked words and words.
+                // A line rises from behind its own edge, or it is only a late word.
                 $mask = ! empty($step['mask']) || $target === 'lines';
-                $target = in_array($target, ['lines', 'chars'], true) ? 'words' : $target;
-                $target = is_string($target) && (in_array($target, ['self', 'children', 'words'], true) || preg_match(self::NODE, $target)) ? $target : 'self';
+                $target === 'lines' && ! $measured && $target = 'words';
+                $target = is_string($target) && (in_array($target, ['self', 'children', 'words', 'lines', 'chars'], true) || preg_match(self::NODE, $target)) ? $target : 'self';
 
                 $steps[] = array_filter([
                     'target' => $target,
-                    'mask' => $mask && $target === 'words' ? true : null,
+                    'mask' => $mask && in_array($target, ['words', 'lines', 'chars'], true) ? true : null,
                     'from' => self::props($step['from'] ?? []) ?: null,
                     'to' => self::props($step['to'] ?? []) ?: null,
                     'duration' => self::number($step['duration'] ?? 0.6, 0, 30),
@@ -181,16 +205,19 @@ final class Motion
      * What a node's animations come to.
      *
      * @param  array<string, string>  $breakpoints  name => min-width (see StyleCompiler)
-     * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, split: ?array{mask: bool}, timelines: list<string>, forever: bool}
+     * @param  array<string, string>  $curves  the design's ease tokens: name => timing function
+     * @param  string  $id  the node's id, which a pinned element's wrapper is known by
+     * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, scroll: list<array>, split: ?array{mask: bool, chars: bool}, pin: bool, timelines: list<string>, forever: bool}
      */
-    public static function compile(array $motion, array $breakpoints = []): array
+    public static function compile(array $motion, array $breakpoints = [], array $curves = [], string $id = ''): array
     {
-        $out = ['classes' => [], 'rules' => [], 'runtime' => [], 'split' => null, 'timelines' => [], 'forever' => false];
+        $out = ['classes' => [], 'rules' => [], 'runtime' => [], 'scroll' => [], 'split' => null, 'pin' => false, 'timelines' => [], 'forever' => false];
+        self::$curves = array_filter($curves, static fn ($curve) => is_string($curve) && preg_match(self::TIMING, trim($curve)));
 
         foreach ($motion as $animation) {
             foreach ($animation['steps'] as $step) {
-                if ($step['target'] === 'words') {
-                    $out['split'] = ['mask' => ($out['split']['mask'] ?? false) || ! empty($step['mask'])];
+                if (in_array($step['target'], ['words', 'lines', 'chars'], true)) {
+                    $out['split'] = ['mask' => ($out['split']['mask'] ?? false) || ! empty($step['mask']), 'chars' => ($out['split']['chars'] ?? false) || $step['target'] === 'chars'];
                 }
             }
 
@@ -198,7 +225,7 @@ final class Motion
 
             match ($type) {
                 'load', 'loop' => self::keyframed($animation, $breakpoints, $out),
-                'scroll' => self::scrolled($animation, $breakpoints, $out),
+                'scroll' => self::scrolled($animation, $breakpoints, $out, $id),
                 default => $out['runtime'][] = self::cycles($animation) ? self::cycle($animation, $breakpoints) : self::runtime($animation, $breakpoints),
             };
 
@@ -268,7 +295,7 @@ final class Motion
             $spread = (float) ($step['stagger'] ?? 0);
             $delay = self::seconds($start);
 
-            if ($spread > 0 && ($target === 'words' || $target === 'children')) {
+            if ($spread > 0 && in_array($target, ['words', 'chars', 'children'], true)) {
                 $each = (int) round($spread * 1000);
                 $delay = 'calc('.($load ? 'min(var(--i,0)*'.$each.'ms,'.((int) (self::LOAD_SPREAD * 1000)).'ms)' : 'var(--i,0)*'.$each.'ms').' + '.self::seconds($start).')';
             }
@@ -278,29 +305,52 @@ final class Motion
             $out['classes'][] = $class;
             $target === 'children' && $out['classes'][] = 'cms-mc';
 
-            $selector = match (true) {
-                $target === 'self' => ".{$class}",
-                $target === 'children' => ".{$class}>*",
-                $target === 'words' => ".{$class} .cms-w__i",
-                default => '[data-cms="'.substr($target, 1).'"]',
-            };
+            $selector = self::selector($class, $target);
 
             $out['rules'][$class] = self::guarded($animation, $breakpoints, "@keyframes {$name}{{$frames}}{$selector}{{$declaration}}");
         }
     }
 
-    /** scroll: follows the scroll with CSS. A browser without it shows the design, which is the right content. */
-    private static function scrolled(array $animation, array $breakpoints, array &$out): void
+    /**
+     * scroll: follows the scroll with CSS, and as a description for the runtime, which takes over where the
+     * browser has no scroll-driven animations and whenever the animation trails the scroll (scrub).
+     */
+    private static function scrolled(array $animation, array $breakpoints, array &$out, string $id): void
     {
         $node = isset($animation['trigger']['node']) ? substr($animation['trigger']['node'], 1) : null;
+        $pin = $id !== '' ? ($animation['trigger']['pin'] ?? null) : null;
         $timeline = $node !== null ? '--cms-t-'.$node : 'view()';
         $start = self::range($animation['trigger']['start'] ?? 'top bottom');
         $end = self::range($animation['trigger']['end'] ?? 'bottom top');
         $steps = self::timeline($animation);
         $total = max(0.001, (float) max(array_column($steps, 'end')));
+        $source = $node !== null ? '[data-cms="'.$node.'"]{view-timeline:'.$timeline.'}' : '';
 
-        if ($node !== null) {
+        if ($pin !== null) {
+            // The wrapper is the element's height plus the distance (an empty box after it: padding is no room
+            // to stick in), and the element sticks to the top of the screen inside it: from the wrapper's top
+            // reaching the top, for as long as the distance takes.
+            $timeline = '--cms-p-'.$id;
+            [$start, $end, $source] = ['100vh', "100vh + {$pin}", ''];
+            $out['pin'] = true;
+            $out['rules']['cms-pin-'.$id] = self::guarded($animation, $breakpoints, '[data-cms-pin="'.$id.'"]{view-timeline:'.$timeline.'}[data-cms-pin="'.$id.'"]::after{content:"";display:block;height:'.$pin.'}[data-cms-pin="'.$id.'"]>*{position:sticky;top:0}');
+        }
+
+        if ($node !== null || $pin !== null) {
             $out['timelines'][] = $timeline;
+        }
+
+        $out['scroll'][] = array_filter([
+            ...self::runtime($animation, $breakpoints),
+            'start' => $animation['trigger']['start'] ?? 'top bottom',
+            'end' => $animation['trigger']['end'] ?? 'bottom top',
+            'pin' => $pin !== null ? 1 : null,
+            'scrub' => $animation['trigger']['scrub'] ?? null,
+        ], static fn ($v) => $v !== null);
+
+        // Trailing the scroll is something only a script does.
+        if (isset($animation['trigger']['scrub'])) {
+            return;
         }
 
         foreach ($steps as ['step' => $step, 'start' => $from, 'end' => $to]) {
@@ -314,7 +364,7 @@ final class Motion
             $name = 'cms-mk-'.self::hash($frames);
             $width = "(({$end}) - ({$start}))";
             $stagger = (float) ($step['stagger'] ?? 0);
-            $staggered = $stagger > 0 && ($target === 'words' || $target === 'children');
+            $staggered = $stagger > 0 && in_array($target, ['words', 'chars', 'children'], true);
             // Staggered items take their turn within the range; ~12 items spread over it.
             $share = $staggered ? 1 / max(1, 1 + 11 * $stagger / max(0.05, $to - $from)) : 1.0;
             $offset = $staggered ? '+ var(--i,0) * '.round((1 - $share) / 11, 4).' * '.$width : '';
@@ -324,17 +374,22 @@ final class Motion
             $class = 'cms-m-'.self::hash($declaration.$target);
             $out['classes'][] = $class;
             $target === 'children' && $out['classes'][] = 'cms-mc';
+            $selector = self::selector($class, $target);
 
-            $selector = match (true) {
-                $target === 'self' => ".{$class}",
-                $target === 'children' => ".{$class}>*",
-                $target === 'words' => ".{$class} .cms-w__i",
-                default => '[data-cms="'.substr($target, 1).'"]',
-            };
-
-            $source = $node !== null ? '[data-cms="'.$node.'"]{view-timeline:'.$timeline.'}' : '';
             $out['rules'][$class] = self::guarded($animation, $breakpoints, "@supports (animation-timeline:view()){@keyframes {$name}{{$frames}}{$source}{$selector}{{$declaration}}}");
         }
+    }
+
+    /** What a step's class animates. */
+    private static function selector(string $class, string $target): string
+    {
+        return match (true) {
+            $target === 'self' => ".{$class}",
+            $target === 'children' => ".{$class}>*",
+            $target === 'words' => ".{$class} .cms-w__i",
+            $target === 'chars' => ".{$class} .cms-c",
+            default => '[data-cms="'.substr($target, 1).'"]',
+        };
     }
 
     /** A timeline that loops as a whole, rather than each step looping by itself. */
@@ -356,7 +411,7 @@ final class Motion
         $tracks = [];
 
         foreach ($steps as ['step' => $step, 'start' => $start, 'end' => $end]) {
-            if (in_array($step['target'], ['words', 'children'], true)) {
+            if (in_array($step['target'], ['words', 'lines', 'chars', 'children'], true)) {
                 continue;
             }
 
@@ -589,6 +644,11 @@ final class Motion
     {
         $ease = (string) ($step['ease'] ?? 'power3.out');
 
+        // A curve of the design, as the value it has now: element.animate() takes no var().
+        if (preg_match(self::TOKEN_EASE, $ease, $m)) {
+            return trim(self::$curves[$m[1]] ?? self::EASES['power3.out']);
+        }
+
         return self::EASES[preg_replace('/\(.*\)$/', '', $ease)] ?? self::EASES[$ease.'.out'] ?? $ease;
     }
 
@@ -636,7 +696,16 @@ final class Motion
         return is_string($value) && preg_match('/^(top|center|bottom) (top|center|bottom|\d{1,3}(\.\d+)?%)$/', trim($value)) ? trim($value) : null;
     }
 
-    /** Names from EASES ("expo.out", "back.out(1.7)"), or cubic-bezier(), linear() and steps() as written. */
+    private static function pin(mixed $value): ?string
+    {
+        return match (true) {
+            $value === true => '100vh',
+            is_string($value) && preg_match(self::PIN, trim($value)) === 1 => trim($value),
+            default => null,
+        };
+    }
+
+    /** Names from EASES ("expo.out", "back.out(1.7)"), a curve of the design ("token:ease.brand"), or cubic-bezier(), linear() and steps() as written. */
     private static function ease(mixed $value): ?string
     {
         if (! is_string($value)) {
@@ -644,6 +713,11 @@ final class Motion
         }
 
         $value = trim($value);
+
+        if (preg_match(self::TOKEN_EASE, $value)) {
+            return $value;
+        }
+
         $name = (string) preg_replace('/\([\d., ]{0,20}\)$/', '', $value);
 
         if (isset(self::EASES[$name]) || isset(self::EASES[$name.'.out'])) {

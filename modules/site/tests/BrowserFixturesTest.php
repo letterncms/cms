@@ -112,6 +112,16 @@ final class BrowserFixturesTest extends TestCase
                 ['type' => 'paragraph', 'anchor' => 'deep', 'props' => ['text' => 'Deep in page two']],
                 ['type' => 'box', 'style' => ['base' => ['height' => '150vh']], 'children' => []],
             ],
+            'Motion' => [
+                ['type' => 'box', 'style' => ['base' => ['height' => '120vh']], 'children' => []],
+                // Followed with CSS where the browser can, by the runtime where it can't.
+                ['type' => 'box', 'anchor' => 'linked', 'style' => ['base' => ['height' => '200px']], 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'top top'], 'steps' => [['from' => ['opacity' => 0, 'y' => 60], 'to' => ['opacity' => 1, 'y' => 0], 'ease' => 'none']]]], 'children' => []],
+                // Trails the scroll: the runtime's in every browser.
+                ['type' => 'box', 'anchor' => 'trailing', 'style' => ['base' => ['height' => '200px']], 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'top top', 'scrub' => 0.3], 'steps' => [['from' => ['opacity' => 0, 'y' => 60], 'to' => ['opacity' => 1, 'y' => 0], 'ease' => 'none']]]], 'children' => []],
+                ['type' => 'box', 'anchor' => 'pinned', 'style' => ['base' => ['height' => '100vh']], 'motion' => [['trigger' => ['type' => 'scroll', 'pin' => '200vh'], 'steps' => [['from' => ['opacity' => 0], 'to' => ['opacity' => 1], 'ease' => 'none']]]], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Pinned']]]],
+                ['type' => 'heading', 'anchor' => 'lines', 'props' => ['text' => 'One two three four five six seven eight nine ten eleven twelve', 'level' => '2'], 'style' => ['base' => ['width' => '260px', 'marginTop' => '150vh']], 'motion' => [['trigger' => ['type' => 'appear'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 110], 'duration' => 0.4, 'stagger' => 0.1]]]]],
+                ['type' => 'box', 'style' => ['base' => ['height' => '120vh']], 'children' => []],
+            ],
             'Behavior' => [
                 ['type' => 'box', 'anchor' => 'first', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'first', 'title' => '{entry.title}']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'First']]]],
                 ['type' => 'box', 'style' => ['base' => ['height' => '400vh']], 'children' => []],

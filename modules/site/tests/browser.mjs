@@ -55,7 +55,7 @@ for (let i = 0; i < 100; i++) {
 }
 
 /** A tab that speaks the DevTools Protocol. `media` emulates features such as prefers-reduced-motion. */
-async function open(path, { media = {}, script = true, site = 'plain' } = {}) {
+async function open(path, { media = {}, script = true, site = 'plain', before = '' } = {}) {
   const origin = sites[site].origin
   const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json()
   const ws = new WebSocket(target.webSocketDebuggerUrl)
@@ -76,6 +76,7 @@ async function open(path, { media = {}, script = true, site = 'plain' } = {}) {
   await send('Runtime.enable')
   await send('Page.enable')
   if (!script) await send('Emulation.setScriptExecutionDisabled', { value: true })
+  if (before) await send('Page.addScriptToEvaluateOnNewDocument', { source: before })
   const features = Object.entries(media).map(([name, value]) => ({ name, value }))
   if (features.length) await send('Emulation.setEmulatedMedia', { features })
   const evaluate = async (expression) => {
@@ -225,6 +226,66 @@ const checks = {
     await off.goto('/two')
     equal(await off.evaluate('document.querySelector("h1").textContent'), 'Page two', 'the page is whole without JavaScript')
     await off.close()
+  },
+
+  /** Scroll animations: CSS where the browser can, the runtime where it can't or when they trail; pinning; lines. */
+  async motion() {
+    const near = (actual, expected, by, what) => {
+      if (!(Math.abs(actual - expected) <= by)) throw new Error(`${what}: expected about ${expected}, got ${actual}`)
+    }
+    const opacity = (id) => `Number(getComputedStyle(document.getElementById('${id}')).opacity)`
+    // The element's top halfway up the screen: halfway from "top bottom" to "top top".
+    const halfway = (id) => `(() => { let top = 0; for (let at = document.getElementById('${id}'); at; at = at.offsetParent) top += at.offsetTop; window.scrollTo({ top: top - innerHeight / 2, behavior: 'instant' }) })()`
+
+    const tab = await open('/motion')
+    equal(await tab.evaluate('CSS.supports("animation-timeline: view()")'), true, 'this Chrome has scroll-driven animations')
+    await tab.evaluate(halfway('linked'))
+    await sleep(150) // a scroll timeline is read at the next frame
+    near(await tab.evaluate(opacity('linked')), 0.5, 0.02, 'CSS follows the scroll')
+    equal(await tab.evaluate('document.getElementById("linked").getAnimations().every((a) => a instanceof CSSAnimation)'), true, 'and the runtime leaves it to CSS')
+
+    // Trailing: not there at once, there soon after.
+    await tab.evaluate('window.scrollTo({ top: 0, behavior: "instant" })')
+    await tab.until(`${opacity('trailing')} < 0.01`)
+    await tab.evaluate(halfway('trailing'))
+    const early = await tab.evaluate(opacity('trailing'))
+    equal(early < 0.47, true, `a trailing animation lags behind the scroll (was at ${early})`)
+    await tab.until(`Math.abs(${opacity('trailing')} - 0.5) < 0.01`)
+
+    // Pinned: holds at the top of the screen for the distance, while its steps play.
+    await tab.evaluate('window.scrollTo({ top: document.querySelector("[data-cms-pin]").getBoundingClientRect().top + scrollY + innerHeight, behavior: "instant" })')
+    await sleep(150)
+    near(await tab.evaluate('document.getElementById("pinned").getBoundingClientRect().top'), 0, 1, 'the pinned element stays at the top')
+    near(Number(await tab.evaluate('getComputedStyle(document.getElementById("pinned")).opacity')), 0.5, 0.03, 'halfway through its steps, halfway through the distance')
+    near(await tab.evaluate('document.querySelector("[data-cms-pin]").offsetHeight / innerHeight'), 3, 0.01, 'the wrapper is the element plus the distance')
+
+    // Lines: the words of a line take one turn.
+    await tab.evaluate('document.getElementById("lines").scrollIntoView({ behavior: "instant", block: "center" })')
+    const words = await tab.until(`(() => {
+      const words = [...document.querySelectorAll('#lines .cms-w__i')].map((w) => ({ top: Math.round(w.parentElement.getBoundingClientRect().top), delay: w.getAnimations()[0]?.effect.getTiming().delay }))
+      return words.every((w) => w.delay !== undefined) && words
+    })()`)
+    const tops = [...new Set(words.map((w) => w.top))]
+    equal(tops.length > 2, true, 'the heading wraps')
+    equal(words.every((w) => w.delay === tops.indexOf(w.top) * 100), true, 'each line starts a stagger after the one above, its words together')
+    equal(tab.errors, [], 'no errors')
+    await tab.close()
+
+    // A browser without scroll-driven animations: the runtime moves the same keyframes by the same range.
+    const old = await open('/motion', { before: 'const supports = CSS.supports.bind(CSS); CSS.supports = (...a) => !String(a[0]).includes("animation-timeline") && supports(...a)' })
+    const script = (id) => `(() => { const a = document.getElementById('${id}').getAnimations().find((a) => !(a instanceof CSSAnimation)); return a ? a.currentTime / a.effect.getComputedTiming().endTime : null })()`
+    await old.until(`${script('linked')} !== null`)
+    await old.evaluate(halfway('linked'))
+    await old.until(`Math.abs(${script('linked')} - 0.5) < 0.02`)
+    await old.evaluate('window.scrollTo({ top: document.querySelector("[data-cms-pin]").getBoundingClientRect().top + scrollY + innerHeight * 0.5, behavior: "instant" })')
+    await old.until(`Math.abs(${script('pinned')} - 0.25) < 0.02`)
+    await old.close()
+
+    // Less motion: nothing moves, nothing is pinned.
+    const calm = await open('/motion', { media: { 'prefers-reduced-motion': 'reduce' } })
+    await sleep(300)
+    equal(await calm.evaluate('[document.getAnimations().length, getComputedStyle(document.getElementById("pinned")).position, document.querySelector("[data-cms-pin]").offsetHeight === document.getElementById("pinned").offsetHeight]'), [0, 'static', true], 'reduced motion')
+    await calm.close()
   },
 }
 

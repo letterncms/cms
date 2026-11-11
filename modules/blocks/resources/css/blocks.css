@@ -9,7 +9,11 @@
 
 @layer components {
   /* Animated words (Motion, TextSplit): a mask clips them top and bottom only, so tight tracking and descenders survive. */
-  .cms-w, .cms-w__i { display: inline-block; }
+  .cms-w, .cms-w__i, .cms-c { display: inline-block; }
+  .cms-w { position: relative; }
+  /* A word whose letters are split, once more for screen readers only. */
+  .cms-sr { position: absolute; inset-inline-start: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; user-select: none; }
+  .cms-c { white-space: pre; }
   .cms-w--mask { overflow-y: clip; padding-block: .15em; margin-block: -.15em; }
   /* Children animating in turn take their place from here. */
   .cms-mc > :nth-child(2) { --i: 1; } .cms-mc > :nth-child(3) { --i: 2; } .cms-mc > :nth-child(4) { --i: 3; } .cms-mc > :nth-child(5) { --i: 4; }
