@@ -6,11 +6,11 @@ namespace Cms\Modules\Audit;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Admin\Translations;
 use Cms\Content\Entries\Entry;
 use Cms\Cms;
-use Cms\Support\RecordTimestamps;
 use Cms\Users\User;
 use Cms\Abilities\Shapes;
 use Cms\Support\Schema\Shape;
@@ -18,18 +18,41 @@ use Cms\Support\Schema\Shape;
 /** Reading the audit log. */
 final class AuditAbilities
 {
+    /** Kept with a change's input: the title of what it was made to, named before the change (a deleted entry's). */
+    public const string SUBJECT = '_subject';
+
+    /** The most changes one export holds. */
+    public const int EXPORT_LIMIT = 10000;
+
+    /** The periods the log is narrowed to, in days back from the start of today. */
+    private const array PERIODS = ['today' => 0, '7d' => 6, '30d' => 29, '90d' => 89];
+
+    /** @var array<string, string>|null ability => what happened, in the reader's language */
+    private ?array $past = null;
+
     public function __construct(private readonly Cms $cms) {}
+
+    /** The title of the entry an ability is about to change, for the log to name it by even once it is deleted. */
+    public function entryTitle(string $ability, array $input): ?string
+    {
+        if ($ability !== 'entries/delete' || ($id = self::entryId($ability, $input)) === null) {
+            return null;
+        }
+
+        $entry = $this->cms->entries()->findMany([$id])[0] ?? null;
+
+        return $entry ? ($entry->title !== '' ? $entry->title : __('Untitled')) : null;
+    }
 
     public function register(AbilityRegistry $a): void
     {
         $a->register('audit/list', [
             'label' => 'Audit Log',
-            'description' => 'Recent changes made through abilities, newest first. Narrowed to one person (userId) or one ability; `filters` lists the people and abilities the log holds.',
+            'description' => 'Recent changes made through abilities, newest first, each labelled as what happened ("Published Entry"). Narrowed to one person (userId), one ability, a period (today, 7d, 30d, 90d: days back from today, in the site\'s time zone) or dates (from, to: YYYY-MM-DD, both included); `filters` lists the people and abilities the log holds.',
             'permission' => 'audit.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => [
-                'userId' => ['type' => 'string'],
-                'ability' => ['type' => 'string', 'maxLength' => 120],
+                ...self::narrowing(),
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
             ]],
@@ -40,16 +63,7 @@ final class AuditAbilities
                 'input' => Shape::open('The input the ability was called with, by parameter name (its input schema says which), with secrets redacted and long text cut short.'), 'createdAt' => Shape::STRING_OR_NULL,
             ], ['filters' => ['people' => [['id' => Shape::STRING, 'name' => Shape::STRING]], 'actions' => [['value' => Shape::STRING, 'label' => Shape::STRING]]]]),
             'handler' => function (array $in) {
-                $query = DB::table('audit_log')->orderByDesc('created_at')->orderByDesc('id');
-
-                if (isset($in['userId'])) {
-                    $query->where('user_id', $in['userId']);
-                }
-
-                if (isset($in['ability'])) {
-                    $query->where('ability', $in['ability']);
-                }
-
+                $query = $this->narrowed($in);
                 $total = (clone $query)->count();
                 $rows = $query->offset(($in['page'] - 1) * $in['perPage'])->limit($in['perPage'])->get();
                 $users = User::query()->whereIn('id', $rows->pluck('user_id')->filter()->unique())->pluck('name', 'id');
@@ -58,7 +72,8 @@ final class AuditAbilities
                     'items' => array_map(static fn (array $d) => [
                         'id' => $d['row']->id, 'ability' => $d['row']->ability, 'transport' => $d['row']->transport,
                         'label' => $d['label'], 'subject' => $d['subject'], 'to' => $d['to'],
-                        ...RecordTimestamps::api(['updated_at' => $d['row']->created_at]),
+                        // The records' timestamp contract, which a log row has no use for: it is never published or updated, it happened (createdAt).
+                        'publishedAt' => null, 'updatedAt' => null,
                         'user' => $d['row']->user_id ? ['id' => $d['row']->user_id, 'name' => $users[$d['row']->user_id] ?? __('Deleted user')] : null,
                         // Said in words, for whoever shows the row: who made the change, and where from.
                         'who' => $d['row']->user_id ? ($users[$d['row']->user_id] ?? __('Deleted user')) : __('System'),
@@ -87,6 +102,92 @@ final class AuditAbilities
             ]]),
             'handler' => fn (array $in) => $this->recent($in['limit']),
         ]);
+
+        // Not read-only: a copy of who did what leaves the site, and the log says who took it.
+        $a->register('audit/export', [
+            'label' => 'Export Audit Log',
+            'description' => 'The audit log as a CSV file, newest first, narrowed like audit/list (userId, ability, period, from, to): when, who, via, change, subject and ability, one row per change. More than 10,000 rows is refused: narrow it first.',
+            'permission' => 'audit.view',
+            'annotations' => ['readOnly' => false, 'destructive' => false, 'idempotent' => true],
+            'input' => ['type' => 'object', 'properties' => self::narrowing()],
+            'output' => Shape::of(['name' => Shape::STRING, 'type' => Shape::STRING, 'content' => Shape::STRING, 'rows' => Shape::INTEGER]),
+            'handler' => fn (array $in) => $this->export($in),
+        ]);
+    }
+
+    /** @return array<string, array<string, mixed>> The inputs that narrow the log, for audit/list and audit/export. */
+    private static function narrowing(): array
+    {
+        return [
+            'userId' => ['type' => 'string'],
+            'ability' => ['type' => 'string', 'maxLength' => 120],
+            'period' => ['type' => 'string', 'enum' => array_keys(self::PERIODS)],
+            'from' => ['type' => 'string', 'format' => 'date'],
+            'to' => ['type' => 'string', 'format' => 'date'],
+        ];
+    }
+
+    /** The log, newest first, narrowed by person, ability and time. */
+    private function narrowed(array $in): \Illuminate\Database\Query\Builder
+    {
+        $query = DB::table('audit_log')->orderByDesc('created_at')->orderByDesc('id');
+
+        if (isset($in['userId'])) {
+            $query->where('user_id', $in['userId']);
+        }
+
+        if (isset($in['ability'])) {
+            $query->where('ability', $in['ability']);
+        }
+
+        // Days are the site's: its time zone is the app's, which the log's times are written in.
+        if (isset($in['period'])) {
+            $query->where('created_at', '>=', Carbon::now()->startOfDay()->subDays(self::PERIODS[$in['period']]));
+        }
+
+        if (isset($in['from'])) {
+            $query->where('created_at', '>=', Carbon::parse($in['from'])->startOfDay());
+        }
+
+        if (isset($in['to'])) {
+            $query->where('created_at', '<', Carbon::parse($in['to'])->addDay()->startOfDay());
+        }
+
+        return $query;
+    }
+
+    /** @return array{name: string, type: string, content: string, rows: int} */
+    private function export(array $in): array
+    {
+        // All of it or nothing: a file cut short at the cap would look complete.
+        if (($count = $this->narrowed($in)->count()) > self::EXPORT_LIMIT) {
+            throw AbilityException::invalid(__('That is :count changes, more than :limit in one file. Narrow it to a person, an action or a shorter time.', ['count' => number_format($count), 'limit' => number_format(self::EXPORT_LIMIT)]));
+        }
+
+        $rows = $this->narrowed($in)->get();
+        $users = User::query()->whereIn('id', $rows->pluck('user_id')->filter()->unique())->pluck('name', 'id');
+        $out = fopen('php://temp', 'r+');
+        // A cell that starts like a formula is read as words by a spreadsheet: names, titles and labels are written by people.
+        $cell = static fn (?string $text) => (string) preg_replace('/^([=+\-@\t\r])/', "'$1", (string) $text);
+        fputcsv($out, [__('When'), __('Who'), __('Via'), __('Change'), __('Subject'), __('Ability')], escape: '');
+
+        foreach ($this->describe($rows) as $d) {
+            $row = $d['row'];
+            fputcsv($out, array_map($cell, [
+                $d['createdAt'] ?? '',
+                $row->user_id ? ($users[$row->user_id] ?? __('Deleted user')) : __('System'),
+                self::channel((string) $row->transport),
+                $d['label'],
+                $d['subject'],
+                $row->ability,
+            ]), escape: '');
+        }
+
+        rewind($out);
+        $content = (string) stream_get_contents($out);
+        fclose($out);
+
+        return ['name' => 'audit-log-'.Carbon::now()->format('Y-m-d').'.csv', 'type' => 'text/csv', 'content' => $content, 'rows' => $rows->count()];
     }
 
     /**
@@ -120,7 +221,10 @@ final class AuditAbilities
 
         return $rows->map(function ($row) use ($entries, $settings, $t) {
             $input = (array) json_decode((string) $row->input, true);
+            $named = is_string($input[self::SUBJECT] ?? null) ? $input[self::SUBJECT] : null;
+            unset($input[self::SUBJECT]);
             [$subject, $to] = $this->subject($row->ability, $input, $entries, $settings);
+            $subject ??= $named;
 
             return [
                 'row' => $row, 'input' => $input,
@@ -132,12 +236,18 @@ final class AuditAbilities
     }
 
     /**
-     * An action in words: the ability's own label, or, for one that is gone (renamed since, or its plugin is
-     * off), its name read as words. `pages/customise` is Customise Pages, `form-submissions/delete` Delete Form
-     * Submissions: never a raw name among titles.
+     * An action in words, as what happened: the label the `audit.past` filter gives it ("Published Entry"),
+     * else the ability's own label, or, for one that is gone (renamed since, or its plugin is off), its name
+     * read as words. `form-submissions/delete` is Delete Form Submissions: never a raw name among titles.
      */
     public function label(string $ability): string
     {
+        $this->past ??= (array) $this->cms->hooks()->filter('audit.past', []);
+
+        if (is_string($this->past[$ability] ?? null)) {
+            return $this->past[$ability];
+        }
+
         if ($label = $this->cms->abilities()->get($ability)?->label) {
             return app(Translations::class)->label($label);
         }
@@ -271,6 +381,10 @@ final class AuditAbilities
 
         if (str_starts_with($ability, 'globals/') && $ability !== 'globals/delete' && is_string($input['handle'] ?? null) && ($set = $this->cms->globals()->find($input['handle']))) {
             return [$set->title, '/globals/'.$set->handle];
+        }
+
+        if ($ability === 'packages/update-auto' && is_bool($input['on'] ?? null)) {
+            return [$input['on'] ? __('On') : __('Off'), null];
         }
 
         if (str_starts_with($ability, 'packages/') && is_string($input['name'] ?? null)) {

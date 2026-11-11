@@ -18,7 +18,21 @@
                             "type": "ui/tab",
                             "props": {
                                 "id": "log",
-                                "label": "Log"
+                                "label": "Log",
+                                "actions": [
+                                    {
+                                        "label": "Export CSV",
+                                        "icon": "download",
+                                        "ability": "audit/export",
+                                        "input": {
+                                            "userId": "{query.userId}",
+                                            "ability": "{query.ability}",
+                                            "period": "{query.period}"
+                                        },
+                                        "then": "download",
+                                        "props": []
+                                    }
+                                ]
                             },
                             "children": [
                                 {
@@ -48,6 +62,29 @@
                                                 "label": "Action",
                                                 "all": "All Actions",
                                                 "at": "filters.actions"
+                                            },
+                                            {
+                                                "param": "period",
+                                                "label": "When",
+                                                "all": "Any Time",
+                                                "options": [
+                                                    {
+                                                        "value": "today",
+                                                        "label": "Today"
+                                                    },
+                                                    {
+                                                        "value": "7d",
+                                                        "label": "Last 7 Days"
+                                                    },
+                                                    {
+                                                        "value": "30d",
+                                                        "label": "Last 30 Days"
+                                                    },
+                                                    {
+                                                        "value": "90d",
+                                                        "label": "Last 90 Days"
+                                                    }
+                                                ]
                                             }
                                         ],
                                         "columns": [

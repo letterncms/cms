@@ -164,7 +164,7 @@ final class Catalog
             'ability' => ['type' => 'string', 'maxLength' => 160], 'input' => ['type' => 'object', 'default' => []],
             'to' => $s, 'href' => $s,
             'confirm' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['title'], 'properties' => ['title' => $counted, 'text' => $s, 'confirm' => $s, 'danger' => ['type' => 'boolean']]],
-            'success' => $counted, 'then' => ['anyOf' => [['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open']], ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open']]]]],
+            'success' => $counted, 'then' => ['anyOf' => [['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open', 'download']], ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['refresh', 'manifest', 'back', 'open', 'download']]]]],
             'dialog' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['title', 'body'], 'properties' => [
                 'title' => $s, 'text' => $s, 'size' => ['type' => 'string', 'enum' => ['md', 'lg']],
                 'body' => ['type' => 'array', 'maxItems' => 12, 'items' => ['type' => 'object']],
