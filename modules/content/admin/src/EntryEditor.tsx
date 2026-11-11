@@ -404,9 +404,10 @@ function Editor({ collection, initial, can }: EditorProps) {
       phase === 'error' || titleError ? 'bg-danger' : busy || dirty ? 'bg-faint' : 'bg-transparent')} />
   )
 
-  useShortcut('mod+s', () => { if (editable) void save() })
-  useShortcut('mod+shift+p', () => { if (actions.publish && !upToDate && working.title.trim()) void publish() })
-  useShortcut('mod+.', toggleSidebar)
+  // Said by name, so `?` lists them: each only while it would do something for this person.
+  useShortcut('mod+s', () => { if (editable) void save() }, true, editable ? t('Save') : undefined)
+  useShortcut('mod+shift+p', () => { if (actions.publish && !upToDate && working.title.trim()) void publish() }, true, actions.publish ? t('Publish') : undefined)
+  useShortcut('mod+.', toggleSidebar, true, t('{name} Details', { name: singular }))
   useEffect(() => {
     const first = Object.keys(errors)[0]
     if (!first) return

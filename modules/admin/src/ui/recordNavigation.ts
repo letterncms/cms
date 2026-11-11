@@ -1,3 +1,4 @@
+import { t } from '@letterncms/sdk'
 import { useEffect, useState, type RefObject } from 'react'
 import { useShortcut } from './shortcuts'
 import type { DataSelection } from './DataTable'
@@ -21,9 +22,9 @@ export function useRecordNavigation<T>({ resetKey, onOpen, selection, enabled = 
     setCursor(next.dataset.entry!)
     next.scrollIntoView({ block: 'nearest' })
   }
-  useShortcut('j', () => move(1), enabled)
-  useShortcut('k', () => move(-1), enabled)
-  useShortcut('x', () => { if (cursor && !blocked()) selection?.onSelect([cursor], !selection.ids.has(cursor)) }, enabled && !!cursor && !!selection)
+  useShortcut('j', () => move(1), enabled, t('Next Row'), t('Lists'))
+  useShortcut('k', () => move(-1), enabled, t('Previous Row'), t('Lists'))
+  useShortcut('x', () => { if (cursor && !blocked()) selection?.onSelect([cursor], !selection.ids.has(cursor)) }, enabled && !!cursor && !!selection, t('Select Row'), t('Lists'))
   useEffect(() => {
     if (!enabled) return
     const onKey = (event: KeyboardEvent) => {

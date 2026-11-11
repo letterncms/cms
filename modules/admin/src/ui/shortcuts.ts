@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 
@@ -28,10 +28,40 @@ export function matches(event: KeyboardEvent, combo: string): boolean {
   )
 }
 
-/** Global keyboard shortcut; ignores plain keys while typing. */
-export function useShortcut(combo: string, handler: (e: KeyboardEvent) => void, enabled = true) {
+/** A shortcut that says what it does: listed in the overlay `?` opens, while it works. */
+export interface ShortcutInfo { keys: string; label: string; group?: string }
+
+const listed = new Map<symbol, ShortcutInfo>()
+const listeners = new Set<() => void>()
+let snapshot: ShortcutInfo[] = []
+const changed = () => {
+  // One line per key: what was mounted last is what the key does now.
+  snapshot = [...new Map([...listed.values()].map((info) => [info.keys, info])).values()]
+  listeners.forEach((listener) => listener())
+}
+const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } }
+
+/** The shortcuts that work on the screen on view and say what they do (see `useShortcut`'s `label`). */
+export function useShortcutList(): ShortcutInfo[] {
+  return useSyncExternalStore(subscribe, () => snapshot)
+}
+
+/**
+ * Global keyboard shortcut; ignores plain keys while typing. With a `label` (and a `group`, such as "Lists")
+ * it is listed in the keyboard shortcuts overlay for as long as it is enabled: say what the key does there,
+ * in Title Case, and the overlay is always true of the screen on view.
+ */
+export function useShortcut(combo: string, handler: (e: KeyboardEvent) => void, enabled = true, label?: string, group?: string) {
   const ref = useRef(handler)
   ref.current = handler
+
+  useEffect(() => {
+    if (!enabled || !label) return
+    const id = Symbol(combo)
+    listed.set(id, { keys: combo, label, group })
+    changed()
+    return () => { listed.delete(id); changed() }
+  }, [combo, enabled, label, group])
 
   useEffect(() => {
     if (!enabled) return

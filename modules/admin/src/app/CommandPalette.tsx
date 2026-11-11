@@ -78,6 +78,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     { heading: t('Commands'), items: [
       { value: 'customize sidebar pin unpin reorder navigation menu more', icon: 'sidebar', label: t('Customize Sidebar…'), perform: () => events.emit('sidebar.customize') },
       { value: 'open settings preferences configure', icon: 'settings', label: t('Open Settings'), trailing: <Kbd keys={SETTINGS_SHORTCUT} />, perform: openSettings },
+      { value: 'keyboard shortcuts keys help', icon: 'command', label: t('Keyboard Shortcuts'), trailing: <Kbd keys="?" />, perform: () => events.emit('shortcuts.open') },
       ...commands.filter((c) => !c.acceptsQuery).map((c) => ({
         value: `${c.label} ${(c.keywords ?? []).join(' ')}`.trim(), icon: c.icon ?? 'command', label: c.label,
         trailing: c.shortcut ? <Kbd keys={c.shortcut} /> : undefined, perform: () => void c.perform(),
