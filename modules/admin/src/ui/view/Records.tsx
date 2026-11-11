@@ -1,8 +1,9 @@
 import { batch, locale, queryClient, setQuery, t, useAbility, useLocation, type RecordTimestamps, type ViewAction } from '@letterncms/sdk'
 import { useEffect, useMemo, useState } from 'react'
 import { Button, IconButton } from '../Button'
+import { cn } from '../cn'
 import { Icon } from '../Icon'
-import type { Tone } from '../Badge'
+import { Badge, type Tone } from '../Badge'
 import { calendarRange } from '../calendar'
 import { flattenTree, type DataColumn, type DataTree } from '../DataTable'
 import { DataView, FEW } from '../DataView'
@@ -35,6 +36,10 @@ interface Column {
   labels?: Record<string, string>
   /** A second value, quieter, after the first: a change and what it was about. */
   muted?: string
+  /** A key of the row holding a word to mark it with, as a badge after the value: "Default". */
+  badge?: string
+  /** What a number counts, said with it where the column's header is not on view (a phone's row): `{ one: '{count} Link', other: '{count} Links' }`. */
+  unit?: Counted
   /** `true`: sorted among what is loaded; a name: what the ability sorts by (`sort.param`). */
   sort?: boolean | string
   currency?: string
@@ -279,15 +284,21 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     const name = plainValue(at(row, columns[0].key), columns[0].labels)
     // A row with nothing to do keeps the room a menu takes, so every row's cells line up.
     if (all.length === 0) return <span aria-hidden className="inline-block size-6" />
+    const items = (list: RowAction[]) => list.map((a) => ({ label: a.label, icon: a.icon, danger: a.variant === 'danger', disabled: a.disabled !== undefined && holds(a.disabled, rowScope(row)), onSelect: () => void act(a, { row }).catch(() => {}) }))
+    const more = (className: string) => <IconButton icon="more" size="xs" className={className} label={name ? t('Actions for {name}', { name: String(name) }) : t('Actions')} />
     return <>
-      {inline.map((a, i) => <IconButton key={i} icon={a.icon!} size="xs" label={a.label} onClick={() => void act(a, { row }).catch(() => {})} />)}
+      {inline.map((a, i) => <IconButton key={i} icon={a.icon!} size="xs" label={a.label} className="max-sm:hidden" onClick={() => void act(a, { row }).catch(() => {})} />)}
       {/* One size whether or not a button of its own stands before it: the menu is in the same place on every row. */}
-      {menu.length > 0 && <Menu trigger={<IconButton icon="more" size="xs" label={name ? t('Actions for {name}', { name: String(name) }) : t('Actions')} />} items={menu.map((a) => ({ label: a.label, icon: a.icon, danger: a.variant === 'danger', disabled: a.disabled !== undefined && holds(a.disabled, rowScope(row)), onSelect: () => void act(a, { row }).catch(() => {}) }))} />}
+      {menu.length > 0 && <Menu trigger={more(inline.length > 0 ? 'max-sm:hidden' : '')} items={items(menu)} />}
+      {/* A phone's row has one thing to hit, the menu: what stands beside it on a wide screen is its first items there. */}
+      {inline.length > 0 && <Menu trigger={more('sm:hidden')} items={items(all)} />}
     </>
   }
 
-  const toColumns = (list: Column[]): DataColumn<Row>[] => list.map((own) => {
+  const toColumns = (list: Column[]): DataColumn<Row>[] => list.map((own, i) => {
     return {
+      // The title's quieter second value: beside it on a wide screen, first on the line under it on a phone.
+      note: i === 0 && own.muted ? (row: Row) => { const said = at(row, own.muted); return said ? String(said) : null } : undefined,
       id: own.key,
       label: own.label,
       width: own.fit ? fits[own.key] : own.width,
@@ -299,7 +310,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       value: paged || sorting || own.sort === false || !display ? undefined : (row: Row) => plainValue(at(row, own.key), own.labels),
       // Days are read newest first.
       descFirst: ['date', 'datetime', 'ago'].includes(own.format ?? '') || (own.format === 'field' && ['date', 'number'].includes(own.field?.type ?? '')),
-      render: (row: Row) => <Cell row={row} column={own} media={media} />,
+      render: (row: Row) => <Cell row={row} column={own} media={media} first={i === 0} />,
     }
   })
 
@@ -370,6 +381,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       dates={(row) => ({ publishedAt: (at(row, 'publishedAt') as string) ?? null, updatedAt: (at(row, 'updatedAt') as string) ?? null }) as RecordTimestamps}
       dateSort={dateKeys}
       calendar={!!calendar}
+      manual={!!tree}
       plain={!display}
       selection={selection}
       image={imageColumn ? (row) => <CardImage row={row} column={imageColumn} media={media} /> : undefined}
@@ -404,22 +416,26 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
 }
 
 /** One cell: the value as its format writes it, with the row's icon, a quieter second value or its problem. */
-function Cell({ row, column: c, media }: { row: Row; column: Column; media: Map<string, MediaThumb> }) {
+function Cell({ row, column: c, media, first }: { row: Row; column: Column; media: Map<string, MediaThumb>; first?: boolean }) {
   if (c.format === 'switch') return <SwitchCell row={row} column={c} />
   const raw = at(row, c.key)
   const value = c.empty && (raw === null || raw === undefined || raw === '') ? <span className="text-muted">{c.empty}</span> : formatValue(raw, { format: c.format, tones: c.tones, labels: c.labels, currency: c.currency ? String(at(row, c.currency) ?? c.currency) : undefined, field: c.field, locales: c.locales, media })
   const icon = c.icon ? at(row, c.icon) : undefined
   const problem = c.warning ? at(row, c.warning) : undefined
   const second = problem || (c.muted ? at(row, c.muted) : undefined)
-  if (!second && !icon) return <>{value}</>
+  const badge = c.badge ? at(row, c.badge) : undefined
+  // A bare number says what it counts where no header does.
+  if (c.unit && typeof raw === 'number') return <><span className="max-sm:hidden">{value}</span><span className="sm:hidden">{fill(counted(c.unit, raw)!, { count: raw.toLocaleString(locale()) })}</span></>
+  if (!second && !icon && !badge) return <>{value}</>
   // The value itself never gives way: what follows it is cut short first.
   return (
     <span className="flex min-w-0 items-baseline gap-2">
       {icon ? <Icon name={String(icon)} size={14} className="shrink-0 self-center text-muted" /> : null}
       <span className="max-w-full shrink-0 truncate">{value}</span>
+      {badge ? <Badge className="shrink-0 self-center font-normal">{String(badge)}</Badge> : null}
       {problem
         ? <span className="flex min-w-0 items-center gap-1 font-normal text-warning"><Icon name="warning" size={12} className="shrink-0" /><span className="truncate">{String(problem)}</span></span>
-        : second ? <span className="min-w-0 truncate font-normal text-muted">{String(second)}</span> : null}
+        : second ? <span className={cn('min-w-0 truncate font-normal text-muted', first && 'max-sm:hidden')}>{String(second)}</span> : null}
     </span>
   )
 }

@@ -35,6 +35,8 @@ final class Catalog
             'width' => $id, 'align' => ['type' => 'string', 'enum' => ['start', 'end']], 'hidden' => ['type' => 'boolean'],
             'tones' => ['type' => 'object', 'additionalProperties' => $tone], 'labels' => ['type' => 'object', 'additionalProperties' => $s],
             // `sort`: true sorts among what is loaded; a name is what the list's ability sorts by (its `sort.param`).
+            // A word to mark the row with, as a badge (a key of the row); what a number counts, said with it on a phone: {one, other} with {count}.
+            'badge' => $id, 'unit' => $this->object(['one' => $s, 'other' => $s], ['one', 'other']),
             'muted' => $id, 'sort' => ['type' => ['boolean', 'string'], 'maxLength' => 120], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
             // A row's own icon, what an empty value reads as, a row's problem in words (drawn as a warning), and a switch's per-row label, lock and why it is locked.
             'icon' => $id, 'empty' => $s, 'warning' => $id, 'ariaLabel' => $s, 'disabled' => $id, 'reason' => $id,
