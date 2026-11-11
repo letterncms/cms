@@ -15,10 +15,15 @@ export function longDate(iso: string): string {
   return new Intl.DateTimeFormat(locale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
 }
 
-export function DateCell({ iso, relative = false }: { iso: string | null | undefined; relative?: boolean }) {
-  if (!iso || !Number.isFinite(Date.parse(iso))) return <span className="text-faint">—</span>
+/**
+ * A date in a list. `wide`: it is worth a column, not a place in a phone's row (`data-wide`), where the status
+ * beside it already says "Published"; a date still to come stays, since it is what the status is about.
+ * No date at all leaves a phone's row too: a dash under a heading is a gap, a dash after a name is noise.
+ */
+export function DateCell({ iso, relative = false, wide = false }: { iso: string | null | undefined; relative?: boolean; wide?: boolean }) {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return <span data-wide="" className="text-faint">—</span>
   const future = Date.parse(iso) > Date.now()
-  return <time dateTime={iso} className={cn('inline-flex items-center gap-1 truncate text-xs tabular-nums', future ? 'text-focus' : 'text-muted')} title={longDate(iso)}>
+  return <time dateTime={iso} data-wide={wide && !future ? '' : undefined} className={cn('inline-flex items-center gap-1 truncate text-xs tabular-nums', future ? 'text-focus' : 'text-muted')} title={longDate(iso)}>
     {future && <Icon name="clock" size={12} />}
     {relative ? timeAgo(iso) : shortDate(iso)}
   </time>
@@ -31,7 +36,7 @@ export function recordDateColumns<T>(dates: (item: T) => Partial<RecordTimestamp
       id, label: id === 'published' ? t('Published') : t('Updated'), width: id === 'published' ? '112px' : '96px',
       sort: sort[id], descFirst: true, hiddenByDefault: true,
       value: (item) => { const iso = dates(item)[key]; return iso && Number.isFinite(Date.parse(iso)) ? Date.parse(iso) : null },
-      render: (item) => <DateCell iso={dates(item)[key]} relative={id === 'updated'} />,
+      render: (item) => <DateCell iso={dates(item)[key]} relative={id === 'updated'} wide={id === 'published'} />,
     }
   })
 }

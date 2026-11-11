@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState, useSyncExternalStore, type Comp
 import { Button, IconButton } from '../Button'
 import { cn } from '../cn'
 import { Icon } from '../Icon'
-import { Badge, type Tone } from '../Badge'
+import { Badge, statusLabel, type Tone } from '../Badge'
 import { calendarRange } from '../calendar'
 import { flattenTree, type DataColumn, type DataTree } from '../DataTable'
 import { DataView, FEW } from '../DataView'
@@ -315,6 +315,15 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       value: paged || sorting || own.sort === false || !display ? undefined : (row: Row) => plainValue(at(row, own.key), own.labels),
       // Days are read newest first.
       descFirst: ['date', 'datetime', 'ago'].includes(own.format ?? '') || (own.format === 'field' && ['date', 'number'].includes(own.field?.type ?? '')),
+      // These say what they are without a heading: a dot and its word, an address, a face, badges, a switch.
+      bare: ['status', 'address', 'person', 'badges', 'switch', 'languages', 'media'].includes(own.format ?? ''),
+      // The same dot and words as the column's own (formats.tsx): the tone from `tones`, the words from `labels`.
+      status: own.format === 'status' ? (row: Row) => {
+        const said = at(row, own.key)
+        if (said === null || said === undefined || said === '') return null
+        const value = String(said), tone = own.tones?.[value] ?? value
+        return { tone, label: own.labels?.[value] ?? (own.tones?.[value] !== undefined ? value : statusLabel(tone)) }
+      } : undefined,
       render: (row: Row) => <Cell row={row} column={own} media={media} first={i === 0} />,
     }
   })

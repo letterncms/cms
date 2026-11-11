@@ -12,11 +12,14 @@
 
 ### Changed
 
+- A list on a phone names its values: each one in a row is led by its column's name ("Updated last week", "Entries 3"), unless it says what it is (a status, an address, a person). A date the status already tells and a value that is missing stay out of the row.
+- A calendar shows each record's status as a dot before its title.
 - On a phone every dialog is a sheet with a grip at its top: drag it down, flick it or press it and the sheet goes; let go early and it returns. The grip is the sheet's one way out, so the × beside it is gone there. The page builder's block panel has the same grip on a phone. `@letterncms/ui` exports `SheetHandle` for a sheet of your own, and `InspectorPanel` takes `sheet` to rise from the bottom edge with it.
 - On a touch screen the lines of a menu, a select and a picker are 44px tall.
 
 ### Fixed
 
+- The rows of the Display menu are all the same height, ticked or not.
 - Dragging with a screen reader is announced in the admin's language (Dutch, French, German) instead of English, in words that say what happened and the position in the list, not an id. Every module and plugin gets it: the shared `@dnd-kit/core` hands out a `DndContext` that speaks.
 - A name read together with its value ("Author: Anna") takes the language's separator: French sets a narrow no-break space before the colon. `labelled(label, value)` in `@letterncms/ui`.
 - A group of avatars shows one initial per person, so the next circle never cuts a letter, and its count grows into a pill instead of losing digits; a single avatar shows two letters at most, with air around them.

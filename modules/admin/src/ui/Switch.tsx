@@ -23,7 +23,8 @@ export function Switch({ checked, onChange, disabled, label, size = 'md', 'aria-
     </BaseSwitch.Root>
   )
   return label ? (
-    <label className="inline-flex items-center gap-2 text-sm">
+    // `align-top`: on the baseline, a box with a tick in it and an empty one sit at different heights, and their rows differ by 2px.
+    <label className="inline-flex items-center gap-2 align-top text-sm">
       {control}
       <span id={labelId}>{label}</span>
     </label>
@@ -50,7 +51,8 @@ export function Checkbox({ checked, onChange, disabled, label, indeterminate }: 
     </BaseCheckbox.Root>
   )
   return label ? (
-    <label className="inline-flex items-center gap-2 text-sm">
+    // `align-top`: on the baseline, a box with a tick in it and an empty one sit at different heights, and their rows differ by 2px.
+    <label className="inline-flex items-center gap-2 align-top text-sm">
       {control}
       <span id={labelId}>{label}</span>
     </label>
