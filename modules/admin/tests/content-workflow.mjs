@@ -367,7 +367,7 @@ try {
     const originalNodes = await parentNodes('block-layout'), original = originalNodes.map((node) => node.id)
     const start = async () => {
       await selectRendered('block-text')
-      const handle = button('Drag to Move', controls('block-text')), rect = handle.getBoundingClientRect()
+      const handle = button('Drag to Reorder', controls('block-text')), rect = handle.getBoundingClientRect()
       const from = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
       pointerEvent(handle, 'pointerdown', from.x, from.y)
       pointerEvent(document, 'pointermove', from.x + 2, from.y + 1)

@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Fields, Icon, cn } from '@letterncms/ui'
+import { Button, Fields, Icon } from '@letterncms/ui'
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { Inserter, useInsertItems, type InsertChoice, type InsertItem } from './Inserter'
 import type { BlockTypeDef } from './types'
@@ -53,23 +53,23 @@ export function QuickInserter({ types, allowed, onChoose, onClose }: { types: Bl
 
   return <div data-cms-insert-menu className="flex w-[300px] flex-col" onKeyDown={onKeyDown}>
     <div className="p-2 pb-0">
-      <Fields bare fields={[{ handle: 'query', type: 'text', label: t('Search'), icon: 'search', size: 'sm', autofocus: true, placeholder: t('Search blocks and components…') }]} values={{ query }} onChange={(_, value) => setQuery(value ?? '')} />
+      <Fields bare fields={[{ handle: 'query', type: 'text', label: t('Search'), icon: 'search', size: 'sm', autofocus: true, placeholder: t('Search Blocks') }]} values={{ query }} onChange={(_, value) => setQuery(value ?? '')} />
     </div>
     <div role="listbox" aria-label={query.trim() ? t('Results') : t('Suggestions')} className="grid grid-cols-3 gap-1 p-2">
       {items.map((item, index) => {
         const title = item.kind === 'block' ? item.type.title : item.pattern.title
         const icon = item.kind === 'block' ? item.type.icon : item.pattern.synced ? 'symbol' : 'pattern'
-        return <button key={item.kind === 'block' ? item.type.name : `p-${item.pattern.handle}`} type="button" role="option" aria-selected={index === active} data-index={index}
+        return <Button key={item.kind === 'block' ? item.type.name : `p-${item.pattern.handle}`} variant="ghost" role="option" aria-selected={index === active} data-index={index}
           onMouseMove={() => index !== active && setActive(index)} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item)}
-          className={cn('flex h-[68px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-sm px-1 text-text', index === active && 'bg-hover')}>
+          data-active={index === active || undefined} className="!h-[68px] min-w-0 shrink !flex-col !gap-1.5 !px-1">
           <Icon name={icon} size={20} />
           <span className="w-full truncate text-center text-xs font-medium">{title}</span>
-        </button>
+        </Button>
       })}
       {!items.length && <div className="col-span-3 px-3 py-5 text-center text-xs text-faint">{t('No matching blocks')}</div>}
     </div>
-    <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setBrowsing(true)} className="cms-focus-ring flex h-9 shrink-0 items-center justify-center gap-1.5 border-t border-border text-sm font-medium text-text hover:bg-hover">
+    <Button variant="ghost" size="lg" onMouseDown={(event) => event.preventDefault()} onClick={() => setBrowsing(true)} className="!h-9 !gap-1.5 !rounded-none border-t border-border !text-sm focus-visible:!-outline-offset-2">
       {t('Browse All')}<Icon name="arrow-right" size={14} className="text-muted" />
-    </button>
+    </Button>
   </div>
 }

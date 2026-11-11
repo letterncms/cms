@@ -267,7 +267,7 @@ export function AccordionBlock({ node }: { node: BlockNode }) {
                 <IconButton icon="close" label={t('Remove Question')} size="xs" className="opacity-0 group-hover/faq:opacity-100" onClick={() => store.updateProps(node.id, { items: items.filter((_, j) => j !== i) })} />
               )}
             </div>
-            <InlineEditable html={item.answer ?? ''} quiet disabled={readOnly} placeholder={t('Answer')} className="mt-1 pl-[22px] text-[15px] leading-6 text-muted" onChange={(answer) => set(i, { answer })} onFocus={() => store.select(node.id)} />
+            <InlineEditable html={item.answer ?? ''} quiet disabled={readOnly} placeholder={t('Answer')} className="mt-1 pl-[22px] text-base leading-6 text-muted" onChange={(answer) => set(i, { answer })} onFocus={() => store.select(node.id)} />
           </div>
         ))}
       </div>
@@ -348,7 +348,7 @@ export function ComponentBlock({ node }: { node: BlockNode }) {
                     singleLine={f.type === 'text'}
                     disabled={readOnly}
                     placeholder={f.placeholder ?? t('Empty')}
-                    className="text-[15px] leading-6"
+                    className="text-base leading-6"
                     onChange={(html) => set(f.handle, f.type === 'richtext' ? html : toText(html))}
                     onFocus={() => store.select(node.id)}
                   />

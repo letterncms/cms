@@ -39,3 +39,8 @@ blockquote:focus-within .cms-block-text.cms-block-cite[data-quiet]:empty::before
 .cms-block-plus-icon { transition: rotate 160ms var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { .cms-block-chrome, .cms-block-line-x, .cms-block-line-y, .cms-block-plus { animation: none; } .cms-block-plus, .cms-block-plus-icon { transition: none; } }
 }
+
+/* A phone's block sheet leaves the page above it as it is: the block being edited is what the sheet is about, so nothing dims it. */
+@media (max-width: 639px) {
+  :has(~ .cms-block-sheet) { background-color: transparent; }
+}

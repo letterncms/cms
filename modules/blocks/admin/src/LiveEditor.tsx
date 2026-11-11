@@ -514,9 +514,10 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
     d.querySelectorAll('img,link[rel="stylesheet"]').forEach((el) => el.addEventListener('load', () => { geometry.current = null; requestAnimationFrame(measure) }, { once: true }))
     d.fonts.ready.then(() => { geometry.current = null; measure() })
   }
-  useEffect(() => bus.on('scroll-to', ({ node }) => {
+  useEffect(() => bus.on('scroll-to', ({ node, top }) => {
     const d = frame.current?.contentDocument, target = d && source(d, node)
-    if (target) target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    if (target && top) d.defaultView?.scrollTo({ top: Math.max(0, target.getBoundingClientRect().top + d.defaultView.scrollY - 72), behavior: 'smooth' })
+    else if (target) target.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }), [])
   useEffect(() => {
     const d = frame.current?.contentDocument

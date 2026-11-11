@@ -14,15 +14,16 @@ import { textDefersEnter } from '../core/slashKeys'
 import { openSlash, slashFor } from './slash'
 
 const HEADING_CLASS: Record<string, string> = {
-  '1': 'text-[30px] leading-[38px] font-semibold tracking-[-0.02em]',
-  '2': 'text-[24px] leading-[32px] font-semibold tracking-[-0.015em]',
-  '3': 'text-[20px] leading-[28px] font-semibold tracking-[-0.01em]',
-  '4': 'text-[17px] leading-[26px] font-semibold',
-  '5': 'text-[16px] leading-[26px] font-semibold',
-  '6': 'text-[13px] leading-[22px] font-semibold uppercase tracking-[0.04em] text-muted',
+  '1': 'text-display font-semibold',
+  '2': 'text-3xl font-semibold',
+  '3': 'text-2xl font-semibold',
+  '4': 'text-xl font-semibold',
+  '5': 'text-lg font-semibold',
+  '6': 'text-base font-semibold uppercase tracking-[0.04em] text-muted',
 }
 
-export const PROSE = 'text-[16px] leading-[27px]'
+/** Writing is set in the admin's own type scale: its largest reading size, with room between lines. */
+export const PROSE = 'text-lg leading-7'
 
 const TONES: Record<string, { icon: string; className: string; label: () => string }> = {
   note: { icon: 'info', className: 'bg-surface', label: () => t('Note') },
@@ -36,7 +37,7 @@ export function TextBlock({ node }: { node: BlockNode }) {
   if (node.type === 'quote') {
     return (
       <blockquote className="m-0 border-l-[3px] border-text/80 py-0.5 pl-4">
-        <EditableText node={node} prop="text" className="text-[17px] leading-[28px]" placeholder={t('Quote')} />
+        <EditableText node={node} prop="text" className="text-lg leading-7" placeholder={t('Quote')} />
         <EditableText node={node} prop="cite" className="cms-block-cite mt-1 text-sm text-muted" placeholder={t('Attribution')} quiet />
       </blockquote>
     )
