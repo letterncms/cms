@@ -68,6 +68,7 @@
 - **Users** and the **Audit Log** keep their tabs when you open their Settings tab.
 - On a phone a screen inside another (a collection's fields, a menu, a section of the design) has a way back to the one above it, the top bar's last button sits as far from the edge as its first, and the sidebar button and the way back are far enough apart to hit the right one.
 - The chat's model picker holds its place while the models load instead of appearing late, and is the same button as everywhere else.
+- Comments: Resolve, Edit and Delete show on a touch screen, where they were hidden until a pointer rested on the comment. An entry without comments says so the way every empty panel does, and saving an edited comment says **Save Comment**.
 
 ### Security
 
