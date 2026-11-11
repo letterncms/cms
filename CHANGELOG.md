@@ -68,6 +68,7 @@
 ### Fixed
 
 - **Plugins › Updates** no longer says "All plugins are up to date" above a list of plugins no store can check: with none from a store it says **No plugins to check**, and plugins that are not from a store are named only beside ones that are. A site updated with Composer says so in four words, not an instruction.
+- On a phone, a list's select filters (the Audit Log's **Everyone** and **All Actions**) share one row, half each, instead of stacking at half width with **Display** hanging beside the second.
 
 ### Fixed
 
