@@ -87,6 +87,8 @@ final class EntriesViewTest extends TestCase
 
         $this->assertSame('ui/records', $root['children'][0]['type']);
         $this->assertSame(['New Page'], array_column($root['props']['actions'], 'label'));
+        // The person's saved views are a control of the list, beside Display, and keep what narrows it.
+        $this->assertSame(['component' => 'content/views', 'props' => ['list' => 'entries.pages', 'defaultView' => 'table', 'params' => ['search', 'status', 'locale']]], $root['children'][0]['props']['controls']);
         $this->assertSame('total', $root['props']['count']['at']);
     }
 

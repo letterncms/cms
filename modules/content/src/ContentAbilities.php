@@ -19,6 +19,9 @@ use Cms\Users\User;
 /** Collections (read), entries, search and field types. */
 final class ContentAbilities
 {
+    /** What a list is sorted by: a column or a data field, `-` first for descending. Saved views keep one, so they check it the same way. */
+    public const string SORT = '^-?[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$';
+
     private const array ID = ['type' => 'string', 'format' => 'ulid', 'description' => 'Entry id (ULID).'];
 
     private const array VERSION = ['type' => 'string', 'pattern' => '^[a-f0-9]{64}$'];
@@ -279,7 +282,7 @@ final class ContentAbilities
                 'status' => ['type' => 'string', 'enum' => ['any', 'published', 'draft', 'live'], 'default' => 'any', 'description' => 'live: published, its time has come and its end date has not.'],
                 'search' => ['type' => 'string', 'maxLength' => 200],
                 'parentId' => ['type' => ['string', 'null'], 'description' => 'Tree collections: children of this entry; null for top level.'],
-                'sort' => ['type' => 'string', 'pattern' => '^-?[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$', 'description' => 'Field to sort by: title, slug, uri, status, locale, published_at, updated_at, created_at, position, author_id (by the author’s name) or a data field. Prefix with - for descending, e.g. -published_at. Empty values sort last.'],
+                'sort' => ['type' => 'string', 'pattern' => self::SORT, 'description' => 'Field to sort by: title, slug, uri, status, locale, published_at, updated_at, created_at, position, author_id (by the author’s name) or a data field. Prefix with - for descending, e.g. -published_at. Empty values sort last.'],
                 'direction' => ['type' => 'string', 'enum' => ['asc', 'desc'], 'description' => 'Sort direction; overrides a - prefix on sort.'],
                 'fields' => self::LIST_FIELDS,
                 'filters' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [

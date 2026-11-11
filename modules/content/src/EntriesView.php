@@ -79,7 +79,9 @@ final class EntriesView
                     'success' => ['one' => __('Deleted {count} entry'), 'other' => __('Deleted {count} entries')]],
             ],
             'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => mb_strtolower(__($collection->title))])],
-            'defaultView' => in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
+            'defaultView' => $defaultView = in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
+            // The person's saved views of this list, beside Display: what narrows the list is what a view can keep.
+            'controls' => ['component' => 'content/views', 'props' => ['list' => "entries.{$handle}", 'defaultView' => $defaultView, 'params' => ['search', 'status', ...(count($locales) > 1 ? ['locale'] : [])]]],
             ...($dated ? ['calendar' => [
                 'dated' => ['sort' => '{field}', 'filters' => [['field' => '{field}', 'operator' => '>=', 'value' => '{start}'], ['field' => '{field}', 'operator' => '<', 'value' => '{end}']]],
                 'undated' => ['sort' => '-updated_at', 'filters' => [['field' => '{field}', 'operator' => 'null']]],
