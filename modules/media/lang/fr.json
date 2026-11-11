@@ -102,5 +102,11 @@
   "Use File": "Utiliser le fichier",
   "Videos": "Vidéos",
   "View the Media Library": "Voir la médiathèque",
-  "Your server allows up to :size MB.": "Votre serveur autorise jusqu’à :size Mo."
+  "Your server allows up to :size MB.": "Votre serveur autorise jusqu’à :size Mo.",
+  "A .:ext file can be :size MB at most.": "Un fichier .:ext peut faire :size Mo au plus.",
+  "JSON files are kept when they are a Lottie animation or a glTF model. This one is neither.": "Les fichiers JSON sont conservés lorsqu’il s’agit d’une animation Lottie ou d’un modèle glTF. Celui-ci n’est ni l’un ni l’autre.",
+  "This .gltf points at other files, which it won’t find here. Export the model as .glb, or with its data embedded.": "Ce .gltf renvoie à d’autres fichiers, qu’il ne trouvera pas ici. Exportez le modèle en .glb, ou avec ses données intégrées.",
+  "This file could not be read.": "Ce fichier n’a pas pu être lu.",
+  "This Lottie animation has expressions, which run as code in the visitor’s browser. Export it without expressions.": "Cette animation Lottie contient des expressions, qui s’exécutent comme du code dans le navigateur du visiteur. Exportez-la sans expressions.",
+  "This Lottie animation loads images from another server. Export it with its images embedded.": "Cette animation Lottie charge des images depuis un autre serveur. Exportez-la avec ses images intégrées."
 }
