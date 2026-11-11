@@ -1424,7 +1424,7 @@
                             "type": "ui/tab",
                             "props": {
                                 "id": "settings",
-                                "label": "Settings"
+                                "label": "General"
                             },
                             "children": [
                                 {

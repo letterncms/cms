@@ -21,8 +21,8 @@ final class SettingsModule extends Plugin
 
         $this->app->make(SettingsAbilities::class)->register($cms->abilities());
 
-        // Every settings page is an item of the settings sidebar, in the section its namespace names (a plugin's
-        // under Plugins), or the Settings tab of the screen it names as its home. Namespaces without a page have no item.
+        // Every settings page has one place: the Settings tab of the screen it names as its home, or, without a screen,
+        // an item of the settings sidebar in the section its namespace names (a plugin's under Plugins). Namespaces without a page have no item.
         $cms->hooks()->addFilter('admin.nav', function (array $items) use ($cms) {
             foreach (array_filter($cms->settingsRegistry()->schemas(), static fn (array $schema) => $schema['page']) as $namespace => $schema) {
                 $home = $schema['home'] !== null ? ($items[$schema['home']]['path'] ?? null) : null;
@@ -49,7 +49,7 @@ final class SettingsModule extends Plugin
     }
 
     /**
-     * One settings page: its form as the Settings tab. Plugins add tabs and actions with the
+     * One settings page: its form as the first tab, General (tabs show once there is a second). Plugins add tabs and actions with the
      * `view.settings` filter, which gets the view, the user and `['namespace' => …]`:
      *
      *   $cms->hooks()->addFilter('view.settings', fn (array $view, User $user, array $params) => $params['namespace'] === 'seo'
@@ -73,7 +73,7 @@ final class SettingsModule extends Plugin
 
         return ['type' => 'ui/page', 'props' => ['title' => __($schema['label']), 'icon' => $schema['icon'], 'actions' => []], 'children' => [
             ['type' => 'ui/tabs', 'children' => [
-                ['type' => 'ui/tab', 'props' => ['id' => 'settings', 'label' => __('Settings')], 'children' => [['type' => 'ui/settings', 'props' => ['namespace' => $namespace]]]],
+                ['type' => 'ui/tab', 'props' => ['id' => 'settings', 'label' => __('General')], 'children' => [['type' => 'ui/settings', 'props' => ['namespace' => $namespace]]]],
             ]],
         ]];
     }

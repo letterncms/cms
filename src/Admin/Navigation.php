@@ -24,8 +24,9 @@ use Cms\Users\User;
  *
  * An item with a `home` (another item's id) belongs to that screen, like a
  * plugin's settings page to the plugin's screen (its Settings tab), and is there
- * when its home is. It is never in the main sidebar; in the settings sidebar it
- * is listed like any plugin's page, unless its screen is there already.
+ * when its home is. It is in neither sidebar: settings have one home, and what
+ * has a screen of its own keeps them there. The settings sidebar lists what has
+ * no screen.
  */
 final class Navigation extends Arranged
 {
@@ -112,7 +113,7 @@ final class Navigation extends Arranged
             $ids = [];
 
             foreach ($items as $id => $item) {
-                if ($item['section'] === $section['id'] && $this->listedInSettings($item, $items) && $may($item)) {
+                if ($item['section'] === $section['id'] && $item['home'] === null && $may($item)) {
                     $nav[$id] = $this->present($item);
                     $ids[] = $id;
                 }
@@ -161,22 +162,6 @@ final class Navigation extends Arranged
         uasort($sections, static fn ($a, $b) => [$a['order'], $a['label']] <=> [$b['order'], $b['label']]);
 
         return array_values($sections);
-    }
-
-    /**
-     * A settings page kept as its screen's Settings tab is a row of the settings sidebar too, when that
-     * screen is in the main sidebar (Analytics, Forms): every plugin's settings are found under Plugins.
-     * When the screen is itself in settings (the Audit Log), its row is the way there.
-     */
-    private function listedInSettings(array $item, array $items): bool
-    {
-        if ($item['home'] === null) {
-            return true;
-        }
-
-        $home = $items[$item['home']] ?? null;
-
-        return $home !== null && ! $this->inSettings($home);
     }
 
     /**

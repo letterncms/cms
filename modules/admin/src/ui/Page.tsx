@@ -2,7 +2,7 @@ import { Link, panelsFor, registry, t, useLocation, useManifestIfLoaded, useScre
 import { Fragment, Suspense, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
-import { homedSettings, inSettings, noteParent, openedAsSettings, placeAt, wayBack } from './place'
+import { homedSettings, inSettings, noteParent, placeAt, wayBack } from './place'
 import { WorkspaceContext } from './Slideover'
 import { Tabs } from './Segmented'
 import { Spinner } from './Spinner'
@@ -166,8 +166,6 @@ export function useScreenTabs<T extends string>(values: readonly T[]): [T | 'set
  */
 export function ScreenTabs<T extends string>({ value, onChange, tabs, className, children }: { value: T | 'settings'; onChange: (tab: T | 'settings') => void; tabs: { value: T; label: string; count?: number; indicator?: boolean }[]; className?: string; children?: ReactNode }) {
   const namespace = useHomedSettings()
-  const manifest = useManifestIfLoaded()
-  const { path } = useLocation()
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const Form = namespace ? panelsFor('screen.settings', { namespace })[0]?.component : undefined
   const [dirty, setDirty] = useState(false)
@@ -176,15 +174,12 @@ export function ScreenTabs<T extends string>({ value, onChange, tabs, className,
   const [opened, setOpened] = useState(false)
   if (settings && !opened) setOpened(true)
   const all = [...tabs, ...(namespace ? [{ value: 'settings' as const, label: t('Settings'), indicator: dirty }] : [])]
-  // Opened from its row of the settings sidebar, a plugin's screen is its settings alone: its own tabs belong to the main sidebar's place.
-  // A screen that lives in settings (Users, the Audit Log) keeps its tabs: Settings is one of them.
-  const alone = settings && !!manifest && openedAsSettings(manifest, path)
   return (
     <>
-      {all.length > 1 && !alone && <Tabs id="screen-tabs" className={cn('mb-6', className)} value={value} onChange={onChange} tabs={all} />}
+      {all.length > 1 && <Tabs id="screen-tabs" className={cn('mb-6', className)} value={value} onChange={onChange} tabs={all} />}
       {!settings && <div id={`screen-tabs-${value}-panel`} role={all.length > 1 ? 'tabpanel' : undefined} aria-labelledby={all.length > 1 ? `screen-tabs-${value}` : undefined}>{children}</div>}
       {opened && Form && namespace && (
-        <div id="screen-tabs-settings-panel" role={alone ? undefined : 'tabpanel'} aria-labelledby={alone ? undefined : 'screen-tabs-settings'} hidden={!settings}>
+        <div id="screen-tabs-settings-panel" role="tabpanel" aria-labelledby="screen-tabs-settings" hidden={!settings}>
           <Suspense fallback={<div className="grid place-items-center py-10 text-faint"><Spinner /></div>}>
             <Form namespace={namespace} onDirty={setDirty} />
           </Suspense>
