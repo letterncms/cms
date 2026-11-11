@@ -233,6 +233,19 @@ final class DesignCodeTest extends TestCase
         $this->assertSame([], $abilities->execute('design-code/list', [], $context)['scripts']);
     }
 
+    public function test_the_guide_for_agents_points_at_the_front_end_and_names_abilities_that_exist(): void
+    {
+        $guide = $this->app->make(\Cms\Abilities\AgentGuide::class)->text();
+
+        $this->assertStringContainsString('Front end:', $guide);
+        preg_match_all('#\b(design(?:-code|-vendor)?/[a-z-]+)\b#', substr($guide, (int) strpos($guide, 'Front end:')), $m);
+        $this->assertNotEmpty($m[1]);
+
+        foreach (array_unique($m[1]) as $name) {
+            $this->assertTrue($this->cms()->abilities()->has($name), "{$name} is named in the guide");
+        }
+    }
+
     public function test_writing_code_needs_the_permission_custom_code_needs(): void
     {
         $this->expectException(AbilityException::class);
