@@ -148,6 +148,12 @@ final class Blueprint
         return $out;
     }
 
+    /** @return list<string> Handles of the fields that hold one value for every language (`localizable: false`). */
+    public function shared(): array
+    {
+        return array_values(array_map(static fn (Field $f) => $f->handle, array_filter($this->fields, static fn (Field $f) => ! $f->localizable)));
+    }
+
     /**
      * JSON schema of the data. Partial schemas (drafts) accept empty required fields.
      *

@@ -272,7 +272,7 @@ final class EntryService
         $parentId = $collection->isTree() ? ($input['parentId'] ?? null) : null;
         $this->assertParent($parentId, $collection, $locale);
 
-        $data = array_replace($collection->blueprint()->defaults(), (array) ($input['data'] ?? []));
+        $data = $this->withShared($collection, $input['originId'] ?? null, array_replace($collection->blueprint()->defaults(), (array) ($input['data'] ?? [])));
         $publish = ($input['status'] ?? 'draft') === 'published';
         if ((isset($input['at']) || isset($input['expiresAt'])) && ! $publish) {
             throw AbilityException::invalid(__('A publication time requires publishing the entry.'));
@@ -337,7 +337,7 @@ final class EntryService
         if ($working['title'] === '') {
             throw AbilityException::invalid(__('A title is required.'), ['title' => __('Is required.')]);
         }
-        $working['data'] = $this->process($collection, array_replace($working['data'], (array) ($input['data'] ?? [])), full: $publish, previous: $working['data']);
+        $working['data'] = $this->process($collection, $this->withShared($collection, $entry->originId, array_replace($working['data'], (array) ($input['data'] ?? []))), full: $publish, previous: $working['data']);
         if (array_key_exists('authorId', $input) && $input['authorId'] !== $working['authorId']) {
             $working['authorId'] = $this->authorId($input['authorId']);
         }
@@ -378,7 +378,7 @@ final class EntryService
         $when = $this->publicationTime($entry, $at);
         $this->writing($entry->locale);
         $working = $entry->working();
-        $working['data'] = $this->process($collection, $working['data'], full: true);
+        $working['data'] = $this->process($collection, $this->withShared($collection, $entry->originId, $working['data']), full: true);
         $previousUri = $entry->uri;
         $entry->applyContent($working);
         $entry->status = 'published';
@@ -509,7 +509,7 @@ final class EntryService
         $source = array_replace($entry->working(), array_intersect_key($snapshot, array_flip(['title', 'slug', 'data', 'authorId'])), $snapshot['draft'] ?? []);
         $this->writing($entry->locale);
         // A restore replaces the content snapshot; absent later fields do not leak into it.
-        $source['data'] = $this->process($entry->collection(), (array) $source['data'], full: false);
+        $source['data'] = $this->process($entry->collection(), $this->withShared($entry->collection(), $entry->originId, (array) $source['data']), full: false);
         $source['authorId'] = $this->authorId($source['authorId'], allowMissing: true);
         $probe = clone $entry;
         $probe->title = $source['title'];
@@ -568,14 +568,76 @@ final class EntryService
 
         if ($this->dry) {
             $this->staged[$entry->id] = $entry;
+        } else {
+            $this->entries->save($entry);
 
+            if ($previousUri !== null && $entry->uri !== null && $previousUri !== $entry->uri && $entry->isLive()) {
+                $this->dispatch('entry.uri-changed', $entry, $previousUri, $entry->uri);
+            }
+        }
+
+        $this->shareWithTranslations($entry, $collection);
+    }
+
+    /**
+     * Fields with `localizable: false` hold one value for every language. The original entry (the one the
+     * others translate) is where it is set; a translation takes the original's value whatever it is sent.
+     */
+    private function withShared(Collection $collection, ?string $originId, array $data): array
+    {
+        $shared = $originId === null ? [] : $collection->blueprint()->shared();
+        $origin = $shared === [] ? null : $this->find($originId);
+
+        foreach ($origin ? $shared : [] as $handle) {
+            $data[$handle] = $origin->data[$handle] ?? null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * After the original is saved: its translations get the shared values it now holds, in what they serve and
+     * in their waiting changes. What only waits in the original's own draft is passed on when it is published.
+     */
+    private function shareWithTranslations(Entry $entry, Collection $collection): void
+    {
+        if ($entry->originId !== null || ($shared = $collection->blueprint()->shared()) === []) {
             return;
         }
 
-        $this->entries->save($entry);
+        $values = [];
 
-        if ($previousUri !== null && $entry->uri !== null && $previousUri !== $entry->uri && $entry->isLive()) {
-            $this->dispatch('entry.uri-changed', $entry, $previousUri, $entry->uri);
+        foreach ($shared as $handle) {
+            $values[$handle] = $entry->data[$handle] ?? null;
+        }
+
+        $translations = [];
+
+        foreach ($this->entries->query()->collection($collection->handle)->where('origin_id', $entry->id)->get() as $translation) {
+            $translations[$translation->id] = $translation;
+        }
+
+        foreach ($this->staged as $id => $staged) {
+            unset($translations[$id]);
+            $staged && $staged->originId === $entry->id && $translations[$id] = $staged;
+        }
+
+        foreach ($translations as $translation) {
+            $same = static fn (array $data): bool => array_intersect_key($data, $values) + array_fill_keys(array_keys($values), null) == $values;
+
+            if ($same($translation->data) && ($translation->draft === null || $same((array) ($translation->draft['data'] ?? [])))) {
+                continue;
+            }
+
+            $translation->data = array_replace($translation->data, $values);
+
+            if ($translation->draft !== null) {
+                $translation->draft['data'] = array_replace((array) ($translation->draft['data'] ?? []), $values);
+            }
+
+            $this->persist($translation, $collection);
+            $this->record($translation, 'shared', null, 'Shared fields changed in the original');
+            $this->dispatch('entry.saved', $translation, null, 'shared');
         }
     }
 
