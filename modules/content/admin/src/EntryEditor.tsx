@@ -318,13 +318,9 @@ function Editor({ collection, initial, can }: EditorProps) {
   const properties = placement.document.filter((field) => !WIDE_FIELDS.includes(field.type))
   const mainFields = placement.document.filter((field) => WIDE_FIELDS.includes(field.type))
   const fieldContext = { entry: entry ?? undefined, collection: collection.handle, locale: contentLocale }
+  // The version's dialog showed what changes and asked: nothing more to confirm here.
   const restore = async (revisionId: string) => {
-    if (!actions.restore || !(await confirm({
-      title: t('Restore this version?'),
-      description: t('The current saved content stays in history.'),
-      confirm: t('Restore'),
-    }))) return
-    await replace('revisions/restore', { revisionId })
+    if (actions.restore) await replace('revisions/restore', { revisionId })
   }
   const sidebar = (
     <div className="flex h-full min-h-0 flex-col">
@@ -355,7 +351,7 @@ function Editor({ collection, initial, can }: EditorProps) {
             update={update}
           />
         ) : active === 'history' ? (
-          <EntryHistory entry={entry} editable={actions.restore && !busy} onRestore={restore} />
+          <EntryHistory entry={entry} working={working} fields={collection.resolvedFields} editable={actions.restore && !busy} onRestore={restore} />
         ) : (
           sidebarPanels.filter((panel) => panel.id === active).map((panel) => (
             <panel.component key={panel.id} {...panelProps} />
