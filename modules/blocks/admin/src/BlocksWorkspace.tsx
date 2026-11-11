@@ -152,7 +152,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
           <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border pl-2 pr-3">
             <IconButton icon="arrow-left" label={t('Back to {name}', { name: props.collection.singular })} size="sm" onClick={entryDetails} />
             <span className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-ink">{plural(count, '{count} block selected', '{count} blocks selected')}</span>
-            <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={() => props.setSidebarOpen(false)} />
+            <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={() => props.setSidebarOpen(false)} className="max-sm:hidden" />
           </div>
           {!readOnly && <div className="px-2 py-3"><Button variant="destructive" size="sm" icon="trash" onClick={() => store.removeSelection()}>{t('Delete')}</Button></div>}
         </> : <Inspector node={selected} onBack={entryDetails} backLabel={props.collection.singular} onClose={() => props.setSidebarOpen(false)} /> : props.sidebar}

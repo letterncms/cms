@@ -113,7 +113,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
             { label: t('Delete'), icon: 'trash', shortcut: '⌫', danger: true, disabled: readOnly, onSelect: () => store.remove(node.id) },
           ]}
         />
-        {onClose && <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={onClose} />}
+        {onClose && <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={onClose} className="max-sm:in-[.cms-block-sheet]:hidden" />}
       </div>
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border pl-4 pr-3">
         <Tabs<Tab>
