@@ -11,6 +11,9 @@ final class FieldTypeRegistry
     /** @var array<string, FieldType> */
     private array $types = [];
 
+    /** The language of the record whose fields are being read, while an entry is written: a term is looked up in it. */
+    public ?string $locale = null;
+
     public function register(FieldType $type): void
     {
         $this->types[$type->key()] = $type;

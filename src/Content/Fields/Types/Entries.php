@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Content\Fields\Types;
 
 use Cms\Content\Entries\EntryRepository;
+use Cms\Content\Entries\EntryService;
 use Cms\Content\Fields\Field;
 use Cms\Content\Fields\FieldType;
 
@@ -46,11 +47,7 @@ class Entries extends FieldType
             return [];
         }
 
-        $found = [];
-
-        foreach (app(EntryRepository::class)->findMany(array_values($new)) as $entry) {
-            $found[$entry->id] = $entry->collection;
-        }
+        $found = app(EntryService::class)->known(array_values($new));
 
         $allowed = $this->collections($field);
         $errors = [];

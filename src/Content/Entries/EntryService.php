@@ -31,6 +31,9 @@ final class EntryService
     /** @var array<string, ?Entry> What a dry run would have saved (null: deleted), read back in place of what is stored. */
     private array $staged = [];
 
+    /** @var array<string, ?string> While primed() runs: the collection of each entry the record names, null for one that is not there. */
+    private array $primed = [];
+
     public function __construct(
         private readonly EntryRepository $entries,
         private readonly CollectionRepository $collections,
@@ -88,6 +91,69 @@ final class EntryService
         });
     }
 
+    /**
+     * Which of these entries exist, and in which collection: as stored, and in a dry run as they would be after
+     * what it has done so far, so a relation to an entry the same run makes is not refused.
+     *
+     * @param  list<string>  $ids
+     * @return array<string, string> id => collection handle
+     */
+    public function known(array $ids): array
+    {
+        $found = [];
+        $ask = [];
+
+        // What a save asked about beforehand (prime()) is not asked again field by field.
+        foreach ($ids as $id) {
+            if (array_key_exists($id, $this->primed)) {
+                $this->primed[$id] === null || $found[$id] = $this->primed[$id];
+            } else {
+                $ask[] = $id;
+            }
+        }
+
+        foreach ($ask === [] ? [] : $this->entries->findMany($ask) as $entry) {
+            $found[$entry->id] = $entry->collection;
+        }
+
+        foreach ($ids as $id) {
+            if (array_key_exists($id, $this->staged)) {
+                unset($found[$id]);
+                $this->staged[$id] && $found[$id] = $this->staged[$id]->collection;
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * Ask once about every entry a record names, before its fields are checked one by one: `$run` then finds the
+     * answers ready in known(), so a repeater of fifty rows costs one query, not fifty.
+     */
+    public function primed(array $data, callable $run): mixed
+    {
+        preg_match_all('/"([0-9a-z]{26})"/', strtolower((string) json_encode($data)), $found);
+        $ids = array_values(array_unique($found[1]));
+        $before = $this->primed;
+        $this->primed = array_fill_keys($ids, null);
+
+        foreach ($ids === [] ? [] : $this->entries->findMany($ids) as $entry) {
+            $this->primed[$entry->id] = $entry->collection;
+        }
+
+        try {
+            return $run();
+        } finally {
+            $this->primed = $before;
+        }
+    }
+
+    /** The language of the entry being written, for field types that look things up in it (a term by its name). */
+    private function writing(string $locale): void
+    {
+        app(\Cms\Content\Fields\FieldTypeRegistry::class)->locale = $locale;
+    }
+
     public function isDry(): bool
     {
         return $this->dry;
@@ -105,6 +171,8 @@ final class EntryService
             return $callback();
         } finally {
             $this->writeDepth--;
+            // No entry is being written any more.
+            $this->writeDepth > 0 || app(\Cms\Content\Fields\FieldTypeRegistry::class)->locale = null;
             flock($lock, LOCK_UN);
             fclose($lock);
         }
@@ -190,6 +258,7 @@ final class EntryService
         $input = $this->hooks->filter('entry.creating', $input, $collection, $user);
         $locale = $input['locale'] ?? config('app.locale', 'en');
         $this->assertLocale($locale);
+        $this->writing($locale);
 
         $title = trim((string) ($input['title'] ?? ''));
 
@@ -257,6 +326,7 @@ final class EntryService
         }
         $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $input['expectedVersion'] ?? null);
+        $this->writing($entry->locale);
         $collection = $entry->collection();
         $working = $entry->working();
         $working['title'] = array_key_exists('title', $input) ? trim((string) $input['title']) : $working['title'];
@@ -301,6 +371,7 @@ final class EntryService
         $this->assertVersion($entry, $expectedVersion);
         $collection = $entry->collection();
         $when = $this->publicationTime($entry, $at);
+        $this->writing($entry->locale);
         $working = $entry->working();
         $working['data'] = $this->process($collection, $working['data'], full: true);
         $previousUri = $entry->uri;
@@ -428,6 +499,7 @@ final class EntryService
         $this->assertVersion($entry, $expectedVersion);
         $snapshot = $revision['snapshot'];
         $source = array_replace($entry->working(), array_intersect_key($snapshot, array_flip(['title', 'slug', 'data', 'authorId'])), $snapshot['draft'] ?? []);
+        $this->writing($entry->locale);
         // A restore replaces the content snapshot; absent later fields do not leak into it.
         $source['data'] = $this->process($entry->collection(), (array) $source['data'], full: false);
         $source['authorId'] = $this->authorId($source['authorId'], allowMissing: true);
