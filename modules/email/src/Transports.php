@@ -22,11 +22,11 @@ final class Transports
     public function __construct()
     {
         $this->register('smtp', 'SMTP', [
-            ['handle' => 'smtp_host', 'type' => 'text', 'label' => 'SMTP Host', 'width' => 'half'],
-            ['handle' => 'smtp_port', 'type' => 'number', 'label' => 'Port', 'default' => 587, 'width' => 'half'],
-            ['handle' => 'smtp_encryption', 'type' => 'select', 'label' => 'Encryption', 'options' => ['tls' => 'STARTTLS (587)', 'ssl' => 'SSL/TLS (465)', 'none' => __('None')], 'default' => 'tls', 'width' => 'half'],
-            ['handle' => 'smtp_username', 'type' => 'text', 'label' => 'Username', 'width' => 'half'],
-            ['handle' => 'smtp_password', 'type' => 'text', 'label' => 'Password', 'secret' => true],
+            ['section' => 'SMTP', 'handle' => 'smtp_host', 'type' => 'text', 'label' => 'Host', 'width' => 'half'],
+            ['section' => 'SMTP', 'handle' => 'smtp_port', 'type' => 'number', 'label' => 'Port', 'default' => 587, 'width' => 'half'],
+            ['section' => 'SMTP', 'handle' => 'smtp_encryption', 'type' => 'select', 'label' => 'Encryption', 'options' => ['tls' => 'STARTTLS (587)', 'ssl' => 'SSL/TLS (465)', 'none' => __('None')], 'default' => 'tls'],
+            ['section' => 'SMTP', 'handle' => 'smtp_username', 'type' => 'text', 'label' => 'Username', 'width' => 'half'],
+            ['section' => 'SMTP', 'handle' => 'smtp_password', 'type' => 'text', 'label' => 'Password', 'secret' => true, 'width' => 'half'],
         ], static function (array $s): Transport {
             $smtp = new EsmtpTransport((string) $s['smtp_host'], (int) ($s['smtp_port'] ?? 587), ($s['smtp_encryption'] ?? 'tls') === 'ssl');
 

@@ -36,8 +36,8 @@ final class AssistantModule extends Plugin
         $this->cms()->settingsRegistry()->register('assistant', fields: [
             ['handle' => 'api_key', 'type' => 'text', 'label' => 'Anthropic API Key', 'secret' => true],
             ['handle' => 'model', 'type' => 'select', 'label' => 'Default Model', 'options' => array_map(static fn (array $model) => $model['name'], Claude::models()), 'default' => Claude::DEFAULT_MODEL, 'required' => true, 'display' => 'dropdown', 'width' => 'half'],
-            ['handle' => 'effort', 'type' => 'select', 'label' => 'Effort', 'options' => Claude::efforts(), 'default' => 'medium', 'display' => 'dropdown', 'width' => 'half'],
             ['handle' => 'small_model', 'type' => 'select', 'label' => 'Model for Small Tasks', 'options' => array_map(static fn (array $model) => $model['name'], Claude::models()), 'default' => Claude::DEFAULT_SMALL_MODEL, 'required' => true, 'display' => 'dropdown', 'width' => 'half'],
+            ['handle' => 'effort', 'type' => 'select', 'label' => 'Effort', 'options' => Claude::efforts(), 'default' => 'medium', 'display' => 'dropdown'],
             ['handle' => 'approval', 'type' => 'select', 'label' => 'Ask Before', 'options' => ['destructive' => __('Deletes and Admin Changes'), 'writes' => __('Every Change')], 'default' => 'destructive', 'display' => 'radio'],
         ], icon: 'sparkle', description: 'API key, models and approvals.', order: 60, section: 'system');
 
