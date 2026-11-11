@@ -9,20 +9,26 @@ import {
   ScreenSidebar, Spinner, StatusDot, Tabs, statusLabel, Tooltip, Topbar, confirm, cn, entryActionAvailability,
   copyText, fieldControlId, toast, useShortcut, useWideInspector,
 } from '@letterncms/ui'
-import { useCollection, type CollectionDef } from './useCollection'
+import { useCollection, withBlueprint, type CollectionDef } from './useCollection'
 import { useEntrySession } from './useEntrySession'
 import { resolveEntryFields } from './entryFields'
 import { EntryDetails, PublicationDialog } from './EntryDetails'
 import { EntryHistory } from './EntryHistory'
 import { EntryMoveDialog } from './EntryMoveDialog'
+import NewEntry from './NewEntry'
 
 
 export default function EntryEditor({ params }: { params: Record<string, string> }) {
-  const { collection, summary, isLoading, error } = useCollection(params.collection)
+  const { collection: defined, summary, isLoading, error } = useCollection(params.collection)
   const isNew = params.id === 'new'
   const entryQuery = useEntryQuery(params.id, isNew)
   const manifest = useManifest()
   const { query } = useLocation()
+  // An entry has the fields of the blueprint it was made with; a new one, of the kind chosen for it (?blueprint=).
+  const blueprint = isNew ? (defined?.resolvedBlueprints?.some((b) => b.handle === query.blueprint) ? query.blueprint! : null) : entryQuery.data?.blueprint ?? null
+  // Wherever New was pressed (the list, the command palette, a widget): with several kinds and none chosen yet, that is asked first.
+  const asks = isNew && !!defined?.resolvedBlueprints?.length && query.blueprint === undefined
+  const collection = useMemo(() => defined && withBlueprint(defined, blueprint), [defined, blueprint])
   const list = listOf(manifest, params.collection, entryQuery.data?.locale ?? query.locale)
   const retryLoad = () => {
     void entryQuery.refetch()
@@ -67,13 +73,27 @@ export default function EntryEditor({ params }: { params: Record<string, string>
     )
   }
 
+  if (asks) {
+    return (
+      <>
+        <Topbar back={{ to: list.path, label: list.label }} />
+        <NewEntry
+          props={{ collection: collection.handle, locale: query.locale, title: summary.newLabel, kinds: [{ handle: '', title: summary.singular }, ...collection.resolvedBlueprints!.map((b) => ({ handle: b.handle, title: b.title }))] }}
+          close={() => navigate(list.path)}
+          disabled={false} onAction={() => {}} scope={{}}
+        />
+      </>
+    )
+  }
+
   // Initial data is read once by the session. Background refreshes never replace local edits.
   return (
     <>
       {hold}
       <Editor
-        key={`${params.collection}:${params.id}`}
+        key={`${params.collection}:${params.id}:${blueprint ?? ''}`}
         collection={collection}
+        blueprint={blueprint}
         initial={isNew ? null : entryQuery.data!}
         can={summary.can}
       />
@@ -98,12 +118,14 @@ function useEntryQuery(id: string, skip: boolean) {
 
 interface EditorProps {
   collection: CollectionDef
+  /** The blueprint a new entry is made with; an existing one has its own. */
+  blueprint: string | null
   initial: Entry | null
   can: EntryPanelProps['can']
 }
 
 // A background refresh that fails while the entry is open changes nothing here: what is on view is the session's.
-function Editor({ collection, initial, can }: EditorProps) {
+function Editor({ collection, blueprint, initial, can }: EditorProps) {
   const manifest = useManifest()
   const { query } = useLocation()
   const autosave = useConfig<{ autosave: number }>('content').autosave ?? 1200
@@ -124,7 +146,7 @@ function Editor({ collection, initial, can }: EditorProps) {
     data: initial?.data ?? Object.fromEntries(
       collection.resolvedFields.map((field) => [field.handle, field.default ?? null]),
     ),
-  }, collection.handle, contentLocale, autosave, can, held)
+  }, collection.handle, contentLocale, autosave, can, held, blueprint)
   const editable = control.editable
   const { entry, working, dirty, phase, errors, conflict, update, session } = control
   // A built-in page (listed with the site's pages) is one of a kind: it is never copied.

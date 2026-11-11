@@ -115,6 +115,13 @@ final class BlueprintsTest extends TestCase
         $collection = $this->ability('collections/get', ['handle' => 'news']);
         $this->assertSame(['body', 'source', 'length'], array_column($collection['resolvedBlueprints'][0]['resolvedFields'], 'handle'));
         $this->assertArrayNotHasKey('resolvedBlueprints', $this->ability('collections/get', ['handle' => 'posts']));
+
+        // New asks which kind, where there are several, and goes straight to the editor where there is one.
+        $admin = $this->admin();
+        $new = fn (string $handle) => $this->cms()->abilities()->execute('views/get', ['id' => 'content', 'params' => ['collection' => $handle]], AbilityContext::forUser($admin, 'admin'))['root']['props']['actions'][0];
+        $this->assertSame('content/new-entry', $new('news')['component']);
+        $this->assertSame([['handle' => '', 'title' => 'News'], ['handle' => 'video', 'title' => 'Video'], ['handle' => 'gallery', 'title' => 'Gallery']], $new('news')['props']['kinds']);
+        $this->assertSame('/content/posts/new?locale={query.locale}', $new('posts')['to']);
     }
 
     public function test_blueprints_are_checked_when_a_collection_is_saved(): void

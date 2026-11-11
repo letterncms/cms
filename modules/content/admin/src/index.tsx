@@ -16,6 +16,8 @@ registry.fields.set('uri', UriField)
 registry.widgets.set('recent', lazy(() => import('./WidgetRecent')))
 // A person's saved views of a collection's list: the control beside Display (EntriesView names it in the list's `controls`).
 registry.components.set('content/views', lazy(() => import('./SavedViews')))
+// New, in a collection whose entries come in kinds: which one (ContentModule::view names it as the New button's component).
+registry.components.set('content/new-entry', lazy(() => import('./NewEntry')))
 
 // @ in a chat: any entry, by its title or what it says. Before anything is typed, the latest ones.
 const entryOption = (entry: EntrySummary): ComposerOption => {

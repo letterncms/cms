@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { EntrySession, type SaveOptions } from './entrySession'
 
 /** `held`: someone else holds the entry; nothing is changed or saved from here until they let go or it is taken over. */
-export function useEntrySession(initial: Entry | null, defaults: EntryContent, collection: string, locale: string, autosave: number, capabilities: EntryCapabilities, held = false) {
+export function useEntrySession(initial: Entry | null, defaults: EntryContent, collection: string, locale: string, autosave: number, capabilities: EntryCapabilities, held = false, blueprint: string | null = null) {
   const mounted = useRef(true)
   const creationPath = useRef(window.location.pathname)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
@@ -12,7 +12,7 @@ export function useEntrySession(initial: Entry | null, defaults: EntryContent, c
       ? await run<Entry>('entries/publish', { id: entry.id, ...(options.at ? { at: options.at } : {}), expectedVersion: options.expectedVersion ?? entry.version })
       : entry
       ? await run<Entry>('entries/update', { id: entry.id, ...values, publish: !!options.publish, ...(options.at ? { at: options.at } : {}), expectedVersion: options.expectedVersion ?? entry.version })
-      : await run<Entry>('entries/create', { collection, locale, ...values, slug: values.slug || undefined, status: options.publish ? 'published' : 'draft', ...(options.at ? { at: options.at } : {}) })
+      : await run<Entry>('entries/create', { collection, locale, ...(blueprint ? { blueprint } : {}), ...values, slug: values.slug || undefined, status: options.publish ? 'published' : 'draft', ...(options.at ? { at: options.at } : {}) })
     if (!entry && mounted.current && window.location.pathname === creationPath.current)
       // The router's own state stays, so Back and Forward still know where they are.
       window.history.replaceState(window.history.state, '', `${window.__CMS__.base}/content/${collection}/${result.id}${locale ? `?locale=${encodeURIComponent(locale)}` : ''}`)

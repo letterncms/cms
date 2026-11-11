@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
-const all = ['navigation', 'command-palette', 'overviews', 'chat', 'inspector', 'content-workflow']
+const all = ['navigation', 'command-palette', 'overviews', 'chat', 'inspector', 'content-workflow', 'content-kinds']
 const chosen = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const chrome = [process.env.CHROME, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find((path) => path && existsSync(path))
 if (!chrome) {
