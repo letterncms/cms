@@ -11,7 +11,9 @@ namespace Cms\Modules\Blocks;
  *     id: "m1", name: "Fade Up",
  *     trigger: { type: "appear", start: "top 85%", once: true, node: "#b1" },   appear · scroll · hover · press · load · loop · event
  *              { type: "scroll", pin: "150vh", scrub: 0.6 },                     scroll: pin holds the element in place for that much scrolling while
- *                                                                                the steps play; scrub lets them trail the scroll by about that many seconds
+ *                                                                                the steps play; scrub lets them trail the scroll by about that many seconds;
+ *                                                                                with scrub, or with progress: true, the element carries --cms-progress
+ *                                                                                (0 to 1) and hears `cms:progress`, for a number that counts with the scroll
  *     on: ["desktop", "tablet"],                                                 absent = every screen size
  *     steps: [{
  *       target: "self",                                                          self · children · words · lines · chars · #<node id>
@@ -135,6 +137,7 @@ final class Motion
                 'node' => is_string($trigger['node'] ?? null) && preg_match(self::NODE, $trigger['node']) ? $trigger['node'] : null,
                 'pin' => $type === 'scroll' ? self::pin($trigger['pin'] ?? null) : null,
                 'scrub' => $type === 'scroll' && is_numeric($trigger['scrub'] ?? null) && (float) $trigger['scrub'] > 0 ? self::number($trigger['scrub'], 0.05, 3) : null,
+                'progress' => $type === 'scroll' && ! empty($trigger['progress']) ? true : null,
             ], static fn ($v) => $v !== null);
             // The runtime lays out lines; what compiles to CSS runs before there is a script to ask.
             $measured = in_array($type, ['appear', 'hover', 'press', 'event'], true);
@@ -357,6 +360,9 @@ final class Motion
             'end' => $animation['trigger']['end'] ?? 'bottom top',
             'pin' => $pin !== null ? 1 : null,
             'scrub' => $animation['trigger']['scrub'] ?? null,
+            // How far along it is, for styles and scripts: when asked for, and for a trailing animation, which the
+            // script follows anyway. Not for a pin alone: CSS does that without a script, and stays without one.
+            'p' => isset($animation['trigger']['scrub']) || ! empty($animation['trigger']['progress']) ? 1 : null,
         ], static fn ($v) => $v !== null);
 
         // Trailing the scroll is something only a script does.
