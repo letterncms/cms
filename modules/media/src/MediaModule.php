@@ -15,7 +15,7 @@ final class MediaModule extends Plugin
 {
     public function register(): void
     {
-        foreach ([ImageProcessor::class, SvgSanitizer::class, Variants::class, MediaStore::class, MediaManifest::class, MediaReferences::class, Images::class] as $service) {
+        foreach ([ImageProcessor::class, SvgSanitizer::class, Variants::class, MediaStore::class, MediaManifest::class, MediaReferences::class, MediaFolders::class, Images::class] as $service) {
             $this->app->singleton($service);
         }
 
@@ -71,8 +71,10 @@ final class MediaModule extends Plugin
     {
         $admin = $this->cms()->admin();
         $none = ['type' => 'object', 'properties' => (object) [], 'additionalProperties' => false];
-        $admin->component('media/library', ['label' => 'Media library', 'description' => 'Every file, as a grid or a table, to search, filter by kind and folder, open and delete.', 'surface' => false, 'permission' => 'media.view', 'props' => $none]);
+        $admin->component('media/library', ['label' => 'Media library', 'description' => 'Every file, as a grid or a table beside the tree of folders, to search, filter by kind, open, move and delete.', 'surface' => false, 'permission' => 'media.view', 'props' => $none]);
         $admin->component('media/upload', ['label' => 'Upload Files', 'description' => 'The file picker, for files into the library’s folder on view.', 'surface' => false, 'permission' => 'media.upload', 'props' => $none]);
+
+        $admin->component('media/new-folder', ['label' => 'New Folder', 'description' => 'The dialog that makes a folder inside the library’s folder on view.', 'surface' => false, 'permission' => 'media.edit', 'props' => $none]);
 
         $this->cms()->views()->register('media', '/media', static fn () => ['type' => 'ui/page', 'props' => [
             'title' => __('Media'), 'icon' => 'media', 'width' => 'wide',
@@ -81,6 +83,7 @@ final class MediaModule extends Plugin
         ], 'children' => [
             ['type' => 'ui/tabs', 'children' => [
                 ['type' => 'ui/tab', 'props' => ['id' => 'library', 'label' => __('Library'), 'actions' => [
+                    ['label' => __('New Folder'), 'icon' => 'folder-plus', 'component' => 'media/new-folder', 'can' => 'media.edit'],
                     ['label' => __('Upload'), 'icon' => 'upload', 'variant' => 'primary', 'component' => 'media/upload', 'can' => 'media.upload'],
                 ]], 'children' => [['type' => 'media/library']]],
             ]],
@@ -154,7 +157,7 @@ final class MediaModule extends Plugin
 
         $a->register('media/list', [
             'label' => 'List Media',
-            'description' => 'Browse the media library with search, filters and sorting.',
+            'description' => 'Browse the media library with search, filters and sorting. `folder` is one folder\'s own files (\'\' for files in none); `folders` is the whole tree of folder paths, empty ones included.',
             'permission' => 'media.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => [
@@ -213,7 +216,7 @@ final class MediaModule extends Plugin
                     'total' => $page->total(),
                     'page' => $page->currentPage(),
                     'pages' => $page->lastPage(),
-                    'folders' => MediaItem::query()->select('folder')->distinct()->orderBy('folder')->pluck('folder')->filter()->values()->all(),
+                    'folders' => $this->app->make(MediaFolders::class)->all(),
                 ];
             },
         ]);
@@ -289,6 +292,87 @@ final class MediaModule extends Plugin
             ], 'required' => ['id']],
             'output' => self::itemShape(),
             'handler' => fn (array $in) => $public($store()->update(MediaItem::query()->findOrFail(strtolower($in['id'])), $in)),
+        ]);
+
+        $folders = fn (): MediaFolders => $this->app->make(MediaFolders::class);
+        // The files a move is for: every id must be one.
+        $movable = static function (array $in): array {
+            $ids = array_values(array_unique(array_map('strtolower', $in['ids'])));
+            $items = MediaItem::query()->whereIn('id', $ids)->get()->keyBy('id');
+
+            if (($missing = array_values(array_diff($ids, $items->keys()->all()))) !== []) {
+                throw new AbilityException(__('Not found.'), 'not_found', ['ids' => implode(', ', $missing)]);
+            }
+
+            return array_map(static fn (string $id) => $items[$id], $ids);
+        };
+
+        $a->register('media/move', [
+            'label' => 'Move Media',
+            'description' => 'Put files in a folder, by its path (such as press/2026; \'\' takes them out of every folder). A folder that is not there yet is made.',
+            'permission' => 'media.edit',
+            'annotations' => ['idempotent' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'ids' => ['type' => 'array', 'items' => ['type' => 'string'], 'minItems' => 1, 'maxItems' => 200],
+                'folder' => ['type' => 'string', 'maxLength' => 200],
+            ], 'required' => ['ids', 'folder']],
+            'output' => Shape::of(['moved' => [Shape::STRING], 'folder' => Shape::STRING]),
+            'dryRun' => function (array $in) use ($movable, $folders): array {
+                $folder = $in['folder'] === '' ? '' : $folders()->path($in['folder']);
+
+                return array_map(static fn (MediaItem $item) => ['action' => 'move', 'type' => 'media', 'id' => $item->id, 'from' => $item->folder, 'to' => $folder], array_values(array_filter($movable($in), static fn (MediaItem $item) => $item->folder !== $folder)));
+            },
+            'handler' => function (array $in) use ($movable, $folders) {
+                $items = $movable($in);
+
+                return ['folder' => $folders()->move($items, $in['folder']), 'moved' => array_map(static fn (MediaItem $item) => $item->id, $items)];
+            },
+        ]);
+
+        $a->register('media-folders/create', [
+            'label' => 'Create Media Folder',
+            'description' => 'Make an empty folder in the media library, by its path: `press/2026` is the folder 2026 inside press. Each part becomes a slug.',
+            'permission' => 'media.edit',
+            'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['path']],
+            'output' => Shape::of(['path' => Shape::STRING, 'folders' => [Shape::STRING]]),
+            'handler' => fn (array $in) => ['path' => $folders()->create($in['path']), 'folders' => $folders()->all()],
+        ]);
+
+        $a->register('media-folders/rename', [
+            'label' => 'Rename Media Folder',
+            'description' => 'Give a folder a new path: a new name, or a new place in the tree. Its files and the folders inside it follow.',
+            'permission' => 'media.edit',
+            'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200], 'to' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['path', 'to']],
+            'output' => Shape::of(['path' => Shape::STRING, 'moved' => Shape::INTEGER, 'folders' => [Shape::STRING]]),
+            'dryRun' => function (array $in) use ($folders): array {
+                [$from, $to] = $folders()->renaming($in['path'], $in['to']);
+
+                return $from === $to ? [] : [['action' => 'rename', 'type' => 'media-folder', 'path' => $from, 'to' => $to, 'moves' => ['files' => $folders()->files($from)->count()]]];
+            },
+            'handler' => function (array $in) use ($folders) {
+                [, $to] = $folders()->renaming($in['path'], $in['to']);
+
+                return ['moved' => $folders()->rename($in['path'], $in['to']), 'path' => $to, 'folders' => $folders()->all()];
+            },
+        ]);
+
+        $a->register('media-folders/delete', [
+            'label' => 'Delete Media Folder',
+            'description' => 'Delete a folder and the folders inside it. No file is deleted: the files in them move to the folder above.',
+            'permission' => 'media.edit',
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['path']],
+            'output' => Shape::of(['deleted' => Shape::STRING, 'moved' => Shape::INTEGER, 'folders' => [Shape::STRING]]),
+            'dryRun' => function (array $in) use ($folders): array {
+                $path = $folders()->existing($in['path']);
+
+                return [['action' => 'delete', 'type' => 'media-folder', 'path' => $path, 'removes' => ['folders' => count(array_filter($folders()->all(), static fn (string $folder) => $folder === $path || str_starts_with($folder, $path.'/')))], 'moves' => ['files' => $folders()->files($path)->count(), 'to' => str_contains($path, '/') ? dirname($path) : '']]];
+            },
+            'handler' => function (array $in) use ($folders) {
+                $path = $folders()->existing($in['path']);
+
+                return ['deleted' => $path, 'moved' => $folders()->delete($path), 'folders' => $folders()->all()];
+            },
         ]);
 
         $a->register('media/report', [

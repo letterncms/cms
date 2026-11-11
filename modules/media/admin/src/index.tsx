@@ -2,6 +2,7 @@ import './styles.css'
 import { can, registry, run, t } from '@letterncms/sdk'
 import { lazy } from 'react'
 import { UploadField } from './fields'
+import { NewFolderAction } from './Folders'
 import { MediaField } from './MediaField'
 import UploadAction from './UploadAction'
 
@@ -11,6 +12,7 @@ registry.fields.set('media-upload', UploadField)
 registry.components.set('media/library', lazy(() => import('./MediaLibrary')))
 // Not lazy: the file picker opens in the same click.
 registry.components.set('media/upload', UploadAction)
+registry.components.set('media/new-folder', NewFolderAction)
 registry.widgets.set('media-recent', lazy(() => import('./WidgetRecent')))
 
 // @ in a chat: a file from the library, for the assistant to use or to change.
