@@ -13,6 +13,21 @@ if (str_contains($uri, '..') || str_contains($uri, "\0")) {
 $file = $public.$uri;
 
 if ($uri !== '/' && is_file($file) && ! str_ends_with($file, '.php')) {
+    // What a site's Apache says for media (public/media/.htaccess): the type a loader expects, and no sniffing.
+    // PHP's own server knows none of these types and takes no header for a file it serves itself.
+    $types = ['glb' => 'model/gltf-binary', 'gltf' => 'model/gltf+json', 'hdr' => 'image/vnd.radiance', 'ktx2' => 'image/ktx2', 'riv' => 'application/vnd.rive', 'json' => 'application/json'];
+    $type = $types[strtolower(pathinfo($file, PATHINFO_EXTENSION))] ?? null;
+
+    if ($type !== null && str_starts_with($uri, '/media/')) {
+        header('Content-Type: '.$type);
+        header('Content-Length: '.filesize($file));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: public, max-age=31536000, immutable');
+        readfile($file);
+
+        return true;
+    }
+
     return false;
 }
 
