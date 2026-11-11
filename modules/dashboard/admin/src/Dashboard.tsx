@@ -3,7 +3,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordi
 import { CSS } from '@dnd-kit/utilities'
 import { can, loadManifest, locale, registry, run, setPreference, setQuery, t, useLocation, useManifest, type Arrangement, type WidgetInfo } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { Button, Icon, IconButton, Notice, Page, WidgetSlot, EmptyState, cn, confirm, toast, useShortcut } from '@letterncms/ui'
+import { Button, Icon, IconButton, Notice, Menu, Page, Pressable, WidgetSlot, EmptyState, cn, confirm, toast, useShortcut } from '@letterncms/ui'
 import { Gallery } from './Gallery'
 import { Start } from './Start'
 
@@ -108,7 +108,7 @@ export default function Dashboard() {
 
   const saveForEveryone = () =>
     act(async () => {
-      const ok = await confirm({ title: t('Make this everyone’s Dashboard?'), description: t('People who customized their own Dashboard keep theirs.'), confirm: t('Save as Default') })
+      const ok = await confirm({ title: t('Make this everyone’s Dashboard?'), description: t('People who customized their own Dashboard keep theirs.'), confirm: t('Save for Everyone') })
       if (!ok) return
       await run('settings/update', { namespace: 'admin', values: { dashboard: draft } })
       await setPreference('dashboard', null)
@@ -140,9 +140,12 @@ export default function Dashboard() {
       actions={
         editing ? (
           <>
-            {manifest.home?.personal && <Button variant="ghost" icon="undo" disabled={busy} onClick={resetToDefault}>{t('Reset to Default')}</Button>}
-            {manage && <Button variant="ghost" disabled={busy} onClick={saveForEveryone}>{t('Save as Default')}</Button>}
-            {manage && customized && <Button variant="ghost" disabled={busy} onClick={resetEveryone}>{t('Reset Everyone’s Default')}</Button>}
+            {/* What concerns the default, the bar keeps to Cancel and Done: it fits a phone. */}
+            {(manifest.home?.personal || manage) && <Menu align="end" trigger={<IconButton icon="more" label={t('More')} disabled={busy} />} items={[
+              manifest.home?.personal && { label: t('Reset to Default'), icon: 'undo', onSelect: resetToDefault },
+              manage && { label: t('Save for Everyone'), icon: 'users', onSelect: saveForEveryone },
+              manage && customized && { label: t('Reset Everyone’s Default'), icon: 'refresh', onSelect: resetEveryone },
+            ]} />}
             <Button variant="ghost" onClick={cancel}>
               {t('Cancel')}
             </Button>
@@ -299,19 +302,18 @@ function EditColumn({ column, ids, widgets, active, onRemove, onAdd }: { column:
           ))}
         </div>
       </SortableContext>
-      <button
-        type="button"
+      <Pressable
         onClick={onAdd}
         className={cn(
           // As wide as the tiles, a tile's gap below the last one.
-          'flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong text-sm text-muted transition-colors duration-120 hover:border-faint hover:bg-sunken hover:text-text',
+          'flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong text-sm text-muted transition-colors duration-base hover:border-faint hover:bg-sunken hover:text-text',
           ids.length === 0 ? 'h-32' : 'mt-10 h-11',
           drop.isOver && ids.length === 0 && 'border-focus bg-focus/5',
         )}
       >
         <Icon name="plus" size={14} />
         {t('Add Widget')}
-      </button>
+      </Pressable>
     </div>
   )
 }
@@ -334,11 +336,13 @@ function EditableWidget({ widget, dragging, onRemove }: { widget: WidgetInfo; dr
         {...sortable.attributes}
         {...sortable.listeners}
         aria-label={t('Move {widget}', { widget: widget.label })}
-        className="cursor-grab rounded-lg outline-none ring-1 ring-border-strong transition-shadow duration-120 hover:ring-faint focus-visible:ring-2 focus-visible:ring-focus active:cursor-grabbing"
+        className="cursor-grab rounded-lg outline-none ring-1 ring-border-strong transition-shadow duration-base hover:ring-faint focus-visible:ring-2 focus-visible:ring-focus active:cursor-grabbing"
       >
         <div inert className="pointer-events-none select-none [&_section>header>:is(a,button,div)]:invisible">
           <WidgetSlot widget={widget} />
         </div>
+        {/* The tile is taken hold of anywhere; the grip says so, where the header's link was. */}
+        <Icon name="drag" size={16} className="pointer-events-none absolute right-12 top-5 text-faint" />
       </div>
       <IconButton
         icon="close"

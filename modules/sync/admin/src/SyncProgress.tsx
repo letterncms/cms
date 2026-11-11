@@ -100,7 +100,7 @@ function Running({ job, onChange, onClose }: { job: Progress; onChange: (p: Prog
             <span className="text-sm tabular-nums text-muted">{job.percent}%</span>
           </div>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-hover" role="progressbar" aria-valuenow={job.percent} aria-valuemin={0} aria-valuemax={100} aria-label={title}>
-            <div className="h-full rounded-full bg-ink transition-[width] duration-500 ease-out" style={{ width: `${Math.max(2, job.percent)}%` }} />
+            <div className="h-full rounded-full bg-ink transition-[width] duration-slow ease-out" style={{ width: `${Math.max(2, job.percent)}%` }} />
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <span>{job.status === 'waiting' ? <span className="text-warning">{job.message} {t('Trying again…')}</span> : job.status === 'paused' ? <span className="text-warning">{job.message}</span> : `${job.label}…`}</span>

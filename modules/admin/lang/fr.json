@@ -270,7 +270,7 @@
   "Row {row}, Column {column}": "Ligne {row}, colonne {column}",
   "Rows made with it keep their values, without these fields.": "Les lignes créées avec gardent leurs valeurs, sans ces champs.",
   "Save": "Enregistrer",
-  "Save as Default": "Enregistrer par défaut",
+  "Save for Everyone": "Enregistrer pour tout le monde",
   "Save Password": "Enregistrer le mot de passe",
   "Saved as the default sidebar": "Enregistrée comme barre latérale par défaut",
   "Scheduled": "Planifié",

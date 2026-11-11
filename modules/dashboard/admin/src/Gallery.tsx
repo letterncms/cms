@@ -1,6 +1,6 @@
 import { t, type WidgetInfo } from '@letterncms/sdk'
 import { useEffect, useState } from 'react'
-import { Dialog, Fields, Icon, cn } from '@letterncms/ui'
+import { Dialog, Fields, Icon, Pressable, cn } from '@letterncms/ui'
 
 /**
  * Every widget the user may put on their Dashboard: what it shows and where it
@@ -41,12 +41,11 @@ function Grid({ widgets, shown, onAdd, onRemove }: { widgets: WidgetInfo[]; show
       {widgets.map((w) => {
         const on = shown.has(w.id)
         return (
-          <button
+          <Pressable
             key={w.id}
-            type="button"
-            aria-pressed={on}
+            active={on}
             onClick={() => (on ? onRemove(w.id) : onAdd(w))}
-            className={cn('group flex items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] duration-120 outline-none focus-visible:ring-2 focus-visible:ring-focus', on ? 'border-border bg-surface' : 'border-border hover:border-border-strong hover:bg-surface')}
+            className={cn('group flex items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] duration-base', on ? 'border-border bg-surface' : 'border-border hover:border-border-strong hover:bg-surface')}
           >
             <span className="grid size-9 shrink-0 place-items-center rounded-md bg-sunken text-muted">
               <Icon name={w.icon} size={17} />
@@ -60,12 +59,12 @@ function Grid({ widgets, shown, onAdd, onRemove }: { widgets: WidgetInfo[]; show
             </span>
             <span
               aria-hidden="true"
-              className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full transition-colors duration-120', on ? 'bg-ink text-ink-contrast group-hover:bg-danger' : 'border border-border-strong text-faint group-hover:border-ink group-hover:text-ink')}
+              className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full transition-colors duration-base', on ? 'bg-ink text-ink-contrast group-hover:bg-danger' : 'border border-border-strong text-faint group-hover:border-ink group-hover:text-ink')}
             >
               <Icon name={on ? 'check' : 'plus'} size={11} className={cn(on && 'group-hover:hidden')} />
               {on && <Icon name="minus" size={11} className="hidden group-hover:block" />}
             </span>
-          </button>
+          </Pressable>
         )
       })}
     </div>

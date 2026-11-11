@@ -122,7 +122,7 @@ export async function resetToDefault() {
 
 export async function saveForEveryone() {
   if (!can('settings.manage')) return
-  const ok = await confirm({ title: t('Make this everyone’s sidebar?'), description: t('People who pinned their own sidebar keep theirs.'), confirm: t('Save as Default') })
+  const ok = await confirm({ title: t('Make this everyone’s sidebar?'), description: t('People who pinned their own sidebar keep theirs.'), confirm: t('Save for Everyone') })
   if (!ok) return
   await saving
   try {
