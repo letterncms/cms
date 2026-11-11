@@ -100,6 +100,20 @@ abstract class TestCase extends BaseTestCase
         Artisan::call('migrate', ['--path' => $this->app->databasePath('migrations'), '--realpath' => true]);
         $this->app->make(\Cms\Packages\PackageManager::class)->sync();
         file_put_contents(storage_path('installed.json'), '{}');
+
+        // Every result an ability gives in any test is held against its output schema.
+        $this->cms()->abilities()->verifyOutput = true;
+
+        // Which abilities there are, and which a test ran: AbilityCoverage fails a whole run that leaves one out.
+        foreach ($this->cms()->abilities()->all() as $name => $ability) {
+            if ($ability->package === null || str_starts_with($ability->package, 'letterncms/')) {
+                Support\AbilityCoverage::$known[$name] = true;
+            }
+        }
+
+        $this->cms()->hooks()->on('ability.executed', static function ($ability): void {
+            Support\AbilityCoverage::$ran[$ability->name] = true;
+        });
     }
 
     protected function tearDown(): void

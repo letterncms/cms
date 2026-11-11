@@ -7,6 +7,7 @@ namespace Cms\Modules\Site\Design;
 use Closure;
 use Cms\Abilities\AbilityException;
 use Cms\Cms;
+use Cms\Support\Schema\Shape;
 use InvalidArgumentException;
 
 /** What an agent or the admin can do with the code beside the design (Code). */
@@ -28,12 +29,16 @@ final class CodeAbilities
             'styles' => array_keys($code()->files('styles')),
             'load' => $code()->config(),
         ];
+        // Code::config(): the names that load on every page, with a template and with a component.
+        $names = ['scripts' => [Shape::STRING], 'styles' => [Shape::STRING]];
+        $listed = Shape::of([...$names, 'load' => [...$names, 'templates' => Shape::map($names), 'components' => Shape::map($names)]]);
 
         $abilities->register('design/code-files', [
             'label' => 'Design Scripts and Styles',
             'description' => 'The ES modules (content/design/scripts/<name>.js) and stylesheets (content/design/styles/<name>.css) beside the design, by name, and `load`: which of them load on every page, with a template or with a component (content/design/code.json). A block loads its own with code: {scripts: [...], styles: [...]}.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => $listed,
             'handler' => $list,
         ]);
 
@@ -43,6 +48,7 @@ final class CodeAbilities
             'permission' => 'site.code',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['path']],
+            'output' => Shape::of(['path' => Shape::STRING, 'contents' => Shape::STRING]),
             'handler' => static fn (array $in) => $guard(static fn () => ['path' => (string) $in['path'], 'contents' => $code()->read((string) $in['path']) ?? throw AbilityException::notFound((string) $in['path'])]),
         ]);
 
@@ -51,6 +57,7 @@ final class CodeAbilities
             'description' => 'Create or replace scripts/<name>.js (an ES module; it can import another script by path, "./lib/ease.js") or styles/<name>.css. Names are lowercase letters, digits, - and _, in up to three folders. Pages that load the file are built again.',
             'permission' => 'site.code',
             'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200], 'contents' => ['type' => 'string', 'maxLength' => 500000]], 'required' => ['path', 'contents']],
+            'output' => Shape::of(['saved' => Shape::STRING]),
             'handler' => static fn (array $in) => $guard(static function () use ($in, $code) {
                 $code()->write((string) $in['path'], (string) $in['contents']);
 
@@ -64,6 +71,7 @@ final class CodeAbilities
             'permission' => 'site.code',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['path']],
+            'output' => Shape::of(['deleted' => Shape::STRING]),
             'handler' => static fn (array $in) => $guard(static function () use ($in, $code) {
                 $code()->delete((string) $in['path']);
 
@@ -81,6 +89,7 @@ final class CodeAbilities
                 'templates' => ['type' => 'object'],
                 'components' => ['type' => 'object'],
             ]],
+            'output' => $listed,
             'handler' => static function (array $in) use ($code, $list) {
                 $code()->saveConfig($in);
 

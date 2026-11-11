@@ -8,6 +8,7 @@ use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 
 /**
  * Claude in the workspace: the agent that answers plain language in its threads
@@ -57,6 +58,7 @@ final class AssistantModule extends Plugin
             'permission' => 'assistant.use',
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
+            'output' => Shape::of(['configured' => Shape::BOOLEAN, 'model' => Shape::STRING, 'models' => [['id' => Shape::STRING, 'name' => Shape::STRING, 'description' => Shape::STRING]]]),
             'handler' => fn () => [
                 'configured' => $this->app->make(Claude::class)->configured(),
                 'model' => $this->app->make(Claude::class)->model(),
@@ -70,6 +72,7 @@ final class AssistantModule extends Plugin
             'permission' => 'assistant.use',
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
+            'output' => Shape::of([['name' => Shape::STRING, 'label' => Shape::STRING, 'description' => Shape::STRING, 'icon' => Shape::STRING]]),
             'handler' => fn (array $in, AbilityContext $c) => array_values(array_map(static fn (array $skill) => [
                 'name' => $skill['name'], 'label' => __($skill['label']), 'description' => __($skill['description']), 'icon' => $skill['icon'],
             ], $this->cms()->skills()->all($c->user))),
@@ -81,6 +84,7 @@ final class AssistantModule extends Plugin
             'permission' => 'assistant.use',
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
+            'output' => Shape::of([['uri' => Shape::STRING, 'name' => Shape::STRING]]),
             'handler' => fn (array $in, AbilityContext $c) => array_map(static fn (array $resource) => ['uri' => $resource['uri'], 'name' => __($resource['name'])], $this->cms()->context()->list($c->user)),
         ]);
 
@@ -91,6 +95,7 @@ final class AssistantModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => $expose,
             'input' => ['type' => 'object', 'properties' => ['uri' => ['type' => 'string']], 'required' => ['uri']],
+            'output' => Shape::of(Shape::STRING),
             'handler' => fn (array $in, AbilityContext $c) => $this->cms()->context()->read($in['uri'], $c->user)['text'] ?? throw new AbilityException(__('Not found.'), 'not_found'),
         ]);
     }

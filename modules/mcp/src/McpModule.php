@@ -11,6 +11,7 @@ use Cms\Modules\Audit\AuditAbilities;
 use Cms\Modules\Mcp\Http\McpController;
 use Cms\Modules\Mcp\OAuth\OAuthController;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 
 final class McpModule extends Plugin
 {
@@ -56,6 +57,11 @@ final class McpModule extends Plugin
             'permission' => 'tokens.manage',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20, 'default' => 5]]],
+            'output' => Shape::of([
+                'agents' => [['name' => Shape::STRING, 'connectedAt' => Shape::STRING_OR_NULL, 'lastUsedAt' => Shape::STRING_OR_NULL]],
+                'connected' => Shape::INTEGER,
+                'activity' => [['id' => Shape::STRING, 'ability' => Shape::STRING, 'label' => Shape::STRING, 'subject' => Shape::STRING_OR_NULL, 'to' => Shape::STRING_OR_NULL, 'createdAt' => Shape::STRING_OR_NULL]],
+            ]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $agents = $ctx->user->tokens()->where('name', 'like', 'MCP: %')
                     ->where(static fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))

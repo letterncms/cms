@@ -10,6 +10,7 @@ use Cms\Cms;
 use Cms\Modules\License\LicenseService;
 use Cms\Packages\Install\PackageJobs;
 use Cms\Support\Files;
+use Cms\Support\Schema\Shape;
 use Cms\Update\CoreUpdate;
 use Cms\Update\ReleaseFeed;
 use RuntimeException;
@@ -42,6 +43,7 @@ final class StoreAbilities
         $a->register('packages/stores', [...$read,
             'label' => 'List Stores',
             'description' => 'The stores this site installs from, each with the fingerprint of its root key.',
+            'output' => Shape::of(['items' => [['id' => Shape::STRING, 'url' => Shape::STRING_OR_NULL, 'name' => Shape::STRING, 'default' => Shape::BOOLEAN, 'fingerprint' => Shape::STRING_OR_NULL, 'problem' => Shape::STRING_OR_NULL]]]),
             'handler' => static fn () => ['items' => $client()->stores()],
         ]);
 
@@ -49,6 +51,7 @@ final class StoreAbilities
             'label' => 'Add Store',
             'description' => 'Read a store\'s name and root key fingerprint. Pinned only when confirm repeats that fingerprint. Code from a store runs with full access to this site.',
             'input' => ['type' => 'object', 'properties' => ['url' => ['type' => 'string', 'maxLength' => 500], 'confirm' => ['type' => 'string', 'maxLength' => 100]], 'required' => ['url']],
+            'output' => Shape::of(['name' => Shape::STRING, 'fingerprint' => Shape::STRING, 'added' => Shape::BOOLEAN, 'id' => Shape::STRING]),
             'handler' => static fn (array $in) => $guard(static fn () => $client()->addStore($in['url'], $in['confirm'] ?? null)),
         ]);
 
@@ -56,6 +59,7 @@ final class StoreAbilities
             'label' => 'Remove Store',
             'description' => 'Forget a store. What it installed stays.',
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['id']],
+            'output' => Shape::of(['removed' => Shape::STRING]),
             'handler' => static fn (array $in) => $guard(static function () use ($in, $client) {
                 $client()->removeStore($in['id']);
 
@@ -67,6 +71,7 @@ final class StoreAbilities
             'label' => 'Browse Store',
             'description' => 'A store\'s signed catalog as this site sees it: for each package what can be done with it here, and whether this site has access to it.',
             'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'refresh' => ['type' => 'boolean', 'default' => false]]],
+            'output' => Shape::of(['store' => Shape::STRING, 'items' => [self::listing()], 'freshness' => Shape::enum('ok', 'stale', 'expired', 'clock', 'none'), 'problem' => Shape::STRING_OR_NULL, 'error' => Shape::STRING_OR_NULL]),
             'handler' => static fn (array $in) => $client()->catalog($in['store'], $in['refresh']),
         ]);
 
@@ -74,6 +79,12 @@ final class StoreAbilities
             'label' => 'Store Package',
             'description' => 'One package\'s listing, its description cleaned on this site.',
             'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['package']],
+            'output' => self::listing()->with([
+                'description_html' => Shape::STRING, 'screenshots' => [Shape::STRING], 'gallery' => [['url' => Shape::STRING, 'alt' => Shape::STRING]],
+                'requirements' => [Shape::STRING], 'docs_url' => Shape::STRING_OR_NULL, 'repository_url' => Shape::STRING_OR_NULL,
+                'releases' => [['version' => Shape::STRING, 'released_at' => Shape::STRING, 'notes' => Shape::STRING, 'security' => Shape::BOOLEAN]],
+                'operator' => Shape::STRING, 'capabilities' => [Shape::STRING], 'requires' => self::requires(),
+            ]),
             'handler' => static fn (array $in) => $guard(static fn () => $client()->item($in['store'], $in['package'])),
         ]);
 
@@ -81,6 +92,7 @@ final class StoreAbilities
             'label' => 'Add Paid Plugin Key',
             'description' => 'Put the key for a paid plugin in place, so the store offers it here.',
             'input' => ['type' => 'object', 'properties' => ['key' => ['type' => 'string', 'maxLength' => 8192]], 'required' => ['key']],
+            'output' => Shape::of(['added' => Shape::BOOLEAN]),
             'handler' => static fn (array $in) => $guard(static function () use ($in) {
                 app(LicenseService::class)->install($in['key']);
 
@@ -92,6 +104,11 @@ final class StoreAbilities
             'label' => 'Plan Install',
             'description' => 'What installing a package means here: dependencies in order, capabilities, access. Refused with the reason when it can\'t work.',
             'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200], 'version' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['package']],
+            'output' => Shape::of([
+                'steps' => [['package' => Shape::STRING, 'version' => Shape::STRING, 'title' => Shape::STRING, 'enable_only' => Shape::BOOLEAN, 'action' => Shape::enum('enable', 'install', 'update')]],
+                'capabilities' => [Shape::STRING],
+                'access' => self::access(),
+            ]),
             // The gate also holds what the download is fetched with (the license token as a header, the query): never part of an answer.
             'handler' => static fn (array $in) => $guard(static function () use ($client, $in): array {
                 $plan = $client()->plan($in['store'], $in['package'], $in['version'] ?? null);
@@ -105,6 +122,7 @@ final class StoreAbilities
             'label' => 'Install Package',
             'description' => 'Start installing a package from a store. Drive it with packages/job-step until it\'s done.',
             'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200], 'version' => ['type' => 'string', 'maxLength' => 40], 'turnOn' => ['type' => 'boolean', 'default' => true]], 'required' => ['package']],
+            'output' => self::jobShape(),
             'handler' => static fn (array $in) => $guard(static fn () => self::job($client()->install($in['store'], $in['package'], $in['version'] ?? null, $in['turnOn']))),
         ]);
 
@@ -120,6 +138,7 @@ final class StoreAbilities
                 'allowUnsigned' => ['type' => 'boolean', 'default' => false],
                 'turnOn' => ['type' => 'boolean', 'default' => true],
             ], 'required' => ['id', 'index', 'data']],
+            'output' => Shape::either(['received' => Shape::INTEGER], self::jobShape()),
             'handler' => function (array $in, $context) use ($guard, $client) {
                 return $guard(function () use ($in, $context, $client) {
                     $this->cms->guardFileMods();
@@ -168,6 +187,7 @@ final class StoreAbilities
             'label' => 'Advance Install',
             'description' => 'Run the next step of an install. Each step is its own request, so nothing runs into a time limit.',
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 32]], 'required' => ['id']],
+            'output' => self::jobShape(),
             'handler' => static fn (array $in) => $guard(static fn () => self::job($jobs()->step($in['id']))),
         ]);
 
@@ -175,6 +195,7 @@ final class StoreAbilities
             'label' => 'Install Status',
             'description' => 'Where an install stands.',
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 32]], 'required' => ['id']],
+            'output' => self::jobShape(),
             'handler' => static fn (array $in) => $guard(static fn () => self::job($jobs()->status($in['id']))),
         ]);
 
@@ -182,6 +203,7 @@ final class StoreAbilities
             'label' => 'Roll Back Package',
             'description' => 'Put the previous version of a package back.',
             'input' => ['type' => 'object', 'properties' => ['package' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['package']],
+            'output' => Shape::of(['rolledBack' => Shape::STRING]),
             'handler' => static fn (array $in) => $guard(static function () use ($in, $jobs) {
                 $jobs()->rollback($in['package']);
 
@@ -192,6 +214,7 @@ final class StoreAbilities
         $a->register('packages/updates', [...$read,
             'label' => 'List Updates',
             'description' => 'The core update on offer and everything in its way, updates for store packages, and advisories about what\'s installed.',
+            'output' => self::updates()->with(['core' => self::offer(), 'status' => self::status()]),
             'handler' => static fn () => [
                 'core' => $core()->offer(),
                 'status' => $core()->status(),
@@ -203,6 +226,7 @@ final class StoreAbilities
             'label' => 'Check for Updates',
             'description' => 'Fetch the signed release list and the store catalog now. Sends nothing but a User-Agent with the version.',
             'annotations' => [],
+            'output' => self::updates()->with(['error' => Shape::STRING_OR_NULL, 'core' => self::offer()]),
             'handler' => static function () use ($client, $core, $feed) {
                 $error = $feed()->check();
                 $store = $client()->refresh();
@@ -215,12 +239,14 @@ final class StoreAbilities
             'label' => 'Start Update',
             'description' => 'Start updating the core to a version on offer. Drive it with packages/update-step.',
             'input' => ['type' => 'object', 'properties' => ['version' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['version']],
+            'output' => self::status(),
             'handler' => static fn (array $in) => $guard(static fn () => $core()->start($in['version'])),
         ]);
 
         $a->register('packages/update-step', [...$install,
             'label' => 'Advance Update',
             'description' => 'Run the next step of the core update. After the switch, the answer says drive: the new release finishes through /_cms/update/tick.',
+            'output' => self::status(),
             'handler' => static fn () => $guard(static fn () => $core()->step()),
         ]);
 
@@ -228,12 +254,14 @@ final class StoreAbilities
             'label' => 'Switch Release',
             'description' => 'Switch to a release someone uploaded into runtime/<version>/ by FTP.',
             'input' => ['type' => 'object', 'properties' => ['version' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['version']],
+            'output' => self::status(),
             'handler' => static fn (array $in) => $guard(static fn () => $core()->switchTo($in['version'])),
         ]);
 
         $a->register('packages/update-rollback', [...$install,
             'label' => 'Roll Back Update',
             'description' => 'Go back to the release before this one, while it\'s still on disk.',
+            'output' => self::status(),
             'handler' => static fn () => $guard(static fn () => $core()->rollback()),
         ]);
 
@@ -241,6 +269,7 @@ final class StoreAbilities
             'label' => 'Postpone Security Update',
             'description' => 'Hold automatic security updates back for up to 14 days.',
             'input' => ['type' => 'object', 'properties' => ['days' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 14, 'default' => 7]]],
+            'output' => Shape::of(['postponed' => Shape::INTEGER]),
             'handler' => static function (array $in) use ($core) {
                 $core()->postpone($in['days']);
 
@@ -252,6 +281,7 @@ final class StoreAbilities
             'label' => 'Automatic Security Updates',
             'description' => 'Turn automatic security updates on or off.',
             'input' => ['type' => 'object', 'properties' => ['on' => ['type' => 'boolean']], 'required' => ['on']],
+            'output' => Shape::of(['on' => Shape::BOOLEAN]),
             'handler' => static function (array $in) use ($core) {
                 $core()->setAuto($in['on']);
 
@@ -266,6 +296,7 @@ final class StoreAbilities
             'description' => 'Advance automatic security updates by one step.',
             'permission' => static fn ($user) => $user !== null,
             'expose' => ['mcp' => false, 'assistant' => false],
+            'output' => Shape::of(['more' => Shape::BOOLEAN, 'drive' => Shape::BOOLEAN]),
             'handler' => static function () use ($client, $core, $feed, $jobs) {
                 try {
                     if ($feed()->due()) {
@@ -301,6 +332,82 @@ final class StoreAbilities
 
                 return ['more' => false, 'drive' => false];
             },
+        ]);
+    }
+
+    /** StoreClient::describe(): a store's package as this site sees it. `entry` is the signed version this site would get. */
+    private static function listing(): Shape
+    {
+        return Shape::of([
+            'store' => Shape::STRING, 'package' => Shape::STRING, 'type' => Shape::STRING, 'title' => Shape::STRING, 'summary' => Shape::STRING,
+            'icon' => Shape::STRING_OR_NULL, 'glyph' => Shape::STRING_OR_NULL, 'featured' => Shape::BOOLEAN, 'categories' => [Shape::STRING],
+            'pricing' => Shape::STRING, 'first_party' => Shape::BOOLEAN, 'author' => ['name' => Shape::STRING, 'url' => Shape::STRING],
+            'listing_url' => Shape::STRING_OR_NULL, 'latest' => Shape::STRING_OR_NULL, 'installed' => Shape::STRING_OR_NULL,
+            'action' => Shape::enum('blocked', 'incompatible', 'installed', 'buy', 'update', 'install'),
+            'access' => self::access(),
+            'entry' => Shape::nullable(Shape::of([
+                'version' => Shape::STRING, 'url?' => Shape::STRING, 'sha256?' => Shape::STRING, 'size?' => Shape::INTEGER, 'released_at?' => Shape::STRING, 'security?' => Shape::BOOLEAN,
+                'fixes?' => Shape::STRING_OR_NULL, 'first_party?' => Shape::BOOLEAN, 'capabilities?' => [Shape::STRING], 'requires?' => self::requires(), 'kid?' => Shape::STRING, 'sig?' => Shape::STRING,
+            ])->andMore('A version as the store\'s signed catalog lists it: the store writes it, so a newer store may say more than these keys.')),
+        ]);
+    }
+
+    /** What a version needs, as its store wrote it: of the core, of PHP, of its extensions and of other packages. */
+    private static function requires(): Shape
+    {
+        return Shape::of(['core?' => Shape::STRING, 'php?' => Shape::STRING, 'ext?' => [Shape::STRING], 'packages?' => Shape::map(Shape::STRING)])
+            ->andMore('Version constraints as the store\'s signed catalog writes them: the store decides the keys, and these are the ones this site reads.');
+    }
+
+    /** StoreClient::gate(): whether this site may have a version, and why not. */
+    private static function access(): Shape
+    {
+        return Shape::of(['allowed' => Shape::BOOLEAN, 'reason?' => Shape::STRING, 'message?' => Shape::STRING, 'buy_url?' => Shape::STRING_OR_NULL]);
+    }
+
+    /** What job() lets through of an install. */
+    private static function jobShape(): Shape
+    {
+        return Shape::of([
+            'id' => Shape::STRING, 'step' => Shape::STRING, 'state' => Shape::enum('running', 'done', 'failed'), 'error?' => Shape::STRING_OR_NULL, 'code?' => Shape::STRING_OR_NULL,
+            'package?' => Shape::STRING_OR_NULL, 'version?' => Shape::STRING_OR_NULL, 'package_version?' => Shape::STRING,
+        ]);
+    }
+
+    /** CoreUpdate::status(): where the core update stands. */
+    private static function status(): Shape
+    {
+        return Shape::of([
+            'state' => Shape::STRING, 'current' => Shape::STRING, 'managed' => Shape::STRING_OR_NULL, 'drive' => Shape::BOOLEAN,
+            'target?' => Shape::STRING_OR_NULL, 'previous?' => Shape::STRING_OR_NULL, 'error?' => Shape::STRING_OR_NULL, 'auto?' => Shape::BOOLEAN_OR_NULL,
+        ]);
+    }
+
+    /** CoreUpdate::offer(): the core update on offer and what stands in its way. */
+    private static function offer(): Shape
+    {
+        $release = Shape::nullable([
+            'version' => Shape::STRING, 'released_at' => Shape::STRING_OR_NULL, 'security' => Shape::BOOLEAN, 'notes_url' => Shape::STRING_OR_NULL,
+            'major' => Shape::BOOLEAN, 'host_problems' => [Shape::STRING], 'incompatible' => [Shape::STRING],
+        ]);
+
+        return Shape::of([
+            'current' => Shape::STRING, 'managed' => Shape::STRING_OR_NULL, 'freshness' => Shape::enum('ok', 'stale', 'expired', 'clock', 'none'),
+            'trust' => Shape::STRING_OR_NULL, 'check' => ['checked_at?' => Shape::INTEGER, 'error?' => Shape::STRING], 'update' => $release, 'major' => $release, 'yanked' => Shape::STRING_OR_NULL,
+            'support_ended' => Shape::nullable(Shape::of(['major' => Shape::INTEGER, 'until' => Shape::STRING, 'latest?' => Shape::STRING])->andMore('The entry of the signed release list that says when support for this major version ended: whoever publishes the list writes it.')), 'auto' => Shape::BOOLEAN, 'postponed_until' => Shape::INTEGER_OR_NULL,
+        ]);
+    }
+
+    /** StoreClient::updates(): updates for store packages, advisories about what's installed, and what no store vouches for. */
+    private static function updates(): Shape
+    {
+        return Shape::of([
+            'packages' => [[
+                'package' => Shape::STRING, 'label' => Shape::STRING, 'installed' => Shape::STRING, 'version' => Shape::STRING, 'security' => Shape::BOOLEAN,
+                'store' => Shape::STRING, 'allowed' => Shape::BOOLEAN, 'message' => Shape::STRING_OR_NULL, 'buy_url' => Shape::STRING_OR_NULL, 'backup' => Shape::BOOLEAN,
+            ]],
+            'advisories' => [['package' => Shape::STRING, 'label' => Shape::STRING, 'version' => Shape::STRING, 'severity' => Shape::STRING, 'advisory' => Shape::STRING_OR_NULL]],
+            'unverified' => [Shape::STRING],
         ]);
     }
 

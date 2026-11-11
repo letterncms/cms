@@ -7,6 +7,7 @@ namespace Cms\Modules\Site\Design;
 use Closure;
 use Cms\Abilities\AbilityException;
 use Cms\Cms;
+use Cms\Support\Schema\Shape;
 use Throwable;
 
 /** `cms vendor …` for agents and the admin: the libraries a site's scripts import by name (Vendor). */
@@ -24,6 +25,12 @@ final class VendorAbilities
             array_keys($vendor()->all()),
             array_values($vendor()->all()),
         )];
+        $imports = ['imports' => [[
+            'import' => Shape::STRING, 'package' => Shape::STRING, 'version' => Shape::STRING, 'file' => Shape::STRING_OR_NULL, 'source' => Shape::STRING,
+            'url' => Shape::STRING, 'files' => Shape::INTEGER, 'integrity' => Shape::STRING,
+        ]]];
+        // Vendor::add() and update(): what was asked for, every import it brought, and what to know about them.
+        $fetched = Shape::of(['specifier' => Shape::STRING, 'version' => Shape::STRING, 'added' => [Shape::STRING], 'notes' => [Shape::STRING], ...$imports]);
         $change = static function (Closure $work) use ($code, $list) {
             try {
                 $result = $work();
@@ -43,6 +50,7 @@ final class VendorAbilities
             'description' => 'The libraries in content/design/vendor that the site’s scripts import by name (import gsap from "gsap"): package, pinned version, where it came from and the hash of its file.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of($imports),
             'handler' => $list,
         ]);
 
@@ -56,6 +64,7 @@ final class VendorAbilities
                 'file' => ['type' => 'string', 'maxLength' => 300],
                 'as' => ['type' => 'string', 'maxLength' => 300],
             ], 'required' => ['package']],
+            'output' => $fetched,
             'handler' => static fn (array $in) => $change(static fn () => $vendor()->add((string) $in['package'], isset($in['file']) ? (string) $in['file'] : null, isset($in['as']) ? (string) $in['as'] : null)),
         ]);
 
@@ -65,6 +74,7 @@ final class VendorAbilities
             'permission' => 'site.code',
             'annotations' => ['openWorld' => true],
             'input' => ['type' => 'object', 'properties' => ['import' => ['type' => 'string', 'maxLength' => 300], 'version' => ['type' => 'string', 'maxLength' => 60]], 'required' => ['import']],
+            'output' => $fetched,
             'handler' => static fn (array $in) => $change(static fn () => $vendor()->update((string) $in['import'], isset($in['version']) ? (string) $in['version'] : null)),
         ]);
 
@@ -74,6 +84,7 @@ final class VendorAbilities
             'permission' => 'site.code',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['import' => ['type' => 'string', 'maxLength' => 300]], 'required' => ['import']],
+            'output' => Shape::of(['removed' => Shape::STRING, ...$imports]),
             'handler' => static fn (array $in) => $change(static function () use ($in, $vendor) {
                 $vendor()->remove((string) $in['import']);
 

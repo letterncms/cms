@@ -170,6 +170,7 @@ final class Server
             'title' => $ability->label,
             'description' => $ability->description ?: $ability->label,
             'inputSchema' => $schema,
+            'outputSchema' => self::structuredSchema($ability->output()),
             'annotations' => array_filter([
                 'title' => $ability->label,
                 'readOnlyHint' => $ability->isReadOnly(),
@@ -197,13 +198,47 @@ final class Server
             return ['content' => [['type' => 'text', 'text' => $e->getMessage().$details]], 'isError' => true];
         }
 
-        $text = is_string($result) ? $result : (string) json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $ability = $this->cms->abilities()->get($name);
+        $encoded = $ability ? $ability->encode($result) : $result;
+        $text = is_string($result) ? $result : (string) json_encode($encoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        return array_filter([
+        return [
             'content' => [['type' => 'text', 'text' => $text]],
-            'structuredContent' => is_array($result) ? (array_is_list($result) ? ['items' => $result] : $result) : null,
+            'structuredContent' => self::structured($encoded),
             'isError' => false,
-        ], static fn ($v) => $v !== null);
+        ];
+    }
+
+    /**
+     * A tool's structured content is always an object: an ability that answers with an object gives it as it is,
+     * a list goes under `items` (an empty one too), and anything else (a string, a number, null) under `result`.
+     * Takes the result as Ability::encode() gives it, where a map is an object and a list a list.
+     */
+    public static function structured(mixed $result): array|object
+    {
+        return match (true) {
+            is_object($result) => $result,
+            is_array($result) => ['items' => $result],
+            default => ['result' => $result],
+        };
+    }
+
+    /** The ability's output schema, wrapped the way structured() wraps its result. */
+    public static function structuredSchema(?array $output): ?array
+    {
+        if ($output === null) {
+            return null;
+        }
+
+        $types = (array) ($output['type'] ?? []);
+
+        return match (true) {
+            $types === ['object'] => $output,
+            $types === ['array'] => ['type' => 'object', 'properties' => ['items' => $output], 'required' => ['items']],
+            $types !== [] && ! array_intersect($types, ['object', 'array']) => ['type' => 'object', 'properties' => ['result' => $output], 'required' => ['result']],
+            // An object or a list, or one of several shapes: whichever wrapping the result gets.
+            default => ['type' => 'object', 'additionalProperties' => true],
+        };
     }
 
     private function read(array $params, AbilityContext $context): array

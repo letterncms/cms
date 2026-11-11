@@ -17,6 +17,8 @@ use Cms\Users\Accounts;
 use Cms\Users\Passwords;
 use Cms\Users\User;
 use Cms\Users\UserFields;
+use Cms\Abilities\Shapes;
+use Cms\Support\Schema\Shape;
 
 /** People, their roles and profile fields. (users/list is the kernel's: pickers need it.) */
 final class UserAbilities
@@ -40,6 +42,7 @@ final class UserAbilities
             'permission' => 'users.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 6]]],
+            'output' => Shape::of(['items' => [Shapes::user()->with(['role' => Shape::STRING])], 'total' => Shape::INTEGER]),
             'handler' => function (array $in) {
                 $roles = $this->cms->roles()->all();
                 $label = static fn (User $u) => $u->super ? __('Super Admin') : implode(', ', array_map(static fn (string $r) => __($roles[$r]['label'] ?? $r), $u->roles ?? []));
@@ -58,6 +61,7 @@ final class UserAbilities
             'description' => 'One user.',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => Shapes::user(),
             'handler' => fn (array $in) => User::query()->findOrFail($in['id'])->toPublic(),
         ]);
 
@@ -85,6 +89,7 @@ final class UserAbilities
                         'confirm' => ['title' => Answers::literal(__('Delete :name?', ['name' => $person['name']])), 'confirm' => __('Delete'), 'danger' => true], 'success' => __('User deleted')],
                 ],
             ),
+            'output' => Shapes::user(),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $email = strtolower($in['email']);
 
@@ -134,6 +139,7 @@ final class UserAbilities
                 'data' => ['type' => 'object', 'description' => 'Profile fields (see users/fields), merged into the current values.'],
                 'suspended' => ['type' => 'boolean', 'description' => 'A suspended account cannot sign in, and is signed out at its next request.'],
             ], 'required' => ['id']],
+            'output' => Shapes::user(),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = User::query()->findOrFail($in['id']);
                 $self = $ctx->user && $user->is($ctx->user);
@@ -198,6 +204,7 @@ final class UserAbilities
             'permission' => 'users.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => Shape::of([['access' => Shape::STRING, 'source' => Shape::STRING, 'expiresAt' => Shape::STRING_OR_NULL]]),
             'handler' => fn (array $in) => array_map(static fn ($g) => $g->toPublic(), $this->cms->accounts()->grants(User::query()->findOrFail($in['id']))),
         ]);
 
@@ -211,6 +218,7 @@ final class UserAbilities
                 'access' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
                 'until' => ['type' => ['string', 'null'], 'format' => 'date-time'],
             ], 'required' => ['id', 'access']],
+            'output' => Shape::of(['granted?' => Shape::STRING]),
             'handler' => function (array $in) {
                 $user = User::query()->findOrFail($in['id']);
                 $this->cms->accounts()->grant($user, $in['access'], 'admin', isset($in['until']) ? new \DateTimeImmutable($in['until']) : null);
@@ -226,6 +234,7 @@ final class UserAbilities
             'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'access' => ['type' => 'string', 'maxLength' => 120]], 'required' => ['id', 'access']],
+            'output' => Shape::of(['revoked' => Shape::STRING]),
             'handler' => function (array $in) {
                 $this->cms->accounts()->revoke(User::query()->findOrFail($in['id']), $in['access']);
 
@@ -238,6 +247,7 @@ final class UserAbilities
             'description' => 'Replace the fields of user profiles. Values of removed fields stay stored.',
             'permission' => 'collections.manage',
             'input' => ['type' => 'object', 'properties' => ['fields' => ['type' => 'array', 'items' => ['type' => 'object']]], 'required' => ['fields']],
+            'output' => Shape::of(['fields' => [Shapes::field()]]),
             'handler' => function (array $in) {
                 $this->cms->app()->make(UserFields::class)->save($in['fields']);
 
@@ -253,6 +263,7 @@ final class UserAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'answer' => static fn (array $gone) => Answers::done(__('Deleted :name', ['name' => $gone['name'] ?? ''])),
+            'output' => Shape::of(['deleted' => Shape::STRING, 'name' => Shape::STRING]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = User::query()->findOrFail($in['id']);
 
@@ -280,6 +291,7 @@ final class UserAbilities
             'answer' => static fn (mixed $sent, array $in) => Answers::done(__('Invitation sent'), User::query()->find($in['id'])?->email, [
                 ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/users/'.$in['id']],
             ]),
+            'output' => Shape::of(['sent' => Shape::BOOLEAN]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $this->invite(User::query()->findOrFail($in['id']), $ctx->user);
 
@@ -292,6 +304,11 @@ final class UserAbilities
             'permission' => 'users.view',
             'description' => 'Roles with their permissions, plus every known permission grouped. Change roles with settings/update (namespace "roles").',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'roles' => Shape::map(['label' => Shape::STRING, 'description' => Shape::STRING, 'permissions' => [Shape::STRING]]),
+                'permissions' => Shape::map([['name' => Shape::STRING, 'label' => Shape::STRING, 'description' => Shape::STRING, 'trusted' => Shape::BOOLEAN]]),
+                'people' => Shape::map(Shape::INTEGER),
+            ]),
             'handler' => function () {
                 $t = app(\Cms\Admin\Translations::class);
                 $permissions = [];

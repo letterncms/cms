@@ -7,11 +7,13 @@ namespace Cms\Modules\Content;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
+use Cms\Abilities\Shapes;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Cms;
 use Cms\Modules\Workspace\Answers;
 use Cms\Support\RecordTimestamps;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 
 /** Collections (read), entries, search and field types. */
@@ -85,6 +87,15 @@ final class ContentAbilities
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['group' => self::HANDLE]],
+            'output' => Shape::of([[
+                'id' => Shape::STRING, 'label' => Shape::STRING, 'collection' => Shape::STRING, 'canCustomise' => Shape::BOOLEAN, 'total' => Shape::INTEGER,
+                'pages' => [[
+                    'handle' => Shape::STRING, 'label' => Shape::STRING, 'path' => Shape::STRING_OR_NULL, 'id' => Shape::STRING_OR_NULL, 'version' => Shape::STRING_OR_NULL,
+                    'status' => Shape::enum('conflict', 'standard', 'customised', 'draft'), 'displayStatus' => Shape::STRING,
+                    'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'href' => Shape::STRING_OR_NULL, 'group' => Shape::STRING,
+                    'collection' => Shape::STRING, 'customisable' => Shape::BOOLEAN, 'opens' => Shape::BOOLEAN, 'restorable' => Shape::BOOLEAN,
+                ]],
+            ]]),
             'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
                 $groups = [];
 
@@ -134,6 +145,7 @@ final class ContentAbilities
             'permission' => fn (?User $user, array $in) => ($group = $registry->get((string) $in['group'])) !== null
                 && ($this->allowed($user, $group['collection'], 'create') || ($this->allowed($user, $group['collection'], 'view') && $own($group, (string) ($in['handle'] ?? '')) !== null)),
             'input' => ['type' => 'object', 'properties' => ['group' => self::HANDLE, 'handle' => ['type' => 'string', 'maxLength' => 64]], 'required' => ['group', 'handle']],
+            'output' => Shape::of(['id' => Shape::STRING, 'collection' => Shape::STRING]),
             'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
                 $group = $registry->get($in['group']) ?? throw AbilityException::notFound($in['group']);
                 $page = ($group['pages'])()[$in['handle']] ?? throw AbilityException::notFound($in['handle']);
@@ -157,6 +169,11 @@ final class ContentAbilities
             'description' => 'All content collections (content types) with their routes and structure. `system` marks the ones the CMS and its plugins bring (templates, components, account and checkout pages): their entries are edited like any other, their schema comes with the code.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([[
+                'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'handle' => Shape::STRING, 'title' => Shape::STRING, 'singular' => Shape::STRING,
+                'icon' => Shape::STRING, 'description' => Shape::STRING, 'driver' => Shape::enum(...Collection::DRIVERS), 'structure' => Shape::enum(...Collection::STRUCTURES), 'route' => Shape::STRING_OR_NULL,
+                'defaultView' => Shape::enum(...Collection::VIEWS), 'system' => Shape::BOOLEAN, 'count' => Shape::INTEGER,
+            ]]),
             'handler' => fn () => array_values(array_map(fn (Collection $c) => [
                 ...RecordTimestamps::api($c->extra),
                 'handle' => $c->handle, 'title' => $c->title, 'singular' => $c->singular, 'icon' => $c->icon,
@@ -170,6 +187,10 @@ final class ContentAbilities
             'description' => 'Initial collection definition defaults and settings from the active plugins. Apply defaults before explicit creation settings; with Blocks off a new collection can contain fields only.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'defaults' => Shape::open('The start of a collection definition, as collections/save takes it (title, fields, body…): what the active plugins give a new collection, empty when none does.'),
+                'settings' => [Shapes::field()],
+            ]),
             'handler' => fn () => [
                 'defaults' => $this->cms->collections()->defaults(),
                 'settings' => app(\Cms\Admin\Translations::class)->fields($this->cms->collections()->settingsFields()),
@@ -182,6 +203,15 @@ final class ContentAbilities
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
+            'output' => Shapes::collection([
+                'count' => Shape::INTEGER, 'deletable' => Shape::BOOLEAN,
+                'schema' => [
+                    'type' => Shape::enum('object'),
+                    'properties?' => Shape::map(Shape::open('The JSON Schema of one field\'s value, with the field\'s label as `title`: what the field\'s type and config make of it.')),
+                    'required?' => [Shape::STRING],
+                ],
+                'settings' => [Shapes::field()],
+            ]),
             'handler' => function (array $in) {
                 $c = $this->cms->collections()->find($in['handle']) ?? throw new AbilityException('Collection not found.', 'not_found');
 
@@ -198,6 +228,10 @@ final class ContentAbilities
             'description' => 'Available field types and their options, for building blueprints.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([[
+                'key' => Shape::STRING, 'label' => Shape::STRING, 'icon' => Shape::STRING, 'description' => Shape::STRING, 'group' => Shape::STRING,
+                'component' => Shape::STRING, 'config' => [Shapes::field()],
+            ]]),
             'handler' => fn () => array_values(array_map(static fn ($t) => $t->toArray(), $this->cms->fields()->all())),
         ]);
     }
@@ -227,6 +261,7 @@ final class ContentAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 25],
             ], 'required' => ['collection']],
+            'output' => Shape::page(self::listed(), ['perPage' => Shape::INTEGER]),
             'handler' => function (array $in) {
                 $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
                 $query = $this->cms->entries()->query()->working()->ungated()->collection($collection->handle)->status($in['status'])->search($in['search'] ?? null);
@@ -263,6 +298,7 @@ final class ContentAbilities
             'permission' => $collectionPermission('view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['collection' => self::HANDLE, 'locale' => ['type' => 'string'], 'fields' => self::LIST_FIELDS], 'required' => ['collection']],
+            'output' => Shape::of([Shape::nested(self::listedKeys(), 'children')]),
             'handler' => function (array $in) {
                 $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
                 $entries = $this->cms->entries()->query()->working()->collection($collection->handle)->locale($in['locale'] ?? $this->cms->defaultLocale())->orderBy('position')->get();
@@ -287,6 +323,7 @@ final class ContentAbilities
             'permission' => $entryPermission('view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
+            'output' => Shapes::entry()->with(['translations' => Shape::map(Shape::STRING)]),
             'handler' => function (array $in) {
                 $entry = $this->cms->entries()->findOrFail($in['id']);
                 $translations = [];
@@ -332,6 +369,7 @@ final class ContentAbilities
                 'at' => ['type' => 'string', 'format' => 'date-time', 'description' => 'Publication time; requires status published.'],
             ], 'required' => ['collection', 'title']],
             'answer' => $this->answer('created'),
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->create($in['collection'], $in, $ctx->user)->toArray(),
         ]);
 
@@ -356,6 +394,7 @@ final class ContentAbilities
                 'expectedVersion' => self::VERSION,
             ], 'required' => ['id']],
             'answer' => $this->answer('saved'),
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish'])->toArray(),
         ]);
 
@@ -365,6 +404,7 @@ final class ContentAbilities
             'permission' => $entryPermission('publish'),
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'at' => ['type' => 'string', 'format' => 'date-time'], 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('published'),
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -374,6 +414,7 @@ final class ContentAbilities
             'permission' => $entryPermission('publish'),
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('unpublished'),
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -384,6 +425,7 @@ final class ContentAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('discarded'),
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -394,6 +436,7 @@ final class ContentAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('deleted'),
+            'output' => Shape::of(['deleted' => Shape::STRING, 'title' => Shape::STRING_OR_NULL]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $title = $this->cms->entries()->find($in['id'])?->title;
                 $this->cms->content()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
@@ -408,6 +451,7 @@ final class ContentAbilities
             'permission' => $entryPermission('create'),
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('duplicated'),
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -419,6 +463,7 @@ final class ContentAbilities
                 'id' => self::ID, 'parentId' => ['type' => ['string', 'null']],
                 'position' => ['type' => 'integer', 'minimum' => 0], 'expectedVersion' => self::VERSION,
             ], 'required' => ['id', 'parentId']],
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->move($in['id'], $in['parentId'], $in['position'] ?? null, $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -433,6 +478,7 @@ final class ContentAbilities
                 'parentId' => ['type' => ['string', 'null'], 'default' => null],
                 'versions' => ['type' => 'object', 'additionalProperties' => self::VERSION],
             ], 'required' => ['collection', 'ids']],
+            'output' => Shapes::ok(),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $this->cms->content()->reorder($in['collection'], $in['ids'], $in['parentId'], $ctx->user, $in['versions'] ?? []);
 
@@ -446,6 +492,10 @@ final class ContentAbilities
             'permission' => $entryPermission('view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
+            'output' => Shape::of([[
+                'id' => Shape::STRING, 'action' => Shape::STRING, 'title' => Shape::STRING_OR_NULL, 'message' => Shape::STRING_OR_NULL,
+                'user' => Shape::nullable(['id' => Shape::STRING, 'name' => Shape::STRING, 'initials' => Shape::STRING]), 'createdAt' => Shape::STRING,
+            ]]),
             'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->list($in['id']),
         ]);
 
@@ -455,6 +505,12 @@ final class ContentAbilities
             'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['id'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
+            'output' => Shape::of(['id' => Shape::STRING, 'entryId' => Shape::STRING, 'action' => Shape::STRING, 'snapshot' => Shape::nullable([
+                    'title' => Shape::STRING, 'slug' => Shape::STRING, 'status' => Shape::STRING, 'data' => self::values(), 'authorId' => Shape::STRING_OR_NULL,
+                    // The working copy a published entry had beside it: what differed from the above.
+                    'draft' => Shape::nullable(['title?' => Shape::STRING, 'slug?' => Shape::STRING, 'data?' => self::values(), 'authorId?' => Shape::STRING_OR_NULL]),
+                    'parentId' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL,
+                ]), 'createdAt' => Shape::STRING]),
             'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->find($in['id']) ?? throw new AbilityException('Revision not found.', 'not_found'),
         ]);
 
@@ -464,6 +520,7 @@ final class ContentAbilities
             'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['revisionId'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'edit'),
             'input' => ['type' => 'object', 'properties' => ['revisionId' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['revisionId']],
             'answer' => $this->answer('restored'),
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -473,6 +530,7 @@ final class ContentAbilities
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['ids' => ['type' => 'array', 'items' => ['type' => 'string'], 'maxItems' => 200]], 'required' => ['ids']],
+            'output' => Shape::of([Shapes::entrySummary()]),
             'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_map(
                 static fn (Entry $e) => $e->toSummary(),
                 array_filter($this->cms->entries()->findMany($in['ids']), fn (Entry $e) => $ctx->system || $this->allowed($ctx->user, $e->collection, 'view'))
@@ -485,6 +543,7 @@ final class ContentAbilities
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10]]],
+            'output' => Shape::of([Shapes::entrySummary()]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $handles = array_values(array_filter(array_keys($this->cms->collections()->all()), fn ($h) => $ctx->system || $this->allowed($ctx->user, $h, 'view')));
 
@@ -502,6 +561,7 @@ final class ContentAbilities
                 'collections' => ['type' => 'array', 'items' => ['type' => 'string']],
                 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10],
             ], 'required' => ['query']],
+            'output' => Shape::of([Shapes::entrySummary()]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $handles = array_values(array_filter(
                     $in['collections'] ?? array_keys($this->cms->collections()->all()),
@@ -588,6 +648,28 @@ final class ContentAbilities
 
             return $item;
         }, $entries, $data);
+    }
+
+    /** An entry as a list screen has it: its summary, the languages it is in (multilingual sites) and the `fields` asked for. */
+    private static function listed(): Shape
+    {
+        return Shape::of(self::listedKeys());
+    }
+
+    /** @return array<string, mixed> */
+    private static function listedKeys(): array
+    {
+        return [
+            ...Shapes::entrySummaryKeys(), 'author' => Shape::nullable(Shapes::person()),
+            'translations?' => [Shape::STRING],
+            'values?' => Shape::open('The data fields asked for with `fields`, by handle: a users field as a list of people ({id, name, initials, avatar}), an entries field as a list of {id, collection, title}, any other as it is stored (the collection\'s schema is in collections/get).'),
+        ];
+    }
+
+    /** An entry's field values, as a revision keeps them. */
+    private static function values(): Shape
+    {
+        return Shape::open('Field values by field handle; what each may be is the collection\'s schema (collections/get).');
     }
 
     private function allowed(?User $user, string $collection, string $action): bool
