@@ -10,10 +10,9 @@
   "{name} suspended": "{name} geschorst",
   "A user with that email already exists.": "Er bestaat al een gebruiker met dat e-mailadres.",
   "Access": "Toegang",
-  "Access Name": "Toegangsnaam",
+  "Access Name": "Naam van de toegang",
   "Added :name": ":name toegevoegd",
   "All Users": "Alle gebruikers",
-  "Cancel": "Annuleren",
   "Client Editor": "Redacteur klant",
   "Collections": "Collecties",
   "Create Role": "Rol aanmaken",
@@ -40,7 +39,6 @@
   "Invited :name": ":name uitgenodigd",
   "Last Sign-In": "Laatst ingelogd",
   "List Roles": "Rollen weergeven",
-  "magazine": "magazine",
   "Manage Users and Roles": "Gebruikers en rollen beheren",
   "Name": "Naam",
   "Never signed in": "Nooit ingelogd",
@@ -79,7 +77,6 @@
   "The people on this site, their roles and when they were last here.": "De mensen op deze site, hun rollen en wanneer ze er het laatst waren.",
   "There must be at least one super admin.": "Er moet minstens één superadmin zijn.",
   "They lose access immediately. Their content stays.": "Ze verliezen meteen hun toegang. Hun inhoud blijft.",
-  "This role has every permission.": "Deze rol heeft alle rechten.",
   "Trusted Only": "Alleen vertrouwd",
   "Two-Factor": "Tweestaps",
   "Unknown role “:role”.": "Onbekende rol “:role”.",
@@ -101,5 +98,6 @@
   "Add Access": "Toegang toevoegen",
   "Any Account": "Elk account",
   "Delete {name}?": "{name} verwijderen?",
-  "excerpt": "excerpt"
+  "excerpt": "excerpt",
+  "Page Access": "Paginatoegang"
 }

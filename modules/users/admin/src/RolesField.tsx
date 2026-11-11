@@ -1,6 +1,6 @@
 import { plural, t, useAbility, type FieldProps } from '@letterncms/sdk'
 import { useState } from 'react'
-import { Badge, Button, Checkbox, Dialog, Fields, Icon, Spinner, confirm, cn } from '@letterncms/ui'
+import { Badge, Button, Checkbox, Dialog, Fields, List, Row, SectionHeading, Spinner, confirm, cn } from '@letterncms/ui'
 
 type Role = { label: string; description: string; permissions: string[] }
 type Roles = Record<string, Role>
@@ -47,14 +47,12 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
 
   const groups = Object.entries(known.data.permissions)
   const collections = groups.filter(([, perms]) => collectionOf(perms))
-  // Each group is headed like every section of the admin.
-  const head = 'm-0 mb-3 text-base font-semibold text-ink'
   const people = known.data.people ?? {}
 
   // A permission to give only to people you trust says so with a badge, not a sentence.
   const section = ([group, perms]: [string, Permission[]]) => (
-    <div key={group} className="mb-6">
-      <h3 className={head}>{group}</h3>
+    <section key={group} className="mb-8">
+      <SectionHeading as="h3" title={group} />
       <div className="grid gap-2">
         {perms.map((p) => (
           <Checkbox key={p.name} checked={grants(role.permissions, p.name)} onChange={(on) => toggle(p.name, on)} label={
@@ -66,35 +64,32 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
           } />
         ))}
       </div>
-    </div>
+    </section>
   )
 
   return (
-    <div className={cn('grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]', disabled && 'pointer-events-none opacity-60')}>
-      {/* The roles lie on a strip of desk; the one on view is a slip of paper on it, as in the sidebar. */}
-      <div className="space-y-px self-start rounded-lg bg-surface p-1 md:sticky md:top-16">
-        {Object.entries(roles).map(([k, r]) => (
-          <button key={k} type="button" aria-current={k === key || undefined} onClick={() => setActive(k)} className={cn('flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors duration-120', k === key ? 'bg-bg font-medium text-ink shadow-raise' : 'text-muted hover:bg-hover hover:text-text')}>
-            <span className="flex-1 truncate">{r.label}</span>
-            {/* How many people hold it, not how many rules it has. */}
-            {(people[k] ?? 0) > 0 && <span className="text-xs tabular-nums text-faint" title={plural(people[k], '{count} person', '{count} people')}>{people[k]}</span>}
-          </button>
-        ))}
-        <button type="button" onClick={() => setAdding(true)} className="flex h-8 w-full items-center gap-1.5 rounded-md px-2 text-left text-sm text-muted hover:bg-hover hover:text-text">
-          <Icon name="plus" size={14} />
-          {t('New Role')}
-        </button>
+    <div className={cn('grid gap-8', disabled && 'pointer-events-none opacity-60')}>
+      {/* One column: the roles, as the kit's list (the one on view is the selected row, with how many people hold it), then that role. */}
+      <div>
+        <List>
+          {Object.entries(roles).map(([k, r]) => (
+            <Row key={k} selected={k === key} onClick={() => setActive(k)}>
+              <span className={cn('min-w-0 flex-1 truncate', k === key && 'font-medium text-ink')}>{r.label}</span>
+              {(people[k] ?? 0) > 0 && <span className="shrink-0 text-xs tabular-nums text-faint">{plural(people[k], '{count} person', '{count} people')}</span>}
+            </Row>
+          ))}
+        </List>
+        <Button variant="ghost" icon="plus" className="mt-2" onClick={() => setAdding(true)}>{t('New Role')}</Button>
       </div>
 
       <div className="min-w-0">
-        <Fields className="mb-6" fields={[{ handle: 'label', type: 'text', label: t('Name'), width: 'half' }, { handle: 'description', type: 'text', label: t('Description') }]} values={role} onChange={(h, v) => set({ ...role, [h]: v ?? '' })} />
-        {role.permissions.includes('*') ? (
-          <p className="text-sm text-muted">{t('This role has every permission.')}</p>
-        ) : (
+        <Fields className="mb-6" fields={[{ handle: 'label', type: 'text', label: t('Name') }, { handle: 'description', type: 'textarea', label: t('Description'), rows: 2 }]} values={role} onChange={(h, v) => set({ ...role, [h]: v ?? '' })} />
+        {/* A role that may do everything lists nothing to tick. */}
+        {!role.permissions.includes('*') && (
           <>
             {groups.map((group, i) => !collectionOf(group[1]) ? section(group) : i === groups.findIndex(([, p]) => collectionOf(p)) && (
-              <div key="collections" role="table" aria-label={t('Collections')} className="mb-6">
-                <div role="row" className={cn(head, 'mb-1 grid grid-cols-[minmax(0,1fr)_repeat(5,2.75rem)] items-end gap-x-1 sm:grid-cols-[minmax(0,1fr)_repeat(5,3.75rem)]')}>
+              <div key="collections" role="table" aria-label={t('Collections')} className="mb-8">
+                <div role="row" className={cn('m-0 mb-1 grid min-h-7 text-base font-semibold text-ink grid-cols-[minmax(0,1fr)_repeat(5,2.75rem)] items-end gap-x-1 sm:grid-cols-[minmax(0,1fr)_repeat(5,3.75rem)]')}>
                   <span role="columnheader">{t('Collections')}</span>
                   {ACTIONS.map((action) => <span key={action} role="columnheader" className="truncate text-center text-xs font-medium text-muted">{collections[0][1].find((p) => p.name.endsWith(`.${action}`))?.label ?? action}</span>)}
                 </div>
@@ -119,7 +114,7 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
         )}
         {key !== 'admin' && (
           <Button
-            variant="ghost"
+            variant="destructive"
             icon="trash"
             onClick={async () => {
               if (await confirm({ title: t('Delete the “{name}” role?', { name: role.label }), description: t('People with this role lose its permissions when you save.'), confirm: t('Delete Role'), danger: true })) {

@@ -229,21 +229,21 @@ final class UserAbilities
 
         $a->register('users/revoke', [
             'label' => 'Take Access Away',
-            'description' => 'Remove an access name from someone, whoever gave it.',
+            'description' => 'Remove an access name from someone: with `source` (as users/access lists it) only what that source gave, without it whoever gave it.',
             'permission' => 'users.manage',
             'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
-            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'access' => ['type' => 'string', 'maxLength' => 120]], 'required' => ['id', 'access']],
+            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'access' => ['type' => 'string', 'maxLength' => 120], 'source' => ['type' => 'string', 'maxLength' => 120]], 'required' => ['id', 'access']],
             'output' => Shape::of(['revoked' => Shape::STRING]),
             // Taking away what someone does not hold changes nothing.
             'dryRun' => function (array $in): array {
                 $user = User::query()->findOrFail($in['id']);
-                $held = count(array_filter($this->cms->accounts()->grants($user), static fn ($grant) => $grant->access === $in['access']));
+                $held = count(array_filter($this->cms->accounts()->grants($user), static fn ($grant) => $grant->access === $in['access'] && (! isset($in['source']) || $grant->source === $in['source'])));
 
                 return $held === 0 ? [] : [['action' => 'revoke', 'type' => 'access', 'access' => $in['access'], 'userId' => $user->id, 'name' => $user->name, 'removes' => ['grants' => $held]]];
             },
             'handler' => function (array $in) {
-                $this->cms->accounts()->revoke(User::query()->findOrFail($in['id']), $in['access']);
+                $this->cms->accounts()->revoke(User::query()->findOrFail($in['id']), $in['access'], $in['source'] ?? null);
 
                 return ['revoked' => $in['access']];
             },

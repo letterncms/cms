@@ -13,7 +13,6 @@
   "Access Name": "Nom d’accès",
   "Added :name": ":name ajouté",
   "All Users": "Tous les utilisateurs",
-  "Cancel": "Annuler",
   "Client Editor": "Rédacteur client",
   "Collections": "Collections",
   "Create Role": "Créer le rôle",
@@ -40,7 +39,6 @@
   "Invited :name": ":name invité",
   "Last Sign-In": "Dernière connexion",
   "List Roles": "Lister les rôles",
-  "magazine": "magazine",
   "Manage Users and Roles": "Gérer les utilisateurs et les rôles",
   "Name": "Nom",
   "Never signed in": "Jamais connecté",
@@ -79,7 +77,6 @@
   "The people on this site, their roles and when they were last here.": "Les personnes de ce site, leurs rôles et leur dernière visite.",
   "There must be at least one super admin.": "Il doit y avoir au moins un super-admin.",
   "They lose access immediately. Their content stays.": "Ils perdent l’accès immédiatement. Leur contenu reste.",
-  "This role has every permission.": "Ce rôle a toutes les autorisations.",
   "Trusted Only": "De confiance uniquement",
   "Two-Factor": "Deux facteurs",
   "Unknown role “:role”.": "Rôle inconnu « :role ».",
@@ -101,5 +98,6 @@
   "Add Access": "Ajouter un accès",
   "Any Account": "Tout compte",
   "Delete {name}?": "Supprimer {name} ?",
-  "excerpt": "excerpt"
+  "excerpt": "excerpt",
+  "Page Access": "Accès aux pages"
 }
