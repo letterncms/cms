@@ -51,7 +51,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       data-variant={variant}
       disabled={disabled || loading}
       className={cn(
-        'group/button inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-medium transition-[background-color,color,opacity,box-shadow] duration-base ease-out disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+        'group/button cms-touch inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-medium transition-[background-color,color,opacity,box-shadow] duration-base ease-out disabled:pointer-events-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
         // Pressed (a toggle that is on, the place on view): the same pressed fill on every variant, winning over its resting fill.
         'aria-pressed:bg-active! aria-pressed:text-ink! data-active:bg-active! data-active:text-ink!',
         // Busy is not off: a button that is loading keeps its tone, so its spinner reads.

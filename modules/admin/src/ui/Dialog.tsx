@@ -85,7 +85,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           )}
           {close && (title || description) && <Base.Close render={<IconButton icon="close" label={t('Close')} size="sm" className="!absolute right-2 top-2" />} />}
           {body && <div data-dialog-body className={cn('min-h-0 flex-1 overflow-auto px-5 max-sm:px-4', title || description ? 'pt-4' : 'pt-5 max-sm:pt-4', !footer && 'pb-5 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))]')}>{body}</div>}
-          {footer && <div data-dialog-footer className="flex shrink-0 items-center justify-end gap-2 px-5 pb-5 pt-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:px-4 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))] max-sm:[&>button]:w-full">{footer}</div>}
+          {footer && <div data-dialog-footer className="flex shrink-0 items-center justify-end gap-2 px-5 pb-5 pt-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-3 max-sm:px-4 max-sm:pb-[calc(24px+env(safe-area-inset-bottom))] max-sm:[&>button]:h-11 max-sm:[&>button]:w-full">{footer}</div>}
         </Base.Popup>
       </Base.Portal>
     </Base.Root>
