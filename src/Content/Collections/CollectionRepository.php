@@ -72,7 +72,7 @@ final class CollectionRepository
             ['handle' => 'title', 'type' => 'text', 'label' => 'Name', 'required' => true, 'width' => 'half'],
             ['handle' => 'singular', 'type' => 'text', 'label' => 'Entry Name', 'width' => 'half'],
             ['handle' => 'icon', 'type' => 'icon', 'label' => 'Icon'],
-            ['handle' => 'route', 'type' => 'text', 'label' => 'URL Pattern', 'width' => 'half', 'placeholder' => '/blog/{slug}', 'instructions' => 'Empty: no public URL.'],
+            ['handle' => 'route', 'type' => 'text', 'label' => 'URL Pattern', 'width' => 'half', 'placeholder' => '/blog/{slug}'],
             ['handle' => 'structure', 'type' => 'select', 'label' => 'Structure', 'width' => 'half', 'display' => 'segmented', 'required' => true, 'options' => ['list' => 'List', 'tree' => 'Tree', 'dated' => 'Dated']],
             ['handle' => 'default_view', 'type' => 'select', 'label' => 'Default View', 'display' => 'segmented', 'required' => true, 'default' => 'table', 'options' => ['table' => 'Table', 'grid' => 'Grid', 'calendar' => 'Calendar']],
             ['handle' => 'taxonomy', 'type' => 'toggle', 'label' => 'Taxonomy', 'instructions' => 'Its entries are terms that other entries are filed under.'],
