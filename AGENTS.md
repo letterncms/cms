@@ -33,7 +33,7 @@ Build screens from `@letterncms/ui` (`modules/admin/src/ui`). One component per 
 - Focus is a 2px line of the focus colour: leave the default ring on a button, inset it on a row or a tab (`-outline-offset-2`), and give a field `cms-input`. `outline-none` only where the focus shows another way or on a popup that hands the focus on. A menu item under the arrow keys shows its fill, no ring.
 - `Button` is 44px to hit on a touch screen whatever its size, and so are a `Segmented` option and a tab; a control of your own needs the same (`cms-touch`).
 - Actions that show only when a row is pointed at are `cms-reveal` inside a `cms-reveal-row` (`Row` and `DataView` do it for you): they also show when the row holds the focus or has a menu open, and always on a touch screen. Never `opacity-0 group-hover:opacity-100` by hand.
-- A key that does something is `useShortcut(combo, handler, enabled, label, group)`: with a `label` it shows in the overlay `?` opens, for as long as it works. Never a list of keys written by hand.
+- A key that does something is `useShortcut(combo, handler, enabled, label, group)`: with a `label` it shows in the overlay `?` opens, for as long as it works. A key handled where that listener must not reach (the canvas's own document, a field's own keys) is only named: `useShortcutLabel(combo, label, group, enabled)` lists it and listens for nothing. Never a list of keys written by hand, and never a `useShortcut` with an empty handler, which would take the key.
 - Look at what you built in light, dark and at phone width before the pull request.
 
 Copy:
