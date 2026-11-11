@@ -10,7 +10,9 @@ export function LabelField({ field, value, onChange, disabled }: FieldProps<stri
       onChange={(e) => onChange(e.target.value)}
       placeholder={field.placeholder}
       aria-label={field.label}
-      className={cn('w-full min-w-0 bg-transparent text-sm text-text outline-none', field.display === 'fallback' ? 'placeholder:text-text' : 'placeholder:text-faint')}
+      autoFocus={field.autofocus === true}
+      // Its focus shows as the fill a row has under the pointer: a ring would draw a field inside the row.
+      className={cn('-mx-1 h-7 w-[calc(100%+0.5rem)] min-w-0 rounded-xs bg-transparent px-1 text-sm font-medium text-text outline-none focus-visible:bg-hover', field.display === 'fallback' ? 'placeholder:text-text' : 'placeholder:font-normal placeholder:text-faint')}
     />
   )
 }
