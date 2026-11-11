@@ -5,7 +5,7 @@ entries:
       slug: home
       data:
         content: |
-          ::: section {"props":{"width":"content"},"style":{"base":{"textAlign":"center"}}}
+          ::: section {"label":"Hero","class":"spotlight","props":{"width":"content"},"style":{"base":{"textAlign":"center"}},"code":{"styles":["spotlight"]},"behavior":{"module":"spotlight","props":{"ease":0.12},"when":"idle"}}
           # A new site, ready for your words
 
           Everything on this page is made of blocks. Open it in the admin, press / to add more, and use the same block settings to adjust content, layout and motion.
