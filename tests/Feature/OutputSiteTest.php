@@ -67,30 +67,30 @@ final class OutputSiteTest extends TestCase
 
     public function test_patterns_and_templates_answer_as_described(): void
     {
-        $this->assertSame([], $this->ability('patterns/list'));
+        $this->assertSame([], $this->ability('components/list'));
         $this->assertSame([], $this->ability('templates/list'));
 
         $blocks = [['type' => 'heading', 'props' => ['text' => 'Card']]];
-        $draft = $this->ability('patterns/save', ['handle' => 'teaser', 'title' => 'Teaser', 'blocks' => $blocks, 'publish' => false]);
+        $draft = $this->ability('components/save', ['handle' => 'teaser', 'title' => 'Teaser', 'blocks' => $blocks, 'publish' => false]);
         $this->assertFalse($draft['synced']);
-        $this->assertSame([], $this->ability('patterns/list'));
-        $this->assertCount(1, $this->ability('patterns/list', ['working' => true]));
+        $this->assertSame([], $this->ability('components/list'));
+        $this->assertCount(1, $this->ability('components/list', ['working' => true]));
 
-        $card = $this->ability('patterns/save', ['handle' => 'card', 'title' => 'Card', 'description' => 'A card', 'category' => 'Cards', 'synced' => true, 'blocks' => $blocks,
+        $card = $this->ability('components/save', ['handle' => 'card', 'title' => 'Card', 'description' => 'A card', 'category' => 'Cards', 'synced' => true, 'blocks' => $blocks,
             'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title']]]);
         $this->assertTrue($card['synced']);
-        $again = $this->ability('patterns/save', ['handle' => 'card', 'title' => 'Card Two', 'blocks' => $blocks]);
+        $again = $this->ability('components/save', ['handle' => 'card', 'title' => 'Card Two', 'blocks' => $blocks]);
         $this->assertSame($card['id'], $again['id']);
-        $this->assertSame(['card'], array_column($this->ability('patterns/list'), 'handle'));
+        $this->assertSame(['card'], array_column($this->ability('components/list'), 'handle'));
 
         // Everything a node can carry: styles, attributes, bindings, a script, an animation, children, a type nobody registered.
-        $hero = $this->ability('patterns/save', ['handle' => 'hero', 'title' => 'Hero', 'blocks' => self::richBlocks()])['blocks'][0];
+        $hero = $this->ability('components/save', ['handle' => 'hero', 'title' => 'Hero', 'blocks' => self::richBlocks()])['blocks'][0];
         $this->assertEqualsCanonicalizing(['id', 'type', 'props', 'style', 'anchor', 'class', 'label', 'attrs', 'bind', 'logic', 'motion', 'hidden', 'children'], array_keys($hero));
         $this->assertSame(['scroll', 'spy', 'group', 'menu', 'carousel', 'marquee'], array_keys($hero['logic']['behaviors']));
         $this->assertSame(['if', 'play', 'scroll', 'copy', 'theme', 'focus', 'dispatch', 'fetch', 'lock', 'add'], array_column($hero['logic']['on'][0]['actions'], 'do'));
         $this->assertSame('words', $hero['motion'][0]['steps'][0]['target']);
         $this->assertSame('plugin/unknown', $hero['children'][1]['type']);
-        $this->assertCount(2, $this->ability('patterns/list'));
+        $this->assertCount(2, $this->ability('components/list'));
 
         $this->cms()->content()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['description' => 'Frames pages', 'collections' => ['pages'], 'blocks' => [['type' => 'outlet']]]]);
         $this->cms()->content()->create('templates', ['title' => 'Bare', 'slug' => 'bare', 'status' => 'draft', 'data' => ['blocks' => []]]);

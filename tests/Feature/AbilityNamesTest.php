@@ -19,7 +19,7 @@ final class AbilityNamesTest extends TestCase
      * `save` creates or replaces a definition by its handle, and only these things are definitions: what a
      * collection, a fieldset, a global set, a component (pattern) or the user profile is made of.
      */
-    private const array SAVED = ['collections', 'fieldsets', 'globals', 'patterns', 'user-fields'];
+    private const array SAVED = ['collections', 'fieldsets', 'components', 'globals', 'user-fields'];
 
     /** Acts that are none of the standard ones: each says what it does to its thing. */
     private const array DOMAIN = [

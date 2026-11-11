@@ -207,7 +207,7 @@ export function ContentPanel({ node }: { node: BlockNode }) {
 /** A component instance: which component, its property values (or data for them). */
 function ComponentInstance({ node, paths, setBind, anchors }: { node: BlockNode; paths: DataPath[]; setBind: (key: string, path: string | null) => void; anchors: { id: string; label: string }[] }) {
   const { store } = useEditorContext()
-  const list = useAbility<Pattern[]>('patterns/list', { working: true }, { staleTime: 30_000 })
+  const list = useAbility<Pattern[]>('components/list', { working: true }, { staleTime: 30_000 })
   const pattern = list.data?.find((p) => p.handle === node.props?.ref)
   const values = (node.props?.values ?? {}) as Record<string, unknown>
   const bind = node.bind ?? {}

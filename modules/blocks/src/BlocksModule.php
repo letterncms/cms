@@ -201,7 +201,7 @@ final class BlocksModule extends Plugin
     private function guardHtmlBlocks(): void
     {
         $this->cms()->hooks()->addFilter('ability.input', function (array $input, Ability $ability, AbilityContext $ctx) {
-            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'patterns/save', 'globals/set'], true)) {
+            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'components/save', 'globals/set'], true)) {
                 return $input;
             }
 
@@ -217,7 +217,7 @@ final class BlocksModule extends Plugin
 
             $existing = match ($ability->name) {
                 'entries/update' => ($entry = $this->cms()->entries()->find((string) ($input['id'] ?? ''))) ? $this->htmlBlocks($entry->working()) : [],
-                'patterns/save' => $this->htmlBlocks($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
+                'components/save' => $this->htmlBlocks($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
                 default => [],
             };
 
@@ -362,7 +362,7 @@ final class BlocksModule extends Plugin
         ]);
 
         // ── Components and templates (read helpers; edit them with the entries abilities) ──
-        $a->register('patterns/list', [
+        $a->register('components/list', [
             'label' => 'List Components and Sections',
             'description' => 'Entries of the components collection (plus plugin patterns). Synced ones are components: instances update everywhere and take property values. Others are sections copied on insert. Create and change them with entries/create and entries/update in the "components" collection.',
             'permission' => 'admin.access',
@@ -372,7 +372,7 @@ final class BlocksModule extends Plugin
             'handler' => fn (array $in) => array_values($patterns()->all((bool) ($in['working'] ?? false))),
         ]);
 
-        $a->register('patterns/save', [
+        $a->register('components/save', [
             'label' => 'Save as Component or Section',
             'description' => 'Create or replace an entry of the components collection by handle (slug). synced: true makes it a component. Saved as a draft of an existing one unless publish is true.',
             'permission' => fn (?\Cms\Users\User $user) => (bool) $user?->hasPermission('entries.'.Patterns::COLLECTION.'.create'),
@@ -507,7 +507,7 @@ final class BlocksModule extends Plugin
                 'logic compiles to Alpine.js (CSP build): data (state), on (events → actions: set, toggle, add, if, wait, play, scroll, copy, go, theme, focus, dispatch, fetch, lock, run), show + transition, states, text, attrs, model, target/merge (load links and forms into blocks), behaviors (scroll: is-scrolled/is-hidden on scroll, spy: scrollspy for in-page links, group: hover group, marquee, carousel: step through the first child with the buttons after it).',
                 'motion compiles to CSS (load, scroll, loop) or Web Animations (appear, hover, press, event): [{trigger: {type: appear|scroll|hover|press|load|loop|event, start, end, once, node}, on: [desktop|tablet|mobile], steps: [{target: self|children|words|#<node id>, mask, from, to, duration, delay, ease, stagger, at}], repeat, yoyo}]. start and end read "<top|center|bottom> <top|center|bottom|N%>". load caps its delay at 0.2s and its stagger at 0.3s so it cannot hold back the page. repeat -1 needs a motion-toggle block on the page. Properties: opacity, x, y, xPercent, yPercent, scale, rotate, rotateX/Y, skewX/Y, perspective, blur, clipPath, colors, borderRadius. Use event triggers with a logic play action for menus and modals.',
                 'Templates and components are entries of the "templates" and "components" collections (body field: blocks). entries/update saves a draft; entries/publish (or publish: true) makes it live and rebuilds the pages that use it.',
-                'Prefer existing components and sections (patterns/list) to keep sites consistent. You can send entry data for a blocks field as Block Markdown (a string).',
+                'Prefer existing components and sections (components/list) to keep sites consistent. You can send entry data for a blocks field as Block Markdown (a string).',
             ],
             'blocks' => $this->app->make(BlockRegistry::class)->catalog(),
             'examples' => [
