@@ -125,8 +125,9 @@ final class Document
                 $clean['code'] = $code;
             }
 
-            if (($behavior = self::behavior($node['behavior'] ?? null)) !== []) {
-                $clean['behavior'] = $behavior;
+            // One behaviour as it was written, or several as a list.
+            if (($behaviors = self::behaviors($node['behavior'] ?? null)) !== []) {
+                $clean['behavior'] = count($behaviors) === 1 ? $behaviors[0] : $behaviors;
             }
 
             // The same element across pages, when the site navigates without page loads: a canvas, a player.
@@ -206,6 +207,17 @@ final class Document
         }
 
         return $out;
+    }
+
+    /** A block's behaviours as a list, whether it names one ({module…}) or several ([{module…}, {module…}]). */
+    public const int BEHAVIORS = 6;
+
+    /** @return list<array{module: string, props?: array<string, mixed>, when?: string}> */
+    public static function behaviors(mixed $behavior): array
+    {
+        $list = is_array($behavior) && array_is_list($behavior) ? $behavior : [$behavior];
+
+        return array_slice(array_values(array_filter(array_map(self::behavior(...), $list))), 0, self::BEHAVIORS);
     }
 
     /** JSON and nothing else: text, numbers, booleans, null, and lists and maps of them. */

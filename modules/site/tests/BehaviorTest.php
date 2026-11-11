@@ -43,6 +43,33 @@ final class BehaviorTest extends TestCase
         $this->assertStringNotContainsString('src="/_cms/site/scripts/tilt-', $html, 'the runtime imports it when the element is there');
     }
 
+    public function test_a_block_can_carry_several_behaviours(): void
+    {
+        Files::put(content_path('design/scripts/tilt.js'), "export function mount() {}\n");
+        Files::put(content_path('design/scripts/cue.js'), "export function mount() {}\n");
+        $this->app->make(Code::class)->flush();
+
+        $html = $this->page('Both', [['type' => 'box', 'behavior' => [
+            ['module' => 'tilt', 'props' => ['max' => 8]],
+            ['module' => 'cue', 'when' => 'idle'],
+            ['module' => 'missing'],
+            ['module' => '../x'],
+        ], 'children' => []]]);
+
+        $this->assertSame(1, preg_match('/data-cms-behavior="(\[[^"]+\])"/', $html, $m));
+        $specs = json_decode(html_entity_decode($m[1]), true);
+        $this->assertCount(2, $specs, 'a script that is not there is left out, the others still run');
+        $this->assertMatchesRegularExpression('#^/_cms/site/scripts/tilt-[0-9a-f]{10}\.js$#', $specs[0]['src']);
+        $this->assertSame(['max' => 8], $specs[0]['props']);
+        $this->assertSame('idle', $specs[1]['when']);
+        $this->assertStringNotContainsString('data-cms-props', $html);
+
+        $normalize = fn (mixed $behavior) => $this->app->make(Document::class)->normalize([['type' => 'box', 'behavior' => $behavior, 'children' => []]])[0]['behavior'] ?? null;
+        $this->assertSame([['module' => 'tilt'], ['module' => 'cue']], $normalize([['module' => 'tilt'], ['module' => 'cue'], 'nonsense']));
+        $this->assertSame(['module' => 'tilt'], $normalize([['module' => 'tilt']]), 'a list of one is the one');
+        $this->assertCount(Document::BEHAVIORS, $normalize(array_fill(0, 9, ['module' => 'tilt'])));
+    }
+
     public function test_a_component_hands_its_properties_to_its_behaviour(): void
     {
         Files::put(content_path('design/scripts/counter.js'), "export function mount() {}\n");
