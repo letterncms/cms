@@ -1,5 +1,5 @@
-import { batch, locale, queryClient, setQuery, t, useAbility, useLocation, type RecordTimestamps, type ViewAction } from '@letterncms/sdk'
-import { useEffect, useMemo, useState } from 'react'
+import { batch, locale, queryClient, registry, setQuery, t, useAbility, useLocation, type RecordTimestamps, type SurfaceComponentProps, type ViewAction } from '@letterncms/sdk'
+import { Suspense, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType } from 'react'
 import { Button, IconButton } from '../Button'
 import { cn } from '../cn'
 import { Icon } from '../Icon'
@@ -125,6 +125,8 @@ export interface RecordsProps {
   address?: boolean
   /** `false`: read as it is, a ranked list: no Display menu, no sorting by its headers. */
   display?: boolean
+  /** A catalog component drawn in the toolbar before Display, with these props: a control that belongs with the list's view (its saved views). */
+  controls?: { component: string; props?: Record<string, unknown> }
 }
 
 type Row = Record<string, unknown>
@@ -173,7 +175,7 @@ const fitTrack = (values: unknown[]) => `minmax(120px,${Math.min(360, Math.max(1
  * that opens and the actions of each row. The same component as every overview, so every
  * list looks and works alike.
  */
-export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, address, display = true }: RecordsProps) {
+export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, address, display = true, controls }: RecordsProps) {
   const { scope, act } = useView()
   const { query: location } = useLocation()
   const [ownText, setOwnText] = useState('')
@@ -382,6 +384,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       dateSort={dateKeys}
       calendar={!!calendar}
       manual={!!tree}
+      controls={controls ? <Control {...controls} /> : undefined}
       plain={!display}
       selection={selection}
       image={imageColumn ? (row) => <CardImage row={row} column={imageColumn} media={media} /> : undefined}
@@ -413,6 +416,14 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     )}
     </>
   )
+}
+
+/** A catalog component in the list's toolbar: drawn with its props and where the list is. */
+function Control({ component, props = {} }: { component: string; props?: Record<string, unknown> }) {
+  const { scope, disabled } = useView()
+  useSyncExternalStore(registry.components.subscribe, registry.components.version)
+  const Component = registry.components.get(component) as ComponentType<SurfaceComponentProps> | undefined
+  return Component ? <Suspense fallback={null}><Component props={fill(props, scope)} disabled={disabled} onAction={() => {}} scope={scope} /></Suspense> : null
 }
 
 /** One cell: the value as its format writes it, with the row's icon, a quieter second value or its problem. */
