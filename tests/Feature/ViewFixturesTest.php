@@ -46,6 +46,10 @@ final class ViewFixturesTest extends TestCase
         $admin = $this->admin();
         $views = [];
         $this->cms()->abilities()->execute('forms/create', ['title' => 'Contact'], AbilityContext::forUser($admin, 'admin'));
+        // The Redirects tab is drawn with a redirect in it: without one it is an empty state, and the fixtures open the table.
+        if (isset($this->cms()->abilities()->all()['redirects/create'])) {
+            $this->cms()->abilities()->execute('redirects/create', ['from' => '/old', 'to' => '/new'], AbilityContext::forUser($admin, 'admin'));
+        }
 
         foreach (self::PLACES as [$id, $params]) {
             if ($this->cms()->views()->has($id)) {

@@ -20,14 +20,28 @@ final class MediaReferences
     /** @var array<string, true> field handles that hold media, at any depth */
     private array $handles = [];
 
+    /** @var list<array>|null every reference, read once per request: a file's details, its delete and its dry run ask in turn */
+    private ?array $all = null;
+
+    /** After something that holds references was written: read them again. */
+    public function forget(): void
+    {
+        $this->all = null;
+    }
+
     /** @return list<array{id: string, where: array{kind: string, id: string, title: string, locale?: ?string, path: string}}> */
     public function all(): array
     {
+        if ($this->all !== null) {
+            return $this->all;
+        }
+
         $this->handles = $this->mediaHandles();
         $found = [];
 
         foreach (cms()->entries()->query()->get() as $entry) {
-            $where = ['kind' => 'entry', 'id' => (string) $entry->id, 'title' => (string) $entry->title, 'locale' => $entry->locale];
+            // The collection comes with the entry: whoever lists the uses doesn't look each entry up again.
+            $where = ['kind' => 'entry', 'id' => (string) $entry->id, 'title' => (string) $entry->title, 'locale' => $entry->locale, 'collection' => $entry->collection];
             $this->walk($entry->data, $where, '', $found);
             $entry->hasDraft() && $this->walk($entry->working(), $where, '', $found);
         }
@@ -42,7 +56,7 @@ final class MediaReferences
             $this->walk((array) json_decode((string) file_get_contents($tokens), true), ['kind' => 'design', 'id' => 'tokens', 'title' => 'Design tokens'], '', $found, styles: true);
         }
 
-        return $found;
+        return $this->all = $found;
     }
 
     /**
@@ -106,6 +120,29 @@ final class MediaReferences
     public function of(MediaItem $item): array
     {
         return array_values(array_filter($this->all(), static fn (array $r) => strtolower($r['id']) === $item->id || (str_starts_with($r['id'], '/') && ltrim((string) parse_url($r['id'], PHP_URL_PATH), '/') === $item->path)));
+    }
+
+    /**
+     * What uses one item, each thing once: an entry with its collection (where it opens), a global set, the design.
+     *
+     * @return list<array{kind: string, id: string, title: string, collection: ?string, locale: ?string}>
+     */
+    public function usedBy(MediaItem $item): array
+    {
+        $used = [];
+
+        foreach ($this->of($item) as $reference) {
+            $where = $reference['where'];
+            $used[$where['kind'].':'.$where['id']] ??= [
+                'kind' => $where['kind'],
+                'id' => $where['id'],
+                'title' => $where['title'],
+                'collection' => $where['collection'] ?? null,
+                'locale' => $where['locale'] ?? null,
+            ];
+        }
+
+        return array_values($used);
     }
 
     private function walk(mixed $value, array $where, string $path, array &$found, bool $styles = false): void

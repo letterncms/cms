@@ -296,6 +296,41 @@ final class MediaTest extends TestCase
         $this->assertNull(MediaItem::query()->find($item->id));
     }
 
+    public function test_one_file_says_what_uses_it_each_thing_once(): void
+    {
+        $item = app(MediaStore::class)->store($this->jpeg(), 'hero.jpg');
+        $ctx = AbilityContext::forUser($this->admin(), 'admin');
+        $get = fn () => $this->cms()->abilities()->execute('media/get', ['id' => strtoupper($item->id)], $ctx);
+
+        $this->assertSame([$item->id, []], [$get()['id'], $get()['usedBy']]);
+
+        // Twice in one global set, once in the design, once in an entry: three things use it.
+        \Cms\Support\Yaml::write(content_path('globals/brand.yaml'), ['logo' => ['image' => $item->id], 'note' => "media:{$item->id}"]);
+        Files::put(content_path('design/tokens.json'), (string) json_encode(['color' => ['hero' => "media:{$item->id}"]]));
+        $collection = array_key_first($this->cms()->collections()->all());
+        $entry = $this->cms()->entryService()->create($collection, ['title' => 'Uses it', 'data' => ['image' => $item->id]]);
+
+        $this->assertEqualsCanonicalizing([
+            ['kind' => 'entry', 'id' => $entry->id, 'title' => 'Uses it', 'collection' => $collection, 'locale' => $entry->locale],
+            ['kind' => 'global', 'id' => 'brand', 'title' => 'brand', 'collection' => null, 'locale' => null],
+            ['kind' => 'design', 'id' => 'tokens', 'title' => 'Design tokens', 'collection' => null, 'locale' => null],
+        ], $get()['usedBy']);
+
+        $this->expectException(AbilityException::class);
+        $this->cms()->abilities()->execute('media/get', ['id' => '01hzzzzzzzzzzzzzzzzzzzzzzz'], $ctx);
+    }
+
+    public function test_the_settings_say_nothing_and_the_servers_limit_is_the_fields_ceiling(): void
+    {
+        $fields = collect($this->cms()->abilities()->execute('settings/get', ['namespace' => 'media'], AbilityContext::forUser($this->admin(), 'admin'))['fields'] ?? [])->keyBy('handle');
+
+        $this->assertNotEmpty($fields);
+        $this->assertSame([], $fields->filter(static fn (array $field) => ! empty($field['instructions']))->keys()->all());
+
+        // What PHP takes at most is the most the field takes: a larger number is refused where it is typed.
+        $limit = (int) ini_get('upload_max_filesize');
+        $limit > 0 && $this->assertSame(min(512, $limit), $fields['max_upload_mb']['max']);
+    }
 
     public function test_the_library_is_a_view(): void
     {
