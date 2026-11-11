@@ -127,19 +127,24 @@ final class DatabaseDriver implements EntryDriver
         };
 
         foreach ($query->wheres as [$field, $operator, $value]) {
-            $column = DB::raw($this->expression($builder, $field, $query->working));
+            if (! EntryQuery::isColumn($field)) {
+                $builder->whereRaw(...$this->whereData($field, $operator, $value, $query->working));
 
-            if ($operator === 'contains' && ! EntryQuery::isColumn($field)) {
-                $builder->whereRaw(...$this->contains($field, $value, $query->working));
                 continue;
             }
+
+            // The same answers as EntryFilter::compare(): nothing there is not equal to anything, and is not in any list.
+            $column = DB::raw($this->expression($builder, $field, $query->working));
+            $blank = $value === null || $value === '';
             match ($operator) {
                 'in' => $builder->whereIn($column, (array) $value),
-                'not in' => $builder->whereNotIn($column, (array) $value),
+                'not in' => $builder->where(fn (Builder $q) => $q->whereNotIn($column, (array) $value)->orWhereNull($column)),
                 'null' => $builder->whereNull($column),
                 'not null' => $builder->whereNotNull($column),
-                'contains' => $builder->where($column, 'like', '%'.$value.'%'),
-                'like' => $builder->where($column, 'like', $value),
+                'contains' => $builder->whereRaw("lower({$column->getValue($builder->getGrammar())}) like ? escape '!'", ['%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower((string) $value)).'%']),
+                'like' => $builder->whereRaw("lower({$column->getValue($builder->getGrammar())}) like ?", [mb_strtolower((string) $value)]),
+                '=' => $blank ? $builder->where(fn (Builder $q) => $q->whereNull($column)->orWhere($column, '')) : $builder->where($column, '=', $value),
+                '!=' => $blank ? $builder->whereNotNull($column)->where($column, '!=', '') : $builder->where(fn (Builder $q) => $q->where($column, '!=', $value)->orWhereNull($column)),
                 default => $builder->where($column, $operator, $value),
             };
         }
@@ -158,14 +163,94 @@ final class DatabaseDriver implements EntryDriver
         }
 
         if ($query->search !== null) {
-            $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query->search).'%';
+            $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($query->search)).'%';
             $title = $this->expression($builder, 'title', $query->working);
             $slug = $this->expression($builder, 'slug', $query->working);
             $data = $query->working ? "case when draft is not null then json_extract(draft, '$.data') else data end" : 'data';
-            $builder->where(fn (Builder $q) => $q->whereRaw("{$title} like ? escape '!'", [$term])->orWhereRaw("{$slug} like ? escape '!'", [$term])->orWhereRaw("{$data} like ? escape '!'", [$term]));
+            // In lower case on both sides: MySQL compares its JSON, and the text taken from it, letter for letter.
+            $builder->where(fn (Builder $q) => $q->whereRaw("lower({$title}) like ? escape '!'", [$term])->orWhereRaw("lower({$slug}) like ? escape '!'", [$term])->orWhereRaw("lower(cast({$data} as char)) like ? escape '!'", [$term]));
         }
 
         return $builder;
+    }
+
+    /**
+     * One condition on a field of the data, in the JSON each database keeps. The answers are EntryFilter::compare()'s:
+     * a field that is missing, null or empty equals only "nothing" and is unequal to everything else, is in no
+     * list and is neither less nor more than anything; a number is compared as a number, true as true, a text as
+     * it is written; `like` and `contains` do not mind case.
+     *
+     * @return array{0: string, 1: list<mixed>} SQL and its bindings.
+     */
+    private function whereData(string $field, string $operator, mixed $value, bool $working): array
+    {
+        if ($operator === 'contains') {
+            return $this->contains($field, $value, $working);
+        }
+
+        $sqlite = DB::connection()->getDriverName() === 'sqlite';
+        $document = $working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data') else entries.data end" : 'entries.data';
+        $json = "json_extract({$document}, '$.{$field}')";
+        // JSON null is SQL null in SQLite, and a value of its own in MySQL.
+        $none = $sqlite ? "{$json} is null" : "({$json} is null or json_type({$json}) = 'NULL')";
+        $text = $sqlite ? $json : "json_unquote({$json})";
+        $empty = "({$none} or {$text} = '')";
+        // One value against the field, typed: SQLite binds it as what it is, MySQL compares JSON with JSON.
+        $compare = static function (string $op, mixed $one) use ($sqlite, $json): array {
+            if ($sqlite) {
+                return match (true) {
+                    is_bool($one) => ["{$json} {$op} ?", [(int) $one]],
+                    is_float($one) => ["{$json} {$op} cast(? as real)", [$one]],
+                    default => ["{$json} {$op} ?", [$one]],
+                };
+            }
+
+            return ["{$json} {$op} cast(? as json)", [json_encode($one, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]];
+        };
+        $blank = $value === null || $value === '';
+
+        switch ($operator) {
+            case 'null':
+                return [$none, []];
+            case 'not null':
+                return ["not {$none}", []];
+            case 'like':
+                return ["(not {$none} and lower({$text}) like ?)", [mb_strtolower((string) $value)]];
+            case 'in':
+            case 'not in':
+                $any = [];
+                $bindings = [];
+
+                foreach ((array) $value as $one) {
+                    [$sql, $bound] = $compare('=', $one);
+                    $any[] = $sql;
+                    array_push($bindings, ...$bound);
+                }
+
+                $any = $any === [] ? '0 = 1' : implode(' or ', $any);
+
+                return [$operator === 'in' ? "(not {$empty} and ({$any}))" : "({$empty} or not ({$any}))", $bindings];
+            case '=':
+                if ($blank) {
+                    return [$empty, []];
+                }
+
+                [$sql, $bindings] = $compare('=', $value);
+
+                return ["(not {$none} and {$sql})", $bindings];
+            case '!=':
+                if ($blank) {
+                    return ["not {$empty}", []];
+                }
+
+                [$sql, $bindings] = $compare('!=', $value);
+
+                return ["({$none} or {$sql})", $bindings];
+            default:
+                [$sql, $bindings] = $compare($operator, $value instanceof \DateTimeInterface ? $value->format('c') : $value);
+
+                return ["(not {$empty} and {$sql})", $bindings];
+        }
     }
 
     /**
@@ -201,6 +286,15 @@ final class DatabaseDriver implements EntryDriver
 
             return;
         }
+        // MySQL reads a field of the data as text unless asked for the JSON: 10 would sort before 9, and null would be a word.
+        if (! EntryQuery::isColumn($field) && DB::connection()->getDriverName() !== 'sqlite') {
+            $document = $working ? "case when entries.draft is not null then json_extract(entries.draft, '$.data') else entries.data end" : 'entries.data';
+            $json = "json_extract({$document}, '$.{$field}')";
+            $builder->orderByRaw("({$json} is null or json_type({$json}) = 'NULL')")->orderByRaw("{$json} {$dir}");
+
+            return;
+        }
+
         $builder->orderByRaw("({$column}) is null");
         $builder->orderByRaw(in_array($field, EntryQuery::TEXT_COLUMNS, true) ? "lower({$column}) {$dir}" : "{$column} {$dir}");
     }

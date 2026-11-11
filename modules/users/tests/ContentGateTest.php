@@ -25,7 +25,7 @@ final class ContentGateTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'home' => 'home', 'body' => 'blocks', 'fields' => [['handle' => 'blocks', 'type' => 'blocks']]],
+            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'home' => 'home', 'body' => 'blocks', 'fields' => [['handle' => 'blocks', 'type' => 'blocks'], ['handle' => 'related', 'type' => 'entries']]],
             // A course site: a course is a page, its lessons are children, a lesson can be a free sample.
             'courses' => ['title' => 'Courses', 'structure' => 'tree', 'route' => '/courses/{parent_uri}/{slug}', 'body' => 'body', 'fields' => [['handle' => 'body', 'type' => 'markdown']]],
             // A membership magazine: everything is a teaser for non-members, unless it says otherwise.
@@ -182,6 +182,20 @@ final class ContentGateTest extends TestCase
         $this->assertSame(0, $this->getJson('/api/v1/content/articles?q=withheld-body-word')->json('meta.total'));
         $this->assertSame(0, $this->getJson('/api/v1/content/articles?filter[secret_note]=secret-note-text')->json('meta.total'));
         $this->assertSame(0, $this->getJson('/api/v1/content/articles?sort=secret_note')->json('meta.total'));
+        $this->assertSame(0, $this->getJson('/api/v1/content/articles?filter[secret_note][contains]=secret')->json('meta.total'));
+        $this->assertSame(0, $this->getJson('/api/v1/content/articles?filter[secret_note][exists]=true')->json('meta.total'));
+        $this->assertStringNotContainsString('secret-note-text', $this->getJson('/api/v1/content/articles?fields=secret_note,blocks')->assertOk()->getContent());
+
+        // A relation to what is closed, expanded: the locked page is left out and the teaser stays a teaser.
+        $linking = $this->entry('pages', 'Linking Page', ['related' => [$locked->id, $teaser->id]]);
+        $expanded = $this->getJson('/api/v1/content/pages/linking-page?expand=related')->assertOk();
+        $this->assertSame(['Teased'], array_column($expanded->json('data.data.related'), 'title'));
+        $this->assertTrue($expanded->json('data.data.related.0.gated'));
+        $this->assertStringNotContainsString('withheld-body-word', $expanded->getContent());
+        $this->assertStringNotContainsString('secret-note-text', $expanded->getContent());
+        $this->assertStringNotContainsString('locked-body-text', $expanded->getContent());
+        $this->assertSame(0, $this->getJson('/api/v1/content/pages?references='.$locked->id)->json('meta.total'));
+        cms()->entryService()->delete($linking->id);
 
         // Files everyone can fetch.
         $search = $this->get('/search.json')->assertOk()->getContent();

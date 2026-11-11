@@ -178,8 +178,8 @@ final class OpenApiTest extends TestCase
         // Public: no token, said per operation.
         $this->assertSame([], $list['security']);
         $this->assertSame([], $show['security']);
-        $this->assertSame(['collection', 'locale', 'q', 'sort', 'filter', 'references', 'references_field', 'limit', 'page'], array_column($list['parameters'], 'name'));
-        $this->assertSame(['collection', 'slug', 'locale'], array_column($show['parameters'], 'name'));
+        $this->assertSame(['collection', 'locale', 'q', 'sort', 'filter', 'fields', 'expand', 'references', 'references_field', 'limit', 'page'], array_column($list['parameters'], 'name'));
+        $this->assertSame(['collection', 'slug', 'locale', 'fields', 'expand'], array_column($show['parameters'], 'name'));
 
         $content = $this->cms()->entryService();
         $content->create('posts', ['title' => 'Public', 'data' => ['excerpt' => 'x'], 'status' => 'published']);
@@ -187,7 +187,10 @@ final class OpenApiTest extends TestCase
         $content->create('posts', ['title' => 'Draft', 'data' => ['excerpt' => 'z']]);
 
         $page = $this->getJson('/api/v1/content/posts?limit=1&page=2&sort=title&locale=en')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.title', 'Second');
-        $this->assertSame(['total' => 2, 'page' => 2, 'perPage' => 1, 'pages' => 2], $page->json('meta'));
+        $this->assertSame(['total' => 2, 'page' => 2, 'perPage' => 1, 'pages' => 2, 'count' => 1, 'from' => 2, 'to' => 2, 'hasMore' => false], $page->json('meta'));
+        $this->assertSame([null, 1], [$page->json('links.next'), preg_match('/[?&]page=1(&|$)/', (string) $page->json('links.prev'))]);
+        $this->assertConforms($this->getJson('/api/v1/content/posts?fields=title&expand=nothing')->assertStatus(422), $list['responses']['422']['content']['application/json']['schema']);
+        $this->assertConforms($this->getJson('/api/v1/content/posts?fields=title,excerpt')->assertOk(), $list['responses']['200']['content']['application/json']['schema']);
         $this->assertConforms($page, $list['responses']['200']['content']['application/json']['schema']);
         $this->assertConforms($this->getJson('/api/v1/content/posts?q=Public')->assertOk()->assertJsonCount(1, 'data'), $list['responses']['200']['content']['application/json']['schema']);
         $this->getJson('/api/v1/content/posts?filter[slug]=second')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.slug', 'second');
