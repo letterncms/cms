@@ -107,13 +107,22 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
         return $parent && $parent->isLive() ? new self($parent) : null;
     }
 
+    /** @var array<string, list<Entry>> a collection's entries in reading order, per language, until an entry changes */
+    private static array $orders = [];
+
+    /** Forget the reading orders: an entry was added, moved, published or removed. */
+    public static function flush(): void
+    {
+        self::$orders = [];
+    }
+
     /**
      * The entry before or after this one in reading order: depth-first for
      * trees (docs), oldest to newest for dated collections, else the collection's order.
      */
-    public function sibling(int $offset): ?self
+    public function sibling(int $offset, bool $wrap = false): ?self
     {
-        static $orders = [];
+        $orders = &self::$orders;
 
         $collection = $this->entry->collection();
         $key = $collection->handle.'|'.$this->entry->locale;
@@ -148,6 +157,9 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
         foreach ($orders[$key] as $i => $e) {
             if ($e->id === $this->entry->id) {
                 $other = $orders[$key][$i + $offset] ?? null;
+                // Round the ends: after the last comes the first, when there is more than this one.
+                $count = count($orders[$key]);
+                $other === null && $wrap && $count > 1 && $other = $orders[$key][(($i + $offset) % $count + $count) % $count];
 
                 return $other ? new self($other) : null;
             }
