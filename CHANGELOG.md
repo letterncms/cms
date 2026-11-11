@@ -22,6 +22,8 @@
 
 ### Changed
 
+- The installer and the page where an app asks to connect look like the admin they belong to: the same typeface, colours, corners, fields, checkboxes and buttons as the sign-in screen, in light and dark. The installer says what a server is missing and offers **Check Again**, shows what a field got wrong under that field and what the database refused in the database's group, and keeps the install token in a group of its own. When there are no plugins to choose, its one button is **Go to Dashboard**. The consent page names the app, the address its answer goes to and whose access it gets, and its button names the app: **Connect Claude**.
+- Sign-in: every step starts at the same height, headings are in one case, Email and Password are drawn alike, **Reset Password** and **Back to Sign In** are buttons you can reach and hit, and choosing a new password has a way back.
 - The admin's light, dark or system theme is kept on your account, so it is the same in every browser you sign in to, from the first paint. The account menu and the command palette show the same choice.
 - Chosen rows are a quiet grey instead of blue, and **Delete** in the selection bar is red like every other way into deleting. A list you can read at a glance (fewer than eight rows, nothing filtered) has no search or status filter; a language switch always stays. A row's menu button is the same size and in the same place on every row.
 - The command palette starts with what you can make and do; places come last, without the screen you are on. It offers only the theme you are not in, and a screen's Settings tab is listed only where Settings lists it. On a phone it fills the screen and has a Close button.

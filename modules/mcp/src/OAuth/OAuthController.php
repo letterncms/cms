@@ -112,18 +112,18 @@ final class OAuthController
             // In the person's admin language.
             'text' => [
                 'title' => __('Connect :app', ['app' => $app]).' · '.$site,
+                'site' => $site,
                 'heading' => __('Connect :app to :site?', ['app' => $app, 'site' => $site]),
-                'as' => __('It will act as :name, with your permissions.', ['name' => $user->name]),
-                'can' => [__('Read your content, design system, blocks and settings'), __('Create and edit what you are allowed to change'), __('Every change is recorded in the audit log')],
+                // Which app, where its answer goes (the line to check) and whose access it gets: named, not explained.
+                'facts' => [__('App') => $app, __('Address') => (string) parse_url($params['redirect_uri'], PHP_URL_HOST), __('Signs In As') => $user->name],
                 'full' => __('Full Access'),
                 'fullHint' => __('Everything you can do in the admin'),
                 'read' => __('Read Only'),
                 'readHint' => __('Look, never change anything'),
                 'cancel' => __('Cancel'),
-                'connect' => __('Connect'),
-                'returns' => __('Returns to :host. Revoke access any time under Account → API tokens.', ['host' => parse_url($params['redirect_uri'], PHP_URL_HOST)]),
+                'connect' => __('Connect :app', ['app' => $app]),
             ],
-        ])->header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ".$this->formAction($params['redirect_uri'])."; frame-ancestors 'none'");
+        ])->header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; form-action 'self' ".$this->formAction($params['redirect_uri'])."; frame-ancestors 'none'");
     }
 
     public function approve(Request $request): Response

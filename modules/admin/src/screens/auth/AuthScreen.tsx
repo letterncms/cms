@@ -1,7 +1,7 @@
 import { boot, brand, navigate, request, t, CmsError, type FieldDef } from '@letterncms/sdk'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { BrandMark } from '../../app/Brand'
-import { Button, Fields } from '../../ui'
+import { Button, Fields, Notice } from '../../ui'
 
 type Mode = 'login' | 'two-factor' | 'forgot' | 'reset'
 
@@ -11,7 +11,8 @@ export function AuthScreen({ path, onAuthenticated }: { path: string; onAuthenti
 
   return (
     <div className="flex min-h-screen flex-col bg-sunken">
-      <div className="mx-auto flex w-full max-w-[360px] flex-1 flex-col justify-center px-5 py-16">
+      {/* From one height on every step, like the installer: the mark and the heading stay put from step to step. */}
+      <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col px-5 pb-16 pt-[14vh]">
         <div className="mb-8 flex items-center gap-2.5">
           <BrandMark size={24} />
           <span className="text-sm font-semibold tracking-[-0.01em] text-ink">{boot.site.name}</span>
@@ -65,12 +66,13 @@ function useSubmit() {
 function ErrorNote({ error }: { error: CmsError | null }) {
   if (!error) return null
   const detail = Object.values(error.details)[0]
-  return <div className="rounded-sm border border-danger/30 bg-danger/6 px-3 py-2 text-sm text-danger" role="alert">{detail && error.type === 'invalid_input' ? detail : error.message}</div>
+  return <Notice tone="danger">{detail && error.type === 'invalid_input' ? detail : error.message}</Notice>
 }
 
 // Sign-in forms are fields too: drawn by Fields before there is a manifest.
 const loginFields = (): FieldDef[] => [
-  { handle: 'email', type: 'email', label: t('Email'), size: 'lg', autocomplete: 'username', autofocus: true },
+  // Plain fields, both: an icon in one and not the other sets their words 22px apart.
+  { handle: 'email', type: 'text', label: t('Email'), size: 'lg', inputmode: 'email', autocomplete: 'username', autofocus: true },
   { handle: 'password', type: 'text', label: t('Password'), secret: true, size: 'lg', autocomplete: 'current-password' },
   { handle: 'remember', type: 'toggle', label: t('Keep Me Signed In'), display: 'checkbox' },
 ]
@@ -95,9 +97,9 @@ function Login({ onDone, onTwoFactor, onForgot }: { onDone: () => void; onTwoFac
       <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
         {t('Sign In')}
       </Button>
-      <button type="button" onClick={onForgot} className="w-full text-center text-sm text-muted hover:text-text">
-        {t('Forgot your password?')}
-      </button>
+      <Button variant="ghost" size="lg" className="w-full font-normal text-muted" onClick={onForgot}>
+        {t('Reset Password')}
+      </Button>
     </form>
   )
 }
@@ -121,11 +123,11 @@ function TwoFactor({ onDone, onBack }: { onDone: () => void; onBack: () => void 
       <Fields bare fields={[{ handle: 'code', type: 'text', label: t('Code'), size: 'lg', mono: true, inputmode: 'numeric', autocomplete: 'one-time-code', placeholder: '123 456', autofocus: true }]} values={{ code }} onChange={(_, v) => setCode(v ?? '')} />
       <ErrorNote error={error} />
       <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
-        {t('Verify')}
+        {t('Verify Code')}
       </Button>
-      <button type="button" onClick={onBack} className="w-full text-center text-sm text-muted hover:text-text">
+      <Button variant="ghost" size="lg" className="w-full font-normal text-muted" onClick={onBack}>
         {t('Back to Sign In')}
-      </button>
+      </Button>
     </form>
   )
 }
@@ -137,7 +139,7 @@ function Forgot({ onBack }: { onBack: () => void }) {
 
   return sent ? (
     <div>
-      <Heading title={t('Check your inbox')}>{t('If an account exists for {email}, a reset link is on its way. It expires in 30 minutes.', { email })}</Heading>
+      <Heading title={t('Check Your Inbox')}>{t('If an account exists for {email}, a reset link is on its way. It expires in 30 minutes.', { email })}</Heading>
       <Button size="lg" className="w-full" onClick={onBack}>
         {t('Back to Sign In')}
       </Button>
@@ -153,15 +155,15 @@ function Forgot({ onBack }: { onBack: () => void }) {
       }}
       className="space-y-4"
     >
-      <Heading title={t('Reset Password')}>{t('We’ll email you a link to choose a new one.')}</Heading>
-      <Fields fields={[{ handle: 'email', type: 'email', label: t('Email'), size: 'lg', autocomplete: 'username', autofocus: true }]} values={{ email }} onChange={(_, v) => setEmail(v ?? '')} />
+      <Heading title={t('Reset Password')} />
+      <Fields fields={[{ handle: 'email', type: 'text', label: t('Email'), size: 'lg', inputmode: 'email', autocomplete: 'username', autofocus: true }]} values={{ email }} onChange={(_, v) => setEmail(v ?? '')} />
       <ErrorNote error={error} />
       <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
         {t('Send Reset Link')}
       </Button>
-      <button type="button" onClick={onBack} className="w-full text-center text-sm text-muted hover:text-text">
+      <Button variant="ghost" size="lg" className="w-full font-normal text-muted" onClick={onBack}>
         {t('Back to Sign In')}
-      </button>
+      </Button>
     </form>
   )
 }
@@ -173,7 +175,7 @@ function Reset({ token, email, invite, onDone }: { token: string; email: string;
 
   return done ? (
     <div>
-      <Heading title={t('Password saved')}>{t('You can sign in with your new password.')}</Heading>
+      <Heading title={t('Password Saved')}>{t('You can sign in with your new password.')}</Heading>
       <Button variant="primary" size="lg" className="w-full" onClick={onDone}>
         {t('Continue to Sign In')}
       </Button>
@@ -189,11 +191,14 @@ function Reset({ token, email, invite, onDone }: { token: string; email: string;
       }}
       className="space-y-4"
     >
-      <Heading title={invite ? t('Welcome') : t('Choose a new password')}>{invite ? t('Set a password for {email} to get started.', { email }) : email}</Heading>
+      <Heading title={invite ? t('Welcome') : t('Choose a New Password')}>{email}</Heading>
       <Fields fields={[{ handle: 'password', type: 'text', label: t('New Password'), secret: true, size: 'lg', autocomplete: 'new-password', autofocus: true, instructions: t('At least 10 characters, with letters and numbers.') }]} values={{ password }} onChange={(_, v) => setPassword(v ?? '')} />
       <ErrorNote error={error} />
       <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
         {t('Save Password')}
+      </Button>
+      <Button variant="ghost" size="lg" className="w-full font-normal text-muted" onClick={onDone}>
+        {t('Back to Sign In')}
       </Button>
     </form>
   )

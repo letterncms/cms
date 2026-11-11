@@ -138,7 +138,7 @@ export interface FieldDef {
   placeholder?: string
   autofocus?: boolean
   autocomplete?: string
-  inputmode?: 'numeric' | 'text'
+  inputmode?: 'numeric' | 'text' | 'email'
   mono?: boolean
   display?: string
   /** text: `blur` saves on blur/Enter instead of on every keystroke. */
