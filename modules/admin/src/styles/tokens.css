@@ -99,9 +99,11 @@
   --cms-shadow-sheet: 0 0 0 1px rgb(42 38 30 / 0.06), 0 1px 3px rgb(42 38 30 / 0.04);
   --cms-shadow-pop: 0 1px 2px rgb(42 38 30 / 0.05), 0 4px 12px -2px rgb(42 38 30 / 0.08), 0 12px 32px -8px rgb(42 38 30 / 0.12);
   --cms-shadow-dialog: 0 2px 4px rgb(42 38 30 / 0.04), 0 12px 24px -6px rgb(42 38 30 / 0.1), 0 32px 64px -16px rgb(42 38 30 / 0.18);
-  /* edge: the lit top edge of an ink fill. focus: the halo of a field that has the focus. cursor: the row the keyboard is on. */
+  /* edge: the lit top edge of an ink fill. cursor: the row the keyboard is on.
+     focus: a field that has the focus. Focus is one thing everywhere, a 2px line of the focus colour: an outline 2px off a button,
+     inset on a row or a tab, and on a field its own edge and this, with a wash around it. */
   --cms-shadow-edge: inset 0 1px 0 rgb(255 255 255 / 0.1);
-  --cms-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+  --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 18%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
 
   color-scheme: light;
@@ -158,7 +160,7 @@
   --cms-shadow-pop: 0 0 0 1px rgb(0 0 0 / 0.2), 0 4px 12px -2px rgb(0 0 0 / 0.35), 0 12px 32px -8px rgb(0 0 0 / 0.45);
   --cms-shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.25), 0 12px 24px -6px rgb(0 0 0 / 0.4), 0 32px 64px -16px rgb(0 0 0 / 0.55);
   --cms-shadow-edge: 0 0 #0000;
-  --cms-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+  --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 32%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
   color-scheme: dark;
 }
