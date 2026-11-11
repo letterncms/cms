@@ -484,7 +484,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/update', [
             'label' => 'Update Design System',
-            'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, form fields, fonts or the page transition. Sections you pass replace the stored ones. The site rebuilds.',
+            'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, form fields, fonts or the page transition. Sections you pass replace the stored ones, except `transition`, whose settings you name are changed and the others kept. The site rebuilds.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'tokens' => ['type' => 'object', 'description' => 'path => value'],

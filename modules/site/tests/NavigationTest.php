@@ -62,6 +62,24 @@ final class NavigationTest extends TestCase
         $this->assertStringNotContainsString('navigate', $canvas);
     }
 
+    public function test_changing_one_setting_of_the_transition_keeps_the_others(): void
+    {
+        $abilities = $this->cms()->abilities();
+        $context = AbilityContext::system('test');
+        $transition = fn () => $abilities->execute('design/get', [], $context)['transition'];
+
+        $abilities->execute('design/update', ['transition' => ['type' => 'slide', 'duration' => 0.6]], $context);
+        $abilities->execute('design/update', ['transition' => ['navigation' => 'client']], $context);
+        $this->assertSame(['type' => 'slide', 'duration' => 0.6, 'navigation' => 'client'], $transition());
+
+        $abilities->execute('design/update', ['transition' => ['type' => 'fade']], $context);
+        $this->assertSame(['type' => 'fade', 'duration' => 0.6, 'navigation' => 'client'], $transition());
+
+        $preview = $abilities->execute('design/preview', ['transition' => ['duration' => 1.2]], $context)['css'];
+        $this->assertStringContainsString('animation-duration:1.2s', $preview, 'a preview merges the same way');
+        $this->assertStringContainsString('@view-transition', $preview);
+    }
+
     public function test_a_persist_name_is_a_plain_name(): void
     {
         $normalize = fn (mixed $persist) => $this->app->make(Document::class)->normalize([['type' => 'box', 'persist' => $persist, 'children' => []]])[0];

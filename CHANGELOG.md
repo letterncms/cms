@@ -52,6 +52,7 @@
 - Pages with an animation no longer ask for two files that are not there: the site's script looked for its `motion` and `scroll` parts at the site's root (two 404s on every such page) before loading them from where they are.
 - With navigation without page loads, a link to the page you are on (the logo, the current menu item) scrolls to the top instead of loading the page again, which restarted whatever was kept across pages, such as a WebGL canvas.
 - In the builder, a block that a behaviour draws (a canvas, a chart) is no longer a blank: while it is empty it says which behaviour draws it and that the preview shows it. The canvas still runs no scripts.
+- `design/update` with only part of the page transition, such as `{"transition": {"navigation": "client"}}`, keeps the transition's other settings instead of dropping its type and duration.
 
 ## 0.22.0 (2026-11-11)
 
