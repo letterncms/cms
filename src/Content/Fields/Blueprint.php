@@ -68,6 +68,30 @@ final class Blueprint
 
                 self::validate($sub, $name.'.', $depth + 1);
             }
+
+            $conditional[$name] = $field;
+        }
+
+        // A condition names fields beside it, each with a value or a list of values.
+        foreach ($conditional ?? [] as $name => $field) {
+            foreach (['if', 'required_if'] as $key) {
+                if (! array_key_exists($key, $field->config)) {
+                    continue;
+                }
+
+                $rule = $field->config[$key];
+                $ok = is_array($rule) && $rule !== [] && ! array_is_list($rule);
+
+                foreach ($ok ? $rule : [] as $handle => $values) {
+                    $ok = $ok && isset($seen[$handle]) && $handle !== $field->handle
+                        && array_filter(is_array($values) ? $values : [$values], static fn ($v) => ! is_scalar($v) && $v !== null) === []
+                        && (! is_array($values) || ($values !== [] && array_is_list($values)));
+                }
+
+                if (! $ok) {
+                    throw new InvalidArgumentException(__('The condition of :field must name fields beside it, each with a value or a list of values.', ['field' => $name]));
+                }
+            }
         }
     }
 
@@ -123,15 +147,31 @@ final class Blueprint
         return $out;
     }
 
-    /** JSON schema of the data. Partial schemas (drafts) accept empty required fields. */
+    /**
+     * JSON schema of the data. Partial schemas (drafts) accept empty required fields.
+     *
+     * A field that is required under a condition (`required` with `if`, or `required_if`) is optional in
+     * `properties` and required in an `allOf` entry: `{if: {the fields its condition names}, then: {required,
+     * and its schema as a required field}}`.
+     */
     public function schema(bool $partial = false): array
     {
         $properties = [];
         $required = [];
+        $conditional = [];
         $types = self::types();
 
         foreach ($this->fields as $field) {
-            if ($partial && $field->required) {
+            $when = $field->required ? $field->condition() : $field->requiredWhen();
+
+            if (! $partial && $when !== []) {
+                $conditional[] = [
+                    'if' => ['properties' => array_map(static fn (array $values) => count($values) === 1 ? ['const' => $values[0]] : ['enum' => $values], $when), 'required' => array_keys($when)],
+                    'then' => ['properties' => [$field->handle => $types->resolve($field->type)->schema(Field::fromArray([...$field->toArray(), 'required' => true]))], 'required' => [$field->handle]],
+                ];
+            }
+
+            if ($field->required && ($partial || $when !== [])) {
                 $field = Field::fromArray([...$field->toArray(), 'required' => false]);
             }
 
@@ -144,7 +184,7 @@ final class Blueprint
             }
         }
 
-        return array_filter(['type' => 'object', 'properties' => $properties, 'required' => $required ?: null]);
+        return array_filter(['type' => 'object', 'properties' => $properties, 'required' => $required ?: null, 'allOf' => $conditional ?: null]);
     }
 
     public function defaults(): array

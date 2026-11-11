@@ -258,6 +258,7 @@
   "The :brand admin needs JavaScript.": "L’administration de :brand nécessite JavaScript.",
   "The action failed.": "L’action a échoué.",
   "The command failed.": "La commande a échoué.",
+  "The condition of :field must name fields beside it, each with a value or a list of values.": "La condition de :field doit nommer des champs voisins, chacun avec une valeur ou une liste de valeurs.",
   "The database “:database” does not exist yet. Create it in your hosting control panel (or with CREATE DATABASE), then try again.": "La base de données « :database » n’existe pas encore. Créez-la dans le panneau de votre hébergeur (ou avec CREATE DATABASE), puis réessayez.",
   "The database server did not accept this username and password, or the user has no access to this database.": "Le serveur de base de données a refusé ce nom d’utilisateur et ce mot de passe, ou l’utilisateur n’a pas accès à cette base.",
   "The download is damaged. Nothing was changed. Try again.": "Le téléchargement est endommagé. Rien n’a été modifié. Réessayez.",

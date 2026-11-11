@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Cms\Support\Schema;
 
 /**
- * JSON Schema (draft 2020-12 subset) validator that also normalizes:
+ * JSON Schema (draft 2020-12 subset: types, formats, bounds, anyOf/oneOf, allOf, if/then/else) validator that also normalizes:
  * applies defaults, strips unknown keys when additionalProperties is false
  * (reporting them), and optionally coerces scalar strings (CLI, query strings).
  */
@@ -55,13 +55,30 @@ final class Validator
             $this->errors[$path] = __('Must be one of: :values.', ['values' => implode(', ', array_map('json_encode', $schema['enum']))]);
         }
 
-        return match (true) {
+        $value = match (true) {
             is_string($value) => $this->checkString($value, $schema, $path),
             is_int($value), is_float($value) => $this->checkNumber($value, $schema, $path),
             is_array($value) && array_is_list($value) && ($value !== [] || in_array('array', $types, true)) && ! in_array('object', $types, true) => $this->checkArray($value, $schema, $path),
             is_array($value) => $this->checkObject($value, $schema, $path),
             default => $value,
         };
+
+        foreach ((array) ($schema['allOf'] ?? []) as $every) {
+            $value = $this->check($value, (array) $every, $path);
+        }
+
+        // if / then / else: the condition is only asked, never reported.
+        if (is_array($schema['if'] ?? null)) {
+            $probe = new self($this->coerce);
+            $probe->check($value, $schema['if'], $path);
+            $branch = $schema[$probe->errors === [] ? 'then' : 'else'] ?? null;
+
+            if (is_array($branch)) {
+                $value = $this->check($value, $branch, $path);
+            }
+        }
+
+        return $value;
     }
 
     private function checkAny(mixed $value, array $options, string $path): mixed
