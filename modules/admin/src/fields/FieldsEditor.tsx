@@ -2,8 +2,8 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { plural, t, useManifest, type FieldDef, type FieldProps, type FieldTypeDef } from '@letterncms/sdk'
-import { useMemo, useState, type ReactNode } from 'react'
-import { Badge, Button, EmptyState, Fields, Icon, IconButton, Popover, cn } from '../ui'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Badge, Button, EmptyState, FieldError, Fields, Icon, IconButton, Popover, cn } from '../ui'
 
 export type RawField = Record<string, any> & { handle?: string; type?: string; label?: string; import?: string }
 
@@ -23,9 +23,18 @@ function commonOptions(depth: number): FieldDef[] {
   ]
 }
 
-export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, addLabel, builtIn = null }: { fields: RawField[]; onChange: (fields: RawField[]) => void; body?: string; depth?: number; emptyText?: string; addLabel?: string; builtIn?: string | null }) {
+export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, addLabel, builtIn = null, errors, path = 'fields' }: {
+  fields: RawField[]; onChange: (fields: RawField[]) => void; body?: string; depth?: number; emptyText?: string; addLabel?: string; builtIn?: string | null
+  /** What a refused save said, by the path of the option it is about (`fields.2.handle`, `fields.0.fields.1.type`). */
+  errors?: Record<string, string>
+  /** Where these fields are in what was saved: `fields`, or `fields.<i>.fields` for a field's sub-fields. */
+  path?: string
+}) {
   const types = useManifest().fieldTypes
   const [open, setOpen] = useState<number | null>(null)
+  // The first field something is wrong with opens, so its problem is on view.
+  const wrong = errors ? fields.findIndex((_, i) => Object.keys(errors).some((key) => key.startsWith(`${path}.${i}.`))) : -1
+  useEffect(() => { if (wrong >= 0) setOpen(wrong) }, [wrong, errors])
 
   const add = (type: FieldTypeDef) => {
     const base = type.key.replace(/[^a-z0-9]/g, '_')
@@ -49,7 +58,7 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
       {fields.length === 0 ? (
         depth === 0 ? <EmptyState icon="field" title={t('No fields yet')} /> : <p className="m-0 mb-2 rounded-md border border-dashed border-border-strong px-3 py-3 text-xs text-faint">{emptyText ?? t('No fields yet.')}</p>
       ) : (
-        <FieldList fields={fields} types={types} openIndex={open} onOpen={setOpen} onChange={onChange} body={body} depth={depth} />
+        <FieldList fields={fields} types={types} openIndex={open} onOpen={setOpen} onChange={onChange} body={body} depth={depth} errors={errors} path={path} />
       )}
       {depth > 0 && <div className="mt-2"><AddField types={types} onAdd={add} label={addLabel ?? t('Add Sub-Field')} align="start" nested /></div>}
     </div>
@@ -63,7 +72,8 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
 export function FieldsConfigField({ field, value, onChange, context }: FieldProps<RawField[]>) {
   const depth = typeof context?.depth === 'number' ? context.depth : 1
   const empty = (field.placeholder as string | undefined) || (context?.values?.type === 'repeater' ? t('Add the fields each item is made of.') : t('Add the fields this group is made of.'))
-  return <FieldsEditor fields={Array.isArray(value) ? value : []} onChange={(f) => onChange(f)} depth={Math.max(1, depth)} emptyText={empty} addLabel={field.add as string | undefined} />
+  return <FieldsEditor fields={Array.isArray(value) ? value : []} onChange={(f) => onChange(f)} depth={Math.max(1, depth)} emptyText={empty} addLabel={field.add as string | undefined}
+    errors={context?.errors} path={context?.path ? [...context.path, field.handle].join('.') : undefined} />
 }
 
 export function AddField({ types, onAdd, label, align = 'end', nested }: { types: FieldTypeDef[]; onAdd: (type: FieldTypeDef) => void; label?: string; align?: 'start' | 'end'; nested?: boolean }) {
@@ -109,7 +119,7 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
   )
 }
 
-function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; body?: string; depth: number }) {
+function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, errors, path }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; body?: string; depth: number; errors?: Record<string, string>; path: string }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const ids = fields.map((f, i) => f.handle ?? `import-${f.import}-${i}`)
   const onDragEnd = (e: DragEndEvent) => {
@@ -131,6 +141,8 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth }: 
                   open={openIndex === i}
                   isBody={field.handle === body}
                   depth={depth}
+                  errors={errors}
+                  path={`${path}.${i}`}
                   dragHandle={handle}
                   onToggle={() => onOpen(openIndex === i ? null : i)}
                   onChange={(f) => onChange(fields.map((x, j) => (j === i ? f : x)))}
@@ -162,7 +174,10 @@ function Sortable({ id, children }: { id: string; children: (handle: ReactNode) 
   )
 }
 
-function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; depth: number; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
+function FieldRow({ field, type, open, isBody, depth, errors, path, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; depth: number; errors?: Record<string, string>; path: string; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
+  // What the last save refused about this field itself; its sub-fields show their own.
+  const problem = (key: string) => errors?.[`${path}.${key}`]
+  const refused = !!errors && Object.keys(errors).some((key) => key.startsWith(`${path}.`))
   if (field.import) {
     return (
       <div className="flex h-11 items-center gap-2 rounded-lg border border-dashed border-border-strong bg-sunken px-2">
@@ -182,7 +197,7 @@ function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onCh
   }
 
   return (
-    <div className={cn('rounded-lg border bg-bg transition-shadow', open ? 'border-border-strong shadow-pop' : 'border-border')}>
+    <div className={cn('rounded-lg border bg-bg transition-shadow', refused ? 'border-danger' : open ? 'border-border-strong' : 'border-border', open && 'shadow-pop')}>
       <div className="flex h-11 items-center gap-2 px-2">
         {dragHandle}
         <span className="grid size-6 shrink-0 place-items-center rounded-xs bg-active text-muted"><Icon name={type?.icon ?? 'field'} size={14} /></span>
@@ -206,6 +221,8 @@ function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onCh
           <Fields
             fields={commonOptions(depth)}
             values={{ ...field, width: field.width ?? 'full', property: field.section === 'sidebar' }}
+            errors={errors}
+            context={{ path: path.split('.') }}
             onChange={(h, v) => {
               if (h === 'handle') onChange({ ...field, handle: String(v ?? '').toLowerCase().replace(/[^a-z0-9_]/g, '') })
               else if (h === 'property') set('section', v ? 'sidebar' : undefined)
@@ -213,10 +230,11 @@ function FieldRow({ field, type, open, isBody, depth, dragHandle, onToggle, onCh
               else set(h, v)
             }}
           />
+          {problem('type') && <FieldError className="mt-0">{problem('type')}</FieldError>}
           {type && type.config.length > 0 && (
             <div className="border-t border-border pt-4">
               <div className="cms-label mb-3">{t('{type} options', { type: type.label })}</div>
-              <Fields fields={type.config.map((c) => ({ ...c, width: c.type === 'json' || c.type === 'fields' ? 'full' : 'half' }))} values={field} onChange={(h, v) => set(h, v)} context={{ depth: depth + 1 }} />
+              <Fields fields={type.config.map((c) => ({ ...c, width: c.type === 'json' || c.type === 'fields' ? 'full' : 'half' }))} values={field} onChange={(h, v) => set(h, v)} errors={errors} context={{ depth: depth + 1, path: path.split('.') }} />
             </div>
           )}
           <div className="flex justify-between border-t border-border pt-3">
