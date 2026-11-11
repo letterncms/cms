@@ -1,5 +1,5 @@
 import { t, type FieldProps, type PersonSummary } from '@letterncms/sdk'
-import { Avatar, Textarea, cn } from '@letterncms/ui'
+import { Avatar, Button, Textarea } from '@letterncms/ui'
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
 /**
@@ -61,17 +61,13 @@ export function ComposerField({ field, value, onChange, disabled }: FieldProps<s
   return (
     <div className="relative">
       {matches.length > 0 && (
-        <ul role="listbox" aria-label={t('Mention Someone')} className="cms-pop absolute bottom-full left-0 z-20 mb-1 w-full list-none p-1">
+        <ul role="listbox" aria-label={t('Mention Someone')} className="cms-pop absolute bottom-full left-0 z-raised mb-1 w-full list-none p-1">
           {matches.map((p, i) => (
             <li key={p.id} role="option" aria-selected={i === highlighted}>
-              <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); pick(p) }}
-                className={cn('flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm', i === highlighted ? 'bg-hover' : 'hover:bg-hover')}
-              >
+              <Button variant="ghost" tabIndex={-1} onMouseDown={(e) => { e.preventDefault(); pick(p) }} data-active={i === highlighted || undefined} className="w-full !justify-start !gap-2 !px-2 !font-normal">
                 <Avatar name={p.name} initials={p.initials} src={p.avatar} size={18} />
                 {p.name}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
