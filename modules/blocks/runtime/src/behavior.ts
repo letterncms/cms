@@ -86,6 +86,12 @@ export function mount(el: HTMLElement) {
   } else if (when === 'idle') {
     const idle = window.requestIdleCallback ? requestIdleCallback(() => run(el, entry), { timeout: 2000 }) : window.setTimeout(() => run(el, entry), 200)
     entry.cancel = () => (window.cancelIdleCallback ? cancelIdleCallback(idle) : clearTimeout(idle))
+  } else if (when === 'loaded') {
+    // Once the page has loaded and its fonts are in: what measures text or the layout measures the final one.
+    let waiting = true
+    entry.cancel = () => (waiting = false)
+    const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise((resolve) => addEventListener('load', resolve, { once: true }))
+    void Promise.all([loaded, document.fonts?.ready]).then(() => waiting && run(el, entry))
   } else void run(el, entry)
 }
 

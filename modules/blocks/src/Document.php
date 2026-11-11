@@ -175,8 +175,11 @@ final class Document
     /** The name two pages know a kept element by. */
     public const string PERSIST = '/^[a-z][a-z0-9-]{0,39}$/D';
 
-    /** When a behaviour's script is fetched and mounted: with the page, a screen before the element is seen, or once the browser is idle. */
-    public const array BEHAVIOR_WHEN = ['load', 'visible', 'idle'];
+    /**
+     * When a behaviour's script is fetched and mounted: with the page (load), a screen before the element is seen
+     * (visible), once the browser is idle (idle), or after the page's load event and its fonts (loaded).
+     */
+    public const array BEHAVIOR_WHEN = ['load', 'visible', 'idle', 'loaded'];
 
     /**
      * A block's behaviour: a script beside the design whose `mount(el, props, context)` runs when the element
@@ -198,7 +201,7 @@ final class Document
             $out['props'] = $props;
         }
 
-        if (in_array($behavior['when'] ?? null, ['visible', 'idle'], true)) {
+        if (($behavior['when'] ?? 'load') !== 'load' && in_array($behavior['when'], self::BEHAVIOR_WHEN, true)) {
             $out['when'] = $behavior['when'];
         }
 
