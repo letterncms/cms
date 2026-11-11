@@ -7,6 +7,7 @@ namespace Cms\Modules\License;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use RuntimeException;
+use Cms\Support\Schema\Shape;
 
 /** Read the licence state, put a key in place, refresh. Registered only with a paid plugin on; runs only when asked. */
 final class LicenseAbilities
@@ -21,6 +22,10 @@ final class LicenseAbilities
             'permission' => 'license.view',
             'annotations' => ['readOnly' => true],
             // Each plugin by the name people know it by, beside its package name.
+            'output' => self::report()->with([
+                'items' => Shape::map(self::item()->with(['label' => Shape::STRING])),
+                'list' => [['product' => Shape::STRING, 'label' => Shape::STRING, 'state' => Shape::STRING, 'standing' => Shape::enum('active', 'limited', 'attention'), 'level' => Shape::INTEGER]],
+            ]),
             'handler' => static function () use ($service) {
                 $report = $service()->report()->toArray();
                 $packages = cms()->packages()->repository();
@@ -39,6 +44,7 @@ final class LicenseAbilities
             'permission' => 'license.manage',
             'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => ['token' => ['type' => 'string', 'maxLength' => 8192]], 'required' => ['token']],
+            'output' => self::report(),
             'handler' => static function (array $in) use ($service) {
                 try {
                     return $service()->install($in['token'])->toArray();
@@ -54,6 +60,7 @@ final class LicenseAbilities
             'permission' => 'license.manage',
             'expose' => ['mcp' => false, 'assistant' => false],
             'annotations' => ['destructive' => true],
+            'output' => self::report(),
             'handler' => static fn () => $service()->clear()->toArray(),
         ]);
 
@@ -63,7 +70,26 @@ final class LicenseAbilities
             // Any signed-in person's visit keeps a licence current; there is no input and nothing comes back.
             'permission' => static fn ($user) => $user !== null,
             'expose' => ['mcp' => false, 'assistant' => false],
+            'output' => Shape::of(['result' => Shape::enum('skipped', 'failed', 'unchanged', 'updated')]),
             'handler' => static fn () => ['result' => $service()->refresh()],
+        ]);
+    }
+
+    /** LicenseReport::toArray(): the host, the key's state and each paid plugin's. */
+    private static function report(): Shape
+    {
+        return Shape::of([
+            'host' => Shape::STRING, 'class' => Shape::STRING, 'token' => Shape::STRING, 'lid' => Shape::STRING_OR_NULL, 'rev' => Shape::INTEGER_OR_NULL,
+            'level' => Shape::INTEGER, 'items' => Shape::map(self::item()), 'notes' => [Shape::STRING], 'domains' => [Shape::STRING],
+        ]);
+    }
+
+    /** One paid plugin in a report. */
+    private static function item(): Shape
+    {
+        return Shape::of([
+            'edition' => Shape::STRING_OR_NULL, 'status' => Shape::STRING_OR_NULL, 'level' => Shape::INTEGER, 'reason' => Shape::STRING,
+            'upd' => Shape::STRING_OR_NULL, 'trm' => Shape::STRING_OR_NULL,
         ]);
     }
 }

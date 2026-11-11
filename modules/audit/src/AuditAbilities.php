@@ -12,6 +12,8 @@ use Cms\Content\Entries\Entry;
 use Cms\Cms;
 use Cms\Support\RecordTimestamps;
 use Cms\Users\User;
+use Cms\Abilities\Shapes;
+use Cms\Support\Schema\Shape;
 
 /** Reading the audit log. */
 final class AuditAbilities
@@ -31,6 +33,12 @@ final class AuditAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
             ]],
+            'output' => Shape::page([
+                'id' => Shape::STRING, 'ability' => Shape::STRING, 'transport' => Shape::STRING, 'label' => Shape::STRING,
+                'subject' => Shape::STRING_OR_NULL, 'to' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
+                'user' => Shape::nullable(['id' => Shape::STRING, 'name' => Shape::STRING]), 'who' => Shape::STRING, 'via' => Shape::STRING,
+                'input' => Shape::open('The input the ability was called with, by parameter name (its input schema says which), with secrets redacted and long text cut short.'), 'createdAt' => Shape::STRING_OR_NULL,
+            ], ['filters' => ['people' => [['id' => Shape::STRING, 'name' => Shape::STRING]], 'actions' => [['value' => Shape::STRING, 'label' => Shape::STRING]]]]),
             'handler' => function (array $in) {
                 $query = DB::table('audit_log')->orderByDesc('created_at')->orderByDesc('id');
 
@@ -73,6 +81,10 @@ final class AuditAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 30, 'default' => 8],
             ]],
+            'output' => Shape::of([[
+                'id' => Shape::STRING, 'ability' => Shape::STRING, 'label' => Shape::STRING, 'subject' => Shape::STRING_OR_NULL, 'to' => Shape::STRING_OR_NULL,
+                'transport' => Shape::STRING, 'user' => Shape::nullable(Shapes::person()), 'count' => Shape::INTEGER, 'createdAt' => Shape::STRING_OR_NULL,
+            ]]),
             'handler' => fn (array $in) => $this->recent($in['limit']),
         ]);
     }

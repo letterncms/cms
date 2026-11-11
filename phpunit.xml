@@ -10,6 +10,9 @@
             <directory>modules/*/tests</directory>
         </testsuite>
     </testsuites>
+    <extensions>
+        <bootstrap class="Cms\Tests\Support\AbilityCoverage"/>
+    </extensions>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
         <env name="APP_KEY" value="base64:2fl+Ktvkfl+Fuz4Qp/A75G2RTiWVA/ZoKZvp6fiiM10=" force="true"/>

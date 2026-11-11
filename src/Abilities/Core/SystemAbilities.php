@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\DB;
 use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityRegistry;
+use Cms\Abilities\Shapes;
 use Cms\Cms;
 use Cms\Packages\PackageManifest;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 
 /** What the kernel itself answers: discovery, system information, the site and its people. */
@@ -24,6 +26,16 @@ final class SystemAbilities
             'description' => 'Every action this site supports for you, with input schemas.',
             'permission' => static fn (?User $u) => $u !== null,
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([[
+                'name' => Shape::STRING, 'label' => Shape::STRING, 'description' => Shape::STRING, 'category' => Shape::STRING,
+                'input' => Shape::open('The JSON Schema of the input the ability takes: each ability writes its own.'),
+                'output?' => Shape::open('The JSON Schema of what the ability answers with: each ability writes its own.'),
+                'annotations?' => [
+                    'readOnly?' => Shape::BOOLEAN, 'destructive?' => Shape::BOOLEAN, 'idempotent?' => Shape::BOOLEAN, 'openWorld?' => Shape::BOOLEAN,
+                    'trustedOutput?' => Shape::BOOLEAN, 'draft?' => Shape::BOOLEAN, 'confirm?' => Shape::BOOLEAN,
+                ],
+                'package?' => Shape::STRING,
+            ]]),
             'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_map(static fn (Ability $x) => $x->toArray(), $a->available($ctx))),
         ]);
 
@@ -38,6 +50,13 @@ final class SystemAbilities
                 'id' => ['type' => 'string', 'maxLength' => 120],
                 'params' => ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'default' => []],
             ], 'required' => ['id']],
+            'output' => Shape::of([
+                'id' => Shape::STRING, 'path' => Shape::STRING_OR_NULL, 'package' => Shape::STRING_OR_NULL,
+                'root' => Shape::nested([
+                    'type' => Shape::STRING,
+                    'props' => Shape::open('What the component of this `type` takes (a page\'s title, a list\'s source and columns…): the catalog of components (Cms\\Admin\\Catalog) has each one\'s props as a JSON Schema.'),
+                ], 'children?', \Cms\Admin\Views::DEPTH),
+            ]),
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->views()->resolve($in['id'], $ctx->user, $in['params']),
         ]);
 
@@ -46,6 +65,11 @@ final class SystemAbilities
             'description' => 'CMS version, PHP, database, packages and pending upgrades.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'cms' => Shape::STRING, 'php' => Shape::STRING, 'database' => Shape::STRING, 'environment' => Shape::STRING,
+                'packages' => [['name' => Shape::STRING, 'version' => Shape::STRING]], // By package name: the version the database is at, or "not installed".
+                'pending' => Shape::map(Shape::STRING),
+            ]),
             'handler' => fn () => [
                 'cms' => Cms::VERSION,
                 'php' => PHP_VERSION,
@@ -69,6 +93,7 @@ final class SystemAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 25],
             ]],
+            'output' => Shape::page(Shapes::person(), ['perPage' => Shape::INTEGER]),
             'handler' => function (array $in) {
                 $query = User::query()->orderBy('name')->orderBy('id');
                 if (isset($in['ids'])) $query->whereIn('id', $in['ids']);
@@ -95,6 +120,7 @@ final class SystemAbilities
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
             ]],
+            'output' => Shape::page(Shapes::user()->with(['person' => Shapes::person(), 'you' => Shape::STRING_OR_NULL, 'badges' => [Shape::STRING]])),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $query = User::query()->orderBy('name');
 
@@ -135,6 +161,8 @@ final class SystemAbilities
             'description' => 'Name, URL, timezone, locales and themes. Change them with settings/update (namespace "site").',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of(['name' => Shape::STRING_OR_NULL, 'url' => Shape::STRING, 'timezone' => Shape::STRING, 'locale' => Shape::STRING, 'locales' => [Shape::STRING]])
+                ->andMore('The other `site` settings by handle (description, admin_language, what plugins keep there): settings/get with namespace "site" lists them as fields.'),
             'handler' => fn () => [
                 'name' => config('app.name'),
                 'url' => $this->cms->url(),

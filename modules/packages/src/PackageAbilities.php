@@ -11,6 +11,7 @@ use Cms\Admin\Translations;
 use Cms\Cms;
 use Cms\Packages\PackageManifest;
 use Cms\Support\RecordTimestamps;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 use RuntimeException;
 
@@ -35,6 +36,18 @@ final class PackageAbilities
             'permission' => 'packages.manage',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['module', 'plugin', 'all'], 'default' => 'all'], 'optional' => ['type' => 'boolean', 'default' => false, 'description' => 'Only what can be switched off: no required modules.']]],
+            'output' => Shape::of([
+                'items' => [[
+                    'name' => Shape::STRING, 'version' => Shape::STRING, 'label' => Shape::STRING, 'description' => Shape::STRING, 'icon' => Shape::STRING,
+                    'firstParty' => Shape::BOOLEAN, 'core' => Shape::BOOLEAN, 'required' => Shape::BOOLEAN, 'requires' => Shape::map(Shape::STRING),
+                    'authors' => [Shape::of(['name?' => Shape::STRING, 'email?' => Shape::STRING, 'homepage?' => Shape::STRING, 'role?' => Shape::STRING])->andMore('An author as the package\'s composer.json writes it: Composer names these four keys, and whatever else is written there comes along.')], 'homepage' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
+                    'enabled' => Shape::BOOLEAN, 'active' => Shape::BOOLEAN, 'problem' => Shape::STRING_OR_NULL, 'installedVersion' => Shape::STRING_OR_NULL,
+                    'dependents' => [Shape::STRING], 'settings' => [Shape::STRING], 'note' => Shape::STRING, 'keptOn' => Shape::STRING_OR_NULL,
+                    'locked' => Shape::BOOLEAN, 'to' => Shape::STRING_OR_NULL, 'settingsTo' => Shape::STRING_OR_NULL,
+                ]],
+                'total' => Shape::INTEGER,
+                'errors' => [Shape::STRING],
+            ]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $manager = $this->cms->packages();
                 $timestamps = $manager->timestamps();
@@ -105,6 +118,7 @@ final class PackageAbilities
             'permission' => 'packages.manage',
             'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']],
+            'output' => Shape::of(['enabled' => Shape::STRING]),
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $this->cms->packages()->enable($in['name']);
 
@@ -118,6 +132,7 @@ final class PackageAbilities
             'permission' => 'packages.manage',
             'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']],
+            'output' => Shape::of(['disabled' => Shape::STRING]),
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $this->cms->packages()->disable($in['name']);
 
@@ -131,6 +146,7 @@ final class PackageAbilities
             'permission' => 'packages.manage',
             'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'on' => ['type' => 'boolean']], 'required' => ['name', 'on']],
+            'output' => Shape::of(['name' => Shape::STRING, 'on' => Shape::BOOLEAN, 'message' => Shape::STRING]),
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $packages = $this->cms->packages();
                 $label = $this->label($in['name']);
@@ -153,6 +169,7 @@ final class PackageAbilities
             
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'deleteFiles' => ['type' => 'boolean', 'default' => false]], 'required' => ['name']],
+            'output' => Shape::of(['uninstalled' => Shape::STRING, 'message' => Shape::STRING]),
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 if ($in['deleteFiles'] && app(\Cms\Update\Layout::class)->managed() === 'composer') {
                     throw new AbilityException(__('This site is managed with Composer. Run: composer remove :package', ['package' => $in['name']]), 'invalid');
@@ -174,6 +191,7 @@ final class PackageAbilities
             'description' => 'Run database migrations and install/upgrade steps for active packages.',
             'permission' => 'packages.manage',
             'expose' => ['mcp' => false, 'assistant' => false],
+            'output' => Shape::of(['done' => Shape::map(Shape::STRING)]),
             'handler' => fn () => $guard(fn () => ['done' => $this->cms->packages()->sync()]),
         ]);
 

@@ -61,7 +61,7 @@ final class AbilityController
             return $this->error($e);
         }
 
-        return response()->json(['data' => $result]);
+        return response()->json(['data' => $ability ? $ability->encode($result) : $result]);
     }
 
     public function batch(Request $request): JsonResponse
@@ -77,7 +77,9 @@ final class AbilityController
 
         foreach ($calls as $i => $call) {
             try {
-                $results[$i] = ['data' => $this->abilities->execute((string) ($call['ability'] ?? ''), (array) ($call['input'] ?? []), $context)];
+                $name = (string) ($call['ability'] ?? '');
+                $result = $this->abilities->execute($name, (array) ($call['input'] ?? []), $context);
+                $results[$i] = ['data' => $this->abilities->get($name)?->encode($result) ?? $result];
             } catch (AbilityException $e) {
                 $results[$i] = ['error' => $e->toArray()];
 

@@ -9,6 +9,7 @@ use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Modules\Media\Http\MediaController;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 
 final class MediaModule extends Plugin
 {
@@ -153,6 +154,7 @@ final class MediaModule extends Plugin
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 60],
             ]],
+            'output' => Shape::page(self::itemShape(), ['folders' => [Shape::STRING]]),
             'handler' => function (array $in) use ($public) {
                 $sort = $in['sort'];
                 $q = MediaItem::query()->orderBy(ltrim($sort, '-'), str_starts_with($sort, '-') ? 'desc' : 'asc')->orderBy('id');
@@ -193,6 +195,7 @@ final class MediaModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['ids' => ['type' => 'array', 'items' => ['type' => 'string'], 'maxItems' => 200]], 'required' => ['ids']],
+            'output' => Shape::of(['items' => [self::itemShape()]]),
             'handler' => static function (array $in) use ($public) {
                 $ids = array_map('strtolower', array_filter($in['ids'], 'is_string'));
                 $items = MediaItem::query()->whereIn('id', $ids)->get()->keyBy('id');
@@ -212,6 +215,7 @@ final class MediaModule extends Plugin
                 'alt' => ['type' => 'string', 'maxLength' => 1000],
                 'folder' => ['type' => 'string', 'maxLength' => 200, 'default' => ''],
             ]],
+            'output' => self::itemShape(),
             'handler' => function (array $in, AbilityContext $ctx) use ($store, $public) {
                 $item = match (true) {
                     isset($in['url']) => $store()->importUrl($in['url'], $ctx->user, $in['folder']),
@@ -240,6 +244,7 @@ final class MediaModule extends Plugin
                 'folder' => ['type' => 'string', 'maxLength' => 200],
                 'focal' => ['type' => 'object', 'properties' => ['x' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100], 'y' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100]]],
             ], 'required' => ['id']],
+            'output' => self::itemShape(),
             'handler' => fn (array $in) => $public($store()->update(MediaItem::query()->findOrFail(strtolower($in['id'])), $in)),
         ]);
 
@@ -249,6 +254,11 @@ final class MediaModule extends Plugin
             'permission' => 'media.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => (object) []],
+            'output' => Shape::of([
+                'items' => Shape::INTEGER,
+                'dangling' => [['id' => Shape::STRING, 'where' => ['kind' => Shape::STRING, 'id' => Shape::STRING, 'title' => Shape::STRING, 'locale?' => Shape::STRING_OR_NULL, 'path' => Shape::STRING]]],
+                'missing_files' => [Shape::STRING], 'orphan_files' => [Shape::STRING], 'unused' => [Shape::STRING], 'parse_errors' => [Shape::STRING],
+            ]),
             'handler' => fn () => $this->app->make(MediaReferences::class)->report(),
         ]);
 
@@ -258,6 +268,7 @@ final class MediaModule extends Plugin
             'permission' => 'media.delete',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'force' => ['type' => 'boolean', 'default' => false]], 'required' => ['id']],
+            'output' => Shape::of(['deleted' => Shape::STRING]),
             'handler' => function (array $in) use ($store) {
                 $item = MediaItem::query()->findOrFail(strtolower($in['id']));
                 $used = empty($in['force']) ? $this->app->make(MediaReferences::class)->of($item) : [];
@@ -270,6 +281,17 @@ final class MediaModule extends Plugin
 
                 return ['deleted' => $in['id']];
             },
+        ]);
+    }
+
+    /** MediaItem::toPublic(): a file of the library. */
+    private static function itemShape(): Shape
+    {
+        return Shape::of([
+            'id' => Shape::STRING, 'url' => Shape::STRING, 'thumb' => Shape::STRING_OR_NULL, 'name' => Shape::STRING, 'filename' => Shape::STRING, 'mime' => Shape::STRING,
+            'kind' => Shape::enum('image', 'video', 'audio', 'pdf', 'file'), 'size' => Shape::INTEGER, 'width' => Shape::INTEGER_OR_NULL, 'height' => Shape::INTEGER_OR_NULL,
+            'alt' => Shape::STRING_OR_NULL, 'caption' => Shape::STRING_OR_NULL, 'focal' => ['x' => Shape::INTEGER, 'y' => Shape::INTEGER], 'folder' => Shape::STRING,
+            'createdAt' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
         ]);
     }
 }

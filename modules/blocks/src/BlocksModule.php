@@ -7,8 +7,10 @@ namespace Cms\Modules\Blocks;
 use Cms\Abilities\Ability;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
+use Cms\Abilities\Shapes;
 use Cms\Packages\Plugin;
 use Cms\Support\Files;
+use Cms\Support\Schema\Shape;
 
 final class BlocksModule extends Plugin
 {
@@ -298,6 +300,23 @@ final class BlocksModule extends Plugin
             'description' => 'Every block type (props, children, examples), every style property and variant, data sources for Repeat, and the schema of scripts (logic) and animations (motion). Compose pages from these.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
+            'output' => Shape::of([
+                'blocks' => [[
+                    'name' => Shape::STRING, 'title' => Shape::STRING, 'icon' => Shape::STRING, 'category' => Shape::STRING, 'description' => Shape::STRING,
+                    'keywords?' => [Shape::STRING], 'fields' => [Shapes::field()], 'children?' => Shape::either(Shape::BOOLEAN, [Shape::STRING]),
+                    'styles?' => [Shape::STRING], 'inline?' => [Shape::STRING],
+                    'defaults' => Shape::open('Prop values a new block of this type starts with, by prop handle (the handles are in `fields`).'),
+                    'template?' => [self::nodeShape(written: true)], 'parent?' => Shape::STRING, 'variants?' => [Shape::STRING],
+                    'example?' => Shape::open('Example prop values for this type, by prop handle (the handles are in `fields`).'), 'package?' => Shape::STRING, 'html' => Shape::STRING, 'placeholders?' => Shape::map(Shape::STRING),
+                ]],
+                'categories' => [['name' => Shape::STRING, 'label' => Shape::STRING]],
+                'styles' => Shape::map(['property' => Shape::STRING, 'group' => Shape::STRING]),
+                'states' => [Shape::STRING],
+                'breakpoints' => Shape::map(Shape::STRING),
+                'sources' => [['name' => Shape::STRING, 'label' => Shape::STRING, 'description' => Shape::STRING, 'fields' => [Shapes::field()], 'item' => Shape::map(Shape::STRING)]],
+                'motion' => ['triggers' => [Shape::STRING], 'properties' => Shape::map(Shape::STRING), 'eases' => [Shape::STRING], 'screens' => [Shape::STRING]],
+                'logic' => ['events' => [Shape::STRING], 'mods' => [Shape::STRING], 'actions' => [Shape::STRING], 'transitions' => [Shape::STRING], 'merges' => [Shape::STRING]],
+            ]),
             'handler' => fn () => [
                 'blocks' => $this->translatedBlocks(),
                 'categories' => $this->translatedCategories(),
@@ -316,6 +335,7 @@ final class BlocksModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
             'input' => ['type' => 'object', 'properties' => ['query' => ['type' => 'string', 'maxLength' => 60], 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 400, 'default' => 120]]],
+            'output' => Shape::of([['name' => Shape::STRING, 'svg' => Shape::STRING]]),
             'handler' => static fn (array $in) => Icons::search((string) ($in['query'] ?? ''), (int) ($in['limit'] ?? 120)),
         ]);
 
@@ -325,6 +345,7 @@ final class BlocksModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
             'input' => ['type' => 'object', 'properties' => ['markdown' => ['type' => 'string', 'maxLength' => 500000]], 'required' => ['markdown']],
+            'output' => Shape::of([self::nodeShape()]),
             'handler' => fn (array $in) => $document()->normalize($this->app->make(MarkdownCodec::class)->decode($in['markdown'])),
         ]);
 
@@ -334,6 +355,7 @@ final class BlocksModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true, 'trustedOutput' => true],
             'input' => ['type' => 'object', 'properties' => ['blocks' => ['type' => 'array']], 'required' => ['blocks']],
+            'output' => Shape::of(['markdown' => Shape::STRING]),
             'handler' => fn (array $in) => ['markdown' => $this->app->make(MarkdownCodec::class)->encode($in['blocks'])],
         ]);
 
@@ -344,6 +366,7 @@ final class BlocksModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['working' => ['type' => 'boolean', 'default' => false]]],
+            'output' => Shape::of([self::patternShape()]),
             'handler' => fn (array $in) => array_values($patterns()->all((bool) ($in['working'] ?? false))),
         ]);
 
@@ -361,6 +384,7 @@ final class BlocksModule extends Plugin
                 'blocks' => ['type' => 'array'],
                 'publish' => ['type' => 'boolean', 'default' => true],
             ], 'required' => ['handle', 'title', 'blocks']],
+            'output' => self::patternShape()->with(['id' => Shape::STRING]),
             'handler' => function (array $in, \Cms\Abilities\AbilityContext $ctx) use ($patterns) {
                 $data = array_filter(['blocks' => $in['blocks'], 'synced' => (bool) ($in['synced'] ?? false), 'category' => $in['category'] ?? null, 'description' => $in['description'] ?? null, 'props' => $in['props'] ?? null], static fn ($v) => $v !== null);
                 $existing = $patterns()->all(true)[$in['handle']]['id'] ?? null;
@@ -380,7 +404,90 @@ final class BlocksModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['working' => ['type' => 'boolean', 'default' => false]]],
+            'output' => Shape::of([['handle' => Shape::STRING, 'id' => Shape::STRING, 'title' => Shape::STRING, 'description' => Shape::STRING, 'collections' => [Shape::STRING], 'blocks' => [self::nodeShape()]]]),
             'handler' => fn (array $in) => array_values($templates()->all((bool) ($in['working'] ?? false))),
+        ]);
+    }
+
+    /**
+     * A node of a block tree as Document::normalize() leaves it. `$written` is a tree as someone wrote it (a block
+     * type's template, a plugin's pattern file): the same, but ids are given when it is inserted.
+     */
+    private static function nodeShape(bool $written = false): Shape
+    {
+        $value = Shape::either(Shape::STRING, Shape::NUMBER);
+
+        return Shape::nested([
+            ($written ? 'id?' : 'id') => Shape::STRING, 'type' => Shape::STRING,
+            'props?' => Shape::open('Prop values by prop handle; the block type\'s `fields` in blocks/types say which props it takes and what each may be.'),
+            'style?' => self::described(Shape::map(Shape::map($value)), 'Declarations by variant ("base", a breakpoint or state from blocks/types such as "md" or "hover", or both: "md:hover"), each a map of style property (`styles` in blocks/types) to a CSS value or a token ("token:color.primary", from design/get).'),
+            'anchor?' => Shape::STRING, 'class?' => Shape::STRING, 'label?' => Shape::STRING,
+            'attrs?' => self::described(Shape::map(Shape::STRING), 'HTML attributes by name (aria-*, data-*, role, title…).'),
+            'bind?' => self::described(Shape::map(Shape::STRING), 'Data paths by what they fill: a prop handle, visible, hidden, text, state:<name>, attr:<name> or style:<property>.'),
+            'logic?' => self::logicShape(), 'motion?' => [self::animationShape()], 'hidden?' => Shape::BOOLEAN,
+            'code?' => ['scripts?' => [Shape::STRING], 'styles?' => [Shape::STRING]],
+            'behavior?' => ['module' => Shape::STRING, 'props?' => Shape::open('What the script\'s mount() is handed: settings of the script\'s own, by name.'), 'when?' => Shape::enum('visible', 'idle')],
+            'persist?' => Shape::STRING,
+        ], 'children?');
+    }
+
+    /** A shape with a sentence on what its keys are. */
+    private static function described(Shape $shape, string $about): Shape
+    {
+        return Shape::raw([...$shape->toSchema(), 'description' => $about]);
+    }
+
+    /** Logic::sanitize(): a node's script. */
+    private static function logicShape(): Shape
+    {
+        $action = Shape::of([
+            'do' => Shape::enum(...Logic::ACTIONS), 'var?' => Shape::STRING, 'value?' => Shape::STRING, 'test?' => Shape::STRING,
+            'then?' => [Shape::any('An action of this same shape, run when the test holds.')], 'else?' => [Shape::any('An action of this same shape, run when the test fails.')],
+            'ms?' => Shape::INTEGER, 'node?' => Shape::STRING, 'motion?' => Shape::STRING, 'mode?' => Shape::STRING, 'to?' => Shape::STRING, 'offset?' => Shape::INTEGER,
+            'url?' => Shape::STRING, 'newTab?' => Shape::BOOLEAN, 'event?' => Shape::STRING, 'detail?' => Shape::STRING, 'urlFrom?' => Shape::STRING,
+            'target?' => [Shape::STRING], 'on?' => Shape::BOOLEAN, 'expr?' => Shape::STRING,
+        ]);
+
+        return Shape::of([
+            'component?' => Shape::STRING,
+            'data?' => self::described(Shape::map(Shape::any('The variable\'s starting value, any JSON.')), 'State for this element and everything inside it, by variable name.'),
+            'init?' => [$action],
+            'on?' => [['event' => Shape::STRING, 'mods?' => [Shape::enum(...Logic::MODS)], 'key?' => Shape::STRING, 'actions' => [$action]]],
+            'show?' => Shape::STRING, 'text?' => Shape::STRING, 'transition?' => Shape::enum(...Logic::TRANSITIONS),
+            'states?' => self::described(Shape::map(Shape::STRING), 'Expressions by state name: the element has the class is-<name> while its expression is true.'),
+            'attrs?' => self::described(Shape::map(Shape::STRING), 'Expressions by the HTML attribute they set.'),
+            'model?' => Shape::STRING, 'target?' => [Shape::STRING], 'push?' => Shape::BOOLEAN, 'merge?' => Shape::enum(...Logic::MERGES),
+            'behaviors?' => [
+                'scroll?' => ['threshold' => Shape::INTEGER, 'hide' => Shape::BOOLEAN], 'spy?' => ['offset' => Shape::INTEGER], 'group?' => Shape::BOOLEAN,
+                'menu?' => Shape::open('Empty: the behavior is on and takes no options.'), 'carousel?' => Shape::open('Empty: the behavior is on and takes no options.'),
+                'marquee?' => ['speed' => Shape::INTEGER, 'reverse' => Shape::BOOLEAN, 'pause' => Shape::BOOLEAN],
+            ],
+        ]);
+    }
+
+    /** Motion::sanitize(): one of a node's animations. */
+    private static function animationShape(): Shape
+    {
+        $side = self::described(Shape::map(Shape::either(Shape::NUMBER, Shape::STRING)), 'Values by animatable property (`motion.properties` in blocks/types).');
+
+        return Shape::of([
+            'id' => Shape::STRING, 'name?' => Shape::STRING,
+            'trigger' => ['type' => Shape::enum(...Motion::TRIGGERS), 'start?' => Shape::STRING, 'end?' => Shape::STRING, 'once?' => Shape::BOOLEAN, 'node?' => Shape::STRING, 'pin?' => Shape::STRING, 'scrub?' => Shape::NUMBER],
+            'on?' => [Shape::enum(...Motion::SCREENS)],
+            'steps' => [[
+                'target' => Shape::STRING, 'mask?' => Shape::BOOLEAN, 'from?' => $side, 'to?' => $side, 'duration' => Shape::NUMBER, 'delay?' => Shape::NUMBER,
+                'ease?' => Shape::STRING, 'stagger?' => Shape::NUMBER, 'at?' => Shape::NUMBER,
+            ]],
+            'repeat?' => Shape::INTEGER, 'yoyo?' => Shape::BOOLEAN, 'hold?' => Shape::NUMBER,
+        ]);
+    }
+
+    /** Patterns::shape(): a component or a section. */
+    private static function patternShape(): Shape
+    {
+        return Shape::of([
+            'handle' => Shape::STRING, 'id' => Shape::STRING_OR_NULL, 'title' => Shape::STRING, 'description' => Shape::STRING, 'category' => Shape::STRING,
+            'synced' => Shape::BOOLEAN, 'props' => [Shapes::field()], 'blocks' => [self::nodeShape(written: true)], 'source' => Shape::STRING, 'editable' => Shape::BOOLEAN,
         ]);
     }
 
