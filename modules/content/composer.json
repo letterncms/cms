@@ -2,7 +2,7 @@
     "name": "letterncms/content",
     "description": "Entries in every collection: lists, the entry editor, drafts, publishing, history and search.",
     "type": "cms-plugin",
-    "version": "0.20.1",
+    "version": "0.20.2",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"

@@ -2,7 +2,7 @@
     "name": "letterncms/cms",
     "description": "The kernel \u2014 plugins, abilities, content, users and APIs.",
     "type": "library",
-    "version": "0.20.1",
+    "version": "0.20.2",
     "license": "MIT",
     "require": {
         "php": "^8.4",
