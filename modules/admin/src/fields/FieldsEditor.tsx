@@ -3,7 +3,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities'
 import { plural, t, useManifest, type FieldDef, type FieldProps, type FieldTypeDef } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Badge, Button, EmptyState, FieldError, Fields, Icon, IconButton, Popover, cn } from '../ui'
+import { Badge, Button, EmptyState, FieldError, Fields, Icon, IconButton, List, Popover, Row, cn } from '../ui'
 
 export type RawField = Record<string, any> & { handle?: string; type?: string; label?: string; import?: string }
 
@@ -12,26 +12,31 @@ export type RawField = Record<string, any> & { handle?: string; type?: string; l
  * blueprints and, nested, for the sub-fields of groups and repeaters.
  */
 /** The options every field has, whatever its type. */
-function commonOptions(depth: number): FieldDef[] {
+function commonOptions(depth: number, renamed: boolean): FieldDef[] {
   return [
     { handle: 'label', type: 'text', label: t('Label'), width: 'half' },
-    { handle: 'handle', type: 'text', label: t('Handle'), width: 'half', instructions: t('Changing it orphans existing values.') },
-    { handle: 'instructions', type: 'text', label: t('Instructions'), placeholder: t('Shown under the field') },
+    // Said only once it applies: the handle of a field that already holds values was changed.
+    { handle: 'handle', type: 'text', label: t('Handle'), width: 'half', instructions: renamed ? t('Changing it orphans existing values.') : undefined },
+    { handle: 'instructions', type: 'text', label: t('Instructions') },
     { handle: 'required', type: 'toggle', label: t('Required'), width: 'third' },
     ...(depth === 0 ? [{ handle: 'property', type: 'toggle', label: t('Show as Property'), width: 'third' as const }] : []),
     { handle: 'width', type: 'select', label: t('Width'), display: 'segmented', width: 'third', options: { full: t('Full'), half: '½', third: '⅓' } },
   ]
 }
 
-export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, addLabel, builtIn = null, errors, path = 'fields' }: {
+export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, addLabel, builtIn = null, errors, path = 'fields', heading = true }: {
   fields: RawField[]; onChange: (fields: RawField[]) => void; body?: string; depth?: number; emptyText?: string; addLabel?: string; builtIn?: string | null
   /** What a refused save said, by the path of the option it is about (`fields.2.handle`, `fields.0.fields.1.type`). */
   errors?: Record<string, string>
   /** Where these fields are in what was saved: `fields`, or `fields.<i>.fields` for a field's sub-fields. */
   path?: string
+  /** `false` under a tab that already says "Fields": the row keeps Add Field, without the word again. */
+  heading?: boolean
 }) {
   const types = useManifest().fieldTypes
   const [open, setOpen] = useState<number | null>(null)
+  // The handles these fields had when the editor opened: those are the ones values are stored under.
+  const [saved] = useState(() => new Set(fields.map((f) => f.handle).filter(Boolean) as string[]))
   // The first field something is wrong with opens, so its problem is on view.
   const wrong = errors ? fields.findIndex((_, i) => Object.keys(errors).some((key) => key.startsWith(`${path}.${i}.`))) : -1
   useEffect(() => { if (wrong >= 0) setOpen(wrong) }, [wrong, errors])
@@ -47,8 +52,8 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
   return (
     <div>
       {depth === 0 ? (
-        <div className="mb-3 flex items-center gap-2 border-b border-border pb-2">
-          <h2 className="m-0 text-sm font-semibold text-ink">{t('Fields')}</h2>
+        <div className={cn('mb-3 flex items-center gap-2', heading && 'border-b border-border pb-2')}>
+          {heading && <h2 className="m-0 text-sm font-semibold text-ink">{t('Fields')}</h2>}
           {builtIn && <p className="m-0 min-w-0 flex-1 truncate text-xs text-faint">{builtIn}</p>}
           <div className="ml-auto shrink-0">
             <AddField types={types} onAdd={add} />
@@ -58,7 +63,7 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
       {fields.length === 0 ? (
         depth === 0 ? <EmptyState icon="field" title={t('No fields yet')} /> : <p className="m-0 mb-2 rounded-md border border-dashed border-border-strong px-3 py-3 text-xs text-faint">{emptyText ?? t('No fields yet.')}</p>
       ) : (
-        <FieldList fields={fields} types={types} openIndex={open} onOpen={setOpen} onChange={onChange} body={body} depth={depth} errors={errors} path={path} />
+        <FieldList fields={fields} types={types} openIndex={open} onOpen={setOpen} onChange={onChange} body={body} depth={depth} errors={errors} path={path} saved={saved} />
       )}
       {depth > 0 && <div className="mt-2"><AddField types={types} onAdd={add} label={addLabel ?? t('Add Sub-Field')} align="start" nested /></div>}
     </div>
@@ -88,30 +93,24 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
   }, [types, q])
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ('') }} side="bottom" align={align} keepSide collisionPadding={8} className="w-[288px] max-w-[calc(100vw-16px)] p-2" trigger={<Button size="sm" icon="plus" variant={nested ? 'ghost' : 'secondary'}>{label ?? t('Add Field')}</Button>}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ('') }} side="bottom" align={align} keepSide collisionPadding={8} className="w-[320px] max-w-[calc(100vw-16px)] p-2" trigger={<Button size="sm" icon="plus" variant={nested ? 'ghost' : 'secondary'}>{label ?? t('Add Field')}</Button>}>
       <Fields bare layout="inline" className="mb-2" fields={[{ handle: 'q', type: 'text', label: t('Field Type'), icon: 'search', size: 'sm', placeholder: t('Search') }]} values={{ q }} onChange={(_, v) => setQ(v ?? '')} />
       <div className="max-h-[360px] overflow-y-auto">
         {groups.map(([group, list]) => (
           <div key={group} className="mb-2">
             <div className="cms-label px-2 pb-1">{group}</div>
-            {list.map((type) => (
-              <button
-                key={type.key}
-                type="button"
-                onClick={() => {
-                  onAdd(type)
-                  setOpen(false)
-                  setQ('')
-                }}
-                className="flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors duration-120 hover:bg-hover"
-              >
-                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-xs border border-border bg-sunken text-muted"><Icon name={type.icon} size={14} /></span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium">{type.label}</span>
-                  {type.description && <span className="block truncate text-xs text-faint">{type.description}</span>}
-                </span>
-              </button>
-            ))}
+            <List className="border-y-0! divide-y-0!">
+              {list.map((type) => (
+                <Row key={type.key} className="items-start rounded-md px-2 py-1.5" onClick={() => { onAdd(type); setOpen(false); setQ('') }}>
+                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-xs border border-border bg-sunken text-muted"><Icon name={type.icon} size={14} /></span>
+                  {/* What a type is for is read whole: a line cut short says less than none. */}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{type.label}</span>
+                    {type.description && <span className="block text-xs text-faint">{type.description}</span>}
+                  </span>
+                </Row>
+              ))}
+            </List>
           </div>
         ))}
       </div>
@@ -119,7 +118,7 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
   )
 }
 
-function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, errors, path }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; body?: string; depth: number; errors?: Record<string, string>; path: string }) {
+function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, errors, path, saved }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; body?: string; depth: number; errors?: Record<string, string>; path: string; saved: Set<string> }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const ids = fields.map((f, i) => f.handle ?? `import-${f.import}-${i}`)
   const onDragEnd = (e: DragEndEvent) => {
@@ -143,6 +142,8 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
                   depth={depth}
                   errors={errors}
                   path={`${path}.${i}`}
+                  // A handle that was not there when the editor opened, while one that was is gone: this field was renamed.
+                  renamed={depth === 0 && !!field.handle && !saved.has(field.handle) && [...saved].some((h) => !fields.some((f) => f.handle === h))}
                   dragHandle={handle}
                   onToggle={() => onOpen(openIndex === i ? null : i)}
                   onChange={(f) => onChange(fields.map((x, j) => (j === i ? f : x)))}
@@ -166,15 +167,13 @@ function Sortable({ id, children }: { id: string; children: (handle: ReactNode) 
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-10')}>
       {children(
-        <button type="button" {...attributes} {...listeners} className="grid size-6 shrink-0 cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing" aria-label={t('Drag to Reorder')}>
-          <Icon name="drag" size={14} />
-        </button>,
+        <IconButton icon="drag" size="xs" label={t('Drag to Reorder')} className="cursor-grab text-faint active:cursor-grabbing" {...attributes} {...listeners} />,
       )}
     </div>
   )
 }
 
-function FieldRow({ field, type, open, isBody, depth, errors, path, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; depth: number; errors?: Record<string, string>; path: string; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
+function FieldRow({ field, type, open, isBody, depth, errors, path, renamed, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; depth: number; errors?: Record<string, string>; path: string; renamed?: boolean; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
   // What the last save refused about this field itself; its sub-fields show their own.
   const problem = (key: string) => errors?.[`${path}.${key}`]
   const refused = !!errors && Object.keys(errors).some((key) => key.startsWith(`${path}.`))
@@ -201,11 +200,11 @@ function FieldRow({ field, type, open, isBody, depth, errors, path, dragHandle, 
       <div className="flex h-11 items-center gap-2 px-2">
         {dragHandle}
         <span className="grid size-6 shrink-0 place-items-center rounded-xs bg-active text-muted"><Icon name={type?.icon ?? 'field'} size={14} /></span>
-        <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <Button variant="ghost" size="sm" aria-expanded={open} onClick={onToggle} className="-mx-1 h-8 min-w-0 flex-1 justify-start gap-2 px-1 text-left hover:bg-transparent">
           {/* The name wins the room: on a phone the handle steps aside for it. */}
-          <span className="min-w-[4ch] truncate text-sm font-medium">{field.label || field.handle}</span>
-          <span className="truncate font-mono text-xs text-faint max-sm:hidden">{field.handle}</span>
-        </button>
+          <span className="min-w-[4ch] truncate text-sm font-medium text-text">{field.label || field.handle}</span>
+          <span className="truncate font-mono text-xs font-normal text-faint max-sm:hidden">{field.handle}</span>
+        </Button>
         {isBody && <Badge>{t('Body')}</Badge>}
         {field.required && <Badge>{t('Required')}</Badge>}
         {field.section === 'sidebar' && <Badge>{t('Property')}</Badge>}
@@ -219,7 +218,7 @@ function FieldRow({ field, type, open, isBody, depth, errors, path, dragHandle, 
         <div className="space-y-5 border-t border-border p-4">
           {/* What every field has, edited with fields like everything else. */}
           <Fields
-            fields={commonOptions(depth)}
+            fields={commonOptions(depth, !!renamed)}
             values={{ ...field, width: field.width ?? 'full', property: field.section === 'sidebar' }}
             errors={errors}
             context={{ path: path.split('.') }}
@@ -233,7 +232,7 @@ function FieldRow({ field, type, open, isBody, depth, errors, path, dragHandle, 
           {problem('type') && <FieldError className="mt-0">{problem('type')}</FieldError>}
           {type && type.config.length > 0 && (
             <div className="border-t border-border pt-4">
-              <div className="cms-label mb-3">{t('{type} options', { type: type.label })}</div>
+              <div className="cms-label mb-3">{t('{type} Options', { type: type.label })}</div>
               <Fields fields={type.config.map((c) => ({ ...c, width: c.type === 'json' || c.type === 'fields' ? 'full' : 'half' }))} values={field} onChange={(h, v) => set(h, v)} errors={errors} context={{ depth: depth + 1, path: path.split('.') }} />
             </div>
           )}

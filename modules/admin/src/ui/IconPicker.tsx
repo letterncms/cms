@@ -82,7 +82,8 @@ export function IconPicker({ value, onChange, choices, disabled, invalid, id, cl
           className={cn('cms-input flex h-8 w-full items-center gap-2 rounded-md pl-2.5 pr-2 text-left text-sm', className)}
         >
           {value && <Icon name={value} size={16} className="shrink-0 text-muted" />}
-          <span className={cn('flex-1 truncate', !value && 'text-ghost')}>{value ?? t('Choose an icon…')}</span>
+          {/* An icon's name as words ("File Text"), not the key it is stored under. */}
+          <span className={cn('flex-1 truncate', !value && 'text-ghost')}>{value ? value.replace(/^ph-/, '').split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : t('Choose an icon…')}</span>
           <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />
         </button>
       }

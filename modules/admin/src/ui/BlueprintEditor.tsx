@@ -156,15 +156,11 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
   if (source.isError && !def) return <Page crumbs={[kind.back]}><QueryError message={source.error?.message} onRetry={() => void source.refetch()} retrying={source.isFetching} /></Page>
   if (!def) return <Page crumbs={[kind.back, { label: t('Not Found') }]}><NotFoundState icon={kind.back.icon} action={<Button onClick={() => navigate(kind.back.to)}>{t('Back to {label}', { label: kind.back.label })}</Button>} /></Page>
 
-  // Deleting is there to see, at the end of the page, never next to Save.
+  // Deleting is there to see, at the end of the page, never next to Save: one quiet button, named for what it deletes.
   const removal = removable && (
-    <section className="mt-10 flex flex-wrap items-center gap-3 border-t border-border pt-6">
-      <div className="min-w-0 flex-1">
-        <h2 className="m-0 text-sm font-semibold text-ink">{kind.removeLabel ?? t('Delete')}</h2>
-        {typeof kind.remove !== 'function' && kind.remove?.[2] && <p className="m-0 mt-0.5 text-xs text-muted">{kind.remove[2]}</p>}
-      </div>
-      <Button variant="destructive" icon="trash" disabled={saving} loading={removing} onClick={remove}>{kind.removeLabel ?? t('Delete')}</Button>
-    </section>
+    <div className="mt-10 border-t border-border pt-6">
+      <Button variant="destructive" icon="trash" className="-ml-2" disabled={saving} loading={removing} onClick={remove}>{kind.removeLabel ?? t('Delete')}</Button>
+    </div>
   )
 
   return (
@@ -180,19 +176,22 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         <div className="max-w-[960px]">
           <Tabs value={tab} onChange={setTab} tabs={[{ value: 'fields', label: t('Fields') }, { value: 'settings', label: t('Settings') }]} className="mb-6" />
           {tab === 'fields' ? (
-            <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
+            <FieldsEditor heading={false} fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
           ) : (
             <div>
+              {/* A rule between two sections, none after the last: what follows draws its own. */}
+              <div className="divide-y divide-border">
               {[...kind.settingsSections, { title: t('More Settings'), handles: settings.filter((f) => !kind.settingsSections!.some((s) => s.handles.includes(f.handle))).map((f) => f.handle), bare: false }].map((section) => {
                 const fields = section.handles.flatMap((h) => settings.filter((f) => f.handle === h))
                 if (!fields.length) return null
                 return (
-                  <section key={section.title} className="grid grid-cols-1 gap-4 border-b border-border py-6 first:pt-0 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-8">
+                  <section key={section.title} className="grid grid-cols-1 gap-4 py-6 first:pt-0 last:pb-0 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-8">
                     <h2 className="m-0 text-sm font-semibold text-ink">{section.title}</h2>
                     <Fields bare={section.bare} fields={fields} values={def} context={{ blueprintFields: source.data?.resolvedFields?.filter((f: FieldDef) => !source.data.fields?.some((own: RawField) => own.handle === f.handle)) }} onChange={(h, v) => patch({ [h]: v })} disabled={saving} />
                   </section>
                 )
               })}
+              </div>
               {removal}
             </div>
           )}
