@@ -99,7 +99,7 @@ final class AuditAbilities
         $ids = DB::table('audit_log')->whereNotNull('user_id')->distinct()->pluck('user_id');
         $people = User::query()->whereIn('id', $ids)->orderBy('name')->get(['id', 'name'])->map(static fn (User $u) => ['id' => (string) $u->id, 'name' => $u->name])->all();
         $actions = DB::table('audit_log')->distinct()->pluck('ability')
-            ->map(fn (string $name) => ['value' => $name, 'label' => $t->label($this->cms->abilities()->get($name)?->label ?? $name)])
+            ->map(fn (string $name) => ['value' => $name, 'label' => $this->label($name)])
             ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
 
         return ['people' => $people, 'actions' => $actions];
@@ -124,11 +124,28 @@ final class AuditAbilities
 
             return [
                 'row' => $row, 'input' => $input,
-                'label' => $t->label($this->cms->abilities()->get($row->ability)?->label ?? $row->ability),
+                'label' => $this->label((string) $row->ability),
                 'subject' => $subject, 'to' => $to,
                 'createdAt' => $row->created_at ? Carbon::parse($row->created_at)->toIso8601String() : null,
             ];
         })->values()->all();
+    }
+
+    /**
+     * An action in words: the ability's own label, or, for one that is gone (renamed since, or its plugin is
+     * off), its name read as words. `pages/customise` is Customise Pages, `form-submissions/delete` Delete Form
+     * Submissions: never a raw name among titles.
+     */
+    public function label(string $ability): string
+    {
+        if ($label = $this->cms->abilities()->get($ability)?->label) {
+            return app(Translations::class)->label($label);
+        }
+
+        [$thing, $verb] = array_pad(explode('/', $ability, 2), 2, '');
+        $words = static fn (string $part) => ucwords(trim((string) preg_replace('/[^a-z0-9]+/i', ' ', $part)));
+
+        return trim($words($verb).' '.$words($thing)) ?: $ability;
     }
 
     /** @return list<array<string, mixed>> */
