@@ -362,9 +362,11 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
         align="start"
         side="top"
         trigger={
-          <button type="button" aria-label={t('Account')} className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left outline-offset-[-2px] hover:bg-hover">
+          <button type="button" className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left outline-offset-[-2px] hover:bg-hover">
             <Avatar name={manifest.user.name} initials={manifest.user.initials} src={manifest.user.avatar} size={24} />
             <span className="min-w-0 flex-1">
+              {/* Named by what it shows, with what it is in front: a label of its own would hide the name from voice control. */}
+              <span className="sr-only">{t('Account')}: </span>
               <span className="block truncate text-sm font-medium leading-4 text-text">{manifest.user.name}</span>
               <span className="block truncate text-xs text-faint">{manifest.user.email}</span>
             </span>

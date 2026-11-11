@@ -331,7 +331,8 @@ function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setC
     }
   }
 
-  return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void onDragEnd(e)}>
+  // What a drag announces goes to the end of the page: a live region among the rows is not a row, and breaks the table for a screen reader.
+  return <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ container: document.body }} onDragEnd={(e) => void onDragEnd(e)}>
     <SortableContext items={ids} strategy={verticalListSortingStrategy}>
       {list.map((node) => {
         const key = rowKey(node)
