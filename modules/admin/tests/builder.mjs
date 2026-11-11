@@ -35,6 +35,8 @@ let saved = null
 const api = abilities((ability, input) => {
   if (ability === 'collections/get') return definition
   if (ability === 'collections/save') { saved = input.definition; return { ...definition, ...input.definition } }
+  // The stored rows of one kind of a matrix field: seven quotes in two entries, no facts.
+  if (ability === 'collections/usage') return input.handle === collection.handle && input.field === 'sections' && input.rowType === 'quote' ? { rows: 7, entries: 2 } : { rows: 0, entries: 0 }
   if (ability === 'entries/list' && input.filters?.[0]?.field === 'blueprint') return { items: [], total: 3, page: 1, perPage: 1, pages: 3 }
   return undefined
 })
@@ -108,8 +110,24 @@ try {
   kinds[0].querySelector('button[aria-expanded]').click()
   await until(() => [...kinds[0].querySelectorAll('input')].some((input) => input.value === 'quote'), 'A row type does not open on its name and handle')
   assert(kinds[0].textContent.includes('Text'), 'A row type does not show its fields')
-  await close('Sections')
   check('Row types of a matrix are rows that open')
+
+  // Taking away a row type rows were made with says how many first; one without rows only asks.
+  press('Remove Row Type', kinds[0]).click()
+  let rowsQuestion = await until(() => document.querySelector('[role="alertdialog"]'), 'Removing a row type asks nothing')
+  assert(rowsQuestion.textContent.includes('7 rows were made with it'), 'The question does not say how many rows: ' + rowsQuestion.textContent)
+  press('Cancel', rowsQuestion).click()
+  await until(() => !document.querySelector('[role="alertdialog"]'), 'The question stayed')
+  assert(box.querySelectorAll('[data-matrix-type]').length === 2, 'Cancel removed the row type')
+  const facts = box.querySelectorAll('[data-matrix-type]')[1]
+  facts.querySelector('button[aria-expanded]').click()
+  ;(await until(() => press('Remove Row Type', facts), 'The second row type does not open')).click()
+  rowsQuestion = await until(() => document.querySelector('[role="alertdialog"]'), 'Removing a row type without rows asks nothing')
+  assert(!/rows? (was|were) made/.test(rowsQuestion.textContent) && !rowsQuestion.textContent.includes('keep their values'), 'A row type without rows is said to have some: ' + rowsQuestion.textContent)
+  press('Cancel', rowsQuestion).click()
+  await until(() => !document.querySelector('[role="alertdialog"]'), 'The question stayed')
+  await close('Sections')
+  check('Removing a row type says how many rows were made with it')
 
   // Blueprints are a switch over the same editor: every option of a field, and a handle that can be typed anew.
   const kindsOf = () => [...document.querySelectorAll('[data-blueprints] [role="radio"]')].map((b) => b.textContent.trim())

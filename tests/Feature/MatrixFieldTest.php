@@ -58,7 +58,9 @@ final class MatrixFieldTest extends TestCase
             $this->cms()->entries()->flush();
             $read = $this->cms()->entries()->find($entry->id);
 
-            $this->assertSame($stored, $read->data['sections'], $collection);
+            // The same rows with the same values: MySQL keeps a JSON object's keys in an order of its own.
+            $sorted = static fn (array $rows) => array_map(static function (array $row) { ksort($row); return $row; }, $rows);
+            $this->assertSame($sorted($stored), $sorted($read->data['sections']), $collection);
             $this->assertSame('Small is fine. Ada 2 One Two', $read->collection()->blueprint()->toText(['sections' => $read->data['sections']]));
 
             // Rows move and change kind; the whole list is replaced.
@@ -76,6 +78,35 @@ final class MatrixFieldTest extends TestCase
         $augmented = (new \Cms\Content\Fields\Types\Matrix)->augment([$stored[1]], $this->cms()->collections()->find('landings')->blueprint()->field('sections'));
         $this->assertSame('teasers', $augmented[0]['type']);
         $this->assertSame([], $augmented[0]['pages'], 'A draft is not shown to a visitor.');
+    }
+
+    public function test_the_rows_of_a_kind_are_counted_on_both_drivers(): void
+    {
+        $content = $this->cms()->entryService();
+        $quote = ['type' => 'quote', 'text' => 'Small is fine.'];
+        $steps = ['type' => 'steps', 'items' => [['label' => 'One']]];
+        $usage = fn (string $collection, string $kind, string $field = 'sections') => $this->cms()->abilities()->execute('collections/usage', ['handle' => $collection, 'field' => $field, 'rowType' => $kind], AbilityContext::system());
+
+        foreach (['landings', 'guides'] as $collection) {
+            $content->create($collection, ['title' => 'One', 'status' => 'published', 'data' => ['sections' => [$quote, $steps, $quote]]]);
+            $content->create($collection, ['title' => 'Two', 'data' => ['sections' => [$steps]]]);
+            // Published without a quote, with one in the draft being worked on.
+            $third = $content->create($collection, ['title' => 'Three', 'status' => 'published', 'data' => ['sections' => [$steps]]]);
+            $content->update($third->id, ['data' => ['sections' => [$steps, $quote]]]);
+            $this->cms()->entries()->flush();
+
+            $this->assertSame(['rows' => 3, 'entries' => 2], $usage($collection, 'quote'), $collection);
+            $this->assertSame(['rows' => 3, 'entries' => 3], $usage($collection, 'steps'), $collection);
+            $this->assertSame(['rows' => 0, 'entries' => 0], $usage($collection, 'teasers'), $collection);
+            $this->assertSame(['rows' => 0, 'entries' => 0], $usage($collection, 'quote', 'elsewhere'), $collection);
+        }
+
+        try {
+            $usage('nowhere', 'quote');
+            $this->fail('A collection that is not there was counted.');
+        } catch (AbilityException $e) {
+            $this->assertSame('not_found', $e->type);
+        }
     }
 
     public function test_a_row_is_held_against_the_fields_of_its_kind(): void

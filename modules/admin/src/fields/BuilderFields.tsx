@@ -1,7 +1,8 @@
 import { plural, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Button, Fields, Icon, IconButton, Input, confirm, cn } from '../ui'
-import { FieldsEditor, type RawField } from './FieldsEditor'
+import { toast } from '../ui/toast'
+import { FieldsEditor, RowUsage, type RawField } from './FieldsEditor'
 
 import type { Sibling } from './conditions'
 
@@ -105,6 +106,7 @@ export function MatrixTypesField({ field, value, onChange, disabled, context }: 
   const depth = typeof context?.depth === 'number' ? context.depth : 1
   const base = context?.path ? [...context.path, field.handle].join('.') : undefined
   const [open, setOpen] = useState<number | null>(null)
+  const usage = useContext(RowUsage)
   // The handles these kinds had when the editor opened: rows are stored under those.
   const [saved] = useState(() => new Set(kinds.map((k) => k.handle).filter(Boolean) as string[]))
   const change = (i: number, patch: Kind) => onChange(kinds.map((kind, j) => (j === i ? { ...kind, ...patch } : kind)))
@@ -116,7 +118,17 @@ export function MatrixTypesField({ field, value, onChange, disabled, context }: 
   }
   const remove = async (i: number) => {
     const kind = kinds[i]
-    if (kind.handle && saved.has(kind.handle) && !(await confirm({ title: t('Remove “{title}”?', { title: kind.label || kind.handle }), description: t('Rows made with it keep their values, without these fields.'), confirm: t('Remove Row Type'), danger: true }))) return
+    if (kind.handle && saved.has(kind.handle)) {
+      // What was made with it stays, without these fields: said with how many rows there are.
+      let description: string | undefined = t('Rows made with it keep their values, without these fields.')
+      const matrix = typeof context?.values?.handle === 'string' ? context.values.handle : ''
+      if (usage && matrix) {
+        let count = 0
+        try { count = await usage(matrix, kind.handle) } catch (e) { toast.error(e); return }
+        description = count > 0 ? plural(count, '{count} row was made with it. It keeps its values, without these fields.', '{count} rows were made with it. They keep their values, without these fields.') : undefined
+      }
+      if (!(await confirm({ title: t('Remove “{title}”?', { title: kind.label || kind.handle }), description, confirm: t('Remove Row Type'), danger: true }))) return
+    }
     onChange(kinds.filter((_, j) => j !== i))
     setOpen(null)
   }

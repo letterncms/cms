@@ -14,6 +14,7 @@
 - `@letterncms/ui`: `Pressable`, the control without a look, for the ones that draw themselves (a colour plane, a box of a spacing control, a card that opens, canvas chrome). It is a `<button type="button">`, or a link with `to`, with the kit's focus line, 44px to hit on a touch screen, `disabled` and `data-active`; `inset` puts the focus line inside its edge, `compact` leaves out the touch area. Everything it looks like is its `className`.
 - **Term archives**: a collection can have a page per term of a taxonomy that lists its own entries filed under the term, such as `/blog/topics/tides` beside the term's own page. Choose the taxonomy and the URL under **Term Archives** in the collection's settings, or write `archives: {topics: '/blog/topics/{slug}'}` in its definition, with a pattern per language under `routes`. The page shows the term and the entries, ten to a page. A template named `<collection>_archive`, or `archive` for every collection, designs it: the page is the term, with its fields, and the new Repeat source **Entries of This Term** lists the entries; on the term's own page that source lists the entries of every collection. Archives are built with the site and follow what changes: publishing, unpublishing or re-filing an entry and an end date that passes rebuild them, renaming or deleting a term moves or removes them. They are in the site's search and the sitemap, name their versions in other languages, leave out drafts and what a visitor may not read, and never share an address with a page: saving either where the other is, is refused with the address. `terms/list` answers with each term's `archives`.
 - `site.search.records` (filter): every record of the site's search index, to add pages that are no entry.
+- `collections/usage` counts the rows of one kind that a collection's entries have in a matrix field.
 
 ### Changed
 
@@ -23,6 +24,8 @@
 - On a touch screen the lines of a menu, a select and a picker are 44px tall.
 - Global sets have one name. The sidebar, the screen, its breadcrumb and the widget say **Global Sets** (they said "Globals"), the permissions are **View Global Sets** and **Edit Global Set Values**, and the abilities are labelled **List Global Sets** and **Update Global Set Values**. Addresses, ability names (`globals/…`) and the `globals` data path stay as they are.
 - A tree's drag handle stands at the start of its row, where a list is taken hold of, instead of at its far end with the row's actions. What is said beside a title (who is editing) is read whole: on a wide screen a long title gives way to it.
+- Removing a matrix row type in the blueprint builder says how many rows were made with it before it is taken away.
+- **Breaking.** One word for components: the block that places one is `component`, not `pattern`, in block trees (`{"type":"component","props":{"ref":"card"}}`) and in Block Markdown (`::: component {"props":{"ref":"header"}}`). `cms migrate` renames it in what a site has stored: entries, their working copies, revisions and profile values in the database, the Markdown files under `content/collections` (front matter and directives), the working copies in `storage/drafts`, and the YAML and JSON files under `content/` (global sets, collections, fieldsets, your own block files), together with the `allowed` list of a blocks field, `dynamic: patterns` of a select, and `children` and `parent` in your own blocks' `block.json`. A content file whose front matter can't be read is left as it is. The old name is no longer read. In code, `Cms\Modules\Blocks\Patterns` is `Cms\Modules\Blocks\Components`, the filter `blocks.pattern-sources` is `blocks.component-sources`, `fields.options.patterns` is `fields.options.components` (`dynamic: components`), and the admin's icon `pattern` is `section-copy`.
 
 ### Fixed
 
@@ -32,10 +35,6 @@
 - A group of avatars shows one initial per person, so the next circle never cuts a letter, and its count grows into a pill instead of losing digits; a single avatar shows two letters at most, with air around them.
 - Green, amber and red badges read at 4.5:1 or more wherever they stand, in light and dark: their words are a step toward ink, as the blue one's already were.
 - A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.
-
-### Changed
-
-- **Breaking.** One word for components: the block that places one is `component`, not `pattern`, in block trees (`{"type":"component","props":{"ref":"card"}}`) and in Block Markdown (`::: component {"props":{"ref":"header"}}`). `cms migrate` renames it in what a site has stored: entries, their working copies, revisions and profile values in the database, the Markdown files under `content/collections` (front matter and directives), the working copies in `storage/drafts`, and the YAML and JSON files under `content/` (global sets, collections, fieldsets, your own block files), together with the `allowed` list of a blocks field, `dynamic: patterns` of a select, and `children` and `parent` in your own blocks' `block.json`. A content file whose front matter can't be read is left as it is. The old name is no longer read. In code, `Cms\Modules\Blocks\Patterns` is `Cms\Modules\Blocks\Components`, the filter `blocks.pattern-sources` is `blocks.component-sources`, `fields.options.patterns` is `fields.options.components` (`dynamic: components`), and the admin's icon `pattern` is `section-copy`.
 
 ## 0.23.0 (2026-11-11)
 

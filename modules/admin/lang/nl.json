@@ -38,6 +38,8 @@
   "{count} fields": "{count} velden",
   "{count} item": "{count} item",
   "{count} items": "{count} items",
+  "{count} row was made with it. It keeps its values, without these fields.": "{count} rij is ermee gemaakt. Ze houdt haar waarden, zonder deze velden.",
+  "{count} rows were made with it. They keep their values, without these fields.": "{count} rijen zijn ermee gemaakt. Ze houden hun waarden, zonder deze velden.",
   "{count} selected": "{count} geselecteerd",
   "{failed} of {total} failed.": "{failed} van {total} mislukt.",
   "{from}–{to} of {total}": "{from}–{to} van {total}",
