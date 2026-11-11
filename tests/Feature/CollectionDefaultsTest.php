@@ -25,7 +25,7 @@ final class CollectionDefaultsTest extends TestCase
         ], $ctx);
         $this->assertSame([], $saved['fields']);
         $this->assertNull($this->cms()->collections()->findOrFail('services')->body);
-        $entry = $this->cms()->content()->create('services', ['title' => 'Consulting'], $ctx->user);
+        $entry = $this->cms()->entryService()->create('services', ['title' => 'Consulting'], $ctx->user);
         $this->assertSame([], $entry->data);
     }
 

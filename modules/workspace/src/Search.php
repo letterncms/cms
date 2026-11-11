@@ -68,7 +68,7 @@ final class Search
         }
 
         $t = $this->cms->app()->make(Translations::class);
-        $nav = $this->cms->navigation()->forUser($user)['nav'];
+        $nav = $this->cms->adminNav()->forUser($user)['nav'];
         $names = array_column(array_map(static fn ($n) => [$n['id'], $t->label($n['label'])], $nav), 1, 0);
         $term = mb_strtolower($query);
         $found = [];

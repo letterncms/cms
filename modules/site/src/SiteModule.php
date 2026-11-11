@@ -117,7 +117,7 @@ final class SiteModule extends Plugin
         });
         $hooks->on('render.warning', fn (string $message) => $this->app->make(SiteBuilder::class)->warn($message));
 
-        $hooks->addFilter('site.build.extras', fn (array $extras) => $this->cms()->settings('site', 'search_index', true)
+        $hooks->addFilter('site.build.extras', fn (array $extras) => $this->cms()->setting('site', 'search_index', true)
             ? [...$extras, 'search' => ['path' => 'search.json', 'render' => fn () => $this->app->make(Search\SearchIndex::class)->json()]]
             : $extras);
         // An animation's ease can be a curve of the design: token:ease.<name>.
@@ -263,7 +263,7 @@ final class SiteModule extends Plugin
 
     private function routes(): void
     {
-        Route::get('/search.json', fn () => $this->cms()->settings('site', 'search_index', true)
+        Route::get('/search.json', fn () => $this->cms()->setting('site', 'search_index', true)
             ? response($this->app->make(Search\SearchIndex::class)->json(), 200, ['Content-Type' => 'application/json; charset=utf-8', 'Cache-Control' => 'public, max-age=300'])
             : abort(404));
 
@@ -607,7 +607,7 @@ final class SiteModule extends Plugin
     {
         $hooks = $this->cms()->hooks();
         $builder = fn () => $this->app->make(SiteBuilder::class);
-        $auto = fn () => (bool) $this->cms()->settings('site', 'auto_build', true);
+        $auto = fn () => (bool) $this->cms()->setting('site', 'auto_build', true);
 
         $hooks->on('entry.published', function (Entry $entry) use ($builder, $auto) {
             $builder()->forgetEntry($entry);

@@ -25,7 +25,7 @@ final class BehaviorTest extends TestCase
 
     private function page(string $title, array $blocks): string
     {
-        $entry = $this->cms()->content()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
 
         return $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($entry->id))['html'];
     }
@@ -47,7 +47,7 @@ final class BehaviorTest extends TestCase
     {
         Files::put(content_path('design/scripts/counter.js'), "export function mount() {}\n");
         $this->app->make(Code::class)->flush();
-        $this->cms()->content()->create('components', ['title' => 'Counter', 'slug' => 'counter', 'status' => 'published', 'data' => ['synced' => true, 'props' => [['handle' => 'to', 'type' => 'text', 'label' => 'To']], 'blocks' => [
+        $this->cms()->entryService()->create('components', ['title' => 'Counter', 'slug' => 'counter', 'status' => 'published', 'data' => ['synced' => true, 'props' => [['handle' => 'to', 'type' => 'text', 'label' => 'To']], 'blocks' => [
             ['type' => 'paragraph', 'props' => ['text' => '0'], 'behavior' => ['module' => 'counter', 'props' => ['to' => '{props.to}']]],
         ]]]);
         $this->app->make(\Cms\Modules\Blocks\Patterns::class)->flush();

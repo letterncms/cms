@@ -39,7 +39,7 @@ final class Starter
     /** Explicit development refresh: replace only the active kit's content, never accounts or configuration. */
     public function refresh(?User $user = null): int
     {
-        return $this->cms->content()->write(fn () => $this->import($user, replace: true));
+        return $this->cms->entryService()->write(fn () => $this->import($user, replace: true));
     }
 
     private function import(?User $user, bool $replace): int
@@ -61,7 +61,7 @@ final class Starter
             foreach ($handles as $handle) {
                 if ($this->collections->find($handle)) {
                     foreach ($this->cms->entries()->query()->collection($handle)->get() as $entry) {
-                        $this->cms->content()->delete($entry->id, $user);
+                        $this->cms->entryService()->delete($entry->id, $user);
                     }
                 }
                 DB::table('revisions')->where('collection', $handle)->delete();
@@ -79,7 +79,7 @@ final class Starter
 
         $create = function (array $items, string $collection, ?string $parent) use (&$create, &$ids, $user): void {
             foreach ($items as $item) {
-                $entry = $this->cms->content()->create($collection, [
+                $entry = $this->cms->entryService()->create($collection, [
                     'title' => (string) $item['title'],
                     'slug' => $item['slug'] ?? null,
                     'data' => (array) ($item['data'] ?? []),

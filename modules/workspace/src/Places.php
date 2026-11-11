@@ -59,7 +59,7 @@ final class Places
             return ! $view;
         }
 
-        foreach ($this->cms->navigation()->items() as $item) {
+        foreach ($this->cms->adminNav()->items() as $item) {
             if (($item['path'] ?? null) === $path) {
                 return ! (($item['permission'] === null || $user->hasPermission($item['permission'], any: true)) && ($item['visible'] === null || ($item['visible'])($user)));
             }
@@ -71,7 +71,7 @@ final class Places
     /** The place's name in the sidebar, when it has one. */
     private function named(string $path, User $user): ?string
     {
-        foreach ($this->cms->navigation()->forUser($user)['nav'] as $item) {
+        foreach ($this->cms->adminNav()->forUser($user)['nav'] as $item) {
             if (($item['path'] ?? null) === $path) {
                 return $this->cms->app()->make(Translations::class)->label($item['label']);
             }

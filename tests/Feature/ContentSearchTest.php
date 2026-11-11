@@ -13,7 +13,7 @@ final class ContentSearchTest extends TestCase
     {
         $admin = $this->admin();
         $context = AbilityContext::forUser($admin, 'rest');
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
 
         foreach (['posts' => 'excerpt', 'notes' => 'body'] as $collection => $field) {
             $this->travelTo(now()->subDay());
@@ -41,7 +41,7 @@ final class ContentSearchTest extends TestCase
     public function test_search_keeps_relevance_when_merging_database_and_file_results(): void
     {
         $context = AbilityContext::forUser($this->admin(), 'rest');
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $this->travelTo(now()->subDay());
         $exact = $content->create('notes', ['title' => 'Agents', 'data' => ['body' => '']]);
         $this->travelBack();
@@ -57,7 +57,7 @@ final class ContentSearchTest extends TestCase
     public function test_search_treats_sql_wildcards_as_literal_characters(): void
     {
         $context = AbilityContext::forUser($this->admin(), 'rest');
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
 
         foreach (['posts' => 'excerpt', 'notes' => 'body'] as $collection => $field) {
             $expected = $content->create($collection, ['title' => '100% ready_now!', 'data' => [$field => '']]);

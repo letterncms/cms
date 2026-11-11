@@ -202,7 +202,7 @@ final class VendorTest extends TestCase
         $this->vendor()->add('@scope/kit@1.0.0');
         Files::put(content_path('design/scripts/hero.js'), "import gsap from 'gsap'\n");
         $this->app->make(Code::class)->flush();
-        $render = fn (array $blocks, string $title) => $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($this->cms()->content()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]])->id))['html'];
+        $render = fn (array $blocks, string $title) => $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]])->id))['html'];
 
         $this->assertStringNotContainsString('importmap', $render([['type' => 'paragraph', 'props' => ['text' => 'Hi']]], 'Plain'), 'a page without a module carries nothing');
 
@@ -254,8 +254,8 @@ final class VendorTest extends TestCase
     public function test_adding_a_library_rebuilds_the_pages_with_an_import_map(): void
     {
         Files::put(content_path('design/scripts/hero.js'), "console.log(1)\n");
-        $this->cms()->content()->create('pages', ['title' => 'With', 'status' => 'published', 'data' => ['content' => [['type' => 'box', 'code' => ['scripts' => ['hero']], 'children' => []]]]]);
-        $this->cms()->content()->create('pages', ['title' => 'Without', 'status' => 'published', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]]]);
+        $this->cms()->entryService()->create('pages', ['title' => 'With', 'status' => 'published', 'data' => ['content' => [['type' => 'box', 'code' => ['scripts' => ['hero']], 'children' => []]]]]);
+        $this->cms()->entryService()->create('pages', ['title' => 'Without', 'status' => 'published', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]]]);
         $builder = $this->app->make(SiteBuilder::class);
         $builder->buildAll();
         $this->assertFalse($builder->hasWork());

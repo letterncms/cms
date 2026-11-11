@@ -46,13 +46,13 @@ final class RenderingTest extends TestCase
         $this->assertSame([], $settings()['options']);
         $this->assertSame('Content Only', $settings()['placeholder']);
 
-        $this->cms()->content()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [['type' => 'outlet']]]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [['type' => 'outlet']]]]);
         $templates->flush();
         $this->assertSame('Default', $settings()['placeholder']);
         $this->assertSame('default', $templates->resolve([$posts->template])['handle']);
         $this->assertArrayNotHasKey('posts_single', $settings()['options']);
 
-        $this->cms()->content()->create('templates', ['title' => 'Post detail', 'slug' => 'posts_single', 'status' => 'published', 'data' => ['blocks' => [
+        $this->cms()->entryService()->create('templates', ['title' => 'Post detail', 'slug' => 'posts_single', 'status' => 'published', 'data' => ['blocks' => [
             ['type' => 'heading', 'props' => ['text' => 'Post template']], ['type' => 'outlet'],
         ]]]);
         $templates->flush();
@@ -61,17 +61,17 @@ final class RenderingTest extends TestCase
         $definition = $posts->toYaml();
         $definition['template'] = 'posts_single';
         $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('posts', $definition));
-        $post = $this->cms()->content()->create('posts', ['title' => 'Hello', 'status' => 'published', 'data' => ['excerpt' => 'Hi']]);
+        $post = $this->cms()->entryService()->create('posts', ['title' => 'Hello', 'status' => 'published', 'data' => ['excerpt' => 'Hi']]);
         $this->assertStringContainsString('Post template', $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($post->id))['html']);
 
-        $this->cms()->content()->create('templates', ['title' => 'Missing page', 'slug' => '404', 'status' => 'published', 'data' => ['blocks' => []]]);
-        $this->cms()->content()->create('templates', ['title' => 'Pages only', 'slug' => 'pages_only', 'status' => 'published', 'data' => ['collections' => ['pages'], 'blocks' => []]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Missing page', 'slug' => '404', 'status' => 'published', 'data' => ['blocks' => []]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Pages only', 'slug' => 'pages_only', 'status' => 'published', 'data' => ['collections' => ['pages'], 'blocks' => []]]);
         $templates->flush();
         $this->assertSame(['default' => 'Default', 'posts_single' => 'Post detail'], $settings()['options']);
 
         // A maximum-length collection handle must still fit its template suffix.
         $longHandle = str_repeat('a', 64).'_single';
-        $long = $this->cms()->content()->create('templates', ['title' => 'Long handle', 'slug' => $longHandle, 'data' => ['blocks' => []]]);
+        $long = $this->cms()->entryService()->create('templates', ['title' => 'Long handle', 'slug' => $longHandle, 'data' => ['blocks' => []]]);
         $this->assertSame($longHandle, $long->slug);
     }
 
@@ -88,7 +88,7 @@ final class RenderingTest extends TestCase
         $fields = fn () => array_column($posts->toArray()['resolvedFields'], null, 'handle');
         $this->assertSame('Content Only', $fields()['template']['placeholder']);
         $this->assertNull($fields()['template']['fallbackHandle']);
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $templates = $this->app->make(\Cms\Modules\Blocks\Templates::class);
         $content->create('templates', ['title' => 'Site default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [['type' => 'outlet']]]]);
         $templates->flush();
@@ -115,7 +115,7 @@ final class RenderingTest extends TestCase
 
     public function test_a_page_is_its_template_with_the_entry_in_the_outlet(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $content->create('components', ['title' => 'Header', 'slug' => 'header', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [
             ['type' => 'box', 'props' => ['tag' => 'header'], 'children' => [['type' => 'link', 'props' => ['url' => '/'], 'bind' => ['label' => 'site.name']]]],
         ]]]);
@@ -151,7 +151,7 @@ final class RenderingTest extends TestCase
 
     public function test_search_and_twins_read_the_text_of_components_and_repeats(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $content->create('components', ['title' => 'Intro', 'slug' => 'intro', 'status' => 'published', 'data' => ['synced' => true,
             'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title']],
             'blocks' => [['type' => 'heading', 'props' => ['level' => '2'], 'bind' => ['text' => 'props.title']]],
@@ -170,7 +170,7 @@ final class RenderingTest extends TestCase
 
     public function test_without_templates_a_page_still_renders_its_content(): void
     {
-        $page = $this->cms()->content()->create('pages', ['title' => 'Bare', 'slug' => 'bare', 'status' => 'published', 'data' => ['content' => [['type' => 'heading', 'props' => ['text' => 'Hello', 'level' => '1']]]]]);
+        $page = $this->cms()->entryService()->create('pages', ['title' => 'Bare', 'slug' => 'bare', 'status' => 'published', 'data' => ['content' => [['type' => 'heading', 'props' => ['text' => 'Hello', 'level' => '1']]]]]);
         $html = $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($page->id))['html'];
 
         $this->assertStringContainsString('<main class="cms-box" id="main"><div class="cms-outlet" style="display:contents" data-cms-contents><h1 class="cms-heading" id="hello">Hello</h1></div></main>', $html);
@@ -211,7 +211,7 @@ final class RenderingTest extends TestCase
 
     public function test_page_content_is_one_element_and_prose_is_a_toggle(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $content->create('templates', ['title' => 'Site default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
             ['type' => 'box', 'props' => ['prose' => true], 'children' => [['type' => 'outlet']]],
         ]]]);
@@ -342,7 +342,7 @@ final class RenderingTest extends TestCase
     {
         $actor = $this->admin(['name' => 'Original credit']);
         $credit = $this->admin(['name' => 'Preview credit']);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Saved title', 'authorId' => $actor->id, 'data' => ['content' => []]]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Saved title', 'authorId' => $actor->id, 'data' => ['content' => []]]);
         $version = $entry->version();
         $snapshot = ['title' => 'Unsaved title', 'slug' => 'unsaved-slug', 'authorId' => $credit->id, 'data' => ['content' => [
             ['type' => 'heading', 'bind' => ['text' => 'entry.title']],
@@ -363,7 +363,7 @@ final class RenderingTest extends TestCase
 
     public function test_an_update_rebuilds_the_static_site(): void
     {
-        $this->cms()->content()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published', 'data' => ['content' => []]]);
+        $this->cms()->entryService()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published', 'data' => ['content' => []]]);
         $builder = app(\Cms\Modules\Site\Build\SiteBuilder::class);
         $builder->buildAll();
 

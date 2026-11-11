@@ -433,11 +433,11 @@ final class PublicAccountsTest extends TestCase
     public function test_a_page_everyone_may_get_the_same_copy_of_leaves_sign_in_or_my_account_to_the_browser(): void
     {
         $id = cms()->abilities()->execute('pages/customize', ['group' => 'accounts', 'handle' => 'deleted'], \Cms\Abilities\AbilityContext::forUser($this->admin()))['id'];
-        cms()->content()->update($id, ['data' => ['blocks' => [
+        cms()->entryService()->update($id, ['data' => ['blocks' => [
             ['type' => 'link', 'id' => 'mine', 'props' => ['label' => '', 'url' => '/'], 'bind' => ['label' => 'accounts.account.label', 'url' => 'accounts.account.url', 'visible' => 'account']],
             ['type' => 'link', 'id' => 'door', 'props' => ['label' => '', 'url' => '/'], 'bind' => ['label' => 'accounts.sign_in.label', 'url' => 'accounts.sign_in.url', 'hidden' => 'account']],
         ]]]);
-        cms()->content()->publish($id);
+        cms()->entryService()->publish($id);
 
         $shared = (string) $this->get('/account/deleted')->assertOk()->getContent();
         $this->assertMatchesRegularExpression('#<a [^>]*href="/account"[^>]*data-cms-account="in"|<a [^>]*data-cms-account="in"[^>]*href="/account"#', $shared);
@@ -514,8 +514,8 @@ final class PublicAccountsTest extends TestCase
         $this->assertSame('account/sign-in', $entry->data['blocks'][0]['children'][1]['type']);
         $this->get('/sign-in')->assertOk()->assertDontSee('Members Only Door');
 
-        cms()->content()->update($id, ['data' => ['blocks' => [['type' => 'heading', 'props' => ['text' => 'Members Only Door', 'level' => '1']], ['type' => 'account/sign-in', 'props' => ['submit' => 'Come In']]]]]);
-        cms()->content()->publish($id);
+        cms()->entryService()->update($id, ['data' => ['blocks' => [['type' => 'heading', 'props' => ['text' => 'Members Only Door', 'level' => '1']], ['type' => 'account/sign-in', 'props' => ['submit' => 'Come In']]]]]);
+        cms()->entryService()->publish($id);
         $this->get('/sign-in')->assertOk()->assertSee('Members Only Door')->assertSee('Come In');
     }
 

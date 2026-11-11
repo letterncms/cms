@@ -82,7 +82,7 @@ final class ModulesTest extends TestCase
         $this->cms()->abilities()->execute('settings/update', ['namespace' => 'site', 'values' => ['description' => 'Changed']], $ctx);
 
         $this->assertSame(['settings/update'], \DB::table('audit_log')->pluck('ability')->all());
-        $this->assertSame('Changed', $this->cms()->settings('site', 'description'));
+        $this->assertSame('Changed', $this->cms()->setting('site', 'description'));
     }
 
     public function test_the_admin_settings_hold_what_modules_add(): void

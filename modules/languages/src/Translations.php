@@ -87,7 +87,7 @@ final class Translations
             unset($content['data']['seo']['canonical'], $content['data']['seo']['noindex']);
         }
 
-        return $this->cms->content()->copyFrom($source, [
+        return $this->cms->entryService()->copyFrom($source, [
             'title' => $content['title'],
             // A translated title gets its own slug (when it has Latin letters); otherwise keep the original's.
             'slug' => ($translate ? Str::slug($content['title'], '-', strtolower(strtok($locale, '-_'))) : '') ?: $working['slug'],
