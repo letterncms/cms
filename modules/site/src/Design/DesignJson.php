@@ -232,10 +232,20 @@ final class DesignJson
             }
         }
 
-        foreach (['styles', 'prose', 'buttons', 'fields', 'fonts', 'transition'] as $section) {
+        foreach (['styles', 'prose', 'buttons', 'fields', 'fonts'] as $section) {
             if (isset($in[$section])) {
                 $this->set($section, (array) $in[$section]);
             }
+        }
+
+        // The transition is one small thing with three settings: naming one keeps the other two.
+        if (isset($in['transition'])) {
+            $this->set('transition', array_filter([...(array) ($this->data['transition'] ?? []), ...(array) $in['transition']], static fn ($value) => $value !== null));
+        }
+
+        // The transition is one small thing with three settings: naming one keeps the other two.
+        if (isset($in['transition'])) {
+            $this->set('transition', array_filter([...(array) ($this->data['transition'] ?? []), ...(array) $in['transition']], static fn ($value) => $value !== null));
         }
     }
 
