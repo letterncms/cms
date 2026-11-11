@@ -19,7 +19,10 @@ final class MediaModule extends Plugin
             $this->app->singleton($service);
         }
 
-        $this->cms()->whenAvailable(\Cms\Content\Fields\FieldTypeRegistry::class, static fn ($types) => $types->register(new MediaField));
+        $this->cms()->whenAvailable(\Cms\Content\Fields\FieldTypeRegistry::class, static function ($types): void {
+            $types->register(new MediaField);
+            $types->register(new FileField);
+        });
     }
 
     public function boot(): void
@@ -29,6 +32,9 @@ final class MediaModule extends Plugin
         $p->register('media.upload', 'Upload Files', 'Media');
         $p->register('media.edit', 'Edit Media Details', 'Media');
         $p->register('media.delete', 'Delete Files', 'Media');
+
+        // A link field's file: where it downloads from and what it is called.
+        $this->cms()->hooks()->addFilter('fields.link.media', static fn (?array $file, string $id) => $file ?? (($item = MediaItem::query()->find(strtolower($id))) ? ['url' => $item->url(), 'name' => $item->name] : null));
 
         $this->settingsSchema();
         $this->routes();

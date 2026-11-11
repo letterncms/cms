@@ -8,7 +8,7 @@ use Cms\Content\Fields\Field;
 use Cms\Content\Fields\FieldType;
 
 /** One or more files from the media library (stores ids). */
-final class MediaField extends FieldType
+class MediaField extends FieldType
 {
     public function key(): string { return 'media'; }
 

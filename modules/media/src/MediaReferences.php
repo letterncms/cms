@@ -140,14 +140,14 @@ final class MediaReferences
         $handles = ['image' => true, 'poster' => true];
 
         foreach (cms()->collections()->all() as $collection) {
-            $this->collect((array) ($collection->blueprint()->toArray()['fields'] ?? []), $handles);
+            $this->collect($collection->blueprint()->toArray(), $handles);
         }
 
         // Blocks may be off on this site: blueprints are all there is then.
         if (app()->bound(BlockRegistry::class)) {
             foreach (app(BlockRegistry::class)->all() as $type) {
                 foreach ($type->blueprint()->fields() as $field) {
-                    $field->type === 'media' && $handles[$field->handle] = true;
+                    in_array($field->type, ['media', 'file'], true) && $handles[$field->handle] = true;
                 }
             }
         }
@@ -162,9 +162,10 @@ final class MediaReferences
                 continue;
             }
 
-            ($field['type'] ?? null) === 'media' && isset($field['handle']) && $handles[(string) $field['handle']] = true;
+            in_array($field['type'] ?? null, ['media', 'file'], true) && isset($field['handle']) && $handles[(string) $field['handle']] = true;
 
-            foreach (['fields', 'sets'] as $nested) {
+            // A group's and a repeater's fields, and the fields of each kind of row of a matrix.
+            foreach (['fields', 'sets', 'types'] as $nested) {
                 is_array($field[$nested] ?? null) && $this->collect($field[$nested], $handles);
             }
         }

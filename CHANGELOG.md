@@ -4,10 +4,22 @@
 
 ### Added
 
+- **Seven field types**, each with its JSON Schema, validation, clean-up and a round trip through database and file collections:
+  - `link`: `{type, value, label?, new_tab?}` where `type` is `entry` (an entry id, of `collections` when set), `url`, `email`, `phone` or `media` (a file's id); `types` limits which. A string is read as a link (`https://…`, `/path`, `entry:<id>`, `mailto:…`, `tel:…`). Templates get `url` (the page's address, `mailto:`, `tel:`, the file) and a `label` that falls back to the page's title.
+  - `date-range`: `{start, end}` as dates, or moments with `time: true`; the end is not before the start.
+  - `time`: `"HH:MM"` on a 24-hour clock, `"HH:MM:SS"` with `seconds: true`.
+  - `range`: a number between `min` (0) and `max` (100) in steps of `step` (1); a value between two steps moves to the nearest.
+  - `table`: rows of text cells, every row as wide as the widest; with `header` (on by default) templates get the first row as `header` and the others as `rows`.
+  - `geo`: `{lat, lng, address?}` in decimal degrees. The address is text; no map service is called.
+  - `file`: files of the media library that are not images (`accept`, `max`), stored as ids; templates get `{id, url, name, filename, extension, mime, kind, size}`.
 - **Matrix** field type: a list of rows of several kinds, each kind with fields of its own (`types: [{handle, label, fields}]`, `max`). A row is its fields' values and `type`, the handle of its kind: `{type: quote, text: …}`. Each row is checked against the fields of its kind, with errors that name them (`data.sections.1.text`), the JSON Schema has a branch per kind, and rows are written to an entry's file as YAML like any other field. A field type can check its own definition when a blueprint is saved (`FieldType::validateDefinition()`).
 - **Conditional fields** in collections, global sets and every other blueprint, as block fields had them: `if: {kind: video}` or `if: {kind: [video, audio], featured: true}` shows a field only while the fields beside it hold those values, and a `required` field with a condition is required only then. `required_if: {…}` leaves the field on view and requires it under the condition. Publishing checks it, the collection's JSON Schema says it (`allOf` with `if`/`then`, in `collections/schema`), and a condition that names a field that isn't beside it is refused when the definition is saved. The schema validator reads `allOf` and `if`/`then`/`else`.
 - **Relations that hold**: an `entries`, `users` or `media` field only takes ids that exist, an `entries` field only entries of its `collections` and a `media` field only files its `accept` allows. A write that names something else is refused with the path of the id (`data.author.0`), in a dry run too; what an entry already named stays, so content that points at something since deleted can still be saved. Entry ids are stored in lower case.
 - **Reverse relations**: `EntryQuery::references($id, $field = null)` finds the entries that name an entry, on both drivers: wherever its id is in their data, so in a relation field at any depth (a group, the rows of a repeater), a link or a block. Agents read it with `references/list` (what links to an entry, across collections, with the fields that name it) and `references` on `entries/list`; the content API takes `?references=<id>` (and `references_field=`), and the Repeat block's **Collection Entries** source has **Only Entries Linking To** this page or the outer item: the posts of an author, the projects of a client.
+
+### Changed
+
+- The `url` field type is called **URL** in the field picker; **Link** is the new `link` type.
 
 ## 0.22.0 (2026-11-11)
 
