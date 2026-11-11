@@ -11,11 +11,9 @@
   "From Address": "Adresse d’expéditeur",
   "From Name": "Nom d’expéditeur",
   "How :brand sends email.": "Comment :brand envoie les e-mails.",
-  "How email is sent, whether it arrives, and the latest messages.": "Comment les e-mails sont envoyés, s’ils arrivent, et les derniers messages.",
   "Last email failed": "Le dernier e-mail a échoué",
   "Latest": "Derniers",
   "Log only (development)": "Journal uniquement (développement)",
-  "No email sent yet": "Aucun e-mail envoyé pour l’instant",
   "No subject": "Sans objet",
   "None": "Aucun",
   "Not delivering": "Aucun envoi réel",
@@ -38,5 +36,6 @@
   "Test email sent to {email}": "E-mail de test envoyé à {email}",
   "Test email sent to {user.email}": "E-mail de test envoyé à {user.email}",
   "This is a test from :site. If you can read it, email works.": "Ceci est un test de :site. Si vous pouvez le lire, les e-mails fonctionnent.",
-  "Username": "Nom d’utilisateur"
+  "Username": "Nom d’utilisateur",
+  "Whether email arrives, and the latest messages.": "Si les e-mails arrivent, et les derniers messages."
 }

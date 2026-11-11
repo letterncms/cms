@@ -6,9 +6,6 @@
   ":package needs :dep :constraint, and this site has :have.": ":package heeft :dep :constraint nodig, en deze site heeft :have.",
   "Search {items}": "Zoeken in {items}",
   "{brand} {version}": "{brand} {version}",
-  "{brand} version, database updates and plugins that need attention.": "{brand}-versie, database-updates en plugins die aandacht vragen.",
-  "{count} need attention": "{count} vragen aandacht",
-  "{count} needs attention": "{count} vraagt aandacht",
   "{count} result": "{count} resultaat",
   "{count} results": "{count} resultaten",
   "{count} update pending": "{count} update in de wacht",
@@ -30,7 +27,6 @@
   "Advance Install": "Installatie voortzetten",
   "Advance Update": "Update voortzetten",
   "All plugins are up to date": "Alle plugins zijn bijgewerkt",
-  "All working": "Alles werkt",
   "Also installs what it needs: {list}.": "Installeert ook wat het nodig heeft: {list}.",
   "An update failed its own checks, so this site went back. Your content is safe.": "Een update slaagde niet voor zijn eigen controles, dus deze site ging terug. Je inhoud is veilig.",
   "Any Price": "Elke prijs",
@@ -66,7 +62,6 @@
   "Free": "Gratis",
   "Go Back": "Teruggaan",
   "Go back to {version}?": "Terug naar {version}?",
-  "Health": "Status",
   "Install": "Installeren",
   "Install {name} unsigned?": "{name} ongetekend installeren?",
   "Install {name}?": "{name} installeren?",
@@ -224,5 +219,6 @@
   "Key Fingerprint": "Vingerafdruk van de sleutel",
   "No plugins to check": "Geen plug-ins om te controleren",
   "Store Address": "Adres van de winkel",
-  "Updates come through Composer": "Updates komen via Composer"
+  "Updates come through Composer": "Updates komen via Composer",
+  "Says when database updates wait or a plugin needs attention.": "Meldt wanneer database-updates wachten of een plug-in aandacht nodig heeft."
 }

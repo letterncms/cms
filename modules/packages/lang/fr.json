@@ -6,9 +6,6 @@
   ":package needs :dep :constraint, and this site has :have.": ":package nécessite :dep :constraint, et ce site a :have.",
   "Search {items}": "Rechercher dans {items}",
   "{brand} {version}": "{brand} {version}",
-  "{brand} version, database updates and plugins that need attention.": "Version de {brand}, mises à jour de la base de données et plugins à vérifier.",
-  "{count} need attention": "{count} demandent votre attention",
-  "{count} needs attention": "{count} demande votre attention",
   "{count} result": "{count} résultat",
   "{count} results": "{count} résultats",
   "{count} update pending": "{count} mise à jour en attente",
@@ -30,7 +27,6 @@
   "Advance Install": "Poursuivre l’installation",
   "Advance Update": "Poursuivre la mise à jour",
   "All plugins are up to date": "Tous les plugins sont à jour",
-  "All working": "Tout fonctionne",
   "Also installs what it needs: {list}.": "Installe aussi ce dont il a besoin : {list}.",
   "An update failed its own checks, so this site went back. Your content is safe.": "Une mise à jour a échoué à ses propres contrôles : ce site est revenu en arrière. Votre contenu est intact.",
   "Any Price": "Tous les prix",
@@ -66,7 +62,6 @@
   "Free": "Gratuit",
   "Go Back": "Revenir en arrière",
   "Go back to {version}?": "Revenir à {version} ?",
-  "Health": "État",
   "Install": "Installer",
   "Install {name} unsigned?": "Installer {name} sans signature ?",
   "Install {name}?": "Installer {name} ?",
@@ -224,5 +219,6 @@
   "Key Fingerprint": "Empreinte de la clé",
   "No plugins to check": "Aucun plugin à vérifier",
   "Store Address": "Adresse de la boutique",
-  "Updates come through Composer": "Les mises à jour passent par Composer"
+  "Updates come through Composer": "Les mises à jour passent par Composer",
+  "Says when database updates wait or a plugin needs attention.": "Signale quand des mises à jour de la base de données attendent ou qu’un plugin demande votre attention."
 }

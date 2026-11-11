@@ -18,7 +18,6 @@
   ":site pushed to this site": ":site a envoyé vers ce site",
   ":site ran into an error: :message": ":site a rencontré une erreur : :message",
   ":site turned down a request for being too big. Raise post_max_size there, or ask its host to.": ":site a refusé une requête trop volumineuse. Augmentez post_max_size là-bas, ou demandez-le à l’hébergeur.",
-  "Connect another site": "Connectez un autre site",
   "No sites connected": "Aucun site connecté",
   "{count} file": "{count} fichier",
   "{count} files": "{count} fichiers",

@@ -1,7 +1,6 @@
 {
   "{count} Day": "{count} jour",
   "{count} Days": "{count} jours",
-  "{count} in use": "{count} utilisé(s)",
   "{count} unused": "{count} inutilisé(s)",
   "1 Year": "1 an",
   "A QR code to scan, the code it shows, then the recovery codes.": "Un code QR à scanner, le code qu’il affiche, puis les codes de récupération.",
@@ -73,7 +72,6 @@
   "It is shown only once.": "Il n’est affiché qu’une seule fois.",
   "Keep me signed in": "Rester connecté",
   "Language": "Langue",
-  "Last Sign-In": "Dernière connexion",
   "Last Used": "Dernière utilisation",
   "Leave this empty": "Laissez ce champ vide",
   "Links": "Liens",
@@ -89,7 +87,6 @@
   "New Password": "Nouveau mot de passe",
   "New Token": "Nouveau jeton",
   "No tokens yet": "Aucun jeton pour l’instant",
-  "None": "Aucun",
   "Now: :email": "Actuellement : :email",
   "Off": "Désactivé",
   "Offer “Keep Me Signed In”": "Proposer « Rester connecté »",
@@ -159,8 +156,6 @@
   "Turn On": "Activer",
   "Two-Factor Authentication": "Authentification à deux facteurs",
   "Two-factor authentication is off": "L’authentification à deux facteurs est désactivée",
-  "Two-Factor Sign-In": "Authentification à deux facteurs",
-  "Two-factor sign-in, your API tokens and your last sign-in.": "Connexion à deux facteurs, vos jetons d’API et votre dernière connexion.",
   "Update My Account": "Mettre à jour mon compte",
   "Use a path on this site, like /account.": "Utilisez un chemin de ce site, comme /account.",
   "Use another address": "Utiliser une autre adresse",
@@ -194,5 +189,6 @@
   "Your password is changed. Please sign in.": "Votre mot de passe est modifié. Veuillez vous connecter.",
   "Your password is not correct.": "Votre mot de passe est incorrect.",
   "Your session expired. Please try again.": "Votre session a expiré. Veuillez réessayer.",
-  "Your versions of the sign-in and account pages. A page without a version here uses the standard one.": "Vos versions des pages de connexion et de compte. Une page sans version ici utilise la page standard."
+  "Your versions of the sign-in and account pages. A page without a version here uses the standard one.": "Vos versions des pages de connexion et de compte. Une page sans version ici utilise la page standard.",
+  "Says when two-factor authentication is off or an API token lies unused.": "Signale quand l’authentification à deux facteurs est désactivée ou qu’un jeton d’API reste inutilisé."
 }

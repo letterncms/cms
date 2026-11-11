@@ -259,7 +259,7 @@ export interface Manifest {
   /** The home screen's columns with the ids of the widgets the user sees. */
   dashboard: ArrangedSection[]
   /** The home screen as arranged for this user (hidden = in the gallery); `personal` when they arranged their own. */
-  home?: { layout: Arrangement; personal: boolean; problems?: Record<string, string> }
+  home?: { layout: Arrangement; personal: boolean }
   commands: { id: string; label: string; icon: string; group: string; path?: string; ability?: string; input?: Record<string, unknown>; keywords?: string[] }[]
   /** The language the manifest's labels are in. */
   locale?: string

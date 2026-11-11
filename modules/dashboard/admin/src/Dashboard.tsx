@@ -1,7 +1,7 @@
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, pointerWithin, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { can, loadManifest, locale, plural, registry, run, setPreference, setQuery, t, useLocation, useManifest, type Arrangement, type WidgetInfo } from '@letterncms/sdk'
+import { can, loadManifest, locale, registry, run, setPreference, setQuery, t, useLocation, useManifest, type Arrangement, type WidgetInfo } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { Button, Icon, IconButton, Notice, Page, WidgetSlot, EmptyState, cn, confirm, toast, useShortcut } from '@letterncms/ui'
 import { Gallery } from './Gallery'
@@ -194,32 +194,20 @@ function Greeting() {
   const firstName = manifest.user.name.split(' ')[0]
 
   return (
-    <div className="mb-10">
+    <div className="mb-8">
       <p className="m-0 text-sm text-muted">{new Date().toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-      <h1 className="m-0 mt-1 text-3xl font-semibold text-ink">{greeting(firstName)}</h1>
+      <h1 className="m-0 mt-0.5 text-2xl font-semibold text-ink">{greeting(firstName)}</h1>
     </div>
   )
 }
 
-/** What needs someone's attention before anything else: pending database updates, invalid plugins (debug mode). */
+/** What needs someone's attention before anything else: pending database updates. */
 function Notices() {
   const manifest = useManifest()
   const pending = Object.keys(manifest.packages.pending)
-  const problems = Object.entries(manifest.home?.problems ?? {})
 
   return (
     <>
-      {problems.length > 0 && (
-        <Notice tone="danger" className="mb-8" title={plural(problems.length, '{count} plugin is invalid', '{count} plugins are invalid')}>
-          <ul className="m-0 list-none space-y-0.5 p-0">
-            {problems.map(([name, problem]) => (
-              <li key={name}>
-                <span className="font-mono text-xs text-text">{name}</span> — {problem}
-              </li>
-            ))}
-          </ul>
-        </Notice>
-      )}
       {pending.length > 0 && can('packages.manage') && (
         <Notice
           tone="warning"

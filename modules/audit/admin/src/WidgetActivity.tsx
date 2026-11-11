@@ -13,12 +13,14 @@ interface Change {
   createdAt: string
 }
 
-/** Home-screen widget: the latest changes across the site — who did what, when, and through which channel. */
+/** Home-screen widget: the latest changes across the site — who did what, when, and through which channel. Nothing while nothing was recorded. */
 export default function WidgetActivity() {
   const recent = useAbility<Change[]>('audit/recent', { limit: 6 }, { refetchInterval: 60_000 })
 
+  if (!recent.isError && (!recent.data || recent.data.length === 0)) return null
+
   return (
-    <Widget action={{ label: t('Audit Log'), to: '/audit' }} query={recent} empty={recent.data?.length === 0 && { icon: 'activity', title: t('No changes recorded yet') }}>
+    <Widget action={{ label: t('Audit Log'), to: '/audit' }} query={recent}>
       {recent.data?.map((c) => {
         const via = channel(c.transport)
         const who = c.user?.name ?? (agent(c.transport) ? t('Agent') : t('System'))

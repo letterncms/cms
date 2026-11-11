@@ -7,8 +7,9 @@ namespace Cms\Tests\Feature;
 use Cms\Tests\TestCase;
 
 /**
- * Every plugin registers at least one home-screen widget. This boots every plugin
- * that ships with the CMS and with the docs and website sites, and checks each one.
+ * The home-screen widgets of every plugin that ships with the CMS and with the docs
+ * and website sites. A plugin registers one when it has something worth a glance:
+ * none is fine, and nothing reports it.
  */
 final class PluginWidgetsTest extends TestCase
 {
@@ -32,18 +33,9 @@ final class PluginWidgetsTest extends TestCase
         return [...array_map(static fn ($dir) => (string) json_decode((string) file_get_contents($dir.'/composer.json'), true)['name'], self::folders()), 'letterncms/assistant', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site'];
     }
 
-    public function test_every_bundled_plugin_registers_a_widget(): void
+    public function test_every_bundled_plugin_boots(): void
     {
-        $packages = $this->cms()->packages();
-        $widgets = $this->cms()->admin()->widgetsByPackage();
-
-        $this->assertSame([], $packages->inactive(), 'Every bundled plugin boots.');
-
-        foreach ($this->plugins() as $name) {
-            $this->assertNotEmpty($widgets[$name] ?? [], "{$name} registers no home-screen widget.");
-        }
-
-        $this->assertSame([], $packages->problems());
+        $this->assertSame([], $this->cms()->packages()->inactive(), 'Every bundled plugin boots.');
     }
 
     public function test_every_widget_tells_the_gallery_what_it_shows(): void
@@ -62,14 +54,14 @@ final class PluginWidgetsTest extends TestCase
         $this->assertSame(['analytics-overview', 'recent', 'site-status'], $enabled);
     }
 
-    public function test_a_plugin_without_a_widget_is_reported_but_keeps_running(): void
+    public function test_a_plugin_without_a_widget_is_as_good_as_any(): void
     {
         $registry = $this->cms()->admin();
         $owned = new \ReflectionProperty($registry, 'widgets');
         $owned->setValue($registry, array_filter($registry->widgets(), static fn ($w) => $w['package'] !== 'letterncms/seo'));
 
-        $this->assertArrayHasKey('letterncms/seo', $this->cms()->packages()->problems());
         $this->assertTrue($this->cms()->packages()->isActive('letterncms/seo'));
-        $this->assertArrayNotHasKey('letterncms/content', $this->cms()->packages()->problems(), 'Modules are the admin itself and exempt.');
+        $seo = array_column($this->cms()->abilities()->execute('packages/list', ['type' => 'plugin'], \Cms\Abilities\AbilityContext::forUser($this->admin(), 'admin'))['items'], null, 'name')['letterncms/seo'];
+        $this->assertNull($seo['problem']);
     }
 }

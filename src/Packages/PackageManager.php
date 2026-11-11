@@ -10,7 +10,6 @@ use Composer\Semver\Semver;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Cms\Admin\AdminRegistry;
 use Cms\Foundation\Application;
 use Cms\Cms;
 use Cms\Support\Files;
@@ -136,36 +135,6 @@ final class PackageManager
         $this->resolve();
 
         return $this->inactive;
-    }
-
-    /**
-     * Active plugins that break a rule every plugin follows. They keep running —
-     * nothing is switched off or lost — but **Modules**, `cms plugins` and, in
-     * debug mode, the home screen report them.
-     *
-     * The rule: every plugin registers at least one home-screen widget
-     * (AdminRegistry::widget). Modules are exempt — they are the admin itself,
-     * and some (settings, packages) have nothing of their own to watch.
-     *
-     * @return array<string, string> name => what is wrong
-     */
-    public function problems(): array
-    {
-        // Widgets are registered while packages boot; before that, nothing can be judged.
-        if (! $this->app->isBooted()) {
-            return [];
-        }
-
-        $widgets = $this->app->make(AdminRegistry::class)->widgetsByPackage();
-        $out = [];
-
-        foreach ($this->active() as $name => $package) {
-            if (! $package->core && ! isset($widgets[$name])) {
-                $out[$name] = __('Registers no home-screen widget. Every plugin needs at least one.');
-            }
-        }
-
-        return $out;
     }
 
     /** Autoload and register every active package's provider. One that fails stays off; the rest run. */

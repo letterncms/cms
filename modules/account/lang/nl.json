@@ -1,7 +1,6 @@
 {
   "{count} Day": "{count} dag",
   "{count} Days": "{count} dagen",
-  "{count} in use": "{count} in gebruik",
   "{count} unused": "{count} ongebruikt",
   "1 Year": "1 jaar",
   "A QR code to scan, the code it shows, then the recovery codes.": "Een QR-code om te scannen, de code die hij toont, dan de herstelcodes.",
@@ -73,7 +72,6 @@
   "It is shown only once.": "Hij wordt maar één keer getoond.",
   "Keep me signed in": "Ingelogd blijven",
   "Language": "Taal",
-  "Last Sign-In": "Laatst ingelogd",
   "Last Used": "Laatst gebruikt",
   "Leave this empty": "Laat dit leeg",
   "Links": "Links",
@@ -89,7 +87,6 @@
   "New Password": "Nieuw wachtwoord",
   "New Token": "Nieuwe token",
   "No tokens yet": "Nog geen tokens",
-  "None": "Geen",
   "Now: :email": "Nu: :email",
   "Off": "Uit",
   "Offer “Keep Me Signed In”": "“Ingelogd blijven” aanbieden",
@@ -159,8 +156,6 @@
   "Turn On": "Inschakelen",
   "Two-Factor Authentication": "Tweestapsverificatie",
   "Two-factor authentication is off": "Tweestapsverificatie is uitgeschakeld",
-  "Two-Factor Sign-In": "Tweestapsverificatie",
-  "Two-factor sign-in, your API tokens and your last sign-in.": "Tweestapsverificatie, je API-tokens en je laatste aanmelding.",
   "Update My Account": "Mijn account bijwerken",
   "Use a path on this site, like /account.": "Gebruik een pad op deze site, zoals /account.",
   "Use another address": "Een ander adres gebruiken",
@@ -194,5 +189,6 @@
   "Your password is changed. Please sign in.": "Je wachtwoord is gewijzigd. Log in.",
   "Your password is not correct.": "Je wachtwoord is niet juist.",
   "Your session expired. Please try again.": "Je sessie is verlopen. Probeer het opnieuw.",
-  "Your versions of the sign-in and account pages. A page without a version here uses the standard one.": "Jouw versies van de inlog- en accountpagina’s. Een pagina zonder versie hier gebruikt de standaardpagina."
+  "Your versions of the sign-in and account pages. A page without a version here uses the standard one.": "Jouw versies van de inlog- en accountpagina’s. Een pagina zonder versie hier gebruikt de standaardpagina.",
+  "Says when two-factor authentication is off or an API token lies unused.": "Meldt wanneer tweestapsverificatie uit staat of een API-token ongebruikt blijft."
 }

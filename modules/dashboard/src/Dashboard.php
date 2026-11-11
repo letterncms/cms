@@ -63,11 +63,6 @@ final class Dashboard extends Arranged
         $sections = array_map(static fn ($column) => [...$column, 'items' => $visible($column['items'])], $layout['sections']);
         $home = ['layout' => ['sections' => $sections, 'hidden' => $visible($layout['hidden'])], 'personal' => $personal !== null];
 
-        // Plugins that break the rules are hard to miss while developing them.
-        if (config('app.debug') && $user->hasPermission('packages.manage')) {
-            $home['problems'] = (object) $this->cms->packages()->problems();
-        }
-
         return [
             'widgets' => $this->cms->admin()->widgetCatalog($user),
             'dashboard' => array_map(static fn ($column) => [...$column, 'items' => array_values(array_filter($column['items'], static fn ($id) => ! isset($hidden[$id])))], $sections),

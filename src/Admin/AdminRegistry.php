@@ -128,8 +128,8 @@ final class AdminRegistry
      * A home-screen widget; its component is registered in the admin module under the same id
      * (`registry.widgets.set(id, Component)`), or it is drawn from a `view`: a tree of catalog
      * components like any place's (see Views), built for whoever looks, with no admin build.
-     * `action` is the link in its header ("All Orders"), its label in English like the widget's. Every plugin registers at least one (see
-     * PackageManager::problems()). The gallery shows label, icon and description; `enabled`
+     * `action` is the link in its header ("All Orders"), its label in English like the widget's. A plugin registers one when it has
+     * something worth a glance, and none otherwise. The gallery shows label, icon and description; `enabled`
      * puts it on everyone's home screen until they rearrange it — keep that for the few
      * widgets nearly everyone wants.
      *
@@ -206,18 +206,6 @@ final class AdminRegistry
             static fn ($c) => array_diff_key($c, ['permission' => true]),
             array_filter($this->components, static fn ($c) => $c['permission'] === null || $user->hasPermission($c['permission'])),
         ));
-    }
-
-    /** @return array<string, list<string>> package => the ids of the widgets it registered */
-    public function widgetsByPackage(): array
-    {
-        $out = [];
-
-        foreach ($this->widgets as $id => $widget) {
-            $out[(string) $widget['package']][] = $id;
-        }
-
-        return $out;
     }
 
     /**

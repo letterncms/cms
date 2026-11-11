@@ -33,7 +33,7 @@ final class EmailModule extends Plugin
         ]));
         // Someone's erased account takes their row in the log with it.
         $this->cms()->hooks()->on('account.deleting', static fn ($user) => DB::table('email_log')->where('to', $user->email)->delete());
-        $this->cms()->admin()->widget('email-status', ['label' => 'Email', 'description' => 'How email is sent, whether it arrives, and the latest messages.', 'icon' => 'mail', 'column' => 'side', 'order' => 60, 'permission' => 'settings.manage']);
+        $this->cms()->admin()->widget('email-status', ['label' => 'Email', 'description' => 'Whether email arrives, and the latest messages.', 'icon' => 'mail', 'column' => 'side', 'order' => 60, 'permission' => 'settings.manage']);
         $this->adminModule();
     }
 
