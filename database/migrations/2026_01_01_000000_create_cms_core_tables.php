@@ -30,7 +30,33 @@ return new class extends Migration
             $table->timestamp('two_factor_confirmed_at')->nullable();
             $table->rememberToken();
             $table->timestamp('last_login_at')->nullable();
+            // A visitor is a user with no admin access: whether the account is active, and its address confirmed.
+            $table->string('status', 16)->default('active')->index();
+            $table->timestamp('email_verified_at')->nullable();
             $table->timestamps();
+        });
+
+        // What a visitor's account holds, and the links mailed to them.
+        Schema::create('account_grants', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->string('access', 120)->index();
+            $table->string('source', 120)->default('');
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+            $table->unique(['user_id', 'access', 'source']);
+        });
+
+        Schema::create('account_tokens', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('user_id')->nullable()->constrained('users')->cascadeOnDelete();
+            $table->string('email', 254)->index();
+            $table->string('type', 24);
+            $table->char('hash', 64)->unique();
+            $table->json('payload')->nullable();
+            $table->timestamp('expires_at')->index();
+            $table->timestamp('used_at')->nullable();
+            $table->timestamp('created_at')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -113,7 +139,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        foreach (['sessions', 'cache_locks', 'cache', 'revisions', 'entries', 'api_tokens', 'password_reset_tokens', 'users', 'packages'] as $table) {
+        foreach (['sessions', 'cache_locks', 'cache', 'revisions', 'entries', 'api_tokens', 'password_reset_tokens', 'account_tokens', 'account_grants', 'users', 'packages'] as $table) {
             Schema::dropIfExists($table);
         }
     }

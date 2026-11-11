@@ -60,11 +60,17 @@ final class ValidatorTest extends TestCase
     {
         $schema = fn (bool $required) => (new Url)->schema(Field::fromArray(['handle' => 'link', 'type' => 'url', 'reference' => true, 'required' => $required]));
 
-        foreach (['', '/about', 'entry:01m5wn#intro', 'https://example.com', 'mailto:a@b.co', null] as $link) {
+        foreach (['/about', 'entry:01m5wn#intro', 'https://example.com', 'mailto:a@b.co', null] as $link) {
             $this->assertSame($link, Validator::validate($link, $schema(false)));
         }
 
-        foreach ([['about', false], ['javascript:alert(1)', false], ['', true]] as [$link, $required]) {
+        // A cleared link is stored as nothing, so the schema never sees an empty string.
+        $field = Field::fromArray(['handle' => 'link', 'type' => 'url', 'reference' => true]);
+        $this->assertNull((new Url)->normalize('', $field));
+        $this->assertNull((new Url)->normalize('  ', $field));
+        $this->assertSame('/about', (new Url)->normalize(' /about ', $field));
+
+        foreach ([['about', false], ['javascript:alert(1)', false], ['', false], ['', true]] as [$link, $required]) {
             try {
                 Validator::validate($link, $schema($required));
                 $this->fail("Expected '{$link}' to be rejected");

@@ -14,14 +14,17 @@ use Throwable;
 
 /**
  * JSON-RPC handler for MCP. Stateless: every request is authorized and served
- * on its own. Speaks the modern revision (per-request _meta, server/discover)
- * and answers legacy `initialize` clients.
+ * on its own. Speaks two revisions: the stateless one, where every request
+ * names its version (`_meta`, or the MCP-Protocol-Version header) and
+ * `server/discover` says what is spoken, and the last one that opens with the
+ * `initialize` handshake, whose requests then carry no version of their own.
  */
 final class Server
 {
     public const string MODERN = '2026-07-28';
 
-    public const array LEGACY = ['2025-11-25', '2025-06-18', '2025-03-26'];
+    /** The revision of clients that start with `initialize`. */
+    public const string HANDSHAKE = '2025-11-25';
 
     private const string META_VERSION = 'io.modelcontextprotocol/protocolVersion';
 
@@ -30,7 +33,7 @@ final class Server
     /** @return array<int, string> */
     public function versions(): array
     {
-        return [self::MODERN, ...self::LEGACY];
+        return [self::MODERN, self::HANDSHAKE];
     }
 
     /**
@@ -54,9 +57,11 @@ final class Server
         }
 
         $version = (string) ($params['_meta'][self::META_VERSION] ?? $headerVersion ?? '');
-        $modern = $version !== '' && ! in_array($method, ['initialize', 'ping'], true);
+        // `initialize` negotiates its own version and a ping has none. A request without one comes from a client
+        // that did the handshake; one that names a version names one that is spoken.
+        $versioned = $version !== '' && ! in_array($method, ['initialize', 'ping'], true);
 
-        if ($modern && ! in_array($version, $this->versions(), true)) {
+        if ($versioned && ! in_array($version, $this->versions(), true)) {
             return $this->error($id, -32022, 'Unsupported protocol version', ['supported' => $this->versions(), 'requested' => $version]);
         }
 
@@ -82,7 +87,8 @@ final class Server
             return $this->error($id, -32603, 'Internal error.');
         }
 
-        if ($modern || $method === 'server/discover') {
+        // What only the stateless revision's results carry.
+        if (($versioned && $version === self::MODERN) || $method === 'server/discover') {
             $result['resultType'] ??= 'complete';
             $result['_meta'] = [...(array) ($result['_meta'] ?? []), 'io.modelcontextprotocol/serverInfo' => $this->serverInfo()];
         }
@@ -97,10 +103,10 @@ final class Server
 
     private function initialize(array $params): array
     {
-        $requested = (string) ($params['protocolVersion'] ?? '');
-
+        // Whatever the client asks for, the handshake is answered with the one revision that has it: a client
+        // that cannot speak it disconnects, as the protocol's negotiation has it.
         return [
-            'protocolVersion' => in_array($requested, self::LEGACY, true) ? $requested : self::LEGACY[0],
+            'protocolVersion' => self::HANDSHAKE,
             'capabilities' => $this->capabilities(),
             'serverInfo' => $this->serverInfo(),
             'instructions' => $this->instructions(),
