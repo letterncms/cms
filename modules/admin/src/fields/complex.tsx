@@ -1,4 +1,5 @@
 import { PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { Pressable } from '../ui/Pressable'
 import { DndContext } from '../ui/dnd'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -21,13 +22,13 @@ export function TagsField({ field, value, onChange, disabled }: FieldProps<strin
     } else if (e.key === 'Backspace' && draft === '' && tags.length) onChange(tags.slice(0, -1))
   }
   return (
-    <div className="cms-input flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1 focus-within:border-focus focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cms-focus)_18%,transparent)]">
+    <div className="cms-input flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1 focus-within:border-focus focus-within:shadow-focus">
       {tags.map((tag) => (
         <span key={tag} className="inline-flex h-5 items-center gap-1 rounded-xs bg-active pl-1.5 pr-0.5 text-xs font-medium text-text">
           {tag}
-          <button type="button" disabled={disabled} onClick={() => onChange(tags.filter((x) => x !== tag))} className="grid size-4 place-items-center rounded-xs text-faint hover:bg-active hover:text-text" aria-label={t('Remove {tag}', { tag })}>
+          <Pressable compact disabled={disabled} onClick={() => onChange(tags.filter((x) => x !== tag))} className="grid size-4 place-items-center rounded-xs text-faint hover:bg-active hover:text-text" aria-label={t('Remove {tag}', { tag })}>
             <Icon name="close" size={10} />
-          </button>
+          </Pressable>
         </span>
       ))}
       <input
@@ -47,12 +48,12 @@ export function TagsField({ field, value, onChange, disabled }: FieldProps<strin
 function SortableItem({ id, children, disabled }: { disabled?: boolean; id: string; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled })
   const handle = (
-    <button type="button" disabled={disabled} {...attributes} {...listeners} className="grid size-6 shrink-0 cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent" aria-label={t('Drag to Reorder')}>
+    <Pressable disabled={disabled} {...attributes} {...listeners} className="grid size-6 shrink-0 cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-text active:cursor-grabbing disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent" aria-label={t('Drag to Reorder')}>
       <Icon name="drag" size={14} />
-    </button>
+    </Pressable>
   )
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-10 opacity-80')}>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-drag opacity-80')}>
       {children(handle)}
     </div>
   )
@@ -121,17 +122,16 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
           onOpenChange={setOpen}
           className="w-80"
           trigger={
-            <button type="button" disabled={disabled} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
+            <Pressable disabled={disabled} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
               <Icon name="plus" size={14} /> {t('Link Entry')}
-            </button>
+            </Pressable>
           }
         >
           <Input icon="search" size="sm" placeholder={t('Search')} value={query} onChange={(e) => setQuery(e.target.value)} className="mb-1" />
           {(results.isFetching || recent.isFetching) && <div className="flex justify-center py-3 text-faint"><Spinner /></div>}
           {options.map((e) => (
-            <button
+            <Pressable compact
               key={e.id}
-              type="button"
               onClick={() => {
                 onChange([...ids, e.id])
                 if (ids.length + 1 >= max) setOpen(false)
@@ -140,7 +140,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
             >
               <span className="min-w-0 flex-1 truncate">{e.title}</span>
               <span className="text-xs text-faint">{e.collection}</span>
-            </button>
+            </Pressable>
           ))}
           {!results.isFetching && !recent.isFetching && options.length === 0 && <div className="px-2 py-3 text-center text-xs text-faint">{query ? t('No matches') : t('Type to search')}</div>}
         </Popover>
@@ -191,10 +191,10 @@ export function RepeaterField({ field, value, onChange, disabled, context }: Fie
           <div className="rounded-lg border border-border bg-bg">
             <div className="flex h-9 items-center gap-1 pl-1 pr-1.5">
               {handle}
-              <button type="button" onClick={() => setCollapsed((c) => ({ ...c, [key]: !c[key] }))} className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm font-medium">
+              <Pressable onClick={() => setCollapsed((c) => ({ ...c, [key]: !c[key] }))} className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm font-medium">
                 <Icon name={collapsed[key] ? 'chevron-right' : 'chevron-down'} size={12} className="text-faint" />
                 <span className="truncate">{titleOf(item, i)}</span>
-              </button>
+              </Pressable>
               <IconButton
                 icon="trash"
                 label={t('Remove')}
@@ -215,9 +215,9 @@ export function RepeaterField({ field, value, onChange, disabled, context }: Fie
         )}
       />
       {items.length < max && (
-        <button type="button" disabled={disabled} onClick={() => onChange([...items, {}])} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
+        <Pressable disabled={disabled} onClick={() => onChange([...items, {}])} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
           <Icon name="plus" size={14} /> {t('Add Item')}
-        </button>
+        </Pressable>
       )}
     </div>
   )
@@ -233,9 +233,9 @@ function RepeaterTable({ field, items, onChange, disabled, context, max, fields 
   return (
     <div className="space-y-2">
       {items.length < max && (
-        <button type="button" disabled={disabled} onClick={() => onChange([blank(), ...items])} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
+        <Pressable disabled={disabled} onClick={() => onChange([blank(), ...items])} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
           <Icon name="plus" size={14} /> {(field.add as string) || t('Add Item')}
-        </button>
+        </Pressable>
       )}
       {items.length === 0 && typeof field.empty === 'string' && <p className="m-0 py-2 text-sm text-muted">{field.empty}</p>}
       {items.length > 0 && (

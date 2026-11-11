@@ -1,4 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
+import { Pressable } from '../ui/Pressable'
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { cn } from '../ui/cn'
 import { fieldControlId } from '../ui/fieldIdentity'
@@ -38,7 +39,7 @@ function EaseCurve({ curve, size, className }: { curve: Bezier; size: number; cl
   const pad = size / 8
   const p = (x: number, y: number) => `${pad + x * (size - 2 * pad)},${size - pad - y * (size - 2 * pad)}`
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={cn('shrink-0 overflow-visible rounded-[3px] bg-sunken', className)} aria-hidden>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={cn('shrink-0 overflow-visible rounded-xs bg-sunken', className)} aria-hidden>
       <path d={`M${p(0, 0)} C${p(x1, y1)} ${p(x2, y2)} ${p(1, 1)}`} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
     </svg>
   )
@@ -74,8 +75,7 @@ export function EaseField({ field, value, onChange, disabled }: FieldProps<strin
       align="end"
       className="w-[248px] !p-0"
       trigger={
-        <button
-          type="button"
+        <Pressable
           id={fieldControlId(field)}
           disabled={disabled}
           aria-label={field.label}
@@ -85,16 +85,15 @@ export function EaseField({ field, value, onChange, disabled }: FieldProps<strin
           <EaseCurve curve={shown} size={20} className="text-focus" />
           <span className={cn('min-w-0 flex-1 truncate', !current && 'text-muted')}>{label}</span>
           <Icon name="chevron-down" size={12} className="shrink-0 text-faint" />
-        </button>
+        </Pressable>
       }
     >
       <div className="grid grid-cols-3 gap-1 p-1.5">
         {listed.map((option) => {
           const chosen = same(current, option.value)
           return (
-            <button
+            <Pressable
               key={option.value}
-              type="button"
               onClick={() => {
                 onChange(option.value)
                 setOpen(false)
@@ -103,7 +102,7 @@ export function EaseField({ field, value, onChange, disabled }: FieldProps<strin
             >
               <EaseCurve curve={curveOf(option.value) ?? NAMED.ease} size={36} className={chosen ? 'text-focus' : 'text-text'} />
               <span className="w-full truncate text-center">{option.label}</span>
-            </button>
+            </Pressable>
           )
         })}
       </div>

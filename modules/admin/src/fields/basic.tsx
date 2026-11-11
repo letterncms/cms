@@ -1,7 +1,8 @@
 import { fieldControlId } from '../ui/fieldIdentity'
+import { Pressable } from '../ui/Pressable'
 import { t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Checkbox, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
+import { Checkbox, ColorInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
 import type { SelectAction } from '../ui/Select'
 import { slugify } from '../ui/slugify'
 import { formatDateTimeInZone, parseDateTimeInZone } from '../ui/dateTime'
@@ -79,7 +80,7 @@ export function MarkdownField({ field, value, onChange, error, disabled }: Field
       invalid={!!error}
       disabled={disabled}
       placeholder={t('Write in Markdown…')}
-      className="font-mono text-[13px] leading-[22px]"
+      className="font-mono text-sm leading-[22px]"
     />
   )
 }
@@ -179,7 +180,7 @@ function ToggleLabel({ field }: { field: FieldProps['field'] }) {
   if (status === 'own' && reset) {
     return (
       <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
-        <button type="button" onClick={reset} className={cn(className, 'text-left decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{field.label}</button>
+        <Pressable compact onClick={reset} className={cn(className, 'text-left decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{field.label}</Pressable>
       </Tooltip>
     )
   }
@@ -206,16 +207,17 @@ export function SelectField({ field, value, onChange, error, disabled }: FieldPr
         {opts.map((o) => {
           const on = selected.includes(o.value)
           return (
-            <button
+            <Pressable
               key={o.value}
-              type="button"
               disabled={disabled}
               onClick={() => onChange(on ? selected.filter((v) => v !== o.value) : [...selected, o.value])}
               aria-pressed={on}
-              className={cn('h-7 rounded-sm px-2.5 text-sm font-medium transition-[background-color,box-shadow,color] duration-120 ease-out disabled:opacity-45', on ? 'bg-ink text-ink-contrast' : 'bg-float text-text shadow-[0_0_0_1px_var(--cms-border-strong),var(--cms-shadow-raise)] hover:bg-sunken')}
+              // 44px under a finger by itself, so its touch area never lies over the chip beside it.
+              compact
+              className={cn('h-7 rounded-sm [@media(pointer:coarse)]:h-11 px-2.5 text-sm font-medium transition-[background-color,box-shadow,color] duration-base ease-out disabled:opacity-45', on ? 'bg-ink text-ink-contrast' : 'bg-float text-text shadow-raise ring-1 ring-border-strong hover:bg-float-hover')}
             >
               {o.label}
-            </button>
+            </Pressable>
           )
         })}
       </div>
@@ -317,9 +319,9 @@ export function SlugField({ field, value, onChange, error, disabled, context }: 
       className="font-mono"
       suffix={
         title && (
-          <button type="button" className={cn('rounded-xs px-1.5 hover:bg-hover hover:text-text', field.size === 'xs' || field.size === 'sm' ? 'py-0' : 'py-0.5')} onClick={() => onChange(slugify(title))}>
+          <Pressable className={cn('rounded-xs px-1.5 hover:bg-hover hover:text-text', field.size === 'xs' || field.size === 'sm' ? 'py-0' : 'py-0.5')} onClick={() => onChange(slugify(title))}>
             {t('From Title')}
-          </button>
+          </Pressable>
         )
       }
     />
@@ -337,18 +339,7 @@ export function EmailField({ field, value, onChange, error, disabled }: FieldPro
 }
 
 export function ColorField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
-  const hex = value && value.startsWith('#') ? value : '#000000'
-  // Any CSS color shows as itself; token references and empty values show a checkerboard.
-  const swatch = value && typeof CSS !== 'undefined' && CSS.supports('color', value) ? value : 'repeating-conic-gradient(var(--cms-sunken) 0 25%, var(--cms-bg) 0 50%) 0 0/8px 8px'
-  const small = field.size === 'sm' || field.size === 'xs'
-  return (
-    <div className={cn('flex items-center gap-2', !small && 'max-w-60')}>
-      <label className={cn('relative shrink-0 overflow-hidden border border-border-strong', small ? 'size-7 rounded-sm' : 'size-8 rounded-md')} style={{ background: swatch }}>
-        <input type="color" value={hex} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="absolute inset-0 cursor-pointer opacity-0" aria-label={t('Pick a Color')} />
-      </label>
-      <Input {...inputProps(field)} value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} placeholder={(field.placeholder as string) || '#ff5a1f'} invalid={!!error} disabled={disabled} className="font-mono" />
-    </div>
-  )
+  return <ColorInput {...inputProps(field)} value={value} onChange={onChange} invalid={!!error} disabled={disabled} />
 }
 
 export function JsonField({ field, value, onChange, error, disabled }: FieldProps<unknown>) {

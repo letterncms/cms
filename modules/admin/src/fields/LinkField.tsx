@@ -1,4 +1,5 @@
 import { fieldControlId } from '../ui/fieldIdentity'
+import { Pressable } from '../ui/Pressable'
 import { can, t, useAbility, useManifest, type EntrySummary, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon, Popover, Spinner, Switch, cn } from '../ui'
@@ -39,8 +40,7 @@ export function LinkField({ field, value, onChange, disabled }: FieldProps<strin
         align="start"
         className="w-[320px] !p-0"
         trigger={
-          <button
-            type="button"
+          <Pressable
             id={fieldControlId(field)}
             disabled={disabled}
             aria-label={field.label || t('Link')}
@@ -52,20 +52,19 @@ export function LinkField({ field, value, onChange, disabled }: FieldProps<strin
           >
             <Chip link={link} xs={xs} anchors={anchorsOf(field)} placeholder={(field.placeholder as string) || t('Add Link')} />
             {newTab && link.kind !== 'none' && <Icon name="external" size={xs ? 10 : 12} className="shrink-0 text-faint" aria-label={t('Opens in New Tab')} />}
-          </button>
+          </Pressable>
         }
       >
         <Picker field={field} value={value ?? ''} onPick={(v) => { onChange(v); setOpen(false) }} newTab={newTab} onNewTab={onNewTab} onClear={value ? () => { onChange(null); setOpen(false) } : undefined} />
       </Popover>
       {link.kind !== 'none' && !disabled && (
-        <button
-          type="button"
+        <Pressable compact
           onClick={() => onChange(null)}
           aria-label={t('Remove Link')}
           className={cn('absolute top-1/2 grid -translate-y-1/2 place-items-center rounded-xs text-faint opacity-0 transition-opacity hover:bg-hover hover:text-text focus-visible:opacity-100 group-hover/link:opacity-100', xs ? 'right-0.5 size-5' : 'right-1 size-6')}
         >
           <Icon name="close" size={xs ? 10 : 12} />
-        </button>
+        </Pressable>
       )}
     </div>
   )
@@ -265,8 +264,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
           return (
             <div key={o.key}>
               {heading && <div className="cms-label px-2 pb-1 pt-2">{heading}</div>}
-              <button
-                type="button"
+              <Pressable compact
                 role="option"
                 data-index={i}
                 aria-selected={i === index}
@@ -279,7 +277,7 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
                 <span className={cn('min-w-0 flex-1 truncate', o.invalid && 'text-muted')}>{o.label}</span>
                 {o.detail && <span className={cn('max-w-[45%] shrink-0 truncate text-xs', o.invalid ? 'text-warning' : 'text-faint')}>{o.detail}</span>}
                 {o.active && <Icon name="check" size={12} className="shrink-0 text-text" />}
-              </button>
+              </Pressable>
             </div>
           )
         })}
@@ -292,9 +290,9 @@ function Picker({ field, value, onPick, newTab, onNewTab, onClear }: { field: Fi
           {onNewTab && <Switch size="sm" checked={newTab} onChange={onNewTab} label={<span className="text-xs text-text">{t('Open in New Tab')}</span>} />}
           <span className="flex-1" />
           {onClear && (
-            <button type="button" onClick={onClear} className="flex h-6 items-center gap-1 rounded-xs px-1.5 text-xs text-muted hover:bg-hover hover:text-danger">
+            <Pressable onClick={onClear} className="flex h-6 items-center gap-1 rounded-xs px-1.5 text-xs text-muted hover:bg-hover hover:text-danger">
               <Icon name="unlink" size={12} /> {t('Remove Link')}
-            </button>
+            </Pressable>
           )}
         </div>
       )}

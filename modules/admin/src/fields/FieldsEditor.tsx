@@ -178,7 +178,7 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
 function Sortable({ id, children }: { id: string; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-10')}>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn(isDragging && 'relative z-drag')}>
       {children(
         <IconButton icon="drag" size="xs" label={t('Drag to Reorder')} className="cursor-grab text-faint active:cursor-grabbing" {...attributes} {...listeners} />,
       )}
