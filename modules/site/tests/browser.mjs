@@ -96,10 +96,12 @@ function equal(actual, expected, what) {
 }
 
 const checks = {
-  /** A block's script and stylesheet load, and the script's import of another script follows the import map. */
+  /** A block's script and stylesheet load; the script imports another script by path and a vendored library by name. */
   async code() {
     const tab = await open('/code')
     equal(await tab.until('document.documentElement.dataset.hero'), 'eased', 'the script ran with what it imported')
+    equal(await tab.evaluate('document.documentElement.dataset.vendor'), 'tiny', 'a library is imported by its name')
+    equal(requests.some((path) => path === '/_cms/site/vendor/tiny@1.0.0/index.js'), true, 'from the site itself')
     equal(await tab.evaluate('getComputedStyle(document.querySelector(".hero")).outlineColor'), 'rgb(1, 2, 3)', 'the stylesheet applies')
     equal(requests.filter((path) => /\/scripts\/lib\/ease(-[0-9a-f]{10})?\.js$/.test(path)).every((path) => /-[0-9a-f]{10}\.js$/.test(path)), true, 'the import asked for the published file')
     equal(tab.errors, [], 'no errors')
