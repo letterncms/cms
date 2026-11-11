@@ -172,7 +172,8 @@ final class ExpiryTest extends TestCase
         $get = fn (string $handle) => $this->cms()->abilities()->execute('views/get', ['id' => 'content', 'params' => ['collection' => $handle]], AbilityContext::forUser($this->admin(), 'admin'));
         $records = $get('posts')['root']['children'][0]['props'];
         $ends = array_column($records['columns'], null, 'key')['expiresAt'];
-        $this->assertSame(['Ends', 'date', true, 'expires_at'], [$ends['label'], $ends['format'], $ends['hidden'], $ends['sort']]);
+        // Written as the dates beside it: short, and marked while it is still to come.
+        $this->assertSame(['Ends', 'field', ['type' => 'date'], '—', true, 'expires_at'], [$ends['label'], $ends['format'], $ends['field'], $ends['empty'], $ends['hidden'], $ends['sort']]);
 
         // Published means on the site or about to be: what ran out has a filter of its own, and can be published again from its row.
         $this->assertSame(['any', 'active', 'draft', 'expired'], array_column($records['filters'][0]['options'], 'value'));

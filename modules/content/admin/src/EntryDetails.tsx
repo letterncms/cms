@@ -243,10 +243,10 @@ export function PublicationDialog({ entry, changes, busy, onClose, onPublish }: 
     >
       <Fields
         fields={[{
-          handle: 'at', type: 'date', time: true, timezone: manifest.site.timezone, zone: false,
+          // Each says the site's zone under it: both are read on the site's clock.
+          handle: 'at', type: 'date', time: true, timezone: manifest.site.timezone,
           label: t('Starts'), required: true,
         }, {
-          // The zone is said once, under the last of the two.
           handle: 'ends', type: 'date', time: true, timezone: manifest.site.timezone, label: t('Ends'),
         }]}
         values={{ at, ends }}

@@ -101,7 +101,7 @@ final class OpenApi
                 ],
                 'responses' => [
                     'Error' => [self::ABOUT => 'The call failed: 401 unauthenticated, 403 forbidden, 404 not_found, 409 conflict, 422 invalid_input, 429 rate_limited, 500 failed.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Error']]]],
-                    'NotFound' => [self::ABOUT => 'No such collection in the content API, or no published entry with that slug.', 'content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['message' => ['type' => 'string']], 'required' => ['message']]]]],
+                    'NotFound' => [self::ABOUT => 'No such collection in the content API, or no entry on the site with that slug: a draft, a scheduled entry and one whose end date has passed are not given.', 'content' => ['application/json' => ['schema' => ['type' => 'object', 'properties' => ['message' => ['type' => 'string']], 'required' => ['message']]]]],
                 ],
             ],
         ];
@@ -141,14 +141,14 @@ final class OpenApi
         $locale = ['name' => 'locale', 'in' => 'query', 'required' => false, self::ABOUT => 'One of the site\'s languages; any other value is read as the default language.', 'schema' => ['type' => 'string']];
         $entry = ['$ref' => '#/components/schemas/Entry'];
         $fields = ['name' => 'fields', 'in' => 'query', 'required' => false, self::ABOUT => 'Only these of each entry, separated by commas: id (always given), collection, locale, title, slug, uri, parentId, publishedAt, updatedAt, data (all fields) or fields of the collection by handle, which come under `data`.', 'schema' => ['type' => 'string']];
-        $expand = ['name' => 'expand', 'in' => 'query', 'required' => false, self::ABOUT => 'Relation fields to give as entries instead of ids, separated by commas, at most two levels deep: author,related.author; a relation in a group is group.field. One answer expands at most 200 entries and answers 422 beyond that. Only published entries this request may read, of collections the API serves, are given; the others are left out.', 'schema' => ['type' => 'string']];
+        $expand = ['name' => 'expand', 'in' => 'query', 'required' => false, self::ABOUT => 'Relation fields to give as entries instead of ids, separated by commas, at most two levels deep: author,related.author; a relation in a group is group.field. One answer expands at most 200 entries and answers 422 beyond that. Only entries on the site that this request may read, of collections the API serves, are given; drafts, scheduled and expired entries and the others are left out.', 'schema' => ['type' => 'string']];
         $missing = ['$ref' => '#/components/responses/NotFound'];
 
         return [
             '/content/{collection}' => ['get' => [
                 'operationId' => 'content.list',
                 'summary' => 'List Published Entries',
-                self::ABOUT => 'One page of a collection\'s published entries. Answers may be cached for a minute.',
+                self::ABOUT => 'One page of a collection\'s entries that are on the site: published, their publication date come and their end date not passed. Answers may be cached for a minute.',
                 'tags' => ['content'],
                 'security' => [],
                 'parameters' => [
@@ -156,10 +156,10 @@ final class OpenApi
                     $locale,
                     ['name' => 'q', 'in' => 'query', 'required' => false, self::ABOUT => 'Words to search for.', 'schema' => ['type' => 'string']],
                     ['name' => 'sort', 'in' => 'query', 'required' => false, self::ABOUT => 'Fields to order by, separated by commas, each with a leading - for descending: -publishedAt,title. One of id, title, slug, uri, parentId, publishedAt, updatedAt, position, or a field of the collection. Without it, the collection\'s own order.', 'schema' => ['type' => 'string']],
-                    ['name' => 'filter', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries whose field matches. filter[category]=news is "equals"; filter[field][operator]=value compares with ne, lt, lte, gt, gte, in (values separated by commas), contains (a list has the value, a text has it in it; any other kind of field answers 422) or exists (true or false). A field that is missing or empty equals only nothing (filter[field]=), is unequal to every value and is neither less nor more than any. Fields are id, title, slug, uri, parentId, publishedAt, updatedAt, position, a field of the collection, or what is inside one after a dot (place.address). A relation or terms field takes the id or the slug of what it names: filter[topics]=news. An unknown field or operator answers 422.', 'style' => 'deepObject', 'explode' => true, 'schema' => ['type' => 'object', 'additionalProperties' => ['oneOf' => [['type' => 'string'], ['type' => 'object', 'properties' => array_fill_keys(['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in', 'contains', 'exists'], ['type' => 'string']), 'additionalProperties' => false]]]]],
+                    ['name' => 'filter', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries whose field matches. filter[category]=news is "equals"; filter[field][operator]=value compares with ne, lt, lte, gt, gte, in (values separated by commas), contains (a list has the value, a text has it in it; any other kind of field answers 422) or exists (true or false). A field that is missing or empty equals only nothing (filter[field]=), is unequal to every value and is neither less nor more than any. Fields are id, title, slug, uri, parentId, publishedAt, updatedAt, position, a field of the collection, or what is inside one after a dot (place.address). A relation or terms field takes the id or the slug of what it names: filter[topics]=news, which is what the archive of that term lists for this collection. An unknown field or operator answers 422.', 'style' => 'deepObject', 'explode' => true, 'schema' => ['type' => 'object', 'additionalProperties' => ['oneOf' => [['type' => 'string'], ['type' => 'object', 'properties' => array_fill_keys(['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in', 'contains', 'exists'], ['type' => 'string']), 'additionalProperties' => false]]]]],
                     $fields,
                     $expand,
-                    ['name' => 'references', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries that name the published entry with this id: in a relation or terms field at any depth, a link field or a link in a block. The posts of an author, the projects of a client.', 'schema' => ['type' => 'string']],
+                    ['name' => 'references', 'in' => 'query', 'required' => false, self::ABOUT => 'Only entries that name the entry on the site with this id: in a relation or terms field at any depth, a link field or a link in a block. The posts of an author, the projects of a client.', 'schema' => ['type' => 'string']],
                     ['name' => 'references_field', 'in' => 'query', 'required' => false, self::ABOUT => 'With references: only inside this field.', 'schema' => ['type' => 'string']],
                     ['name' => 'limit', 'in' => 'query', 'required' => false, self::ABOUT => 'Entries per page. Without it, the collection\'s own page size.', 'schema' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200]],
                     ['name' => 'page', 'in' => 'query', 'required' => false, self::ABOUT => 'A page past the last one answers 422.', 'schema' => ['type' => 'integer', 'minimum' => 1, 'default' => 1]],
@@ -177,7 +177,7 @@ final class OpenApi
             '/content/{collection}/{slug}' => ['get' => [
                 'operationId' => 'content.get',
                 'summary' => 'Get a Published Entry',
-                self::ABOUT => 'One published entry by its slug. Answers may be cached for a minute.',
+                self::ABOUT => 'One entry that is on the site (published, its publication date come and its end date not passed) by its slug. Answers may be cached for a minute.',
                 'tags' => ['content'],
                 'security' => [],
                 'parameters' => [$collection, ['name' => 'slug', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'string']], $locale, $fields, $expand],

@@ -276,6 +276,45 @@ final class ContentGateTest extends TestCase
         $this->assertFileDoesNotExist(public_path('news/topics/tides/index.html'));
     }
 
+    public function test_a_locked_entry_is_nobodys_neighbour_but_a_members(): void
+    {
+        cms()->entryService()->create('templates', ['title' => 'News', 'slug' => 'news', 'status' => 'published', 'data' => ['blocks' => [
+            ['type' => 'outlet'],
+            ['type' => 'repeat', 'props' => ['source' => 'neighbors', 'tag' => 'nav'], 'children' => [['type' => 'link', 'bind' => ['label' => 'item.title', 'url' => 'item.url']]]],
+        ]]]);
+        app(\Cms\Modules\Blocks\Templates::class)->flush();
+        $at = static fn (int $day) => ['status' => 'published', 'at' => "2026-10-0{$day}T10:00:00+00:00"];
+        $first = cms()->entryService()->create('news', ['title' => 'First News', ...$at(1)]);
+        cms()->entryService()->create('news', ['title' => 'Locked News', 'data' => ['gate' => ['mode' => 'locked']], ...$at(2)]);
+        cms()->entryService()->create('news', ['title' => 'Teased News', 'data' => ['gate' => ['mode' => 'teaser'], 'blocks' => [['type' => 'paragraph', 'props' => ['text' => 'withheld-news-body']]]], ...$at(3)]);
+        $last = cms()->entryService()->create('news', ['title' => 'Last News', ...$at(4)]);
+        $links = function (Entry $entry): array {
+            \Cms\Modules\Site\Rendering\AugmentedEntry::flush();
+            preg_match_all('#<a class="cms-link" href="[^"]+">([^<]+)</a>#', $this->get($entry->uri)->assertOk()->getContent(), $m);
+
+            return $m[1];
+        };
+
+        // A stranger steps over the locked entry; a teaser is on the site, so it is a neighbour, by its title alone.
+        $this->assertSame(['Teased News'], $links($first));
+        $this->assertSame(['Teased News'], $links($last));
+        $this->assertStringNotContainsString('withheld-news-body', $this->get($first->uri)->getContent());
+
+        // A member's pages have it between the two.
+        $this->as($this->member());
+        $this->assertSame(['Locked News'], $links($first));
+        $this->as(null);
+
+        // As files, which everyone gets: stepped over.
+        cms()->settingsRegistry()->save('site', ['static' => true]);
+        \Cms\Modules\Site\Rendering\AugmentedEntry::flush();
+        $this->assertSame([], app(\Cms\Modules\Site\Build\SiteBuilder::class)->buildAll()['errors']);
+        $built = (string) file_get_contents(public_path('news/first-news/index.html'));
+        $this->assertStringContainsString('Teased News', $built);
+        $this->assertStringNotContainsString('Locked News', $built);
+        $this->assertFileDoesNotExist(public_path('news/locked-news/index.html'));
+    }
+
     public function test_a_gated_entry_never_becomes_a_file_and_stops_being_one(): void
     {
         cms()->settingsRegistry()->save('site', ['static' => true]);

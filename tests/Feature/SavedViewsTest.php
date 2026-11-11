@@ -114,6 +114,20 @@ final class SavedViewsTest extends TestCase
         $this->assertSame([[], null, null, 'table', 'published'], [(array) $odd['state']['query'], $odd['state']['sort'], $odd['state']['columns'], $odd['state']['view'], $odd['state']['calendarDate']]);
     }
 
+    public function test_a_view_kept_as_published_before_entries_could_end_is_the_published_filter_of_today(): void
+    {
+        $ada = $this->admin();
+        $view = $this->as($ada, 'saved-views/create', ['list' => 'entries.pages', 'name' => 'Live', 'state' => ['query' => ['status' => 'active']]]);
+
+        // As it was stored then.
+        $ada = $ada->fresh();
+        $ada->preferences = [...$ada->preferences, 'views' => array_map(static fn (array $v) => [...$v, 'state' => [...$v['state'], 'query' => ['status' => 'published']]], $ada->preferences['views'])];
+        $ada->save();
+
+        $listed = $this->as($ada, 'saved-views/list', ['list' => 'entries.pages'])[0];
+        $this->assertSame([$view['id'], ['status' => 'active']], [$listed['id'], (array) $listed['state']['query']]);
+    }
+
     public function test_views_are_written_by_their_abilities_only_and_lose_nothing_else(): void
     {
         $ada = $this->admin();
