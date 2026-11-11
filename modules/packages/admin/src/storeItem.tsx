@@ -1,5 +1,5 @@
-import { t } from '@letterncms/sdk'
-import { Badge, Button, cn, Icon } from '@letterncms/ui'
+import { invalidate, run, t } from '@letterncms/sdk'
+import { Badge, Button, cn, Icon, prompt, toast } from '@letterncms/ui'
 
 /** A package in a store's catalog, as this site sees it: what can be done with it here. */
 export interface Item {
@@ -24,12 +24,28 @@ export interface Item {
 
 export const priceLabel = (item: Item) => (item.pricing === 'free' ? t('Free') : t('Paid'))
 
-/** The store's picture of it, else the icon it names, else the icon it has here once installed, else a plugin's. */
+/** A bought plugin's license key, asked for and added: the same words as on the Licenses tab. True once it is in. */
+export async function addLicenseKey(): Promise<boolean> {
+  const asked = await prompt({ title: t('Add License Key'), fields: [{ handle: 'key', type: 'textarea', label: t('License Key'), required: true }], confirm: t('Add License Key') })
+  const key = asked?.key as string | undefined
+  if (!key) return false
+  try {
+    await run('packages/add-key', { key })
+    invalidate('packages/')
+    toast.success(t('License key added'))
+    return true
+  } catch (e) {
+    toast.error(e)
+    return false
+  }
+}
+
+/** The store's picture of it, else the icon it has here once installed (one icon for one plugin, wherever it is shown), else the one the store names, else a plugin's. */
 export function ItemIcon({ item, icon, size = 'md' }: { item: Item; icon?: string; size?: 'md' | 'lg' }) {
   const box = size === 'lg' ? 'size-14 rounded-xl' : 'size-10 rounded-lg'
   return item.icon
     ? <img src={item.icon} alt="" className={cn(box, 'shrink-0 object-cover')} loading="lazy" />
-    : <span className={cn(box, 'grid shrink-0 place-items-center border border-border bg-sunken text-ink')}><Icon name={item.glyph || icon || 'plugin'} size={size === 'lg' ? 26 : 20} /></span>
+    : <span className={cn(box, 'grid shrink-0 place-items-center border border-border bg-sunken text-ink')}><Icon name={icon || item.glyph || 'plugin'} size={size === 'lg' ? 26 : 20} /></span>
 }
 
 export function Action({ item, busy, locked, onInstall, size = 'sm' }: { item: Item; busy: boolean; locked: boolean; onInstall: () => void; size?: 'sm' | 'md' }) {

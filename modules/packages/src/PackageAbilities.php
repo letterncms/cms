@@ -43,13 +43,14 @@ final class PackageAbilities
                     'authors' => [Shape::of(['name?' => Shape::STRING, 'email?' => Shape::STRING, 'homepage?' => Shape::STRING, 'role?' => Shape::STRING])->andMore('An author as the package\'s composer.json writes it: Composer names these four keys, and whatever else is written there comes along.')], 'homepage' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
                     'enabled' => Shape::BOOLEAN, 'active' => Shape::BOOLEAN, 'problem' => Shape::STRING_OR_NULL, 'installedVersion' => Shape::STRING_OR_NULL,
                     'dependents' => [Shape::STRING], 'settings' => [Shape::STRING], 'note' => Shape::STRING, 'keptOn' => Shape::STRING_OR_NULL,
-                    'locked' => Shape::BOOLEAN, 'to' => Shape::STRING_OR_NULL, 'settingsTo' => Shape::STRING_OR_NULL,
+                    'locked' => Shape::BOOLEAN, 'to' => Shape::STRING_OR_NULL, 'settingsTo' => Shape::STRING_OR_NULL, 'inStore' => Shape::BOOLEAN,
                 ]],
                 'total' => Shape::INTEGER,
                 'errors' => [Shape::STRING],
             ]),
             'handler' => function (array $in, AbilityContext $ctx) {
                 $manager = $this->cms->packages();
+                $store = $this->cms->app()->make(StoreClient::class);
                 $timestamps = $manager->timestamps();
                 $settings = $this->cms->settingsRegistry()->schemas();
                 $inactive = $manager->inactive();
@@ -101,11 +102,13 @@ final class PackageAbilities
                         // Where it is set up for whoever asks: its settings, else its screen, else nowhere. `settingsTo` only for settings.
                         'to' => $to,
                         'settingsTo' => $settingsTo,
+                        // Its page in the store, when the store lists it.
+                        'inStore' => ! $package->core && $store->lists($package->name),
                     ];
                 }
 
-                // Found by their names.
-                usort($out, static fn (array $a, array $b) => strnatcasecmp((string) $a['label'], (string) $b['label']));
+                // Found by their names; what can't be switched off comes last, out of the way of what can.
+                usort($out, static fn (array $a, array $b) => [$a['locked'], strtolower((string) $a['label'])] <=> [$b['locked'], strtolower((string) $b['label'])]);
 
                 return ['items' => $out, 'total' => count($out), 'errors' => $manager->repository()->errors()];
             },
@@ -254,10 +257,10 @@ final class PackageAbilities
         return $package ? self::translated($package, app(Translations::class)->current())['label'] ?? $package->label : $name;
     }
 
-    /** A description's first clause ("Media library", "Sell anything from a site"): one short line in a list. */
+    /** A description's first clause ("Site analytics on your own server"): one line in a list, cut at a colon, semicolon or dash, never at a comma mid-list. */
     private static function gist(string $description): string
     {
-        return trim((string) preg_split('/[:;,]\s|\.(\s|$)/', $description, 2)[0]);
+        return trim((string) preg_split('/[:;]\s|\s[—–]\s|\.(\s|$)/u', $description, 2)[0]);
     }
 
     /**

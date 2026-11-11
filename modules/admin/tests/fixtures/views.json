@@ -505,6 +505,14 @@
                                                 "props": []
                                             },
                                             {
+                                                "label": "View in Store",
+                                                "icon": "plugin",
+                                                "to": "/plugins?tab=store&item={row.name}",
+                                                "when": "{row.inStore}",
+                                                "input": [],
+                                                "props": []
+                                            },
+                                            {
                                                 "label": "Uninstall…",
                                                 "icon": "trash",
                                                 "variant": "danger",
@@ -552,6 +560,9 @@
                                         "id": "packages.modules",
                                         "label": "Built In",
                                         "key": "name",
+                                        "search": {
+                                            "placeholder": "Search"
+                                        },
                                         "source": {
                                             "ability": "packages/list",
                                             "input": {

@@ -15,7 +15,7 @@
     "extra": {
         "cms": {
             "label": "Collaboration",
-            "icon": "users",
+            "icon": "comment",
             "provider": "Cms\\Modules\\Collaboration\\CollaborationModule"
         }
     }

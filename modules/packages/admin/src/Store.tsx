@@ -1,9 +1,9 @@
-import { invalidate, locale, run, t, useAbility, can, plural } from '@letterncms/sdk'
+import { invalidate, locale, run, t, useAbility, useLocation, can, navigate, plural } from '@letterncms/sdk'
 import { Badge, Button, confirm, EmptyState, Icon, IconButton, Input, List, Menu, NoMatches, prompt, Select, Skeleton, toast } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 import { driveJob, JobFailed, type Job } from './installing'
 import { StoreDetail } from './StoreDetail'
-import { Action, ItemIcon, priceLabel, type Item } from './storeItem'
+import { Action, addLicenseKey, ItemIcon, priceLabel, type Item } from './storeItem'
 
 interface Catalog { store: string; items: Item[]; freshness: 'ok' | 'stale' | 'expired' | 'clock' | 'none'; problem: string | null; error: string | null }
 interface StoreInfo { id: string; name: string; url: string | null; default: boolean; fingerprint: string | null; problem: string | null }
@@ -45,7 +45,9 @@ export function Store() {
   const [category, setCategory] = useState('')
   const [pricing, setPricing] = useState('all')
   const [sort, setSort] = useState<Sort>('popular')
-  const [open, setOpen] = useState<Item | null>(null)
+  const [chosen, setOpen] = useState<Item | null>(null)
+  // `?item=<package>` opens a plugin's page here: Installed's View in Store leads to it.
+  const { query } = useLocation()
   const [busy, setBusy] = useState<string | null>(null)
   const [step, setStep] = useState<string | null>(null)
   const [turnOn, setTurnOn] = useState(true)
@@ -56,6 +58,8 @@ export function Store() {
   const icons = Object.fromEntries((local.data?.items ?? []).map((p) => [p.name, p.icon]))
   const current = stores.data?.items.find((s) => s.id === store)
   const all = data?.items ?? []
+  const open = chosen ?? (query.item ? all.find((i) => i.package === query.item) ?? null : null)
+  const close = () => { setOpen(null); if (query.item) navigate('/plugins?tab=store', { replace: true }) }
 
   // Only what this store has: no empty categories, and price only once something costs money.
   const categories = useMemo(() => {
@@ -188,7 +192,7 @@ export function Store() {
     : data.problem === 'dev_trust' ? t('This build has development keys, so the store is closed.')
     : data.problem ? t('No valid signing keys, so the store is off. Upload packages instead.')
     : data.freshness === 'clock' ? t('This server’s clock looks wrong, so installs are paused.')
-    : data.freshness === 'expired' ? t('This catalog is out of date, so installs are off. Refresh it.')
+    : data.freshness === 'expired' ? t('This catalog is out of date, so installs are off until the store is checked again.')
     : data.freshness === 'stale' ? t('This catalog is a few days old.')
     : data.error ? t('Can’t reach the store. {error}', { error: data.error })
     : null
@@ -211,7 +215,9 @@ export function Store() {
           <Menu
             trigger={<IconButton icon="more" label={t('More')} />}
             items={[
-              { label: t('Refresh'), icon: 'refresh', disabled: busy !== null, onSelect: () => void refresh() },
+              { label: t('Check Now'), icon: 'refresh', disabled: busy !== null, onSelect: () => void refresh() },
+              // A key for what was bought belongs here too, before anything paid is installed and a Licenses tab exists.
+              priced && { label: t('Add License Key'), icon: 'key', onSelect: () => void addLicenseKey() },
               { label: t('Turn On After Install'), checked: turnOn, onSelect: () => setTurnOn((on) => !on) },
               { separator: true, label: '' },
               { label: t('Add Store'), icon: 'plus', onSelect: () => void addStore() },
@@ -237,7 +243,7 @@ export function Store() {
         </>
       )}
 
-      {open && <StoreDetail item={all.find((i) => i.package === open.package) ?? open} icon={icons[open.package]} onClose={() => setOpen(null)} busy={busy === open.package} locked={busy !== null} onInstall={() => void install(open)} />}
+      {open && <StoreDetail item={all.find((i) => i.package === open.package) ?? open} icon={icons[open.package]} onClose={close} busy={busy === open.package} locked={busy !== null} onInstall={() => void install(open)} />}
     </div>
   )
 }
