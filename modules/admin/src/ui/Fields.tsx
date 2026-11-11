@@ -1,4 +1,5 @@
 import { registry, t, useManifestIfLoaded, type FieldContext, type FieldDef } from '@letterncms/sdk'
+import { Pressable } from './Pressable'
 import { useSyncExternalStore } from 'react'
 import { cn } from './cn'
 import { Field, FieldError, SharedMark } from './Field'
@@ -150,7 +151,7 @@ function InlineLabel({ field, stacked, width }: { field: FieldDef; stacked?: boo
   if (status === 'own' && reset) {
     return (
       <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
-        <button type="button" onClick={reset} style={style} className={cn(className, 'decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</button>
+        <Pressable compact onClick={reset} style={style} className={cn(className, 'decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</Pressable>
       </Tooltip>
     )
   }
