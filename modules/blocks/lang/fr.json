@@ -1096,7 +1096,6 @@
   "Snap Type": "Type d’accroche",
   "Underline Offset": "Décalage du soulignement",
   "Vanishing Point": "Point de fuite",
-  "The page’s first heading is hidden behind a mask or a clip until its page load animation runs, which makes the page count as slow to show. Animate its opacity or position instead, or use the appear trigger.": "Le premier titre de la page reste caché derrière un masque ou un détourage jusqu’à son animation de chargement, ce qui fait compter la page comme lente à s’afficher. Animez plutôt son opacité ou sa position, ou utilisez le déclencheur « apparition ».",
   "Drawn by “:name” on the site. Open the preview to see it.": "Dessiné par « :name » sur le site. Ouvrez l’aperçu pour le voir.",
   "An attribute names the block #:id, which is not on this page.": "Un attribut nomme le bloc #:id, qui n’est pas sur cette page."
 }

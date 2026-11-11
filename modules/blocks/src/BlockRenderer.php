@@ -460,11 +460,6 @@ final class BlockRenderer
             $this->hooks->dispatch('render.style', 'cms-timeline-scope', ':root{timeline-scope:'.implode(',', array_keys($this->timelines)).'}', 4999);
         }
 
-        // The page's first heading is most often what a browser measures the page by (Largest Contentful Paint).
-        if ($compiled['hides'] && ($node['type'] ?? '') === 'heading' && (string) ($node['props']['level'] ?? '') === '1') {
-            $this->hooks->dispatch('render.warning', __('The page’s first heading is hidden behind a mask or a clip until its page load animation runs, which makes the page count as slow to show. Animate its opacity or position instead, or use the appear trigger.'));
-        }
-
         $compiled['forever'] && $this->uses('forever');
         $compiled['runtime'] !== [] && $this->uses('motion');
         $compiled['scroll'] !== [] && $this->uses('scroll');

@@ -217,11 +217,11 @@ final class Motion
      * @param  array<string, string>  $breakpoints  name => min-width (see StyleCompiler)
      * @param  array<string, string>  $curves  the design's ease tokens: name => timing function
      * @param  string  $id  the node's id, which a pinned element's wrapper is known by
-     * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, scroll: list<array>, split: ?array{mask: bool, chars: bool}, pin: bool, timelines: list<string>, forever: bool, hides: bool}
+     * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, scroll: list<array>, split: ?array{mask: bool, chars: bool}, pin: bool, timelines: list<string>, forever: bool}
      */
     public static function compile(array $motion, array $breakpoints = [], array $curves = [], string $id = ''): array
     {
-        $out = ['classes' => [], 'rules' => [], 'runtime' => [], 'scroll' => [], 'split' => null, 'pin' => false, 'timelines' => [], 'forever' => false, 'hides' => false];
+        $out = ['classes' => [], 'rules' => [], 'runtime' => [], 'scroll' => [], 'split' => null, 'pin' => false, 'timelines' => [], 'forever' => false];
         self::$curves = array_filter($curves, static fn ($curve) => is_string($curve) && preg_match(self::TIMING, trim($curve)));
 
         foreach ($motion as $animation) {
@@ -284,11 +284,6 @@ final class Motion
         foreach (self::timeline($animation, $load) as ['step' => $step, 'start' => $start]) {
             if ($load && isset($step['from']['opacity']) && (float) $step['from']['opacity'] < self::LOAD_OPACITY) {
                 $step['from']['opacity'] = self::LOAD_OPACITY;
-            }
-
-            // Text behind a mask, or clipped away, is not drawn at all until its animation runs.
-            if ($load && (! empty($step['mask']) || isset($step['from']['clipPath']))) {
-                $out['hides'] = true;
             }
 
             $frames = self::keyframes($step);

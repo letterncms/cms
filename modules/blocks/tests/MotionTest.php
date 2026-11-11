@@ -59,17 +59,6 @@ final class MotionTest extends TestCase
 
         // What waits for the visitor is not what the page is measured by.
         $this->assertStringContainsString('&quot;opacity&quot;:0,', $this->render([$this->animated('appear')])['html']);
-
-        // A mask or a clip draws nothing until it runs: said where the build shows it, for the page's first heading.
-        $warnings = [];
-        $this->cms()->hooks()->on('render.warning', function (string $message) use (&$warnings) {
-            $warnings[] = $message;
-        });
-        $this->render([['props' => ['text' => 'Title', 'level' => '1']] + $this->animated('load', ['target' => 'words', 'mask' => true, 'from' => ['yPercent' => 110]], type: 'heading')]);
-        $this->assertCount(1, $warnings);
-        $this->assertStringContainsString('first heading', $warnings[0]);
-        $this->render([['props' => ['text' => 'Title', 'level' => '2']] + $this->animated('load', ['target' => 'words', 'mask' => true, 'from' => ['yPercent' => 110]], type: 'heading')]);
-        $this->assertCount(1, $warnings);
     }
 
     public function test_load_cannot_hold_the_page_back(): void
