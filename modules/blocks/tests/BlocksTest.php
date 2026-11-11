@@ -123,6 +123,26 @@ final class BlocksTest extends TestCase
         $this->assertStringContainsString('#gone', $warnings[0]);
     }
 
+    public function test_an_icon_with_an_svg_of_its_own_shows_that(): void
+    {
+        $render = function (array $props): string {
+            $renderer = app(\Cms\Modules\Blocks\BlockRenderer::class);
+            $renderer->begin();
+
+            return $renderer->render(app(Document::class)->normalize([['type' => 'icon', 'props' => $props]]));
+        };
+        $own = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" onclick="alert(1)"/></svg>';
+
+        $html = $render(['svg' => $own]);
+        $this->assertStringContainsString('<circle cx="5" cy="5" r="4"', $html, 'with the default icon’s name still in the block');
+        $this->assertSame(1, substr_count($html, '<svg'));
+        $this->assertStringNotContainsString('onclick', $html);
+        $this->assertStringContainsString('<circle', $render(['icon' => 'arrow-up-right', 'svg' => $own]), 'and with another name chosen');
+
+        $this->assertStringNotContainsString('<circle', $render(['icon' => 'arrow-up-right']));
+        $this->assertStringContainsString('<svg', $render(['icon' => 'arrow-up-right', 'svg' => 'not an svg']), 'what is no SVG leaves the named icon');
+    }
+
     public function test_document_sanitizes_text_and_styles(): void
     {
         $nodes = app(Document::class)->normalize([
