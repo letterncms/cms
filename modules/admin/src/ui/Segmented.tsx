@@ -88,7 +88,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
     // Many plugin tabs scroll sideways rather than wrapping their labels. The rule is an inset shadow the active underline covers, so nothing overflows vertically.
     // A page's tabs sit 20px apart on their hairline; unbordered ones (in a panel's own header row) 16px.
     // The row clips what reaches outside it, so on a touch screen a tab is 44px tall itself.
-    <div ref={row} role="tablist" className={cn('flex min-h-9 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [@media(pointer:coarse)]:min-h-11', bordered ? 'gap-5 shadow-[inset_0_-1px_0_var(--cms-border)]' : 'gap-4', className)}>
+    <div ref={row} role="tablist" className={cn('flex min-h-9 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [@media(pointer:coarse)]:min-h-11', bordered ? 'gap-5 shadow-rule' : 'gap-4', className)}>
       {tabs.map((t, index) => {
         const iconOnly = compact && !!t.icon
         const tab = (
@@ -111,7 +111,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
               onChange(tabs[next].value)
               e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus()
             }}
-            className={cn('flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap font-medium outline-offset-[-2px] transition-[color,box-shadow] duration-base ease-out', size === 'xs' ? 'text-xs' : 'text-sm', value === t.value ? 'text-ink shadow-[inset_0_-2px_0_var(--cms-ink)]' : 'text-muted hover:text-text')}
+            className={cn('flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap font-medium outline-offset-[-2px] transition-[color,box-shadow] duration-base ease-out', size === 'xs' ? 'text-xs' : 'text-sm', value === t.value ? 'text-ink shadow-underline' : 'text-muted hover:text-text')}
           >
             {iconOnly ? <Icon name={t.icon!} size={16} /> : t.label}
             {t.indicator && <><span className="size-1.5 shrink-0 rounded-full bg-signal" aria-hidden /><span className="sr-only">{translate('Unsaved changes')}</span></>}

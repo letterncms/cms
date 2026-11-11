@@ -93,6 +93,10 @@
   --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
   /* Blue as text on its own wash (an info badge): a step toward ink so it still reads. */
   --cms-info: color-mix(in srgb, var(--cms-focus) 84%, var(--cms-ink));
+  /* Green, amber and red as words on their own wash (a badge), the same way: 5:1 or more on the page, the desk and a float. */
+  --cms-on-success: color-mix(in srgb, var(--cms-success) 85%, var(--cms-ink));
+  --cms-on-warning: color-mix(in srgb, var(--cms-warning) 85%, var(--cms-ink));
+  --cms-on-danger: color-mix(in srgb, var(--cms-danger) 85%, var(--cms-ink));
 
   --cms-overlay: rgb(28 27 24 / 0.22);
   /* raise: a control that sits on the page (secondary button, segmented thumb, the active sidebar row). */
@@ -107,6 +111,9 @@
   --cms-shadow-edge: inset 0 1px 0 rgb(255 255 255 / 0.1);
   --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 18%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
+  /* rule: a hairline along the bottom of a row of tabs, drawn inside it so nothing overflows. underline: the tab on view, over that hairline. */
+  --cms-shadow-rule: inset 0 -1px 0 var(--cms-border);
+  --cms-shadow-underline: inset 0 -2px 0 var(--cms-ink);
 
   color-scheme: light;
 }
@@ -157,6 +164,9 @@
   --cms-thumb: color-mix(in srgb, var(--cms-float), var(--cms-ink) 30%);
   --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
   --cms-info: color-mix(in srgb, var(--cms-focus) 60%, var(--cms-ink));
+  --cms-on-success: color-mix(in srgb, var(--cms-success) 85%, var(--cms-ink));
+  --cms-on-warning: color-mix(in srgb, var(--cms-warning) 85%, var(--cms-ink));
+  --cms-on-danger: color-mix(in srgb, var(--cms-danger) 85%, var(--cms-ink));
 
   --cms-overlay: rgb(0 0 0 / 0.5);
   --cms-shadow-raise: 0 1px 1px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.04);
@@ -166,5 +176,7 @@
   --cms-shadow-edge: 0 0 #0000;
   --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 32%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
+  --cms-shadow-rule: inset 0 -1px 0 var(--cms-border);
+  --cms-shadow-underline: inset 0 -2px 0 var(--cms-ink);
   color-scheme: dark;
 }

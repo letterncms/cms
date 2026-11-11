@@ -7,10 +7,13 @@
 - **Repeat**'s **Previous and Next Entry** source tells each item which side it is on: `item.side` is `previous` or `next`, and `item.previous` and `item.following` are that as yes or no. One Repeat now renders both neighbours with the right label and arrow (`bind: {"visible": "item.following"}`, `{"state:next": "item.following"}`, or `item.side|is:next`).
 - **Fonts that do not move the text.** Adding a Google Font now reads the font’s own tables and gives each face the fallback that stands in for it until it arrives: Arial, Times New Roman or Courier New, drawn at the size and line height that match (`sizeAdjust`, `ascentOverride`, `descentOverride`, `lineGapOverride`). Nobody types those numbers any more; the ones you change in `fonts` stay when the family is imported again.
 - **Design styles for a class.** The design’s element styles take a class a block carries, alone or on a tag: `".note em"`, `"span.note"`, `".card.is-open > a:hover"`, with the same safe properties, tokens and states as a tag. Give a block the class and style it in the Design System; a class no longer needs custom CSS. A key the design cannot style is refused by name when it is saved.
+- Design tokens: `shadow-rule` (a hairline along the bottom of a row of tabs) and `shadow-underline` (the tab on view), and `text-on-success`, `text-on-warning` and `text-on-danger` for words on their own wash.
 - `@letterncms/ui`: `Pressable`, the control without a look, for the ones that draw themselves (a colour plane, a box of a spacing control, a card that opens, canvas chrome). It is a `<button type="button">`, or a link with `to`, with the kit's focus line, 44px to hit on a touch screen, `disabled` and `data-active`; `inset` puts the focus line inside its edge, `compact` leaves out the touch area. Everything it looks like is its `className`.
 
 ### Fixed
 
+- A group of avatars shows one initial per person, so the next circle never cuts a letter, and its count grows into a pill instead of losing digits; a single avatar shows two letters at most, with air around them.
+- Green, amber and red badges read at 4.5:1 or more wherever they stand, in light and dark: their words are a step toward ink, as the blue one's already were.
 - A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.
 
 ## 0.23.0 (2026-11-11)

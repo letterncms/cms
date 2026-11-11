@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
-    "test": "node --experimental-vm-modules --test modules/admin/tests/calendar.mjs modules/admin/tests/dateTime.mjs modules/admin/tests/entryActions.mjs modules/admin/tests/fieldIdentity.mjs modules/admin/tests/iconCatalog.mjs modules/admin/tests/viewScope.mjs modules/content/tests/entrySession.mjs modules/admin/tests/viewPrefs.mjs modules/admin/tests/conditions.mjs modules/admin/tests/theme.mjs modules/admin/tests/standalone.mjs modules/blocks/tests/insert.mjs modules/blocks/tests/insertionTargets.mjs modules/blocks/tests/readOnly.mjs 'modules/blocks/tests/js/*.test.ts'",
+    "test": "node --experimental-vm-modules --test modules/admin/tests/calendar.mjs modules/admin/tests/dateTime.mjs modules/admin/tests/entryActions.mjs modules/admin/tests/fieldIdentity.mjs modules/admin/tests/iconCatalog.mjs modules/admin/tests/viewScope.mjs modules/content/tests/entrySession.mjs modules/admin/tests/viewPrefs.mjs modules/admin/tests/contrast.mjs modules/admin/tests/conditions.mjs modules/admin/tests/theme.mjs modules/admin/tests/standalone.mjs modules/blocks/tests/insert.mjs modules/blocks/tests/insertionTargets.mjs modules/blocks/tests/readOnly.mjs 'modules/blocks/tests/js/*.test.ts'",
     "test:browser": "node modules/admin/tests/browser.mjs"
   },
   "packageManager": "pnpm@11.12.0",
