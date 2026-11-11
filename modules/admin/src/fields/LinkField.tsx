@@ -127,7 +127,7 @@ function anchorsOf(field: FieldProps['field']): { id: string; label: string }[] 
 /** The current destination, as people think of it. */
 function Chip({ link, xs, anchors, placeholder }: { link: Link; xs: boolean; anchors: { id: string; label: string }[]; placeholder: string }) {
   const manifest = useManifest()
-  const entry = useAbility<EntrySummary[]>('entries/lookup', { ids: link.kind === 'entry' ? [link.id] : [] }, { enabled: link.kind === 'entry', staleTime: 60_000 })
+  const entry = useAbility<EntrySummary[]>('entries/get-many', { ids: link.kind === 'entry' ? [link.id] : [] }, { enabled: link.kind === 'entry', staleTime: 60_000 })
   const icon = (name: string, className?: string) => <Icon name={name} size={xs ? 12 : 14} className={cn('shrink-0 text-muted', className)} />
   const parts = (main: ReactNode, sub?: ReactNode) => (
     <span className="flex min-w-0 flex-1 items-baseline gap-1.5">

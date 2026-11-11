@@ -190,7 +190,7 @@ final class WorkspaceTest extends TestCase
         $saved = $answers->command($abilities->get('settings/update'), ['namespace' => 'site', 'values' => ['name' => 'Renamed']], [], $admin);
         $this->assertSame('Saved General: Name', $saved['children'][0]['props']['title']);
         $run('globals/save', ['title' => 'Opening Hours', 'fields' => [['handle' => 'hours', 'type' => 'text', 'label' => 'Hours']]]);
-        $run('globals/update', ['handle' => 'opening_hours', 'values' => ['hours' => '9–5']]);
+        $run('globals/set', ['handle' => 'opening_hours', 'values' => ['hours' => '9–5']]);
     }
 
     public function test_a_button_left_on_view_says_what_it_was_for_is_gone(): void

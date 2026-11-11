@@ -30,6 +30,7 @@ final class AgentGuide
         3. Prefer patterns (patterns/list) for common sections so the site stays consistent.
 
         Conventions:
+        - Names are thing/verb, and a verb means the same on every thing: list (many), get (one), get-many (several by id), create, update and delete (one record). save creates or replaces a definition by its handle (collections, fieldsets, globals, patterns, user-fields) or a file of the design by its path (design-code/save); set puts a value in place (globals/set for a global set's values, languages/set-default, design-code/set-load). Any other verb is an act of its own (entries/publish, navigation/add-item, revisions/restore), and a read named for what it answers with (entries/tree, collections/schema) changes nothing.
         - Anything that changes the site takes dryRun: true: nothing is written, and the answer says how far it was checked. checked "full": refused exactly where the real run would be, and `changes` lists what would change or be removed (entries, settings, and everything destructive). checked "input": only the input and your permission were checked, `changes` is null, and the real run may still refuse. Use it before a change you are unsure of.
         - Entries are drafts until published (entries/publish, or status "published" on create).
         - Block styles only use design tokens (token:space.8, token:color.primary…), never raw colors or pixel values.

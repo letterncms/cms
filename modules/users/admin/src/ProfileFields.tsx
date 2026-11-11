@@ -4,7 +4,7 @@ import { FieldsEditor, SaveBar, Spinner, useTabDirty, type RawField } from '@let
 
 /** The Profile Fields tab of Users: the fields every profile has, in the same editor as collections. Saved from the bar. */
 export default function ProfileFields() {
-  const source = useAbility<{ fields: RawField[] }>('users/fields', {}, { refetchOnWindowFocus: false })
+  const source = useAbility<{ fields: RawField[] }>('user-fields/get', {}, { refetchOnWindowFocus: false })
   const [fields, setFields] = useState<RawField[] | null>(null)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
@@ -19,8 +19,8 @@ export default function ProfileFields() {
     setSaving(true)
     setFailed(null)
     try {
-      await run('users/fields-save', { fields })
-      invalidate('users/')
+      await run('user-fields/save', { fields })
+      invalidate('users/', 'user-fields/')
       await loadManifest()
       setFields(null)
     } catch (e) {

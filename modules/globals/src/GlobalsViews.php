@@ -65,7 +65,7 @@ final class GlobalsViews
         $form = static fn (?string $locale) => ['type' => 'ui/form', 'props' => [
             'source' => ['ability' => 'globals/get', 'input' => ['handle' => $handle, ...($locale ? ['locale' => $locale] : [])]],
             'fieldsAt' => 'resolvedFields', 'valuesAt' => 'data',
-            'save' => ['ability' => 'globals/update', 'input' => ['handle' => $handle, ...($locale ? ['locale' => $locale] : [])]],
+            'save' => ['ability' => 'globals/set', 'input' => ['handle' => $handle, ...($locale ? ['locale' => $locale] : [])]],
             // Fields that link to entries pick them in this language.
             'context' => ['locale' => $locale ?? $cms->defaultLocale()],
         ]];

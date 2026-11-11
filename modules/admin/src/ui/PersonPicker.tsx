@@ -31,9 +31,9 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
   const [page, setPage] = useState(1)
   const selected = useQueries({ queries: Array.from({ length: Math.ceil(value.length / 100) }, (_, index) => {
     const input = { ids: value.slice(index * 100, (index + 1) * 100), perPage: 100 }
-    return { queryKey: abilityKey('users/lookup', input), queryFn: () => run<Page<PersonSummary>>('users/lookup', input) }
+    return { queryKey: abilityKey('people/list', input), queryFn: () => run<Page<PersonSummary>>('people/list', input) }
   }) })
-  const options = useAbility<Page<PersonSummary>>('users/lookup', { search: search || undefined, page, perPage: 25 }, { enabled: open && !disabled })
+  const options = useAbility<Page<PersonSummary>>('people/list', { search: search || undefined, page, perPage: 25 }, { enabled: open && !disabled })
   const people = new Map([...selected.flatMap((query) => query.data?.items ?? []), ...(options.data?.items ?? [])].map((person) => [person.id, person]))
   const loading = selected.some((query) => query.isLoading)
   const failed = selected.some((query) => query.isError)

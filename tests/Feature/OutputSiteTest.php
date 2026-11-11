@@ -141,9 +141,13 @@ final class OutputSiteTest extends TestCase
     {
         $this->assertSame([], $this->ability('navigation/list'));
         $this->assertSame([], $this->ability('navigation/create', ['title' => 'Main'])['items']);
+        $this->assertSame('/x', $this->ability('navigation/create', ['title' => 'Footer', 'handle' => 'foot', 'maxDepth' => 1, 'items' => [['url' => '/x', 'label' => 'X']]])['items'][0]['url']);
+        $this->assertSame([], $this->ability('navigation/create', ['title' => 'Again', 'handle' => 'foot'], 'conflict'));
+        $this->assertSame([], $this->ability('navigation/update', ['handle' => 'none', 'items' => []], 'not_found'));
+        $this->assertTrue($this->ability('navigation/delete', ['handle' => 'foot'])['deleted']);
 
         $page = $this->cms()->content()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published']);
-        $menu = $this->ability('navigation/save', ['handle' => 'main', 'maxDepth' => 3, 'items' => [
+        $menu = $this->ability('navigation/update', ['handle' => 'main', 'maxDepth' => 3, 'items' => [
             ['entry' => $page->id, 'locales' => ['de' => ['label' => 'Über uns']], 'children' => [
                 ['url' => '/jobs', 'label' => 'Jobs', 'newTab' => true, 'locales' => ['de' => ['label' => 'Stellen', 'url' => '/de/jobs'], 'pt-BR' => ['url' => '/pt/jobs']], 'children' => [['url' => '#top', 'label' => 'Top']]],
             ]],
@@ -152,7 +156,7 @@ final class OutputSiteTest extends TestCase
         $this->assertSame(['label' => 'Stellen', 'url' => '/de/jobs'], $menu['items'][0]['children'][0]['locales']['de']);
         $this->assertSame('Top', $menu['items'][0]['children'][0]['children'][0]['label']);
 
-        $this->assertCount(2, $this->ability('navigation/add', ['menu' => 'main', 'url' => 'https://example.com', 'label' => 'Elsewhere'])['items']);
+        $this->assertCount(2, $this->ability('navigation/add-item', ['menu' => 'main', 'url' => 'https://example.com', 'label' => 'Elsewhere'])['items']);
         $this->assertSame(4, $this->ability('navigation/list')[0]['count']);
 
         // A hand-written file may link to an entry that is gone.
@@ -166,8 +170,8 @@ final class OutputSiteTest extends TestCase
 
     public function test_design_abilities_answer_as_described(): void
     {
-        $this->assertSame([], $this->ability('design/code')['saved']);
-        $this->assertSame(['css', 'js'], $this->ability('design/code', ['css' => 'body { color: red }', 'js' => 'console.log(1)'])['saved']);
+        $this->assertSame([], $this->ability('design-code/set-custom')['saved']);
+        $this->assertSame(['css', 'js'], $this->ability('design-code/set-custom', ['css' => 'body { color: red }', 'js' => 'console.log(1)'])['saved']);
 
         $font = $this->ability('design/fonts-upload', ['family' => 'Test Sans', 'data' => base64_encode('wOF2'.str_repeat("\0", 40))]);
         $this->assertSame('fonts/test-sans-400.woff2', $font['src']);
@@ -209,21 +213,21 @@ final class OutputSiteTest extends TestCase
     public function test_design_code_abilities_answer_as_described(): void
     {
         // Nothing yet: `templates` and `components` are maps also when empty.
-        $this->assertSame(['scripts' => [], 'styles' => [], 'load' => ['scripts' => [], 'styles' => [], 'templates' => [], 'components' => []]], $this->ability('design/code-files'));
+        $this->assertSame(['scripts' => [], 'styles' => [], 'load' => ['scripts' => [], 'styles' => [], 'templates' => [], 'components' => []]], $this->ability('design-code/list'));
 
-        $this->assertSame(['saved' => 'scripts/lib/ease.js'], $this->ability('design/code-write', ['path' => 'scripts/lib/ease.js', 'contents' => 'export const ease = 1']));
-        $this->assertSame(['saved' => 'styles/hero.css'], $this->ability('design/code-write', ['path' => 'styles/hero.css', 'contents' => '.hero{color:red}']));
-        $this->assertSame([], $this->ability('design/code-write', ['path' => 'scripts/../x.js', 'contents' => 'x'], 'invalid_input'));
-        $this->assertSame('scripts/lib/ease.js', $this->ability('design/code-read', ['path' => 'scripts/lib/ease.js'])['path']);
-        $this->assertSame([], $this->ability('design/code-read', ['path' => 'scripts/none.js'], 'not_found'));
+        $this->assertSame(['saved' => 'scripts/lib/ease.js'], $this->ability('design-code/save', ['path' => 'scripts/lib/ease.js', 'contents' => 'export const ease = 1']));
+        $this->assertSame(['saved' => 'styles/hero.css'], $this->ability('design-code/save', ['path' => 'styles/hero.css', 'contents' => '.hero{color:red}']));
+        $this->assertSame([], $this->ability('design-code/save', ['path' => 'scripts/../x.js', 'contents' => 'x'], 'invalid_input'));
+        $this->assertSame('scripts/lib/ease.js', $this->ability('design-code/get', ['path' => 'scripts/lib/ease.js'])['path']);
+        $this->assertSame([], $this->ability('design-code/get', ['path' => 'scripts/none.js'], 'not_found'));
 
-        $loaded = $this->ability('design/code-load', ['scripts' => ['lib/ease'], 'templates' => ['post' => ['styles' => ['hero']]], 'components' => ['header' => ['scripts' => ['lib/ease'], 'styles' => ['hero']]]]);
+        $loaded = $this->ability('design-code/set-load', ['scripts' => ['lib/ease'], 'templates' => ['post' => ['styles' => ['hero']]], 'components' => ['header' => ['scripts' => ['lib/ease'], 'styles' => ['hero']]]]);
         $this->assertSame(['lib/ease'], $loaded['scripts']);
         $this->assertSame(['scripts' => [], 'styles' => ['hero']], $loaded['load']['templates']['post']);
-        $this->assertSame($loaded, $this->ability('design/code-files'));
+        $this->assertSame($loaded, $this->ability('design-code/list'));
 
-        $this->assertSame(['deleted' => 'styles/hero.css'], $this->ability('design/code-delete', ['path' => 'styles/hero.css']));
-        $this->assertSame([], $this->ability('design/code-files')['styles']);
+        $this->assertSame(['deleted' => 'styles/hero.css'], $this->ability('design-code/delete', ['path' => 'styles/hero.css']));
+        $this->assertSame([], $this->ability('design-code/list')['styles']);
     }
 
     public function test_design_vendor_abilities_answer_as_described(): void
@@ -237,20 +241,20 @@ final class OutputSiteTest extends TestCase
         $this->app->forgetInstance(\Cms\Modules\Site\Design\Vendor::class);
         $this->app->forgetInstance(\Cms\Modules\Site\Design\Code::class);
 
-        $this->assertSame(['imports' => []], $this->ability('design/vendor-list'));
+        $this->assertSame(['imports' => []], $this->ability('design-vendor/list'));
 
-        $added = $this->ability('design/vendor-add', ['package' => 'gsap@3.12.5']);
+        $added = $this->ability('design-vendor/create', ['package' => 'gsap@3.12.5']);
         $this->assertSame(['gsap'], $added['added']);
         $this->assertNull($added['imports'][0]['file']);
         $this->assertSame('/_cms/site/vendor/gsap@3.12.5/index.js', $added['imports'][0]['url']);
-        $this->assertSame('dist/lenis.mjs', $this->ability('design/vendor-add', ['package' => 'lenis@1.1.13', 'file' => 'dist/lenis.mjs', 'as' => 'lenis'])['imports'][1]['file']);
-        $this->assertSame([], $this->ability('design/vendor-add', ['package' => 'gsap@^3'], 'invalid_input'));
+        $this->assertSame('dist/lenis.mjs', $this->ability('design-vendor/create', ['package' => 'lenis@1.1.13', 'file' => 'dist/lenis.mjs', 'as' => 'lenis'])['imports'][1]['file']);
+        $this->assertSame([], $this->ability('design-vendor/create', ['package' => 'gsap@^3'], 'invalid_input'));
 
-        $this->assertSame('3.13.0', $this->ability('design/vendor-update', ['import' => 'gsap'])['version']);
-        $this->assertSame([], $this->ability('design/vendor-update', ['import' => 'none'], 'invalid_input'));
-        $this->assertCount(2, $this->ability('design/vendor-list')['imports']);
+        $this->assertSame('3.13.0', $this->ability('design-vendor/update', ['import' => 'gsap'])['version']);
+        $this->assertSame([], $this->ability('design-vendor/update', ['import' => 'none'], 'invalid_input'));
+        $this->assertCount(2, $this->ability('design-vendor/list')['imports']);
 
-        $removed = $this->ability('design/vendor-remove', ['import' => 'lenis']);
+        $removed = $this->ability('design-vendor/delete', ['import' => 'lenis']);
         $this->assertSame('lenis', $removed['removed']);
         $this->assertSame(['gsap'], array_column($removed['imports'], 'import'));
     }
@@ -270,7 +274,7 @@ final class OutputSiteTest extends TestCase
 
     public function test_media_abilities_answer_as_described(): void
     {
-        $this->assertSame([], $this->ability('media/lookup', ['ids' => []])['items']);
+        $this->assertSame([], $this->ability('media/get-many', ['ids' => []])['items']);
         $this->assertSame(0, $this->ability('media/report')['items']);
 
         $im = imagecreatetruecolor(40, 30);
@@ -286,7 +290,7 @@ final class OutputSiteTest extends TestCase
         $this->assertSame(['x' => 10, 'y' => 90], $updated['focal']);
         $this->assertSame($text['id'], $this->ability('media/update', ['id' => $text['id']])['id']);
 
-        $this->assertSame([$text['id'], $image['id']], array_column($this->ability('media/lookup', ['ids' => [$text['id'], 'nothing', $image['id']]])['items'], 'id'));
+        $this->assertSame([$text['id'], $image['id']], array_column($this->ability('media/get-many', ['ids' => [$text['id'], 'nothing', $image['id']]])['items'], 'id'));
         $this->assertCount(2, $this->ability('media/list', ['folder' => null])['items']);
         $listed = $this->ability('media/list', ['kind' => 'image', 'folder' => 'icons', 'search' => 'Dot']);
         $this->assertSame(['icons'], $listed['folders']);

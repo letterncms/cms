@@ -39,7 +39,7 @@ async function uploadZip(file: File, allowUnsigned: boolean): Promise<Job> {
  */
 export function Store() {
   const [store, setStore] = useState('default')
-  const stores = useAbility<{ items: StoreInfo[] }>('packages/stores')
+  const stores = useAbility<{ items: StoreInfo[] }>('package-stores/list')
   const catalog = useAbility<Catalog>('packages/catalog', { store })
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -143,11 +143,11 @@ export function Store() {
     const url = asked?.url as string | undefined
     if (!url) return
     try {
-      const first = await run<{ name: string; fingerprint: string; id: string }>('packages/store-add', { url })
+      const first = await run<{ name: string; fingerprint: string; id: string }>('package-stores/create', { url })
       const answer = await prompt({ title: t('Confirm {name}', { name: first.name }), description: t('Compare this key fingerprint with the one in the store’s own documentation, then type it here: {fingerprint}', { fingerprint: first.fingerprint }), fields: [{ handle: 'fingerprint', type: 'text', label: t('Key fingerprint'), required: true }], confirm: t('Add Store') })
       const typed = answer?.fingerprint as string | undefined
       if (!typed) return
-      const done = await run<{ added: boolean; id: string }>('packages/store-add', { url, confirm: typed })
+      const done = await run<{ added: boolean; id: string }>('package-stores/create', { url, confirm: typed })
       if (!done.added) {
         toast.error(t('That fingerprint does not match. The store was not added.'))
         return
@@ -161,7 +161,7 @@ export function Store() {
 
   const removeStore = async () => {
     if (!current || !(await confirm({ title: t('Remove {name}?', { name: current.name }), description: t('What it installed stays, without update offers.'), confirm: t('Remove Store'), danger: true }))) return
-    await run('packages/store-remove', { id: store })
+    await run('package-stores/delete', { id: store })
     setStore('default')
     await stores.refetch()
   }

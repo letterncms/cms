@@ -201,7 +201,7 @@ final class BlocksModule extends Plugin
     private function guardHtmlBlocks(): void
     {
         $this->cms()->hooks()->addFilter('ability.input', function (array $input, Ability $ability, AbilityContext $ctx) {
-            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'patterns/save', 'globals/update'], true)) {
+            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'patterns/save', 'globals/set'], true)) {
                 return $input;
             }
 

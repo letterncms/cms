@@ -432,7 +432,7 @@ final class PublicAccountsTest extends TestCase
 
     public function test_a_page_everyone_may_get_the_same_copy_of_leaves_sign_in_or_my_account_to_the_browser(): void
     {
-        $id = cms()->abilities()->execute('pages/customise', ['group' => 'accounts', 'handle' => 'deleted'], \Cms\Abilities\AbilityContext::forUser($this->admin()))['id'];
+        $id = cms()->abilities()->execute('pages/customize', ['group' => 'accounts', 'handle' => 'deleted'], \Cms\Abilities\AbilityContext::forUser($this->admin()))['id'];
         cms()->content()->update($id, ['data' => ['blocks' => [
             ['type' => 'link', 'id' => 'mine', 'props' => ['label' => '', 'url' => '/'], 'bind' => ['label' => 'accounts.account.label', 'url' => 'accounts.account.url', 'visible' => 'account']],
             ['type' => 'link', 'id' => 'door', 'props' => ['label' => '', 'url' => '/'], 'bind' => ['label' => 'accounts.sign_in.label', 'url' => 'accounts.sign_in.url', 'hidden' => 'account']],
@@ -509,7 +509,7 @@ final class PublicAccountsTest extends TestCase
         $this->assertStringNotContainsString('style="', preg_replace('/<div[^>]*data-cms[^>]*>/', '', $html));
 
         // Customise: a draft of the standard page changes nothing until it is published.
-        $id = cms()->abilities()->execute('pages/customise', ['group' => 'accounts', 'handle' => 'sign-in'], \Cms\Abilities\AbilityContext::forUser($this->admin()))['id'];
+        $id = cms()->abilities()->execute('pages/customize', ['group' => 'accounts', 'handle' => 'sign-in'], \Cms\Abilities\AbilityContext::forUser($this->admin()))['id'];
         $entry = cms()->entries()->find($id);
         $this->assertSame('account/sign-in', $entry->data['blocks'][0]['children'][1]['type']);
         $this->get('/sign-in')->assertOk()->assertDontSee('Members Only Door');

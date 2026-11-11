@@ -145,7 +145,7 @@ final class DesignCodeTest extends TestCase
         $this->assertFileExists(public_path(ltrim((string) $second, '/')));
         $this->assertFileExists(public_path(ltrim((string) $video, '/')), 'a file whose name starts the same is another file');
 
-        $this->cms()->abilities()->execute('design/code-delete', ['path' => 'styles/hero.css'], AbilityContext::system('test'));
+        $this->cms()->abilities()->execute('design-code/delete', ['path' => 'styles/hero.css'], AbilityContext::system('test'));
         $this->assertFileDoesNotExist(public_path(ltrim((string) $second, '/')), 'a deleted file is not left reachable');
         $this->assertFileExists(public_path(ltrim((string) $video, '/')));
     }
@@ -208,12 +208,12 @@ final class DesignCodeTest extends TestCase
         $abilities = $this->cms()->abilities();
         $context = AbilityContext::system('test');
 
-        $abilities->execute('design/code-write', ['path' => 'scripts/lib/ease.js', 'contents' => 'export const ease = 1'], $context);
-        $abilities->execute('design/code-write', ['path' => 'styles/base.css', 'contents' => 'body{margin:0}'], $context);
+        $abilities->execute('design-code/save', ['path' => 'scripts/lib/ease.js', 'contents' => 'export const ease = 1'], $context);
+        $abilities->execute('design-code/save', ['path' => 'styles/base.css', 'contents' => 'body{margin:0}'], $context);
         $this->assertSame("export const ease = 1\n", file_get_contents(content_path('design/scripts/lib/ease.js')));
-        $this->assertSame("export const ease = 1\n", $abilities->execute('design/code-read', ['path' => 'scripts/lib/ease.js'], $context)['contents']);
+        $this->assertSame("export const ease = 1\n", $abilities->execute('design-code/get', ['path' => 'scripts/lib/ease.js'], $context)['contents']);
 
-        $list = $abilities->execute('design/code-load', ['scripts' => ['lib/ease', 'No Such Name'], 'templates' => ['post' => ['styles' => ['base']], '../x' => ['styles' => ['base']]]], $context);
+        $list = $abilities->execute('design-code/set-load', ['scripts' => ['lib/ease', 'No Such Name'], 'templates' => ['post' => ['styles' => ['base']], '../x' => ['styles' => ['base']]]], $context);
         $this->assertSame(['lib/ease'], $list['scripts']);
         $this->assertSame(['lib/ease'], $list['load']['scripts']);
         $this->assertSame(['post' => ['scripts' => [], 'styles' => ['base']]], $list['load']['templates']);
@@ -221,21 +221,21 @@ final class DesignCodeTest extends TestCase
 
         foreach (['scripts/../../config/site.js', '../custom.js', 'scripts/x.php', 'styles/x.js', 'scripts/.hidden.js', 'fonts/a.js', "scripts/a\0.js", 'scripts/A.js'] as $path) {
             try {
-                $abilities->execute('design/code-write', ['path' => $path, 'contents' => 'x'], $context);
+                $abilities->execute('design-code/save', ['path' => $path, 'contents' => 'x'], $context);
                 $this->fail("{$path} was written");
             } catch (AbilityException $e) {
                 $this->assertStringContainsString('scripts/<name>.js', $e->getMessage());
             }
         }
 
-        $abilities->execute('design/code-delete', ['path' => 'scripts/lib/ease.js'], $context);
+        $abilities->execute('design-code/delete', ['path' => 'scripts/lib/ease.js'], $context);
         $this->assertFileDoesNotExist(content_path('design/scripts/lib/ease.js'));
-        $this->assertSame([], $abilities->execute('design/code-files', [], $context)['scripts']);
+        $this->assertSame([], $abilities->execute('design-code/list', [], $context)['scripts']);
     }
 
     public function test_writing_code_needs_the_permission_custom_code_needs(): void
     {
         $this->expectException(AbilityException::class);
-        $this->cms()->abilities()->execute('design/code-write', ['path' => 'scripts/x.js', 'contents' => 'x'], AbilityContext::forUser($this->userWithRole('editor')));
+        $this->cms()->abilities()->execute('design-code/save', ['path' => 'scripts/x.js', 'contents' => 'x'], AbilityContext::forUser($this->userWithRole('editor')));
     }
 }

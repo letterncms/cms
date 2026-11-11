@@ -223,12 +223,12 @@ function Editor({ collection, initial, can }: EditorProps) {
     setReplacing(true)
     retry.current = () => replace(ability, input)
     await attempt(() => session.command((current) => run<Entry>(ability, {
-      ...(ability === 'entries/restore' ? {} : { id: current.id }),
+      ...(ability === 'revisions/restore' ? {} : { id: current.id }),
       ...input,
       expectedVersion: current.version,
     })))
     setReplacing(false)
-    invalidate('entries/', 'content/')
+    invalidate('entries/', 'revisions/', 'content/')
   }
   const remove = async () => {
     if (!entry || !actions.delete || !(await confirm({
@@ -246,7 +246,7 @@ function Editor({ collection, initial, can }: EditorProps) {
         return current
       })
       session.reset()
-      invalidate('entries/', 'content/')
+      invalidate('entries/', 'revisions/', 'content/')
       navigate(listPath)
     })
   }
@@ -270,7 +270,7 @@ function Editor({ collection, initial, can }: EditorProps) {
     try {
       if (session.get().dirty && !(await control.save())) return false
       const result = await session.command((current) => run<Entry>('entries/move', { id: current.id, parentId, expectedVersion: current.version }))
-      invalidate('entries/', 'content/')
+      invalidate('entries/', 'revisions/', 'content/')
       return !!result
     } catch (error) {
       toast.error(error)
@@ -324,7 +324,7 @@ function Editor({ collection, initial, can }: EditorProps) {
       description: t('The current saved content stays in history.'),
       confirm: t('Restore'),
     }))) return
-    await replace('entries/restore', { revisionId })
+    await replace('revisions/restore', { revisionId })
   }
   const sidebar = (
     <div className="flex h-full min-h-0 flex-col">

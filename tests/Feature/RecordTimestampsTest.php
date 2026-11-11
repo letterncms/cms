@@ -46,7 +46,7 @@ final class RecordTimestampsTest extends TestCase
 
     public function test_every_overview_exposes_the_same_timestamp_contract(): void
     {
-        $this->ability('navigation/save', ['handle' => 'main', 'title' => 'Main', 'items' => []]);
+        $this->ability('navigation/create', ['handle' => 'main', 'title' => 'Main', 'items' => []]);
         $this->ability('forms/save', ['handle' => 'contact', 'title' => 'Contact', 'fields' => [], 'settings' => []]);
         $this->ability('globals/save', ['handle' => 'footer', 'title' => 'Footer', 'fields' => []]);
         $this->app->make(Redirects::class)->save([['from' => '/old', 'to' => '/new']]);
@@ -71,7 +71,7 @@ final class RecordTimestampsTest extends TestCase
     public function test_file_records_preserve_publication_and_advance_update_dates_across_reloads(): void
     {
         CarbonImmutable::setTestNow('2026-10-01 12:00:00 UTC');
-        $first = $this->ability('navigation/save', ['handle' => 'main', 'title' => 'Main', 'items' => []]);
+        $first = $this->ability('navigation/create', ['handle' => 'main', 'title' => 'Main', 'items' => []]);
         $collection = Collection::fromArray('cases', ['title' => 'Cases', 'fields' => []]);
         $this->cms()->collections()->save($collection);
         $this->ability('globals/save', ['handle' => 'footer', 'title' => 'Footer', 'fields' => []]);
@@ -79,14 +79,14 @@ final class RecordTimestampsTest extends TestCase
         $this->assertSame($first['publishedAt'], $first['updatedAt']);
 
         CarbonImmutable::setTestNow('2026-10-02 12:00:00 UTC');
-        $saved = $this->ability('navigation/save', ['handle' => 'main', 'title' => 'Main menu', 'items' => []]);
+        $saved = $this->ability('navigation/update', ['handle' => 'main', 'title' => 'Main menu', 'items' => []]);
         $fresh = new Menus($this->cms()->hooks());
         $this->assertSame($saved, $this->ability('navigation/get', ['handle' => 'main']));
         $this->assertSame($saved['updatedAt'], $fresh->find('main')['updatedAt']);
         $this->assertSame($first['publishedAt'], $saved['publishedAt']);
         $this->assertNotSame($first['updatedAt'], $saved['updatedAt']);
         $this->cms()->collections()->save($collection);
-        $this->ability('globals/update', ['handle' => 'footer', 'values' => []]);
+        $this->ability('globals/set', ['handle' => 'footer', 'values' => []]);
         $this->ability('forms/save', ['handle' => 'contact', 'title' => 'Contact us', 'fields' => [], 'settings' => []]);
         foreach ([$this->ability('collections/get', ['handle' => 'cases']), $this->ability('globals/get', ['handle' => 'footer']), $this->ability('forms/get', ['handle' => 'contact'])] as $record) {
             $this->assertSame($first['publishedAt'], $record['publishedAt']);
@@ -121,7 +121,7 @@ final class RecordTimestampsTest extends TestCase
         $this->assertNull($legacy['publishedAt']);
         $this->assertNull($legacy['updatedAt']);
         $this->assertSame($before, file_get_contents(content_path('navigation/legacy.yaml')));
-        $saved = $this->ability('navigation/save', ['handle' => 'legacy', 'title' => 'Legacy', 'items' => []]);
+        $saved = $this->ability('navigation/update', ['handle' => 'legacy', 'title' => 'Legacy', 'items' => []]);
         $this->assertNull($saved['publishedAt']);
         $this->assertNotNull($saved['updatedAt']);
         $this->assertSame(['publishedAt' => null, 'updatedAt' => null], RecordTimestamps::api(['published_at' => 'garbage', 'updated_at' => '']));
@@ -130,19 +130,19 @@ final class RecordTimestampsTest extends TestCase
     public function test_language_dates_follow_language_changes_but_not_unrelated_settings(): void
     {
         CarbonImmutable::setTestNow('2026-10-01 12:00:00 UTC');
-        $first = array_column($this->ability('languages/save', ['default' => 'en', 'languages' => ['en', 'de', 'fr']]), null, 'code');
+        $first = array_column($this->ability('languages/update', ['default' => 'en', 'languages' => ['en', 'de', 'fr']]), null, 'code');
         $this->assertNotNull($first['fr']['publishedAt']);
         $this->assertNull($first['en']['publishedAt']);
         CarbonImmutable::setTestNow('2026-10-02 12:00:00 UTC');
         $this->cms()->saveSite(['name' => 'Renamed site']);
         // The list adds what the Languages screen shows (entries, path, badge…); the record itself is the same.
         $this->assertSame(array_values($first), array_map(static fn ($row) => array_intersect_key($row, $first[$row['code']]), $this->ability('languages/list')['languages']));
-        $changed = array_column($this->ability('languages/save', ['default' => 'fr', 'languages' => ['en', 'de', 'fr']]), null, 'code');
+        $changed = array_column($this->ability('languages/update', ['default' => 'fr', 'languages' => ['en', 'de', 'fr']]), null, 'code');
         $this->assertSame($first['fr']['publishedAt'], $changed['fr']['publishedAt']);
         $this->assertNotSame($first['fr']['updatedAt'], $changed['fr']['updatedAt']);
         $this->assertSame($first['de'], $changed['de']);
         CarbonImmutable::setTestNow('2026-10-03 12:00:00 UTC');
-        $prefixed = array_column($this->ability('languages/save', ['default' => 'fr', 'languages' => ['en', 'de', 'fr'], 'prefixDefault' => true]), null, 'code');
+        $prefixed = array_column($this->ability('languages/update', ['default' => 'fr', 'languages' => ['en', 'de', 'fr'], 'prefixDefault' => true]), null, 'code');
         $this->assertSame($changed['de'], $prefixed['de']);
         $this->assertSame($first['fr']['publishedAt'], $prefixed['fr']['publishedAt']);
         $this->assertNotSame($changed['fr']['updatedAt'], $prefixed['fr']['updatedAt']);

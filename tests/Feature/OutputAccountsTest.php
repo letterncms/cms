@@ -84,7 +84,7 @@ final class OutputAccountsTest extends TestCase
         $this->assertIsString($brief['expiresAt']);
 
         $this->assertCount(2, $this->run_('tokens/list', [], $me));
-        $this->assertSame(['revoked' => $brief['id']], $this->run_('tokens/revoke', ['id' => $brief['id']], $me));
+        $this->assertSame(['revoked' => $brief['id']], $this->run_('tokens/delete', ['id' => $brief['id']], $me));
         $this->assertCount(1, $this->run_('tokens/list', [], $me));
     }
 
@@ -95,9 +95,9 @@ final class OutputAccountsTest extends TestCase
         $editor->forceFill(['last_login_at' => now()])->save();
 
         // No profile fields yet, then some.
-        $this->assertSame([], $this->run_('users/fields', [], $me)['fields']);
-        $this->run_('users/fields-save', ['fields' => [['handle' => 'bio', 'type' => 'textarea', 'label' => 'Bio'], ['handle' => 'job', 'type' => 'text', 'required' => false]]], $me);
-        $this->assertCount(2, $this->run_('users/fields', [], $me)['resolvedFields']);
+        $this->assertSame([], $this->run_('user-fields/get', [], $me)['fields']);
+        $this->run_('user-fields/save', ['fields' => [['handle' => 'bio', 'type' => 'textarea', 'label' => 'Bio'], ['handle' => 'job', 'type' => 'text', 'required' => false]]], $me);
+        $this->assertCount(2, $this->run_('user-fields/get', [], $me)['resolvedFields']);
         $this->run_('users/update', ['id' => $editor->id, 'data' => ['bio' => 'Writes.']], $me);
 
         $one = $this->run_('users/get', ['id' => $editor->id], $me);
@@ -163,12 +163,12 @@ final class OutputAccountsTest extends TestCase
         $this->assertSame('footer', $set['handle']);
         $this->run_('globals/save', ['title' => 'Empty', 'icon' => 'star', 'fields' => []], $me);
         // The values as stored, by field handle: every field of the set, also one nobody filled in.
-        $stored = (array) $this->run_('globals/update', ['handle' => 'footer', 'values' => ['text' => 'Hello']], $me);
+        $stored = (array) $this->run_('globals/set', ['handle' => 'footer', 'values' => ['text' => 'Hello']], $me);
         $this->assertSame('Hello', $stored['text']);
         $this->assertArrayHasKey('hours', $stored);
-        $this->assertSame('Hallo', ((array) $this->run_('globals/update', ['handle' => 'footer', 'values' => ['text' => 'Hallo'], 'locale' => 'de'], $me))['text']);
+        $this->assertSame('Hallo', ((array) $this->run_('globals/set', ['handle' => 'footer', 'values' => ['text' => 'Hallo'], 'locale' => 'de'], $me))['text']);
         // A set without fields has no values: a map all the same.
-        $this->assertSame([], (array) $this->run_('globals/update', ['handle' => 'empty', 'values' => []], $me));
+        $this->assertSame([], (array) $this->run_('globals/set', ['handle' => 'empty', 'values' => []], $me));
 
         $list = $this->run_('globals/list', [], $me);
         $this->assertEqualsCanonicalizing(['empty', 'footer'], array_column($list, 'handle'));
@@ -270,8 +270,8 @@ final class OutputAccountsTest extends TestCase
         $this->assertSame('valid', $this->run_('license/status', [], $me)['token']);
 
         // A dry run names the key that would go, and leaves it.
-        $this->assertSame([['action' => 'remove', 'type' => 'license', 'host' => $installed['host'], 'state' => 'valid']], $this->run_('license/clear', ['dryRun' => true], $me)['changes']);
+        $this->assertSame([['action' => 'remove', 'type' => 'license', 'host' => $installed['host'], 'state' => 'valid']], $this->run_('license/delete', ['dryRun' => true], $me)['changes']);
         $this->assertSame('valid', $this->run_('license/status', [], $me)['token']);
-        $this->assertSame('none', $this->run_('license/clear', [], $me)['token']);
+        $this->assertSame('none', $this->run_('license/delete', [], $me)['token']);
     }
 }

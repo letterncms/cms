@@ -45,7 +45,7 @@ final class VendorAbilities
             return [...(array) $result, ...$list()];
         };
 
-        $abilities->register('design/vendor-list', [
+        $abilities->register('design-vendor/list', [
             'label' => 'Vendored Libraries',
             'description' => 'The libraries in content/design/vendor that the site’s scripts import by name (import gsap from "gsap"): package, pinned version, where it came from and the hash of its file.',
             'permission' => 'admin.access',
@@ -54,7 +54,7 @@ final class VendorAbilities
             'handler' => $list,
         ]);
 
-        $abilities->register('design/vendor-add', [
+        $abilities->register('design-vendor/create', [
             'label' => 'Add a Library',
             'description' => 'Fetch an npm package’s ES module at one exact version into content/design/vendor and lock it: {"package": "gsap@3.12.5"}. Scripts then import it by name. `file` takes one file of the package instead ({"package": "three@0.160.0", "file": "examples/jsm/controls/OrbitControls.js", "as": "three/addons/controls/OrbitControls.js"}); `as` is the name to import it by. Packages it imports are added too. The site serves the files itself; a build that would still import from an address is refused. What the library does when it runs is not checked.',
             'permission' => 'site.code',
@@ -68,7 +68,7 @@ final class VendorAbilities
             'handler' => static fn (array $in) => $change(static fn () => $vendor()->add((string) $in['package'], isset($in['file']) ? (string) $in['file'] : null, isset($in['as']) ? (string) $in['as'] : null)),
         ]);
 
-        $abilities->register('design/vendor-update', [
+        $abilities->register('design-vendor/update', [
             'label' => 'Update a Library',
             'description' => 'Move an import to another exact version, or without `version` to the newest one: {"import": "gsap", "version": "3.13.0"}.',
             'permission' => 'site.code',
@@ -78,7 +78,7 @@ final class VendorAbilities
             'handler' => static fn (array $in) => $change(static fn () => $vendor()->update((string) $in['import'], isset($in['version']) ? (string) $in['version'] : null)),
         ]);
 
-        $abilities->register('design/vendor-remove', [
+        $abilities->register('design-vendor/delete', [
             'label' => 'Remove a Library',
             'description' => 'Take an import and its files out of content/design/vendor: {"import": "gsap"}.',
             'permission' => 'site.code',

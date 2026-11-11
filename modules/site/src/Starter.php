@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Site;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Cms\Abilities\AbilityContext;
 use Cms\Content\Collections\CollectionRepository;
 use Cms\Cms;
@@ -94,12 +95,18 @@ final class Starter
             $create((array) $items, (string) $collection, null);
         }
 
-        if ($this->cms->abilities()->has('navigation/save')) {
+        if ($this->cms->abilities()->has('navigation/create')) {
+            $system = AbilityContext::system('install');
+            $existing = array_column($this->cms->abilities()->execute('navigation/list', [], $system), 'handle');
+
             foreach ((array) ($seed['menus'] ?? []) as $handle => $items) {
                 $items = array_values(array_filter(array_map(static fn (array $i) => isset($i['page'])
                     ? (isset($ids[$i['page']]) ? array_filter(['entry' => $ids[$i['page']], 'label' => $i['label'] ?? null]) : null)
                     : $i, (array) $items)));
-                $this->cms->abilities()->execute('navigation/save', ['handle' => (string) $handle, 'items' => $items], AbilityContext::system('install'));
+                // A menu the site has already keeps its name and gets the kit's items; one it has not is made.
+                in_array((string) $handle, $existing, true)
+                    ? $this->cms->abilities()->execute('navigation/update', ['handle' => (string) $handle, 'items' => $items], $system)
+                    : $this->cms->abilities()->execute('navigation/create', ['handle' => (string) $handle, 'title' => Str::headline((string) $handle), 'items' => $items], $system);
             }
         }
 

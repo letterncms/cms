@@ -22,9 +22,9 @@ registry.composer.set('assistant-resources', {
   trigger: '@', label: t('Site'), order: 40,
   search: async (query) => {
     if (!answering()) return []
-    resources ??= run('assistant/resources')
+    resources ??= run('assistant-resources/list')
     return (await resources).filter((resource) => matches(query, resource.name)).slice(0, 5).map((resource) => ({
-      id: `resource:${resource.uri}`, kind: 'resource', label: resource.name, icon: 'book', read: () => run('assistant/resource', { uri: resource.uri }),
+      id: `resource:${resource.uri}`, kind: 'resource', label: resource.name, icon: 'book', read: () => run('assistant-resources/get', { uri: resource.uri }),
     }))
   },
 })

@@ -54,7 +54,7 @@ final class LicenseAbilities
             },
         ]);
 
-        $a->register('license/clear', [
+        $a->register('license/delete', [
             'label' => 'Remove License Key',
             'description' => 'Remove this site\'s license key. The site keeps working.',
             'permission' => 'license.manage',

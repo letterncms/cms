@@ -56,7 +56,7 @@ final class NavigationModule extends Plugin
             }
         });
 
-        $this->cms()->context()->register('cms://navigation', 'Menus', 'Site menus and their items. Edit with navigation/save; pages show them with a Repeat block: {"source":"menu","menu":"<handle>"}.', fn () => array_values(array_map(fn ($m) => $this->describe($m), $this->app->make(Menus::class)->all())), permission: 'navigation.view');
+        $this->cms()->context()->register('cms://navigation', 'Menus', 'Site menus and their items. Edit with navigation/update; pages show them with a Repeat block: {"source":"menu","menu":"<handle>"}.', fn () => array_values(array_map(fn ($m) => $this->describe($m), $this->app->make(Menus::class)->all())), permission: 'navigation.view');
 
         $this->cms()->admin()->nav('navigation', ['path' => '/navigation', 'icon' => 'list-tree', 'section' => 'content', 'order' => 72, 'permission' => 'navigation.view']);
         $this->cms()->admin()->command('navigation', ['label' => 'Edit Menus', 'icon' => 'list-tree', 'path' => '/navigation', 'keywords' => ['menu', 'navigation', 'links', 'header', 'footer'], 'permission' => 'navigation.view']);
@@ -72,7 +72,7 @@ final class NavigationModule extends Plugin
         $this->cms()->admin()->component('navigation/menu', ['label' => 'Menu editor', 'description' => 'The links of one menu: pages and links, nested by dragging, with how deep they may go.', 'surface' => false, 'permission' => 'navigation.view',
             'props' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle'], 'additionalProperties' => false]]);
 
-        $rename = static fn (string $handle, string $title) => ['label' => __('Rename'), 'icon' => 'edit', 'ability' => 'navigation/save', 'input' => ['handle' => $handle, 'title' => '{values.title}'],
+        $rename = static fn (string $handle, string $title) => ['label' => __('Rename'), 'icon' => 'edit', 'ability' => 'navigation/update', 'input' => ['handle' => $handle, 'title' => '{values.title}'],
             'form' => ['title' => __('Rename Menu'), 'confirm' => __('Rename'), 'values' => ['title' => $title], 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'required' => true, 'autofocus' => true]]]];
         $delete = static fn (string $handle, string $question, ?string $then = null) => ['label' => __('Delete'), 'icon' => 'trash', 'variant' => $then ? 'ghost' : 'danger', 'ability' => 'navigation/delete', 'input' => ['handle' => $handle],
             'confirm' => ['title' => $question, 'text' => __('Repeat blocks that list this menu will show nothing.'), 'confirm' => __('Delete'), 'danger' => true], ...($then ? ['then' => 'open', 'to' => $then] : [])];
@@ -147,9 +147,14 @@ final class NavigationModule extends Plugin
 
         $a->register('navigation/create', [
             'label' => 'Create Menu',
-            'description' => 'A new, empty menu named title. Its handle is made from the title (main, footer).',
+            'description' => 'A new menu named title, empty unless items are given. Its handle is made from the title (main, footer) unless one is given. Items nest through children (up to maxDepth levels). Link pages by entry id so links survive moves; use url for anything else. A handle that is taken is refused: change that menu with navigation/update.',
             'permission' => 'navigation.manage',
-            'input' => ['type' => 'object', 'properties' => ['title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120]], 'required' => ['title']],
+            'input' => ['type' => 'object', 'properties' => [
+                'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
+                'handle' => ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,63}$', 'description' => 'e.g. main, footer. Made from the title when left out.'],
+                'maxDepth' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 5],
+                'items' => ['type' => 'array', 'items' => $item],
+            ], 'required' => ['title']],
             'answer' => static fn (array $menu) => Answers::done(__('Created :name', ['name' => $menu['title']]), null, [
                 ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/navigation/'.$menu['handle']],
                 ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'ghost', 'ability' => 'navigation/delete', 'input' => ['handle' => $menu['handle']], 'success' => __('Menu deleted'),
@@ -157,7 +162,7 @@ final class NavigationModule extends Plugin
             ]),
             'output' => self::menuShape(),
             'handler' => function (array $in) use ($menus) {
-                $handle = substr(trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower(Str::ascii($in['title']))), '-'), 0, 64);
+                $handle = $in['handle'] ?? substr(trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower(Str::ascii($in['title']))), '-'), 0, 64);
 
                 // Said on the name, in the dialog that asked for it.
                 if ($handle === '') {
@@ -165,16 +170,16 @@ final class NavigationModule extends Plugin
                 }
 
                 if ($menus()->find($handle) !== null) {
-                    throw new AbilityException($error = __('A menu called “:handle” already exists.', ['handle' => $handle]), 'conflict', ['title' => $error]);
+                    throw new AbilityException($error = __('A menu called “:handle” already exists.', ['handle' => $handle]), 'conflict', [isset($in['handle']) ? 'handle' : 'title' => $error]);
                 }
 
-                return $this->describe($menus()->save($handle, ['title' => trim($in['title']), 'items' => []]));
+                return $this->describe($menus()->save($handle, [...array_intersect_key($in, array_flip(['maxDepth'])), 'title' => trim($in['title']), 'items' => $in['items'] ?? []]));
             },
         ]);
 
-        $a->register('navigation/save', [
+        $a->register('navigation/update', [
             'label' => 'Save Menu',
-            'description' => 'Create a menu or replace its items. Items nest through children (up to maxDepth levels). Link pages by entry id so links survive moves; use url for anything else. On an existing menu, what is left out (title, maxDepth, items) stays as it is.',
+            'description' => 'Change a menu: rename it, set how deep it nests, or replace its items. Items nest through children (up to maxDepth levels). Link pages by entry id so links survive moves; use url for anything else. What is left out (title, maxDepth, items) stays as it is. A menu that is not there is not made: navigation/create does that.',
             'permission' => 'navigation.manage',
             'annotations' => ['idempotent' => true],
             'input' => [
@@ -191,10 +196,14 @@ final class NavigationModule extends Plugin
                 ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/navigation/'.$menu['handle']],
             ]),
             'output' => self::menuShape(),
-            'handler' => fn (array $in) => $this->describe($menus()->save($in['handle'], [...array_intersect_key($menus()->find($in['handle']) ?? [], array_flip(['title', 'maxDepth', 'items'])), ...$in])),
+            'handler' => function (array $in) use ($menus) {
+                $menu = $menus()->find($in['handle']) ?? throw new AbilityException(__('Menu not found.'), 'not_found', ['handle' => __('Menu not found.')]);
+
+                return $this->describe($menus()->save($in['handle'], [...array_intersect_key($menu, array_flip(['title', 'maxDepth', 'items'])), ...$in]));
+            },
         ]);
 
-        $a->register('navigation/add', [
+        $a->register('navigation/add-item', [
             'label' => 'Add to Menu',
             'description' => 'Add one link at the end of a menu: a page by its entry id (it follows the page when it moves), or any url. Its label is the page’s title unless one is given.',
             'permission' => 'navigation.manage',
@@ -216,6 +225,48 @@ final class NavigationModule extends Plugin
                 $item = array_filter(['entry' => $in['entry'] ?? null, 'url' => empty($in['entry']) ? ($in['url'] ?? null) : null, 'label' => $in['label'] ?? null, 'children' => []], static fn ($v) => $v !== null);
 
                 return $this->describe($menus()->save($in['menu'], [...$menu, 'items' => [...$menu['items'], $item]]));
+            },
+        ]);
+
+        // The menu without one of its items, and the item: refused the same in a real and a dry run.
+        $remove = function (array $in) use ($menus): array {
+            $menu = $menus()->find($in['menu']) ?? throw new AbilityException(__('Menu not found.'), 'not_found', ['menu' => __('Menu not found.')]);
+            $removed = null;
+            $items = self::withoutItem($menu['items'], $in['id'], $removed);
+
+            if ($removed === null) {
+                throw new AbilityException(__('Menu item not found.'), 'not_found', ['id' => __('Menu item not found.')]);
+            }
+
+            return [[...$menu, 'items' => $items], $removed];
+        };
+
+        $a->register('navigation/remove-item', [
+            'label' => 'Remove from Menu',
+            'description' => 'Remove one item of a menu by its id (navigation/get has the ids), at any depth. The items nested under it go with it.',
+            'permission' => 'navigation.manage',
+            'input' => ['type' => 'object', 'properties' => [
+                'menu' => ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,63}$', 'description' => 'The menu’s handle (main, footer).'],
+                'id' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 64, 'description' => 'The item’s id.'],
+            ], 'required' => ['menu', 'id']],
+            'answer' => static fn (array $menu) => Answers::done(__('Removed from :name', ['name' => $menu['title']]), null, [
+                ['label' => __('Open'), 'icon' => 'arrow-right', 'variant' => 'primary', 'to' => '/navigation/'.$menu['handle']],
+            ]),
+            'output' => self::menuShape(),
+            'dryRun' => function (array $in) use ($remove, $menus): array {
+                [$menu, $item] = $remove($in);
+                $label = $item['label'] ?? (isset($item['entry']) ? ($menus()->entriesById([$item])[$item['entry']] ?? null)?->title : null) ?? $item['url'] ?? null;
+
+                return [array_filter([
+                    'action' => 'remove-item', 'type' => 'menu', 'handle' => $menu['handle'], 'title' => $menu['title'],
+                    'item' => array_filter(['id' => $item['id'], 'label' => $label, 'entry' => $item['entry'] ?? null, 'url' => $item['url'] ?? null], static fn ($v) => $v !== null),
+                    'removes' => ['items' => 1 + self::count($item['children'])],
+                ])];
+            },
+            'handler' => function (array $in) use ($remove, $menus) {
+                [$menu] = $remove($in);
+
+                return $this->describe($menus()->save($in['menu'], $menu));
             },
         ]);
 
@@ -245,7 +296,7 @@ final class NavigationModule extends Plugin
                 return $view;
             }
             $first = array_key_first($menus);
-            $add = ['label' => __('Add to Menu'), 'icon' => 'list-tree', 'ability' => 'navigation/add', 'input' => ['menu' => '{values.menu}', 'entry' => $result['id']], 'success' => __('Added to the menu'),
+            $add = ['label' => __('Add to Menu'), 'icon' => 'list-tree', 'ability' => 'navigation/add-item', 'input' => ['menu' => '{values.menu}', 'entry' => $result['id']], 'success' => __('Added to the menu'),
                 'form' => ['title' => __('Add to Menu'), 'confirm' => __('Add'), 'values' => ['menu' => $first], 'fields' => [
                     ['handle' => 'menu', 'type' => 'select', 'label' => __('Menu'), 'required' => true, 'display' => 'dropdown', 'options' => array_map(static fn (array $m) => $m['title'], $menus)],
                 ]]];
@@ -314,6 +365,24 @@ final class NavigationModule extends Plugin
             } else {
                 $out[] = [...$item, 'children' => $children];
             }
+        }
+
+        return $out;
+    }
+
+    /** The items without the one with this id, wherever it is nested; `$removed` is that item, with what was under it. */
+    private static function withoutItem(array $items, string $id, ?array &$removed): array
+    {
+        $out = [];
+
+        foreach ($items as $item) {
+            if ($removed === null && (string) ($item['id'] ?? '') === $id) {
+                $removed = $item;
+
+                continue;
+            }
+
+            $out[] = [...$item, 'children' => self::withoutItem($item['children'], $id, $removed)];
         }
 
         return $out;

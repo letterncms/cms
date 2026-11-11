@@ -33,7 +33,7 @@ final class CodeAbilities
         $names = ['scripts' => [Shape::STRING], 'styles' => [Shape::STRING]];
         $listed = Shape::of([...$names, 'load' => [...$names, 'templates' => Shape::map($names), 'components' => Shape::map($names)]]);
 
-        $abilities->register('design/code-files', [
+        $abilities->register('design-code/list', [
             'label' => 'Design Scripts and Styles',
             'description' => 'The ES modules (content/design/scripts/<name>.js) and stylesheets (content/design/styles/<name>.css) beside the design, by name, and `load`: which of them load on every page, with a template or with a component (content/design/code.json). A block loads its own with code: {scripts: [...], styles: [...]}.',
             'permission' => 'admin.access',
@@ -42,7 +42,7 @@ final class CodeAbilities
             'handler' => $list,
         ]);
 
-        $abilities->register('design/code-read', [
+        $abilities->register('design-code/get', [
             'label' => 'Read a Design Script or Style',
             'description' => 'The contents of one file: {"path": "scripts/hero.js"} or {"path": "styles/hero.css"}.',
             'permission' => 'site.code',
@@ -52,7 +52,7 @@ final class CodeAbilities
             'handler' => static fn (array $in) => $guard(static fn () => ['path' => (string) $in['path'], 'contents' => $code()->read((string) $in['path']) ?? throw AbilityException::notFound((string) $in['path'])]),
         ]);
 
-        $abilities->register('design/code-write', [
+        $abilities->register('design-code/save', [
             'label' => 'Write a Design Script or Style',
             'description' => 'Create or replace scripts/<name>.js (an ES module; it can import another script by path, "./lib/ease.js") or styles/<name>.css. Names are lowercase letters, digits, - and _, in up to three folders. Pages that load the file are built again.',
             'permission' => 'site.code',
@@ -65,7 +65,7 @@ final class CodeAbilities
             }),
         ]);
 
-        $abilities->register('design/code-delete', [
+        $abilities->register('design-code/delete', [
             'label' => 'Delete a Design Script or Style',
             'description' => 'Remove scripts/<name>.js or styles/<name>.css.',
             'permission' => 'site.code',
@@ -83,7 +83,7 @@ final class CodeAbilities
             }),
         ]);
 
-        $abilities->register('design/code-load', [
+        $abilities->register('design-code/set-load', [
             'label' => 'Where Design Scripts and Styles Load',
             'description' => 'Replace content/design/code.json: {"scripts": ["smooth"], "styles": ["base"]} load on every page; "templates": {"post": {"scripts": [...], "styles": [...]}} with a template; "components": {"header": {...}} on pages that show a component. The site rebuilds.',
             'permission' => 'site.code',
@@ -111,7 +111,7 @@ final class CodeAbilities
                     'content/design/code.json says where they load: top-level "scripts" and "styles" on every page, "templates": {<handle>: {scripts, styles}} with a template, "components": {<handle>: {scripts, styles}} on pages that show that component.',
                     'A block loads its own: {"type": "box", "code": {"scripts": ["hero"], "styles": ["hero"]}}.',
                     'Scripts load as <script type="module"> at the end of the page, never in the editor. One script imports another by path: import { ease } from "./lib/ease.js".',
-                    'Libraries come from `cms vendor add <name>@<version>` or design/vendor-add (see design/vendor-list): kept in content/design/vendor, pinned in its lock.json, and imported by name: import gsap from "gsap". Don’t import a library from a CDN in a script: nothing checks a script’s own imports.',
+                    'Libraries come from `cms vendor add <name>@<version>` or design-vendor/create (see design-vendor/list): kept in content/design/vendor, pinned in its lock.json, and imported by name: import gsap from "gsap". Don’t import a library from a CDN in a script: nothing checks a script’s own imports.',
                     'Files are published under /_cms/site/ with a hash in their name and cached forever; changing one rebuilds the pages that load it.',
                 ],
                 ...$list(),

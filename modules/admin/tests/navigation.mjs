@@ -199,7 +199,7 @@ serve('Navigation', async (req, res, url) => {
     if (ability === 'collections/get') return json(res, 200, { data: { ...collection, fields: [], resolvedFields: [], schema: {} } })
     if (ability === 'entries/list') return json(res, 200, { data: { items: [entry], total: 1, page: 1, pages: 1 } })
     if (ability === 'entries/get') return json(res, 200, { data: entry })
-    if (ability === 'entries/revisions') return json(res, 200, { data: [] })
+    if (ability === 'revisions/list') return json(res, 200, { data: [] })
     throw new Error('Unexpected ability: ' + ability)
   }
   res.writeHead(200, { 'Content-Type': 'text/html' }); res.end(page({ title: 'Navigation regression test', boot, runner }))

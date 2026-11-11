@@ -155,7 +155,7 @@ final class AbilityOutputTest extends TestCase
         $this->assertStringContainsString('"data":{}', $rpc('tools/call', ['name' => 'entries.get', 'arguments' => ['id' => $id]])->getContent());
 
         // A list that is empty is still a list under `items`, as the tool's output schema requires.
-        $empty = $rpc('tools/call', ['name' => 'entries.lookup', 'arguments' => ['ids' => []]]);
+        $empty = $rpc('tools/call', ['name' => 'entries.get-many', 'arguments' => ['ids' => []]]);
         $this->assertStringContainsString('"structuredContent":{"items":[]}', $empty->getContent());
 
         \Illuminate\Support\Facades\Artisan::call('run', ['ability' => 'entries/get', 'input' => ["id={$id}"]], $buffer = new \Symfony\Component\Console\Output\BufferedOutput);
@@ -182,20 +182,20 @@ final class AbilityOutputTest extends TestCase
         $run('entries/update', ['id' => $parent['id'], 'title' => 'Parent, changed']);
         $this->assertFalse($run('entries/discard-draft', ['id' => $parent['id']])['hasDraft']);
 
-        $revisions = $run('entries/revisions', ['id' => $parent['id']]);
+        $revisions = $run('revisions/list', ['entryId' => $parent['id']]);
         $this->assertNotSame([], $revisions);
-        $this->assertSame($parent['id'], $run('entries/revision', ['id' => $revisions[0]['id']])['entryId']);
-        $this->assertSame($parent['id'], $run('entries/restore', ['revisionId' => $revisions[count($revisions) - 1]['id']])['id']);
+        $this->assertSame($parent['id'], $run('revisions/get', ['id' => $revisions[0]['id']])['entryId']);
+        $this->assertSame($parent['id'], $run('revisions/restore', ['revisionId' => $revisions[count($revisions) - 1]['id']])['id']);
 
-        $this->assertSame([$child['id'], $parent['id']], array_column($run('entries/lookup', ['ids' => [$child['id'], $parent['id']]]), 'id'));
+        $this->assertSame([$child['id'], $parent['id']], array_column($run('entries/get-many', ['ids' => [$child['id'], $parent['id']]]), 'id'));
         $this->assertNotSame([], $run('content/recent'));
         $this->assertNotSame([], $run('content/search', ['query' => 'Child']));
         $this->assertNotSame([], $run('fields/types'));
         $this->assertNotSame([], $run('entries/tree', ['collection' => 'pages', 'fields' => ['summary']]));
         $this->assertSame('pages', $run('collections/get', ['handle' => 'pages'])['handle']);
-        $this->assertSame('Test site', $run('site/get')['name']);
+        $this->assertSame('Test site', $run('settings/get', ['namespace' => 'site'])['values']['name']);
         $this->assertSame(PHP_VERSION, $run('system/info')['php']);
-        $this->assertNotSame([], $run('users/lookup', ['search' => 'Ada'])['items']);
+        $this->assertNotSame([], $run('people/list', ['search' => 'Ada'])['items']);
         $this->assertContains('entries/create', array_column($run('abilities/list'), 'name'));
 
         // A list with the fields asked for and without, a revision that kept a working copy, and the rest of what describes the site.
@@ -206,7 +206,7 @@ final class AbilityOutputTest extends TestCase
 
         $run('entries/update', ['id' => $parent['id'], 'title' => 'Parent, changed again', 'data' => ['summary' => 'Kept beside it']]);
         $run('entries/publish', ['id' => $parent['id']]);
-        $snapshots = array_map(fn (array $revision) => $run('entries/revision', ['id' => $revision['id']])['snapshot'], $run('entries/revisions', ['id' => $parent['id']]));
+        $snapshots = array_map(fn (array $revision) => $run('revisions/get', ['id' => $revision['id']])['snapshot'], $run('revisions/list', ['entryId' => $parent['id']]));
         $this->assertNotSame([], array_filter(array_column($snapshots, 'draft')), 'A revision that kept the working copy');
         $this->assertSame('draft', $run('entries/unpublish', ['id' => $parent['id']])['status']);
         $this->assertSame('draft', $run('entries/duplicate', ['id' => $child['id']])['status']);

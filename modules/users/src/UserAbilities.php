@@ -76,7 +76,7 @@ final class UserAbilities
                 'password' => ['type' => 'string'],
                 'roles' => $roleSchema,
                 'super' => ['type' => 'boolean', 'default' => false, 'title' => __('Super Admin')],
-                'data' => ['type' => 'object', 'description' => 'Profile fields (see users/fields).'],
+                'data' => ['type' => 'object', 'description' => 'Profile fields (see user-fields/get).'],
             ], 'required' => ['name', 'email', 'roles']],
             // Invited, or added with a password: who they are, with a way to them and a way back.
             'answer' => static fn (array $person, array $in) => Answers::done(
@@ -136,7 +136,7 @@ final class UserAbilities
                 'email' => ['type' => 'string', 'format' => 'email'],
                 'roles' => $roleSchema,
                 'super' => ['type' => 'boolean', 'title' => __('Super Admin')],
-                'data' => ['type' => 'object', 'description' => 'Profile fields (see users/fields), merged into the current values.'],
+                'data' => ['type' => 'object', 'description' => 'Profile fields (see user-fields/get), merged into the current values.'],
                 'suspended' => ['type' => 'boolean', 'description' => 'A suspended account cannot sign in, and is signed out at its next request.'],
             ], 'required' => ['id']],
             'output' => Shapes::user(),
@@ -249,7 +249,7 @@ final class UserAbilities
             },
         ]);
 
-        $a->register('users/fields-save', [
+        $a->register('user-fields/save', [
             'label' => 'Save User Profile Fields',
             'description' => 'Replace the fields of user profiles. Values of removed fields stay stored.',
             'permission' => 'collections.manage',

@@ -133,16 +133,16 @@ final class OutputCollaborationTest extends TestCase
         $this->assertNotContains('secret', array_column($this->as($this->userWithRole('author'), 'assistant/skills'), 'name'));
 
         $this->cms()->context()->register('cms://test/guide', 'Writing guide', 'How this site writes.', static fn () => 'Short sentences.', 'text/markdown');
-        $resources = $this->as($ada, 'assistant/resources');
+        $resources = $this->as($ada, 'assistant-resources/list');
         $this->assertContains('cms://test/guide', array_column($resources, 'uri'));
-        $this->assertSame('Short sentences.', $this->as($ada, 'assistant/resource', ['uri' => 'cms://test/guide']));
+        $this->assertSame('Short sentences.', $this->as($ada, 'assistant-resources/get', ['uri' => 'cms://test/guide']));
 
         // Every resource the site itself brings reads as text.
         foreach ($resources as $resource) {
-            $this->assertIsString($this->as($ada, 'assistant/resource', ['uri' => $resource['uri']]));
+            $this->assertIsString($this->as($ada, 'assistant-resources/get', ['uri' => $resource['uri']]));
         }
 
-        $this->assertSame('not_found', $this->refused($ada, 'assistant/resource', ['uri' => 'cms://nothing/here']));
+        $this->assertSame('not_found', $this->refused($ada, 'assistant-resources/get', ['uri' => 'cms://nothing/here']));
     }
 
     public function test_the_workspace_answers_as_described(): void
