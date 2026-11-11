@@ -33,7 +33,7 @@ final class EntryWorkflowTest extends TestCase
     {
         $writer = $this->admin(['name' => 'Original Writer']);
         $editor = $this->admin(['name' => 'Another Editor']);
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         foreach (['pages', 'notes'] as $collection) {
             $created = $service->create($collection, ['title' => 'Original', 'status' => 'published'], $writer);
             $this->assertSame($created->version(), $this->cms()->entries()->find($created->id)->version());
@@ -62,7 +62,7 @@ final class EntryWorkflowTest extends TestCase
     {
         $writer = $this->admin();
         $editor = $this->admin();
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         $entry = $service->create('pages', ['title' => 'Historical', 'status' => 'published'], $writer);
         $writer->delete();
         $saved = $service->update($entry->id, ['title' => 'Edited', 'slug' => $entry->slug, 'data' => $entry->data, 'authorId' => $writer->id, 'expectedVersion' => $entry->version()], $editor);
@@ -76,7 +76,7 @@ final class EntryWorkflowTest extends TestCase
     public function test_versions_guard_same_second_saves_and_all_followup_actions(): void
     {
         $this->freezeTime();
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         foreach (['pages', 'notes'] as $collection) {
             $created = $service->create($collection, ['title' => 'Shared']);
             $fresh = $service->update($created->id, ['title' => 'First save', 'expectedVersion' => $created->version()]);
@@ -90,7 +90,7 @@ final class EntryWorkflowTest extends TestCase
 
     public function test_moves_and_parent_deletion_preserve_unpublished_content_and_bylines(): void
     {
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         $writer = $this->admin();
         foreach (['pages', 'notes'] as $collection) {
             $parent = $service->create($collection, ['title' => 'Parent']);
@@ -111,7 +111,7 @@ final class EntryWorkflowTest extends TestCase
 
     public function test_structure_requires_publish_permission_and_reorder_checks_every_version_first(): void
     {
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         $a = $service->create('pages', ['title' => 'A', 'status' => 'published']);
         $b = $service->create('pages', ['title' => 'B']);
         $this->fails(fn () => $this->execute('entries/move', ['id' => $a->id, 'parentId' => $b->id], $this->userWithRole('author')), 'forbidden');
@@ -143,7 +143,7 @@ final class EntryWorkflowTest extends TestCase
 
     public function test_admin_queries_use_working_values_without_leaking_them_to_public_queries(): void
     {
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         $zoe = $this->admin(['name' => 'Zoe']);
         $ada = $this->admin(['name' => 'Ada']);
         foreach (['posts' => 'excerpt', 'notes' => 'body'] as $collection => $field) {
@@ -177,7 +177,7 @@ final class EntryWorkflowTest extends TestCase
     public function test_deletion_removes_history_and_collections_require_explicit_data_deletion(): void
     {
         $admin = $this->admin();
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         foreach (['posts' => 'excerpt', 'notes' => 'body'] as $collection => $field) {
             $entry = $service->create($collection, ['title' => 'Remove', 'data' => [$field => 'Body'], 'status' => 'published'], $admin);
             $service->update($entry->id, ['title' => 'Draft']);

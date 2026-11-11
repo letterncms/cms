@@ -71,7 +71,7 @@ final class AccountController
         }
 
         Auth::guard('web')->getProvider()->rehashPasswordIfRequired($user, ['password' => $password]);
-        Auth::guard('web')->login($user, $request->boolean('remember') && $this->cms->settings('accounts', 'remember', true));
+        Auth::guard('web')->login($user, $request->boolean('remember') && $this->cms->setting('accounts', 'remember', true));
         $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->saveQuietly();
         $this->accounts->touchSession($user);
@@ -134,7 +134,7 @@ final class AccountController
         $token = AccountToken::live($request->session()->get('account.token.complete'), AccountToken::SIGN_UP);
 
         // Sign-up may have closed since the link went out.
-        if (! $token || ! $this->accounts->enabled() || $this->cms->settings(Accounts::SETTINGS, 'sign_up', 'open') !== 'open') {
+        if (! $token || ! $this->accounts->enabled() || $this->cms->setting(Accounts::SETTINGS, 'sign_up', 'open') !== 'open') {
             return $this->back('complete', $back, __('This link is invalid or has expired.'), 'error');
         }
 
@@ -142,7 +142,7 @@ final class AccountController
         $errors = array_filter([
             'name' => $name === '' ? __('Enter your name.') : null,
             'password' => $this->passwordProblem($request->input('password')),
-            'terms' => (string) $this->cms->settings('accounts', 'terms_url', '') !== '' && ! $request->boolean('terms') ? __('Tick this to agree to the terms.') : null,
+            'terms' => (string) $this->cms->setting('accounts', 'terms_url', '') !== '' && ! $request->boolean('terms') ? __('Tick this to agree to the terms.') : null,
         ]);
 
         if ($errors !== []) {

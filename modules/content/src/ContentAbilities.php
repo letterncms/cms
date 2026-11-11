@@ -152,7 +152,7 @@ final class ContentAbilities
 
             $locale = $this->cms->defaultLocale();
 
-            return [$this->cms->content()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user), true];
+            return [$this->cms->entryService()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user), true];
         };
 
         $a->register('pages/customize', [
@@ -371,7 +371,7 @@ final class ContentAbilities
 
         // Each change, written once: the handler runs it, and a dry run runs the same in the service's dry mode
         // (EntryService::dry()), so both are refused in the same place.
-        $content = fn () => $this->cms->content();
+        $content = fn () => $this->cms->entryService();
         $create = fn (array $in, AbilityContext $ctx): Entry => $content()->create($in['collection'], $in, $ctx->user);
         $update = fn (array $in, AbilityContext $ctx): Entry => $content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish']);
         $publish = fn (array $in, AbilityContext $ctx): Entry => $content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null);
@@ -788,7 +788,7 @@ final class ContentAbilities
     /** For a dry run: what the handler does, done in the entry service's dry mode — checked the same, nothing written. */
     private function dry(\Closure $run): mixed
     {
-        return $this->cms->content()->dry($run);
+        return $this->cms->entryService()->dry($run);
     }
 
     /** One line of a dry run's report: what would happen to which entry, named as it would be afterwards. One not made yet has no id. */

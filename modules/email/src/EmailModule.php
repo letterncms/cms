@@ -79,7 +79,7 @@ final class EmailModule extends Plugin
                     throw new AbilityException(__('Sending failed: :error', ['error' => $e->getMessage()]), 'failed');
                 }
 
-                return ['sent' => true, 'transport' => $this->cms()->settings('email', 'transport', 'log')];
+                return ['sent' => true, 'transport' => $this->cms()->setting('email', 'transport', 'log')];
             },
         ]);
 
@@ -98,13 +98,13 @@ final class EmailModule extends Plugin
                 ]],
             ]),
             'handler' => function (array $in) {
-                $key = (string) $this->cms()->settings('email', 'transport', 'log');
+                $key = (string) $this->cms()->setting('email', 'transport', 'log');
                 $transports = $this->app->make(Transports::class);
                 $counts = DB::table('email_log')->where('created_at', '>=', now()->subDays(7))->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
 
                 return [
                     'transport' => ['key' => $key, 'label' => $transports->all()[$key]['label'] ?? $key, 'delivers' => $this->app->make(Mailer::class)->configured()],
-                    'from' => (string) ($this->cms()->settings('email', 'from_address') ?: $this->app->make(Mailer::class)->noReply()),
+                    'from' => (string) ($this->cms()->setting('email', 'from_address') ?: $this->app->make(Mailer::class)->noReply()),
                     'sent' => (int) ($counts['sent'] ?? 0),
                     'failed' => (int) ($counts['failed'] ?? 0),
                     'latest' => DB::table('email_log')->orderByDesc('created_at')->limit($in['limit'])->get(['id', 'to', 'subject', 'tag', 'transport', 'status', 'error', 'created_at'])

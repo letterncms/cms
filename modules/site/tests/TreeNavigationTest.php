@@ -24,12 +24,12 @@ final class TreeNavigationTest extends TestCase
 
     private function page(string $title, ?string $parent = null, ?string $group = null, int $position = 0): string
     {
-        return $this->cms()->content()->create('guide', ['title' => $title, 'status' => 'published', 'parentId' => $parent, 'position' => $position, 'data' => ['group' => $group, 'content' => []]])->id;
+        return $this->cms()->entryService()->create('guide', ['title' => $title, 'status' => 'published', 'parentId' => $parent, 'position' => $position, 'data' => ['group' => $group, 'content' => []]])->id;
     }
 
     private function render(string $id, array $blocks): string
     {
-        $this->cms()->content()->create('templates', ['title' => 'Guide', 'slug' => 'guide', 'status' => 'published', 'data' => ['blocks' => $blocks]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Guide', 'slug' => 'guide', 'status' => 'published', 'data' => ['blocks' => $blocks]]);
 
         return $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($id))['html'];
     }
@@ -110,7 +110,7 @@ final class TreeNavigationTest extends TestCase
     public function test_a_field_named_active_wins_over_the_navigation_state(): void
     {
         $this->cms()->collections()->find('guide');
-        $id = $this->cms()->content()->create('guide', ['title' => 'Own', 'status' => 'published', 'data' => ['active' => 'yes it is', 'content' => []]])->id;
+        $id = $this->cms()->entryService()->create('guide', ['title' => 'Own', 'status' => 'published', 'data' => ['active' => 'yes it is', 'content' => []]])->id;
 
         $html = $this->render($id, [['type' => 'paragraph', 'bind' => ['text' => 'entry.active']]]);
 

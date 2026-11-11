@@ -48,7 +48,7 @@ final class Manifest
                 'active' => array_keys($this->cms->packages()->active()),
                 'pending' => $user->hasPermission('packages.manage') ? $this->cms->packages()->pending() : [],
             ],
-            ...$this->cms->navigation()->forUser($user),
+            ...$this->cms->adminNav()->forUser($user),
             ...$admin,
         ];
 

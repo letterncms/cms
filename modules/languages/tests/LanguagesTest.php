@@ -56,13 +56,13 @@ final class LanguagesTest extends TestCase
     {
         $writer = $this->admin(['name' => 'Writer']);
         $translator = $this->admin(['name' => 'Translator']);
-        $source = $this->cms()->content()->create('pages', ['title' => 'Attributed source'], $writer);
+        $source = $this->cms()->entryService()->create('pages', ['title' => 'Attributed source'], $writer);
         $translated = $this->cms()->abilities()->execute('translations/create', ['id' => $source->id, 'locale' => 'de'], AbilityContext::forUser($translator, 'rest'));
         $this->assertSame($writer->id, $translated['authorId']);
         $revision = app(\Cms\Content\Revisions\Revisions::class)->list($translated['id'])[0];
         $this->assertSame($translator->id, $revision['user']['id']);
         $writer->delete();
-        $duplicate = $this->cms()->content()->duplicate($translated['id'], $translator);
+        $duplicate = $this->cms()->entryService()->duplicate($translated['id'], $translator);
         $this->assertSame($writer->id, $duplicate->authorId, 'Historical credit is retained even when its account is unavailable.');
         $this->assertNull($duplicate->toArray()['author']);
     }

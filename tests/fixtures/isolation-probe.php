@@ -67,7 +67,7 @@ if ($action === 'seed') {
         ['id' => 'seed-form', 'type' => 'forms/form', 'props' => ['form' => 'contact']],
     ];
 
-    $service = $cms->content();
+    $service = $cms->entryService();
     $service->create('pages', ['title' => 'Home', 'slug' => 'home', 'status' => 'published', 'data' => ['content' => [$blocks[0]]]]);
     $rich = $service->create('pages', ['title' => 'Rich', 'slug' => 'rich', 'status' => 'published', 'data' => ['content' => $blocks]]);
     file_put_contents($site.'/seed.json', json_encode(['id' => $rich->id, 'blocks' => $rich->working()['data']['content']]));
@@ -147,8 +147,8 @@ foreach ($cms->abilities()->all() as $name => $ability) {
 
 $try('edit the entry', static function () use ($cms, $seed): void {
     $entry = $cms->entries()->find($seed['id']);
-    $saved = $cms->content()->update($seed['id'], ['title' => 'Rich, edited', 'data' => $entry->working()['data']]);
-    $cms->content()->publish($saved->id);
+    $saved = $cms->entryService()->update($seed['id'], ['title' => 'Rich, edited', 'data' => $entry->working()['data']]);
+    $cms->entryService()->publish($saved->id);
 });
 
 $try('build', static function () use ($app, $seed): void {

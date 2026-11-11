@@ -104,7 +104,7 @@ final class Forms
             'sign-in' => [[
                 $email,
                 $password('password', __('Password'), 'current-password'),
-                ...($this->cms->settings('accounts', 'remember', true) ? [['name' => 'remember', 'type' => 'checkbox', 'label' => __('Keep me signed in')]] : []),
+                ...($this->cms->setting('accounts', 'remember', true) ? [['name' => 'remember', 'type' => 'checkbox', 'label' => __('Keep me signed in')]] : []),
                 ['name' => 'next', 'type' => 'hidden', 'value' => Accounts::safePath($next = request()->query('next')) ? $next : (session('account.old.next') ?? '')],
             ], __('Sign in'), $links([['forgot', __('Forgot your password?')], ...($accounts->signUpOpen() || $editor ? [['sign-up', __('Create an account')]] : [])]), null],
             'sign-up' => [[$email, $honeypot], __('Send the link'), $links([['sign-in', __('I already have an account')]]), $accounts->signUpOpen() || $editor ? null : __('Sign-up is not open.')],
@@ -267,7 +267,7 @@ final class Forms
 
     private function termsUrl(): string
     {
-        return (string) $this->cms->settings('accounts', 'terms_url', '');
+        return (string) $this->cms->setting('accounts', 'terms_url', '');
     }
 
     private function locale(): string

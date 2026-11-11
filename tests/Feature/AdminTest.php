@@ -15,7 +15,7 @@ final class AdminTest extends TestCase
 {
     public function test_the_sidebar_shows_every_item_from_the_start(): void
     {
-        $sidebar = $this->cms()->navigation()->forUser($this->admin())['sidebar'];
+        $sidebar = $this->cms()->adminNav()->forUser($this->admin())['sidebar'];
 
         // Sections without items are left out; the settings sidebar is separate.
         $this->assertSame(['main', 'content', 'design'], array_column($sidebar['sections'], 'id'));
@@ -35,7 +35,7 @@ final class AdminTest extends TestCase
         $this->cms()->collections()->save(Collection::fromArray('parts', ['title' => 'Parts', 'section' => 'shop', 'system' => true, 'fields' => []]));
         $this->cms()->admin()->section('shop', 'Shop', 25);
 
-        $sidebar = $this->cms()->navigation()->forUser($this->admin())['sidebar'];
+        $sidebar = $this->cms()->adminNav()->forUser($this->admin())['sidebar'];
 
         $this->assertSame(['main', 'content', 'design', 'shop'], array_column($sidebar['sections'], 'id'));
         $this->assertSame(['collection.layouts', 'collection.parts'], $sidebar['sections'][3]['items']);
@@ -69,7 +69,7 @@ final class AdminTest extends TestCase
 
         // A collection created later is pinned in its default section, after what is there.
         $this->cms()->collections()->save(Collection::fromArray('products', ['title' => 'Products', 'fields' => []]));
-        $result = $this->cms()->navigation()->forUser($admin);
+        $result = $this->cms()->adminNav()->forUser($admin);
 
         // Sections are the registered ones: people pin and order items, they do not invent or rename sections.
         $this->assertSame(['main', 'content', 'design'], array_column($result['sidebar']['sections'], 'id'));
@@ -82,7 +82,7 @@ final class AdminTest extends TestCase
 
         // Someone else still sees the site's sidebar.
         $other = $this->admin();
-        $this->assertFalse($this->cms()->navigation()->forUser($other)['sidebar']['personal']);
+        $this->assertFalse($this->cms()->adminNav()->forUser($other)['sidebar']['personal']);
     }
 
     public function test_the_site_default_applies_until_people_pin_their_own_and_after_they_reset(): void
@@ -90,7 +90,7 @@ final class AdminTest extends TestCase
         $admin = $this->admin();
         $this->settle($admin, ['sections' => [['id' => 'content', 'items' => ['collection.posts', 'collection.pages', 'collection.notes']]], 'hidden' => ['collection.notes']]);
         $this->assertSame(['collection.posts', 'collection.pages', 'collection.notes', 'media', 'navigation', 'globals'], $this->section($admin, 'content')['items']);
-        $this->assertSame(['collection.notes'], $this->cms()->navigation()->forUser($admin)['sidebar']['hidden']);
+        $this->assertSame(['collection.notes'], $this->cms()->adminNav()->forUser($admin)['sidebar']['hidden']);
 
         $this->pin($admin, ['sections' => [['id' => 'content', 'items' => ['collection.pages']]], 'hidden' => []]);
         $this->assertSame('collection.pages', $this->section($admin, 'content')['items'][0]);
@@ -109,7 +109,7 @@ final class AdminTest extends TestCase
 
         // Saved while posts was gone: the editor never saw it, but its place is kept.
         $this->settle($admin, ['sections' => [['id' => 'content', 'items' => ['collection.pages']]], 'hidden' => []]);
-        $this->assertContains('collection.posts', $this->cms()->navigation()->saved()['sections'][0]['items']);
+        $this->assertContains('collection.posts', $this->cms()->adminNav()->saved()['sections'][0]['items']);
 
         $this->cms()->collections()->save(Collection::fromArray('posts', ['title' => 'Posts', 'fields' => []]));
         $this->assertSame(['collection.pages', 'collection.posts', 'collection.notes', 'media', 'navigation', 'globals'], $this->section($admin, 'content')['items']);
@@ -135,7 +135,7 @@ final class AdminTest extends TestCase
         $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']]);
         $this->cms()->settingsRegistry()->register('newsletter', 'Newsletter', [['handle' => 'from', 'type' => 'text', 'label' => 'From']]);
 
-        $result = $this->cms()->navigation()->forUser($this->admin());
+        $result = $this->cms()->adminNav()->forUser($this->admin());
 
         $this->assertSame(['collections', 'links'], array_column($result['sidebar']['sections'], 'items', 'id')['design']);
         // The unnamed group, People, then a settings page without a section of its own: a plugin's, under Plugins by name.
@@ -148,7 +148,7 @@ final class AdminTest extends TestCase
     {
         $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']]);
 
-        $settings = array_column($this->cms()->navigation()->forUser($this->admin())['settingsNav'], null, 'id');
+        $settings = array_column($this->cms()->adminNav()->forUser($this->admin())['settingsNav'], null, 'id');
 
         $this->assertArrayNotHasKey('plugins', $settings);
         $this->assertSame(['account', 'settings.site', 'settings.media', 'settings.email', 'audit', 'sync', 'settings.shop'], $settings['account']['items']);
@@ -159,7 +159,7 @@ final class AdminTest extends TestCase
         $this->cms()->admin()->nav('shop', ['label' => 'Shop', 'path' => '/shop', 'pinned' => true]);
         $this->cms()->settingsRegistry()->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text', 'label' => 'Currency']], home: 'shop');
 
-        $result = $this->cms()->navigation()->forUser($this->admin());
+        $result = $this->cms()->adminNav()->forUser($this->admin());
         $nav = array_column($result['nav'], null, 'id');
 
         $this->assertSame('shop', $nav['settings.shop']['home']);
@@ -180,7 +180,7 @@ final class AdminTest extends TestCase
         $ctx = AbilityContext::forUser($this->admin(), 'admin');
 
         // Not an item of its own: it belongs to the pages, and the editor goes back there.
-        $nav = array_column($this->cms()->navigation()->forUser($this->admin())['nav'], null, 'id');
+        $nav = array_column($this->cms()->adminNav()->forUser($this->admin())['nav'], null, 'id');
         $this->assertSame('collection.pages', $nav['collection.shop-pages']['home']);
         $collections = array_column($this->app->make(Manifest::class)->build($this->admin())['collections'], null, 'handle');
         $this->assertSame(['pages', 'shop'], [$collections['shop-pages']['within'], $collections['shop-pages']['tab']]);
@@ -202,7 +202,7 @@ final class AdminTest extends TestCase
 
     public function test_settings_have_a_sidebar_of_their_own(): void
     {
-        $result = $this->cms()->navigation()->forUser($this->admin());
+        $result = $this->cms()->adminNav()->forUser($this->admin());
         $settings = array_column($result['settingsNav'], null, 'id');
 
         // Your account, General, the Audit Log and Sync without a group name; then People.
@@ -222,7 +222,7 @@ final class AdminTest extends TestCase
 
     public function test_people_only_see_what_they_may_open(): void
     {
-        $result = $this->cms()->navigation()->forUser($this->userWithRole('author'));
+        $result = $this->cms()->adminNav()->forUser($this->userWithRole('author'));
         $ids = array_column($result['nav'], 'id');
 
         $this->assertNotContains('users', $ids);
@@ -235,8 +235,8 @@ final class AdminTest extends TestCase
     {
         $this->cms()->admin()->nav('reviews', ['label' => 'Reviews', 'path' => '/reviews', 'pinned' => true, 'visible' => static fn ($user) => $user->hasPermission('settings.manage')]);
 
-        $this->assertContains('reviews', array_column($this->cms()->navigation()->forUser($this->admin())['nav'], 'id'));
-        $this->assertNotContains('reviews', array_column($this->cms()->navigation()->forUser($this->userWithRole('author'))['nav'], 'id'));
+        $this->assertContains('reviews', array_column($this->cms()->adminNav()->forUser($this->admin())['nav'], 'id'));
+        $this->assertNotContains('reviews', array_column($this->cms()->adminNav()->forUser($this->userWithRole('author'))['nav'], 'id'));
     }
 
     public function test_the_arrangement_ability_describes_the_sidebar(): void
@@ -378,7 +378,7 @@ final class AdminTest extends TestCase
     /** The section of someone's sidebar. */
     private function section(\Cms\Users\User $user, string $id): array
     {
-        return array_column($this->cms()->navigation()->forUser($user)['sidebar']['sections'], null, 'id')[$id];
+        return array_column($this->cms()->adminNav()->forUser($user)['sidebar']['sections'], null, 'id')[$id];
     }
 
     /** Someone's own sidebar (the `sidebar` preference). */

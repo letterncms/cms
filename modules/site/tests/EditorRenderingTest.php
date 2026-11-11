@@ -33,7 +33,7 @@ final class EditorRenderingTest extends TestCase
 
     private function template(array $blocks): \Cms\Content\Entries\Entry
     {
-        return $this->cms()->content()->create('templates', ['title' => 'Page', 'slug' => 'page', 'status' => 'published', 'data' => ['blocks' => $blocks]]);
+        return $this->cms()->entryService()->create('templates', ['title' => 'Page', 'slug' => 'page', 'status' => 'published', 'data' => ['blocks' => $blocks]]);
     }
 
     public function test_only_the_active_body_has_source_markers_even_when_template_ids_collide(): void
@@ -42,7 +42,7 @@ final class EditorRenderingTest extends TestCase
             ['id' => 'collision', 'type' => 'paragraph', 'props' => ['text' => 'Template chrome']],
             ['type' => 'outlet'], ['type' => 'outlet'],
         ]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Example', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Example', 'data' => ['content' => [
             ['id' => 'collision', 'type' => 'paragraph', 'props' => ['text' => 'Editable body']],
         ]]]);
         $version = $entry->version();
@@ -65,10 +65,10 @@ final class EditorRenderingTest extends TestCase
 
     public function test_component_and_repeat_expansions_never_borrow_the_source_identity(): void
     {
-        $this->cms()->content()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [
+        $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [
             ['id' => 'collision', 'type' => 'paragraph', 'props' => ['text' => 'Component text']],
         ]]]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Example', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Example', 'data' => ['content' => [
             ['id' => 'collision', 'type' => 'pattern', 'props' => ['ref' => 'card']],
             ['id' => 'repeat-source', 'type' => 'repeat', 'props' => ['source' => 'list', 'path' => 'entry.missing'], 'children' => [
                 ['id' => 'child-source', 'type' => 'paragraph', 'props' => ['text' => 'Repeated item']],
@@ -89,7 +89,7 @@ final class EditorRenderingTest extends TestCase
         $template = $this->template([
             ['id' => 'collision', 'type' => 'paragraph', 'props' => ['text' => 'Template source']], ['type' => 'outlet'],
         ]);
-        $sample = $this->cms()->content()->create('pages', ['title' => 'Sample', 'status' => 'published', 'data' => ['content' => [
+        $sample = $this->cms()->entryService()->create('pages', ['title' => 'Sample', 'status' => 'published', 'data' => ['content' => [
             ['id' => 'collision', 'type' => 'paragraph', 'props' => ['text' => 'Sample body']],
         ]]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$template->id, ['sample' => $sample->id])->assertOk();
@@ -122,7 +122,7 @@ final class EditorRenderingTest extends TestCase
 
     public function test_empty_documents_keep_an_insertion_root_and_inert_normalized_text_prototypes(): void
     {
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Empty', 'data' => ['content' => []]]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Empty', 'data' => ['content' => []]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id)->assertOk();
         $xpath = $this->xpath($response->getContent());
         $this->assertCount(1, $xpath->query('//*[@data-cms-editor-root]'));
@@ -137,7 +137,7 @@ final class EditorRenderingTest extends TestCase
 
     public function test_inline_slots_exist_only_for_literal_source_props(): void
     {
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Binding', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Binding', 'data' => ['content' => [
             ['id' => 'literal', 'type' => 'paragraph', 'props' => ['text' => 'Literal']],
             ['id' => 'bound', 'type' => 'paragraph', 'bind' => ['text' => 'entry.title']],
             ['id' => 'leaf-link', 'type' => 'link', 'props' => ['label' => 'Link']],
@@ -174,7 +174,7 @@ final class EditorRenderingTest extends TestCase
             $nodes[] = ['id' => 'empty-'.$type, 'type' => $type, 'props' => [...$props, $prop => '']];
             $nodes[] = ['id' => 'filled-'.$type, 'type' => $type, 'props' => [...$props, $prop => 'Visible attribution']];
         }
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Optional text', 'data' => ['content' => $nodes]]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Optional text', 'data' => ['content' => $nodes]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id)->assertOk();
         $xpath = $this->xpath($response->getContent());
         foreach (['quote' => 'cite', 'image' => 'caption', 'video' => 'caption'] as $type => $prop) {
@@ -195,7 +195,7 @@ final class EditorRenderingTest extends TestCase
             ['id' => 'literal-title', 'type' => 'paragraph', 'props' => ['text' => 'Current title']],
             ['type' => 'outlet'],
         ]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Current title', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Current title', 'data' => ['content' => [
             ['id' => 'bound-body-title', 'type' => 'paragraph', 'bind' => ['text' => 'entry.title']],
         ]]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id)->assertOk();
@@ -211,7 +211,7 @@ final class EditorRenderingTest extends TestCase
     public function test_standalone_schema_fields_render_for_admin_read_only_users_without_persistence(): void
     {
         $this->cms()->settingsRegistry()->save('roles', ['roles' => ['inspector' => ['label' => 'Inspector', 'permissions' => ['admin.access']]]]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Unchanged']);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Unchanged']);
         $version = $entry->version();
         $count = $this->cms()->entries()->query()->collection('pages')->count();
         $snapshot = ['standalone' => true, 'field' => 'content', 'title' => 'Shared field', 'data' => ['content' => [
@@ -239,7 +239,7 @@ final class EditorRenderingTest extends TestCase
     public function test_saved_view_only_inspection_is_allowed_but_unsaved_render_requires_authoring_permission(): void
     {
         $this->cms()->settingsRegistry()->save('roles', ['roles' => ['viewer' => ['label' => 'Viewer', 'permissions' => ['admin.access', 'entries.pages.view']]]]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Inspect', 'data' => ['content' => [['id' => 'inspect-source', 'type' => 'paragraph', 'props' => ['text' => 'Visible']]]]]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Inspect', 'data' => ['content' => [['id' => 'inspect-source', 'type' => 'paragraph', 'props' => ['text' => 'Visible']]]]]);
         $version = $entry->version();
         $this->actingAs($this->userWithRole('viewer'))->postJson('/__preview/'.$entry->id)->assertOk()->assertSee('data-cms-node="inspect-source"', false);
         $this->postJson('/__preview', ['collection' => 'pages'])->assertNotFound();
@@ -249,7 +249,7 @@ final class EditorRenderingTest extends TestCase
     public function test_the_canvas_speaks_the_language_the_editor_asks_for_and_hands_it_back(): void
     {
         $nl = json_decode((string) file_get_contents(dirname(__DIR__, 2).'/blocks/lang/nl.json'), true);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Example', 'data' => ['content' => [['type' => 'heading', 'props' => ['level' => '2']]]]]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Example', 'data' => ['content' => [['type' => 'heading', 'props' => ['level' => '2']]]]]);
 
         $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id, [], ['X-Cms-Locale' => 'nl'])->assertOk()
             ->assertSee('data-cms-placeholder="'.$nl['Heading'].'"', false);

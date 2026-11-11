@@ -161,7 +161,7 @@ final class LanguagesModule extends Plugin
                 ])],
             ]),
             'handler' => function () use ($languages) {
-                $prefixed = (bool) $this->cms()->settings('languages', 'prefix_default', false);
+                $prefixed = (bool) $this->cms()->setting('languages', 'prefix_default', false);
 
                 return [
                     'prefixDefault' => $prefixed,
@@ -452,7 +452,7 @@ final class LanguagesModule extends Plugin
             return;
         }
 
-        $this->cms()->content()->refreshUris();
+        $this->cms()->entryService()->refreshUris();
         Files::putJson($file, ['signature' => $signature]);
     }
 }

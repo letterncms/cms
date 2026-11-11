@@ -23,7 +23,7 @@ final class ComponentEditingTest extends TestCase
 
     private function makeComponent(string $handle, array $props, array $blocks): \Cms\Content\Entries\Entry
     {
-        return $this->cms()->content()->create('components', ['title' => ucfirst($handle), 'slug' => $handle, 'status' => 'published', 'data' => ['synced' => true, 'props' => $props, 'blocks' => $blocks]]);
+        return $this->cms()->entryService()->create('components', ['title' => ucfirst($handle), 'slug' => $handle, 'status' => 'published', 'data' => ['synced' => true, 'props' => $props, 'blocks' => $blocks]]);
     }
 
     private function xpath(string $html): DOMXPath
@@ -48,7 +48,7 @@ final class ComponentEditingTest extends TestCase
             ['id' => 'definition-constant', 'type' => 'paragraph', 'props' => ['text' => 'Shared constant']],
         ]);
         $version = $component->version();
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Page', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page', 'data' => ['content' => [
             ['id' => 'first-instance', 'type' => 'pattern', 'props' => ['ref' => 'intro', 'values' => ['title' => 'First heading', 'copy' => '<strong>Rich copy</strong>', 'label' => 'First button']]],
             ['id' => 'second-instance', 'type' => 'pattern', 'props' => ['ref' => 'intro']],
             ['id' => 'ordinary-source', 'type' => 'paragraph', 'props' => ['text' => 'Following paragraph']],
@@ -93,7 +93,7 @@ final class ComponentEditingTest extends TestCase
             ['type' => 'paragraph', 'bind' => ['text' => 'props.undeclared']],
             ['type' => 'paragraph', 'bind' => ['text' => 'props.title'], 'logic' => ['text' => 'something']],
         ]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Page title', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page title', 'data' => ['content' => [
             ['id' => 'literal-instance', 'type' => 'pattern', 'props' => ['ref' => 'computed', 'values' => ['title' => 'Literal title', 'count' => 42]]],
             ['id' => 'data-instance', 'type' => 'pattern', 'props' => ['ref' => 'computed'], 'bind' => ['values.title' => 'entry.title']],
         ]]]);
@@ -115,7 +115,7 @@ final class ComponentEditingTest extends TestCase
             ['type' => 'pattern', 'props' => ['ref' => 'leaf', 'values' => ['label' => 'Nested constant']]],
             ['type' => 'pattern', 'props' => ['ref' => 'leaf'], 'bind' => ['values.label' => 'props.title|upper']],
         ]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Page', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page', 'data' => ['content' => [
             ['id' => 'outer-source', 'type' => 'pattern', 'props' => ['ref' => 'outer', 'values' => ['title' => 'Forwarded value']]],
         ]]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id)->assertOk();
@@ -150,10 +150,10 @@ final class ComponentEditingTest extends TestCase
             ['type' => 'repeat', 'props' => ['source' => 'numbers', 'count' => 2], 'children' => [['type' => 'paragraph', 'bind' => ['text' => 'props.title']]]],
             ['type' => 'paragraph', 'bind' => ['text' => 'props.title']],
         ]);
-        $this->cms()->content()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
+        $this->cms()->entryService()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
             ['type' => 'pattern', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Template value']]], ['type' => 'outlet'],
         ]]]);
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Page', 'data' => ['content' => [
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page', 'data' => ['content' => [
             ['id' => 'local-instance', 'type' => 'pattern', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Local value']]],
             ['type' => 'repeat', 'props' => ['source' => 'numbers', 'count' => 2], 'children' => [
                 ['type' => 'pattern', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Generated value']]],

@@ -30,7 +30,7 @@ final class AuditModule extends Plugin
         ], icon: 'activity', description: 'What is recorded and for how long.', order: 85, section: 'system', home: 'audit');
 
         $cms->hooks()->on('ability.executed', function (Ability $ability, array $input, mixed $result, AbilityContext $context): void {
-            if ((! $ability->isReadOnly() || $this->settings('reads', false)) && ! self::unrecorded($ability->name, $input)) {
+            if ((! $ability->isReadOnly() || $this->setting('reads', false)) && ! self::unrecorded($ability->name, $input)) {
                 $this->record($ability, $input, $context);
             }
         });
@@ -95,7 +95,7 @@ final class AuditModule extends Plugin
             ]);
 
             // Pruning on roughly one write in a hundred keeps the table bounded without a cron job. 0 keeps every entry.
-            $days = (int) $this->settings('retention', 365);
+            $days = (int) $this->setting('retention', 365);
 
             if ($days > 0 && random_int(1, 100) === 1) {
                 DB::table('audit_log')->where('created_at', '<', now()->subDays($days))->delete();

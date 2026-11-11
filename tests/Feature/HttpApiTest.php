@@ -84,7 +84,7 @@ final class HttpApiTest extends TestCase
 
     public function test_delivery_api_serves_only_live_content(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $content->create('posts', ['title' => 'Public', 'data' => ['excerpt' => 'x'], 'status' => 'published']);
         $content->create('posts', ['title' => 'Secret draft', 'data' => ['excerpt' => 'y']]);
         $content->create('posts', ['title' => 'Future', 'data' => ['excerpt' => 'z'], 'status' => 'published', 'at' => now()->addDay()->toIso8601String()]);

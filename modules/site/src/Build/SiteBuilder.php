@@ -38,7 +38,7 @@ final class SiteBuilder implements SiteBuilderContract
 
     public function available(): bool
     {
-        return (bool) $this->cms->settings('site', 'static', true);
+        return (bool) $this->cms->setting('site', 'static', true);
     }
 
     public function queue(?array $uris = null, string $reason = ''): void

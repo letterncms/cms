@@ -11,7 +11,7 @@ final class EntriesTest extends TestCase
 {
     public function test_create_generates_unique_slugs_and_uris(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
 
         $a = $content->create('posts', ['title' => 'Hello World', 'data' => ['excerpt' => 'x']]);
         $b = $content->create('posts', ['title' => 'Hello World', 'data' => ['excerpt' => 'y']]);
@@ -24,7 +24,7 @@ final class EntriesTest extends TestCase
 
     public function test_required_fields_are_enforced_on_publish_only(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $draft = $content->create('posts', ['title' => 'No excerpt']);
 
         $this->assertSame('draft', $draft->status);
@@ -35,7 +35,7 @@ final class EntriesTest extends TestCase
 
     public function test_published_entries_collect_changes_in_a_draft(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $entry = $content->create('posts', ['title' => 'Live', 'data' => ['excerpt' => 'one'], 'status' => 'published']);
 
         $updated = $content->update($entry->id, ['title' => 'Live v2', 'data' => ['excerpt' => 'two']]);
@@ -56,7 +56,7 @@ final class EntriesTest extends TestCase
 
     public function test_tree_uris_follow_parents_and_home(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $home = $content->create('pages', ['title' => 'Home']);
         $about = $content->create('pages', ['title' => 'About']);
         $team = $content->create('pages', ['title' => 'Team', 'parentId' => $about->id]);
@@ -72,7 +72,7 @@ final class EntriesTest extends TestCase
 
     public function test_cannot_move_entry_inside_itself(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $a = $content->create('pages', ['title' => 'A']);
         $b = $content->create('pages', ['title' => 'B', 'parentId' => $a->id]);
 
@@ -82,7 +82,7 @@ final class EntriesTest extends TestCase
 
     public function test_deleting_a_parent_moves_children_up(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $a = $content->create('pages', ['title' => 'A']);
         $b = $content->create('pages', ['title' => 'B', 'parentId' => $a->id]);
 
@@ -95,7 +95,7 @@ final class EntriesTest extends TestCase
 
     public function test_query_filters_sorting_and_pagination(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
 
         foreach (['Zeta' => ['php'], 'Alpha' => ['js'], 'Mid' => ['php', 'js']] as $title => $tags) {
             $content->create('posts', ['title' => $title, 'data' => ['excerpt' => $title, 'tags' => $tags], 'status' => 'published']);
@@ -114,7 +114,7 @@ final class EntriesTest extends TestCase
 
     public function test_revisions_are_recorded_and_restorable(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $entry = $content->create('pages', ['title' => 'First']);
         $content->update($entry->id, ['title' => 'Second']);
         $content->publish($entry->id);
@@ -128,7 +128,7 @@ final class EntriesTest extends TestCase
 
     public function test_uri_conflicts_are_rejected(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $content->create('pages', ['title' => 'Blog']);
         $content->create('posts', ['title' => 'Post', 'data' => ['excerpt' => 'x']]);
 
@@ -141,7 +141,7 @@ final class EntriesTest extends TestCase
 
     public function test_flat_file_driver_round_trip(): void
     {
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $parent = $content->create('notes', ['title' => 'Guides', 'data' => ['body' => "# Guides\n\nAll guides."], 'status' => 'published']);
         $child = $content->create('notes', ['title' => 'Install', 'parentId' => $parent->id, 'data' => ['body' => 'Upload.']]);
 
@@ -174,7 +174,7 @@ final class EntriesTest extends TestCase
             ['handle' => 'links', 'type' => 'repeater', 'fields' => [['handle' => 'label', 'type' => 'text', 'required' => true], ['handle' => 'url', 'type' => 'url']]],
         ]]));
 
-        $entry = $this->cms()->content()->create('team', ['title' => 'Ada', 'status' => 'published', 'data' => [
+        $entry = $this->cms()->entryService()->create('team', ['title' => 'Ada', 'status' => 'published', 'data' => [
             'contact' => ['email' => ' ADA@Example.com ', 'phone' => '123'],
             'links' => [['label' => 'Site', 'url' => 'https://ada.dev'], 'not-an-item'],
         ]]);
@@ -183,7 +183,7 @@ final class EntriesTest extends TestCase
         $this->assertSame([['label' => 'Site', 'url' => 'https://ada.dev']], $entry->data['links']);
 
         $this->expectException(\Cms\Abilities\AbilityException::class);
-        $this->cms()->content()->create('team', ['title' => 'Bad', 'status' => 'published', 'data' => ['contact' => ['email' => 'nope']]]);
+        $this->cms()->entryService()->create('team', ['title' => 'Bad', 'status' => 'published', 'data' => ['contact' => ['email' => 'nope']]]);
     }
 
     public function test_select_options_from_plugins_are_read_when_needed(): void
@@ -196,10 +196,10 @@ final class EntriesTest extends TestCase
         $this->cms()->hooks()->addFilter('fields.options.layouts', fn (array $options) => [...$options, 'wide' => 'Wide · '.count($this->cms()->collections()->all())]);
 
         $this->assertSame(['plain', 'wide'], array_keys($this->cms()->collections()->find('notes')->blueprint()->toArray()[0]['options']));
-        $this->assertSame('wide', $this->cms()->content()->create('notes', ['title' => 'A', 'status' => 'published', 'data' => ['layout' => 'wide']])->data['layout']);
+        $this->assertSame('wide', $this->cms()->entryService()->create('notes', ['title' => 'A', 'status' => 'published', 'data' => ['layout' => 'wide']])->data['layout']);
 
         $this->expectException(AbilityException::class);
-        $this->cms()->content()->create('notes', ['title' => 'B', 'status' => 'published', 'data' => ['layout' => 'huge']]);
+        $this->cms()->entryService()->create('notes', ['title' => 'B', 'status' => 'published', 'data' => ['layout' => 'huge']]);
     }
 
     public function test_globals_values(): void
@@ -216,7 +216,7 @@ final class EntriesTest extends TestCase
 
     public function test_stale_saves_conflict_instead_of_overwriting(): void
     {
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         $entry = $service->create('pages', ['title' => 'Shared']);
         $loaded = $entry->version();
 

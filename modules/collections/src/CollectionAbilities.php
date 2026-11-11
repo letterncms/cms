@@ -96,11 +96,11 @@ final class CollectionAbilities
             }
             if ($in['deleteEntries']) {
                 foreach ($this->cms->entries()->query()->collection($collection->handle)->get() as $entry) {
-                    $this->cms->content()->delete($entry->id, $ctx->user);
+                    $this->cms->entryService()->delete($entry->id, $ctx->user);
                 }
             }
 
-            if (! $this->cms->content()->isDry()) {
+            if (! $this->cms->entryService()->isDry()) {
                 $this->cms->collections()->delete($collection->handle);
             }
 
@@ -115,13 +115,13 @@ final class CollectionAbilities
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'deleteEntries' => ['type' => 'boolean', 'default' => false]], 'required' => ['handle']],
             'output' => Shape::of(['deleted' => Shape::STRING, 'deletedEntries' => Shape::INTEGER]),
             // The same steps in the entry service's dry mode: each entry's delete is checked, none is made, and the collection stays.
-            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->cms->content()->dry(function () use ($in, $ctx, $delete): array {
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->cms->entryService()->dry(function () use ($in, $ctx, $delete): array {
                 $collection = $this->cms->collections()->find($in['handle']);
                 $gone = $delete($in, $ctx);
 
                 return [['action' => 'delete', 'type' => 'collection', 'handle' => $gone['deleted'], 'title' => $collection?->title, 'removes' => ['entries' => $gone['deletedEntries'], 'history' => true]]];
             }),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->write(fn () => $delete($in, $ctx)),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->write(fn () => $delete($in, $ctx)),
         ]);
 
         $a->register('fieldsets/list', [

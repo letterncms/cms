@@ -390,7 +390,7 @@ final class BlocksModule extends Plugin
             'handler' => function (array $in, \Cms\Abilities\AbilityContext $ctx) use ($patterns) {
                 $data = array_filter(['blocks' => $in['blocks'], 'synced' => (bool) ($in['synced'] ?? false), 'category' => $in['category'] ?? null, 'description' => $in['description'] ?? null, 'props' => $in['props'] ?? null], static fn ($v) => $v !== null);
                 $existing = $patterns()->all(true)[$in['handle']]['id'] ?? null;
-                $content = $this->cms()->content();
+                $content = $this->cms()->entryService();
                 $entry = $existing
                     ? $content->update($existing, ['title' => $in['title'], 'data' => $data], $ctx->user, (bool) ($in['publish'] ?? true))
                     : $content->create(Patterns::COLLECTION, ['title' => $in['title'], 'slug' => $in['handle'], 'data' => $data, 'status' => ($in['publish'] ?? true) ? 'published' : 'draft'], $ctx->user);
