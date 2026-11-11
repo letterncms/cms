@@ -5,6 +5,7 @@ import { can, loadManifest, locale, registry, run, setPreference, setQuery, t, u
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { Button, Icon, IconButton, Notice, Page, WidgetSlot, EmptyState, cn, confirm, toast, useShortcut } from '@letterncms/ui'
 import { Gallery } from './Gallery'
+import { Start } from './Start'
 
 function greeting(name: string): string {
   const h = new Date().getHours()
@@ -158,6 +159,7 @@ export default function Dashboard() {
     >
       <Greeting />
       <Notices />
+      {!editing && <Start />}
 
       {editing ? (
         <EditGrid widgets={widgets} shown={shown} setDraft={setDraft} columnOf={columnOf} onRemove={remove} onAdd={setGallery} />

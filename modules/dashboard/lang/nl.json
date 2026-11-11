@@ -41,5 +41,14 @@
   "Updated": "Bijgewerkt",
   "Widgets": "Widgets",
   "Working late, {name}": "Laat aan het werk, {name}",
-  "Your dashboard is empty": "Je dashboard is leeg"
+  "Your dashboard is empty": "Je dashboard is leeg",
+  "{done} of {total}": "{done} van {total}",
+  "Choose Colors and Fonts": "Kleuren en lettertypen kiezen",
+  "Connect an AI Agent": "Een AI-agent verbinden",
+  "Create the First Page": "De eerste pagina maken",
+  "Get Started": "Aan de slag",
+  "Guided Start": "Begeleide start",
+  "Hide": "Verbergen",
+  "Hide the Guided Start": "De begeleide start verbergen",
+  "Name the Site": "De site een naam geven"
 }
