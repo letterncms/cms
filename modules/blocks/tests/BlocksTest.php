@@ -68,14 +68,14 @@ final class BlocksTest extends TestCase
     public function test_markdown_round_trip_keeps_structure(): void
     {
         $codec = app(MarkdownCodec::class);
-        $markdown = "## Hello\n\nSome **bold** and [a link](/x).\n\n- One\n- Two\n\n::: section {\"props\":{\"width\":\"wide\"},\"style\":{\"base\":{\"paddingY\":\"token:space.16\"}}}\n### Inside\n\n:::: buttons\n::::: button {\"props\":{\"label\":\"Go\",\"url\":\"/go\"}}\n:::::\n::::\n:::\n\n```php\necho 1;\n```";
+        $markdown = "## Hello\n\nSome **bold** and [a link](/x).\n\n- One\n- Two\n\n::: section {\"props\":{\"width\":\"wide\"},\"style\":{\"base\":{\"paddingBlock\":\"token:space.16\"}}}\n### Inside\n\n:::: buttons\n::::: button {\"props\":{\"label\":\"Go\",\"url\":\"/go\"}}\n:::::\n::::\n:::\n\n```php\necho 1;\n```";
 
         $nodes = app(Document::class)->normalize($codec->decode($markdown));
 
         $this->assertSame(['heading', 'paragraph', 'list', 'section', 'code'], array_column($nodes, 'type'));
         $this->assertSame('Some <strong>bold</strong> and <a href="/x">a link</a>.', $nodes[1]['props']['text']);
         $this->assertSame('wide', $nodes[3]['props']['width']);
-        $this->assertSame('token:space.16', $nodes[3]['style']['base']['paddingBlock'], 'shorthand keys are stored as CSS properties');
+        $this->assertSame('token:space.16', $nodes[3]['style']['base']['paddingBlock']);
         $this->assertSame('button', $nodes[3]['children'][1]['children'][0]['type']);
         $this->assertSame('php', $nodes[4]['props']['language']);
 
@@ -84,18 +84,29 @@ final class BlocksTest extends TestCase
         $this->assertSame($nodes[3]['children'][1]['children'][0]['props']['label'], $again[3]['children'][1]['children'][0]['props']['label']);
     }
 
+    public function test_a_stored_binding_to_a_style_that_no_longer_exists_does_nothing(): void
+    {
+        $renderer = app(\Cms\Modules\Blocks\BlockRenderer::class);
+        $renderer->begin();
+        // As it sits in content saved before: rendering doesn't normalize.
+        $html = $renderer->render([['id' => 'b1', 'type' => 'box', 'bind' => ['style:bg' => 'site.name', 'style:color' => 'site.name'], 'children' => []]], new \Cms\Modules\Blocks\Scope(['site' => ['name' => 'red']]));
+
+        $this->assertStringContainsString('style="color:red"', $html);
+        $this->assertStringNotContainsString('background', $html);
+    }
+
     public function test_document_sanitizes_text_and_styles(): void
     {
         $nodes = app(Document::class)->normalize([
             ['type' => 'paragraph', 'props' => ['text' => 'Hi <script>alert(1)</script><em>there</em><img src=x onerror=alert(1)>']],
-            ['type' => 'section', 'style' => ['base' => ['paddingY' => 'token:space.8', 'color' => 'red;}body{display:none', 'nonsense' => '1px'], 'evil' => ['color' => 'red']], 'children' => [
+            ['type' => 'section', 'style' => ['base' => ['paddingBlock' => 'token:space.8', 'paddingY' => 'token:space.8', 'bg' => 'red', 'color' => 'red;}body{display:none', 'nonsense' => '1px'], 'evil' => ['color' => 'red']], 'children' => [
                 ['type' => 'columns', 'children' => [['type' => 'paragraph', 'props' => ['text' => 'not a column']], ['type' => 'column']]],
             ]],
             ['type' => 'from-a-removed-plugin', 'props' => ['keep' => 'me']],
         ]);
 
         $this->assertSame('Hi <em>there</em>', $nodes[0]['props']['text']);
-        $this->assertSame(['base' => ['paddingBlock' => 'token:space.8']], $nodes[1]['style']);
+        $this->assertSame(['base' => ['paddingBlock' => 'token:space.8']], $nodes[1]['style'], 'a style key is a CSS property by its own name');
         $this->assertSame(['column'], array_column($nodes[1]['children'][0]['children'], 'type'));
         $this->assertSame('me', $nodes[2]['props']['keep']);
         $this->assertMatchesRegularExpression('/^b[a-z0-9]{10}$/', $nodes[0]['id']);

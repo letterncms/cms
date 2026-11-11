@@ -99,13 +99,6 @@ final class StyleCompiler
         'transitionTimingFunction' => ['transition-timing-function', 'transition'], 'transitionDelay' => ['transition-delay', 'transition'], 'willChange' => ['will-change', 'transition'],
     ];
 
-    /** Older and shorthand keys people (and agents) reach for. */
-    public const array ALIASES = [
-        'direction' => 'flexDirection', 'wrap' => 'flexWrap', 'justify' => 'justifyContent', 'align' => 'alignItems',
-        'paddingX' => 'paddingInline', 'paddingY' => 'paddingBlock', 'marginX' => 'marginInline', 'marginY' => 'marginBlock',
-        'radius' => 'borderRadius', 'shadow' => 'boxShadow', 'colSpan' => 'gridColumn', 'bg' => 'backgroundColor',
-    ];
-
     /** Values that are plain numbers (no px added). */
     private const array UNITLESS = ['opacity', 'zIndex', 'order', 'flex', 'flexGrow', 'flexShrink', 'fontWeight', 'lineHeight', 'lineClamp', 'scale', 'columns', 'aspectRatio'];
 
@@ -154,8 +147,6 @@ final class StyleCompiler
             }
 
             foreach ($declarations as $key => $value) {
-                $key = self::ALIASES[$key] ?? $key;
-
                 if (isset(self::PROPERTIES[$key]) && (is_string($value) || is_int($value) || is_float($value)) && $this->value((string) $key, $value) !== null) {
                     $out[$variant][$key] = is_string($value) ? trim($value) : $value;
                 }
@@ -178,7 +169,6 @@ final class StyleCompiler
             }
 
             foreach ((array) $declarations as $key => $value) {
-                $key = self::ALIASES[$key] ?? $key;
                 $property = self::PROPERTIES[$key][0] ?? null;
                 $css = $property ? $this->value((string) $key, $value) : null;
 
@@ -226,14 +216,12 @@ final class StyleCompiler
     /** The inspector group of a property (catalog for editors and agents). */
     public static function group(string $key): ?string
     {
-        return self::PROPERTIES[self::ALIASES[$key] ?? $key][1] ?? null;
+        return self::PROPERTIES[$key][1] ?? null;
     }
 
     /** CSS for one value of a property, or null when it is not allowed. */
     public function value(string $key, mixed $value): ?string
     {
-        $key = self::ALIASES[$key] ?? $key;
-
         if ($key === 'gridTemplateColumns' && (is_int($value) || ctype_digit((string) $value))) {
             $n = max(1, min(24, (int) $value));
 
