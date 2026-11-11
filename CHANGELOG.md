@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Code beside the design**: ES modules in `content/design/scripts/` and stylesheets in `content/design/styles/` load on every page, with a template or with a component (`content/design/code.json`), or with one block (`code: {scripts, styles}`). One script imports another by path; each file is published with a hash in its name and cached forever, and changing one rebuilds only the pages that load it. `custom.css` and `custom.js` stay as they are. Agents use `design/code-files`, `design/code-read`, `design/code-write`, `design/code-delete` and `design/code-load`, and read `cms://site/code`.
+
 ## 0.21.0 (2026-11-11)
 
 ### Changed
