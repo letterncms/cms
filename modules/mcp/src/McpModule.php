@@ -44,6 +44,19 @@ final class McpModule extends Plugin
         $this->abilities();
         $this->cms()->admin()->widget('mcp-agents', ['label' => 'Agents', 'description' => 'AI agents connected to your account and what they changed lately.', 'icon' => 'mcp', 'column' => 'side', 'order' => 70, 'permission' => 'tokens.manage']);
         $this->adminModule();
+        // Agents is a section of each person's Account, before their tokens: who is connected as them, and how to connect one.
+        $this->cms()->admin()->component('mcp/connect', ['label' => 'Agents', 'description' => 'The AI agents connected to your account over MCP, the server URL and the command that connects Claude Code.', 'surface' => false, 'permission' => 'tokens.manage', 'props' => ['type' => 'object', 'properties' => (object) [], 'additionalProperties' => false]]);
+        $this->cms()->hooks()->addFilter('view.account', static function (array $view, $user) {
+            if (! $user->hasPermission('tokens.manage')) {
+                return $view;
+            }
+
+            $section = ['type' => 'ui/section', 'props' => ['title' => __('Agents')], 'children' => [['type' => 'mcp/connect']]];
+            $at = array_search(true, array_map(static fn (array $node) => ($node['can'] ?? null) === 'tokens.manage', $view['children']), true);
+            array_splice($view['children'], $at === false ? count($view['children']) : $at, 0, [$section]);
+
+            return $view;
+        });
         $this->cms()->admin()->command('connect-mcp', ['label' => 'Connect an AI Agent (MCP)', 'icon' => 'mcp', 'path' => '/account#mcp', 'keywords' => ['claude', 'cursor', 'agent', 'mcp', 'ai']]);
     }
 
@@ -84,6 +97,22 @@ final class McpModule extends Plugin
 
                 return ['agents' => $agents->take($in['limit'])->all(), 'connected' => $agents->count(), 'activity' => $activity];
             },
+        ]);
+
+        // An agent is the tokens it holds as you: disconnecting it revokes them, and it has to be authorized again.
+        $held = static fn (array $in, AbilityContext $ctx) => $ctx->user->tokens()->where('name', 'MCP: '.$in['name']);
+
+        $abilities->register('mcp-agents/delete', [
+            'label' => 'Disconnect Agent',
+            'description' => 'Disconnect an AI agent (as mcp/agents names it) from your account: its tokens are revoked and it stops working until you authorize it again.',
+            'permission' => 'tokens.manage',
+            'expose' => ['mcp' => false, 'assistant' => false],
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 200]], 'required' => ['name']],
+            'output' => Shape::of(['disconnected' => Shape::STRING, 'tokens' => Shape::INTEGER]),
+            // An agent that is not connected is nothing to disconnect.
+            'dryRun' => static fn (array $in, AbilityContext $ctx): array => ($count = $held($in, $ctx)->count()) === 0 ? [] : [['action' => 'disconnect', 'type' => 'agent', 'name' => $in['name'], 'removes' => ['tokens' => $count]]],
+            'handler' => static fn (array $in, AbilityContext $ctx) => ['disconnected' => $in['name'], 'tokens' => (int) $held($in, $ctx)->delete()],
         ]);
     }
 }

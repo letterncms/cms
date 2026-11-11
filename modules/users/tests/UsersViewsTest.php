@@ -55,15 +55,23 @@ final class UsersViewsTest extends TestCase
         $this->assertSame(['suspended', 'editor', 'twoFactor'], $items[$other->id]['badges']);
     }
 
-    public function test_account_offers_two_factor_set_up_or_off_as_it_stands(): void
+    public function test_account_is_profile_security_and_tokens_with_agents_before_them(): void
     {
         $admin = $this->admin();
-        $labels = static fn (array $root) => array_column(array_merge([], ...array_map(static fn ($n) => $n['props']['items'] ?? [], array_filter(self::nodes($root), static fn ($n) => $n['type'] === 'ui/actions'))), 'label');
+        $root = $this->resolved('account', $admin);
+        $sections = array_values(array_filter(self::nodes($root), static fn ($n) => $n['type'] === 'ui/section'));
+        $titles = array_map(static fn ($n) => $n['props']['title'], $sections);
 
-        $this->assertContains('Set Up Two-Factor', $labels($this->resolved('account', $admin)));
-        $admin->forceFill(['two_factor_secret' => 'JBSWY3DPEHPK3PXP', 'two_factor_confirmed_at' => now()])->save();
-        $this->assertContains('Turn Off Two-Factor', $labels($this->resolved('account', $admin->refresh())));
-        $this->assertContains('ui/records', self::types($this->resolved('account', $admin)));
+        // Profile, how you sign in, then what reaches the admin as you: agents (when MCP is on) before the tokens.
+        $this->assertSame(['Profile', 'Security'], array_slice($titles, 0, 2));
+        $this->assertSame('API Tokens', end($titles));
+        $this->assertContains('account/security', self::types($root));
+        $this->assertContains('ui/records', self::types($root));
+
+        if ($this->cms()->isActive('letterncms/mcp')) {
+            $this->assertSame(['Profile', 'Security', 'Agents', 'API Tokens'], $titles);
+            $this->assertContains('mcp/connect', self::types($root));
+        }
     }
 
     public function test_globals_and_collections_are_views(): void

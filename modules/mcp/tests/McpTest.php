@@ -213,4 +213,28 @@ final class McpTest extends TestCase
         $this->assertCount(1, $data['activity']);
         $this->assertSame('Hello', $data['activity'][0]['subject']);
     }
+
+    public function test_disconnecting_an_agent_revokes_its_tokens_and_no_others(): void
+    {
+        $admin = $this->admin();
+        ApiToken::issue($admin, 'MCP: Claude', ['*'], now()->addDay());
+        ApiToken::issue($admin, 'MCP: Claude', ['*'], now()->addDay());
+        ApiToken::issue($admin, 'MCP: Cursor', ['*'], now()->addDay());
+        ApiToken::issue($admin, 'Deploy script');
+        $other = \Cms\Users\User::query()->create(['name' => 'Ann', 'email' => 'ann@example.com', 'password' => 'x', 'roles' => ['admin']]);
+        ApiToken::issue($other, 'MCP: Claude', ['*'], now()->addDay());
+        $run = fn (array $input) => $this->cms()->abilities()->execute('mcp-agents/delete', $input, \Cms\Abilities\AbilityContext::forUser($admin, 'admin'));
+
+        $dry = $run(['name' => 'Claude', 'dryRun' => true]);
+        $this->assertSame(['full', [['action' => 'disconnect', 'type' => 'agent', 'name' => 'Claude', 'removes' => ['tokens' => 2]]]], [$dry['checked'], $dry['changes']]);
+        $this->assertSame(5, ApiToken::query()->count());
+
+        $this->assertSame(['disconnected' => 'Claude', 'tokens' => 2], $run(['name' => 'Claude']));
+        $this->assertSame(['Deploy script', 'MCP: Cursor'], $admin->tokens()->orderBy('name')->pluck('name')->all());
+        $this->assertSame(1, $other->tokens()->count(), 'someone else\'s agent of the same name stays connected');
+
+        // Not connected: nothing to do, and it says so.
+        $this->assertSame([], $run(['name' => 'Claude', 'dryRun' => true])['changes']);
+        $this->assertSame(0, $run(['name' => 'Claude'])['tokens']);
+    }
 }
