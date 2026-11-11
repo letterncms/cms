@@ -4,6 +4,7 @@
 
 const loaders: Record<string, () => Promise<{ start: () => void }>> = {
   motion: () => import('./motion'),
+  lines: () => import('./lines'),
   logic: () => import('./alpine'),
   ajax: () => import('./alpine'),
   code: () => import('./code'),
@@ -19,13 +20,24 @@ const loaders: Record<string, () => Promise<{ start: () => void }>> = {
 
 const loaded = new Map<() => Promise<{ start: () => void }>, Promise<void>>()
 
+/**
+ * Lines CSS animates wait for their count (`data-cms-lines`, see lines.ts). Never for long: when the count is late
+ * or its chunk fails, the words are let go uncounted ("0"), and play word by word as without a script.
+ */
+const WAIT = 1500
+function release(): void {
+  for (const block of document.querySelectorAll('[data-cms-lines=""]')) block.setAttribute('data-cms-lines', '0')
+}
+
 export function boot(features: Iterable<string>): Promise<unknown> {
   const tasks = new Set<Promise<void>>()
   for (const feature of features) {
+    if (feature === 'lines') setTimeout(release, WAIT)
     const loader = loaders[feature]
     if (!loader) continue
     const before = loaded.get(loader)
     const task = before ? before.then(() => loader()).then((m) => m.start()) : loader().then((m) => m.start())
+    if (feature === 'lines') void task.catch(release)
     loaded.set(loader, task.catch(() => {}))
     tasks.add(task)
   }

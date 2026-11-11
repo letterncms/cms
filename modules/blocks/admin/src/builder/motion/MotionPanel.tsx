@@ -13,8 +13,6 @@ const time = (handle: string, label: string, extra: Partial<FieldDef> = {}): Fie
 /** What a pin distance may be, as the site keeps it (Motion.php PIN). */
 const PIN = /^\d{1,5}(\.\d{1,2})?(px|rem|vh|svh|lvh|dvh)$/
 const PIN_UNITS = ['vh', 'svh', 'lvh', 'dvh', 'px', 'rem']
-/** The triggers a script plays, so their text can be measured into lines first. */
-const MEASURED = ['appear', 'hover', 'press', 'event']
 
 /** Fields shown only when `on`. */
 const when = (on: unknown, ...fields: FieldDef[]): FieldDef[] => (on ? fields : [])
@@ -179,7 +177,6 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
         <StepEditor
           key={step}
           node={node}
-          trigger={trigger.type}
           step={motion.steps[step]}
           index={step}
           count={motion.steps.length}
@@ -304,7 +301,7 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
 }
 
 
-function StepEditor({ node, trigger, step, index, count, onChange, onRemove }: { node: BlockNode; trigger: string; step: MotionStep; index: number; count: number; onChange: (patch: Partial<MotionStep>) => void; onRemove: () => void }) {
+function StepEditor({ node, step, index, count, onChange, onRemove }: { node: BlockNode; step: MotionStep; index: number; count: number; onChange: (patch: Partial<MotionStep>) => void; onRemove: () => void }) {
   const { catalog } = useEditorContext()
   const { byGroup } = useTokens()
   const target = step.target ?? 'self'
@@ -365,8 +362,8 @@ function StepEditor({ node, trigger, step, index, count, onChange, onRemove }: {
             size: 'sm',
             label: t('Target'),
             required: true,
-            options: [{ value: 'self', label: t('This Element') }, { value: 'children', label: t('Each Child in Turn') }, // Lines are found once the text is laid out: only what the script plays can wait for that (Motion.php).
-            ...(text ? [{ value: 'words', label: t('Each Word') }, ...(MEASURED.includes(trigger) || target === 'lines' ? [{ value: 'lines', label: t('Each Line') }] : []), { value: 'chars', label: t('Each Letter') }] : []), { value: 'other', label: t('Another Element') }],
+            options: [{ value: 'self', label: t('This Element') }, { value: 'children', label: t('Each Child in Turn') },
+            ...(text ? [{ value: 'words', label: t('Each Word') }, { value: 'lines', label: t('Each Line') }, { value: 'chars', label: t('Each Letter') }] : []), { value: 'other', label: t('Another Element') }],
           },
           ...when(target.startsWith('#'), { handle: 'element', type: 'select', component: 'blocks-node', label: t('Element') }),
           ...when(target === 'words' || target === 'chars', { handle: 'mask', type: 'toggle', size: 'sm', label: t('Rise from Behind a Line') }),

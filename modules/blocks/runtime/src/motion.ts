@@ -3,6 +3,8 @@
 // load, scroll and loop animations are plain CSS and never get here.
 //   <h1 data-cms="b1" data-cms-motion='[{"id":"m1","type":"appear","steps":[{"t":"self","k":[{"opacity":0,"offset":0}],"d":800}]}]'>
 
+import { lines } from './layout'
+
 interface Step {
   t: string // self, children, words, lines, chars or #<node id>
   k: Keyframe[]
@@ -63,23 +65,6 @@ function targets(el: HTMLElement, target: string): Element[] {
 function own(item: Element, frames: Keyframe[]): Keyframe[] {
   const style = getComputedStyle(item) as unknown as Record<string, string>
   return frames.map((frame) => Object.fromEntries(Object.entries(frame).map(([key, value]) => [key, value === null ? style[key] : value])) as Keyframe)
-}
-
-/**
- * Which line each word is on, as the text is laid out now: words that share a top share a line.
- * The words stay where they are in the HTML; a line is only the turn they take together.
- */
-function lines(words: Element[]): number[] {
-  let line = -1
-  let top = NaN
-  return words.map((word) => {
-    const at = Math.round(word.parentElement!.getBoundingClientRect().top)
-    if (!(Math.abs(at - top) < 2)) {
-      line++
-      top = at
-    }
-    return line
-  })
 }
 
 /** The animations of a step, created paused. */

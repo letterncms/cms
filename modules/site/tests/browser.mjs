@@ -489,6 +489,32 @@ const checks = {
     const tops = [...new Set(words.map((w) => w.top))]
     equal(tops.length > 2, true, 'the heading wraps')
     equal(words.every((w) => w.delay === tops.indexOf(w.top) * 100), true, 'each line starts a stagger after the one above, its words together')
+
+    // Lines CSS animates (load): numbered by the runtime, the words of a line share its turn; numbered again at another width.
+    const laid = () => tab.until(`(() => {
+      const block = document.getElementById('load-lines')
+      if (!block.dataset.cmsLines) return false
+      const words = [...block.querySelectorAll('.cms-w__i')].map((w) => ({ top: Math.round(w.parentElement.getBoundingClientRect().top), i: w.style.getPropertyValue('--i'), state: getComputedStyle(w).animationPlayState, delay: getComputedStyle(w).animationDelay }))
+      return { count: Number(block.dataset.cmsLines), words }
+    })()`)
+    let load = await laid()
+    let loadTops = [...new Set(load.words.map((w) => w.top))]
+    equal(loadTops.length > 2 && load.count === loadTops.length, true, `the load heading wraps and says how many lines it has (${load.count}, ${loadTops.length})`)
+    equal(load.words.every((w) => Number(w.i) === loadTops.indexOf(w.top)), true, 'each word has its line\'s turn: ' + JSON.stringify(load.words))
+    equal(load.words.every((w) => w.state === 'running'), true, 'numbered, the words play')
+    equal(load.words.every((w) => w.delay === `${Math.min(Number(w.i) * 100, 300) / 1000}s`), true, 'a line starts a stagger after the one above: ' + load.words.map((w) => w.delay).join())
+    await tab.evaluate('document.getElementById("load-lines").style.width = "160px"')
+    await tab.until(`Number(document.getElementById('load-lines').dataset.cmsLines) > ${load.count}`)
+    load = await laid()
+    loadTops = [...new Set(load.words.map((w) => w.top))]
+    equal(load.count === loadTops.length && load.words.every((w) => Number(w.i) === loadTops.indexOf(w.top)), true, 'narrower, the lines are numbered again')
+
+    // Without the count (the lines chunk breaks here: no ResizeObserver), the words wait a moment and then play anyway.
+    const late = await open('/motion', { before: 'window.ResizeObserver = undefined' })
+    await sleep(2200)
+    equal(await late.evaluate(`[...document.querySelectorAll('#load-lines .cms-w__i')].every((w) => getComputedStyle(w).animationPlayState === 'running')`), true, 'text is never left waiting for a count that does not come')
+    equal(await late.evaluate(`document.getElementById('load-lines').dataset.cmsLines`), '0', 'let go uncounted')
+    await late.close()
     equal(tab.errors, [], 'no errors')
     await tab.close()
 
