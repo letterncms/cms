@@ -49,7 +49,7 @@ final class Translations
     {
         $languages = $this->languages();
 
-        foreach ([$user?->locale, (string) $this->cms->settings('site', 'admin_language', '')] as $code) {
+        foreach ([$user?->locale, (string) $this->cms->setting('site', 'admin_language', '')] as $code) {
             if ($code && isset($languages[$code])) {
                 return $code;
             }

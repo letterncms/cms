@@ -51,7 +51,7 @@ final class CollaborationTest extends TestCase
 
     private function page(): string
     {
-        return $this->cms()->content()->create('pages', ['title' => 'Launch plan'])->id;
+        return $this->cms()->entryService()->create('pages', ['title' => 'Launch plan'])->id;
     }
 
     public function test_presence_shows_who_else_is_here(): void
@@ -152,7 +152,7 @@ final class CollaborationTest extends TestCase
         $bob = $this->userWithRole('editor');
         $this->as($ada, 'comments/create', ['entryId' => $id, 'body' => 'Note', 'mentions' => [$bob->id]]);
 
-        $this->cms()->content()->delete($id);
+        $this->cms()->entryService()->delete($id);
 
         $this->assertSame(0, Comment::query()->count());
         $this->assertDatabaseCount('comment_mentions', 0);

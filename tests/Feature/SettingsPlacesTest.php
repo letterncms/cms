@@ -54,7 +54,7 @@ final class SettingsPlacesTest extends TestCase
 
     public function test_a_plugins_settings_go_under_plugins_by_its_name(): void
     {
-        $result = $this->cms()->navigation()->forUser($this->admin());
+        $result = $this->cms()->adminNav()->forUser($this->admin());
         $settings = array_column($result['settingsNav'], null, 'id');
 
         // The core's groups, then Plugins: alphabetical, whatever order or group they were registered with,
@@ -73,7 +73,7 @@ final class SettingsPlacesTest extends TestCase
 
     public function test_settings_kept_with_a_screen_are_its_settings_tab(): void
     {
-        $result = $this->cms()->navigation()->forUser($this->admin());
+        $result = $this->cms()->adminNav()->forUser($this->admin());
         $nav = array_column($result['nav'], null, 'id');
 
         // Its place is the screen's Settings tab: /settings/clicks, its row under Plugins and every link to it lead there.
@@ -86,7 +86,7 @@ final class SettingsPlacesTest extends TestCase
 
     public function test_a_plugins_screen_is_in_the_sidebar_from_the_start(): void
     {
-        $sidebar = $this->cms()->navigation()->forUser($this->admin())['sidebar'];
+        $sidebar = $this->cms()->adminNav()->forUser($this->admin())['sidebar'];
 
         $this->assertContains('clicks', array_column($sidebar['sections'], 'items', 'id')['content']);
         $this->assertNotContains('clicks', $sidebar['hidden']);

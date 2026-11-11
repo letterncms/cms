@@ -105,7 +105,7 @@ final class CollectionAbilities
             
                 return [['action' => 'delete', 'type' => 'collection', 'handle' => $collection->handle, 'title' => $collection->title, 'entries' => $count]];
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->write(function () use ($in, $ctx) {
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->write(function () use ($in, $ctx) {
                 $collection = $this->cms->collections()->findOrFail($in['handle']);
 
                 if (! $collection->deletable()) {
@@ -118,7 +118,7 @@ final class CollectionAbilities
                 }
                 if ($in['deleteEntries']) {
                     foreach ($this->cms->entries()->query()->collection($collection->handle)->get() as $entry) {
-                        $this->cms->content()->delete($entry->id, $ctx->user);
+                        $this->cms->entryService()->delete($entry->id, $ctx->user);
                     }
                 }
 

@@ -34,7 +34,7 @@ final class BlocksTest extends TestCase
         ], $ctx);
         $collection = $this->cms()->collections()->findOrFail('articles');
         $this->assertSame('blocks', $collection->blueprint()->field($collection->body)->type);
-        $entry = $this->cms()->content()->create('articles', [
+        $entry = $this->cms()->entryService()->create('articles', [
             'title' => 'A shared document', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]],
         ], $admin);
         $this->assertSame('Hello', $entry->data['content'][0]['props']['text']);
@@ -141,7 +141,7 @@ final class BlocksTest extends TestCase
 
     public function test_entries_accept_markdown_and_files_driver_stores_it(): void
     {
-        $entry = $this->cms()->content()->create('docs', ['title' => 'Intro', 'data' => ['content' => "# Hi\n\nWelcome."]]);
+        $entry = $this->cms()->entryService()->create('docs', ['title' => 'Intro', 'data' => ['content' => "# Hi\n\nWelcome."]]);
 
         $this->assertSame('heading', $entry->data['content'][0]['type']);
         $file = content_path('collections/docs/intro.md');

@@ -39,7 +39,7 @@ final class MediaStore
 
     public function maxBytes(): int
     {
-        return (int) cms()->settings('media', 'max_upload_mb', 32) * 1024 * 1024;
+        return (int) cms()->setting('media', 'max_upload_mb', 32) * 1024 * 1024;
     }
 
     /** Store an uploaded or downloaded file. The temp file is moved or removed. A new file fires `media.uploaded`; the same file again is the one already stored. */
@@ -51,7 +51,7 @@ final class MediaStore
             }
 
             if (filesize($tmp) > $this->maxBytes()) {
-                throw AbilityException::invalid(__('The file is larger than :size MB.', ['size' => cms()->settings('media', 'max_upload_mb', 32)]));
+                throw AbilityException::invalid(__('The file is larger than :size MB.', ['size' => cms()->setting('media', 'max_upload_mb', 32)]));
             }
 
             $mime = $this->detect($tmp, $originalName);
@@ -65,7 +65,7 @@ final class MediaStore
                 }
 
                 // Remove EXIF (location, camera) by re-encoding photos.
-                if ($mime === 'image/jpeg' && cms()->settings('media', 'strip_metadata', true)) {
+                if ($mime === 'image/jpeg' && cms()->setting('media', 'strip_metadata', true)) {
                     $this->images->strip($tmp, 'jpg');
                 }
             }

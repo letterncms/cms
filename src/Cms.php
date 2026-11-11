@@ -117,7 +117,8 @@ final class Cms
         return $this->app->make(EntryRepository::class);
     }
 
-    public function content(): EntryService
+    /** Where entries are written: create, update, publish, move, delete. entries() reads them. */
+    public function entryService(): EntryService
     {
         return $this->app->make(EntryService::class);
     }
@@ -159,7 +160,8 @@ final class Cms
         return $this->app->make(Admin\Views::class);
     }
 
-    public function navigation(): Navigation
+    /** The admin's sidebar. The site's menus are the Navigation module's. */
+    public function adminNav(): Navigation
     {
         return $this->app->make(Navigation::class);
     }
@@ -185,8 +187,8 @@ final class Cms
         return $this->app->make(SettingsRegistry::class);
     }
 
-    /** Settings value(s) for a namespace (core or plugin). */
-    public function settings(string $namespace, ?string $key = null, mixed $default = null): mixed
+    /** The value(s) of a settings namespace (core or plugin), or one key of it. settingsRegistry() is where namespaces are registered and saved. */
+    public function setting(string $namespace, ?string $key = null, mixed $default = null): mixed
     {
         return $this->settingsRegistry()->get($namespace, $key, $default);
     }
@@ -194,7 +196,7 @@ final class Cms
     /** The `site` settings (config/site.yaml): name, url, description, timezone, locale, locales, themes. */
     public function site(?string $key = null, mixed $default = null): mixed
     {
-        $site = $this->settings('site');
+        $site = $this->setting('site');
 
         return $key === null ? $site : data_get($site, $key, $default);
     }

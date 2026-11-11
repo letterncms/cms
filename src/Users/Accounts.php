@@ -40,13 +40,13 @@ final class Accounts
     /** Whether this site has public sign-in and account pages. Off until a site turns it on. */
     public function enabled(): bool
     {
-        return (bool) $this->cms->settings(self::SETTINGS, 'enabled', false);
+        return (bool) $this->cms->setting(self::SETTINGS, 'enabled', false);
     }
 
     /** Whether a stranger can create an account right now: it needs a working mailbox. */
     public function signUpOpen(): bool
     {
-        return $this->enabled() && $this->cms->settings(self::SETTINGS, 'sign_up', 'open') === 'open' && $this->canMail();
+        return $this->enabled() && $this->cms->setting(self::SETTINGS, 'sign_up', 'open') === 'open' && $this->canMail();
     }
 
     public function canMail(): bool
@@ -177,7 +177,7 @@ final class Accounts
     /** The roles a new visitor gets: never one that opens the admin. */
     public function visitorRoles(): array
     {
-        $role = (string) $this->cms->settings(self::SETTINGS, 'default_role', 'member');
+        $role = (string) $this->cms->setting(self::SETTINGS, 'default_role', 'member');
         $definition = $this->cms->roles()->all()[$role] ?? null;
 
         return $definition && ! self::opensAdmin($definition['permissions']) ? [$role] : [];

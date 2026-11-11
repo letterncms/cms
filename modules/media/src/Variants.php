@@ -23,7 +23,7 @@ final class Variants
     {
         $formats = [];
 
-        if (cms()->settings('media', 'avif', true) && $this->processor->supports('avif')) {
+        if (cms()->setting('media', 'avif', true) && $this->processor->supports('avif')) {
             $formats[] = 'avif';
         }
 
@@ -57,7 +57,7 @@ final class Variants
                 $target,
                 $width,
                 $format,
-                (int) cms()->settings('media', 'quality', 78),
+                (int) cms()->setting('media', 'quality', 78),
                 $ratio ? $this->ratio($ratio) : null,
                 [$item->focal_x, $item->focal_y],
             );

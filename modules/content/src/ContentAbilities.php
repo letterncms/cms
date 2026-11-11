@@ -155,7 +155,7 @@ final class ContentAbilities
                 }
 
                 $locale = $this->cms->defaultLocale();
-                $entry = $this->cms->content()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user);
+                $entry = $this->cms->entryService()->create($group['collection'], ['title' => __($page['label']), 'slug' => $in['handle'], 'locale' => $locale, 'data' => ['blocks' => ($group['seed'])($in['handle'], $locale)]], $ctx->user);
 
                 return ['id' => $entry->id, 'collection' => $group['collection']];
             },
@@ -375,7 +375,7 @@ final class ContentAbilities
             
                 return [['action' => $in['status'] === 'published' ? 'create-published' : 'create', 'type' => 'entry', 'collection' => $collection->handle, 'title' => $in['title'], 'locale' => $in['locale'] ?? $this->cms->defaultLocale()]];
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->create($in['collection'], $in, $ctx->user)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->create($in['collection'], $in, $ctx->user)->toArray(),
         ]);
 
         $a->register('entries/update', [
@@ -415,7 +415,7 @@ final class ContentAbilities
             
                 return [$this->change($in['publish'] ? 'update-published' : 'update', $entry, ['fields' => $fields])];
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish'])->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish'])->toArray(),
         ]);
 
         $a->register('entries/publish', [
@@ -426,7 +426,7 @@ final class ContentAbilities
             'answer' => $this->answer('published'),
             'output' => Shapes::entry(),
             'dryRun' => fn (array $in): array => [$this->change('publish', $this->target($in), ['at' => $in['at'] ?? null])],
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
         $a->register('entries/unpublish', [
@@ -437,7 +437,7 @@ final class ContentAbilities
             'answer' => $this->answer('unpublished'),
             'output' => Shapes::entry(),
             'dryRun' => fn (array $in): array => [$this->change('unpublish', $this->target($in), [])],
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
         $a->register('entries/discard-draft', [
@@ -449,7 +449,7 @@ final class ContentAbilities
             'answer' => $this->answer('discarded'),
             'output' => Shapes::entry(),
             'dryRun' => fn (array $in): array => [$this->change('discard-draft', $this->target($in), [])],
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
         $a->register('entries/delete', [
@@ -463,7 +463,7 @@ final class ContentAbilities
             'dryRun' => fn (array $in): array => [$this->change('delete', $this->target($in), [])],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $title = $this->cms->entries()->find($in['id'])?->title;
-                $this->cms->content()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
+                $this->cms->entryService()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
 
                 return ['deleted' => $in['id'], 'title' => $title];
             },
@@ -477,7 +477,7 @@ final class ContentAbilities
             'answer' => $this->answer('duplicated'),
             'output' => Shapes::entry(),
             'dryRun' => fn (array $in): array => [$this->change('duplicate', $this->target($in), [])],
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
         $a->register('entries/move', [
@@ -490,7 +490,7 @@ final class ContentAbilities
             ], 'required' => ['id', 'parentId']],
             'output' => Shapes::entry(),
             'dryRun' => fn (array $in): array => [$this->change('move', $this->target($in), ['parentId' => $in['parentId']])],
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->move($in['id'], $in['parentId'], $in['position'] ?? null, $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->move($in['id'], $in['parentId'], $in['position'] ?? null, $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
         $a->register('entries/reorder', [
@@ -506,7 +506,7 @@ final class ContentAbilities
             ], 'required' => ['collection', 'ids']],
             'output' => Shapes::ok(),
             'handler' => function (array $in, AbilityContext $ctx) {
-                $this->cms->content()->reorder($in['collection'], $in['ids'], $in['parentId'], $ctx->user, $in['versions'] ?? []);
+                $this->cms->entryService()->reorder($in['collection'], $in['ids'], $in['parentId'], $ctx->user, $in['versions'] ?? []);
 
                 return ['ok' => true];
             },
@@ -547,7 +547,7 @@ final class ContentAbilities
             
                 return [$this->change('restore', $this->target(['id' => $revision['entryId'], ...$in]), ['revisionId' => $revision['id']])];
             },
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->entryService()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
         $a->register('entries/get-many', [

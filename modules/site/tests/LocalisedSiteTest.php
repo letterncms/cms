@@ -37,17 +37,17 @@ final class LocalisedSiteTest extends TestCase
 
     private function page(string $title, array $extra = []): \Cms\Content\Entries\Entry
     {
-        return $this->cms()->content()->create('pages', ['title' => $title, 'status' => 'published', ...$extra]);
+        return $this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', ...$extra]);
     }
 
     private function translation(\Cms\Content\Entries\Entry $source, string $locale, string $title, array $extra = []): \Cms\Content\Entries\Entry
     {
-        return $this->cms()->content()->copyFrom($source, ['title' => $title, 'data' => $source->data, 'locale' => $locale, 'originId' => $source->id, 'status' => 'published', ...$extra]);
+        return $this->cms()->entryService()->copyFrom($source, ['title' => $title, 'data' => $source->data, 'locale' => $locale, 'originId' => $source->id, 'status' => 'published', ...$extra]);
     }
 
     public function test_a_collection_can_have_another_url_pattern_in_a_language(): void
     {
-        $post = $this->cms()->content()->create('news', ['title' => 'First', 'slug' => 'first', 'status' => 'published']);
+        $post = $this->cms()->entryService()->create('news', ['title' => 'First', 'slug' => 'first', 'status' => 'published']);
         $de = $this->translation($post, 'de', 'Erste', ['slug' => 'erste']);
         $fr = $this->translation($post, 'fr', 'Première', ['slug' => 'premiere']);
 
@@ -88,7 +88,7 @@ final class LocalisedSiteTest extends TestCase
     public function test_a_link_to_an_unpublished_translation_stays_on_the_original(): void
     {
         $pricing = $this->page('Pricing', ['slug' => 'pricing']);
-        $this->cms()->content()->copyFrom($pricing, ['title' => 'Preise', 'data' => [], 'locale' => 'de', 'originId' => $pricing->id, 'status' => 'draft', 'slug' => 'preise']);
+        $this->cms()->entryService()->copyFrom($pricing, ['title' => 'Preise', 'data' => [], 'locale' => 'de', 'originId' => $pricing->id, 'status' => 'draft', 'slug' => 'preise']);
         $about = $this->page('About', ['slug' => 'about', 'data' => ['content' => [['type' => 'link', 'props' => ['label' => 'Go', 'url' => '/pricing']]]]]);
         $this->translation($about, 'de', 'Über uns', ['slug' => 'ueber-uns']);
 
@@ -243,7 +243,7 @@ final class LocalisedSiteTest extends TestCase
 
     public function test_a_missing_page_answers_in_the_language_of_its_url(): void
     {
-        $this->cms()->content()->create('templates', ['title' => '404', 'slug' => '404', 'status' => 'published', 'data' => ['blocks' => [
+        $this->cms()->entryService()->create('templates', ['title' => '404', 'slug' => '404', 'status' => 'published', 'data' => ['blocks' => [
             ['type' => 'paragraph', 'props' => ['text' => '', 'tag' => 'p'], 'bind' => ['text' => 'globals.ui.gone']],
             ['type' => 'repeat', 'props' => ['source' => 'languages'], 'children' => [['type' => 'link', 'bind' => ['label' => 'item.locale', 'url' => 'item.url', 'attr:hreflang' => 'item.locale']]]],
         ]]]);

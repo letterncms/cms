@@ -26,7 +26,7 @@ final class PersonalDataTest extends TestCase
             ...$foot,
             '<p data-who="'.e((string) (Auth::user()?->email ?? 'nobody')).'" data-mode="'.$context->mode.'"></p>',
         ]);
-        $this->cms()->content()->create('notes', ['title' => 'Public', 'status' => 'published', 'data' => ['body' => 'Words']]);
+        $this->cms()->entryService()->create('notes', ['title' => 'Public', 'status' => 'published', 'data' => ['body' => 'Words']]);
     }
 
     public function test_a_build_in_a_signed_in_request_writes_nothing_about_them(): void

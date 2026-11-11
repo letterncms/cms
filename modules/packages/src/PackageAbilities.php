@@ -205,7 +205,7 @@ final class PackageAbilities
      */
     private function places(User $user): \Closure
     {
-        $menu = $this->cms->navigation()->forUser($user);
+        $menu = $this->cms->adminNav()->forUser($user);
         $nav = array_column($menu['nav'], null, 'id');
         $inSettings = array_merge(...array_map(static fn (array $s) => $s['items'], $menu['settingsNav'] ?: [['items' => []]]));
 

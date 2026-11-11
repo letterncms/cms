@@ -24,7 +24,7 @@ class Mailer
 
     public function configured(): bool
     {
-        $transport = (string) $this->cms->settings('email', 'transport', 'log');
+        $transport = (string) $this->cms->setting('email', 'transport', 'log');
 
         return $transport !== 'log' && $this->transports->has($transport);
     }
@@ -42,7 +42,7 @@ class Mailer
     /** Send and throw on failure (test mails, CLI). */
     public function deliver(Message $message): void
     {
-        $settings = (array) $this->cms->settings('email');
+        $settings = (array) $this->cms->setting('email');
         $key = (string) ($settings['transport'] ?? 'log');
         $email = $this->build($message, $settings);
 

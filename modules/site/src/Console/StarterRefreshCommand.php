@@ -34,7 +34,7 @@ final class StarterRefreshCommand extends Command
         }
 
         $backup = storage_path('backups/starter-refresh-'.gmdate('Ymd-His').'-'.bin2hex(random_bytes(3)));
-        $count = $cms->content()->write(function () use ($starter, $user, $backup): int {
+        $count = $cms->entryService()->write(function () use ($starter, $user, $backup): int {
             Files::copyDirectory(content_path(), $backup.'/content');
             Files::copyDirectory(site_path('config'), $backup.'/config');
             $database = [];

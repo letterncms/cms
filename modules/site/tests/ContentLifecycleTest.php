@@ -19,7 +19,7 @@ final class ContentLifecycleTest extends TestCase
     public function test_collection_deletion_removes_just_built_routes_search_sitemap_and_markdown(): void
     {
         $this->freezeTime();
-        $entry = $this->cms()->content()->create('notes', ['title' => 'Experiment', 'status' => 'published', 'data' => ['body' => 'Experimental content']]);
+        $entry = $this->cms()->entryService()->create('notes', ['title' => 'Experiment', 'status' => 'published', 'data' => ['body' => 'Experimental content']]);
         $builder = app(SiteBuilder::class);
         $this->assertSame([], $builder->buildAll()['errors']);
         $this->assertFileExists(public_path('notes/experiment/index.html'));
@@ -37,7 +37,7 @@ final class ContentLifecycleTest extends TestCase
 
     public function test_moving_published_file_tree_rebuilds_only_public_content_and_removes_old_markdown(): void
     {
-        $service = $this->cms()->content();
+        $service = $this->cms()->entryService();
         $parent = $service->create('notes', ['title' => 'Parent']);
         $entry = $service->create('notes', ['title' => 'Public', 'status' => 'published', 'data' => ['body' => 'Public words']]);
         $child = $service->create('notes', ['title' => 'Child', 'parentId' => $entry->id, 'status' => 'published', 'data' => ['body' => 'Child words']]);

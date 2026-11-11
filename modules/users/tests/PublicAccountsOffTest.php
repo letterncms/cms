@@ -34,7 +34,7 @@ final class PublicAccountsOffTest extends TestCase
     public function test_a_gated_entry_stays_closed_with_accounts_off(): void
     {
         // Stored earlier, or deployed in a file: the rule holds whether or not anyone can edit it now.
-        $entry = cms()->content()->create('pages', ['title' => 'Closed', 'status' => 'published']);
+        $entry = cms()->entryService()->create('pages', ['title' => 'Closed', 'status' => 'published']);
         $entry = cms()->entries()->find($entry->id);
         $entry->data['gate'] = ['mode' => 'locked'];
         cms()->entries()->save($entry);

@@ -36,7 +36,7 @@ final class EntryListTest extends TestCase
         $admin = $this->admin();
         $zoe = User::query()->create(['name' => 'Zoe', 'email' => 'zoe@example.com', 'password' => 'secret-pass-123']);
         $adam = User::query()->create(['name' => 'adam', 'email' => 'adam@example.com', 'password' => 'secret-pass-123']);
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
 
         foreach (['posts' => 'excerpt', 'notes' => 'body'] as $collection => $field) {
             $content->create($collection, ['title' => 'banana', 'data' => [$field => 'b'], 'authorId' => $zoe->id, 'status' => 'published', 'at' => '2026-01-02 10:00:00']);
@@ -65,7 +65,7 @@ final class EntryListTest extends TestCase
     public function test_items_carry_authors_translations_and_requested_values(): void
     {
         $admin = $this->admin();
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $post = $content->create('posts', ['title' => 'Launch', 'data' => ['excerpt' => 'x']]);
         $person = $content->create('people', ['title' => 'Ada', 'data' => ['role' => 'lead', 'owner' => [$admin->id], 'posts' => [$post->id], 'tags' => ['math']]], $admin);
         $content->create('people', ['title' => 'Ada (de)', 'locale' => 'de', 'originId' => $person->id]);
@@ -90,7 +90,7 @@ final class EntryListTest extends TestCase
     public function test_tree_items_carry_values_too(): void
     {
         $admin = $this->admin();
-        $content = $this->cms()->content();
+        $content = $this->cms()->entryService();
         $home = $content->create('pages', ['title' => 'Home', 'data' => ['summary' => 'Start here']], $admin);
         $content->create('pages', ['title' => 'Team', 'parentId' => $home->id, 'data' => ['summary' => 'Who we are']]);
 

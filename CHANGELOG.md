@@ -10,6 +10,7 @@
 
 ### Changed
 
+- **Breaking.** For plugins: `cms()->navigation()` (the admin's sidebar) is `cms()->adminNav()`, `cms()->content()` (where entries are written) is `cms()->entryService()`, and `cms()->settings('namespace', 'key')` (a value) is `cms()->setting('namespace', 'key')`. `entries()` still reads entries and `settingsRegistry()` still registers and saves settings.
 - **Breaking.** `patterns/list` and `patterns/save` are `components/list` and `components/save`, named after the `components` collection whose entries they list and save.
 - **Breaking.** `cms sync` is `cms migrate`, and the `cms.sync` action that runs after it is `cms.migrated`: “sync” now only means the Sync module (`pull`, `push`, `sync:undo`, `sync:history`). `cms migrate` takes the place of the framework's command of that name. `cms packages:update` is `cms update`. Change deploy scripts that call the old names.
 - **Breaking.** Abilities are named with the same verbs everywhere, with no aliases: `navigation/save` is `navigation/update` and `navigation/add` is `navigation/add-item`; `languages/save`, `languages/add` and `languages/remove` are `languages/update`, `languages/create` and `languages/delete`; `entries/lookup` and `media/lookup` are `entries/get-many` and `media/get-many`; `users/lookup` is `people/list`; `pages/customise` is `pages/customize`. `site/get` is gone: `settings/get` with namespace `site` has the same values.

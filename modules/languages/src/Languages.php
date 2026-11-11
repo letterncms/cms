@@ -71,7 +71,7 @@ final class Languages
     /** URL prefix for a language ('' = none). The default language has none unless configured. */
     public function prefix(string $code): string
     {
-        if ($code === $this->default() && ! $this->cms->settings('languages', 'prefix_default', false)) {
+        if ($code === $this->default() && ! $this->cms->setting('languages', 'prefix_default', false)) {
             return '';
         }
 

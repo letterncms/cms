@@ -30,7 +30,7 @@ final class StarterTest extends TestCase
         $this->assertSame(6, app(Starter::class)->seed($admin));
         $posts = $this->cms()->collections()->findOrFail('posts');
         $this->assertSame('Blog', $posts->title);
-        $sidebar = array_column($this->cms()->navigation()->forUser($admin)['sidebar']['sections'], null, 'id');
+        $sidebar = array_column($this->cms()->adminNav()->forUser($admin)['sidebar']['sections'], null, 'id');
         $this->assertSame(['collection.pages', 'collection.posts'], array_slice($sidebar['content']['items'], 0, 2));
         $this->assertSame('content', $posts->body);
         $this->assertSame('blocks', $posts->blueprint()->field('content')->type);
@@ -63,9 +63,9 @@ final class StarterTest extends TestCase
         $password = $admin->getRawOriginal('password');
         $siteSettings = Yaml::read(site_path('config/site.yaml'));
         $this->cms()->collections()->save(Collection::fromArray('private_notes', ['title' => 'Notes', 'fields' => []]));
-        $note = $this->cms()->content()->create('private_notes', ['title' => 'Keep this'], $admin);
+        $note = $this->cms()->entryService()->create('private_notes', ['title' => 'Keep this'], $admin);
         $oldPost = $this->cms()->entries()->query()->collection('posts')->first();
-        $this->cms()->content()->update($oldPost->id, ['title' => 'Unpublished experiment'], $admin);
+        $this->cms()->entryService()->update($oldPost->id, ['title' => 'Unpublished experiment'], $admin);
 
         $this->assertSame(6, app(Starter::class)->refresh($admin));
         $this->assertSame(1, User::query()->count());

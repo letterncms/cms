@@ -66,8 +66,8 @@ final class OutputSiteTest extends TestCase
         $this->assertSame($card['id'], $again['id']);
         $this->assertSame(['card'], array_column($this->ability('components/list'), 'handle'));
 
-        $this->cms()->content()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['description' => 'Frames pages', 'collections' => ['pages'], 'blocks' => [['type' => 'outlet']]]]);
-        $this->cms()->content()->create('templates', ['title' => 'Bare', 'slug' => 'bare', 'status' => 'draft', 'data' => ['blocks' => []]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['description' => 'Frames pages', 'collections' => ['pages'], 'blocks' => [['type' => 'outlet']]]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Bare', 'slug' => 'bare', 'status' => 'draft', 'data' => ['blocks' => []]]);
         $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
         $this->assertSame(['default'], array_column($this->ability('templates/list'), 'handle'));
         $this->assertCount(2, $this->ability('templates/list', ['working' => true]));
@@ -98,7 +98,7 @@ final class OutputSiteTest extends TestCase
         $idle = $this->ability('site/build-status');
         $this->assertSame('idle', $idle['state']);
 
-        $page = $this->cms()->content()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published', 'data' => ['content' => [['type' => 'heading', 'props' => ['text' => 'About']]]]]);
+        $page = $this->cms()->entryService()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published', 'data' => ['content' => [['type' => 'heading', 'props' => ['text' => 'About']]]]]);
         $this->assertStringEndsWith('/__preview/'.$page->id, $this->ability('site/preview-url', ['id' => $page->id])['url']);
 
         $built = $this->ability('site/build');
@@ -129,7 +129,7 @@ final class OutputSiteTest extends TestCase
 
         // One file in use, one reference to nothing, one record without a file.
         $gone = '01hzzzzzzzzzzzzzzzzzzzzzzz';
-        $this->cms()->content()->create('pages', ['title' => 'Uses', 'slug' => 'uses', 'status' => 'published', 'data' => ['cover' => [$image['id']], 'note' => 'Background: media:'.$gone, 'link' => '/media/none.png']]);
+        $this->cms()->entryService()->create('pages', ['title' => 'Uses', 'slug' => 'uses', 'status' => 'published', 'data' => ['cover' => [$image['id']], 'note' => 'Background: media:'.$gone, 'link' => '/media/none.png']]);
         MediaItem::query()->create(['name' => 'Lost', 'filename' => 'lost.txt', 'path' => 'media/lost.txt', 'mime' => 'text/plain', 'size' => 1, 'hash' => hash('sha256', 'lost'), 'folder' => '']);
         $report = $this->ability('media/report');
         $this->assertSame(3, $report['items']);
