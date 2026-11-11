@@ -138,11 +138,18 @@ final class Elements
     {
         $b = $d['block'];
         $label = trim((string) ($b['label'] ?? ''));
-        $svg = Icons::svg((string) ($b['icon'] ?? ''));
+        $svg = '';
 
-        if ($svg === '' && ! empty($b['svg'])) {
-            $svg = app(\Cms\Modules\Media\SvgSanitizer::class)->clean((string) $b['svg']);
+        // An SVG of one's own is the icon, whatever name the block still holds: Icon has a default, so a name is always there.
+        if (trim((string) ($b['svg'] ?? '')) !== '') {
+            try {
+                $svg = app(\Cms\Modules\Media\SvgSanitizer::class)->clean((string) $b['svg'], inline: true);
+            } catch (\Throwable) {
+                $svg = ''; // Not an SVG: the named icon stands in.
+            }
         }
+
+        $svg === '' && $svg = Icons::svg((string) ($b['icon'] ?? ''));
 
         if ($svg === '') {
             return $d['editor'] ? '<span '.$d['attrs'].' data-cms-media aria-hidden="true">'.Icons::svg('star').'</span>' : '';

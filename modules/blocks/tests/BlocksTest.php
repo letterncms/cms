@@ -167,6 +167,46 @@ final class BlocksTest extends TestCase
         $this->assertSame($ids[1], array_values(array_unique($ids[1])), 'no id twice');
     }
 
+    public function test_an_icon_with_an_svg_of_its_own_shows_that(): void
+    {
+        $render = function (array $props): string {
+            $renderer = app(\Cms\Modules\Blocks\BlockRenderer::class);
+            $renderer->begin();
+
+            return $renderer->render(app(Document::class)->normalize([['type' => 'icon', 'props' => $props]]));
+        };
+        $own = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" onclick="alert(1)"/></svg>';
+
+        $html = $render(['svg' => $own]);
+        $this->assertStringContainsString('<circle cx="5" cy="5" r="4"', $html, 'with the default icon’s name still in the block');
+        $this->assertSame(1, substr_count($html, '<svg'));
+        $this->assertStringNotContainsString('onclick', $html);
+        $this->assertStringContainsString('<circle', $render(['icon' => 'arrow-up-right', 'svg' => $own]), 'and with another name chosen');
+
+        // The SVG is part of the page: nothing in it may style the page, or be styled by it.
+        $wrap = static fn (string $inside) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">'.$inside.'<circle class="cms-button" style="fill:red" fill="blue" cx="5" cy="5" r="4"/></svg>';
+
+        foreach ([
+            'a stylesheet for the page' => '<style>body{display:none}</style>',
+            'an escaped url()' => '<style>circle{background:u\\72l(https://evil.test/x)}</style>',
+            'image-set()' => '<style>circle{background:image-set("https://evil.test/x" 1x)}</style>',
+        ] as $why => $payload) {
+            $html = $render(['svg' => $wrap($payload)]);
+            $this->assertStringNotContainsString('<style', $html, $why);
+            $this->assertStringNotContainsString('evil.test', $html, $why);
+            $this->assertStringNotContainsString('display:none', $html, $why);
+            $this->assertStringNotContainsString('cms-button', $html, 'no class of the page’s');
+            $this->assertStringNotContainsString('style=', $html, 'no inline style');
+            $this->assertStringContainsString('<circle fill="blue" cx="5" cy="5" r="4"', $html, 'the shape keeps its own attributes');
+        }
+
+        // A file in the media library is a document of its own: it keeps its stylesheet.
+        $this->assertStringContainsString('<style', app(\Cms\Modules\Media\SvgSanitizer::class)->clean($wrap('<style>circle{fill:red}</style>')));
+
+        $this->assertStringNotContainsString('<circle', $render(['icon' => 'arrow-up-right']));
+        $this->assertStringContainsString('<svg', $render(['icon' => 'arrow-up-right', 'svg' => 'not an svg']), 'what is no SVG leaves the named icon');
+    }
+
     public function test_document_sanitizes_text_and_styles(): void
     {
         $nodes = app(Document::class)->normalize([
