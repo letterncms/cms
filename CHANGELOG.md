@@ -48,6 +48,7 @@
 - An entry's row menu says **Edit**, not "Open", beside its pencil, for those who may edit it. The number beside a collection's name (and on the **Site** tab of Pages) counts its entries in the language on view whatever the list is narrowed to, so it no longer reads "0" next to a filter that found nothing.
 - **Media**: a file's details are one form whose **Save** is the dialog's own button, with **Delete File** at its foot. The focal point is a control with a name: click or tap the picture, drag the marker, or move it with the arrow keys (Shift for bigger steps, Home for the middle). The media picker opens as a sheet on a phone, shows the files a field takes without a kind switch, says **Use Image** for an image field, and for a field that takes one file a click chooses it: no count and no second button. An empty library offers **Upload** where it says so. The sentences under Alt Text, **Serve AVIF Images** and **Remove Photo Metadata** are gone.
 - **Media**: a file's folder is no longer a text field in its details, and a folder with nothing in it says "No files in this folder" with **Upload** instead of "No matches".
+- **Media**: 3D models, textures (HDR and KTX2) and animations (Lottie and Rive) are kinds of their own. Each shows its icon and what it is (GLB, HDR, Lottie) where a picture would be, its details say kind, type and size without the image tools, and the library's kind filter and `media/list` (`kind`: `model`, `texture`, `animation`) find them. **Other** no longer includes PDFs.
 
 ### Fixed
 

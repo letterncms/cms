@@ -7,7 +7,6 @@
   "Actions for {name}": "Actions pour {name}",
   "Add More": "Ajouter d’autres",
   "Added": "Ajouté",
-  "All": "Tous",
   "All Media": "Tous les médias",
   "Allowed": "Autorisés",
   "Alt Text": "Texte alternatif",
@@ -150,8 +149,18 @@
   "Replace a file with one of its kind: an image with an image, a video with a video.": "Remplacez un fichier par un fichier du même genre : une image par une image, une vidéo par une vidéo.",
   "Replace File": "Remplacer le fichier",
   "Replace Media File": "Remplacer un fichier média",
-  "Rotate": "Pivoter",
+  "Rotate": "Rotation",
   "Rotate or Crop Image": "Pivoter ou recadrer une image",
   "Top Left Corner": "Coin supérieur gauche",
-  "Top Right Corner": "Coin supérieur droit"
+  "Top Right Corner": "Coin supérieur droit",
+  "3D Model": "Modèle 3D",
+  "3D Models": "Modèles 3D",
+  "All Kinds": "Tous les types",
+  "Animation": "Animation",
+  "Animations": "Animations",
+  "File": "Fichier",
+  "Image": "Image",
+  "Texture": "Texture",
+  "Textures": "Textures",
+  "Video": "Vidéo"
 }

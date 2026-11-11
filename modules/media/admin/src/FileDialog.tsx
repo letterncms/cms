@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { deleteFiles, useHref, type MediaUse } from './actions'
 import { CropDialog } from './Crop'
 import { MoveDialog } from './Folders'
+import { FileTile, kindLabel } from './kinds'
 import { FocalPoint } from './FocalPoint'
 import { upload, type MediaItem } from './upload'
 
@@ -90,10 +91,12 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
         ) : item.kind === 'audio' ? (
           <audio key={url} src={url} controls className="w-full" />
         ) : (
-          <div className="grid h-32 place-items-center rounded-md bg-sunken text-muted"><Icon name="file-text" size={28} /></div>
+          // Nothing here draws a model, a texture, an animation or a document: it is shown as what it is.
+          <FileTile item={item} size={28} className="h-32 rounded-md bg-sunken" />
         )}
 
         <dl className="m-0 grid grid-cols-[88px_minmax(0,1fr)] items-center gap-y-1 text-xs">
+          <dt className="text-faint">{t('Kind')}</dt><dd className="m-0">{kindLabel(item.kind)}</dd>
           <dt className="text-faint">{t('Type')}</dt><dd className="m-0 truncate">{item.mime}</dd>
           <dt className="text-faint">{t('Size')}</dt><dd className="m-0">{formatBytes(item.size)}</dd>
           {item.width && <><dt className="text-faint">{t('Dimensions')}</dt><dd className="m-0">{item.width} × {item.height}</dd></>}

@@ -147,11 +147,36 @@ final class MediaTest extends TestCase
 
             $this->assertSame($mime, $item->mime);
             $this->assertStringEndsWith('.'.$ext, $item->path);
-            $this->assertSame('file', $item->kind(), 'not an image to resize, whatever its type starts with');
+            $this->assertSame(['glb' => 'model', 'gltf' => 'model', 'hdr' => 'texture', 'ktx2' => 'texture', 'json' => 'animation', 'riv' => 'animation'][$ext], $item->kind(), 'not an image to resize, whatever its type starts with');
             $this->assertFalse($item->isImage());
             $this->assertSame([null, null], [$item->width, $item->height]);
             $this->assertSame($bytes, file_get_contents(public_path($item->path)));
         }
+    }
+
+    public function test_the_library_filters_by_every_kind_and_a_texture_is_no_image(): void
+    {
+        $types = ['photo.jpg' => 'image/jpeg', 'film.mp4' => 'video/mp4', 'song.mp3' => 'audio/mpeg', 'report.pdf' => 'application/pdf', 'chair.glb' => 'model/gltf-binary', 'room.gltf' => 'model/gltf+json',
+            'sky.hdr' => 'image/vnd.radiance', 'wood.ktx2' => 'image/ktx2', 'spinner.json' => 'application/json', 'mascot.riv' => 'application/vnd.rive', 'prices.csv' => 'text/csv', 'all.zip' => 'application/zip'];
+
+        foreach ($types as $name => $mime) {
+            MediaItem::query()->create(['name' => $name, 'filename' => $name, 'path' => 'media/'.$name, 'mime' => $mime, 'size' => 1, 'hash' => hash('sha256', $name), 'folder' => '']);
+        }
+
+        $ctx = AbilityContext::forUser($this->admin(), 'admin');
+        $of = fn (string $kind) => array_column($this->cms()->abilities()->execute('media/list', ['kind' => $kind, 'sort' => 'name'], $ctx)['items'], 'kind', 'name');
+
+        $this->assertSame(['photo.jpg' => 'image'], $of('image'));
+        $this->assertSame(['film.mp4' => 'video'], $of('video'));
+        $this->assertSame(['song.mp3' => 'audio'], $of('audio'));
+        $this->assertSame(['report.pdf' => 'pdf'], $of('pdf'));
+        $this->assertSame(['chair.glb' => 'model', 'room.gltf' => 'model'], $of('model'));
+        $this->assertSame(['sky.hdr' => 'texture', 'wood.ktx2' => 'texture'], $of('texture'));
+        $this->assertSame(['mascot.riv' => 'animation', 'spinner.json' => 'animation'], $of('animation'));
+        $this->assertSame(['all.zip' => 'file', 'prices.csv' => 'file'], $of('file'));
+        // Every file is of exactly one kind.
+        $this->assertCount(count($types), $of('all'));
+        $this->assertSame(count($types), array_sum(array_map(fn (string $kind) => count($of($kind)), MediaItem::KINDS)));
     }
 
     public function test_refuses_assets_that_carry_code_point_away_or_are_too_large(): void

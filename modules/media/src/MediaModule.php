@@ -162,7 +162,7 @@ final class MediaModule extends Plugin
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => [
                 'search' => ['type' => 'string', 'maxLength' => 120],
-                'kind' => ['type' => 'string', 'enum' => ['all', 'image', 'video', 'audio', 'pdf', 'file'], 'default' => 'all'],
+                'kind' => ['type' => 'string', 'enum' => ['all', ...MediaItem::KINDS], 'default' => 'all', 'description' => 'model: glTF; texture: HDR environment maps and KTX2; animation: Lottie and Rive; file: everything that is none of the others.'],
                 'folder' => ['type' => ['string', 'null']],
                 'accept' => ['type' => 'string', 'maxLength' => 300, 'description' => 'Only files of these types, separated by commas, as a field\'s `accept` has them: application/pdf, video/*.'],
                 'except' => ['type' => 'string', 'maxLength' => 300, 'description' => 'Leave out files of these types: image/* for what a file field takes.'],
@@ -180,12 +180,13 @@ final class MediaModule extends Plugin
                     $q->where(static fn ($w) => $w->where('name', 'like', $term)->orWhere('alt', 'like', $term)->orWhere('filename', 'like', $term));
                 }
 
+                // By type, as MediaItem::kind() names it: a texture's type starts with image/ and is no image.
+                $assets = array_keys(MediaItem::ASSET_KINDS);
                 match ($in['kind']) {
-                    'image' => $q->where('mime', 'like', 'image/%'),
-                    'video' => $q->where('mime', 'like', 'video/%'),
-                    'audio' => $q->where('mime', 'like', 'audio/%'),
+                    'image', 'video', 'audio' => $q->where('mime', 'like', $in['kind'].'/%')->whereNotIn('mime', $assets),
                     'pdf' => $q->where('mime', 'application/pdf'),
-                    'file' => $q->where('mime', 'not like', 'image/%')->where('mime', 'not like', 'video/%')->where('mime', 'not like', 'audio/%'),
+                    'model', 'texture', 'animation' => $q->whereIn('mime', array_keys(MediaItem::ASSET_KINDS, $in['kind'], true)),
+                    'file' => $q->where('mime', 'not like', 'image/%')->where('mime', 'not like', 'video/%')->where('mime', 'not like', 'audio/%')->where('mime', '!=', 'application/pdf')->whereNotIn('mime', $assets),
                     default => null,
                 };
 
@@ -500,7 +501,7 @@ final class MediaModule extends Plugin
     {
         return Shape::of([
             'id' => Shape::STRING, 'url' => Shape::STRING, 'thumb' => Shape::STRING_OR_NULL, 'name' => Shape::STRING, 'filename' => Shape::STRING, 'mime' => Shape::STRING,
-            'kind' => Shape::enum('image', 'video', 'audio', 'pdf', 'file'), 'size' => Shape::INTEGER, 'width' => Shape::INTEGER_OR_NULL, 'height' => Shape::INTEGER_OR_NULL,
+            'kind' => Shape::enum(...MediaItem::KINDS), 'size' => Shape::INTEGER, 'width' => Shape::INTEGER_OR_NULL, 'height' => Shape::INTEGER_OR_NULL,
             'alt' => Shape::STRING_OR_NULL, 'caption' => Shape::STRING_OR_NULL, 'focal' => ['x' => Shape::INTEGER, 'y' => Shape::INTEGER], 'folder' => Shape::STRING,
             'createdAt' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
         ]);

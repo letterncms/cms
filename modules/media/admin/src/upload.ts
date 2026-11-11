@@ -8,7 +8,8 @@ export interface MediaItem extends RecordTimestamps {
   name: string
   filename: string
   mime: string
-  kind: 'image' | 'video' | 'audio' | 'pdf' | 'file'
+  /** What it is: `model` is glTF, `texture` an HDR environment map or a KTX2, `animation` a Lottie or a Rive file. */
+  kind: 'image' | 'video' | 'audio' | 'pdf' | 'model' | 'texture' | 'animation' | 'file'
   size: number
   width: number | null
   height: number | null
