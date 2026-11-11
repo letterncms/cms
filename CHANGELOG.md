@@ -17,6 +17,8 @@
 
 ### Fixed
 
+- Dragging with a screen reader is announced in the admin's language (Dutch, French, German) instead of English, in words that say what happened and the position in the list, not an id. Every module and plugin gets it: the shared `@dnd-kit/core` hands out a `DndContext` that speaks.
+- A name read together with its value ("Author: Anna") takes the language's separator: French sets a narrow no-break space before the colon. `labelled(label, value)` in `@letterncms/ui`.
 - A group of avatars shows one initial per person, so the next circle never cuts a letter, and its count grows into a pill instead of losing digits; a single avatar shows two letters at most, with air around them.
 - Green, amber and red badges read at 4.5:1 or more wherever they stand, in light and dark: their words are a step toward ink, as the blue one's already were.
 - A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.

@@ -1,9 +1,10 @@
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext } from '../ui/dnd'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { boot, events, Link, navigate, panelsFor, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, type SidebarRowAction } from '../ui'
+import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
 import { BrandMark } from './Brand'
 import { setThemePreference, useThemePreference } from '../ui/theme'
 import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
@@ -366,7 +367,7 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
             <Avatar name={manifest.user.name} initials={manifest.user.initials} src={manifest.user.avatar} size={24} />
             <span className="min-w-0 flex-1">
               {/* Named by what it shows, with what it is in front: a label of its own would hide the name from voice control. */}
-              <span className="sr-only">{t('Account')}: </span>
+              <span className="sr-only">{labelled(t('Account'), '')}</span>
               <span className="block truncate text-sm font-medium leading-4 text-text">{manifest.user.name}</span>
               <span className="block truncate text-xs text-faint">{manifest.user.email}</span>
             </span>
