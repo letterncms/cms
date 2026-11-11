@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.23.0 (2026-11-11)
+
 ### Added
 
 - **German**: the admin, the sign-in and account pages, emails and the setup page of the zip speak German (Deutsch), in the informal *du* the plugins already use. Choose it under Account → Appearance, or for everyone under Settings → General → Admin Language; a browser set to German gets it without asking.
