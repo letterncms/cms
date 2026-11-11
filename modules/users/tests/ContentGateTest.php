@@ -46,7 +46,7 @@ final class ContentGateTest extends TestCase
 
     private function entry(string $collection, string $title, array $data = [], ?string $parentId = null): Entry
     {
-        $entry = cms()->content()->create($collection, ['title' => $title, 'status' => 'published', 'data' => $data, ...($parentId ? ['parentId' => $parentId] : [])]);
+        $entry = cms()->entryService()->create($collection, ['title' => $title, 'status' => 'published', 'data' => $data, ...($parentId ? ['parentId' => $parentId] : [])]);
 
         return cms()->entries()->find($entry->id);
     }
@@ -222,8 +222,8 @@ final class ContentGateTest extends TestCase
 
         // Gating a page that is a file removes the file on the next rebuild.
         $id = $public->id;
-        cms()->content()->update($id, ['data' => ['gate' => ['mode' => 'locked'], 'blocks' => $public->data['blocks']]]);
-        cms()->content()->publish($id);
+        cms()->entryService()->update($id, ['data' => ['gate' => ['mode' => 'locked'], 'blocks' => $public->data['blocks']]]);
+        cms()->entryService()->publish($id);
         $this->assertTrue($builder->hasWork(), 'A change in the gate changes which pages may exist as files.');
         $builder->process(60000);
         $this->assertFileDoesNotExist(public_path('open-page/index.html'));
@@ -232,8 +232,8 @@ final class ContentGateTest extends TestCase
 
     public function test_a_scheduled_locked_entry_is_closed_before_its_date(): void
     {
-        $entry = cms()->content()->create('pages', ['title' => 'Later', 'data' => ['gate' => ['mode' => 'locked']]]);
-        cms()->content()->publish($entry->id, null, now()->addDay()->toIso8601String());
+        $entry = cms()->entryService()->create('pages', ['title' => 'Later', 'data' => ['gate' => ['mode' => 'locked']]]);
+        cms()->entryService()->publish($entry->id, null, now()->addDay()->toIso8601String());
         $this->assertTrue(cms()->entries()->gate()->isGated(cms()->entries()->find($entry->id)));
     }
 

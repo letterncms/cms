@@ -190,14 +190,14 @@ final class Screens
 
     public function home(string $locale): string
     {
-        $next = (string) $this->cms->settings('accounts', 'after_sign_in', '/account');
+        $next = (string) $this->cms->setting('accounts', 'after_sign_in', '/account');
 
         return $next === '/account' ? $this->url('account', $locale) : $next;
     }
 
     private function prefix(string $locale): string
     {
-        return $locale === $this->cms->defaultLocale() && ! $this->cms->settings('languages', 'prefix_default', false) ? '' : '/'.strtolower($locale);
+        return $locale === $this->cms->defaultLocale() && ! $this->cms->setting('languages', 'prefix_default', false) ? '' : '/'.strtolower($locale);
     }
 
     private function defaults(): array

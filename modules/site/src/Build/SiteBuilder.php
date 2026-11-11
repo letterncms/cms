@@ -39,7 +39,7 @@ final class SiteBuilder implements SiteBuilderContract
 
     public function available(): bool
     {
-        return (bool) $this->cms->settings('site', 'static', true);
+        return (bool) $this->cms->setting('site', 'static', true);
     }
 
     public function queue(?array $uris = null, string $reason = ''): void
@@ -151,7 +151,7 @@ final class SiteBuilder implements SiteBuilderContract
         $code->flush();
         $files = $this->rememberCode($code, $stamp);
 
-        if (! is_file(storage_path('build/manifest.json')) || ! $this->cms->settings('site', 'auto_build', true)) {
+        if (! is_file(storage_path('build/manifest.json')) || ! $this->cms->setting('site', 'auto_build', true)) {
             return false;
         }
 

@@ -33,7 +33,7 @@ final class DesignCodeTest extends TestCase
 
     private function page(string $title, array $blocks, array $data = []): string
     {
-        $entry = $this->cms()->content()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks] + $data]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks] + $data]);
 
         return $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($entry->id))['html'];
     }
@@ -62,8 +62,8 @@ final class DesignCodeTest extends TestCase
             'templates' => ['article' => ['scripts' => ['article'], 'styles' => ['article']]],
             'components' => ['nav' => ['scripts' => ['nav']]],
         ]));
-        $this->cms()->content()->create('templates', ['title' => 'Article', 'slug' => 'article', 'status' => 'published', 'data' => ['blocks' => [['type' => 'outlet']]]]);
-        $this->cms()->content()->create('components', ['title' => 'Nav', 'slug' => 'nav', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [['type' => 'paragraph', 'props' => ['text' => 'Menu']]]]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Article', 'slug' => 'article', 'status' => 'published', 'data' => ['blocks' => [['type' => 'outlet']]]]);
+        $this->cms()->entryService()->create('components', ['title' => 'Nav', 'slug' => 'nav', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [['type' => 'paragraph', 'props' => ['text' => 'Menu']]]]]);
         $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
         $this->app->make(\Cms\Modules\Blocks\Patterns::class)->flush();
 
@@ -154,8 +154,8 @@ final class DesignCodeTest extends TestCase
     {
         $this->file('styles/hero.css', ".hero{color:blue}\n");
         $this->file('scripts/hero.js', "console.log(1)\n");
-        $this->cms()->content()->create('pages', ['title' => 'With', 'status' => 'published', 'data' => ['content' => [['type' => 'box', 'code' => ['styles' => ['hero'], 'scripts' => ['hero']], 'children' => []]]]]);
-        $this->cms()->content()->create('pages', ['title' => 'Without', 'status' => 'published', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]]]);
+        $this->cms()->entryService()->create('pages', ['title' => 'With', 'status' => 'published', 'data' => ['content' => [['type' => 'box', 'code' => ['styles' => ['hero'], 'scripts' => ['hero']], 'children' => []]]]]);
+        $this->cms()->entryService()->create('pages', ['title' => 'Without', 'status' => 'published', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]]]);
 
         $builder = $this->app->make(SiteBuilder::class);
         $this->assertSame([], $builder->buildAll()['errors']);
@@ -195,7 +195,7 @@ final class DesignCodeTest extends TestCase
 
     public function test_a_name_without_a_file_is_a_warning_not_a_broken_page(): void
     {
-        $this->cms()->content()->create('pages', ['title' => 'Typo', 'status' => 'published', 'data' => ['content' => [['type' => 'box', 'code' => ['styles' => ['heero']], 'children' => []]]]]);
+        $this->cms()->entryService()->create('pages', ['title' => 'Typo', 'status' => 'published', 'data' => ['content' => [['type' => 'box', 'code' => ['styles' => ['heero']], 'children' => []]]]]);
 
         $status = $this->app->make(SiteBuilder::class)->buildAll();
 

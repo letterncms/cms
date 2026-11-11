@@ -25,7 +25,7 @@ final class NavigationTest extends TestCase
 
     private function page(array $blocks): string
     {
-        $entry = $this->cms()->content()->create('pages', ['title' => 'Page '.bin2hex(random_bytes(3)), 'status' => 'published', 'data' => ['content' => $blocks]]);
+        $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page '.bin2hex(random_bytes(3)), 'status' => 'published', 'data' => ['content' => $blocks]]);
 
         return $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($entry->id))['html'];
     }

@@ -88,9 +88,9 @@ abstract class Plugin extends ServiceProvider
         return $this->manifest->path($relative);
     }
 
-    /** Plugin settings from config/<namespace>.yaml merged over defaults. */
-    protected function settings(?string $key = null, mixed $default = null): mixed
+    /** The plugin's own settings (config/<namespace>.yaml over the defaults), or one key of them: Cms::setting() for this plugin's namespace. */
+    protected function setting(?string $key = null, mixed $default = null): mixed
     {
-        return $this->cms()->settings($this->manifest->namespace, $key, $default);
+        return $this->cms()->setting($this->manifest->namespace, $key, $default);
     }
 }

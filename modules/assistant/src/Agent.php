@@ -288,7 +288,7 @@ final class Agent implements Contract
     /** One execution and approval path for model calls and component interactions. True means paused. */
     private function dispatch(Thread $thread, array $calls, AbilityContext $context, Closure $emit): bool
     {
-        $mode = (string) $this->cms->settings('assistant', 'approval', 'destructive');
+        $mode = (string) $this->cms->setting('assistant', 'approval', 'destructive');
         $results = [];
         $awaiting = [];
         foreach ($calls as $call) {
@@ -535,7 +535,7 @@ final class Agent implements Contract
         }
 
         $lines = [];
-        foreach ($this->cms->navigation()->forUser($user)['nav'] as $item) {
+        foreach ($this->cms->adminNav()->forUser($user)['nav'] as $item) {
             $path = (string) ($item['path'] ?? '');
             $lines[] = "- {$item['label']}: {$path}".(isset($tabs[$path]) ? ' (tabs: '.implode(', ', $tabs[$path]).')' : '');
         }

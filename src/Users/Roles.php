@@ -43,7 +43,7 @@ final class Roles
     /** @return array<string, array{label: string, description: string, permissions: list<string>}> */
     public function all(): array
     {
-        $roles = cms()->settings(self::SETTINGS, 'roles');
+        $roles = cms()->setting(self::SETTINGS, 'roles');
 
         return self::normalize(is_array($roles) && $roles !== [] ? $roles : $this->defaults());
     }

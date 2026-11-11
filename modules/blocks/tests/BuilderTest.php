@@ -236,7 +236,7 @@ final class BuilderTest extends TestCase
         $this->assertSame('blocks', $this->cms()->collections()->find('templates')->body);
         $this->assertArrayNotHasKey('editor', $this->cms()->collections()->find('templates')->toArray());
 
-        $card = $this->cms()->content()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [
+        $card = $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [
             'synced' => true,
             'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title', 'default' => 'Default title']],
             'blocks' => [['type' => 'heading', 'props' => ['level' => '3'], 'bind' => ['text' => 'props.title']]],
@@ -254,12 +254,12 @@ final class BuilderTest extends TestCase
         $this->assertFileExists(content_path('collections/components/card.md'));
 
         // A draft is visible to previews only.
-        $this->cms()->content()->update($card->id, ['data' => ['blocks' => [['type' => 'heading', 'props' => ['text' => 'Draft', 'level' => '3']]]]]);
+        $this->cms()->entryService()->update($card->id, ['data' => ['blocks' => [['type' => 'heading', 'props' => ['text' => 'Draft', 'level' => '3']]]]]);
         app(Patterns::class)->flush();
         $this->assertStringContainsString('>Fast</h3>', $this->render([['type' => 'pattern', 'props' => ['ref' => 'card', 'values' => ['title' => 'Fast']]]]));
         $this->assertSame('Draft', app(Patterns::class)->find('card', true)['blocks'][0]['props']['text']);
 
-        $this->cms()->content()->create('templates', ['title' => 'Post', 'slug' => 'post', 'status' => 'published', 'data' => ['collections' => ['pages'], 'blocks' => [['type' => 'outlet']]]]);
+        $this->cms()->entryService()->create('templates', ['title' => 'Post', 'slug' => 'post', 'status' => 'published', 'data' => ['collections' => ['pages'], 'blocks' => [['type' => 'outlet']]]]);
         $this->assertSame('post', app(Templates::class)->resolve(['missing', 'post'])['handle']);
         $this->assertSame(['post' => 'Post'], app(Templates::class)->options('pages'));
     }
@@ -277,7 +277,7 @@ final class BuilderTest extends TestCase
         $this->assertArrayNotHasKey('templates', $offered);
         $this->assertArrayNotHasKey('components', $offered);
 
-        $template = $this->cms()->content()->create('templates', ['title' => 'Account', 'slug' => 'account', 'status' => 'published', 'data' => ['collections' => ['screens'], 'blocks' => [['type' => 'outlet']]]]);
+        $template = $this->cms()->entryService()->create('templates', ['title' => 'Account', 'slug' => 'account', 'status' => 'published', 'data' => ['collections' => ['screens'], 'blocks' => [['type' => 'outlet']]]]);
         $this->assertSame(['screens'], $template->data['collections']);
         $this->assertSame(['account' => 'Account'], array_intersect_key(app(Templates::class)->options('screens'), ['account' => true]));
     }

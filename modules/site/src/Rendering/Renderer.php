@@ -249,7 +249,7 @@ final class Renderer
             $head[] = '<link rel="preload" href="'.e($href).'" as="font" type="font/woff2" crossorigin>';
         }
 
-        if ($favicon = \Cms\Modules\Blocks\Media::url(cms()->settings('site', 'favicon'))) {
+        if ($favicon = \Cms\Modules\Blocks\Media::url(cms()->setting('site', 'favicon'))) {
             $head[] = '<link rel="icon" href="'.e($favicon).'">';
         } else {
             // Without one, every browser asks for /favicon.ico and gets a 404.

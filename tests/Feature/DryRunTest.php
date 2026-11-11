@@ -336,10 +336,10 @@ final class DryRunTest extends TestCase
         $this->assertBothRefuse('forbidden', 'settings/update', ['namespace' => 'site', 'values' => ['name' => 'Mine']], $this->userWithRole('author'));
 
         // Only what would differ from what is stored is a change.
-        $name = $this->cms()->settings('site', 'name');
+        $name = $this->cms()->setting('site', 'name');
         [$report] = $this->assertBothPass('settings/update', ['namespace' => 'site', 'values' => ['name' => 'Renamed']]);
         $this->assertSame([['action' => 'update', 'type' => 'settings', 'namespace' => 'site', 'fields' => ['name']]], $report['changes']);
-        $this->assertNotSame($name, $this->cms()->settings('site', 'name'));
+        $this->assertNotSame($name, $this->cms()->setting('site', 'name'));
         $this->assertSame([], $this->dry('settings/update', ['namespace' => 'site', 'values' => ['name' => 'Renamed']])['changes'][0]['fields']);
     }
 

@@ -121,7 +121,7 @@ final class PlaceholdersTest extends TestCase
 
     public function test_unbound_data_shows_what_it_is_bound_to(): void
     {
-        $this->cms()->content()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [
+        $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [
             'synced' => true,
             'props' => [
                 ['handle' => 'title', 'type' => 'text', 'label' => 'Card title'],
@@ -167,7 +167,7 @@ final class PlaceholdersTest extends TestCase
 
     public function test_links_to_pages_follow_the_page(): void
     {
-        $page = $this->cms()->content()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published']);
+        $page = $this->cms()->entryService()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published']);
 
         $this->assertSame($page->uri, Elements::url('entry:'.$page->id));
         $this->assertSame($page->uri.'#team', Elements::url('entry:'.$page->id.'#team'));
@@ -177,12 +177,12 @@ final class PlaceholdersTest extends TestCase
         $html = $this->render([['type' => 'button', 'props' => ['label' => 'About us', 'url' => 'entry:'.$page->id]]], false);
         $this->assertStringContainsString('href="'.$page->uri.'"', $html);
 
-        $this->cms()->content()->update($page->id, ['slug' => 'company'], publish: true);
+        $this->cms()->entryService()->update($page->id, ['slug' => 'company'], publish: true);
         $moved = $this->cms()->entries()->find($page->id);
         $this->assertNotSame($page->uri, $moved->uri);
         $this->assertStringContainsString('href="'.$moved->uri.'"', $this->render([['type' => 'button', 'props' => ['label' => 'About us', 'url' => 'entry:'.$page->id]]], false));
 
-        $draft = $this->cms()->content()->create('pages', ['title' => 'Soon', 'slug' => 'soon']);
+        $draft = $this->cms()->entryService()->create('pages', ['title' => 'Soon', 'slug' => 'soon']);
         $this->assertNull(Elements::url('entry:'.$draft->id), 'the site does not link to drafts');
     }
 }

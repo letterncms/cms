@@ -33,7 +33,7 @@ abstract class Arranged
     /** The saved arrangement (config/admin.yaml may be edited by hand), or null for the defaults. */
     public function saved(): ?array
     {
-        return $this->arrangement()->normalize($this->cms->settings(self::SETTINGS, $this->key()));
+        return $this->arrangement()->normalize($this->cms->setting(self::SETTINGS, $this->key()));
     }
 
     public function resolved(): array

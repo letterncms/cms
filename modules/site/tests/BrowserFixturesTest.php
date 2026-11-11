@@ -40,7 +40,7 @@ final class BrowserFixturesTest extends TestCase
         }
 
         // Every page: links to two pages, and a stage that both keep.
-        $this->cms()->content()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
+        $this->cms()->entryService()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
             ['type' => 'box', 'props' => ['tag' => 'nav'], 'children' => [
                 ['type' => 'link', 'anchor' => 'to-one', 'props' => ['label' => 'One', 'url' => '/one']],
                 ['type' => 'link', 'anchor' => 'to-two', 'props' => ['label' => 'Two', 'url' => '/two#deep']],
@@ -51,7 +51,7 @@ final class BrowserFixturesTest extends TestCase
         $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
 
         foreach ($this->pages() as $title => $blocks) {
-            $this->cms()->content()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
+            $this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
         }
 
         $status = $this->app->make(SiteBuilder::class)->buildAll();
