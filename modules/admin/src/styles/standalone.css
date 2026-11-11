@@ -55,6 +55,15 @@ input:not([type="checkbox"], [type="radio"]), select {
 input:not([type="checkbox"], [type="radio"]):hover, select:hover { border-color: var(--cms-border-hover); }
 input:not([type="checkbox"], [type="radio"]):focus-visible, select:focus-visible { border-color: var(--cms-focus); box-shadow: var(--cms-shadow-focus); }
 input::placeholder { color: var(--cms-ghost); }
+/* A password that can be looked at: the field with a quiet button at its end (the kit's eye). The page's script
+   turns the field's type and the button's `aria-pressed`; without an icon the button says Show or Hide. */
+.reveal { position: relative; display: block; }
+.reveal input { padding-right: 44px; }
+.reveal button { position: absolute; top: 4px; right: 4px; height: 32px; min-width: 32px; padding: 0 8px; border-radius: var(--radius-md); color: var(--cms-muted); font-size: var(--text-xs); }
+.reveal button:hover { color: var(--cms-ink); }
+.reveal button .on, .reveal button[aria-pressed="true"] .off { display: none; }
+.reveal button[aria-pressed="true"] .on { display: inline-flex; }
+.reveal button .off { display: inline-flex; }
 /* A field that was refused: its edge, and why, under it (the kit's `Field` error). */
 input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--cms-danger); box-shadow: 0 0 0 3px var(--cms-danger-soft); }
 /* Why it was refused takes the place of the hint. */

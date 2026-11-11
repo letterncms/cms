@@ -56,7 +56,7 @@
         <div class="field"><label for="db_database">{{ $text['databaseName'] }}</label><input id="db_database" name="db_database" autocomplete="off"></div>
         <div class="row">
           <div class="field"><label for="db_username">{{ $text['username'] }}</label><input id="db_username" name="db_username" autocomplete="off"></div>
-          <div class="field"><label for="db_password">{{ $text['password'] }}</label><input id="db_password" name="db_password" type="password" autocomplete="new-password"></div>
+          <div class="field"><label for="db_password">{{ $text['password'] }}</label><span class="reveal"><input id="db_password" name="db_password" type="password" autocomplete="new-password"><button type="button" data-reveal aria-pressed="false" aria-label="{{ $text['showPassword'] }}"><span class="off">{!! \Cms\Admin\StandaloneStyle::icon('eye') ?: e($text['showPassword']) !!}</span><span class="on">{!! \Cms\Admin\StandaloneStyle::icon('eye-off') ?: e($text['showPassword']) !!}</span></button></span></div>
         </div>
         <div class="field"><label for="db_prefix">{{ $text['prefix'] }}</label><input id="db_prefix" name="db_prefix" placeholder="{{ $text['prefixPlaceholder'] }}" pattern="[a-z0-9_]*"></div>
       </div>
@@ -66,7 +66,7 @@
       <h2>{{ $text['account'] }}</h2>
       <div class="field"><label for="name">{{ $text['name'] }}</label><input id="name" name="name" required autocomplete="name"></div>
       <div class="field"><label for="email">{{ $text['email'] }}</label><input id="email" name="email" type="email" required autocomplete="email"></div>
-      <div class="field"><label for="password">{{ $text['password'] }}</label><input id="password" name="password" type="password" required minlength="10" autocomplete="new-password"><div class="help">{{ $text['passwordHelp'] }}</div></div>
+      <div class="field"><label for="password">{{ $text['password'] }}</label><span class="reveal"><input id="password" name="password" type="password" required minlength="10" autocomplete="new-password"><button type="button" data-reveal aria-pressed="false" aria-label="{{ $text['showPassword'] }}"><span class="off">{!! \Cms\Admin\StandaloneStyle::icon('eye') ?: e($text['showPassword']) !!}</span><span class="on">{!! \Cms\Admin\StandaloneStyle::icon('eye-off') ?: e($text['showPassword']) !!}</span></button></span><div class="help">{{ $text['passwordHelp'] }}</div></div>
     </section>
 
     @if ($needsToken)
@@ -112,6 +112,16 @@
     document.getElementById('db_port').value = driver.value === 'pgsql' ? '5432' : '3306';
   };
   driver.addEventListener('change', sync); sync();
+
+  // A password can be looked at while it is typed: it is asked for once.
+  for (const button of document.querySelectorAll('[data-reveal]')) {
+    button.addEventListener('click', () => {
+      const input = button.parentNode.querySelector('input');
+      const shown = input.type === 'password';
+      input.type = shown ? 'text' : 'password';
+      button.setAttribute('aria-pressed', String(shown));
+    });
+  }
 
   // What went wrong is said where it went wrong: under the field it is about, in the database's group
   // when the database refused, and above the button only when it is about neither.

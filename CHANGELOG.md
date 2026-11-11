@@ -4,6 +4,7 @@
 
 ### Added
 
+- A password can be looked at while you type it: every password and key field has an eye at its end, on the sign-in and reset screens, in Account's Change Password, in settings and in the installer.
 - Design tokens: `shadow-rule` (a hairline along the bottom of a row of tabs) and `shadow-underline` (the tab on view), and `text-on-success`, `text-on-warning` and `text-on-danger` for words on their own wash.
 - `@letterncms/ui`: `Pressable`, the control without a look, for the ones that draw themselves (a colour plane, a box of a spacing control, a card that opens, canvas chrome). It is a `<button type="button">`, or a link with `to`, with the kit's focus line, 44px to hit on a touch screen, `disabled` and `data-active`; `inset` puts the focus line inside its edge, `compact` leaves out the touch area. Everything it looks like is its `className`.
 
