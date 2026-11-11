@@ -95,7 +95,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       await run(...kind.save(def))
       setDirty(false)
       // The places drawn from a blueprint (a collection's columns) change with it.
-      invalidate('collections/', 'globals/', 'entries/', 'users/', 'views/')
+      invalidate('collections/', 'globals/', 'entries/', 'users/', 'user-fields/', 'views/')
       await loadManifest()
     } catch (e) {
       setSaveError(e instanceof Error && e.constructor !== TypeError ? e.message : t('Couldn’t save. Check your connection.'))

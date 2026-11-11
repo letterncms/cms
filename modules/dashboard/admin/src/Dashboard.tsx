@@ -226,7 +226,7 @@ function Notices() {
           icon="database"
           className="mb-8"
           title={t('Database updates are waiting')}
-          action={<Button size="sm" variant="primary" onClick={() => run('packages/sync').then(() => { toast.success(t('Updated')); window.location.reload() }, toast.error)}>{t('Run Updates')}</Button>}
+          action={<Button size="sm" variant="primary" onClick={() => run('packages/migrate').then(() => { toast.success(t('Updated')); window.location.reload() }, toast.error)}>{t('Run Updates')}</Button>}
         />
       )}
     </>

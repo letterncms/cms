@@ -11,7 +11,7 @@ export function MediaField({ field, value, onChange, disabled }: FieldProps<stri
   const accept = (field.accept as string) || 'image/*'
   const [open, setOpen] = useState(false)
   const [picked, setPicked] = useState<string[]>(ids)
-  const lookup = useAbility<{ items: MediaItem[] }>('media/lookup', { ids: ids.filter((i) => !i.startsWith('/') && !i.startsWith('http')) }, { enabled: ids.length > 0 })
+  const lookup = useAbility<{ items: MediaItem[] }>('media/get-many', { ids: ids.filter((i) => !i.startsWith('/') && !i.startsWith('http')) }, { enabled: ids.length > 0 })
   const byId = new Map((lookup.data?.items ?? []).map((m) => [m.id, m]))
 
   return (

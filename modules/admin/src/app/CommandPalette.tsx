@@ -96,7 +96,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     })) },
     { heading: t('Maintenance'), items: can('packages.manage') && manifest.packages && Object.keys(manifest.packages.pending).length > 0 ? [{
       value: 'run pending upgrades migrations database update', icon: 'database', label: t('Update the Database'),
-      perform: () => void run('packages/sync').then(() => loadManifest()).then(() => toast.success(t('Database is up to date')), toast.error),
+      perform: () => void run('packages/migrate').then(() => loadManifest()).then(() => toast.success(t('Database is up to date')), toast.error),
     }] : [] },
   ]
   // Own the ordering for both local and async results; cmdk handles keyboard navigation.

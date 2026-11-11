@@ -51,7 +51,7 @@ final class McpTest extends TestCase
             $this->assertArrayHasKey($name, $tools);
             $this->assertTrue($tools[$name]['annotations']['destructiveHint'], "{$name} asks first");
         }
-        $this->assertArrayNotHasKey('packages.sync', $tools);
+        $this->assertArrayNotHasKey('packages.migrate', $tools);
     }
 
     public function test_tools_call_runs_abilities_and_reports_errors_as_results(): void
@@ -142,7 +142,7 @@ final class McpTest extends TestCase
 
         // Revoke under Account → API Tokens, which deletes the access token and knows nothing of refresh tokens.
         $id = ApiToken::findByPlain($tokens['access_token'])->id;
-        cms()->abilities()->execute('tokens/revoke', ['id' => $id], \Cms\Abilities\AbilityContext::forUser($admin));
+        cms()->abilities()->execute('tokens/delete', ['id' => $id], \Cms\Abilities\AbilityContext::forUser($admin));
 
         $this->rpc($tokens['access_token'], 'tools/list')->assertUnauthorized();
         $this->postJson('/oauth/token', ['grant_type' => 'refresh_token', 'refresh_token' => $tokens['refresh_token'], 'client_id' => $client['client_id']])->assertStatus(400)->assertJsonPath('error', 'invalid_grant');

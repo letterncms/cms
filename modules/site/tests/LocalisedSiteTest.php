@@ -100,7 +100,7 @@ final class LocalisedSiteTest extends TestCase
         $pricing = $this->page('Pricing', ['slug' => 'pricing']);
         $this->translation($pricing, 'de', 'Preise', ['slug' => 'preise']);
 
-        $saved = $this->cms()->abilities()->execute('navigation/save', ['handle' => 'main', 'title' => 'Main', 'items' => [
+        $saved = $this->cms()->abilities()->execute('navigation/create', ['handle' => 'main', 'title' => 'Main', 'items' => [
             ['entry' => $pricing->id, 'label' => 'Plans', 'locales' => ['de' => ['label' => 'Tarife', 'url' => 'https://ignored.example']]],
             ['url' => 'https://docs.example', 'label' => 'Docs', 'locales' => ['de' => ['label' => 'Doku', 'url' => 'https://docs.example/de'], 'fr' => ['label' => 'Documentation']]],
         ]], AbilityContext::system());

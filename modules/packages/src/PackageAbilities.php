@@ -210,7 +210,7 @@ final class PackageAbilities
             }),
         ]);
 
-        $a->register('packages/sync', [
+        $a->register('packages/migrate', [
             'label' => 'Run Pending Upgrades',
             'description' => 'Run database migrations and install/upgrade steps for active packages.',
             'permission' => 'packages.manage',

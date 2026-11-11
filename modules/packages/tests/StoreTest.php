@@ -435,7 +435,7 @@ final class StoreTest extends TestCase
         $this->list('acme/forms', '1.0.0');
         $editor = AbilityContext::forUser($this->userWithRole('editor'));
 
-        foreach (['packages/install' => ['package' => 'acme/forms'], 'packages/catalog' => [], 'packages/update-start' => ['version' => '9.0.0'], 'packages/store-add' => ['url' => 'https://x.example']] as $name => $input) {
+        foreach (['packages/install' => ['package' => 'acme/forms'], 'packages/catalog' => [], 'packages/update-start' => ['version' => '9.0.0'], 'package-stores/create' => ['url' => 'https://x.example']] as $name => $input) {
             try {
                 $this->cms()->abilities()->execute($name, $input, $editor);
                 $this->fail("An editor ran {$name}.");

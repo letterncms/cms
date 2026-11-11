@@ -104,7 +104,7 @@ final class OutputPackagesTest extends TestCase
         $on = $this->ability('packages/switch', ['name' => 'acme/extra', 'on' => true]);
         $this->assertTrue($on['on']);
 
-        $this->assertIsArray($this->ability('packages/sync')['done']);
+        $this->assertIsArray($this->ability('packages/migrate')['done']);
 
         $list = array_column($this->ability('packages/list', ['type' => 'plugin'])['items'], null, 'name');
         $this->assertTrue($list['acme/extra']['enabled']);
@@ -118,7 +118,7 @@ final class OutputPackagesTest extends TestCase
     {
         // Before anything was fetched: no catalog, and saying so.
         $this->assertSame('none', $this->ability('packages/catalog')['freshness']);
-        $this->assertCount(1, $this->ability('packages/stores')['items']);
+        $this->assertCount(1, $this->ability('package-stores/list')['items']);
 
         // Another store, pinned only once its fingerprint is repeated.
         $base = 'https://other.example';
@@ -126,11 +126,11 @@ final class OutputPackagesTest extends TestCase
         $release = sodium_crypto_sign_seed_keypair(hash('sha256', 'other-release', true));
         $this->remote->routes[$base.'/api/store/v1/index.json'] = (string) json_encode(['name' => 'Other', 'api' => 1, 'trust_url' => $base.'/api/store/v1/trust.json', 'catalog_url' => $base.'/api/store/v1/catalog.json']);
         $this->remote->routes[$base.'/api/store/v1/trust.json'] = Envelope::sign('cms-trust', ['type' => 'cms-trust', 'epoch' => 1, 'version' => 1, 'roots' => [['kid' => 'o-root', 'pub' => Base64Url::encode(sodium_crypto_sign_publickey($root))]], 'keys' => [['kid' => 'o-rel', 'role' => 'release', 'pub' => Base64Url::encode(sodium_crypto_sign_publickey($release))]]], ['o-root' => sodium_crypto_sign_secretkey($root)]);
-        $asked = $this->ability('packages/store-add', ['url' => $base]);
+        $asked = $this->ability('package-stores/create', ['url' => $base]);
         $this->assertFalse($asked['added']);
-        $this->assertTrue($this->ability('packages/store-add', ['url' => $base, 'confirm' => $asked['fingerprint']])['added']);
-        $this->assertCount(2, $this->ability('packages/stores')['items']);
-        $this->assertSame(['removed' => $asked['id']], $this->ability('packages/store-remove', ['id' => $asked['id']]));
+        $this->assertTrue($this->ability('package-stores/create', ['url' => $base, 'confirm' => $asked['fingerprint']])['added']);
+        $this->assertCount(2, $this->ability('package-stores/list')['items']);
+        $this->assertSame(['removed' => $asked['id']], $this->ability('package-stores/delete', ['id' => $asked['id']]));
 
         // The default store, with a listing that says everything a listing can.
         $this->list('acme/forms', '1.0.0', item: ['glyph' => 'map-pin', 'featured' => true]);

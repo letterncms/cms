@@ -10,7 +10,7 @@ import { Avatar, Button, Dialog, Fields, SaveBar, copyText, toast } from '@lette
  */
 export function Profile() {
   const { user } = useManifest()
-  const profile = useAbility<{ resolvedFields: FieldDef[] }>('users/fields')
+  const profile = useAbility<{ resolvedFields: FieldDef[] }>('user-fields/get')
   const initial: Record<string, any> = { name: user.name, email: user.email, currentPassword: '', data: user.data ?? {}, locale: user.locale ?? '' }
   const [changes, setChanges] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})

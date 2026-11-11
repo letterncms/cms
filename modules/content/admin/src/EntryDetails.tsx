@@ -39,7 +39,7 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
   const system = (collection as { system?: boolean }).system === true
   // The record itself (where it is kept, its id) is for whoever builds the site.
   const builder = can('collections.manage')
-  const parent = useAbility<EntrySummary[]>('entries/lookup', { ids: entry?.parentId ? [entry.parentId] : [] }, { enabled: builder && !!entry?.parentId })
+  const parent = useAbility<EntrySummary[]>('entries/get-many', { ids: entry?.parentId ? [entry.parentId] : [] }, { enabled: builder && !!entry?.parentId })
   // A built-in page (sign in, checkout) keeps the address its feature gives it: shown, not edited.
   const builtin = !!summary?.within
   const builtinGroups = useAbility<BuiltinGroup[]>('pages/builtin', {}, { enabled: builtin })

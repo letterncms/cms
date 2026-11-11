@@ -109,7 +109,7 @@ final class EntriesViewTest extends TestCase
         $this->assertSame('0.total', $tabs['shop']['props']['count']['at']);
         // The site's pages' columns and statuses, opened as the site's own version.
         $this->assertSame(['label', 'path', 'displayStatus', 'published', 'updated'], array_column($shop['columns'], 'key'));
-        $this->assertSame('pages/customise', $shop['open']['ability']);
+        $this->assertSame('pages/customize', $shop['open']['ability']);
         $this->assertSame(['View on Site', 'Open', 'Copy URL', 'Use Standard Version'], array_column($shop['actions'], 'label'));
     }
 }

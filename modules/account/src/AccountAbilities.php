@@ -30,7 +30,7 @@ final class AccountAbilities
         $this->tokens($a);
 
         // Everyone's own account page shows these, with or without the Users module.
-        $a->register('users/fields', [
+        $a->register('user-fields/get', [
             'label' => 'User Profile Fields',
             'description' => 'The fields every user profile has beyond name and email (content/users.yaml), as stored and resolved.',
             'permission' => 'admin.access',
@@ -69,7 +69,7 @@ final class AccountAbilities
                 'locale' => ['type' => ['string', 'null']],
                 'avatar' => ['type' => ['string', 'null'], 'maxLength' => 512],
                 'preferences' => ['type' => 'object'],
-                'data' => ['type' => 'object', 'description' => 'Profile fields (see users/fields).'],
+                'data' => ['type' => 'object', 'description' => 'Profile fields (see user-fields/get).'],
                 'currentPassword' => ['type' => 'string'],
                 'password' => ['type' => 'string'],
             ]],
@@ -206,7 +206,7 @@ final class AccountAbilities
         // The token a revoke is for, among the person's own.
         $mine = static fn (array $in, AbilityContext $ctx) => $ctx->user->tokens()->whereKey($in['id']);
 
-        $a->register('tokens/revoke', [
+        $a->register('tokens/delete', [
             'label' => 'Revoke API Token',
             'permission' => 'tokens.manage',
             'description' => 'Delete one of your tokens.',

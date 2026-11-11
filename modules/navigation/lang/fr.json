@@ -1,5 +1,8 @@
 {
   ":count links": ":count liens",
+  "Menu item not found.": "Élément de menu introuvable.",
+  "Remove from Menu": "Retirer du menu",
+  "Removed from :name": "Retiré de :name",
   "“:url” is not a link :brand can use. Use https://…, /path, #anchor, mailto: or tel:.": "« :url » n’est pas un lien utilisable par :brand. Utilisez https://…, /chemin, #ancre, mailto: ou tel:.",
   "{count} Levels": "{count} niveaux",
   "{count} link": "{count} lien",

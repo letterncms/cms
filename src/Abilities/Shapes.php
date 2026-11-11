@@ -29,7 +29,7 @@ final class Shapes
             'roles' => [Shape::STRING], 'super' => Shape::BOOLEAN, 'locale' => Shape::STRING_OR_NULL, 'status' => Shape::STRING, 'visitor' => Shape::BOOLEAN,
             'twoFactor' => Shape::BOOLEAN, 'lastLoginAt' => Shape::STRING_OR_NULL, 'createdAt' => Shape::STRING_OR_NULL,
             'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL,
-            'data' => Shape::open('Values of the profile fields, by field handle (users/fields lists the fields).'),
+            'data' => Shape::open('Values of the profile fields, by field handle (user-fields/get lists the fields).'),
         ]);
     }
 

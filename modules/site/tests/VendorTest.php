@@ -263,7 +263,7 @@ final class VendorTest extends TestCase
         [$with, $without] = [$built('/with'), $built('/without')];
 
         $this->travel(5)->seconds();
-        $this->cms()->abilities()->execute('design/vendor-add', ['package' => 'gsap@3.12.5'], AbilityContext::system('test'));
+        $this->cms()->abilities()->execute('design-vendor/create', ['package' => 'gsap@3.12.5'], AbilityContext::system('test'));
         clearstatcache();
 
         $this->assertTrue($builder->hasWork());
@@ -309,19 +309,19 @@ final class VendorTest extends TestCase
 
         $abilities = $this->cms()->abilities();
         $context = AbilityContext::system('test');
-        $added = $abilities->execute('design/vendor-add', ['package' => 'three@0.160.0', 'file' => 'examples/jsm/controls/OrbitControls.js', 'as' => 'three/addons/controls/OrbitControls.js'], $context);
+        $added = $abilities->execute('design-vendor/create', ['package' => 'three@0.160.0', 'file' => 'examples/jsm/controls/OrbitControls.js', 'as' => 'three/addons/controls/OrbitControls.js'], $context);
         $this->assertSame(['three', 'three/addons/controls/OrbitControls.js'], array_column($added['imports'], 'import'));
-        $this->assertSame($added['imports'], $abilities->execute('design/vendor-list', [], $context)['imports']);
-        $this->assertSame(['three'], array_column($abilities->execute('design/vendor-remove', ['import' => 'three/addons/controls/OrbitControls.js'], $context)['imports'], 'import'));
+        $this->assertSame($added['imports'], $abilities->execute('design-vendor/list', [], $context)['imports']);
+        $this->assertSame(['three'], array_column($abilities->execute('design-vendor/delete', ['import' => 'three/addons/controls/OrbitControls.js'], $context)['imports'], 'import'));
 
         try {
-            $abilities->execute('design/vendor-add', ['package' => 'gsap@latest'], $context);
+            $abilities->execute('design-vendor/create', ['package' => 'gsap@latest'], $context);
             $this->fail('a range was added');
         } catch (AbilityException $e) {
             $this->assertStringContainsString('exact version', $e->getMessage());
         }
 
         $this->expectException(AbilityException::class);
-        $abilities->execute('design/vendor-add', ['package' => 'gsap@3.12.5'], AbilityContext::forUser($this->userWithRole('editor')));
+        $abilities->execute('design-vendor/create', ['package' => 'gsap@3.12.5'], AbilityContext::forUser($this->userWithRole('editor')));
     }
 }

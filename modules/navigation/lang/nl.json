@@ -1,5 +1,8 @@
 {
   ":count links": ":count links",
+  "Menu item not found.": "Menu-item niet gevonden.",
+  "Remove from Menu": "Uit menu verwijderen",
+  "Removed from :name": "Verwijderd uit :name",
   "“:url” is not a link :brand can use. Use https://…, /path, #anchor, mailto: or tel:.": "“:url” is geen link die :brand kan gebruiken. Gebruik https://…, /pad, #anker, mailto: of tel:.",
   "{count} Levels": "{count} niveaus",
   "{count} link": "{count} link",

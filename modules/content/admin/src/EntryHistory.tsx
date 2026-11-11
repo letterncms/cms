@@ -18,8 +18,8 @@ interface EntryHistoryProps {
 
 export function EntryHistory({ entry, editable, onRestore }: EntryHistoryProps) {
   const revisions = useAbility<Revision[]>(
-    'entries/revisions',
-    { id: entry?.id ?? '' },
+    'revisions/list',
+    { entryId: entry?.id ?? '' },
     { enabled: !!entry },
   )
 

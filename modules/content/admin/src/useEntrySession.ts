@@ -15,7 +15,7 @@ export function useEntrySession(initial: Entry | null, defaults: EntryContent, c
     if (!entry && mounted.current && window.location.pathname === creationPath.current)
       // The router's own state stays, so Back and Forward still know where they are.
       window.history.replaceState(window.history.state, '', `${window.__CMS__.base}/content/${collection}/${result.id}${locale ? `?locale=${encodeURIComponent(locale)}` : ''}`)
-    invalidate('entries/', 'content/', 'collections/overview')
+    invalidate('entries/', 'revisions/', 'content/', 'collections/overview')
     return result
   }))
   const state = useSyncExternalStore(session.subscribe, session.get)

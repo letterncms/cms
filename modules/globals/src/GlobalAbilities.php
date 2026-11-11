@@ -51,7 +51,7 @@ final class GlobalAbilities
             ],
         ]);
 
-        $a->register('globals/update', [
+        $a->register('globals/set', [
             'label' => 'Update Global Values',
             'permission' => 'globals.edit',
             'description' => 'Set values of a global set (merged into existing values). Returns the values as stored.',
