@@ -69,6 +69,7 @@
 - **Breaking.** A plugin no longer has to register a home-screen widget. `PackageManager::problems()`, the "invalid" status of `cms plugins` (and its failing exit code), the notice on the Dashboard in debug mode and `AdminRegistry::widgetsByPackage()` are gone. A plugin with nothing worth a glance registers none and shows nothing; plugin tests that asserted `problems()` is empty drop that line.
 - The **Site Setup** widget. The guided start on the Dashboard takes its place; what it listed (public URL, description, timezone, email sender) is on **Settings › General** and **Email**.
 - **Breaking.** The `account.api` slot of the admin. What a plugin shows on Account is a section it adds with the `view.account` filter, as the MCP module now does for **Agents**.
+- **Design System**: an element style can reach a tag inside a tag. Beside the elements the Design System offers, `styles` and `prose` take any tag, alone or up to three deep with a space (inside) or ` > ` (directly inside), and one state or part at the end: `"h1 em"`, `"li > a"`, `"nav a:hover"`, `"li::marker"`. Classes, ids and attributes stay with `custom.css`.
 
 ### Fixed
 

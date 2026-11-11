@@ -223,6 +223,15 @@ final class DesignJson
             $this->setDark((string) $path, $value);
         }
 
+        // A key the design can't style would be kept and never show: said now, by name.
+        foreach (['styles', 'prose'] as $section) {
+            foreach (array_keys((array) ($in[$section] ?? [])) as $selector) {
+                if (! DesignCompiler::selectable($selector) && ! ($section === 'prose' && $selector === 'spacing')) {
+                    throw new InvalidArgumentException(__('“:selector” is not something the design can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em” or “nav a:hover”. A class or an id is for custom CSS.', ['selector' => (string) $selector]));
+                }
+            }
+        }
+
         foreach (['styles', 'prose', 'buttons', 'fields', 'fonts', 'transition'] as $section) {
             if (isset($in[$section])) {
                 $this->set($section, (array) $in[$section]);

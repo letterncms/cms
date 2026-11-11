@@ -542,5 +542,6 @@
   "Vendored Libraries": "Meegeleverde bibliotheken",
   "Libraries are only fetched from :hosts.": "Bibliotheken worden alleen opgehaald van :hosts.",
   ":url did not answer with the file itself.": ":url antwoordde niet met het bestand zelf.",
-  "“:name” has the name of something a server runs.": "‘:name’ heeft de naam van iets dat een server uitvoert."
+  "“:name” has the name of something a server runs.": "‘:name’ heeft de naam van iets dat een server uitvoert.",
+  "“:selector” is not something the design can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em” or “nav a:hover”. A class or an id is for custom CSS.": "‘:selector’ kan het ontwerp niet opmaken: gebruik een tag, of hooguit drie met een spatie of ‘ > ’ ertussen, met één toestand aan het eind, zoals ‘h1 em’ of ‘nav a:hover’. Een klasse of id hoort in eigen CSS."
 }
