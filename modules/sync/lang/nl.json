@@ -191,7 +191,7 @@
   "That isn’t a connection key. Copy it from Sync on the other site: it starts with the site’s address.": "Dat is geen verbindingssleutel. Kopieer hem uit Sync op de andere site: hij begint met het adres van de site.",
   "That key belongs to this site. Paste the key of the other site.": "Die sleutel hoort bij deze site. Plak de sleutel van de andere site.",
   "That sync can’t be undone any more.": "Die sync kan niet meer ongedaan worden gemaakt.",
-  "The :table table has a :column column on :has but not on :lacks. Bring both sites to the same versions and run php cms sync on each, then sync.": "De tabel :table heeft een kolom :column op :has maar niet op :lacks. Breng beide sites naar dezelfde versies en voer op elk php cms sync uit, en synchroniseer dan.",
+  "The :table table has a :column column on :has but not on :lacks. Bring both sites to the same versions and run php cms migrate on each, then sync.": "De tabel :table heeft een kolom :column op :has maar niet op :lacks. Breng beide sites naar dezelfde versies en voer op elk php cms migrate uit, en synchroniseer dan.",
   "The address has to start with http:// or https://.": "Het adres moet beginnen met http:// of https://.",
   "The backup isn’t finished yet.": "De back-up is nog niet klaar.",
   "the connection was refused": "de verbinding werd geweigerd",

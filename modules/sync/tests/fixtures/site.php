@@ -28,7 +28,7 @@ $app = Bootstrap::create($cms, $site);
 $app->make(Console::class)->bootstrap();
 
 if (! is_file($site.'/storage/installed.json')) {
-    Artisan::call('migrate', ['--path' => $app->databasePath('migrations'), '--realpath' => true, '--force' => true]);
+    \Cms\Update\Upgrader::migrateCore($app);
     $app->make(\Cms\Packages\PackageManager::class)->sync();
     file_put_contents($site.'/storage/installed.json', '{}');
 }
