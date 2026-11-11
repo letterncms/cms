@@ -1,4 +1,4 @@
-import { invalidate, loadManifest, navigate, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
+import { CmsError, invalidate, loadManifest, navigate, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
 import { useEffect, useRef, useState } from 'react'
 import { FieldsEditor, type RawField } from '../fields/FieldsEditor'
 import { Button } from './Button'
@@ -69,6 +69,8 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
   const [removing, setRemoving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
+  // What a refused save said about single fields, by the path of the option (`fields.2.handle`): shown beside them.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const operation = useRef(false)
   const [tab, setTab] = useTab(['fields', 'settings'])
   const removable = !!kind.remove && !!source.data && (kind.canRemove?.(source.data) ?? true)
@@ -83,7 +85,17 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     setDef((d) => (d ? { ...d, ...p } : d))
     setDirty(true)
   }
-  const setFields = (fields: RawField[]) => patch({ fields })
+  const setFields = (fields: RawField[]) => {
+    // A problem stays until its field is changed; once fields are added, removed or moved, the paths no longer say which.
+    setFieldErrors((errors) => {
+      const before = def?.fields ?? []
+      if (!Object.keys(errors).length) return errors
+      if (before.length !== fields.length) return {}
+      const changed = fields.flatMap((f, i) => f === before[i] ? [] : [`fields.${i}.`])
+      return Object.fromEntries(Object.entries(errors).filter(([path]) => !changed.some((prefix) => path.startsWith(prefix))))
+    })
+    patch({ fields })
+  }
 
   // The save bar is the one way to save (and asks before leaving with changes); it says when saving failed.
   const save = async () => {
@@ -91,6 +103,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     operation.current = true
     setSaving(true)
     setSaveError(null)
+    setFieldErrors({})
     try {
       await run(...kind.save(def))
       setDirty(false)
@@ -99,6 +112,12 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       await loadManifest()
     } catch (e) {
       setSaveError(e instanceof Error && e.constructor !== TypeError ? e.message : t('Couldn’t save. Check your connection.'))
+      if (e instanceof CmsError && e.type === 'invalid_input') {
+        const about = Object.fromEntries(Object.entries(e.details).filter(([path]) => path.startsWith('fields.')))
+        setFieldErrors(about)
+        // The field it is about is on the Fields tab.
+        if (Object.keys(about).length) setTab('fields')
+      }
     } finally {
       setSaving(false)
       operation.current = false
@@ -130,6 +149,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     setDef(editableDefinition(source.data))
     setDirty(false)
     setSaveError(null)
+    setFieldErrors({})
   }
 
   if (source.isLoading || (!def && source.data)) return <div className="grid h-full place-items-center text-faint"><Spinner /></div>
@@ -160,7 +180,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         <div className="max-w-[960px]">
           <Tabs value={tab} onChange={setTab} tabs={[{ value: 'fields', label: t('Fields') }, { value: 'settings', label: t('Settings') }]} className="mb-6" />
           {tab === 'fields' ? (
-            <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} />
+            <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
           ) : (
             <div>
               {[...kind.settingsSections, { title: t('More Settings'), handles: settings.filter((f) => !kind.settingsSections!.some((s) => s.handles.includes(f.handle))).map((f) => f.handle), bare: false }].map((section) => {
@@ -179,7 +199,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         </div>
       ) : <div className={settings.length > 0 ? 'grid grid-cols-1 gap-10 lg:grid-cols-[1fr_300px]' : 'max-w-[760px]'}>
         <div className="min-w-0">
-          <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} />
+          <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
           {removal}
         </div>
 
