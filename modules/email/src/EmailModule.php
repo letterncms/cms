@@ -29,7 +29,7 @@ final class EmailModule extends Plugin
         // On the Email settings page: try what is saved, sent to whoever presses it.
         $this->cms()->hooks()->addFilter('view.settings', static fn (array $view, User $user, array $params) => ($params['namespace'] ?? '') !== 'email' ? $view : SettingsModule::withAction($view, [
             // What is saved is what it tries: with changes waiting, Save comes first.
-            'label' => __('Send Test Email'), 'icon' => 'mail', 'ability' => 'email/test', 'input' => ['to' => '{user.email}'], 'success' => __('Test email sent to {user.email}'), 'disabled' => '{dirty}',
+            'label' => __('Send Test Email'), 'icon' => 'send', 'ability' => 'email/test', 'input' => ['to' => '{user.email}'], 'success' => __('Test email sent to {user.email}'), 'disabled' => '{dirty}',
         ]));
         // Someone's erased account takes their row in the log with it.
         $this->cms()->hooks()->on('account.deleting', static fn ($user) => DB::table('email_log')->where('to', $user->email)->delete());
@@ -50,7 +50,7 @@ final class EmailModule extends Plugin
             array_push($fields, ...array_map(static fn ($f) => [...$f, 'if' => ['transport' => $key]], $transport['fields']));
         }
 
-        $fields[] = ['handle' => 'footer', 'type' => 'text', 'label' => 'Email Footer', 'instructions' => 'Shown under every email, like your address.'];
+        $fields[] = ['handle' => 'footer', 'type' => 'text', 'label' => 'Email Footer'];
 
         // After boot, so out of the module's scope: it names itself.
         $this->cms()->settingsRegistry()->register('email', fields: $fields, icon: 'mail', description: 'How :brand sends email.', package: $this->manifest->name, order: 40, section: 'system');

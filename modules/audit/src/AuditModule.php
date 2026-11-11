@@ -25,8 +25,8 @@ final class AuditModule extends Plugin
         $this->app->make(AuditAbilities::class)->register($cms->abilities());
 
         $cms->settingsRegistry()->register('audit', 'Audit Log', [
-            ['handle' => 'retention', 'type' => 'number', 'label' => 'Keep Entries For', 'suffix' => 'days', 'default' => 365, 'min' => 0, 'max' => 3650, 'instructions' => '0 keeps them forever.'],
-            ['handle' => 'reads', 'type' => 'toggle', 'label' => 'Also Record Reads', 'default' => false, 'instructions' => 'Who looked at what. The log grows quickly.'],
+            ['handle' => 'retention', 'type' => 'number', 'label' => 'Keep Entries For', 'suffix' => 'days', 'default' => 365, 'min' => 0, 'max' => 3650, 'placeholder' => 'Forever'],
+            ['handle' => 'reads', 'type' => 'toggle', 'label' => 'Also Record Reads', 'default' => false],
         ], icon: 'activity', description: 'What is recorded and for how long.', order: 85, section: 'system', home: 'audit');
 
         $cms->hooks()->on('ability.executed', function (Ability $ability, array $input, mixed $result, AbilityContext $context): void {
@@ -94,15 +94,30 @@ final class AuditModule extends Plugin
                 'created_at' => now(),
             ]);
 
-            // Pruning on roughly one write in a hundred keeps the table bounded without a cron job. 0 keeps every entry.
-            $days = (int) $this->setting('retention', 365);
-
-            if ($days > 0 && random_int(1, 100) === 1) {
-                DB::table('audit_log')->where('created_at', '<', now()->subDays($days))->delete();
+            // Pruning on roughly one write in a hundred keeps the table bounded without a cron job.
+            if (random_int(1, 100) === 1) {
+                $this->prune();
             }
         } catch (Throwable $e) {
             report($e);
         }
+    }
+
+    /**
+     * How many days entries are kept, 0 for forever. A site that never saved the setting keeps a year (the
+     * field's default); a field left empty, or 0, keeps every entry: its placeholder says Forever, and so it is.
+     */
+    public function retention(): int
+    {
+        return max(0, (int) ($this->cms()->settingsRegistry()->get('audit')['retention'] ?? 0));
+    }
+
+    /** Delete what is older than is kept. Returns how many entries went. */
+    public function prune(): int
+    {
+        $days = $this->retention();
+
+        return $days > 0 ? DB::table('audit_log')->where('created_at', '<', now()->subDays($days))->delete() : 0;
     }
 
     /**

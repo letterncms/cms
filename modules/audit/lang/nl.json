@@ -1,7 +1,6 @@
 {
   "{count} time": "{count} keer",
   "{count} times": "{count} keer",
-  "0 keeps them forever.": "0 bewaart ze voor altijd.",
   "Ability": "Vaardigheid",
   "Action": "Actie",
   "Activity": "Activiteit",
@@ -36,5 +35,5 @@
   "When": "Wanneer",
   "Who": "Wie",
   "Who changed what across the site, and when.": "Wie wat heeft gewijzigd op de site, en wanneer.",
-  "Who looked at what. The log grows quickly.": "Wie wat bekeek. Het logboek groeit snel."
+  "Forever": "Oneindig"
 }

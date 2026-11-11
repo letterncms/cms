@@ -1,7 +1,6 @@
 {
   "{count} time": "{count} fois",
   "{count} times": "{count} fois",
-  "0 keeps them forever.": "0 les conserve indéfiniment.",
   "Ability": "Capacité",
   "Action": "Action",
   "Activity": "Activité",
@@ -36,5 +35,5 @@
   "When": "Quand",
   "Who": "Qui",
   "Who changed what across the site, and when.": "Qui a modifié quoi sur le site, et quand.",
-  "Who looked at what. The log grows quickly.": "Qui a consulté quoi. Le journal grossit vite."
+  "Forever": "Indéfiniment"
 }
