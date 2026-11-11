@@ -1,5 +1,5 @@
 import { getManifest, setPreference, t, useAbility, type ComposerPanelProps } from '@letterncms/sdk'
-import { Icon, Menu } from '@letterncms/ui'
+import { Button, Icon, Menu, Skeleton } from '@letterncms/ui'
 import { useEffect } from 'react'
 import { answering } from './sources'
 
@@ -38,21 +38,20 @@ export function ModelPicker({ thread, agent, state, options, setOption, loading 
   // A new thread sends the pick it starts with.
   const start = !thread && options.model === undefined ? current?.id : undefined
   useEffect(() => { if (start) setOption('model', start) }, [start, setOption])
-  if (!ready || !status.data || loading || !current) return null
+  if (!ready || loading) return null
+  // The picker's place holds while the models load: the composer's foot doesn't jump when they arrive.
+  if (status.isLoading) return <span className="flex h-7 items-center px-2" aria-hidden="true"><Skeleton className="h-3 w-20" /></span>
+  if (!current) return null
   return (
     <Menu
       side="top"
       align="start"
       className="w-72"
       trigger={
-        <button
-          type="button"
-          aria-label={t('Model: {name}', { name: current.name })}
-          className="flex h-7 min-w-0 items-center gap-1 rounded-md pl-2 pr-1.5 text-xs text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text data-[popup-open]:bg-hover data-[popup-open]:text-text"
-        >
+        <Button variant="ghost" aria-label={t('Model: {name}', { name: current.name })} className="min-w-0 shrink !gap-1 !pl-2 !pr-1.5 !text-xs !font-normal !text-muted hover:!text-text data-[popup-open]:bg-hover data-[popup-open]:!text-text">
           <span className="truncate">{current.name}</span>
           <Icon name="chevron-down" size={12} className="shrink-0 text-faint" />
-        </button>
+        </Button>
       }
       items={[
         { label: t('Model'), heading: true },
