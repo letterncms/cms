@@ -54,6 +54,14 @@ final class StarterTest extends TestCase
         $this->assertStringContainsString('Notes, stories and useful ideas from this site.', file_get_contents(public_path('blog/index.html')));
         $this->assertStringContainsString('same blocks as pages', file_get_contents(public_path('blog/hello-world/index.html')));
         $this->assertSame(0, app(Starter::class)->seed($admin));
+
+        // One block behaviour, so a new site shows where its own scripts and styles go.
+        $this->assertFileExists(content_path('design/scripts/spotlight.js'));
+        $home = (string) file_get_contents(public_path('index.html'));
+        $this->assertMatchesRegularExpression('#<section class="cms-section[^"]* spotlight[^"]*"[^>]* data-cms-behavior="/_cms/site/scripts/spotlight-[0-9a-f]{10}\.js" data-cms-props="\{&quot;ease&quot;:0\.12\}" data-cms-when="idle"#', $home);
+        $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/styles/spotlight-[0-9a-f]{10}\.css">#', $home);
+        $this->assertStringNotContainsString('data-cms-behavior', (string) file_get_contents(public_path('about/index.html')), 'only the page that uses it carries it');
+        $this->assertStringNotContainsString('importmap', (string) file_get_contents(public_path('about/index.html')), 'nor an import map for scripts it doesn’t load');
     }
 
     public function test_explicit_refresh_keeps_accounts_settings_and_nonkit_content(): void
