@@ -878,7 +878,7 @@
                             "type": "ui/tab",
                             "props": {
                                 "id": "forms",
-                                "label": "Forms",
+                                "label": "All Forms",
                                 "actions": [
                                     {
                                         "label": "New Form",
@@ -945,21 +945,33 @@
                                                 "label": "Fields",
                                                 "width": "90px",
                                                 "align": "end",
-                                                "format": "number"
+                                                "format": "number",
+                                                "unit": {
+                                                    "one": "{count} Field",
+                                                    "other": "{count} Fields"
+                                                }
                                             },
                                             {
                                                 "key": "total",
                                                 "label": "Submissions",
                                                 "width": "120px",
                                                 "align": "end",
-                                                "format": "number"
+                                                "format": "number",
+                                                "unit": {
+                                                    "one": "{count} Submission",
+                                                    "other": "{count} Submissions"
+                                                }
                                             },
                                             {
                                                 "key": "unread",
                                                 "label": "Unread",
                                                 "width": "90px",
                                                 "align": "end",
-                                                "format": "badge"
+                                                "format": "badge",
+                                                "unit": {
+                                                    "one": "{count} Unread",
+                                                    "other": "{count} Unread"
+                                                }
                                             }
                                         ],
                                         "open": {
@@ -993,7 +1005,32 @@
                                         ],
                                         "empty": {
                                             "icon": "form",
-                                            "title": "No forms yet"
+                                            "title": "No forms yet",
+                                            "action": {
+                                                "label": "New Form",
+                                                "icon": "plus",
+                                                "ability": "forms/create",
+                                                "input": {
+                                                    "title": "{values.title}"
+                                                },
+                                                "then": "open",
+                                                "to": "/forms/{result.handle}",
+                                                "form": {
+                                                    "title": "New Form",
+                                                    "confirm": "Create Form",
+                                                    "fields": [
+                                                        {
+                                                            "handle": "title",
+                                                            "type": "text",
+                                                            "label": "Name",
+                                                            "placeholder": "Quote Request",
+                                                            "required": true,
+                                                            "autofocus": true
+                                                        }
+                                                    ]
+                                                },
+                                                "props": []
+                                            }
                                         }
                                     }
                                 }
@@ -1561,7 +1598,7 @@
                                                 "type": "repeater",
                                                 "display": "table",
                                                 "label": "Redirects",
-                                                "add": "Add Redirect",
+                                                "add": false,
                                                 "fields": [
                                                     {
                                                         "handle": "from",
@@ -1984,7 +2021,7 @@
                                         ],
                                         "empty": {
                                             "icon": "inbox",
-                                            "title": "No submissions"
+                                            "title": "No submissions yet"
                                         }
                                     }
                                 }
