@@ -90,6 +90,21 @@ final class CollectionAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'deleteEntries' => ['type' => 'boolean', 'default' => false]], 'required' => ['handle']],
             'output' => Shape::of(['deleted' => Shape::STRING, 'deletedEntries' => Shape::INTEGER]),
+            'dryRun' => function (array $in): array {
+                $collection = $this->cms->collections()->findOrFail($in['handle']);
+            
+                if (! $collection->deletable()) {
+                    throw AbilityException::invalid(__('“:title” comes with a plugin and cannot be deleted.', ['title' => $collection->title]));
+                }
+            
+                $count = $this->cms->entries()->query()->collection($collection->handle)->count();
+            
+                if ($count > 0 && ! $in['deleteEntries']) {
+                    throw AbilityException::invalid(__('This collection still has entries. Choose to delete its entries as well.'), ['count' => $count]);
+                }
+            
+                return [['action' => 'delete', 'type' => 'collection', 'handle' => $collection->handle, 'title' => $collection->title, 'entries' => $count]];
+            },
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->write(function () use ($in, $ctx) {
                 $collection = $this->cms->collections()->findOrFail($in['handle']);
 

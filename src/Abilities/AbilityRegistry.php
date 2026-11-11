@@ -65,6 +65,12 @@ final class AbilityRegistry
      * Validate, authorize and execute an ability. Listeners of `ability.executed` see every
      * successful run (letterncms/audit records the changes).
      *
+     * With `dryRun: true` in the input of an ability that changes something, everything up to the handler
+     * happens as usual (validation, the `ability.input` filter, authorization) and then nothing is run:
+     * no handler, no `ability.executing` or `ability.executed`, so nothing is written or recorded. The answer
+     * is the report dryRun() builds. An ability with a `dryRun` callback also checks there what its handler
+     * would refuse (a missing record, a version conflict, invalid field data) and lists what would change.
+     *
      * @throws AbilityException
      */
     public function execute(string $name, array $input, AbilityContext $context): mixed
@@ -77,6 +83,14 @@ final class AbilityRegistry
 
         if (! $this->inScope($ability, $context)) {
             throw AbilityException::forbidden(__('This token is not scoped for :ability.', ['ability' => $name]));
+        }
+
+        $dryRun = false;
+
+        if (! $ability->isReadOnly() && array_key_exists('dryRun', $input)) {
+            $dryRun = filter_var($input['dryRun'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+                ?? throw AbilityException::invalid(__('Invalid input: :errors', ['errors' => 'dryRun']), ['dryRun' => __('Expected :expected, got :actual.', ['expected' => 'boolean', 'actual' => get_debug_type($input['dryRun'])])]);
+            unset($input['dryRun']);
         }
 
         try {
@@ -93,10 +107,33 @@ final class AbilityRegistry
                 : AbilityException::forbidden();
         }
 
-        $this->hooks->dispatch('ability.executing', $ability, $input, $context);
+        if ($dryRun) {
+            return [
+                'dryRun' => true,
+                'ability' => $ability->name,
+                'input' => (object) $input,
+                'changes' => $ability->dryRun ? array_values((array) $this->guarded($ability->dryRun, $input, $context)) : null,
+            ];
+        }
 
+        $this->hooks->dispatch('ability.executing', $ability, $input, $context);
+        $result = $this->guarded($ability->handler, $input, $context);
+        $this->hooks->dispatch('ability.executed', $ability, $input, $result, $context);
+
+        $result = $this->hooks->filter('ability.result', $result, $ability, $input, $context);
+
+        if ($this->verifyOutput) {
+            $this->verify($ability, $result);
+        }
+
+        return $result;
+    }
+
+    /** Run a handler, with whatever it throws said as an AbilityException. */
+    private function guarded(Closure|string|array $handler, array $input, AbilityContext $context): mixed
+    {
         try {
-            $result = $this->call($ability->handler, $input, $context);
+            return $this->call($handler, $input, $context);
         } catch (AbilityException $e) {
             throw $e;
         } catch (SchemaException $e) {
@@ -112,16 +149,6 @@ final class AbilityRegistry
             report($e);
             throw new AbilityException(config('app.debug') ? $e->getMessage() : __('The action failed.'), 'failed', previous: $e);
         }
-
-        $this->hooks->dispatch('ability.executed', $ability, $input, $result, $context);
-
-        $result = $this->hooks->filter('ability.result', $result, $ability, $input, $context);
-
-        if ($this->verifyOutput) {
-            $this->verify($ability, $result);
-        }
-
-        return $result;
     }
 
     /** The result as its JSON, against the schema the ability declares. */

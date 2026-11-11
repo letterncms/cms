@@ -20,6 +20,7 @@ final class RunCommand extends Command
         {input?* : key=value pairs (values may be JSON)}
         {--input= : The whole input as a JSON object}
         {--as= : Run as this user (email) instead of the system}
+        {--dry-run : Check only: validate and authorize, write nothing, and print what would change}
         {--list : List abilities}';
 
     protected $description = 'Run any ability from the command line';
@@ -53,6 +54,10 @@ final class RunCommand extends Command
         foreach ((array) $this->argument('input') as $pair) {
             [$key, $value] = array_pad(explode('=', (string) $pair, 2), 2, '');
             data_set($input, $key, json_validate($value) && ! is_numeric($value) ? json_decode($value, true) : $value);
+        }
+
+        if ($this->option('dry-run')) {
+            $input['dryRun'] = true;
         }
 
         $context = AbilityContext::system('cli');

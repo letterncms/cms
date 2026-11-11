@@ -359,6 +359,12 @@ final class ContentAbilities
             ], 'required' => ['collection', 'title']],
             'answer' => $this->answer('created'),
             'output' => Shapes::entry(),
+            'dryRun' => function (array $in): array {
+                $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
+                $collection->blueprint()->process(array_replace($collection->blueprint()->defaults(), $in['data']), partial: $in['status'] !== 'published');
+            
+                return [['action' => $in['status'] === 'published' ? 'create-published' : 'create', 'type' => 'entry', 'collection' => $collection->handle, 'title' => $in['title'], 'locale' => $in['locale'] ?? $this->cms->defaultLocale()]];
+            },
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->create($in['collection'], $in, $ctx->user)->toArray(),
         ]);
 
@@ -384,6 +390,21 @@ final class ContentAbilities
             ], 'required' => ['id']],
             'answer' => $this->answer('saved'),
             'output' => Shapes::entry(),
+            'dryRun' => function (array $in): array {
+                $entry = $this->target($in);
+                $working = $entry->working();
+                $data = array_replace((array) $working['data'], $in['data'] ?? []);
+                $entry->collection()->blueprint()->process($data, partial: ! $in['publish']);
+                $fields = array_keys(array_filter($in['data'] ?? [], static fn ($value, $key) => ($working['data'][$key] ?? null) !== $value, ARRAY_FILTER_USE_BOTH));
+            
+                foreach (['slug', 'title'] as $key) {
+                    if (isset($in[$key]) && $in[$key] !== $working[$key]) {
+                        array_unshift($fields, $key);
+                    }
+                }
+            
+                return [$this->change($in['publish'] ? 'update-published' : 'update', $entry, ['fields' => $fields])];
+            },
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->update($in['id'], array_diff_key($in, ['id' => 1, 'publish' => 1]), $ctx->user, $in['publish'])->toArray(),
         ]);
 
@@ -394,6 +415,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'at' => ['type' => 'string', 'format' => 'date-time'], 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('published'),
             'output' => Shapes::entry(),
+            'dryRun' => fn (array $in): array => [$this->change('publish', $this->target($in), ['at' => $in['at'] ?? null])],
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->publish($in['id'], $ctx->user, $in['at'] ?? null, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -404,6 +426,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('unpublished'),
             'output' => Shapes::entry(),
+            'dryRun' => fn (array $in): array => [$this->change('unpublish', $this->target($in), [])],
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->unpublish($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -415,6 +438,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('discarded'),
             'output' => Shapes::entry(),
+            'dryRun' => fn (array $in): array => [$this->change('discard-draft', $this->target($in), [])],
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->discardDraft($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -426,6 +450,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('deleted'),
             'output' => Shape::of(['deleted' => Shape::STRING, 'title' => Shape::STRING_OR_NULL]),
+            'dryRun' => fn (array $in): array => [$this->change('delete', $this->target($in), [])],
             'handler' => function (array $in, AbilityContext $ctx) {
                 $title = $this->cms->entries()->find($in['id'])?->title;
                 $this->cms->content()->delete($in['id'], $ctx->user, $in['expectedVersion'] ?? null);
@@ -441,6 +466,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('duplicated'),
             'output' => Shapes::entry(),
+            'dryRun' => fn (array $in): array => [$this->change('duplicate', $this->target($in), [])],
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->duplicate($in['id'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -453,6 +479,7 @@ final class ContentAbilities
                 'position' => ['type' => 'integer', 'minimum' => 0], 'expectedVersion' => self::VERSION,
             ], 'required' => ['id', 'parentId']],
             'output' => Shapes::entry(),
+            'dryRun' => fn (array $in): array => [$this->change('move', $this->target($in), ['parentId' => $in['parentId']])],
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->move($in['id'], $in['parentId'], $in['position'] ?? null, $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -505,6 +532,11 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['revisionId' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['revisionId']],
             'answer' => $this->answer('restored'),
             'output' => Shapes::entry(),
+            'dryRun' => function (array $in): array {
+                $revision = app(\Cms\Content\Revisions\Revisions::class)->find($in['revisionId']) ?? throw new AbilityException('Revision not found.', 'not_found');
+            
+                return [$this->change('restore', $this->target(['id' => $revision['entryId'], ...$in]), ['revisionId' => $revision['id']])];
+            },
             'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->restore($in['revisionId'], $ctx->user, $in['expectedVersion'] ?? null)->toArray(),
         ]);
 
@@ -632,6 +664,24 @@ final class ContentAbilities
 
             return $item;
         }, $entries, $data);
+    }
+
+    /** For a dry run: the entry a change is for, refused as the change would be when it is gone or was changed since it was read. */
+    private function target(array $in): Entry
+    {
+        $entry = $this->cms->entries()->find($in['id']) ?? throw new AbilityException(__('This entry no longer exists.'), 'not_found');
+
+        if (isset($in['expectedVersion']) && ! hash_equals($entry->version(), $in['expectedVersion'])) {
+            throw new AbilityException(__('This entry was changed after you read it.'), 'conflict', ['version' => $entry->version()]);
+        }
+
+        return $entry;
+    }
+
+    /** One line of a dry run's report: what would happen to which entry. */
+    private function change(string $action, Entry $entry, array $more = []): array
+    {
+        return ['action' => $action, 'type' => 'entry', 'id' => $entry->id, 'collection' => $entry->collection, 'title' => $entry->working()['title'], ...$more];
     }
 
     private function allowed(?User $user, string $collection, string $action): bool

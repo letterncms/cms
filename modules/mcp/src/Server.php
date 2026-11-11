@@ -158,7 +158,7 @@ final class Server
 
     private function tool(Ability $ability): array
     {
-        $schema = $ability->input === [] ? ['type' => 'object'] : $ability->input;
+        $schema = $ability->input();
         $schema['type'] = 'object';
 
         if (empty($schema['properties'])) {
@@ -170,7 +170,7 @@ final class Server
             'title' => $ability->label,
             'description' => $ability->description ?: $ability->label,
             'inputSchema' => $schema,
-            'outputSchema' => self::structuredSchema($ability->output()),
+            'outputSchema' => self::structuredSchema($ability->output(), dryRun: ! $ability->isReadOnly()),
             'annotations' => array_filter([
                 'title' => $ability->label,
                 'readOnlyHint' => $ability->isReadOnly(),
@@ -221,7 +221,7 @@ final class Server
     }
 
     /** The ability's output schema, wrapped the way structured() wraps its result. */
-    public static function structuredSchema(?array $output): ?array
+    public static function structuredSchema(?array $output, bool $dryRun = false): ?array
     {
         if ($output === null) {
             return null;
@@ -229,12 +229,15 @@ final class Server
 
         $types = (array) ($output['type'] ?? []);
 
-        return match (true) {
+        $schema = match (true) {
             $types === ['object'] => $output,
             $types === ['array'] => ['type' => 'object', 'properties' => ['items' => $output]],
             // A list or an object, or something that isn't either: whichever wrapping the result gets.
             default => ['type' => 'object'],
         };
+
+        // A tool that changes something answers a dry run with the report instead.
+        return $dryRun ? ['type' => 'object', 'anyOf' => [$schema, Ability::DRY_RUN_OUTPUT]] : $schema;
     }
 
     private function read(array $params, AbilityContext $context): array

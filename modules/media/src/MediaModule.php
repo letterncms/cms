@@ -269,6 +269,16 @@ final class MediaModule extends Plugin
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'force' => ['type' => 'boolean', 'default' => false]], 'required' => ['id']],
             'output' => Shape::of(['deleted' => Shape::STRING]),
+            'dryRun' => function (array $in): array {
+                $item = MediaItem::query()->findOrFail(strtolower($in['id']));
+                $used = empty($in['force']) ? $this->app->make(MediaReferences::class)->of($item) : [];
+            
+                if ($used !== []) {
+                    throw AbilityException::conflict(__('This file is still used by :where.', ['where' => implode(', ', array_unique(array_map(static fn (array $r) => $r['where']['title'], $used)))]));
+                }
+            
+                return [['action' => 'delete', 'type' => 'media', 'id' => $item->id, 'path' => $item->path]];
+            },
             'handler' => function (array $in) use ($store) {
                 $item = MediaItem::query()->findOrFail(strtolower($in['id']));
                 $used = empty($in['force']) ? $this->app->make(MediaReferences::class)->of($item) : [];

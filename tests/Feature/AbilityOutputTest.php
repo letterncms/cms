@@ -101,7 +101,9 @@ final class AbilityOutputTest extends TestCase
         }
 
         // An object is given as it is, a list under `items`: the schema says the same, and the content follows it.
-        $this->assertContains('slug', $tools['entries.create']['outputSchema']['required']);
+        // One that changes something answers a dry run with its report instead.
+        $this->assertContains('slug', $tools['entries.create']['outputSchema']['anyOf'][0]['required']);
+        $this->assertContains('dryRun', $tools['entries.create']['outputSchema']['anyOf'][1]['required']);
         $this->assertSame('array', $tools['collections.list']['outputSchema']['properties']['items']['type']);
 
         foreach (['collections.list' => [], 'entries.create' => ['collection' => 'pages', 'title' => 'Hello'], 'entries.list' => ['collection' => 'pages']] as $name => $arguments) {

@@ -264,6 +264,19 @@ final class UserAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'answer' => static fn (array $gone) => Answers::done(__('Deleted :name', ['name' => $gone['name'] ?? ''])),
             'output' => Shape::of(['deleted' => Shape::STRING, 'name' => Shape::STRING]),
+            'dryRun' => function (array $in, AbilityContext $ctx): array {
+                $user = User::query()->findOrFail($in['id']);
+            
+                if ($ctx->user && $user->is($ctx->user)) {
+                    throw AbilityException::conflict('You cannot delete your own account here.');
+                }
+            
+                if ($user->super && User::query()->where('super', true)->count() <= 1) {
+                    throw AbilityException::conflict('There must be at least one super admin.');
+                }
+            
+                return [['action' => 'delete', 'type' => 'user', 'id' => $user->id, 'name' => $user->name]];
+            },
             'handler' => function (array $in, AbilityContext $ctx) {
                 $user = User::query()->findOrFail($in['id']);
 

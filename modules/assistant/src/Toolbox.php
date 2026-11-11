@@ -221,7 +221,7 @@ final class Toolbox
 
     private function definition(Ability $ability): array
     {
-        $schema = $ability->input === [] ? ['type' => 'object'] : $ability->input;
+        $schema = $ability->input();
         $schema['type'] = 'object';
 
         if (! $ability->isReadOnly()) {

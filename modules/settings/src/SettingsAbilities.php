@@ -107,6 +107,17 @@ final class SettingsAbilities
                 ]);
             },
             'output' => Shape::of(Shape::OBJECT),
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($registry): array {
+                if (! $registry->has($in['namespace'])) {
+                    throw new AbilityException('Unknown settings.', 'not_found');
+                }
+            
+                if ($ctx->transport === 'assistant' && $in['namespace'] === Roles::SETTINGS) {
+                    throw AbilityException::forbidden(__('Roles are changed by people, in Settings.'));
+                }
+            
+                return [['action' => 'update', 'type' => 'settings', 'namespace' => $in['namespace'], 'fields' => array_keys($in['values'])]];
+            },
             'handler' => function (array $in, AbilityContext $ctx) use ($registry) {
                 if (! $registry->has($in['namespace'])) {
                     throw new AbilityException('Unknown settings.', 'not_found');

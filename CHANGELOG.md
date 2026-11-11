@@ -4,6 +4,7 @@
 
 ### Added
 
+- Dry runs: every ability that changes something takes `dryRun: true` (`cms run … --dry-run`). The input is validated and you are authorized as usual, nothing is written, run or recorded, and the answer is `{dryRun, ability, input, changes}`. Entries, `collections/delete`, `media/delete`, `users/delete` and `settings/update` also refuse what the real run would (a missing or changed record, invalid field data, a file in use) and list what would change; for the others `changes` is null. A plugin's ability says the same with a `dryRun` callback.
 - Every ability says what it answers with: an `output` JSON Schema beside its `input`, in `abilities/list`, `GET /api/v1/abilities`, `cms run --list --json` and as each MCP tool's `outputSchema`. Plugins write it the short way with `Cms\Support\Schema\Shape`. The tests hold every result against its schema.
 
 ### Changed

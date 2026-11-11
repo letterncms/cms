@@ -155,6 +155,7 @@
   "The current saved content stays in history.": "Le contenu actuellement enregistré reste dans l’historique.",
   "This cannot be undone.": "Cette action est irréversible.",
   "This entry no longer exists.": "Ce contenu n’existe plus.",
+  "This entry was changed after you read it.": "Ce contenu a été modifié après que vous l’avez lu.",
   "This parent is no longer available. Choose another parent.": "Ce parent n’est plus disponible. Choisissez un autre parent.",
   "This permanently deletes the entry and its history.": "Le contenu et son historique seront définitivement supprimés.",
   "Title": "Titre",
