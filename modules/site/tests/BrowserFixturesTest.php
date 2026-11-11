@@ -92,6 +92,7 @@ final class BrowserFixturesTest extends TestCase
                 }
                 JS,
             'styles/one.css' => ".only-one{outline:3px solid rgb(4, 5, 6)}\n",
+            'scripts/tag.js' => "export function mount(el, { word }) {\n  el.dataset.tag = word\n  return () => (document.documentElement.dataset.untagged = word)\n}\n",
             'styles/hero.css' => ".hero{outline:3px solid rgb(1, 2, 3)}\n",
         ];
     }
@@ -134,6 +135,7 @@ final class BrowserFixturesTest extends TestCase
             ],
             'Behavior' => [
                 ['type' => 'box', 'anchor' => 'first', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'first', 'title' => '{entry.title}']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'First']]]],
+                ['type' => 'box', 'anchor' => 'both', 'behavior' => [['module' => 'probe', 'props' => ['name' => 'one-of-two']], ['module' => 'tag', 'props' => ['word' => 'tagged']]], 'children' => []],
                 ['type' => 'box', 'anchor' => 'settled', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'settled'], 'when' => 'loaded'], 'children' => []],
                 ['type' => 'box', 'style' => ['base' => ['height' => '400vh']], 'children' => []],
                 ['type' => 'box', 'anchor' => 'later', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'later'], 'when' => 'visible'], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Later']]]],

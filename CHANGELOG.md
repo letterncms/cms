@@ -25,6 +25,7 @@
 - **Relations that hold**: an `entries`, `users` or `media` field only takes ids that exist, an `entries` field only entries of its `collections` and a `media` field only files its `accept` allows. A write that names something else is refused with the path of the id (`data.author.0`), in a dry run too; what an entry already named stays, so content that points at something since deleted can still be saved. Entry ids are stored in lower case.
 - **Reverse relations**: `EntryQuery::references($id, $field = null)` finds the entries that name an entry, on both drivers: wherever its id is in their data, so in a relation field at any depth (a group, the rows of a repeater), a link or a block. Agents read it with `references/list` (what links to an entry, across collections, with the fields that name it) and `references` on `entries/list`; the content API takes `?references=<id>` (and `references_field=`), and the Repeat block's **Collection Entries** source has **Only Entries Linking To** this page or the outer item: the posts of an author, the projects of a client.
 - A block behaviour can wait for the whole page: `when: "loaded"` mounts it after the page's load event and its fonts, for a script that measures text or layout. Beside `load`, `visible` and `idle`.
+- A block can carry several behaviours: `behavior` takes a list, `[{module: "tilt"}, {module: "cue", props: {…}}]`, and each is mounted and undone by itself, in order. One behaviour is written as before.
 
 ### Changed
 

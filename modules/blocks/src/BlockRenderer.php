@@ -821,32 +821,43 @@ final class BlockRenderer
     }
 
     /**
-     * A block's behaviour as the attributes the runtime reads: the published script, its props and when to load it.
-     * Whoever knows the design's scripts answers the `blocks.behavior` filter with the URL; without one there is nothing to run.
+     * A block's behaviours as the attributes the runtime reads: the published script, its props and when to load it;
+     * with several, one list. Whoever knows the design's scripts answers the `blocks.behavior` filter with the URL;
+     * a behaviour without one is left out.
      *
      * @return array<string, string>
      */
     private function behavior(array $node): array
     {
-        $behavior = Document::behavior($node['behavior'] ?? null);
-        $url = $behavior === [] ? null : $this->hooks->filter('blocks.behavior', null, $behavior['module']);
+        $scope = $this->currentScope();
+        $specs = [];
 
-        if (! is_string($url) || $url === '') {
+        foreach (Document::behaviors($node['behavior'] ?? null) as $behavior) {
+            $url = $this->hooks->filter('blocks.behavior', null, $behavior['module']);
+
+            if (! is_string($url) || $url === '') {
+                continue;
+            }
+
+            $props = $behavior['props'] ?? [];
+            // Text may name data, like any text in a block: "{props.speed}" in a component, "{entry.title}" on a page.
+            array_walk_recursive($props, static function (mixed &$value) use ($scope): void {
+                is_string($value) && Scope::isTemplate($value) && Scope::valid($value) && $value = $scope->interpolate($value);
+            });
+            $specs[] = array_filter(['src' => $url, 'props' => $props !== [] ? $props : null, 'when' => $behavior['when'] ?? null], static fn ($v) => $v !== null);
+        }
+
+        if ($specs === []) {
             return [];
         }
 
         $this->uses('behavior');
-        $scope = $this->currentScope();
-        $props = $behavior['props'] ?? [];
-        // Text may name data, like any text in a block: "{props.speed}" in a component, "{entry.title}" on a page.
-        array_walk_recursive($props, static function (mixed &$value) use ($scope): void {
-            is_string($value) && Scope::isTemplate($value) && Scope::valid($value) && $value = $scope->interpolate($value);
-        });
+        $json = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
-        return array_filter([
-            'data-cms-behavior' => $url,
-            'data-cms-props' => $props !== [] ? (string) json_encode($props, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
-            'data-cms-when' => $behavior['when'] ?? null,
+        return count($specs) > 1 ? ['data-cms-behavior' => (string) json_encode($specs, $json)] : array_filter([
+            'data-cms-behavior' => $specs[0]['src'],
+            'data-cms-props' => isset($specs[0]['props']) ? (string) json_encode($specs[0]['props'], $json) : null,
+            'data-cms-when' => $specs[0]['when'] ?? null,
         ], static fn ($v) => $v !== null);
     }
 
