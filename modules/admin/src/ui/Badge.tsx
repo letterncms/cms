@@ -4,12 +4,14 @@ import { cn } from './cn'
 
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'signal'
 
-// Every tone keeps its text at 4.5:1 or more on its own wash. `signal` is the one yellow badge: Live, Published site.
+// Every tone keeps its words at 4.5:1 or more on its own wash, on the page, the desk and a float, in light and dark
+// (tests/contrast.mjs measures it): the colour itself is a little short on the desk, so the words are a step toward ink.
+// `signal` is the one yellow badge: Live, Published site.
 const tones: Record<Tone, string> = {
   neutral: 'bg-active text-muted',
-  success: 'bg-success-soft text-success',
-  warning: 'bg-warning-soft text-warning',
-  danger: 'bg-danger-soft text-danger',
+  success: 'bg-success-soft text-on-success',
+  warning: 'bg-warning-soft text-on-warning',
+  danger: 'bg-danger-soft text-on-danger',
   info: 'bg-focus-soft text-info',
   signal: 'bg-signal text-signal-ink',
 }

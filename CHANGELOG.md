@@ -4,10 +4,13 @@
 
 ### Added
 
+- Design tokens: `shadow-rule` (a hairline along the bottom of a row of tabs) and `shadow-underline` (the tab on view), and `text-on-success`, `text-on-warning` and `text-on-danger` for words on their own wash.
 - `@letterncms/ui`: `Pressable`, the control without a look, for the ones that draw themselves (a colour plane, a box of a spacing control, a card that opens, canvas chrome). It is a `<button type="button">`, or a link with `to`, with the kit's focus line, 44px to hit on a touch screen, `disabled` and `data-active`; `inset` puts the focus line inside its edge, `compact` leaves out the touch area. Everything it looks like is its `className`.
 
 ### Fixed
 
+- A group of avatars shows one initial per person, so the next circle never cuts a letter, and its count grows into a pill instead of losing digits; a single avatar shows two letters at most, with air around them.
+- Green, amber and red badges read at 4.5:1 or more wherever they stand, in light and dark: their words are a step toward ink, as the blue one's already were.
 - A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.
 
 ## 0.23.0 (2026-11-11)
