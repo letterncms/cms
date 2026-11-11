@@ -1,5 +1,5 @@
 import { can, plural, requestText, t, type EntryContent } from '@letterncms/sdk'
-import { QueryError, Spinner, deviceWidths } from '@letterncms/ui'
+import { QueryError, Spinner, deviceWidths, useShortcutLabel } from '@letterncms/ui'
 import { createPortal, flushSync } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext, useTokens } from './core/context'
@@ -86,6 +86,23 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
   const blockMode = useEditor(store, (state) => state.blockMode)
   const hovered = useEditor(store, (state) => state.hovered)
   const breakpoint = useEditor(store, (state) => state.breakpoint)
+  // The canvas's own keys, handled in its document (blockKeys, below): named in the overlay `?` opens, for as long as they work.
+  const canvasKeys = t('Page Builder')
+  const blockKeysWork = !readOnly && !!selected && blockMode
+  useShortcutLabel('up', t('Select Previous Block'), canvasKeys, blockKeysWork)
+  useShortcutLabel('down', t('Select Next Block'), canvasKeys, blockKeysWork)
+  useShortcutLabel('shift+up', t('Select the Block Above Too'), canvasKeys, blockKeysWork)
+  useShortcutLabel('shift+down', t('Select the Block Below Too'), canvasKeys, blockKeysWork)
+  useShortcutLabel('alt+up', t('Move Up'), canvasKeys, blockKeysWork)
+  useShortcutLabel('alt+down', t('Move Down'), canvasKeys, blockKeysWork)
+  useShortcutLabel('enter', t('Edit Block'), canvasKeys, blockKeysWork)
+  useShortcutLabel('mod+d', t('Duplicate Block'), canvasKeys, blockKeysWork)
+  useShortcutLabel('backspace', t('Delete Block'), canvasKeys, blockKeysWork)
+  useShortcutLabel('escape', t('Deselect'), canvasKeys, !!selected)
+  useShortcutLabel('mod+alt+t', t('Insert Before'), canvasKeys, !readOnly && !!selected)
+  useShortcutLabel('mod+alt+y', t('Insert After'), canvasKeys, !readOnly && !!selected)
+  useShortcutLabel('mod+z', t('Undo'), canvasKeys, !readOnly)
+  useShortcutLabel('mod+shift+z', t('Redo'), canvasKeys, !readOnly)
   const { breakpoints } = useTokens()
   // Desktop styles apply from the site's large breakpoint up (tablet styles below it).
   const desktopWidth = pixels(breakpoints.lg) || 1024
