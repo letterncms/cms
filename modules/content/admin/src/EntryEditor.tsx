@@ -7,7 +7,7 @@ import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore, t
 import {
   Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, NotFoundState, Notice, Page, QueryError,
   ScreenSidebar, Spinner, StatusDot, Tabs, statusLabel, Tooltip, Topbar, confirm, cn, entryActionAvailability,
-  fieldControlId, toast, useShortcut, useWideInspector,
+  copyText, fieldControlId, toast, useShortcut, useWideInspector,
 } from '@letterncms/ui'
 import { useCollection, type CollectionDef } from './useCollection'
 import { useEntrySession } from './useEntrySession'
@@ -460,7 +460,14 @@ function Editor({ collection, initial, can }: EditorProps) {
             {/* One control says where it stands and what's next: the button while there's something to publish, its state when there isn't. */}
             {actions.publish ? (
               upToDate ? (
-                <StatusDot status={status} label={statusLabel(status)} className="h-7 px-1.5 text-sm" />
+                // Where it stands is also the way to what publishing offers next: the date it went live, taking it off the site.
+                <Menu
+                  trigger={<Button variant="ghost" className="!gap-1 !px-1.5 !font-normal"><StatusDot status={status} label={statusLabel(status)} className="text-sm" /><Icon name="chevron-down" size={12} className="shrink-0 text-faint" /></Button>}
+                  items={[
+                    { label: t('Publication Date…'), icon: 'calendar', onSelect: () => setPublishing(true) },
+                    entry && actions.unpublish && { label: t('Unpublish'), icon: 'eye-off', onSelect: () => { void replace('entries/unpublish') } },
+                  ]}
+                />
               ) : (
                 <Button variant="publish" disabled={!working.title.trim()} loading={sending} onClick={() => { void publish() }}>
                   <span className="max-sm:hidden">{status === 'scheduled' ? t('Publish Now') : live ? t('Publish Changes') : t('Publish')}</span>
@@ -481,7 +488,8 @@ function Editor({ collection, initial, can }: EditorProps) {
                   label: t('View on Site'), icon: 'external',
                   onSelect: () => { window.open(entry.uri!, '_blank', 'noopener') },
                 } : null,
-                actions.publish && {
+                // With nothing left to publish these two are in the status's own menu, in the bar.
+                actions.publish && !upToDate && {
                   label: status === 'scheduled' ? t('Change Schedule') : live ? t('Publication Date…') : t('Schedule…'),
                   icon: 'calendar',
                   onSelect: () => setPublishing(true),
@@ -499,10 +507,12 @@ function Editor({ collection, initial, can }: EditorProps) {
                   label: t('Discard Unpublished Changes'), icon: 'undo',
                   onSelect: () => { void replace('entries/discard-draft') },
                 },
-                entry && actions.unpublish && {
+                entry && actions.unpublish && !(actions.publish && upToDate) && {
                   label: t('Unpublish'), icon: 'eye-off',
                   onSelect: () => { void replace('entries/unpublish') },
                 },
+                // What agents, the API and URLs know the entry by: copied whole, where Info could only show its start.
+                entry && { label: t('Copy ID'), icon: 'hash', onSelect: () => void copyText(entry.id, { copied: t('ID copied') }) },
                 entry && actions.delete && { separator: true, label: '' },
                 entry && actions.delete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: remove },
               ]}
@@ -580,7 +590,7 @@ function SaveFeedback({ error, conflict, dirty, onReload, onKeepMine, onRetry }:
     : ours ? t('Couldn’t save. {reason}', { reason: error.message })
     : t('Couldn’t save. Check your connection.')
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-14 z-30 flex justify-center px-4">
+    <div className="pointer-events-none absolute inset-x-0 top-14 z-sticky flex justify-center px-4 max-sm:top-[5.5rem]">
       <div role="alert" className="pointer-events-auto flex min-h-10 max-w-[560px] items-center gap-2.5 rounded-lg border border-border-float bg-float py-1.5 pl-3 pr-1.5 text-sm text-text shadow-pop">
         <Icon name="warning" size={16} className="shrink-0 text-danger" />
         <span className="min-w-0 flex-1">{message}</span>
@@ -627,15 +637,10 @@ function Properties({ collection, count, children }: PropertiesProps) {
   return (
     <div className="mt-6" data-cms-fields={open ? '' : undefined}>
       {open && <div className="space-y-px">{children}</div>}
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        className="-ml-1.5 mt-2 flex h-7 items-center gap-1.5 rounded-xs px-1.5 text-xs text-faint transition-colors hover:bg-hover hover:text-muted"
-      >
+      <Button variant="ghost" onClick={toggle} aria-expanded={open} className="-ml-1.5 mt-2 !gap-1.5 !rounded-xs !px-1.5 !text-xs !font-normal !text-faint hover:!text-muted">
         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={12} />
         {open ? t('Hide Properties') : plural(count, '{count} property', '{count} properties')}
-      </button>
+      </Button>
     </div>
   )
 }

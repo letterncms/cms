@@ -68,7 +68,6 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
       ...(manifest.site.locales.length > 1 ? [[t('Language'), entry?.locale ?? manifest.site.defaultLocale] as [string, ReactNode]] : []),
       ...(entry?.createdAt ? [[t('Created'), date(entry.createdAt)] as [string, ReactNode]] : []),
       ...(entry?.updatedAt ? [[t('Updated'), date(entry.updatedAt)] as [string, ReactNode]] : []),
-      ...(entry ? [[t('ID'), <span key="id" className="block select-all truncate font-mono text-xs text-faint" title={entry.id}>{entry.id}</span>] as [string, ReactNode]] : []),
     ] : []),
   ]
   const row = (field: FieldDef) => (
