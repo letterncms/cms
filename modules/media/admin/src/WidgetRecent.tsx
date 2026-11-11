@@ -43,9 +43,9 @@ export default function WidgetRecent() {
         {list.data?.items.map((item) => (
           <Link key={item.id} to="/media" title={item.name} className="group relative block aspect-square overflow-hidden rounded-sm border border-border bg-surface">
             {item.thumb ? (
-              <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="size-full object-cover transition-opacity duration-120 group-hover:opacity-85" />
+              <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="size-full object-cover transition-opacity duration-base group-hover:opacity-85" />
             ) : (
-              <span className="flex size-full flex-col items-center justify-center gap-1 px-1.5 text-faint transition-colors duration-120 group-hover:bg-hover">
+              <span className="flex size-full flex-col items-center justify-center gap-1 px-1.5 text-faint transition-colors duration-base group-hover:bg-hover">
                 <Icon name={kindIcon[item.kind] ?? 'file'} size={18} />
                 <span className="w-full truncate text-center text-2xs">{item.filename}</span>
               </span>

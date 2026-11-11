@@ -32,7 +32,7 @@ export function CustomizeSidebar({ open, onOpenChange }: { open: boolean; onOpen
       footer={(layout.personal || manage) && (
         <>
           {layout.personal && <Button variant="ghost" icon="undo" onClick={() => void resetToDefault()}>{t('Reset to Default')}</Button>}
-          {manage && <Button variant="ghost" onClick={() => void saveForEveryone().then(() => loadSiteDefault()).then((result) => setCustomized(!!result?.customized))}>{t('Save as Default')}</Button>}
+          {manage && <Button variant="ghost" onClick={() => void saveForEveryone().then(() => loadSiteDefault()).then((result) => setCustomized(!!result?.customized))}>{t('Save for Everyone')}</Button>}
           {manage && customized && <Button variant="ghost" onClick={() => void resetEveryonesDefault().then((done) => done && setCustomized(false))}>{t('Reset Everyone’s Default')}</Button>}
         </>
       )}

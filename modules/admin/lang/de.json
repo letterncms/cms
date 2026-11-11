@@ -264,7 +264,7 @@
   "Row {row}, Column {column}": "Zeile {row}, Spalte {column}",
   "Rows made with it keep their values, without these fields.": "Damit erstellte Zeilen behalten ihre Werte, ohne diese Felder.",
   "Save": "Speichern",
-  "Save as Default": "Als Standard speichern",
+  "Save for Everyone": "Für alle speichern",
   "Save Password": "Passwort speichern",
   "Saved as the default sidebar": "Als Standard-Seitenleiste gespeichert",
   "Scheduled": "Geplant",
