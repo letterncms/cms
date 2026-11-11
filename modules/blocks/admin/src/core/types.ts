@@ -41,7 +41,8 @@ export interface MotionStep {
 export interface MotionDef {
   id: string
   name?: string
-  trigger: { type: string; start?: string; end?: string; once?: boolean; node?: string }
+  /** scroll: `pin` holds the element for that much scrolling ("150vh"), `scrub` lets the steps trail the scroll by about that many seconds. */
+  trigger: { type: string; start?: string; end?: string; once?: boolean; node?: string; pin?: string; scrub?: number }
   on?: string[]
   steps: MotionStep[]
   repeat?: number
@@ -63,6 +64,12 @@ export interface BlockNode {
   bind?: Record<string, string>
   logic?: LogicMap
   motion?: MotionDef[]
+  /** A script of the design mounted on the element: { module: "tilt", props: { max: 8 }, when: "visible" }. */
+  behavior?: { module: string; props?: Record<string, unknown>; when?: 'load' | 'visible' | 'idle' }
+  /** Scripts and styles of the design the block brings to its page. */
+  code?: { scripts?: string[]; styles?: string[] }
+  /** The name the element is kept by across pages when navigation swaps them. */
+  persist?: string
 }
 
 export interface BlockTypeDef {

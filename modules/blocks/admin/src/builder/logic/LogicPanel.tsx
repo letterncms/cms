@@ -1,4 +1,4 @@
-import { t, type FieldDef } from '@letterncms/sdk'
+import { t, useAbility, type FieldDef } from '@letterncms/sdk'
 import { Icon, Menu, cn } from '@letterncms/ui'
 import { useEditorContext } from '../../core/context'
 import { useEditor } from '../../core/store'
@@ -97,6 +97,60 @@ const when = (on: unknown, ...fields: FieldDef[]): FieldDef[] => (on ? fields : 
 
 const ATTRS = ['aria-expanded', 'aria-pressed', 'aria-selected', 'aria-hidden', 'aria-current', 'hidden', 'disabled', 'inert', 'href', 'src', 'title', 'value', 'tabindex']
 
+/**
+ * The design's code on this block: the script mounted on it (`behavior`), when and with what, and the scripts
+ * and styles it brings to its page (`code`). They are the files Design System › Code lists.
+ */
+function CodeSection({ node }: { node: BlockNode }) {
+  const { store } = useEditorContext()
+  const files = useAbility<{ scripts: string[]; styles: string[] }>('design/code-files', {}, { staleTime: 30_000 })
+  const behavior = node.behavior
+  const code = node.code ?? {}
+  // What the block names stays choosable while the list loads, and when its file is gone.
+  const names = (kind: 'scripts' | 'styles', ...own: (string | undefined)[]) => [...new Set([...(files.data?.[kind] ?? []), ...own.filter((name): name is string => !!name)])]
+  const used = !!behavior || !!node.code
+  const setBehavior = (patch: Partial<NonNullable<BlockNode['behavior']>> | null) => store.updateNode(node.id, { behavior: patch && (patch.module ?? behavior?.module) ? { ...behavior, ...patch } as BlockNode['behavior'] : undefined }, `behavior:${node.id}`)
+  const setCode = (kind: 'scripts' | 'styles', list: string[]) => {
+    const next = { ...code, [kind]: list.length ? list : undefined }
+    store.updateNode(node.id, { code: next.scripts || next.styles ? next : undefined })
+  }
+  const props = behavior?.props ?? {}
+  return (
+    <Section title={t('Code')} open={used} empty={!used}>
+      <PanelFields
+        fields={[
+          { handle: 'module', type: 'select', size: 'sm', label: t('Behavior'), placeholder: t('None'), options: names('scripts', behavior?.module), status: behavior ? 'own' : undefined, reset: () => setBehavior(null) },
+          ...when(behavior, { handle: 'when', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Starts'), required: true, options: [{ value: 'load', label: t('On Load') }, { value: 'visible', label: t('In View') }, { value: 'idle', label: t('When Idle') }] }),
+        ]}
+        values={{ module: behavior?.module, when: behavior?.when ?? 'load' }}
+        onChange={(h, v) => (h === 'module' ? setBehavior(v ? { module: String(v) } : null) : setBehavior({ when: v === 'visible' || v === 'idle' ? v : undefined }))}
+      />
+      {behavior && (
+        <>
+          <SubHeading title={t('Properties')} action={<AddButton label={t('Add Property')} onClick={() => { let name = 'value'; let i = 2; while (name in props) name = `value${i++}`; setBehavior({ props: { ...props, [name]: '' } }) }} />} />
+          <PanelFields
+            bare
+            fields={[{ handle: 'props', type: 'json', component: 'blocks-pairs', className: 'items-start', label: t('Properties'), key: { strip: '[^a-zA-Z0-9_]' }, join: '=', item: { handle: 'value', type: 'text', size: 'sm', commit: 'blur', label: t('Value'), mono: true } }]}
+            values={{ props: Object.fromEntries(Object.entries(props).map(([k, v]) => [k, literal(v)])) }}
+            onChange={(_, next: Record<string, string | null>) => {
+              const out = Object.fromEntries(Object.entries(next).map(([k, text]) => [k, k in props && literal(props[k]) === text ? props[k] : parseLiteral(text ?? '')]))
+              setBehavior({ props: Object.keys(out).length ? out : undefined })
+            }}
+          />
+        </>
+      )}
+      <PanelFields
+        fields={[
+          { handle: 'scripts', type: 'select', multiple: true, size: 'sm', label: t('Scripts'), placeholder: t('None'), options: names('scripts', ...(code.scripts ?? [])) },
+          { handle: 'styles', type: 'select', multiple: true, size: 'sm', label: t('Styles'), placeholder: t('None'), options: names('styles', ...(code.styles ?? [])) },
+        ]}
+        values={{ scripts: code.scripts ?? [], styles: code.styles ?? [] }}
+        onChange={(h, v) => setCode(h as 'scripts' | 'styles', Array.isArray(v) ? v.map(String) : [])}
+      />
+    </Section>
+  )
+}
+
 /** Scripts: state, events and actions, conditional display, states for styling, behaviors. */
 export function LogicPanel({ node }: { node: BlockNode }) {
   const { store, types } = useEditorContext()
@@ -133,6 +187,8 @@ export function LogicPanel({ node }: { node: BlockNode }) {
           onChange={(_, v) => save({ component: String(v ?? '').replace(/[^a-zA-Z0-9_$]/g, '') || undefined })}
         />
       </Section>
+
+      <CodeSection node={node} />
 
       <Section title={t('Events')} empty={!logic.on?.length && !logic.init?.length} open={!!logic.on?.length || !!logic.init?.length} actions={<AddButton label={t('Add Event')} onClick={() => save({ on: [...(logic.on ?? []), { event: 'click', actions: [] }] })} />}>
         {logic.init && (
