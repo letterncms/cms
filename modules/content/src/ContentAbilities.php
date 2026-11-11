@@ -348,11 +348,11 @@ final class ContentAbilities
 
         $a->register('entries/get', [
             'label' => 'Get Entry',
-            'description' => 'One entry with its working copy (draft changes included) and data fields.',
+            'description' => 'One entry with its working copy (draft changes included) and data fields. On a translation, `sharedFields` names the fields that hold one value for every language (`localizable: false`): they follow the original entry (`originId`) and are changed there.',
             'permission' => $entryPermission('view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
-            'output' => Shapes::entry()->with(['translations' => Shape::map(Shape::STRING)]),
+            'output' => Shapes::entry()->with(['translations' => Shape::map(Shape::STRING), 'sharedFields?' => [Shape::STRING]]),
             'handler' => function (array $in) {
                 $entry = $this->cms->entries()->findOrFail($in['id']);
                 $translations = [];
@@ -371,7 +371,9 @@ final class ContentAbilities
                     }
                 }
 
-                return [...$entry->toArray(), 'translations' => $translations ?: (object) []];
+                $shared = $entry->originId === null ? [] : $entry->collection()->blueprint()->shared();
+
+                return [...$entry->toArray(), 'translations' => $translations ?: (object) [], ...($shared === [] ? [] : ['sharedFields' => $shared])];
             },
         ]);
 

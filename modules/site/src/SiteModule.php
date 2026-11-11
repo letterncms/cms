@@ -681,7 +681,8 @@ final class SiteModule extends Plugin
 
         $hooks->on('entry.saved', function (Entry $entry, $user, string $action) use ($builder, $auto) {
             // Structural changes (moves, slug changes) of live entries affect URLs immediately.
-            if ($entry->isLive() && in_array($action, ['create', 'save'], true) && $entry->draft === null) {
+            // …and a value shared across languages changes a live translation's page when its original changes.
+            if ($entry->isLive() && (in_array($action, ['create', 'save'], true) && $entry->draft === null || $action === 'shared')) {
                 $builder()->forgetEntry($entry);
                 $auto() && $builder()->queueForEntry($entry);
             }

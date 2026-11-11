@@ -20,6 +20,10 @@ final readonly class Field
         public array $config = [],
         public string $width = 'full',
         public string $section = 'main',
+        /**
+         * False: one value for every language. The original entry holds it and its translations follow
+         * (see EntryService): for a price, a date, a picture. Read on the fields of a collection, not on nested ones.
+         */
         public bool $localizable = true,
     ) {
         if (! preg_match('/^[a-z][a-z0-9_]{0,63}$/', $handle)) {
