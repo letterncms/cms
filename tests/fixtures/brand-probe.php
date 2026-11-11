@@ -6,7 +6,8 @@ declare(strict_types=1);
 
 [, $installation, $site] = $argv;
 
-require $installation.'/vendor/autoload.php';
+// The site's vendor folder, as its own CLI loads it: the test points it at the code under test.
+require $site.'/vendor/autoload.php';
 
 $app = Cms\Foundation\Bootstrap::create($installation, $site);
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
