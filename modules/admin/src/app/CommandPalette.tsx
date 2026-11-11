@@ -1,9 +1,10 @@
 import { Command, defaultFilter } from 'cmdk'
-import { can, events, loadManifest, navigate, prefetch, registry, run, t, useAbility, useManifest, type EntrySummary } from '@letterncms/sdk'
+import { can, events, loadManifest, navigate, prefetch, registry, run, t, useAbility, useLocation, useManifest, type EntrySummary } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Dialog as Base } from '@base-ui/react/dialog'
-import { Fields, Icon, Kbd, NoMatches, Spinner, StatusDot, toast } from '../ui'
-import { setThemePreference } from '../ui/theme'
+import { Fields, Icon, IconButton, Kbd, NoMatches, Spinner, StatusDot, toast } from '../ui'
+import { getThemePreference, setThemePreference, useTheme } from '../ui/theme'
+import { settingsIds } from '../ui/place'
 import { openSettings, SETTINGS_SHORTCUT } from './sidebarStore'
 
 function useDebounced<T>(value: T, ms = 180): T {
@@ -35,6 +36,8 @@ function matchScore(title: string, query: string, keywords = '', slug = ''): num
 
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const manifest = useManifest()
+  const { path } = useLocation()
+  const theme = useTheme()
   const [query, setQuery] = useState('')
   const [selection, setSelection] = useState({ query: '', value: '' })
   const debounced = useDebounced(query.trim())
@@ -54,10 +57,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   }
 
   const pages = useMemo(
-    () => [
-      ...manifest.nav.filter((n) => !n.home || n.id.startsWith('settings.')).map((n) => ({ id: n.id, label: n.home && n.id.startsWith('settings.') ? t('{name} Settings', { name: manifest.nav.find((h) => h.id === n.home)?.label ?? n.label }) : n.label, icon: n.icon, path: n.path })),
+    () => { const listed = settingsIds(manifest); return [
+      // A screen's Settings tab is a place of its own only where the settings sidebar lists it (a plugin's); otherwise it is a tab of a place already here.
+      ...manifest.nav.filter((n) => !n.home || (n.id.startsWith('settings.') && listed.has(n.id))).map((n) => ({ id: n.id, label: n.home && n.id.startsWith('settings.') ? t('{name} Settings', { name: manifest.nav.find((h) => h.id === n.home)?.label ?? n.label }) : n.label, icon: n.icon, path: n.path })),
       ...manifest.globals.map((g) => ({ id: `g-${g.handle}`, label: g.title, icon: g.icon, path: `/globals/${g.handle}` })),
-    ],
+    ] },
     [manifest],
   )
   const commands = registry.commands.all()
@@ -68,9 +72,6 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   type Item = { value: string; icon: string; label: ReactNode; trailing?: ReactNode; path?: string; score?: number; perform: () => void }
   type Group = { heading: string; items: Item[] }
   const localGroups: Group[] = [
-    { heading: t('Jump To'), items: pages.map((p) => ({
-      value: `go ${p.label}`, icon: p.icon, label: p.label, path: p.path, perform: () => navigate(p.path),
-    })) },
     { heading: t('New'), items: manifest.collections.filter((c) => c.can.create && !c.within).map((c) => ({
       value: `new ${c.singular} create`, icon: 'plus', label: c.newLabel, perform: () => navigate(`/content/${c.handle}/new`),
     })) },
@@ -89,7 +90,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         },
       })),
     ] },
-    { heading: t('Appearance'), items: (['light', 'dark', 'system'] as const).map((scheme) => ({
+    // Only what would change something: the other theme, and the system's unless it is followed already.
+    { heading: t('Appearance'), items: (['light', 'dark', 'system'] as const).filter((scheme) => scheme === 'system' ? getThemePreference() !== 'system' : scheme !== theme).map((scheme) => ({
       value: `theme ${scheme} mode appearance`, icon: scheme === 'light' ? 'sun' : scheme === 'dark' ? 'moon' : 'monitor',
       label: scheme === 'system' ? t('Match System Appearance') : scheme === 'dark' ? t('Switch to Dark Mode') : t('Switch to Light Mode'),
       perform: () => setThemePreference(scheme),
@@ -98,6 +100,10 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       value: 'run pending upgrades migrations database update', icon: 'database', label: t('Update the Database'),
       perform: () => void run('packages/migrate').then(() => loadManifest()).then(() => toast.success(t('Database is up to date')), toast.error),
     }] : [] },
+    // Last: the sidebar is on view already, and the screen on view is no place to jump to.
+    { heading: t('Jump To'), items: pages.filter((p) => p.path !== path).map((p) => ({
+      value: `go ${p.label}`, icon: p.icon, label: p.label, path: p.path, perform: () => navigate(p.path),
+    })) },
   ]
   // Own the ordering for both local and async results; cmdk handles keyboard navigation.
   const matchedGroups = localGroups.map((group) => ({
@@ -132,20 +138,22 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     <Base.Root open={open} onOpenChange={(o) => onOpenChange(o)}>
       <Base.Portal>
         <Base.Backdrop className="fixed inset-0 z-overlay bg-overlay transition-opacity duration-move data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-        <Base.Popup className="fixed left-1/2 top-[14vh] z-overlay w-[calc(100vw-32px)] max-w-[620px] -translate-x-1/2 overflow-hidden rounded-xl border border-border-modal bg-bg shadow-dialog outline-none transition-[opacity,transform] duration-move ease-out data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
+        <Base.Popup className="fixed left-1/2 top-[14vh] z-overlay w-[calc(100vw-32px)] max-w-[620px] -translate-x-1/2 overflow-hidden rounded-xl border border-border-modal bg-bg shadow-dialog outline-none max-sm:inset-0 max-sm:w-auto max-sm:max-w-none max-sm:translate-x-0 max-sm:rounded-none max-sm:border-0 transition-[opacity,transform] duration-move ease-out data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
           <Base.Title className="sr-only">{t('Command Palette')}</Base.Title>
           <Command label={t('Command Palette')} loop shouldFilter={false} value={selected} onValueChange={(value) => {
             setSelection({ query, value: value ?? '' })
             const item = groups.flatMap((group) => group.items).find((item) => item.value === value)
             if (item?.path) prefetch(item.path)
-          }} className="flex flex-col">
+          }} className="flex flex-col max-sm:h-full">
             <div className="flex h-12 items-center gap-2.5 border-b border-border px-4">
               <Icon name="search" size={16} className="text-faint" />
               <Fields bare layout="inline" className="flex-1" fields={[{ handle: 'query', type: 'text', label: t('Search'), component: 'command-query', placeholder: queryCommands.length > 0 ? t('Search or Ask {brand}') : t('Search'), autofocus: true }]} values={{ query }} onChange={(_, v) => setQuery(v ?? '')} />
               {isSearching && <Spinner size={14} className="text-faint" />}
-              <Kbd keys="esc" />
+              <span className="max-sm:hidden"><Kbd keys="esc" /></span>
+              {/* A phone has no Esc, and the palette has the whole screen there. */}
+              <IconButton icon="close" label={t('Close')} className="-mr-1.5 sm:hidden" onClick={() => onOpenChange(false)} />
             </div>
-            <Command.List className="max-h-[min(440px,60vh)] overflow-y-auto p-2 [&_[cmdk-group-heading]]:cms-label [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2">
+            <Command.List className="max-h-[min(440px,60vh)] overflow-y-auto p-2 [@media(pointer:coarse)]:[&_kbd]:hidden max-sm:max-h-none max-sm:min-h-0 max-sm:flex-1 [&_[cmdk-group-heading]]:cms-label [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2">
               {groups.length === 0 && !isSearching && <Command.Empty><NoMatches className="py-8" /></Command.Empty>}
               {groups.map((group) => (
                 <Command.Group key={group.heading} heading={group.heading}>

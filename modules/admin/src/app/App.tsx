@@ -240,7 +240,7 @@ export function App() {
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', {})
   const sidebarShown = !narrow && (own ? ownOpen : !hidden)
-  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={() => setPalette(true)} onNavigate={onNavigate} />
+  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={() => { setPalette(true); setExpanded(false) }} onNavigate={onNavigate} />
   const sidebarOut = narrow ? expanded : sidebarShown
   const toggleLabel = own
     ? sidebarOut ? t('Hide {name}', { name: own.title }) : t('Show {name}', { name: own.title })

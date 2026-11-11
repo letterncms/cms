@@ -64,7 +64,7 @@ type DataViewProps<T> = BaseDataViewProps<T> & ([T] extends [RecordTimestamps]
   : { dates: (item: T) => RecordTimestamps })
 
 /** Lists up to this long are read at a glance: no search, and no display menu unless it has something to add. */
-const FEW = 8
+export const FEW = 8
 
 const isDate = (iso: string | null | undefined) => !!iso && Number.isFinite(Date.parse(iso))
 
