@@ -325,12 +325,16 @@ const checks = {
     equal(early < 0.47, true, `a trailing animation lags behind the scroll (was at ${early})`)
     await tab.until(`Math.abs(${opacity('trailing')} - 0.5) < 0.01`)
 
-    // Pinned: holds at the top of the screen for the distance, while its steps play.
+    // Pinned: holds at the top of the screen for the distance, while its steps play, and says how far along it is.
+    await tab.evaluate('window.__progress = []; document.getElementById("pinned").addEventListener("cms:progress", (e) => window.__progress.push(e.detail.progress))')
     await tab.evaluate('window.scrollTo({ top: document.querySelector("[data-cms-pin]").getBoundingClientRect().top + scrollY + innerHeight, behavior: "instant" })')
     await sleep(150)
     near(await tab.evaluate('document.getElementById("pinned").getBoundingClientRect().top'), 0, 1, 'the pinned element stays at the top')
     near(Number(await tab.evaluate('getComputedStyle(document.getElementById("pinned")).opacity')), 0.5, 0.03, 'halfway through its steps, halfway through the distance')
     near(await tab.evaluate('document.querySelector("[data-cms-pin]").offsetHeight / innerHeight'), 3, 0.01, 'the wrapper is the element plus the distance')
+    near(Number(await tab.evaluate('document.getElementById("pinned").style.getPropertyValue("--cms-progress")')), 0.5, 0.02, 'its progress is on the element for styles')
+    near(await tab.evaluate('window.__progress.at(-1)'), 0.5, 0.02, 'and in an event for scripts')
+    equal(await tab.evaluate('document.getElementById("pinned").getAnimations().every((a) => a instanceof CSSAnimation)'), true, 'while CSS still moves it')
 
     // Lines: the words of a line take one turn.
     await tab.evaluate('document.getElementById("lines").scrollIntoView({ behavior: "instant", block: "center" })')
@@ -357,7 +361,7 @@ const checks = {
     // Less motion: nothing moves, nothing is pinned.
     const calm = await open('/motion', { media: { 'prefers-reduced-motion': 'reduce' } })
     await sleep(300)
-    equal(await calm.evaluate('[document.getAnimations().length, getComputedStyle(document.getElementById("pinned")).position, getComputedStyle(document.querySelector("[data-cms-pin]")).display]'), [0, 'static', 'contents'], 'reduced motion: the wrapper is no box')
+    equal(await calm.evaluate('[document.getAnimations().length, getComputedStyle(document.getElementById("pinned")).position, getComputedStyle(document.querySelector("[data-cms-pin]")).display, document.getElementById("pinned").style.getPropertyValue("--cms-progress")]'), [0, 'static', 'contents', ''], 'reduced motion: the wrapper is no box, and there is no progress to follow')
     await calm.close()
   },
 }

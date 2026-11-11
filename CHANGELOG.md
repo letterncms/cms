@@ -27,6 +27,7 @@
 - A block behaviour can wait for the whole page: `when: "loaded"` mounts it after the page's load event and its fonts, for a script that measures text or layout. Beside `load`, `visible` and `idle`.
 - A block can carry several behaviours: `behavior` takes a list, `[{module: "tilt"}, {module: "cue", props: {…}}]`, and each is mounted and undone by itself, in order. One behaviour is written as before.
 - The **Motion Toggle** block tells scripts: pausing sets `<html data-cms-motion="paused">` and dispatches `cms:motion` on `document` (`event.detail.paused`), and a block behaviour's `reducedMotion` is true while motion is paused, with the behaviour mounted again when that changes. A canvas or a script's own loop can now stop with everything else.
+- **Scroll progress for styles and scripts**: a pinned or scrubbed scroll animation, or any scroll animation with `trigger.progress: true`, sets `--cms-progress` (0 to 1) on its element and dispatches `cms:progress` on it (`event.detail.progress`). A number that counts with the scroll is a few lines in a behaviour, with no animation library.
 
 ### Changed
 

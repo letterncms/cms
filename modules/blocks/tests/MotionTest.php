@@ -176,6 +176,22 @@ final class MotionTest extends TestCase
         $this->assertSame(['scroll' => true], $page['features']);
     }
 
+    public function test_a_pinned_or_trailing_animation_tells_its_progress_and_any_other_can_ask_to(): void
+    {
+        $described = function (array $trigger): array {
+            preg_match('/data-cms-scroll="([^"]+)"/', $this->render([$this->animated('scroll', ['from' => ['y' => 10]], ['trigger' => $trigger])])['html'], $m);
+
+            return json_decode(html_entity_decode($m[1]), true)[0];
+        };
+
+        $this->assertArrayNotHasKey('p', $described([]));
+        $this->assertSame(1, $described(['pin' => true])['p']);
+        $this->assertSame(1, $described(['scrub' => 0.5])['p']);
+        $this->assertSame(1, $described(['progress' => true])['p']);
+        $this->assertStringContainsString('animation-timeline:view()', $this->render([$this->animated('scroll', ['from' => ['y' => 10]], ['trigger' => ['progress' => true]])])['css'], 'asking for progress leaves the animation to CSS');
+        $this->assertArrayNotHasKey('progress', Motion::sanitize([['trigger' => ['type' => 'appear', 'progress' => true], 'steps' => [['from' => ['y' => 1]]]]])[0]['trigger']);
+    }
+
     public function test_pin_holds_the_element_in_a_wrapper_it_is_scrolled_through(): void
     {
         $page = $this->render([$this->animated('scroll', ['from' => ['opacity' => 0]], ['trigger' => ['pin' => '150vh']])]);

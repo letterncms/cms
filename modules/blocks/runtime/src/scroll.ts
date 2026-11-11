@@ -8,6 +8,7 @@ interface Scrolled extends Animation {
   end?: string
   pin?: 1
   scrub?: number
+  p?: 1 // tell the element how far along it is: --cms-progress and a cms:progress event
 }
 
 interface Track {
@@ -17,6 +18,8 @@ interface Track {
   running: globalThis.Animation[]
   at: number // where the animations are, 0 to 1
   to: number // where the scroll says they should be
+  drive: boolean // this script moves the animations; otherwise the stylesheet does and it only reports
+  told: number // the progress last reported
 }
 
 const tracks: Track[] = []
@@ -57,8 +60,25 @@ function progress(track: Track): number {
 const allowed = (track: Track) => !reduced.matches && (!track.animation.media || matchMedia(track.animation.media).matches)
 
 function apply(track: Track) {
-  if (!track.running.length) track.running = create(track.el, track.animation)
-  for (const a of track.running) a.currentTime = track.at * Number(a.effect!.getComputedTiming().endTime)
+  if (track.drive) {
+    if (!track.running.length) track.running = create(track.el, track.animation)
+    for (const a of track.running) a.currentTime = track.at * Number(a.effect!.getComputedTiming().endTime)
+  }
+  if (track.animation.p) tell(track, track.at)
+}
+
+/**
+ * How far along, on the element: --cms-progress for styles (and counter() tricks), and an event for scripts:
+ *   el.addEventListener('cms:progress', (e) => (el.textContent = Math.round(e.detail.progress * 120)))
+ * With less motion asked for there is no progress to follow: the property goes and one last event says null.
+ */
+function tell(track: Track, progress: number | null) {
+  const value = progress === null ? -1 : Math.round(progress * 10000) / 10000
+  if (value === track.told) return
+  track.told = value
+  if (progress === null) track.el.style.removeProperty('--cms-progress')
+  else track.el.style.setProperty('--cms-progress', String(value))
+  track.el.dispatchEvent(new CustomEvent('cms:progress', { bubbles: true, detail: { progress: progress === null ? null : value, id: track.animation.id } }))
 }
 
 function tick(now: number) {
@@ -75,6 +95,7 @@ function tick(now: number) {
     if (!allowed(track)) {
       // As designed: no animation holds the element anywhere.
       track.running.splice(0).forEach((a) => a.cancel())
+      if (track.animation.p && track.told !== -1) tell(track, null)
       continue
     }
     track.to = Math.max(0, Math.min(1, progress(track)))
@@ -100,10 +121,11 @@ function setup(el: HTMLElement) {
     return
   }
   for (const animation of animations) {
-    // The browser already runs this one from the stylesheet.
-    if (css && !animation.scrub) continue
+    // The browser already runs this one from the stylesheet: nothing to do here unless it wants its progress told.
+    const drive = !css || !!animation.scrub
+    if (!drive && !animation.p) continue
     const watched = animation.pin ? el.closest<HTMLElement>('[data-cms-pin]') : animation.node ? document.querySelector<HTMLElement>(`[data-cms="${CSS.escape(animation.node)}"]`) : el
-    if (watched) tracks.push({ el, animation, watched, running: [], at: 0, to: 0 })
+    if (watched) tracks.push({ el, animation, watched, running: [], at: 0, to: 0, drive, told: -1 })
   }
 }
 
@@ -113,7 +135,7 @@ let listening = false
 export function start() {
   document.querySelectorAll<HTMLElement>('[data-cms-scroll]').forEach((el) => done.has(el) || (done.add(el), setup(el)))
   // Where each starts is where the page is now, not a run-up from zero.
-  for (const track of tracks) if (!track.running.length && allowed(track)) track.at = Math.max(0, Math.min(1, progress(track)))
+  for (const track of tracks) if (!track.running.length && track.told === -1 && allowed(track)) track.at = Math.max(0, Math.min(1, progress(track)))
   request()
   if (listening) return
   listening = true

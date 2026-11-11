@@ -13,8 +13,8 @@ const loaders: Record<string, () => Promise<{ start: () => void }>> = {
   fields: () => import('./fields'),
   behavior: () => import('./behavior'),
   navigate: () => import('./navigate'),
-  // Scroll animations are CSS where the browser can; the script is for where it can't, and for those that trail the scroll.
-  scroll: () => (CSS.supports('animation-timeline: view()') && !document.querySelector('[data-cms-scroll*=\'"scrub"\']') ? Promise.resolve({ start() {} }) : import('./scroll')),
+  // Scroll animations are CSS where the browser can; the script is for where it can't, for those that trail the scroll, and for those that tell how far along they are.
+  scroll: () => (CSS.supports('animation-timeline: view()') && !document.querySelector('[data-cms-scroll*=\'"scrub"\'], [data-cms-scroll*=\'"p":1\']') ? Promise.resolve({ start() {} }) : import('./scroll')),
 }
 
 const loaded = new Map<() => Promise<{ start: () => void }>, Promise<void>>()
