@@ -305,6 +305,29 @@ final class SiteModule extends Plugin
                 },
             ];
 
+            $sources['neighbors'] = [
+                'label' => 'Previous and Next Entry',
+                'description' => __('The entries before and after this one in its collection, for a detail page: newest last in a dated collection, the tree’s reading order, else the collection’s own order.'),
+                'fields' => [
+                    ['handle' => 'show', 'type' => 'select', 'label' => 'Show', 'options' => ['both' => __('Previous and Next'), 'previous' => __('Previous'), 'next' => __('Next')], 'default' => 'both'],
+                    ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Go Round at the Ends'],
+                ],
+                'item' => ['title' => __('Title'), 'url' => __('Link'), 'date' => __('Published'), 'excerpt' => __('A field (any field handle)')],
+                'resolve' => static function (array $props, Scope $scope) use ($entry) {
+                    $current = $entry($scope);
+                    $show = (string) ($props['show'] ?? 'both');
+                    $wrap = ! empty($props['wrap']);
+                    $items = $current ? [
+                        $show !== 'next' ? $current->sibling(-1, $wrap) : null,
+                        $show !== 'previous' ? $current->sibling(1, $wrap) : null,
+                    ] : [];
+                    $items = array_values(array_filter($items));
+
+                    // With two entries, going round gives the same one twice: once is enough.
+                    return count($items) === 2 && $items[0]->is($items[1]) ? [$items[0]] : $items;
+                },
+            ];
+
             $sources['headings'] = [
                 'label' => 'Headings on This Page',
                 'description' => __('For a table of contents: the page’s own headings, in order.'),
@@ -673,6 +696,11 @@ final class SiteModule extends Plugin
         $hooks = $this->cms()->hooks();
         $builder = fn () => $this->app->make(SiteBuilder::class);
         $auto = fn () => (bool) $this->cms()->setting('site', 'auto_build', true);
+
+        // Previous and next are read from a collection's order, kept while pages render: not across a change.
+        foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted', 'entry.structure-changed', 'entries.reordered'] as $event) {
+            $hooks->on($event, static fn () => AugmentedEntry::flush());
+        }
 
         $hooks->on('entry.published', function (Entry $entry) use ($builder, $auto) {
             $builder()->forgetEntry($entry);

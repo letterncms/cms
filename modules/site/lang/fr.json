@@ -543,5 +543,12 @@
   "Libraries are only fetched from :hosts.": "Les bibliothèques ne sont récupérées que depuis :hosts.",
   ":url did not answer with the file itself.": ":url n’a pas répondu avec le fichier lui-même.",
   "“:name” has the name of something a server runs.": "« :name » porte le nom de quelque chose qu’un serveur exécute.",
-  "“:selector” is not something the design can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em” or “nav a:hover”. A class or an id is for custom CSS.": "« :selector » n’est pas quelque chose que le design peut styler : utilisez une balise, ou jusqu’à trois séparées par une espace ou « > », avec un état à la fin, comme « h1 em » ou « nav a:hover ». Une classe ou un id relève du CSS personnalisé."
+  "“:selector” is not something the design can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em” or “nav a:hover”. A class or an id is for custom CSS.": "« :selector » n’est pas quelque chose que le design peut styler : utilisez une balise, ou jusqu’à trois séparées par une espace ou « > », avec un état à la fin, comme « h1 em » ou « nav a:hover ». Une classe ou un id relève du CSS personnalisé.",
+  "Previous and Next Entry": "Entrée précédente et suivante",
+  "The entries before and after this one in its collection, for a detail page: newest last in a dated collection, the tree’s reading order, else the collection’s own order.": "Les entrées avant et après celle-ci dans sa collection, pour une page de détail : la plus récente en dernier dans une collection datée, l’ordre de lecture de l’arborescence, sinon l’ordre de la collection.",
+  "Previous and Next": "Précédente et suivante",
+  "Previous": "Précédente",
+  "Next": "Suivante",
+  "Show": "Afficher",
+  "Go Round at the Ends": "Boucler aux extrémités"
 }
