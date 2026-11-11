@@ -36,6 +36,48 @@ final class CollaborationModule extends Plugin
             Comment::query()->where('entry_id', $entry->id)->delete();
         });
 
+        // A list of entries says who is editing which of them, beside its title: someone about to open one knows before they do.
+        $this->cms()->hooks()->addFilter('ability.result', function (mixed $result, Ability $ability, array $input, AbilityContext $context) {
+            if (! in_array($ability->name, ['entries/list', 'entries/tree'], true) || $context->user === null || ! is_array($result)) {
+                return $result;
+            }
+
+            $listed = $ability->name === 'entries/list';
+            $rows = $listed ? ($result['items'] ?? []) : $result;
+            // The ids of the rows and of the rows nested under them, nothing else an entry carries.
+            $ids = [];
+            $collect = static function (array $rows) use (&$collect, &$ids): void {
+                foreach ($rows as $row) {
+                    if (is_array($row) && is_string($row['id'] ?? null)) {
+                        $ids[] = $row['id'];
+                        $collect((array) ($row['children'] ?? []));
+                    }
+                }
+            };
+            $collect($rows);
+            $editing = $this->app->make(Presence::class)->editing($ids, $context->user);
+
+            if ($editing === []) {
+                return $result;
+            }
+
+            $mark = static function (array $rows) use (&$mark, $editing): array {
+                return array_map(static function ($row) use (&$mark, $editing) {
+                    if (is_array($row) && isset($row['id'], $editing[$row['id']])) {
+                        $people = $editing[$row['id']];
+                        $row['editingBy'] = count($people) === 1 ? __(':name is editing', ['name' => $people[0]['name']]) : __(':count people are editing', ['count' => count($people)]);
+                    }
+                    if (is_array($row) && isset($row['children']) && is_array($row['children'])) {
+                        $row['children'] = $mark($row['children']);
+                    }
+
+                    return $row;
+                }, $rows);
+            };
+
+            return $listed ? [...$result, 'items' => $mark($rows)] : $mark($rows);
+        });
+
         $this->cms()->admin()->widget('comments-inbox', ['label' => 'Comments', 'description' => 'Open threads that mention you or sit on your entries.', 'icon' => 'comment', 'column' => 'main', 'order' => 30, 'permission' => 'comments.view']);
         $this->adminModule();
     }
@@ -54,15 +96,20 @@ final class CollaborationModule extends Plugin
         };
         $id = ['type' => 'string'];
 
+        $others = [Shapes::person()->with(['editing' => Shape::BOOLEAN, 'holder' => Shape::BOOLEAN, 'since' => Shape::INTEGER])];
+        // Looking takes the right to see the entry; editing it and holding it, the right to change it.
+        $may = fn (string $action) => fn (?User $u, array $in) => $u !== null && ($t = $this->cms()->entries()->find((string) $in['entryId'])) !== null && $u->hasPermission("entries.{$t->collection}.{$action}");
+
         $a->register('collaboration/presence', [
             'label' => 'Presence Heartbeat',
-            'description' => 'Say you have an entry open (and whether you are editing); returns who else has it open and when it was last saved.',
-            'permission' => fn (?User $u, array $in) => $u !== null && ($t = $this->cms()->entries()->find((string) $in['entryId'])) !== null && $u->hasPermission("entries.{$t->collection}.view"),
+            'description' => 'Say you have an entry open (and whether you are editing, which counts only for someone who may edit it); returns who else has it open, whether you hold it (the first to edit it does, until they leave, stop editing for two minutes or someone takes it over), who among the others does, and when it was last saved.',
+            'permission' => $may('view'),
             'annotations' => ['readOnly' => true],
             'expose' => Ability::ADMIN_ONLY,
             'input' => ['type' => 'object', 'properties' => ['entryId' => $id, 'editing' => ['type' => 'boolean', 'default' => false], 'leave' => ['type' => 'boolean', 'default' => false]], 'required' => ['entryId']],
             'output' => Shape::of([
-                'others' => [Shapes::person()->with(['editing' => Shape::BOOLEAN, 'since' => Shape::INTEGER])],
+                'others' => $others,
+                'holding?' => Shape::BOOLEAN,
                 'updatedAt?' => Shape::STRING_OR_NULL,
                 'updatedBy?' => Shape::nullable(['id' => Shape::STRING, 'name' => Shape::STRING, 'initials' => Shape::STRING]),
             ]),
@@ -79,10 +126,30 @@ final class CollaborationModule extends Plugin
                 $last = $this->app->make(\Cms\Content\Revisions\Revisions::class)->list($target->id, 1)[0] ?? null;
 
                 return [
-                    'others' => $presence->beat($target->id, $ctx->user, $in['editing']),
+                    'others' => $presence->beat($target->id, $ctx->user, $in['editing'] && $ctx->can("entries.{$target->collection}.edit")),
+                    'holding' => $presence->holds($target->id, $ctx->user),
                     'updatedAt' => $target->updatedAt?->toIso8601String(),
                     'updatedBy' => $last['user'] ?? null,
                 ];
+            },
+        ]);
+
+        $a->register('collaboration/take-over', [
+            'label' => 'Take Over Entry',
+            'description' => 'Hold an entry yourself from now on, to edit it. Whoever held it is told with their next heartbeat and can no longer save over you.',
+            'permission' => $may('edit'),
+            'expose' => Ability::ADMIN_ONLY,
+            'input' => ['type' => 'object', 'properties' => ['entryId' => $id], 'required' => ['entryId']],
+            'output' => Shape::of(['holding' => Shape::BOOLEAN, 'others' => $others]),
+            'dryRun' => function (array $in) use ($entry): array {
+                $target = $entry($in['entryId']);
+
+                return [['action' => 'take-over', 'type' => 'entry', 'id' => $target->id, 'title' => $target->title, 'from' => $this->app->make(Presence::class)->holder($target->id)['name'] ?? null]];
+            },
+            'handler' => function (array $in, AbilityContext $ctx) use ($entry) {
+                $target = $entry($in['entryId']);
+
+                return ['others' => $this->app->make(Presence::class)->take($target->id, $ctx->user), 'holding' => true];
             },
         ]);
 
