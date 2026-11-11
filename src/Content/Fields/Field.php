@@ -45,6 +45,26 @@ final readonly class Field
         );
     }
 
+    /**
+     * When the field is on view: `if: {type: video}` or `if: {type: [video, audio], featured: true}`. Every field
+     * named must hold the value, or one of the values listed. A required field with a condition is only required
+     * while it holds.
+     *
+     * @return array<string, list<mixed>> Sibling handle => the values that count; empty: always.
+     */
+    public function condition(string $key = 'if'): array
+    {
+        $rule = $this->config[$key] ?? null;
+
+        return is_array($rule) ? array_map(static fn (mixed $values) => is_array($values) ? array_values($values) : [$values], $rule) : [];
+    }
+
+    /** `required_if: {…}`: always on view, required while the condition holds. */
+    public function requiredWhen(): array
+    {
+        return $this->condition('required_if');
+    }
+
     public function get(string $key, mixed $default = null): mixed
     {
         return $this->config[$key] ?? $default;

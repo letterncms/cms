@@ -86,6 +86,7 @@ final class Shapes
             'type' => Shape::enum('object'),
             'properties?' => Shape::map(Shape::open('The JSON Schema of one field\'s value, with the field\'s label as `title`: what the field\'s type and config make of it.')),
             'required?' => [Shape::STRING],
+            'allOf?' => [Shape::of(['if' => Shape::open('The fields a condition names, each with the value (`const`) or values (`enum`) that make it hold.'), 'then' => Shape::open('What holds with it: the field is required, with its schema as a required field.')])],
         ]);
     }
 

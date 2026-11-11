@@ -34,6 +34,7 @@ final class AgentGuide
         - Anything that changes the site takes dryRun: true: nothing is written, and the answer says how far it was checked. checked "full": refused exactly where the real run would be, and `changes` lists what would change or be removed (entries, settings, and everything destructive). checked "input": only the input and your permission were checked, `changes` is null, and the real run may still refuse. Use it before a change you are unsure of.
         - Entries are drafts until published (entries/publish, or status "published" on create).
         - A relation field (entries, users, media) takes ids that exist: an entries field only entries of its `collections`. What names an entry (in a relation at any depth, a link field or a block) is read with references/list, or `references` on entries/list: read it before deleting an entry.
+        - A field of a collection can depend on the fields beside it: `if: {kind: video}` (or a list of values) shows it only then, and a required field with `if` is required only then; `required_if: {…}` keeps it on view. The collection's schema says it as allOf/if/then.
         - Block styles only use design tokens (token:space.8, token:color.primary…), never raw colors or pixel values.
         - A blocks field also accepts Block Markdown (Markdown plus ::: directives) as a string.
         - Every image needs alt text. Add files with media/import (url or base64) and use the returned id.
