@@ -407,5 +407,6 @@
   "You do not have access to the admin.": "Du hast keinen Zugriff auf den Admin.",
   "Your Account": "Dein Konto",
   "Your session expired. Reload the page.": "Deine Sitzung ist abgelaufen. Lade die Seite neu.",
-  "Your sign-in expired. Please start again.": "Deine Anmeldung ist abgelaufen. Bitte beginne noch einmal."
+  "Your sign-in expired. Please start again.": "Deine Anmeldung ist abgelaufen. Bitte beginne noch einmal.",
+  "The saved secrets can’t be read with this site’s key, so nothing was saved. Restore storage/secrets.json or the APP_KEY it was written with.": "Die gespeicherten Geheimnisse lassen sich mit dem Schlüssel dieser Website nicht lesen, deshalb wurde nichts gespeichert. Stelle storage/secrets.json oder den APP_KEY wieder her, mit dem sie geschrieben wurden."
 }

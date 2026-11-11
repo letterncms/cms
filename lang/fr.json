@@ -408,5 +408,6 @@
   "Another field uses this handle.": "Un autre champ utilise cet identifiant.",
   "Sub-fields must be a list.": "Les sous-champs doivent être une liste.",
   "The field type “:type” is not available.": "Le type de champ « :type » n’est pas disponible.",
-  "Use lowercase letters, digits and underscores, starting with a letter.": "Utilisez des minuscules, des chiffres et des tirets bas, en commençant par une lettre."
+  "Use lowercase letters, digits and underscores, starting with a letter.": "Utilisez des minuscules, des chiffres et des tirets bas, en commençant par une lettre.",
+  "The saved secrets can’t be read with this site’s key, so nothing was saved. Restore storage/secrets.json or the APP_KEY it was written with.": "Les secrets enregistrés ne peuvent pas être lus avec la clé de ce site : rien n’a été enregistré. Restaurez storage/secrets.json ou l’APP_KEY avec laquelle ils ont été écrits."
 }
