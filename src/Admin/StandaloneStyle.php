@@ -24,6 +24,18 @@ final class StandaloneStyle
     }
 
     /**
+     * One of the admin's icons as inline SVG (`eye`, `eye-off`), from the same build: '' where the admin
+     * has not been built, so a control falls back to its words.
+     */
+    public static function icon(string $name): string
+    {
+        static $icons = null;
+        $icons ??= json_decode((string) @file_get_contents(dirname(__DIR__, 2).'/modules/admin/dist/standalone-icons.json'), true) ?: [];
+
+        return (string) ($icons[$name] ?? '');
+    }
+
+    /**
      * The typeface's public address. Copied into this site's public folder the way the brand's
      * mark is, so it is there before anything is installed; where that folder cannot be written,
      * the page falls back to the system's typeface.

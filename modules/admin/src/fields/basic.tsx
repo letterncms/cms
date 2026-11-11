@@ -1,7 +1,7 @@
 import { fieldControlId } from '../ui/fieldIdentity'
 import { t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Checkbox, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
+import { Checkbox, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
 import type { SelectAction } from '../ui/Select'
 import { slugify } from '../ui/slugify'
 import { formatDateTimeInZone, parseDateTimeInZone } from '../ui/dateTime'
@@ -32,10 +32,13 @@ export function TextField({ field, value, onChange, error, disabled }: FieldProp
   const [draft, setDraft] = useState(value ?? '')
   useEffect(() => setDraft(value ?? ''), [value])
   const commit = () => draft !== (value ?? '') && onChange(draft)
+  // A secret can be looked at while it is typed: a password asked for once is otherwise a guess. Hidden again whenever the field is drawn anew.
+  const [shown, setShown] = useState(false)
   return (
     <Input
       {...props}
-      type={secret ? 'password' : 'text'}
+      type={secret && !shown ? 'password' : 'text'}
+      suffix={secret && !disabled ? <IconButton icon={shown ? 'eye-off' : 'eye'} label={t('Show Password')} size={props.size === 'lg' ? 'sm' : 'xs'} aria-pressed={shown} onClick={() => setShown(!shown)} className="-mr-1" /> : undefined}
       autoComplete={props.autoComplete ?? (secret ? 'new-password' : undefined)}
       spellCheck={secret || field.mono ? false : undefined}
       list={field.list as string | undefined}

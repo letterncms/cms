@@ -117,6 +117,7 @@ final class InstallController
             'databaseName' => __('Database Name'),
             'username' => __('Username'),
             'password' => __('Password'),
+            'showPassword' => __('Show Password'),
             'prefix' => __('Table Prefix'),
             'prefixPlaceholder' => __('Optional, e.g. cms_'),
             'account' => __('Your Account'),

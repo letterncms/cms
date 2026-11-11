@@ -252,6 +252,7 @@
   "Send 1–25 calls as {\"calls\": [{\"ability\": \"…\", \"input\": {}}]}.": "Envoyez 1 à 25 appels sous la forme {\"calls\": [{\"ability\": \"…\", \"input\": {}}]}.",
   "Set Up Your Site": "Configurer votre site",
   "Several terms are called “:term”. Give the id of the one you mean.": "Plusieurs termes s’appellent « :term ». Donnez l’id de celui que vous voulez.",
+  "Show Password": "Afficher le mot de passe",
   "Sidebar": "Barre latérale",
   "Site": "Site",
   "Site Name": "Nom du site",

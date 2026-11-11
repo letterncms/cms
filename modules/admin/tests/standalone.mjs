@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { standaloneCss } from '../scripts/standalone.mjs'
+import { standaloneCss, standaloneIcons } from '../scripts/standalone.mjs'
 
 const styles = fileURLToPath(new URL('../src/styles', import.meta.url))
 const css = standaloneCss(styles)
@@ -31,4 +31,11 @@ test('the values are the admin\u2019s: tokens.css and theme.css, as they are', (
   assert.ok(css.includes('--font-sans:"Instrument Sans"'))
   assert.ok(!css.includes('data-theme'))
   assert.ok(css.includes('url("%font%")'))
+})
+
+test('the pages get the admin\u2019s own icons, as markup', () => {
+  const icons = standaloneIcons(fileURLToPath(new URL('../src/lib', import.meta.url)))
+  assert.deepEqual(Object.keys(icons), ['eye', 'eye-off'])
+  for (const svg of Object.values(icons)) assert.match(svg, /^<svg [^>]*fill="currentColor"[^>]*><path /)
+  assert.throws(() => standaloneIcons(fileURLToPath(new URL('../src/lib', import.meta.url)), ['no-such-icon']))
 })
