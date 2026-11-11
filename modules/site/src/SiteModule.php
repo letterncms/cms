@@ -455,7 +455,7 @@ final class SiteModule extends Plugin
                     'dark' => Shape::any('The value in dark mode, like `value`; null when the token has none.'),
                     'type' => Shape::STRING_OR_NULL, 'description' => Shape::STRING_OR_NULL,
                 ]],
-                'fonts' => [['family?' => Shape::STRING, 'src?' => Shape::STRING, 'weight?' => Shape::either(Shape::STRING, Shape::INTEGER), 'style?' => Shape::STRING, 'preload?' => Shape::BOOLEAN, 'display?' => Shape::STRING]],
+                'fonts' => [['family?' => Shape::STRING, 'src?' => Shape::STRING, 'weight?' => Shape::either(Shape::STRING, Shape::INTEGER), 'style?' => Shape::STRING, 'preload?' => Shape::BOOLEAN, 'display?' => Shape::STRING, 'fallback?' => Shape::either(Shape::STRING, [Shape::STRING]), 'sizeAdjust?' => Shape::STRING, 'ascentOverride?' => Shape::STRING, 'descentOverride?' => Shape::STRING, 'lineGapOverride?' => Shape::STRING]],
                 'fontFiles' => [Shape::STRING],
                 'styles' => self::described(Shape::map(self::declarationsShape()), 'Declarations by element. `elements` lists the ones the Design System offers; any tag works, alone or up to three deep with a space (inside) or " > " (directly inside), with one state or part at the end: "h1 em", "li > a", "nav a:hover", "li::marker". No classes, ids or attributes: those are custom.css.'),
                 'prose' => Shape::raw([
@@ -579,15 +579,17 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/fonts-import', [
             'label' => 'Add a Google Font',
-            'description' => 'Download a Google Fonts family (latin, variable weights when available) into content/design/fonts so it is self-hosted, and add it to the design system. Then use it in a font token.',
+            'description' => 'Download a Google Fonts family (latin) into content/design/fonts so it is self-hosted, and add it to the design system: the weights its variable axis really spans as one file, or the static weights it has; upright, italic or both. Then use it in a font token. To keep text from moving when the font arrives, give its faces a fallback with design/update `fonts`: {"fallback": "Arial", "sizeAdjust": "102%", "ascentOverride": "98%", "descentOverride": "26%", "lineGapOverride": "0%"} draws that local font at the web font’s size first; the font tokens that name the family get it by themselves.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
-                'italic' => ['type' => 'boolean', 'default' => false],
+                'style' => ['type' => 'string', 'enum' => ['normal', 'italic', 'both'], 'description' => 'normal when left out. Italic is left out when the family has none.'],
+                'italic' => ['type' => 'boolean', 'description' => 'The same as style: "both", when style is not given.'],
+                'weights' => ['type' => 'array', 'items' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 1000], 'maxItems' => 9, 'description' => 'Static weights to take when the family has no weight axis; 400, 500, 600 and 700 of what it has when left out.'],
             ], 'required' => ['family']],
             'output' => Shape::of(['fonts' => [['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic'), 'preload' => Shape::BOOLEAN]]]),
             'handler' => function (array $in) use ($design) {
-                $fonts = $this->app->make(Fonts::class)->import((string) $in['family'], (bool) ($in['italic'] ?? false));
+                $fonts = $this->app->make(Fonts::class)->import((string) $in['family'], (string) ($in['style'] ?? (! empty($in['italic']) ? 'both' : 'normal')), array_map('intval', (array) ($in['weights'] ?? [])));
                 $design()->saved();
 
                 return ['fonts' => $fonts];
