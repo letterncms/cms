@@ -23,6 +23,7 @@
 - `collections/usage` counts the rows of one kind that a collection's entries have in a matrix field.
 - **Used By** in the lists of templates and components: a template names the collections it frames and how many entries chose it themselves, a component how many entries hold it, and one nobody uses says "Nothing". `entries/list` carries `usedBy` for them.
 - Audit Log: a **When** filter (Today, Last 7 Days, Last 30 Days, Last 90 Days), and **Export CSV**, which downloads what is narrowed as a CSV file (more than 10,000 changes is refused, never cut short, and no cell can start a spreadsheet formula); the export is itself recorded. `audit/list` takes `period`, `from` and `to`, and `audit/export` is new. A view's action can `then: 'download'` the file its ability answers with (`{name, type, content}`).
+- Roles: a group of permissions is ticked or cleared at once with its **All**, a collection's row with its name, and a column of the collections table with **All Collections**. **Duplicate Role** in a role's menu starts a new role with the same permissions; **Delete Role** moved into that menu.
 
 ### Changed
 
@@ -39,6 +40,7 @@
 - **Rename View** and **Delete View** work for any of your saved views, not only the one the list is in: with several, they ask which, starting on the current one, and Delete View is that dialog's red button. `prompt` in `@letterncms/ui` takes `danger`.
 - The tab of the pages a plugin brings, beside **Site** under Pages, is named for what it lists (the label the plugin registers its pages under), not after the plugin. Those pages have a **Version** column, Standard or Customized, and a status that says how that version stands: the standard one is Published. `pages/builtin` answers with `displayStatus: "published"` for it, where it said "standard". In a list of fields, a group has a folder for its icon instead of the blocks field's four squares. The lists of templates and components keep the title to its words, with the status beside it, and show **Updated**.
 - The Audit Log says what happened, in the past tense: **Published Entry**, **Deleted Collection**, **Sent Test Email**. A deleted entry is named by the title it had, and turning automatic security updates on or off says which. A plugin names its own changes through the `audit.past` filter (ability name => words). `audit/list` items carry `publishedAt` and `updatedAt` as null, so Display offers no Updated column: `createdAt` is when it happened.
+- The permission group that holds **Access the Admin** is called **Admin**, not "General" beside the General settings page; a permission registered without a group joins it.
 
 ### Fixed
 

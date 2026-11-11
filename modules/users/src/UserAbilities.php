@@ -335,7 +335,7 @@ final class UserAbilities
                 $grouped = $this->cms->permissions()->grouped();
                 // In the order people look for them: the admin, content and each collection, what the site
                 // has, then who and how. Groups no one listed here go before Users, by name.
-                $order = ['General', 'Content', 'Media', 'Navigation', 'Forms', 'Comments', 'Site', 'Design', 'Assistant', 'Analytics'];
+                $order = ['Admin', 'Content', 'Media', 'Navigation', 'Forms', 'Comments', 'Site', 'Design', 'Assistant', 'Analytics'];
                 $last = ['Users', 'System'];
                 $rank = static function (string $group, array $items) use ($order, $last): array {
                     $collection = str_starts_with((string) ($items[0]['name'] ?? ''), 'entries.');

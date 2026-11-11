@@ -9,6 +9,7 @@
   ":package requires :packages. Enable those first.": ":package benötigt :packages. Aktiviere diese zuerst.",
   ":package ships with :brand; disable it instead.": ":package gehört zu :brand; deaktiviere es stattdessen.",
   "\":handle\" is part of every account; choose another field handle.": "„:handle“ gehört zu jedem Konto; wähle einen anderen Handle für das Feld.",
+  "Admin": "Admin",
   "Expired||order": "Abgelaufen",
   "Phone||number": "Telefon",
   "Schema Files": "Schema-Dateien",

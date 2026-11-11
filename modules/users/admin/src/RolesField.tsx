@@ -1,6 +1,6 @@
 import { plural, t, useAbility, type FieldProps } from '@letterncms/sdk'
 import { useState } from 'react'
-import { Badge, Button, Checkbox, Dialog, Fields, List, Row, SectionHeading, Spinner, confirm, cn } from '@letterncms/ui'
+import { Badge, Button, Checkbox, Dialog, Fields, IconButton, List, Menu, Row, SectionHeading, Spinner, confirm, cn } from '@letterncms/ui'
 
 type Role = { label: string; description: string; permissions: string[] }
 type Roles = Record<string, Role>
@@ -44,6 +44,30 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
     const next = role.permissions.flatMap((p) => (p === perm ? [] : p.includes('*') && pattern(p).test(perm) ? all.filter((n) => n !== perm && pattern(p).test(n)) : [p]))
     set({ ...role, permissions: [...new Set(next)] })
   }
+  // A whole group (or a column or row of the collections) at once: on when every one of them is, off otherwise.
+  const many = (names: string[], on: boolean) => {
+    if (on) return set({ ...role, permissions: [...role.permissions, ...names.filter((n) => !grants(role.permissions, n))] })
+    const next = role.permissions.flatMap((p) => names.includes(p) ? [] : p.includes('*') && names.some((n) => pattern(p).test(n)) ? all.filter((n) => !names.includes(n) && pattern(p).test(n)) : [p])
+    set({ ...role, permissions: [...new Set(next)] })
+  }
+  const state = (names: string[]) => {
+    const on = names.filter((n) => grants(role.permissions, n)).length
+    return { checked: on === names.length && on > 0, indeterminate: on > 0 && on < names.length }
+  }
+  const remove = async (k: string) => {
+    if (!(await confirm({ title: t('Delete the “{name}” role?', { name: roles[k].label }), description: t('People with this role lose its permissions when you save.'), confirm: t('Delete Role'), danger: true }))) return
+    const { [k]: _removed, ...rest } = roles
+    onChange(rest)
+    setActive(Object.keys(rest)[0])
+  }
+  // A copy starts with the same permissions, under a name of its own and a handle nobody has.
+  const duplicate = (k: string) => {
+    const label = t('{label} copy', { label: roles[k].label })
+    let handle = `${k}-copy`
+    for (let n = 2; roles[handle]; n++) handle = `${k}-copy-${n}`
+    onChange({ ...roles, [handle]: { ...roles[k], label, permissions: [...roles[k].permissions] } })
+    setActive(handle)
+  }
 
   const groups = Object.entries(known.data.permissions)
   const collections = groups.filter(([, perms]) => collectionOf(perms))
@@ -52,7 +76,7 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
   // A permission to give only to people you trust says so with a badge, not a sentence.
   const section = ([group, perms]: [string, Permission[]]) => (
     <section key={group} className="mb-8">
-      <SectionHeading as="h3" title={group} />
+      <SectionHeading as="h3" title={group} actions={perms.length > 1 && <Checkbox {...state(perms.map((p) => p.name))} onChange={(on) => many(perms.map((p) => p.name), on)} label={<>{t('All')}<span className="sr-only"> {group}</span></>} />} />
       <div className="grid gap-2">
         {perms.map((p) => (
           <Checkbox key={p.name} checked={grants(role.permissions, p.name)} onChange={(on) => toggle(p.name, on)} label={
@@ -73,7 +97,12 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
       <div>
         <List>
           {Object.entries(roles).map(([k, r]) => (
-            <Row key={k} selected={k === key} onClick={() => setActive(k)}>
+            <Row key={k} selected={k === key} onClick={() => setActive(k)} actions={
+              <Menu align="end" trigger={<IconButton size="xs" icon="more" label={t('Actions for {name}', { name: r.label })} />} items={[
+                { label: t('Duplicate Role'), icon: 'copy', onSelect: () => duplicate(k) },
+                k !== 'admin' && { label: t('Delete Role'), icon: 'trash', danger: true, onSelect: () => void remove(k) },
+              ]} />
+            }>
               <span className={cn('min-w-0 flex-1 truncate', k === key && 'font-medium text-ink')}>{r.label}</span>
               {(people[k] ?? 0) > 0 && <span className="shrink-0 text-xs tabular-nums text-faint">{plural(people[k], '{count} person', '{count} people')}</span>}
             </Row>
@@ -94,9 +123,19 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
                   {ACTIONS.map((action) => <span key={action} role="columnheader" className="truncate text-center text-xs font-medium text-muted">{collections[0][1].find((p) => p.name.endsWith(`.${action}`))?.label ?? action}</span>)}
                 </div>
                 <div role="rowgroup">
+                  {/* Every collection at once, a column at a time. */}
+                  <div role="row" className="grid min-h-8 grid-cols-[minmax(0,1fr)_repeat(5,2.75rem)] items-center gap-x-1 border-b border-border sm:grid-cols-[minmax(0,1fr)_repeat(5,3.75rem)]">
+                    <span role="rowheader" className="truncate text-sm text-muted">{t('All Collections')}</span>
+                    {ACTIONS.map((action) => {
+                      const names = collections.flatMap(([, perms]) => perms.filter((p) => p.name.endsWith(`.${action}`)).map((p) => p.name))
+                      const label = collections[0][1].find((p) => p.name.endsWith(`.${action}`))?.label ?? action
+                      return <span key={action} role="cell" className="grid place-items-center">{names.length > 0 && <Checkbox {...state(names)} onChange={(on) => many(names, on)} label={<span className="sr-only">{`${label}: ${t('All Collections')}`}</span>} />}</span>
+                    })}
+                  </div>
                   {collections.map(([group, perms]) => (
                     <div key={group} role="row" className="grid min-h-8 grid-cols-[minmax(0,1fr)_repeat(5,2.75rem)] items-center gap-x-1 sm:grid-cols-[minmax(0,1fr)_repeat(5,3.75rem)]">
-                      <span role="rowheader" className="truncate text-sm">{group}</span>
+                      {/* The collection's name ticks or clears its whole row. */}
+                      <span role="rowheader" className="min-w-0 truncate text-sm"><Checkbox {...state(perms.map((p) => p.name))} onChange={(on) => many(perms.map((p) => p.name), on)} label={group} /></span>
                       {ACTIONS.map((action) => {
                         const perm = perms.find((p) => p.name.endsWith(`.${action}`))
                         return (
@@ -111,21 +150,6 @@ export function RolesField({ value, onChange, disabled }: FieldProps<Roles | nul
               </div>
             ))}
           </>
-        )}
-        {key !== 'admin' && (
-          <Button
-            variant="destructive"
-            icon="trash"
-            onClick={async () => {
-              if (await confirm({ title: t('Delete the “{name}” role?', { name: role.label }), description: t('People with this role lose its permissions when you save.'), confirm: t('Delete Role'), danger: true })) {
-                const { [key]: _removed, ...rest } = roles
-                onChange(rest)
-                setActive(Object.keys(rest)[0])
-              }
-            }}
-          >
-            {t('Delete Role')}
-          </Button>
         )}
       </div>
 
