@@ -65,7 +65,7 @@ final class OutputSiteTest extends TestCase
         $this->assertSame(['x' => 1], $this->ability('blocks/from-markdown', ['markdown' => ":::plugin/unknown {\"props\":{\"x\":1},\"label\":\"Kept\"}\n:::\n"])[0]['props']);
     }
 
-    public function test_patterns_and_templates_answer_as_described(): void
+    public function test_components_and_templates_answer_as_described(): void
     {
         $this->assertSame([], $this->ability('components/list'));
         $this->assertSame([], $this->ability('templates/list'));

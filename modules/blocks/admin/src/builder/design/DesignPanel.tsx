@@ -30,7 +30,7 @@ export function DesignPanel({ node }: { node: BlockNode }) {
   const container = !!type?.children || node.type === 'repeat'
   const inParent = !unwrapped && !!parentDisplay && /flex|grid/.test(parentDisplay)
 
-  if (node.type === 'pattern') {
+  if (node.type === 'component') {
     return <p className="m-0 p-4 text-xs text-muted">{t('Edit the component to change its shared design.')}</p>
   }
 

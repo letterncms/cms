@@ -269,7 +269,7 @@ function RowContent({ row }: { row: Row }) {
       return <Divider />
     case 'accordion':
       return <AccordionBlock node={node} />
-    case 'pattern':
+    case 'component':
       return <ComponentBlock node={node} />
     default:
       return <BlockCard node={node} type={type} />
@@ -415,7 +415,7 @@ function SlashMenu() {
   const slash = useSlash()
   const [rect, setRect] = useState<DOMRect | null>(null)
   // Components load with the editor, so they're there the moment someone types "/".
-  useAbility('components/list', {}, { staleTime: 60_000, enabled: allowed.length === 0 || allowed.includes('pattern') })
+  useAbility('components/list', {}, { staleTime: 60_000, enabled: allowed.length === 0 || allowed.includes('component') })
 
   useEffect(() => {
     if (!slash) return setRect(null)
@@ -462,7 +462,7 @@ function SlashMenu() {
         types={[...types.values()]}
         query={slash.query}
         chooseFirst={slash.enter}
-        patterns={allowed.length === 0 || allowed.includes('pattern')}
+        components={allowed.length === 0 || allowed.includes('component')}
         onNoMatch={() => {
           const el = document.querySelector<HTMLElement>(`[data-row="${slash.id}"] [contenteditable]`)
           openSlash(null)

@@ -77,9 +77,9 @@ final class BehaviorTest extends TestCase
         $this->cms()->entryService()->create('components', ['title' => 'Counter', 'slug' => 'counter', 'status' => 'published', 'data' => ['synced' => true, 'props' => [['handle' => 'to', 'type' => 'text', 'label' => 'To']], 'blocks' => [
             ['type' => 'paragraph', 'props' => ['text' => '0'], 'behavior' => ['module' => 'counter', 'props' => ['to' => '{props.to}']]],
         ]]]);
-        $this->app->make(\Cms\Modules\Blocks\Patterns::class)->flush();
+        $this->app->make(\Cms\Modules\Blocks\Components::class)->flush();
 
-        $html = $this->page('Numbers', [['type' => 'pattern', 'props' => ['ref' => 'counter', 'values' => ['to' => '120']]]]);
+        $html = $this->page('Numbers', [['type' => 'component', 'props' => ['ref' => 'counter', 'values' => ['to' => '120']]]]);
 
         $this->assertStringContainsString('data-cms-props="{&quot;to&quot;:&quot;120&quot;}"', $html);
     }

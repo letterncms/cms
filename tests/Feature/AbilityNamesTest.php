@@ -17,7 +17,7 @@ final class AbilityNamesTest extends TestCase
 
     /**
      * `save` creates or replaces a definition by its handle, and only these things are definitions: what a
-     * collection, a fieldset, a global set, a component (pattern) or the user profile is made of, and a
+     * collection, a fieldset, a global set, a component or the user profile is made of, and a
      * script or stylesheet beside the design, whose handle is its path.
      */
     private const array SAVED = ['collections', 'fieldsets', 'components', 'globals', 'user-fields', 'design-code'];

@@ -12,14 +12,14 @@ use Cms\Cms;
  * Components and sections are entries of the `components` collection
  * (content/collections/components/*.md), so they have drafts, publishing,
  * history and comments like any entry. Plugins can add read-only ones through
- * the `blocks.pattern-sources` filter (folders of <handle>.json).
+ * the `blocks.component-sources` filter (folders of <handle>.json).
  *
- * A synced pattern is a **component**: inserted as a reference, it updates
+ * A synced one is a **component**: inserted as a reference, it updates
  * everywhere, and its `props` (fields) let each instance set its own values —
- * blocks inside bind to them as `props.<handle>`. An unsynced pattern is a
+ * blocks inside bind to them as `props.<handle>`. An unsynced one is a
  * section that is copied into the document.
  */
-final class Patterns
+final class Components
 {
     public const string COLLECTION = 'components';
 
@@ -39,7 +39,7 @@ final class Patterns
 
         $out = [];
 
-        foreach ((array) $this->hooks->filter('blocks.pattern-sources', []) as $source) {
+        foreach ((array) $this->hooks->filter('blocks.component-sources', []) as $source) {
             foreach (glob(rtrim((string) $source['path'], '/').'/*.json') ?: [] as $file) {
                 $data = json_decode((string) file_get_contents($file), true);
 
@@ -64,16 +64,16 @@ final class Patterns
         return $this->cache[$key] = $out;
     }
 
-    /** A pattern; with $working, its unpublished changes. Rendering one makes the page depend on it. */
+    /** A component or section; with $working, its unpublished changes. Rendering one makes the page depend on it. */
     public function find(string $handle, bool $working = false): ?array
     {
-        $pattern = $this->all($working)[$handle] ?? null;
+        $component = $this->all($working)[$handle] ?? null;
 
-        if ($pattern && $pattern['id']) {
-            $this->hooks->dispatch('render.depend', 'entry:'.$pattern['id']);
+        if ($component && $component['id']) {
+            $this->hooks->dispatch('render.depend', 'entry:'.$component['id']);
         }
 
-        return $pattern;
+        return $component;
     }
 
     /**
@@ -82,9 +82,9 @@ final class Patterns
      * On the canvas ($editor) a link without a value is "#", so linked elements look
      * as they will; empty text and images show the renderer's placeholders.
      */
-    public function values(array $pattern, array $values, Scope $scope, array $bind = [], bool $editor = false): array
+    public function values(array $component, array $values, Scope $scope, array $bind = [], bool $editor = false): array
     {
-        $fields = (array) ($pattern['props'] ?? []);
+        $fields = (array) ($component['props'] ?? []);
 
         if ($fields === []) {
             return [];

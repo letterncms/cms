@@ -16,7 +16,7 @@ final class BlocksModule extends Plugin
 {
     public function register(): void
     {
-        foreach ([BlockRegistry::class, StyleCompiler::class, BlockRenderer::class, Patterns::class, Templates::class, DataSources::class, Document::class, MarkdownCodec::class] as $service) {
+        foreach ([BlockRegistry::class, StyleCompiler::class, BlockRenderer::class, Components::class, Templates::class, DataSources::class, Document::class, MarkdownCodec::class] as $service) {
             $this->app->singleton($service);
         }
 
@@ -76,7 +76,7 @@ final class BlocksModule extends Plugin
                     ['handle' => 'collections', 'type' => 'select', 'label' => 'Offered For', 'multiple' => true, 'dynamic' => 'collections', 'section' => 'sidebar', 'instructions' => 'Leave empty to offer it everywhere.'],
                 ],
             ]);
-            $collections[Patterns::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Patterns::COLLECTION, [
+            $collections[Components::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Components::COLLECTION, [
                 'title' => 'Components', 'singular' => 'Component', 'icon' => 'symbol', 'driver' => 'files', 'structure' => 'list',
                 'section' => 'design', 'nav_order' => 30, 'system' => true, 'body' => 'blocks', 'sort' => 'title',
                 'description' => 'Reusable designs. A synced one (a header, a card) changes everywhere it is used; a section is copied when you insert it.',
@@ -97,13 +97,13 @@ final class BlocksModule extends Plugin
         $hooks = $this->cms()->hooks();
         $hooks->addFilter('fields.options.button-variants', static fn (array $options) => [...['primary' => 'Primary', 'secondary' => 'Secondary', 'ghost' => 'Ghost', 'link' => 'Text link'], ...$options], 5);
         $hooks->addFilter('fields.options.sources', fn (array $options) => [...$options, ...array_column($this->app->make(DataSources::class)->catalog(), 'label', 'name')]);
-        $hooks->addFilter('fields.options.patterns', fn (array $options) => [...$options, ...array_map(static fn ($p) => $p['title'], array_filter($this->app->make(Patterns::class)->all(), static fn ($p) => $p['synced']))]);
+        $hooks->addFilter('fields.options.components', fn (array $options) => [...$options, ...array_map(static fn ($p) => $p['title'], array_filter($this->app->make(Components::class)->all(), static fn ($p) => $p['synced']))]);
 
         foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted'] as $event) {
             $this->cms()->hooks()->on($event, function ($entry) {
-                if (in_array($entry->collection ?? null, [Templates::COLLECTION, Patterns::COLLECTION], true)) {
+                if (in_array($entry->collection ?? null, [Templates::COLLECTION, Components::COLLECTION], true)) {
                     $this->app->make(Templates::class)->flush();
-                    $this->app->make(Patterns::class)->flush();
+                    $this->app->make(Components::class)->flush();
                 }
             });
         }
@@ -218,7 +218,7 @@ final class BlocksModule extends Plugin
 
             $existing = match ($ability->name) {
                 'entries/update' => ($entry = $this->cms()->entries()->find((string) ($input['id'] ?? ''))) ? $this->htmlBlocks($entry->working()) : [],
-                'components/save' => $this->htmlBlocks($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
+                'components/save' => $this->htmlBlocks($this->app->make(Components::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
                 default => [],
             };
 
@@ -254,7 +254,7 @@ final class BlocksModule extends Plugin
 
             $existing = match ($ability->name) {
                 'entries/update' => ($entry = $this->cms()->entries()->find((string) ($input['id'] ?? ''))) ? $this->blockCode($entry->working()) : [],
-                'components/save' => $this->blockCode($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
+                'components/save' => $this->blockCode($this->app->make(Components::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
                 default => [],
             };
 
@@ -360,7 +360,7 @@ final class BlocksModule extends Plugin
     private function abilities(): void
     {
         $a = $this->cms()->abilities();
-        $patterns = fn () => $this->app->make(Patterns::class);
+        $components = fn () => $this->app->make(Components::class);
         $templates = fn () => $this->app->make(Templates::class);
         $document = fn () => $this->app->make(Document::class);
         $handle = ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,63}$'];
@@ -432,18 +432,18 @@ final class BlocksModule extends Plugin
         // ── Components and templates (read helpers; edit them with the entries abilities) ──
         $a->register('components/list', [
             'label' => 'List Components and Sections',
-            'description' => 'Entries of the components collection (plus plugin patterns). Synced ones are components: instances update everywhere and take property values. Others are sections copied on insert. Create and change them with entries/create and entries/update in the "components" collection.',
+            'description' => 'Entries of the components collection (plus those plugins ship). Synced ones are components: instances update everywhere and take property values. Others are sections copied on insert. Create and change them with entries/create and entries/update in the "components" collection.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['working' => ['type' => 'boolean', 'default' => false]]],
-            'output' => Shape::of([self::patternShape()]),
-            'handler' => fn (array $in) => array_values(array_map(static fn (array $pattern) => [...$pattern, 'blocks' => Document::jsonable($pattern['blocks'])], $patterns()->all((bool) ($in['working'] ?? false)))),
+            'output' => Shape::of([self::componentShape()]),
+            'handler' => fn (array $in) => array_values(array_map(static fn (array $component) => [...$component, 'blocks' => Document::jsonable($component['blocks'])], $components()->all((bool) ($in['working'] ?? false)))),
         ]);
 
         $a->register('components/save', [
             'label' => 'Save as Component or Section',
             'description' => 'Create or replace an entry of the components collection by handle (slug). synced: true makes it a component. Saved as a draft of an existing one unless publish is true.',
-            'permission' => fn (?\Cms\Users\User $user) => (bool) $user?->hasPermission('entries.'.Patterns::COLLECTION.'.create'),
+            'permission' => fn (?\Cms\Users\User $user) => (bool) $user?->hasPermission('entries.'.Components::COLLECTION.'.create'),
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => $handle,
                 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
@@ -454,17 +454,17 @@ final class BlocksModule extends Plugin
                 'blocks' => ['type' => 'array'],
                 'publish' => ['type' => 'boolean', 'default' => true],
             ], 'required' => ['handle', 'title', 'blocks']],
-            'output' => self::patternShape()->with(['id' => Shape::STRING]),
-            'handler' => function (array $in, \Cms\Abilities\AbilityContext $ctx) use ($patterns) {
+            'output' => self::componentShape()->with(['id' => Shape::STRING]),
+            'handler' => function (array $in, \Cms\Abilities\AbilityContext $ctx) use ($components) {
                 $data = array_filter(['blocks' => $in['blocks'], 'synced' => (bool) ($in['synced'] ?? false), 'category' => $in['category'] ?? null, 'description' => $in['description'] ?? null, 'props' => $in['props'] ?? null], static fn ($v) => $v !== null);
-                $existing = $patterns()->all(true)[$in['handle']]['id'] ?? null;
+                $existing = $components()->all(true)[$in['handle']]['id'] ?? null;
                 $content = $this->cms()->entryService();
                 $entry = $existing
                     ? $content->update($existing, ['title' => $in['title'], 'data' => $data], $ctx->user, (bool) ($in['publish'] ?? true))
-                    : $content->create(Patterns::COLLECTION, ['title' => $in['title'], 'slug' => $in['handle'], 'data' => $data, 'status' => ($in['publish'] ?? true) ? 'published' : 'draft'], $ctx->user);
-                $patterns()->flush();
+                    : $content->create(Components::COLLECTION, ['title' => $in['title'], 'slug' => $in['handle'], 'data' => $data, 'status' => ($in['publish'] ?? true) ? 'published' : 'draft'], $ctx->user);
+                $components()->flush();
 
-                return ['id' => $entry->id, ...($patterns()->find($in['handle'], true) ?? [])];
+                return ['id' => $entry->id, ...($components()->find($in['handle'], true) ?? [])];
             },
         ]);
 
@@ -481,7 +481,7 @@ final class BlocksModule extends Plugin
 
     /**
      * A node of a block tree as Document::normalize() leaves it. `$written` is a tree as someone wrote it (a block
-     * type's template, a plugin's pattern file): the same, but ids are given when it is inserted.
+     * type's template, a plugin's component file): the same, but ids are given when it is inserted.
      */
     private static function nodeShape(bool $written = false): Shape
     {
@@ -552,8 +552,8 @@ final class BlocksModule extends Plugin
         ]);
     }
 
-    /** Patterns::shape(): a component or a section. */
-    private static function patternShape(): Shape
+    /** Components::shape(): a component or a section. */
+    private static function componentShape(): Shape
     {
         return Shape::of([
             'handle' => Shape::STRING, 'id' => Shape::STRING_OR_NULL, 'title' => Shape::STRING, 'description' => Shape::STRING, 'category' => Shape::STRING,
@@ -574,7 +574,7 @@ final class BlocksModule extends Plugin
                 'bind connects props to data: {"text": "entry.title"}, {"url": "item.url"}, {"image": "entry.cover"}, {"visible": "entry.excerpt"}, {"state:active": "item.active"}, {"attr:aria-label": "item.label"}, {"style:backgroundImage": "item.image"}. Filters: |date:M j, Y |excerpt:120 |upper |default:Text |count |not.',
                 'Scope: site.*, entry.* (title, url, date, any field, parent, prev, next, children), globals.<set>.<field>, page.uri, item/index/first/last inside a Repeat, props.* inside a component, pagination.* after a paginated Repeat.',
                 'Repeat renders its children once per item of a data source (see blocks/types sources): entries {collection, sort, limit, hasTag, parent, paginate}, menu {menu}, children, headings, breadcrumbs, neighbors {show: both|previous|next, wrap} (the entries before and after this one, for a detail template; each item says its side: item.side is "previous" or "next", and item.previous and item.following are yes or no, so one Repeat labels both: bind {"visible": "item.following"} on the arrow that points on, {"state:next": "item.following"} for a style, or "item.side|is:next"), languages, list {path: "item.children"}. Nest Repeats for sub-menus.',
-                'Components: entries of the components collection with synced: true and props (fields). Instances: {"type":"pattern","props":{"ref":"card","values":{"title":"Fast"}}}; inside the component bind to props.title. Bind instance values to data with bind {"values.title": "item.title"}.',
+                'Components: entries of the components collection with synced: true and props (fields). Instances: {"type":"component","props":{"ref":"card","values":{"title":"Fast"}}}; inside the component bind to props.title. Bind instance values to data with bind {"values.title": "item.title"}.',
                 'logic compiles to Alpine.js (CSP build): data (state), on (events → actions: set, toggle, add, if, wait, play, scroll, copy, go, theme, focus, dispatch, fetch, lock, run), show + transition, states, text, attrs, model, target/merge (load links and forms into blocks), behaviors (scroll: is-scrolled/is-hidden on scroll, spy: scrollspy for in-page links, group: hover group, marquee, carousel: step through the first child with the buttons after it).',
                 'motion compiles to CSS (load, scroll, loop) or Web Animations (appear, hover, press, event): [{trigger: {type: appear|scroll|hover|press|load|loop|event, start, end, once, node}, on: [desktop|tablet|mobile], steps: [{target: self|children|words|lines|chars|#<node id>, mask, from, to, duration, delay, ease, stagger, at}], repeat, yoyo}]. A scroll trigger takes pin: "150vh" (the element holds at the top of the screen for that much scrolling while its steps play; true is 100vh) and scrub: 0.6 (the steps trail the scroll by about that many seconds, which needs the script). A scroll animation with trigger.progress: true (or with scrub) sets --cms-progress (0 to 1) on its element and dispatches cms:progress on it (event.detail.progress; null once less motion is asked for), so a number can count with the scroll in a few lines of a behaviour and no library. chars splits letters inside their words (the block says its text in aria-label; text with a link in it, or in a script that joins its letters, animates by word instead); lines are real lines with appear, hover, press and event, and masked words with load, scroll and loop. ease is a name (expo.out, back.out), cubic-bezier(), linear(), steps() or a curve of the design: token:ease.<name>. start and end read "<top|center|bottom> <top|center|bottom|N%>". load caps its delay at 0.2s and its stagger at 0.3s so it cannot hold back the page. repeat -1 needs a motion-toggle block on the page. Properties: opacity, x, y, xPercent, yPercent, scale, rotate, rotateX/Y, skewX/Y, perspective, blur, clipPath, colors, borderRadius. Use event triggers with a logic play action for menus and modals.',
                 'code brings files beside the design to the page a block is on: {"code": {"scripts": ["hero"], "styles": ["hero"]}} loads content/design/scripts/hero.js (an ES module) and content/design/styles/hero.css. Read cms://site/code for the files and for what loads on every page, with a template or with a component.',
@@ -606,7 +606,7 @@ final class BlocksModule extends Plugin
                 ]],
                 'animated hero heading' => ['type' => 'heading', 'props' => ['text' => 'Design that moves', 'level' => '1'], 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'words', 'from' => ['opacity' => 0, 'y' => 40], 'duration' => 0.9, 'ease' => 'power3.out', 'stagger' => 0.06]]]]],
                 'parallax image' => ['type' => 'image', 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'bottom top'], 'steps' => [['from' => ['yPercent' => -10], 'to' => ['yPercent' => 10], 'ease' => 'none']]]]],
-                'template' => ['title' => 'Post', 'collections' => ['posts'], 'blocks' => [['type' => 'pattern', 'props' => ['ref' => 'header']], ['type' => 'box', 'props' => ['tag' => 'main'], 'children' => [['type' => 'heading', 'props' => ['level' => '1'], 'bind' => ['text' => 'entry.title']], ['type' => 'outlet']]], ['type' => 'pattern', 'props' => ['ref' => 'footer']]]],
+                'template' => ['title' => 'Post', 'collections' => ['posts'], 'blocks' => [['type' => 'component', 'props' => ['ref' => 'header']], ['type' => 'box', 'props' => ['tag' => 'main'], 'children' => [['type' => 'heading', 'props' => ['level' => '1'], 'bind' => ['text' => 'entry.title']], ['type' => 'outlet']]], ['type' => 'component', 'props' => ['ref' => 'footer']]]],
             ],
             'markdown' => "## Why Cms\n\nFast pages by default.\n\n::: buttons\n:::: button {\"props\":{\"label\":\"Start\",\"url\":\"/start\"}}\n::::\n:::",
         ]);

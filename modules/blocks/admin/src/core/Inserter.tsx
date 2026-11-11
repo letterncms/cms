@@ -5,7 +5,7 @@ import { useCatalog } from './context'
 import { menuEnter, settleEnter } from './slashKeys'
 import type { BlockNode, BlockTypeDef } from './types'
 
-export interface PatternDef {
+export interface ComponentDef {
   handle: string
   title: string
   description: string
@@ -14,16 +14,16 @@ export interface PatternDef {
   blocks: BlockNode[]
 }
 
-export type InsertChoice = { kind: 'block'; type: BlockTypeDef } | { kind: 'pattern'; pattern: PatternDef }
+export type InsertChoice = { kind: 'block'; type: BlockTypeDef } | { kind: 'component'; component: ComponentDef }
 
 /** A category no catalog names yet: its handle in title case. */
 const titled = (handle: string) => handle.replace(/[-_]+/g, ' ').replace(/(^|\s)\S/g, (c) => c.toUpperCase())
 
-export type InsertItem = { kind: 'block'; type: BlockTypeDef; group: string } | { kind: 'pattern'; pattern: PatternDef; group: string }
+export type InsertItem = { kind: 'block'; type: BlockTypeDef; group: string } | { kind: 'component'; component: ComponentDef; group: string }
 
 /** Blocks, then components and sections, that match `query` and fit where they would go. */
-export function useInsertItems(types: BlockTypeDef[], query: string, allowed?: (t: BlockTypeDef) => boolean, withPatterns = true): { items: InsertItem[]; loading: boolean } {
-  const patterns = useAbility<PatternDef[]>('components/list', {}, { staleTime: 60_000 })
+export function useInsertItems(types: BlockTypeDef[], query: string, allowed?: (t: BlockTypeDef) => boolean, withComponents = true): { items: InsertItem[]; loading: boolean } {
+  const components = useAbility<ComponentDef[]>('components/list', {}, { staleTime: 60_000 })
   const { catalog } = useCatalog()
   const items = useMemo(() => {
     const categories = catalog?.categories ?? []
@@ -41,19 +41,19 @@ export function useInsertItems(types: BlockTypeDef[], query: string, allowed?: (
     const found = (q ? [...blocks].sort((a, b) => named(a) - named(b)) : blocks)
       .map((type) => ({ kind: 'block' as const, type, group: q ? t('Blocks') : label(type.category) }))
     const permits = (name: string) => { const type = types.find((item) => item.name === name); return !!type && (allowed ? allowed(type) : !type.parent) }
-    const pats = (withPatterns ? (patterns.data ?? []) : [])
-      .filter((pattern) => pattern.synced ? permits('pattern') : pattern.blocks.length > 0 && pattern.blocks.every((node) => permits(node.type)))
+    const reusable = (withComponents ? (components.data ?? []) : [])
+      .filter((component) => component.synced ? permits('component') : component.blocks.length > 0 && component.blocks.every((node) => permits(node.type)))
       .filter((p) => !q || match(p.title) || match(p.category) || match(p.description))
       .sort((a, b) => Number(b.synced) - Number(a.synced))
-      .map((pattern) => ({ kind: 'pattern' as const, pattern, group: pattern.synced ? t('Components') : t('Sections') }))
-    return [...found, ...pats]
-  }, [types, query, patterns.data, allowed, withPatterns, catalog])
-  return { items, loading: withPatterns && patterns.isLoading }
+      .map((component) => ({ kind: 'component' as const, component, group: component.synced ? t('Components') : t('Sections') }))
+    return [...found, ...reusable]
+  }, [types, query, components.data, allowed, withComponents, catalog])
+  return { items, loading: withComponents && components.isLoading }
 }
 
-/** Searchable block + pattern picker used by the slash menu, the + buttons and the workspace toolbar. */
-export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, showSearch = true, className, style, compact, chooseFirst, onNoMatch, patterns: withPatterns = true, keyboardDocument }: { types: BlockTypeDef[]; query: string; onQuery?: (q: string) => void; onChoose: (c: InsertChoice) => void; onClose?: () => void; allowed?: (t: BlockTypeDef) => boolean; showSearch?: boolean; className?: string; style?: React.CSSProperties; compact?: boolean; chooseFirst?: boolean; onNoMatch?: () => void; patterns?: boolean; keyboardDocument?: Document }) {
-  const { items, loading } = useInsertItems(types, query, allowed, withPatterns)
+/** Searchable block + component picker used by the slash menu, the + buttons and the workspace toolbar. */
+export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, showSearch = true, className, style, compact, chooseFirst, onNoMatch, components: withComponents = true, keyboardDocument }: { types: BlockTypeDef[]; query: string; onQuery?: (q: string) => void; onChoose: (c: InsertChoice) => void; onClose?: () => void; allowed?: (t: BlockTypeDef) => boolean; showSearch?: boolean; className?: string; style?: React.CSSProperties; compact?: boolean; chooseFirst?: boolean; onNoMatch?: () => void; components?: boolean; keyboardDocument?: Document }) {
+  const { items, loading } = useInsertItems(types, query, allowed, withComponents)
   const [active, setActive] = useState(0)
   const list = useRef<HTMLDivElement>(null)
 
@@ -121,11 +121,11 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
         {items.map((item, i) => {
           const heading = item.group !== lastGroup ? item.group : null
           lastGroup = item.group
-          const title = item.kind === 'block' ? item.type.title : item.pattern.title
-          const description = item.kind === 'block' ? item.type.description : item.pattern.description || (item.pattern.synced ? t('Component') : t('Section'))
-          const icon = item.kind === 'block' ? item.type.icon : item.pattern.synced ? 'symbol' : 'pattern'
+          const title = item.kind === 'block' ? item.type.title : item.component.title
+          const description = item.kind === 'block' ? item.type.description : item.component.description || (item.component.synced ? t('Component') : t('Section'))
+          const icon = item.kind === 'block' ? item.type.icon : item.component.synced ? 'symbol' : 'section-copy'
           return (
-            <div key={item.kind === 'block' ? item.type.name : `p-${item.pattern.handle}`}>
+            <div key={item.kind === 'block' ? item.type.name : `p-${item.component.handle}`}>
               {heading && <div className="cms-label px-2 pb-1 pt-2">{heading}</div>}
               <Button
                 variant="ghost"

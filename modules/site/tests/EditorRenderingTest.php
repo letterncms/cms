@@ -69,7 +69,7 @@ final class EditorRenderingTest extends TestCase
             ['id' => 'collision', 'type' => 'paragraph', 'props' => ['text' => 'Component text']],
         ]]]);
         $entry = $this->cms()->entryService()->create('pages', ['title' => 'Example', 'data' => ['content' => [
-            ['id' => 'collision', 'type' => 'pattern', 'props' => ['ref' => 'card']],
+            ['id' => 'collision', 'type' => 'component', 'props' => ['ref' => 'card']],
             ['id' => 'repeat-source', 'type' => 'repeat', 'props' => ['source' => 'list', 'path' => 'entry.missing'], 'children' => [
                 ['id' => 'child-source', 'type' => 'paragraph', 'props' => ['text' => 'Repeated item']],
             ]],

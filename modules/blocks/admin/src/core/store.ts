@@ -131,7 +131,7 @@ export class EditorStore {
     this.set({ selected: null, head: null })
   }
 
-  /** Put `replacement` where the selected blocks were (e.g. a synced pattern reference). */
+  /** Put `replacement` where the selected blocks were (e.g. a synced component reference). */
   replaceSelection(replacement: BlockNode[]) {
     const ids = this.selection()
     const loc = ids[0] ? tree.locate(this.state.nodes, ids[0]) : null

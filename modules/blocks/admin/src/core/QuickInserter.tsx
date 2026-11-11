@@ -57,9 +57,9 @@ export function QuickInserter({ types, allowed, onChoose, onClose }: { types: Bl
     </div>
     <div role="listbox" aria-label={query.trim() ? t('Results') : t('Suggestions')} className="grid grid-cols-3 gap-1 p-2">
       {items.map((item, index) => {
-        const title = item.kind === 'block' ? item.type.title : item.pattern.title
-        const icon = item.kind === 'block' ? item.type.icon : item.pattern.synced ? 'symbol' : 'pattern'
-        return <Button key={item.kind === 'block' ? item.type.name : `p-${item.pattern.handle}`} variant="ghost" role="option" aria-selected={index === active} data-index={index}
+        const title = item.kind === 'block' ? item.type.title : item.component.title
+        const icon = item.kind === 'block' ? item.type.icon : item.component.synced ? 'symbol' : 'section-copy'
+        return <Button key={item.kind === 'block' ? item.type.name : `p-${item.component.handle}`} variant="ghost" role="option" aria-selected={index === active} data-index={index}
           onMouseMove={() => index !== active && setActive(index)} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item)}
           data-active={index === active || undefined} className="!h-[68px] min-w-0 shrink !flex-col !gap-1.5 !px-1">
           <Icon name={icon} size={20} />

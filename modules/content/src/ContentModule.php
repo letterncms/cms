@@ -218,7 +218,7 @@ final class ContentModule extends Plugin
         ]);
         $skills->register('build-page', [
             'label' => 'Build a Page',
-            'description' => 'Design a complete page from a brief, with the design tokens, blocks and patterns.',
+            'description' => 'Design a complete page from a brief, with the design tokens, blocks and components.',
             'icon' => 'blocks',
             'arguments' => [
                 ['name' => 'brief', 'description' => 'What the page is for and what it should say', 'required' => true],

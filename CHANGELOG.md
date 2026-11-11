@@ -29,6 +29,10 @@
 - Green, amber and red badges read at 4.5:1 or more wherever they stand, in light and dark: their words are a step toward ink, as the blue one's already were.
 - A tree's expander, a table's drag handle, a widget's rows, the icon picker's icons and a person picker's names show the focus line when you reach them with the keyboard.
 
+### Changed
+
+- **Breaking.** One word for components: the block that places one is `component`, not `pattern`, in block trees (`{"type":"component","props":{"ref":"card"}}`) and in Block Markdown (`::: component {"props":{"ref":"header"}}`). `cms migrate` renames it in what a site has stored: entries, their working copies, revisions and profile values in the database, the Markdown files under `content/collections` (front matter and directives), the working copies in `storage/drafts`, and the YAML and JSON files under `content/` (global sets, collections, fieldsets, your own block files), together with the `allowed` list of a blocks field, `dynamic: patterns` of a select, and `children` and `parent` in your own blocks' `block.json`. A content file whose front matter can't be read is left as it is. The old name is no longer read. In code, `Cms\Modules\Blocks\Patterns` is `Cms\Modules\Blocks\Components`, the filter `blocks.pattern-sources` is `blocks.component-sources`, `fields.options.patterns` is `fields.options.components` (`dynamic: components`), and the admin's icon `pattern` is `section-copy`.
+
 ## 0.23.0 (2026-11-11)
 
 ### Added

@@ -13,7 +13,7 @@ use Cms\Content\Entries\EntryGate;
 use Cms\Content\Entries\UriBuilder;
 use Illuminate\Support\Str;
 use Cms\Modules\Blocks\Document;
-use Cms\Modules\Blocks\Patterns;
+use Cms\Modules\Blocks\Components;
 use Cms\Modules\Blocks\Templates;
 use Cms\Modules\Account\Site\Screens;
 use Cms\Modules\Site\Rendering\Renderer;
@@ -171,7 +171,7 @@ final class SiteController
                 Templates::COLLECTION => ($sample = $this->sample((string) $request->json('sample'), (array) ($working->data['collections'] ?? []), $user))
                     ? $this->renderer->entry($sample->withWorkingCopy(), 1, preview: true, editor: $editor, template: Templates::shape($working), templateDocument: $document)['html']
                     : $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
-                Patterns::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
+                Components::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
                 default => $this->renderer->entry($working, 1, preview: true, editor: $editor, bodyDocument: $document)['html'],
             };
         }

@@ -5,8 +5,8 @@ import type { BlockNode, BlockTypeDef, Catalog } from './types'
 
 /** What the editor is editing: an entry's blocks field, a template or a component. */
 export interface DocRef {
-  kind: 'entry' | 'template' | 'pattern'
-  /** Entry id or template/pattern handle. */
+  kind: 'entry' | 'template' | 'component'
+  /** Entry id or template/component handle. */
   id: string
   /** Collections whose entries a template frames (for data hints and the sample entry). */
   collections?: string[]
@@ -18,7 +18,7 @@ export interface EditorContextValue {
   store: EditorStore
   types: Map<string, BlockTypeDef>
   catalog: Catalog
-  /** Entry being edited (for previews); null for unsaved entries and patterns. */
+  /** Entry being edited (for previews); null for unsaved entries and components. */
   entryId: string | null
   fieldHandle: string
   /** Allowed block types for this field (empty = all). */
@@ -57,7 +57,7 @@ export function useComponentTitles(): Map<string, string> {
 
 /** What a block is called: its layer name, its component's title, or its type's. */
 export function blockName(node: BlockNode, types: Map<string, BlockTypeDef>, components: Map<string, string>): string {
-  return node.label || (node.type === 'pattern' ? components.get(String(node.props?.ref ?? '')) : undefined) || types.get(node.type)?.title || node.type
+  return node.label || (node.type === 'component' ? components.get(String(node.props?.ref ?? '')) : undefined) || types.get(node.type)?.title || node.type
 }
 
 export interface ThemeToken {

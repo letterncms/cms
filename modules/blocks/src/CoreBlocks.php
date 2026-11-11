@@ -508,10 +508,10 @@ final class CoreBlocks
                 'render' => Elements::outlet(...),
             ],
             [
-                'name' => 'pattern', 'title' => 'Component', 'icon' => 'symbol', 'category' => 'data',
+                'name' => 'component', 'title' => 'Component', 'icon' => 'symbol', 'category' => 'data',
                 'description' => 'A reusable component.', 'keywords' => ['reusable', 'synced', 'symbol', 'component', 'header', 'footer'],
                 'fields' => [
-                    ['handle' => 'ref', 'type' => 'select', 'label' => 'Component', 'options' => [], 'dynamic' => 'patterns', 'required' => true],
+                    ['handle' => 'ref', 'type' => 'select', 'label' => 'Component', 'options' => [], 'dynamic' => 'components', 'required' => true],
                     ['handle' => 'values', 'type' => 'json', 'label' => 'Properties'],
                 ],
             ],

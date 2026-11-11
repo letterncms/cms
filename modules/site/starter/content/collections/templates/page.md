@@ -8,7 +8,7 @@ collections:
   - pages
 ---
 
-::: pattern {"id":"t-header","props":{"ref":"header"}}
+::: component {"id":"t-header","props":{"ref":"header"}}
 :::
 
 ::: box {"id":"t-main","props":{"tag":"main"},"label":"Main","style":{"base":{"minHeight":"60vh"}},"anchor":"main"}
@@ -16,5 +16,5 @@ collections:
 ::::
 :::
 
-::: pattern {"id":"t-footer","props":{"ref":"footer"}}
+::: component {"id":"t-footer","props":{"ref":"footer"}}
 :::

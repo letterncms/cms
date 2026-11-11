@@ -33,7 +33,7 @@ final class BlockRenderer
 {
     private int $depth = 0;
 
-    /** @var array<string, true> patterns being rendered (recursion guard) */
+    /** @var array<string, true> components being rendered (recursion guard) */
     private array $rendering = [];
 
     public bool $editor = false;
@@ -276,7 +276,7 @@ final class BlockRenderer
         private readonly StyleCompiler $styles,
         private readonly Factory $views,
         private readonly Hooks $hooks,
-        private readonly Patterns $patterns,
+        private readonly Components $components,
         private readonly DataSources $sources,
     ) {}
 
@@ -293,7 +293,7 @@ final class BlockRenderer
         $this->ids = 0;
     }
 
-    /** @param list<array> $nodes A whole document (entry body, template, pattern). */
+    /** @param list<array> $nodes A whole document (entry body, template, component). */
     public function render(array $nodes, ?Scope $scope = null): string
     {
         $outer = $this->depth === 0;
@@ -406,8 +406,8 @@ final class BlockRenderer
         $this->depth++;
 
         try {
-            if ($type->name === 'pattern') {
-                $html = $this->pattern($node);
+            if ($type->name === 'component') {
+                $html = $this->component($node);
 
                 return $browser === null ? $html : '<div style="display:contents" data-cms-account="'.$browser.'">'.$html.'</div>';
             }
@@ -587,14 +587,14 @@ final class BlockRenderer
                 continue;
             }
 
-            if ($type->name === 'pattern') {
+            if ($type->name === 'component') {
                 $ref = (string) ($node['props']['ref'] ?? '');
-                $pattern = $this->patterns->find($ref, $this->working);
+                $component = $this->components->find($ref, $this->working);
 
-                if ($pattern && ! isset($this->rendering[$ref])) {
+                if ($component && ! isset($this->rendering[$ref])) {
                     $this->rendering[$ref] = true;
-                    $values = $this->patterns->values($pattern, (array) ($node['props']['values'] ?? []), $scope, $bind);
-                    array_push($out, ...$this->materialize($pattern['blocks'], $scope->with(['props' => $values]), $depth + 1));
+                    $values = $this->components->values($component, (array) ($node['props']['values'] ?? []), $scope, $bind);
+                    array_push($out, ...$this->materialize($component['blocks'], $scope->with(['props' => $values]), $depth + 1));
                     unset($this->rendering[$ref]);
                 }
 
@@ -986,11 +986,11 @@ final class BlockRenderer
                 continue;
             }
 
-            $ref = ($node['type'] ?? null) === 'pattern' ? (string) ($node['props']['ref'] ?? '') : '';
+            $ref = ($node['type'] ?? null) === 'component' ? (string) ($node['props']['ref'] ?? '') : '';
 
             if ($ref !== '' && ! isset($seen[$ref])) {
                 $seen[$ref] = true;
-                $this->collectReferences((array) ($this->patterns->find($ref, $this->editor || $this->working)['blocks'] ?? []), $seen);
+                $this->collectReferences((array) ($this->components->find($ref, $this->editor || $this->working)['blocks'] ?? []), $seen);
             } elseif (($node['type'] ?? null) === 'outlet' && $this->outletNodes !== null && ! isset($seen["\0outlet"])) {
                 $seen["\0outlet"] = true;
                 $this->collectReferences(($this->outletNodes)(), $seen);
@@ -1012,23 +1012,23 @@ final class BlockRenderer
     }
 
     /** A component: its blocks rendered with its properties in scope as `props`. */
-    private function pattern(array $node): string
+    private function component(array $node): string
     {
         $ref = (string) ($node['props']['ref'] ?? '');
-        $pattern = $this->patterns->find($ref, $this->editor || $this->working);
+        $component = $this->components->find($ref, $this->editor || $this->working);
 
-        if (! $pattern || isset($this->rendering[$ref])) {
-            return $this->editor ? '<div '.$this->editorAttributes($node, 'pattern').' class="cms-placeholder">'.e(__('Missing component “:name”', ['name' => $ref])).'</div>' : '';
+        if (! $component || isset($this->rendering[$ref])) {
+            return $this->editor ? '<div '.$this->editorAttributes($node, 'component').' class="cms-placeholder">'.e(__('Missing component “:name”', ['name' => $ref])).'</div>' : '';
         }
 
         $this->rendering[$ref] = true;
         $this->hooks->dispatch('render.component', $ref);
-        $this->propLabels[] = array_column(array_filter((array) ($pattern['props'] ?? []), 'is_array'), 'label', 'handle');
+        $this->propLabels[] = array_column(array_filter((array) ($component['props'] ?? []), 'is_array'), 'label', 'handle');
 
         try {
-            $values = $this->patterns->values($pattern, (array) ($node['props']['values'] ?? []), $this->currentScope(), (array) ($node['bind'] ?? []), $this->editor);
-            $properties = $this->instanceEditingProperties($node, $pattern, $values);
-            $html = $this->withInstanceProperties($properties, fn () => $this->withPrototypes(null, fn () => $this->withEditorDocument(null, fn () => $this->render($pattern['blocks'], $this->currentScope()->with(['props' => $values])))));
+            $values = $this->components->values($component, (array) ($node['props']['values'] ?? []), $this->currentScope(), (array) ($node['bind'] ?? []), $this->editor);
+            $properties = $this->instanceEditingProperties($node, $component, $values);
+            $html = $this->withInstanceProperties($properties, fn () => $this->withPrototypes(null, fn () => $this->withEditorDocument(null, fn () => $this->render($component['blocks'], $this->currentScope()->with(['props' => $values])))));
         } finally {
             unset($this->rendering[$ref]);
             array_pop($this->propLabels);
@@ -1038,7 +1038,7 @@ final class BlockRenderer
             return $html;
         }
 
-        $attrs = $this->editorAttributes($node, 'pattern');
+        $attrs = $this->editorAttributes($node, 'component');
 
         return $html === ''
             ? '<div '.$attrs.' data-cms-ref="'.e($ref).'" class="cms-placeholder">'.e(__('Empty component')).'</div>'
@@ -1046,11 +1046,11 @@ final class BlockRenderer
     }
 
     /** Map declared scalar properties to the source instance, never to shared definition nodes. */
-    private function instanceEditingProperties(array $node, array $pattern, array $values): array
+    private function instanceEditingProperties(array $node, array $component, array $values): array
     {
         if (! $this->editor) return [];
         $properties = [];
-        foreach ($pattern['props'] as $field) {
+        foreach ($component['props'] as $field) {
             $handle = $field['handle'] ?? null;
             $type = $field['type'] ?? null;
             if (! is_string($handle) || ! preg_match('/^[a-z][a-z0-9_]{0,63}$/D', $handle) || ! in_array($type, ['text', 'textarea', 'richtext'], true)) continue;

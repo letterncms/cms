@@ -174,7 +174,7 @@
  "justify-center": "ph:align-center-horizontal",
  "justify-end": "ph:align-right",
  "symbol": "ph:diamonds-four",
- "pattern": "ph:selection-plus",
+ "section-copy": "ph:selection-plus",
  "detach": "ph:selection-slash",
  "frame": "ph:frame-corners",
  "ruler": "ph:ruler",

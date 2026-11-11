@@ -120,7 +120,7 @@ final class RenderingTest extends TestCase
             ['type' => 'box', 'props' => ['tag' => 'header'], 'children' => [['type' => 'link', 'props' => ['url' => '/'], 'bind' => ['label' => 'site.name']]]],
         ]]]);
         $content->create('templates', ['title' => 'Page', 'slug' => 'page', 'status' => 'published', 'data' => ['blocks' => [
-            ['type' => 'pattern', 'props' => ['ref' => 'header']],
+            ['type' => 'component', 'props' => ['ref' => 'header']],
             ['type' => 'box', 'props' => ['tag' => 'main'], 'anchor' => 'main', 'children' => [
                 ['type' => 'heading', 'props' => ['level' => '1'], 'bind' => ['text' => 'entry.title']],
                 ['type' => 'outlet'],
@@ -158,7 +158,7 @@ final class RenderingTest extends TestCase
         ]]);
         $content->create('posts', ['title' => 'Launch notes', 'slug' => 'launch', 'status' => 'published', 'data' => []]);
         $page = $content->create('pages', ['title' => 'Home', 'slug' => 'home', 'status' => 'published', 'data' => ['content' => [
-            ['type' => 'pattern', 'props' => ['ref' => 'intro', 'values' => ['title' => 'Built for agencies']]],
+            ['type' => 'component', 'props' => ['ref' => 'intro', 'values' => ['title' => 'Built for agencies']]],
             ['type' => 'repeat', 'props' => ['source' => 'entries', 'collection' => 'posts'], 'children' => [['type' => 'paragraph', 'bind' => ['text' => 'item.title']]]],
         ]]]);
 
@@ -268,10 +268,10 @@ final class RenderingTest extends TestCase
             // Rendered first, named by what comes after it: the page's content and a component.
             ['id' => 'frame-title', 'type' => 'paragraph', 'props' => ['text' => 'Frame']],
             ['id' => 'region', 'type' => 'box', 'props' => ['tag' => 'section'], 'attrs' => ['aria-labelledby' => '#page-title'], 'children' => [['type' => 'outlet']]],
-            ['type' => 'pattern', 'props' => ['ref' => 'aside']],
+            ['type' => 'component', 'props' => ['ref' => 'aside']],
         ]]]);
         $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
-        $this->app->make(\Cms\Modules\Blocks\Patterns::class)->flush();
+        $this->app->make(\Cms\Modules\Blocks\Components::class)->flush();
         $page = $this->cms()->entryService()->create('pages', ['title' => 'Named page', 'status' => 'published', 'data' => ['template' => 'named', 'content' => [
             ['id' => 'page-title', 'type' => 'heading', 'props' => ['text' => 'A page title', 'level' => '1']],
             ['id' => 'lede', 'type' => 'paragraph', 'props' => ['text' => 'Lede'], 'attrs' => ['aria-details' => '#frame-title']],
