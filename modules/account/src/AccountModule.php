@@ -43,7 +43,7 @@ final class AccountModule extends Plugin
         $this->cms()->settingsRegistry()->register(Accounts::SETTINGS, 'Visitor Accounts', [
             ['handle' => 'enabled', 'type' => 'toggle', 'label' => 'Allow Visitor Accounts', 'default' => false, 'instructions' => 'Sign-up and password resets need working email.'],
             ['handle' => 'sign_up', 'type' => 'select', 'label' => 'Who Can Sign Up', 'options' => ['open' => 'Anyone', 'closed' => 'Only People You Add'], 'default' => 'open', 'if' => ['enabled' => true]],
-            ['handle' => 'default_role', 'type' => 'select', 'label' => 'Role for New Visitors', 'dynamic' => 'visitor-roles', 'default' => 'member', 'if' => ['enabled' => true]],
+            ['handle' => 'default_role', 'type' => 'select', 'label' => 'Role for New Visitors', 'dynamic' => 'visitor-roles', 'default' => 'visitor', 'if' => ['enabled' => true]],
             ['handle' => 'terms_url', 'type' => 'url', 'label' => 'Terms to Agree To', 'instructions' => 'Signing up then asks to agree.', 'if' => ['enabled' => true]],
             ['handle' => 'after_sign_in', 'type' => 'text', 'label' => 'Page After Sign-In', 'default' => '/account', 'if' => ['enabled' => true]],
             ['handle' => 'remember', 'type' => 'toggle', 'label' => 'Offer “Keep Me Signed In”', 'default' => true, 'if' => ['enabled' => true]],

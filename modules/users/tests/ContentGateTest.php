@@ -51,7 +51,7 @@ final class ContentGateTest extends TestCase
         return cms()->entries()->find($entry->id);
     }
 
-    private function member(string $email = 'ada@example.com', array $roles = ['member']): User
+    private function member(string $email = 'ada@example.com', array $roles = ['visitor']): User
     {
         return User::query()->create(['name' => 'Ada', 'email' => $email, 'password' => 'correct-horse-1', 'roles' => $roles]);
     }

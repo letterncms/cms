@@ -104,6 +104,12 @@ final class SettingsRegistry
         return $key === null ? $values : (array_key_exists($key, $values) && $values[$key] !== null ? $values[$key] : $default);
     }
 
+    /** Read the namespace from its files again next time: for code that changed a file itself, as a migration does. */
+    public function forget(string $namespace): void
+    {
+        unset($this->cache[$namespace]);
+    }
+
     /** Values for the admin form: secrets are masked. */
     public function forDisplay(string $namespace): array
     {
