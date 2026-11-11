@@ -364,11 +364,31 @@ final class Blueprint
     {
         if (is_string($field['dynamic'] ?? null) && preg_match('/^[a-z][a-z0-9_-]*$/', $field['dynamic'])) {
             $hooks = app(\Cms\Extend\Hooks::class);
-            $field['options'] = [...(array) ($field['options'] ?? []), ...(array) $hooks->filter('fields.options.'.$field['dynamic'], [])];
+            $field['options'] = self::mergeOptions((array) ($field['options'] ?? []), (array) $hooks->filter('fields.options.'.$field['dynamic'], []));
             $field = $hooks->filter('fields.definition.'.$field['dynamic'], $field, $context);
         }
 
         return $field;
+    }
+
+    /**
+     * A field's own options with those a filter added. Two lists of values are one list; otherwise each is
+     * a map of value => label, and a value keeps its key, also one that is a number (a list's id): spreading
+     * would renumber it and leave the labels as the values. A value both name takes the added label.
+     */
+    private static function mergeOptions(array $own, array $added): array
+    {
+        if ($own === [] || $added === []) {
+            return $own === [] ? $added : $own;
+        }
+
+        if (array_is_list($own) && array_is_list($added)) {
+            return [...$own, ...$added];
+        }
+
+        $map = static fn (array $options) => array_is_list($options) ? array_combine(array_map('strval', $options), $options) : $options;
+
+        return array_replace($map($own), $map($added));
     }
 
     private static function expand(array $raw, int $depth = 0): array
