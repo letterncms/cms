@@ -758,6 +758,10 @@ final class BlockRenderer
             $attrs['data-cms-motion'] = (string) json_encode($compiled['runtime'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
 
+        foreach ($this->editor ? [] : $this->behavior($node) as $name => $value) {
+            $attrs[$name] = $value;
+        }
+
         if ($id !== '' && ($logic !== [] || ($compiled['runtime'] ?? []) !== [] || $referenced)) {
             $attrs['data-cms'] = $id;
         }
@@ -794,6 +798,36 @@ final class BlockRenderer
         }
 
         return implode(' ', $html);
+    }
+
+    /**
+     * A block's behaviour as the attributes the runtime reads: the published script, its props and when to load it.
+     * Whoever knows the design's scripts answers the `blocks.behavior` filter with the URL; without one there is nothing to run.
+     *
+     * @return array<string, string>
+     */
+    private function behavior(array $node): array
+    {
+        $behavior = Document::behavior($node['behavior'] ?? null);
+        $url = $behavior === [] ? null : $this->hooks->filter('blocks.behavior', null, $behavior['module']);
+
+        if (! is_string($url) || $url === '') {
+            return [];
+        }
+
+        $this->uses('behavior');
+        $scope = $this->currentScope();
+        $props = $behavior['props'] ?? [];
+        // Text may name data, like any text in a block: "{props.speed}" in a component, "{entry.title}" on a page.
+        array_walk_recursive($props, static function (mixed &$value) use ($scope): void {
+            is_string($value) && Scope::isTemplate($value) && Scope::valid($value) && $value = $scope->interpolate($value);
+        });
+
+        return array_filter([
+            'data-cms-behavior' => $url,
+            'data-cms-props' => $props !== [] ? (string) json_encode($props, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
+            'data-cms-when' => $behavior['when'] ?? null,
+        ], static fn ($v) => $v !== null);
     }
 
     private function collectReferences(array $nodes): void
