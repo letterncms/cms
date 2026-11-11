@@ -27,6 +27,14 @@ final class BrowserFixturesTest extends TestCase
 
     public function test_the_fixture_site_builds(): void
     {
+        // A library from a CDN that is an array: kept in content/design/vendor and imported by name.
+        $this->app->instance(\Cms\Modules\Site\Design\VendorFetcher::class, new FakeVendorFetcher([
+            'https://cdn.jsdelivr.net/npm/tiny@1.0.0/+esm' => "export default { name: 'tiny' }\n",
+        ]));
+        $this->app->forgetInstance(\Cms\Modules\Site\Design\Vendor::class);
+        $this->app->forgetInstance(\Cms\Modules\Site\Design\Code::class);
+        $this->app->make(\Cms\Modules\Site\Design\Vendor::class)->add('tiny@1.0.0');
+
         foreach ($this->files() as $path => $contents) {
             Files::put(content_path('design/'.$path), $contents);
         }
@@ -50,7 +58,7 @@ final class BrowserFixturesTest extends TestCase
     {
         return [
             'scripts/lib/ease.js' => "export const ease = () => 'eased'\n",
-            'scripts/hero.js' => "import { ease } from './lib/ease.js'\ndocument.documentElement.dataset.hero = ease()\n",
+            'scripts/hero.js' => "import { ease } from './lib/ease.js'\nimport tiny from 'tiny'\ndocument.documentElement.dataset.hero = ease()\ndocument.documentElement.dataset.vendor = tiny.name\n",
             'styles/hero.css' => ".hero{outline:3px solid rgb(1, 2, 3)}\n",
         ];
     }
