@@ -73,6 +73,7 @@
 - **Breaking.** The `account.api` slot of the admin. What a plugin shows on Account is a section it adds with the `view.account` filter, as the MCP module now does for **Agents**.
 - **Design System**: an element style can reach a tag inside a tag. Beside the elements the Design System offers, `styles` and `prose` take any tag, alone or up to three deep with a space (inside) or ` > ` (directly inside), and one state or part at the end: `"h1 em"`, `"li > a"`, `"nav a:hover"`, `"li::marker"`. Classes, ids and attributes stay with `custom.css`.
 - **Fonts**: importing a Google Fonts family takes what the family really has. A variable family is one file for the weights its axis spans (EB Garamond is 400 to 800, not 100 to 900), a static family the weights it has, and no file is saved twice. `design/fonts-import` takes `style` (`normal`, `italic` or `both`; italic alone for a display face) and `weights` for static families. A font face can name what is drawn until it arrives: `fallback` (a local font such as Arial) with `sizeAdjust`, `ascentOverride`, `descentOverride` and `lineGapOverride`, and font tokens that name the family get that stand-in by themselves, so text doesn't move when the font loads.
+- The guide every agent starts from has a short **Front end** part: where motion, block behaviours, page transitions, fonts and the code beside the design are described, and the abilities that change them.
 
 ### Fixed
 
