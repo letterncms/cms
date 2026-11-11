@@ -121,6 +121,8 @@ final class SiteModule extends Plugin
         $hooks->addFilter('site.build.extras', fn (array $extras) => $this->cms()->setting('site', 'search_index', true)
             ? [...$extras, 'search' => ['path' => 'search.json', 'render' => fn () => $this->app->make(Search\SearchIndex::class)->json()]]
             : $extras);
+        // Every site has an llms.txt: a plugin makes it richer through `site.llms` (see Llms), it does not write another.
+        $hooks->addFilter('site.build.extras', fn (array $extras) => [...$extras, 'llms' => ['path' => 'llms.txt', 'render' => fn () => $this->app->make(Llms::class)->render()]]);
         // An animation's ease can be a curve of the design: token:ease.<name>.
         $hooks->addFilter('blocks.eases', static function (array $eases) use ($design) {
             foreach ($design()->json()->tokens() as $token) {
@@ -402,6 +404,7 @@ final class SiteModule extends Plugin
 
     private function routes(): void
     {
+        Route::get('/llms.txt', fn () => response($this->app->make(Llms::class)->render(), 200, ['Content-Type' => 'text/plain; charset=utf-8']));
         Route::get('/search.json', fn () => $this->cms()->setting('site', 'search_index', true)
             ? response($this->app->make(Search\SearchIndex::class)->json(), 200, ['Content-Type' => 'application/json; charset=utf-8', 'Cache-Control' => 'public, max-age=300'])
             : abort(404));

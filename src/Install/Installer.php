@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Cms\Abilities\AbilityException;
 use Cms\Foundation\Application;
 use Cms\Cms;
+use Cms\Content\Schemas\SchemaFiles;
 use Cms\Packages\PackageManager;
 use Cms\Support\Files;
 use Cms\Support\Yaml;
@@ -183,6 +184,9 @@ final class Installer
         } catch (Throwable $e) {
             report($e);
         }
+
+        // The content model as JSON Schema files, with what the starter kit and the plugins defined (it reports its own failure).
+        $this->app->make(SchemaFiles::class)->refresh();
 
         // Last, so it names what the plugins brought: the site's guide for AI agents, unless it has one.
         // On its own: a starter kit that failed above must not cost the site its guide, nor the guide the install.

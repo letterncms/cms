@@ -804,6 +804,9 @@ final class PackageManager
         $this->resolved = false;
         $this->enabled = null;
         $this->active = $this->inactive = [];
+        // What a package defines (a collection, the blocks a field takes) comes or goes with the next request,
+        // which boots with it: that one writes content/schemas again (SchemaFiles::STALE).
+        @touch(storage_path(\Cms\Content\Schemas\SchemaFiles::STALE));
     }
 
     private function satisfies(string $version, string $constraint): bool

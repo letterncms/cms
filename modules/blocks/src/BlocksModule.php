@@ -111,6 +111,8 @@ final class BlocksModule extends Plugin
         $hooks = $this->cms()->hooks();
         $hooks->addFilter('fields.options.button-variants', static fn (array $options) => [...['primary' => 'Primary', 'secondary' => 'Secondary', 'ghost' => 'Ghost', 'link' => 'Text link'], ...$options], 5);
         $hooks->addFilter('fields.options.sources', fn (array $options) => [...$options, ...array_column($this->app->make(DataSources::class)->catalog(), 'label', 'name')]);
+        // content/schemas/blocks.json: what a blocks field holds, beside the schemas of the collections.
+        $hooks->addFilter('schemas.documents', fn (array $documents) => [...$documents, 'blocks.json' => $this->app->make(DocumentSchema::class)->schema()]);
         $hooks->addFilter('fields.options.components', fn (array $options) => [...$options, ...array_map(static fn ($p) => $p['title'], array_filter($this->app->make(Components::class)->all(), static fn ($p) => $p['synced']))]);
 
         foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted'] as $event) {

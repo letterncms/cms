@@ -60,5 +60,6 @@ final class Fieldsets
     {
         Blueprint::validate($fields); // handles, field types and nesting, as a collection's fields are checked
         Yaml::write(Files::within(content_path('fieldsets'), "{$handle}.yaml"), ['title' => $title, 'fields' => array_values($fields)]);
+        cms()->hooks()->dispatch('fieldset.saved', $handle);
     }
 }
