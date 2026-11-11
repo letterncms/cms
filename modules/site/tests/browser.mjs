@@ -281,6 +281,52 @@ const checks = {
     await tab.close()
   },
 
+  /** The Motion Toggle tells scripts too: an attribute, an event, and reducedMotion in behaviours. */
+  async toggle() {
+    const tab = await open('/toggle')
+    await tab.until('!document.getElementById("toggle").hidden && document.getElementById("heard").dataset.mounted')
+    equal(JSON.parse(await tab.evaluate('document.getElementById("heard").dataset.mounted')).reducedMotion, false, 'motion runs to begin with')
+    await tab.evaluate('window.__heard = []; document.addEventListener("cms:motion", (e) => window.__heard.push(e.detail.paused)); document.getElementById("toggle").click()')
+    await tab.until('JSON.parse(document.getElementById("heard").dataset.mounted).reducedMotion === true')
+    equal(await tab.evaluate('[document.documentElement.dataset.cmsMotion, window.__heard]'), ['paused', [true]], 'the page says so, once')
+
+    // The choice is kept: the next page load starts paused, for the behaviour as well.
+    await tab.goto('/toggle')
+    await tab.until('document.getElementById("heard").dataset.mounted && document.documentElement.dataset.cmsMotion === "paused"')
+    equal(JSON.parse(await tab.evaluate('document.getElementById("heard").dataset.mounted')).reducedMotion, true, 'a paused page mounts its behaviours calm')
+    await tab.evaluate('window.__heard = []; document.addEventListener("cms:motion", (e) => window.__heard.push(e.detail.paused)); document.getElementById("toggle").click()')
+    await tab.until('JSON.parse(document.getElementById("heard").dataset.mounted).reducedMotion === false')
+    equal(await tab.evaluate('[document.documentElement.dataset.cmsMotion ?? null, window.__heard]'), [null, [false]], 'and playing again says so too')
+    equal(tab.errors, [], 'no errors')
+    await tab.close()
+
+    // Without page loads: however many pages came before, one press mounts each behaviour again once.
+    const site = await open('/one', { site: 'client' })
+    await site.until('window.cmsNavigate && document.getElementById("stage").dataset.mounted')
+    await site.evaluate('localStorage.removeItem("cms-motion-paused")')
+    for (const to of ['/two', '/one', '/toggle']) {
+      await site.evaluate(`window.cmsNavigate.go("${to}")`)
+      await site.until(`location.pathname === "${to}" && !document.documentElement.hasAttribute("data-cms-navigating")`)
+    }
+    await site.until('!document.getElementById("toggle").hidden && document.getElementById("heard").dataset.mounted')
+    const before = await site.evaluate('window.__mounts')
+    await site.evaluate('document.getElementById("toggle").click()')
+    await site.until('JSON.parse(document.getElementById("heard").dataset.mounted).reducedMotion === true && JSON.parse(document.getElementById("stage").dataset.mounted).reducedMotion === true')
+    await sleep(300)
+    equal(await site.evaluate('window.__mounts') - before, 2, 'after three navigations, one press mounts the two behaviours on the page once each')
+
+    // On to a page without a toggle: it moves, as it would after a page load.
+    await site.evaluate('window.cmsNavigate.go("/two")')
+    await site.until('location.pathname === "/two" && JSON.parse(document.getElementById("stage").dataset.mounted).reducedMotion === false')
+    equal(await site.evaluate('document.documentElement.dataset.cmsMotion ?? null'), null, 'a page without a toggle is not left paused')
+    // And back: the choice was kept, so the page with the toggle is paused again.
+    await site.evaluate('window.cmsNavigate.go("/toggle")')
+    await site.until('location.pathname === "/toggle" && document.documentElement.dataset.cmsMotion === "paused" && JSON.parse(document.getElementById("stage").dataset.mounted).reducedMotion === true')
+    await site.evaluate('localStorage.removeItem("cms-motion-paused")')
+    equal(site.errors, [], 'no errors')
+    await site.close()
+  },
+
   /** Scroll animations: CSS where the browser can, the runtime where it can't or when they trail; pinning; lines. */
   async motion() {
     const near = (actual, expected, by, what) => {
