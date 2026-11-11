@@ -11,6 +11,7 @@ use Cms\Abilities\AbilityException;
 use Cms\Admin\Translations;
 use Cms\Modules\Workspace\Http\TurnController;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 
 /**
@@ -67,6 +68,7 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100], 'offset' => ['type' => 'integer', 'minimum' => 0]]],
+            'output' => Shape::of([self::thread()]),
             'handler' => static fn (array $in, AbilityContext $c) => $threads($c)->latest('updated_at')->orderByDesc('id')->offset($in['offset'] ?? 0)->limit($in['limit'] ?? 30)->get()->map->summary()->all(),
         ]);
 
@@ -77,6 +79,12 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => self::thread()->with([
+                'turns' => [self::turn()],
+                'awaiting' => [self::call()],
+                'agent' => Shape::nullable(Shape::open('What the agent that answers this chat shows of its own state; each agent decides the keys (Cms\\Contracts\\Agent::state). The assistant gives `model`: the model picked for this chat, or null for the default one.')),
+                'usage' => Shape::nullable(Shape::map(Shape::INTEGER)),
+            ]),
             'handler' => static fn (array $in, AbilityContext $c) => $workspace()->show($threads($c)->findOrFail($in['id']), $c->user),
         ]);
 
@@ -86,6 +94,7 @@ final class WorkspaceModule extends Plugin
             'permission' => 'admin.access',
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120]], 'required' => ['id']],
+            'output' => self::thread(),
             'handler' => static function (array $in, AbilityContext $c) use ($threads, $workspace) {
                 $thread = $threads($c)->findOrFail($in['id']);
                 $agent = $workspace()->agent();
@@ -107,6 +116,7 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['destructive' => true],
             'expose' => $mine,
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => Shape::of(['deleted' => Shape::BOOLEAN]),
             'handler' => static fn (array $in, AbilityContext $c) => ['deleted' => (bool) $threads($c)->whereKey($in['id'])->delete()],
         ]);
 
@@ -117,6 +127,9 @@ final class WorkspaceModule extends Plugin
             'annotations' => ['readOnly' => true],
             'expose' => ['mcp' => false, 'assistant' => false],
             'input' => ['type' => 'object', 'properties' => ['query' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 200]], 'required' => ['query']],
+            'output' => Shape::of(['query' => Shape::STRING, 'sections' => [[
+                'id' => Shape::STRING, 'title' => Shape::STRING, 'items' => [['label' => Shape::STRING, 'detail?' => Shape::STRING, 'icon?' => Shape::STRING, 'to' => Shape::STRING]],
+            ]]]),
             'handler' => fn (array $in, AbilityContext $c) => $this->app->make(Search::class)->run($in['query'], $c->user ?? throw new AbilityException(__('Authentication required.'), 'unauthenticated')),
         ]);
 
@@ -131,6 +144,7 @@ final class WorkspaceModule extends Plugin
                 'to' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 300],
                 'label' => ['type' => 'string', 'maxLength' => 120],
             ], 'required' => ['to']],
+            'output' => Shape::of(['to' => Shape::STRING, 'label' => Shape::STRING]),
             'handler' => fn (array $in, AbilityContext $c) => $this->app->make(Places::class)->open((string) $in['to'], $c->user ?? throw new AbilityException(__('Authentication required.'), 'unauthenticated'), $in['label'] ?? null),
         ]);
 
@@ -140,7 +154,91 @@ final class WorkspaceModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'expose' => $mine,
+            'output' => Shape::of([[
+                'name' => Shape::STRING, 'label' => Shape::STRING, 'group' => Shape::STRING, 'icon' => Shape::STRING,
+                'input' => Shape::open('The input the ability takes, as JSON Schema (type, properties, required…), with its titles and x-labels in the person\'s language.'),
+                'destructive' => Shape::BOOLEAN, 'readOnly' => Shape::BOOLEAN,
+            ]]),
             'handler' => fn (array $in, AbilityContext $c) => $this->runnable($c),
+        ]);
+    }
+
+    /** Thread::summary(): a chat in a list. */
+    private static function thread(): Shape
+    {
+        return Shape::of(['id' => Shape::STRING, 'title' => Shape::STRING, 'updatedAt' => Shape::STRING_OR_NULL]);
+    }
+
+    /**
+     * A turn of a chat as Transcript stores it: the person's (a message, a command they ran, a search, a click on
+     * an interface) or an answer in parts. The workspace writes the turns itself, so their keys are fixed here;
+     * what a command was run with, a view's props and an interface's props follow the ability or component they belong to.
+     */
+    private static function turn(): Shape
+    {
+        return Shape::either(
+            [
+                'id' => Shape::STRING, 'role' => Shape::enum('user'), 'kind' => Shape::enum('message', 'command', 'search', 'action'), 'text' => Shape::STRING,
+                'command?' => ['ability' => Shape::STRING, 'label' => Shape::STRING, 'input' => self::input(), 'detail?' => Shape::STRING],
+                'attached?' => [['label' => Shape::STRING, 'kind?' => Shape::STRING, 'icon?' => Shape::STRING, 'to?' => Shape::STRING]],
+                'replaces?' => Shape::STRING, 'at' => Shape::STRING,
+            ],
+            ['id' => Shape::STRING, 'role' => Shape::enum('answer'), 'parts' => [self::part()], 'agent?' => Shape::STRING, 'at' => Shape::STRING],
+        );
+    }
+
+    /** One part of an answer, by its `type` (see Transcript). */
+    private static function part(): Shape
+    {
+        return Shape::either(
+            ['type' => Shape::enum('text', 'thinking'), 'text' => Shape::STRING],
+            [
+                'type' => Shape::enum('tool'), 'id' => Shape::STRING, 'name' => Shape::STRING, 'label' => Shape::STRING, 'ability?' => Shape::STRING,
+                'input?' => self::input(), 'status' => Shape::enum('running', 'ok', 'error', 'declined', 'awaiting'), 'output?' => Shape::STRING,
+                'surface?' => self::surface(), 'used?' => Shape::BOOLEAN,
+            ],
+            ['type' => Shape::enum('view'), 'view' => self::view()],
+            ['type' => Shape::enum('surface'), 'surface' => self::surface()],
+            ['type' => Shape::enum('notice'), 'tone' => Shape::STRING, 'message' => Shape::STRING],
+            ['type' => Shape::enum('approval'), 'calls' => [self::call()], 'decided?' => Shape::BOOLEAN],
+        );
+    }
+
+    /** What an ability was or would be run with: only its own input schema names the keys. */
+    private static function input(): Shape
+    {
+        return Shape::open('The input of the ability that was run, by its input schema (abilities/list has each one\'s); passwords, keys and tokens are masked.');
+    }
+
+    /** A call an agent asks the person to approve. The agent describes it: these are the keys the workspace reads, an agent may add its own. */
+    private static function call(): Shape
+    {
+        return Shape::of([
+            'id' => Shape::STRING, 'name' => Shape::STRING, 'label?' => Shape::STRING, 'input?' => self::input(),
+            'destructive?' => Shape::BOOLEAN, 'untrusted?' => Shape::BOOLEAN, 'ability?' => Shape::STRING,
+        ])->andMore('What else the answering agent says about a call (Cms\\Contracts\\Agent, the `approval` event); the assistant adds nothing.');
+    }
+
+    /** A view tree as Cms\Admin\Views::validate() leaves it: every node a component of the admin with its props, and its children when it has any. */
+    private static function view(): Shape
+    {
+        return Shape::nested([
+            'type' => Shape::STRING,
+            'props' => Shape::open('The props of the component `type` names; each component of the admin has its own (views/get answers with the same nodes).'),
+        ], 'children?', \Cms\Admin\Views::DEPTH);
+    }
+
+    /** An interface an agent composed, as Cms\Admin\Surface::validate() leaves it: flat elements by id, from a root. */
+    private static function surface(): Shape
+    {
+        return Shape::of([
+            'version' => Shape::INTEGER, 'id' => Shape::STRING, 'title' => Shape::STRING,
+            'spec' => ['root' => Shape::STRING, 'elements' => Shape::map([
+                'type' => Shape::STRING,
+                'props' => Shape::open('The props of the component `type` names, literal values only; each component has its own.'),
+                'children?' => [Shape::STRING],
+                'on?' => Shape::map(['action' => Shape::STRING, 'params' => self::input()]),
+            ])],
         ]);
     }
 

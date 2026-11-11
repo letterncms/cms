@@ -13,6 +13,7 @@ use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Packages\Plugin;
+use Cms\Support\Schema\Shape;
 use Cms\Modules\Site\Build\SiteBuilder;
 use Cms\Modules\Site\Design\Design;
 use Cms\Modules\Site\Design\DesignCompiler;
@@ -301,6 +302,7 @@ final class SiteModule extends Plugin
             'label' => 'Publish Site',
             'description' => 'Rebuild the static site (all pages). Work continues in the background; poll site/build-status.',
             'permission' => 'site.build',
+            'output' => self::buildShape(),
             'handler' => function () use ($builder) {
                 $builder()->queue(null, __('Manual Rebuild'));
 
@@ -313,6 +315,7 @@ final class SiteModule extends Plugin
             'description' => 'Progress of the static build. Calling it also advances queued work.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => self::buildShape(),
             'handler' => fn () => $builder()->process(1500),
         ]);
 
@@ -321,6 +324,38 @@ final class SiteModule extends Plugin
             'description' => 'The site’s design system (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, form fields, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'name' => Shape::STRING,
+                'tokens' => [[
+                    'path' => Shape::STRING, 'group' => Shape::STRING, 'name' => Shape::STRING,
+                    'value' => Shape::any('The token\'s value as tokens.json has it: CSS, a number, a reference to another token (token:group.name), or {min, max} for a fluid size.'),
+                    'dark' => Shape::any('The value in dark mode, like `value`; null when the token has none.'),
+                    'type' => Shape::STRING_OR_NULL, 'description' => Shape::STRING_OR_NULL,
+                ]],
+                'fonts' => [['family?' => Shape::STRING, 'src?' => Shape::STRING, 'weight?' => Shape::either(Shape::STRING, Shape::INTEGER), 'style?' => Shape::STRING, 'preload?' => Shape::BOOLEAN, 'display?' => Shape::STRING]],
+                'fontFiles' => [Shape::STRING],
+                'styles' => self::described(Shape::map(self::declarationsShape()), 'Declarations by element (`elements` lists them; "a:hover" is an element in a state).'),
+                'prose' => Shape::raw([
+                    ...Shape::of(['spacing?' => ['blocks?' => self::cssValue(), 'headings?' => self::cssValue(), 'afterHeadings?' => self::cssValue(), 'items?' => self::cssValue()]])->toSchema(),
+                    'additionalProperties' => self::declarationsShape()->toSchema(),
+                    'description' => 'Declarations by element of long-form text (`proseElements` lists them), and `spacing`: the flow between its blocks.',
+                ]),
+                'buttons' => self::described(
+                    Shape::map(Shape::open('A look by state (base, hover, active, focus-visible), each a map of camelCase CSS property to a CSS value or a token (token:group.name, from `tokens`); `surface` names the background the variant is made for.')),
+                    'Button variants by name (primary, secondary…), as tokens.json has them.',
+                ),
+                'fields' => self::described(Shape::map(Shape::map(self::cssValue())), 'What the site sets for its form fields: part => property => value. `fieldStyles` lists every part and property.'),
+                'fieldStyles' => self::described(
+                    Shape::map(Shape::map(['type' => Shape::STRING, 'variable' => Shape::STRING, 'default?' => Shape::either(Shape::STRING, [Shape::STRING]), 'inherits?' => Shape::STRING, 'hint?' => Shape::STRING, 'tokens?' => Shape::STRING, 'unit?' => Shape::STRING, 'options?' => [Shape::STRING]])),
+                    'Every property `fields` may set: part (field, hover, focus, checkbox…) => property => what it is.',
+                ),
+                'controlSizes' => Shape::map(['height' => Shape::STRING, 'padding' => Shape::STRING, 'text' => [Shape::STRING]]),
+                'transition' => ['type' => Shape::enum('none', 'fade', 'slide', 'scale'), 'duration' => Shape::NUMBER],
+                'breakpoints' => Shape::map(Shape::STRING),
+                'templates' => Shape::map(Shape::STRING),
+                'stylesheet' => Shape::STRING, 'css' => Shape::STRING, 'js' => Shape::STRING,
+                'elements' => [Shape::STRING], 'proseElements' => [Shape::STRING],
+            ]),
             'handler' => function () use ($design) {
                 $json = $design()->json();
 
@@ -363,6 +398,7 @@ final class SiteModule extends Plugin
                 'fonts' => ['type' => 'array'],
                 'transition' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['none', 'fade', 'slide', 'scale']], 'duration' => ['type' => 'number']]],
             ]],
+            'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
             'handler' => function (array $in) use ($design) {
                 $json = $design()->json();
                 $json->apply($in);
@@ -390,6 +426,7 @@ final class SiteModule extends Plugin
                 'transition' => ['type' => 'object'],
                 'css' => ['type' => 'string', 'maxLength' => 200000],
             ]],
+            'output' => Shape::of(['css' => Shape::STRING]),
             'handler' => function (array $in) use ($design) {
                 $json = DesignJson::fromArray($design()->json()->toArray());
                 $json->apply($in);
@@ -403,6 +440,7 @@ final class SiteModule extends Plugin
             'description' => 'Replace the site’s custom.css or custom.js (content/design). CSS is appended after everything else; JS loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component.',
             'permission' => 'site.code',
             'input' => ['type' => 'object', 'properties' => ['css' => ['type' => 'string', 'maxLength' => 200000], 'js' => ['type' => 'string', 'maxLength' => 200000]]],
+            'output' => Shape::of(['saved' => [Shape::enum('css', 'js')]]),
             'handler' => function (array $in) use ($design) {
                 foreach (['css', 'js'] as $kind) {
                     if (isset($in[$kind])) {
@@ -424,6 +462,7 @@ final class SiteModule extends Plugin
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
                 'italic' => ['type' => 'boolean', 'default' => false],
             ], 'required' => ['family']],
+            'output' => Shape::of(['fonts' => [['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic'), 'preload' => Shape::BOOLEAN]]]),
             'handler' => function (array $in) use ($design) {
                 $fonts = $this->app->make(Fonts::class)->import((string) $in['family'], (bool) ($in['italic'] ?? false));
                 $design()->saved();
@@ -443,6 +482,7 @@ final class SiteModule extends Plugin
                 'weight' => ['type' => 'string', 'default' => '400'],
                 'style' => ['type' => 'string', 'enum' => ['normal', 'italic'], 'default' => 'normal'],
             ], 'required' => ['family', 'data']],
+            'output' => Shape::of(['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic')]),
             'handler' => function (array $in) use ($design) {
                 $font = $this->app->make(Fonts::class)->upload((string) $in['family'], (string) ($in['name'] ?? $in['family']), (string) $in['data'], (string) ($in['weight'] ?? '400'), (string) ($in['style'] ?? 'normal'));
                 $design()->saved();
@@ -457,6 +497,7 @@ final class SiteModule extends Plugin
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'format' => 'ulid']], 'required' => ['id']],
+            'output' => Shape::of(['url' => Shape::STRING]),
             'handler' => fn (array $in) => ['url' => url('/__preview/'.strtolower($in['id']))],
         ]);
 
@@ -483,6 +524,33 @@ final class SiteModule extends Plugin
                 ...$this->templatePicker($collection),
             ]];
         });
+    }
+
+    /** A shape with a sentence on what its keys are. */
+    private static function described(Shape $shape, string $about): Shape
+    {
+        return Shape::raw([...$shape->toSchema(), 'description' => $about]);
+    }
+
+    /** A value in tokens.json: CSS or a token as a string, or a bare number. */
+    private static function cssValue(): Shape
+    {
+        return Shape::either(Shape::STRING, Shape::NUMBER);
+    }
+
+    /** Declarations of one element, as tokens.json has them. */
+    private static function declarationsShape(): Shape
+    {
+        return Shape::open('CSS declarations by camelCase property (fontSize, backgroundColor…); a value is CSS or a token (token:group.name, from `tokens`).');
+    }
+
+    /** SiteBuilder::status(): how far the static build is. */
+    private static function buildShape(): Shape
+    {
+        return Shape::of([
+            'state' => Shape::STRING, 'progress' => Shape::NUMBER, 'message' => Shape::STRING, 'pending' => Shape::INTEGER, 'finishedAt' => Shape::STRING_OR_NULL,
+            'pages' => Shape::INTEGER, 'errors' => [Shape::STRING], 'warnings' => [['uri' => Shape::STRING_OR_NULL, 'message' => Shape::STRING]], 'enabled' => Shape::BOOLEAN,
+        ]);
     }
 
     /** Collection settings inherit the site default; entry fields inherit their collection. */

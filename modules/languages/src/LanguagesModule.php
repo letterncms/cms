@@ -6,9 +6,11 @@ namespace Cms\Modules\Languages;
 
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
+use Cms\Abilities\Shapes;
 use Cms\Content\Entries\Entry;
 use Cms\Packages\Plugin;
 use Cms\Support\Files;
+use Cms\Support\Schema\Shape;
 use Cms\Users\User;
 
 final class LanguagesModule extends Plugin
@@ -150,6 +152,14 @@ final class LanguagesModule extends Plugin
             'description' => 'The site’s languages with names, URL prefixes, direction and how many entries each has.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'prefixDefault' => Shape::BOOLEAN,
+                'canTranslate' => Shape::BOOLEAN,
+                'languages' => [self::language()->with([
+                    'entries' => Shape::INTEGER, 'path' => Shape::STRING_OR_NULL, 'prefixLabel' => Shape::STRING, 'badge' => Shape::STRING_OR_NULL, 'directionName' => Shape::STRING,
+                    'removable' => Shape::BOOLEAN, 'note' => Shape::STRING_OR_NULL, 'prefixable' => Shape::BOOLEAN, 'prefixed' => Shape::BOOLEAN,
+                ])],
+            ]),
             'handler' => function () use ($languages) {
                 $prefixed = (bool) $this->cms()->settings('languages', 'prefix_default', false);
 
@@ -175,6 +185,7 @@ final class LanguagesModule extends Plugin
                 ],
                 'required' => ['default', 'languages'],
             ],
+            'output' => Shape::of([self::language()]),
             'handler' => fn (array $in) => $this->saveLanguages($in['default'], $in['languages'], $in['prefixDefault'] ?? null),
         ]);
 
@@ -186,6 +197,7 @@ final class LanguagesModule extends Plugin
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
             'input' => $one,
+            'output' => Shape::of([self::language()]),
             'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), [...$languages()->codes(), $in['code']]),
         ]);
 
@@ -196,6 +208,7 @@ final class LanguagesModule extends Plugin
             'annotations' => ['destructive' => true],
             'expose' => ['mcp' => false],
             'input' => $one,
+            'output' => Shape::of([self::language()]),
             'handler' => function (array $in) use ($languages) {
                 if ($in['code'] === $languages()->default()) {
                     throw AbilityException::invalid(__('Make another language the default first.'));
@@ -211,6 +224,7 @@ final class LanguagesModule extends Plugin
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
             'input' => $one,
+            'output' => Shape::of([self::language()]),
             'handler' => fn (array $in) => in_array($in['code'], $languages()->codes(), true)
                 ? $this->saveLanguages($in['code'], $languages()->codes())
                 : throw AbilityException::invalid(__('Add the language first.')),
@@ -222,6 +236,7 @@ final class LanguagesModule extends Plugin
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
             'input' => ['type' => 'object', 'properties' => ['prefixDefault' => ['type' => 'boolean']], 'required' => ['prefixDefault']],
+            'output' => Shape::of([self::language()]),
             'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), $languages()->codes(), $in['prefixDefault']),
         ]);
 
@@ -231,6 +246,11 @@ final class LanguagesModule extends Plugin
             'permission' => fn (?User $u, array $in) => $can($u, (string) $in['id'], 'view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => Shape::of([
+                'origin' => Shape::STRING,
+                'versions' => [['id' => Shape::STRING, 'locale' => Shape::STRING, 'name' => Shape::STRING, 'title' => Shape::STRING, 'uri' => Shape::STRING_OR_NULL, 'status' => Shape::STRING, 'original' => Shape::BOOLEAN]],
+                'missing' => [['locale' => Shape::STRING, 'name' => Shape::STRING]],
+            ]),
             'handler' => function (array $in) use ($languages, $translations) {
                 $entry = $this->cms()->entries()->findOrFail($in['id']);
                 $versions = $translations()->versions($entry);
@@ -256,6 +276,10 @@ final class LanguagesModule extends Plugin
             'description' => 'For each language, how many entries exist in it (as the original or a translation) out of all entries in content collections, as counts and a share. Counted at most every 10 minutes.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'output' => Shape::of([
+                'total' => Shape::INTEGER,
+                'languages' => [['code' => Shape::STRING, 'name' => Shape::STRING, 'englishName' => Shape::STRING, 'default' => Shape::BOOLEAN, 'entries' => Shape::INTEGER, 'share' => Shape::NUMBER]],
+            ]),
             'handler' => fn () => cache()->remember(self::COVERAGE, 600, fn () => $this->coverage()),
         ]);
 
@@ -268,7 +292,17 @@ final class LanguagesModule extends Plugin
                 'properties' => ['id' => ['type' => 'string'], 'locale' => $code, 'translate' => ['type' => 'boolean', 'default' => false]],
                 'required' => ['id', 'locale'],
             ],
+            'output' => Shapes::entry(),
             'handler' => fn (array $in, AbilityContext $ctx) => $translations()->create($this->cms()->entries()->findOrFail($in['id']), $in['locale'], $ctx->user, (bool) $in['translate'])->toArray(),
+        ]);
+    }
+
+    /** Languages::all(): a language of the site. */
+    private static function language(): Shape
+    {
+        return Shape::of([
+            'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'code' => Shape::STRING, 'name' => Shape::STRING, 'englishName' => Shape::STRING,
+            'default' => Shape::BOOLEAN, 'prefix' => Shape::STRING, 'direction' => Shape::STRING,
         ]);
     }
 

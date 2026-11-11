@@ -68,7 +68,10 @@ final class RunCommand extends Command
         }
 
         try {
-            return $this->done($abilities->execute((string) $this->argument('ability'), $input, $context));
+            $name = (string) $this->argument('ability');
+            $result = $abilities->execute($name, $input, $context);
+
+            return $this->done($abilities->get($name)?->encode($result) ?? $result);
         } catch (AbilityException $e) {
             return $this->failure($e);
         }

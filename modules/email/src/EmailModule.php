@@ -11,6 +11,7 @@ use Cms\Modules\Settings\SettingsModule;
 use Cms\Packages\Plugin;
 use Cms\Users\User;
 use Throwable;
+use Cms\Support\Schema\Shape;
 
 final class EmailModule extends Plugin
 {
@@ -65,6 +66,7 @@ final class EmailModule extends Plugin
             'permission' => 'settings.manage',
             'expose' => ['mcp' => false],
             'input' => ['type' => 'object', 'properties' => ['to' => ['type' => 'string', 'format' => 'email']], 'required' => ['to']],
+            'output' => Shape::of(['sent' => Shape::BOOLEAN, 'transport' => Shape::STRING]),
             'handler' => function (array $in) {
                 try {
                     $this->app->make(Mailer::class)->deliver(new Message(
@@ -87,6 +89,14 @@ final class EmailModule extends Plugin
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20, 'default' => 5]]],
+            'output' => Shape::of([
+                'transport' => ['key' => Shape::STRING, 'label' => Shape::STRING, 'delivers' => Shape::BOOLEAN],
+                'from' => Shape::STRING, 'sent' => Shape::INTEGER, 'failed' => Shape::INTEGER,
+                'latest' => [[
+                    'id' => Shape::STRING, 'to' => Shape::STRING, 'subject' => Shape::STRING, 'tag' => Shape::STRING_OR_NULL, 'transport' => Shape::STRING,
+                    'status' => Shape::STRING, 'error' => Shape::STRING_OR_NULL, 'createdAt' => Shape::STRING_OR_NULL,
+                ]],
+            ]),
             'handler' => function (array $in) {
                 $key = (string) $this->cms()->settings('email', 'transport', 'log');
                 $transports = $this->app->make(Transports::class);
@@ -109,6 +119,10 @@ final class EmailModule extends Plugin
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 50]]],
+            'output' => Shape::of([[
+                'id' => Shape::STRING, 'to' => Shape::STRING, 'subject' => Shape::STRING, 'tag' => Shape::STRING_OR_NULL, 'transport' => Shape::STRING,
+                'status' => Shape::STRING, 'error' => Shape::STRING_OR_NULL, 'created_at' => Shape::STRING_OR_NULL,
+            ]]),
             'handler' => fn (array $in) => DB::table('email_log')->orderByDesc('created_at')->limit($in['limit'])->get()->all(),
         ]);
     }

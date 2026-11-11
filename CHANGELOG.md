@@ -6,12 +6,17 @@
 
 - `packages/plan-install` no longer answers with the license token: for a paid package its `access` carried the `X-Cms-License` header and query the download is fetched with. It now has only `allowed`, `reason`, `message` and `buy_url`, as the catalog does.
 
+### Added
+
+- Every ability says what it answers with: an `output` JSON Schema beside its `input`, in `abilities/list`, `GET /api/v1/abilities`, `cms run --list --json` and as each MCP tool's `outputSchema`. Plugins write it the short way with `Cms\Support\Schema\Shape`. The tests hold every result against its schema, key for key.
+
 ### Fixed
 
 - `fieldsets/save` refuses a field of a type that does not exist, a handle used twice and fields nested too deep, as `collections/save` does. It checked handles only, so a fieldset could be saved that no collection could then import.
 
 ### Changed
 
+- **Breaking.** An answer's maps are JSON objects on every transport, also when empty: an entry without field values has `"data": {}` where it had `"data": []`. MCP: a tool's `structuredContent` is always an object, as its `outputSchema` says: a list is under `items` (an empty one too), a string, a number or nothing under `result`. `Ability::$output` is read with `output()`.
 - **Breaking.** Every command takes `--json`: it then prints one JSON document and nothing else, `{"data": …}` when it worked and `{"error": {"type", "message", "details"}}` with a non-zero exit when it didn't, the same shape the REST API answers with, and it never asks a question (`pull`, `push` and `sync:undo` need `--yes`). That holds before a command starts too: an unknown command, or a site that cannot boot, is the same document. Something unexpected is logged and said as “The command failed.”, not as its internals. `cms run` always answers this way, so its result is under `data` and a failure is the error document instead of a line of text; its input as one JSON object is `--input='{…}'` (was `--json=`). `license:status --json` and `media:check --json` print their report under `data`.
 - **Design tokens**: motion and layering have small named scales that every admin module and plugin can use: `duration-fast`, `duration-base`, `duration-move` and `duration-slow`, and `z-raised`, `z-drag`, `z-sticky`, `z-bar`, `z-drawer`, `z-overlay` and `z-tooltip`. A transition without a duration takes `duration-base`. New colours for pointed-at and pressed fills (`ink-hover`, `danger-hover`, `signal-hover`, `float-hover` and their `-active`), `focus-hover`, `fill`, `border-hover` and `info`, the shadows `shadow-edge`, `shadow-focus` and `shadow-cursor`, and the size `text-display` for the title of an entry. The admin's own components use them, so dialogs, panels and toasts move at one speed.
 - Everything that fails says so the same way, with **Try Again**: a list, a form, a widget, a screen, the admin itself. A crash says so in plain words and keeps its technical message for the console. Every search that finds nothing says **No matches**. Short status lines no longer end in a period.
