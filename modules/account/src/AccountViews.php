@@ -30,6 +30,25 @@ final class AccountViews
         return ['type' => 'ui/page', 'props' => ['title' => __('Account'), 'icon' => 'user', 'width' => 'narrow'], 'children' => [
             ['type' => 'ui/section', 'props' => ['title' => __('Profile')], 'children' => [['type' => 'account/profile']]],
             ['type' => 'ui/section', 'props' => ['title' => __('Security')], 'children' => [['type' => 'account/security']]],
+            // Where sessions can be read (files, the database): with redis or a cookie there would be nothing to list.
+            ...(! Sessions::listable() ? [] : [['type' => 'ui/section', 'props' => ['title' => __('Signed In'), 'actions' => [
+                ['label' => __('Sign Out Everywhere Else'), 'icon' => 'logout', 'ability' => 'sessions/delete', 'input' => ['others' => true], 'success' => __('Signed out everywhere else'),
+                    'confirm' => ['title' => __('Sign out everywhere else?'), 'text' => __('Every other browser has to sign in again.'), 'confirm' => __('Sign Out Everywhere Else'), 'danger' => true]],
+            ]], 'children' => [
+                ['type' => 'ui/records', 'props' => [
+                    'id' => 'sessions', 'label' => __('Signed In'), 'search' => false, 'display' => false,
+                    'source' => ['ability' => 'sessions/list'],
+                    'columns' => [
+                        ['key' => 'device', 'label' => __('Device'), 'format' => 'strong', 'badge' => 'currentLabel', 'width' => 'minmax(140px,1fr)'],
+                        ['key' => 'ip', 'label' => __('Address'), 'format' => 'code', 'width' => '120px'],
+                        ['key' => 'lastActiveAt', 'label' => __('Last Active'), 'format' => 'ago', 'width' => '120px'],
+                    ],
+                    'actions' => [
+                        ['label' => __('Sign Out'), 'icon' => 'logout', 'variant' => 'danger', 'ability' => 'sessions/delete', 'input' => ['id' => '{row.id}'], 'unless' => '{row.current}', 'success' => __('Signed out')],
+                    ],
+                    'empty' => ['size' => 'sm', 'title' => __('Not signed in anywhere else')],
+                ]],
+            ]]]),
             ['type' => 'ui/section', 'can' => 'tokens.manage', 'props' => ['title' => __('API Tokens'), 'actions' => [
                 ['label' => __('New Token'), 'icon' => 'plus', 'component' => 'account/new-token'],
             ]], 'children' => [

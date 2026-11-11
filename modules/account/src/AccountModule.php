@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Account;
 
+use Illuminate\Auth\Events\Login;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Cms\Modules\Blocks\BlockRegistry;
 use Cms\Content\Collections\Collection;
 use Cms\Modules\Account\Site\Forms;
@@ -28,6 +30,11 @@ final class AccountModule extends Plugin
     {
         $this->cms()->permissions()->register('tokens.manage', 'Create Personal API Tokens', 'Users');
         $this->app->make(AccountAbilities::class)->register($this->cms()->abilities());
+        // What a session is opened on, for the list of where someone is signed in.
+        Event::listen(Login::class, static function (Login $event): void {
+            $request = request();
+            $request->hasSession() && Sessions::remember($request->session(), $request->userAgent(), $request->ip());
+        });
         // First in the settings sidebar: everyone has one, whatever else they may change.
         $this->cms()->admin()->nav('account', ['label' => 'Account', 'path' => '/account', 'icon' => 'user', 'section' => 'account', 'order' => 0]);
         $this->cms()->admin()->widget('account-security', ['label' => 'Security', 'description' => 'Says when two-factor authentication is off or an API token lies unused.', 'icon' => 'shield', 'column' => 'side', 'order' => 60]);

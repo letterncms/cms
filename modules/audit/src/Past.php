@@ -104,6 +104,7 @@ final class Past
             'settings/update' => __('Updated Settings'),
             'schemas/refresh' => __('Wrote Schema Files'),
             'site/build' => __('Published Site'),
+            'sessions/delete' => __('Signed Out Elsewhere'),
             'sync/allow' => __('Changed Pulls and Pushes'),
             'sync/cancel' => __('Cancelled Sync'),
             'sync/connect' => __('Connected Site'),
