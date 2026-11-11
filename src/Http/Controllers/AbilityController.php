@@ -11,6 +11,7 @@ use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Cms;
+use Cms\Http\OpenApi;
 
 /**
  * One endpoint for everything: the admin SPA (/api/admin) and integrations
@@ -31,9 +32,16 @@ final class AbilityController
                 'run' => url('/api/v1/abilities/{name}'),
                 'batch' => url('/api/v1/batch'),
                 'content' => url('/api/v1/content/{collection}'),
+                'openapi' => url('/api/v1/openapi.json'),
             ],
             'auth' => 'Bearer token (create one under Account → API tokens).',
         ]);
+    }
+
+    /** The API as OpenAPI 3.1, for tools that generate clients and for agents that read it. Public: it holds names and schemas, no content. */
+    public function openapi(OpenApi $openapi): JsonResponse
+    {
+        return response()->json($openapi->document(), 200, [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
     public function index(Request $request): JsonResponse
@@ -98,6 +106,8 @@ final class AbilityController
             $request->user(),
             $request->is('api/admin/*') ? 'admin' : 'rest',
             $token?->scopes,
+            // A query string has only text: ?perPage=5 is the number the schema asks for.
+            strings: $request->isMethod('GET'),
         );
     }
 
