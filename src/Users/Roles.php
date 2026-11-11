@@ -31,7 +31,7 @@ final class Roles
             'description' => 'Write and edit content; cannot publish.',
             'permissions' => ['admin.access', 'entries.*.view', 'entries.*.create', 'entries.*.edit', 'media.view', 'media.upload'],
         ],
-        'member' => [
+        'visitor' => [
             'label' => 'Visitor',
             'description' => 'A site visitor with an account. No access to the admin.',
             'permissions' => [],

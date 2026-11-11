@@ -89,7 +89,7 @@ final class PublicAccountsTest extends TestCase
 
     private function member(string $email = 'ada@example.com', string $password = 'correct-horse-1'): User
     {
-        $user = new User(['name' => 'Ada', 'email' => $email, 'password' => $password, 'roles' => ['member']]);
+        $user = new User(['name' => 'Ada', 'email' => $email, 'password' => $password, 'roles' => ['visitor']]);
         $user->save();
 
         return $user;
@@ -140,7 +140,7 @@ final class PublicAccountsTest extends TestCase
         $user = User::query()->where('email', 'new@example.com')->firstOrFail();
         $this->assertSame('Ada', $user->name);
         $this->assertNotNull($user->email_verified_at);
-        $this->assertSame(['member'], $user->roles);
+        $this->assertSame(['visitor'], $user->roles);
         $this->assertTrue(cms()->accounts()->isVisitor($user));
         $this->assertAuthenticatedAs($user);
         $this->get('/account')->assertOk()->assertSee('new@example.com');
@@ -302,7 +302,7 @@ final class PublicAccountsTest extends TestCase
         $this->assertSame('Ada L', $fresh->name);
         $this->assertSame('ada@example.com', $fresh->email);
         $this->assertFalse($fresh->super);
-        $this->assertSame(['member'], $fresh->roles);
+        $this->assertSame(['visitor'], $fresh->roles);
         $this->assertSame('xHello', $fresh->data['bio']);
         $this->assertArrayNotHasKey('internal_note', $fresh->data);
     }
