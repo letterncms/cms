@@ -550,5 +550,8 @@
   "Width": "Breite",
   "With Prose on, its own paragraphs are spaced the same way.": "Ist Fließtext an, erhalten die eigenen Absätze denselben Abstand.",
   "Working…": "In Arbeit…",
-  "Write a Design Script or Style": "Skript oder Stil des Designs schreiben"
+  "Write a Design Script or Style": "Skript oder Stil des Designs schreiben",
+  "Which side it is on: previous or next": "Auf welcher Seite er steht: vorheriger oder nächster",
+  "Is the previous entry": "Ist der vorherige Eintrag",
+  "Is the next entry": "Ist der nächste Eintrag"
 }

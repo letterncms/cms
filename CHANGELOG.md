@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Repeat**'s **Previous and Next Entry** source tells each item which side it is on: `item.side` is `previous` or `next`, and `item.previous` and `item.following` are that as yes or no. One Repeat now renders both neighbours with the right label and arrow (`bind: {"visible": "item.following"}`, `{"state:next": "item.following"}`, or `item.side|is:next`).
+
 ## 0.23.0 (2026-11-11)
 
 ### Added

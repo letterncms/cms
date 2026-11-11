@@ -312,14 +312,17 @@ final class SiteModule extends Plugin
                     ['handle' => 'show', 'type' => 'select', 'label' => 'Show', 'options' => ['both' => __('Previous and Next'), 'previous' => __('Previous'), 'next' => __('Next')], 'default' => 'both'],
                     ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Go Round at the Ends'],
                 ],
-                'item' => ['title' => __('Title'), 'url' => __('Link'), 'date' => __('Published'), 'excerpt' => __('A field (any field handle)')],
+                'item' => ['title' => __('Title'), 'url' => __('Link'), 'date' => __('Published'), 'excerpt' => __('A field (any field handle)'), 'side' => __('Which side it is on: previous or next'), 'previous' => __('Is the previous entry'), 'following' => __('Is the next entry')],
                 'resolve' => static function (array $props, Scope $scope) use ($entry) {
                     $current = $entry($scope);
                     $show = (string) ($props['show'] ?? 'both');
                     $wrap = ! empty($props['wrap']);
+                    // Each says which side it is on, so one Repeat labels and points both: item.side is "previous"
+                    // or "next", and item.previous and item.following are that as yes or no, for a condition or a state.
+                    $on = static fn (?AugmentedEntry $item, string $side) => $item?->as(['side' => $side, 'previous' => $side === 'previous', 'following' => $side === 'next']);
                     $items = $current ? [
-                        $show !== 'next' ? $current->sibling(-1, $wrap) : null,
-                        $show !== 'previous' ? $current->sibling(1, $wrap) : null,
+                        $show !== 'next' ? $on($current->sibling(-1, $wrap), 'previous') : null,
+                        $show !== 'previous' ? $on($current->sibling(1, $wrap), 'next') : null,
                     ] : [];
                     $items = array_values(array_filter($items));
 

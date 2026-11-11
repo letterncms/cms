@@ -550,5 +550,8 @@
   "Previous": "Précédent",
   "Next": "Suivant",
   "Show": "Afficher",
-  "Go Round at the Ends": "Boucler aux extrémités"
+  "Go Round at the Ends": "Boucler aux extrémités",
+  "Which side it is on: previous or next": "De quel côté elle se trouve : précédente ou suivante",
+  "Is the previous entry": "Est l’entrée précédente",
+  "Is the next entry": "Est l’entrée suivante"
 }

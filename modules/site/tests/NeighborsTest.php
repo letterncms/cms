@@ -132,4 +132,47 @@ final class NeighborsTest extends TestCase
 
         $this->assertStringContainsString('>Second</a>', (string) file_get_contents(public_path('soundings/first/index.html')), 'the page before it now links to it');
     }
+
+    public function test_each_item_says_which_side_it_is_on_so_one_repeat_labels_both(): void
+    {
+        $this->cms()->entryService()->create('templates', ['title' => 'Sounding', 'slug' => 'sounding', 'status' => 'published', 'data' => ['blocks' => [
+            ['type' => 'repeat', 'props' => ['source' => 'neighbors', 'tag' => 'nav'], 'children' => [
+                ['type' => 'box', 'props' => ['tag' => 'p'], 'bind' => ['state:next' => 'item.following', 'attr:data-side' => 'item.side'], 'children' => [
+                    ['type' => 'paragraph', 'props' => ['tag' => 'span', 'text' => 'Earlier:'], 'bind' => ['visible' => 'item.previous']],
+                    ['type' => 'paragraph', 'props' => ['tag' => 'span', 'text' => 'Later:'], 'bind' => ['visible' => 'item.side|is:next']],
+                    ['type' => 'link', 'bind' => ['label' => 'item.title', 'url' => 'item.url']],
+                ]],
+            ]],
+        ]]]);
+        $ids = [];
+
+        foreach (['First', 'Second', 'Third'] as $i => $title) {
+            $ids[$title] = $this->cms()->entryService()->create('soundings', ['title' => $title, 'status' => 'published', 'position' => $i, 'data' => ['content' => []]])->id;
+        }
+
+        $read = function (string $title) use ($ids): array {
+            preg_match_all('#<p class="cms-box( is-next)?" data-side="(previous|next)">(.*?)</p>#', $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($ids[$title]))['html'], $m, PREG_SET_ORDER);
+
+            return array_map(static fn (array $row) => [$row[2], $row[1] !== '', trim(strip_tags(str_replace('</span>', ' ', $row[3])))], $m);
+        };
+
+        $this->assertSame([['previous', false, 'Earlier: First'], ['next', true, 'Later: Third']], $read('Second'));
+        $this->assertSame([['next', true, 'Later: Second']], $read('First'));
+        $this->assertSame([['previous', false, 'Earlier: Second']], $read('Third'));
+    }
+
+    public function test_an_entry_behind_the_gate_is_no_neighbour_for_someone_outside_it(): void
+    {
+        $this->template();
+        $create = fn (array $input) => $this->cms()->entryService()->create('soundings', ['status' => 'published', 'data' => ['content' => []], ...$input])->id;
+        $first = $create(['title' => 'First', 'position' => 0]);
+        $create(['title' => 'Members only', 'position' => 1, 'data' => ['content' => [], 'gate' => ['mode' => 'locked', 'access' => ['member']]]]);
+        $teaser = $create(['title' => 'A taste', 'position' => 2, 'data' => ['content' => [], 'gate' => ['mode' => 'teaser', 'access' => ['member']]]]);
+        $last = $create(['title' => 'Last', 'position' => 3]);
+        $this->cms()->entries()->gate()->forget();
+
+        $this->assertSame(['A taste'], $this->linksOf($first), 'a locked entry is skipped; one with a teaser has a page of its own and is listed');
+        $this->assertSame(['First', 'Last'], $this->linksOf($teaser));
+        $this->assertSame(['A taste'], $this->linksOf($last));
+    }
 }

@@ -550,5 +550,8 @@
   "Previous": "Vorige",
   "Next": "Volgende",
   "Show": "Tonen",
-  "Go Round at the Ends": "Rondgaan aan de uiteinden"
+  "Go Round at the Ends": "Rondgaan aan de uiteinden",
+  "Which side it is on: previous or next": "Aan welke kant het staat: vorige of volgende",
+  "Is the previous entry": "Is het vorige item",
+  "Is the next entry": "Is het volgende item"
 }
