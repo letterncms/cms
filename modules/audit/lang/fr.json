@@ -16,6 +16,7 @@
   "Also Record Reads": "Enregistrer aussi les lectures",
   "Any Time": "Toute période",
   "API": "API",
+  "Applied Site Kit": "Kit de site appliqué",
   "Assistant": "Assistant",
   "Audit Log": "Journal d’audit",
   "Cancelled Sync": "Synchronisation annulée",
@@ -60,6 +61,8 @@
   "Export Audit Log": "Exporter le journal d’audit",
   "Export CSV": "Exporter en CSV",
   "Exported Audit Log": "Journal d’audit exporté",
+  "Exported Site as a Kit": "Site exporté en kit",
+  "Forever": "Indéfiniment",
   "Gave Access": "Accès accordé",
   "Hid the Guided Start": "Démarrage guidé masqué",
   "Imported Media": "Médias importés",
@@ -156,6 +159,5 @@
   "When": "Quand",
   "Who": "Qui",
   "Who changed what across the site, and when.": "Qui a modifié quoi sur le site, et quand.",
-  "Forever": "Indéfiniment",
   "Wrote Schema Files": "Fichiers de schéma écrits"
 }

@@ -45,7 +45,7 @@ final class ZipInspector
             }
 
             $this->manifest($composer, $expected, $coreVersion);
-            $this->parseAll($zip);
+            ($composer['type'] ?? null) === PackageManifest::KIT ? $this->kitFiles($zip, $top) : $this->parseAll($zip);
         } finally {
             $zip->close();
         }
@@ -123,7 +123,7 @@ final class ZipInspector
             throw new RuntimeException(__('This zip holds :found, not :expected.', ['found' => $name ?: '?', 'expected' => $expected]));
         }
 
-        if (($composer['type'] ?? null) !== PackageManifest::PLUGIN) {
+        if (! in_array($composer['type'] ?? null, [PackageManifest::PLUGIN, PackageManifest::KIT], true)) {
             throw new RuntimeException(__('This zip is not a plugin for this CMS.'));
         }
 
@@ -140,6 +140,22 @@ final class ZipInspector
 
             if ($dep === PackageManifest::CORE && ! Semver::satisfies($coreVersion, $constraint)) {
                 throw new RuntimeException(__('This package needs :brand :constraint.', ['constraint' => $constraint]));
+            }
+        }
+    }
+
+    /** A kit is data: nothing in it may be a file a server runs, and it says what it is in kit.json. */
+    private function kitFiles(ZipArchive $zip, string $top): void
+    {
+        if ($zip->locateName($top.'/kit.json') === false) {
+            throw new RuntimeException(__('This zip is a kit without a kit.json.'));
+        }
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = (string) $zip->getNameIndex($i);
+
+            if (preg_match('/\.(php\d?|phtml|phar|pl|py|cgi|sh|asp|aspx|jsp|htaccess)(\.|\/|$)/i', $name)) {
+                throw new RuntimeException(__('A kit holds no code a server runs: :name', ['name' => $name]));
             }
         }
     }

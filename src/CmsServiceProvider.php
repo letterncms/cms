@@ -363,6 +363,7 @@ final class CmsServiceProvider extends ServiceProvider
         Route::middleware('web')->group(function () {
             Route::get('/install', [Http\Controllers\InstallController::class, 'show']);
             Route::post('/install', [Http\Controllers\InstallController::class, 'store'])->middleware('throttle:cms-login');
+            Route::get('/install/kits', [Http\Controllers\InstallController::class, 'kits'])->middleware('throttle:cms-login');
             Route::post('/install/finish', [Http\Controllers\InstallController::class, 'finish'])->middleware(['auth:web', 'cms.admin']);
         });
 

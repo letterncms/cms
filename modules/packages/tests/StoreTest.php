@@ -160,6 +160,33 @@ final class StoreTest extends TestCase
         $this->assertSame([], $this->remote->callsTo('/download/acme/forms/1.0.0')[0]['headers']);
     }
 
+    public function test_a_site_kit_from_the_store_lands_in_kits_and_never_runs(): void
+    {
+        $kit = ['kit.json' => json_encode(['handle' => 'studio', 'name' => 'Studio', 'version' => '1.2.0']), 'content/design/tokens.json' => '{"tokens":{}}'];
+        $this->list('letterncms/studio', '1.2.0', [], ['type' => 'kit', 'first_party' => true], $kit, ['type' => 'cms-kit']);
+        $this->assertSame('kit', $this->itemIn($this->client->catalog(), 'letterncms/studio')['type']);
+
+        $job = $this->install('letterncms/studio');
+
+        $this->assertSame('done', $job['state'], (string) ($job['error'] ?? ''));
+        $this->assertFileExists($this->site.'/kits/studio/kit.json');
+        $this->assertDirectoryDoesNotExist($this->site.'/plugins/studio');
+        $this->assertFalse($this->cms()->packages()->isEnabled('letterncms/studio'), 'a kit is not a plugin to switch on');
+        $this->assertSame('installed', $this->itemIn($this->client->catalog(), 'letterncms/studio')['action']);
+        // Its demo is the store's own page; one elsewhere is not shown.
+        $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => self::STORE.'/kits/studio/']);
+        $this->assertSame(self::STORE.'/kits/studio/', $this->client->item(StoreClient::DEFAULT, 'letterncms/studio')['demo_url']);
+        $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => 'https://evil.example/kits/studio/']);
+        $this->assertNull($this->client->item(StoreClient::DEFAULT, 'letterncms/studio')['demo_url']);
+
+        // A kit that carries something a server would run is refused before it is unpacked.
+        $this->list('letterncms/sneaky', '1.0.0', [], ['type' => 'kit', 'first_party' => true], [...$kit, 'public/media/x.php' => '<?php'], ['type' => 'cms-kit']);
+        $job = $this->install('letterncms/sneaky');
+        $this->assertSame('failed', $job['state']);
+        $this->assertStringContainsString('x.php', (string) $job['error']);
+        $this->assertDirectoryDoesNotExist($this->site.'/kits/sneaky');
+    }
+
     public function test_the_store_tab_is_there_with_no_store_plugin_in_sight(): void
     {
         $abilities = $this->cms()->abilities();

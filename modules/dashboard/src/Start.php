@@ -86,7 +86,7 @@ final class Start
         return $state['since'] !== null && ! $state['dismissed'] && array_any($this->steps($user), static fn (array $step) => ! $step['done']);
     }
 
-    /** A site is ready for its first sign-in: the guide starts counting from now. What the starter brought is before it. */
+    /** A site is ready for its first sign-in: the guide starts counting from now. What the site kit brought is before it. */
     public function begin(): void
     {
         is_file($this->file()) || Files::putJson($this->file(), ['since' => time(), 'dismissed' => false]);

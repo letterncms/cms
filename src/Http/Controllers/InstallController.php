@@ -12,6 +12,10 @@ use Cms\Admin\Translations;
 use Cms\Http\Csp;
 use Cms\Http\Middleware\SiteCookies;
 use Cms\Install\Installer;
+use Cms\Modules\Packages\StoreClient;
+use Cms\Modules\Site\Kits\Kit;
+use Cms\Modules\Site\Kits\Kits;
+use Cms\Support\Files;
 use Cms\Update\Layout;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -26,15 +30,20 @@ final class InstallController
         $nonce = Csp::nonce();
         $locale = $this->locale($request);
 
+        // A store's pictures come from the store: the one place besides this site an image may.
+        $store = self::origin((string) (app(StoreClient::class)->stores()[0]['url'] ?? ''));
+
         return response()->view('cms::install', [
             'locale' => $locale,
             'text' => self::text(),
+            'kits' => array_values(array_map(static fn (Kit $kit) => ['handle' => $kit->handle, 'name' => $kit->name(), 'preview' => $kit->toArray()['previews'][0] ?? null], app(Kits::class)->all())),
+            'defaultKit' => Kits::DEFAULT,
             'requirements' => $installer->requirements(),
             'nonce' => $nonce,
             'drivers' => \PDO::getAvailableDrivers(),
             'url' => $request->getSchemeAndHttpHost(),
             'needsToken' => (string) env('CMS_INSTALL_TOKEN', '') !== '',
-        ])->header('Content-Security-Policy', "default-src 'self'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'");
+        ])->header('Content-Security-Policy', "default-src 'self'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline'; img-src 'self' data:".($store !== null ? ' '.$store : '')."; frame-ancestors 'none'");
     }
 
     public function store(Request $request, Installer $installer): JsonResponse
@@ -68,7 +77,60 @@ final class InstallController
             'xsrfCookie' => SiteCookies::xsrf($request),
             'composer' => app(Layout::class)->managed() === 'composer',
             'recommended' => Installer::RECOMMENDED,
+            'kit' => $input['kit'] ?? Kits::DEFAULT,
         ]);
+    }
+
+    /**
+     * The site kits the store has, for a setup that can fetch them (not a site Composer manages: it says
+     * `composer require` for a kit, as for a plugin). Free ones only, with their first picture. Asked by the
+     * page once it is open, so a store that is slow or down never holds up the installer.
+     */
+    public function kits(): JsonResponse
+    {
+        if (Installer::installed() || app(Layout::class)->managed() === 'composer') {
+            return response()->json(['kits' => []]);
+        }
+
+        try {
+            $catalog = app(StoreClient::class)->catalog(refresh: true);
+        } catch (\Throwable) {
+            return response()->json(['kits' => []]);
+        }
+
+        return response()->json(['kits' => self::storeKits($catalog['items'], array_keys(app(Kits::class)->all()))]);
+    }
+
+    /**
+     * The store's free kits a setup may fetch, once each: a kit this site already has (built in, put in kits/ by
+     * Composer or by hand) is the one offered, and the store's copy of it is left out.
+     *
+     * @param  list<array<string, mixed>>  $items  the catalog as StoreClient describes it
+     * @param  list<string>  $here  the handles of the kits this site has
+     * @return list<array{handle: string, name: string, package: string, preview: ?string}>
+     */
+    public static function storeKits(array $items, array $here): array
+    {
+        $kits = [];
+
+        foreach ($items as $item) {
+            [$vendor, $name] = explode('/', (string) ($item['package'] ?? ''), 2) + [1 => ''];
+            $handle = $vendor === \Cms\Packages\PackageManifest::VENDOR ? $name : "{$vendor}-{$name}";
+
+            if (($item['type'] ?? null) === 'kit' && ($item['action'] ?? null) === 'install' && ($item['access']['allowed'] ?? false)
+                && Files::isHandle($handle) && ! in_array($handle, $here, true) && ! isset($kits[$handle])) {
+                $kits[$handle] = ['handle' => $handle, 'name' => (string) $item['title'], 'package' => (string) $item['package'], 'preview' => $item['preview'] ?? $item['icon'] ?? null];
+            }
+        }
+
+        return array_values($kits);
+    }
+
+    private static function origin(string $url): ?string
+    {
+        $parts = parse_url($url);
+
+        return isset($parts['scheme'], $parts['host']) && in_array($parts['scheme'], ['https', 'http'], true) ? $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '') : null;
     }
 
     /** The setup's last step, on a fresh request: the plugins it pulled have booted. */
@@ -133,6 +195,10 @@ final class InstallController
             'addButton' => __('Install Plugins'),
             'skip' => __('Continue Without Plugins'),
             'continue' => __('Go to Dashboard'),
+            'kits' => __('Start From'),
+            'addingKit' => __('Adding the kit :name…'),
+            'kitFailed' => __('The kit you chose couldn’t be fetched.'),
+            'useMinimal' => __('Start From Minimal'),
             'adding' => __('Finishing Your Site'),
             'addingOne' => __('Adding :package…'),
             'finishing' => __('Putting your site together…'),

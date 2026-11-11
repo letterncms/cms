@@ -68,7 +68,7 @@ final class GuidedStartTest extends TestCase
         $page = array_values(array_filter($this->start($ctx)['steps'], static fn (array $s) => $s['id'] === 'page'))[0];
         $collection = explode('/', $page['to'])[2];
 
-        // What was there when the site was ready (the starter's pages) is not the first page someone made.
+        // What was there when the site was ready (the site kit's pages) is not the first page someone made.
         $this->cms()->abilities()->execute('entries/create', ['collection' => $collection, 'title' => 'From the starter'], $ctx);
         $this->install(-60);
         $this->assertFalse($done()['page']);

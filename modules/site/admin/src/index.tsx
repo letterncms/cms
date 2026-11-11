@@ -20,3 +20,4 @@ registry.entryActions.set('site-preview', {
   perform: () => events.emit('entry.preview'),
 })
 registry.routes.set('/design', { path: '/design', component: lazy(() => import('./DesignTokens')), load: () => prefetchAbility('design/get') })
+registry.routes.set('/kits', { path: '/kits', component: lazy(() => import('./Kits')), load: () => prefetchAbility('kits/list') })

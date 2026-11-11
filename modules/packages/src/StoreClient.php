@@ -218,6 +218,8 @@ final class StoreClient
             'gallery' => array_values(array_filter(array_map(static fn ($s) => is_array($s) ? ['url' => (string) ($s['url'] ?? ''), 'alt' => mb_substr((string) ($s['alt'] ?? ''), 0, 300)] : ['url' => (string) $s, 'alt' => ''], (array) ($detail['gallery'] ?? $detail['screenshots'] ?? [])), static fn (array $s) => self::origin($s['url']) === $origin)),
             'requirements' => array_values(array_map(static fn ($r) => mb_substr((string) $r, 0, 200), array_slice((array) ($detail['requirements'] ?? []), 0, 20))),
             'docs_url' => self::link($detail['docs_url'] ?? null),
+            // A site kit's live demo, on the store's own origin.
+            'demo_url' => self::origin((string) ($detail['demo_url'] ?? '')) === $origin ? self::link($detail['demo_url']) : null,
             'repository_url' => self::link($detail['repository_url'] ?? null),
             'releases' => array_values(array_map(static fn ($r) => ['version' => mb_substr((string) ($r['version'] ?? ''), 0, 40), 'released_at' => mb_substr((string) ($r['released_at'] ?? ''), 0, 32), 'notes' => mb_substr((string) ($r['notes'] ?? ''), 0, 4000), 'security' => (bool) ($r['security'] ?? false)], array_filter(array_slice((array) ($detail['releases'] ?? []), 0, 20), 'is_array'))),
             'operator' => (string) ($detail['operator'] ?? parse_url((string) $payload['store'], PHP_URL_HOST)),
@@ -560,7 +562,7 @@ final class StoreClient
     /** @return array<string, mixed> */
     private function describe(string $id, array $item, array $payload): array
     {
-        $installed = $this->cms->packages()->repository()->find((string) ($item['package'] ?? ''));
+        $installed = $this->installedVersion($item);
         $entry = $this->latestCompatible($item, null);
         $origin = self::origin((string) ($payload['store'] ?? ''));
         $icon = (string) ($item['icon'] ?? '');
@@ -570,7 +572,7 @@ final class StoreClient
         $action = match (true) {
             $blocked => 'blocked',
             ! $entry => 'incompatible',
-            $installed && version_compare($installed->version, (string) $entry['version'], '>=') => 'installed',
+            $installed !== null && version_compare($installed, (string) $entry['version'], '>=') => 'installed',
             ! $gate['allowed'] => 'buy',
             $installed !== null => 'update',
             default => 'install',
@@ -583,6 +585,8 @@ final class StoreClient
             'title' => mb_substr((string) ($item['title'] ?? $item['package']), 0, 120),
             'summary' => mb_substr((string) ($item['summary'] ?? ''), 0, 300),
             'icon' => self::origin($icon) === $origin ? $icon : null,
+            // A site kit's picture of itself, from the store's own origin like the icon.
+            'preview' => is_string($item['preview'] ?? null) && self::origin($item['preview']) === $origin ? $item['preview'] : null,
             // A name from the icon set the admin draws, not a picture: nothing to fetch.
             'glyph' => preg_match('/^[a-z0-9-]{1,60}$/', (string) ($item['glyph'] ?? '')) === 1 ? (string) $item['glyph'] : null,
             'featured' => (bool) ($item['featured'] ?? false),
@@ -592,11 +596,25 @@ final class StoreClient
             'author' => ['name' => (string) ($item['author']['name'] ?? ''), 'url' => (string) ($item['author']['url'] ?? '')],
             'listing_url' => self::origin((string) ($item['listing_url'] ?? '')) === $origin ? $item['listing_url'] : null,
             'latest' => $entry['version'] ?? null,
-            'installed' => $installed?->version,
+            'installed' => $installed,
             'action' => $action,
             'access' => array_intersect_key($gate, array_flip(['allowed', 'reason', 'message', 'buy_url'])),
             'entry' => $entry,
         ];
+    }
+
+    /** The version of a listed package this site has: a plugin's, or a site kit's in kits/ (the store lists both). */
+    private function installedVersion(array $item): ?string
+    {
+        $package = (string) ($item['package'] ?? '');
+
+        if (($item['type'] ?? 'plugin') !== 'kit') {
+            return $this->cms->packages()->repository()->find($package)?->version;
+        }
+
+        $kit = Files::readJson($this->jobs->targetFor($package, PackageManifest::KIT).'/kit.json');
+
+        return is_string($kit['version'] ?? null) ? $kit['version'] : null;
     }
 
     /** @param  array<string, array<string, mixed>>  $steps  @param  list<string>  $path */

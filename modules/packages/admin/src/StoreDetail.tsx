@@ -8,6 +8,7 @@ interface Detail extends Item {
   gallery: { url: string; alt: string }[]
   requirements: string[]
   docs_url: string | null
+  demo_url?: string | null
   repository_url: string | null
   releases: { version: string; released_at: string; notes: string; security: boolean }[]
   operator: string
@@ -49,6 +50,7 @@ export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { 
     [t('Package'), <code key="p" className="text-xs">{item.package}</code>],
   ]
   const links = [
+    d?.demo_url && { label: t('View the Demo'), href: d.demo_url, icon: 'eye' },
     d?.docs_url && { label: t('Documentation'), href: d.docs_url, icon: 'book-open' },
     d?.repository_url && { label: t('Source Code'), href: d.repository_url, icon: 'code' },
     item.listing_url && { label: t('Store Page'), href: item.listing_url, icon: 'arrow-square-out' },

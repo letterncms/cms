@@ -1,0 +1,13 @@
+{
+    "handle": "minimal",
+    "name": "Minimal",
+    "description": "A home page, an about page and a blog with three posts, on one typeface and a calm design system.",
+    "version": "1.0.0",
+    "license": "MIT",
+    "languages": [
+        "en"
+    ],
+    "previews": [
+        "previews/home.webp"
+    ]
+}

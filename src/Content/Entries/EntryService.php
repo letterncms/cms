@@ -213,6 +213,26 @@ final class EntryService
         });
     }
 
+    /**
+     * An entry that comes from somewhere else with its relations already written (a site kit): created under
+     * the id its maker chose for it, so what the others say of it holds before it exists. It is validated,
+     * named and published like any other; only what it names is taken as it stands, as for a copy.
+     */
+    public function createAs(string $id, string $collectionHandle, array $input, ?User $user = null): Entry
+    {
+        if (! preg_match('/^[0-9a-z]{26}$/', $id)) {
+            throw AbilityException::invalid(__('An entry id is a lowercase ULID.'));
+        }
+
+        return $this->write(function () use ($id, $collectionHandle, $input, $user): Entry {
+            if ($this->find($id) !== null) {
+                throw AbilityException::conflict(__('An entry with the id :id already exists.', ['id' => $id]));
+            }
+
+            return $this->createUnlocked($collectionHandle, $input, $user, copied: true, id: $id);
+        });
+    }
+
     public function update(string $id, array $input, ?User $user = null, bool $publish = false): Entry
     {
         return $this->write(fn () => $this->updateUnlocked($id, $input, $user, $publish));
@@ -272,7 +292,7 @@ final class EntryService
     /**
      * @param  array{title: string, slug?: ?string, data?: array, locale?: ?string, parentId?: ?string, position?: ?int, status?: ?string, at?: ?string, originId?: ?string, authorId?: ?string}  $input
      */
-    private function createUnlocked(string $collectionHandle, array $input, ?User $user = null, bool $allowMissingAuthor = false, bool $copied = false): Entry
+    private function createUnlocked(string $collectionHandle, array $input, ?User $user = null, bool $allowMissingAuthor = false, bool $copied = false, ?string $id = null): Entry
     {
         if (array_diff(array_keys($input), ['collection', 'blueprint', 'title', 'slug', 'data', 'locale', 'parentId', 'position', 'status', 'at', 'expiresAt', 'originId', 'authorId']) !== []) {
             throw AbilityException::invalid(__('Unsupported entry properties.'));
@@ -308,7 +328,7 @@ final class EntryService
         }
 
         $entry = new Entry(
-            id: strtolower((string) Str::ulid()),
+            id: $id ?? strtolower((string) Str::ulid()),
             collection: $collection->handle,
             locale: $locale,
             slug: '',

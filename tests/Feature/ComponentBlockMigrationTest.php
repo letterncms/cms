@@ -312,7 +312,8 @@ final class ComponentBlockMigrationTest extends TestCase
 
     public function test_a_site_without_the_old_block_is_left_as_it_is(): void
     {
-        $this->app->make(\Cms\Modules\Site\Starter::class)->refresh($this->admin());
+        $kits = $this->app->make(\Cms\Modules\Site\Kits\Kits::class);
+        $this->app->make(\Cms\Modules\Site\Kits\KitApplier::class)->apply($kits->findOrFail('minimal'), 'full', 'replace', $this->admin(), withoutPlugins: true);
         $files = $this->files();
         $rows = [DB::table('entries')->orderBy('id')->get()->all(), DB::table('revisions')->orderBy('id')->get()->all()];
         $this->assertNotSame([], $rows[0]);

@@ -81,7 +81,7 @@ final class StoreAbilities
             'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['package']],
             'output' => self::listing()->with([
                 'description_html' => Shape::STRING, 'screenshots' => [Shape::STRING], 'gallery' => [['url' => Shape::STRING, 'alt' => Shape::STRING]],
-                'requirements' => [Shape::STRING], 'docs_url' => Shape::STRING_OR_NULL, 'repository_url' => Shape::STRING_OR_NULL,
+                'requirements' => [Shape::STRING], 'docs_url' => Shape::STRING_OR_NULL, 'demo_url' => Shape::STRING_OR_NULL, 'repository_url' => Shape::STRING_OR_NULL,
                 'releases' => [['version' => Shape::STRING, 'released_at' => Shape::STRING, 'notes' => Shape::STRING, 'security' => Shape::BOOLEAN]],
                 'operator' => Shape::STRING, 'capabilities' => [Shape::STRING], 'requires' => self::requires(),
             ]),
@@ -340,7 +340,7 @@ final class StoreAbilities
     {
         return Shape::of([
             'store' => Shape::STRING, 'package' => Shape::STRING, 'type' => Shape::STRING, 'title' => Shape::STRING, 'summary' => Shape::STRING,
-            'icon' => Shape::STRING_OR_NULL, 'glyph' => Shape::STRING_OR_NULL, 'featured' => Shape::BOOLEAN, 'categories' => [Shape::STRING],
+            'icon' => Shape::STRING_OR_NULL, 'preview' => Shape::STRING_OR_NULL, 'glyph' => Shape::STRING_OR_NULL, 'featured' => Shape::BOOLEAN, 'categories' => [Shape::STRING],
             'pricing' => Shape::STRING, 'first_party' => Shape::BOOLEAN, 'author' => ['name' => Shape::STRING, 'url' => Shape::STRING],
             'listing_url' => Shape::STRING_OR_NULL, 'latest' => Shape::STRING_OR_NULL, 'installed' => Shape::STRING_OR_NULL,
             'action' => Shape::enum('blocked', 'incompatible', 'installed', 'buy', 'update', 'install'),

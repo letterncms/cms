@@ -37,6 +37,20 @@
       <div class="field"><label for="site_url">{{ $text['siteUrl'] }}</label><input id="site_url" name="site_url" type="url" required value="{{ $url }}"></div>
     </section>
 
+    {{-- What the site starts as: a picture and a name per kit, the one that comes with the CMS chosen. --}}
+    <section>
+      <h2 id="kits-heading">{{ $text['kits'] }}</h2>
+      <div role="radiogroup" aria-labelledby="kits-heading"><ul class="kits" id="kits">
+        @foreach ($kits as $kit)
+          <li><label>
+            @if ($kit['preview'])<img src="{{ $kit['preview'] }}" alt="" width="480" height="300" loading="lazy">@else<span class="blank" aria-hidden="true"></span>@endif
+            <span class="name"><input type="radio" name="kit" value="{{ $kit['handle'] }}" @checked($kit['handle'] === $defaultKit)>{{ $kit['name'] }}</span>
+          </label></li>
+        @endforeach
+      </ul></div>
+      <input type="hidden" name="kit_from_store" id="kit_from_store" value="0">
+    </section>
+
     <section>
       <h2>{{ $text['database'] }}</h2>
       <p class="notice danger" id="db-error" role="alert"></p>
@@ -90,6 +104,7 @@
     <p class="notice danger" id="pick-error" role="alert"></p>
     <button type="button" id="add" class="primary block">{{ $text['addButton'] }}</button>
     <button type="button" id="skip" class="block">{{ $text['skip'] }}</button>
+    <button type="button" id="minimal" class="block hidden">{{ $text['useMinimal'] }}</button>
   </div>
 
   <div id="working" class="hidden">
@@ -112,6 +127,27 @@
     document.getElementById('db_port').value = driver.value === 'pgsql' ? '5432' : '3306';
   };
   driver.addEventListener('change', sync); sync();
+
+  // The store's kits join the list when the store answers; a slow or absent store leaves the ones here.
+  const kitList = document.getElementById('kits');
+  const fromStore = document.getElementById('kit_from_store');
+  const packages = {};
+  fetch('/install/kits', { headers: { 'Accept': 'application/json' } }).then((res) => res.ok ? res.json() : { kits: [] }).then(({ kits = [] }) => {
+    for (const kit of kits) {
+      // One card per kit: the one this site has already stands for any other copy.
+      if ([...kitList.querySelectorAll('input[name=kit]')].some((input) => input.value === kit.handle)) continue;
+      packages[kit.handle] = kit.package;
+      const row = document.createElement('li');
+      const label = document.createElement('label');
+      const picture = kit.preview ? Object.assign(document.createElement('img'), { src: kit.preview, alt: '', width: 480, height: 300, loading: 'lazy' }) : Object.assign(document.createElement('span'), { className: 'blank' });
+      const name = Object.assign(document.createElement('span'), { className: 'name' });
+      name.append(Object.assign(document.createElement('input'), { type: 'radio', name: 'kit', value: kit.handle }), kit.title || kit.name);
+      label.append(picture, name);
+      row.append(label);
+      kitList.append(row);
+    }
+  }).catch(() => {});
+  kitList.addEventListener('change', (event) => { fromStore.value = packages[event.target.value] ? '1' : '0'; });
 
   // A password can be looked at while it is typed: it is asked for once.
   for (const button of document.querySelectorAll('[data-reveal]')) {
@@ -166,6 +202,7 @@
         submit.disabled = false; submit.removeAttribute('aria-busy'); submit.textContent = text.install;
         return;
       }
+      session.kitPackage = packages[body.kit] || null;
       await choose(json);
     } catch (e) {
       error.textContent = e.message || text.failed;
@@ -200,7 +237,7 @@
   const pickNote = document.getElementById('pick-note');
 
   async function choose(json) {
-    session = json;
+    session = { ...json, kitPackage: session.kitPackage };
     show('pick');
     const list = document.getElementById('packages');
     // Nothing to choose: the one button left is the way on, and says where it leads.
@@ -213,7 +250,7 @@
     };
     if (session.composer) return onward(text.composerSite);
     const catalog = await ability('packages/catalog', { refresh: true }).catch(() => ({ items: [] }));
-    const items = (catalog.items || []).filter((item) => !item.installed);
+    const items = (catalog.items || []).filter((item) => !item.installed && item.type !== 'kit');
     if (!items.length) return onward(text.noStore);
     const rank = (item) => (session.recommended.includes(item.package) ? 0 : item.pricing === 'free' ? 1 : 2);
     items.sort((a, b) => rank(a) - rank(b) || session.recommended.indexOf(a.package) - session.recommended.indexOf(b.package) || a.title.localeCompare(b.title));
@@ -232,6 +269,8 @@
   }
 
   document.getElementById('skip').addEventListener('click', () => finish());
+  // The kit chosen could not be fetched: the site starts from Minimal, because the person said so.
+  document.getElementById('minimal').addEventListener('click', () => { session.kitPackage = null; finish(); });
   document.getElementById('add').addEventListener('click', async () => {
     const chosen = [...document.querySelectorAll('#packages input:checked')].map((box) => box.value);
     pickError.textContent = '';
@@ -249,9 +288,7 @@
         if (step.enable_only) {
           await ability('packages/enable', { name: step.package });
         } else {
-          let job = await ability('packages/install', { package: step.package, version: step.version });
-          while (job.state === 'running') job = await ability('packages/job-step', { id: job.id });
-          if (job.state === 'failed') throw new Error(job.error || text.failed);
+          await install(step);
         }
         done++;
       }
@@ -262,8 +299,29 @@
     }
   });
 
+  // A kit from the store comes the way a plugin does, then the last step starts the site from it.
+  async function install(step) {
+    let job = await ability('packages/install', { package: step.package, version: step.version });
+    while (job.state === 'running') job = await ability('packages/job-step', { id: job.id });
+    if (job.state === 'failed') throw new Error(job.error || text.failed);
+  }
+
   async function finish() {
     show('working');
+    if (session.kitPackage) {
+      try {
+        const [step] = (await ability('packages/plan-install', { package: session.kitPackage })).steps.slice(-1);
+        status.textContent = text.addingKit.replace(':name', step.title);
+        bar.style.width = '90%';
+        await install(step);
+      } catch (e) {
+        // Said where it can be acted on: try again, or start from the kit that is always here.
+        show('pick');
+        pickError.textContent = text.kitFailed + ' ' + (e.message || '');
+        document.getElementById('minimal').classList.remove('hidden');
+        return;
+      }
+    }
     bar.style.width = '95%';
     status.textContent = text.finishing;
     await post('/install/finish').catch(() => {});

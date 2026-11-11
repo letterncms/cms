@@ -196,10 +196,13 @@ class PackageJobs
         return $problems;
     }
 
-    /** Where a package goes on this site: the same folder Composer puts it in (see letterncms/composer-plugin). */
-    public function targetFor(string $name): string
+    /**
+     * Where a package goes on this site: the same folder Composer puts it in (see letterncms/composer-plugin),
+     * plugins/ for a plugin and kits/ for a site kit.
+     */
+    public function targetFor(string $name, string $type = PackageManifest::PLUGIN): string
     {
-        $existing = $this->cms->packages()->repository()->find($name);
+        $existing = $type === PackageManifest::PLUGIN ? $this->cms->packages()->repository()->find($name) : null;
 
         if ($existing) {
             return $existing->path;
@@ -207,7 +210,7 @@ class PackageJobs
 
         [$vendor, $short] = explode('/', $name, 2);
 
-        return $this->packagesDir().'/'.($vendor === PackageManifest::VENDOR ? $short : "{$vendor}-{$short}");
+        return ($type === PackageManifest::KIT ? $this->app->sitePath('kits') : $this->packagesDir()).'/'.($vendor === PackageManifest::VENDOR ? $short : "{$vendor}-{$short}");
     }
 
     private function packagesDir(): string
@@ -283,7 +286,7 @@ class PackageJobs
 
     private function runStage(array $job): string
     {
-        $target = $this->targetFor((string) $job['package']);
+        $target = $this->targetFor((string) $job['package'], (string) ($job['type'] ?? PackageManifest::PLUGIN));
         $parent = dirname($target);
         Files::ensureDir($parent);
         // Beside the target: same filesystem, so the rename can't cross a mount.
@@ -297,6 +300,18 @@ class PackageJobs
         }
 
         $zip->close();
+
+        // A kit is read as the CMS reads any kit before it is kept: every file one its layout names, of a kind
+        // and a size a site takes. One that isn't stays in the stage, which goes.
+        if (($job['type'] ?? null) === PackageManifest::KIT) {
+            try {
+                $this->cms->hooks()->dispatch('packages.kit.staged', $stage.'/'.$job['top'], basename($target));
+            } catch (Throwable $e) {
+                Files::deleteDirectory($stage);
+                throw new RuntimeException($e->getMessage(), 0, $e);
+            }
+        }
+
         // Hosts running PHP as the user refuse group-writable scripts.
         self::setModes($stage);
         $job['stage'] = $stage;
@@ -367,6 +382,11 @@ class PackageJobs
 
     private function runMigrate(array $job): string
     {
+        // A kit is files to copy from, later: nothing to switch on or migrate.
+        if (($job['type'] ?? null) === PackageManifest::KIT) {
+            return 'health';
+        }
+
         $packages = $this->packages();
         $package = (string) $job['package'];
         $manifest = $packages->repository()->find($package);
@@ -388,6 +408,10 @@ class PackageJobs
 
     private function runHealth(array $job): string
     {
+        if (($job['type'] ?? null) === PackageManifest::KIT) {
+            return 'done';
+        }
+
         $packages = $this->packages();
         $packages->refresh();
         $package = (string) $job['package'];

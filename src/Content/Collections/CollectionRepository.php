@@ -130,6 +130,23 @@ final class CollectionRepository
         $this->collections = null;
     }
 
+    /**
+     * Run with these definitions beside the stored ones, in memory only: what a dry run needs to check the
+     * entries of a collection it would make. Nothing is written and no hook hears of them.
+     *
+     * @param  array<string, Collection>  $collections
+     */
+    public function staged(array $collections, callable $run): mixed
+    {
+        $this->collections = [...$this->all(), ...$collections];
+
+        try {
+            return $run();
+        } finally {
+            $this->collections = null;
+        }
+    }
+
     private function file(string $handle): string
     {
         if (! Files::isHandle($handle)) {
