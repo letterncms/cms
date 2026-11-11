@@ -166,7 +166,7 @@ final class CmsServiceProvider extends ServiceProvider
                 Types\Text::class, Types\Textarea::class, Types\RichText::class, Types\Markdown::class, Types\Number::class,
                 Types\Toggle::class, Types\Select::class, Types\Date::class, Types\Slug::class, Types\Url::class,
                 Types\Email::class, Types\Color::class, Types\Entries::class, Types\Users::class, Types\Tags::class,
-                Types\Code::class, Types\Json::class, Types\Group::class, Types\Repeater::class, Types\Icon::class,
+                Types\Code::class, Types\Json::class, Types\Group::class, Types\Repeater::class, Types\Matrix::class, Types\Icon::class,
             ] as $type) {
                 $types->register(new $type);
             }

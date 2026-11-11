@@ -68,6 +68,14 @@ abstract class FieldType
         return implode(' ', array_slice(preg_split('/\s+/u', trim(strip_tags($value))) ?: [], 0, $words));
     }
 
+    /**
+     * What a definition of this type must be, beyond a handle and a known type: checked when a blueprint is saved.
+     * `$name` is the field's path for messages; nested fields are checked with `Blueprint::validate($fields, $name.'.', $depth + 1)`.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function validateDefinition(Field $field, string $name, int $depth): void {}
+
     /** Plain text used for search and excerpts. */
     public function toText(mixed $value, Field $field): string
     {
