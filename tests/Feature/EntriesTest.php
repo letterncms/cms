@@ -202,6 +202,36 @@ final class EntriesTest extends TestCase
         $this->cms()->entryService()->create('notes', ['title' => 'B', 'status' => 'published', 'data' => ['layout' => 'huge']]);
     }
 
+    public function test_options_a_plugin_adds_keep_their_keys_also_when_they_are_numbers(): void
+    {
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('notes', ['title' => 'Notes', 'fields' => [
+            ['handle' => 'list', 'type' => 'select', 'dynamic' => 'mailing-lists'],
+            ['handle' => 'size', 'type' => 'select', 'options' => ['small', 'large'], 'dynamic' => 'sizes'],
+            ['handle' => 'tone', 'type' => 'select', 'options' => ['calm' => 'Calm'], 'dynamic' => 'tones'],
+        ]]));
+
+        // Ids from another service, as a plugin adds them: the key is the value, the name the label.
+        $this->cms()->hooks()->addFilter('fields.options.mailing-lists', function (array $options) {
+            $options[7] = 'Customers';
+            $options[12] = 'Newsletter';
+
+            return $options;
+        });
+        $this->cms()->hooks()->addFilter('fields.options.sizes', fn (array $options) => [...$options, 'huge']);
+        $this->cms()->hooks()->addFilter('fields.options.tones', fn (array $options) => [3 => 'Loud']);
+
+        $fields = array_column($this->cms()->collections()->find('notes')->blueprint()->toArray(), null, 'handle');
+        $this->assertSame([7 => 'Customers', 12 => 'Newsletter'], $fields['list']['options']);
+        $this->assertSame(['small', 'large', 'huge'], $fields['size']['options']);
+        $this->assertSame(['calm' => 'Calm', 3 => 'Loud'], $fields['tone']['options']);
+
+        $entry = $this->cms()->entryService()->create('notes', ['title' => 'A', 'status' => 'published', 'data' => ['list' => '12', 'size' => 'huge', 'tone' => '3']]);
+        $this->assertSame(['12', 'huge', '3'], [(string) $entry->data['list'], $entry->data['size'], (string) $entry->data['tone']]);
+
+        $this->expectException(AbilityException::class);
+        $this->cms()->entryService()->create('notes', ['title' => 'B', 'status' => 'published', 'data' => ['list' => 'Newsletter']]);
+    }
+
     public function test_globals_values(): void
     {
         $set = new \Cms\Content\Globals\GlobalSet('footer', 'Footer', 'globe', [['handle' => 'tagline', 'type' => 'text'], ['handle' => 'year', 'type' => 'number']]);
