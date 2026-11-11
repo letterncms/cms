@@ -1,0 +1,16 @@
+{
+  "Admin Arrangement": "Anordnung des Admins",
+  "General": "Allgemein",
+  "Get Settings": "Einstellungen abrufen",
+  "List Settings Pages": "Einstellungsseiten auflisten",
+  "Nothing called “:name” is arranged here.": "Hier wird nichts namens „:name“ angeordnet.",
+  "Nothing to set up": "Nichts einzurichten",
+  "Open": "Öffnen",
+  "Redirects": "Weiterleitungen",
+  "Roles are changed by people, in Settings.": "Rollen werden von Personen geändert, in den Einstellungen.",
+  "Saved :name": ":name gespeichert",
+  "Settings": "Einstellungen",
+  "The settings screen every module and plugin configures itself through, and the sidebar editor.": "Die Einstellungen, über die sich jedes Modul und Plugin konfigurieren lässt, und der Editor für die Seitenleiste.",
+  "Unknown settings.": "Unbekannte Einstellungen.",
+  "Update Settings": "Einstellungen aktualisieren"
+}
