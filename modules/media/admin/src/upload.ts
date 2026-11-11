@@ -77,6 +77,6 @@ export async function uploadAll(files: FileList | File[], folder = ''): Promise<
   return done
 }
 
-/** The folder the library on view shows: where the Media place's Upload puts files. */
-export const libraryFolder = { current: '' }
+/** The folder the library on view shows: where the Media place's Upload puts files and New Folder makes one; `show` takes the library to a folder. */
+export const libraryFolder: { current: string; show?: (folder: string) => void } = { current: '' }
 

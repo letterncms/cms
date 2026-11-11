@@ -336,6 +336,6 @@ final class MediaTest extends TestCase
     {
         $view = $this->cms()->abilities()->execute('views/get', ['id' => 'media'], AbilityContext::forUser($this->admin(), 'admin'))['root'];
         $tab = $view['children'][0]['children'][0];
-        $this->assertSame(['media/library', 'media/upload'], [$tab['children'][0]['type'], $tab['props']['actions'][0]['component']]);
+        $this->assertSame(['media/library', 'media/upload'], [$tab['children'][0]['type'], $tab['props']['actions'][1]['component']]);
     }
 }

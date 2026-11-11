@@ -2,15 +2,19 @@ import { can, invalidate, run, t, useAbility } from '@letterncms/sdk'
 import { Button, Dialog, Field, Fields, Icon, IconButton, List, Row, copyText, formatBytes, toast } from '@letterncms/ui'
 import { useState } from 'react'
 import { deleteFiles, useHref, type MediaUse } from './actions'
+import { MoveDialog } from './Folders'
 import { FocalPoint } from './FocalPoint'
 import type { MediaItem } from './upload'
 
 /** One file: what it is, its words, where it is used, and the way to delete it. A form: Save is the dialog's own button. */
-export function FileDialog({ item, onClose }: { item: MediaItem; onClose: () => void }) {
-  const [draft, setDraft] = useState({ name: item.name, alt: item.alt ?? '', caption: item.caption ?? '', folder: item.folder })
+export function FileDialog({ item, folders, onClose }: { item: MediaItem; folders: string[]; onClose: () => void }) {
+  const [draft, setDraft] = useState({ name: item.name, alt: item.alt ?? '', caption: item.caption ?? '' })
+  // Moving is an act of its own, done at once: the folder shown follows it, whatever the list behind still holds.
+  const [folder, setFolder] = useState(item.folder)
+  const [moving, setMoving] = useState(false)
   const [focal, setFocal] = useState(item.focal)
   const [busy, setBusy] = useState(false)
-  const dirty = draft.name !== item.name || draft.alt !== (item.alt ?? '') || draft.caption !== (item.caption ?? '') || draft.folder !== item.folder || focal.x !== item.focal.x || focal.y !== item.focal.y
+  const dirty = draft.name !== item.name || draft.alt !== (item.alt ?? '') || draft.caption !== (item.caption ?? '') || focal.x !== item.focal.x || focal.y !== item.focal.y
   const editable = can('media.edit')
   const uses = useAbility<{ usedBy: MediaUse[] }>('media/get', { id: item.id })
   const usedBy = uses.data?.usedBy ?? []
@@ -50,6 +54,7 @@ export function FileDialog({ item, onClose }: { item: MediaItem; onClose: () => 
           <dt className="text-faint">{t('Type')}</dt><dd className="m-0 truncate">{item.mime}</dd>
           <dt className="text-faint">{t('Size')}</dt><dd className="m-0">{formatBytes(item.size)}</dd>
           {item.width && <><dt className="text-faint">{t('Dimensions')}</dt><dd className="m-0">{item.width} × {item.height}</dd></>}
+          {folder && <><dt className="text-faint">{t('Folder')}</dt><dd className="m-0 truncate">{folder}</dd></>}
           <dt className="text-faint">{t('URL')}</dt>
           <dd className="m-0 flex min-w-0 items-center gap-1">
             <span className="truncate font-mono">{item.url}</span>
@@ -64,7 +69,6 @@ export function FileDialog({ item, onClose }: { item: MediaItem; onClose: () => 
             { handle: 'name', type: 'text', label: t('Name'), size: 'sm' },
             ...(item.kind === 'image' ? [{ handle: 'alt', type: 'textarea', label: t('Alt Text'), rows: 2 }] : []),
             { handle: 'caption', type: 'textarea', label: t('Caption'), rows: 2 },
-            { handle: 'folder', type: 'text', label: t('Folder'), size: 'sm', mono: true, placeholder: 'team/2026' },
           ]}
           values={draft}
           onChange={(h, v) => setDraft({ ...draft, [h]: v ?? '' })}
@@ -83,11 +87,13 @@ export function FileDialog({ item, onClose }: { item: MediaItem; onClose: () => 
           </Field>
         )}
 
-        {can('media.delete') && (
-          <div>
-            <Button size="sm" variant="destructive" icon="trash" onClick={async () => { if ((await deleteFiles([item])).length) onClose() }}>{t('Delete File')}</Button>
+        {(editable || can('media.delete')) && (
+          <div className="flex flex-wrap items-center gap-2 pb-0.5">
+            {editable && <Button size="sm" icon="folder" onClick={() => setMoving(true)}>{t('Move to Folder')}</Button>}
+            {can('media.delete') && <Button size="sm" variant="destructive" icon="trash" onClick={async () => { if ((await deleteFiles([item])).length) onClose() }}>{t('Delete File')}</Button>}
           </div>
         )}
+        {moving && <MoveDialog files={[{ id: item.id, folder }]} folders={folders} onClose={(to) => { setMoving(false); if (to !== undefined) setFolder(to) }} />}
       </div>
     </Dialog>
   )

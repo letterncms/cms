@@ -988,6 +988,14 @@
                                 "label": "Library",
                                 "actions": [
                                     {
+                                        "label": "New Folder",
+                                        "icon": "folder-plus",
+                                        "component": "media/new-folder",
+                                        "can": "media.edit",
+                                        "input": [],
+                                        "props": []
+                                    },
+                                    {
                                         "label": "Upload",
                                         "icon": "upload",
                                         "variant": "primary",

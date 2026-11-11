@@ -425,11 +425,35 @@ final class MediaStore
         return str_starts_with($mime, 'image/') ? ($this->images->dimensions($file) ?? [null, null]) : [null, null];
     }
 
-    private function folder(string $folder): string
-    {
-        $parts = array_filter(array_map(static fn ($p) => Str::slug($p), explode('/', $folder)));
+    /** How deep folders go. */
+    public const int FOLDER_DEPTH = 6;
 
-        return implode('/', array_slice($parts, 0, 6));
+    /**
+     * A folder's path as it is stored: each part a slug; '' is no folder. A name in Latin letters is the slug it
+     * always was (`Press Kit` is `press-kit`, `Café` is `cafe`); a name in another script keeps its letters
+     * (`写真`, `пресса`), lowercased, with a hyphen for whatever is not a letter or a digit. Deeper than six is
+     * refused, not cut: a file would land in a folder nobody named.
+     */
+    public function folder(string $folder): string
+    {
+        $parts = array_values(array_filter(array_map(self::folderPart(...), explode('/', $folder)), static fn (string $part) => $part !== ''));
+
+        if (count($parts) > self::FOLDER_DEPTH) {
+            throw AbilityException::invalid(__('Folders go :count deep at most.', ['count' => self::FOLDER_DEPTH]), ['folder' => __('Folders go :count deep at most.', ['count' => self::FOLDER_DEPTH])]);
+        }
+
+        return implode('/', $parts);
+    }
+
+    private static function folderPart(string $name): string
+    {
+        $name = trim($name);
+
+        if ($name === '' || preg_match('/^[\p{Latin}\p{N}\p{P}\p{Z}\p{S}]+$/u', $name)) {
+            return Str::slug($name);
+        }
+
+        return mb_substr(trim((string) preg_replace('/[^\p{L}\p{M}\p{N}]+/u', '-', mb_strtolower($name)), '-'), 0, 80);
     }
 
     private function tmp(): string
