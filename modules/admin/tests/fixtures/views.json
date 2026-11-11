@@ -675,12 +675,6 @@
                                 "key": "title",
                                 "label": "Name",
                                 "icon": "icon"
-                            },
-                            {
-                                "key": "handle",
-                                "label": "Handle",
-                                "width": "minmax(200px,1fr)",
-                                "format": "code"
                             }
                         ],
                         "open": {
@@ -775,7 +769,11 @@
                                 "label": "Entries",
                                 "width": "90px",
                                 "align": "end",
-                                "format": "number"
+                                "format": "number",
+                                "unit": {
+                                    "one": "{count} Entry",
+                                    "other": "{count} Entries"
+                                }
                             }
                         ],
                         "open": {
@@ -784,6 +782,23 @@
                             "input": [],
                             "props": []
                         },
+                        "actions": [
+                            {
+                                "label": "Edit Fields",
+                                "icon": "field",
+                                "to": "/collections/{row.handle}",
+                                "input": [],
+                                "props": []
+                            },
+                            {
+                                "label": "Open Entries",
+                                "icon": "arrow-up-right",
+                                "to": "/content/{row.handle}",
+                                "when": "{row.viewable}",
+                                "input": [],
+                                "props": []
+                            }
+                        ],
                         "empty": {
                             "icon": "collection",
                             "title": "No collections yet"
@@ -827,8 +842,7 @@
                                         "to": "/forms/{result.handle}",
                                         "form": {
                                             "title": "New Form",
-                                            "text": "Starts with name, email and message.",
-                                            "confirm": "Create",
+                                            "confirm": "Create Form",
                                             "fields": [
                                                 {
                                                     "handle": "title",
@@ -1025,7 +1039,6 @@
                                     "type": "text",
                                     "label": "Name",
                                     "placeholder": "Footer",
-                                    "instructions": "For example Main, Footer or Legal.",
                                     "required": true,
                                     "autofocus": true
                                 }
@@ -1053,16 +1066,15 @@
                                 "icon": "icon"
                             },
                             {
-                                "key": "handle",
-                                "label": "Handle",
-                                "width": "minmax(200px,1fr)",
-                                "format": "code"
-                            },
-                            {
-                                "key": "links",
+                                "key": "count",
                                 "label": "Links",
-                                "width": "100px",
-                                "align": "end"
+                                "width": "90px",
+                                "align": "end",
+                                "format": "number",
+                                "unit": {
+                                    "one": "{count} Link",
+                                    "other": "{count} Links"
+                                }
                             }
                         ],
                         "open": {
@@ -1133,8 +1145,15 @@
             "props": {
                 "title": "Languages",
                 "icon": "translate",
-                "width": "narrow",
                 "actions": [
+                    {
+                        "label": "Set Up Automatic Translation",
+                        "icon": "sparkle",
+                        "to": "/settings/assistant",
+                        "can": "settings.manage",
+                        "input": [],
+                        "props": []
+                    },
                     {
                         "label": "Add Language",
                         "name": "add-language",
@@ -1149,204 +1168,80 @@
             },
             "children": [
                 {
-                    "type": "ui/stack",
-                    "props": [],
-                    "children": [
-                        {
-                            "type": "ui/records",
-                            "props": {
-                                "id": "languages",
-                                "label": "Languages",
+                    "type": "ui/records",
+                    "props": {
+                        "id": "languages",
+                        "label": "Languages",
+                        "key": "code",
+                        "source": {
+                            "ability": "languages/list",
+                            "input": []
+                        },
+                        "at": "languages",
+                        "columns": [
+                            {
+                                "key": "name",
+                                "label": "Name",
+                                "badge": "badge"
+                            },
+                            {
                                 "key": "code",
-                                "source": {
-                                    "ability": "languages/list",
-                                    "input": []
-                                },
-                                "at": "languages",
-                                "columns": [
+                                "label": "Code",
+                                "width": "72px",
+                                "format": "code"
+                            },
+                            {
+                                "key": "path",
+                                "label": "URL Prefix",
+                                "width": "120px",
+                                "format": "code",
+                                "empty": "No Prefix"
+                            },
+                            {
+                                "key": "entries",
+                                "label": "Entries",
+                                "width": "80px",
+                                "align": "end",
+                                "format": "number",
+                                "unit": {
+                                    "one": "{count} Entry",
+                                    "other": "{count} Entries"
+                                }
+                            }
+                        ],
+                        "open": {
+                            "label": "Open",
+                            "dialog": {
+                                "title": "{row.name}",
+                                "text": "{row.note}",
+                                "body": [
                                     {
-                                        "key": "name",
-                                        "label": "Name",
-                                        "muted": "badge"
-                                    },
-                                    {
-                                        "key": "code",
-                                        "label": "Code",
-                                        "width": "72px",
-                                        "format": "code"
-                                    },
-                                    {
-                                        "key": "path",
-                                        "label": "URL Prefix",
-                                        "width": "120px",
-                                        "format": "code",
-                                        "empty": "None"
-                                    },
-                                    {
-                                        "key": "entries",
-                                        "label": "Entries",
-                                        "width": "80px",
-                                        "align": "end",
-                                        "format": "number"
+                                        "type": "ui/detail",
+                                        "props": {
+                                            "items": [
+                                                {
+                                                    "label": "Code",
+                                                    "key": "row.code",
+                                                    "format": "code"
+                                                },
+                                                {
+                                                    "label": "URL Prefix",
+                                                    "key": "row.prefixLabel"
+                                                },
+                                                {
+                                                    "label": "Direction",
+                                                    "key": "row.directionName"
+                                                },
+                                                {
+                                                    "label": "Entries",
+                                                    "key": "row.entries",
+                                                    "format": "number"
+                                                }
+                                            ]
+                                        }
                                     }
                                 ],
-                                "open": {
-                                    "label": "Open",
-                                    "dialog": {
-                                        "title": "{row.name}",
-                                        "text": "{row.note}",
-                                        "body": [
-                                            {
-                                                "type": "ui/detail",
-                                                "props": {
-                                                    "items": [
-                                                        {
-                                                            "label": "Code",
-                                                            "key": "row.code",
-                                                            "format": "code"
-                                                        },
-                                                        {
-                                                            "label": "URL Prefix",
-                                                            "key": "row.prefixLabel"
-                                                        },
-                                                        {
-                                                            "label": "Direction",
-                                                            "key": "row.directionName"
-                                                        },
-                                                        {
-                                                            "label": "Entries",
-                                                            "key": "row.entries",
-                                                            "format": "number"
-                                                        }
-                                                    ]
-                                                }
-                                            }
-                                        ],
-                                        "actions": [
-                                            {
-                                                "label": "Remove",
-                                                "icon": "trash",
-                                                "variant": "danger",
-                                                "ability": "languages/delete",
-                                                "input": {
-                                                    "code": "{row.code}"
-                                                },
-                                                "then": "manifest",
-                                                "unless": "{row.default}",
-                                                "disabled": "{row.entries}",
-                                                "success": "{row.name} removed",
-                                                "confirm": {
-                                                    "title": "Remove {row.name}?",
-                                                    "text": "Visitors will no longer see this language. You can add it again later.",
-                                                    "confirm": "Remove",
-                                                    "danger": true
-                                                }
-                                            },
-                                            {
-                                                "label": "Add URL Prefix",
-                                                "icon": "link",
-                                                "ability": "languages/set-prefix",
-                                                "input": {
-                                                    "prefixDefault": true
-                                                },
-                                                "then": "manifest",
-                                                "when": "{row.prefixable}",
-                                                "success": "{row.name} now has a URL prefix",
-                                                "confirm": {
-                                                    "title": "Give {row.name} a URL prefix?",
-                                                    "text": "Its pages move to /{row.code}/….",
-                                                    "confirm": "Add Prefix"
-                                                }
-                                            },
-                                            {
-                                                "label": "Remove URL Prefix",
-                                                "icon": "link",
-                                                "ability": "languages/set-prefix",
-                                                "input": {
-                                                    "prefixDefault": false
-                                                },
-                                                "then": "manifest",
-                                                "when": "{row.prefixed}",
-                                                "success": "{row.name} is now at the root URL",
-                                                "confirm": {
-                                                    "title": "Remove the URL prefix of {row.name}?",
-                                                    "text": "Its pages move to the root URL.",
-                                                    "confirm": "Remove Prefix"
-                                                }
-                                            },
-                                            {
-                                                "label": "Make Default",
-                                                "icon": "star",
-                                                "ability": "languages/set-default",
-                                                "input": {
-                                                    "code": "{row.code}"
-                                                },
-                                                "then": "manifest",
-                                                "unless": "{row.default}",
-                                                "success": "{row.name} is now the default",
-                                                "confirm": {
-                                                    "title": "Make {row.name} the default?",
-                                                    "text": "Its pages move to the root URL and English gets a prefix. Old URLs redirect automatically.",
-                                                    "confirm": "Make Default"
-                                                }
-                                            }
-                                        ]
-                                    },
-                                    "input": [],
-                                    "props": []
-                                },
                                 "actions": [
-                                    {
-                                        "label": "Make Default",
-                                        "icon": "star",
-                                        "ability": "languages/set-default",
-                                        "input": {
-                                            "code": "{row.code}"
-                                        },
-                                        "then": "manifest",
-                                        "unless": "{row.default}",
-                                        "success": "{row.name} is now the default",
-                                        "confirm": {
-                                            "title": "Make {row.name} the default?",
-                                            "text": "Its pages move to the root URL and English gets a prefix. Old URLs redirect automatically.",
-                                            "confirm": "Make Default"
-                                        },
-                                        "props": []
-                                    },
-                                    {
-                                        "label": "Add URL Prefix",
-                                        "icon": "link",
-                                        "ability": "languages/set-prefix",
-                                        "input": {
-                                            "prefixDefault": true
-                                        },
-                                        "then": "manifest",
-                                        "when": "{row.prefixable}",
-                                        "success": "{row.name} now has a URL prefix",
-                                        "confirm": {
-                                            "title": "Give {row.name} a URL prefix?",
-                                            "text": "Its pages move to /{row.code}/….",
-                                            "confirm": "Add Prefix"
-                                        },
-                                        "props": []
-                                    },
-                                    {
-                                        "label": "Remove URL Prefix",
-                                        "icon": "link",
-                                        "ability": "languages/set-prefix",
-                                        "input": {
-                                            "prefixDefault": false
-                                        },
-                                        "then": "manifest",
-                                        "when": "{row.prefixed}",
-                                        "success": "{row.name} is now at the root URL",
-                                        "confirm": {
-                                            "title": "Remove the URL prefix of {row.name}?",
-                                            "text": "Its pages move to the root URL.",
-                                            "confirm": "Remove Prefix"
-                                        },
-                                        "props": []
-                                    },
                                     {
                                         "label": "Remove",
                                         "icon": "trash",
@@ -1364,32 +1259,139 @@
                                             "text": "Visitors will no longer see this language. You can add it again later.",
                                             "confirm": "Remove",
                                             "danger": true
-                                        },
-                                        "props": []
-                                    }
-                                ],
-                                "empty": {
-                                    "icon": "translate",
-                                    "title": "Languages are not available"
-                                }
-                            }
-                        },
-                        {
-                            "type": "ui/actions",
-                            "props": {
-                                "items": [
+                                        }
+                                    },
                                     {
-                                        "label": "Set Up Automatic Translation",
-                                        "icon": "sparkle",
-                                        "variant": "ghost",
-                                        "to": "/settings/assistant",
-                                        "input": [],
-                                        "props": []
+                                        "label": "Add URL Prefix",
+                                        "icon": "link",
+                                        "ability": "languages/set-prefix",
+                                        "input": {
+                                            "prefixDefault": true
+                                        },
+                                        "then": "manifest",
+                                        "when": "{row.prefixable}",
+                                        "success": "{row.name} now has a URL prefix",
+                                        "confirm": {
+                                            "title": "Give {row.name} a URL prefix?",
+                                            "text": "Its pages move to /{row.code}/….",
+                                            "confirm": "Add Prefix"
+                                        }
+                                    },
+                                    {
+                                        "label": "Remove URL Prefix",
+                                        "icon": "link",
+                                        "ability": "languages/set-prefix",
+                                        "input": {
+                                            "prefixDefault": false
+                                        },
+                                        "then": "manifest",
+                                        "when": "{row.prefixed}",
+                                        "success": "{row.name} is now at the root URL",
+                                        "confirm": {
+                                            "title": "Remove the URL prefix of {row.name}?",
+                                            "text": "Its pages move to the root URL.",
+                                            "confirm": "Remove Prefix"
+                                        }
+                                    },
+                                    {
+                                        "label": "Make Default",
+                                        "icon": "star",
+                                        "ability": "languages/set-default",
+                                        "input": {
+                                            "code": "{row.code}"
+                                        },
+                                        "then": "manifest",
+                                        "unless": "{row.default}",
+                                        "success": "{row.name} is now the default",
+                                        "confirm": {
+                                            "title": "Make {row.name} the default?",
+                                            "text": "Its pages move to the root URL and English gets a prefix. Old URLs redirect automatically.",
+                                            "confirm": "Make Default"
+                                        }
                                     }
                                 ]
+                            },
+                            "input": [],
+                            "props": []
+                        },
+                        "actions": [
+                            {
+                                "label": "Make Default",
+                                "icon": "star",
+                                "ability": "languages/set-default",
+                                "input": {
+                                    "code": "{row.code}"
+                                },
+                                "then": "manifest",
+                                "unless": "{row.default}",
+                                "success": "{row.name} is now the default",
+                                "confirm": {
+                                    "title": "Make {row.name} the default?",
+                                    "text": "Its pages move to the root URL and English gets a prefix. Old URLs redirect automatically.",
+                                    "confirm": "Make Default"
+                                },
+                                "props": []
+                            },
+                            {
+                                "label": "Add URL Prefix",
+                                "icon": "link",
+                                "ability": "languages/set-prefix",
+                                "input": {
+                                    "prefixDefault": true
+                                },
+                                "then": "manifest",
+                                "when": "{row.prefixable}",
+                                "success": "{row.name} now has a URL prefix",
+                                "confirm": {
+                                    "title": "Give {row.name} a URL prefix?",
+                                    "text": "Its pages move to /{row.code}/….",
+                                    "confirm": "Add Prefix"
+                                },
+                                "props": []
+                            },
+                            {
+                                "label": "Remove URL Prefix",
+                                "icon": "link",
+                                "ability": "languages/set-prefix",
+                                "input": {
+                                    "prefixDefault": false
+                                },
+                                "then": "manifest",
+                                "when": "{row.prefixed}",
+                                "success": "{row.name} is now at the root URL",
+                                "confirm": {
+                                    "title": "Remove the URL prefix of {row.name}?",
+                                    "text": "Its pages move to the root URL.",
+                                    "confirm": "Remove Prefix"
+                                },
+                                "props": []
+                            },
+                            {
+                                "label": "Remove",
+                                "icon": "trash",
+                                "variant": "danger",
+                                "ability": "languages/delete",
+                                "input": {
+                                    "code": "{row.code}"
+                                },
+                                "then": "manifest",
+                                "unless": "{row.default}",
+                                "disabled": "{row.entries}",
+                                "success": "{row.name} removed",
+                                "confirm": {
+                                    "title": "Remove {row.name}?",
+                                    "text": "Visitors will no longer see this language. You can add it again later.",
+                                    "confirm": "Remove",
+                                    "danger": true
+                                },
+                                "props": []
                             }
+                        ],
+                        "empty": {
+                            "icon": "translate",
+                            "title": "Languages are not available"
                         }
-                    ]
+                    }
                 }
             ]
         }
@@ -1429,7 +1431,60 @@
                             "type": "ui/tab",
                             "props": {
                                 "id": "redirects",
-                                "label": "Redirects"
+                                "label": "Redirects",
+                                "actions": [
+                                    {
+                                        "label": "New Redirect",
+                                        "icon": "plus",
+                                        "variant": "primary",
+                                        "ability": "redirects/create",
+                                        "then": "refresh",
+                                        "input": {
+                                            "from": "{values.from}",
+                                            "to": "{values.to}",
+                                            "status": "{values.status}"
+                                        },
+                                        "form": {
+                                            "title": "New Redirect",
+                                            "confirm": "Create Redirect",
+                                            "values": {
+                                                "status": 301
+                                            },
+                                            "fields": [
+                                                {
+                                                    "handle": "from",
+                                                    "type": "text",
+                                                    "label": "From",
+                                                    "mono": true,
+                                                    "placeholder": "/old-url",
+                                                    "required": true,
+                                                    "autofocus": true
+                                                },
+                                                {
+                                                    "handle": "to",
+                                                    "type": "text",
+                                                    "label": "To",
+                                                    "mono": true,
+                                                    "placeholder": "/new-url or https://…",
+                                                    "required": true
+                                                },
+                                                {
+                                                    "handle": "status",
+                                                    "type": "select",
+                                                    "label": "Status",
+                                                    "required": true,
+                                                    "numeric": true,
+                                                    "default": 301,
+                                                    "options": {
+                                                        "301": "301 Permanent",
+                                                        "302": "302 Temporary"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "props": []
+                                    }
+                                ]
                             },
                             "children": [
                                 {
@@ -1447,8 +1502,7 @@
                                                 "type": "repeater",
                                                 "display": "table",
                                                 "label": "Redirects",
-                                                "add": "New Redirect",
-                                                "empty": "No redirects",
+                                                "add": "Add Redirect",
                                                 "fields": [
                                                     {
                                                         "handle": "from",
@@ -1480,7 +1534,7 @@
                                             }
                                         ],
                                         "save": {
-                                            "ability": "redirects/save",
+                                            "ability": "redirects/set",
                                             "as": "*",
                                             "input": []
                                         }
@@ -1613,7 +1667,7 @@
                                                 "type": "url",
                                                 "component": "link",
                                                 "label": "Or Redirect To",
-                                                "placeholder": "A Thank-You Page"
+                                                "placeholder": "/thank-you"
                                             },
                                             {
                                                 "handle": "notify",
@@ -1626,14 +1680,15 @@
                                                 "handle": "subject",
                                                 "type": "text",
                                                 "label": "Email Subject",
-                                                "instructions": "Use {{form}} or any {{field_name}}.",
+                                                "placeholder": "New submission: {{form}}",
                                                 "section": "Email"
                                             },
                                             {
                                                 "handle": "reply_to_field",
                                                 "type": "text",
                                                 "label": "Reply-to Field",
-                                                "instructions": "The field that holds the sender’s email.",
+                                                "placeholder": "email",
+                                                "mono": true,
                                                 "section": "Email"
                                             },
                                             {
@@ -1684,12 +1739,12 @@
                                                 "handle": "webhook",
                                                 "type": "url",
                                                 "label": "Webhook",
-                                                "instructions": "Each submission is POSTed as JSON to this https:// URL (Zapier, Make, n8n, your CRM).",
+                                                "placeholder": "https://example.com/hook",
                                                 "section": "Submissions"
                                             }
                                         ],
                                         "save": {
-                                            "ability": "forms/configure",
+                                            "ability": "form-settings/update",
                                             "input": {
                                                 "handle": "contact"
                                             },
@@ -1710,13 +1765,13 @@
                                     "type": "ui/form",
                                     "props": {
                                         "source": {
-                                            "ability": "forms/words",
+                                            "ability": "form-words/get",
                                             "input": {
                                                 "handle": "contact"
                                             }
                                         },
                                         "save": {
-                                            "ability": "forms/translate",
+                                            "ability": "form-words/update",
                                             "input": {
                                                 "handle": "contact"
                                             },
@@ -1748,14 +1803,14 @@
                                         "id": "submissions",
                                         "label": "Submissions",
                                         "source": {
-                                            "ability": "forms/submissions",
+                                            "ability": "form-submissions/list",
                                             "input": {
                                                 "form": "contact"
                                             }
                                         },
                                         "search": {
                                             "param": "search",
-                                            "placeholder": "Search…"
+                                            "placeholder": "Search Submissions"
                                         },
                                         "filters": [
                                             {
@@ -1828,7 +1883,7 @@
                                         "bulk": [
                                             {
                                                 "label": "Mark Read",
-                                                "ability": "forms/submission-update",
+                                                "ability": "form-submissions/update",
                                                 "input": {
                                                     "ids": "{ids}",
                                                     "status": "read"
@@ -1837,7 +1892,7 @@
                                             },
                                             {
                                                 "label": "Archive",
-                                                "ability": "forms/submission-update",
+                                                "ability": "form-submissions/update",
                                                 "input": {
                                                     "ids": "{ids}",
                                                     "status": "archived"
@@ -1846,7 +1901,7 @@
                                             },
                                             {
                                                 "label": "Spam",
-                                                "ability": "forms/submission-update",
+                                                "ability": "form-submissions/update",
                                                 "input": {
                                                     "ids": "{ids}",
                                                     "status": "spam"
@@ -1855,7 +1910,7 @@
                                             },
                                             {
                                                 "label": "Delete",
-                                                "ability": "forms/submission-delete",
+                                                "ability": "form-submissions/delete",
                                                 "input": {
                                                     "ids": "{ids}"
                                                 },

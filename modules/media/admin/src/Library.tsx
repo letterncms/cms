@@ -1,6 +1,8 @@
-import { can, invalidate, locale, plural, run, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
-import { Badge, Button, DataView, Dialog, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, confirm, cn, copyText, formatBytes, toast, readViewPrefs } from '@letterncms/ui'
-import { useEffect, useState } from 'react'
+import { can, locale, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
+import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, formatBytes, readViewPrefs } from '@letterncms/ui'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { deleteFiles } from './actions'
+import { FileDialog } from './FileDialog'
 import { libraryFolder, uploadAll, type MediaItem } from './upload'
 
 const KINDS = ['all', 'image', 'video', 'audio', 'pdf', 'file'] as const
@@ -9,10 +11,11 @@ type Kind = (typeof KINDS)[number]
 interface MediaFilters { search: string; kind: Kind; folder: string | null }
 const mediaInput = (filters: MediaFilters, page: number, sort: string | null, only: { accept?: string; except?: string } = {}) => ({ ...only, search: filters.search || undefined, kind: filters.kind, folder: filters.folder, page, perPage: 60, sort: sort ?? undefined })
 
-function filterFields(): FieldDef[] {
+/** Search, and the kind switch unless the picker's field fixes the kind. */
+function filterFields(kinds: boolean): FieldDef[] {
   return [
     { handle: 'search', type: 'text', label: t('Search Files'), icon: 'search', size: 'sm', placeholder: t('Search Files'), className: 'w-full sm:w-60' },
-    { handle: 'kind', type: 'select', label: t('Kind'), display: 'segmented', required: true, options: { all: t('All'), image: t('Images'), video: t('Videos'), audio: t('Audio'), pdf: 'PDF', file: t('Other') } },
+    ...(kinds ? [{ handle: 'kind', type: 'select', label: t('Kind'), display: 'segmented', required: true, options: { all: t('All'), image: t('Images'), video: t('Videos'), audio: t('Audio'), pdf: 'PDF', file: t('Other') } }] : []),
   ]
 }
 
@@ -66,7 +69,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
     onSelectionChange?.(next, [item])
   }
 
-  const uploadButton = (autofocus = false) => allow ? <Fields layout="inline" bare fields={uploader({ variant: mode === 'manage' ? 'primary' : 'secondary', autofocus })} values={{}} onChange={(_, files) => void send(files)} /> : null
+  const uploadButton = (autofocus = false, variant = mode === 'manage' ? 'primary' : 'secondary') => allow ? <Fields layout="inline" bare fields={uploader({ variant, autofocus })} values={{}} onChange={(_, files) => void send(files)} /> : null
 
   const select = (ids: string[], on: boolean, records = items) => {
     if (mode === 'pick') {
@@ -75,27 +78,40 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
     } else setChosen((current) => { const next = new Set(current); ids.forEach((id) => on ? next.add(id) : next.delete(id)); return next })
   }
   const deleteItems = async (ids: string[]) => {
-    const one = ids.length === 1 ? items.find((item) => item.id === ids[0]) : undefined
-    if (deleting || !await confirm({ title: one ? t('Delete “{name}”?', { name: one.name }) : plural(ids.length, 'Delete {count} file?', 'Delete {count} files?'), description: t('Pages that use it will show nothing in its place.'), confirm: t('Delete'), danger: true })) return
+    if (deleting) return
     setDeleting(true)
     try {
-      const results = await Promise.allSettled(ids.map((id) => run('media/delete', { id })))
-      const failed = ids.filter((_, i) => results[i].status === 'rejected')
-      setChosen(new Set(failed))
-      const failure = results.find((result) => result.status === 'rejected')
-      if (failure?.status === 'rejected') toast.error(failure.reason)
-      if (open && ids.includes(open.id) && !failed.includes(open.id)) setOpen(null)
-      invalidate('media/')
+      const gone = await deleteFiles(items.filter((item) => ids.includes(item.id)))
+      setChosen((current) => new Set([...current].filter((id) => !gone.includes(id))))
     } finally { setDeleting(false) }
+  }
+  // Files dragged in from the desktop land in the folder on view, like the Upload button's.
+  const [dropping, setDropping] = useState(false)
+  const depth = useRef(0)
+  const hasFiles = (e: DragEvent) => allow && e.dataTransfer.types.includes('Files')
+  const drop = {
+    onDragEnter: (e: DragEvent) => { if (hasFiles(e)) { depth.current++; setDropping(true) } },
+    onDragOver: (e: DragEvent) => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } },
+    onDragLeave: (e: DragEvent) => { if (hasFiles(e) && --depth.current <= 0) { depth.current = 0; setDropping(false) } },
+    onDrop: (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth.current = 0
+      setDropping(false)
+      const files = Array.from(e.dataTransfer.files)
+      void send(mode === 'pick' && !multiple ? files.slice(0, 1) : files)
+    },
   }
   const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="absolute inset-0 size-full object-cover" style={{ objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : <div className="grid size-full place-items-center text-faint"><Icon name={item.kind === 'video' ? 'video' : item.kind === 'audio' ? 'file' : 'file-text'} size={24} /></div>
   // What a picker opens on (images, for an image field) is where it starts, not something someone filtered by:
   // an empty library says so and offers the upload, never "No matches".
   const filtered = !!filters.search || kind !== (bar ? 'all' : startKind) || folder !== null
-  // An empty library is its empty state and the way to fill it (the top bar's Upload, or the picker's own): no filters, display or count yet.
-  const blank = !filtered && kind === 'all' && !list.isError && list.data?.total === 0
-  const body = (
-    <div className="min-w-0">
+  // An empty library is its empty state and the way to fill it: no filters, display or count yet. The page's bar has the one black Upload.
+  const blank = !filtered && !list.isError && list.data?.total === 0
+  // A field that takes one kind shows that kind: nothing to switch.
+  const fixed = !bar && startKind !== 'all'
+  return (
+    <div className={cn('relative min-w-0', dropping && 'rounded-lg outline-2 -outline-offset-2 outline-focus')} {...drop}>
       <DataView id="media" label={t('Media')} items={items} source={{ ability: 'media/list', input: mediaInput(filters, 1, sort, only), perPage: 60 }} rowKey={(item) => item.id} onRowClick={toggle} defaultView="grid" image={preview}
         pagination={list.data && { page: list.data.page, pages: list.data.pages, total: list.data.total, perPage: 60, onPage: setPage }}
         loading={list.isLoading} stale={list.isPlaceholderData} error={list.isError} onRetry={() => void list.refetch()}
@@ -105,7 +121,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
         selection={{ ids: mode === 'manage' ? chosen : new Set(selected), onSelect: select }}
         selected={(item) => open?.id === item.id}
         toolbar={blank ? undefined : <>
-          <Fields layout="inline" bare className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full" fields={[...filterFields(), ...(list.data?.folders.length ? [{ handle: 'folder', type: 'select', label: t('Folder'), size: 'sm' as const, placeholder: t('All Folders'), options: list.data.folders.map((f) => ({ value: f, label: f, icon: 'folder' })), className: 'w-44' }] : [])]} values={filters} onChange={filter} />
+          <Fields layout="inline" bare className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full" fields={[...filterFields(!fixed), ...(list.data?.folders.length ? [{ handle: 'folder', type: 'select', label: t('Folder'), size: 'sm' as const, placeholder: t('All Folders'), options: list.data.folders.map((f) => ({ value: f, label: f, icon: 'folder' })), className: 'w-44' }] : [])]} values={filters} onChange={filter} />
           {!bar && uploadButton(autoUpload)}
         </>}
         columns={[
@@ -121,108 +137,15 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
           { label: t('Copy URL'), icon: 'copy', onSelect: () => void copyText(new URL(item.url, location.origin).href, { copied: t('URL copied'), failed: t('Couldn’t copy the URL') }) },
           mode === 'manage' && can('media.delete') && { label: t('Delete'), icon: 'trash', danger: true, disabled: deleting, onSelect: () => void deleteItems([item.id]) },
         ]} />}
-        empty={filtered ? <NoMatches onClear={() => { setFilters({ search: '', kind: bar ? 'all' : startKind, folder: null }); setPage(1) }} /> : <EmptyState icon="media" title={kind === 'image' ? t('No images yet') : kind === 'video' ? t('No videos yet') : t('No files yet')} action={bar ? undefined : uploadButton()} />}
+        empty={filtered ? <NoMatches onClear={() => { setFilters({ search: '', kind: bar ? 'all' : startKind, folder: null }); setPage(1) }} /> : <EmptyState icon="media" title={kind === 'image' ? t('No images yet') : kind === 'video' ? t('No videos yet') : t('No files yet')} action={uploadButton(false, 'secondary')} />}
       />
 
       {/* Opened to upload (?upload=1): the picker, with the page's own button in its bar. */}
       {bar && autoUpload && <span className="hidden">{uploadButton(true)}</span>}
 
-      {mode === 'manage' && <SelectionBar count={chosen.size} onClear={() => setChosen(new Set())}>{can('media.delete') && <Button size="sm" variant="ghost" loading={deleting} onClick={() => void deleteItems([...chosen])}>{t('Delete')}</Button>}</SelectionBar>}
+      {mode === 'manage' && <SelectionBar count={chosen.size} onClear={() => setChosen(new Set())}>{can('media.delete') && <Button size="sm" variant="destructive" loading={deleting} onClick={() => void deleteItems([...chosen])}>{t('Delete')}</Button>}</SelectionBar>}
 
-      {mode === 'manage' && open && <Dialog open onOpenChange={(next) => !next && setOpen(null)} title={open.name}><Details key={open.id} item={items.find((i) => i.id === open.id) ?? open} onClose={() => setOpen(null)} /></Dialog>}
-    </div>
-  )
-
-  return body
-}
-
-function Details({ item, onClose }: { item: MediaItem; onClose: () => void }) {
-  const [draft, setDraft] = useState({ name: item.name, alt: item.alt ?? '', caption: item.caption ?? '', folder: item.folder })
-  const [focal, setFocal] = useState(item.focal)
-  const [busy, setBusy] = useState(false)
-  const dirty = draft.name !== item.name || draft.alt !== (item.alt ?? '') || draft.caption !== (item.caption ?? '') || draft.folder !== item.folder || focal.x !== item.focal.x || focal.y !== item.focal.y
-  const editable = can('media.edit')
-
-  const save = async () => {
-    setBusy(true)
-    try {
-      await run('media/update', { id: item.id, ...draft, focal })
-      invalidate('media/')
-      toast.success(t('Saved'))
-    } catch (e) {
-      toast.error(e)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="flex min-w-0 flex-col">
-
-
-      {item.kind === 'image' ? (
-        <div
-          className={cn('relative overflow-hidden rounded-md bg-sunken', editable && 'cursor-crosshair')}
-          onClick={(e) => {
-            if (!editable) return
-            const r = e.currentTarget.getBoundingClientRect()
-            setFocal({ x: Math.round(((e.clientX - r.left) / r.width) * 100), y: Math.round(((e.clientY - r.top) / r.height) * 100) })
-          }}
-          title={t('Click to set the focal point. Crops keep it in view.')}
-        >
-          <img src={item.thumb ?? item.url} alt="" className="block w-full" />
-          <span className="pointer-events-none absolute size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.4)]" style={{ left: `${focal.x}%`, top: `${focal.y}%` }} />
-        </div>
-      ) : item.kind === 'video' ? (
-        <video src={item.url} controls className="w-full rounded-md" />
-      ) : (
-        <div className="grid h-32 place-items-center rounded-md bg-sunken text-muted"><Icon name="file-text" size={28} /></div>
-      )}
-
-      <dl className="my-4 grid grid-cols-[80px_1fr] gap-y-1 text-xs">
-        <dt className="text-faint">{t('Type')}</dt><dd className="m-0 truncate">{item.mime}</dd>
-        <dt className="text-faint">{t('Size')}</dt><dd className="m-0">{formatBytes(item.size)}</dd>
-        {item.width && <><dt className="text-faint">{t('Dimensions')}</dt><dd className="m-0">{item.width} × {item.height}</dd></>}
-        <dt className="text-faint">{t('URL')}</dt>
-        <dd className="m-0 flex items-center gap-1">
-          <span className="truncate font-mono">{item.url}</span>
-          <IconButton icon="copy" label={t('Copy URL')} size="xs" onClick={() => void copyText(new URL(item.url, location.origin).href, { copied: t('URL copied'), failed: t('Couldn’t copy the URL') })} />
-        </dd>
-      </dl>
-
-      <Fields
-        className="gap-y-4!"
-        disabled={!editable}
-        fields={[
-          { handle: 'name', type: 'text', label: t('Name'), size: 'sm' },
-          ...(item.kind === 'image' ? [{ handle: 'alt', type: 'textarea', label: t('Alt Text'), rows: 2, instructions: draft.alt ? plural(draft.alt.length, '{count} character', '{count} characters') : t('Describe what the image shows, for screen readers and search.') }] : []),
-          { handle: 'caption', type: 'textarea', label: t('Caption'), rows: 2 },
-          { handle: 'folder', type: 'text', label: t('Folder'), size: 'sm', mono: true, placeholder: 'team/2026' },
-        ]}
-        values={draft}
-        onChange={(h, v) => setDraft({ ...draft, [h]: v ?? '' })}
-      />
-
-      <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-        {can('media.delete') ? (
-          <Button
-            size="sm"
-            variant="destructive"
-            icon="trash"
-            onClick={async () => {
-              if (!(await confirm({ title: t('Delete “{name}”?', { name: item.name }), description: t('Pages that use it will show nothing in its place.'), confirm: t('Delete'), danger: true }))) return
-              try {
-                await run('media/delete', { id: item.id })
-                invalidate('media/')
-                onClose()
-              } catch (error) { toast.error(error) }
-            }}
-          >
-            {t('Delete')}
-          </Button>
-        ) : <span />}
-        {editable && <Button size="sm" variant="primary" disabled={!dirty} loading={busy} onClick={save}>{t('Save')}</Button>}
-      </div>
+      {mode === 'manage' && open && <FileDialog key={open.id} item={items.find((i) => i.id === open.id) ?? open} onClose={() => setOpen(null)} />}
     </div>
   )
 }

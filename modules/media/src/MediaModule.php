@@ -27,6 +27,11 @@ final class MediaModule extends Plugin
 
     public function boot(): void
     {
+        // Where media is used is read once per request; whatever writes what can name a file has it read again.
+        foreach (['entry.saved', 'entry.deleted', 'globals.saved', 'design.saved'] as $written) {
+            $this->cms()->hooks()->on($written, fn () => $this->app->make(MediaReferences::class)->forget());
+        }
+
         $p = $this->cms()->permissions();
         $p->register('media.view', 'View the Media Library', 'Media');
         $p->register('media.upload', 'Upload Files', 'Media');
@@ -109,13 +114,13 @@ final class MediaModule extends Plugin
             ['handle' => 'max_upload_mb', 'type' => 'number', 'label' => 'Max Upload Size', 'suffix' => 'MB', 'default' => 32, 'min' => 1, 'max' => 512],
             ['handle' => 'quality', 'type' => 'number', 'display' => 'slider', 'label' => 'Image Quality', 'default' => 78, 'min' => 40, 'max' => 95],
             // The switches together, one group of rows.
-            ['handle' => 'avif', 'type' => 'toggle', 'label' => 'Serve AVIF Images', 'default' => true, 'instructions' => 'Smaller than WebP; slower to generate.'],
-            ['handle' => 'strip_metadata', 'type' => 'toggle', 'label' => 'Remove Photo Metadata', 'default' => true, 'instructions' => 'Location and camera details.'],
+            ['handle' => 'avif', 'type' => 'toggle', 'label' => 'Serve AVIF Images', 'default' => true],
+            ['handle' => 'strip_metadata', 'type' => 'toggle', 'label' => 'Remove Photo Metadata', 'default' => true],
         ], icon: 'media', description: 'Uploads and responsive images.', order: 30, section: 'system', home: 'media');
 
-        // The server's own limit, in the reader's language (settings are registered at boot, before it is known).
+        // The server's own limit is the field's ceiling: a larger number is refused where it is typed, without a sentence under it.
         $this->cms()->hooks()->addFilter('settings.fields', static fn (array $fields, string $namespace) => $namespace !== 'media' ? $fields : array_map(
-            static fn (array $field) => $field['handle'] === 'max_upload_mb' && ($limit = self::serverLimitMb()) !== null ? [...$field, 'instructions' => __('Your server allows up to :size MB.', ['size' => $limit])] : $field,
+            static fn (array $field) => $field['handle'] === 'max_upload_mb' && ($limit = self::serverLimitMb()) !== null ? [...$field, 'max' => max(1, min((int) $field['max'], $limit))] : $field,
             $fields,
         ));
     }
@@ -213,6 +218,20 @@ final class MediaModule extends Plugin
             },
         ]);
 
+        $a->register('media/get', [
+            'label' => 'Get Media',
+            'description' => 'One file, with every entry, global set and design file that uses it (usedBy).',
+            'permission' => 'media.view',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => self::itemShape()->with(['usedBy' => [['kind' => Shape::STRING, 'id' => Shape::STRING, 'title' => Shape::STRING, 'collection' => Shape::STRING_OR_NULL, 'locale' => Shape::STRING_OR_NULL]]]),
+            'handler' => function (array $in) use ($public) {
+                $item = MediaItem::query()->findOrFail(strtolower($in['id']));
+
+                return [...$public($item), 'usedBy' => $this->app->make(MediaReferences::class)->usedBy($item)];
+            },
+        ]);
+
         $a->register('media/get-many', [
             'label' => 'Look Up Media',
             'description' => 'Details for media ids.',
@@ -280,7 +299,7 @@ final class MediaModule extends Plugin
             'input' => ['type' => 'object', 'properties' => (object) []],
             'output' => Shape::of([
                 'items' => Shape::INTEGER,
-                'dangling' => [['id' => Shape::STRING, 'where' => ['kind' => Shape::STRING, 'id' => Shape::STRING, 'title' => Shape::STRING, 'locale?' => Shape::STRING_OR_NULL, 'path' => Shape::STRING]]],
+                'dangling' => [['id' => Shape::STRING, 'where' => ['kind' => Shape::STRING, 'id' => Shape::STRING, 'title' => Shape::STRING, 'locale?' => Shape::STRING_OR_NULL, 'collection?' => Shape::STRING, 'path' => Shape::STRING]]],
                 'missing_files' => [Shape::STRING], 'orphan_files' => [Shape::STRING], 'unused' => [Shape::STRING], 'parse_errors' => [Shape::STRING],
             ]),
             'handler' => fn () => $this->app->make(MediaReferences::class)->report(),
