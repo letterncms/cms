@@ -388,6 +388,8 @@ export interface EntryPanelProps {
   editable: boolean
   can: EntryCapabilities
   errors: Record<string, string>
+  /** Say that someone else holds the entry (`true`) or no longer does: while held, the editor is read-only and saves nothing. */
+  hold: (held: boolean) => void
 }
 
 /** One body editor workspace. Selection never changes the content or persistence model. */
@@ -427,6 +429,8 @@ export interface ComposerPanelProps {
 export interface PanelSlots {
   /** The entry editor's top bar. */
   'entry.toolbar': EntryPanelProps
+  /** Above the document, under the bar: what someone should know before they edit (who holds the entry). */
+  'entry.notice': EntryPanelProps
   /** Tabs in the entry editor's side panel (give `label` and `icon`). */
   'entry.sidebar': EntryPanelProps
   /** After the main body, in the editor's footer. */

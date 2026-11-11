@@ -2,7 +2,8 @@ import { blockNavigation, invalidate, run, t, type Entry, type EntryContent, typ
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { EntrySession, type SaveOptions } from './entrySession'
 
-export function useEntrySession(initial: Entry | null, defaults: EntryContent, collection: string, locale: string, autosave: number, capabilities: EntryCapabilities) {
+/** `held`: someone else holds the entry; nothing is changed or saved from here until they let go or it is taken over. */
+export function useEntrySession(initial: Entry | null, defaults: EntryContent, collection: string, locale: string, autosave: number, capabilities: EntryCapabilities, held = false) {
   const mounted = useRef(true)
   const creationPath = useRef(window.location.pathname)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
@@ -19,7 +20,7 @@ export function useEntrySession(initial: Entry | null, defaults: EntryContent, c
     return result
   }))
   const state = useSyncExternalStore(session.subscribe, session.get)
-  const editable = state.entry ? capabilities.edit : capabilities.create
+  const editable = !held && (state.entry ? capabilities.edit : capabilities.create)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cancel = () => clearTimeout(timer.current)
   useEffect(() => {
@@ -35,6 +36,6 @@ export function useEntrySession(initial: Entry | null, defaults: EntryContent, c
     window.addEventListener('beforeunload', unload)
     return () => window.removeEventListener('beforeunload', unload)
   }, [session])
-  const save = (options: SaveOptions = {}) => { cancel(); return editable || options.publish ? session.save(options) : Promise.resolve(state.entry) }
+  const save = (options: SaveOptions = {}) => { cancel(); return !held && (editable || options.publish) ? session.save(options) : Promise.resolve(state.entry) }
   return { ...state, session, editable, save, update: (patch: Partial<EntryContent>) => { if (editable) session.update(patch) }, cancel }
 }

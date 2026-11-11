@@ -115,6 +115,8 @@ function Editor({ collection, initial, can }: EditorProps) {
   // In the person's language: the manifest's names are translated, the definition's are as written.
   const singular = list.within?.singular ?? manifest.collections.find((c) => c.handle === collection.handle)?.singular ?? collection.singular
   const shownCollection = useMemo(() => ({ ...collection, singular }), [collection, singular])
+  // Someone else holds the entry (a panel says so through `hold`): read-only here, and nothing is saved, until that ends.
+  const [held, setHeld] = useState(false)
   const control = useEntrySession(initial, {
     title: initial?.title ?? '',
     slug: initial?.slug ?? '',
@@ -122,7 +124,7 @@ function Editor({ collection, initial, can }: EditorProps) {
     data: initial?.data ?? Object.fromEntries(
       collection.resolvedFields.map((field) => [field.handle, field.default ?? null]),
     ),
-  }, collection.handle, contentLocale, autosave, can)
+  }, collection.handle, contentLocale, autosave, can, held)
   const editable = control.editable
   const { entry, working, dirty, phase, errors, conflict, update, session } = control
   // A built-in page (listed with the site's pages) is one of a kind: it is never copied.
@@ -289,9 +291,10 @@ function Editor({ collection, initial, can }: EditorProps) {
 
   const panelProps: EntryPanelProps = {
     entry, collection: shownCollection, content: working, values: working.data, title: working.title, setValue,
-    save: savePanel, reload, editable: editable && !replacing, can, errors,
+    save: savePanel, reload, editable: editable && !replacing, can, errors, hold: setHeld,
   }
   const toolbar = panelsFor('entry.toolbar', panelProps)
+  const notices = panelsFor('entry.notice', panelProps)
   useSyncExternalStore(registry.entryActions.subscribe, registry.entryActions.version)
   const entryActions = registry.entryActions.all().filter((action) => action.when?.(panelProps) ?? true).sort((a, b) => (a.order ?? 50) - (b.order ?? 50))
   const sidebarPanels = panelsFor('entry.sidebar', panelProps)
@@ -412,7 +415,7 @@ function Editor({ collection, initial, can }: EditorProps) {
 
   // Said by name, so `?` lists them: each only while it would do something for this person.
   useShortcut('mod+s', () => { if (editable) void save() }, true, editable ? t('Save') : undefined)
-  useShortcut('mod+shift+p', () => { if (actions.publish && !upToDate && working.title.trim()) void publish() }, true, actions.publish ? t('Publish') : undefined)
+  useShortcut('mod+shift+p', () => { if (actions.publish && !held && !upToDate && working.title.trim()) void publish() }, true, actions.publish && !held ? t('Publish') : undefined)
   useShortcut('mod+.', toggleSidebar, true, t('{name} Details', { name: singular }))
   useEffect(() => {
     const first = Object.keys(errors)[0]
@@ -469,7 +472,7 @@ function Editor({ collection, initial, can }: EditorProps) {
                   ]}
                 />
               ) : (
-                <Button variant="publish" disabled={!working.title.trim()} loading={sending} onClick={() => { void publish() }}>
+                <Button variant="publish" disabled={!working.title.trim() || held} loading={sending} onClick={() => { void publish() }}>
                   <span className="max-sm:hidden">{status === 'scheduled' ? t('Publish Now') : live ? t('Publish Changes') : t('Publish')}</span>
                   <span className="sm:hidden">{t('Publish')}</span>
                 </Button>
@@ -528,6 +531,7 @@ function Editor({ collection, initial, can }: EditorProps) {
       {placement.error && (
         <Notice tone="danger" className="m-3">{placement.error}</Notice>
       )}
+      {notices.map((panel) => <panel.component key={panel.id} {...panelProps} />)}
       {workspace && editorProps ? (
         <div className="min-h-0 flex-1"><Suspense fallback={<div className="grid h-full place-items-center"><Spinner /></div>}><workspace.component {...editorProps} /></Suspense></div>
       ) : (

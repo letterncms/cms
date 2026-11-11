@@ -951,6 +951,7 @@ final class ContentAbilities
         return [
             ...Shapes::entrySummaryKeys(), 'author' => Shape::nullable(Shapes::person()),
             'translations?' => [Shape::STRING],
+            'editingBy?' => Shape::STRING,
             'values?' => Shape::open('The data fields asked for with `fields`, by handle: a users field as a list of people ({id, name, initials, avatar}), an entries field as a list of {id, collection, title}, any other as it is stored (the collection\'s schema is in collections/get).'),
         ];
     }

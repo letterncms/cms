@@ -36,8 +36,8 @@ final class AbilityNamesTest extends TestCase
         'search', 'open',
         // People and their access.
         'invite', 'grant', 'revoke', 'two-factor-setup', 'two-factor-confirm', 'two-factor-disable',
-        // Comments and chats.
-        'resolve', 'rename',
+        // Comments and chats, and holding an entry someone else is editing.
+        'resolve', 'rename', 'take-over',
         // Packages, their installs and the core update.
         'enable', 'disable', 'switch', 'install', 'uninstall', 'migrate', 'rollback', 'add-key', 'plan-install', 'job-step',
         'update-check', 'update-start', 'update-step', 'update-switch', 'update-rollback', 'update-postpone', 'update-auto', 'update-tick',

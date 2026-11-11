@@ -167,7 +167,8 @@ final class EntriesView
         // Cards show the picture and a few lines too, unless the collection says what to show.
         $cards = $collection->defaultColumns === null ? array_filter([$media ? "field:{$media['handle']}" : null, $excerpt ? "field:{$excerpt['handle']}" : null]) : [];
 
-        $columns = [['id' => 'title', 'key' => 'title', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)', 'sort' => 'title', 'empty' => __('Untitled')]];
+        // Beside a title, quieter: who is editing that entry right now (`editingBy`), when something that knows says so.
+        $columns = [['id' => 'title', 'key' => 'title', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)', 'sort' => 'title', 'empty' => __('Untitled'), 'muted' => 'editingBy']];
 
         if ($routable) {
             $columns[] = ['id' => 'uri', 'key' => 'uri', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'sort' => 'uri'];
