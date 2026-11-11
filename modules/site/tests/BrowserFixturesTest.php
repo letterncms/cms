@@ -118,6 +118,10 @@ final class BrowserFixturesTest extends TestCase
                 ['type' => 'link', 'anchor' => 'with-query', 'props' => ['label' => 'Sign out', 'url' => '/one?signout=1']],
                 ['type' => 'box', 'style' => ['base' => ['height' => '150vh']], 'children' => []],
             ],
+            // The largest text of the page, with a page load animation from transparent.
+            'Lcp' => [
+                ['type' => 'heading', 'props' => ['text' => 'The largest text on this page by a long way', 'level' => '1'], 'style' => ['base' => ['fontSize' => '4rem']], 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'self', 'from' => ['opacity' => 0, 'y' => 24], 'duration' => 1.2, 'delay' => 0.2]]]]],
+            ],
             'Motion' => [
                 ['type' => 'box', 'style' => ['base' => ['height' => '120vh']], 'children' => []],
                 // Followed with CSS where the browser can, by the runtime where it can't.

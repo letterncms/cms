@@ -1,0 +1,251 @@
+@layer theme, base, elements, components, utilities;
+@layer base {
+  *, ::before, ::after { box-sizing: border-box; border: 0 solid; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { min-height: 100dvh; line-height: 1.5; }
+  img, picture, video, canvas, svg, iframe { display: block; max-width: 100%; }
+  img, video { height: auto; }
+  input, button, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; background: none; }
+  a { color: inherit; }
+  h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; overflow-wrap: break-word; }
+  p { overflow-wrap: break-word; }
+  ol, ul { list-style: none; }
+  table { border-collapse: collapse; }
+  :focus-visible { outline: 2px solid var(--color-primary, currentColor); outline-offset: 3px; }
+  .cms-skip { position: absolute; left: 1rem; top: -4rem; z-index: 100; padding: .6rem 1rem; border-radius: .5rem; background: var(--color-background, #fff); color: var(--color-foreground, #111); box-shadow: 0 4px 16px rgb(0 0 0 / .15); }
+  .cms-skip:focus { top: 1rem; }
+}
+@layer elements {
+  /* Prose is a flow of blocks, whatever they are, spaced by the design system's Prose spacing. An element that only
+     holds blocks (data-cms-contents: Page Content without a box of its own) is looked through. A block inside keeps
+     its own layout: a Box or Repeat is not text (as a list or a link), and one with text of its own is Prose too. */
+  .cms-prose > * + *, .cms-prose > [data-cms-contents] > * + *, .cms-prose > * + [data-cms-contents] > :first-child { margin-top: var(--prose-blocks, 1.1em); }
+  .cms-prose > * + :is(h2, h3, h4, h5, h6), .cms-prose > [data-cms-contents] > * + :is(h2, h3, h4, h5, h6), .cms-prose > * + [data-cms-contents] > :is(h2, h3, h4, h5, h6):first-child { margin-top: var(--prose-headings, 1.8em); }
+  .cms-prose > :is(h2, h3, h4, h5, h6) + *, .cms-prose > [data-cms-contents] > :is(h2, h3, h4, h5, h6) + *, .cms-prose > :is(h2, h3, h4, h5, h6) + [data-cms-contents] > :first-child { margin-top: var(--prose-after-headings, .6em); }
+  .cms-prose ul:where(:not(.cms-box, .cms-repeat)) { list-style: disc; padding-left: 1.25em; }
+  .cms-prose ol:where(:not(.cms-box, .cms-repeat)) { list-style: decimal; padding-left: 1.25em; }
+  .cms-prose :where(ul:not(.cms-box, .cms-repeat), ol:not(.cms-box, .cms-repeat)) > li + li { margin-top: var(--prose-items, .35em); }
+  .cms-prose a:where(:not(.cms-box, .cms-repeat)) { text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: .2em; }
+  .cms-prose a:where(:not(.cms-box, .cms-repeat)):hover { text-decoration-color: currentColor; }
+  .cms-prose :not(pre) > code { padding: .1em .35em; border-radius: .3em; background: var(--color-surface, rgb(0 0 0 / .05)); font-size: .9em; }
+  .cms-prose blockquote:where(:not(.cms-box, .cms-repeat)) { padding-left: 1em; border-left: 2px solid var(--color-border, rgb(0 0 0 / .12)); }
+}
+
+:root{--color-background:#ffffff;--color-surface:#f6f6f4;--color-foreground:#161614;--color-muted:#6b6b66;--color-border:#e6e6e2;--color-primary:#1d4ed8;--color-primary-foreground:#ffffff;--font-sans:ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;--font-display:ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;--font-mono:ui-monospace, "SF Mono", Menlo, monospace;--text-xs:0.8125rem;--text-sm:0.875rem;--text-base:clamp(1rem, 0.9755rem + 0.1087vw, 1.0625rem);--text-lg:clamp(1.125rem, 1.0761rem + 0.2174vw, 1.25rem);--text-xl:clamp(1.25rem, 1.1522rem + 0.4348vw, 1.5rem);--text-2xl:clamp(1.5rem, 1.3043rem + 0.8696vw, 2rem);--text-3xl:clamp(1.875rem, 1.5326rem + 1.5217vw, 2.75rem);--text-4xl:clamp(2.25rem, 1.663rem + 2.6087vw, 3.75rem);--text-5xl:clamp(2.75rem, 1.8696rem + 3.913vw, 5rem);--leading-tight:1.1;--leading-snug:1.3;--leading-normal:1.6;--tracking-tight:-0.025em;--tracking-normal:0;--tracking-wide:0.06em;--font-weight-regular:400;--font-weight-medium:500;--font-weight-semibold:600;--font-weight-bold:700;--space-0:0;--space-1:0.25rem;--space-2:0.5rem;--space-3:0.75rem;--space-4:1rem;--space-6:1.5rem;--space-8:2rem;--space-12:3rem;--space-16:4rem;--space-24:6rem;--space-gutter:clamp(1.25rem, 0.7609rem + 2.1739vw, 2.5rem);--space-section:clamp(4rem, 2.4348rem + 6.9565vw, 8rem);--radius-none:0;--radius-sm:0.375rem;--radius-md:0.625rem;--radius-lg:1rem;--radius-full:9999px;--shadow-sm:0 1px 2px rgb(0 0 0 / 0.06);--shadow-md:0 4px 16px -4px rgb(0 0 0 / 0.12);--shadow-lg:0 24px 48px -16px rgb(0 0 0 / 0.2);--container-prose:42rem;--container-content:72rem;--container-wide:84rem;--control-sm-height:2.25rem;--control-sm-padding:0.75rem;--control-sm-text:var(--text-sm);--control-md-height:2.75rem;--control-md-padding:1rem;--control-md-text:var(--text-base);--control-lg-height:3.25rem;--control-lg-padding:1.25rem;--control-lg-text:var(--text-lg);--breakpoint-sm:640px;--breakpoint-md:768px;--breakpoint-lg:1024px;--breakpoint-xl:1280px;--duration-fast:150ms;--duration-base:300ms;--duration-slow:600ms;--ease-out:cubic-bezier(0.2, 0.8, 0.2, 1);--ease-in-out:cubic-bezier(0.65, 0, 0.35, 1)}
+:root{--control-height:var(--control-md-height);--control-padding:var(--control-md-padding);--control-text:var(--control-md-text)}[data-size=sm]{--control-height:var(--control-sm-height);--control-padding:var(--control-sm-padding);--control-text:var(--control-sm-text)}[data-size=md]{--control-height:var(--control-md-height);--control-padding:var(--control-md-padding);--control-text:var(--control-md-text)}[data-size=lg]{--control-height:var(--control-lg-height);--control-padding:var(--control-lg-padding);--control-text:var(--control-lg-text)}
+:root,[data-theme]{--field-background:var(--color-raised, var(--color-background, transparent));--field-border-width:1px;--field-border-color:color-mix(in srgb, var(--color-border, currentColor) 70%, currentColor);--field-radius:var(--radius-md, 0.5rem);--field-color:currentColor;--field-placeholder:var(--color-muted, color-mix(in srgb, currentColor 50%, transparent));--field-shadow:0 0 #0000;--field-hover-background:var(--field-background);--field-hover-border-color:color-mix(in srgb, var(--field-border-color) 55%, currentColor);--field-focus-background:var(--field-background);--field-focus-border-color:var(--color-focus, var(--color-primary, currentColor));--field-focus-ring-width:3px;--field-focus-ring-color:color-mix(in srgb, var(--field-focus-border-color) 22%, transparent);--field-invalid-color:var(--color-danger, #d92d20);--field-invalid-ring-color:color-mix(in srgb, var(--field-invalid-color) 20%, transparent);--field-disabled-opacity:0.55;--field-disabled-background:var(--field-background);--field-label-font-size:var(--text-sm, 0.875rem);--field-label-font-weight:var(--font-weight-medium, 500);--field-label-color:currentColor;--field-label-required:var(--color-muted, currentColor);--field-help-font-size:var(--text-xs, 0.8125rem);--field-help-color:var(--color-muted, currentColor);--field-spacing-fields:1.25rem;--field-spacing-label:0.375rem;--field-spacing-list:0.625rem;--field-spacing-choice:0.625rem;--field-select-arrow-color:color-mix(in srgb, currentColor 55%, transparent);--field-select-arrow-size:0.3125rem;--field-textarea-min-height:6.5rem;--field-checkbox-size:1.125rem;--field-checkbox-radius:var(--radius-sm, 0.3125rem);--field-checkbox-background:var(--field-background);--field-checkbox-border-color:var(--field-border-color);--field-checkbox-checked:var(--color-primary, currentColor);--field-checkbox-mark-color:var(--color-primary-foreground, #ffffff);--field-checkbox-mark-size:80%;--field-radio-size:var(--field-checkbox-size);--field-radio-checked:var(--field-checkbox-checked);--field-radio-dot-color:var(--field-checkbox-mark-color);--field-radio-dot-size:40%;--field-switch-width:2.25rem;--field-switch-height:1.375rem;--field-switch-radius:999px;--field-switch-off:color-mix(in srgb, currentColor 20%, transparent);--field-switch-on:var(--field-checkbox-checked);--field-switch-knob:#ffffff;--field-switch-inset:0.1875rem;--field-switch-knob-shadow:0 1px 2px rgb(0 0 0 / 0.2);--field-slider-track-height:0.375rem;--field-slider-track:color-mix(in srgb, currentColor 14%, transparent);--field-slider-fill:var(--field-checkbox-checked);--field-slider-radius:999px;--field-slider-thumb-size:1.25rem;--field-slider-thumb:#ffffff;--field-slider-thumb-border:var(--field-border-color);--field-slider-thumb-shadow:0 1px 3px rgb(0 0 0 / 0.16);--field-tags-background:color-mix(in srgb, currentColor 8%, transparent);--field-tags-color:currentColor;--field-tags-radius:var(--radius-sm, 0.375rem);--field-chips-radius:999px;--field-chips-background:transparent;--field-chips-border-color:var(--field-border-color);--field-chips-selected:var(--color-foreground, currentColor);--field-chips-selected-text:var(--color-background, #ffffff);--field-file-background:color-mix(in srgb, currentColor 8%, transparent);--field-file-color:currentColor;--field-file-radius:var(--radius-sm, 0.375rem);--field-textarea-resize:vertical;--field-checkbox-mark-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%3E%3Cpath%20d%3D%27M3%208.5l3.25%203.25L13%204.75%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272.25%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E");--field-checkbox-dash-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%3E%3Cpath%20d%3D%27M3.5%208h9%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272.25%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E");--field-radio-on-background:var(--field-radio-checked);--field-radio-on-dot:var(--field-radio-dot-color)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--color-background:#0c0c0b;--color-surface:#161615;--color-foreground:#f2f2ee;--color-muted:#9c9c96;--color-border:#2a2a27;--color-primary:#7aa2ff;--color-primary-foreground:#0c0c0b;color-scheme:dark}}
+[data-theme=dark]{--color-background:#0c0c0b;--color-surface:#161615;--color-foreground:#f2f2ee;--color-muted:#9c9c96;--color-border:#2a2a27;--color-primary:#7aa2ff;--color-primary-foreground:#0c0c0b;color-scheme:dark}
+@layer elements{body{font-family:var(--font-sans);font-size:var(--text-base);line-height:var(--leading-normal);color:var(--color-foreground);background-color:var(--color-background)}h1{font-family:var(--font-display);font-size:var(--text-5xl);line-height:var(--leading-tight);letter-spacing:var(--tracking-tight);font-weight:var(--font-weight-semibold);text-wrap:balance}h2{font-family:var(--font-display);font-size:var(--text-3xl);line-height:var(--leading-tight);letter-spacing:var(--tracking-tight);font-weight:var(--font-weight-semibold);text-wrap:balance}h3{font-size:var(--text-xl);line-height:var(--leading-snug);font-weight:var(--font-weight-semibold)}code{font-family:var(--font-mono);font-size:0.9em}::selection{background-color:color-mix(in srgb, var(--color-primary) 20%, transparent)}}
+/* Buttons. Their size is the control size scale fields share (data-size → --control-*), their
+   look a variant from the design system. Three layers, so nothing depends on specificity: the
+   base and the core variants, then the site's variants, then shapes and states, which a
+   variant can't undo. [data-cms-state] shows a state without the pointer, for the specimen. */
+@layer components {
+  @layer button-base, button-variants, button-shapes;
+
+  @layer button-base {
+    .cms-button {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5em; box-sizing: border-box; flex-shrink: 0;
+      height: var(--control-height); padding: 0 var(--control-padding);
+      font: inherit; font-size: var(--control-text); font-weight: var(--font-weight-medium, 500); line-height: 1; white-space: nowrap; text-decoration: none;
+      color: inherit; background: none; border: 1px solid transparent; border-radius: var(--radius-md, 0.5rem); cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+    }
+    .cms-button__icon { flex: none; width: 1.25em; height: 1.25em; }
+    .cms-button[data-variant="primary"] { color: var(--color-primary-foreground, #fff); background: var(--color-primary, #111); }
+    .cms-button[data-variant="primary"]:is(:hover, [data-cms-state~=hover]) { opacity: 0.9; }
+    .cms-button[data-variant="secondary"] { border-color: var(--color-border, rgb(0 0 0 / 0.15)); }
+    .cms-button[data-variant="secondary"]:is(:hover, [data-cms-state~=hover]), .cms-button[data-variant="ghost"]:is(:hover, [data-cms-state~=hover]) { background: var(--color-surface, rgb(0 0 0 / 0.04)); }
+    .cms-button[data-variant="link"] { color: var(--color-primary, inherit); text-decoration: underline; text-underline-offset: 0.2em; }
+  }
+
+  @layer button-shapes {
+    /* An icon alone makes a square button, as tall as it is wide; round makes it a circle, and a labelled one a pill. */
+    .cms-button[data-icon-only] { width: var(--control-height); padding: 0; gap: 0; }
+    .cms-button[data-shape="round"] { border-radius: 999px; }
+    .cms-button[data-variant="link"] { height: auto; padding: 0; border: 0; }
+    .cms-button:is(:active, [data-cms-state~=active]):not(:disabled) { transform: translateY(1px); }
+    .cms-button[data-cms-state~=focus] { outline: 2px solid var(--color-focus, var(--color-primary, currentColor)); outline-offset: 3px; }
+    /* Disabled reads the same on a button as on a field. */
+    .cms-button:is(:disabled, [aria-disabled=true], [data-cms-state~=disabled]) { opacity: var(--field-disabled-opacity, 0.5); cursor: not-allowed; transform: none; }
+    .cms-button[data-danger] { color: var(--color-danger, #b91c1c); }
+  }
+}
+
+/* Form fields, for every form on the site: the forms people build, the account pages, the
+   checkout, list filters and the Input block. Their size is the control size scale buttons share
+   (--control-height, --control-padding, --control-text, by data-size); everything they look like
+   is a --field-* property from the design system (FieldStyles), so a site styles its fields once.
+   [data-cms-state] shows a state without the pointer or keyboard, for the design system's specimens. */
+@layer components {
+  .cms-form { display: grid; gap: var(--field-spacing-fields); }
+  .cms-field, .cms-form [data-field] { display: grid; gap: var(--field-spacing-label); align-content: start; min-width: 0; }
+  .cms-field[hidden], .cms-form [data-field][hidden] { display: none; }
+
+  /* Labels, help and messages. */
+  .cms-label { display: block; margin: 0; padding: 0; font-size: var(--field-label-font-size); font-weight: var(--field-label-font-weight); line-height: 1.4; color: var(--field-label-color); }
+  legend.cms-label { display: block; margin-bottom: var(--field-spacing-label); }
+  .cms-req { color: var(--field-label-required); font-weight: inherit; }
+  .cms-optional { font-size: var(--field-help-font-size); font-weight: normal; color: var(--field-help-color); }
+  .cms-label output { float: inline-end; font-weight: normal; font-variant-numeric: tabular-nums; color: var(--field-help-color); }
+  .cms-help, .cms-msg { margin: 0; font-size: var(--field-help-font-size); line-height: 1.45; color: var(--field-help-color); }
+  .cms-msg { color: var(--field-invalid-color); }
+
+  /* Boxed fields: text of every kind, dropdowns, text areas, tag fields, file pickers. */
+  .cms-input:where(:not([type=checkbox], [type=radio], [type=range], [type=hidden])) {
+    appearance: none; box-sizing: border-box; width: 100%; min-width: 0; height: var(--control-height); margin: 0; padding: 0 var(--control-padding);
+    font: inherit; font-size: var(--control-text); line-height: 1.25; color: var(--field-color);
+    background-color: var(--field-background); border: var(--field-border-width) solid var(--field-border-color); border-radius: var(--field-radius);
+    box-shadow: var(--field-shadow); outline: 2px solid transparent; outline-offset: 2px;
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+  }
+  .cms-input::placeholder { color: var(--field-placeholder); opacity: 1; }
+  /* Phones zoom into text smaller than 16px while it's typed in. */
+  @media (pointer: coarse) {
+    .cms-input:where(:not([type=checkbox], [type=radio], [type=range])), .cms-tags__input { font-size: max(1rem, var(--control-text)); }
+  }
+  @media (hover: hover) {
+    .cms-input:where(:not([type=checkbox], [type=radio], [type=range])):hover:not(:disabled, :focus-visible, :focus-within, [aria-invalid=true], .is-invalid *) { border-color: var(--field-hover-border-color); background-color: var(--field-hover-background); }
+  }
+  .cms-input[data-cms-state~=hover] { border-color: var(--field-hover-border-color); background-color: var(--field-hover-background); }
+  .cms-input:where(:not([type=checkbox], [type=radio], [type=range])):is([aria-invalid=true], .is-invalid *, [data-cms-state~=invalid]) { border-color: var(--field-invalid-color); }
+  .cms-input:where(:not([type=checkbox], [type=radio], [type=range])):is(:focus-visible, .cms-tags:focus-within, [data-cms-state~=focus]) { border-color: var(--field-focus-border-color); background-color: var(--field-focus-background); box-shadow: var(--field-shadow), 0 0 0 var(--field-focus-ring-width) var(--field-focus-ring-color); }
+  .cms-input:where(:not([type=checkbox], [type=radio], [type=range])):is([aria-invalid=true], .is-invalid *, [data-cms-state~=invalid]):is(:focus-visible, .cms-tags:focus-within, [data-cms-state~=focus]) { border-color: var(--field-invalid-color); box-shadow: var(--field-shadow), 0 0 0 var(--field-focus-ring-width) var(--field-invalid-ring-color); }
+  .cms-input:where(:not([type=checkbox], [type=radio], [type=range])):is(:disabled, [data-cms-state~=disabled]) { opacity: var(--field-disabled-opacity); background-color: var(--field-disabled-background); cursor: not-allowed; }
+
+  textarea.cms-input { height: auto; min-height: var(--field-textarea-min-height); padding-block: max(0.5rem, calc((var(--control-height) - 1.5em) / 2 - var(--field-border-width))); line-height: 1.5; resize: var(--field-textarea-resize); }
+  select.cms-input:not([multiple]) {
+    cursor: pointer; text-overflow: ellipsis;
+    padding-inline-end: calc(var(--control-padding) + 2 * var(--field-select-arrow-size) + 0.5rem);
+    /* A chevron of two strokes, in a color the design system sets. */
+    --cms-arrow: transparent calc(50% - 0.75px), var(--field-select-arrow-color) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px);
+    background-image: linear-gradient(45deg, var(--cms-arrow)), linear-gradient(135deg, var(--cms-arrow));
+    background-position: right calc(var(--control-padding) + var(--field-select-arrow-size)) center, right var(--control-padding) center;
+    background-size: var(--field-select-arrow-size) var(--field-select-arrow-size); background-repeat: no-repeat;
+  }
+  select.cms-input[multiple] { height: auto; padding: 0.375rem; }
+  select.cms-input[multiple] option:checked { background: linear-gradient(color-mix(in srgb, var(--field-checkbox-checked) 22%, transparent), color-mix(in srgb, var(--field-checkbox-checked) 22%, transparent)); }
+  select.cms-input[multiple] option { padding: 0.375rem calc(var(--control-padding) - 0.375rem); border-radius: calc(var(--field-radius) / 2); }
+  .cms-input::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
+  .cms-input::-webkit-datetime-edit { padding: 0; }
+  .cms-input[type=search]::-webkit-search-cancel-button { cursor: pointer; }
+  .cms-input[type=file] { padding-block: max(0px, calc(0.375rem - var(--field-border-width))); padding-inline-start: max(0px, calc(0.375rem - var(--field-border-width))); line-height: calc(var(--control-height) - 0.75rem); cursor: pointer; }
+  .cms-input[type=file]::file-selector-button {
+    height: calc(var(--control-height) - 0.75rem); margin: 0 0.75rem 0 0; padding: 0 0.75rem; vertical-align: middle;
+    font: inherit; font-size: 0.875em; font-weight: 500; color: var(--field-file-color);
+    background: var(--field-file-background); border: 0; border-radius: var(--field-file-radius); cursor: pointer;
+  }
+
+  /* Tag fields: words added one by one, each a tag with a button that removes it. */
+  .cms-input.cms-tags { --cms-tags-pad: 0.3125rem; --cms-tag-height: calc(var(--control-height) - 2 * var(--cms-tags-pad) - 2 * var(--field-border-width)); display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; height: auto; min-height: var(--control-height); padding: var(--cms-tags-pad); cursor: text; }
+  .cms-tags__input { flex: 1 0 8rem; min-width: 8rem; height: var(--cms-tag-height); margin: 0; padding: 0 max(0px, calc(var(--control-padding) - var(--cms-tags-pad) - var(--field-border-width))); font: inherit; color: inherit; background: none; border: 0; outline: 0; }
+  .cms-tags__input::placeholder { color: var(--field-placeholder); opacity: 1; }
+  .cms-tag { display: inline-flex; align-items: center; gap: 0.25rem; max-width: 100%; height: var(--cms-tag-height); padding-inline: 0.625rem 0.375rem; font-size: 0.875em; line-height: 1; white-space: nowrap; color: var(--field-tags-color); background: var(--field-tags-background); border-radius: var(--field-tags-radius); }
+  .cms-tag > span { overflow: hidden; text-overflow: ellipsis; }
+  .cms-tag__remove { display: grid; place-items: center; flex: none; width: 1.125rem; height: 1.125rem; padding: 0; color: inherit; background: none; border: 0; border-radius: 50%; opacity: 0.55; cursor: pointer; }
+  .cms-tag__remove:hover { opacity: 1; background: color-mix(in srgb, currentColor 12%, transparent); }
+  .cms-tag__remove svg { width: 0.75rem; height: 0.75rem; }
+
+  /* Checkboxes, radios and switches, with their text beside them. */
+  .cms-choices { display: grid; gap: var(--field-spacing-list); min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+  .cms-choices[data-look=chips] > .cms-choices__list, .cms-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .cms-choice { display: flex; gap: var(--field-spacing-choice); align-items: flex-start; font-weight: normal; line-height: 1.45; cursor: pointer; }
+  .cms-choice:has(:disabled) { cursor: not-allowed; }
+  .cms-choice > span { min-width: 0; }
+
+  .cms-check, .cms-radio {
+    appearance: none; position: relative; flex: none; display: inline-block; box-sizing: border-box;
+    width: var(--field-checkbox-size); height: var(--field-checkbox-size); margin: max(0px, calc((1.45em - var(--field-checkbox-size)) / 2)) 0 0;
+    font: inherit; color: inherit; background: var(--field-checkbox-background); border: var(--field-border-width) solid var(--field-checkbox-border-color);
+    border-radius: var(--field-checkbox-radius); outline: 2px solid transparent; outline-offset: 2px; cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+  .cms-check::before, .cms-radio::before { content: ""; position: absolute; inset: 0; margin: auto; transform: scale(0); transition: transform 160ms cubic-bezier(.2, .9, .3, 1.3); }
+  .cms-check::before { width: var(--field-checkbox-mark-size); height: var(--field-checkbox-mark-size); background: var(--field-checkbox-mark-color); mask: var(--field-checkbox-mark-icon) center / 100% 100% no-repeat; }
+  .cms-check:is(:checked, :indeterminate, [data-cms-state~=checked]) { background: var(--field-checkbox-checked); border-color: var(--field-checkbox-checked); }
+  .cms-check:is(:checked, :indeterminate, [data-cms-state~=checked])::before { transform: scale(1); }
+  .cms-check:indeterminate::before { mask-image: var(--field-checkbox-dash-icon); }
+
+  .cms-radio { width: var(--field-radio-size); height: var(--field-radio-size); margin-top: max(0px, calc((1.45em - var(--field-radio-size)) / 2)); border-radius: 50%; }
+  .cms-radio::before { width: var(--field-radio-dot-size); height: var(--field-radio-dot-size); border-radius: 50%; background: var(--field-radio-on-dot); }
+  .cms-radio:is(:checked, [data-cms-state~=checked]) { background: var(--field-radio-on-background); border-color: var(--field-radio-checked); }
+  .cms-radio:is(:checked, [data-cms-state~=checked])::before { transform: scale(1); }
+
+  .cms-switch {
+    appearance: none; position: relative; flex: none; box-sizing: border-box;
+    width: var(--field-switch-width); height: var(--field-switch-height); margin: max(0px, calc((1.45em - var(--field-switch-height)) / 2)) 0 0;
+    font: inherit; background: var(--field-switch-off); border: 0; border-radius: var(--field-switch-radius); outline: 2px solid transparent; outline-offset: 2px; cursor: pointer;
+    transition: background-color 160ms ease, box-shadow 140ms ease;
+  }
+  .cms-switch::before {
+    content: ""; position: absolute; top: var(--field-switch-inset); left: var(--field-switch-inset);
+    width: calc(var(--field-switch-height) - 2 * var(--field-switch-inset)); aspect-ratio: 1;
+    background: var(--field-switch-knob); border-radius: max(0px, calc(var(--field-switch-radius) - var(--field-switch-inset))); box-shadow: var(--field-switch-knob-shadow);
+    transition: transform 200ms cubic-bezier(.3, .7, .4, 1);
+  }
+  .cms-switch:is(:checked, [data-cms-state~=checked]) { background: var(--field-switch-on); }
+  .cms-switch:is(:checked, [data-cms-state~=checked])::before { transform: translateX(calc(var(--field-switch-width) - var(--field-switch-height))); }
+
+  @media (hover: hover) {
+    :is(.cms-check, .cms-radio):hover:not(:checked, :indeterminate, :disabled) { border-color: var(--field-hover-border-color); }
+  }
+  :is(.cms-check, .cms-radio)[data-cms-state~=hover]:not(:checked) { border-color: var(--field-hover-border-color); }
+  @media (hover: hover) {
+    .cms-switch:hover:not(:checked, :disabled) { background: color-mix(in srgb, var(--field-switch-off), currentColor 8%); }
+  }
+  .cms-switch[data-cms-state~=hover]:not(:checked) { background: color-mix(in srgb, var(--field-switch-off), currentColor 8%); }
+  :is(.cms-check, .cms-radio):is([aria-invalid=true], .is-invalid *, [data-cms-state~=invalid]):not(:checked) { border-color: var(--field-invalid-color); }
+  :is(.cms-check, .cms-radio, .cms-switch):is(:focus-visible, [data-cms-state~=focus]) { box-shadow: 0 0 0 var(--field-focus-ring-width) var(--field-focus-ring-color); }
+  :is(.cms-check, .cms-radio, .cms-switch):is(:disabled, [data-cms-state~=disabled]) { opacity: var(--field-disabled-opacity); cursor: not-allowed; }
+
+  /* Sliders. The page's script keeps --cms-range (0 to 1) at the value, so the track fills up to the thumb. */
+  .cms-range { appearance: none; display: block; width: 100%; height: max(var(--field-slider-thumb-size), var(--field-slider-track-height)); margin: 0; background: transparent; outline: 0; cursor: pointer; }
+  .cms-range::-webkit-slider-runnable-track {
+    height: var(--field-slider-track-height); border-radius: var(--field-slider-radius);
+    background: linear-gradient(to right, var(--field-slider-fill) 0 calc(var(--field-slider-thumb-size) / 2 + (100% - var(--field-slider-thumb-size)) * var(--cms-range, 0)), var(--field-slider-track) 0);
+  }
+  .cms-range::-webkit-slider-thumb {
+    appearance: none; box-sizing: border-box; width: var(--field-slider-thumb-size); height: var(--field-slider-thumb-size);
+    margin-top: calc((var(--field-slider-track-height) - var(--field-slider-thumb-size)) / 2);
+    background: var(--field-slider-thumb); border: var(--field-border-width) solid var(--field-slider-thumb-border); border-radius: 50%; box-shadow: var(--field-slider-thumb-shadow);
+    transition: box-shadow 140ms ease, transform 140ms ease;
+  }
+  .cms-range::-moz-range-track { height: var(--field-slider-track-height); border-radius: var(--field-slider-radius); background: var(--field-slider-track); }
+  .cms-range::-moz-range-progress { height: var(--field-slider-track-height); border-radius: var(--field-slider-radius); background: var(--field-slider-fill); }
+  .cms-range::-moz-range-thumb { box-sizing: border-box; width: var(--field-slider-thumb-size); height: var(--field-slider-thumb-size); background: var(--field-slider-thumb); border: var(--field-border-width) solid var(--field-slider-thumb-border); border-radius: 50%; box-shadow: var(--field-slider-thumb-shadow); }
+  .cms-range:is(:focus-visible, [data-cms-state~=focus])::-webkit-slider-thumb { box-shadow: var(--field-slider-thumb-shadow), 0 0 0 var(--field-focus-ring-width) var(--field-focus-ring-color); }
+  .cms-range:is(:focus-visible, [data-cms-state~=focus])::-moz-range-thumb { box-shadow: var(--field-slider-thumb-shadow), 0 0 0 var(--field-focus-ring-width) var(--field-focus-ring-color); }
+  .cms-range:active::-webkit-slider-thumb { transform: scale(1.08); }
+  .cms-range:is(:disabled, [data-cms-state~=disabled]) { opacity: var(--field-disabled-opacity); cursor: not-allowed; }
+  .cms-range__scale { display: flex; justify-content: space-between; margin-top: 0.25rem; font-size: var(--field-help-font-size); color: var(--field-help-color); font-variant-numeric: tabular-nums; }
+
+  /* Chips: one or more options shown as pills. */
+  .cms-chip {
+    position: relative; display: inline-flex; align-items: center; gap: 0.375em; box-sizing: border-box; height: var(--control-height); padding-inline: var(--control-padding);
+    font-size: var(--control-text); line-height: 1; white-space: nowrap; color: inherit; background: var(--field-chips-background);
+    border: var(--field-border-width) solid var(--field-chips-border-color); border-radius: var(--field-chips-radius); cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+  }
+  .cms-chip > input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+  @media (hover: hover) {
+    .cms-chip:hover:not(:has(:checked, :disabled)) { border-color: var(--field-hover-border-color); }
+  }
+  .cms-chip[data-cms-state~=hover] { border-color: var(--field-hover-border-color); }
+  .cms-chip:is(:has(:checked), [data-cms-state~=checked]) { color: var(--field-chips-selected-text); background: var(--field-chips-selected); border-color: var(--field-chips-selected); }
+  .cms-chip:is(:has(:focus-visible), [data-cms-state~=focus]) { box-shadow: 0 0 0 var(--field-focus-ring-width) var(--field-focus-ring-color); }
+  .cms-chip:has(:disabled) { opacity: var(--field-disabled-opacity); cursor: not-allowed; }
+  .cms-chip__count { opacity: 0.6; font-size: 0.875em; font-variant-numeric: tabular-nums; }
+
+  @media (forced-colors: active) {
+    .cms-check::before, .cms-radio::before, .cms-switch::before { background: CanvasText; }
+    :is(.cms-input, .cms-check, .cms-radio, .cms-switch, .cms-chip):is(:focus-visible, :focus-within) { outline-color: Highlight; }
+  }
+}
+
+@layer components{@layer button-variants{.cms-button[data-variant="primary"]{background-color:var(--color-primary);color:var(--color-primary-foreground)}.cms-button[data-variant="secondary"]{background-color:transparent;color:var(--color-foreground);border-color:var(--color-border)}}}
+@view-transition{navigation:auto}
+::view-transition-old(root),::view-transition-new(root){animation-duration:0.25s}
+@media (prefers-reduced-motion:reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}

@@ -45,10 +45,31 @@ final class MotionTest extends TestCase
         $this->assertStringNotContainsString('data-cms-motion', $page['html']);
         $this->assertStringNotContainsString('data-cms-appear', $page['html']);
         $this->assertSame([], $page['features'], 'no animation script on this page');
-        $this->assertMatchesRegularExpression('/@keyframes cms-mk-\w+\{from\{transform:translateY\(14px\);opacity:0\}\}/', $page['css']);
+        $this->assertMatchesRegularExpression('/@keyframes cms-mk-\w+\{from\{transform:translateY\(14px\);opacity:0\.01\}\}/', $page['css']);
         $this->assertStringContainsString('@media (prefers-reduced-motion:no-preference){', $page['css']);
         $this->assertMatchesRegularExpression('/\.cms-m-\w+\{animation:cms-mk-\w+ 900ms cubic-bezier\(\.16,1,\.3,1\) 0ms 1 backwards\}/', $page['css']);
         $this->assertMatchesRegularExpression('/class="[^"]*cms-m-\w+/', $page['html']);
+    }
+
+    public function test_load_never_starts_text_where_a_browser_does_not_count_it_as_painted(): void
+    {
+        $page = $this->render([$this->animated('load', ['target' => 'words', 'from' => ['opacity' => 0, 'y' => 20]], type: 'heading')]);
+        $this->assertStringContainsString('from{transform:translateY(20px);opacity:0.01}', $page['css'], 'drawn from the first frame, and counted');
+        $this->assertStringNotContainsString('opacity:0}', $page['css']);
+
+        // What waits for the visitor is not what the page is measured by.
+        $this->assertStringContainsString('&quot;opacity&quot;:0,', $this->render([$this->animated('appear')])['html']);
+
+        // A mask or a clip draws nothing until it runs: said where the build shows it, for the page's first heading.
+        $warnings = [];
+        $this->cms()->hooks()->on('render.warning', function (string $message) use (&$warnings) {
+            $warnings[] = $message;
+        });
+        $this->render([['props' => ['text' => 'Title', 'level' => '1']] + $this->animated('load', ['target' => 'words', 'mask' => true, 'from' => ['yPercent' => 110]], type: 'heading')]);
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString('first heading', $warnings[0]);
+        $this->render([['props' => ['text' => 'Title', 'level' => '2']] + $this->animated('load', ['target' => 'words', 'mask' => true, 'from' => ['yPercent' => 110]], type: 'heading')]);
+        $this->assertCount(1, $warnings);
     }
 
     public function test_load_cannot_hold_the_page_back(): void

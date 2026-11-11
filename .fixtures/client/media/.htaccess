@@ -1,0 +1,14 @@
+# Written by the CMS, and again whenever it differs: change public/.htaccess instead.
+<IfModule mod_mime.c>
+    AddType model/gltf-binary .glb
+    AddType model/gltf+json .gltf
+    AddType image/vnd.radiance .hdr
+    AddType image/ktx2 .ktx2
+    AddType application/vnd.rive .riv
+</IfModule>
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    <FilesMatch "\.(glb|gltf|hdr|ktx2|riv|json)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
