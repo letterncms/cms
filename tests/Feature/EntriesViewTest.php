@@ -76,9 +76,25 @@ final class EntriesViewTest extends TestCase
         $records = $this->records('pages', $this->userWithRole('author'));
 
         $this->assertSame([], $records['bulk']);
-        $this->assertSame(['View on Site', 'Open', 'Duplicate', 'Copy URL'], array_column($records['actions'], 'label'));
+        $this->assertSame(['View on Site', 'Edit', 'Duplicate', 'Copy URL'], array_column($records['actions'], 'label'));
         // A published page stays where it is for them.
         $this->assertSame('{row.status} is not published', $records['tree']['reorder']['when']);
+    }
+
+    public function test_someone_who_may_only_look_is_not_offered_edit(): void
+    {
+        $this->cms()->settingsRegistry()->save(\Cms\Users\Roles::SETTINGS, ['roles' => [...$this->cms()->roles()->defaults(), 'reader' => ['label' => 'Reader', 'description' => '', 'permissions' => ['admin.access', 'entries.pages.view']]]]);
+
+        $this->assertSame(['View on Site', 'Copy URL'], array_column($this->records('pages', $this->userWithRole('reader'))['actions'], 'label'));
+    }
+
+    public function test_the_count_beside_a_collections_name_ignores_what_narrows_the_list(): void
+    {
+        $count = $this->place('posts', $this->admin())['props']['count'];
+
+        // Its language only: not the status filter, not the search.
+        $this->assertSame(['collection' => 'posts', 'locale' => '{query.locale}', 'perPage' => 1, 'fields' => []], $count['source']['input']);
+        $this->assertSame(['entries/list', 'total'], [$count['source']['ability'], $count['at']]);
     }
 
     public function test_pages_without_features_that_bring_pages_are_one_list(): void
@@ -112,6 +128,6 @@ final class EntriesViewTest extends TestCase
         // The site's pages' columns and statuses, opened as the site's own version.
         $this->assertSame(['label', 'path', 'displayStatus', 'published', 'updated'], array_column($shop['columns'], 'key'));
         $this->assertSame('pages/customize', $shop['open']['ability']);
-        $this->assertSame(['View on Site', 'Open', 'Copy URL', 'Use Standard Version'], array_column($shop['actions'], 'label'));
+        $this->assertSame(['View on Site', 'Edit', 'Copy URL', 'Use Standard Version'], array_column($shop['actions'], 'label'));
     }
 }

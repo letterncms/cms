@@ -41,7 +41,7 @@ export const views = {
     const summary = manifest.collections.find((c) => c.handle === collection)
     if (!summary) return page('Not Found', undefined, [{ type: 'ui/empty', props: { icon: 'collection', title: 'Not Found' } }])
     return page(summary.title, summary.icon, [{ type: 'ui/records', props: entries(summary, definition?.(collection) ?? {}, manifest) }], {
-      count: { source: { ability: 'entries/list', input: { collection, locale: '{query.locale}', status: '{query.status}', search: '{query.search}', perPage: 1, fields: [] } }, at: 'total' },
+      count: { source: { ability: 'entries/list', input: { collection, locale: '{query.locale}', perPage: 1, fields: [] } }, at: 'total' },
       actions: summary.can?.create === false ? [] : [{ label: summary.newLabel ?? `New ${summary.singular}`, icon: 'plus', variant: 'primary', to: `/content/${collection}/new?locale={query.locale}`, key: 'c' }],
     })
   },
@@ -153,7 +153,7 @@ function entries(summary, def, manifest) {
     open: { label: 'Open', to: open },
     actions: [
       { label: 'View on Site', icon: 'external', inline: true, href: '{row.uri}', when: '{row.uri}', unless: '{row.displayStatus} is draft, scheduled' },
-      { label: 'Open', icon: 'edit', to: open },
+      { label: 'Edit', icon: 'edit', to: open },
       ...(can.create ? [{ label: 'Duplicate', icon: 'copy', ability: 'entries/duplicate', input: entry, then: 'open', to: `/content/${handle}/{result.id}` }] : []),
       ...(can.publish ? [{ label: 'Publish', icon: 'rocket', ability: 'entries/publish', input: entry, success: 'Published', when: '{row.displayStatus} is draft, changed' }, { label: 'Unpublish', icon: 'eye-off', ability: 'entries/unpublish', input: entry, success: 'Unpublished', unless: '{row.displayStatus} is draft' }] : []),
       { label: 'Copy URL', icon: 'link', copy: '{origin}{row.uri}', success: 'URL copied', when: '{row.uri}' },
