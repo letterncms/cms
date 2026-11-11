@@ -11,6 +11,15 @@
 - **Breaking.** `@letterncms/ui`: `confirm()` and `prompt()` require `confirm`, the label of the button that goes through with it, as a verb ("Delete", "Rename"): the "Confirm" and "OK" fallbacks are gone.
 - The save bar's **Discard** and **Save** are the same buttons as everywhere else, its warning reads in the dark theme, and it no longer has a yellow dot: yellow is for publishing. `data-theme` on an element inside the admin sets that piece in the theme it names; `useTheme()` says which theme is on view.
 
+### Added
+
+- `SafeFetcher::post()` sends a body as it is with the caller's own headers, such as a signature, and can keep the start of a long answer instead of refusing it. `SafeFetcher::isPublic()` says whether an address is on the public internet. Plugins that call other servers use these instead of a check of their own.
+
+### Security
+
+- **Breaking.** The CMS no longer uses a proxy from the server's environment (`http_proxy`, `https_proxy`, `ALL_PROXY`) for anything it fetches: updates, the store, remote media, fonts, Sync. A proxy would connect to an address nobody checked. A server that can only reach the internet through a proxy can no longer fetch these.
+- Everything the CMS fetches goes only to public addresses, judged more strictly: shared, multicast and site-local ranges and the IPv6 forms that carry an IPv4 address (IPv4-compatible, local-use NAT64, 6to4, Teredo) are refused, an IPv4-mapped or NAT64 address is judged as the IPv4 address it carries, and the address the connection really reached is checked against the one that was vetted before anything is sent.
+
 ### Fixed
 
 - A row of a list shows the focus ring when you reach it with the keyboard, and a field that has the focus is clear to see in the dark theme.

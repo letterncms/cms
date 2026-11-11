@@ -245,6 +245,7 @@
   "Textarea": "Zone de texte",
   "That address is not allowed.": "Cette adresse n’est pas autorisée.",
   "That code is not valid.": "Ce code n’est pas valide.",
+  "That header is not allowed.": "Cet en-tête n’est pas autorisé.",
   "That install is not known here.": "Cette installation est inconnue ici.",
   "That is not a zip file.": "Ce n’est pas un fichier zip.",
   "That port is not allowed.": "Ce port n’est pas autorisé.",
