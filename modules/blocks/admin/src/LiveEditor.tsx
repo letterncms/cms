@@ -572,7 +572,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
             const node = tree.find(nodes, selected)
             if (!first || !last || !node) return null
             const siblings = tree.siblings(nodes, first.parentId)
-            const describe = (block: BlockNode) => ({ label: blockName(block, types, components), icon: block.type === 'pattern' ? 'b-diamonds-four' : types.get(block.type)?.icon ?? 'square' })
+            const describe = (block: BlockNode) => ({ label: blockName(block, types, components), icon: block.type === 'pattern' ? 'symbol' : types.get(block.type)?.icon ?? 'square' })
             const parent = first.parentId ? tree.find(nodes, first.parentId) : null
             const { label, icon } = describe(node)
             return <BlockToolbar id={selected} label={selectedIds.length > 1 ? plural(selectedIds.length, '{count} block', '{count} blocks') : label} icon={icon} parent={parent ? describe(parent) : null}

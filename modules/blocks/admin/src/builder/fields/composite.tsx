@@ -26,7 +26,7 @@ export function GroupField({ field, value, onChange, disabled, context }: FieldP
       </div>
       {link && (
         <button type="button" onClick={() => setSplit(!split)} className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" title={split ? (field.joinLabel as string) ?? t('The same for all') : (field.splitLabel as string) ?? t('Each One')}>
-          <Icon name={split ? 'b-square' : 'b-corners-out'} size={14} />
+          <Icon name={split ? 'square' : 'radius'} size={14} />
         </button>
       )}
     </Control>

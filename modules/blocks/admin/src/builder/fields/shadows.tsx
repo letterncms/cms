@@ -104,8 +104,8 @@ export function ShadowsField({ field, value, onChange, context }: FieldProps<str
                 !text && { handle: 'inset', type: 'select', display: 'segmented', block: true, size: 'sm', required: true, label: t('Type'), options: [{ value: 'outside', label: t('Outside') }, { value: 'inside', label: t('Inside') }] },
                 { handle: 'x', type: 'text', component: 'blocks-value', label: t('X Offset'), prefix: 'X', placeholder: '0' },
                 { handle: 'y', type: 'text', component: 'blocks-value', label: t('Y Offset'), prefix: 'Y', placeholder: '0' },
-                { handle: 'blur', type: 'text', component: 'blocks-value', label: t('Blur'), min: 0, prefixIcon: 'b-drop', placeholder: '0' },
-                !text && { handle: 'spread', type: 'text', component: 'blocks-value', label: t('Spread'), prefixIcon: 'b-arrows-out-simple', placeholder: '0' },
+                { handle: 'blur', type: 'text', component: 'blocks-value', label: t('Blur'), min: 0, prefixIcon: 'shadow', placeholder: '0' },
+                !text && { handle: 'spread', type: 'text', component: 'blocks-value', label: t('Spread'), prefixIcon: 'arrows-out-simple', placeholder: '0' },
                 { handle: 'color', type: 'color', component: 'blocks-color', label: t('Color') },
               ].filter(Boolean) as never}
               values={{ ...layer, inset: layer.inset ? 'inside' : 'outside' }}

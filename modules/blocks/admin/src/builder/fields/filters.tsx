@@ -20,14 +20,14 @@ interface FilterFn {
 }
 
 const FUNCTIONS: FilterFn[] = [
-  { name: 'blur', label: () => t('Blur'), unit: 'px', initial: '8px', step: 1, min: 0, icon: 'b-drop' },
-  { name: 'brightness', label: () => t('Brightness'), unit: '%', initial: '100%', step: 5, min: 0, icon: 'b-sun' },
-  { name: 'contrast', label: () => t('Contrast'), unit: '%', initial: '100%', step: 5, min: 0, icon: 'b-circle-half' },
-  { name: 'saturate', label: () => t('Saturation'), unit: '%', initial: '100%', step: 5, min: 0, icon: 'b-drop-half' },
-  { name: 'grayscale', label: () => t('Grayscale'), unit: '%', initial: '100%', step: 5, min: 0, max: 100, icon: 'b-circle-half' },
-  { name: 'hue-rotate', label: () => t('Hue'), unit: 'deg', initial: '90deg', step: 1, icon: 'b-arrows-clockwise' },
-  { name: 'invert', label: () => t('Invert'), unit: '%', initial: '100%', step: 5, min: 0, max: 100, icon: 'b-circle-half' },
-  { name: 'sepia', label: () => t('Sepia'), unit: '%', initial: '100%', step: 5, min: 0, max: 100, icon: 'b-paint-brush' },
+  { name: 'blur', label: () => t('Blur'), unit: 'px', initial: '8px', step: 1, min: 0, icon: 'shadow' },
+  { name: 'brightness', label: () => t('Brightness'), unit: '%', initial: '100%', step: 5, min: 0, icon: 'sun' },
+  { name: 'contrast', label: () => t('Contrast'), unit: '%', initial: '100%', step: 5, min: 0, icon: 'opacity' },
+  { name: 'saturate', label: () => t('Saturation'), unit: '%', initial: '100%', step: 5, min: 0, icon: 'drop-half' },
+  { name: 'grayscale', label: () => t('Grayscale'), unit: '%', initial: '100%', step: 5, min: 0, max: 100, icon: 'opacity' },
+  { name: 'hue-rotate', label: () => t('Hue'), unit: 'deg', initial: '90deg', step: 1, icon: 'refresh' },
+  { name: 'invert', label: () => t('Invert'), unit: '%', initial: '100%', step: 5, min: 0, max: 100, icon: 'opacity' },
+  { name: 'sepia', label: () => t('Sepia'), unit: '%', initial: '100%', step: 5, min: 0, max: 100, icon: 'theme' },
 ]
 
 type Part = { name: string; value: string }
@@ -57,7 +57,7 @@ export function FiltersField({ field, value, onChange, context, disabled }: Fiel
             align="end"
             trigger={
               <button type="button" disabled={disabled} className="grid size-6 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('Add a Filter')} title={t('Add a Filter')}>
-                <Icon name="b-plus" size={14} />
+                <Icon name="plus" size={14} />
               </button>
             }
             items={missing.map((f) => ({ label: f.label(), icon: f.icon, onSelect: () => set([...parts, { name: f.name, value: f.initial }]) }))}
@@ -72,7 +72,7 @@ export function FiltersField({ field, value, onChange, context, disabled }: Fiel
         return (
           <div key={part.name + i} className="flex h-7 items-center gap-2">
             <span className="flex w-[88px] shrink-0 items-center gap-1.5 truncate pl-2 text-xs text-muted">
-              <Icon name={fn?.icon ?? 'b-faders'} size={13} className="shrink-0 text-faint" />
+              <Icon name={fn?.icon ?? 'faders'} size={13} className="shrink-0 text-faint" />
               {fn?.label() ?? part.name}
             </span>
             <SubField field={sub} value={fn?.unit === '%' && /^[\d.]+$/.test(part.value) ? `${Math.round(parseFloat(part.value) * 1000) / 10}%` : part.value || null} onChange={(v) => set(parts.map((p, j) => (j === i ? { ...p, value: String(v ?? fn?.initial ?? '') } : p)))} disabled={disabled} context={context} />

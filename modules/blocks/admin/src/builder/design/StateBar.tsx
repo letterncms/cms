@@ -89,7 +89,7 @@ export function StateBar({ node }: { node: BlockNode }) {
           align="end"
           trigger={
             <button type="button" className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={t('More States')} title={t('More States')}>
-              <Icon name="b-plus" size={14} />
+              <Icon name="plus" size={14} />
             </button>
           }
           items={[
@@ -102,7 +102,7 @@ export function StateBar({ node }: { node: BlockNode }) {
       {/* The state is the track above; this line only says which screens a breakpoint's styles reach. */}
       {breakpoint !== 'base' && (
         <div className="flex h-7 items-center gap-2 rounded-sm bg-bg px-2 text-xs text-text">
-          <Icon name={breakpoint === 'mobile' ? 'b-device-mobile' : 'b-device-tablet'} size={14} className="shrink-0 text-muted" />
+          <Icon name={breakpoint === 'mobile' ? 'phone' : 'tablet'} size={14} className="shrink-0 text-muted" />
           <span className="min-w-0 flex-1 truncate">{where}</span>
           <button type="button" onClick={() => store.setBreakpoint('base')} className="shrink-0 rounded-xs px-1 text-muted hover:text-ink">{t('Back to Desktop')}</button>
         </div>

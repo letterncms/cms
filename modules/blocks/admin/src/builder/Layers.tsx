@@ -140,10 +140,10 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
   const [renaming, setRenaming] = useState(false)
   const component = node.type === 'pattern'
   const badges = [
-    node.motion?.length && { icon: 'b-magic-wand', title: t('Animated') },
-    node.logic && { icon: 'b-lightning', title: t('Interactive') },
-    node.bind && Object.keys(node.bind).some((k) => k !== 'visible' && k !== 'hidden') && { icon: 'b-database', title: t('Connected to Data') },
-    (node.logic?.show || node.bind?.visible || node.bind?.hidden) && { icon: 'b-eye-slash', title: node.logic?.show ? t('Shown when {condition}', { condition: node.logic.show }) : t('Shown conditionally') },
+    node.motion?.length && { icon: 'wand', title: t('Animated') },
+    node.logic && { icon: 'zap', title: t('Interactive') },
+    node.bind && Object.keys(node.bind).some((k) => k !== 'visible' && k !== 'hidden') && { icon: 'database', title: t('Connected to Data') },
+    (node.logic?.show || node.bind?.visible || node.bind?.hidden) && { icon: 'eye-off', title: node.logic?.show ? t('Shown when {condition}', { condition: node.logic.show }) : t('Shown conditionally') },
   ].filter(Boolean) as { icon: string; title: string }[]
 
   return (
@@ -185,9 +185,9 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
         className={cn('-mr-1 grid size-4 shrink-0 place-items-center rounded-xs text-faint hover:text-ink', !hasChildren && 'invisible')}
         aria-label={collapsed ? t('Expand') : t('Collapse')}
       >
-        <Icon name="b-caret-down" size={10} className={cn('transition-transform duration-120', collapsed && '-rotate-90')} />
+        <Icon name="chevron-down" size={10} className={cn('transition-transform duration-120', collapsed && '-rotate-90')} />
       </button>
-      <Icon name={component ? 'b-diamonds-four' : type?.icon ?? 'square'} size={14} className={cn('shrink-0', node.hidden ? 'text-ghost' : selected ? 'text-ink' : component ? 'text-muted' : 'text-faint')} />
+      <Icon name={component ? 'symbol' : type?.icon ?? 'square'} size={14} className={cn('shrink-0', node.hidden ? 'text-ghost' : selected ? 'text-ink' : component ? 'text-muted' : 'text-faint')} />
       {renaming ? (
         <div className="min-w-0 flex-1" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} onKeyUp={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()} onBlur={() => setRenaming(false)}>
           <PanelFields

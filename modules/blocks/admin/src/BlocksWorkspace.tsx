@@ -46,9 +46,9 @@ const sheet = 'max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:h-[72dvh]
 
 /** The screens a page is previewed and styled for: one vocabulary everywhere (Desktop, Tablet, Phone). */
 export const screens = () => [
-  { value: 'base', label: t('Desktop'), icon: 'b-monitor' },
-  { value: 'tablet', label: t('Tablet'), icon: 'b-device-tablet' },
-  { value: 'mobile', label: t('Phone'), icon: 'b-device-mobile' },
+  { value: 'base', label: t('Desktop'), icon: 'monitor' },
+  { value: 'tablet', label: t('Tablet'), icon: 'tablet' },
+  { value: 'mobile', label: t('Phone'), icon: 'phone' },
 ] as const
 
 /**

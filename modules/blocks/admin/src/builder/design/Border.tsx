@@ -85,7 +85,7 @@ export function Border({ s }: { s: StyleApi }) {
             get: () => ({ width: line.width, style: line.style }),
             set: (v) => setLine(changed({ width: line.width, style: line.style }, v)),
             fields: [
-              { handle: 'width', type: 'text', component: 'blocks-value', label: t('Width'), placeholder: '0', min: 0, prefixIcon: 'b-square' },
+              { handle: 'width', type: 'text', component: 'blocks-value', label: t('Width'), placeholder: '0', min: 0, prefixIcon: 'square' },
               { handle: 'style', type: 'select', size: 'sm', label: t('Style'), options: styleOptions(), placeholder: t('Style') },
             ],
           },
@@ -111,7 +111,7 @@ export function Border({ s }: { s: StyleApi }) {
             split: radii.some(Boolean),
             splitLabel: t('Each Corner'),
             joinLabel: t('Same radius for every corner'),
-            link: { handle: 'borderRadius', type: 'text', component: 'blocks-value', label: t('Radius'), group: 'radius', prefixIcon: 'b-frame-corners', placeholder: '0', min: 0 },
+            link: { handle: 'borderRadius', type: 'text', component: 'blocks-value', label: t('Radius'), group: 'radius', prefixIcon: 'frame', placeholder: '0', min: 0 },
             fields: CORNERS.map((c, i) => ({ handle: c, type: 'text', component: 'blocks-value', label: [t('Top Left'), t('Top Right'), t('Bottom Right'), t('Bottom Left')][i], title: [t('Top Left'), t('Top Right'), t('Bottom Right'), t('Bottom Left')][i], group: 'radius', prefix: ['◜', '◝', '◞', '◟'][i], placeholder: '0', min: 0 })),
             get: () => ({ borderRadius: s.value('borderRadius'), ...Object.fromEntries(CORNERS.map((c, i) => [c, corner(i)])) }),
             set: (v) => {
@@ -134,14 +134,14 @@ export function Border({ s }: { s: StyleApi }) {
               get: () => ({ width: outline.width, style: outline.style }),
               set: (v) => s.set('outline', formatLine({ ...outline, ...changed({ width: outline.width, style: outline.style }, v) })),
               fields: [
-                { handle: 'width', type: 'text', component: 'blocks-value', label: t('Width'), placeholder: '0', min: 0, prefixIcon: 'b-selection' },
+                { handle: 'width', type: 'text', component: 'blocks-value', label: t('Width'), placeholder: '0', min: 0, prefixIcon: 'selection' },
                 { handle: 'style', type: 'select', size: 'sm', label: t('Style'), options: styleOptions(), placeholder: t('Style') },
               ],
             },
             outline.width || outline.style
               ? { handle: 'outlineColor', type: 'color', component: 'blocks-color', label: t('Outline Color'), placeholder: t('Text Color'), keys: ['outline'], get: () => outline.color, set: (v) => s.set('outline', formatLine({ ...outline, color: v ?? undefined })) }
               : null,
-            outline.width || outline.style || s.value('outlineOffset') ? { handle: 'outlineOffset', type: 'text', component: 'blocks-value', label: t('Offset'), placeholder: '0', prefixIcon: 'b-arrows-out-simple' } : null,
+            outline.width || outline.style || s.value('outlineOffset') ? { handle: 'outlineOffset', type: 'text', component: 'blocks-value', label: t('Offset'), placeholder: '0', prefixIcon: 'arrows-out-simple' } : null,
           ]}
         />
       </div>

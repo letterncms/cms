@@ -40,7 +40,7 @@ export function ConditionsField({ field, value, onChange, disabled, context }: F
         </div>
       ))}
       <button type="button" disabled={disabled} onClick={() => set([...rows, { field: '', op: '=', value: '' }])} className="-ml-2 inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs text-muted hover:bg-hover hover:text-ink">
-        <Icon name="b-plus" size={13} />
+        <Icon name="plus" size={13} />
         {t('Add Condition')}
       </button>
     </div>

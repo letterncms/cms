@@ -289,7 +289,7 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
                 align="end"
                 trigger={
                   <button type="button" className="pointer-events-auto grid size-5 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
-                    <Icon name="b-caret-down" size={10} />
+                    <Icon name="chevron-down" size={10} />
                   </button>
                 }
                 items={[...units.map((u) => ({ label: u, onSelect: () => onChange(`0${u}`) })), { separator: true, label: '' }, ...keywords.map((k) => ({ label: k, checked: value === k, onSelect: () => onChange(k) }))]}
@@ -304,7 +304,7 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
           trigger={
             <button type="button" className="flex h-7 shrink-0 items-center gap-0.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
               {menu.label}
-              <Icon name="b-caret-down" size={10} />
+              <Icon name="chevron-down" size={10} />
             </button>
           }
           items={menu.items.map((item) => ({ label: item.label, checked: item.checked, onSelect: () => onChange(item.value) }))}

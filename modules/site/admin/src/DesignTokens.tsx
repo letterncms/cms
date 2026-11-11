@@ -723,8 +723,8 @@ function boxFields(): FieldDef[] {
     {
       handle: 'padding', type: 'group', component: 'blocks-group', label: t('Padding'),
       fields: [
-        { handle: 'paddingBlock', type: 'text', component: 'blocks-value', label: t('Vertical Padding'), group: 'space', prefixIcon: 'b-arrows-out-line-vertical', unit: 'rem', placeholder: '0', min: 0 },
-        { handle: 'paddingInline', type: 'text', component: 'blocks-value', label: t('Horizontal Padding'), group: 'space', prefixIcon: 'b-arrows-out-line-horizontal', unit: 'rem', placeholder: '0', min: 0 },
+        { handle: 'paddingBlock', type: 'text', component: 'blocks-value', label: t('Vertical Padding'), group: 'space', prefixIcon: 'arrows-out-line-vertical', unit: 'rem', placeholder: '0', min: 0 },
+        { handle: 'paddingInline', type: 'text', component: 'blocks-value', label: t('Horizontal Padding'), group: 'space', prefixIcon: 'spacing', unit: 'rem', placeholder: '0', min: 0 },
       ],
     },
     {

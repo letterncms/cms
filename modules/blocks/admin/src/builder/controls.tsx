@@ -42,7 +42,7 @@ export function Section({ title, children, open: initial = true, actions, empty 
         <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className={cn('flex h-full min-w-0 flex-1 items-center gap-1 text-left text-xs font-semibold', empty ? 'text-muted' : 'text-ink')}>
           <span className="min-w-0 truncate">{title}</span>
           {/* Open sections show their caret on hover; a folded one keeps it, so it reads as one. */}
-          <Icon name="b-caret-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-120', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
+          <Icon name="chevron-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-120', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
         </button>
         {/* Adding something shows it: the section opens. */}
         {actions && <span className="contents" onClickCapture={() => !open && setOpen(true)}>{actions}</span>}
@@ -169,7 +169,7 @@ export function AddButton({ onClick, label = t('Add') }: { onClick: () => void; 
   return (
     <Tooltip content={label}>
       <button type="button" onClick={onClick} className={iconButtonClass} aria-label={label}>
-        <Icon name="b-plus" size={14} />
+        <Icon name="plus" size={14} />
       </button>
     </Tooltip>
   )
@@ -179,7 +179,7 @@ export function RemoveButton({ onClick, label = t('Remove') }: { onClick: () => 
   return (
     <Tooltip content={label}>
       <button type="button" onClick={onClick} className={cn(iconButtonClass, 'text-faint hover:text-danger')} aria-label={label}>
-        <Icon name="b-minus" size={14} />
+        <Icon name="minus" size={14} />
       </button>
     </Tooltip>
   )
