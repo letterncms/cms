@@ -107,6 +107,44 @@ const checks = {
     equal(tab.errors, [], 'no errors')
     await tab.close()
   },
+
+  /** A behaviour mounts with its props and the design, when its element is there, and unmounts when it leaves. */
+  async behavior() {
+    const tab = await open('/behavior')
+    const first = JSON.parse(await tab.until('document.getElementById("first").dataset.mounted'))
+    equal(first.props, { name: 'first', title: 'Behavior' }, 'props, with the data they name')
+    equal(first.reducedMotion, false, 'reduced motion')
+    equal(first.primary !== '', true, 'a design token is read where the element is')
+    equal(await tab.evaluate('document.getElementById("later").dataset.mounted ?? null'), null, 'one that waits to be seen has not loaded')
+
+    await tab.evaluate('document.getElementById("later").scrollIntoView()')
+    await tab.until('document.getElementById("later").dataset.mounted')
+
+    // Leaving the document, however: its own undo, its unmount, its signal.
+    await tab.evaluate('document.getElementById("first").remove()')
+    equal(await tab.until('document.documentElement.dataset.cleaned'), 'first', 'the function mount returned ran')
+    equal(await tab.evaluate('[document.documentElement.dataset.unmounted, document.documentElement.dataset.aborted]'), ['yes', 'first'], 'unmount and the signal')
+
+    // Arriving later, as after a page transition.
+    const url = await tab.evaluate('document.getElementById("later").dataset.cmsBehavior')
+    await tab.evaluate(`document.body.insertAdjacentHTML('beforeend', '<div id="added" data-cms-behavior="${url}" data-cms-props=\\'{"name":"added"}\\'></div>')`)
+    equal(JSON.parse(await tab.until('document.getElementById("added").dataset.mounted')).props, { name: 'added' }, 'an element added later mounts')
+
+    // Moved, not removed: it stays what it is.
+    const before = await tab.evaluate('window.__mounts')
+    await tab.evaluate('document.body.prepend(document.getElementById("added"))')
+    await sleep(200)
+    equal(await tab.evaluate('window.__mounts'), before, 'a moved element is not mounted again')
+    equal(tab.errors, [], 'no errors')
+    await tab.close()
+
+    const calm = await open('/behavior', { media: { 'prefers-reduced-motion': 'reduce' } })
+    equal(JSON.parse(await calm.until('document.getElementById("first").dataset.mounted')).reducedMotion, true, 'told that the visitor wants less motion')
+    await calm.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
+    await calm.until('JSON.parse(document.getElementById("first").dataset.mounted).reducedMotion === false')
+    equal(await calm.evaluate('document.documentElement.dataset.cleaned'), 'first', 'mounted again when that changes')
+    await calm.close()
+  },
 }
 
 let failed = 0
