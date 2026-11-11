@@ -15,7 +15,7 @@ function inputProps(field: FieldProps['field']) {
     size: field.size as 'xs' | 'sm' | 'md' | 'lg' | undefined,
     autoFocus: field.autofocus === true,
     autoComplete: field.autocomplete as string | undefined,
-    inputMode: field.inputmode as 'numeric' | 'text' | undefined,
+    inputMode: field.inputmode,
     className: cn(!!field.mono && 'font-mono'),
     // Named for assistive tech even when drawn without a visible label (bare).
     'aria-label': field.label || undefined,

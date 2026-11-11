@@ -6,49 +6,12 @@
 <meta name="robots" content="noindex">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>{{ $text['title'] }}</title>
-<style>
-:root{color-scheme:light dark;--bg:#fff;--surface:#fafaf8;--sunken:#f6f5f2;--border:#e8e6e1;--border-strong:#d6d4cd;--ink:#17160f;--text:#26251e;--muted:#6f6d65;--faint:#6f6d65;--signal:#ffe100;--focus:#17160f;--success:#3f8f5b;--danger:#c0352b}
-@media (prefers-color-scheme:dark){:root{--bg:#1c1c18;--surface:#21211c;--sunken:#141411;--border:#2c2b26;--border-strong:#3a3932;--ink:#f4f3ee;--text:#e8e7e1;--muted:#a09e94;--faint:#a09e94;--signal:#ffe100;--focus:#f4f3ee;--success:#6cc08a;--danger:#ef7a6f}}
-*{box-sizing:border-box}html,body{margin:0;background:var(--sunken);color:var(--text);font:13px/1.45 "Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-main{max-width:520px;margin:0 auto;padding:56px 16px}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:28px;font-weight:600;font-size:14px;letter-spacing:-.01em}
-.mark{width:22px;height:22px;border-radius:6px}
-h1{font-size:24px;letter-spacing:-.02em;margin:0 0 28px;font-weight:600;color:var(--ink)}
-section{background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:12px}
-h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 14px;font-weight:600}
-label{display:block;font-weight:500;margin:0 0 6px}
-.field{margin-bottom:14px}.field:last-child{margin-bottom:0}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-input,select{width:100%;height:32px;padding:0 10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--bg);color:var(--text);font:inherit;outline:none;transition:border-color .12s,box-shadow .12s}
-input:focus,select:focus{border-color:var(--focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 22%,transparent)}
-.help{color:var(--faint);font-size:12px;margin-top:4px}
-.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.checks li{display:flex;justify-content:space-between;gap:12px;min-width:0}
-.checks .label{flex:none}
-.checks .detail{flex:1;min-width:0;text-align:right;color:var(--faint);font-family:ui-monospace,"Geist Mono",monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;background:var(--success)}.bad .dot{background:var(--danger)}
-button{height:40px;width:100%;border:0;border-radius:6px;background:var(--ink);color:var(--bg);font:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:opacity .12s}
-button:disabled{opacity:.5;cursor:progress}
-.error{display:none;margin:0 0 12px;padding:10px 12px;border-radius:6px;border:1px solid color-mix(in srgb,var(--danger) 35%,transparent);background:color-mix(in srgb,var(--danger) 8%,transparent);color:var(--danger)}
-.hidden{display:none}
-.lead{color:var(--muted);font-size:14px;margin:-20px 0 24px}
-.pick{list-style:none;margin:0;padding:0;display:grid;gap:2px}
-.pick label{display:grid;grid-template-columns:18px 1fr;gap:12px;align-items:start;margin:0;padding:10px;border-radius:10px;font-weight:400;cursor:pointer}
-.pick label:hover{background:var(--sunken)}
-.pick input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--ink)}
-.pick strong{display:block;font-weight:500;color:var(--ink)}
-.pick small{display:block;color:var(--muted);font-size:12.5px}
-.pick .badge{display:inline-block;margin-left:6px;padding:0 6px;border-radius:99px;background:var(--sunken);color:var(--muted);font-size:11px;font-weight:500}
-.track{height:6px;border-radius:99px;background:var(--sunken);overflow:hidden}
-.bar{height:100%;width:0;border-radius:99px;background:var(--signal);transition:width .3s ease}
-.status{margin:10px 0 0;color:var(--muted);font-size:13px;min-height:19px}
-.secondary{margin-top:8px;background:transparent;color:var(--muted);height:36px;font-weight:500;font-size:13px}
-@media (prefers-reduced-motion:reduce){.bar{transition:none}}
-</style>
+{{-- The admin's tokens, typeface, radii and buttons: one family with the sign-in screen this page hands over to. --}}
+<style>{!! \Cms\Admin\StandaloneStyle::css() !!}</style>
 </head>
 <body>
-<main>
-  <div class="brand"><img class="mark" src="{{ \Cms\Support\Brand::asset('mark.svg') }}" alt="" width="22" height="22">{{ \Cms\Support\Brand::get() }}</div>
+<main class="page wide">
+  <div class="brand"><img src="{{ \Cms\Support\Brand::asset('mark.svg') }}" alt="" width="24" height="24">{{ \Cms\Support\Brand::get() }}</div>
   <h1>{{ $text['heading'] }}</h1>
 
   @php($ok = collect($requirements)->every('ok'))
@@ -56,10 +19,16 @@ button:disabled{opacity:.5;cursor:progress}
     <h2>{{ $text['requirements'] }}</h2>
     <ul class="checks">
       @foreach ($requirements as $check)
-        <li class="{{ $check['ok'] ? '' : 'bad' }}"><span class="label"><span class="dot"></span>{{ $check['label'] }}</span><span class="detail" title="{{ $check['detail'] }}">{{ $check['detail'] }}</span></li>
+        <li class="{{ $check['ok'] ? '' : 'bad' }}"><span class="label"><span class="dot" aria-hidden="true"></span>{{ $check['label'] }}</span><span class="detail" title="{{ $check['detail'] }}">{{ $check['detail'] }}</span></li>
       @endforeach
     </ul>
   </section>
+
+  @if (! $ok)
+    {{-- Not ready: what is missing is marked above, and fixing it on the server is followed by looking again. --}}
+    <p class="notice danger" role="alert">{{ $text['blocked'] }}</p>
+    <a class="button primary block" href="/install">{{ $text['recheck'] }}</a>
+  @endif
 
   <form id="install" @if(! $ok) class="hidden" @endif>
     <section>
@@ -70,13 +39,14 @@ button:disabled{opacity:.5;cursor:progress}
 
     <section>
       <h2>{{ $text['database'] }}</h2>
+      <p class="notice danger" id="db-error" role="alert"></p>
       <div class="field">
-        <label for="db_driver">{{ $text['database'] }}</label>
-        <select id="db_driver" name="db_driver">
+        <label for="db_driver">{{ $text['databaseType'] }}</label>
+        <span class="select"><select id="db_driver" name="db_driver">
           @if (in_array('mysql', $drivers)) <option value="mysql">MySQL / MariaDB</option> @endif
           @if (in_array('sqlite', $drivers)) <option value="sqlite">{{ $text['sqlite'] }}</option> @endif
           @if (in_array('pgsql', $drivers)) <option value="pgsql">PostgreSQL</option> @endif
-        </select>
+        </select></span>
       </div>
       <div id="db-server">
         <div class="row">
@@ -88,7 +58,7 @@ button:disabled{opacity:.5;cursor:progress}
           <div class="field"><label for="db_username">{{ $text['username'] }}</label><input id="db_username" name="db_username" autocomplete="off"></div>
           <div class="field"><label for="db_password">{{ $text['password'] }}</label><input id="db_password" name="db_password" type="password" autocomplete="new-password"></div>
         </div>
-        <div class="field"><label for="db_prefix">{{ $text['prefix'] }}</label><input id="db_prefix" name="db_prefix" placeholder="{{ $text['prefixPlaceholder'] }}" pattern="[a-z0-9_]*"><div class="help">{{ $text['prefixHelp'] }}</div></div>
+        <div class="field"><label for="db_prefix">{{ $text['prefix'] }}</label><input id="db_prefix" name="db_prefix" placeholder="{{ $text['prefixPlaceholder'] }}" pattern="[a-z0-9_]*"></div>
       </div>
     </section>
 
@@ -97,23 +67,29 @@ button:disabled{opacity:.5;cursor:progress}
       <div class="field"><label for="name">{{ $text['name'] }}</label><input id="name" name="name" required autocomplete="name"></div>
       <div class="field"><label for="email">{{ $text['email'] }}</label><input id="email" name="email" type="email" required autocomplete="email"></div>
       <div class="field"><label for="password">{{ $text['password'] }}</label><input id="password" name="password" type="password" required minlength="10" autocomplete="new-password"><div class="help">{{ $text['passwordHelp'] }}</div></div>
-      @if ($needsToken)
-        <div class="field"><label for="install_token">{{ $text['token'] }}</label><input id="install_token" name="install_token" required autocomplete="off"><div class="help">{{ $text['tokenHelp'] }}</div></div>
-      @endif
     </section>
 
-    <p class="error" id="error" role="alert"></p>
-    <button type="submit" id="submit">{{ $text['install'] }}</button>
+    @if ($needsToken)
+      {{-- The server's own secret, not part of the account: a group of its own. --}}
+      <section>
+        <h2>{{ $text['token'] }}</h2>
+        <div class="field"><input id="install_token" name="install_token" required autocomplete="off" aria-label="{{ $text['token'] }}" placeholder="CMS_INSTALL_TOKEN"></div>
+      </section>
+    @endif
+
+    <p class="notice danger" id="error" role="alert"></p>
+    <button type="submit" id="submit" class="primary block">{{ $text['install'] }}</button>
   </form>
 
   <div id="pick" class="hidden">
     <section>
       <h2>{{ $text['add'] }}</h2>
-      <ul class="pick" id="packages"></ul>
+      <ul class="options" id="packages"></ul>
     </section>
-    <p class="error" id="pick-error" role="alert"></p>
-    <button type="button" id="add">{{ $text['addButton'] }}</button>
-    <button type="button" id="skip" class="secondary">{{ $text['skip'] }}</button>
+    <p class="notice" id="pick-note" role="status"></p>
+    <p class="notice danger" id="pick-error" role="alert"></p>
+    <button type="button" id="add" class="primary block">{{ $text['addButton'] }}</button>
+    <button type="button" id="skip" class="block">{{ $text['skip'] }}</button>
   </div>
 
   <div id="working" class="hidden">
@@ -137,10 +113,26 @@ button:disabled{opacity:.5;cursor:progress}
   };
   driver.addEventListener('change', sync); sync();
 
+  // What went wrong is said where it went wrong: under the field it is about, in the database's group
+  // when the database refused, and above the button only when it is about neither.
+  const dbError = document.getElementById('db-error');
+  const clear = () => {
+    error.textContent = ''; dbError.textContent = '';
+    form.querySelectorAll('.error').forEach((line) => line.remove());
+    form.querySelectorAll('[aria-invalid]').forEach((input) => input.removeAttribute('aria-invalid'));
+  };
+  const mark = (name, message) => {
+    const input = form.elements[name];
+    if (!input || !input.closest) return false;
+    input.setAttribute('aria-invalid', 'true');
+    (input.closest('.field') || input.parentNode).append(Object.assign(document.createElement('div'), { className: 'error', textContent: message }));
+    return true;
+  };
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    error.style.display = 'none';
-    submit.disabled = true; submit.textContent = text.installing;
+    clear();
+    submit.disabled = true; submit.setAttribute('aria-busy', 'true'); submit.textContent = text.installing;
     const body = Object.fromEntries(new FormData(form));
     try {
       const res = await fetch('/install', {
@@ -151,13 +143,23 @@ button:disabled{opacity:.5;cursor:progress}
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         const message = json.error?.message || json.message || text.failed;
-        const details = json.errors ? Object.values(json.errors).flat().join(' ') : '';
-        throw new Error(details || message);
+        // A refused form names its fields (Laravel's `errors`, an ability's `details`).
+        const fields = Object.entries(json.errors || json.error?.details || {}).map(([name, said]) => [name, Array.isArray(said) ? said[0] : said]);
+        let first = null;
+        for (const [name, said] of fields) if (mark(name, String(said))) first = first || form.elements[name];
+        if (!first && res.status === 403 && mark('install_token', message)) first = form.elements.install_token;
+        // Without a field to blame, a refusal while installing came from the database.
+        const target = first ? null : json.error?.type === 'invalid_input' ? dbError : error;
+        if (target) target.textContent = message;
+        (first || target).scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        if (first) first.focus({ preventScroll: true });
+        submit.disabled = false; submit.removeAttribute('aria-busy'); submit.textContent = text.install;
+        return;
       }
       await choose(json);
     } catch (e) {
-      error.textContent = e.message; error.style.display = 'block';
-      submit.disabled = false; submit.textContent = text.install;
+      error.textContent = e.message || text.failed;
+      submit.disabled = false; submit.removeAttribute('aria-busy'); submit.textContent = text.install;
     }
   });
 
@@ -184,24 +186,25 @@ button:disabled{opacity:.5;cursor:progress}
   const bar = document.getElementById('bar');
   const status = document.getElementById('status');
   const pickError = document.getElementById('pick-error');
+  // Worth knowing, nothing gone wrong: a note, not an error.
+  const pickNote = document.getElementById('pick-note');
 
   async function choose(json) {
     session = json;
     show('pick');
     const list = document.getElementById('packages');
-    if (session.composer) {
-      pickError.textContent = text.composerSite; pickError.style.display = 'block';
+    // Nothing to choose: the one button left is the way on, and says where it leads.
+    const onward = (why) => {
+      pickNote.textContent = why;
+      list.closest('section').classList.add('hidden');
       document.getElementById('add').classList.add('hidden');
-      document.getElementById('skip').textContent = text.continue;
-      return;
-    }
+      const skip = document.getElementById('skip');
+      skip.textContent = text.continue; skip.classList.add('primary');
+    };
+    if (session.composer) return onward(text.composerSite);
     const catalog = await ability('packages/catalog', { refresh: true }).catch(() => ({ items: [] }));
     const items = (catalog.items || []).filter((item) => !item.installed);
-    if (!items.length) {
-      pickError.textContent = text.noStore; pickError.style.display = 'block';
-      document.getElementById('add').classList.add('hidden');
-      return;
-    }
+    if (!items.length) return onward(text.noStore);
     const rank = (item) => (session.recommended.includes(item.package) ? 0 : item.pricing === 'free' ? 1 : 2);
     items.sort((a, b) => rank(a) - rank(b) || session.recommended.indexOf(a.package) - session.recommended.indexOf(b.package) || a.title.localeCompare(b.title));
     for (const item of items) {
@@ -221,7 +224,7 @@ button:disabled{opacity:.5;cursor:progress}
   document.getElementById('skip').addEventListener('click', () => finish());
   document.getElementById('add').addEventListener('click', async () => {
     const chosen = [...document.querySelectorAll('#packages input:checked')].map((box) => box.value);
-    pickError.style.display = 'none';
+    pickError.textContent = '';
     show('working');
     try {
       // Dependencies first, each once: a plan names them in order.
@@ -245,7 +248,7 @@ button:disabled{opacity:.5;cursor:progress}
       await finish();
     } catch (e) {
       show('pick');
-      pickError.textContent = e.message; pickError.style.display = 'block';
+      pickError.textContent = e.message;
     }
   });
 
