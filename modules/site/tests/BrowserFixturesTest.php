@@ -59,6 +59,18 @@ final class BrowserFixturesTest extends TestCase
         return [
             'scripts/lib/ease.js' => "export const ease = () => 'eased'\n",
             'scripts/hero.js' => "import { ease } from './lib/ease.js'\nimport tiny from 'tiny'\ndocument.documentElement.dataset.hero = ease()\ndocument.documentElement.dataset.vendor = tiny.name\n",
+            // Says on the element what it was handed, and on the page what it undid.
+            'scripts/probe.js' => <<<'JS'
+                export function mount(el, props, { token, reducedMotion, signal }) {
+                  el.dataset.mounted = JSON.stringify({ props, primary: token('color.primary'), reducedMotion })
+                  window.__mounts = (window.__mounts ?? 0) + 1
+                  signal.addEventListener('abort', () => (document.documentElement.dataset.aborted = props.name))
+                  return () => (document.documentElement.dataset.cleaned = props.name)
+                }
+                export function unmount(el) {
+                  document.documentElement.dataset.unmounted = el.dataset.mounted ? 'yes' : 'no'
+                }
+                JS,
             'styles/hero.css' => ".hero{outline:3px solid rgb(1, 2, 3)}\n",
         ];
     }
@@ -68,6 +80,11 @@ final class BrowserFixturesTest extends TestCase
     {
         return [
             'Code' => [['type' => 'box', 'class' => 'hero', 'code' => ['scripts' => ['hero'], 'styles' => ['hero']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Hero']]]]],
+            'Behavior' => [
+                ['type' => 'box', 'anchor' => 'first', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'first', 'title' => '{entry.title}']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'First']]]],
+                ['type' => 'box', 'style' => ['base' => ['height' => '400vh']], 'children' => []],
+                ['type' => 'box', 'anchor' => 'later', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'later'], 'when' => 'visible'], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Later']]]],
+            ],
         ];
     }
 }
