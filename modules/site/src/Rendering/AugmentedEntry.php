@@ -30,8 +30,24 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
         PageContext::depend('entry:'.$entry->id);
     }
 
+    /** @var array<string, mixed> what a list says about this entry as one of its items (a neighbour's `side`) */
+    private array $as = [];
+
+    /** This entry as an item that also answers $more: `item.side` in a Repeat over its neighbours. */
+    public function as(array $more): static
+    {
+        $copy = clone $this;
+        $copy->as = [...$this->as, ...$more];
+
+        return $copy;
+    }
+
     public function __get(string $key): mixed
     {
+        if (array_key_exists($key, $this->as)) {
+            return $this->as[$key];
+        }
+
         return match ($key) {
             'id' => $this->entry->id,
             'title' => $this->entry->title,
@@ -59,7 +75,7 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
 
     public function __isset(string $key): bool
     {
-        return in_array($key, ['id', 'title', 'slug', 'uri', 'url', 'collection', 'locale', 'author', 'date', 'updated', 'children', 'parent', 'ancestors', 'root', 'current', 'active', 'prev', 'next'], true) || array_key_exists($key, $this->entry->data);
+        return array_key_exists($key, $this->as) || in_array($key, ['id', 'title', 'slug', 'uri', 'url', 'collection', 'locale', 'author', 'date', 'updated', 'children', 'parent', 'ancestors', 'root', 'current', 'active', 'prev', 'next'], true) || array_key_exists($key, $this->entry->data);
     }
 
     public function url(): string
