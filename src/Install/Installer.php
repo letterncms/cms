@@ -170,7 +170,7 @@ final class Installer
 
     /**
      * The last step of a setup, on a request that booted with the plugins it pulled: what they
-     * start a new site with (the Site module's starter kit), then a first build.
+     * start a new site with (the Site module's starter kit), a first build, and the site's `AGENTS.md`.
      */
     public function finish(User $user): void
     {
@@ -180,6 +180,14 @@ final class Installer
         try {
             cms()->hooks()->dispatch('cms.installed', $user);
             cms()->hooks()->dispatch('cms.migrated');
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        // Last, so it names what the plugins brought: the site's guide for AI agents, unless it has one.
+        // On its own: a starter kit that failed above must not cost the site its guide, nor the guide the install.
+        try {
+            $this->app->make(AgentsGuide::class)->write();
         } catch (Throwable $e) {
             report($e);
         }
