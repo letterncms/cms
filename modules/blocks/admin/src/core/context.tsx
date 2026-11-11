@@ -51,7 +51,7 @@ export function useCatalog() {
 
 /** Components' titles by handle: an instance is named after its component (Header, Footer). */
 export function useComponentTitles(): Map<string, string> {
-  const q = useAbility<{ handle: string; title: string }[]>('patterns/list', {}, { staleTime: 60_000 })
+  const q = useAbility<{ handle: string; title: string }[]>('components/list', {}, { staleTime: 60_000 })
   return useMemo(() => new Map((q.data ?? []).map((p) => [p.handle, p.title])), [q.data])
 }
 
