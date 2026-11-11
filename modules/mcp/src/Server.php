@@ -68,7 +68,7 @@ final class Server
                 'tools/list' => $this->cacheable(['tools' => $this->tools($context)]),
                 'tools/call' => $this->call($params, $context),
                 'resources/list' => $this->cacheable(['resources' => $this->cms->context()->list($context->user)]),
-                'resources/templates/list' => $this->cacheable(['resourceTemplates' => []]),
+                'resources/templates/list' => $this->cacheable(['resourceTemplates' => $this->cms->context()->templates($context->user)]),
                 'resources/read' => $this->read($params, $context),
                 'prompts/list' => $this->cacheable(['prompts' => $this->prompts->list()]),
                 'prompts/get' => $this->prompts->get((string) ($params['name'] ?? ''), (array) ($params['arguments'] ?? [])),

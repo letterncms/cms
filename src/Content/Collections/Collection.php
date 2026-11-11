@@ -177,6 +177,7 @@ final class Collection
             'default_view' => $this->defaultView,
             'default_columns' => $this->defaultColumns,
             'resolvedFields' => $this->blueprint()->toArray(['collection' => $this]),
+            'schema' => $this->blueprint()->schema(),
         ];
     }
 }
