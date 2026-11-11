@@ -1095,5 +1095,6 @@
   "Snap Align": "Snap-uitlijning",
   "Snap Type": "Snap-type",
   "Underline Offset": "Afstand onderstreping",
-  "Vanishing Point": "Verdwijnpunt"
+  "Vanishing Point": "Verdwijnpunt",
+  "Drawn by “:name” on the site. Open the preview to see it.": "Getekend door ‘:name’ op de site. Open het voorbeeld om het te zien."
 }

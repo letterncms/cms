@@ -773,6 +773,12 @@ final class BlockRenderer
             $attrs[$name] = $value;
         }
 
+        // The canvas runs no scripts, so a block that a behaviour draws would be a blank there. It says which
+        // behaviour it waits for instead (editor.css shows it while the block is empty); the preview runs it.
+        if ($this->editor && ($names = array_column(Document::behaviors($node['behavior'] ?? null), 'module')) !== []) {
+            $attrs['data-cms-behavior-label'] = __('Drawn by “:name” on the site. Open the preview to see it.', ['name' => implode(', ', $names)]);
+        }
+
         if (($compiled['scroll'] ?? []) !== []) {
             $attrs['data-cms-scroll'] = (string) json_encode($compiled['scroll'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }

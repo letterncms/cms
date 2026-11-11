@@ -59,6 +59,12 @@ final class BrowserFixturesTest extends TestCase
         $this->assertSame([], $status['errors']);
         $this->assertSame([], $status['warnings']);
 
+        // The builder's canvas of a block that a behaviour draws, and of one that has content of its own.
+        Files::put(public_path('canvas/index.html'), $this->app->make(\Cms\Modules\Site\Rendering\Renderer::class)->blocks([
+            ['id' => 'drawn', 'type' => 'box', 'anchor' => 'drawn', 'behavior' => ['module' => 'probe'], 'children' => []],
+            ['id' => 'filled', 'type' => 'box', 'anchor' => 'filled', 'behavior' => ['module' => 'probe'], 'children' => [['id' => 'p1', 'type' => 'paragraph', 'props' => ['text' => 'Words']]]],
+        ]));
+
         $target = getenv('CMS_BROWSER_FIXTURES');
 
         if ($target) {

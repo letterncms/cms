@@ -1095,5 +1095,6 @@
   "Snap Align": "Alignement d’accroche",
   "Snap Type": "Type d’accroche",
   "Underline Offset": "Décalage du soulignement",
-  "Vanishing Point": "Point de fuite"
+  "Vanishing Point": "Point de fuite",
+  "Drawn by “:name” on the site. Open the preview to see it.": "Dessiné par « :name » sur le site. Ouvrez l’aperçu pour le voir."
 }
