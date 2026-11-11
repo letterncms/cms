@@ -55,7 +55,7 @@ final class AbilityNamesTest extends TestCase
     private const array READS = [
         'info', 'status', 'recent', 'overview', 'editable', 'options', 'schema', 'types', 'icons', 'tree', 'builtin', 'coverage',
         'people', 'inbox', 'log', 'report', 'agents', 'catalog', 'item', 'job-status', 'updates', 'build-status', 'preview-url',
-        'arrangement', 'access', 'history', 'skills', 'commands', 'presence',
+        'arrangement', 'access', 'history', 'skills', 'commands', 'presence', 'usage',
     ];
 
     /** Domain verbs that do something and leave the site as it was: they are read-only. */

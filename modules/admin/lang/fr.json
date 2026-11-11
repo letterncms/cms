@@ -38,6 +38,8 @@
   "{count} fields": "{count} champs",
   "{count} item": "{count} élément",
   "{count} items": "{count} éléments",
+  "{count} row was made with it. It keeps its values, without these fields.": "{count} ligne a été créée avec. Elle garde ses valeurs, sans ces champs.",
+  "{count} rows were made with it. They keep their values, without these fields.": "{count} lignes ont été créées avec. Elles gardent leurs valeurs, sans ces champs.",
   "{count} selected": "{count} sélectionné(s)",
   "{failed} of {total} failed.": "{failed} sur {total} ont échoué.",
   "{from}–{to} of {total}": "{from}–{to} sur {total}",
