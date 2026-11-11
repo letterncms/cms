@@ -404,7 +404,10 @@ final class BlockRenderer
             $html = $type->render ? (string) ($type->render)($data) : $this->view($type, $data);
 
             // Words animate from spans in the HTML; text a script writes has no words to find.
-            return ($motion['split'] ?? null) !== null && empty($node['logic']['text']) ? TextSplit::html($html, $motion['split']['mask']) : $html;
+            ($motion['split'] ?? null) !== null && empty($node['logic']['text']) && $html = TextSplit::html($html, $motion['split']['mask'], $motion['split']['chars']);
+
+            // A pinned element stays put inside a wrapper it is scrolled through (Motion::scrolled).
+            return ! empty($motion['pin']) && $html !== '' ? '<div class="cms-pin" data-cms-pin="'.e((string) $node['id']).'">'.$html.'</div>' : $html;
         } catch (Throwable $e) {
             report($e);
 
@@ -421,7 +424,7 @@ final class BlockRenderer
             return null;
         }
 
-        $compiled = Motion::compile((array) $node['motion'], $this->styles->breakpoints());
+        $compiled = Motion::compile((array) $node['motion'], $this->styles->breakpoints(), (array) $this->hooks->filter('blocks.eases', []), (string) ($node['id'] ?? ''));
 
         foreach ($compiled['rules'] as $key => $css) {
             $this->hooks->dispatch('render.style', $key, '@layer utilities{'.$css.'}', 5000);
@@ -437,6 +440,7 @@ final class BlockRenderer
 
         $compiled['forever'] && $this->uses('forever');
         $compiled['runtime'] !== [] && $this->uses('motion');
+        $compiled['scroll'] !== [] && $this->uses('scroll');
 
         return $compiled;
     }
@@ -768,7 +772,11 @@ final class BlockRenderer
             $attrs[$name] = $value;
         }
 
-        if ($id !== '' && ($logic !== [] || ($compiled['runtime'] ?? []) !== [] || $referenced)) {
+        if (($compiled['scroll'] ?? []) !== []) {
+            $attrs['data-cms-scroll'] = (string) json_encode($compiled['scroll'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        if ($id !== '' && ($logic !== [] || ($compiled['runtime'] ?? []) !== [] || ($compiled['scroll'] ?? []) !== [] || $referenced)) {
             $attrs['data-cms'] = $id;
         }
 

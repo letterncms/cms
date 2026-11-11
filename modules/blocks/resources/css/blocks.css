@@ -9,7 +9,10 @@
 
 @layer components {
   /* Animated words (Motion, TextSplit): a mask clips them top and bottom only, so tight tracking and descenders survive. */
-  .cms-w, .cms-w__i { display: inline-block; }
+  .cms-w, .cms-w__i, .cms-c { display: inline-block; }
+  .cms-c { white-space: pre; }
+  /* Around a pinned block (Motion): not a box at all until the rule that pins says so, which it doesn't for people who asked for less motion. */
+  .cms-pin { display: contents; }
   .cms-w--mask { overflow-y: clip; padding-block: .15em; margin-block: -.15em; }
   /* Children animating in turn take their place from here. */
   .cms-mc > :nth-child(2) { --i: 1; } .cms-mc > :nth-child(3) { --i: 2; } .cms-mc > :nth-child(4) { --i: 3; } .cms-mc > :nth-child(5) { --i: 4; }
