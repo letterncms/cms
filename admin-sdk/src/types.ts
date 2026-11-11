@@ -453,8 +453,6 @@ export interface PanelSlots {
   'sidebar.start': { onNavigate?: () => void }
   /** In every screen's top bar, before its own actions. */
   'topbar.end': {}
-  /** Part of API & Agents on Account. */
-  'account.api': {}
   /** In a thread's composer, beside Send. */
   'workspace.composer': ComposerPanelProps
   /** A settings page's form, by namespace. */
