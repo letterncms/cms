@@ -44,6 +44,7 @@ final class BrowserFixturesTest extends TestCase
             ['type' => 'box', 'props' => ['tag' => 'nav'], 'children' => [
                 ['type' => 'link', 'anchor' => 'to-one', 'props' => ['label' => 'One', 'url' => '/one']],
                 ['type' => 'link', 'anchor' => 'to-two', 'props' => ['label' => 'Two', 'url' => '/two#deep']],
+                ['type' => 'link', 'anchor' => 'to-two-plain', 'props' => ['label' => 'Two, from the top', 'url' => '/two']],
             ]],
             ['type' => 'box', 'anchor' => 'stage', 'persist' => 'stage', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'stage']], 'children' => []],
             ['type' => 'box', 'props' => ['tag' => 'main'], 'anchor' => 'main', 'children' => [['type' => 'outlet']]],

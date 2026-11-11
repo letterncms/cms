@@ -231,6 +231,14 @@ const checks = {
     await tab.until('document.querySelector("h1").textContent === "Page two"')
     await alpine('after Back and Forward')
 
+    // A link to the page one is on goes to its top and loads nothing: the stage is not started again.
+    await tab.evaluate('window.scrollTo({ top: 700, behavior: "instant" })')
+    requests.length = 0
+    await tab.evaluate('document.getElementById("to-two-plain").click()')
+    await tab.until('scrollY === 0')
+    equal(await tab.evaluate('[window.__same, location.pathname, document.getElementById("stage") === window.__stage, window.__mounts]'), [true, '/two', true, await tab.evaluate('window.__mounts')], 'the same page, at its top')
+    equal(requests.filter((path) => path === '/two').length, 0, 'and nothing was fetched')
+
     // A script can refuse to leave, and can go somewhere itself.
     await tab.evaluate('document.addEventListener("cms:before-leave", (e) => e.preventDefault(), { once: true }); document.getElementById("to-one").click()')
     await sleep(300)
