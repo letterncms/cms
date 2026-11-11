@@ -223,7 +223,7 @@ export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpe
   const edited = (parts: string[]) => parts.some((part) => Object.keys(value[part] ?? {}).length > 0)
 
   return (
-    <Group title={t('Form Fields')}>
+    <Group>
       {sections().map((section) => (
         <Disclosure
           key={section.key}
@@ -234,7 +234,7 @@ export function FieldEditor({ schema, value, onChange, tokens, dark, open, onOpe
           menu={
             edited(section.parts) ? (
               <Menu
-                trigger={<IconButton icon="more" label={t('Section Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />}
+                trigger={<IconButton icon="more" label={t('Section Actions')} size="xs" className="cms-reveal shrink-0" />}
                 items={[{ label: t('Reset to Defaults'), icon: 'undo', onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([key]) => !section.parts.includes(key)))) }]}
               />
             ) : undefined
