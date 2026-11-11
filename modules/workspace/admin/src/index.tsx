@@ -24,6 +24,7 @@ registry.commands.set('workspace', {
   perform: (query?: string) => panel.ask(query),
 })
 
+// Either modifier opens it, on every platform; the dock says the key by name for the shortcuts overlay.
 window.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'j') {
     e.preventDefault()

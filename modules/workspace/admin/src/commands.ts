@@ -32,7 +32,7 @@ registry.composer.set('workspace-search', {
 
 // `/` in a thread: making things first, then the places to go, what the admin's screens offer, and every ability the person may run.
 registry.composer.set('workspace-create', {
-  trigger: '/', label: t('Create'), order: 20,
+  trigger: '/', label: t('New'), order: 20,
   search: async (query) => {
     const create = (await runnable()).find((ability) => ability.name === 'entries/create')
     if (!create) return []

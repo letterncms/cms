@@ -1,5 +1,5 @@
 import { adminUrl, CmsError, Link, panelsFor, registry, t, useAction, useLocation, useManifest, type ComposerOption, type SurfaceAction } from '@letterncms/sdk'
-import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, type ActionAsker, type ActionRunner } from '@letterncms/ui'
+import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, useShortcut, type ActionAsker, type ActionRunner } from '@letterncms/ui'
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Composer, coarse } from './Composer'
 import { History, NewChatButton } from './History'
@@ -24,6 +24,8 @@ const useWide = () => useSyncExternalStore((change) => {
  * It stays mounted while closed, so an answer keeps coming.
  */
 export function WorkspacePanel() {
+  // The key itself is the module's (index.tsx); here it is said by name, so `?` lists it.
+  useShortcut('mod+j', () => {}, true, t('Chat'))
   const { path } = useLocation()
   const { mode, title } = usePanel()
   const floating = useFloating()
@@ -150,7 +152,8 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
   }
 
   const empty = !thread.loading && !thread.turns.length
-  const title = thread.title || t('New Chat')
+  // "New Chat" is the action; a thread that has nothing in it yet is just the chat.
+  const title = thread.title || t('Chat')
   const listing = history && !column
   const composerProps = { thread: id, agent: answering, state: thread.state, options: options[key] ?? {}, setOption: panel.option, busy: thread.busy, loading: thread.loading }
   const footer = panelsFor('workspace.composer', composerProps)
@@ -229,7 +232,7 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
             {thread.loading ? (
               <div className="grid h-full place-items-center text-faint"><Spinner /></div>
             ) : thread.turns.length === 0 ? (
-              <Welcome />
+              <Welcome asking={!!answering} />
             ) : (
               <Runner.Provider value={{ run: runner, ask }}><div className="cms-thread-turns cms-thread-width space-y-6 py-5">
                 {thread.turns.map((turn, i) => (
@@ -285,10 +288,10 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
 }
 
 /** A new thread: an empty page and the composer, nothing to read first. */
-function Welcome() {
+function Welcome({ asking }: { asking: boolean }) {
   return (
     <div className="cms-thread-welcome cms-thread-width flex min-h-full flex-col justify-end pb-3 pt-2">
-      <h2 className="cms-thread-greeting m-0 font-semibold tracking-[-0.02em] text-ink">{t('What should we work on?')}</h2>
+      <h2 className="cms-thread-greeting m-0 font-semibold tracking-[-0.02em] text-ink">{asking ? t('What should we work on?') : t('What are you looking for?')}</h2>
     </div>
   )
 }
@@ -453,9 +456,9 @@ function Thinking({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
   return (
     <div>
-      <button type="button" onClick={() => setOpen(!open)} className="flex items-center gap-1 text-xs text-faint hover:text-muted" aria-expanded={open}>
+      <Button variant="ghost" size="xs" onClick={() => setOpen(!open)} className="-ml-1.5 !px-1.5 !font-normal !text-faint hover:!text-muted" aria-expanded={open}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={11} /> {t('Thought Process')}
-      </button>
+      </Button>
       {open && <p className="m-0 mt-1.5 whitespace-pre-wrap border-l border-border pl-3 text-xs leading-relaxed text-muted">{text}</p>}
     </div>
   )
@@ -469,7 +472,7 @@ function ToolRow({ part }: { part: Extract<Part, { type: 'tool' }> }) {
 
   return (
     <div className="rounded-sm border border-border">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex h-8 w-full items-center gap-2 px-2.5 text-left text-xs hover:bg-hover">
+      <Button variant="ghost" size="md" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full !justify-start !gap-2 !rounded-none !px-2.5 !text-xs !font-normal">
         {part.status === 'running' ? (
           <Spinner size={12} />
         ) : (
@@ -478,7 +481,7 @@ function ToolRow({ part }: { part: Extract<Part, { type: 'tool' }> }) {
         <span className={cn('shrink-0 font-medium', part.status === 'declined' ? 'text-faint line-through' : 'text-text')}>{part.label}</span>
         {hint && <span className="min-w-0 flex-1 truncate text-faint">{hint}</span>}
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={11} className="ml-auto shrink-0 text-faint" />
-      </button>
+      </Button>
       {open && (
         <div className="space-y-2 border-t border-border bg-surface px-2.5 py-2">
           {part.input !== undefined && <Code label={t('Input')} value={JSON.stringify(part.input, null, 2)} />}
@@ -532,10 +535,10 @@ function ApprovalCall({ call }: { call: Call }) {
       <Icon name={call.destructive ? 'trash' : 'edit'} size={13} className={cn('mt-[3px] shrink-0', call.destructive ? 'text-danger' : 'text-muted')} />
       <div className="min-w-0 flex-1">
         <p className="m-0 text-sm text-text">{said || call.label}</p>
-        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1 pt-0.5 text-xs text-faint hover:text-muted">
+        <Button variant="ghost" size="xs" onClick={() => setOpen(!open)} aria-expanded={open} className="-ml-1.5 !px-1.5 !font-normal !text-faint hover:!text-muted">
           {said ? call.label : t('Details')}
           <Icon name={open ? 'chevron-down' : 'chevron-right'} size={11} />
-        </button>
+        </Button>
         {open && (
           <dl className="mx-0 mb-0 mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-l border-border pl-2.5 text-xs">
             {sent.map(([key, value]) => (
