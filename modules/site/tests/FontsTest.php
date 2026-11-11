@@ -26,8 +26,20 @@ final class FontsTest extends TestCase
     {
         $fonts = $this->app->make(Fonts::class);
         $face = static fn (string $style, string $weight, string $file) => "/* latin-ext */\n@font-face { font-family: 'X'; font-style: {$style}; font-weight: {$weight}; src: url(https://fonts.gstatic.com/s/x/{$file}-ext.woff2) format('woff2'); }\n/* latin */\n@font-face { font-family: 'X'; font-style: {$style}; font-weight: {$weight}; src: url(https://fonts.gstatic.com/s/x/{$file}.woff2) format('woff2'); }\n";
-        $fonts->fetcher = function (string $url) use ($families, $face): string {
+        $fonts->fetcher = function (string $url, string $agent = '') use ($families, $face): string {
             $this->asked[] = $url;
+
+            // A client Google doesn't know gets TrueType: the real files in the fixtures, by family and style.
+            if (preg_match('#^https://fonts\.googleapis\.com/css2\?family=([^:]+):ital,wght@([01]),(\d+)$#', $url, $m)) {
+                $file = ($families[str_replace('+', ' ', $m[1])]['ttf'] ?? [])[(int) $m[2]] ?? throw new RuntimeException('404');
+                $this->assertStringNotContainsString('Chrome', $agent, 'asked as a client that gets TrueType');
+
+                return "@font-face { font-family: 'X'; src: url(https://fonts.gstatic.com/s/x/{$file}.ttf) format('truetype'); }";
+            }
+
+            if (preg_match('#^https://fonts\.gstatic\.com/s/x/([a-z0-9-]+)\.ttf$#', $url, $m)) {
+                return (string) file_get_contents(__DIR__.'/fixtures/fonts/'.$m[1].'.ttf');
+            }
 
             if (preg_match('#^https://fonts\.google\.com/metadata/fonts/(.+)$#', $url, $m)) {
                 return isset($families[rawurldecode($m[1])]) ? ")]}'\n".json_encode($families[rawurldecode($m[1])]) : throw new RuntimeException('404');
@@ -140,5 +152,45 @@ final class FontsTest extends TestCase
         $this->assertStringContainsString('--font-mono:ui-monospace, monospace', $css);
         $this->assertStringNotContainsString('display:none', $css);
         $this->assertStringNotContainsString('Bad Fallback', $css);
+    }
+
+    public function test_an_imported_family_brings_the_fallback_its_own_tables_give(): void
+    {
+        $fonts = $this->fonts([
+            'Karla' => ['category' => 'Sans Serif', 'axes' => [['tag' => 'wght', 'min' => 200, 'max' => 800]], 'fonts' => ['400' => [], '400i' => []], 'ttf' => ['karla-400', 'karla-400-italic']],
+            'IBM Plex Mono' => ['category' => 'Monospace', 'axes' => [], 'fonts' => ['400' => [], '700' => []], 'ttf' => ['ibm-plex-mono-400']],
+            'Quiet' => ['category' => 'Serif', 'axes' => [], 'fonts' => ['400' => []]],
+        ]);
+
+        [$upright, $italic] = $fonts->import('Karla', 'both');
+
+        // Karla is a little wider than Arial and sits lower in its line; its italic is narrower.
+        $this->assertSame(['fallback' => 'Arial', 'sizeAdjust' => '103.63%', 'ascentOverride' => '88.48%', 'descentOverride' => '24.32%', 'lineGapOverride' => '0%'], array_intersect_key($upright, array_flip(\Cms\Modules\Site\Design\DesignCompiler::FALLBACK)));
+        $this->assertSame(['Arial', '93.7%', '97.87%', '26.89%'], [$italic['fallback'], $italic['sizeAdjust'], $italic['ascentOverride'], $italic['descentOverride']]);
+        $this->assertContains('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,400', $this->asked);
+
+        $css = $this->cms()->abilities()->execute('design/preview', ['tokens' => ['font.sans' => ['Karla', 'sans-serif']]], AbilityContext::system('test'))['css'];
+        $this->assertStringContainsString('@font-face{font-family:"Karla Fallback";src:local("Arial");font-style:normal;size-adjust:103.63%;ascent-override:88.48%;descent-override:24.32%;line-gap-override:0%}', $css);
+        $this->assertStringContainsString('@font-face{font-family:"Karla Fallback";src:local("Arial");font-style:italic;size-adjust:93.7%;', $css);
+        $this->assertStringContainsString('--font-sans:Karla, "Karla Fallback", sans-serif', $css);
+
+        // A monospace family stands on Courier New, whose letters are as wide.
+        $mono = $fonts->import('IBM Plex Mono')[0];
+        $this->assertSame(['Courier New', '99.98%', '102.52%', '27.5%', '0%'], [$mono['fallback'], $mono['sizeAdjust'], $mono['ascentOverride'], $mono['descentOverride'], $mono['lineGapOverride']]);
+
+        // What a person changed stays when the family is imported again.
+        $design = $this->app->make(Design::class)->json();
+        $design->setFonts(array_map(static fn (array $font) => $font['family'] === 'Karla' && $font['style'] === 'normal' ? [...$font, 'fallback' => 'Helvetica Neue, Arial', 'sizeAdjust' => '101%'] : $font, $design->fonts()));
+        $design->save();
+
+        [$again, $slanted] = $fonts->import('Karla', 'both');
+        $this->assertSame(['Helvetica Neue, Arial', '101%', '88.48%'], [$again['fallback'], $again['sizeAdjust'], $again['ascentOverride']]);
+        $this->assertSame('93.7%', $slanted['sizeAdjust'], 'the italic keeps its own');
+
+        // No TrueType to read: the family arrives as before, without a fallback.
+        $this->assertArrayNotHasKey('fallback', $fonts->import('Quiet')[0]);
+
+        $out = $this->cms()->abilities()->execute('design/fonts-import', ['family' => 'IBM Plex Mono'], AbilityContext::system('test'));
+        $this->assertSame('Courier New', $out['fonts'][0]['fallback']);
     }
 }
