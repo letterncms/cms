@@ -44,7 +44,6 @@ final class SettingsModule extends Plugin
 
         $cms->views()->register('settings', '/settings/:namespace', fn (User $user, array $params) => $this->view((string) ($params['namespace'] ?? ''), $user), permission: static fn (User $user) => $user->hasPermission('admin.access'));
 
-        $cms->admin()->widget('settings-setup', ['label' => 'Site Setup', 'description' => 'What the site still needs before launch.', 'icon' => 'check-circle', 'column' => 'side', 'order' => 15, 'permission' => 'settings.manage']);
         $this->adminModule();
     }
 

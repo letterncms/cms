@@ -41,5 +41,14 @@
   "Updated": "Mis à jour",
   "Widgets": "Widgets",
   "Working late, {name}": "Vous travaillez tard, {name}",
-  "Your dashboard is empty": "Votre tableau de bord est vide"
+  "Your dashboard is empty": "Votre tableau de bord est vide",
+  "{done} of {total}": "{done} sur {total}",
+  "Choose Colors and Fonts": "Choisir les couleurs et les polices",
+  "Connect an AI Agent": "Connecter un agent IA",
+  "Create the First Page": "Créer la première page",
+  "Get Started": "Commencer",
+  "Guided Start": "Premiers pas guidés",
+  "Hide": "Masquer",
+  "Hide the Guided Start": "Masquer les premiers pas",
+  "Name the Site": "Nommer le site"
 }
