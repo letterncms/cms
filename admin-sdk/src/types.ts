@@ -336,6 +336,8 @@ export interface Entry extends EntrySummary {
   data: Record<string, any>
   originId: string | null
   createdAt: string | null
+  /** The blueprint it was made with, in a collection that has several; null for the collection's own fields. */
+  blueprint?: string | null
   translations?: Record<string, string>
 }
 

@@ -232,7 +232,9 @@ final class ContentAbilities
                 $collection = $c->toArray();
 
                 // Field labels in the user's language (built-in collections' blueprints are written in English).
-                return [...$collection, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(), 'deletable' => $c->deletable(), 'resolvedFields' => $t->fields($collection['resolvedFields']), 'settings' => $t->fields($this->cms->collections()->settingsFields($c))];
+                return [...$collection, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(), 'deletable' => $c->deletable(), 'resolvedFields' => $t->fields($collection['resolvedFields']), 'settings' => $t->fields($this->cms->collections()->settingsFields($c)),
+                    // …and those of its other blueprints, with their names.
+                    ...(isset($collection['resolvedBlueprints']) ? ['resolvedBlueprints' => array_map(static fn (array $b) => [...$b, 'title' => $t->label($b['title']), 'resolvedFields' => $t->fields($b['resolvedFields'])], $collection['resolvedBlueprints'])] : [])];
             },
         ]);
 

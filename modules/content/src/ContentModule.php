@@ -116,6 +116,14 @@ final class ContentModule extends Plugin
         // How many there are in the language on view, whatever narrows the list: "0" beside a name read as "there are none", next to a filter that found nothing.
         $count = ['source' => ['ability' => 'entries/list', 'input' => ['collection' => $handle, 'locale' => '{query.locale}', 'perPage' => 1, 'fields' => []]], 'at' => 'total'];
         $new = [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'to' => "/content/{$handle}/new?locale={query.locale}", 'key' => 'c', 'can' => "entries.{$handle}.create"]];
+        // Several blueprints: New asks which kind first, in one small step; the collection's own fields come first.
+        if (($blueprints = $collection->blueprints()) !== []) {
+            $new = [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'key' => 'c', 'can' => "entries.{$handle}.create", 'component' => 'content/new-entry', 'props' => [
+                'collection' => $handle, 'locale' => '{query.locale}', 'title' => self::newLabel($collection->singular),
+                'kinds' => [['handle' => '', 'title' => __($collection->singular)], ...array_map(static fn (string $name, array $blueprint) => ['handle' => $name, 'title' => __($blueprint['title'])], array_keys($blueprints), $blueprints)],
+            ]]];
+        }
+
         $records = ['type' => 'ui/records', 'props' => $view->records($collection, $user)];
         $page = ['title' => __($collection->title), 'icon' => $collection->icon];
         $features = $handle === 'pages' ? $this->builtinGroups($user) : [];
