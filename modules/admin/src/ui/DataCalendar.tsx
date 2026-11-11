@@ -4,11 +4,12 @@ import { useState, type ReactNode } from 'react'
 import { Button, IconButton } from './Button'
 import { calendarDayKey, calendarRange } from './calendar'
 import { cn } from './cn'
-import type { DataSelection } from './DataTable'
+import type { DataSelection, RecordStatus } from './DataTable'
 import { QueryError } from './QueryError'
 import { longDate } from './recordDates'
 import { Skeleton } from './Spinner'
 import { Checkbox } from './Switch'
+import { StatusDot, statusLabel } from './Badge'
 
 interface DataCalendarProps<T> {
   label: string
@@ -17,6 +18,8 @@ interface DataCalendarProps<T> {
   onMonth: (month: string | null) => void
   date: (item: T) => string | null | undefined
   title: (item: T) => ReactNode
+  /** The record's status, when it has one: its dot stands before the title, so a month shows what is planned and what is live. */
+  status?: (item: T) => RecordStatus | null | undefined
   rowKey: (item: T) => string
   /** Where a row opens; nothing for a row with nowhere to go. */
   rowHref?: (item: T) => string | undefined
@@ -31,7 +34,7 @@ interface DataCalendarProps<T> {
 }
 
 /** The one calendar renderer for content, media and administrative records. */
-export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date, title, rowKey, rowHref, onRowClick, actions, selection, cursor, loading, stale, error, onRetry }: DataCalendarProps<T>) {
+export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date, title, status, rowKey, rowHref, onRowClick, actions, selection, cursor, loading, stale, error, onRetry }: DataCalendarProps<T>) {
   const { month, year, monthIndex, first, days } = calendarRange(monthValue)
   const [expanded, setExpanded] = useState<string[]>([])
   const byDay = new Map<string, T[]>()
@@ -52,9 +55,12 @@ export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date
   const choosing = !!selection && selection.ids.size > 0
   const record = (item: T) => {
     const iso = date(item)
+    const said = status?.(item)
+    const state = typeof said === 'string' ? { tone: said, label: statusLabel(said) } : said
     const className = 'min-w-0 flex-1 truncate text-left text-inherit no-underline'
-    return <div key={rowKey(item)} data-entry={rowKey(item)} className={cn('group/event cms-reveal-row relative flex min-h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-text transition-colors duration-base hover:bg-hover', cursor === rowKey(item) && 'bg-hover shadow-cursor', selection?.ids.has(rowKey(item)) && 'bg-active')} title={iso && Number.isFinite(Date.parse(iso)) ? longDate(iso) : undefined}>
+    return <div key={rowKey(item)} data-entry={rowKey(item)} className={cn('group/event cms-reveal-row relative flex min-h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-text transition-colors duration-base hover:bg-hover', cursor === rowKey(item) && 'bg-hover shadow-cursor', selection?.ids.has(rowKey(item)) && 'bg-active')} title={[state?.label, iso && Number.isFinite(Date.parse(iso)) ? longDate(iso) : null].filter(Boolean).join(' · ') || undefined}>
       {selection && <span className={cn('flex shrink-0', !choosing && '[@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover/event:flex [@media(hover:hover)]:group-focus-within/event:flex')}><Checkbox checked={selection.ids.has(rowKey(item))} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([rowKey(item)], on, items)} /></span>}
+      {state && <StatusDot status={state.tone} label={<span className="sr-only">{state.label}</span>} className="shrink-0" />}
       {rowHref?.(item) ? <Link className={className} to={rowHref(item)!}>{title(item)}</Link> : onRowClick ? <Pressable compact className={className} onClick={() => onRowClick(item)}>{title(item)}</Pressable> : <span className={className}>{title(item)}</span>}
       {/* A day is 160px wide at best: what a record can do lies over the end of its title while the record is pointed at or has the focus, and takes none of its room. */}
       {actions && <div className="cms-reveal cms-reveal-over flex shrink-0 items-center">{actions(item)}</div>}

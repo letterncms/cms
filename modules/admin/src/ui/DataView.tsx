@@ -150,7 +150,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
       {!plain && controls}
     </TableToolbar>}
     {view === 'calendar' ? state ?? <DataCalendar label={label} items={rows} month={locationQuery.month} onMonth={(month) => setQuery({ month })}
-      date={(item) => dates(item)[calendarDate === 'published' ? 'publishedAt' : 'updatedAt']} title={columns[0].render} rowKey={rowKey} rowHref={rowHref} onRowClick={onRowClick}
+      date={(item) => dates(item)[calendarDate === 'published' ? 'publishedAt' : 'updatedAt']} title={columns[0].render} status={columns.find((c) => c.status)?.status} rowKey={rowKey} rowHref={rowHref} onRowClick={onRowClick}
       selection={selection} actions={actions} cursor={cursor} loading={busy} stale={loaded ? calendar.stale : stale} /> : view === 'grid' ? state ?? <DataGrid loading={loading} stale={stale} media={pictures}>
       {rows.map((item) => <DataCard key={rowKey(item)} title={columns[0].render(item)} href={rowHref?.(item)} onClick={onRowClick ? () => onRowClick(item) : undefined} icon={icon} image={pictures ? image?.(item) : undefined} selected={isSelected(item)} active={cursor === rowKey(item)} recordId={rowKey(item)} onSelect={selection ? (on) => selection.onSelect([rowKey(item)], on, rows) : undefined} actions={actions?.(item)}>
         {visible.slice(1).filter((c) => c.card === 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="m-0 mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{c.render(item)}</div>)}
