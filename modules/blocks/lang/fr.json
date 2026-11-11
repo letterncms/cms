@@ -1,4 +1,6 @@
 {
+  ":count collections": ":count collections",
+  ":count entries": ":count entrées",
   "“{title}” is now a component": "“{title}” est maintenant un composant",
   "{brand}: abilities": "{brand} : actions",
   "{brand}: abilities by namespace": "{brand} : actions par espace de noms",
@@ -21,6 +23,7 @@
   "{name} (add a field handle)": "{name} (ajoutez un identifiant de champ)",
   "{name} Details": "Détails : {name}",
   "&::placeholder": "&::placeholder",
+  "1 entry": "1 entrée",
   "1:1 square": "1:1 carré",
   "2XL": "2XL",
   "3 or 1fr 2fr": "3 ou 1fr 2fr",
@@ -618,6 +621,7 @@
   "Missing component": "Composant manquant",
   "Missing component “:name”": "Composant “:name” manquant",
   "Missing image: :image": "Image manquante : :image",
+  "Missing pages": "Pages introuvables",
   "Mode": "Mode",
   "More Block Actions": "Plus d’actions de bloc",
   "More States": "Plus d’états",

@@ -60,6 +60,20 @@ final class BlocksModule extends Plugin
      */
     private function collections(): void
     {
+        // The lists of templates and components say where each is used, beside its title (`usedBy`).
+        $this->cms()->hooks()->addFilter('ability.result', function (mixed $result, \Cms\Abilities\Ability $ability, array $input) {
+            $collection = $input['collection'] ?? null;
+
+            if ($ability->name !== 'entries/list' || ! is_array($result) || ! in_array($collection, [Templates::COLLECTION, Components::COLLECTION], true)) {
+                return $result;
+            }
+
+            $uses = $this->app->make(Uses::class);
+            $used = $collection === Templates::COLLECTION ? $uses->templates() : $uses->components();
+
+            return [...$result, 'items' => array_map(static fn (array $row) => isset($used[$row['slug'] ?? '']) ? [...$row, 'usedBy' => $used[$row['slug']]] : $row, $result['items'] ?? [])];
+        });
+
         $this->cms()->hooks()->addFilter('collections.defaults', static fn (array $defaults) => $defaults + [
             'body' => 'content',
             'fields' => [['handle' => 'content', 'type' => 'blocks', 'label' => 'Content']],

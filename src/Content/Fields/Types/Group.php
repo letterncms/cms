@@ -17,7 +17,8 @@ class Group extends FieldType
 
     public function description(): string { return __('A fixed set of nested fields stored together.'); }
 
-    public function icon(): string { return 'group'; }
+    // A folder: the four squares are the blocks field's, and the two stood alike in a list of fields.
+    public function icon(): string { return 'folder'; }
 
     public function group(): string { return __('Structure'); }
 

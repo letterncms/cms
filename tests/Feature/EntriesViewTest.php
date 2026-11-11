@@ -67,6 +67,8 @@ final class EntriesViewTest extends TestCase
         $this->assertArrayNotHasKey('tree', $records);
         $this->assertSame('-published_at', $records['sort']['default']);
         $this->assertSame('{field}', $records['calendar']['dated']['sort']);
+        // It opens as a table, like every list: the calendar is offered, and a collection's Default View can choose it.
+        $this->assertSame('table', $records['defaultView']);
         // Tags are a column, but not one entries/list sorts by.
         $this->assertArrayNotHasKey('sort', array_column($records['columns'], null, 'key')['values.tags']);
     }
@@ -126,7 +128,11 @@ final class EntriesViewTest extends TestCase
         $this->assertSame(['ability' => 'pages/builtin', 'input' => ['group' => 'shop']], $shop['source']);
         $this->assertSame('0.total', $tabs['shop']['props']['count']['at']);
         // The site's pages' columns and statuses, opened as the site's own version.
-        $this->assertSame(['label', 'path', 'displayStatus', 'published', 'updated'], array_column($shop['columns'], 'key'));
+        $this->assertSame(['label', 'path', 'status', 'displayStatus', 'published', 'updated'], array_column($shop['columns'], 'key'));
+        // The standard version is live: its status is Published, and Standard is the version, not a status.
+        $columns = array_column($shop['columns'], null, 'key');
+        $this->assertSame(['Standard', 'Customized', 'Standard'], [$columns['status']['labels']['standard'], $columns['status']['labels']['customised'], $columns['status']['labels']['draft']], 'a customized version only drafted is not on the site yet');
+        $this->assertSame(['conflict' => 'Address Taken'], $columns['displayStatus']['labels']);
         $this->assertSame('pages/customize', $shop['open']['ability']);
         $this->assertSame(['View on Site', 'Edit', 'Copy URL', 'Use Standard Version'], array_column($shop['actions'], 'label'));
     }
