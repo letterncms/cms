@@ -31,7 +31,7 @@ final class Bootstrap
             Upgrader::purgeCaches($app);
         }
 
-        return (new ApplicationBuilder($app))
+        $app = (new ApplicationBuilder($app))
             ->withKernels()
             ->withEvents(false)
             ->withProviders([CmsServiceProvider::class], withBootstrapProviders: false)
@@ -52,6 +52,11 @@ final class Bootstrap
                 );
             })
             ->create();
+
+        // The console's own failures (no such command, a provider that cannot boot) follow --json too.
+        $app->singleton(\Illuminate\Contracts\Console\Kernel::class, ConsoleKernel::class);
+
+        return $app;
     }
 
     /** Runtime folders are created on demand so a fresh checkout or upload just works. */
@@ -141,6 +146,18 @@ final class Bootstrap
             $sitePath = realpath((string) $site) ?: (string) $site;
         }
 
-        exit(self::create($cmsPath, $sitePath)->handleCommand($input));
+        try {
+            $status = self::create($cmsPath, $sitePath)->handleCommand($input);
+        } catch (\Throwable $e) {
+            // The site could not even start (a broken config file, a missing extension). With --json, and for `run`, that is still the one document.
+            if (! \Cms\Console\Command::answersJson($input)) {
+                throw $e;
+            }
+
+            fwrite(STDOUT, \Cms\Console\Command::errorDocument(\Cms\Console\Command::said($e))."\n");
+            $status = 1;
+        }
+
+        exit($status);
     }
 }

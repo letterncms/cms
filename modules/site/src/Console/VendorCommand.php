@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Site\Console;
 
+use Cms\Console\Command;
 use Cms\Modules\Site\Design\Code;
 use Cms\Modules\Site\Design\Vendor;
-use Illuminate\Console\Command;
+use InvalidArgumentException;
 use Throwable;
 
 final class VendorCommand extends Command
@@ -31,12 +32,11 @@ final class VendorCommand extends Command
                 'add' => $vendor->add($package, $this->option('file'), $this->option('as')),
                 'update' => $vendor->update($package, $this->argument('version')),
                 'remove' => $vendor->remove($package),
-                default => throw new \InvalidArgumentException(__('Use add, list, remove or update.')),
+                default => throw new InvalidArgumentException(__('Use add, list, remove or update.')),
             };
         } catch (Throwable $e) {
-            $this->components->error($e->getMessage());
-
-            return self::FAILURE;
+            // What a library or its address refuses is written for whoever ran this.
+            return $this->failure($e, $e instanceof InvalidArgumentException ? 'invalid_input' : 'failed');
         }
 
         $code->flush();
@@ -51,18 +51,28 @@ final class VendorCommand extends Command
                 $this->components->warn($note);
             }
 
-            return self::SUCCESS;
+            return $this->done(['added' => $result['added'], 'notes' => $result['notes'], 'imports' => self::imports($vendor)]);
         }
 
         if ($action === 'remove') {
             $this->components->info(__('Removed :name.', ['name' => $package]));
 
-            return self::SUCCESS;
+            return $this->done(['removed' => $package, 'imports' => self::imports($vendor)]);
         }
 
         $rows = array_map(static fn (string $name, array $entry) => [$name, $entry['package'].'@'.$entry['version'], $entry['file'] ?? '', count($entry['files']), $entry['files'][$entry['path']]], array_keys($vendor->all()), array_values($vendor->all()));
         $rows === [] ? $this->components->info(__('No libraries yet. Add one: cms vendor add gsap@3.12.5')) : $this->table(['Import', 'Package', 'File', 'Files', 'Integrity'], $rows);
 
-        return self::SUCCESS;
+        return $this->done(['imports' => self::imports($vendor)]);
+    }
+
+    /** @return list<array{import: string, package: string, version: string, file: ?string, files: int, integrity: string}> */
+    private static function imports(Vendor $vendor): array
+    {
+        return array_map(
+            static fn (string $name, array $entry) => ['import' => $name, 'package' => $entry['package'], 'version' => $entry['version'], 'file' => $entry['file'] ?? null, 'files' => count($entry['files']), 'integrity' => $entry['files'][$entry['path']]],
+            array_keys($vendor->all()),
+            array_values($vendor->all()),
+        );
     }
 }

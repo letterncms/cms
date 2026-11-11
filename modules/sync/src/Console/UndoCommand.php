@@ -6,7 +6,7 @@ namespace Cms\Modules\Sync\Console;
 
 use Cms\Modules\Sync\Connections;
 use Cms\Modules\Sync\Receiver;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 use Throwable;
 
 final class UndoCommand extends Command
@@ -36,16 +36,14 @@ final class UndoCommand extends Command
             }
 
             if (! $sync || ! $sync['can_undo']) {
-                $this->components->error(__('There’s no sync to undo there.'));
-
-                return self::FAILURE;
+                return $this->failure(__('There’s no sync to undo there.'), 'not_found');
             }
 
             $where = $target ? $target->label() : __('this site');
             $this->line('  '.__(':direction :ago from :site: :tables', ['direction' => $sync['direction'] === 'pull' ? __('Pulled') : __('Pushed'), 'ago' => \Illuminate\Support\Carbon::parse($sync['at'])->diffForHumans(), 'site' => $sync['from']['label'] ?? $sync['from']['name'] ?? '?', 'tables' => implode(', ', $sync['tables'])]));
 
-            if (! $this->option('yes') && ! $this->confirm(__('Put back what :where had before it? Changes made since are replaced too.', ['where' => $where]), false)) {
-                return self::SUCCESS;
+            if (! $this->agreed(__('Put back what :where had before it? Changes made since are replaced too.', ['where' => $where]))) {
+                return $this->done(['status' => 'declined']);
             }
 
             do {
@@ -58,11 +56,9 @@ final class UndoCommand extends Command
 
             $this->components->info(__('Undone. :where is as it was before that sync.', ['where' => ucfirst($where)]));
 
-            return self::SUCCESS;
+            return $this->done(['undone' => $sync['id']]);
         } catch (Throwable $e) {
-            $this->components->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e);
         }
     }
 }

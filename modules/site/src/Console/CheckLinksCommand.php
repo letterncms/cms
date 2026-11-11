@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Site\Console;
 
 use Cms\Modules\Site\Build\LinkChecker;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 
 final class CheckLinksCommand extends Command
 {
@@ -23,13 +23,11 @@ final class CheckLinksCommand extends Command
         }
 
         if ($broken !== []) {
-            $this->components->error(sprintf('%d broken links on %d pages. Run `cms build` first if the site changed.', count($broken), $report['pages']));
-
-            return self::FAILURE;
+            return $this->failure(sprintf('%d broken links on %d pages. Run `cms build` first if the site changed.', count($broken), $report['pages']), 'failed', ['pages' => $report['pages'], 'broken' => $broken]);
         }
 
         $this->components->info(sprintf('No broken links on %d pages.', $report['pages']));
 
-        return self::SUCCESS;
+        return $this->done(['pages' => $report['pages'], 'broken' => []]);
     }
 }

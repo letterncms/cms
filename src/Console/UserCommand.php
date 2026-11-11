@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Console;
 
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
 use Cms\Users\Passwords;
 use Cms\Users\User;
@@ -27,16 +26,12 @@ final class UserCommand extends Command
         $validator = Validator::make(['password' => $pass, 'email' => $email], ['password' => Passwords::rules(), 'email' => ['email', 'unique:users,email']]);
 
         if ($validator->fails()) {
-            foreach ($validator->errors()->all() as $error) {
-                $this->error($error);
-            }
-
-            return self::FAILURE;
+            return $this->failure('The user is not valid.', 'invalid_input', array_map(static fn (array $messages) => $messages[0], $validator->errors()->toArray()));
         }
 
         $user = User::query()->create(['name' => $name, 'email' => $email, 'password' => $pass, 'roles' => [(string) $this->option('role')], 'super' => (bool) $this->option('super')]);
         $this->components->info("Created {$user->email}.");
 
-        return self::SUCCESS;
+        return $this->done(['id' => $user->id, 'email' => $user->email, 'roles' => $user->roles, 'super' => (bool) $user->super]);
     }
 }

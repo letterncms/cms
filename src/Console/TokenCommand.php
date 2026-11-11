@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Console;
 
-use Illuminate\Console\Command;
 use Cms\Users\ApiToken;
 use Cms\Users\User;
 
@@ -19,16 +18,14 @@ final class TokenCommand extends Command
         $user = User::query()->where('email', strtolower((string) $this->argument('email')))->first();
 
         if (! $user) {
-            $this->error('User not found.');
-
-            return self::FAILURE;
+            return $this->failure('User not found.', 'not_found');
         }
 
-        [, $plain] = ApiToken::issue($user, (string) $this->option('name'), $this->option('scope') ?: ['*'], $this->option('days') ? now()->addDays((int) $this->option('days')) : null);
+        [$token, $plain] = ApiToken::issue($user, (string) $this->option('name'), $this->option('scope') ?: ['*'], $this->option('days') ? now()->addDays((int) $this->option('days')) : null);
 
         $this->line($plain);
         $this->components->warn('Store this token now — it is not shown again.');
 
-        return self::SUCCESS;
+        return $this->done(['token' => $plain, 'name' => $token->name, 'scopes' => $token->scopes, 'expiresAt' => $token->expires_at?->toIso8601String()]);
     }
 }
