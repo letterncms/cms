@@ -129,6 +129,11 @@ const checks = {
     equal(first.reducedMotion, false, 'reduced motion')
     equal(first.primary !== '', true, 'a design token is read where the element is')
     equal(await tab.evaluate('document.getElementById("later").dataset.mounted ?? null'), null, 'one that waits to be seen has not loaded')
+    // Two behaviours on one block: both mount, and both leave with it.
+    equal(await tab.until('document.getElementById("both").dataset.mounted && document.getElementById("both").dataset.tag'), 'tagged', 'a second behaviour on the same block mounts too')
+    equal(JSON.parse(await tab.evaluate('document.getElementById("both").dataset.mounted')).props.name, 'one-of-two', 'beside the first')
+    await tab.evaluate('document.getElementById("both").remove()')
+    equal(await tab.until('document.documentElement.dataset.untagged && document.documentElement.dataset.cleaned'), 'one-of-two', 'and each is undone when the block leaves')
     const settled = JSON.parse(await tab.until('document.getElementById("settled").dataset.mounted'))
     equal([settled.ready, settled.fonts], ['complete', 'loaded'], 'one that waits for the page mounts after its load event and its fonts')
 
@@ -137,7 +142,7 @@ const checks = {
 
     // Leaving the document, however: its own undo, its unmount, its signal.
     await tab.evaluate('document.getElementById("first").remove()')
-    equal(await tab.until('document.documentElement.dataset.cleaned'), 'first', 'the function mount returned ran')
+    equal(await tab.until('document.documentElement.dataset.cleaned === "first" && "first"'), 'first', 'the function mount returned ran')
     equal(await tab.evaluate('[document.documentElement.dataset.unmounted, document.documentElement.dataset.aborted]'), ['yes', 'first'], 'unmount and the signal')
 
     // Arriving later, as after a page transition.
@@ -155,9 +160,10 @@ const checks = {
 
     const calm = await open('/behavior', { media: { 'prefers-reduced-motion': 'reduce' } })
     equal(JSON.parse(await calm.until('document.getElementById("first").dataset.mounted')).reducedMotion, true, 'told that the visitor wants less motion')
+    const mounts = await calm.evaluate('window.__mounts')
     await calm.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
     await calm.until('JSON.parse(document.getElementById("first").dataset.mounted).reducedMotion === false')
-    equal(await calm.evaluate('window.__mounts >= 4'), true, 'mounted again when that changes')
+    equal(await calm.evaluate('window.__mounts') > mounts, true, 'mounted again when that changes')
     await calm.close()
   },
 

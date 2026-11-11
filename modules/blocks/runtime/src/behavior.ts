@@ -2,6 +2,9 @@
 // element is in the document and its `unmount` when it leaves, however it got there or went: the first
 // load, a script that adds markup, a page transition that swaps the page.
 //   <div data-cms-behavior="/_cms/site/scripts/tilt-1a2b3c4d5e.js" data-cms-props='{"max":8}' data-cms-when="visible">
+// A block with several carries them as one list, each mounted and unmounted by itself. They are started in
+// the order written; their scripts load side by side, so which mounts first is not promised:
+//   <div data-cms-behavior='[{"src":"/_cms/site/scripts/tilt-….js","props":{"max":8}},{"src":"/…/cue-….js","when":"idle"}]'>
 //
 //   export function mount(el, props, { token, reducedMotion, signal }) { …; return () => { /* undo */ } }
 //   export function unmount(el) { … }                                      // optional, after the returned function
@@ -26,7 +29,15 @@ interface Behavior {
   unmount?: (el: HTMLElement) => void
 }
 
+/** One behaviour of an element: its script, what it is handed and when it starts. */
+interface Spec {
+  src: string
+  props?: Record<string, unknown>
+  when?: string
+}
+
 interface Mounted {
+  spec: Spec
   abort: AbortController
   module?: Behavior
   cleanup?: () => void
@@ -35,7 +46,7 @@ interface Mounted {
 }
 
 const SELECTOR = '[data-cms-behavior]'
-const mounted = new Map<HTMLElement, Mounted>()
+const mounted = new Map<HTMLElement, Mounted[]>()
 const reduced = matchMedia('(prefers-reduced-motion: reduce)')
 
 /** Token groups whose CSS variable isn't named after them (DesignJson::GROUPS). */
@@ -47,65 +58,76 @@ function token(el: HTMLElement, path: string): string {
   return getComputedStyle(el).getPropertyValue(`--${PREFIX[group] ?? group}-${path.slice(at + 1)}`).trim()
 }
 
-function props(el: HTMLElement): Record<string, unknown> {
+/** What an element asks for: one behaviour in three attributes, or a list in one. */
+function specs(el: HTMLElement): Spec[] {
+  const value = el.dataset.cmsBehavior ?? ''
   try {
-    return JSON.parse(el.dataset.cmsProps ?? '{}')
+    if (value.startsWith('[')) return (JSON.parse(value) as Spec[]).filter((spec) => typeof spec?.src === 'string')
+    return value ? [{ src: value, props: JSON.parse(el.dataset.cmsProps ?? '{}'), when: el.dataset.cmsWhen }] : []
   } catch {
-    return {}
+    return []
   }
 }
 
-const report = (el: HTMLElement, error: unknown) => console.error('[cms] behavior', el.dataset.cmsBehavior, error)
+const report = (spec: Spec, error: unknown) => console.error('[cms] behavior', spec.src, error)
 
-async function run(el: HTMLElement, entry: Mounted) {
+async function run(el: HTMLElement, entry: Mounted, spec: Spec) {
   entry.cancel = undefined
   try {
-    const module: Behavior = await import(/* @vite-ignore */ el.dataset.cmsBehavior!)
+    const module: Behavior = await import(/* @vite-ignore */ spec.src)
     if (entry.abort.signal.aborted) return
     entry.module = module
-    const cleanup = await (module.mount ?? module.default)?.(el, props(el), { token: (path) => token(el, path), reducedMotion: reduced.matches, signal: entry.abort.signal })
+    const cleanup = await (module.mount ?? module.default)?.(el, spec.props ?? {}, { token: (path) => token(el, path), reducedMotion: reduced.matches, signal: entry.abort.signal })
     if (typeof cleanup !== 'function') return
     // It left while its mount was still at work: undo what that did.
     if (entry.abort.signal.aborted) cleanup()
     else entry.cleanup = cleanup
   } catch (error) {
-    report(el, error)
+    report(spec, error)
   }
 }
 
-export function mount(el: HTMLElement) {
-  if (mounted.has(el) || !el.dataset.cmsBehavior) return
-  const entry: Mounted = { abort: new AbortController() }
-  mounted.set(el, entry)
-  const when = el.dataset.cmsWhen
+function begin(el: HTMLElement, spec: Spec): Mounted {
+  const entry: Mounted = { abort: new AbortController(), spec }
+  const when = spec.when
   if (when === 'visible' && 'IntersectionObserver' in window) {
     // A screen ahead, so it is there by the time it is seen.
-    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && (io.disconnect(), run(el, entry)), { rootMargin: '100% 0px' })
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && (io.disconnect(), run(el, entry, spec)), { rootMargin: '100% 0px' })
     io.observe(el)
     entry.cancel = () => io.disconnect()
   } else if (when === 'idle') {
-    const idle = window.requestIdleCallback ? requestIdleCallback(() => run(el, entry), { timeout: 2000 }) : window.setTimeout(() => run(el, entry), 200)
+    const idle = window.requestIdleCallback ? requestIdleCallback(() => run(el, entry, spec), { timeout: 2000 }) : window.setTimeout(() => run(el, entry, spec), 200)
     entry.cancel = () => (window.cancelIdleCallback ? cancelIdleCallback(idle) : clearTimeout(idle))
   } else if (when === 'loaded') {
     // Once the page has loaded and its fonts are in: what measures text or the layout measures the final one.
     let waiting = true
     entry.cancel = () => (waiting = false)
     const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise((resolve) => addEventListener('load', resolve, { once: true }))
-    void Promise.all([loaded, document.fonts?.ready]).then(() => waiting && run(el, entry))
-  } else void run(el, entry)
+    void Promise.all([loaded, document.fonts?.ready]).then(() => waiting && run(el, entry, spec))
+  } else void run(el, entry, spec)
+  return entry
+}
+
+export function mount(el: HTMLElement) {
+  if (mounted.has(el)) return
+  const list = specs(el)
+  if (list.length) mounted.set(el, list.map((spec) => begin(el, spec)))
 }
 
 export function unmount(el: HTMLElement) {
-  const entry = mounted.get(el)
-  if (!entry) return
+  const entries = mounted.get(el)
+  if (!entries) return
   mounted.delete(el)
-  entry.cancel?.()
-  entry.abort.abort()
-  try {
-    entry.cleanup?.()
-    entry.module?.unmount?.(el)
-  } catch (error) {
-    report(el, error)
+  // Last on, first off.
+  for (const entry of [...entries].reverse()) {
+    entry.cancel?.()
+    entry.abort.abort()
+    try {
+      entry.cleanup?.()
+      entry.module?.unmount?.(el)
+    } catch (error) {
+      report(entry.spec, error)
+    }
   }
 }
 
