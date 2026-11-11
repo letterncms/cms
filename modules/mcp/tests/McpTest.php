@@ -16,11 +16,9 @@ final class McpTest extends TestCase
         return ['letterncms/mcp'];
     }
 
-    private function rpc(string $token, string $method, array $params = [], bool $modern = true): \Illuminate\Testing\TestResponse
+    private function rpc(string $token, string $method, array $params = []): \Illuminate\Testing\TestResponse
     {
-        if ($modern) {
-            $params['_meta']['io.modelcontextprotocol/protocolVersion'] = '2026-07-28';
-        }
+        $params['_meta']['io.modelcontextprotocol/protocolVersion'] ??= '2026-07-28';
 
         return $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => $method, 'params' => $params ?: (object) []], ['Authorization' => "Bearer {$token}"]);
     }
@@ -79,18 +77,19 @@ final class McpTest extends TestCase
         [, $token] = ApiToken::issue($this->admin(), 'a');
 
         $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])->assertUnauthorized()->assertHeader('WWW-Authenticate');
-        $this->rpc($token, 'tools/list', ['_meta' => ['io.modelcontextprotocol/protocolVersion' => '1999-01-01']], modern: false)->assertJsonPath('error.code', -32022);
+        $this->rpc($token, 'tools/list', ['_meta' => ['io.modelcontextprotocol/protocolVersion' => '1999-01-01']])->assertJsonPath('error.code', -32022);
+        // The older revisions and their handshake are gone: a client that speaks them is told which one is spoken.
+        $this->rpc($token, 'initialize', ['protocolVersion' => '2025-11-25', '_meta' => ['io.modelcontextprotocol/protocolVersion' => '2025-11-25']])->assertJsonPath('error.code', -32022)->assertJsonPath('error.data.supported', ['2026-07-28']);
+        $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'], ['Authorization' => "Bearer {$token}"])->assertJsonPath('error.code', -32022);
+        $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'], ['Authorization' => "Bearer {$token}", 'MCP-Protocol-Version' => '2026-07-28'])->assertJsonPath('result.resultType', 'complete');
+        $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'server/discover'], ['Authorization' => "Bearer {$token}"])->assertJsonPath('result.supportedVersions', ['2026-07-28']);
         $this->rpc($token, 'nope/method')->assertJsonPath('error.code', -32601);
         $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'], ['Authorization' => "Bearer {$token}", 'Origin' => 'https://evil.example'])->assertForbidden();
     }
 
-    public function test_legacy_initialize_and_resources(): void
+    public function test_resources_and_prompts(): void
     {
         [, $token] = ApiToken::issue($this->admin(), 'a');
-
-        $this->rpc($token, 'initialize', ['protocolVersion' => '2025-11-25', 'capabilities' => [], 'clientInfo' => ['name' => 't', 'version' => '1']], modern: false)
-            ->assertJsonPath('result.protocolVersion', '2025-11-25')
-            ->assertJsonPath('result.serverInfo.name', 'cms');
 
         $uris = array_column($this->rpc($token, 'resources/list')->json('result.resources'), 'uri');
         $this->assertContains('cms://collections', $uris);

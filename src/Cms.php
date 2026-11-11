@@ -193,7 +193,7 @@ final class Cms
         return $this->settingsRegistry()->get($namespace, $key, $default);
     }
 
-    /** The `site` settings (config/site.yaml): name, url, description, timezone, locale, locales, themes. */
+    /** The `site` settings (config/site.yaml): name, url, description, timezone, locale, locales. */
     public function site(?string $key = null, mixed $default = null): mixed
     {
         $site = $this->setting('site');

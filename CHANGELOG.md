@@ -10,6 +10,8 @@
 
 ### Changed
 
+- **Breaking.** MCP speaks one protocol revision, `2026-07-28`: the `initialize` handshake and the 2025 revisions are gone, and every request names the revision (`server/discover` says which). A client that only speaks an older one is answered with the supported revision.
+- A cleared link field is stored as nothing (`null`) instead of an empty string.
 - **Breaking.** The role a visitor's account gets is `visitor` (was `member`), the word everything else already used for it: the role's label, `kind: visitors` in `users/list`, the **Visitor Accounts** settings. Accounts and settings that name `member` need the new id.
 - **Breaking.** For plugins: `cms()->navigation()` (the admin's sidebar) is `cms()->adminNav()`, `cms()->content()` (where entries are written) is `cms()->entryService()`, and `cms()->settings('namespace', 'key')` (a value) is `cms()->setting('namespace', 'key')`. `entries()` still reads entries and `settingsRegistry()` still registers and saves settings.
 - **Breaking.** `patterns/list` and `patterns/save` are `components/list` and `components/save`, named after the `components` collection whose entries they list and save.

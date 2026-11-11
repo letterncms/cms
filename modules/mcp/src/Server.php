@@ -14,14 +14,13 @@ use Throwable;
 
 /**
  * JSON-RPC handler for MCP. Stateless: every request is authorized and served
- * on its own. Speaks the modern revision (per-request _meta, server/discover)
- * and answers legacy `initialize` clients.
+ * on its own. Speaks one revision: every request names it (`_meta`, or the
+ * MCP-Protocol-Version header) and `server/discover` says which it is. There is
+ * no `initialize` handshake and no session.
  */
 final class Server
 {
     public const string MODERN = '2026-07-28';
-
-    public const array LEGACY = ['2025-11-25', '2025-06-18', '2025-03-26'];
 
     private const string META_VERSION = 'io.modelcontextprotocol/protocolVersion';
 
@@ -30,7 +29,7 @@ final class Server
     /** @return array<int, string> */
     public function versions(): array
     {
-        return [self::MODERN, ...self::LEGACY];
+        return [self::MODERN];
     }
 
     /**
@@ -54,15 +53,15 @@ final class Server
         }
 
         $version = (string) ($params['_meta'][self::META_VERSION] ?? $headerVersion ?? '');
-        $modern = $version !== '' && ! in_array($method, ['initialize', 'ping'], true);
+        // Asking what is spoken, and a ping, need no version; everything else names the one it speaks.
+        $versioned = ! in_array($method, ['server/discover', 'ping'], true);
 
-        if ($modern && ! in_array($version, $this->versions(), true)) {
+        if ($versioned && ! in_array($version, $this->versions(), true)) {
             return $this->error($id, -32022, 'Unsupported protocol version', ['supported' => $this->versions(), 'requested' => $version]);
         }
 
         try {
             $result = match ($method) {
-                'initialize' => $this->initialize($params),
                 'ping' => [],
                 'server/discover' => $this->discover(),
                 'tools/list' => $this->cacheable(['tools' => $this->tools($context)]),
@@ -82,7 +81,7 @@ final class Server
             return $this->error($id, -32603, 'Internal error.');
         }
 
-        if ($modern || $method === 'server/discover') {
+        if ($method !== 'ping') {
             $result['resultType'] ??= 'complete';
             $result['_meta'] = [...(array) ($result['_meta'] ?? []), 'io.modelcontextprotocol/serverInfo' => $this->serverInfo()];
         }
@@ -93,18 +92,6 @@ final class Server
     public function instructions(): string
     {
         return $this->cms->app()->make(AgentGuide::class)->text()."\n\nTool names use a dot instead of the slash (entries/create is entries.create).";
-    }
-
-    private function initialize(array $params): array
-    {
-        $requested = (string) ($params['protocolVersion'] ?? '');
-
-        return [
-            'protocolVersion' => in_array($requested, self::LEGACY, true) ? $requested : self::LEGACY[0],
-            'capabilities' => $this->capabilities(),
-            'serverInfo' => $this->serverInfo(),
-            'instructions' => $this->instructions(),
-        ];
     }
 
     private function discover(): array
