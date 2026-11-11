@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Removed
+
+- **Breaking.** Style keys are CSS properties by their own names. The shorthands `direction`, `wrap`, `justify`, `align`, `paddingX`, `paddingY`, `marginX`, `marginY`, `radius`, `shadow`, `colSpan` and `bg` are no longer understood in a block's `style`, in `bind` (`style:<property>`) or in the design's element styles; write `flexDirection`, `flexWrap`, `justifyContent`, `alignItems`, `paddingInline`, `paddingBlock`, `marginInline`, `marginBlock`, `borderRadius`, `boxShadow`, `gridColumn` and `backgroundColor`. Content saved through the CMS already holds the full names. `blocks/types` no longer lists `aliases`.
+
 ## 0.21.0 (2026-11-11)
 
 ### Changed

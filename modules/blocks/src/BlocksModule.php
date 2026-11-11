@@ -302,7 +302,6 @@ final class BlocksModule extends Plugin
                 'blocks' => $this->translatedBlocks(),
                 'categories' => $this->translatedCategories(),
                 'styles' => array_map(static fn ($p) => ['property' => $p[0], 'group' => $p[1]], StyleCompiler::PROPERTIES),
-                'aliases' => StyleCompiler::ALIASES,
                 'states' => [...array_keys(StyleCompiler::STATES), 'is-<name>', 'in-<name>'],
                 'breakpoints' => $this->app->make(StyleCompiler::class)->breakpoints(),
                 'sources' => $this->translatedSources(),

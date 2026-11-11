@@ -605,7 +605,7 @@ final class BlockRenderer
             } elseif (str_starts_with($key, 'style:')) {
                 $property = substr($key, 6);
                 $css = $this->styleValue($property, $value);
-                $css !== null && $extra['style'][] = StyleCompiler::PROPERTIES[StyleCompiler::ALIASES[$property] ?? $property][0].':'.$css;
+                $css !== null && $extra['style'][] = StyleCompiler::PROPERTIES[$property][0].':'.$css;
             } else {
                 $field = $type->blueprint()->field($key);
                 $props[$key] = $this->propValue($field?->type ?? 'text', $value, $raw, in_array($key, $type->inline, true));

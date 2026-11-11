@@ -178,7 +178,7 @@ final class DesignCompiler
 
     private function property(string $key): ?string
     {
-        return self::SHORT[$key] ?? StyleCompiler::PROPERTIES[StyleCompiler::ALIASES[$key] ?? $key][0] ?? null;
+        return self::SHORT[$key] ?? StyleCompiler::PROPERTIES[$key][0] ?? null;
     }
 
     /** camelCase (or short) keys → declarations. */
@@ -206,7 +206,7 @@ final class DesignCompiler
 
         foreach ($declarations as $key => $value) {
             $key = (string) $key;
-            $property = self::SHORT[$key] ?? StyleCompiler::PROPERTIES[StyleCompiler::ALIASES[$key] ?? $key][0] ?? null;
+            $property = self::SHORT[$key] ?? StyleCompiler::PROPERTIES[$key][0] ?? null;
             $resolved = is_array($value) ? null : Css::value(is_numeric($value) && ! in_array($key, ['weight', 'fontWeight', 'leading', 'lineHeight', 'opacity', 'zIndex'], true) && (string) $value !== '0' ? $value.'px' : $value);
 
             if ($property && $resolved !== null) {
