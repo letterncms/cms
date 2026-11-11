@@ -330,6 +330,14 @@ final class StoreTest extends TestCase
         $abilities = $this->cms()->abilities();
         $this->assertSame(['added' => true], $abilities->execute('packages/add-key', ['key' => $token], \Cms\Abilities\AbilityContext::forUser($this->admin())));
         $this->assertSame('install', $this->itemIn($this->client->catalog(), 'acme/paid')['action']);
+
+        // Planning says whether it may be installed, and never what the download is fetched with.
+        $plan = $abilities->execute('packages/plan-install', ['package' => 'acme/paid'], \Cms\Abilities\AbilityContext::forUser($this->admin(), 'rest'));
+        $this->assertSame(['allowed' => true, 'reason' => 'ok'], $plan['access']);
+        $this->assertStringNotContainsString($token, (string) json_encode($plan));
+        $this->assertStringNotContainsString('X-Cms-License', (string) json_encode($plan));
+        $this->assertArrayHasKey('headers', $this->client->plan(StoreClient::DEFAULT, 'acme/paid')['access'], 'the client keeps them for the download');
+
         $job = $this->install('acme/paid');
 
         $this->assertSame('done', $job['state'], (string) ($job['error'] ?? ''));
