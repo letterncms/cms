@@ -459,6 +459,9 @@ final class EntryService
         try {
             return $collection->blueprint()->process($data, partial: ! $full);
         } catch (SchemaException $e) {
+            // Paths as the caller sent them: a field's value is under `data`, as the collection's schema says (collections/schema).
+            $e = $e->under('data');
+
             throw AbilityException::invalid($e->getMessage(), $e->errors);
         }
     }

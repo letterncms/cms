@@ -71,7 +71,7 @@ final class Shapes
             // As written: a field, or the import of a fieldset ({import, prefix?}).
             'fields' => [Shape::OBJECT],
             'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'default_view' => Shape::STRING,
-            'default_columns' => Shape::nullable([Shape::STRING]), 'resolvedFields' => [self::field()],
+            'default_columns' => Shape::nullable([Shape::STRING]), 'resolvedFields' => [self::field()], 'schema' => Shape::OBJECT,
         ]);
     }
 }

@@ -17,4 +17,16 @@ final class SchemaException extends InvalidArgumentException
             $errors
         ))]));
     }
+
+    /** The same errors, each path under a key of the document they belong to: `summary` becomes `data.summary`. */
+    public function under(string $key): self
+    {
+        $errors = [];
+
+        foreach ($this->errors as $path => $message) {
+            $errors[$path === '' ? $key : "{$key}.{$path}"] = $message;
+        }
+
+        return new self($errors);
+    }
 }

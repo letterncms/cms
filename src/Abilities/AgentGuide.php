@@ -25,7 +25,7 @@ final class AgentGuide
         You are working on {$site}, a website built with {$brand}. Every tool is an ability (for example entries/create) and runs with the permissions of the signed-in person.
 
         Before creating or changing pages:
-        1. Read the collections (content types and field schemas) and the design system (tokens) — the cms://collections and cms://site/design context, or collections/list and design/get.
+        1. Read the collections (content types and field schemas) and the design system (tokens) — the cms://collections and cms://site/design context, or collections/list and design/get. collections/schema (cms://collections/{handle}/schema) is the JSON Schema of one collection's entries: validation errors name its paths (data.summary).
         2. Read the block catalog (cms://blocks or blocks/types) for block props, nesting rules and an example page.
         3. Prefer patterns (patterns/list) for common sections so the site stays consistent.
 

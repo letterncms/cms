@@ -74,9 +74,17 @@ final class ContentModule extends Plugin
         ]);
 
         $cms->context()->register('cms://collections', 'Collections', 'Every collection with its fields and JSON schema — use these field handles in entry data.', fn () => array_map(
-            static fn ($c) => [...$c->toArray(), 'schema' => $c->blueprint()->schema()],
+            static fn ($c) => $c->toArray(),
             array_values($cms->collections()->all())
         ));
+
+        $cms->context()->template(
+            'cms://collections/{handle}/schema',
+            'Collection Schema',
+            'JSON Schema of one collection: what `data` must follow in a draft and to be published, and the whole input of entries/create and entries/update for it.',
+            fn (array $params) => ($c = $cms->collections()->find($params['handle'])) ? ContentAbilities::schemaOf($cms, $c) : null,
+            fn () => array_map(static fn ($c) => ['handle' => $c->handle, 'name' => $c->title], array_values($cms->collections()->all())),
+        );
 
         $cms->admin()->widget('recent', ['label' => 'Recently Edited', 'description' => 'Entries you and your team changed last.', 'icon' => 'clock', 'column' => 'main', 'enabled' => true, 'order' => 10]);
         $cms->views()->register('content', '/content/:collection', fn (User $user, array $params) => $this->view((string) ($params['collection'] ?? ''), $user));

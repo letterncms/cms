@@ -196,11 +196,11 @@ final class ContentAbilities
 
         $a->register('collections/get', [
             'label' => 'Get Collection',
-            'description' => 'A collection definition with its fields, the JSON schema entry data must follow, and its settings as fields.',
+            'description' => 'A collection definition with its fields, the JSON Schema entry data must follow (`schema`; collections/schema has more), and its settings as fields.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
-            'output' => Shapes::collection()->with(['count' => Shape::INTEGER, 'deletable' => Shape::BOOLEAN, 'schema' => Shape::OBJECT, 'settings' => [Shapes::field()]]),
+            'output' => Shapes::collection()->with(['count' => Shape::INTEGER, 'deletable' => Shape::BOOLEAN, 'settings' => [Shapes::field()]]),
             'handler' => function (array $in) {
                 $c = $this->cms->collections()->find($in['handle']) ?? throw new AbilityException('Collection not found.', 'not_found');
 
@@ -208,8 +208,18 @@ final class ContentAbilities
                 $collection = $c->toArray();
 
                 // Field labels in the user's language (built-in collections' blueprints are written in English).
-                return [...$collection, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(), 'deletable' => $c->deletable(), 'resolvedFields' => $t->fields($collection['resolvedFields']), 'schema' => $c->blueprint()->schema(), 'settings' => $t->fields($this->cms->collections()->settingsFields($c))];
+                return [...$collection, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(), 'deletable' => $c->deletable(), 'resolvedFields' => $t->fields($collection['resolvedFields']), 'settings' => $t->fields($this->cms->collections()->settingsFields($c))];
             },
+        ]);
+
+        $a->register('collections/schema', [
+            'label' => 'Collection Schema',
+            'description' => 'JSON Schema for the entries of one collection: `data` is what an entry\'s data must follow to be published, `draft` what a draft may be (required fields may be empty), and `create` and `update` are the whole input of entries/create and entries/update for this collection. Validation errors name the same paths (data.summary, data.blocks.0.props.text).',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
+            'output' => Shape::of(['handle' => Shape::STRING, 'title' => Shape::STRING, 'data' => Shape::OBJECT, 'draft' => Shape::OBJECT, 'create' => Shape::OBJECT, 'update' => Shape::OBJECT]),
+            'handler' => fn (array $in) => self::schemaOf($this->cms, $this->cms->collections()->find($in['handle']) ?? throw new AbilityException('Collection not found.', 'not_found')),
         ]);
 
         $a->register('fields/types', [
@@ -339,7 +349,7 @@ final class ContentAbilities
             'label' => 'Create Entry',
             // Unless a call publishes or schedules it, what this changes isn't live and stays in the history.
             'annotations' => ['draft' => true],
-            'description' => 'Create an entry. `data` keys are the collection\'s field handles (see collections/get for the schema). Created as a draft unless status is "published".',
+            'description' => 'Create an entry. `data` keys are the collection\'s field handles (collections/schema has its JSON Schema, and this input with it in place). Created as a draft unless status is "published".',
             'permission' => function (?User $user, array $in) {
                 $ok = $this->allowed($user, (string) $in['collection'], 'create');
 
@@ -361,7 +371,7 @@ final class ContentAbilities
             'output' => Shapes::entry(),
             'dryRun' => function (array $in): array {
                 $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
-                $collection->blueprint()->process(array_replace($collection->blueprint()->defaults(), $in['data']), partial: $in['status'] !== 'published');
+                $this->checked($collection, array_replace($collection->blueprint()->defaults(), $in['data']), partial: $in['status'] !== 'published');
             
                 return [['action' => $in['status'] === 'published' ? 'create-published' : 'create', 'type' => 'entry', 'collection' => $collection->handle, 'title' => $in['title'], 'locale' => $in['locale'] ?? $this->cms->defaultLocale()]];
             },
@@ -371,7 +381,7 @@ final class ContentAbilities
         $a->register('entries/update', [
             'label' => 'Update Entry',
             'annotations' => ['draft' => true],
-            'description' => 'Change an entry. `data` is merged into existing data. For published entries changes are saved as a draft until published (or pass publish: true).',
+            'description' => 'Change an entry. `data` is merged into existing data and follows the collection\'s schema (collections/schema). For published entries changes are saved as a draft until published (or pass publish: true).',
             'permission' => function (?User $user, array $in) {
                 $collection = $this->collectionOf((string) $in['id']);
 
@@ -394,7 +404,7 @@ final class ContentAbilities
                 $entry = $this->target($in);
                 $working = $entry->working();
                 $data = array_replace((array) $working['data'], $in['data'] ?? []);
-                $entry->collection()->blueprint()->process($data, partial: ! $in['publish']);
+                $this->checked($entry->collection(), $data, partial: ! $in['publish']);
                 $fields = array_keys(array_filter($in['data'] ?? [], static fn ($value, $key) => ($working['data'][$key] ?? null) !== $value, ARRAY_FILTER_USE_BOTH));
             
                 foreach (['slug', 'title'] as $key) {
@@ -664,6 +674,38 @@ final class ContentAbilities
 
             return $item;
         }, $entries, $data);
+    }
+
+    /**
+     * What entries of a collection must look like, as JSON Schema: their data, and the input of entries/create
+     * and entries/update with that data in place of the free object the abilities declare for every collection.
+     */
+    public static function schemaOf(Cms $cms, Collection $collection): array
+    {
+        $data = $collection->blueprint()->schema();
+        $draft = $collection->blueprint()->schema(partial: true);
+        $input = static function (string $ability) use ($cms, $collection, $draft): array {
+            $schema = $cms->abilities()->get($ability)?->input() ?? ['type' => 'object'];
+            $schema['properties']['data'] = [...$draft, 'description' => 'Field values by handle. To publish, required fields must be filled (see `data`).'];
+
+            if (isset($schema['properties']['collection'])) {
+                $schema['properties']['collection'] = ['const' => $collection->handle];
+            }
+
+            return $schema;
+        };
+
+        return ['handle' => $collection->handle, 'title' => $collection->title, 'data' => $data, 'draft' => $draft, 'create' => $input('entries/create'), 'update' => $input('entries/update')];
+    }
+
+    /** Field values against the collection's schema, as a write checks them: errors under `data`. */
+    private function checked(Collection $collection, array $data, bool $partial): void
+    {
+        try {
+            $collection->blueprint()->process($data, partial: $partial);
+        } catch (\Cms\Support\Schema\SchemaException $e) {
+            throw $e->under('data');
+        }
     }
 
     /** For a dry run: the entry a change is for, refused as the change would be when it is gone or was changed since it was read. */

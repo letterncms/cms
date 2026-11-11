@@ -4,11 +4,13 @@
 
 ### Added
 
+- `collections/schema` and the MCP resource `cms://collections/{handle}/schema` give one collection's JSON Schema: what an entry's `data` must follow as a draft and to be published, and the whole input of `entries/create` and `entries/update` for that collection. Resources can be families now (`cms()->context()->template()`), listed by MCP's `resources/templates/list`.
 - Dry runs: every ability that changes something takes `dryRun: true` (`cms run … --dry-run`). The input is validated and you are authorized as usual, nothing is written, run or recorded, and the answer is `{dryRun, ability, input, changes}`. Entries, `collections/delete`, `media/delete`, `users/delete` and `settings/update` also refuse what the real run would (a missing or changed record, invalid field data, a file in use) and list what would change; for the others `changes` is null. A plugin's ability says the same with a `dryRun` callback.
 - Every ability says what it answers with: an `output` JSON Schema beside its `input`, in `abilities/list`, `GET /api/v1/abilities`, `cms run --list --json` and as each MCP tool's `outputSchema`. Plugins write it the short way with `Cms\Support\Schema\Shape`. The tests hold every result against its schema.
 
 ### Changed
 
+- **Breaking.** A field that fails validation in `entries/create`, `entries/update` and `entries/publish` is named by its path in the input, as the collection's schema has it: `details` has `data.summary` where it had `summary`.
 - **Breaking.** MCP: a tool's `structuredContent` is always an object, as its `outputSchema` says. An ability that answers with a list still gives it under `items`; one that answers with a string, a number or nothing now gives it under `result` instead of leaving `structuredContent` out. `Ability::$output` is read with `output()`.
 - **Breaking.** Every command takes `--json`: it then prints one JSON document and nothing else, `{"data": …}` when it worked and `{"error": {"type", "message", "details"}}` with a non-zero exit when it didn't, the same shape the REST API answers with, and it never asks a question (`pull`, `push` and `sync:undo` need `--yes`). `cms run` always answers this way, so its result is under `data` and a failure is the error document instead of a line of text; its input as one JSON object is `--input='{…}'` (was `--json=`). `license:status --json` and `media:check --json` print their report under `data`.
 
