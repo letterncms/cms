@@ -33,6 +33,15 @@ final class AdminLanguageTest extends TestCase
         $this->assertSame('Admin Language', array_column($this->cms()->settingsRegistry()->schemas()['site']['fields'], 'label', 'handle')['admin_language']);
     }
 
+    public function test_german_is_offered_and_translates_the_core_and_its_modules(): void
+    {
+        $translations = app(Translations::class);
+
+        $this->assertSame('Deutsch', $translations->languages()['de'] ?? null);
+        $this->assertSame('Speichern', $translations->messages('de')['Save'] ?? null);
+        $this->assertNotContains('', $translations->messages('de'));
+    }
+
     public function test_a_language_cms_does_not_speak_falls_back_to_english(): void
     {
         $admin = $this->admin();
