@@ -21,7 +21,7 @@ export function DataCard({ title, href, onClick, icon, image, children, footer, 
 }) {
   const linkClass = "line-clamp-2 min-w-0 text-left text-sm font-medium text-ink no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:rounded-lg focus-visible:after:outline-2 focus-visible:after:outline-focus"
   // A card lies flat on the sheet: a hairline that firms up on hover, blue only when it is selected.
-  return <article data-entry={recordId} className={cn('group relative flex flex-col overflow-hidden rounded-lg border bg-bg transition-[border-color,box-shadow] duration-base ease-out', selected ? 'border-focus ring-1 ring-focus' : active ? 'border-border-strong ring-3 ring-focus-soft' : 'border-border hover:border-border-strong')}>
+  return <article data-entry={recordId} className={cn('group cms-reveal-row relative flex flex-col overflow-hidden rounded-lg border bg-bg transition-[border-color,box-shadow] duration-base ease-out', selected ? 'border-focus ring-1 ring-focus' : active ? 'border-border-strong ring-3 ring-focus-soft' : 'border-border hover:border-border-strong')}>
     {image !== undefined && <div className="relative aspect-[3/2] overflow-hidden border-b border-border bg-sunken">{image}</div>}
     <div className="flex flex-1 flex-col p-3">
       <div className={cn('flex items-start gap-2', !!actions && image === undefined && 'pr-12')}>
@@ -31,7 +31,7 @@ export function DataCard({ title, href, onClick, icon, image, children, footer, 
       {children}
       {footer && <div className="mt-auto flex items-center gap-2 pt-3 text-xs text-muted">{footer}</div>}
     </div>
-    {onSelect && <div className={cn('absolute z-raised flex transition-opacity duration-base', image !== undefined ? 'left-2 top-2 rounded-sm bg-float p-1 shadow-raise' : 'left-3 top-3.5 bg-bg', selected ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100')}>
+    {onSelect && <div className={cn('absolute z-raised flex transition-opacity duration-base', image !== undefined ? 'left-2 top-2 rounded-sm bg-float p-1 shadow-raise' : 'left-3 top-3.5 bg-bg', !selected && 'cms-reveal')}>
       <Checkbox checked={!!selected} onChange={onSelect} label={<span className="sr-only">{t('Select Item')}</span>} />
     </div>}
     {actions && <div className={cn('absolute right-2 top-2 z-raised rounded-sm', image !== undefined ? 'bg-float shadow-raise' : 'bg-bg')}>{actions}</div>}

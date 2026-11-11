@@ -52,10 +52,11 @@ export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date
   const record = (item: T) => {
     const iso = date(item)
     const className = 'min-w-0 flex-1 truncate text-left text-inherit no-underline'
-    return <div key={rowKey(item)} data-entry={rowKey(item)} className={cn('group/event flex min-h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-text transition-colors duration-base hover:bg-hover', cursor === rowKey(item) && 'bg-hover shadow-cursor', selection?.ids.has(rowKey(item)) && 'bg-focus-soft')} title={iso && Number.isFinite(Date.parse(iso)) ? longDate(iso) : undefined}>
+    return <div key={rowKey(item)} data-entry={rowKey(item)} className={cn('group/event cms-reveal-row relative flex min-h-7 min-w-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-text transition-colors duration-base hover:bg-hover', cursor === rowKey(item) && 'bg-hover shadow-cursor', selection?.ids.has(rowKey(item)) && 'bg-focus-soft')} title={iso && Number.isFinite(Date.parse(iso)) ? longDate(iso) : undefined}>
       {selection && <span className={cn('flex shrink-0', !choosing && '[@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover/event:flex [@media(hover:hover)]:group-focus-within/event:flex')}><Checkbox checked={selection.ids.has(rowKey(item))} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([rowKey(item)], on, items)} /></span>}
       {rowHref?.(item) ? <Link className={className} to={rowHref(item)!}>{title(item)}</Link> : onRowClick ? <button type="button" className={className} onClick={() => onRowClick(item)}>{title(item)}</button> : <span className={className}>{title(item)}</span>}
-      {actions && <div className="flex shrink-0 items-center">{actions(item)}</div>}
+      {/* A day is 160px wide at best: what a record can do lies over the end of its title while the record is pointed at or has the focus, and takes none of its room. */}
+      {actions && <div className="cms-reveal cms-reveal-over flex shrink-0 items-center">{actions(item)}</div>}
     </div>
   }
   if (error) return <QueryError onRetry={onRetry} />
@@ -87,7 +88,7 @@ export function DataCalendar<T>({ label, items, month: monthValue, onMonth, date
             <div className="mb-1 flex h-5 items-center px-1"><span className={cn('grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs tabular-nums', key === today ? 'bg-ink font-semibold text-ink-contrast' : day.getMonth() !== monthIndex ? 'text-faint' : 'text-muted')}>{day.getDate()}</span></div>
             {loading ? index % 5 === 2 && <Skeleton className="h-5" /> : <>
               {(open ? records : records.slice(0, 3)).map(record)}
-              {records.length > 3 && <button type="button" className="rounded-xs px-1.5 text-xs text-muted hover:bg-hover hover:text-text" onClick={() => setExpanded((current) => open ? current.filter((value) => value !== key) : [...current, key])}>{open ? t('Show Less') : t('Show {count} More', { count: records.length - 3 })}</button>}
+              {records.length > 3 && <Button size="xs" variant="ghost" className="font-normal text-muted" onClick={() => setExpanded((current) => open ? current.filter((value) => value !== key) : [...current, key])}>{open ? t('Show Less') : t('Show {count} More', { count: records.length - 3 })}</Button>}
             </>}
           </div>
         })}</div>
