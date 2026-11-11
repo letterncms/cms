@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 type Weight = 'regular' | 'bold' | 'fill' | 'light'
 
 const WEIGHTS: Weight[] = ['regular', 'bold', 'fill', 'light']
-const weightLabel = (w: Weight) => ({ regular: t('Regular'), bold: t('Bold'), fill: t('Fill'), light: t('Light') })[w]
+const weightLabel = (w: Weight) => ({ regular: t('Regular'), bold: t('Bold'), fill: t('Fill||weight'), light: t('Light||weight') })[w]
 
 const split = (name: string): { base: string; weight: Weight } => {
   const m = name.match(/^(.*)-(bold|fill|light)$/)

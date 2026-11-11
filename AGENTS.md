@@ -50,3 +50,4 @@ Copy:
   - A handle that moves a row is "Drag to Reorder".
 - A search field says "Search", or "Search Pages" where it has a list of its own: Title Case, no ellipsis.
 - Every string goes through `t()`, with a translation in each `lang/*.json`: `./dev i18n`, then `./dev check`.
+- One dictionary is read for every package, so one English string has one translation. Where an English word means two things that another language says with two words, the rarer meaning says which it is, after `||` at the end, in plain lowercase words: `t('Light||weight')` beside `t('Light')`, `__('Expired||order')`. The context is part of the key and never shown; a language without a translation for it says its word for the plain key, and English the words before it. Put it in the `t()` or `__()` call, not in a label that is data (a block's title, a field's options in PHP): those are also read untranslated. `./dev check` fails on a context no language uses.

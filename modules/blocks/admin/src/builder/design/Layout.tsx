@@ -86,7 +86,7 @@ export function InParent({ s, parentDisplay }: { s: StyleApi; parentDisplay?: st
         fields={[
           grid && { handle: 'gridColumn', type: 'text', component: 'blocks-value', label: t('Column'), placeholder: 'auto', unit: '', title: t('Span a number of columns (2), or a range (1 / -1 for full width)') },
           grid && { handle: 'gridRow', type: 'text', component: 'blocks-value', label: t('Row'), placeholder: 'auto', unit: '' },
-          !grid && { handle: 'flex', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Grow'), options: [{ value: '1 1 0%', label: t('Fill') }, { value: '0 0 auto', label: t('Fixed') }, { value: '0 1 auto', label: t('Shrink') }] },
+          !grid && { handle: 'flex', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Grow'), options: [{ value: '1 1 0%', label: t('Fill||size') }, { value: '0 0 auto', label: t('Fixed') }, { value: '0 1 auto', label: t('Shrink') }] },
           { handle: 'alignSelf', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Align Self'), options: [{ value: 'flex-start', icon: 'align-top', title: t('Start') }, { value: 'center', icon: 'align-middle', title: t('Center') }, { value: 'flex-end', icon: 'align-bottom', title: t('End') }, { value: 'stretch', icon: 'arrows-out-line-vertical', title: t('Stretch') }] },
           { handle: 'order', type: 'text', component: 'blocks-value', label: t('Display Order'), unit: '', placeholder: '0', prefixIcon: 'list-ordered' },
         ]}

@@ -28,7 +28,7 @@ const nextId = (list: MotionDef[]) => {
 }
 
 const targetLabel = (target = 'self') =>
-  target.startsWith('#') ? t('Another Element') : ({ self: t('This Element'), children: t('Children'), words: t('Words'), lines: t('Lines'), chars: t('Letters') } as Record<string, string>)[target] ?? target
+  target.startsWith('#') ? t('Another Element') : ({ self: t('This Element'), children: t('Children'), words: t('Words'), lines: t('Lines||of text'), chars: t('Letters') } as Record<string, string>)[target] ?? target
 
 /** Animations: Framer-style effects with presets, and a timeline of steps when one effect is not enough. */
 export function MotionPanel({ node }: { node: BlockNode }) {
@@ -115,7 +115,7 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
     ),
     ...when(
       loop,
-      { handle: 'repeat', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Repeat'), required: true, options: [{ value: '0', label: t('Once') }, { value: '1', label: t('Twice') }, { value: '-1', label: t('Forever') }] },
+      { handle: 'repeat', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Repeat||again'), required: true, options: [{ value: '0', label: t('Once') }, { value: '1', label: t('Twice') }, { value: '-1', label: t('Forever||repeat') }] },
       { handle: 'yoyo', type: 'toggle', size: 'sm', label: t('Back and Forth') },
       { handle: 'hold', type: 'number', size: 'sm', label: t('Loop as a Timeline, Resting (s)'), if: { repeat: '-1' }, instructions: t('On Appear: all steps loop together while on screen.') },
     ),
@@ -318,7 +318,7 @@ function StepEditor({ node, trigger, step, index, count, onChange, onRemove }: {
     return (
       <div className="space-y-1">
         <div className="flex h-7 items-center justify-between">
-          <span className="text-xs font-medium text-muted">{side === 'from' ? t('From') : t('To')}</span>
+          <span className="text-xs font-medium text-muted">{side === 'from' ? t('From') : t('To||end value')}</span>
           <Menu
             align="end"
             trigger={<IconButton icon="plus" label={side === 'from' ? t('Add a Start Property') : t('Add an End Property')} size="xs" />}
@@ -334,7 +334,7 @@ function StepEditor({ node, trigger, step, index, count, onChange, onRemove }: {
               type: 'json',
               component: 'blocks-pairs',
               className: 'items-start',
-              label: side === 'from' ? t('From') : t('To'),
+              label: side === 'from' ? t('From') : t('To||end value'),
               labels,
               item: { handle: 'value', type: 'text', component: 'blocks-value', label: t('Value'), unit: '' },
               items: Object.fromEntries(Object.keys(values).map((key) => [key, { handle: 'value', type: 'text', component: 'blocks-value', label: t('Value'), unit: '', step: key === 'opacity' || key.startsWith('scale') ? 0.05 : 1, group: key.toLowerCase().includes('color') ? 'color' : undefined }])),
@@ -381,7 +381,7 @@ function StepEditor({ node, trigger, step, index, count, onChange, onRemove }: {
           time('duration', t('Duration')),
           time('delay', t('Delay')),
           ...when(target !== 'self', time('stagger', t('Stagger'), { step: 0.01 })),
-          ...when(count > 1, time('at', t('Starts At'), { placeholder: t('After') })),
+          ...when(count > 1, time('at', t('Starts At||time'), { placeholder: t('After') })),
           { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: [...(byGroup.get('ease') ?? []).map((ease) => ({ value: `token:${ease.path}`, label: ease.name, curve: String(ease.value) })), ...eases()] },
         ]}
         values={{ duration: `${step.duration ?? 0.6}s`, delay: step.delay !== undefined ? `${step.delay}s` : undefined, stagger: step.stagger !== undefined ? `${step.stagger}s` : undefined, at: step.at !== undefined ? `${step.at}s` : undefined, ease: step.ease }}

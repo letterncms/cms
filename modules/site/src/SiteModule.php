@@ -357,7 +357,7 @@ final class SiteModule extends Plugin
                 'label' => 'Previous and Next Entry',
                 'description' => __('The entries before and after this one in its collection, for a detail page: newest last in a dated collection, the tree’s reading order, else the collection’s own order.'),
                 'fields' => [
-                    ['handle' => 'show', 'type' => 'select', 'label' => 'Show', 'options' => ['both' => __('Previous and Next'), 'previous' => __('Previous'), 'next' => __('Next')], 'default' => 'both'],
+                    ['handle' => 'show', 'type' => 'select', 'label' => 'Show', 'options' => ['both' => __('Previous and Next'), 'previous' => __('Previous||entry'), 'next' => __('Next||entry')], 'default' => 'both'],
                     ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Go Round at the Ends'],
                 ],
                 'item' => ['title' => __('Title'), 'url' => __('Link'), 'date' => __('Published'), 'excerpt' => __('A field (any field handle)'), 'side' => __('Which side it is on: previous or next'), 'previous' => __('Is the previous entry'), 'following' => __('Is the next entry')],

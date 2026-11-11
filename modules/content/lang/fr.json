@@ -1,4 +1,5 @@
 {
+  "Outline||structure": "Plan",
   "{count} properties": "{count} propriétés",
   "{count} property": "{count} propriété",
   "{name} Details": "Détails : {name}",
@@ -135,7 +136,6 @@
   "Nothing": "Rien",
   "Nothing edited yet": "Rien de modifié pour l’instant",
   "Open": "Ouvrir",
-  "Outline": "Plan",
   "Parent": "Parent",
   "Proofread": "Relire",
   "Publication Date": "Date de publication",

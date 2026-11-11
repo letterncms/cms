@@ -7,7 +7,7 @@ import { StyleFields, type StyleField } from './StyleFields'
 function dimension(s: StyleApi, prop: 'width' | 'height', label: string): StyleField {
   const value = s.value(prop)
   const mode = value === '100%' ? 'fill' : value === 'fit-content' ? 'fit' : value === 'auto' || !value ? 'auto' : value.endsWith('vh') || value.endsWith('vw') || value.endsWith('dvh') ? 'viewport' : 'fixed'
-  const names = { fill: t('Fill'), fit: t('Fit'), auto: t('Auto'), viewport: t('Window'), fixed: t('Fixed') }
+  const names = { fill: t('Fill||size'), fit: t('Fit'), auto: t('Auto'), viewport: t('Window'), fixed: t('Fixed') }
   return {
     handle: prop,
     type: 'text',
@@ -68,7 +68,7 @@ export function Size({ s, media }: { s: StyleApi; media?: boolean }) {
               { value: 'clip', icon: 'scissors', title: t('Clip, without scrolling') },
             ],
           },
-          media && { handle: 'objectFit', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Fit'), options: [{ value: 'cover', label: t('Cover') }, { value: 'contain', label: t('Contain') }, { value: 'fill', label: t('Stretch') }, { value: 'none', label: t('None') }] },
+          media && { handle: 'objectFit', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Fit||image'), options: [{ value: 'cover', label: t('Cover') }, { value: 'contain', label: t('Contain') }, { value: 'fill', label: t('Stretch') }, { value: 'none', label: t('None') }] },
           media && { handle: 'objectPosition', type: 'json', component: 'blocks-origin', label: t('Focus'), className: 'items-start py-0.5 [&>label]:leading-6' },
         ]}
       />

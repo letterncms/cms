@@ -177,7 +177,7 @@ export function ShadowField({ field, value, onChange, disabled }: FieldProps<str
       className="w-72 p-1"
       trigger={
         <PickerButton id={fieldControlId(field)} disabled={disabled} label={field.label}>
-          {preset?.label ?? t('Custom')}
+          {preset?.label ?? t('Custom||shadow')}
         </PickerButton>
       }
     >
@@ -191,7 +191,7 @@ export function ShadowField({ field, value, onChange, disabled }: FieldProps<str
         ))}
       </div>
       <div className="mt-1 border-t border-border px-1 pb-1 pt-2">
-        <p className="m-0 mb-1 text-2xs font-medium text-muted">{t('Custom')}</p>
+        <p className="m-0 mb-1 text-2xs font-medium text-muted">{t('Custom||shadow')}</p>
         <Fields bare fields={[SHADOW]} values={{ shadow: value && value !== 'none' ? value : '0 4px 16px 0 rgb(0 0 0 / 12%)' }} onChange={(_, v) => onChange(v ?? 'none')} />
         <Button variant="ghost" size="xs" onClick={() => onChange(`${value && value !== 'none' ? `${value}, ` : ''}0 2px 8px 0 rgb(0 0 0 / 10%)`)} className="mt-1.5 w-full !text-2xs !font-normal !text-muted hover:!text-text">
           <Icon name="plus" size={11} />

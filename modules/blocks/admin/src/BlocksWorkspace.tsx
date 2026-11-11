@@ -140,7 +140,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
       <IconButton icon="redo" label={t('Redo')} disabled={!redo} onClick={store.redo} />
       <Devices />
     </>, props.toolbar)}
-    <ScreenSidebar title={t('Outline')} backTo={props.listPath} backLabel={props.listLabel ?? props.collection.title}><Layers /></ScreenSidebar>
+    <ScreenSidebar title={t('Outline||structure')} backTo={props.listPath} backLabel={props.listLabel ?? props.collection.title}><Layers /></ScreenSidebar>
     <div className="flex min-h-0 flex-1">
       <main id={fieldControlId(props.bodyField)} tabIndex={-1} aria-label={props.bodyField.label} aria-describedby={props.errors[props.bodyField.handle] ? `${fieldControlId(props.bodyField)}-error` : undefined} className="flex min-w-0 flex-1 flex-col outline-none" data-editor-document>
         <LiveEditor collection={props.collection.handle} entryId={props.entry?.id} content={props.content} onTitleChange={!['templates', 'components'].includes(props.collection.handle) ? props.setTitle : undefined} onInspect={inspect} />

@@ -264,7 +264,7 @@ export function LogicPanel({ node }: { node: BlockNode }) {
         <SubHeading title={t('States')} action={<AddButton label={t('Add State')} onClick={() => save({ states: { ...(logic.states ?? {}), [Object.keys(logic.states ?? {}).length ? `state${Object.keys(logic.states ?? {}).length + 1}` : 'open']: variables[0] ?? 'open' } })} />} />
         <PanelFields
           bare
-          fields={[{ handle: 'states', type: 'json', component: 'blocks-pairs', className: 'items-start', label: t('States'), key: { prefix: 'is-', lower: true, strip: '[^a-z0-9-]', className: '!w-[34%] !flex-none' }, join: t('when'), item: expr('expr', t('When')) }]}
+          fields={[{ handle: 'states', type: 'json', component: 'blocks-pairs', className: 'items-start', label: t('States'), key: { prefix: 'is-', lower: true, strip: '[^a-z0-9-]', className: '!w-[34%] !flex-none' }, join: t('when'), item: expr('expr', t('When||condition')) }]}
           values={{ states: logic.states }}
           onChange={(_, states) => save({ states })}
         />
@@ -296,7 +296,7 @@ export function LogicPanel({ node }: { node: BlockNode }) {
           label={t('Scroll States')}
           onToggle={(on) => save({ behaviors: { ...behaviors, scroll: on ? { threshold: 20 } : undefined } })}
           fields={[
-            { handle: 'threshold', type: 'text', component: 'blocks-value', label: t('After'), unit: '', prefix: 'px' },
+            { handle: 'threshold', type: 'text', component: 'blocks-value', label: t('After||a distance'), unit: '', prefix: 'px' },
             { handle: 'hide', type: 'toggle', size: 'sm', label: t('Add is-hidden While Scrolling Down') },
           ]}
           values={{ threshold: String(behaviors.scroll?.threshold ?? 20), hide: !!behaviors.scroll?.hide }}
@@ -436,7 +436,7 @@ function ActionFields({ action: a, onChange, variables, node, depth }: { action:
   switch (a.do) {
     case 'set':
     case 'add':
-      fields = [variable, expr('value', a.do === 'set' ? t('To') : t('Add'), { placeholder: a.do === 'set' ? "true, 'text', count + 1" : '1' })]
+      fields = [variable, expr('value', a.do === 'set' ? t('To||set a value') : t('Add||to a number'), { placeholder: a.do === 'set' ? "true, 'text', count + 1" : '1' })]
       break
     case 'toggle':
       fields = [variable]
@@ -477,7 +477,7 @@ function ActionFields({ action: a, onChange, variables, node, depth }: { action:
       apply = (_, v) => ({ url: v ?? '' })
       break
     case 'theme':
-      fields = [seg('mode', t('Mode'), [{ value: 'toggle', label: t('Switch') }, { value: 'light', label: t('Light') }, { value: 'dark', label: t('Dark') }, { value: 'system', label: t('System') }])]
+      fields = [seg('mode', t('Mode'), [{ value: 'toggle', label: t('Switch||between two') }, { value: 'light', label: t('Light') }, { value: 'dark', label: t('Dark') }, { value: 'system', label: t('System') }])]
       values = { mode: a.mode ?? 'toggle' }
       break
     case 'focus':

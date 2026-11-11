@@ -71,7 +71,7 @@ export function GradientField({ value, onChange, context }: FieldProps<string | 
                 handle: 'stop',
                 type: 'group',
                 component: 'blocks-group',
-                label: t('Stop'),
+                label: t('Stop||gradient'),
                 fields: [
                   { handle: 'color', type: 'color', component: 'blocks-color', label: t('Color') },
                   { handle: 'at', type: 'text', component: 'blocks-value', label: t('Position'), unit: '%', placeholder: 'auto', className: '!flex-none w-14' },

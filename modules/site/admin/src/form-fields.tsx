@@ -79,7 +79,7 @@ function sections(): { key: string; label: string; parts: string[]; specimen: st
     { key: 'spacing', label: t('Size and Spacing'), parts: ['spacing'], specimen: 'sizes' },
     { key: 'select', label: t('Dropdowns'), parts: ['select'], specimen: 'select' },
     { key: 'textarea', label: t('Text Areas'), parts: ['textarea'], specimen: 'textarea' },
-    { key: 'checkbox', label: t('Checkboxes'), parts: ['checkbox'], specimen: 'checkbox' },
+    { key: 'checkbox', label: t('Checkboxes||controls'), parts: ['checkbox'], specimen: 'checkbox' },
     { key: 'radio', label: t('Radio Buttons'), parts: ['radio'], specimen: 'radio' },
     { key: 'switch', label: t('Switches'), parts: ['switch'], specimen: 'switch' },
     { key: 'slider', label: t('Sliders'), parts: ['slider'], specimen: 'slider' },
@@ -111,7 +111,7 @@ function label(part: string, key: string): string {
 
 function optionLabel(option: string): string {
   const names: Record<string, string> = {
-    sm: t('S'), md: t('M'), lg: t('L'), vertical: t('Vertical'), none: t('Fixed'), check: t('Check'), square: t('Square'), dot: t('Dot'), light: t('Light'), regular: t('Regular'), bold: t('Bold'), ring: t('Ring'),
+    sm: t('S'), md: t('M'), lg: t('L'), vertical: t('Vertical'), none: t('Fixed'), check: t('Check'), square: t('Square'), dot: t('Dot'), light: t('Light||weight'), regular: t('Regular'), bold: t('Bold'), ring: t('Ring'),
   }
   return names[option] ?? option
 }
