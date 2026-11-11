@@ -288,6 +288,25 @@ final class VendorTest extends TestCase
         $this->assertSame(0, Artisan::call('vendor', ['action' => 'remove', 'package' => 'gsap']));
         $this->assertSame([], $this->vendor()->all());
 
+        // With --json each answers one document, as every command does.
+        $json = static function (array $params): array {
+            $code = Artisan::call('vendor', [...$params, '--json' => true], $buffer = new \Symfony\Component\Console\Output\BufferedOutput);
+
+            return [$code, json_decode($buffer->fetch(), true)];
+        };
+        [$code, $document] = $json(['action' => 'add', 'package' => 'gsap@3.12.5']);
+        $this->assertSame(0, $code);
+        $this->assertSame(['gsap'], $document['data']['added']);
+        $this->assertSame('3.12.5', $document['data']['imports'][0]['version']);
+        [, $document] = $json([]);
+        $this->assertSame(['gsap'], array_column($document['data']['imports'], 'import'));
+        [$code, $document] = $json(['action' => 'add', 'package' => 'gsap@^3']);
+        $this->assertSame(1, $code);
+        $this->assertSame('invalid_input', $document['error']['type']);
+        [$code, $document] = $json(['action' => 'remove', 'package' => 'gsap']);
+        $this->assertSame(0, $code);
+        $this->assertSame(['removed' => 'gsap', 'imports' => []], $document['data']);
+
         $abilities = $this->cms()->abilities();
         $context = AbilityContext::system('test');
         $added = $abilities->execute('design/vendor-add', ['package' => 'three@0.160.0', 'file' => 'examples/jsm/controls/OrbitControls.js', 'as' => 'three/addons/controls/OrbitControls.js'], $context);

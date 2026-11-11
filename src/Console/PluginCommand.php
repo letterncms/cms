@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Console;
 
-use Illuminate\Console\Command;
 use Cms\Packages\PackageManager;
 use RuntimeException;
 
@@ -26,9 +25,7 @@ final class PluginCommand extends Command
                 default => throw new RuntimeException('Unknown action. Use enable, disable or uninstall.'),
             };
         } catch (RuntimeException $e) {
-            $this->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e, 'invalid_input');
         }
 
         $this->components->info("{$name}: {$this->argument('action')} done.");
@@ -37,6 +34,6 @@ final class PluginCommand extends Command
             $this->call('sync');
         }
 
-        return self::SUCCESS;
+        return $this->done(['name' => $name, 'action' => $this->argument('action')]);
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Cms\Console;
 
 use Cms\Update\Upgrader;
-use Illuminate\Console\Command;
 
 final class SyncCommand extends Command
 {
@@ -25,6 +24,6 @@ final class SyncCommand extends Command
             $this->components->info('Everything is up to date.');
         }
 
-        return self::SUCCESS;
+        return $this->done(['done' => (object) $done]);
     }
 }

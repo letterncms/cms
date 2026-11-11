@@ -6,7 +6,7 @@ namespace Cms\Modules\Sync\Console;
 
 use Cms\Modules\Sync\Connections;
 use Cms\Modules\Sync\Receiver;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 use Illuminate\Support\Carbon;
 use Throwable;
 
@@ -22,15 +22,13 @@ final class HistoryCommand extends Command
             $remote = (string) $this->option('remote');
             $history = $remote !== '' ? $connections->remote($remote)->history() : $receiver->history();
         } catch (Throwable $e) {
-            $this->components->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e);
         }
 
         if ($history === []) {
             $this->components->info(__('Nothing has come in through Sync yet.'));
 
-            return self::SUCCESS;
+            return $this->done(['history' => []]);
         }
 
         foreach ($history as $s) {
@@ -38,6 +36,6 @@ final class HistoryCommand extends Command
             $this->components->twoColumnDetail($s['id'].'  '.Carbon::parse($s['at'])->diffForHumans(), ($s['direction'] === 'pull' ? __('pulled from') : __('pushed from')).' '.($s['from']['label'] ?? $s['from']['name'] ?? '?').' · '.implode(', ', $s['tables']).($state !== '' ? ' · '.$state : ''));
         }
 
-        return self::SUCCESS;
+        return $this->done(['history' => $history]);
     }
 }

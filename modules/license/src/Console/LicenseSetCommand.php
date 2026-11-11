@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\License\Console;
 
 use Cms\Modules\License\LicenseService;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 use RuntimeException;
 
 final class LicenseSetCommand extends Command
@@ -22,13 +22,11 @@ final class LicenseSetCommand extends Command
         try {
             $report = $service->install((string) $this->argument('token'));
         } catch (RuntimeException $e) {
-            $this->components->error($e->getMessage());
-
-            return self::FAILURE;
+            return $this->failure($e, 'invalid_input');
         }
 
         $this->components->info("Saved. Token: {$report->token}, level {$report->level}.");
 
-        return self::SUCCESS;
+        return $this->done($report->toArray());
     }
 }

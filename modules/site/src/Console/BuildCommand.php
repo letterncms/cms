@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Site\Console;
 
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 use Cms\Modules\Site\Build\SiteBuilder;
 
 final class BuildCommand extends Command
@@ -39,6 +39,10 @@ final class BuildCommand extends Command
 
         $this->components->info(sprintf('%d pages in public/ (%.1fs).', $status['pages'], microtime(true) - $started));
 
-        return $status['errors'] === [] && (! $this->option('strict') || $status['warnings'] === []) ? self::SUCCESS : self::FAILURE;
+        $report = ['pages' => $status['pages'], 'seconds' => round(microtime(true) - $started, 1), 'errors' => $status['errors'], 'warnings' => $status['warnings']];
+
+        return $status['errors'] === [] && (! $this->option('strict') || $status['warnings'] === [])
+            ? $this->done($report)
+            : $this->failure($status['errors'] === [] ? 'The build has warnings.' : 'The build has errors.', details: $report);
     }
 }

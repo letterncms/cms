@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Console;
 
-use Illuminate\Console\Command;
 use Cms\Packages\PackageManager;
 
 final class PluginsCommand extends Command
@@ -18,12 +17,25 @@ final class PluginsCommand extends Command
         $inactive = $packages->inactive();
         $problems = $packages->problems();
         $rows = [];
+        $data = [];
 
         foreach ($packages->repository()->all() as $p) {
+            $source = $p->core ? 'module' : ($p->firstParty() ? 'first-party' : 'third-party');
+            $data[] = [
+                'name' => $p->name,
+                'version' => $p->version,
+                'source' => $source,
+                'status' => match (true) {
+                    isset($problems[$p->name]) => 'invalid',
+                    $packages->isActive($p->name) => 'active',
+                    default => 'off',
+                },
+                'reason' => $problems[$p->name] ?? $inactive[$p->name] ?? null,
+            ];
             $rows[] = [
                 $p->name,
                 $p->version,
-                $p->core ? 'module' : ($p->firstParty() ? 'first-party' : 'third-party'),
+                $source,
                 match (true) {
                     isset($problems[$p->name]) => '<fg=red>invalid</> '.$problems[$p->name],
                     $packages->isActive($p->name) => '<fg=green>active</>',
@@ -39,6 +51,8 @@ final class PluginsCommand extends Command
         }
 
         // Invalid plugins keep running; the exit code lets CI catch them.
-        return $problems === [] ? self::SUCCESS : self::FAILURE;
+        return $problems === []
+            ? $this->done(['plugins' => $data, 'errors' => array_values($packages->repository()->errors())])
+            : $this->failure(count($problems) === 1 ? 'A plugin is invalid.' : count($problems).' plugins are invalid.', 'failed', $problems);
     }
 }

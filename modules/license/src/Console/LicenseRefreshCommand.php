@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\License\Console;
 
 use Cms\Modules\License\LicenseService;
-use Illuminate\Console\Command;
+use Cms\Console\Command;
 
 final class LicenseRefreshCommand extends Command
 {
@@ -18,9 +18,9 @@ final class LicenseRefreshCommand extends Command
 
     public function handle(LicenseService $service): int
     {
-        $this->components->info('Refresh: '.$service->refresh(force: true).'.');
+        $this->components->info('Refresh: '.($outcome = $service->refresh(force: true)).'.');
 
         // A server that's down changes nothing for the site, so it isn't a failed command either.
-        return self::SUCCESS;
+        return $this->done(['refresh' => $outcome]);
     }
 }
