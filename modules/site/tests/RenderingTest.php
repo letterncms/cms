@@ -298,14 +298,24 @@ final class RenderingTest extends TestCase
             $this->assertFalse($compiler::selectable($selector), json_encode($selector));
         }
 
+        // A class a block carries, for element styles only: alone or on a tag, never the runtime's own, never an id.
+        foreach (['.water', '.water em', 'span.water', '.card.is-open', 'nav.main > a:hover', '.a .b .c', 'h1 .water::after'] as $selector) {
+            $this->assertTrue($compiler::selectable($selector, true), $selector);
+            $this->assertFalse($compiler::selectable($selector), $selector.' in prose');
+        }
+
+        foreach (['.cms-box', 'p.cms-prose em', '.Water', '.water_', '.-x', '.a.b.c', '. water', '.water,.x', '.water{}', '#a.water', '.water[x]', '.a .b .c .d', 'body.water', '.water:hover em', '.'] as $selector) {
+            $this->assertFalse($compiler::selectable($selector, true), $selector);
+        }
+
         $context = \Cms\Abilities\AbilityContext::system('test');
         $css = $this->cms()->abilities()->execute('design/preview', [
-            'styles' => ['h1 em' => ['fontStyle' => 'italic', 'color' => 'rgb(7, 8, 9)'], 'nav a:hover' => ['color' => 'red']],
+            'styles' => ['h1 em' => ['fontStyle' => 'italic', 'color' => 'rgb(7, 8, 9)'], 'nav a:hover' => ['color' => 'red'], '.water em' => ['fontFamily' => 'token:font.serif', 'fontStyle' => 'italic', 'fontWeight' => '400', 'letterSpacing' => '-0.03em', 'fontSize' => '1.07em'], 'span.water' => ['fontStyle' => 'italic']],
             'prose' => ['spacing' => ['blocks' => '1em'], 'li::marker' => ['color' => 'green'], 'blockquote p' => ['color' => 'teal']],
         ], $context)['css'];
 
         // What can't be styled is refused by name when it is saved, not kept and dropped in silence.
-        foreach ([['styles', '.x'], ['styles', 'h1}body{display:none'], ['prose', '#lead p']] as [$section, $selector]) {
+        foreach ([['styles', '#x'], ['styles', '.cms-box'], ['styles', 'h1}body{display:none'], ['prose', '#lead p'], ['prose', '.lead']] as [$section, $selector]) {
             foreach (['design/update', 'design/preview'] as $ability) {
                 try {
                     $this->cms()->abilities()->execute($ability, [$section => [$selector => ['color' => 'blue']]], $context);
@@ -317,7 +327,7 @@ final class RenderingTest extends TestCase
         }
 
         // A file written by hand can still hold one: it compiles to nothing.
-        \Cms\Support\Files::putJson(content_path('design/tokens.json'), ['styles' => ['.x' => ['color' => 'blue'], 'p' => ['color' => 'teal']]]);
+        \Cms\Support\Files::putJson(content_path('design/tokens.json'), ['styles' => ['#x' => ['color' => 'blue'], '.cms-box' => ['color' => 'blue'], 'p' => ['color' => 'teal']]]);
         $this->app->make(\Cms\Modules\Site\Design\Design::class)->saved();
         $stored = (string) file_get_contents(public_path(ltrim($this->app->make(\Cms\Modules\Site\Design\Design::class)->stylesheet(), '/')));
         $this->assertStringNotContainsString('blue', $stored);
@@ -326,8 +336,19 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('h1 em{font-style:italic;color:rgb(7, 8, 9)}', $css);
         $this->assertStringContainsString('nav a:hover{color:red}', $css);
         $this->assertStringNotContainsString('blue', $css);
+        // What the showcase wrote custom CSS for: a class on a block, styled by the design.
+        $this->assertStringContainsString('.water em{font-family:var(--font-serif);font-style:italic;font-weight:400;letter-spacing:-0.03em;font-size:1.07em}', $css);
+        $this->assertStringContainsString('span.water{font-style:italic}', $css);
+        $this->assertMatchesRegularExpression('/@layer elements\{[^@]*\.water em\{/', $css, 'with the element styles, under a block\'s own');
         $this->assertStringContainsString('.cms-prose li:where(:not(.cms-box, .cms-repeat))::marker{color:green}', $css);
         $this->assertStringContainsString('.cms-prose blockquote p:where(:not(.cms-box, .cms-repeat)){color:teal}', $css);
+
+        // Inside prose a class still holds: at the same weight as `.cms-prose em`, it comes after it.
+        $css = $this->cms()->abilities()->execute('design/preview', ['styles' => ['.note em' => ['color' => 'rgb(1, 2, 3)'], 'h1' => ['color' => 'rgb(4, 5, 6)']], 'prose' => ['em' => ['color' => 'rgb(9, 9, 9)']]], $context)['css'];
+        $prose = strpos($css, '.cms-prose em');
+        $this->assertNotFalse($prose);
+        $this->assertGreaterThan($prose, strpos($css, '.note em{color:rgb(1, 2, 3)}'), 'a class comes after the prose rules');
+        $this->assertLessThan($prose, strpos($css, 'h1{color:rgb(4, 5, 6)}'), 'a tag stays under them, as it was');
     }
 
     public function test_form_fields_are_styled_once_from_the_design_system(): void

@@ -43,19 +43,29 @@ final class DesignCompiler
     /** The tags a style's selector may name, after `html` and `body`, which only stand alone. */
     private const string TAG = 'h[1-6]|p|a|small|strong|em|mark|code|kbd|pre|blockquote|hr|ul|ol|li|img|figure|figcaption|table|th|td|span|sup|sub|abbr|cite|q|time|dl|dt|dd|button|label|summary|nav|header|footer|main|section|article|aside';
 
+    /** A class a style's selector may name: a block's own `class`, or the `is-…` a state binding gives it. Never one of the runtime's. */
+    private const string NAME = '\.(?!cms-)[a-z][a-z0-9-]{0,40}';
+
     /**
      * Is this a selector the design may style? ELEMENTS are the ones the Design System offers; beside them a small
-     * grammar covers what a site otherwise wrote custom CSS for, and nothing that could select by class, id or
-     * attribute or break out of the rule:
+     * grammar covers what a site otherwise wrote custom CSS for, and nothing that could select by id or attribute,
+     * reach the runtime's own classes or break out of the rule:
      *
      *   tag                       "figcaption"
      *   tag tag, tag > tag        "h1 em", "li > a", up to three deep
      *   … with a state at the end "a:hover", "nav a:focus-visible", "li:first-child"
+     *
+     * and, for element styles ($classes), a class a block carries, alone or on a tag, one or two of them:
+     *
+     *   .name, tag.name           ".note", "span.note", ".card.is-open"
+     *   … in the same places      ".note em", "nav.main > a:hover"
      */
-    public static function selectable(mixed $selector): bool
+    public static function selectable(mixed $selector, bool $classes = false): bool
     {
+        $part = $classes ? '(?:(?:'.self::TAG.')(?:'.self::NAME.'){0,2}|(?:'.self::NAME.'){1,2})' : '(?:'.self::TAG.')';
+
         return is_string($selector) && (in_array($selector, self::ELEMENTS, true)
-            || preg_match('/^(?:'.self::TAG.')(?: (?:> )?(?:'.self::TAG.')){0,2}(?::hover|:focus-visible|:active|:first-child|:last-child|::before|::after|::marker|::placeholder)?$/D', $selector) === 1);
+            || preg_match('/^'.$part.'(?: (?:> )?'.$part.'){0,2}(?::hover|:focus-visible|:active|:first-child|:last-child|::before|::after|::marker|::placeholder)?$/D', $selector) === 1);
     }
 
     /** The elements prose styles: every one is in the Design System's prose sample. */
@@ -124,10 +134,13 @@ final class DesignCompiler
         }
 
         $elements = [];
+        // A class is the site's own word for a block: it comes after the prose rules, so `.note em` holds inside prose
+        // too, where `.cms-prose em` would otherwise win by coming later at the same weight.
+        $classes = [];
 
         foreach ($design->styles() as $selector => $declarations) {
-            if (self::selectable($selector) && is_array($declarations) && ($css = $this->declarations($declarations)) !== '') {
-                $elements[] = "{$selector}{{$css}}";
+            if (self::selectable($selector, true) && is_array($declarations) && ($css = $this->declarations($declarations)) !== '') {
+                str_contains((string) $selector, '.') ? $classes[] = "{$selector}{{$css}}" : $elements[] = "{$selector}{{$css}}";
             }
         }
 
@@ -164,6 +177,8 @@ final class DesignCompiler
                 $elements[] = ".cms-prose > * + {$text},.cms-prose > [data-cms-contents] > * + {$text},.cms-prose > * + [data-cms-contents] > {$text}:first-child{{$css}}";
             }
         }
+
+        $elements = [...$elements, ...$classes];
 
         if ($elements !== []) {
             $out[] = '@layer elements{'.implode('', $elements).'}';

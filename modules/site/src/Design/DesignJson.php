@@ -228,8 +228,10 @@ final class DesignJson
         // A key the design can't style would be kept and never show: said now, by name.
         foreach (['styles', 'prose'] as $section) {
             foreach (array_keys((array) ($in[$section] ?? [])) as $selector) {
-                if (! DesignCompiler::selectable($selector) && ! ($section === 'prose' && $selector === 'spacing')) {
-                    throw new InvalidArgumentException(__('“:selector” is not something the design can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em” or “nav a:hover”. A class or an id is for custom CSS.', ['selector' => (string) $selector]));
+                if (! DesignCompiler::selectable($selector, $section === 'styles') && ! ($section === 'prose' && $selector === 'spacing')) {
+                    throw new InvalidArgumentException($section === 'styles'
+                        ? __('“:selector” is not something the design can style: use a tag or a class, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em”, “.note” or “span.note em:hover”. An id or an attribute is for custom CSS.', ['selector' => (string) $selector])
+                        : __('“:selector” is not something prose can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “blockquote p” or “a:hover”. A class is for the element styles.', ['selector' => (string) $selector]));
                 }
             }
         }
