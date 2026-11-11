@@ -64,6 +64,7 @@
 - The content API's OpenAPI document says which entries it gives: published, their publication date come and their end date not passed.
 - On a phone a list's select filters take two to a row, so three of them no longer squeeze into one line with Display, and the Audit Log's rows say who, how and when without leading each with its column's name. A view's column can say it is `bare`. A value that is missing stays out of a phone's row in every list, not only a date.
 - On a phone the page builder's block sheet has one way out, its grip, as every other sheet: the × beside the block's name is gone there.
+- On a phone, a page with tabs counts its tab's actions and its own together: with three or more they show as icons, so the page's name keeps its room (Forms' Submissions tab lost it to Export CSV, Rename and Delete). A table of rows in a form (redirects, rates) is a card per row on a phone, each field with its label, instead of a table wider than the screen; its `add: false` leaves out the button that adds a row, where rows come from a dialog.
 
 ### Security
 

@@ -51,11 +51,13 @@ const children = (node: ViewNode, path: string) => <ViewNodes nodes={node.childr
 /** What a page or tab holds, one under another with room between: a notice, then its list. */
 const stacked = (nodes: ViewNode[] | undefined, path: string) => (nodes?.length ?? 0) > 1 ? <div className="space-y-6"><ViewNodes nodes={nodes} path={path} /></div> : <ViewNodes nodes={nodes} path={path} />
 
-function Buttons({ actions, size, bar }: { actions?: ViewAction[]; size?: 'sm' | 'md'; bar?: boolean }) {
+function Buttons({ actions, size, bar, alongside = [] }: { actions?: ViewAction[]; size?: 'sm' | 'md'; bar?: boolean; alongside?: ViewAction[] }) {
   const { scope } = useView()
   const list = shown(actions, scope)
-  // In a page's bar on a phone, a button with an icon is its icon: the page's name keeps its room.
-  return list.length > 0 ? <>{list.map((a, i) => <Fragment key={i}><ActionButton action={a} size={size} compact={bar && !!a.icon ? (list.length > 2 ? true : 'label') : false} />{bar && a.key && <ActionKey action={a} />}</Fragment>)}</> : null
+  // In a page's bar on a phone, a button with an icon is its icon: the page's name keeps its room. Counted with what
+  // stands beside them in the same bar (a tab's actions and the page's), or three buttons push the name out.
+  const many = list.length + shown(alongside, scope).length > 2
+  return list.length > 0 ? <>{list.map((a, i) => <Fragment key={i}><ActionButton action={a} size={size} compact={bar && !!a.icon ? (many ? true : 'label') : false} />{bar && a.key && <ActionKey action={a} />}</Fragment>)}</> : null
 }
 
 /** A page's action on a key of its own (`c` for a new entry), as the person looking may take it. */
@@ -119,7 +121,7 @@ function TabbedPage({ node, tabs, path }: { node: ViewNode; tabs: ViewNode; path
   const counts = useTabCounts(list, scope)
   const mark = useCallback((id: string, on: boolean) => setDirty((d) => d[id] === on ? d : { ...d, [id]: on }), [])
   return (
-    <Page width={width} crumbs={crumbs(node)} actions={<DirtyScope dirty={!!dirty[tab]}><Buttons actions={current?.props.actions} bar /><Buttons actions={actions} bar /></DirtyScope>}>
+    <Page width={width} crumbs={crumbs(node)} actions={<DirtyScope dirty={!!dirty[tab]}><Buttons actions={current?.props.actions} alongside={actions} bar /><Buttons actions={actions} alongside={current?.props.actions} bar /></DirtyScope>}>
       <ScreenTabs value={tab} onChange={setTab} tabs={list.map((c) => ({ value: String(c.props.id), label: String(c.props.label), count: counts[String(c.props.id)], indicator: !!dirty[String(c.props.id)] }))}>
         {list.filter((c) => opened.includes(String(c.props.id))).map((c, i) => (
           <div key={String(c.props.id)} hidden={c.props.id !== tab}>
