@@ -125,6 +125,10 @@ final class Document
                 $clean['code'] = $code;
             }
 
+            if (($behavior = self::behavior($node['behavior'] ?? null)) !== []) {
+                $clean['behavior'] = $behavior;
+            }
+
             if (! empty($node['hidden'])) {
                 $clean['hidden'] = true;
             }
@@ -158,6 +162,58 @@ final class Document
                 static fn ($name) => is_string($name) && preg_match(self::CODE_NAME, $name),
             )));
             $names !== [] && $out[$kind] = $names;
+        }
+
+        return $out;
+    }
+
+    /** When a behaviour's script is fetched and mounted: with the page, a screen before the element is seen, or once the browser is idle. */
+    public const array BEHAVIOR_WHEN = ['load', 'visible', 'idle'];
+
+    /**
+     * A block's behaviour: a script beside the design whose `mount(el, props, context)` runs when the element
+     * is in the document, and what it is handed. { module: "tilt", props: { max: 8 }, when: "visible" }
+     *
+     * @return array{module?: string, props?: array<string, mixed>, when?: string}
+     */
+    public static function behavior(mixed $behavior): array
+    {
+        if (! is_array($behavior) || ! is_string($behavior['module'] ?? null) || ! preg_match(self::CODE_NAME, $behavior['module'])) {
+            return [];
+        }
+
+        $out = ['module' => $behavior['module']];
+        $props = is_array($behavior['props'] ?? null) && ! array_is_list($behavior['props']) ? self::plain($behavior['props']) : [];
+
+        // Props travel in an attribute: settings, not content.
+        if ($props !== [] && strlen((string) json_encode($props)) <= 4000) {
+            $out['props'] = $props;
+        }
+
+        if (in_array($behavior['when'] ?? null, ['visible', 'idle'], true)) {
+            $out['when'] = $behavior['when'];
+        }
+
+        return $out;
+    }
+
+    /** JSON and nothing else: text, numbers, booleans, null, and lists and maps of them. */
+    private static function plain(array $value, int $depth = 0): array
+    {
+        $out = [];
+
+        foreach (array_slice($value, 0, 50, true) as $key => $item) {
+            if (is_string($key) && ! preg_match('/^[A-Za-z_][A-Za-z0-9_-]{0,40}$/', $key)) {
+                continue;
+            }
+
+            if (is_array($item)) {
+                $depth < 4 && $out[$key] = self::plain($item, $depth + 1);
+            } elseif (is_string($item)) {
+                $out[$key] = mb_substr($item, 0, 1000);
+            } elseif (is_int($item) || is_float($item) || is_bool($item) || $item === null) {
+                $out[$key] = $item;
+            }
         }
 
         return $out;

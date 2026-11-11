@@ -44,6 +44,9 @@ final class PageContext
     /** @var array{scripts: list<string>, styles: list<string>} files beside the design this page loads, by name (Design\Code) */
     public array $code = ['scripts' => [], 'styles' => []];
 
+    /** A block on this page loads a script of the design by itself (a behaviour), so the page needs the import map. */
+    public bool $modules = false;
+
     public int $pages = 1;
 
     /** @var array{current?: int, total?: int, prev?: ?string, next?: ?string, count?: int} set by a paginated Repeat */

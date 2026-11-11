@@ -93,6 +93,20 @@ final class SiteModule extends Plugin
         $hooks->on('render.code', static fn (array $names) => PageContext::current()?->addCode($names));
         $hooks->on('render.component', static fn (string $handle) => PageContext::current()?->addCode($code()->for('components', $handle)));
         $hooks->on('design.saved', static fn () => $code()->flush());
+        // A block's behaviour names a script: its published file, on a page that then depends on it.
+        $hooks->addFilter('blocks.behavior', static function (?string $url, string $module) use ($code, $hooks) {
+            $context = PageContext::current();
+            $url = $code()->url('scripts', $module);
+
+            if ($context !== null) {
+                $context->dependencies["design:scripts/{$module}"] = true;
+                $context->modules = $context->modules || $url !== null;
+            }
+
+            $url === null && $hooks->dispatch('render.warning', __('This page names :file, which is not in content/design.', ['file' => "scripts/{$module}.js"]));
+
+            return $url;
+        });
         $hooks->on('render.depend', static fn (string $key) => PageContext::depend($key));
         // Mail wears the site's colours, from whichever tokens this design has.
         $hooks->addFilter('email.colors', static function (array $colors) use ($design) {

@@ -288,7 +288,7 @@ final class Renderer
         $foot = $this->hooks->filter('site.foot', $foot, $context);
 
         // An import map counts from the first module on: it goes in the head, on pages that load one of the design's.
-        if ((bool) $this->hooks->filter('site.modules', $modules !== [], $context) && ($map = $this->code->importMapTag()) !== '') {
+        if ((bool) $this->hooks->filter('site.modules', $modules !== [] || $context->modules, $context) && ($map = $this->code->importMapTag()) !== '') {
             $context->dependencies['design:importmap'] = true;
             $head[] = $map;
         }
