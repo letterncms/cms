@@ -50,7 +50,7 @@ final class EntriesViewTest extends TestCase
         $this->assertTrue($records['bulk'][0]['each']);
 
         $columns = array_column($records['columns'], null, 'key');
-        $this->assertSame(['title', 'uri', 'displayStatus', 'values.summary', 'translations', 'author', 'published', 'updated'], array_keys($columns));
+        $this->assertSame(['title', 'uri', 'displayStatus', 'values.summary', 'translations', 'author', 'published', 'expiresAt', 'updated'], array_keys($columns));
         $this->assertSame(['en', 'de'], $columns['translations']['locales']);
         $this->assertSame(['type' => 'textarea'], $columns['values.summary']['field']);
         $this->assertSame(['summary'], $records['source']['input']['fields']);

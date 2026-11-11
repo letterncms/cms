@@ -1,6 +1,7 @@
 import type { Entry, EntryContent } from '@letterncms/sdk'
 
-export interface SaveOptions { publish?: boolean; at?: string; expectedVersion?: string }
+/** `expiresAt`: when the publication ends; null takes the date away, left out it stays as it is. */
+export interface SaveOptions { publish?: boolean; at?: string; expiresAt?: string | null; expectedVersion?: string }
 type Failure = Error & { type?: string; details?: Record<string, string> }
 export interface SessionState {
   entry: Entry | null

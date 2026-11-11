@@ -294,7 +294,7 @@ export interface User extends RecordTimestamps {
 }
 
 export type EntryStatus = 'draft' | 'published'
-export type DisplayStatus = 'draft' | 'published' | 'changed' | 'scheduled'
+export type DisplayStatus = 'draft' | 'published' | 'changed' | 'scheduled' | 'expired'
 
 /** Safe identity used by content, history and people pickers. */
 export interface PersonSummary {
@@ -329,6 +329,8 @@ export interface EntrySummary extends RecordTimestamps {
   author: PersonSummary | null
   /** Opaque persisted content version for mutation preconditions. */
   version: string
+  /** When its publication ends: from then on it is off the site. */
+  expiresAt?: string | null
 }
 
 export interface Entry extends EntrySummary {

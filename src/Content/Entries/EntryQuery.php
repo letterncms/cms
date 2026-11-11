@@ -24,7 +24,7 @@ final class EntryQuery
 
     public ?string $locale = null;
 
-    /** "any" | "published" | "draft" | "live" */
+    /** "any" | "published" | "draft" | "live" | "expired" (published, its end date passed) | "active" (published, not expired: live or scheduled) */
     public string $status = 'any';
 
     /** @var list<array{0: string, 1: string, 2: mixed}> */
@@ -82,7 +82,7 @@ final class EntryQuery
 
     public function status(string $status): self
     {
-        if (! in_array($status, ['any', 'published', 'draft', 'live'], true)) {
+        if (! in_array($status, ['any', 'published', 'draft', 'live', 'expired', 'active'], true)) {
             throw new InvalidArgumentException(__('Unknown status filter :status.', ['status' => $status]));
         }
 

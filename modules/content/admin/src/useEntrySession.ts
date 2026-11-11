@@ -8,11 +8,12 @@ export function useEntrySession(initial: Entry | null, defaults: EntryContent, c
   const creationPath = useRef(window.location.pathname)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const [session] = useState(() => new EntrySession(initial, defaults, async (entry, values, options) => {
+    const ends = options.publish && options.expiresAt !== undefined ? { expiresAt: options.expiresAt } : {}
     const result = entry && !capabilities.edit && options.publish
-      ? await run<Entry>('entries/publish', { id: entry.id, ...(options.at ? { at: options.at } : {}), expectedVersion: options.expectedVersion ?? entry.version })
+      ? await run<Entry>('entries/publish', { id: entry.id, ...(options.at ? { at: options.at } : {}), ...ends, expectedVersion: options.expectedVersion ?? entry.version })
       : entry
-      ? await run<Entry>('entries/update', { id: entry.id, ...values, publish: !!options.publish, ...(options.at ? { at: options.at } : {}), expectedVersion: options.expectedVersion ?? entry.version })
-      : await run<Entry>('entries/create', { collection, locale, ...(blueprint ? { blueprint } : {}), ...values, slug: values.slug || undefined, status: options.publish ? 'published' : 'draft', ...(options.at ? { at: options.at } : {}) })
+      ? await run<Entry>('entries/update', { id: entry.id, ...values, publish: !!options.publish, ...(options.at ? { at: options.at } : {}), ...ends, expectedVersion: options.expectedVersion ?? entry.version })
+      : await run<Entry>('entries/create', { collection, locale, ...(blueprint ? { blueprint } : {}), ...values, slug: values.slug || undefined, status: options.publish ? 'published' : 'draft', ...(options.at ? { at: options.at } : {}), ...(ends.expiresAt ? ends : {}) })
     if (!entry && mounted.current && window.location.pathname === creationPath.current)
       // The router's own state stays, so Back and Forward still know where they are.
       window.history.replaceState(window.history.state, '', `${window.__CMS__.base}/content/${collection}/${result.id}${locale ? `?locale=${encodeURIComponent(locale)}` : ''}`)

@@ -66,7 +66,7 @@ final class Collection
         }
 
         foreach ($defaultColumns ?? [] as $id) {
-            if (! is_string($id) || (! in_array($id, ['uri', 'status', 'translations', 'author', 'published', 'updated'], true) && ! preg_match('/^field:[a-z0-9][a-z0-9_-]{0,63}$/D', $id))) {
+            if (! is_string($id) || (! in_array($id, ['uri', 'status', 'translations', 'author', 'published', 'ends', 'updated'], true) && ! preg_match('/^field:[a-z0-9][a-z0-9_-]{0,63}$/D', $id))) {
                 throw new InvalidArgumentException(__('Default display fields must be column IDs or field:handle.'));
             }
         }

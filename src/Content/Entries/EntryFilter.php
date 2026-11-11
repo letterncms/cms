@@ -22,6 +22,8 @@ final class EntryFilter
             $ok = match ($query->status) {
                 'published' => $entry->status === 'published',
                 'draft' => $entry->status === 'draft',
+                'expired' => $entry->status === 'published' && $entry->expiresAt !== null && $entry->expiresAt->getTimestamp() <= $now,
+                'active' => $entry->status === 'published' && ($entry->expiresAt === null || $entry->expiresAt->getTimestamp() > $now),
                 'live' => $entry->status === 'published' && ($entry->publishedAt === null || $entry->publishedAt->getTimestamp() <= $now) && ($entry->expiresAt === null || $entry->expiresAt->getTimestamp() > $now),
                 default => true,
             };

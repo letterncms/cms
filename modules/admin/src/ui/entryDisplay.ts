@@ -23,7 +23,7 @@ export function entrySystemColumns(routable: boolean, locales: string[]) {
     ...(routable ? [{ id: 'uri', label: t('URL') }] : []),
     { id: 'status', label: t('Status') },
     ...(locales.length > 1 ? [{ id: 'translations', label: t('Languages') }] : []),
-    { id: 'author', label: t('Author') }, { id: 'published', label: t('Published') }, { id: 'updated', label: t('Updated') },
+    { id: 'author', label: t('Author') }, { id: 'published', label: t('Published') }, { id: 'ends', label: t('Ends') }, { id: 'updated', label: t('Updated') },
   ]
 }
 
