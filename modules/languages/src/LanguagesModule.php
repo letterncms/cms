@@ -201,6 +201,15 @@ final class LanguagesModule extends Plugin
             'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), [...$languages()->codes(), $in['code']]),
         ]);
 
+        // The languages left when one is removed; the default stays.
+        $without = function (array $in) use ($languages): array {
+            if ($in['code'] === $languages()->default()) {
+                throw AbilityException::invalid(__('Make another language the default first.'));
+            }
+
+            return array_values(array_diff($languages()->codes(), [$in['code']]));
+        };
+
         $a->register('languages/remove', [
             'label' => 'Remove Language',
             'description' => 'Remove a language that has no entries. The default language cannot be removed.',
@@ -209,13 +218,13 @@ final class LanguagesModule extends Plugin
             'expose' => ['mcp' => false],
             'input' => $one,
             'output' => Shape::of([self::language()]),
-            'handler' => function (array $in) use ($languages) {
-                if ($in['code'] === $languages()->default()) {
-                    throw AbilityException::invalid(__('Make another language the default first.'));
-                }
+            'dryRun' => function (array $in) use ($languages, $without): array {
+                $codes = $without($in);
+                $this->removable($languages()->default(), $codes);
 
-                return $this->saveLanguages($languages()->default(), array_values(array_diff($languages()->codes(), [$in['code']])));
+                return in_array($in['code'], $languages()->codes(), true) ? [['action' => 'remove', 'type' => 'language', 'code' => $in['code'], 'remaining' => $codes]] : [];
             },
+            'handler' => fn (array $in) => $this->saveLanguages($languages()->default(), $without($in)),
         ]);
 
         $a->register('languages/default', [
@@ -309,16 +318,8 @@ final class LanguagesModule extends Plugin
     /** The site's languages as given: the default first; one that still has entries stays. */
     private function saveLanguages(string $default, array $languages, ?bool $prefixDefault = null): array
     {
-        $codes = array_values(array_unique([$default, ...$languages]));
+        $codes = $this->removable($default, $languages);
         $all = fn () => $this->app->make(Languages::class);
-
-        foreach (array_diff($all()->codes(), $codes) as $removed) {
-            if (($n = $this->count($removed)) > 0) {
-                throw AbilityException::invalid($n === 1
-                    ? __(':language still has 1 entry. Delete or move it before removing the language.', ['language' => $removed])
-                    : __(':language still has :count entries. Delete or move them before removing the language.', ['language' => $removed, 'count' => $n]));
-            }
-        }
 
         if ($prefixDefault !== null) {
             $this->cms()->settingsRegistry()->save('languages', ['prefix_default' => $prefixDefault]);
@@ -327,6 +328,22 @@ final class LanguagesModule extends Plugin
         $this->cms()->saveSite(['locale' => $default, 'locales' => $codes]);
 
         return $all()->all();
+    }
+
+    /** The languages a save would leave the site with, refused while one it drops still has entries. What a save, and a dry run of a removal, check. */
+    private function removable(string $default, array $languages): array
+    {
+        $codes = array_values(array_unique([$default, ...$languages]));
+
+        foreach (array_diff($this->app->make(Languages::class)->codes(), $codes) as $removed) {
+            if (($n = $this->count($removed)) > 0) {
+                throw AbilityException::invalid($n === 1
+                    ? __(':language still has 1 entry. Delete or move it before removing the language.', ['language' => $removed])
+                    : __(':language still has :count entries. Delete or move them before removing the language.', ['language' => $removed, 'count' => $n]));
+            }
+        }
+
+        return $codes;
     }
 
     /** A language as the Languages screen lists it: what it can be done with, in words for the person looking. */

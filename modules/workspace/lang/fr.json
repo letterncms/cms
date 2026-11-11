@@ -1,5 +1,9 @@
 {
   ":name Settings": "Réglages :name",
+  "Checked only: nothing was changed": "Vérification seule : rien n’a été modifié",
+  "Running it would change nothing.": "L’exécuter ne changerait rien.",
+  "The input and your permission were checked. What it would change is not known until it runs.": "Les données saisies et votre autorisation ont été vérifiées. Ce qui changerait n’est connu qu’à l’exécution.",
+  "Would Change": "Changerait",
   "{brand} sees the text you selected": "{brand} voit le texte que vous avez sélectionné",
   "{brand} sees this block": "{brand} voit ce bloc",
   "{brand} sees this page": "{brand} voit cette page",

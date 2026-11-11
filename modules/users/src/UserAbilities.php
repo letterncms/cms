@@ -235,6 +235,13 @@ final class UserAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'access' => ['type' => 'string', 'maxLength' => 120]], 'required' => ['id', 'access']],
             'output' => Shape::of(['revoked' => Shape::STRING]),
+            // Taking away what someone does not hold changes nothing.
+            'dryRun' => function (array $in): array {
+                $user = User::query()->findOrFail($in['id']);
+                $held = count(array_filter($this->cms->accounts()->grants($user), static fn ($grant) => $grant->access === $in['access']));
+
+                return $held === 0 ? [] : [['action' => 'revoke', 'type' => 'access', 'access' => $in['access'], 'userId' => $user->id, 'name' => $user->name, 'removes' => ['grants' => $held]]];
+            },
             'handler' => function (array $in) {
                 $this->cms->accounts()->revoke(User::query()->findOrFail($in['id']), $in['access']);
 
@@ -255,6 +262,21 @@ final class UserAbilities
             },
         ]);
 
+        // The person a delete is for, refused where the delete is.
+        $deletable = function (array $in, AbilityContext $ctx): User {
+            $user = User::query()->findOrFail($in['id']);
+
+            if ($ctx->user && $user->is($ctx->user)) {
+                throw AbilityException::conflict('You cannot delete your own account here.');
+            }
+
+            if ($user->super && User::query()->where('super', true)->count() <= 1) {
+                throw AbilityException::conflict('There must be at least one super admin.');
+            }
+
+            return $user;
+        };
+
         $a->register('users/delete', [
             'label' => 'Delete User',
             'permission' => 'users.manage',
@@ -264,17 +286,15 @@ final class UserAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'answer' => static fn (array $gone) => Answers::done(__('Deleted :name', ['name' => $gone['name'] ?? ''])),
             'output' => Shape::of(['deleted' => Shape::STRING, 'name' => Shape::STRING]),
-            'handler' => function (array $in, AbilityContext $ctx) {
-                $user = User::query()->findOrFail($in['id']);
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($deletable): array {
+                $user = $deletable($in, $ctx);
 
-                if ($ctx->user && $user->is($ctx->user)) {
-                    throw AbilityException::conflict('You cannot delete your own account here.');
-                }
-
-                if ($user->super && User::query()->where('super', true)->count() <= 1) {
-                    throw AbilityException::conflict('There must be at least one super admin.');
-                }
-
+                return [['action' => 'delete', 'type' => 'user', 'id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'removes' => [
+                    'tokens' => $user->tokens()->count(), 'access' => count($this->cms->accounts()->grants($user)),
+                ]]];
+            },
+            'handler' => function (array $in, AbilityContext $ctx) use ($deletable) {
+                $user = $deletable($in, $ctx);
                 $name = $user->name;
                 $this->cms->accounts()->erase($user);
 

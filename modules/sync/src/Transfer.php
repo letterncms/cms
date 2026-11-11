@@ -29,6 +29,30 @@ final class Transfer
      */
     public function start(string $remote, string $direction, array $choice): array
     {
+        ['preview' => $preview, 'groups' => $groups, 'tables' => $tables, 'areas' => $areas] = $this->plan($remote, $direction, $choice);
+        $bytes = array_sum(array_column($tables, 'bytes')) + array_sum(array_map(static fn (array $a) => array_sum(array_column($a['send'], 1)), $areas));
+        $id = strtolower((string) Str::ulid());
+        $job = [
+            'id' => $id, 'remote' => $remote, 'remote_label' => $this->connections->label($remote), 'direction' => $direction, 'groups' => $groups,
+            'from' => $preview['from'], 'to' => $preview['to'], 'rewrite' => $preview['rewrite'], 'tables' => $tables, 'areas' => $areas,
+            'status' => 'running', 'phase' => 'begin', 'cursor' => ['table' => 0, 'after' => null, 'seq' => 0, 'area' => 0, 'file' => 0, 'offset' => 0],
+            'total' => max(1, $bytes), 'done' => 0, 'rows' => 0, 'files' => 0, 'retries' => 0, 'message' => null, 'error' => null, 'result' => null,
+            'chunk' => (int) min($preview['from']['chunk'] ?? LocalSite::CHUNK, $preview['to']['chunk'] ?? LocalSite::CHUNK, LocalSite::CHUNK),
+            'started_at' => now()->toIso8601String(), 'finished_at' => null,
+        ];
+        $this->save($job);
+
+        return self::progress($job);
+    }
+
+    /**
+     * What a sync of this choice would move, refused as start() refuses it (another sync going, something in
+     * its way, a group that is not available, nothing chosen). Changes nothing: start() begins what this answers.
+     *
+     * @return array{preview: array, groups: list<string>, tables: list<array>, areas: array<string, array{send: list<array>, remove: list<string>}>}
+     */
+    public function plan(string $remote, string $direction, array $choice): array
+    {
         if ($current = $this->current()) {
             throw new RuntimeException(__('A sync with :site is still going. Finish or cancel it first.', ['site' => $current['remote_label']]));
         }
@@ -74,19 +98,7 @@ final class Transfer
             throw new RuntimeException(__('Choose what to :direction.', ['direction' => $direction === 'pull' ? __('pull') : __('push')]));
         }
 
-        $bytes = array_sum(array_column($tables, 'bytes')) + array_sum(array_map(static fn (array $a) => array_sum(array_column($a['send'], 1)), $areas));
-        $id = strtolower((string) Str::ulid());
-        $job = [
-            'id' => $id, 'remote' => $remote, 'remote_label' => $this->connections->label($remote), 'direction' => $direction, 'groups' => $groups,
-            'from' => $preview['from'], 'to' => $preview['to'], 'rewrite' => $preview['rewrite'], 'tables' => $tables, 'areas' => $areas,
-            'status' => 'running', 'phase' => 'begin', 'cursor' => ['table' => 0, 'after' => null, 'seq' => 0, 'area' => 0, 'file' => 0, 'offset' => 0],
-            'total' => max(1, $bytes), 'done' => 0, 'rows' => 0, 'files' => 0, 'retries' => 0, 'message' => null, 'error' => null, 'result' => null,
-            'chunk' => (int) min($preview['from']['chunk'] ?? LocalSite::CHUNK, $preview['to']['chunk'] ?? LocalSite::CHUNK, LocalSite::CHUNK),
-            'started_at' => now()->toIso8601String(), 'finished_at' => null,
-        ];
-        $this->save($job);
-
-        return self::progress($job);
+        return ['preview' => $preview, 'groups' => $groups, 'tables' => $tables, 'areas' => $areas];
     }
 
     /** One stretch of work, then where it stands. */

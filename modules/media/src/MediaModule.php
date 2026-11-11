@@ -262,6 +262,18 @@ final class MediaModule extends Plugin
             'handler' => fn () => $this->app->make(MediaReferences::class)->report(),
         ]);
 
+        // The file a delete is for, refused while something uses it (unless forced).
+        $deletable = function (array $in): MediaItem {
+            $item = MediaItem::query()->findOrFail(strtolower($in['id']));
+            $used = empty($in['force']) ? $this->app->make(MediaReferences::class)->of($item) : [];
+
+            if ($used !== []) {
+                throw AbilityException::conflict(__('This file is still used by :where.', ['where' => implode(', ', array_unique(array_map(static fn (array $r) => $r['where']['title'], $used)))]));
+            }
+
+            return $item;
+        };
+
         $a->register('media/delete', [
             'label' => 'Delete Media',
             'description' => 'Permanently delete a file and its image variants. Refused while something uses it, unless force is true.',
@@ -269,15 +281,13 @@ final class MediaModule extends Plugin
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string'], 'force' => ['type' => 'boolean', 'default' => false]], 'required' => ['id']],
             'output' => Shape::of(['deleted' => Shape::STRING]),
-            'handler' => function (array $in) use ($store) {
-                $item = MediaItem::query()->findOrFail(strtolower($in['id']));
-                $used = empty($in['force']) ? $this->app->make(MediaReferences::class)->of($item) : [];
+            'dryRun' => function (array $in) use ($deletable): array {
+                $item = $deletable($in);
 
-                if ($used !== []) {
-                    throw AbilityException::conflict(__('This file is still used by :where.', ['where' => implode(', ', array_unique(array_map(static fn (array $r) => $r['where']['title'], $used)))]));
-                }
-
-                $store()->delete($item);
+                return [['action' => 'delete', 'type' => 'media', 'id' => $item->id, 'path' => $item->path, 'removes' => ['file' => true, 'variants' => true, 'stillUsedBy' => count($this->app->make(MediaReferences::class)->of($item))]]];
+            },
+            'handler' => function (array $in) use ($store, $deletable) {
+                $store()->delete($deletable($in));
 
                 return ['deleted' => $in['id']];
             },

@@ -203,6 +203,9 @@ final class AccountAbilities
             },
         ]);
 
+        // The token a revoke is for, among the person's own.
+        $mine = static fn (array $in, AbilityContext $ctx) => $ctx->user->tokens()->whereKey($in['id']);
+
         $a->register('tokens/revoke', [
             'label' => 'Revoke API Token',
             'permission' => 'tokens.manage',
@@ -211,8 +214,10 @@ final class AccountAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
             'output' => Shape::of(['revoked' => Shape::STRING]),
-            'handler' => function (array $in, AbilityContext $ctx) {
-                $ctx->user->tokens()->whereKey($in['id'])->delete();
+            // Only your own tokens: one that is not yours, or is gone, is nothing to revoke.
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $mine($in, $ctx)->get()->map(static fn (ApiToken $token) => ['action' => 'revoke', 'type' => 'token', 'id' => (string) $token->getKey(), 'name' => $token->name])->all(),
+            'handler' => function (array $in, AbilityContext $ctx) use ($mine) {
+                $mine($in, $ctx)->delete();
 
                 return ['revoked' => $in['id']];
             },

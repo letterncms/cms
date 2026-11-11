@@ -127,6 +127,11 @@ final class Toolbox
             return $untrusted && (bool) ($ability->annotations['openWorld'] ?? false);
         }
 
+        // A dry run changes nothing, so there is nothing to approve: the executor reads `dryRun` the same way and never calls the handler.
+        if ($ability->dryRunAsked($input) === true) {
+            return false;
+        }
+
         if ($mode === 'writes' || $ability->asksFirst() || ! $ability->exposedTo('mcp')) {
             return true;
         }
@@ -203,7 +208,8 @@ final class Toolbox
 
         $text = is_string($result) ? $result : (string) json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 
-        return ['content' => $this->limit($text), 'isError' => false, 'mutated' => ! $ability->isReadOnly()];
+        // A dry run's report is not a change: the admin has nothing to reload.
+        return ['content' => $this->limit($text), 'isError' => false, 'mutated' => ! $ability->isReadOnly() && ! Ability::isDryRun($result)];
     }
 
     /** Shared by live events, transcript replay and action resolution. Never parse the truncated display output. */
@@ -221,7 +227,7 @@ final class Toolbox
 
     private function definition(Ability $ability): array
     {
-        $schema = $ability->input === [] ? ['type' => 'object'] : $ability->input;
+        $schema = $ability->input();
         $schema['type'] = 'object';
 
         if (! $ability->isReadOnly()) {

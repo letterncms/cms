@@ -94,6 +94,17 @@ final class SettingsAbilities
             },
         ]);
 
+        $guard = static function (array $in, AbilityContext $ctx) use ($registry): void {
+            if (! $registry->has($in['namespace'])) {
+                throw new AbilityException('Unknown settings.', 'not_found');
+            }
+
+            // Who may do what is for people to decide: the assistant never changes roles.
+            if ($ctx->transport === 'assistant' && $in['namespace'] === Roles::SETTINGS) {
+                throw AbilityException::forbidden(__('Roles are changed by people, in Settings.'));
+            }
+        };
+
         $a->register('settings/update', [
             'label' => 'Update Settings',
             'description' => 'Save values for a settings namespace.',
@@ -112,16 +123,14 @@ final class SettingsAbilities
                 ]);
             },
             'output' => self::values(),
-            'handler' => function (array $in, AbilityContext $ctx) use ($registry) {
-                if (! $registry->has($in['namespace'])) {
-                    throw new AbilityException('Unknown settings.', 'not_found');
-                }
+            // The values are merged and checked as a save checks them (SettingsRegistry::prepare()); nothing is stored.
+            'dryRun' => function (array $in, AbilityContext $ctx) use ($registry, $guard): array {
+                $guard($in, $ctx);
 
-                // Who may do what is for people to decide: the assistant never changes roles.
-                if ($ctx->transport === 'assistant' && $in['namespace'] === Roles::SETTINGS) {
-                    throw AbilityException::forbidden(__('Roles are changed by people, in Settings.'));
-                }
-
+                return [['action' => 'update', 'type' => 'settings', 'namespace' => $in['namespace'], 'fields' => $registry->changed($in['namespace'], $in['values'])]];
+            },
+            'handler' => function (array $in, AbilityContext $ctx) use ($registry, $guard) {
+                $guard($in, $ctx);
                 $registry->save($in['namespace'], $in['values']);
 
                 return $registry->forDisplay($in['namespace']);

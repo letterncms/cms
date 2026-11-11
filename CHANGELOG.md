@@ -8,6 +8,7 @@
 
 ### Added
 
+- Dry runs: every ability that changes something takes `dryRun: true` (`cms run … --dry-run`). Nothing is written, run or recorded, and the answer is `{dryRun, ability, checked, input, changes}`. `checked` says how far it went: `"full"` when the dry run is refused exactly where the real run would be and `changes` lists what would change or be removed, `"input"` when only the input and your permission were checked (`changes` is null, and the real run may still refuse). Entries (create, update, publish, unpublish, discard, delete, duplicate, move, reorder, restore, `pages/customise`), `settings/update` and every ability marked destructive or asking first (deleting a collection, file, user, global set, menu, comment, chat or token, removing a language, switching or uninstalling a plugin, starting or undoing a sync) are checked in full, by the same code the real run uses. A plugin's ability says the same with a `dryRun` callback; `Cms\Content\Entries\EntryService::dry()` runs entry writes without making them. In the workspace and for the assistant a dry run is shown as a check, not as a change.
 - Every ability says what it answers with: an `output` JSON Schema beside its `input`, in `abilities/list`, `GET /api/v1/abilities`, `cms run --list --json` and as each MCP tool's `outputSchema`. Plugins write it the short way with `Cms\Support\Schema\Shape`. The tests hold every result against its schema, key for key.
 
 ### Fixed

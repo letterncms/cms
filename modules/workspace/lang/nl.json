@@ -1,5 +1,9 @@
 {
   ":name Settings": "Instellingen :name",
+  "Checked only: nothing was changed": "Alleen gecontroleerd: er is niets gewijzigd",
+  "Running it would change nothing.": "Uitvoeren zou niets wijzigen.",
+  "The input and your permission were checked. What it would change is not known until it runs.": "De invoer en je rechten zijn gecontroleerd. Wat er zou wijzigen is pas bekend bij het uitvoeren.",
+  "Would Change": "Zou wijzigen",
   "{brand} sees the text you selected": "{brand} ziet de tekst die je hebt geselecteerd",
   "{brand} sees this block": "{brand} ziet dit blok",
   "{brand} sees this page": "{brand} ziet deze pagina",

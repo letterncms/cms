@@ -226,6 +226,10 @@ final class NavigationModule extends Plugin
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle']],
             'output' => Shape::of(['deleted' => Shape::BOOLEAN]),
+            // Deleting never refuses: a menu that is not there is nothing to remove (`deleted: false`).
+            'dryRun' => fn (array $in): array => ($menu = $menus()->find($in['handle'])) === null ? [] : [
+                ['action' => 'delete', 'type' => 'menu', 'handle' => $in['handle'], 'title' => $menu['title'] ?? $in['handle'], 'removes' => ['items' => count($menus()->ids($menu['items'] ?? []))]],
+            ],
             'handler' => fn (array $in) => ['deleted' => $menus()->delete($in['handle'])],
         ]);
     }
