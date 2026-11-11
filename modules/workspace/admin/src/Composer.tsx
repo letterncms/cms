@@ -1,5 +1,5 @@
 import { registry, t, useScreen, type ComposerOption, type ComposerSource, type ContextItem, type FieldDef, type Registered } from '@letterncms/sdk'
-import { Button, Fields, Icon, Spinner, Textarea, Tooltip, cn } from '@letterncms/ui'
+import { Button, Fields, Icon, Pressable, Spinner, Textarea, Tooltip, cn } from '@letterncms/ui'
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
 import { runnable } from './commands'
 import { attachments, hints, offered } from './context'
@@ -100,18 +100,18 @@ function Attachments({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-wrap items-center gap-1 px-2 pt-2">
       <Tooltip content={t('Add Context')} shortcut="@">
-        <button type="button" aria-label={t('Add Context')} onClick={onAdd} className="cms-thread-chip justify-center !px-0 w-[22px] text-muted hover:text-text">
+        <Pressable compact aria-label={t('Add Context')} onClick={onAdd} className="cms-thread-chip justify-center !px-0 w-[22px] text-muted hover:text-text">
           <span aria-hidden="true" className="text-xs leading-none">@</span>
-        </button>
+        </Pressable>
       </Tooltip>
       {skill && <Chip icon={skill.icon ?? 'sparkle'} label={skill.label} hint={skill.detail ?? skill.label} strong onRemove={() => panel.set({ skills: { ...state.skills, [key]: null } })} />}
       {items.map((item) => (
         <Chip key={item.id} icon={item.icon ?? 'file'} label={item.label} hint={(item.kind && hints[item.kind]?.()) ?? item.label} strong={!auto.has(item.id)} onRemove={() => remove(item)} />
       ))}
       {off && (
-        <button type="button" onClick={() => panel.set({ dismissed: state.dismissed.filter((id) => id !== 'page') })} className="cms-thread-chip pr-1.5 text-faint hover:text-text">
+        <Pressable compact onClick={() => panel.set({ dismissed: state.dismissed.filter((id) => id !== 'page') })} className="cms-thread-chip pr-1.5 text-faint hover:text-text">
           <Icon name="plus" size={11} /><span className="truncate">{screen.title}</span>
-        </button>
+        </Pressable>
       )}
     </div>
   )
@@ -123,9 +123,9 @@ function Chip({ icon, label, hint, strong, onRemove }: { icon: string; label: st
       <Tooltip content={hint}>
         <span tabIndex={0} className="flex min-w-0 items-center gap-1 outline-offset-1"><Icon name={icon} size={11} className="shrink-0" /><span className="truncate">{label}</span></span>
       </Tooltip>
-      <button type="button" aria-label={t('Remove {name}', { name: label })} onClick={onRemove} className="grid size-4 shrink-0 place-items-center rounded-xs text-faint hover:bg-hover hover:text-text">
+      <Pressable compact aria-label={t('Remove {name}', { name: label })} onClick={onRemove} className="grid size-4 shrink-0 place-items-center rounded-xs text-faint hover:bg-hover hover:text-text">
         <Icon name="close" size={10} />
-      </button>
+      </Pressable>
     </span>
   )
 }
@@ -140,7 +140,7 @@ function Picker({ id, trigger, groups, loading, active, onActive, onPick }: { id
   }, [active])
   let index = -1
   return (
-    <div ref={list} onMouseMove={() => { moved.current = true }} id={id} role="listbox" aria-label={trigger.char === '@' ? t('Add Context') : t('Commands')} className="cms-pop absolute inset-x-0 bottom-full z-10 mb-1.5 max-h-80 overflow-y-auto overscroll-contain p-1">
+    <div ref={list} onMouseMove={() => { moved.current = true }} id={id} role="listbox" aria-label={trigger.char === '@' ? t('Add Context') : t('Commands')} className="cms-pop absolute inset-x-0 bottom-full z-sticky mb-1.5 max-h-80 overflow-y-auto overscroll-contain p-1">
       {groups.map(({ source, label, options }) => (
         <div key={`${source.id}:${label}`} role="group" aria-label={label}>
           <div className="flex h-6 items-center px-2 text-2xs font-medium text-faint">{label}</div>

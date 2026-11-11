@@ -171,7 +171,7 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
         }
       }}
       className={cn(
-        'group relative flex h-7 pointer-coarse:h-10 cursor-default select-none items-center gap-1.5 rounded-md pr-1 text-sm outline-none focus-visible:shadow-[inset_0_0_0_1.5px_var(--cms-focus)]',
+        'group relative flex h-7 pointer-coarse:h-10 cursor-default select-none items-center gap-1.5 rounded-md pr-1 text-sm -outline-offset-2',
         selected ? 'bg-focus-soft text-ink' : hovered ? 'bg-hover text-text' : 'text-text',
         isDragging && 'z-drag bg-bg opacity-80 shadow-pop',
       )}

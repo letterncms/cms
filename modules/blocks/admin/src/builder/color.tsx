@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Popover, Segmented, cn } from '@letterncms/ui'
+import { fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTokens } from '../core/context'
 import { Swatch, inputClass } from './controls'
@@ -93,14 +93,14 @@ export function ColorField({ field, value: raw, onChange }: FieldProps<string | 
         align="end"
         className="w-64 !p-0"
         trigger={
-          <button type="button" id={fieldControlId(field)} className={cn(inputClass, 'flex items-center gap-1.5 pl-1 text-left')}>
+          <Pressable compact id={fieldControlId(field)} className={cn(inputClass, 'flex items-center gap-1.5 pl-1 text-left')}>
             <Swatch color={value === undefined && typeof field.swatch === 'string' ? field.swatch : preview(value)} className="!size-4" />
             {chosen ? (
               <TokenChip token={chosen.token} alpha={chosen.alpha} />
             ) : (
               <span className={cn('truncate font-mono', !value && 'font-sans text-faint')}>{value ?? field.placeholder ?? t('None')}</span>
             )}
-          </button>
+          </Pressable>
         }
       >
         <ColorPicker label={field.label || t('Color')} value={value} onChange={onChange} />
@@ -158,12 +158,12 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
   const alpha = current ? (value?.includes('/') ? Number(value.split('/')[1]) / 100 : 1) : hsv.a
   const solid = current ? preview(`token:${current}`) : formatColor({ ...fromHsv(hsv.h, hsv.s, hsv.v, 1) })
   const alphaBar = (
-    <div onPointerDown={(e) => drag(e, 'alpha')} className="relative h-2.5 cursor-ew-resize rounded-full [background:repeating-conic-gradient(#ddd_0_25%,#fff_0_50%)_0_0/8px_8px]">
+    <div onPointerDown={(e) => drag(e, 'alpha')} className="relative h-2.5 cursor-ew-resize rounded-full cms-checkerboard">
       <span className="absolute inset-0 rounded-full" style={{ background: `linear-gradient(to right, transparent, ${solid})` }} />
-      <span className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.3)]" style={{ left: `${alpha * 100}%` }} />
+      <span className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-1 ring-black/30" style={{ left: `${alpha * 100}%` }} />
     </div>
   )
-  const clear = <button type="button" onClick={() => onChange(null)} className="h-7 shrink-0 rounded-sm px-2 text-xs text-muted hover:bg-hover hover:text-ink">{t('Clear')}</button>
+  const clear = <Pressable compact onClick={() => onChange(null)} className="h-7 shrink-0 rounded-sm px-2 text-xs text-muted hover:bg-hover hover:text-ink">{t('Clear')}</Pressable>
 
   return (
     <div>
@@ -175,9 +175,7 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
         <div>
           <div role="listbox" aria-label={t('Color Tokens')} className="max-h-60 overflow-y-auto p-1">
             {tokens.map((token) => (
-              <button
-                key={token.path}
-                type="button"
+              <Pressable compact key={token.path}
                 role="option"
                 aria-selected={current === token.path}
                 title={`${token.path} · ${String(token.value)}${token.dark ? ` / ${String(token.dark)}` : ''}`}
@@ -188,7 +186,7 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
                 <span className="min-w-0 flex-1 truncate text-text">{token.name}</span>
                 <span className="max-w-[45%] shrink-0 truncate font-mono text-2xs text-faint">{String(token.value)}</span>
                 {current === token.path ? <Icon name="check" size={12} className="shrink-0 text-focus" /> : <span className="w-3 shrink-0" />}
-              </button>
+              </Pressable>
             ))}
           </div>
           <div className="flex items-center gap-2 border-t border-border px-2.5 py-2">
@@ -206,11 +204,11 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
         </div>
       ) : (
         <div className="space-y-2 p-2.5">
-          <div ref={area} onPointerDown={(e) => drag(e, 'area')} className="relative h-32 cursor-crosshair rounded-sm" style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsv.h} 100% 50%))` }}>
-            <span className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.3)]" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
+          <div ref={area} onPointerDown={(e) => drag(e, 'area')} className="relative h-32 cursor-crosshair rounded-sm" style={{ background: `linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(${hsv.h} 100% 50%))` }}>
+            <span className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-1 ring-black/30" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
           </div>
           <div onPointerDown={(e) => drag(e, 'hue')} className="relative h-2.5 cursor-ew-resize rounded-full" style={{ background: 'linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red)' }}>
-            <span className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.3)]" style={{ left: `${(hsv.h / 360) * 100}%` }} />
+            <span className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-1 ring-black/30" style={{ left: `${(hsv.h / 360) * 100}%` }} />
           </div>
           {alphaBar}
           <div className="flex gap-1.5">
@@ -233,7 +231,7 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
                 else (e.target as HTMLInputElement).blur()
               }}
               className={cn(inputClass, 'font-mono')}
-              placeholder="#000000"
+              placeholder={NEW_COLOR}
             />
             {clear}
           </div>

@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, Popover, cn } from '@letterncms/ui'
+import { Icon, Popover, cn, Pressable } from '@letterncms/ui'
 import { useState, type ReactElement } from 'react'
 import { useTokens, type ThemeToken } from '../../core/context'
 import { Swatch, display } from '../controls'
@@ -53,26 +53,24 @@ export function TokenList({ group, value, onPick, detach }: { group: string; val
       <p className="cms-label m-0 px-2 pb-1 pt-1.5 !text-2xs">{t('Tokens')}</p>
       <div className="max-h-60 overflow-y-auto">
         {tokens.map((token) => (
-          <button
-            key={token.path}
-            type="button"
+          <Pressable compact key={token.path}
             onClick={() => onPick(`token:${token.path}`)}
             className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-xs hover:bg-hover', current === token.path && 'bg-active')}
           >
             {group === 'color' && <Swatch color={String(token.value)} dark={token.dark ? String(token.dark) : undefined} />}
-            {group === 'shadow' && <span className="size-3.5 shrink-0 rounded-[3px] bg-bg" style={{ boxShadow: String(token.value) }} />}
+            {group === 'shadow' && <span className="size-3.5 shrink-0 rounded-xs bg-bg" style={{ boxShadow: String(token.value) }} />}
             {group === 'radius' && <span className="size-3.5 shrink-0 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: String(token.value) }} />}
             <span className="min-w-0 truncate font-mono text-2xs">{token.path}</span>
             <span className="ml-auto max-w-[45%] shrink-0 truncate font-mono text-2xs text-faint">{tokenValue(token)}</span>
             {current === token.path && <Icon name="check" size={12} className="shrink-0 text-focus" />}
-          </button>
+          </Pressable>
         ))}
       </div>
       {current && detach && (
-        <button type="button" onClick={detach} className="mt-1 flex h-7 w-full items-center gap-2 rounded-xs border-t border-border px-2 text-xs text-muted hover:bg-hover hover:text-text">
+        <Pressable compact onClick={detach} className="mt-1 flex h-7 w-full items-center gap-2 rounded-xs border-t border-border px-2 text-xs text-muted hover:bg-hover hover:text-text">
           <Icon name="unlink" size={12} />
           {t('Detach Token')}
-        </button>
+        </Pressable>
       )}
     </div>
   )
@@ -102,14 +100,12 @@ export function TokenButton({ group, value, onPick, active, className, trigger }
       className="w-60 !p-1"
       trigger={
         trigger ?? (
-          <button
-            type="button"
-            className={cn('grid size-5 shrink-0 place-items-center rounded-xs text-faint transition-opacity hover:bg-hover hover:text-ink', !active && !open && 'opacity-0 group-hover/value:opacity-100 group-focus-within/value:opacity-100', (active || open) && 'text-ink', className)}
+          <Pressable compact className={cn('grid size-5 shrink-0 place-items-center rounded-xs text-faint transition-opacity hover:bg-hover hover:text-ink', !active && !open && 'opacity-0 group-hover/value:opacity-100 group-focus-within/value:opacity-100', (active || open) && 'text-ink', className)}
             aria-label={t('Design Tokens')}
             title={t('Design Tokens')}
           >
             <Icon name="symbol" size={10} />
-          </button>
+          </Pressable>
         )
       }
     >

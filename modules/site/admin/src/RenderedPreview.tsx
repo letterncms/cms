@@ -22,7 +22,7 @@ export function RenderedPreview({ entry, collection, content, onClose }: { entry
   return <Dialog open onOpenChange={(open) => !open && onClose()} title={t('Preview')} size="xl" className="!top-[3vh] !max-h-[94vh] !max-w-[calc(100vw-32px)]" footer={<Button onClick={onClose}>{t('Close')}</Button>}>
     <Fields bare layout="inline" fields={[{ handle: 'device', type: 'select', display: 'segmented', label: t('Viewport'), required: true, options: { desktop: t('Desktop'), tablet: t('Tablet'), mobile: t('Phone') } }]} values={{ device }} onChange={(_, value) => value && setDevice(value)} />
     {error ? <QueryError message={error} onRetry={() => setRetry(retry + 1)} /> : <div className="relative mt-3 flex h-[68vh] overflow-auto bg-sunken p-2">
-      {loading && <div className="absolute inset-0 z-10 grid place-items-center bg-bg/70"><Spinner /></div>}
+      {loading && <div className="absolute inset-0 z-raised grid place-items-center bg-bg/70"><Spinner /></div>}
       <iframe title={t('Site preview')} srcDoc={html} sandbox="allow-same-origin allow-scripts allow-forms allow-popups" className="mx-auto h-full shrink-0 border-0 bg-white" style={{ width: device === 'mobile' ? deviceWidths.phone : device === 'tablet' ? deviceWidths.tablet : '100%' }} />
     </div>}
   </Dialog>

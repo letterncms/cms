@@ -1,5 +1,5 @@
 import { t, useAbility, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Popover, Segmented, Spinner, cn } from '@letterncms/ui'
+import { fieldControlId, Icon, Popover, Pressable, Segmented, Spinner, cn } from '@letterncms/ui'
 import { useEffect, useState } from 'react'
 
 type Weight = 'regular' | 'bold' | 'fill' | 'light'
@@ -37,9 +37,7 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
         onOpenChange={(o) => !disabled && setOpen(o)}
         className="w-[284px] !p-0"
         trigger={
-          <button
-            type="button"
-            id={fieldControlId(field)}
+          <Pressable id={fieldControlId(field)}
             disabled={disabled}
             aria-label={field.label}
             className={cn('cms-input flex h-7 w-full min-w-0 items-center gap-2 rounded-sm px-2 text-left text-sm disabled:opacity-50', name && 'pr-6')}
@@ -47,7 +45,7 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
             {name && current ? <span className="grid size-3.5 shrink-0 place-items-center text-text [&_svg]:size-3.5" dangerouslySetInnerHTML={{ __html: current.svg }} /> : <Icon name="star" size={14} className="shrink-0 text-faint" />}
             <span className={cn('min-w-0 flex-1 truncate', !name && 'text-ghost')}>{name ? base : (field.placeholder as string) || t('Choose an Icon')}</span>
             {name && weight !== 'regular' && <span className="shrink-0 text-faint">{weightLabel(weight)}</span>}
-          </button>
+          </Pressable>
         }
       >
         <div className="flex h-10 items-center gap-2 border-b border-border px-3">
@@ -74,9 +72,7 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
         </div>
         <div className="grid max-h-64 grid-cols-8 gap-0.5 overflow-y-auto p-1.5" role="listbox" aria-label={t('Icons')}>
           {(results.data ?? []).map((icon) => (
-            <button
-              key={icon.name}
-              type="button"
+            <Pressable key={icon.name}
               role="option"
               aria-selected={icon.name === base}
               title={icon.name}
@@ -92,9 +88,9 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
         </div>
       </Popover>
       {name && !disabled && (
-        <button type="button" onClick={() => onChange(null)} aria-label={t('Remove Icon')} className="absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-xs text-faint opacity-0 hover:bg-hover hover:text-text focus-visible:opacity-100 group-hover/icon:opacity-100">
+        <Pressable onClick={() => onChange(null)} aria-label={t('Remove Icon')} className="absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-xs text-faint opacity-0 hover:bg-hover hover:text-text focus-visible:opacity-100 group-hover/icon:opacity-100">
           <Icon name="close" size={12} />
-        </button>
+        </Pressable>
       )}
     </div>
   )

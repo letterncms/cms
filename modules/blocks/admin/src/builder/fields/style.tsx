@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Icon, cn } from '@letterncms/ui'
+import { Icon, cn, Pressable } from '@letterncms/ui'
 import { useColorPreview } from '../color'
 import { RemoveButton, PanelFields } from '../controls'
 import { splitList, splitValue } from '../css'
@@ -41,7 +41,7 @@ export function GradientField({ value, onChange, context }: FieldProps<string | 
 
   return (
     <div className="min-w-0 flex-1 space-y-1 rounded-md bg-active/60 p-1.5">
-      <div className="h-6 rounded-sm shadow-[inset_0_0_0_1px_rgb(0_0_0/0.1)]" style={{ background: preview(formatGradient({ ...gradient, kind: 'linear', angle: '90deg' })) }} />
+      <div className="h-6 rounded-sm ring-1 ring-inset ring-black/10" style={{ background: preview(formatGradient({ ...gradient, kind: 'linear', angle: '90deg' })) }} />
       <PanelFields
         bare
         context={context}
@@ -84,9 +84,9 @@ export function GradientField({ value, onChange, context }: FieldProps<string | 
           {gradient.stops.length > 2 && <RemoveButton onClick={() => set({ ...gradient, stops: gradient.stops.filter((_, j) => j !== i) })} />}
         </div>
       ))}
-      <button type="button" onClick={() => set({ ...gradient, stops: [...gradient.stops, { color: 'token:color.foreground', at: '' }] })} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
+      <Pressable compact onClick={() => set({ ...gradient, stops: [...gradient.stops, { color: 'token:color.foreground', at: '' }] })} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
         <Icon name="plus" size={14} /> {t('Add Stop')}
-      </button>
+      </Pressable>
     </div>
   )
 }
@@ -119,9 +119,9 @@ export function AlignField({ field, value, onChange, context }: FieldProps<{ jus
             const cross = MAIN[row ? y : x]
             const on = (justify ?? 'flex-start') === main && (align ?? 'stretch').replace('stretch', 'flex-start') === cross
             return (
-              <button key={`${x}${y}`} type="button" onClick={() => onChange({ justifyContent: main, alignItems: cross })} className="grid place-items-center rounded-[2px] hover:bg-hover" title={`${main.replace('flex-', '')} · ${cross.replace('flex-', '')}`}>
+              <Pressable compact key={`${x}${y}`} onClick={() => onChange({ justifyContent: main, alignItems: cross })} className="grid place-items-center rounded-xs hover:bg-hover" title={`${main.replace('flex-', '')} · ${cross.replace('flex-', '')}`}>
                 <span className={cn('rounded-full', on ? 'size-2 bg-ink' : 'size-1 bg-faint')} />
-              </button>
+              </Pressable>
             )
           }),
         )}
@@ -184,9 +184,9 @@ export function OriginField({ field, value, onChange, context, disabled }: Field
         {SPOTS.flat().map((spot) => {
           const on = current === spotKey(spot)
           return (
-            <button key={spot} type="button" role="radio" aria-checked={on} disabled={disabled} onClick={() => onChange(spot === 'center' && !field.required ? null : spot)} className="grid place-items-center rounded-[2px] hover:bg-hover" title={spot}>
+            <Pressable compact key={spot} role="radio" aria-checked={on} disabled={disabled} onClick={() => onChange(spot === 'center' && !field.required ? null : spot)} className="grid place-items-center rounded-xs hover:bg-hover" title={spot}>
               <span className={cn('rounded-full', on ? 'size-2 bg-ink' : 'size-1 bg-faint')} />
-            </button>
+            </Pressable>
           )
         })}
       </div>

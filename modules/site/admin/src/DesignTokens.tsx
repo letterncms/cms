@@ -1,5 +1,5 @@
 import { can, queryClient, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
-import { Button, Fields, Icon, IconButton, Menu, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar, useTheme, type MenuItemDef } from '@letterncms/ui'
+import { Button, Fields, Icon, IconButton, Menu, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar, useTheme, type MenuItemDef, NEW_COLOR } from '@letterncms/ui'
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Disclosure, Group, css, px, variable } from './design-parts'
 import { fallbackOf, fontStack, withFallback } from './fields'
@@ -419,7 +419,7 @@ export default function DesignTokens() {
                 <span className={cn(COLOR, 'flex items-center gap-1')}><Icon name="sun" size={11} />{t('Light')}</span>
                 <span className={cn(COLOR, 'flex items-center gap-1')}><Icon name="moon" size={11} />{t('Dark')}</span>
                 <Tooltip content={addLabel('color')}>
-                  <IconButton icon="plus" label={addLabel('color')} title={undefined} size="xs" className="shrink-0 max-sm:order-2" onClick={() => add('color', '#000000')} />
+                  <IconButton icon="plus" label={addLabel('color')} title={undefined} size="xs" className="shrink-0 max-sm:order-2" onClick={() => add('color', NEW_COLOR)} />
                 </Tooltip>
               </div>
               {byGroup('color').map((token) => (
@@ -440,7 +440,7 @@ export default function DesignTokens() {
                     key={token.from ?? token.path}
                     token={token}
                     {...actions}
-                    sample={<span className="block max-w-7 overflow-hidden whitespace-nowrap text-center text-[17px] leading-none text-ink" style={{ fontFamily: css('font', token.value) }}>Aa</span>}
+                    sample={<span className="block max-w-7 overflow-hidden whitespace-nowrap text-center text-lg leading-none text-ink" style={{ fontFamily: css('font', token.value) }}>Aa</span>}
                     extra={[
                       { separator: true, label: '' },
                       { heading: true, label: t('Fallback') },
@@ -519,7 +519,7 @@ export default function DesignTokens() {
               </Group>
               <Group title={t('Shadows')} onAdd={() => add('shadow', '0 4px 16px -4px rgb(0 0 0 / 0.12)')} addLabel={addLabel('shadow')}>
                 {byGroup('shadow').map((token) => (
-                  <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="size-5 shrink-0 rounded-[5px] border border-border bg-bg" style={{ boxShadow: css('shadow', token.value) }} />}>
+                  <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="size-5 shrink-0 rounded-xs border border-border bg-bg" style={{ boxShadow: css('shadow', token.value) }} />}>
                     {value(token, { component: 'site-shadow' })}
                   </Row>
                 ))}

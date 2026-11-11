@@ -1,5 +1,5 @@
 import { t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Icon, cn } from '@letterncms/ui'
+import { Icon, cn, Pressable } from '@letterncms/ui'
 import { useState } from 'react'
 import { RemoveButton } from '../controls'
 import { Control, SubField, shown } from './controls'
@@ -25,9 +25,9 @@ export function GroupField({ field, value, onChange, disabled, context }: FieldP
         ))}
       </div>
       {link && (
-        <button type="button" onClick={() => setSplit(!split)} className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" title={split ? (field.joinLabel as string) ?? t('The same for all') : (field.splitLabel as string) ?? t('Each One')}>
+        <Pressable compact onClick={() => setSplit(!split)} className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" title={split ? (field.joinLabel as string) ?? t('The same for all') : (field.splitLabel as string) ?? t('Each One')}>
           <Icon name={split ? 'square' : 'radius'} size={14} />
-        </button>
+        </Pressable>
       )}
     </Control>
   )

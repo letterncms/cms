@@ -579,12 +579,12 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
         // Outside the frame (its gutter, the toolbar) only the + under the pointer keeps its boundary.
         onPointerMove={(event) => { if (!(event.target as Element).closest('[data-cms-inserter]')) { showGap(null); store.hover(null) } }}
         className="relative min-h-0 flex-1 overflow-hidden bg-sunken">
-        {loading && <div className="absolute inset-0 z-20 grid place-items-center bg-bg"><Spinner /></div>}
+        {loading && <div className="absolute inset-0 z-drag grid place-items-center bg-bg"><Spinner /></div>}
         <iframe ref={frame} title={t('Live editor')} sandbox="allow-same-origin" onLoad={onLoad} className="absolute top-0 border-0 bg-white" style={{ width: layout.width, height: layout.height, left: layout.left, transformOrigin: 'top left', transform: `scale(${layout.scale})` }} />
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          {!readOnly && !blockDrag.drag && !writing && !typing && !chooser && hovered && hoverBox && !selectedIds.includes(hovered) && <div data-cms-hover={hovered} className="absolute z-10 border border-focus/50" style={boxStyle(hoverBox)} />}
+          {!readOnly && !blockDrag.drag && !writing && !typing && !chooser && hovered && hoverBox && !selectedIds.includes(hovered) && <div data-cms-hover={hovered} className="absolute z-raised border border-focus/50" style={boxStyle(hoverBox)} />}
           {/* The selection shows while writing too; its toolbar waits for block selection (Esc). */}
-          {!blockDrag.drag && boxes.map((rect, index) => <div data-cms-selection key={index} className="absolute z-10 border-solid border-focus" style={{ ...boxStyle(rect), borderWidth: 1.5 }} />)}
+          {!blockDrag.drag && boxes.map((rect, index) => <div data-cms-selection key={index} className="absolute z-raised border-solid border-focus" style={{ ...boxStyle(rect), borderWidth: 1.5 }} />)}
           {!readOnly && !blockDrag.drag && blockMode && selected && boxes[0] && (() => {
             const first = tree.locate(nodes, selectedIds[0]), last = tree.locate(nodes, selectedIds.at(-1)!)
             const node = tree.find(nodes, selected)
@@ -689,7 +689,7 @@ function LiveSlash({ doc, frame, scale }: { doc: Document; frame: HTMLIFrameElem
   }
   const origin = frame.getBoundingClientRect()
   const { maxHeight, ...place } = slashPlacement({ left: origin.left + rect.left * scale, top: origin.top + rect.top * scale, bottom: origin.top + rect.bottom * scale })
-  return createPortal(<div data-cms-slash className="cms-pop fixed z-[70] overflow-hidden !p-0" style={place}><Inserter types={[...types.values()]} query={slash.query} showSearch={false} compact style={{ maxHeight }} chooseFirst={slash.enter} keyboardDocument={doc} onChoose={choose} onClose={() => openSlash(null)} onNoMatch={() => { openSlash(null) }} allowed={(type) => !!insertionPoint(store.get().nodes, slash.id, type.name, types, allowed)} /></div>, document.body)
+  return createPortal(<div data-cms-slash className="cms-pop fixed z-overlay overflow-hidden !p-0" style={place}><Inserter types={[...types.values()]} query={slash.query} showSearch={false} compact style={{ maxHeight }} chooseFirst={slash.enter} keyboardDocument={doc} onChoose={choose} onClose={() => openSlash(null)} onNoMatch={() => { openSlash(null) }} allowed={(type) => !!insertionPoint(store.get().nodes, slash.id, type.name, types, allowed)} /></div>, document.body)
 }
 
 function LiveTitle({ doc, content, onChange, readOnly }: { doc: Document; content: EntryContent; onChange: (title: string) => void; readOnly: boolean }) {

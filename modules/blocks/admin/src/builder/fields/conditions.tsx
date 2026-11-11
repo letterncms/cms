@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Icon } from '@letterncms/ui'
+import { Icon, Pressable } from '@letterncms/ui'
 import { RemoveButton } from '../controls'
 import { SubField } from './controls'
 
@@ -39,10 +39,10 @@ export function ConditionsField({ field, value, onChange, disabled, context }: F
           <RemoveButton label={t('Remove Condition')} onClick={() => set(rows.filter((_, j) => j !== i))} />
         </div>
       ))}
-      <button type="button" disabled={disabled} onClick={() => set([...rows, { field: '', op: '=', value: '' }])} className="-ml-2 inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs text-muted hover:bg-hover hover:text-ink">
+      <Pressable compact disabled={disabled} onClick={() => set([...rows, { field: '', op: '=', value: '' }])} className="-ml-2 inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs text-muted hover:bg-hover hover:text-ink">
         <Icon name="plus" size={13} />
         {t('Add Condition')}
-      </button>
+      </Pressable>
     </div>
   )
 }

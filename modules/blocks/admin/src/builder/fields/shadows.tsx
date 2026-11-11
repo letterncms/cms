@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Popover, cn } from '@letterncms/ui'
+import { Popover, cn, Pressable } from '@letterncms/ui'
 import { useState } from 'react'
 import { useColorPreview } from '../color'
 import { AddButton, RemoveButton, PanelFields } from '../controls'
@@ -70,7 +70,7 @@ export function ShadowsField({ field, value, onChange, context }: FieldProps<str
       </div>
       {chosen && (
         <div className="flex h-7 items-center gap-2 pl-[88px]">
-          <span className="size-4 shrink-0 rounded-[3px] border border-border bg-bg" style={{ boxShadow: preview(String(chosen.token.value)) }} />
+          <span className="size-4 shrink-0 rounded-xs border border-border bg-bg" style={{ boxShadow: preview(String(chosen.token.value)) }} />
           <TokenChip token={chosen.token} className="text-xs" />
           <span className="flex-1" />
           <RemoveButton label={t('Remove Shadow')} onClick={() => onChange(null)} />
@@ -84,17 +84,17 @@ export function ShadowsField({ field, value, onChange, context }: FieldProps<str
             align="end"
             className="w-64 !p-2"
             trigger={
-              <button type="button" className={cn('flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-sm px-1.5 text-left text-xs hover:bg-hover', editing === i && 'bg-active')}>
+              <Pressable compact className={cn('flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-sm px-1.5 text-left text-xs hover:bg-hover', editing === i && 'bg-active')}>
                 {text ? (
-                  <span className="grid size-4 shrink-0 place-items-center text-[11px] font-semibold text-text" style={{ textShadow: preview(formatShadows([layer], true) ?? '') }}>A</span>
+                  <span className="grid size-4 shrink-0 place-items-center text-2xs font-semibold text-text" style={{ textShadow: preview(formatShadows([layer], true) ?? '') }}>A</span>
                 ) : (
-                  <span className="size-4 shrink-0 rounded-[3px] border border-border bg-bg" style={{ boxShadow: preview(formatShadows([{ ...layer, x: scale(layer.x), y: scale(layer.y), blur: scale(layer.blur), spread: scale(layer.spread) }]) ?? '') }} />
+                  <span className="size-4 shrink-0 rounded-xs border border-border bg-bg" style={{ boxShadow: preview(formatShadows([{ ...layer, x: scale(layer.x), y: scale(layer.y), blur: scale(layer.blur), spread: scale(layer.spread) }]) ?? '') }} />
                 )}
                 <span className="min-w-0 flex-1 truncate font-mono tabular-nums text-muted">
                   {[layer.x, layer.y, layer.blur, ...(text ? [] : [layer.spread])].map(short).join(' ')}
                 </span>
-                {layer.inset && <span className="rounded-[3px] bg-sunken px-1 text-2xs text-muted">{t('Inside')}</span>}
-              </button>
+                {layer.inset && <span className="rounded-xs bg-sunken px-1 text-2xs text-muted">{t('Inside')}</span>}
+              </Pressable>
             }
           >
             <p className="m-0 mb-2 text-xs font-semibold text-ink">{text ? t('Text Shadow') : t('Shadow')}</p>

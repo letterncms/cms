@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, Menu, cn } from '@letterncms/ui'
+import { Icon, Menu, cn, Pressable } from '@letterncms/ui'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { atEnd, atStart, caretOffset, split, textLength } from '../core/caret'
 import { useEditorContext } from '../core/context'
@@ -66,9 +66,9 @@ function Callout({ node }: { node: BlockNode }) {
       <Menu
         align="start"
         trigger={
-          <button type="button" disabled={readOnly} aria-label={t('Callout Style')} className="grid h-[27px] w-5 shrink-0 place-items-center rounded-xs text-muted hover:text-text">
+          <Pressable compact disabled={readOnly} aria-label={t('Callout Style')} className="grid h-[27px] w-5 shrink-0 place-items-center rounded-xs text-muted hover:text-text">
             <Icon name={tone.icon} size={17} />
-          </button>
+          </Pressable>
         }
         items={Object.entries(TONES).map(([value, def]) => ({ label: def.label(), icon: def.icon, checked: value === (node.props.tone ?? 'note'), onSelect: () => store.updateProps(node.id, { tone: value }) }))}
       />

@@ -39,7 +39,7 @@ function blocks(source: string): ReactNode[] {
 
     const heading = line.match(/^(#{1,4})\s+(.*)$/)
     if (heading) {
-      const size = heading[1].length <= 2 ? 'text-[15px]' : 'text-sm'
+      const size = heading[1].length <= 2 ? 'text-base' : 'text-sm'
       out.push(
         <p key={out.length} className={`${size} pt-1 font-semibold tracking-[-0.01em] text-ink`}>
           {inline(heading[2])}
@@ -127,7 +127,7 @@ function inline(text: string): ReactNode[] {
 
     if (m[1]) {
       // A place of the admin written as code opens there, like a link.
-      const code = <code key={key} className="rounded-xs bg-sunken px-1 py-px font-mono text-[0.92em]">{token.slice(1, -1)}</code>
+      const code = <code key={key} className="rounded-xs bg-sunken px-1 py-px font-mono text-xs">{token.slice(1, -1)}</code>
       out.push(adminPlace(token.slice(1, -1)) !== null ? <SafeLink key={key} href={token.slice(1, -1)}>{code}</SafeLink> : code)
     }
     else if (m[2]) out.push(<strong key={key} className="font-semibold text-ink">{inline(token.slice(2, -2))}</strong>)

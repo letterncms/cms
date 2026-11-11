@@ -65,7 +65,7 @@ function paint(text: string, schema: FieldSchema, values: FieldValues, tokens: T
     const [part, key] = out.slice(6).split('.')
     return paint(effective(schema, values, part, key, tokens), schema, values, tokens, dark, depth + 1)
   }
-  return out.replace(/currentColor/gi, tokenValue('color.foreground') ?? '#161614')
+  return out.replace(/currentColor/gi, tokenValue('color.foreground') ?? 'var(--cms-ink)')
 }
 
 type State = 'hover' | 'focus' | 'invalid' | 'disabled'
@@ -150,7 +150,7 @@ function placeholder(schema: FieldSchema, values: FieldValues, part: string, key
   if (token) return token[1]
   if (own === undefined && property?.hint) return { border: t('From border'), darker: t('Darker'), faint: t('Faint') }[property.hint] ?? property.hint
   if (value === 'currentColor') return t('Text color')
-  if (value === '0 0 #0000') return t('None')
+  if (/^0 0 (#0+|transparent)$/.test(value)) return t('None')
   if (schema[part][key].type === 'shadow') return t('Soft')
   if (value === '999px') return t('Round')
   return value

@@ -1,5 +1,5 @@
 import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Menu, cn } from '@letterncms/ui'
+import { fieldControlId, Icon, Menu, cn, Pressable } from '@letterncms/ui'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { inputClass } from '../controls'
 import { TokenButton, TokenChip, useTokenOf, useTypedToken } from './tokens'
@@ -218,7 +218,7 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
       )}
       <div className={cn('group/value relative flex h-7 min-w-0 flex-1 items-center', slider && '!w-16 !flex-none')} title={field.title as string | undefined}>
         {prefix !== undefined && (
-          <span onPointerDown={(e) => scrub(e, true)} className="absolute left-0 z-10 grid h-7 w-6 cursor-ew-resize select-none place-items-center text-xs text-faint hover:text-ink">
+          <span onPointerDown={(e) => scrub(e, true)} className="absolute left-0 z-raised grid h-7 w-6 cursor-ew-resize select-none place-items-center text-xs text-faint hover:text-ink">
             {prefix}
           </span>
         )}
@@ -228,9 +228,9 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
             value={value}
             onPick={onChange}
             trigger={
-              <button type="button" onDoubleClick={() => setDraft(value ?? '')} className={cn(inputClass, 'flex items-center pr-1 text-left', prefix !== undefined && '!pl-6')}>
+              <Pressable compact onDoubleClick={() => setDraft(value ?? '')} className={cn(inputClass, 'flex items-center pr-1 text-left', prefix !== undefined && '!pl-6')}>
                 <TokenChip token={chosen.token} alpha={chosen.alpha} className="text-xs" />
-              </button>
+              </Pressable>
             }
           />
         ) : (
@@ -274,9 +274,9 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
               <Menu
                 align="end"
                 trigger={
-                  <button type="button" disabled={disabled} className={cn('pointer-events-auto h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink data-[popup-open]:opacity-100')} aria-label={t('Unit')}>
+                  <Pressable compact disabled={disabled} className={cn('pointer-events-auto h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink data-[popup-open]:opacity-100')} aria-label={t('Unit')}>
                     {shownUnit}
-                  </button>
+                  </Pressable>
                 }
                 items={[
                   ...units.map((u) => ({ label: u, checked: u === shownUnit, onSelect: () => setUnit(u) })),
@@ -288,9 +288,9 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
               <Menu
                 align="end"
                 trigger={
-                  <button type="button" className="pointer-events-auto grid size-5 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
+                  <Pressable compact className="pointer-events-auto grid size-5 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
                     <Icon name="chevron-down" size={10} />
-                  </button>
+                  </Pressable>
                 }
                 items={[...units.map((u) => ({ label: u, onSelect: () => onChange(`0${u}`) })), { separator: true, label: '' }, ...keywords.map((k) => ({ label: k, checked: value === k, onSelect: () => onChange(k) }))]}
               />
@@ -302,18 +302,18 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
         <Menu
           align="end"
           trigger={
-            <button type="button" className="flex h-7 shrink-0 items-center gap-0.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
+            <Pressable compact className="flex h-7 shrink-0 items-center gap-0.5 rounded-sm px-1.5 text-xs text-muted hover:bg-hover hover:text-ink">
               {menu.label}
               <Icon name="chevron-down" size={10} />
-            </button>
+            </Pressable>
           }
           items={menu.items.map((item) => ({ label: item.label, checked: item.checked, onSelect: () => onChange(item.value) }))}
         />
       )}
       {action && (
-        <button type="button" onClick={() => onChange(action.value)} className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" title={action.label} aria-label={action.label}>
+        <Pressable compact onClick={() => onChange(action.value)} className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" title={action.label} aria-label={action.label}>
           <Icon name={action.icon} size={14} />
-        </button>
+        </Pressable>
       )}
     </Control>
   )

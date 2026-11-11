@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { cn } from '@letterncms/ui'
+import { cn, Pressable } from '@letterncms/ui'
 import { useState } from 'react'
 import { sides, splitValue } from '../css'
 import { Control, SubField } from './controls'
@@ -121,9 +121,7 @@ export function ClipField({ field, value: raw, onChange, context, disabled }: Fi
       {kind === 'polygon' && (
         <div className="grid grid-cols-5 gap-1">
           {SHAPES.map((s) => (
-            <button
-              key={s.id}
-              type="button"
+            <Pressable compact key={s.id}
               title={s.label()}
               aria-label={s.label()}
               aria-pressed={shape?.id === s.id}
@@ -131,7 +129,7 @@ export function ClipField({ field, value: raw, onChange, context, disabled }: Fi
               className={cn('grid aspect-square place-items-center rounded-xs border', shape?.id === s.id ? 'border-focus bg-focus/8' : 'border-border hover:bg-hover')}
             >
               <span className={cn('size-4', shape?.id === s.id ? 'bg-focus' : 'bg-muted')} style={{ clipPath: s.value }} />
-            </button>
+            </Pressable>
           ))}
         </div>
       )}
