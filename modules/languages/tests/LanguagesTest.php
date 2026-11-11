@@ -223,7 +223,7 @@ final class LanguagesTest extends TestCase
     public function test_languages_are_a_view_and_change_one_at_a_time(): void
     {
         $view = $this->cms()->abilities()->execute('views/get', ['id' => 'languages'], AbilityContext::forUser($this->admin(), 'admin'))['root'];
-        $this->assertSame('ui/records', $view['children'][0]['children'][0]['type']);
+        $this->assertSame('ui/records', $view['children'][0]['type']);
 
         $this->ability('languages/create', ['code' => 'fr']);
         $this->assertSame(['en', 'de', 'fr'], $this->cms()->locales());

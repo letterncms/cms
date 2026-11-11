@@ -44,9 +44,15 @@ final class CollectionsViews
                     ['key' => 'title', 'label' => __('Name'), 'icon' => 'icon'],
                     ['key' => 'route', 'label' => __('URL'), 'width' => 'minmax(200px,1fr)', 'format' => 'code', 'empty' => __('No URL')],
                     ['key' => 'structure', 'label' => __('Structure'), 'width' => '120px', 'labels' => ['list' => __('List'), 'tree' => __('Tree'), 'dated' => __('Dated')]],
-                    ['key' => 'count', 'label' => __('Entries'), 'width' => '90px', 'align' => 'end', 'format' => 'number'],
+                    ['key' => 'count', 'label' => __('Entries'), 'width' => '90px', 'align' => 'end', 'format' => 'number', 'unit' => ['one' => __('{count} Entry'), 'other' => __('{count} Entries')]],
                 ],
                 'open' => ['label' => __('Open'), 'to' => '/collections/{row.handle}'],
+                // A menu in each row, as a global set, a menu and a language have. Deleting stays in the collection's settings, where it says how many entries go with it.
+                'actions' => [
+                    ['label' => __('Edit Fields'), 'icon' => 'field', 'to' => '/collections/{row.handle}'],
+                    // Only for someone who may see that collection's entries.
+                    ['label' => __('Open Entries'), 'icon' => 'arrow-up-right', 'to' => '/content/{row.handle}', 'when' => '{row.viewable}'],
+                ],
                 'empty' => ['icon' => 'collection', 'title' => __('No collections yet')],
             ]],
             ...($open ? [$open] : []),

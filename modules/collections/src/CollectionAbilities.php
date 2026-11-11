@@ -42,12 +42,14 @@ final class CollectionAbilities
             'expose' => ['mcp' => false, 'assistant' => false],
             'output' => Shape::of([[
                 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'handle' => Shape::STRING, 'title' => Shape::STRING, 'icon' => Shape::STRING,
-                'structure' => Shape::STRING, 'route' => Shape::STRING_OR_NULL, 'count' => Shape::INTEGER,
+                'structure' => Shape::STRING, 'route' => Shape::STRING_OR_NULL, 'count' => Shape::INTEGER, 'viewable' => Shape::BOOLEAN,
             ]]),
-            'handler' => fn () => array_values(array_map(fn ($c) => [
+            'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_map(fn ($c) => [
                 ...\Cms\Support\RecordTimestamps::api($c->extra),
                 'handle' => $c->handle, 'title' => $c->title, 'icon' => $c->icon, 'structure' => $c->structure, 'route' => $c->route,
                 'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
+                // Whether the person asking may see its entries: managing collections does not give that.
+                'viewable' => $ctx->can("entries.{$c->handle}.view"),
             ], array_filter($this->cms->collections()->all(), static fn ($c) => ! $c->system))),
         ]);
 

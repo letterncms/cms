@@ -79,15 +79,14 @@ final class NavigationModule extends Plugin
 
         $this->cms()->views()->register('navigation', '/navigation', static fn () => ['type' => 'ui/page', 'props' => ['title' => __('Navigation'), 'icon' => 'list-tree', 'actions' => [
             ['label' => __('New Menu'), 'icon' => 'plus', 'variant' => 'primary', 'ability' => 'navigation/create', 'input' => ['title' => '{values.title}'], 'then' => 'open', 'to' => '/navigation/{result.handle}',
-                'form' => ['title' => __('New Menu'), 'confirm' => __('Create Menu'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'instructions' => __('For example Main, Footer or Legal.'), 'required' => true, 'autofocus' => true]]]],
+                'form' => ['title' => __('New Menu'), 'confirm' => __('Create Menu'), 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'placeholder' => __('Footer'), 'required' => true, 'autofocus' => true]]]],
         ]], 'children' => [
             ['type' => 'ui/records', 'props' => [
                 'id' => 'navigation', 'label' => __('Menus'), 'key' => 'handle',
                 'source' => ['ability' => 'navigation/list'],
                 'columns' => [
                     ['key' => 'title', 'label' => __('Name'), 'icon' => 'icon'],
-                    ['key' => 'handle', 'label' => __('Handle'), 'width' => 'minmax(200px,1fr)', 'format' => 'code'],
-                    ['key' => 'links', 'label' => __('Links'), 'width' => '100px', 'align' => 'end'],
+                    ['key' => 'count', 'label' => __('Links'), 'width' => '90px', 'align' => 'end', 'format' => 'number', 'unit' => ['one' => __('{count} Link'), 'other' => __('{count} Links')]],
                 ],
                 'open' => ['label' => __('Open'), 'to' => '/navigation/{row.handle}'],
                 'actions' => [$rename('{row.handle}', '{row.title}'), $delete('{row.handle}', __('Delete “{row.title}”?'))],
