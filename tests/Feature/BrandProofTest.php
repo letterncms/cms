@@ -49,10 +49,13 @@ final class BrandProofTest extends TestCase
         mkdir("{$this->scratch}/site/storage", 0o755, true);
         mkdir("{$this->scratch}/site/vendor/letterncms", 0o755, true);
         copy($real.'/stubs/site/cms', "{$this->scratch}/site/cms");
-        file_put_contents("{$this->scratch}/site/vendor/autoload.php", '<?php return require '.var_export($real.'/vendor/autoload.php', true).";\n");
+        // The same vendor folder the other tests that start a second process run with: the code under test.
+        $vendor = getenv('CMS_TEST_VENDOR') ?: $real.'/vendor';
+        file_put_contents("{$this->scratch}/site/vendor/autoload.php", '<?php return require '.var_export($vendor.'/autoload.php', true).";\n");
         symlink("{$this->scratch}/cms", "{$this->scratch}/site/vendor/letterncms/cms");
 
-        $this->cli('install --no-interaction --db=sqlite --site-name=Proof --site-url=http://localhost --name=Proof --email=proof@example.com --password=proof-password-1');
+        // No plugins: the recommended ones would be required from Packagist, and the name is the core's to prove.
+        $this->cli('install --no-interaction --db=sqlite --site-name=Proof --site-url=http://localhost --name=Proof --email=proof@example.com --password=proof-password-1 --plugins=none');
     }
 
     protected function tearDown(): void
