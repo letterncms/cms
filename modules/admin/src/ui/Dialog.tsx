@@ -43,6 +43,7 @@ const firstField = 'input:not([type=hidden]):not([disabled]), textarea:not([disa
 export function Dialog({ open, onOpenChange, title, description, children, footer: own, size = 'md', className, close = true, alert = false, onSubmit, submitLabel, submitDisabled = false, danger = false, busy = false }: DialogProps) {
   const popup = useRef<HTMLDivElement>(null)
   const form = useId()
+  const [scrolled, setScrolled] = useState(false)
   const footer = own ?? (onSubmit && (
     <>
       <Button onClick={() => onOpenChange(false)} disabled={busy}>{t('Cancel')}</Button>
@@ -78,13 +79,14 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           )}
         >
           {(title || description) && (
-            <div className={cn('shrink-0 px-5 pt-5 max-sm:px-4 max-sm:pt-4', close && 'pr-12')}>
+            // Under the title an edge shows while the body is scrolled, so rows pass under a line and never meet the title.
+            <div className={cn('shrink-0 border-b px-5 pb-3 pt-5 transition-colors duration-base max-sm:px-4 max-sm:pt-4', scrolled ? 'border-border' : 'border-transparent', close && 'pr-12')}>
               {title && <Base.Title className="m-0 text-lg font-semibold text-ink">{title}</Base.Title>}
               {description && <Base.Description className="m-0 mt-1 text-sm text-muted">{description}</Base.Description>}
             </div>
           )}
           {close && (title || description) && <Base.Close render={<IconButton icon="close" label={t('Close')} size="sm" className="!absolute right-2 top-2" />} />}
-          {body && <div data-dialog-body className={cn('min-h-0 flex-1 overflow-auto px-5 max-sm:px-4', title || description ? 'pt-4' : 'pt-5 max-sm:pt-4', !footer && 'pb-5 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))]')}>{body}</div>}
+          {body && <div data-dialog-body onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)} className={cn('min-h-0 flex-1 overflow-auto px-5 max-sm:px-4', title || description ? 'pt-1' : 'pt-5 max-sm:pt-4', !footer && 'pb-5 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))]')}>{body}</div>}
           {footer && <div data-dialog-footer className="flex shrink-0 items-center justify-end gap-2 px-5 pb-5 pt-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-3 max-sm:px-4 max-sm:pb-[calc(24px+env(safe-area-inset-bottom))] max-sm:[&>button]:h-11 max-sm:[&>button]:w-full">{footer}</div>}
         </Base.Popup>
       </Base.Portal>

@@ -5,9 +5,9 @@ import { Checkbox } from './Switch'
 import { Icon } from './Icon'
 import { Skeleton } from './Spinner'
 
-/** The same responsive cards for content, assets and other overview records. */
+/** The same responsive cards for content, assets and other overview records. Picture cards stand two across on a phone. */
 export function DataGrid({ children, loading, stale, media }: { children?: ReactNode; loading?: boolean; stale?: boolean; media?: boolean }) {
-  return <div aria-busy={loading || stale} className={cn('grid grid-cols-[repeat(auto-fill,minmax(min(100%,232px),1fr))] gap-4 transition-opacity duration-move', stale && 'opacity-60')}>
+  return <div aria-busy={loading || stale} className={cn('grid grid-cols-[repeat(auto-fill,minmax(min(100%,232px),1fr))] gap-4 transition-opacity duration-move', media && 'max-sm:grid-cols-2 max-sm:gap-3', stale && 'opacity-60')}>
     {loading ? Array.from({ length: 8 }, (_, i) => <div key={i} aria-hidden="true" className="overflow-hidden rounded-lg border border-border">
       {media && <Skeleton className="aspect-[3/2] rounded-none" />}
       <div className="space-y-2 p-3"><Skeleton className="h-3.5 w-3/4" /><Skeleton className="h-3 w-2/3" /><Skeleton className="mt-4 h-3 w-1/3" /></div>

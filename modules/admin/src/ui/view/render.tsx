@@ -55,7 +55,7 @@ function Buttons({ actions, size, bar }: { actions?: ViewAction[]; size?: 'sm' |
   const { scope } = useView()
   const list = shown(actions, scope)
   // In a page's bar on a phone, a button with an icon is its icon: the page's name keeps its room.
-  return list.length > 0 ? <>{list.map((a, i) => <Fragment key={i}><ActionButton action={a} size={size} compact={bar && !!a.icon} />{bar && a.key && <ActionKey action={a} />}</Fragment>)}</> : null
+  return list.length > 0 ? <>{list.map((a, i) => <Fragment key={i}><ActionButton action={a} size={size} compact={bar && !!a.icon ? (list.length > 2 ? true : 'label') : false} />{bar && a.key && <ActionKey action={a} />}</Fragment>)}</> : null
 }
 
 /** A page's action on a key of its own (`c` for a new entry), as the person looking may take it. */
@@ -309,7 +309,7 @@ const builtins: Record<string, Renderer> = {
   'ui/tab': ({ node, path }) => children(node, path),
   'ui/section': SectionNode,
   'ui/stack': ({ node, path }) => <div className="space-y-4">{children(node, path)}</div>,
-  'ui/grid': ({ node, path }) => <div className={cn('grid min-w-0 gap-4', { 1: 'grid-cols-1', 2: '@md:grid-cols-2 md:grid-cols-2', 3: '@lg:grid-cols-3 lg:grid-cols-3', 4: '@lg:grid-cols-4 lg:grid-cols-4' }[Number(node.props.columns ?? 2)])}>{children(node, path)}</div>,
+  'ui/grid': ({ node, path }) => <div className={cn('grid min-w-0 gap-4 [&>*]:min-w-0', { 1: 'grid-cols-1', 2: '@md:grid-cols-2 md:grid-cols-2', 3: '@lg:grid-cols-3 lg:grid-cols-3', 4: '@lg:grid-cols-4 lg:grid-cols-4' }[Number(node.props.columns ?? 2)])}>{children(node, path)}</div>,
   'ui/text': ({ node }) => <p className={cn('m-0 whitespace-pre-wrap text-sm leading-relaxed', node.props.muted ? 'text-muted' : 'text-text')}>{node.props.text}</p>,
   'ui/notice': NoticeNode,
   'ui/stat': StatNode,

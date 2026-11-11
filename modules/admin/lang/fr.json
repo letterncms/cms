@@ -270,7 +270,6 @@
   "Select All": "Tout sélectionner",
   "Select Item": "Sélectionner cet élément",
   "Select people": "Sélectionner des personnes",
-  "Select…": "Choisir…",
   "Selection": "Sélection",
   "Send Reset Link": "Envoyer le lien",
   "Set in {language}": "Défini en {language}",
@@ -328,5 +327,6 @@
   "Yes": "Oui",
   "You are not allowed to do this": "Vous n’êtes pas autorisé à effectuer cette action",
   "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe.",
-  "{type} Options": "Options de {type}"
+  "{type} Options": "Options de {type}",
+  "Choose": "Choisir"
 }
