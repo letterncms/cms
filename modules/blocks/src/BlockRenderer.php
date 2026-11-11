@@ -511,6 +511,13 @@ final class BlockRenderer
         $compiled['runtime'] !== [] && $this->uses('motion');
         $compiled['scroll'] !== [] && $this->uses('scroll');
 
+        // Lines animated by CSS wait for the runtime to say which words share one; without a script they go by word.
+        // The runtime lets them go after a moment, counted or not (features.ts), so text never stays hidden.
+        if ($compiled['lines']) {
+            $this->uses('lines');
+            $this->hooks->dispatch('render.style', 'cms-lines', '@media (scripting:enabled){[data-cms-lines=""] .cms-w__i{animation-play-state:paused}}', 4998);
+        }
+
         return $compiled;
     }
 
@@ -837,6 +844,10 @@ final class BlockRenderer
             if (isset($logic['show']) && $this->editor && Expression::evaluate($logic['show'], array_merge(...$this->logicData, ...[(array) ($logic['data'] ?? [])])) === false) {
                 $conditional = true;
             }
+        }
+
+        if (! empty($compiled['lines'])) {
+            $attrs['data-cms-lines'] = '';
         }
 
         if (($compiled['runtime'] ?? []) !== []) {

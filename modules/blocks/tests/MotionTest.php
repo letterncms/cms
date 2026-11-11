@@ -80,18 +80,34 @@ final class MotionTest extends TestCase
         $this->assertSame('Hello there world', trim(strip_tags($page['html'])));
     }
 
-    public function test_lines_in_css_are_masked_words_and_the_runtime_finds_real_ones(): void
+    public function test_lines_are_real_lines_with_every_trigger(): void
     {
-        // CSS runs before there is a layout to ask: a line is each of its words, rising from behind its edge.
-        $clean = Motion::sanitize([['trigger' => ['type' => 'load'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 108]]]]]);
-        $this->assertSame('words', $clean[0]['steps'][0]['target']);
-        $this->assertTrue($clean[0]['steps'][0]['mask']);
+        // CSS animates them: each word takes its line's turn, which the runtime counts once the text is laid out.
+        foreach (['load', 'loop', 'scroll'] as $trigger) {
+            $clean = Motion::sanitize([['trigger' => ['type' => $trigger], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 108]]]]]);
+            $this->assertSame(['lines', true], [$clean[0]['steps'][0]['target'], $clean[0]['steps'][0]['mask']], $trigger);
 
-        // What waits for the visitor has a layout: the runtime gives the words of a line one turn.
+            $page = $this->render([$this->animated($trigger, ['target' => 'lines', 'from' => ['yPercent' => 108], 'stagger' => 0.08], type: 'heading')]);
+            $this->assertMatchesRegularExpression('/<h2 [^>]*data-cms-lines[ >]/', $page['html'], $trigger);
+            $this->assertStringContainsString('cms-w--mask', $page['html'], $trigger);
+            $this->assertTrue($page['features']['lines'] ?? false, $trigger.': the runtime numbers the lines');
+            $this->assertMatchesRegularExpression('/\.cms-m-\w+ \.cms-w__i\{animation/', $page['css'], $trigger);
+            $this->assertStringContainsString('var(--i,0)', $page['css'], $trigger.': each line a turn');
+            // Until they are numbered the words wait (a moment at most: the runtime lets them go); without a script they go word by word.
+            $this->assertStringContainsString('@media (scripting:enabled){[data-cms-lines=""] .cms-w__i{animation-play-state:paused}}', $page['css'], $trigger);
+            $this->assertSame('Hello there world', trim(strip_tags($page['html'])), 'the words stay where they are');
+        }
+
+        // Words are not lines: nothing waits for them.
+        $words = $this->render([$this->animated('load', ['target' => 'words', 'stagger' => 0.08], type: 'heading')]);
+        $this->assertStringNotContainsString('data-cms-lines', $words['html']);
+        $this->assertArrayNotHasKey('lines', $words['features']);
+
+        // What waits for the visitor has a layout already: the motion runtime gives the words of a line one turn.
         $page = $this->render([$this->animated('appear', ['target' => 'lines', 'from' => ['yPercent' => 108], 'stagger' => 0.08], type: 'heading')]);
         $this->assertStringContainsString('cms-w--mask', $page['html']);
         $this->assertStringContainsString('&quot;t&quot;:&quot;lines&quot;', $page['html']);
-        $this->assertSame('Hello there world', trim(strip_tags($page['html'])), 'the words stay where they are');
+        $this->assertStringNotContainsString('data-cms-lines', $page['html']);
     }
 
     public function test_letters_are_split_inside_their_word_and_the_block_says_its_text_once(): void

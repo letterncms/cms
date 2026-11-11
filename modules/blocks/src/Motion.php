@@ -35,8 +35,10 @@ namespace Cms\Modules\Blocks;
  * scroll is CSS where the browser has scroll-driven animations. Where it hasn't, or when the
  * animation asks to trail the scroll (scrub), the runtime's `scroll` chunk moves the same keyframes
  * by the same range. Pinning is `position: sticky` in a wrapper as tall as the element plus the
- * distance, so it holds without a script. Lines are found by the runtime once the text is laid out
- * (appear, hover, press, event); what is CSS can't wait for that and animates masked words.
+ * distance, so it holds without a script. Lines are found by the runtime once the text is laid out.
+ * Where CSS animates them (load, scroll, loop) each word's turn (--i) becomes its line's: the block
+ * carries `data-cms-lines`, its words wait until the runtime's `lines` chunk has numbered them, and
+ * without a script they go word by word.
  */
 final class Motion
 {
@@ -139,8 +141,6 @@ final class Motion
                 'scrub' => $type === 'scroll' && is_numeric($trigger['scrub'] ?? null) && (float) $trigger['scrub'] > 0 ? self::number($trigger['scrub'], 0.05, 3) : null,
                 'progress' => $type === 'scroll' && ! empty($trigger['progress']) ? true : null,
             ], static fn ($v) => $v !== null);
-            // The runtime lays out lines; what compiles to CSS runs before there is a script to ask.
-            $measured = in_array($type, ['appear', 'hover', 'press', 'event'], true);
 
             $screens = array_values(array_intersect(self::SCREENS, array_filter((array) ($animation['on'] ?? []), 'is_string')));
             $screens !== [] && count($screens) < 3 && $clean['on'] = $screens;
@@ -155,7 +155,6 @@ final class Motion
                 $target = $step['target'] ?? 'self';
                 // A line rises from behind its own edge, or it is only a late word.
                 $mask = ! empty($step['mask']) || $target === 'lines';
-                $target === 'lines' && ! $measured && $target = 'words';
                 $target = is_string($target) && (in_array($target, ['self', 'children', 'words', 'lines', 'chars'], true) || preg_match(self::NODE, $target)) ? $target : 'self';
 
                 $steps[] = array_filter([
@@ -217,11 +216,11 @@ final class Motion
      * @param  array<string, string>  $breakpoints  name => min-width (see StyleCompiler)
      * @param  array<string, string>  $curves  the design's ease tokens: name => timing function
      * @param  string  $id  the node's id, which a pinned element's wrapper is known by
-     * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, scroll: list<array>, split: ?array{mask: bool, chars: bool}, pin: bool, timelines: list<string>, forever: bool}
+     * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, scroll: list<array>, split: ?array{mask: bool, chars: bool}, lines: bool, pin: bool, timelines: list<string>, forever: bool}
      */
     public static function compile(array $motion, array $breakpoints = [], array $curves = [], string $id = ''): array
     {
-        $out = ['classes' => [], 'rules' => [], 'runtime' => [], 'scroll' => [], 'split' => null, 'pin' => false, 'timelines' => [], 'forever' => false];
+        $out = ['classes' => [], 'rules' => [], 'runtime' => [], 'scroll' => [], 'split' => null, 'lines' => false, 'pin' => false, 'timelines' => [], 'forever' => false];
         self::$curves = array_filter($curves, static fn ($curve) => is_string($curve) && preg_match(self::TIMING, trim($curve)));
 
         foreach ($motion as $animation) {
@@ -303,13 +302,15 @@ final class Motion
 
             $name = 'cms-mk-'.self::hash($frames);
             $target = $step['target'];
+            // Which words share a line only the laid-out page knows: the runtime numbers them (see lines()).
+            $target === 'lines' && $out['lines'] = true;
             // A later step's `from` must not show before it starts.
             $fill = isset($seen[$target]) ? (isset($step['to']) ? 'forwards' : 'none') : (isset($step['to']) ? 'both' : 'backwards');
             $seen[$target] = true;
             $spread = (float) ($step['stagger'] ?? 0);
             $delay = self::seconds($start);
 
-            if ($spread > 0 && in_array($target, ['words', 'chars', 'children'], true)) {
+            if ($spread > 0 && in_array($target, ['words', 'lines', 'chars', 'children'], true)) {
                 $each = (int) round($spread * 1000);
                 $delay = 'calc('.($load ? 'min(var(--i,0)*'.$each.'ms,'.((int) (self::LOAD_SPREAD * 1000)).'ms)' : 'var(--i,0)*'.$each.'ms').' + '.self::seconds($start).')';
             }
@@ -378,10 +379,11 @@ final class Motion
             }
 
             $target = $step['target'];
+            $target === 'lines' && $out['lines'] = true;
             $name = 'cms-mk-'.self::hash($frames);
             $width = "(({$end}) - ({$start}))";
             $stagger = (float) ($step['stagger'] ?? 0);
-            $staggered = $stagger > 0 && in_array($target, ['words', 'chars', 'children'], true);
+            $staggered = $stagger > 0 && in_array($target, ['words', 'lines', 'chars', 'children'], true);
             // Staggered items take their turn within the range; ~12 items spread over it.
             $share = $staggered ? 1 / max(1, 1 + 11 * $stagger / max(0.05, $to - $from)) : 1.0;
             $offset = $staggered ? '+ var(--i,0) * '.round((1 - $share) / 11, 4).' * '.$width : '';
@@ -403,7 +405,8 @@ final class Motion
         return match (true) {
             $target === 'self' => ".{$class}",
             $target === 'children' => ".{$class}>*",
-            $target === 'words' => ".{$class} .cms-w__i",
+            // A line is its words, each with the turn of its line (--i), which the runtime counts once they are laid out.
+            $target === 'words', $target === 'lines' => ".{$class} .cms-w__i",
             $target === 'chars' => ".{$class} .cms-c",
             default => '[data-cms="'.substr($target, 1).'"]',
         };
