@@ -49,7 +49,8 @@ export function PersonPicker({ value, onChange, max = Infinity, disabled, label 
     <button
       id={id}
       type="button"
-      aria-label={label}
+      // What it does, then the name it shows: someone who speaks to the screen says the name they see.
+      aria-label={value.length ? `${label}: ${personName(value[0])}` : label}
       aria-describedby={describedBy}
       disabled={disabled}
       className={cn('flex h-full min-w-0 flex-1 items-center gap-2 pr-1 text-left text-sm outline-none disabled:cursor-default', small ? 'rounded-sm pl-2' : 'rounded-md pl-2.5')}

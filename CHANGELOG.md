@@ -68,6 +68,7 @@
 
 ### Fixed
 
+- For screen readers and voice control: the account button at the foot of the sidebar is named by the name it shows (it was only “Account”, so saying the name you see did nothing), an entry’s author button says who it shows, and a tree list such as Pages is a proper table again (the drag-and-drop announcer sat among its rows).
 - **Plugins › Updates** no longer says "All plugins are up to date" above a list of plugins no store can check: with none from a store it says **No plugins to check**, and plugins that are not from a store are named only beside ones that are. A site updated with Composer says so in four words, not an instruction.
 - On a phone, a list's select filters (the Audit Log's **Everyone** and **All Actions**) share one row, half each, instead of stacking at half width with **Display** hanging beside the second.
 - The Audit Log says every action in words: one whose ability is gone (renamed since, or its plugin is off) reads as its name in words (`pages/customise` is **Customise Pages**) instead of standing as a raw name among the others, in the list and in the action filter.
