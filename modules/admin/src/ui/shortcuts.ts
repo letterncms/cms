@@ -47,6 +47,23 @@ export function useShortcutList(): ShortcutInfo[] {
 }
 
 /**
+ * Says what a key does, and nothing else: it is listed in the overlay `?` opens while `enabled`, and no key is
+ * listened for. For keys that are handled somewhere this window's listener must not reach or take over: the
+ * page builder's canvas, which is a document of its own, or a field that handles its own keys.
+ *
+ *   useShortcutLabel('mod+d', duplicateLabel, canvasGroup, !!selected)   // both translated, as any label
+ */
+export function useShortcutLabel(combo: string, label: string | undefined, group?: string, enabled = true) {
+  useEffect(() => {
+    if (!enabled || !label) return
+    const id = Symbol(combo)
+    listed.set(id, { keys: combo, label, group })
+    changed()
+    return () => { listed.delete(id); changed() }
+  }, [combo, enabled, label, group])
+}
+
+/**
  * Global keyboard shortcut; ignores plain keys while typing. With a `label` (and a `group`, such as "Lists")
  * it is listed in the keyboard shortcuts overlay for as long as it is enabled: say what the key does there,
  * in Title Case, and the overlay is always true of the screen on view.
@@ -55,13 +72,7 @@ export function useShortcut(combo: string, handler: (e: KeyboardEvent) => void, 
   const ref = useRef(handler)
   ref.current = handler
 
-  useEffect(() => {
-    if (!enabled || !label) return
-    const id = Symbol(combo)
-    listed.set(id, { keys: combo, label, group })
-    changed()
-    return () => { listed.delete(id); changed() }
-  }, [combo, enabled, label, group])
+  useShortcutLabel(combo, label, group, enabled)
 
   useEffect(() => {
     if (!enabled) return

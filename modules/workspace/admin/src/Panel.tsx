@@ -1,5 +1,5 @@
 import { adminUrl, CmsError, Link, panelsFor, registry, t, useAction, useLocation, useManifest, type ComposerOption, type SurfaceAction } from '@letterncms/sdk'
-import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, useShortcut, type ActionAsker, type ActionRunner } from '@letterncms/ui'
+import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, useShortcutLabel, type ActionAsker, type ActionRunner } from '@letterncms/ui'
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Composer, coarse } from './Composer'
 import { History, NewChatButton } from './History'
@@ -25,7 +25,7 @@ const useWide = () => useSyncExternalStore((change) => {
  */
 export function WorkspacePanel() {
   // The key itself is the module's (index.tsx); here it is said by name, so `?` lists it.
-  useShortcut('mod+j', () => {}, true, t('Chat'))
+  useShortcutLabel('mod+j', t('Chat'))
   const { path } = useLocation()
   const { mode, title } = usePanel()
   const floating = useFloating()
