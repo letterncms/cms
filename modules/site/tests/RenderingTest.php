@@ -259,6 +259,30 @@ final class RenderingTest extends TestCase
         $this->assertArrayHasKey('spacing', (array) $this->cms()->abilities()->execute('design/get', [], \Cms\Abilities\AbilityContext::system('test'))['prose']);
     }
 
+    public function test_element_styles_take_a_small_grammar_of_selectors_and_nothing_else(): void
+    {
+        $compiler = \Cms\Modules\Site\Design\DesignCompiler::class;
+
+        foreach (['h1 em', 'h2 > strong', 'nav a:hover', 'li::marker', 'figure figcaption', 'ul li > a:focus-visible', 'a:hover', '::selection', 'body'] as $selector) {
+            $this->assertTrue($compiler::selectable($selector), $selector);
+        }
+
+        foreach (['.hero em', '#main p', 'h1[title]', 'h1, body', 'h1{color:red}body', 'h1 em strong a', 'body em', 'a:has(img)', 'h1 em:hover:active', 'p}', 'script', '*', '', 'h1  em', ['h1']] as $selector) {
+            $this->assertFalse($compiler::selectable($selector), json_encode($selector));
+        }
+
+        $css = $this->cms()->abilities()->execute('design/preview', [
+            'styles' => ['h1 em' => ['fontStyle' => 'italic', 'color' => 'rgb(7, 8, 9)'], 'nav a:hover' => ['color' => 'red'], '.x' => ['color' => 'blue'], 'h1}body{display:none' => ['color' => 'blue']],
+            'prose' => ['li::marker' => ['color' => 'green'], 'blockquote p' => ['color' => 'teal']],
+        ], \Cms\Abilities\AbilityContext::system('test'))['css'];
+
+        $this->assertStringContainsString('h1 em{font-style:italic;color:rgb(7, 8, 9)}', $css);
+        $this->assertStringContainsString('nav a:hover{color:red}', $css);
+        $this->assertStringNotContainsString('blue', $css);
+        $this->assertStringContainsString('.cms-prose li:where(:not(.cms-box, .cms-repeat))::marker{color:green}', $css);
+        $this->assertStringContainsString('.cms-prose blockquote p:where(:not(.cms-box, .cms-repeat)){color:teal}', $css);
+    }
+
     public function test_form_fields_are_styled_once_from_the_design_system(): void
     {
         $context = \Cms\Abilities\AbilityContext::system('test');

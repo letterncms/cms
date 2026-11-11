@@ -43,6 +43,7 @@
 - A global set's fields are the same screen as a collection's: **Fields** and **Settings** as tabs in one column under the set's own name, with **Delete Global Set** at the foot of Settings instead of in the middle of the page on a phone. In a collection's settings the list's columns are one group labelled **Columns** with **Reset Columns** beside it, the group that holds the structure is called Content, and the line under URL Pattern is gone.
 - A view's `ui/records` takes `controls` (`{component, props}`): a component of the catalog drawn in the list's toolbar before **Display**. `@letterncms/ui`: `setViewPrefs(handle, prefs)` puts a list's view, sort and columns in place, and every list showing them follows at once; `DataView` takes `controls`.
 - An entry's row menu says **Edit**, not "Open", beside its pencil, for those who may edit it. The number beside a collection's name (and on the **Site** tab of Pages) counts its entries in the language on view whatever the list is narrowed to, so it no longer reads "0" next to a filter that found nothing.
+- **Design System**: an element style can reach a tag inside a tag. Beside the elements the Design System offers, `styles` and `prose` take any tag, alone or up to three deep with a space (inside) or ` > ` (directly inside), and one state or part at the end: `"h1 em"`, `"li > a"`, `"nav a:hover"`, `"li::marker"`. Classes, ids and attributes stay with `custom.css`.
 
 ### Fixed
 
