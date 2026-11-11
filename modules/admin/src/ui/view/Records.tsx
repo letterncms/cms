@@ -454,11 +454,12 @@ function Cell({ row, column: c, media, first }: { row: Row; column: Column; medi
   return (
     <span className="flex min-w-0 items-baseline gap-2">
       {icon ? <Icon name={String(icon)} size={14} className="shrink-0 self-center text-muted" /> : null}
-      <span className="max-w-full shrink-0 truncate">{value}</span>
+      {/* Beside a title, the note is what must be read whole (who is editing): there the title is cut short first. */}
+      <span className={first && second && !problem ? 'min-w-0 truncate' : 'max-w-full shrink-0 truncate'}>{value}</span>
       {badge ? <Badge className="shrink-0 self-center font-normal">{String(badge)}</Badge> : null}
       {problem
         ? <span className="flex min-w-0 items-center gap-1 font-normal text-warning"><Icon name="warning" size={12} className="shrink-0" /><span className="truncate">{String(problem)}</span></span>
-        : second ? <span className={cn('min-w-0 truncate font-normal text-muted', first && 'max-sm:hidden')}>{String(second)}</span> : null}
+        : second ? <span className={cn('font-normal text-muted', first ? 'shrink-0 max-sm:hidden' : 'min-w-0 truncate')}>{String(second)}</span> : null}
     </span>
   )
 }
