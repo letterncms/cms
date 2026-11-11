@@ -24,6 +24,19 @@ final class MediaStore
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
         'application/zip' => 'zip',
+        // What a scene, an animation player or a WebGL library loads by URL (see ASSETS).
+        'model/gltf-binary' => 'glb', 'model/gltf+json' => 'gltf', 'image/vnd.radiance' => 'hdr', 'image/ktx2' => 'ktx2',
+        'application/json' => 'json', 'application/vnd.rive' => 'riv',
+    ];
+
+    /**
+     * Files a script loads, not ones a page shows: 3D models, their environment maps and textures, Lottie and Rive
+     * animations. Each has a ceiling of its own in MB (the site's upload limit still applies when it is lower),
+     * and none of them is an image to resize, whatever its MIME type starts with.
+     */
+    public const array ASSETS = [
+        'model/gltf-binary' => 64, 'model/gltf+json' => 16, 'image/vnd.radiance' => 32, 'image/ktx2' => 32,
+        'application/json' => 4, 'application/vnd.rive' => 16,
     ];
 
     public function __construct(
@@ -57,7 +70,15 @@ final class MediaStore
             $mime = $this->detect($tmp, $originalName);
             $ext = self::TYPES[$mime] ?? throw AbilityException::invalid(__('Files of type :type are not allowed.', ['type' => $mime]));
 
-            if ($mime === 'image/svg+xml') {
+            if (isset(self::ASSETS[$mime])) {
+                if (filesize($tmp) > self::ASSETS[$mime] * 1024 * 1024) {
+                    throw AbilityException::invalid(__('A .:ext file can be :size MB at most.', ['ext' => $ext, 'size' => self::ASSETS[$mime]]));
+                }
+
+                if (($problem = $this->unsafe($mime, $tmp)) !== null) {
+                    throw AbilityException::invalid($problem);
+                }
+            } elseif ($mime === 'image/svg+xml') {
                 file_put_contents($tmp, $this->svg->clean((string) file_get_contents($tmp)));
             } elseif (str_starts_with($mime, 'image/')) {
                 if (! $this->images->dimensions($tmp)) {
@@ -195,6 +216,33 @@ final class MediaStore
     public function detect(string $file, string $name): string
     {
         $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($file);
+        $head = (string) file_get_contents($file, false, null, 0, 16);
+
+        // Formats finfo has no name for, by the bytes they must start with. The file's name decides nothing.
+        $asset = match (true) {
+            str_starts_with($head, "glTF\x02\x00\x00\x00") => 'model/gltf-binary',
+            str_starts_with($head, "\xABKTX 20\xBB\r\n\x1A\n") => 'image/ktx2',
+            str_starts_with($head, "#?RADIANCE\n"), str_starts_with($head, "#?RGBE\n") => 'image/vnd.radiance',
+            str_starts_with($head, 'RIVE') && $mime === 'application/octet-stream' => 'application/vnd.rive',
+            default => null,
+        };
+
+        if ($asset !== null) {
+            return $asset;
+        }
+
+        // JSON is allowed as the two things it is uploaded for: a glTF model and a Lottie animation.
+        if (in_array($mime, ['application/json', 'text/plain'], true) && str_starts_with(ltrim($head), '{') && filesize($file) <= self::ASSETS['model/gltf+json'] * 1024 * 1024) {
+            $json = json_decode((string) file_get_contents($file), true, 128);
+
+            if (is_array($json) && is_string($json['asset']['version'] ?? null) && array_intersect_key($json, ['scenes' => 1, 'nodes' => 1, 'meshes' => 1]) !== []) {
+                return 'model/gltf+json';
+            }
+
+            if (is_array($json) && isset($json['v'], $json['w'], $json['h'], $json['fr']) && is_array($json['layers'] ?? null)) {
+                return 'application/json';
+            }
+        }
 
         // SVGs are often reported as text; trust content, not the name.
         if (in_array($mime, ['text/plain', 'text/xml', 'application/xml', 'image/svg'], true) && preg_match('/<svg[\s>]/i', (string) file_get_contents($file, false, null, 0, 4096))) {
@@ -218,9 +266,65 @@ final class MediaStore
         return $mime;
     }
 
+    /**
+     * Why an asset can't be kept, or null. A player runs what an animation carries and fetches what a model
+     * points at, so neither may carry code or point away from the site.
+     */
+    public function unsafe(string $mime, string $file): ?string
+    {
+        if (! in_array($mime, ['application/json', 'model/gltf+json'], true)) {
+            return null;
+        }
+
+        $json = json_decode((string) file_get_contents($file), true, 128);
+
+        if (! is_array($json)) {
+            return __('This file could not be read.');
+        }
+
+        if ($mime === 'application/json' && ! (isset($json['v'], $json['w'], $json['h'], $json['fr']) && is_array($json['layers'] ?? null))) {
+            return __('JSON files are kept when they are a Lottie animation or a glTF model. This one is neither.');
+        }
+
+        if ($mime === 'model/gltf+json') {
+            foreach ([...(array) ($json['buffers'] ?? []), ...(array) ($json['images'] ?? [])] as $part) {
+                if (is_array($part) && isset($part['uri']) && ! (is_string($part['uri']) && str_starts_with($part['uri'], 'data:'))) {
+                    return __('This .gltf points at other files, which it won’t find here. Export the model as .glb, or with its data embedded.');
+                }
+            }
+
+            return null;
+        }
+
+        $problem = null;
+        $walk = static function (array $node) use (&$walk, &$problem): void {
+            foreach ($node as $key => $value) {
+                if ($problem !== null) {
+                    return;
+                }
+
+                // An expression: JavaScript the Lottie player evaluates.
+                if ($key === 'x' && is_string($value) && trim($value) !== '') {
+                    $problem = __('This Lottie animation has expressions, which run as code in the visitor’s browser. Export it without expressions.');
+                } elseif (in_array($key, ['u', 'p'], true) && is_string($value) && preg_match('#^\s*(https?:)?//#i', $value)) {
+                    $problem = __('This Lottie animation loads images from another server. Export it with its images embedded.');
+                } elseif (is_array($value)) {
+                    $walk($value);
+                }
+            }
+        };
+        $walk($json);
+
+        return $problem;
+    }
+
     /** @return array{0: ?int, 1: ?int} */
     private function dimensions(string $file, string $mime): array
     {
+        if (isset(self::ASSETS[$mime])) {
+            return [null, null];
+        }
+
         if ($mime === 'image/svg+xml') {
             $svg = (string) file_get_contents($file, false, null, 0, 4096);
 

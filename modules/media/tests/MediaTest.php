@@ -88,6 +88,65 @@ final class MediaTest extends TestCase
         app(MediaStore::class)->store($this->tmp("<?php echo 'pwned';"), 'image.jpg');
     }
 
+    public function test_keeps_what_scenes_and_animation_players_load(): void
+    {
+        $store = app(MediaStore::class);
+        $lottie = (string) json_encode(['v' => '5.9.0', 'fr' => 30, 'ip' => 0, 'op' => 60, 'w' => 200, 'h' => 200, 'layers' => [['ty' => 4, 'ks' => ['o' => ['a' => 0, 'k' => 100], 'p' => ['a' => 0, 'k' => [100, 100, 0]]]]], 'assets' => [['id' => 'i', 'p' => 'data:image/png;base64,AAAA', 'u' => '', 'e' => 1]]]);
+        $gltf = (string) json_encode(['asset' => ['version' => '2.0'], 'scenes' => [['nodes' => [0]]], 'nodes' => [[]], 'buffers' => [['uri' => 'data:application/octet-stream;base64,AAAA', 'byteLength' => 3]]]);
+        $files = [
+            'model/gltf-binary' => ['glb', "glTF\x02\x00\x00\x00".pack('V', 20).str_repeat("\x00", 8)],
+            'model/gltf+json' => ['gltf', $gltf],
+            'image/vnd.radiance' => ['hdr', "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 1\n\x80\x80\x80\x80"],
+            'image/ktx2' => ['ktx2', "\xABKTX 20\xBB\r\n\x1A\n".str_repeat("\x00", 68)],
+            'application/json' => ['json', $lottie],
+            'application/vnd.rive' => ['riv', "RIVE\x07\x00\xB9\x01\x00\x00\x00\x00\x00\x17"],
+        ];
+
+        foreach ($files as $mime => [$ext, $bytes]) {
+            // The name says nothing: the bytes decide what a file is.
+            $item = $store->store($this->tmp($bytes), "Scene one.bin");
+
+            $this->assertSame($mime, $item->mime);
+            $this->assertStringEndsWith('.'.$ext, $item->path);
+            $this->assertSame('file', $item->kind(), 'not an image to resize, whatever its type starts with');
+            $this->assertFalse($item->isImage());
+            $this->assertSame([null, null], [$item->width, $item->height]);
+            $this->assertSame($bytes, file_get_contents(public_path($item->path)));
+        }
+    }
+
+    public function test_refuses_assets_that_carry_code_point_away_or_are_too_large(): void
+    {
+        $store = app(MediaStore::class);
+        $lottie = ['v' => '5.9.0', 'fr' => 30, 'ip' => 0, 'op' => 60, 'w' => 200, 'h' => 200, 'layers' => []];
+        $refused = [
+            'expressions' => (string) json_encode([...$lottie, 'layers' => [['ks' => ['r' => ['a' => 0, 'k' => 0, 'x' => 'var $bm_rt; $bm_rt = fetch("https://evil.test")']]]]]),
+            'another server' => (string) json_encode([...$lottie, 'assets' => [['id' => 'i', 'u' => 'https://evil.test/', 'p' => 'pixel.png']]]),
+            'neither' => '{"name": "just some json", "private": true}',
+            'points at other files' => (string) json_encode(['asset' => ['version' => '2.0'], 'scenes' => [], 'buffers' => [['uri' => '../../../config/site.yaml']]]),
+            '4 MB at most' => (string) json_encode([...$lottie, 'nm' => str_repeat('x', 4 * 1024 * 1024 + 1)]),
+        ];
+
+        foreach ($refused as $why => $bytes) {
+            try {
+                $store->store($this->tmp($bytes), 'animation.json');
+                $this->fail("kept: {$why}");
+            } catch (AbilityException $e) {
+                $this->assertStringContainsString($why, $e->getMessage());
+            }
+        }
+
+        // A script that calls itself a model is still a script.
+        foreach (['model.glb' => "<?php echo 'pwned';", 'anim.riv' => 'RIVE is just text here', 'env.hdr' => '<script>alert(1)</script>'] as $name => $bytes) {
+            try {
+                $item = $store->store($this->tmp($bytes), $name);
+                $this->assertStringEndsWith('.txt', $item->path, "{$name} is kept as the text it is");
+            } catch (AbilityException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
     public function test_svg_is_sanitized(): void
     {
         $clean = app(SvgSanitizer::class)->clean('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" onload="alert(1)"><script>alert(1)</script><a href="javascript:alert(1)"><rect width="10" height="10" fill="red"/></a><foreignObject><div/></foreignObject><use href="https://evil.test/x.svg#a"/></svg>');

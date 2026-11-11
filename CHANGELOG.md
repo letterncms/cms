@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Media** keeps what scenes and animation players load: 3D models (`.glb`, and `.gltf` with its data embedded), environment maps (`.hdr`), GPU textures (`.ktx2`), Lottie animations (`.json`) and Rive files (`.riv`). Each is recognised by its contents, has a size limit of its own (64, 16, 32, 32, 4 and 16 MB), and is served with its own type and cached like other media. A Lottie animation with expressions or images on another server, and a `.gltf` that points at other files, are refused with the reason. New sites get the types in `public/.htaccess`; on an existing site, copy the block that starts with “What scripts load from the media library” from a new one.
+
 ## 0.21.0 (2026-11-11)
 
 ### Changed
