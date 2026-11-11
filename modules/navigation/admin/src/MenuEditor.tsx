@@ -1,5 +1,5 @@
-import { can, invalidate, run, t, useAbility, useManifest, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
-import { Badge, Button, NotFoundState, Fields, Icon, IconButton, Popover, SaveBar, Skeleton, SortableTree, Spinner, cn } from '@letterncms/ui'
+import { can, invalidate, navigate, run, t, useAbility, useManifest, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
+import { Badge, Button, EmptyState, Fields, Icon, IconButton, List, Menu as Actions, NoMatches, NotFoundState, Popover, QueryError, Row as ListRow, SaveBar, Skeleton, SortableTree, Spinner, cn, confirm, toast } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 interface Target {
@@ -36,12 +36,6 @@ interface Found {
   displayStatus: string
 }
 
-// How deep links may nest, said plainly: 1 is a flat menu, 2 allows one level of submenus.
-const levels = (): FieldDef => ({ handle: 'maxDepth', type: 'select', label: t('Submenus'), size: 'sm', required: true, options: [
-  { value: '1', label: t('No Submenus') },
-  { value: '2', label: t('One Level') },
-  ...[3, 4, 5].map((n) => ({ value: String(n), label: t('{count} Levels', { count: n - 1 }) })),
-] })
 const search = (): FieldDef => ({ handle: 'query', type: 'text', label: t('Search Content'), autofocus: true, placeholder: t('Search Pages and Posts') })
 
 /** What is saved of a menu: its items without what is looked up for showing them, and nothing empty. */
@@ -54,35 +48,39 @@ const words = (locales: Item['locales']) => {
   })
   return filled.length ? Object.fromEntries(filled) : undefined
 }
-const snapshot = (maxDepth: number, items: Item[]) => JSON.stringify([maxDepth, clean(items)])
+const snapshot = (items: Item[]) => JSON.stringify(clean(items))
 
 const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('')
 
 /**
- * The links of one menu, as a tree to drag: the place around it (its name, Rename and Delete)
- * is the view `menu` (NavigationModule::places). Saved from the save bar.
+ * The links of one menu, as a tree to drag: the place around it (its name and Menu Settings)
+ * is the view `menu` (NavigationModule::places). Saved from the save bar; deleting the menu is at the foot.
  */
 export default function MenuEditor({ props }: SurfaceComponentProps<{ handle: string }>) {
   const menu = useAbility<Menu>('navigation/get', { handle: props.handle }, { refetchOnWindowFocus: false })
 
-  if (menu.isLoading) return <Skeleton className="h-40" />
-  if (!menu.data) return <NotFoundState icon="list-tree" />
+  if (menu.isLoading) return <div className="space-y-1.5" aria-hidden>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-11 rounded-lg" />)}</div>
+  if (menu.isError && !menu.data) return <QueryError message={t('Couldn’t load this menu.')} onRetry={() => void menu.refetch()} retrying={menu.isFetching} />
+  if (!menu.data) return <NotFoundState icon="list-tree" action={<Button onClick={() => navigate('/navigation')}>{t('Back to Navigation')}</Button>} />
 
   return <Editor key={menu.data.handle} menu={menu.data} />
 }
 
 function Editor({ menu }: { menu: Menu }) {
   const [items, setItems] = useState<Item[]>(menu.items)
-  const [maxDepth, setMaxDepth] = useState(menu.maxDepth)
+  // How deep links may nest is the menu's own (Menu Settings): it follows the menu as it is stored.
+  const maxDepth = menu.maxDepth
+  const [focus, setFocus] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [open, setOpen] = useState<Set<string>>(new Set())
-  const [saved, setSaved] = useState(() => snapshot(menu.maxDepth, menu.items))
+  const [saved, setSaved] = useState(() => snapshot(menu.items))
   // What Discard puts back: the menu as last saved.
-  const [base, setBase] = useState<Pick<Menu, 'maxDepth' | 'items'>>(menu)
+  const [base, setBase] = useState<Item[]>(menu.items)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
   const manage = can('navigation.manage')
   // Changed only while it differs from what was saved: putting something back is no change.
-  const dirty = useMemo(() => snapshot(maxDepth, items) !== saved, [maxDepth, items, saved])
+  const dirty = useMemo(() => snapshot(items) !== saved, [items, saved])
 
   const change = (next: Item[]) => setItems(next)
 
@@ -91,9 +89,26 @@ function Editor({ menu }: { menu: Menu }) {
     change(walk(items))
   }
 
-  const remove = (id: string) => {
-    const walk = (list: Item[]): Item[] => list.filter((i) => i.id !== id).map((i) => ({ ...i, children: walk(i.children) }))
-    change(walk(items))
+  // Removing acts at once, so it can be taken back at once: the link goes back where it was, under the same link and in
+  // the same place, into the menu as it is by then. What was changed in between stays.
+  const remove = (id: string, name: string) => {
+    let taken: { item: Item; parent: string | null; index: number } | null = null
+    const walk = (list: Item[], parent: string | null): Item[] => list.flatMap((i, index) => {
+      if (i.id === id) { taken = { item: i, parent, index }; return [] }
+      return [{ ...i, children: walk(i.children, i.id) }]
+    })
+    change(walk(items, null))
+    const gone = taken as { item: Item; parent: string | null; index: number } | null
+    if (!gone) return
+    const put = (list: Item[], parent: string | null): { list: Item[]; done: boolean } => {
+      if (parent === gone.parent) return { list: [...list.slice(0, gone.index), gone.item, ...list.slice(gone.index)], done: true }
+      let done = false
+      const next = list.map((i) => { if (done) return i; const inner = put(i.children, i.id); done = inner.done; return inner.done ? { ...i, children: inner.list } : i })
+      return { list: next, done }
+    }
+    // Its parent may be gone by then too: it goes to the end of the menu.
+    const undo = () => setItems((now) => { const back = put(now, null); return back.done ? back.list : [...now, gone.item] })
+    toast(t('Removed “{name}”', { name }), { action: { label: t('Undo'), onClick: undo } })
   }
 
   const toggle = (id: string) => setOpen((s) => {
@@ -108,11 +123,12 @@ function Editor({ menu }: { menu: Menu }) {
     const id = newId()
     change([...items, { id, url: '', label: '', children: [] }])
     setOpen((s) => new Set(s).add(id))
+    // The cursor goes to the new link's label.
+    setFocus(id)
   }
 
   const discard = () => {
-    setMaxDepth(base.maxDepth)
-    setItems(base.items)
+    setItems(base)
     setFailed(null)
   }
 
@@ -120,11 +136,10 @@ function Editor({ menu }: { menu: Menu }) {
     setBusy(true)
     setFailed(null)
     try {
-      const stored = await run<Menu>('navigation/update', { handle: menu.handle, maxDepth, items: clean(items) })
+      const stored = await run<Menu>('navigation/update', { handle: menu.handle, items: clean(items) })
       setItems(stored.items)
-      setMaxDepth(stored.maxDepth)
-      setSaved(snapshot(stored.maxDepth, stored.items))
-      setBase(stored)
+      setSaved(snapshot(stored.items))
+      setBase(stored.items)
       invalidate('navigation/')
     } catch (e) {
       setFailed(e instanceof Error ? e.message : String(e))
@@ -133,12 +148,28 @@ function Editor({ menu }: { menu: Menu }) {
     }
   }
 
+  const removeMenu = async () => {
+    if (!(await confirm({ title: t('Delete “{title}”?', { title: menu.title }), description: t('Repeat blocks that list this menu will show nothing.'), confirm: t('Delete'), danger: true }))) return
+    setDeleting(true)
+    try {
+      await run('navigation/delete', { handle: menu.handle })
+      invalidate('navigation/', 'views/')
+      navigate('/navigation')
+    } catch (e) {
+      toast.error(e)
+      setDeleting(false)
+    }
+  }
+
   return (
     <>
       {items.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border-strong px-6 py-10 text-center text-sm text-muted">{t('This menu is empty.')}</div>
+        <EmptyState compact icon="list-tree" title={t('No links yet')} />
       ) : (
         <SortableTree<Item>
+          // A level in is a clear step: a nested link starts where its parent's name does.
+          indent={32}
+          className="space-y-1.5!"
           items={items}
           maxDepth={maxDepth - 1}
           onChange={change}
@@ -150,20 +181,23 @@ function Editor({ menu }: { menu: Menu }) {
               disabled={!manage}
               onToggle={() => toggle(item.id)}
               onPatch={(v) => patch(item.id, v)}
-              onRemove={() => remove(item.id)}
+              onRemove={() => remove(item.id, item.label?.trim() || item.target?.title || item.url || t('Link'))}
+              autoFocus={focus === item.id}
             />
           )}
         />
       )}
 
       {manage && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className={cn('flex flex-wrap items-center gap-2', items.length === 0 ? 'justify-center' : 'mt-3')}>
           <AddPage onPick={addEntry} />
           <Button icon="link" onClick={addLink}>{t('Add Link')}</Button>
-          <div className="ml-auto flex items-center gap-2 text-sm text-muted">
-            <span aria-hidden>{t('Submenus')}</span>
-            <span className="w-36"><Fields bare fields={[levels()]} values={{ maxDepth: String(maxDepth) }} onChange={(_, v) => setMaxDepth(Number(v))} /></span>
-          </div>
+        </div>
+      )}
+      {/* Deleting is there to see, at the end of the page, never next to Save. */}
+      {manage && (
+        <div className="mt-10 border-t border-border pt-6">
+          <Button variant="destructive" icon="trash" className="-ml-2" disabled={busy} loading={deleting} onClick={() => void removeMenu()}>{t('Delete Menu')}</Button>
         </div>
       )}
       {manage && <SaveBar dirty={dirty} saving={busy} error={failed} onSave={() => void save()} onDiscard={discard} />}
@@ -173,41 +207,54 @@ function Editor({ menu }: { menu: Menu }) {
 
 type RowCtx = { depth: number; handle: ReactNode; indent: () => void; outdent: () => void; canIndent: boolean; canOutdent: boolean }
 
-function Row({ item, ctx, expanded, disabled, onToggle, onPatch, onRemove }: { item: Item; ctx: RowCtx; expanded: boolean; disabled: boolean; onToggle: () => void; onPatch: (v: Partial<Item>) => void; onRemove: () => void }) {
+/** One link: the same row a field has in a blueprint (drag, name, what it is, a menu, a chevron that opens its options). */
+function Row({ item, ctx, expanded, disabled, onToggle, onPatch, onRemove, autoFocus }: { item: Item; ctx: RowCtx; expanded: boolean; disabled: boolean; onToggle: () => void; onPatch: (v: Partial<Item>) => void; onRemove: () => void; autoFocus?: boolean }) {
   const link = !item.entry
   const status = item.target?.status
+  // Not on the site for now: said in the row. On a phone a row is its name and what is wrong with it: where it goes is a tap away.
+  const hidden = !!status && status !== 'published' && status !== 'changed'
   const where = link ? item.url || t('No URL yet') : item.target?.uri ?? t('No URL')
   const site = useManifest().site
   const languages = site.locales.filter((code: string) => code !== site.defaultLocale)
+  // Something to open the row for: where a link goes, or what the item says in the site's other languages.
+  const more = link || languages.length > 0
   const language = (code: string) => new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? code
 
   return (
-    <div className={cn('group rounded-sm border bg-bg', expanded ? 'border-border-strong' : 'border-border hover:border-border-strong')}>
-      <div className="flex h-10 items-center gap-1.5 pl-1 pr-1.5">
+    <div className={cn('rounded-lg border bg-bg transition-shadow', expanded ? 'border-border-strong shadow-pop' : 'border-border')}>
+      <div className="flex h-11 items-center gap-2 px-2">
         {!disabled && ctx.handle}
         <Icon name={link ? 'link' : 'page'} size={14} className="shrink-0 text-muted" />
         <Fields
           bare
-          className="min-w-0 flex-1"
+          // The name keeps its room; where the link goes gives way first.
+          className="min-w-[60%] flex-1 max-sm:min-w-0"
           disabled={disabled}
-          fields={[{ handle: 'label', type: 'text', component: 'navigation-label', label: t('Label'), placeholder: link ? t('Label') : item.target?.title ?? t('Missing entry'), display: link ? undefined : 'fallback' }]}
+          fields={[{ handle: 'label', type: 'text', component: 'navigation-label', label: t('Label'), autofocus: autoFocus, placeholder: link ? t('Label') : item.target?.title ?? t('Missing entry'), display: link ? undefined : 'fallback' }]}
           values={{ label: item.label ?? '' }}
           onChange={(_, v) => onPatch({ label: v })}
         />
-        <span className={cn('max-w-[38%] truncate text-xs', link && !item.url ? 'text-warning' : 'text-faint')}>{where}</span>
-        {status && status !== 'published' && status !== 'changed' && <Badge tone={status === 'missing' ? 'danger' : 'neutral'}>{status === 'missing' ? t('Missing') : t('Hidden until live')}</Badge>}
+        <span className={cn('min-w-0 shrink truncate text-xs', (hidden || !link || item.url) && 'max-sm:hidden', link && !item.url ? 'text-warning' : 'text-faint')}>{where}</span>
+        {hidden && <Badge tone={status === 'missing' ? 'danger' : 'neutral'}>{status === 'missing' ? t('Missing') : t('Hidden until live')}</Badge>}
         {!disabled && (
-          <div className="flex items-center text-faint">
-            <IconButton icon="arrow-left" label={t('Move Out a Level')} size="xs" disabled={!ctx.canOutdent} onClick={ctx.outdent} />
-            <IconButton icon="arrow-right" label={t('Nest Under the Item Above')} size="xs" disabled={!ctx.canIndent} onClick={ctx.indent} />
-            <IconButton icon="settings" label={t('Link Options')} size="xs" active={expanded} onClick={onToggle} />
-            <IconButton icon="trash" label={t('Remove')} size="xs" onClick={onRemove} />
-          </div>
+          <>
+            {/* What moves or removes the link is one menu, so two buttons a row stand 44px apart on a phone. */}
+            <Actions trigger={<IconButton icon="more" label={t('Actions for {name}', { name: item.label?.trim() || item.target?.title || t('Link') })} size="xs" />} items={[
+              { label: t('Move Out a Level'), icon: 'arrow-left', disabled: !ctx.canOutdent, onSelect: ctx.outdent },
+              { label: t('Nest Under the Item Above'), icon: 'arrow-right', disabled: !ctx.canIndent, onSelect: ctx.indent },
+              ...(!link && item.target?.collection ? [{ label: t('Edit Page'), icon: 'edit', onSelect: () => navigate(`/content/${item.target!.collection}/${item.entry}`) }] : []),
+              // A link to a page has this one option: it is here, not behind a second button at the end of the row.
+              ...(more ? [] : [{ label: t('Open in a New Tab'), icon: 'external', checked: !!item.newTab, onSelect: () => onPatch({ newTab: item.newTab ? undefined : true }) }]),
+              { separator: true, label: '' },
+              { label: t('Remove'), icon: 'trash', danger: true, onSelect: onRemove },
+            ]} />
+            {more && <IconButton icon={expanded ? 'chevron-up' : 'chevron-down'} label={expanded ? t('Collapse') : t('Link Options')} size="xs" className="max-sm:ml-3" onClick={onToggle} />}
+          </>
         )}
       </div>
-      {expanded && (
+      {expanded && more && (
         <Fields
-          className="gap-y-2.5! border-t border-border px-3 py-3 pl-9"
+          className="gap-y-2.5! border-t border-border p-4"
           disabled={disabled}
           fields={[
             ...(link ? [{ handle: 'url', type: 'url', component: 'link', label: t('Link'), placeholder: t('Choose a page or paste a link') }] : []),
@@ -248,7 +295,7 @@ function AddPage({ onPick }: { onPick: (e: Found) => void }) {
     <Popover
       open={open}
       onOpenChange={(o) => { setOpen(o); if (!o) setQuery('') }}
-      className="w-[360px] p-0"
+      className="w-[360px] max-w-[calc(100vw-16px)] p-0"
       trigger={<Button icon="page">{t('Add Page')}</Button>}
     >
       <div className="border-b border-border p-2">
@@ -257,23 +304,23 @@ function AddPage({ onPick }: { onPick: (e: Found) => void }) {
       <div className="max-h-72 overflow-y-auto p-1">
         {results.isFetching && !results.data ? (
           <div className="grid place-items-center py-6 text-faint"><Spinner size={14} /></div>
+        ) : results.isError ? (
+          <QueryError compact message={t('Couldn’t load the pages.')} onRetry={() => void results.refetch()} retrying={results.isFetching} />
         ) : routable.length === 0 ? (
-          <p className="m-0 px-3 py-6 text-center text-sm text-faint">{debounced ? t('No matches') : t('No pages yet')}</p>
+          debounced ? <NoMatches className="py-6" onClear={() => setQuery('')} /> : <EmptyState compact icon="page" title={t('No pages yet')} />
         ) : (
           <>
             {!debounced && <div className="cms-label px-2 pb-1 pt-1.5">{t('Recently Edited')}</div>}
-            {routable.map((e) => (
-              <button
-                key={e.id}
-                type="button"
-                onClick={() => { onPick(e); setOpen(false); setQuery('') }}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-hover"
-              >
-                <Icon name="page" size={14} className="shrink-0 text-muted" />
-                <span className="min-w-0 flex-1 truncate">{e.title}</span>
-                <span className="max-w-[45%] truncate text-xs text-faint">{e.uri}</span>
-              </button>
-            ))}
+            <List className="border-y-0! divide-y-0!">
+              {routable.map((e) => (
+                // The popover stays open: a menu is mostly made of several pages, picked one after the other.
+                <ListRow key={e.id} className="rounded-sm px-2" onClick={() => onPick(e)}>
+                  <Icon name="page" size={14} className="shrink-0 text-muted" />
+                  <span className="min-w-[55%] flex-1 truncate">{e.title}</span>
+                  <span className="min-w-0 shrink truncate text-xs text-faint">{e.uri}</span>
+                </ListRow>
+              ))}
+            </List>
           </>
         )}
       </div>

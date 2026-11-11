@@ -71,11 +71,13 @@ final class NavigationModule extends Plugin
     {
         $this->cms()->admin()->component('navigation/menu', ['label' => 'Menu editor', 'description' => 'The links of one menu: pages and links, nested by dragging, with how deep they may go.', 'surface' => false, 'permission' => 'navigation.view',
             'props' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle'], 'additionalProperties' => false]]);
+        $this->cms()->admin()->component('navigation/menu-settings', ['label' => 'Menu Settings', 'description' => 'A menu’s name and how deep its links may nest, in a dialog.', 'surface' => false, 'permission' => 'navigation.manage',
+            'props' => ['type' => 'object', 'properties' => ['handle' => ['type' => 'string']], 'required' => ['handle'], 'additionalProperties' => false]]);
 
         $rename = static fn (string $handle, string $title) => ['label' => __('Rename'), 'icon' => 'edit', 'ability' => 'navigation/update', 'input' => ['handle' => $handle, 'title' => '{values.title}'],
             'form' => ['title' => __('Rename Menu'), 'confirm' => __('Rename'), 'values' => ['title' => $title], 'fields' => [['handle' => 'title', 'type' => 'text', 'label' => __('Name'), 'required' => true, 'autofocus' => true]]]];
-        $delete = static fn (string $handle, string $question, ?string $then = null) => ['label' => __('Delete'), 'icon' => 'trash', 'variant' => $then ? 'ghost' : 'danger', 'ability' => 'navigation/delete', 'input' => ['handle' => $handle],
-            'confirm' => ['title' => $question, 'text' => __('Repeat blocks that list this menu will show nothing.'), 'confirm' => __('Delete'), 'danger' => true], ...($then ? ['then' => 'open', 'to' => $then] : [])];
+        $delete = static fn (string $handle, string $question) => ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'navigation/delete', 'input' => ['handle' => $handle],
+            'confirm' => ['title' => $question, 'text' => __('Repeat blocks that list this menu will show nothing.'), 'confirm' => __('Delete'), 'danger' => true]];
 
         $this->cms()->views()->register('navigation', '/navigation', static fn () => ['type' => 'ui/page', 'props' => ['title' => __('Navigation'), 'icon' => 'list-tree', 'actions' => [
             ['label' => __('New Menu'), 'icon' => 'plus', 'variant' => 'primary', 'ability' => 'navigation/create', 'input' => ['title' => '{values.title}'], 'then' => 'open', 'to' => '/navigation/{result.handle}',
@@ -94,16 +96,16 @@ final class NavigationModule extends Plugin
             ]],
         ]], permission: 'navigation.view');
 
-        $this->cms()->views()->register('menu', '/navigation/:handle', function (User $user, array $params) use ($rename, $delete) {
+        $this->cms()->views()->register('menu', '/navigation/:handle', function (User $user, array $params) {
             $menu = $this->app->make(Menus::class)->find((string) ($params['handle'] ?? ''));
 
             if ($menu === null) {
                 return Views::notFound('list-tree', ['to' => '/navigation', 'label' => __('Navigation')]);
             }
 
+            // What the menu is (its name, how deep it nests) is one dialog from the bar; deleting it is at the foot of its editor, never beside Save.
             return ['type' => 'ui/page', 'props' => ['title' => $menu['title'], 'icon' => 'list-tree', 'width' => 'narrow', 'back' => ['to' => '/navigation', 'label' => __('Navigation')], 'actions' => [
-                $rename($menu['handle'], $menu['title']),
-                $delete($menu['handle'], __('Delete “:title”?', ['title' => $menu['title']]), '/navigation'),
+                ['label' => __('Menu Settings'), 'icon' => 'settings', 'component' => 'navigation/menu-settings', 'props' => ['handle' => $menu['handle']], 'can' => 'navigation.manage'],
             ]], 'children' => [['type' => 'navigation/menu', 'props' => ['handle' => $menu['handle']]]]];
         }, permission: 'navigation.view');
     }
