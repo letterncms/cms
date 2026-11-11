@@ -1,4 +1,5 @@
 import { KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { Pressable } from '../ui/Pressable'
 import { DndContext } from '../ui/dnd'
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -82,16 +83,15 @@ function Item({ item, pinned }: { item: NavItem; pinned: boolean }) {
       style={{ transform: CSS.Translate.toString(transform && { ...transform, x: 0 }), transition }}
       className={cn('flex h-9 items-center gap-2 rounded-md px-1 hover:bg-hover', isDragging && 'relative z-drag bg-bg shadow-pop')}
     >
-      <button
+      <Pressable
         ref={setActivatorNodeRef}
-        type="button"
         {...attributes}
         {...listeners}
         aria-label={t('Reorder {label}', { label: item.label })}
         className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-xs text-faint outline-offset-[-2px] hover:text-text active:cursor-grabbing"
       >
         <Icon name="drag" size={14} />
-      </button>
+      </Pressable>
       {/* The switch says whether it is pinned; the row stays as legible either way. */}
       <Icon name={item.icon} size={16} className="shrink-0 text-muted" />
       <span className="min-w-0 flex-1 truncate text-sm text-text">{item.label}</span>

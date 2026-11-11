@@ -1,4 +1,5 @@
 import { PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { Pressable } from '../ui/Pressable'
 import { DndContext } from '../ui/dnd'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -237,13 +238,13 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
       align="start"
       className="w-60"
       trigger={
-        <button type="button" className={cn('cms-sidebar-row w-full', here && 'cms-sidebar-row-active')} data-popup-open={open || undefined}>
+        <Pressable compact className={cn('cms-sidebar-row w-full', here && 'cms-sidebar-row-active')} data-popup-open={open || undefined}>
           <span className="cms-sidebar-row-main">
             <Icon name="more" size={16} className="shrink-0" />
             <span className="min-w-0 flex-1 truncate text-left">{t('More')}</span>
             <Icon name="chevron-right" size={12} className="shrink-0 text-faint" />
           </span>
-        </button>
+        </Pressable>
       }
     >
       {groups.length === 0 && <p className="m-0 px-2 py-1.5 text-sm text-muted">{t('Everything is pinned')}</p>}
@@ -301,10 +302,10 @@ export function StateBack({ own, onNavigate, drawer }: Pick<SidebarProps, 'own' 
   return (
     <>
       <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
-        <button type="button" aria-label={t('Back to {label}', { label })} onClick={back} className={cn(button, up && 'max-sm:hidden')}>
+        <Pressable aria-label={t('Back to {label}', { label })} onClick={back} className={cn(button, up && 'max-sm:hidden')}>
           <Icon name="chevron-left" size={14} className={cn('shrink-0', !drawer && 'max-sm:size-4')} />
           <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{label}</span>
-        </button>
+        </Pressable>
       </Tooltip>
       {up && (
         <Link to={up.to} aria-label={t('Back to {label}', { label: up.label })} className="cms-touch flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline outline-offset-[-2px] transition-colors hover:bg-hover hover:text-ink sm:hidden">
@@ -363,7 +364,7 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
         align="start"
         side="top"
         trigger={
-          <button type="button" className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left outline-offset-[-2px] hover:bg-hover">
+          <Pressable className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left outline-offset-[-2px] hover:bg-hover">
             <Avatar name={manifest.user.name} initials={manifest.user.initials} src={manifest.user.avatar} size={24} />
             <span className="min-w-0 flex-1">
               {/* Named by what it shows, with what it is in front: a label of its own would hide the name from voice control. */}
@@ -371,7 +372,7 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
               <span className="block truncate text-sm font-medium leading-4 text-text">{manifest.user.name}</span>
               <span className="block truncate text-xs text-faint">{manifest.user.email}</span>
             </span>
-          </button>
+          </Pressable>
         }
         items={[
           { label: t('Account'), icon: 'user', onSelect: () => navigate('/account') },
