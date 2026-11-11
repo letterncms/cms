@@ -60,7 +60,7 @@ const definition = (handle) => {
 }
 const people = [...realSources.map((source) => source.entry.author).filter(Boolean), { id: 'ada', name: 'Ada Example', initials: 'AE', avatar: null }, { id: 'grace', name: 'Grace Hopper', initials: 'GH', avatar: null }]
 const fixtureComponent = { handle: 'fixture-component', title: 'Fixture component', synced: true, category: 'Fixture', description: '', props: [{ handle: 'title', type: 'text', label: 'Title', default: 'Shared component default title' }], blocks: [{ id: 'shared-component-heading', type: 'heading', props: { text: 'Shared component default title', level: 2 }, bind: { text: { source: 'props.title' } } }] }
-const instanceNode = () => ({ id: 'block-instance', type: 'pattern', props: { ref: fixtureComponent.handle, values: { subtitle: 'Preserve the instance subtitle', tone: 'quiet' } } })
+const instanceNode = () => ({ id: 'block-instance', type: 'component', props: { ref: fixtureComponent.handle, values: { subtitle: 'Preserve the instance subtitle', tone: 'quiet' } } })
 const makeEntry = (id, collection, title) => ({ id, collection, locale: 'en', title, slug: id, uri: collection === 'posts' ? null : `/${id}`, status: 'draft', displayStatus: 'draft', data: { excerpt: 'A short summary for testing the real entry form.', notes: 'This section has no plugin owner.', reviewer: ['grace'], seo: { title: 'Search title', description: 'Search description' }, body: [{ id: 'block-heading', type: 'heading', props: { text: 'A clear page title', level: 1 } }, { id: 'block-layout', type: 'box', label: 'Article section', props: { tag: 'section' }, children: [{ id: 'block-text', type: 'paragraph', props: { text: 'Select a block to inspect its content and return to page details.' } }, { id: 'block-nested-tail', type: 'paragraph', props: { text: 'A second paragraph preserves a real nested insertion gap.' } }] }, { id: 'block-tail', type: 'paragraph', props: { text: '' } }, ...(id === 'post-2' ? [{ id: 'block-list', type: 'list', props: { items: ['A list item keeps consistent keyboard selection.'], ordered: false } }] : []), ...(['post-2', 'view-1'].includes(id) ? [instanceNode()] : [])] }, hasDraft: false, version: `v-${id}-1`, parentId: null, position: 0, originId: null, authorId: 'ada', author: people[0], createdAt: '2026-10-24T10:00:00Z', updatedAt: '2026-10-28T11:00:00Z', publishedAt: null })
 const initialEntries = () => realSite ? new Map(realSources.map((source) => [source.entry.id, structuredClone(source.entry)])) : new Map([['post-1', makeEntry('post-1', 'posts', 'An editable post')], ['post-2', makeEntry('post-2', 'posts', 'A second post')], ['page-1', makeEntry('page-1', 'pages', 'An editable page')], ['page-2', makeEntry('page-2', 'pages', 'A parent page')], ['view-1', makeEntry('view-1', 'viewer', 'A read-only page')]])
 let entries = initialEntries()
@@ -86,7 +86,7 @@ const requests = []
 const failures = new Set()
 let delay = 0
 let sequence = 1
-const catalog = realSources[0]?.catalog ?? { blocks: [{ name: 'heading', title: 'Heading', icon: 'heading', category: 'text', fields: [{ handle: 'text', type: 'text', label: 'Text' }], styles: [] }, { name: 'paragraph', title: 'Paragraph', icon: 'text', category: 'text', fields: [{ handle: 'text', type: 'textarea', label: 'Text' }], styles: [] }, { name: 'box', title: 'Container', icon: 'square', category: 'layout', children: true, fields: [{ handle: 'tag', type: 'text', label: 'HTML tag' }], styles: [] }, { name: 'pattern', title: 'Component', icon: 'symbol', category: 'layout', fields: [], styles: [] }, { name: 'list', title: 'List', icon: 'list', category: 'text', fields: [], styles: [] }], styles: {}, aliases: {}, states: ['hover'], breakpoints: { tablet: '820px', mobile: '390px' }, sources: [], transforms: [], motion: { triggers: [], properties: {} }, logic: { events: [], mods: [], actions: [], transitions: [], merges: [] } }
+const catalog = realSources[0]?.catalog ?? { blocks: [{ name: 'heading', title: 'Heading', icon: 'heading', category: 'text', fields: [{ handle: 'text', type: 'text', label: 'Text' }], styles: [] }, { name: 'paragraph', title: 'Paragraph', icon: 'text', category: 'text', fields: [{ handle: 'text', type: 'textarea', label: 'Text' }], styles: [] }, { name: 'box', title: 'Container', icon: 'square', category: 'layout', children: true, fields: [{ handle: 'tag', type: 'text', label: 'HTML tag' }], styles: [] }, { name: 'component', title: 'Component', icon: 'symbol', category: 'layout', fields: [], styles: [] }, { name: 'list', title: 'List', icon: 'list', category: 'text', fields: [], styles: [] }], styles: {}, aliases: {}, states: ['hover'], breakpoints: { tablet: '820px', mobile: '390px' }, sources: [], transforms: [], motion: { triggers: [], properties: {} }, logic: { events: [], mods: [], actions: [], transitions: [], merges: [] } }
 const runner = String.raw`
 import { navigate, queryClient } from '@letterncms/sdk'
 const output = document.querySelector('#results')
@@ -458,8 +458,8 @@ try {
     const current = await state(), updated = current.entries['post-2'].data.body.find((node) => node.id === 'block-instance')
     assert(updated.props.values.title === text, 'Component typing did not write the source instance value')
     assert(updated.props.ref === previous.props.ref && updated.props.values.subtitle === previous.props.values.subtitle && updated.props.values.tone === previous.props.values.tone, 'Editing a component value replaced its reference or other instance values')
-    assert(JSON.stringify(current.patterns) === JSON.stringify(baseline.patterns), 'Typing an instance changed the shared component definition')
-    assert(!current.requests.some((request) => /patterns\/(?:save|update)|components\/(?:save|update)/.test(request.ability)), 'Inline instance typing called a shared definition mutation')
+    assert(JSON.stringify(current.components) === JSON.stringify(baseline.components), 'Typing an instance changed the shared component definition')
+    assert(!current.requests.some((request) => /components\/(?:save|update)/.test(request.ability)), 'Inline instance typing called a shared definition mutation')
     const listText = editing('block-list')
     listText.focus()
     listText.dispatchEvent(new (liveDoc().defaultView.KeyboardEvent)('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
@@ -625,7 +625,7 @@ const propAttrs = (name, edit, index) => edit ? ` data-cms-prop="${name}"${index
 const renderBlocks = (nodes, edit) => nodes.map((node) => {
   const attr = sourceAttrs(node, edit), props = node.props ?? {}
   if (node.type === 'box') return `<section${attr}>${renderBlocks(node.children ?? [], edit)}</section>`
-  if (node.type === 'pattern') {
+  if (node.type === 'component') {
     const value = props.values?.title ?? fixtureComponent.props[0].default
     const instance = edit ? ` data-cms-instance-document="${editorToken}" data-cms-instance-node="${escape(node.id)}" data-cms-instance-prop="title" data-cms-instance-type="text" data-cms-instance-format="plain" data-cms-instance-value="${escape(value)}"` : ''
     return `<section${attr}><h2${instance}>${escape(value)}</h2><p>${escape(props.values?.subtitle ?? '')}</p></section>`
@@ -639,7 +639,7 @@ const renderBlocks = (nodes, edit) => nodes.map((node) => {
 }).join('')
 const prototypes = () => ['paragraph', 'heading', 'list', 'quote', 'callout', 'code'].map((type) => `<template data-cms-prototype="${type}">${renderBlocks([{ id: '__prototype__', type, props: { level: 2, items: [''] } }], true)}</template>`).join('')
 serve('Content workflow', async (req, res, url) => {
-  if (url.pathname === '/__test/state') return json(res, 200, { entries: Object.fromEntries(entries), requests, patterns: realSources[0]?.patterns ?? [fixtureComponent] })
+  if (url.pathname === '/__test/state') return json(res, 200, { entries: Object.fromEntries(entries), requests, components: realSources[0]?.components ?? [fixtureComponent] })
   if (url.pathname === '/__test/config') { const config = await body(req); if (config.failures) { failures.clear(); config.failures.forEach((ability) => failures.add(ability)) }; if (config.delay !== undefined) delay = config.delay; return json(res, 200, {}) }
   if (url.pathname === '/__preview' || url.pathname.startsWith('/__preview/')) {
     const input = await body(req)
@@ -696,7 +696,7 @@ serve('Content workflow', async (req, res, url) => {
       entries.set(data.id, data)
     }
     else if (ability === 'blocks/types') data = catalog
-    else if (ability === 'components/list') data = realSources[0]?.patterns ?? [fixtureComponent]
+    else if (ability === 'components/list') data = realSources[0]?.components ?? [fixtureComponent]
     else if (ability === 'design/get') data = realSources[0]?.design ?? { tokens: [], breakpoints: { tablet: '820px', mobile: '390px' }, templates: {}, name: 'Fixture', fonts: [], stylesheet: '' }
     else if (ability === 'seo/analyze') data = { score: 100, checks: [{ id: 'title', status: 'pass', label: 'Title', message: 'Search title is available.' }], meta: { title: entries.get(input.id)?.title, description: 'A fixture description', canonical: '', image: null } }
     else if (ability === 'seo/markdown') data = { markdown: '# Fixture Markdown' }

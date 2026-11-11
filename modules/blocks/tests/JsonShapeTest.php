@@ -31,7 +31,7 @@ final class JsonShapeTest extends TestCase
     {
         $nodes = app(Document::class)->normalize([
             ['type' => 'box', 'children' => [['type' => 'divider'], ['type' => 'heading', 'props' => ['text' => 'Hi']]]],
-            ['type' => 'pattern', 'props' => ['ref' => 'card']],
+            ['type' => 'component', 'props' => ['ref' => 'card']],
         ]);
         $json = (string) json_encode(Document::jsonable($nodes));
 
@@ -117,7 +117,7 @@ final class JsonShapeTest extends TestCase
         $this->assertStringNotContainsString('"props":[]', $markdown);
 
         $this->cms()->entryService()->create('components', ['title' => 'Rule', 'slug' => 'rule', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [['type' => 'box', 'children' => [['type' => 'divider']]]]]]);
-        app(\Cms\Modules\Blocks\Patterns::class)->flush();
+        app(\Cms\Modules\Blocks\Components::class)->flush();
         $list = $this->sent('components/list', []);
         $this->assertStringContainsString('"type":"divider","props":{}', $list);
         // A component's own `props` is the list of its properties, and stays one.

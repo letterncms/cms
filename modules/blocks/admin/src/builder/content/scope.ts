@@ -57,7 +57,7 @@ export function useDataPaths(node: BlockNode): DataPath[] {
     out.push({ path: 'index', label: t('Position (1, 2, 3…)'), group }, { path: 'first', label: t('Is First'), group }, { path: 'last', label: t('Is Last'), group })
   }
 
-  if (doc?.kind === 'pattern') for (const p of doc.props ?? []) out.push({ path: `props.${p.handle}`, label: p.label ?? p.handle, group: t('Component Properties') })
+  if (doc?.kind === 'component') for (const p of doc.props ?? []) out.push({ path: `props.${p.handle}`, label: p.label ?? p.handle, group: t('Component Properties') })
 
   out.push(...ENTRY())
   for (const f of collection.data?.fields ?? []) {

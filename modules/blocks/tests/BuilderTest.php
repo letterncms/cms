@@ -8,7 +8,7 @@ use Cms\Abilities\AbilityContext;
 use Cms\Modules\Blocks\BlockRenderer;
 use Cms\Modules\Blocks\Document;
 use Cms\Modules\Blocks\Expression;
-use Cms\Modules\Blocks\Patterns;
+use Cms\Modules\Blocks\Components;
 use Cms\Modules\Blocks\Scope;
 use Cms\Modules\Blocks\StyleCompiler;
 use Cms\Modules\Blocks\Templates;
@@ -243,9 +243,9 @@ final class BuilderTest extends TestCase
         ]]);
 
         $html = $this->render([
-            ['type' => 'pattern', 'props' => ['ref' => 'card', 'values' => ['title' => 'Fast']]],
-            ['type' => 'pattern', 'props' => ['ref' => 'card']],
-            ['type' => 'pattern', 'props' => ['ref' => 'card'], 'bind' => ['values.title' => 'entry.title']],
+            ['type' => 'component', 'props' => ['ref' => 'card', 'values' => ['title' => 'Fast']]],
+            ['type' => 'component', 'props' => ['ref' => 'card']],
+            ['type' => 'component', 'props' => ['ref' => 'card'], 'bind' => ['values.title' => 'entry.title']],
         ], ['entry' => ['title' => 'From data']]);
 
         $this->assertStringContainsString('>Fast</h3>', $html);
@@ -255,9 +255,9 @@ final class BuilderTest extends TestCase
 
         // A draft is visible to previews only.
         $this->cms()->entryService()->update($card->id, ['data' => ['blocks' => [['type' => 'heading', 'props' => ['text' => 'Draft', 'level' => '3']]]]]);
-        app(Patterns::class)->flush();
-        $this->assertStringContainsString('>Fast</h3>', $this->render([['type' => 'pattern', 'props' => ['ref' => 'card', 'values' => ['title' => 'Fast']]]]));
-        $this->assertSame('Draft', app(Patterns::class)->find('card', true)['blocks'][0]['props']['text']);
+        app(Components::class)->flush();
+        $this->assertStringContainsString('>Fast</h3>', $this->render([['type' => 'component', 'props' => ['ref' => 'card', 'values' => ['title' => 'Fast']]]]));
+        $this->assertSame('Draft', app(Components::class)->find('card', true)['blocks'][0]['props']['text']);
 
         $this->cms()->entryService()->create('templates', ['title' => 'Post', 'slug' => 'post', 'status' => 'published', 'data' => ['collections' => ['pages'], 'blocks' => [['type' => 'outlet']]]]);
         $this->assertSame('post', app(Templates::class)->resolve(['missing', 'post'])['handle']);

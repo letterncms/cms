@@ -76,7 +76,7 @@ try {
             'entry' => $entry?->toArray(),
             'catalog' => $catalog('blocks/types'),
             'design' => $catalog('design/get'),
-            'patterns' => $catalog('components/list', ['working' => true]),
+            'components' => $catalog('components/list', ['working' => true]),
             'site' => [
                 'name' => config('app.name'), 'url' => $cms->url(),
                 'locales' => $cms->locales(), 'defaultLocale' => $cms->defaultLocale(),

@@ -49,8 +49,8 @@ final class ComponentEditingTest extends TestCase
         ]);
         $version = $component->version();
         $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page', 'data' => ['content' => [
-            ['id' => 'first-instance', 'type' => 'pattern', 'props' => ['ref' => 'intro', 'values' => ['title' => 'First heading', 'copy' => '<strong>Rich copy</strong>', 'label' => 'First button']]],
-            ['id' => 'second-instance', 'type' => 'pattern', 'props' => ['ref' => 'intro']],
+            ['id' => 'first-instance', 'type' => 'component', 'props' => ['ref' => 'intro', 'values' => ['title' => 'First heading', 'copy' => '<strong>Rich copy</strong>', 'label' => 'First button']]],
+            ['id' => 'second-instance', 'type' => 'component', 'props' => ['ref' => 'intro']],
             ['id' => 'ordinary-source', 'type' => 'paragraph', 'props' => ['text' => 'Following paragraph']],
         ]]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id)->assertOk();
@@ -94,8 +94,8 @@ final class ComponentEditingTest extends TestCase
             ['type' => 'paragraph', 'bind' => ['text' => 'props.title'], 'logic' => ['text' => 'something']],
         ]);
         $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page title', 'data' => ['content' => [
-            ['id' => 'literal-instance', 'type' => 'pattern', 'props' => ['ref' => 'computed', 'values' => ['title' => 'Literal title', 'count' => 42]]],
-            ['id' => 'data-instance', 'type' => 'pattern', 'props' => ['ref' => 'computed'], 'bind' => ['values.title' => 'entry.title']],
+            ['id' => 'literal-instance', 'type' => 'component', 'props' => ['ref' => 'computed', 'values' => ['title' => 'Literal title', 'count' => 42]]],
+            ['id' => 'data-instance', 'type' => 'component', 'props' => ['ref' => 'computed'], 'bind' => ['values.title' => 'entry.title']],
         ]]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id)->assertOk();
         $xpath = $this->xpath($response->getContent());
@@ -108,15 +108,15 @@ final class ComponentEditingTest extends TestCase
     {
         $this->makeComponent('leaf', [['handle' => 'label', 'type' => 'text']], [['type' => 'paragraph', 'bind' => ['text' => 'props.label']]]);
         $this->makeComponent('middle', [['handle' => 'forwarded', 'type' => 'textarea']], [
-            ['type' => 'pattern', 'props' => ['ref' => 'leaf'], 'bind' => ['values.label' => 'props.forwarded']],
+            ['type' => 'component', 'props' => ['ref' => 'leaf'], 'bind' => ['values.label' => 'props.forwarded']],
         ]);
         $this->makeComponent('outer', [['handle' => 'title', 'type' => 'richtext']], [
-            ['type' => 'pattern', 'props' => ['ref' => 'middle'], 'bind' => ['values.forwarded' => 'props.title']],
-            ['type' => 'pattern', 'props' => ['ref' => 'leaf', 'values' => ['label' => 'Nested constant']]],
-            ['type' => 'pattern', 'props' => ['ref' => 'leaf'], 'bind' => ['values.label' => 'props.title|upper']],
+            ['type' => 'component', 'props' => ['ref' => 'middle'], 'bind' => ['values.forwarded' => 'props.title']],
+            ['type' => 'component', 'props' => ['ref' => 'leaf', 'values' => ['label' => 'Nested constant']]],
+            ['type' => 'component', 'props' => ['ref' => 'leaf'], 'bind' => ['values.label' => 'props.title|upper']],
         ]);
         $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page', 'data' => ['content' => [
-            ['id' => 'outer-source', 'type' => 'pattern', 'props' => ['ref' => 'outer', 'values' => ['title' => 'Forwarded value']]],
+            ['id' => 'outer-source', 'type' => 'component', 'props' => ['ref' => 'outer', 'values' => ['title' => 'Forwarded value']]],
         ]]]);
         $response = $this->actingAs($this->admin())->postJson('/__preview/'.$entry->id)->assertOk();
         $xpath = $this->xpath($response->getContent());
@@ -133,11 +133,11 @@ final class ComponentEditingTest extends TestCase
     {
         $this->makeComponent('first', [], []);
         $registry = $this->app->make(\Cms\Modules\Blocks\BlockRegistry::class);
-        $pattern = $registry->get('pattern');
-        $before = $pattern->blueprint()->field('ref')->get('options');
+        $component = $registry->get('component');
+        $before = $component->blueprint()->field('ref')->get('options');
         $this->assertArrayHasKey('first', $before);
         $this->makeComponent('second', [], []);
-        $after = $pattern->blueprint()->field('ref')->get('options');
+        $after = $component->blueprint()->field('ref')->get('options');
         $this->assertArrayHasKey('second', $after, 'a new component is immediately available within the same request or batch');
         $this->assertArrayNotHasKey('second', $before);
         $paragraph = $registry->get('paragraph');
@@ -151,12 +151,12 @@ final class ComponentEditingTest extends TestCase
             ['type' => 'paragraph', 'bind' => ['text' => 'props.title']],
         ]);
         $this->cms()->entryService()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
-            ['type' => 'pattern', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Template value']]], ['type' => 'outlet'],
+            ['type' => 'component', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Template value']]], ['type' => 'outlet'],
         ]]]);
         $entry = $this->cms()->entryService()->create('pages', ['title' => 'Page', 'data' => ['content' => [
-            ['id' => 'local-instance', 'type' => 'pattern', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Local value']]],
+            ['id' => 'local-instance', 'type' => 'component', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Local value']]],
             ['type' => 'repeat', 'props' => ['source' => 'numbers', 'count' => 2], 'children' => [
-                ['type' => 'pattern', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Generated value']]],
+                ['type' => 'component', 'props' => ['ref' => 'repeated', 'values' => ['title' => 'Generated value']]],
             ]],
             ['id' => 'no-leak', 'type' => 'paragraph', 'bind' => ['text' => 'props.title']],
         ]]]);

@@ -295,19 +295,19 @@ export function ComponentBlock({ node }: { node: BlockNode }) {
   const { store } = useEditorContext()
   const { readOnly } = useWrite()
   const list = useAbility<ComponentDef[]>('components/list', { working: true }, { staleTime: 30_000 })
-  const pattern = list.data?.find((p) => p.handle === node.props.ref)
+  const component = list.data?.find((p) => p.handle === node.props.ref)
   const values = (node.props.values ?? {}) as Record<string, unknown>
   const bind = node.bind ?? {}
-  const props = (pattern?.props ?? []).filter((f) => f.type !== 'json')
+  const props = (component?.props ?? []).filter((f) => f.type !== 'json')
   const set = (handle: string, value: unknown) => store.updateProps(node.id, { values: { ...values, [handle]: value } }, `values:${node.id}:${handle}`)
 
   const header = (
     <div className="flex h-8 items-center gap-2 text-xs">
       <Icon name="symbol" size={13} className="text-faint" />
-      <span className="truncate font-medium text-muted">{pattern?.title ?? (list.isLoading ? '…' : t('Missing component'))}</span>
+      <span className="truncate font-medium text-muted">{component?.title ?? (list.isLoading ? '…' : t('Missing component'))}</span>
       <span className="flex-1" />
-      {pattern?.id && (
-        <button type="button" onClick={() => navigate(`/content/components/${pattern.id}`)} className="rounded-xs px-1.5 text-faint opacity-0 transition-opacity hover:bg-hover hover:text-text group-hover/component:opacity-100">
+      {component?.id && (
+        <button type="button" onClick={() => navigate(`/content/components/${component.id}`)} className="rounded-xs px-1.5 text-faint opacity-0 transition-opacity hover:bg-hover hover:text-text group-hover/component:opacity-100">
           {t('Edit Component')}
         </button>
       )}
@@ -319,9 +319,9 @@ export function ComponentBlock({ node }: { node: BlockNode }) {
     return (
       <div className="flex h-9 items-center gap-2 rounded-md px-1 text-sm text-faint">
         <Icon name="symbol" size={14} />
-        <span className="truncate text-muted">{pattern?.title ?? (list.isLoading ? '…' : t('Missing component'))}</span>
-        {pattern?.id && (
-          <button type="button" onClick={() => navigate(`/content/components/${pattern.id}`)} className="shrink-0 rounded-xs px-1 text-xs text-faint hover:bg-hover hover:text-text">
+        <span className="truncate text-muted">{component?.title ?? (list.isLoading ? '…' : t('Missing component'))}</span>
+        {component?.id && (
+          <button type="button" onClick={() => navigate(`/content/components/${component.id}`)} className="shrink-0 rounded-xs px-1 text-xs text-faint hover:bg-hover hover:text-text">
             {t('Edit Component')}
           </button>
         )}

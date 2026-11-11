@@ -2,14 +2,14 @@ import { can, navigate, t, useAbility, type FieldDef } from '@letterncms/sdk'
 import { fieldControlId, Button, Fields, IconButton, Tooltip, cn, wideFieldTypes } from '@letterncms/ui'
 import { useAnchors } from '../../core/anchors'
 import { useEditorContext } from '../../core/context'
-import type { PatternDef } from '../../core/Inserter'
+import type { ComponentDef } from '../../core/Inserter'
 import * as tree from '../../core/tree'
 import type { BlockNode } from '../../core/types'
 import { AddButton, Body, PanelFields, Section, SubHeading, labelColumn, stacks } from '../controls'
 import { pairOp } from '../fields/composite'
 import { useDataPaths, type DataPath } from './scope'
 
-type Pattern = PatternDef & { id: string | null; props: FieldDef[] }
+type Component = ComponentDef & { id: string | null; props: FieldDef[] }
 
 /** Text-like property types: an empty value shows the label as placeholder. */
 const TEXTUAL = ['text', 'textarea', 'richtext', 'markdown']
@@ -115,7 +115,7 @@ export function ContentPanel({ node }: { node: BlockNode }) {
 
   return (
     <div>
-      {node.type === 'pattern' ? (
+      {node.type === 'component' ? (
         <ComponentInstance node={node} paths={paths} setBind={setBind} anchors={anchors} />
       ) : repeat ? (
         <RepeatSource node={node} />
@@ -209,16 +209,16 @@ export function ContentPanel({ node }: { node: BlockNode }) {
 /** A component instance: which component, its property values (or data for them). */
 function ComponentInstance({ node, paths, setBind, anchors }: { node: BlockNode; paths: DataPath[]; setBind: (key: string, path: string | null) => void; anchors: { id: string; label: string }[] }) {
   const { store } = useEditorContext()
-  const list = useAbility<Pattern[]>('components/list', { working: true }, { staleTime: 30_000 })
-  const pattern = list.data?.find((p) => p.handle === node.props?.ref)
+  const list = useAbility<Component[]>('components/list', { working: true }, { staleTime: 30_000 })
+  const component = list.data?.find((p) => p.handle === node.props?.ref)
   const values = (node.props?.values ?? {}) as Record<string, unknown>
   const bind = node.bind ?? {}
 
   const detach = () => {
-    if (!pattern) return
+    if (!component) return
     const loc = tree.locate(store.get().nodes, node.id)
     if (!loc) return
-    const copies = pattern.blocks.map((b) => tree.clone(b))
+    const copies = component.blocks.map((b) => tree.clone(b))
     store.commit(tree.insert(tree.remove(store.get().nodes, node.id), loc.parentId, loc.index, copies))
     store.select(copies[0]?.id ?? null)
   }
@@ -230,7 +230,7 @@ function ComponentInstance({ node, paths, setBind, anchors }: { node: BlockNode;
         values={{ ref: node.props?.ref }}
         onChange={(_, ref) => ref && store.updateProps(node.id, { ref, values: {} })}
       />
-      {(pattern?.props ?? []).map((f) => (
+      {(component?.props ?? []).map((f) => (
         <Prop
           key={f.handle}
           field={{ ...f, placeholder: (f.placeholder as string | undefined) ?? (TEXTUAL.includes(f.type) ? f.label : undefined) }}
@@ -243,8 +243,8 @@ function ComponentInstance({ node, paths, setBind, anchors }: { node: BlockNode;
         />
       ))}
       <div className="-ml-2 flex gap-1 pt-1">
-        {pattern?.id && <Button size="sm" variant="ghost" icon="edit" onClick={() => navigate(`/content/components/${pattern.id}`)}>{t('Edit Component')}</Button>}
-        <Button size="sm" variant="ghost" icon="scissors" onClick={detach} disabled={!pattern}>
+        {component?.id && <Button size="sm" variant="ghost" icon="edit" onClick={() => navigate(`/content/components/${component.id}`)}>{t('Edit Component')}</Button>}
+        <Button size="sm" variant="ghost" icon="scissors" onClick={detach} disabled={!component}>
           {t('Detach')}
         </Button>
       </div>

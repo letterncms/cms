@@ -2,9 +2,9 @@ import { can, t } from '@letterncms/sdk'
 import { Button, Icon, IconButton, Menu, Tabs, cn, copyText } from '@letterncms/ui'
 import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
-import { savePattern } from '../core/SavePattern'
+import { saveComponent } from '../core/SaveComponent'
 import type { BlockNode } from '../core/types'
-import { patternFits } from '../core/insert'
+import { componentFits } from '../core/insert'
 import { ContentPanel } from './content/ContentPanel'
 import { DesignPanel } from './design/DesignPanel'
 import { LogicPanel } from './logic/LogicPanel'
@@ -69,7 +69,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
     try { sessionStorage.setItem(tabKey, next) } catch { /* Optional preference. */ }
     setTab(next)
   }
-  const component = !readOnly && node.type !== 'pattern' && can('entries.components.create')
+  const component = !readOnly && node.type !== 'component' && can('entries.components.create')
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col" data-blocks-inspector>
@@ -77,7 +77,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
       <div className={cn('flex h-12 shrink-0 items-center gap-1 pr-3', onBack ? 'pl-2 max-sm:pl-4' : 'pl-4')}>
         {/* A phone's sheet has one way out, its ×: the way to the page's own details is in the block's menu there. */}
         {onBack && <IconButton icon="arrow-left" label={backLabel ? t('Back to {name}', { name: backLabel }) : t('Back')} size="sm" onClick={onBack} className="max-sm:!hidden" />}
-        <Icon name={node.type === 'pattern' ? 'symbol' : type?.icon ?? 'square'} size={16} className="ml-1 shrink-0 text-muted" />
+        <Icon name={node.type === 'component' ? 'symbol' : type?.icon ?? 'square'} size={16} className="ml-1 shrink-0 text-muted" />
         {renaming ? (
           <div className="min-w-0 flex-1 pl-1" onBlur={() => setRenaming(false)} onKeyUp={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()}>
             <PanelFields
@@ -103,7 +103,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
               icon: 'symbol',
               onSelect: () => {
                 if (!store.selection().includes(node.id)) store.select(node.id)
-                savePattern(store, patternFits(store, types, allowed))
+                saveComponent(store, componentFits(store, types, allowed))
               },
             },
             !!onBack && !!backLabel && window.matchMedia('(max-width: 639px)').matches && { label: t('{name} Details', { name: backLabel }), icon: 'sidebar', onSelect: onBack },

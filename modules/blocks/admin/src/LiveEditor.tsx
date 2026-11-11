@@ -7,8 +7,8 @@ import { caretRect } from './core/caret'
 import { FormatToolbar } from './core/FormatToolbar'
 import { InlineEditable } from './core/InlineEditable'
 import { Inserter, type InsertChoice } from './core/Inserter'
-import { accepts, choiceToNodes, insertionPoint, patternFits } from './core/insert'
-import { savePattern } from './core/SavePattern'
+import { accepts, choiceToNodes, insertionPoint, componentFits } from './core/insert'
+import { saveComponent } from './core/SaveComponent'
 import { insertionTargets, pickDropTarget, pickHoverTarget, type BlockBox, type InsertionTarget, type Rect } from './core/insertionTargets'
 import { QuickInserter } from './core/QuickInserter'
 import { morphDocument } from './core/morph'
@@ -162,7 +162,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
     const blocks = indexed.current.flatMap(({ node, parentId, index }) => {
       const el = elements.get(node.id)
       if (!el || d.defaultView!.getComputedStyle(el).display === 'none') return []
-      return [{ id: node.id, parentId, index, rect: rectOf(el), container: !!types.get(node.type)?.children && !['repeat', 'pattern'].includes(node.type), axis: axis(el) }]
+      return [{ id: node.id, parentId, index, rect: rectOf(el), container: !!types.get(node.type)?.children && !['repeat', 'component'].includes(node.type), axis: axis(el) }]
     })
     let rootRect: Rect = rectOf(root)
     if (rootRect.width === 0) rootRect = rectOf(root.parentElement ?? d.body)
@@ -291,7 +291,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
           }
           itemSlots.slice(items.length).forEach((item) => item.remove())
         }
-        if (node.children && !['repeat', 'pattern'].includes(node.type)) sync(node.children, el)
+        if (node.children && !['repeat', 'component'].includes(node.type)) sync(node.children, el)
       }
     }
     // The empty-page label must not stay beside new content: the authoritative render would morph it into the first block and drop its caret.
@@ -573,7 +573,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
             const node = tree.find(nodes, selected)
             if (!first || !last || !node) return null
             const siblings = tree.siblings(nodes, first.parentId)
-            const describe = (block: BlockNode) => ({ label: blockName(block, types, components), icon: block.type === 'pattern' ? 'symbol' : types.get(block.type)?.icon ?? 'square' })
+            const describe = (block: BlockNode) => ({ label: blockName(block, types, components), icon: block.type === 'component' ? 'symbol' : types.get(block.type)?.icon ?? 'square' })
             const parent = first.parentId ? tree.find(nodes, first.parentId) : null
             const { label, icon } = describe(node)
             return <BlockToolbar id={selected} label={selectedIds.length > 1 ? plural(selectedIds.length, '{count} block', '{count} blocks') : label} icon={icon} parent={parent ? describe(parent) : null}
@@ -582,7 +582,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
               onSelectParent={() => parent && onInspect(parent.id)} onDrag={(event) => { setChooser(null); blockDrag.start(event, selectionOf(store.get()), label) }}
               onMove={(direction) => store.nudgeSelection(direction)} onInsert={(side) => requestAnimationFrame(() => openInserter(side))}
               onDuplicate={() => store.duplicateSelection()} onDelete={() => store.removeSelection()}
-              onMakeComponent={node.type !== 'pattern' && can('entries.components.create') ? () => savePattern(store, patternFits(store, types, allowed)) : undefined}
+              onMakeComponent={node.type !== 'component' && can('entries.components.create') ? () => saveComponent(store, componentFits(store, types, allowed)) : undefined}
               covers={covers} />
           })()}
           {!readOnly && !blockDrag.drag && gaps.filter((at) => at.inside).map((at) => {

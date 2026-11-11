@@ -134,7 +134,7 @@ final class PlaceholdersTest extends TestCase
         ]]);
 
         $canvas = $this->render([
-            ['type' => 'pattern', 'props' => ['ref' => 'card']],
+            ['type' => 'component', 'props' => ['ref' => 'card']],
             ['type' => 'paragraph', 'bind' => ['text' => 'entry.cover_caption']],
         ], true, ['entry' => []]);
 
@@ -142,7 +142,7 @@ final class PlaceholdersTest extends TestCase
         $this->assertMatchesRegularExpression('/<a [^>]*class="[^"]*cms-button[^"]*"[^>]*href="#"/', $canvas, 'a link property without a value links to # on the canvas');
         $this->assertStringContainsString('data-cms-placeholder="Cover caption"', $canvas, 'other data shows its name');
 
-        $site = $this->render([['type' => 'pattern', 'props' => ['ref' => 'card']]], false);
+        $site = $this->render([['type' => 'component', 'props' => ['ref' => 'card']]], false);
         $this->assertStringNotContainsString('href="#"', $site);
         $this->assertStringNotContainsString('<h3', $site);
     }

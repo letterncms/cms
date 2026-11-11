@@ -65,7 +65,7 @@ final class DesignCodeTest extends TestCase
         $this->cms()->entryService()->create('templates', ['title' => 'Article', 'slug' => 'article', 'status' => 'published', 'data' => ['blocks' => [['type' => 'outlet']]]]);
         $this->cms()->entryService()->create('components', ['title' => 'Nav', 'slug' => 'nav', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [['type' => 'paragraph', 'props' => ['text' => 'Menu']]]]]);
         $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
-        $this->app->make(\Cms\Modules\Blocks\Patterns::class)->flush();
+        $this->app->make(\Cms\Modules\Blocks\Components::class)->flush();
 
         $plain = $this->page('Plain', [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]);
         $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/styles/base-[0-9a-f]{10}\.css">#', $plain);
@@ -74,7 +74,7 @@ final class DesignCodeTest extends TestCase
         $this->assertStringNotContainsString('/_cms/site/styles/article-', $plain);
 
         $html = $this->page('Story', [
-            ['type' => 'pattern', 'props' => ['ref' => 'nav']],
+            ['type' => 'component', 'props' => ['ref' => 'nav']],
             ['type' => 'box', 'code' => ['scripts' => ['hero', '../../etc/passwd', 'smooth'], 'styles' => ['hero']], 'children' => []],
         ], ['template' => 'article']);
 

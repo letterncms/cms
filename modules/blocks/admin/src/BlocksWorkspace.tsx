@@ -23,7 +23,7 @@ export function BlocksWorkspace(props: EntryEditorProps) {
   const values = useRef(props.values)
   values.current = props.values
   const doc: DocRef = {
-    kind: props.collection.handle === 'templates' ? 'template' : props.collection.handle === 'components' ? 'pattern' : 'entry',
+    kind: props.collection.handle === 'templates' ? 'template' : props.collection.handle === 'components' ? 'component' : 'entry',
     id: props.entry?.id ?? '',
     collections: props.values.collections,
     props: props.values.props,

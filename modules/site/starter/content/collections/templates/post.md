@@ -8,7 +8,7 @@ collections:
   - posts
 ---
 
-::: pattern {"id":"p-header","props":{"ref":"header"}}
+::: component {"id":"p-header","props":{"ref":"header"}}
 :::
 
 ::: box {"id":"p-main","props":{"tag":"main"},"label":"Article","style":{"base":{"maxWidth":"token:container.prose","marginInline":"auto","paddingInline":"token:space.gutter","paddingBlock":"token:space.section"}},"anchor":"main"}
@@ -30,5 +30,5 @@ collections:
 ::::
 :::
 
-::: pattern {"id":"p-footer","props":{"ref":"footer"}}
+::: component {"id":"p-footer","props":{"ref":"footer"}}
 :::

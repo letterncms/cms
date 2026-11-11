@@ -1,25 +1,25 @@
 import { invalidate, plural, run, t } from '@letterncms/sdk'
-import { Button, Dialog, Fields, toast } from '@letterncms/ui'
+import { Dialog, Fields, toast } from '@letterncms/ui'
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { EditorStore } from './store'
 import * as tree from './tree'
 import { newId, type BlockNode } from './types'
 
-/** Lowercase, dash-separated, valid as a pattern handle (^[a-z0-9][a-z0-9_-]{0,63}$). */
-export function patternHandle(title: string, taken: Set<string>): string {
-  const base = title.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) || 'pattern'
+/** Lowercase, dash-separated, valid as a component handle (^[a-z0-9][a-z0-9_-]{0,63}$). */
+export function componentHandle(title: string, taken: Set<string>): string {
+  const base = title.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) || 'component'
   let handle = base
   for (let i = 2; taken.has(handle); i++) handle = `${base}-${i}`
   return handle
 }
 
 /**
- * Save the selected blocks as a pattern. A synced pattern replaces the
- * selection with a reference, so this page updates with the pattern too;
- * `canReference` is false where a pattern block isn't allowed.
+ * Save the selected blocks as a component. A synced component replaces the
+ * selection with a reference, so this page updates with the component too;
+ * `canReference` is false where a component block isn't allowed.
  */
-export function savePattern(store: EditorStore, canReference: boolean) {
+export function saveComponent(store: EditorStore, canReference: boolean) {
   const ids = store.selection()
   const nodes = ids.map((id) => tree.find(store.get().nodes, id)).filter((n): n is BlockNode => !!n)
   if (nodes.length === 0) return
@@ -48,10 +48,10 @@ export function savePattern(store: EditorStore, canReference: boolean) {
       setBusy(true)
       try {
         const existing = await run<{ handle: string }[]>('components/list')
-        const handle = patternHandle(title, new Set(existing.map((p) => p.handle)))
+        const handle = componentHandle(title, new Set(existing.map((p) => p.handle)))
         await run('components/save', { handle, title: title.trim(), description: description.trim(), category: category.trim() || undefined, synced, blocks: nodes })
         invalidate('components/')
-        if (synced) store.replaceSelection([{ id: newId(), type: 'pattern', props: { ref: handle } }])
+        if (synced) store.replaceSelection([{ id: newId(), type: 'component', props: { ref: handle } }])
         toast.success(synced ? t('“{title}” is now a component', { title: title.trim() }) : t('Saved “{title}” as a section', { title: title.trim() }))
         close()
       } catch (e) {
@@ -67,20 +67,12 @@ export function savePattern(store: EditorStore, canReference: boolean) {
         size="sm"
         title={synced ? t('Make a Component') : t('Save as a Section')}
         description={plural(nodes.length, '{count} block, reusable on every page', '{count} blocks, reusable on every page')}
-        footer={
-          <>
-            <Button variant="ghost" onClick={close}>{t('Cancel')}</Button>
-            <Button variant="primary" disabled={!title.trim()} loading={busy} onClick={save}>{synced ? t('Make Component') : t('Save Section')}</Button>
-          </>
-        }
+        onSubmit={() => void save()}
+        submitLabel={synced ? t('Make Component') : t('Save Section')}
+        submitDisabled={!title.trim()}
+        busy={busy}
       >
-        <form
-          className="grid gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            void save()
-          }}
-        >
+        <div className="grid gap-4">
           <Fields
             fields={[
               { handle: 'title', type: 'text', label: t('Name'), required: true, autofocus: true, max: 120, placeholder: t('Pricing Card') },
@@ -96,8 +88,7 @@ export function savePattern(store: EditorStore, canReference: boolean) {
             values={values}
             onChange={(h, v) => set(h, !!v)}
           />
-          <button type="submit" hidden />
-        </form>
+        </div>
       </Dialog>
     )
   }

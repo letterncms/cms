@@ -114,7 +114,7 @@ function says(node: BlockNode, max: number): string {
 function hints(nodes: BlockNode[], containers: (node: BlockNode) => boolean): Map<string, string> {
   const out = new Map<string, string>()
   for (const { node } of tree.flatten(nodes)) {
-    if (!containers(node) || node.label || node.type === 'pattern') continue
+    if (!containers(node) || node.label || node.type === 'component') continue
     const children = node.children ?? []
     const heading = children.find((child) => child.type === 'heading' && says(child, 48))
     if (heading) {
@@ -135,10 +135,10 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
   const components = useComponentTitles()
   const container = !!type?.children || hasChildren
   // A layer is named by what it is or says: its own name, the component, its text, or for a container, its kind and what it holds.
-  const label = node.type === 'pattern' ? blockName(node, types, components) : node.label || (container ? kindOf(node, type?.title ?? node.type) : says(node, 48) || type?.title || node.type)
-  const plain = !node.label && node.type !== 'pattern' && !container && !says(node, 48)
+  const label = node.type === 'component' ? blockName(node, types, components) : node.label || (container ? kindOf(node, type?.title ?? node.type) : says(node, 48) || type?.title || node.type)
+  const plain = !node.label && node.type !== 'component' && !container && !says(node, 48)
   const [renaming, setRenaming] = useState(false)
-  const component = node.type === 'pattern'
+  const component = node.type === 'component'
   const badges = [
     node.motion?.length && { icon: 'wand', title: t('Animated') },
     node.logic && { icon: 'zap', title: t('Interactive') },

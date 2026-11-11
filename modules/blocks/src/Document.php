@@ -292,7 +292,7 @@ final class Document
 
             $ok = in_array($key, ['visible', 'hidden', 'text', ...$props], true)
                 || preg_match('/^state:[a-z][a-z0-9-]{0,30}$/', $key)
-                || ($type?->name === 'pattern' && preg_match('/^values\.[a-z_][a-z0-9_]{0,40}$/', $key))
+                || ($type?->name === 'component' && preg_match('/^values\.[a-z_][a-z0-9_]{0,40}$/', $key))
                 || (str_starts_with($key, 'attr:') && (preg_match(self::ATTRIBUTE, substr($key, 5)) || in_array(substr($key, 5), ['href', 'src', 'alt', 'id'], true)))
                 || (str_starts_with($key, 'style:') && StyleCompiler::group(substr($key, 6)) !== null);
 
