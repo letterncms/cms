@@ -6,9 +6,13 @@ namespace Cms\Console;
 
 use Cms\Update\Upgrader;
 
-final class SyncCommand extends Command
+/**
+ * `cms migrate`: brings the database up to the code. Takes the place of the framework's command of that name,
+ * which knows the core's tables only: this one also installs and upgrades the active packages.
+ */
+final class MigrateCommand extends Command
 {
-    protected $signature = 'sync';
+    protected $signature = 'migrate';
 
     protected $description = 'Run core migrations and install/upgrade active packages';
 

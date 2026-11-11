@@ -97,7 +97,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        Artisan::call('migrate', ['--path' => $this->app->databasePath('migrations'), '--realpath' => true]);
+        \Cms\Update\Upgrader::migrateCore($this->app);
         $this->app->make(\Cms\Packages\PackageManager::class)->sync();
         file_put_contents(storage_path('installed.json'), '{}');
 

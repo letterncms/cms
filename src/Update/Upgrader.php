@@ -7,14 +7,25 @@ namespace Cms\Update;
 use Cms\Cms;
 use Cms\Foundation\Application;
 use Cms\Support\Files;
-use Illuminate\Support\Facades\Artisan;
 
 /** The one upgrade routine: core tables, then every package, then what the old code cached. */
 final class Upgrader
 {
     public static function migrateCore(Application $app): void
     {
-        Artisan::call('migrate', ['--force' => true, '--path' => $app->databasePath('migrations'), '--realpath' => true]);
+        // The migrator itself, not the framework's `migrate` command: `cms migrate` is this routine's own command.
+        if (config('database.default') === 'sqlite' && ($file = (string) config('database.connections.sqlite.database')) !== ':memory:' && $file !== '' && ! is_file($file)) {
+            Files::ensureDir(dirname($file));
+            touch($file);
+        }
+
+        $migrator = $app->make('migrator');
+
+        if (! $migrator->repositoryExists()) {
+            $migrator->getRepository()->createRepository();
+        }
+
+        $migrator->run([$app->databasePath('migrations')]);
     }
 
     /** @return array<string, string> What each package did */
@@ -22,7 +33,7 @@ final class Upgrader
     {
         self::migrateCore($app);
         $done = $app->make(Cms::class)->packages()->sync();
-        $app->make(Cms::class)->hooks()->dispatch('cms.sync');
+        $app->make(Cms::class)->hooks()->dispatch('cms.migrated');
         self::purgeCaches($app);
 
         return $done;

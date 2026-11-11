@@ -441,7 +441,7 @@ final class Receiver
         // The configured store may not be a file: it goes first, then every cache file, as after an update.
         rescue(static fn () => Cache::flush(), report: false);
         Upgrader::purgeCaches(app());
-        rescue(static fn () => cms()->hooks()->dispatch('cms.sync'), report: true);
+        rescue(static fn () => cms()->hooks()->dispatch('cms.migrated'), report: true);
 
         $builder = app(\Cms\Contracts\SiteBuilder::class);
 

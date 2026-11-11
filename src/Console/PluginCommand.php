@@ -31,7 +31,7 @@ final class PluginCommand extends Command
         $this->components->info("{$name}: {$this->argument('action')} done.");
 
         if ($this->argument('action') === 'enable') {
-            $this->call('sync');
+            $this->call('migrate');
         }
 
         return $this->done(['name' => $name, 'action' => $this->argument('action')]);
