@@ -44,6 +44,7 @@ final class BrowserFixturesTest extends TestCase
             ['type' => 'box', 'props' => ['tag' => 'nav'], 'children' => [
                 ['type' => 'link', 'anchor' => 'to-one', 'props' => ['label' => 'One', 'url' => '/one']],
                 ['type' => 'link', 'anchor' => 'to-two', 'props' => ['label' => 'Two', 'url' => '/two#deep']],
+                ['type' => 'link', 'anchor' => 'to-two-plain', 'props' => ['label' => 'Two, from the top', 'url' => '/two']],
             ]],
             ['type' => 'box', 'anchor' => 'stage', 'persist' => 'stage', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'stage']], 'children' => []],
             ['type' => 'box', 'props' => ['tag' => 'main'], 'anchor' => 'main', 'children' => [['type' => 'outlet']]],
@@ -117,6 +118,7 @@ final class BrowserFixturesTest extends TestCase
                     ['type' => 'box', 'anchor' => 'opened', 'logic' => ['show' => 'open'], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Now you see it']]]],
                 ]],
                 ['type' => 'link', 'anchor' => 'with-query', 'props' => ['label' => 'Sign out', 'url' => '/one?signout=1']],
+                ['type' => 'link', 'anchor' => 'same-query', 'props' => ['label' => 'Add', 'url' => '/two?add=5']],
                 ['type' => 'box', 'style' => ['base' => ['height' => '150vh']], 'children' => []],
             ],
             // The largest text of the page, with a page load animation from transparent.
