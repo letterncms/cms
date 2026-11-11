@@ -1096,5 +1096,6 @@
   "Snap Type": "Snap-type",
   "Underline Offset": "Afstand onderstreping",
   "Vanishing Point": "Verdwijnpunt",
-  "The page’s first heading is hidden behind a mask or a clip until its page load animation runs, which makes the page count as slow to show. Animate its opacity or position instead, or use the appear trigger.": "De eerste kop van de pagina zit achter een masker of uitsnede tot de animatie bij het laden loopt, waardoor de pagina als traag telt. Animeer de dekking of positie, of gebruik de trigger ‘verschijnen’."
+  "The page’s first heading is hidden behind a mask or a clip until its page load animation runs, which makes the page count as slow to show. Animate its opacity or position instead, or use the appear trigger.": "De eerste kop van de pagina zit achter een masker of uitsnede tot de animatie bij het laden loopt, waardoor de pagina als traag telt. Animeer de dekking of positie, of gebruik de trigger ‘verschijnen’.",
+  "Drawn by “:name” on the site. Open the preview to see it.": "Getekend door ‘:name’ op de site. Open het voorbeeld om het te zien."
 }
