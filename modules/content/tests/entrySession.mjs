@@ -42,7 +42,7 @@ test('queued saves create only once', async () => {
 
 test('failed saves retain edits and validation until an explicit retry succeeds', async () => {
   let fail = true
-  const session = new EntrySession(entry, values, async (_, working) => { if (fail) throw Object.assign(new Error('Invalid body'), { type: 'invalid_input', details: { body: 'Invalid' } }); return { ...entry, ...working, version: 'v2' } })
+  const session = new EntrySession(entry, values, async (_, working) => { if (fail) throw Object.assign(new Error('Invalid body'), { type: 'invalid_input', details: { 'data.body': 'Invalid' } }); return { ...entry, ...working, version: 'v2' } })
   session.update({ title: 'Unsaved' }); await assert.rejects(session.save()); assert.equal(session.get().dirty, true); assert.equal(session.get().phase, 'error'); assert.equal(session.get().errors.body, 'Invalid')
   session.update({ data: { body: 'Corrected' } }); assert.ok(session.get().error)
   fail = false; await session.save(); assert.equal(session.get().dirty, false); assert.equal(session.get().error, null)
