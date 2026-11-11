@@ -543,5 +543,12 @@
   "Libraries are only fetched from :hosts.": "Bibliotheken worden alleen opgehaald van :hosts.",
   ":url did not answer with the file itself.": ":url antwoordde niet met het bestand zelf.",
   "“:name” has the name of something a server runs.": "‘:name’ heeft de naam van iets dat een server uitvoert.",
-  "“:selector” is not something the design can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em” or “nav a:hover”. A class or an id is for custom CSS.": "‘:selector’ kan het ontwerp niet opmaken: gebruik een tag, of hooguit drie met een spatie of ‘ > ’ ertussen, met één toestand aan het eind, zoals ‘h1 em’ of ‘nav a:hover’. Een klasse of id hoort in eigen CSS."
+  "“:selector” is not something the design can style: use a tag, or up to three with a space or “ > ” between them, with one state at the end, like “h1 em” or “nav a:hover”. A class or an id is for custom CSS.": "‘:selector’ kan het ontwerp niet opmaken: gebruik een tag, of hooguit drie met een spatie of ‘ > ’ ertussen, met één toestand aan het eind, zoals ‘h1 em’ of ‘nav a:hover’. Een klasse of id hoort in eigen CSS.",
+  "Previous and Next Entry": "Vorig en volgend item",
+  "The entries before and after this one in its collection, for a detail page: newest last in a dated collection, the tree’s reading order, else the collection’s own order.": "De items voor en na dit item in zijn collectie, voor een detailpagina: nieuwste laatst in een collectie met datum, de leesvolgorde van de boom, anders de volgorde van de collectie zelf.",
+  "Previous and Next": "Vorige en volgende",
+  "Previous": "Vorige",
+  "Next": "Volgende",
+  "Show": "Tonen",
+  "Go Round at the Ends": "Rondgaan aan de uiteinden"
 }

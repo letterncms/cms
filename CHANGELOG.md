@@ -37,6 +37,7 @@
 - The **Motion Toggle** block tells scripts: pausing sets `<html data-cms-motion="paused">` and dispatches `cms:motion` on `document` (`event.detail.paused`), and a block behaviour's `reducedMotion` is true while motion is paused, with the behaviour mounted again when that changes. A canvas or a script's own loop can now stop with everything else.
 - **Scroll progress for styles and scripts**: a scroll animation with `trigger.progress: true` (or with `scrub`) sets `--cms-progress` (0 to 1) on its element and dispatches `cms:progress` on it (`event.detail.progress`). A number that counts with the scroll is a few lines in a behaviour, with no animation library.
 - A block's attributes can name another block: `"aria-labelledby": "#hero-title"` or `"aria-controls": "#panel"` in `attrs` becomes the id that block has on the page (its anchor, a heading's own, or one made for it). In `aria-labelledby`, `aria-describedby`, `aria-controls`, `aria-owns`, `aria-details`, `aria-flowto`, `aria-activedescendant`, `aria-errormessage` and `for`. The build warns when the block named is not on the page.
+- **Repeat** has a source for a detail page's way on: **Previous and Next Entry** (`neighbors`) lists the entries before and after the current one in its collection's order, either side alone with `show`, and round the ends with `wrap`.
 
 ### Changed
 
