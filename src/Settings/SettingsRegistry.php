@@ -80,10 +80,99 @@ final class SettingsRegistry
         return $schemas;
     }
 
-    /** A namespace's fields; plugins add, change or take over fields with the `settings.fields` filter. */
+    /**
+     * A namespace's fields; plugins add, change or take over fields with the `settings.fields` filter. A field
+     * with `localizable: true` holds one value per language of the site: see localizable().
+     */
     private function fields(string $namespace): array
     {
-        return array_values((array) cms()->hooks()->filter('settings.fields', $this->schemas[$namespace]['fields'] ?? [], $namespace));
+        return self::localizable(array_values((array) cms()->hooks()->filter('settings.fields', $this->schemas[$namespace]['fields'] ?? [], $namespace)));
+    }
+
+    /**
+     * A field with `localizable: true` is a group of the same field once per language of the site, labelled
+     * with the language's name, so its value is a map by language (`{en: …, de: …}`: the key is the language
+     * code in lower case, `pt-BR` is `pt_br`). `placeholder` and `default` may be such a map too. A language
+     * added to the site gets its field at once; read a value with localized().
+     *
+     * @param  list<array<string, mixed>>  $fields
+     * @return list<array<string, mixed>>
+     */
+    private static function localizable(array $fields): array
+    {
+        if (! array_any($fields, static fn ($field) => is_array($field) && ! empty($field['localizable']))) {
+            return $fields;
+        }
+
+        $locales = cms()->locales();
+
+        return array_map(static function ($field) use ($locales) {
+            if (! is_array($field) || empty($field['localizable']) || ($field['type'] ?? null) === 'group') {
+                return $field;
+            }
+
+            $own = array_diff_key($field, array_flip(['handle', 'label', 'section', 'if', 'width', 'localizable', 'instructions', 'placeholder', 'default']));
+            $each = static fn (mixed $value, string $locale): mixed => is_array($value) && ! array_is_list($value) ? ($value[$locale] ?? $value[self::languageKey($locale)] ?? null) : $value;
+
+            return [
+                ...array_intersect_key($field, array_flip(['handle', 'label', 'section', 'if', 'width', 'instructions'])),
+                'type' => 'group',
+                'localizable' => true,
+                'fields' => array_map(static fn (string $locale) => array_filter([
+                    ...$own,
+                    'handle' => self::languageKey($locale),
+                    'label' => self::languageName($locale),
+                    'placeholder' => $each($field['placeholder'] ?? null, $locale),
+                    'default' => $each($field['default'] ?? null, $locale),
+                ], static fn ($value) => $value !== null), $locales),
+            ];
+        }, $fields);
+    }
+
+    /** @return array<string, true> The handles of a namespace's fields with a value per language. */
+    private function localizableKeys(string $namespace): array
+    {
+        $keys = [];
+
+        foreach ($this->fields($namespace) as $field) {
+            if (is_array($field) && ! empty($field['localizable']) && isset($field['handle'])) {
+                $keys[(string) $field['handle']] = true;
+            }
+        }
+
+        return $keys;
+    }
+
+    /** What a language is called inside a localizable value: its code in lower case, `pt-BR` as `pt_br`. */
+    public static function languageKey(string $locale): string
+    {
+        return strtolower((string) preg_replace('/[^A-Za-z0-9]+/', '_', $locale));
+    }
+
+    /** A language by its own name ("Deutsch"), as a person who speaks it looks for it. */
+    private static function languageName(string $locale): string
+    {
+        if (class_exists(\Locale::class)) {
+            $name = (string) \Locale::getDisplayName(str_replace('-', '_', $locale), str_replace('-', '_', $locale));
+
+            if ($name !== '' && $name !== $locale) {
+                return mb_strtoupper(mb_substr($name, 0, 1)).mb_substr($name, 1);
+            }
+        }
+
+        return strtoupper($locale);
+    }
+
+    /**
+     * The value of a localizable field in one language (the site's default when none is given). Empty in a
+     * language that has none: what to show then is the reader's to decide, as no language stands in for another.
+     */
+    public function localized(string $namespace, string $key, ?string $locale = null, mixed $default = null): mixed
+    {
+        $values = $this->get($namespace, $key);
+        $value = is_array($values) ? ($values[self::languageKey($locale ?? cms()->defaultLocale())] ?? null) : null;
+
+        return $value === null || $value === '' ? $default : $value;
     }
 
     public function has(string $namespace): bool
@@ -115,8 +204,12 @@ final class SettingsRegistry
     {
         $values = $this->get($namespace);
 
+        $mask = static fn (mixed $value): string => ($value ?? '') !== '' ? '••••••••' : '';
+        $perLanguage = $this->localizableKeys($namespace);
+
         foreach ($this->secretKeys($namespace) as $key) {
-            $values[$key] = ($values[$key] ?? '') !== '' ? '••••••••' : '';
+            // A secret with a value per language is masked language by language: which ones are set still shows.
+            $values[$key] = isset($perLanguage[$key]) && is_array($values[$key] ?? null) ? array_map($mask, $values[$key]) : $mask($values[$key] ?? null);
         }
 
         return $values;
@@ -165,14 +258,26 @@ final class SettingsRegistry
         $schema = $this->schemas[$namespace] ?? null;
         $secretKeys = $this->secretKeys($namespace);
 
-        // Masked secrets mean "unchanged".
+        // Masked secrets mean "unchanged", also one language of a secret with a value per language.
         foreach ($secretKeys as $key) {
             if (($values[$key] ?? null) === '••••••••') {
                 unset($values[$key]);
+            } elseif (is_array($values[$key] ?? null)) {
+                $values[$key] = array_filter($values[$key], static fn (mixed $value) => $value !== '••••••••');
             }
         }
 
         $stored = $this->stored($namespace);
+
+        // A value per language is saved language by language: the ones not given keep theirs.
+        foreach ($this->fields($namespace) as $field) {
+            $handle = $field['handle'] ?? null;
+
+            if (! empty($field['localizable']) && is_string($handle) && is_array($values[$handle] ?? null) && is_array($stored[$handle] ?? null)) {
+                $values[$handle] = array_replace($stored[$handle], $values[$handle]);
+            }
+        }
+
         $merged = cms()->hooks()->filter('settings.saving', array_replace($stored, $values), $namespace, $stored);
 
         if ($schema) {
