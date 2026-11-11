@@ -73,4 +73,29 @@ final class SettingsSecretsTest extends TestCase
 
         $this->assertSame($other, file_get_contents($file));
     }
+
+    public function test_settings_update_and_get_never_answer_with_a_secret(): void
+    {
+        $registry = $this->cms()->settingsRegistry();
+        $registry->register('shop', 'Shop', [['handle' => 'currency', 'type' => 'text'], ['handle' => 'api_key', 'type' => 'text', 'secret' => true], ['handle' => 'keys', 'type' => 'json', 'secret' => true]]);
+        $context = AbilityContext::system('test');
+        $abilities = $this->cms()->abilities();
+
+        $saved = $abilities->execute('settings/update', ['namespace' => 'shop', 'values' => ['currency' => 'EUR', 'api_key' => 'sk-live-1', 'keys' => ['a' => 'sk-2']]], $context);
+        $this->assertSame(['EUR', '••••••••', '••••••••'], [$saved['currency'], $saved['api_key'], $saved['keys']]);
+
+        // A plugin may take a secret's field away (Brevo does while another key serves): what was saved stays hidden.
+        $this->cms()->hooks()->addFilter('settings.fields', static fn (array $fields, string $namespace) => $namespace === 'shop' ? array_values(array_filter($fields, static fn (array $f) => $f['handle'] === 'currency')) : $fields);
+        $registry->forget('shop');
+
+        $saved = $abilities->execute('settings/update', ['namespace' => 'shop', 'values' => ['currency' => 'USD']], $context);
+        $read = $abilities->execute('settings/get', ['namespace' => 'shop'], $context)['values'];
+
+        foreach ([$saved, $read] as $values) {
+            $this->assertStringNotContainsString('sk-', (string) json_encode($values));
+        }
+        $this->assertSame('USD', $saved['currency']);
+        $this->assertSame('sk-live-1', $registry->get('shop', 'api_key'), 'The secret itself is kept.');
+        $this->assertStringNotContainsString('sk-', (string) file_get_contents(site_path('config/shop.yaml')), 'A secret is never written to the settings file.');
+    }
 }
