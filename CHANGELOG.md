@@ -28,6 +28,7 @@
 
 ### Fixed
 
+- `fieldsets/save` refuses a field of a type that does not exist, a handle used twice and fields nested too deep, as `collections/save` does. It checked handles only, so a fieldset could be saved that no collection could then import.
 - A row of a list shows the focus ring when you reach it with the keyboard, and a field that has the focus is clear to see in the dark theme.
 - On a touch screen every button is at least 44px to hit, whatever its size, and a dialog's buttons on a phone are 44px tall with more room between and under them.
 
