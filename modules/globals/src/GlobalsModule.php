@@ -16,13 +16,13 @@ final class GlobalsModule extends Plugin
     {
         $cms = $this->cms();
         $p = $cms->permissions();
-        $p->register('globals.view', 'View Globals', 'Content');
-        $p->register('globals.edit', 'Edit Globals', 'Content');
+        $p->register('globals.view', 'View Global Sets', 'Content');
+        $p->register('globals.edit', 'Edit Global Set Values', 'Content');
         $p->register('globals.manage', 'Manage Global Sets and Fields', 'Content');
 
         $this->app->make(GlobalAbilities::class)->register($cms->abilities());
 
-        $cms->context()->register('cms://globals', 'Globals', 'Global sets and their current values.', static fn () => array_map(
+        $cms->context()->register('cms://globals', 'Global Sets', 'Global sets and their current values.', static fn () => array_map(
             static fn ($g) => $g->toArray(),
             array_values($cms->globals()->all())
         ), permission: 'globals.view');
@@ -34,8 +34,8 @@ final class GlobalsModule extends Plugin
                 : [],
         ]);
 
-        $cms->admin()->nav('globals', ['label' => 'Globals', 'path' => '/globals', 'icon' => 'globe', 'section' => 'content', 'order' => 80, 'permission' => 'globals.view']);
-        $cms->admin()->widget('globals-sets', ['label' => 'Globals', 'description' => 'Quick links to your global sets.', 'icon' => 'globe', 'column' => 'side', 'order' => 80, 'permission' => 'globals.view']);
+        $cms->admin()->nav('globals', ['label' => 'Global Sets', 'path' => '/globals', 'icon' => 'globe', 'section' => 'content', 'order' => 80, 'permission' => 'globals.view']);
+        $cms->admin()->widget('globals-sets', ['label' => 'Global Sets', 'description' => 'Quick links to your global sets.', 'icon' => 'globe', 'column' => 'side', 'order' => 80, 'permission' => 'globals.view']);
         GlobalsViews::register($cms);
         $this->routes();
         $this->adminModule();

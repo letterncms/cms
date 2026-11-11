@@ -1,6 +1,6 @@
 {
   "A global set with this handle already exists.": "Un ensemble global avec cet identifiant existe déjà.",
-  "All Globals": "Toutes les données globales",
+  "All Global Sets": "Tous les ensembles globaux",
   "Content": "Contenu",
   "Create Global Set": "Créer l’ensemble global",
   "Created :name": ":name créé",
@@ -10,16 +10,16 @@
   "Deleted": "Supprimé",
   "Edit": "Modifier",
   "Edit Fields": "Modifier les champs",
-  "Edit Globals": "Modifier les données globales",
+  "Edit Global Set Values": "Modifier les valeurs des ensembles globaux",
   "Footer": "Pied de page",
   "General": "Général",
   "Get Global Set": "Obtenir un ensemble global",
   "Global Set Fields": "Champs d’un ensemble global",
+  "Global Sets": "Ensembles globaux",
   "Global sets: site-wide values such as contact details or a footer, with their own fields.": "Ensembles globaux : des valeurs pour tout le site, comme les coordonnées ou un pied de page, avec leurs propres champs.",
-  "Globals": "Données globales",
   "Icon": "Icône",
   "Its values are deleted too.": "Ses valeurs sont aussi supprimées.",
-  "List Globals": "Lister les données globales",
+  "List Global Sets": "Lister les ensembles globaux",
   "Manage Global Sets and Fields": "Gérer les ensembles globaux et leurs champs",
   "Name": "Nom",
   "New Global Set": "Nouvel ensemble global",
@@ -30,7 +30,7 @@
   "Saved :name": ":name enregistré",
   "Text": "Texte",
   "The fields of one global set, in the blueprint editor.": "Les champs d’un ensemble global, dans l’éditeur de modèle.",
-  "Update Global Values": "Mettre à jour les valeurs globales",
+  "Update Global Set Values": "Mettre à jour les valeurs d’un ensemble global",
   "Use letters or numbers in the name.": "Utilisez des lettres ou des chiffres dans le nom.",
-  "View Globals": "Voir les données globales"
+  "View Global Sets": "Voir les ensembles globaux"
 }

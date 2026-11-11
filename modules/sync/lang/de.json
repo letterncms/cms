@@ -94,7 +94,7 @@
   "Empty on both sites: {groups}.": "Auf beiden Websites leer: {groups}.",
   "Entries in the database, with their history.": "Einträge in der Datenbank, mit ihrem Verlauf.",
   "Everything in config/, except the plugins that are on and the license key. Secrets stay with each site.": "Alles in config/, außer den aktiven Plugins und dem Lizenzschlüssel. Geheimnisse bleiben bei jeder Website.",
-  "Everything in content/: templates, components, collections kept in files, globals, forms and menus.": "Alles in content/: Vorlagen, Komponenten, Sammlungen in Dateien, globale Inhalte, Formulare und Menüs.",
+  "Everything in content/: templates, components, collections kept in files, global sets, forms and menus.": "Alles in content/: Vorlagen, Komponenten, Sammlungen in Dateien, globale Inhalte, Formulare und Menüs.",
   "files the same": "Dateien gleich",
   "Files the same": "Dateien identisch",
   "files: :add new, :change changed, :remove removed (:size)": "Dateien: :add neu, :change geändert, :remove entfernt (:size)",

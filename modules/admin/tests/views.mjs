@@ -63,8 +63,8 @@ export const views = {
     tab('store', 'Store', [{ type: 'packages/store', props: {} }]),
     tab('updates', 'Updates', [{ type: 'packages/updates', props: {} }]),
   )),
-  globals: () => page('Globals', 'globe', [{ type: 'ui/records', props: {
-    id: 'globals', label: 'Globals', key: 'handle', source: { ability: 'globals/list', input: {} },
+  globals: () => page('Global Sets', 'globe', [{ type: 'ui/records', props: {
+    id: 'globals', label: 'Global Sets', key: 'handle', source: { ability: 'globals/list', input: {} },
     columns: [{ key: 'title', label: 'Name' }, { key: 'handle', label: 'Handle', width: 'minmax(200px,1fr)', format: 'code' }],
     open: { label: 'Edit', to: '/globals/{row.handle}' },
     actions: [{ label: 'Edit', icon: 'edit', to: '/globals/{row.handle}' }, { label: 'Edit Fields', icon: 'field', to: '/globals/{row.handle}/fields' }],

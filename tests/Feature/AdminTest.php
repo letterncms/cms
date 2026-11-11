@@ -24,6 +24,10 @@ final class AdminTest extends TestCase
         $this->assertContains('plugins', $sidebar['sections'][0]['items']);
         $this->assertSame(['collection.notes', 'collection.pages', 'collection.posts', 'media', 'navigation', 'globals'], $sidebar['sections'][1]['items']);
         $this->assertSame(['collections'], $sidebar['sections'][2]['items']);
+        // One name for global sets: the sidebar, the screen and its abilities all say "Global Set(s)".
+        $nav = $this->cms()->adminNav()->forUser($this->admin());
+        $this->assertSame('Global Sets', array_column($nav['nav'], 'label', 'id')['globals']);
+        $this->assertSame(['List Global Sets', 'Update Global Set Values'], [$this->cms()->abilities()->get('globals/list')->label, $this->cms()->abilities()->get('globals/set')->label]);
         // Nothing is put away: More holds only what someone unpins.
         $this->assertSame([], $sidebar['hidden']);
         $this->assertFalse($sidebar['personal']);
