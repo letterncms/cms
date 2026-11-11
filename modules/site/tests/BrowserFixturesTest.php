@@ -141,6 +141,12 @@ final class BrowserFixturesTest extends TestCase
                 ['type' => 'heading', 'anchor' => 'lines', 'props' => ['text' => 'One two three four five six seven eight nine ten eleven twelve', 'level' => '2'], 'style' => ['base' => ['width' => '260px', 'marginTop' => '150vh']], 'motion' => [['trigger' => ['type' => 'appear'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 110], 'duration' => 0.4, 'stagger' => 0.1]]]]],
                 ['type' => 'box', 'style' => ['base' => ['height' => '120vh']], 'children' => []],
             ],
+            // Styles for dark, on a site that follows the visitor's system.
+            'Dark' => [
+                ['type' => 'box', 'anchor' => 'plain', 'style' => ['base' => ['backgroundColor' => 'rgb(250, 250, 250)', 'height' => '40px'], 'dark' => ['backgroundColor' => 'rgb(1, 2, 3)']], 'children' => []],
+                ['type' => 'box', 'anchor' => 'narrow', 'style' => ['base' => ['backgroundColor' => 'rgb(250, 250, 250)', 'height' => '40px'], 'mobile' => ['backgroundColor' => 'rgb(240, 240, 240)'], 'mobile:dark' => ['backgroundColor' => 'rgb(4, 5, 6)']], 'children' => []],
+                ['type' => 'box', 'anchor' => 'hovered', 'style' => ['base' => ['color' => 'rgb(10, 10, 10)'], 'hover' => ['color' => 'rgb(20, 20, 20)'], 'dark' => ['color' => 'rgb(200, 200, 200)']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Text']]]],
+            ],
             // A Motion Toggle, and a behaviour that should hear it.
             'Toggle' => [
                 ['type' => 'motion-toggle', 'anchor' => 'toggle'],
