@@ -7,7 +7,6 @@
   "Actions for {name}": "Acties voor {name}",
   "Add More": "Meer toevoegen",
   "Added": "Toegevoegd",
-  "All": "Alle",
   "All Media": "Alle media",
   "Allowed": "Toegestaan",
   "Alt Text": "Alt-tekst",
@@ -134,7 +133,7 @@
   "No files in this folder": "Geen bestanden in deze map",
   "No Folder": "Geen map",
   "Not found.": "Niet gevonden.",
-  "Rename": "Hernoemen",
+  "Rename": "Naam wijzigen",
   "Rename Folder": "Map hernoemen",
   "Rename Media Folder": "Mediamap hernoemen",
   "There is already a folder “:name” here.": "Hier staat al een map “:name”.",
@@ -153,5 +152,15 @@
   "Rotate": "Draaien",
   "Rotate or Crop Image": "Afbeelding draaien of bijsnijden",
   "Top Left Corner": "Hoek linksboven",
-  "Top Right Corner": "Hoek rechtsboven"
+  "Top Right Corner": "Hoek rechtsboven",
+  "3D Model": "3D-model",
+  "3D Models": "3D-modellen",
+  "All Kinds": "Alle soorten",
+  "Animation": "Animatie",
+  "Animations": "Animaties",
+  "File": "Bestand",
+  "Image": "Afbeelding",
+  "Texture": "Textuur",
+  "Textures": "Texturen",
+  "Video": "Video"
 }

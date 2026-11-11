@@ -1,9 +1,9 @@
 import { can, invalidate, Link, plural, t, useAbility } from '@letterncms/sdk'
 import { Fields, Icon, Skeleton, toast, Widget } from '@letterncms/ui'
 import { useState } from 'react'
+import { kindIcon } from './kinds'
 import { upload, type MediaItem } from './upload'
 
-const kindIcon: Record<MediaItem['kind'], string> = { image: 'image', video: 'video', audio: 'play', pdf: 'file-text', file: 'file' }
 
 /** Home-screen widget: the latest uploads as thumbnails — three across in the side column, six in the main one. */
 export default function WidgetRecent() {

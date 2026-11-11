@@ -1,22 +1,22 @@
 import { can, locale, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
-import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, formatBytes, readViewPrefs } from '@letterncms/ui'
+import { Badge, Button, DataView, EmptyState, Fields, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, formatBytes, readViewPrefs } from '@letterncms/ui'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { deleteFiles } from './actions'
 import { FileDialog } from './FileDialog'
+import { FileTile, KINDS, acceptKind, kindOptions, type MediaKind } from './kinds'
 import { FolderTree, MoveDialog, folderActions, folderAfter, folderName } from './Folders'
 import { libraryFolder, uploadAll, type MediaItem } from './upload'
 
-const KINDS = ['all', 'image', 'video', 'audio', 'pdf', 'file'] as const
-type Kind = (typeof KINDS)[number]
+type Kind = MediaKind | 'all'
 
 interface MediaFilters { search: string; kind: Kind; folder: string | null }
 const mediaInput = (filters: MediaFilters, page: number, sort: string | null, only: { accept?: string; except?: string } = {}) => ({ ...only, search: filters.search || undefined, kind: filters.kind, folder: filters.folder, page, perPage: 60, sort: sort ?? undefined })
 
-/** Search, and the kind switch unless the picker's field fixes the kind. */
+/** Search, and the kind unless the picker's field fixes it: a select, so eight kinds are one quiet control. */
 function filterFields(kinds: boolean): FieldDef[] {
   return [
     { handle: 'search', type: 'text', label: t('Search Files'), icon: 'search', size: 'sm', placeholder: t('Search Files'), className: 'w-full sm:w-60' },
-    ...(kinds ? [{ handle: 'kind', type: 'select', label: t('Kind'), display: 'segmented', required: true, options: { all: t('All'), image: t('Images'), video: t('Videos'), audio: t('Audio'), pdf: 'PDF', file: t('Other') } }] : []),
+    ...(kinds ? [{ handle: 'kind', type: 'select', label: t('Kind'), size: 'sm' as const, placeholder: t('All Kinds'), options: kindOptions(), className: 'w-full sm:w-40' }] : []),
   ]
 }
 
@@ -27,10 +27,10 @@ function filterFields(kinds: boolean): FieldDef[] {
  */
 export function Library({ mode = 'manage', accept = '*', except, multiple = false, selected = [], onSelectionChange, autoUpload = false, bar = false }: { mode?: 'manage' | 'pick'; accept?: string; except?: string; multiple?: boolean; selected?: string[]; onSelectionChange?: (ids: string[], items: MediaItem[]) => void; autoUpload?: boolean; bar?: boolean }) {
   const { query } = useLocation()
-  const startKind: Kind = accept.startsWith('image') ? 'image' : accept.startsWith('video') ? 'video' : accept === 'application/pdf' ? 'pdf' : 'all'
+  const startKind: Kind = acceptKind(accept)
   // On the Media place the filters are in the address too: its count reads them (MediaModule::places), and a link keeps them.
   const [filters, setFilters] = useState<MediaFilters>(() => bar
-    ? { search: query.search ?? '', kind: (KINDS as readonly string[]).includes(query.kind ?? '') ? query.kind as Kind : 'all', folder: query.folder || null }
+    ? { search: query.search ?? '', kind: (KINDS as string[]).includes(query.kind ?? '') ? query.kind as Kind : 'all', folder: query.folder || null }
     : { search: '', kind: startKind, folder: null })
   const { kind, folder } = filters
   // A picker lists what its field takes: a family of types (image/*) is the kind filter, anything narrower is asked of the list.
@@ -58,7 +58,8 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
   const manages = mode === 'manage' && can('media.edit')
   // A folder's menu: what it does to the folder on view follows (renamed with it, up when it is deleted, into a new one).
   const folderMenu = (path: string) => folderActions(path, (to, made) => filter('folder', made ?? folderAfter(folder, path, to ?? null)))
-  const filter = (handle: string, value: unknown) => { setPage(1); setChosen(new Set()); setFilters((f) => ({ ...f, [handle]: value })) }
+  // The kind's select is empty for every kind.
+  const filter = (handle: string, value: unknown) => { setPage(1); setChosen(new Set()); setFilters((f) => ({ ...f, [handle]: handle === 'kind' ? value || 'all' : value })) }
   // The upload button, in the page's top bar or the picker's toolbar: the one way to add files.
   const uploader = (field: Partial<FieldDef>): FieldDef[] => [{ handle: 'files', type: 'json', component: 'media-upload', label: t('Upload'), multiple: mode === 'manage' || multiple, accept: accept === '*' ? undefined : accept, ...field }]
 
@@ -109,7 +110,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
       void send(mode === 'pick' && !multiple ? files.slice(0, 1) : files)
     },
   }
-  const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="absolute inset-0 size-full object-cover" style={{ objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : <div className="grid size-full place-items-center text-faint"><Icon name={item.kind === 'video' ? 'video' : item.kind === 'audio' ? 'file' : 'file-text'} size={24} /></div>
+  const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="absolute inset-0 size-full object-cover" style={{ objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : <FileTile item={item} />
   // What a picker opens on (images, for an image field) is where it starts, not something someone filtered by:
   // an empty library says so and offers the upload, never "No matches".
   // Nor is the folder on view: an empty folder is empty, not a search that found nothing.
@@ -137,7 +138,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
         selection={{ ids: mode === 'manage' ? chosen : new Set(selected), onSelect: select }}
         selected={(item) => open?.id === item.id}
         toolbar={blank ? undefined : <>
-          <Fields layout="inline" bare className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full" fields={[...filterFields(!fixed), ...(folders.length ? [{ handle: 'folder', type: 'select', label: t('Folder'), size: 'sm' as const, placeholder: t('All Files'), options: folders.map((f) => ({ value: f, label: '\u00a0\u00a0'.repeat(f.split('/').length - 1) + folderName(f), icon: 'folder' })), className: 'w-full sm:w-44 md:hidden' }] : [])]} values={filters} onChange={filter} />
+          <Fields layout="inline" bare className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full" fields={[...filterFields(!fixed), ...(folders.length ? [{ handle: 'folder', type: 'select', label: t('Folder'), size: 'sm' as const, placeholder: t('All Files'), options: folders.map((f) => ({ value: f, label: '\u00a0\u00a0'.repeat(f.split('/').length - 1) + folderName(f), icon: 'folder' })), className: 'w-full sm:w-44 md:hidden' }] : [])]} values={{ ...filters, kind: kind === 'all' ? null : kind }} onChange={filter} />
           {manages && folder && <Menu trigger={<IconButton icon="more" label={t('Actions for {name}', { name: folderName(folder) })} size="sm" className="md:hidden" />} items={folderMenu(folder)} />}
           {!bar && uploadButton(autoUpload)}
         </>}

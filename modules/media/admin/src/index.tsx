@@ -3,8 +3,10 @@ import { can, registry, run, t } from '@letterncms/sdk'
 import { lazy } from 'react'
 import { UploadField } from './fields'
 import { NewFolderAction } from './Folders'
+import { kindIcon } from './kinds'
 import { MediaField } from './MediaField'
 import UploadAction from './UploadAction'
+import type { MediaItem } from './upload'
 
 registry.fields.set('media', MediaField)
 registry.fields.set('media-upload', UploadField)
@@ -20,8 +22,8 @@ registry.composer.set('media', {
   trigger: '@', label: t('Media'), order: 20,
   search: async (query) => {
     if (!can('media.view')) return []
-    const { items } = await run<{ items: { id: string; name: string; url: string; kind?: string; alt?: string | null }[] }>('media/list', { search: query, perPage: 5 })
-    return items.map((item) => ({ id: `media:${item.id}`, kind: 'file', label: item.name, icon: item.kind === 'image' ? 'image' : 'file', to: '/media', read: () => item }))
+    const { items } = await run<{ items: MediaItem[] }>('media/list', { search: query, perPage: 5 })
+    return items.map((item) => ({ id: `media:${item.id}`, kind: 'file', label: item.name, icon: kindIcon[item.kind] ?? 'file', to: '/media', read: () => item }))
   },
 })
 

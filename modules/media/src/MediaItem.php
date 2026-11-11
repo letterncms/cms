@@ -52,9 +52,20 @@ class MediaItem extends Model
         return '/'.$this->path;
     }
 
+    /** What the files a script loads are, by type: a 3D model, a texture (an environment map too) or an animation. */
+    public const array ASSET_KINDS = [
+        'model/gltf-binary' => 'model', 'model/gltf+json' => 'model',
+        'image/vnd.radiance' => 'texture', 'image/ktx2' => 'texture',
+        'application/json' => 'animation', 'application/vnd.rive' => 'animation',
+    ];
+
+    /** Every kind a file can be, as `kind` in what abilities answer with and as the library's filter. */
+    public const array KINDS = ['image', 'video', 'audio', 'pdf', 'model', 'texture', 'animation', 'file'];
+
     public function kind(): string
     {
         return match (true) {
+            isset(self::ASSET_KINDS[$this->mime]) => self::ASSET_KINDS[$this->mime],
             isset(MediaStore::ASSETS[$this->mime]) => 'file',
             str_starts_with($this->mime, 'image/') => 'image',
             str_starts_with($this->mime, 'video/') => 'video',
