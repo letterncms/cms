@@ -11,6 +11,15 @@ function stored(handle: string): Partial<ViewPrefs> {
   return value && typeof value === 'object' ? (value as Partial<ViewPrefs>) : {}
 }
 
+/** Whoever shows an overview's preferences hears when they change, wherever that was done. */
+const listeners = new Set<(handle: string) => void>()
+
+/** Put an overview's view, sort and columns in place at once (a saved view): every list and control showing them follows. */
+export function setViewPrefs(handle: string, prefs: ViewPrefsChange): void {
+  void setPreference(handle, prefs).catch(() => {})
+  listeners.forEach((l) => l(handle))
+}
+
 export function readViewPrefs(handle: string, fallbackView: OverviewView = 'table'): ViewPrefs {
   const saved = stored(handle)
   const view = saved.view && ['table', 'grid', 'calendar'].includes(saved.view) ? saved.view : fallbackView
@@ -25,13 +34,18 @@ export function useViewPrefs(handle: string, fallbackView: OverviewView = 'table
   const read = () => readViewPrefs(handle, fallbackView)
   const [prefs, setPrefs] = useState<ViewPrefs>(read)
 
-  // Another overview: its own preferences.
-  useEffect(() => setPrefs(read()), [handle, fallbackView])
+  // Another overview: its own preferences. And the same overview's, changed from elsewhere (a saved view applied to it).
+  useEffect(() => {
+    setPrefs(read())
+    const listener = (changed: string) => { if (changed === handle) setPrefs(read()) }
+    listeners.add(listener)
+    return () => { listeners.delete(listener) }
+  }, [handle, fallbackView])
 
   const update = (change: ViewPrefsChange) => {
     // Changing sort or columns should not turn the inherited view into a personal override.
     void setPreference(handle, { ...stored(handle), ...change }, 800).catch(() => {})
-    setPrefs(read())
+    listeners.forEach((l) => l(handle))
   }
 
   return [prefs, update]

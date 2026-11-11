@@ -108,6 +108,8 @@ final class Catalog
                 'paged' => $this->object(['perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100]]),
                 // Sorted by the ability: the input that takes a column's `sort` name (`-` first for descending), and its order while none is chosen.
                 'sort' => $this->object(['param' => $id, 'default' => $id], ['param']),
+                // A catalog component in the toolbar, before Display: a control that belongs with the list's view.
+                'controls' => $this->object(['component' => $id, 'props' => ['type' => 'object']], ['component']),
                 // A tree while nothing narrows or sorts the list: where it loads, and what puts siblings in order (`{ids}`, `{parent}`, `{versions}`).
                 'tree' => $this->object(['source' => $source, 'at' => $id, 'children' => $id, 'version' => $id, 'reorder' => $action], ['source']),
                 'open' => $action, 'actions' => ['type' => 'array', 'maxItems' => 8, 'items' => $action],

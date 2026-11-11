@@ -36,6 +36,7 @@
 - When a collection's or a global set's fields cannot be saved, the field that is wrong opens with a red edge and says what is wrong under its handle or type, also for a field inside a group or a repeater. `@letterncms/ui` exports `FieldError`, and `FieldsEditor` takes `errors` (by path) and `path`.
 - The fields editor of a collection, a global set and the user profile: the word "Fields" is no longer printed again under the Fields tab, deleting is one quiet button at the end of the page, **Add Field** shows what each type is for in full, an icon is named in words ("File Text") instead of by its key, and the warning about changing a handle shows only once you change one that holds values.
 - A global set's fields are the same screen as a collection's: **Fields** and **Settings** as tabs in one column under the set's own name, with **Delete Global Set** at the foot of Settings instead of in the middle of the page on a phone. In a collection's settings the list's columns are one group labelled **Columns** with **Reset Columns** beside it, the group that holds the structure is called Content, and the line under URL Pattern is gone.
+- A view's `ui/records` takes `controls` (`{component, props}`): a component of the catalog drawn in the list's toolbar before **Display**. `@letterncms/ui`: `setViewPrefs(handle, prefs)` puts a list's view, sort and columns in place, and every list showing them follows at once; `DataView` takes `controls`.
 
 ### Fixed
 
