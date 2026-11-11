@@ -82,6 +82,31 @@ final class CollectionAbilities
             },
         ]);
 
+        // Deleting a collection, written once: the handler runs it in a write, a dry run in the entry service's dry mode, where nothing is removed.
+        $delete = function (array $in, AbilityContext $ctx): array {
+            $collection = $this->cms->collections()->findOrFail($in['handle']);
+
+            if (! $collection->deletable()) {
+                throw AbilityException::invalid(__('“:title” comes with a plugin and cannot be deleted.', ['title' => $collection->title]));
+            }
+
+            $count = $this->cms->entries()->query()->collection($collection->handle)->count();
+            if ($count > 0 && ! $in['deleteEntries']) {
+                throw AbilityException::invalid(__('This collection still has entries. Choose to delete its entries as well.'), ['count' => $count]);
+            }
+            if ($in['deleteEntries']) {
+                foreach ($this->cms->entries()->query()->collection($collection->handle)->get() as $entry) {
+                    $this->cms->content()->delete($entry->id, $ctx->user);
+                }
+            }
+
+            if (! $this->cms->content()->isDry()) {
+                $this->cms->collections()->delete($collection->handle);
+            }
+
+            return ['deleted' => $collection->handle, 'deletedEntries' => $count];
+        };
+
         $a->register('collections/delete', [
             'label' => 'Delete Collection',
             'description' => 'Delete a collection definition. Nonempty collections require deleteEntries true; entries, drafts and history are removed.',
@@ -89,27 +114,14 @@ final class CollectionAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE, 'deleteEntries' => ['type' => 'boolean', 'default' => false]], 'required' => ['handle']],
             'output' => Shape::of(['deleted' => Shape::STRING, 'deletedEntries' => Shape::INTEGER]),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->write(function () use ($in, $ctx) {
-                $collection = $this->cms->collections()->findOrFail($in['handle']);
+            // The same steps in the entry service's dry mode: each entry's delete is checked, none is made, and the collection stays.
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->cms->content()->dry(function () use ($in, $ctx, $delete): array {
+                $collection = $this->cms->collections()->find($in['handle']);
+                $gone = $delete($in, $ctx);
 
-                if (! $collection->deletable()) {
-                    throw AbilityException::invalid(__('“:title” comes with a plugin and cannot be deleted.', ['title' => $collection->title]));
-                }
-
-                $count = $this->cms->entries()->query()->collection($collection->handle)->count();
-                if ($count > 0 && ! $in['deleteEntries']) {
-                    throw AbilityException::invalid(__('This collection still has entries. Choose to delete its entries as well.'), ['count' => $count]);
-                }
-                if ($in['deleteEntries']) {
-                    foreach ($this->cms->entries()->query()->collection($collection->handle)->get() as $entry) {
-                        $this->cms->content()->delete($entry->id, $ctx->user);
-                    }
-                }
-
-                $this->cms->collections()->delete($collection->handle);
-
-                return ['deleted' => $collection->handle, 'deletedEntries' => $count];
+                return [['action' => 'delete', 'type' => 'collection', 'handle' => $gone['deleted'], 'title' => $collection?->title, 'removes' => ['entries' => $gone['deletedEntries'], 'history' => true]]];
             }),
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->cms->content()->write(fn () => $delete($in, $ctx)),
         ]);
 
         $a->register('fieldsets/list', [

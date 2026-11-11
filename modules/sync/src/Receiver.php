@@ -259,19 +259,27 @@ final class Receiver
         return array_map(static fn (array $s) => [...$s, 'can_undo' => empty($s['undone_at']) && is_file(Site::dir('backups/'.$s['id'].'/backup.json'))], $all);
     }
 
+    /** The backup an undo would put back, refused when there is none left. What undo(), and a dry run of it, check. */
+    public function undoable(string $id): array
+    {
+        self::validJob($id);
+        $meta = Files::readJson(Site::dir('backups/'.$id).'/backup.json');
+
+        if ($meta === [] || ! empty($meta['restored_at'])) {
+            throw new RuntimeException(__('That sync can’t be undone any more.'));
+        }
+
+        return $meta;
+    }
+
     /**
      * Puts back what a sync replaced, a piece at a time: the backup's rows into staging tables,
      * then the same switch. Changes made since that sync are replaced too.
      */
     public function undo(string $id, float $budget = 8.0): array
     {
-        self::validJob($id);
+        $meta = $this->undoable($id);
         $dir = Site::dir('backups/'.$id);
-        $meta = Files::readJson($dir.'/backup.json');
-
-        if ($meta === [] || ! empty($meta['restored_at'])) {
-            throw new RuntimeException(__('That sync can’t be undone any more.'));
-        }
 
         $this->lock('undo-'.$id, 'undo');
         $u = (array) ($meta['undo'] ?? ['tables' => [], 'table' => 0, 'seq' => 0]);

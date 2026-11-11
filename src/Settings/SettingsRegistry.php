@@ -122,6 +122,30 @@ final class SettingsRegistry
      */
     public function save(string $namespace, array $values): array
     {
+        $merged = $this->prepare($namespace, $values);
+        $secretKeys = $this->secretKeys($namespace);
+        $public = array_diff_key($merged, array_flip($secretKeys));
+        Yaml::write(site_path("config/{$namespace}.yaml"), $public);
+
+        if ($secretKeys !== []) {
+            $secrets = $this->secrets();
+            $secrets[$namespace] = array_intersect_key($merged, array_flip($secretKeys));
+            $this->writeSecrets($secrets);
+        }
+
+        unset($this->cache[$namespace]);
+        cms()->hooks()->dispatch('settings.saved', $namespace, $this->get($namespace));
+
+        return $this->get($namespace);
+    }
+
+    /**
+     * What a save of these values would store: merged over what is stored, adjusted by listeners
+     * (`settings.saving`) and checked against the fields. Writes nothing: save() stores what this answers,
+     * and a dry run stops here.
+     */
+    public function prepare(string $namespace, array $values): array
+    {
         if (! Files::isHandle($namespace)) {
             throw AbilityException::invalid(__('Invalid settings namespace.'));
         }
@@ -147,19 +171,19 @@ final class SettingsRegistry
             }
         }
 
-        $public = array_diff_key($merged, array_flip($secretKeys));
-        Yaml::write(site_path("config/{$namespace}.yaml"), $public);
+        return $merged;
+    }
 
-        if ($secretKeys !== []) {
-            $secrets = $this->secrets();
-            $secrets[$namespace] = array_intersect_key($merged, array_flip($secretKeys));
-            $this->writeSecrets($secrets);
-        }
+    /**
+     * The handles whose stored value a save of these values would change, checked as the save checks them.
+     *
+     * @return list<string>
+     */
+    public function changed(string $namespace, array $values): array
+    {
+        $stored = $this->stored($namespace);
 
-        unset($this->cache[$namespace]);
-        cms()->hooks()->dispatch('settings.saved', $namespace, $this->get($namespace));
-
-        return $this->get($namespace);
+        return array_keys(array_filter($this->prepare($namespace, $values), static fn (mixed $value, string|int $key) => ! array_key_exists($key, $stored) || json_encode($stored[$key]) !== json_encode($value), ARRAY_FILTER_USE_BOTH));
     }
 
     /** Defaults, then config/<namespace>.yaml, then secrets, then CMS_<NAMESPACE>_<KEY>. */

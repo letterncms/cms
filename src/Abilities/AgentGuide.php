@@ -30,6 +30,7 @@ final class AgentGuide
         3. Prefer patterns (patterns/list) for common sections so the site stays consistent.
 
         Conventions:
+        - Anything that changes the site takes dryRun: true: nothing is written, and the answer says how far it was checked. checked "full": refused exactly where the real run would be, and `changes` lists what would change or be removed (entries, settings, and everything destructive). checked "input": only the input and your permission were checked, `changes` is null, and the real run may still refuse. Use it before a change you are unsure of.
         - Entries are drafts until published (entries/publish, or status "published" on create).
         - Block styles only use design tokens (token:space.8, token:color.primary…), never raw colors or pixel values.
         - A blocks field also accepts Block Markdown (Markdown plus ::: directives) as a string.

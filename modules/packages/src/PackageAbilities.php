@@ -112,6 +112,22 @@ final class PackageAbilities
             },
         ]);
 
+        // What turning a package on or off would do, refused where enable() and disable() refuse (their own checks).
+        $switch = function (string $name, bool $on): array {
+            $package = $on ? $this->cms->packages()->enableable($name) : $this->cms->packages()->disableable($name);
+
+            return ['action' => $on ? 'enable' : 'disable', 'type' => 'package', 'name' => $name, 'label' => $package?->label ?? $name, 'changes' => $this->cms->packages()->isEnabled($name) !== $on];
+        };
+
+        // The plugin an uninstall is for, refused where the uninstall is.
+        $removable = function (array $in): \Cms\Packages\PackageManifest {
+            if ($in['deleteFiles'] && app(\Cms\Update\Layout::class)->managed() === 'composer') {
+                throw new AbilityException(__('This site is managed with Composer. Run: composer remove :package', ['package' => $in['name']]), 'invalid');
+            }
+
+            return $this->cms->packages()->uninstallable($in['name']);
+        };
+
         $a->register('packages/enable', [
             'label' => 'Enable Module or Plugin',
             'description' => 'Turn a module or plugin on and run its install/upgrade steps.',
@@ -119,6 +135,7 @@ final class PackageAbilities
             'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']],
             'output' => Shape::of(['enabled' => Shape::STRING]),
+            'dryRun' => fn (array $in) => $guard(fn () => [$switch($in['name'], true)]),
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $this->cms->packages()->enable($in['name']);
 
@@ -133,6 +150,7 @@ final class PackageAbilities
             'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']],
             'output' => Shape::of(['disabled' => Shape::STRING]),
+            'dryRun' => fn (array $in) => $guard(fn () => [$switch($in['name'], false)]),
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $this->cms->packages()->disable($in['name']);
 
@@ -147,6 +165,7 @@ final class PackageAbilities
             'annotations' => ['confirm' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'on' => ['type' => 'boolean']], 'required' => ['name', 'on']],
             'output' => Shape::of(['name' => Shape::STRING, 'on' => Shape::BOOLEAN, 'message' => Shape::STRING]),
+            'dryRun' => fn (array $in) => $guard(fn () => [$switch($in['name'], $in['on'])]),
             'handler' => fn (array $in) => $guard(function () use ($in) {
                 $packages = $this->cms->packages();
                 $label = $this->label($in['name']);
@@ -170,11 +189,16 @@ final class PackageAbilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'deleteFiles' => ['type' => 'boolean', 'default' => false]], 'required' => ['name']],
             'output' => Shape::of(['uninstalled' => Shape::STRING, 'message' => Shape::STRING]),
-            'handler' => fn (array $in) => $guard(function () use ($in) {
-                if ($in['deleteFiles'] && app(\Cms\Update\Layout::class)->managed() === 'composer') {
-                    throw new AbilityException(__('This site is managed with Composer. Run: composer remove :package', ['package' => $in['name']]), 'invalid');
-                }
+            // Its tables and settings go; its files too with deleteFiles.
+            'dryRun' => fn (array $in) => $guard(function () use ($in, $removable) {
+                $package = $removable($in);
 
+                return [['action' => 'uninstall', 'type' => 'package', 'name' => $package->name, 'label' => $package->label, 'removes' => [
+                    'data' => true, 'tables' => is_dir($package->path('database/migrations')), 'files' => $in['deleteFiles'], 'disablesFirst' => $this->cms->packages()->isEnabled($package->name),
+                ]]];
+            }),
+            'handler' => fn (array $in) => $guard(function () use ($in, $removable) {
+                $removable($in);
                 $label = $this->label($in['name']);
                 $this->cms->packages()->uninstall($in['name'], $in['deleteFiles']);
 

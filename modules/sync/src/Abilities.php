@@ -73,6 +73,11 @@ final class Abilities
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['name' => $remote], 'required' => ['name']],
             'output' => Shapes::ok(),
+            // Forgetting never refuses: a site that is not connected is nothing to forget.
+            'dryRun' => static fn (array $in): array => array_values(array_map(
+                static fn (array $r) => ['action' => 'disconnect', 'type' => 'remote', 'name' => $r['name'], 'label' => $r['label'], 'url' => $r['url']],
+                array_filter(app(Remotes::class)->all(), static fn (array $r) => $r['name'] === (string) $in['name']),
+            )),
             'handler' => static function (array $in) {
                 app(Remotes::class)->remove((string) $in['name']);
 
@@ -101,6 +106,8 @@ final class Abilities
             'description' => 'Replaces this site’s key. Sites connected with the old one stop reaching it until they get the new one.',
             'annotations' => ['destructive' => true],
             'output' => Shape::of(['key' => Shape::STRING]),
+            // Renewing never refuses. The old key goes: the sites that hold it are not known here.
+            'dryRun' => static fn (): array => [['action' => 'replace', 'type' => 'connection-key', 'removes' => ['key' => true]]],
             'handler' => static function () {
                 app(Site::class)->renew();
 
@@ -143,6 +150,19 @@ final class Abilities
                 'rewrite' => $pairs,
             ], 'required' => ['remote', 'direction', 'groups']],
             'output' => self::progressShape(),
+            // Transfer::plan() is what start() begins with: the same preview and refusals, and what the receiving site would lose.
+            'dryRun' => static fn (array $in) => $guard(static function () use ($in) {
+                $plan = app(Transfer::class)->plan((string) $in['remote'], (string) $in['direction'], $in);
+
+                return [[
+                    'action' => (string) $in['direction'], 'type' => 'sync', 'from' => $plan['preview']['from']['label'] ?? null, 'to' => $plan['preview']['to']['label'] ?? null, 'groups' => $plan['groups'],
+                    'removes' => [
+                        'tables' => array_column($plan['tables'], 'table'),
+                        'files' => array_sum(array_map(static fn (array $a) => count($a['remove']), $plan['areas'])),
+                    ],
+                    'sends' => ['files' => array_sum(array_map(static fn (array $a) => count($a['send']), $plan['areas']))],
+                ]];
+            }),
             'handler' => static fn (array $in) => $guard(static fn () => app(Transfer::class)->start((string) $in['remote'], (string) $in['direction'], $in)),
         ]);
 
@@ -186,6 +206,22 @@ final class Abilities
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 26], 'remote' => $remote], 'required' => ['id']],
             // Still putting tables back (at of tables), or done.
             'output' => Shape::either(['done' => Shape::enum(false), 'at' => Shape::INTEGER, 'tables' => Shape::INTEGER], ['done' => Shape::enum(true)]),
+            // Here the backup is checked as undo() checks it. On a connected site only that site can say: its history is asked whether the sync can still be undone.
+            'dryRun' => static fn (array $in) => $guard(static function () use ($in) {
+                if (! isset($in['remote']) || $in['remote'] === '') {
+                    $meta = app(Receiver::class)->undoable((string) $in['id']);
+
+                    return [['action' => 'undo', 'type' => 'sync', 'id' => (string) $in['id'], 'removes' => ['tables' => array_keys((array) ($meta['tables'] ?? []))]]];
+                }
+
+                $synced = array_values(array_filter(app(Connections::class)->remote((string) $in['remote'])->history(), static fn (array $s) => ($s['id'] ?? null) === $in['id']))[0] ?? null;
+
+                if ($synced === null || empty($synced['can_undo'])) {
+                    throw new RuntimeException(__('That sync can’t be undone any more.'));
+                }
+
+                return [['action' => 'undo', 'type' => 'sync', 'id' => (string) $in['id'], 'remote' => (string) $in['remote'], 'removes' => ['tables' => array_values((array) ($synced['tables'] ?? []))]]];
+            }),
             'handler' => static fn (array $in) => $guard(static function () use ($in) {
                 if (! isset($in['remote']) || $in['remote'] === '') {
                     return app(Receiver::class)->undo((string) $in['id']);
