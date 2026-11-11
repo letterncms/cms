@@ -19,6 +19,8 @@
 
 ### Changed
 
+- **Breaking.** MCP speaks two protocol revisions: `2026-07-28`, where every request names the revision, and `2025-11-25` for clients that start with the `initialize` handshake. The older `2025-06-18` and `2025-03-26` are gone: `initialize` answers them with `2025-11-25`, and a request that names one is told which revisions are spoken.
+- A cleared link field is stored as nothing (`null`) instead of an empty string.
 - **Breaking.** The role a visitor's account gets is `visitor` (was `member`), the word everything else already used for it: the role's label, `kind: visitors` in `users/list`, the **Visitor Accounts** settings. `cms migrate` renames it in what a site has stored: accounts with the role `member` get `visitor`, as do **Role for New Visitors** and a `member` role in the site's own roles. A site whose roles already have a `visitor` of their own is left as it is. Plugins and templates that name the role `member` need the new id.
 - **Breaking.** For plugins: `cms()->navigation()` (the admin's sidebar) is `cms()->adminNav()`, and `cms()->content()` (where entries are written) is `cms()->entryService()`; `entries()` still reads them. Settings are read with one word: `cms()->setting($namespace, $key = null, $default = null)` gives one value of a namespace, or all of them without a key (it was `cms()->settings(…)`), and a plugin reads its own namespace with `$this->setting($key = null, $default = null)` (it was `$this->settings(…)`). `settingsRegistry()` still registers and saves settings.
 - **Breaking.** `patterns/list` and `patterns/save` are `components/list` and `components/save`, named after the `components` collection whose entries they list and save.

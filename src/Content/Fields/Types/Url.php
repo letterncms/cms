@@ -20,10 +20,16 @@ class Url extends Text
     public function schema(Field $field): array
     {
         // `reference: true` also takes a page by id (entry:<id>, optionally #section), which follows the page when it moves.
-        // An optional one may be empty, as with `format` (older drafts store a cleared link as '').
-        $empty = $field->required ? '' : '$|';
-        $format = $field->get('reference') ? ['pattern' => "^({$empty}https?://|/|#|\\?|mailto:|tel:|entry:[a-z0-9]+(#[\\w-]+)?$)"] : ['format' => 'uri-reference'];
+        $format = $field->get('reference') ? ['pattern' => '^(https?://|/|#|\\?|mailto:|tel:|entry:[a-z0-9]+(#[\\w-]+)?$)'] : ['format' => 'uri-reference'];
 
         return $this->nullable(['type' => 'string', ...$format, 'maxLength' => 2048, 'description' => $field->instructions ?: $field->label], $field);
+    }
+
+    /** A cleared link is no link: null, not an empty string. */
+    public function normalize(mixed $value, Field $field): mixed
+    {
+        $value = parent::normalize($value, $field);
+
+        return $value === '' ? null : $value;
     }
 }
