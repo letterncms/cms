@@ -44,6 +44,9 @@ final class BrowserFixturesTest extends TestCase
             Files::put(content_path('design/'.$path), $contents);
         }
 
+        // The pages' security policy is on, as on a new site: every check runs under it.
+        $this->cms()->settingsRegistry()->save('site', ['csp' => true]);
+
         // Every page: links to two pages, and a stage that both keep.
         $this->cms()->entryService()->create('templates', ['title' => 'Default', 'slug' => 'default', 'status' => 'published', 'data' => ['blocks' => [
             ['type' => 'box', 'props' => ['tag' => 'nav'], 'children' => [
@@ -97,6 +100,24 @@ final class BrowserFixturesTest extends TestCase
         $this->assertSame([], $status['errors']);
         $this->assertStringContainsString('navigate', (string) file_get_contents(public_path('one/index.html')));
         $target && Files::copyDirectory(public_path(), $target.'/client');
+    }
+
+    /** A new site as it starts: the starter's pages, with the security policy a new site has. */
+    public function test_the_starter_builds_under_its_policy(): void
+    {
+        $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
+        $this->assertTrue((bool) $this->cms()->setting('site', 'csp'));
+        // This test site has a collection of its own already, which install leaves alone: the starter's pages go in by hand.
+        $this->assertGreaterThan(0, $this->app->make(\Cms\Modules\Site\Starter::class)->refresh($this->admin()));
+
+        $status = $this->app->make(SiteBuilder::class)->buildAll();
+        $this->assertSame([], $status['errors']);
+        $this->assertMatchesRegularExpression('/Header set Content-Security-Policy "[^"]*script-src \'self\' \'wasm-unsafe-eval\' \'sha256-/', (string) file_get_contents(public_path('.htaccess')));
+        $this->assertFileExists(public_path('index.html'), 'the starter has a home page');
+
+        if ($target = getenv('CMS_BROWSER_FIXTURES')) {
+            Files::copyDirectory(public_path(), $target.'/starter');
+        }
     }
 
     /** @return array<string, string> path under content/design => contents */

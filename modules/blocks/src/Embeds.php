@@ -7,6 +7,9 @@ namespace Cms\Modules\Blocks;
 /** Turns share URLs from trusted providers into embed URLs. Unknown hosts are refused. */
 final class Embeds
 {
+    /** The hosts an embed's frame comes from: every address video() and iframe() can answer. A page's security policy allows these frames. */
+    public const array HOSTS = ['www.youtube-nocookie.com', 'player.vimeo.com', 'www.google.com', 'open.spotify.com', 'www.loom.com', 'codepen.io', 'www.figma.com', 'calendly.com'];
+
     /** @return array{kind: string, src: string}|null */
     public static function video(string $url, bool $autoplay = false): ?array
     {
@@ -21,6 +24,9 @@ final class Embeds
         }
 
         if (preg_match('#^(https://|/)[^\s"\'<>]+\.(mp4|webm|mov)(\?.*)?$#i', $url)) {
+            // A file from elsewhere is loaded by the page: the site's security policy names its host.
+            cms()->hooks()->dispatch('site.policy.source', 'media', $url);
+
             return ['kind' => 'file', 'src' => $url];
         }
 

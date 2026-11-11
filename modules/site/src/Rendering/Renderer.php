@@ -16,6 +16,7 @@ use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
 use Cms\Cms;
 use Cms\Modules\Site\Design\Code;
+use Cms\Modules\Site\Http\ContentPolicy;
 use Cms\Modules\Site\Design\Design;
 
 /**
@@ -35,6 +36,7 @@ final class Renderer
         private readonly Hooks $hooks,
         private readonly HtmlMinifier $minifier,
         private readonly Code $code,
+        private readonly ContentPolicy $policy,
     ) {}
 
     /**
@@ -372,6 +374,9 @@ final class Renderer
             $context->dependencies['design:importmap'] = true;
             $head[] = $map;
         }
+        // What the head and the foot run is what the site's security policy lets a public page run.
+        $this->policy->rendered([...$head, ...$foot], $context->mode === PageContext::BUILD || $context->mode === PageContext::REQUEST);
+
         $skipLink = ! $context->editor && str_contains($body, 'id="main"') ? '<a class="cms-skip" href="#main">'.e(__('Skip to content')).'</a>' : '';
         $alpine = ! $context->editor && (! empty($this->blocks->features['logic']) || ! empty($this->blocks->features['ajax'])) ? ' x-data' : '';
 

@@ -27,7 +27,9 @@ use Cms\Modules\Site\Design\HttpVendorFetcher;
 use Cms\Modules\Site\Design\Vendor;
 use Cms\Modules\Site\Design\VendorAbilities;
 use Cms\Modules\Site\Design\VendorFetcher;
+use Cms\Modules\Site\Http\ContentPolicy;
 use Cms\Modules\Site\Http\PublicPage;
+use Cms\Modules\Site\Http\PublicPolicy;
 use Cms\Modules\Site\Http\SiteController;
 use Cms\Modules\Site\Rendering\AugmentedEntry;
 use Cms\Modules\Site\Rendering\EntryQueryProxy;
@@ -43,7 +45,7 @@ final class SiteModule extends Plugin
     {
         require_once __DIR__.'/helpers.php';
 
-        foreach ([Design::class, Code::class, Vendor::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class] as $service) {
+        foreach ([Design::class, Code::class, Vendor::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class, ContentPolicy::class] as $service) {
             $this->app->singleton($service);
         }
 
@@ -76,10 +78,42 @@ final class SiteModule extends Plugin
         $this->agentContext();
 
         $this->cms()->hooks()->on('cms.installed', fn (User $user) => $this->app->make(Starter::class)->seed($user));
+        $this->policy();
 
         if ($this->app->runningInConsole()) {
             $this->commands([Console\BuildCommand::class, Console\CheckLinksCommand::class, Console\StarterRefreshCommand::class, Console\VendorCommand::class]);
         }
+    }
+
+    /**
+     * The security policy of the public pages (Http\ContentPolicy): on for a site that starts today, a setting
+     * for one that was there before, whose pages may load from hosts nobody listed yet.
+     */
+    private function policy(): void
+    {
+        $hooks = $this->cms()->hooks();
+        $policy = fn () => $this->app->make(ContentPolicy::class);
+
+        // Every answer passes it, and only one for which a public page was rendered gets the header: a site page, a
+        // page of the account screens, the 429 page. The router's groups are the HTTP kernel's, so not there.
+        $this->app->make(\Illuminate\Contracts\Http\Kernel::class)->pushMiddleware(PublicPolicy::class);
+
+        $hooks->on('cms.installed', fn () => $this->cms()->settingsRegistry()->save('site', ['csp' => true]));
+        // What code made a page load from (an image from elsewhere, a CDN, a video file): Images and Embeds say so.
+        $hooks->on('site.policy.source', static fn (string $kind, mixed $url) => $policy()->source($kind, $url));
+        // public/.htaccess is copied to a site once: the CMS's own lines in it are kept current here.
+        $hooks->on('cms.migrated', static fn () => $policy()->publish());
+        $hooks->on('settings.saved', static fn (string $namespace) => $namespace === 'site' && $policy()->publish());
+
+        // A host is listed as a policy names it; anything else would be kept and never count.
+        $hooks->addFilter('settings.saving', static function (array $values, string $namespace) {
+            if ($namespace === 'site' && isset($values['csp_hosts'])) {
+                $values['csp_hosts'] = array_values(array_unique(array_map(static fn ($host) => ContentPolicy::host($host)
+                    ?? throw \Cms\Abilities\AbilityException::invalid(__('“:host” is not a host: write it like “player.example.com”, “*.example.com” or “https://example.com”.', ['host' => is_scalar($host) ? (string) $host : '?'])), (array) $values['csp_hosts'])));
+            }
+
+            return $values;
+        });
     }
 
     /** Let modules and plugins (blocks, seo…) contribute to the page being rendered. */
@@ -465,6 +499,9 @@ final class SiteModule extends Plugin
                 ['handle' => 'static', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Build a Static Site', 'default' => true],
                 ['handle' => 'auto_build', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Rebuild Automatically on Publish', 'default' => true],
                 ['handle' => 'search_index', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Publish a Search Index', 'default' => true],
+                ['handle' => 'csp', 'section' => 'Security', 'type' => 'toggle', 'label' => 'Content Security Policy', 'default' => false],
+                ['handle' => 'csp_hosts', 'section' => 'Security', 'type' => 'tags', 'label' => 'Allowed Hosts', 'placeholder' => 'player.example.com', 'if' => ['csp' => true]],
+                ['handle' => 'csp_report_only', 'section' => 'Security', 'type' => 'toggle', 'label' => 'Report Only', 'default' => false, 'if' => ['csp' => true]],
             ];
         });
     }

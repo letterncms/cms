@@ -69,6 +69,8 @@
 ### Security
 
 - A secret of a settings page whose field a plugin takes away (as Brevo does with its key while the mail transport's serves) is still a secret: `settings/get` and `settings/update` answered with it in clear, and the next save wrote it into `config/<namespace>.yaml`. Every key that `storage/secrets.json` holds for a page, and every field registered as `secret`, is now masked in answers and kept out of the settings file.
+- **A Content-Security-Policy for the public pages.** Turn on **Content Security Policy** under Settings → General → Security, and a page runs only what the site and its plugins put in its head and foot (each inline script by its hash), loads from the site itself and the providers the Embed and Video blocks know, and from the hosts you add under **Allowed Hosts**. A script that gets into a page's content some other way runs nothing. Built pages get it from `public/.htaccess`, pages PHP answers as a header; the admin, the builder and previews are not touched. A new site starts with it on; a site installed before keeps it off until you turn it on. **Report Only** sends it as `Content-Security-Policy-Report-Only` while you try it. It goes out once a full build has seen every page, and names the hosts of images and video files from elsewhere (or a CDN) and the scripts that wait for consent. Plugins add to it with the `site.policy` filter.
+- Every site's `public/.htaccess` now has a block the CMS keeps current, between `# BEGIN cms` and `# END cms`: built pages are sent with `X-Content-Type-Options: nosniff`, and with the policy when it is on. A site that was installed before gets it with `cms migrate`; what you wrote outside the block stays as it is.
 
 ## 0.23.0 (2026-11-11)
 
