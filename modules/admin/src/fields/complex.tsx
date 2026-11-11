@@ -232,7 +232,8 @@ function RepeaterTable({ field, items, onChange, disabled, context, max, fields 
   const template = `${fields.map((f) => f.width === 'narrow' || f.type === 'select' || f.type === 'number' || f.type === 'toggle' ? '160px' : 'minmax(160px,1fr)').join(' ')} 32px`
   return (
     <div className="space-y-2">
-      {items.length < max && (
+      {/* `add: false`: rows come from elsewhere (a dialog in the page's bar), not from here. */}
+      {items.length < max && field.add !== false && (
         <Pressable disabled={disabled} onClick={() => onChange([blank(), ...items])} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
           <Icon name="plus" size={14} /> {(field.add as string) || t('Add Item')}
         </Pressable>
@@ -240,18 +241,20 @@ function RepeaterTable({ field, items, onChange, disabled, context, max, fields 
       {items.length === 0 && typeof field.empty === 'string' && <p className="m-0 py-2 text-sm text-muted">{field.empty}</p>}
       {items.length > 0 && (
         <div role="table" aria-label={field.label} className="overflow-x-auto rounded-lg border border-border">
-          <div role="row" className="grid min-w-fit gap-2 border-b border-border bg-sunken px-3 py-2 text-xs font-medium text-muted" style={{ gridTemplateColumns: template }}>
+          {/* On a phone each row is a card of labelled fields, one under the other: a row of three fields does not fit. */}
+          <div role="row" className="grid min-w-fit gap-2 border-b border-border bg-sunken px-3 py-2 text-xs font-medium text-muted max-sm:hidden" style={{ gridTemplateColumns: template }}>
             {fields.map((f) => <span key={f.handle} role="columnheader">{f.label}</span>)}
             <span role="columnheader" className="sr-only">{t('Remove')}</span>
           </div>
           {items.map((item, i) => (
-            <div key={i} role="row" className="grid min-w-fit items-center gap-2 px-3 py-1.5 [&+&]:border-t [&+&]:border-border" style={{ gridTemplateColumns: template }}>
+            <div key={i} role="row" className="grid min-w-fit items-center gap-2 px-3 py-1.5 max-sm:!flex max-sm:min-w-0 max-sm:flex-col max-sm:items-stretch max-sm:py-3 [&+&]:border-t [&+&]:border-border" style={{ gridTemplateColumns: template }}>
               {fields.map((f) => (
                 <div key={f.handle} role="cell" className="min-w-0">
+                  <span aria-hidden className="mb-1 block text-xs text-muted sm:hidden">{f.label}</span>
                   <Fields bare fields={[{ ...f, size: 'sm' }]} values={item} onChange={(h, v) => onChange(items.map((it, j) => (j === i ? { ...it, [h]: v } : it)))} context={{ ...context, path: [...(context.path ?? []), field.handle, String(i)] }} errors={context.errors} disabled={disabled} />
                 </div>
               ))}
-              <IconButton icon="trash" label={t('Remove')} size="xs" disabled={disabled} onClick={() => onChange(items.filter((_, j) => j !== i))} />
+              <IconButton icon="trash" label={t('Remove')} size="xs" disabled={disabled} onClick={() => onChange(items.filter((_, j) => j !== i))} className="max-sm:self-end" />
             </div>
           ))}
         </div>
