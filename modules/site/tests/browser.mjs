@@ -21,11 +21,15 @@ const requests = []
 const missing = []
 /** Everything a page logged as an error, to say with a failure. */
 const logged = []
+/** What a page's Content-Security-Policy refused. No check may leave any but the one that asks for it. */
+const refused = []
 
 // Static files the way the site's .htaccess serves them: /about is public/about/index.html.
 // Two builds of the same site: `plain`, and `client`, which navigates without page loads.
 async function serve(site) {
   const folder = join(root, site)
+  // The policy the CMS wrote into the site's .htaccess, sent with every page as Apache would. The builder's canvas is not a public page.
+  const policy = existsSync(join(folder, '.htaccess')) ? readFileSync(join(folder, '.htaccess'), 'utf8').match(/Header set Content-Security-Policy "([^"\n]+)"/)?.[1] : undefined
   const server = createServer((request, response) => {
     const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname))
     requests.push(path)
@@ -36,12 +40,13 @@ async function serve(site) {
       response.writeHead(404).end('Not found')
       return
     }
-    response.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file))
+    const html = extname(file) === '.html'
+    response.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', ...(html && policy && !path.startsWith('/canvas') ? { 'Content-Security-Policy': policy } : {}) }).end(readFileSync(file))
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
-  return { server, origin: `http://127.0.0.1:${server.address().port}` }
+  return { server, policy, origin: `http://127.0.0.1:${server.address().port}` }
 }
-const sites = { plain: await serve('plain'), client: await serve('client') }
+const sites = { plain: await serve('plain'), client: await serve('client'), starter: await serve('starter') }
 
 const chrome = [process.env.CHROME, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find((path) => path && existsSync(path))
 if (!chrome) {
@@ -81,10 +86,12 @@ async function open(path, { media = {}, script = true, site = 'plain', before = 
       waiting.delete(data.id)
       data.error ? reject(new Error(data.error.message)) : resolve(data.result)
     } else if (data.method === 'Runtime.exceptionThrown') logged.push(data.params.exceptionDetails.exception?.description ?? data.params.exceptionDetails.text), errors.push(data.params.exceptionDetails.exception?.description ?? data.params.exceptionDetails.text)
+    else if (data.method === 'Log.entryAdded' && /Content Security Policy/i.test(data.params.entry.text)) refused.push(data.params.entry.text)
     else if (data.method === 'Runtime.consoleAPICalled' && data.params.type === 'error') logged.push(data.params.args.map((a) => a.value ?? a.description).join(' ')), errors.push(data.params.args.map((a) => a.value ?? a.description).join(' '))
   }
   const send = (method, params = {}) => new Promise((resolve, reject) => (waiting.set(++id, { resolve, reject }), ws.send(JSON.stringify({ id, method, params }))))
   await send('Runtime.enable')
+  await send('Log.enable')
   await send('Page.enable')
   if (!script) await send('Emulation.setScriptExecutionDisabled', { value: true })
   if (before) await send('Page.addScriptToEvaluateOnNewDocument', { source: before })
@@ -117,6 +124,39 @@ function equal(actual, expected, what) {
 }
 
 const checks = {
+  /**
+   * The site's Content-Security-Policy is on for every check here. This one: a starter page, and a page with a
+   * behaviour, a vendored library and client navigation, run under it and nothing is refused; a script that
+   * got into a page some other way does not run.
+   */
+  async policy() {
+    for (const site of ['plain', 'client', 'starter']) {
+      if (!/script-src 'self' 'wasm-unsafe-eval' 'sha256-/.test(sites[site].policy ?? '')) throw new Error(`${site} has no policy with a hash in its .htaccess: ${sites[site].policy}`)
+    }
+    const home = await open('/', { site: 'starter' })
+    await home.until('location.pathname === "/" && document.readyState === "complete"')
+    equal(await home.evaluate('fetch("/").then((r) => r.headers.get("content-security-policy") === null ? "none" : "sent")'), 'sent', 'the starter page comes with the policy')
+    await home.until('document.querySelector("[data-cms-behavior]") && !document.querySelector("[data-cms-behavior]:not([data-cms-mounted])")').catch(() => null)
+    equal(await home.evaluate('document.querySelectorAll("script[type=importmap], script:not([src]):not([type])").length > 0'), true, 'the starter page has inline scripts the policy must name')
+    await sleep(500)
+    await home.close()
+    equal([...refused], [], 'refused on the starter page')
+
+    const page = await open('/one', { site: 'client' })
+    await page.until('document.getElementById("stage")?.dataset.mounted')
+    await page.evaluate('document.getElementById("to-two-plain").click()')
+    await page.until('location.pathname === "/two"')
+    await sleep(500)
+    equal([...refused], [], 'refused on a page with a behaviour, a vendored library and client navigation')
+
+    // What the policy is for: markup that is not the site's own runs nothing.
+    equal(await page.evaluate('(() => { const s = document.createElement("script"); s.textContent = "window.__stolen = 1"; document.body.append(s); const i = document.createElement("img"); i.src = "https://elsewhere.example/x.png"; document.body.append(i); return typeof window.__stolen })()'), 'undefined', 'an inline script nobody named does not run')
+    await page.until('true')
+    await sleep(300)
+    if (!refused.some((text) => /inline script/i.test(text))) throw new Error(`the inline script was not refused: ${refused.join(' | ')}`)
+    refused.length = 0
+    await page.close()
+  },
   /** A block's script and stylesheet load; the script imports another script by path and a vendored library by name. */
   async code() {
     const tab = await open('/code')
@@ -475,8 +515,10 @@ for (const [name, check] of Object.entries(checks)) {
   if (only.length && !only.includes(name)) continue
   logged.length = 0
   missing.length = 0
+  refused.length = 0
   try {
     await check()
+    if (refused.length) throw new Error(`the page's security policy refused: ${[...new Set(refused)].join('\n      ')}`)
     if (missing.length) throw new Error(`asked for what is not there: ${[...new Set(missing)].join(', ')}`)
     console.log(`ok    ${name}`)
   } catch (error) {

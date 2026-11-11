@@ -560,5 +560,13 @@
   "Is the previous entry": "Is het vorige item",
   "Is the next entry": "Is het volgende item",
   "Next": "Volgende",
-  "Previous": "Vorige"
+  "Previous": "Vorige",
+  "Security": "Beveiliging",
+  "Content Security Policy": "Content Security Policy",
+  "Allowed Hosts": "Toegestane hosts",
+  "player.example.com": "player.example.com",
+  "Report Only": "Alleen melden",
+  "public/.htaccess could not be written, so its security headers are not current. Make it writable for the web server.": "public/.htaccess kon niet worden geschreven, dus de beveiligingsheaders zijn niet actueel. Maak het bestand schrijfbaar voor de webserver.",
+  "“:host” is not a host: write it like “player.example.com”, “*.example.com” or “https://example.com”.": "“:host” is geen host: schrijf hem als “player.example.com”, “*.example.com” of “https://example.com”.",
+  "The pages carry more than :count different inline scripts: put what changes per page in an attribute and the script in a file, or the security policy cannot name them.": "De pagina’s bevatten meer dan :count verschillende inline scripts: zet wat per pagina verandert in een attribuut en het script in een bestand, anders kan het beveiligingsbeleid ze niet benoemen."
 }

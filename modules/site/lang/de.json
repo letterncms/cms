@@ -560,5 +560,13 @@
   "Is the previous entry": "Ist der vorherige Eintrag",
   "Is the next entry": "Ist der nächste Eintrag",
   "Next": "Weiter",
-  "Previous": "Zurück"
+  "Previous": "Zurück",
+  "Security": "Sicherheit",
+  "Content Security Policy": "Content Security Policy",
+  "Allowed Hosts": "Erlaubte Hosts",
+  "player.example.com": "player.example.com",
+  "Report Only": "Nur melden",
+  "public/.htaccess could not be written, so its security headers are not current. Make it writable for the web server.": "public/.htaccess konnte nicht geschrieben werden, deshalb sind die Sicherheits-Header nicht aktuell. Mach die Datei für den Webserver beschreibbar.",
+  "“:host” is not a host: write it like “player.example.com”, “*.example.com” or “https://example.com”.": "„:host“ ist kein Host: schreib ihn wie „player.example.com“, „*.example.com“ oder „https://example.com“.",
+  "The pages carry more than :count different inline scripts: put what changes per page in an attribute and the script in a file, or the security policy cannot name them.": "Die Seiten enthalten mehr als :count verschiedene Inline-Skripte: Leg, was sich pro Seite ändert, in ein Attribut und das Skript in eine Datei, sonst kann die Sicherheitsrichtlinie sie nicht benennen."
 }

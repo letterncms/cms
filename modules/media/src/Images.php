@@ -51,7 +51,20 @@ final class Images
         $item = $this->item($value);
         $html = $item ? $this->variants->picture($item, $alt !== '' ? $alt : null, $options) : null;
 
-        return cms()->hooks()->filter('media.img', $html, $value, $alt, $options);
+        $html = cms()->hooks()->filter('media.img', $html, $value, $alt, $options);
+
+        // Where its files come from (a CDN through media.img, an address given as it is): for the security policy.
+        if (is_string($html)) {
+            preg_match_all('#(?:src|srcset)="([^"]+)"#', $html, $m);
+
+            foreach ($m[1] as $sources) {
+                foreach (explode(',', $sources) as $source) {
+                    cms()->hooks()->dispatch('site.policy.source', 'img', strtok(trim($source), ' '));
+                }
+            }
+        }
+
+        return $html;
     }
 
     /** The address of an image value: the library's file, or an address given as it is. Plugins adjust it with `media.url` (a CDN). */
@@ -64,7 +77,11 @@ final class Images
             $url = is_string($given) && preg_match('#^(https?://|/)#', $given) ? $given : null;
         }
 
-        return cms()->hooks()->filter('media.url', $url, $value);
+        $url = cms()->hooks()->filter('media.url', $url, $value);
+        // A page that shows it loads from that host: the site's security policy names it.
+        cms()->hooks()->dispatch('site.policy.source', 'img', $url);
+
+        return $url;
     }
 
     /** A file added beside the site (by Sync, by hand) has no record yet: import, at most once a minute. */

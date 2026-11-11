@@ -12,6 +12,7 @@ use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Extend\Hooks;
 use Cms\Cms;
 use Cms\Modules\Media\MediaManifest;
+use Cms\Modules\Site\Http\ContentPolicy;
 use Cms\Modules\Site\Design\Code;
 use Cms\Modules\Site\Rendering\PageContext;
 use Cms\Modules\Site\Rendering\Renderer;
@@ -37,6 +38,7 @@ final class SiteBuilder implements SiteBuilderContract
         private readonly Renderer $renderer,
         private readonly Hooks $hooks,
         private readonly Archives $archives,
+        private readonly ContentPolicy $policy,
     ) {}
 
     public function available(): bool
@@ -246,6 +248,10 @@ final class SiteBuilder implements SiteBuilderContract
 
             $queue['done'] = (int) ($queue['done'] ?? 0) + 1;
         }
+
+        // What the pages built in this step run is part of the site's security policy from now on;
+        // after a full build, what no page runs any more leaves it.
+        $this->policy->publish($queue['generation'] ?? null, $queue['items'] === [] && ! empty($queue['full']) ? $queue['generation'] : null);
 
         if ($queue['items'] === []) {
             if (! empty($queue['full'])) {
