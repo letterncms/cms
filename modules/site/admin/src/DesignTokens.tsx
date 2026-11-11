@@ -1,5 +1,5 @@
 import { can, queryClient, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
-import { Fields, Icon, IconButton, Menu, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar, type MenuItemDef } from '@letterncms/ui'
+import { Button, Fields, Icon, IconButton, Menu, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, copyText, deviceWidths, prompt, toast, useScreenSidebar, useTheme, type MenuItemDef } from '@letterncms/ui'
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Disclosure, Group, css, px, variable } from './design-parts'
 import { fallbackOf, fontStack, withFallback } from './fields'
@@ -85,6 +85,18 @@ function sections(): { group: string; items: { value: SectionKey; label: string;
 }
 
 /** The title of the dialog that adds a token to a group. */
+/** A row's ⋯: there on a touch screen, and on hover or focus where a pointer hovers. */
+const rowAction = 'shrink-0 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100'
+
+/** What the button that adds a token of a group says: the dialog's title says what is new, its button what it does. */
+function addLabel(group: string): string {
+  const labels: Record<string, string> = {
+    color: t('Add Color'), font: t('Add Font Family'), text: t('Add Text Size'), weight: t('Add Weight'), leading: t('Add Line Height'), tracking: t('Add Letter Spacing'),
+    space: t('Add Spacing'), container: t('Add Container'), breakpoint: t('Add Breakpoint'), radius: t('Add Radius'), shadow: t('Add Shadow'), duration: t('Add Duration'), ease: t('Add Easing'),
+  }
+  return labels[group] ?? t('Add Token')
+}
+
 function newTitle(group: string): string {
   const titles: Record<string, string> = {
     color: t('New Color'), font: t('New Font Family'), text: t('New Text Size'), weight: t('New Weight'), leading: t('New Line Height'), tracking: t('New Letter Spacing'),
@@ -178,7 +190,19 @@ export default function DesignTokens() {
   const base = useMemo(() => (theme.data ? initial(theme.data) : null), [theme.data])
   const [draft, setDraft] = useState<Draft | null>(null)
   const [section, setSection] = useTab(SECTIONS)
-  const [mode, setMode] = useState<'light' | 'dark'>('light')
+  // The preview starts in the theme the admin is in: a dark admin opens on the site's dark colours, not on a white slab.
+  const [mode, setMode] = useState<'light' | 'dark'>(useTheme() === 'dark' ? 'dark' : 'light')
+  // A phone shows the list or the preview, never both: the bar's Preview button turns between them.
+  const [asked, setPreviewing] = useState(false)
+  const [narrow, setNarrow] = useState(() => window.matchMedia('(max-width: 767px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const change = () => setNarrow(media.matches)
+    media.addEventListener('change', change)
+    return () => media.removeEventListener('change', change)
+  }, [])
+  // Only a narrow window turns between the two, and it shows the site as a phone does.
+  const previewing = asked && narrow
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
@@ -255,7 +279,7 @@ export default function DesignTokens() {
     return (
       <div className="flex h-full flex-col">
         <Topbar crumbs={[{ label: t('Design System'), icon: 'palette' }]} />
-        <QueryError title={t('The design system could not be loaded')} onRetry={() => void theme.refetch()} />
+        <QueryError title={t('Couldn’t load the design system')} onRetry={() => void theme.refetch()} retrying={theme.isRefetching} />
       </div>
     )
   }
@@ -265,7 +289,7 @@ export default function DesignTokens() {
   const setToken = (token: DraftToken, patch: Partial<DraftToken>) => update((d) => ({ ...d, tokens: d.tokens.map((x) => (x.path === token.path ? { ...x, ...patch } : x)) }))
   const removeToken = (token: DraftToken) => update((d) => ({ ...d, tokens: d.tokens.filter((x) => x.path !== token.path) }))
   const tokenName = async (title: string, group: string, name = '') => {
-    const asked = await prompt({ title, description: name ? t('Blocks that use token:{path} keep the old name.', { path: `${group}.${name}` }) : undefined, fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, placeholder: group === 'color' ? 'brand' : 'md' }], values: { name }, confirm: name ? t('Rename') : t('Add') })
+    const asked = await prompt({ title, description: name ? t('Blocks that use token:{path} keep the old name.', { path: `${group}.${name}` }) : undefined, fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, placeholder: group === 'color' ? 'brand' : 'md' }], values: { name }, confirm: name ? t('Rename') : addLabel(group) })
     const next = String(asked?.name ?? '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/^-+/, '')
     if (!next || next === name) return null
     if (tokens.some((x) => x.path === `${group}.${next}`)) {
@@ -307,7 +331,7 @@ export default function DesignTokens() {
   const addFont = async (kind: string): Promise<string | null> => {
     try {
       if (kind === 'google') {
-        const asked = await prompt({ title: t('Add a Google Font'), description: t('Its files are downloaded to your site.'), fields: [{ handle: 'family', type: 'text', label: t('Name'), placeholder: 'Inter Tight', autofocus: true }], confirm: t('Add') })
+        const asked = await prompt({ title: t('Add a Google Font'), description: t('Its files are downloaded to your site.'), fields: [{ handle: 'family', type: 'text', label: t('Name'), placeholder: 'Inter Tight', autofocus: true }], confirm: t('Add Font') })
         const family = String(asked?.family ?? '').trim()
         if (!family) return null
         await run('design/fonts-import', { family })
@@ -357,9 +381,12 @@ export default function DesignTokens() {
       <Topbar
         crumbs={[{ label: t('Design System'), icon: 'palette' }, { label: sections().flatMap((g) => g.items).find((item) => item.value === section)?.label ?? '' }]}
         actions={
-          <Tooltip content={t('Open Site')}>
-            <IconButton icon="external" label={t('Open Site')} onClick={() => window.open('/', '_blank', 'noopener')} />
-          </Tooltip>
+          <>
+            <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>
+            <Tooltip content={t('Open Site')}>
+              <IconButton icon="external" label={t('Open Site')} title={undefined} onClick={() => window.open('/', '_blank', 'noopener')} className="max-md:hidden" />
+            </Tooltip>
+          </>
         }
       />
       {/* The sections are rows under Design System in the sidebar: no column of their own, and the sidebar stays the one it was. */}
@@ -376,16 +403,19 @@ export default function DesignTokens() {
         </nav>
       </ScreenSidebar>
       <SaveBar dirty={dirty} saving={busy} error={failed} onSave={() => void save()} onDiscard={() => { setDraft(null); setFailed(null) }} />
-      {/* On a phone the panel takes the screen; the site is a tab away (Open Site). */}
+      {/* On a phone the list takes the screen, and the preview does when asked for: the same draft, drawn by the site. */}
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:grid-cols-[minmax(380px,460px)_minmax(0,1fr)]">
-        <div key={section} className="overflow-y-auto border-border px-4 pb-16 pt-2 md:border-r">
+        <div key={section} className={cn('overflow-y-auto border-border px-4 pb-16 pt-2 md:border-r', previewing && 'max-md:hidden')}>
           {section === 'color' && (
-            <Group title={t('Colors')} onAdd={() => add('color', '#000000')}>
-              <div className="flex h-7 items-center gap-2 text-2xs text-faint">
+            <Group>
+              {/* The section is this one list: its column heads are its head, with the way to add where each row has its menu. */}
+              <div className="flex h-9 items-center gap-2 border-b border-border text-2xs text-faint">
                 <span className="min-w-0 flex-1">{t('Name')}</span>
                 <span className={cn(COLOR, 'flex items-center gap-1')}><Icon name="sun" size={11} />{t('Light')}</span>
                 <span className={cn(COLOR, 'flex items-center gap-1')}><Icon name="moon" size={11} />{t('Dark')}</span>
-                <span className="w-6 shrink-0" />
+                <Tooltip content={addLabel('color')}>
+                  <IconButton icon="plus" label={addLabel('color')} title={undefined} size="xs" className="shrink-0" onClick={() => add('color', '#000000')} />
+                </Tooltip>
               </div>
               {byGroup('color').map((token) => (
                 <Row key={token.from ?? token.path} token={token} {...actions} wide>
@@ -399,7 +429,7 @@ export default function DesignTokens() {
           {section === 'type' && (
             <>
               {/* Fonts are the roles the site uses (sans, display, mono…); each picks, or adds, the font it uses. */}
-              <Group title={t('Fonts')} onAdd={() => add('font', [...(families[0] ? [families[0]] : []), 'ui-sans-serif', 'system-ui', 'sans-serif'])}>
+              <Group title={t('Fonts')} onAdd={() => add('font', [...(families[0] ? [families[0]] : []), 'ui-sans-serif', 'system-ui', 'sans-serif'])} addLabel={addLabel('font')}>
                 {byGroup('font').map((token) => (
                   <Row
                     key={token.from ?? token.path}
@@ -416,28 +446,28 @@ export default function DesignTokens() {
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Type Scale')} onAdd={() => add('text', { min: '1rem', max: '1.25rem' })}>
+              <Group title={t('Type Scale')} onAdd={() => add('text', { min: '1rem', max: '1.25rem' })} addLabel={addLabel('text')}>
                 {byGroup('text').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} below={<p className="m-0 truncate pb-2.5 leading-[1.1] tracking-[-0.01em] text-ink" style={{ fontSize: css('text', token.value), fontFamily: css('font', byGroup('font').find((x) => x.name === 'display')?.value ?? byGroup('font')[0]?.value) }}>{t('Ship It')}</p>}>
                     {value(token, { component: 'site-size' })}
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Weights')} onAdd={() => add('weight', '600')}>
+              <Group title={t('Weights')} onAdd={() => add('weight', '600')} addLabel={addLabel('weight')}>
                 {byGroup('weight').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="text-base text-ink" style={{ fontWeight: Number(token.value) || 400 }}>Ag</span>}>
                     {value(token, number('', { step: 100, min: 100, max: 900 }))}
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Line Heights')} onAdd={() => add('leading', '1.5')}>
+              <Group title={t('Line Heights')} onAdd={() => add('leading', '1.5')} addLabel={addLabel('leading')}>
                 {byGroup('leading').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="flex w-4 flex-col" style={{ gap: `${Math.max(1, (Number(token.value) - 0.8) * 6)}px` }}>{[0, 1, 2].map((i) => <span key={i} className={cn('h-0.5 rounded-full bg-muted', i === 2 && 'w-2/3')} />)}</span>}>
                     {value(token, number('', { step: 0.05, min: 0 }))}
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Letter Spacing')} onAdd={() => add('tracking', '0em')}>
+              <Group title={t('Letter Spacing')} onAdd={() => add('tracking', '0em')} addLabel={addLabel('tracking')}>
                 {byGroup('tracking').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="text-xs font-medium text-ink" style={{ letterSpacing: css('tracking', token.value) }}>Aa</span>}>
                     {value(token, number('em', { units: ['em', 'px'], step: 0.005 }))}
@@ -449,21 +479,21 @@ export default function DesignTokens() {
 
           {section === 'space' && (
             <>
-              <Group title={t('Spacing')} onAdd={() => add('space', '1rem')}>
+              <Group onAdd={() => add('space', '1rem')} addLabel={addLabel('space')}>
                 {byGroup('space').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} after={<Bar value={token.value} of={byGroup('space')} />}>
                     {value(token, { component: 'site-size' })}
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Containers')} onAdd={() => add('container', '72rem')}>
+              <Group title={t('Containers')} onAdd={() => add('container', '72rem')} addLabel={addLabel('container')}>
                 {byGroup('container').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} after={<Bar value={token.value} of={byGroup('container')} />}>
                     {value(token, { component: 'site-size' })}
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Breakpoints')} onAdd={() => add('breakpoint', '768px')}>
+              <Group title={t('Breakpoints')} onAdd={() => add('breakpoint', '768px')} addLabel={addLabel('breakpoint')}>
                 {byGroup('breakpoint').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} after={<Bar value={token.value} of={byGroup('breakpoint')} />}>
                     {value(token, number('px', { units: ['px', 'rem', 'em'], min: 0 }))}
@@ -475,14 +505,14 @@ export default function DesignTokens() {
 
           {section === 'shape' && (
             <>
-              <Group title={t('Radius')} onAdd={() => add('radius', '0.5rem')}>
+              <Group title={t('Radius')} onAdd={() => add('radius', '0.5rem')} addLabel={addLabel('radius')}>
                 {byGroup('radius').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="size-5 translate-x-0.5 translate-y-0.5 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: `min(${css('radius', token.value)}, 20px)` }} />}>
                     {value(token, number('px', { units: ['px', 'rem', '%'], min: 0 }))}
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Shadows')} onAdd={() => add('shadow', '0 4px 16px -4px rgb(0 0 0 / 0.12)')}>
+              <Group title={t('Shadows')} onAdd={() => add('shadow', '0 4px 16px -4px rgb(0 0 0 / 0.12)')} addLabel={addLabel('shadow')}>
                 {byGroup('shadow').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="size-5 shrink-0 rounded-[5px] border border-border bg-bg" style={{ boxShadow: css('shadow', token.value) }} />}>
                     {value(token, { component: 'site-shadow' })}
@@ -504,14 +534,14 @@ export default function DesignTokens() {
                   </Setting>
                 )}
               </Group>
-              <Group title={t('Durations')} onAdd={() => add('duration', '300ms')}>
+              <Group title={t('Durations')} onAdd={() => add('duration', '300ms')} addLabel={addLabel('duration')}>
                 {byGroup('duration').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} sample={<span className="relative h-3 w-6"><span className="absolute left-0 top-1/2 size-2 -translate-y-1/2 rounded-full bg-muted transition-transform group-hover:translate-x-4" style={{ transitionDuration: css('duration', token.value), transitionTimingFunction: durationEase }} /></span>}>
                     {value(token, number('ms', { units: ['ms'], step: 10, min: 0 }))}
                   </Row>
                 ))}
               </Group>
-              <Group title={t('Easing')} onAdd={() => add('ease', 'cubic-bezier(0.2, 0.8, 0.2, 1)')}>
+              <Group title={t('Easing')} onAdd={() => add('ease', 'cubic-bezier(0.2, 0.8, 0.2, 1)')} addLabel={addLabel('ease')}>
                 {byGroup('ease').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions}>
                     {value(token, { component: 'ease' })}
@@ -523,7 +553,7 @@ export default function DesignTokens() {
 
           {section === 'elements' && (
             <>
-              <StyleList title={t('Elements')} options={theme.data.elements ?? []} tokens={tokens} vars={siteVars} value={current.styles} onChange={(styles) => update((d) => ({ ...d, styles }))} />
+              <StyleList options={theme.data.elements ?? []} tokens={tokens} vars={siteVars} value={current.styles} onChange={(styles) => update((d) => ({ ...d, styles }))} />
             </>
           )}
 
@@ -536,15 +566,16 @@ export default function DesignTokens() {
           {section === 'code' && <Code css={current.css} js={current.js} onChange={(code) => update((d) => ({ ...d, ...code }))} />}
         </div>
 
-        <div className="flex min-w-0 flex-col bg-sunken max-md:hidden">
+        <div className={cn('flex min-w-0 flex-col bg-sunken', !previewing && 'max-md:hidden')}>
           <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-bg px-3">
-            <Segmented size="xs" value={viewport} onChange={setViewport} options={[{ value: 'desktop', icon: 'desktop', title: t('Desktop') }, { value: 'tablet', icon: 'tablet', title: t('Tablet') }, { value: 'phone', icon: 'phone', title: t('Phone') }]} />
-            {viewport !== 'desktop' && <span className="font-mono text-2xs text-faint">{WIDTHS[viewport]}</span>}
+            {/* A phone is its own width: the other screens are for a window with room to draw them. */}
+            <span className="max-md:hidden"><Segmented size="xs" value={viewport} onChange={setViewport} options={[{ value: 'desktop', icon: 'desktop', title: t('Desktop') }, { value: 'tablet', icon: 'tablet', title: t('Tablet') }, { value: 'phone', icon: 'phone', title: t('Phone') }]} /></span>
+            {viewport !== 'desktop' && <span className="font-mono text-2xs text-faint max-md:hidden">{WIDTHS[viewport]}</span>}
             <span className="flex-1" />
             <Segmented size="xs" value={mode} onChange={setMode} options={[{ value: 'light', icon: 'sun', title: t('Light') }, { value: 'dark', icon: 'moon', title: t('Dark') }]} />
           </div>
-          <Preview viewport={viewport} desktop={page === '/' ? px(theme.data.breakpoints?.lg) || 1024 : 0}>
-            {(style) => <iframe key={page} ref={frame} src={page} title={page === '/' ? t('Site Preview') : t('Specimen')} className={cn('border-0 bg-bg', viewport !== 'desktop' && 'border-x border-border')} style={style} onLoad={() => { inject(); showPart(frame.current?.contentDocument, part, false) }} />}
+          <Preview viewport={previewing ? 'phone' : viewport} desktop={page === '/' ? px(theme.data.breakpoints?.lg) || 1024 : 0}>
+            {(style) => <iframe key={page} ref={frame} src={page} title={page === '/' ? t('Site Preview') : t('Specimen')} className={cn('border-0 bg-bg', viewport !== 'desktop' && !previewing && 'border-x border-border')} style={style} onLoad={() => { inject(); showPart(frame.current?.contentDocument, part, false) }} />}
           </Preview>
         </div>
       </div>
@@ -577,15 +608,15 @@ function Row({ token, sample, after, below, wide, rename, remove, extra, childre
       <div className="flex min-h-9 items-center gap-2 py-1">
         {sample !== undefined && <span className="grid w-7 shrink-0 place-items-center">{sample}</span>}
         <Tooltip content={<span className="font-mono">{reference}</span>}>
-          <button type="button" onClick={copy} title={token.name} className={cn('h-6 truncate rounded-xs text-left text-xs text-text hover:text-ink', wide ? 'min-w-0 flex-1' : sample !== undefined ? 'w-[84px] shrink-0 max-sm:w-16' : 'w-[120px] shrink-0 max-sm:w-20')}>
-            {token.name}
-          </button>
+          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference })} className={cn('!justify-start !bg-transparent !px-0 text-left !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
+            <span className="truncate">{token.name}</span>
+          </Button>
         </Tooltip>
         {/* On a phone the value takes the row; the bar beside it waits for a wider screen. */}
         {wide ? children : <div className="flex w-60 min-w-0 shrink max-lg:w-52 max-sm:w-auto max-sm:flex-1">{children}</div>}
         {!wide && <span className="flex min-w-0 flex-1 items-center max-sm:hidden">{after}</span>}
         <Menu
-          trigger={<IconButton icon="more" label={t('Token Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />}
+          trigger={<IconButton icon="more" label={t('Token Actions')} size="xs" className={rowAction} />}
           items={[
             { label: t('Copy Reference'), icon: 'copy', onSelect: copy },
             { label: t('Rename…'), icon: 'edit', onSelect: () => rename(token) },
@@ -707,7 +738,7 @@ function StyleControls({ value, onChange, fields }: { value: Declarations | unde
 }
 
 /** Elements (or prose elements) and their styles: a specimen each, its controls a click away. */
-function StyleList({ title, value, onChange, options, tokens, vars, open: shown, onOpen }: { title: string; value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties; open?: string | null; onOpen?: (element: string | null) => void }) {
+function StyleList({ title, value, onChange, options, tokens, vars, open: shown, onOpen }: { title?: string; value: Record<string, Declarations>; onChange: (v: Record<string, Declarations>) => void; options: string[]; tokens: Token[]; vars: CSSProperties; open?: string | null; onOpen?: (element: string | null) => void }) {
   // The element open: held here, or by the screen when its preview follows it.
   const [own, setOwn] = useState<string | null>(null)
   const open = onOpen ? shown ?? null : own
@@ -725,7 +756,7 @@ function StyleList({ title, value, onChange, options, tokens, vars, open: shown,
           label={elementLabel(element)}
           // A specimen on the site's own background, in the site's text color unless the element sets its own.
           aside={<span aria-hidden="true" className="grid h-6 w-9 shrink-0 place-items-center rounded-xs" style={{ ...vars, background: 'var(--color-background)', color: 'var(--color-foreground)' }}><span className="px-0.5" style={{ ...style(declarations), fontSize: 15, lineHeight: 1.2, margin: 0, paddingBlock: 0 }}>Aa</span></span>}
-          menu={<Menu trigger={<IconButton icon="more" label={t('Element Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== element))) }]} />}
+          menu={<Menu trigger={<IconButton icon="more" label={t('Element Actions')} size="xs" className={rowAction} />} items={[{ label: t('Delete'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== element))) }]} />}
         >
           <StyleControls value={declarations} fields={fields} onChange={(next) => onChange({ ...value, [element]: next })} />
         </Disclosure>
@@ -770,7 +801,7 @@ function Prose({ value, onChange, options, tokens, vars, open, onOpen }: { value
           </Setting>
         ))}
       </Group>
-      <StyleList title={t('Elements in Prose')} options={options} tokens={tokens} vars={vars} open={open} onOpen={onOpen} value={elements} onChange={(next) => write(spacing, next)} />
+      <StyleList title={t('Elements')} options={options} tokens={tokens} vars={vars} open={open} onOpen={onOpen} value={elements} onChange={(next) => write(spacing, next)} />
     </>
   )
 }
@@ -791,7 +822,7 @@ function ControlSizeTable({ defaults, tokens, onSet }: { defaults: Record<string
     return String(first ?? '').replace(/^token:[a-z]+\./, '')
   }
   return (
-    <Group title={t('Sizes')}>
+    <Group>
       <div className="grid grid-cols-[52px_repeat(3,minmax(0,1fr))] items-center gap-x-2 gap-y-1.5 py-2">
         <span />
         {columns.map(([key, label]) => <span key={key} className="text-2xs text-faint">{label}</span>)}
@@ -816,7 +847,7 @@ function ControlSizeTable({ defaults, tokens, onSet }: { defaults: Record<string
 function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Buttons; onChange: (v: Buttons) => void; tokens: Token[]; open: string | null; onOpen: (name: string | null) => void }) {
   const [state, setState] = useState<'base' | 'hover' | 'active' | 'focus-visible'>('base')
   const add = async () => {
-    const asked = await prompt({ title: t('New Button Variant'), fields: [{ handle: 'name', type: 'text', label: t('Name'), placeholder: 'outline', mono: true, autofocus: true }], confirm: t('Add') })
+    const asked = await prompt({ title: t('New Button Variant'), fields: [{ handle: 'name', type: 'text', label: t('Name'), placeholder: 'outline', mono: true, autofocus: true }], confirm: t('Add Variant') })
     const name = String(asked?.name ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '')
     if (name && !(name in value)) {
       onChange({ ...value, [name]: { base: {}, hover: {} } })
@@ -835,7 +866,7 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
   const fields = [...boxFields().filter((f) => f.handle !== 'padding' && f.handle !== 'margin'), ...textFields(tokens).filter((f) => ['fontWeight', 'letterSpacing', 'color'].includes(f.handle)).map((f) => (f.handle === 'color' ? { ...f, label: t('Text') } : f)), { handle: 'boxShadow', type: 'text', component: 'blocks-shadows', label: t('Shadow'), group: 'shadow' } as FieldDef, { handle: 'opacity', type: 'text', component: 'blocks-value', label: t('Opacity'), percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' } as FieldDef]
 
   return (
-    <Group title={t('Button Variants')} onAdd={add}>
+    <Group title={t('Button Variants')} onAdd={add} addLabel={t('Add Variant')}>
       {Object.keys(value).length === 0 && <p className="m-0 py-3 text-xs text-faint">{t('No variants')}</p>}
       {Object.entries(value).map(([name, variant]) => (
         <Disclosure
@@ -843,7 +874,7 @@ function ButtonVariants({ value, onChange, tokens, open, onOpen }: { value: Butt
           open={open === name}
           onToggle={() => onOpen(open === name ? null : name)}
           label={label(name)}
-          menu={<Menu trigger={<IconButton icon="more" label={t('Variant Actions')} size="xs" className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />} items={[{ label: t('Delete'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== name))) }]} />}
+          menu={<Menu trigger={<IconButton icon="more" label={t('Variant Actions')} size="xs" className={rowAction} />} items={[{ label: t('Delete'), icon: 'trash', danger: true, onSelect: () => onChange(Object.fromEntries(Object.entries(value).filter(([k]) => k !== name))) }]} />}
         >
           {/* The end keeps the place of the style rows' ⋯, so this lines up with them. */}
           <div className="mb-2 flex items-center gap-1">

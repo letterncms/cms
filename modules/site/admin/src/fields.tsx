@@ -1,5 +1,5 @@
 import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Fields, Icon, IconButton, Input, Popover, Tooltip, cn } from '@letterncms/ui'
+import { Button, fieldControlId, Fields, Icon, IconButton, Input, Popover, Tooltip, cn } from '@letterncms/ui'
 import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 /* Field components of the design system editor — the controls core fields can't
@@ -90,18 +90,18 @@ export function FontStackField({ field, value, onChange, disabled }: FieldProps<
   }
   const option = (family: string, label: string, aside: string, extra?: ReactNode) => (
     <div key={family || 'system'} className="group/font flex items-center gap-1 rounded-sm pr-1 hover:bg-hover">
-      <button type="button" onClick={() => { use(family); setOpen(false) }} className="flex min-h-9 min-w-0 flex-1 items-center gap-2 pl-2 text-left">
-        <span className="min-w-0 flex-1 truncate text-[15px] leading-tight text-ink" style={family ? { fontFamily: `"${family}"` } : undefined}>{label}</span>
+      <Button variant="ghost" onClick={() => { use(family); setOpen(false) }} className="!h-9 min-w-0 flex-1 shrink !justify-start !gap-2 !bg-transparent !pl-2 !pr-0 text-left !font-normal">
+        <span className="min-w-0 flex-1 truncate text-base leading-tight text-ink" style={family ? { fontFamily: `"${family}"` } : undefined}>{label}</span>
         {aside && <span className="shrink-0 text-2xs tabular-nums text-faint">{aside}</span>}
-      </button>
+      </Button>
       <span className="grid w-5 shrink-0 place-items-center">{family === first ? <Icon name="check" size={14} className="text-ink" /> : extra}</span>
     </div>
   )
   const action = (icon: string, label: string, onClick: () => void) => (
-    <button type="button" onClick={onClick} className="flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left text-xs text-text hover:bg-hover hover:text-ink">
+    <Button variant="ghost" size="md" onClick={onClick} className="w-full !justify-start !gap-2 !rounded-sm !px-2 text-left !text-xs !font-normal">
       <Icon name={icon} size={14} className="shrink-0 text-faint" />
       {label}
-    </button>
+    </Button>
   )
   return (
     <Popover
@@ -110,10 +110,10 @@ export function FontStackField({ field, value, onChange, disabled }: FieldProps<
       align="end"
       className="w-72 !p-1.5"
       trigger={
-        <button type="button" id={fieldControlId(field)} disabled={disabled} className="cms-input flex h-7 w-full min-w-0 items-center gap-2 rounded-sm pl-2 pr-1.5 text-left text-sm">
+        <Button variant="ghost" id={fieldControlId(field)} disabled={disabled} className="cms-input w-full min-w-0 shrink !justify-start !gap-2 !pl-2 !pr-1.5 text-left !font-normal">
           <span className="min-w-0 flex-1 truncate" style={first ? { fontFamily: `"${first}"` } : undefined}>{first || t('System Font')}</span>
           <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />
-        </button>
+        </Button>
       }
     >
       <div className="max-h-72 overflow-y-auto">
@@ -150,10 +150,10 @@ export function FileField({ field, onChange, disabled }: FieldProps<File | null>
 /** A trigger that looks like the inspector's inputs: what is chosen, a chevron. (A popover's trigger: it takes the props and ref it is given.) */
 const PickerButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { label: string }>(function PickerButton({ label, children, className, ...props }, ref) {
   return (
-    <button ref={ref} type="button" aria-label={label} {...props} className={cn('cms-input flex h-7 w-full min-w-0 items-center gap-1.5 rounded-sm pl-2 pr-1.5 text-left text-sm text-text transition-[border-color,box-shadow] duration-120 hover:bg-hover data-[popup-open]:border-focus disabled:opacity-50', className)}>
+    <Button ref={ref} variant="ghost" aria-label={label} {...props} className={cn('cms-input w-full min-w-0 shrink !justify-start !gap-1.5 !pl-2 !pr-1.5 text-left !font-normal data-[popup-open]:border-focus', className)}>
       <span className="min-w-0 flex-1 truncate">{children}</span>
       <Icon name="chevrons-up-down" size={11} className="shrink-0 text-faint" />
-    </button>
+    </Button>
   )
 })
 
@@ -166,7 +166,7 @@ const shadows = (): { label: string; value: string }[] => [
   { label: t('Large'), value: '0 24px 48px -16px rgb(0 0 0 / 0.2)' },
 ]
 
-const ShadowSample = ({ value }: { value: string | null }) => <span className="size-3.5 shrink-0 rounded-[3px] border border-border bg-bg" style={{ boxShadow: value ?? undefined }} />
+const ShadowSample = ({ value }: { value: string | null }) => <span className="size-3.5 shrink-0 rounded-xs border border-border bg-bg" style={{ boxShadow: value ?? undefined }} />
 
 /** A box-shadow: a named preset, or a custom one made in the canvas's shadow editor (offsets, blur, spread, color). */
 export function ShadowField({ field, value, onChange, disabled }: FieldProps<string | null>) {
@@ -183,20 +183,20 @@ export function ShadowField({ field, value, onChange, disabled }: FieldProps<str
     >
       <div className="space-y-px">
         {shadows().map((option) => (
-          <button key={option.value} type="button" onClick={() => onChange(option.value)} className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-xs transition-colors', option.value === preset?.value ? 'bg-active text-ink' : 'text-text hover:bg-hover')}>
+          <Button key={option.value} variant="ghost" onClick={() => onChange(option.value)} data-active={option.value === preset?.value || undefined} className="w-full !justify-start !gap-2 !rounded-xs !px-2 text-left !text-xs !font-normal">
             <ShadowSample value={option.value} />
             <span className="flex-1">{option.label}</span>
             {option.value === preset?.value && <Icon name="check" size={12} className="text-muted" />}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="mt-1 border-t border-border px-1 pb-1 pt-2">
         <p className="m-0 mb-1 text-2xs font-medium text-muted">{t('Custom')}</p>
         <Fields bare fields={[SHADOW]} values={{ shadow: value && value !== 'none' ? value : '0 4px 16px 0 rgb(0 0 0 / 12%)' }} onChange={(_, v) => onChange(v ?? 'none')} />
-        <button type="button" onClick={() => onChange(`${value && value !== 'none' ? `${value}, ` : ''}0 2px 8px 0 rgb(0 0 0 / 10%)`)} className="mt-1.5 flex h-6 w-full items-center justify-center gap-1 rounded-xs text-2xs text-muted hover:bg-hover hover:text-text">
+        <Button variant="ghost" size="xs" onClick={() => onChange(`${value && value !== 'none' ? `${value}, ` : ''}0 2px 8px 0 rgb(0 0 0 / 10%)`)} className="mt-1.5 w-full !text-2xs !font-normal !text-muted hover:!text-text">
           <Icon name="plus" size={11} />
           {t('Add Layer')}
-        </button>
+        </Button>
       </div>
     </Popover>
   )

@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, IconButton, Tooltip, cn } from '@letterncms/ui'
+import { Button, Icon, IconButton, Tooltip, cn } from '@letterncms/ui'
 import type { ReactNode } from 'react'
 
 /** CSS custom property prefixes that differ from the group name — mirrors DesignJson::GROUPS. */
@@ -30,20 +30,32 @@ export function px(value: any): number {
   return /r?em$/.test(String(v)) ? n * 16 : n
 }
 
-/** A titled list of rows — hairlines, no card. */
-export function Group({ title, onAdd, action, children }: { title: string; onAdd?: () => void; action?: ReactNode; children: ReactNode }) {
+/**
+ * A list of rows — hairlines, no card. A group that is its whole section has no title (the bar already
+ * says it): the way to add is then a named button under the list.
+ */
+export function Group({ title, onAdd, addLabel, action, children }: { title?: string; onAdd?: () => void; addLabel?: string; action?: ReactNode; children: ReactNode }) {
+  const label = addLabel ?? t('Add Token')
   return (
     <section className="mb-6">
-      <div className="flex h-9 items-center justify-between border-b border-border">
-        <h3 className="m-0 text-xs font-semibold text-ink">{title}</h3>
-        {action}
-        {onAdd && (
-          <Tooltip content={t('Add Token')}>
-            <IconButton icon="plus" label={t('Add Token')} size="xs" onClick={onAdd} />
-          </Tooltip>
-        )}
-      </div>
+      {title && (
+        <div className="flex h-9 items-center justify-between border-b border-border">
+          <h3 className="m-0 text-xs font-semibold text-ink">{title}</h3>
+          {action}
+          {onAdd && (
+            <Tooltip content={label}>
+              <IconButton icon="plus" label={label} title={undefined} size="xs" onClick={onAdd} />
+            </Tooltip>
+          )}
+        </div>
+      )}
       {children}
+      {/* Without a title there is no head to hold a lone +: the way to add is a named button under the list. */}
+      {!title && (action || onAdd) && (
+        <div className="flex h-9 items-center border-t border-border">
+          {action ?? <Button variant="ghost" size="xs" icon="plus" onClick={onAdd} className="-ml-1.5 !px-1.5 !font-normal !text-muted hover:!text-ink">{label}</Button>}
+        </div>
+      )}
     </section>
   )
 }
@@ -51,13 +63,13 @@ export function Group({ title, onAdd, action, children }: { title: string; onAdd
 /** A row that opens to show its controls. */
 export function Disclosure({ open, onToggle, label, aside, menu, children }: { open: boolean; onToggle: () => void; label: ReactNode; aside?: ReactNode; menu?: ReactNode; children: ReactNode }) {
   return (
-    <div className="group border-b border-border last:border-b-0">
+    <div className="cms-reveal-row group border-b border-border last:border-b-0">
       <div className="flex min-h-10 items-center gap-2">
-        <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-h-10 min-w-0 flex-1 items-center gap-1.5 rounded-xs text-left text-xs text-text outline-offset-[-2px] hover:text-ink">
-          <Icon name="chevron-right" size={12} className={cn('shrink-0 text-faint transition-transform duration-120', open && 'rotate-90')} />
+        <Button variant="ghost" aria-expanded={open} onClick={onToggle} className="!h-auto min-h-10 min-w-0 flex-1 shrink !justify-start !gap-1.5 !rounded-xs !bg-transparent !px-0 text-left !text-xs !font-normal focus-visible:!-outline-offset-2 hover:text-ink">
+          <Icon name="chevron-right" size={12} className={cn('shrink-0 text-faint transition-transform duration-fast', open && 'rotate-90')} />
           <span className="min-w-0 flex-1 truncate">{label}</span>
           {aside}
-        </button>
+        </Button>
         {menu}
       </div>
       {open && <div className="pb-3 pl-[18px]">{children}</div>}
