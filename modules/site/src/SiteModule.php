@@ -22,6 +22,10 @@ use Cms\Modules\Site\Design\DesignJson;
 use Cms\Modules\Site\Design\ControlSizes;
 use Cms\Modules\Site\Design\FieldStyles;
 use Cms\Modules\Site\Design\Fonts;
+use Cms\Modules\Site\Design\HttpVendorFetcher;
+use Cms\Modules\Site\Design\Vendor;
+use Cms\Modules\Site\Design\VendorAbilities;
+use Cms\Modules\Site\Design\VendorFetcher;
 use Cms\Modules\Site\Http\PublicPage;
 use Cms\Modules\Site\Http\SiteController;
 use Cms\Modules\Site\Rendering\AugmentedEntry;
@@ -38,11 +42,12 @@ final class SiteModule extends Plugin
     {
         require_once __DIR__.'/helpers.php';
 
-        foreach ([Design::class, Code::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class] as $service) {
+        foreach ([Design::class, Code::class, Vendor::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class] as $service) {
             $this->app->singleton($service);
         }
 
         $this->app->singleton(SiteBuilderContract::class, SiteBuilder::class);
+        $this->app->bind(VendorFetcher::class, HttpVendorFetcher::class);
     }
 
     public function boot(): void
@@ -63,6 +68,7 @@ final class SiteModule extends Plugin
         $this->settingsSchema();
         $this->abilities();
         CodeAbilities::register($this->cms(), fn () => $this->app->make(Code::class));
+        VendorAbilities::register($this->cms(), fn () => $this->app->make(Vendor::class), fn () => $this->app->make(Code::class));
         $this->buildTriggers();
         $this->adminUi();
         $this->agentContext();
@@ -70,7 +76,7 @@ final class SiteModule extends Plugin
         $this->cms()->hooks()->on('cms.installed', fn (User $user) => $this->app->make(Starter::class)->seed($user));
 
         if ($this->app->runningInConsole()) {
-            $this->commands([Console\BuildCommand::class, Console\CheckLinksCommand::class, Console\StarterRefreshCommand::class]);
+            $this->commands([Console\BuildCommand::class, Console\CheckLinksCommand::class, Console\StarterRefreshCommand::class, Console\VendorCommand::class]);
         }
     }
 
