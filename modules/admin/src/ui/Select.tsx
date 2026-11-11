@@ -119,7 +119,7 @@ function Empty({ empty, action, onDone }: { empty?: ReactNode; action?: SelectAc
 function TriggerValue({ current, placeholder, defaultLabel, valueHint }: { current?: SelectOption; placeholder?: string; defaultLabel?: string; valueHint?: ReactNode }) {
   return <>
     {current?.icon && <Icon name={current.icon} size={14} className="shrink-0 text-muted" />}
-    <span className={cn('min-w-0 flex-1 truncate', !current && defaultLabel === undefined && 'text-ghost')}>{current?.label ?? defaultLabel ?? placeholder ?? t('Select…')}</span>
+    <span className={cn('min-w-0 flex-1 truncate', !current && defaultLabel === undefined && 'text-ghost')}>{current?.label ?? defaultLabel ?? placeholder ?? t('Choose')}</span>
     {valueHint && <span title={typeof valueHint === 'string' ? valueHint : undefined} className="max-w-[45%] shrink-0 truncate text-xs font-normal text-faint">{valueHint}</span>}
   </>
 }

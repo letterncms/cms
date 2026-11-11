@@ -160,7 +160,7 @@ function ActionComponent({ action, scope, onClose }: { action: ViewAction; scope
 }
 
 /** A button bound to an action. `after` runs once it succeeded (a dialog closing). */
-export function ActionButton({ action, variant, size, after, scope: local = {}, compact }: { action: ViewAction; variant?: ViewAction['variant']; size?: 'sm' | 'md'; after?: () => void; scope?: Scope; compact?: boolean }) {
+export function ActionButton({ action, variant, size, after, scope: local = {}, compact }: { action: ViewAction; variant?: ViewAction['variant']; size?: 'sm' | 'md'; after?: () => void; scope?: Scope; compact?: boolean | 'label' }) {
   // Run with where the button is drawn: in a dialog, the row it was opened for.
   const { act, disabled, scope: here, at } = useView()
   const [busy, setBusy] = useState(false)
@@ -177,8 +177,9 @@ export function ActionButton({ action, variant, size, after, scope: local = {}, 
     } catch { /* told in a toast */ }
   }
   return (
-    <Button size={size} icon={action.icon} variant={style === 'default' ? 'secondary' : style} loading={busy} disabled={disabled || busy || blocked} onClick={() => void click()} aria-label={compact ? action.label : undefined} title={compact ? action.label : undefined}>
-      {compact ? <span className="max-sm:sr-only">{action.label}</span> : action.label || t('Open')}
+    // In a screen's bar on a phone: with room (one or two actions) a button is its words without its icon; in a fuller bar it is its icon, named for whoever can't see it.
+    <Button size={size} icon={action.icon} variant={style === 'default' ? 'secondary' : style} loading={busy} disabled={disabled || busy || blocked} onClick={() => void click()} aria-label={compact === true ? action.label : undefined} title={compact === true ? action.label : undefined} className={compact === 'label' ? 'max-sm:[&>svg]:hidden' : undefined}>
+      {compact === true ? <span className="max-sm:sr-only">{action.label}</span> : action.label || t('Open')}
     </Button>
   )
 }

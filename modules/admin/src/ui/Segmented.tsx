@@ -52,7 +52,7 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
             size === 'xs' ? 'min-h-5 rounded-xs text-xs [@media(pointer:coarse)]:min-h-7' : 'min-h-6 rounded-xs text-sm [@media(pointer:coarse)]:min-h-8',
             // One padding per option: an icon alone is a square, a label that must fit gives up some room.
             !o.label && !block ? (size === 'xs' ? 'w-6 px-0' : 'w-7 px-0') : fit && o.label ? 'px-1.5' : size === 'xs' ? 'px-2' : 'px-2.5',
-            value === o.value ? 'bg-float text-ink shadow-raise dark:bg-fill' : implied === o.value ? 'bg-float/55 text-text' : 'text-muted hover:text-text',
+            value === o.value ? 'bg-thumb text-ink shadow-raise' : implied === o.value ? 'bg-float/55 text-text' : 'text-muted hover:text-text',
           )}
         >
           {o.icon && <Icon name={o.icon} size={size === 'xs' ? 14 : 16} className="shrink-0" />}

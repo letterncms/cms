@@ -150,7 +150,7 @@ export function TableRow({ children, header, selected, active, className, record
 
 /** The cells after the title: columns of the row on a wide screen, one line under the title on a phone (the first one gives way; a note before it is said whole). */
 export function TableMeta({ children }: { children: ReactNode }) {
-  return <div role="none" data-row-meta="" className={cn('contents max-sm:order-last max-sm:flex max-sm:min-w-0 max-sm:basis-full max-sm:items-center max-sm:gap-x-3 max-sm:overflow-hidden max-sm:text-xs max-sm:text-muted max-sm:[&>[role=cell]]:shrink-0 max-sm:[&>[role=cell]:first-child]:min-w-0 max-sm:[&>[role=cell]:first-child]:shrink max-sm:[&>[data-row-note]+[role=cell]]:min-w-0 max-sm:[&>[data-row-note]+[role=cell]]:shrink max-sm:[&>[role=cell]]:justify-start max-sm:[&>[role=cell]]:py-0 max-sm:[&>[role=cell]:has(>:empty)]:hidden max-sm:[&>[role=cell]:empty]:hidden')}>{children}</div>
+  return <div role="none" data-row-meta="" className={cn('contents max-sm:order-last max-sm:flex max-sm:min-w-0 max-sm:basis-full max-sm:flex-wrap max-sm:items-center max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:overflow-hidden max-sm:text-xs max-sm:text-muted max-sm:[&>[role=cell]]:shrink-0 max-sm:[&>[role=cell]:first-child]:min-w-0 max-sm:[&>[role=cell]:first-child]:shrink max-sm:[&>[data-row-note]+[role=cell]]:min-w-0 max-sm:[&>[data-row-note]+[role=cell]]:shrink max-sm:[&>[role=cell]]:justify-start max-sm:[&>[role=cell]]:py-0 max-sm:[&>[role=cell]:has(>:empty)]:hidden max-sm:[&>[role=cell]:empty]:hidden')}>{children}</div>
 }
 
 /** Row actions: on a screen with a pointer they show on hover or focus, so the list stays quiet. */

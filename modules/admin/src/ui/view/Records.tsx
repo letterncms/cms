@@ -248,7 +248,8 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   else if (!searching.on && response && !glance) setSearching({ id, on: true })
   const narrow = searching.id === id && searching.on
   const offered = segmented.filter((f) => narrow || !narrows(f))
-  const toolbar = (server || filters.length > 0) && (
+  // Nothing to search or narrow by: no toolbar, and no empty band where it would be.
+  const toolbar = ((narrow && server) || offered.length > 0 || filters.some((f) => f.display !== 'segmented')) && (
     <span className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents">
       {((narrow && server) || offered.length > 0) && <Fields bare layout="inline" className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents" fields={[
         ...(narrow && server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search'), className: 'w-full sm:w-60' }] : []),

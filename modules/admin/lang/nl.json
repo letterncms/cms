@@ -270,7 +270,6 @@
   "Select All": "Alles selecteren",
   "Select Item": "Item selecteren",
   "Select people": "Personen selecteren",
-  "Select…": "Kiezen…",
   "Selection": "Selectie",
   "Send Reset Link": "Resetlink versturen",
   "Set in {language}": "Ingesteld in het {language}",
@@ -328,5 +327,6 @@
   "Yes": "Ja",
   "You are not allowed to do this": "Je hebt hier geen toestemming voor",
   "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord.",
-  "{type} Options": "Opties voor {type}"
+  "{type} Options": "Opties voor {type}",
+  "Choose": "Kiezen"
 }

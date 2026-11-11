@@ -87,6 +87,8 @@
   --cms-float-active: color-mix(in srgb, var(--cms-float), var(--cms-ink) 7%);
   /* A solid tint for what lies on the page and must not show through: initials, the chosen option of a segmented control in the dark. */
   --cms-fill: color-mix(in srgb, var(--cms-bg), var(--cms-ink) 8%);
+  /* The chosen option of a segmented control: a slip of paper on its track. */
+  --cms-thumb: var(--cms-float);
   /* The edge of a field or a switch that is pointed at. */
   --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
   /* Blue as text on its own wash (an info badge): a step toward ink so it still reads. */
@@ -151,6 +153,8 @@
   --cms-float-hover: color-mix(in srgb, var(--cms-float), var(--cms-ink) 5.5%);
   --cms-float-active: color-mix(in srgb, var(--cms-float), var(--cms-ink) 9%);
   --cms-fill: color-mix(in srgb, var(--cms-float), var(--cms-ink) 12%);
+  /* In the dark the slip is lit: clearly lighter than its track, which is a 9% film. */
+  --cms-thumb: color-mix(in srgb, var(--cms-float), var(--cms-ink) 30%);
   --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
   --cms-info: color-mix(in srgb, var(--cms-focus) 60%, var(--cms-ink));
 
