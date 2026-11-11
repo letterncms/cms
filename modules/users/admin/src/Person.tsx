@@ -1,6 +1,6 @@
 import { can, invalidate, locale, navigate, run, t, useAbility, useManifest, type FieldDef, type SurfaceComponentProps, type User } from '@letterncms/sdk'
 import { useEffect, useState } from 'react'
-import { Badge, Button, Dialog, Fields, IconButton, confirm, toast } from '@letterncms/ui'
+import { Button, Dialog, Field, Fields, IconButton, Input, List, Row, Skeleton, confirm, toast } from '@letterncms/ui'
 
 type RolesResponse = { roles: Record<string, { label: string; description: string; permissions: string[] }>; permissions: Record<string, { name: string; label: string }[]> }
 
@@ -18,7 +18,15 @@ export default function Person({ props, close }: SurfaceComponentProps<{ id?: st
   // Someone who isn't there (any more): back to the list.
   useEffect(() => { if (loaded.isError) done() }, [loaded.isError])
   const user = props.user ?? (id ? loaded.data : null)
-  if (!roles.data || !profile.data || user === undefined) return null
+  // Its fields are on their way: the dialog is there at once, in the shape of what is coming.
+  if (!roles.data || !profile.data || user === undefined) return (
+    <Dialog open onOpenChange={(o) => !o && done()} title={props.user || id ? t('Edit User') : t('Invite User')}>
+      <div className="grid gap-4" aria-busy="true">
+        <div className="grid gap-4 sm:grid-cols-2"><Skeleton className="h-14" /><Skeleton className="h-14" /></div>
+        <Skeleton className="h-14" />
+      </div>
+    </Dialog>
+  )
   return <UserDialog user={user} roles={roles.data.roles} profile={profile.data.resolvedFields} onClose={done} />
 }
 
@@ -32,7 +40,7 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
   const [values, setValues] = useState<Record<string, any>>({ name: user?.name ?? '', email: user?.email ?? '', roles: user?.roles ?? ['editor'], super: user?.super ?? false })
   const [data, setData] = useState<Record<string, any>>(user?.data ?? {})
   // Access names added or taken away here wait for Save, like everything else in the dialog.
-  const [access, setAccess] = useState<{ add: string[]; remove: string[] }>({ add: [], remove: [] })
+  const [access, setAccess] = useState<Staged>({ add: [], remove: [] })
   const [busy, setBusy] = useState<'save' | 'suspend' | 'invite' | 'remove' | null>(null)
   const manage = can('users.manage')
   const others = !!user && manage && !self
@@ -52,7 +60,8 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
       const input = { ...rest, data, ...(self ? {} : { roles: chosen }), ...(manifest.user.super && !self && !visitor ? { super: superAdmin } : {}) }
       if (user) {
         await run('users/update', { id: user.id, ...input })
-        for (const name of access.remove) await run('users/revoke', { id: user.id, access: name })
+        // One grant at a time: what another source gave under the same name stays.
+        for (const grant of access.remove) await run('users/revoke', { id: user.id, access: grant.access, source: grant.source })
         for (const name of access.add) await run('users/grant', { id: user.id, access: name })
       } else await run('users/create', input)
       invalidate('users/', 'people/')
@@ -110,64 +119,78 @@ function UserDialog({ user, roles, profile, onClose }: { user: User | null; role
       open
       onOpenChange={(o) => !o && onClose()}
       title={user ? t('Edit User') : t('Invite User')}
-      footer={<>
-        {others && user && <>
-          <Button variant="destructive" className="mr-auto max-sm:mr-0" loading={busy === 'remove'} disabled={!!busy} onClick={() => void remove(user)}>{t('Delete User')}</Button>
-          <Button loading={busy === 'suspend'} disabled={!!busy} onClick={() => void suspend(user)}>{user.status === 'suspended' ? t('Reactivate') : t('Suspend')}</Button>
-          {!user.lastLoginAt && !visitor && <Button loading={busy === 'invite'} disabled={!!busy} onClick={() => void invite(user)}>{t('Resend Invitation')}</Button>}
-        </>}
-        <Button onClick={onClose}>{t('Cancel')}</Button>
-        <Button variant="primary" loading={busy === 'save'} disabled={!values.name || !values.email || (!!busy && busy !== 'save')} onClick={() => void submit()}>{user ? t('Save') : t('Send Invitation')}</Button>
-      </>}
+      onSubmit={() => void submit()}
+      submitLabel={user ? t('Save') : t('Send Invitation')}
+      submitDisabled={!values.name || !values.email || (!!busy && busy !== 'save')}
+      busy={busy === 'save'}
     >
       <Fields fields={fields} values={values} onChange={(h, v) => setValues({ ...values, [h]: v })} />
       {profile.length > 0 && <Fields className="mt-5 border-t border-border pt-5" fields={profile} values={data} onChange={(h, v) => setData({ ...data, [h]: v })} />}
       {user && <Access id={user.id} value={access} onChange={setAccess} />}
+      {/* What can be done with the person, apart from the form: what ends the account last. */}
+      {others && user && (
+        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pb-1 pt-5">
+          <Button loading={busy === 'suspend'} disabled={!!busy} onClick={() => void suspend(user)}>{user.status === 'suspended' ? t('Reactivate') : t('Suspend')}</Button>
+          {!user.lastLoginAt && !visitor && <Button loading={busy === 'invite'} disabled={!!busy} onClick={() => void invite(user)}>{t('Resend Invitation')}</Button>}
+          <Button variant="destructive" icon="trash" className="sm:ml-auto" loading={busy === 'remove'} disabled={!!busy} onClick={() => void remove(user)}>{t('Delete User')}</Button>
+        </div>
+      )}
     </Dialog>
   )
 }
 
+interface Grant { access: string; source: string; expiresAt: string | null }
+interface Staged { add: string[]; remove: { access: string; source: string }[] }
+
 /**
- * What this person holds beyond their roles: the access names pages can be limited to.
- * Added and removed names are staged; the dialog's Save applies them.
+ * What this person holds beyond their roles: the access names pages can be limited to, each as it was given,
+ * by whom (a plugin's order, say) and until when. Taking one away takes that grant only; adding and taking
+ * away wait for the dialog's Save like everything else in it.
  */
-function Access({ id, value, onChange }: { id: string; value: { add: string[]; remove: string[] }; onChange: (next: { add: string[]; remove: string[] }) => void }) {
-  const grants = useAbility<{ access: string; source: string; expiresAt: string | null }[]>('users/access', { id })
+function Access({ id, value, onChange }: { id: string; value: Staged; onChange: (next: Staged) => void }) {
+  const grants = useAbility<Grant[]>('users/access', { id })
   const [name, setName] = useState('')
   const manage = can('users.manage')
-  const held = (grants.data ?? []).filter((g) => !value.remove.includes(g.access))
-  const shown = [...held, ...value.add.filter((a) => !held.some((g) => g.access === a)).map((access) => ({ access, source: 'new', expiresAt: null }))]
+  const gone = (g: Grant) => value.remove.some((r) => r.access === g.access && r.source === g.source)
+  const held = (grants.data ?? []).filter((g) => !gone(g))
   const add = () => {
     const next = name.trim()
     if (!next) return
     setName('')
-    if (value.remove.includes(next)) onChange({ ...value, remove: value.remove.filter((r) => r !== next) })
-    else if (!shown.some((g) => g.access === next)) onChange({ ...value, add: [...value.add, next] })
+    if (!held.some((g) => g.access === next && g.source === 'admin') && !value.add.includes(next)) onChange({ ...value, add: [...value.add, next] })
   }
-  const take = (access: string) => value.add.includes(access)
-    ? onChange({ ...value, add: value.add.filter((a) => a !== access) })
-    : onChange({ ...value, remove: [...value.remove, access] })
+  if (!grants.data || (!manage && held.length === 0)) return null
+
+  // Who gave it, in words: "shop:order-7" is Shop. What was given here by hand says nothing.
+  const giver = (source: string) => source === 'admin' ? '' : source.split(/[:/]/)[0].replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase())
 
   return (
-    <section className="mt-5 border-t border-border pt-5">
-      <h3 className="m-0 text-sm font-medium text-text">{t('Access')}</h3>
-      {shown.length > 0 && (
-        <ul className="m-0 mt-2 flex list-none flex-wrap gap-2 p-0">
-          {shown.map((g) => (
-            <li key={g.access + g.source} className="flex items-center gap-1">
-              <Badge>{g.access}</Badge>
-              {g.expiresAt && <span className="text-xs text-faint">{t('until {date}', { date: new Date(g.expiresAt).toLocaleDateString(locale()) })}</span>}
-              {manage && <IconButton icon="close" size="xs" label={t('Remove {name}', { name: g.access })} onClick={() => take(g.access)} />}
-            </li>
-          ))}
-        </ul>
+    <div className="mt-5 grid gap-3">
+      {(held.length > 0 || value.add.length > 0) && (
+        <Field label={t('Page Access')}>
+          <List>
+            {held.map((g) => (
+              <Row key={`${g.access}:${g.source}`} actions={manage && <IconButton icon="close" label={t('Remove {name}', { name: g.access })} onClick={() => onChange({ ...value, remove: [...value.remove, { access: g.access, source: g.source }] })} />}>
+                <span className="min-w-0 truncate font-medium">{g.access}</span>
+                <span className="min-w-0 flex-1 truncate text-xs text-muted">{[giver(g.source), g.expiresAt && t('until {date}', { date: new Date(g.expiresAt).toLocaleDateString(locale()) })].filter(Boolean).join(' · ')}</span>
+              </Row>
+            ))}
+            {value.add.map((access) => (
+              <Row key={`new:${access}`} actions={<IconButton icon="close" label={t('Remove {name}', { name: access })} onClick={() => onChange({ ...value, add: value.add.filter((a) => a !== access) })} />}>
+                <span className="min-w-0 flex-1 truncate font-medium">{access}</span>
+              </Row>
+            ))}
+          </List>
+        </Field>
       )}
       {manage && (
-        <form className="mt-2 flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); add() }}>
-          <Fields bare layout="inline" className="w-48 max-w-full" fields={[{ handle: 'access', type: 'text', label: t('Access Name'), size: 'sm', placeholder: t('magazine') }]} values={{ access: name }} onChange={(_, v) => setName(v ?? '')} />
-          <Button size="sm" type="submit" disabled={name.trim() === ''}>{t('Add Access')}</Button>
-        </form>
+        <Field label={held.length > 0 || value.add.length > 0 ? t('Access Name') : t('Page Access')} htmlFor="person-access">
+          <div className="flex items-center gap-2">
+            <Input id="person-access" className="min-w-0 flex-1" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }} />
+            <Button disabled={name.trim() === ''} onClick={add}>{t('Add Access')}</Button>
+          </div>
+        </Field>
       )}
-    </section>
+    </div>
   )
 }

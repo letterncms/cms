@@ -306,6 +306,20 @@ final class ContentGateTest extends TestCase
         cms()->abilities()->execute('users/revoke', ['id' => $visitors['items'][0]['id'], 'access' => 'magazine'], $context);
         $this->assertSame([], cms()->abilities()->execute('users/access', ['id' => $visitors['items'][0]['id']], $context));
 
+        // The same name from two sources: taking one away, by its source, leaves what the other gave.
+        $ada = User::query()->find($visitors['items'][0]['id']);
+        cms()->accounts()->grant($ada, 'magazine', 'admin');
+        cms()->accounts()->grant($ada, 'magazine', 'shop:order-7', new \DateTimeImmutable('+30 days'));
+        $this->assertSame(['admin', 'shop:order-7'], array_column(cms()->abilities()->execute('users/access', ['id' => $ada->id], $context), 'source'));
+        $this->assertSame(1, cms()->abilities()->execute('users/revoke', ['id' => $ada->id, 'access' => 'magazine', 'source' => 'admin', 'dryRun' => true], $context)['changes'][0]['removes']['grants']);
+        cms()->abilities()->execute('users/revoke', ['id' => $ada->id, 'access' => 'magazine', 'source' => 'admin'], $context);
+        $left = cms()->abilities()->execute('users/access', ['id' => $ada->id], $context);
+        $this->assertSame([['magazine', 'shop:order-7']], array_map(static fn (array $g) => [$g['access'], $g['source']], $left));
+        $this->assertNotNull($left[0]['expiresAt']);
+        // Without a source it is whoever gave it, as before.
+        cms()->abilities()->execute('users/revoke', ['id' => $ada->id, 'access' => 'magazine'], $context);
+        $this->assertSame([], cms()->abilities()->execute('users/access', ['id' => $ada->id], $context));
+
         cms()->abilities()->execute('users/update', ['id' => $visitors['items'][0]['id'], 'suspended' => true], $context);
         $this->assertSame(Accounts::SUSPENDED, User::query()->find($visitors['items'][0]['id'])->status);
     }
