@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { deleteFiles, useHref, type MediaUse } from './actions'
 import { CropDialog } from './Crop'
 import { MoveDialog } from './Folders'
-import { FileTile, kindLabel } from './kinds'
+import { FileTile, kindWords } from './kinds'
 import { FocalPoint } from './FocalPoint'
 import { upload, type MediaItem } from './upload'
 
@@ -28,8 +28,7 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
   const photo = item.kind === 'image' && item.mime !== 'image/svg+xml'
   // What the server can turn and cut.
   const tools = editable && ['image/jpeg', 'image/png', 'image/webp'].includes(item.mime) && !!item.width
-  // A file keeps its address when its contents change: the version makes the browser fetch it again.
-  const url = `${item.url}?v=${encodeURIComponent(item.updatedAt ?? '')}`
+  const url = item.url
   const picture = item.thumb ?? url
   const input = useRef<HTMLInputElement>(null)
   // New pixels: the picture, its size and where its focal point now lies.
@@ -70,34 +69,38 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
     }
   }
 
+  // Cropping takes the sheet over: one dialog, one Cancel, and back to the details as they were, unsaved words included.
+  if (cropping) return <CropDialog item={item} src={picture} onClose={(cropped) => { setCropping(false); if (cropped) changed(cropped) }} />
+
   return (
     <Dialog open onOpenChange={(next) => !next && onClose()} title={item.name} {...(editable ? { onSubmit: () => void save(), submitLabel: t('Save'), submitDisabled: !dirty, busy } : {})}>
       <div className="flex min-w-0 flex-col gap-4">
         {photo ? (
           editable
             ? (
-              <Field label={t('Focal Point')} aside={tools && <>
-                <Button size="xs" variant="ghost" icon="crop" disabled={working !== null} onClick={() => setCropping(true)}>{t('Crop')}</Button>
-                <Button size="xs" variant="ghost" icon="arrow-clockwise" loading={working === 'rotate'} disabled={working !== null} onClick={() => void rotate()}>{t('Rotate')}</Button>
-              </>}>
+              <div>
                 <FocalPoint src={picture} value={focal} onChange={setFocal} />
-              </Field>
+                {/* What changes the picture itself, under it. */}
+                {tools && (
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    <Button size="sm" icon="crop" disabled={working !== null} onClick={() => setCropping(true)}>{t('Crop')}</Button>
+                    <Button size="sm" icon="arrow-clockwise" loading={working === 'rotate'} disabled={working !== null} onClick={() => void rotate()}>{t('Rotate')}</Button>
+                  </div>
+                )}
+              </div>
             )
             : <img src={picture} alt={item.alt ?? ''} className="mx-auto block max-h-[44vh] max-w-full rounded-md bg-sunken" />
         ) : item.kind === 'image' ? (
           <img src={url} alt={item.alt ?? ''} className="mx-auto block max-h-[44vh] max-w-full rounded-md bg-sunken" />
         ) : item.kind === 'video' ? (
           <video key={url} src={url} controls className="max-h-[44vh] w-full rounded-md bg-sunken" />
-        ) : item.kind === 'audio' ? (
-          <audio key={url} src={url} controls className="w-full" />
         ) : (
           // Nothing here draws a model, a texture, an animation or a document: it is shown as what it is.
           <FileTile item={item} size={28} className="h-32 rounded-md bg-sunken" />
         )}
 
         <dl className="m-0 grid grid-cols-[88px_minmax(0,1fr)] items-center gap-y-1 text-xs">
-          <dt className="text-faint">{t('Kind')}</dt><dd className="m-0">{kindLabel(item.kind)}</dd>
-          <dt className="text-faint">{t('Type')}</dt><dd className="m-0 truncate">{item.mime}</dd>
+          <dt className="text-faint">{t('Kind')}</dt><dd className="m-0 truncate">{kindWords(item)}</dd>
           <dt className="text-faint">{t('Size')}</dt><dd className="m-0">{formatBytes(item.size)}</dd>
           {item.width && <><dt className="text-faint">{t('Dimensions')}</dt><dd className="m-0">{item.width} × {item.height}</dd></>}
           {folder && <><dt className="text-faint">{t('Folder')}</dt><dd className="m-0 truncate">{folder}</dd></>}
@@ -144,7 +147,6 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
         <div className="hidden" onSubmit={(e) => e.stopPropagation()}>
             {/* Another file of the same kind, for this one's place. */}
             <input ref={input} type="file" className="hidden" accept={{ image: 'image/*', video: 'video/*', audio: 'audio/*', pdf: 'application/pdf' }[item.kind as string]} onChange={(e) => { const chosen = e.target.files?.[0]; e.target.value = ''; if (chosen) void replace(chosen) }} />
-            {cropping && <CropDialog item={item} src={picture} onClose={(cropped) => { setCropping(false); if (cropped) changed(cropped) }} />}
             {moving && <MoveDialog files={[{ id: item.id, folder }]} folders={folders} onClose={(to) => { setMoving(false); if (to !== undefined) setFolder(to) }} />}
         </div>
       </div>

@@ -192,12 +192,14 @@ try {
     await openDisplay()
     const offered = options()
     assert(offered['Alt Text'] === false && offered.Updated === false && !('Published' in offered), 'media date or alt options wrong: ' + JSON.stringify(offered))
-    await toggle('Folder')
+    // A card says kind and size; Folder and Uploaded are there to turn on, Kind to turn off.
+    assert(offered.Folder === false && offered.Uploaded === false && offered.Kind === true, 'media columns wrong: ' + JSON.stringify(offered))
+    await toggle('Kind')
     await closeDisplay()
-    assert(cards().length === 60 && !cardTerms().includes('Folder') && cardTerms().includes('Size'), 'card metadata ignored visibility')
+    assert(cards().length === 60 && !cardTerms().includes('Kind') && !cardTerms().includes('Folder') && cardTerms().includes('Size'), 'card metadata ignored visibility')
     await switchView('Table')
     assert(rows().length === 60, 'media table missing')
-    assert(!headerLabels().includes('Folder') && !headerLabels().includes('Alt Text'), 'table ignored hidden columns')
+    assert(!headerLabels().includes('Kind') && !headerLabels().includes('Folder') && !headerLabels().includes('Alt Text'), 'table ignored hidden columns')
     rows()[0].querySelector('[role="checkbox"]').click(); await wait(() => selectedCount() === 1, 'media selection failed')
     await switchView('Grid')
     assert(cards()[0].querySelector('[role="checkbox"]').getAttribute('aria-checked') === 'true', 'view switch lost selection')
@@ -220,9 +222,9 @@ try {
     await open('/forms', 'Quote Request')
     await open('/media', 'Project image')
     assert(view('Table').getAttribute('aria-checked') === 'true' && rows().length === 60, 'table preference was lost')
-    assert(!headerLabels().includes('Folder') && header('Name').getAttribute('aria-sort') === 'ascending', 'column or sort preference was lost')
+    assert(!headerLabels().includes('Kind') && header('Name').getAttribute('aria-sort') === 'ascending', 'column or sort preference was lost')
     await resetDisplay()
-    assert(view('Grid').getAttribute('aria-checked') === 'true' && cardTerms().includes('Folder'), 'reset did not restore the default grid and columns')
+    assert(view('Grid').getAttribute('aria-checked') === 'true' && cardTerms().includes('Kind'), 'reset did not restore the default grid and columns')
     await wait(() => cards()[0]?.textContent.includes('Project image 60'), 'reset kept the server sort instead of newest first')
   })
   await test('Content entries share selection, cards and j/x keyboard selection with a visible cursor', async () => {
@@ -310,7 +312,7 @@ try {
     assert(headerLabels().includes('Category'), 'table ignored shared fields')
     assert(!headerLabels().includes('Updated'), 'table ignored hidden system column')
   })
-  await test('Media picker reuses views and commits the selected file', async () => {
+  await test('Media picker reuses the cards and commits the file clicked', async () => {
     function Picker() {
       const [value, setValue] = useState([])
       return createElement(Page, { crumbs: [{ label: 'Picker fixture' }] }, createElement(Fields, { fields: [{ handle: 'image', type: 'media', label: 'Image', max: 1 }], values: { image: value }, onChange: (_, value) => setValue(value) }))
@@ -320,11 +322,10 @@ try {
     button('Choose Image').click(); await wait(() => document.querySelector('[role="dialog"] article, [role="dialog"] [role="table"]'), 'media picker did not render shared views')
     const dialog = document.querySelector('[role="dialog"]')
     assert(dialog.querySelector('input[placeholder="Search Files"]'), 'picker lacks search')
-    const table = dialog.querySelector('[role="radio"][title="Table"]'); assert(table, 'picker lacks the view switch'); table.click(); await sleep(50)
-    assert(dialog.querySelector('[role="table"]'), 'picker lacks the shared table')
-    dialog.querySelector('[role="radio"][title="Grid"]').click(); await sleep(50)
+    // A picker is thumbnails and names to choose from: the shared cards, without a view switch, display choices, checkboxes or row menus.
     assert(dialog.querySelectorAll('article').length === 60, 'picker lacks shared cards')
-    dialog.querySelector('article [role="checkbox"]').click(); await wait(() => !document.querySelector('[role="dialog"]'), 'single selection did not commit')
+    assert(!dialog.querySelector('[role="radio"][title="Table"]') && !dialog.querySelector('article [role="checkbox"]') && !dialog.querySelector('article [aria-haspopup="menu"]'), 'picker has more than thumbnails and names')
+    const card = dialog.querySelector('article'); (card.querySelector('button, a') ?? card).click(); await wait(() => !document.querySelector('[role="dialog"]'), 'single selection did not commit')
     await wait(() => main().querySelector('img'), 'selected file missing from the field')
     assert((await calls()).some((r) => r.ability === 'media/get-many' && r.input.ids?.length === 1), 'field did not look up the chosen file')
   })
