@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Cms\Modules\Site\Tests;
+
+use Cms\Modules\Site\Build\SiteBuilder;
+use Cms\Support\Files;
+use Cms\Tests\TestCase;
+
+/**
+ * Builds a small site that uses what runs in the browser, the way a real site would. With
+ * CMS_BROWSER_FIXTURES=<folder> its public/ is copied there, and `node modules/site/tests/browser.mjs
+ * --fixtures <folder>` opens the pages in headless Chrome and checks what they do.
+ */
+final class BrowserFixturesTest extends TestCase
+{
+    protected function plugins(): array
+    {
+        return ['letterncms/blocks', 'letterncms/site'];
+    }
+
+    protected function collections(): array
+    {
+        return ['pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]]];
+    }
+
+    public function test_the_fixture_site_builds(): void
+    {
+        foreach ($this->files() as $path => $contents) {
+            Files::put(content_path('design/'.$path), $contents);
+        }
+
+        foreach ($this->pages() as $title => $blocks) {
+            $this->cms()->content()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]]);
+        }
+
+        $status = $this->app->make(SiteBuilder::class)->buildAll();
+        $this->assertSame([], $status['errors']);
+        $this->assertSame([], $status['warnings']);
+
+        if ($target = getenv('CMS_BROWSER_FIXTURES')) {
+            Files::deleteDirectory($target);
+            Files::copyDirectory(public_path(), $target);
+        }
+    }
+
+    /** @return array<string, string> path under content/design => contents */
+    private function files(): array
+    {
+        return [
+            'scripts/lib/ease.js' => "export const ease = () => 'eased'\n",
+            'scripts/hero.js' => "import { ease } from './lib/ease.js'\ndocument.documentElement.dataset.hero = ease()\n",
+            'styles/hero.css' => ".hero{outline:3px solid rgb(1, 2, 3)}\n",
+        ];
+    }
+
+    /** @return array<string, list<array>> title => blocks */
+    private function pages(): array
+    {
+        return [
+            'Code' => [['type' => 'box', 'class' => 'hero', 'code' => ['scripts' => ['hero'], 'styles' => ['hero']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Hero']]]]],
+        ];
+    }
+}
