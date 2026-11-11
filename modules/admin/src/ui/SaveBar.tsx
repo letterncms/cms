@@ -66,7 +66,7 @@ export function SaveBar({ dirty, saving = false, error, onSave, onDiscard }: Sav
 
   useEffect(() => blockNavigation(() => (dirty ? t('Discard unsaved changes?') : null)), [dirty])
   // While the form is on view ⌘S is always its save, so the browser never offers to save the page. Each form saves its own.
-  useShortcut('mod+s', () => { if (dirty && !saving) onSave() })
+  useShortcut('mod+s', () => { if (dirty && !saving) onSave() }, true, t('Save'))
 
   if ((!shown && !dirty) || !leader) return null
   const save = () => { if (busy) return; if (all) all.forEach((bar) => { if (!bar.saving) bar.onSave() }); else onSave() }

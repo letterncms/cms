@@ -1,7 +1,7 @@
 import { brand, confirmLeaving, events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useLocation, useManifest, useScreen, useScreenContext, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { NotFound } from '../screens/NotFound'
-import { cn, confirm, IconButton, Tooltip } from '../ui'
+import { cn, confirm, IconButton, ShortcutsDialog, SHORTCUTS_KEY, Tooltip } from '../ui'
 import { CommandPalette } from './CommandPalette'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -110,6 +110,7 @@ export function App() {
   const [hidden, setHidden] = useState(() => stored('cms.sidebar') === 'collapsed')
   const [palette, setPalette] = useState(false)
   const [customizing, setCustomizing] = useState(false)
+  const [shortcuts, setShortcuts] = useState(false)
   // Below tablet width it opens over the screen and goes again with the next screen.
   const narrow = useMedia('(max-width: 767px)')
   const [expanded, setExpanded] = useState(false)
@@ -192,12 +193,15 @@ export function App() {
   }
 
   useEffect(() => { try { localStorage.setItem('cms.sidebar', hidden ? 'collapsed' : 'open') } catch { /* private window: not remembered */ } }, [hidden])
-  useShortcut('mod+k', () => setPalette((p) => !p))
-  useShortcut(SETTINGS_SHORTCUT, toggleSettings)
+  useShortcut('mod+k', () => setPalette((p) => !p), true, t('Search and Commands'))
+  useShortcut(SETTINGS_SHORTCUT, toggleSettings, true, t('Open Settings'))
+  // `?` lists every key that works here. Not while a dialog is open: the key belongs to it.
+  useShortcut(SHORTCUTS_KEY, () => { if (!document.querySelector('[role="dialog"], [role="alertdialog"]')) setShortcuts(true) }, true, t('Keyboard Shortcuts'))
+  useEffect(() => events.on('shortcuts.open', () => setShortcuts(true)), [])
   useEffect(() => events.on('sidebar.customize', () => setCustomizing(true)), [])
   // Modules pin and unpin their own items.
   useEffect(() => events.on<{ id: string; pinned: boolean }>('sidebar.pin', ({ id, pinned }) => (pinned ? setPinned(id, true) : unpin(id))), [])
-  useShortcut('mod+\\', toggleSidebar)
+  useShortcut('mod+\\', toggleSidebar, true, t('Toggle Sidebar'))
 
   // Every screen's code, fetched while the admin is idle.
   useEffect(() => {
@@ -329,6 +333,7 @@ export function App() {
         ))}
         <CommandPalette open={palette} onOpenChange={setPalette} />
         <CustomizeSidebar open={customizing} onOpenChange={setCustomizing} />
+        <ShortcutsDialog open={shortcuts} onOpenChange={setShortcuts} />
       </div>
     </div>
   )

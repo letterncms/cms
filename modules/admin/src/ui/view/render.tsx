@@ -61,7 +61,7 @@ function Buttons({ actions, size, bar }: { actions?: ViewAction[]; size?: 'sm' |
 /** A page's action on a key of its own (`c` for a new entry), as the person looking may take it. */
 function ActionKey({ action }: { action: ViewAction }) {
   const { act, scope } = useView()
-  useShortcut(action.key!, () => void act(action, scope).catch(() => {}))
+  useShortcut(action.key!, () => void act(action, scope).catch(() => {}), true, action.label)
   return null
 }
 
