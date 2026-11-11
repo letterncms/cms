@@ -294,6 +294,80 @@ final class MediaModule extends Plugin
             'handler' => fn (array $in) => $public($store()->update(MediaItem::query()->findOrFail(strtolower($in['id'])), $in)),
         ]);
 
+        // The file that takes the place: fetched, decoded, or the one the admin just sent to the upload endpoint.
+        $incoming = static function (array $in) use ($store): array {
+            return match (true) {
+                isset($in['upload'], $in['filename']) => [MediaStore::uploaded($in['upload']), $in['filename']],
+                isset($in['url']) => $store()->fetched($in['url']),
+                isset($in['data'], $in['filename']) => [$store()->decoded($in['data']), $in['filename']],
+                default => throw AbilityException::invalid(__('Send a url, or data with a filename.')),
+            };
+        };
+        $references = fn (): MediaReferences => $this->app->make(MediaReferences::class);
+
+        $a->register('media/replace', [
+            'label' => 'Replace Media File',
+            'description' => 'Put another file in a media item\'s place, from a public URL or base64 data (with filename). The item keeps its id, name, alt text, caption, focal point and folder, so everything that uses it by id shows the new file; it must be of the same kind (an image for an image). Its URL changes, because files are cached by their address: content that names the old URL (not the id) is rewritten to the new one, and the dry run lists it. The old file is gone.',
+            'permission' => 'media.edit',
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'id' => ['type' => 'string'],
+                'url' => ['type' => 'string', 'format' => 'uri'],
+                'filename' => ['type' => 'string', 'maxLength' => 200],
+                'data' => ['type' => 'string', 'description' => 'Base64 file content (with filename).'],
+                'upload' => ['type' => 'string', 'pattern' => '^[0-9a-f]{24}$', 'description' => 'For the admin: the token of a file it sent to its upload endpoint (with filename).'],
+            ], 'required' => ['id']],
+            'output' => self::itemShape(),
+            // The file is fetched or decoded and held against what an upload must pass, as the real run does: only the swap is left out.
+            'dryRun' => static function (array $in) use ($store, $incoming, $references): array {
+                $item = MediaItem::query()->findOrFail(strtolower($in['id']));
+                [$tmp] = [$tmp, $name] = $incoming($in);
+
+                try {
+                    $new = $store()->replacing($item, $tmp, $name);
+                } finally {
+                    // An upload waits for the real run; what was fetched or decoded for the check is thrown away.
+                    isset($in['upload']) || @unlink($tmp);
+                }
+
+                return $new['hash'] === $item->hash ? [] : [
+                    ['action' => 'replace', 'type' => 'media', 'id' => $item->id, 'path' => $item->path, 'mime' => $new['mime'], 'removes' => ['file' => true, 'variants' => true]],
+                    ...$references()->repoint($item->path, '', write: false),
+                ];
+            },
+            'handler' => function (array $in) use ($store, $public, $incoming) {
+                $item = MediaItem::query()->findOrFail(strtolower($in['id']));
+
+                return $public($store()->replace($item, ...$incoming($in)));
+            },
+        ]);
+
+        $a->register('media/transform', [
+            'label' => 'Rotate or Crop Image',
+            'description' => 'Rotate an image clockwise by 90, 180 or 270 degrees, crop it to a rectangle (in pixels of the rotated image), or both, in place: the same item with new pixels, and the focal point stays on what it marked. Its URL changes, because files are cached by their address: content that names the old URL (not the id) is rewritten, and the dry run lists it. JPEG, PNG and WebP only. The pixels cut away are gone.',
+            'permission' => 'media.edit',
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'id' => ['type' => 'string'],
+                'rotate' => ['type' => 'integer', 'enum' => [90, 180, 270]],
+                'crop' => ['type' => 'object', 'properties' => [
+                    'x' => ['type' => 'integer', 'minimum' => 0], 'y' => ['type' => 'integer', 'minimum' => 0],
+                    'width' => ['type' => 'integer', 'minimum' => 1], 'height' => ['type' => 'integer', 'minimum' => 1],
+                ], 'required' => ['x', 'y', 'width', 'height']],
+            ], 'required' => ['id']],
+            'output' => self::itemShape(),
+            'dryRun' => static function (array $in) use ($store, $references): array {
+                $item = MediaItem::query()->findOrFail(strtolower($in['id']));
+                [, $size, $crop] = $store()->transforming($item, (int) ($in['rotate'] ?? 0), $in['crop'] ?? null);
+
+                return [
+                    array_filter(['action' => 'transform', 'type' => 'media', 'id' => $item->id, 'path' => $item->path, 'rotate' => $in['rotate'] ?? null, 'crop' => $crop, 'from' => ['width' => $item->width, 'height' => $item->height], 'to' => ['width' => $size[0], 'height' => $size[1]]], static fn ($v) => $v !== null),
+                    ...$references()->repoint($item->path, '', write: false),
+                ];
+            },
+            'handler' => fn (array $in) => $public($store()->transform(MediaItem::query()->findOrFail(strtolower($in['id'])), (int) ($in['rotate'] ?? 0), $in['crop'] ?? null)),
+        ]);
+
         $folders = fn (): MediaFolders => $this->app->make(MediaFolders::class);
         // The files a move is for: every id must be one.
         $movable = static function (array $in): array {

@@ -19,13 +19,15 @@ export interface MediaItem extends RecordTimestamps {
   createdAt: string
 }
 
-/** Upload one file with progress (multipart; the server validates and sanitizes). */
-export function upload(file: File, folder = '', onProgress?: (fraction: number) => void): Promise<MediaItem> {
+/** Upload one file with progress (multipart; the server validates and sanitizes): a new item, or with `replace` another file for the item with that id. */
+export function upload(file: File, folder = '', onProgress?: (fraction: number) => void, replace?: string): Promise<MediaItem> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     const form = new FormData()
     form.append('file', file)
     form.append('folder', folder)
+    // In the place of the file an item has now: the item stays, with its id and everything that uses it.
+    if (replace) form.append('replace', replace)
     xhr.open('POST', `${boot.api}/media/upload`)
     xhr.setRequestHeader('X-XSRF-TOKEN', xsrfToken() ?? '')
     xhr.setRequestHeader('Accept', 'application/json')

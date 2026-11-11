@@ -138,5 +138,20 @@
   "Rename Folder": "Renommer le dossier",
   "Rename Media Folder": "Renommer un dossier de médias",
   "There is already a folder “:name” here.": "Il y a déjà un dossier « :name » ici.",
-  "This folder is not there.": "Ce dossier n’existe pas."
+  "This folder is not there.": "Ce dossier n’existe pas.",
+  "“{file}” takes its place wherever it is used. The file there now is deleted.": "« {file} » prend sa place partout où il est utilisé. Le fichier actuel est supprimé.",
+  "Bottom Left Corner": "Coin inférieur gauche",
+  "Bottom Right Corner": "Coin inférieur droit",
+  "Crop": "Recadrer",
+  "Crop Image": "Recadrer l’image",
+  "Give a rotation of 90, 180 or 270 degrees, a crop, or both.": "Indiquez une rotation de 90, 180 ou 270 degrés, un recadrage, ou les deux.",
+  "Only JPEG, PNG and WebP images can be rotated and cropped.": "Seules les images JPEG, PNG et WebP peuvent être pivotées et recadrées.",
+  "Replace “{name}”?": "Remplacer « {name} » ?",
+  "Replace a file with one of its kind: an image with an image, a video with a video.": "Remplacez un fichier par un fichier du même genre : une image par une image, une vidéo par une vidéo.",
+  "Replace File": "Remplacer le fichier",
+  "Replace Media File": "Remplacer un fichier média",
+  "Rotate": "Pivoter",
+  "Rotate or Crop Image": "Pivoter ou recadrer une image",
+  "Top Left Corner": "Coin supérieur gauche",
+  "Top Right Corner": "Coin supérieur droit"
 }

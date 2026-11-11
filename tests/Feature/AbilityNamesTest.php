@@ -32,6 +32,8 @@ final class AbilityNamesTest extends TestCase
         'add-item', 'remove-item',
         // Files and fonts brought in from elsewhere.
         'import', 'fonts-import', 'fonts-upload', 'upload',
+        // A file's contents: another in its place, or its picture rotated and cropped.
+        'replace', 'transform',
         // Finding and going.
         'search', 'open',
         // People and their access.

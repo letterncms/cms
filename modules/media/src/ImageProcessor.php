@@ -29,6 +29,25 @@ final class ImageProcessor
     }
 
     /**
+     * The size of the picture as it stands: a JPEG kept with its metadata may be stored on its side and
+     * turned by its EXIF orientation, which is how browsers show it and how load() reads it.
+     *
+     * @return array{0: int, 1: int}|null
+     */
+    public function upright(string $file): ?array
+    {
+        $info = @getimagesize($file);
+
+        if (! $info) {
+            return null;
+        }
+
+        $turned = $info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data') && in_array((int) (@exif_read_data($file)['Orientation'] ?? 1), [5, 6, 7, 8], true);
+
+        return $turned ? [(int) $info[1], (int) $info[0]] : [(int) $info[0], (int) $info[1]];
+    }
+
+    /**
      * Write a resized copy. With $ratio (w/h) the image is cropped around the focal point.
      */
     public function resize(string $source, string $target, int $width, string $format, int $quality = 80, ?float $ratio = null, array $focal = [50, 50]): void
@@ -70,6 +89,35 @@ final class ImageProcessor
         imagealphablending($image, false);
         imagesavealpha($image, true);
         $this->save($image, $file, $format, 90);
+        imagedestroy($image);
+    }
+
+    /**
+     * Turn an image clockwise by quarter turns, then cut it to a rectangle (of the turned image), in place.
+     *
+     * @param  array{x: int, y: int, width: int, height: int}|null  $crop
+     */
+    public function edit(string $file, string $format, int $rotate = 0, ?array $crop = null): void
+    {
+        $image = $this->load($file);
+
+        if ($rotate % 360 !== 0) {
+            imagealphablending($image, false);
+            // GD turns counter-clockwise.
+            $image = imagerotate($image, -$rotate, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        }
+
+        if ($crop !== null) {
+            $image = imagecrop($image, $crop);
+        }
+
+        if (! $image instanceof GdImage) {
+            throw new RuntimeException(__('Not a readable image.'));
+        }
+
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        $this->save($image, $file, $format, 92);
         imagedestroy($image);
     }
 

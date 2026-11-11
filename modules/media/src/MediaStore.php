@@ -100,37 +100,7 @@ final class MediaStore
         try {
             $this->protect();
 
-            if (! is_file($tmp) || filesize($tmp) === 0) {
-                throw AbilityException::invalid(__('The file is empty.'));
-            }
-
-            if (filesize($tmp) > $this->maxBytes()) {
-                throw AbilityException::invalid(__('The file is larger than :size MB.', ['size' => cms()->setting('media', 'max_upload_mb', 32)]));
-            }
-
-            $mime = $this->detect($tmp, $originalName);
-            $ext = self::TYPES[$mime] ?? throw AbilityException::invalid(__('Files of type :type are not allowed.', ['type' => $mime]));
-
-            if (isset(self::ASSETS[$mime])) {
-                if (filesize($tmp) > self::ASSETS[$mime] * 1024 * 1024) {
-                    throw AbilityException::invalid(__('A .:ext file can be :size MB at most.', ['ext' => $ext, 'size' => self::ASSETS[$mime]]));
-                }
-
-                if (($problem = $this->unsafe($mime, $tmp)) !== null) {
-                    throw AbilityException::invalid($problem);
-                }
-            } elseif ($mime === 'image/svg+xml') {
-                file_put_contents($tmp, $this->svg->clean((string) file_get_contents($tmp)));
-            } elseif (str_starts_with($mime, 'image/')) {
-                if (! $this->images->dimensions($tmp)) {
-                    throw AbilityException::invalid(__('This image could not be read.'));
-                }
-
-                // Remove EXIF (location, camera) by re-encoding photos.
-                if ($mime === 'image/jpeg' && cms()->setting('media', 'strip_metadata', true)) {
-                    $this->images->strip($tmp, 'jpg');
-                }
-            }
+            [$mime, $ext] = $this->admit($tmp, $originalName);
 
             $hash = hash_file('sha256', $tmp);
             $folder = $this->folder($folder);
@@ -185,7 +155,65 @@ final class MediaStore
         }
     }
 
+    /**
+     * What every file passes before it is kept, new or in another's place: not empty, within the limits, of a
+     * type the library takes, safe, and cleaned where that is how it is made safe (SVG, a photo's metadata).
+     *
+     * @return array{0: string, 1: string} its MIME type and the extension it is stored with
+     */
+    private function admit(string $tmp, string $originalName): array
+    {
+        if (! is_file($tmp) || filesize($tmp) === 0) {
+            throw AbilityException::invalid(__('The file is empty.'));
+        }
+
+        if (filesize($tmp) > $this->maxBytes()) {
+            throw AbilityException::invalid(__('The file is larger than :size MB.', ['size' => cms()->setting('media', 'max_upload_mb', 32)]));
+        }
+
+        $mime = $this->detect($tmp, $originalName);
+        $ext = self::TYPES[$mime] ?? throw AbilityException::invalid(__('Files of type :type are not allowed.', ['type' => $mime]));
+
+        if (isset(self::ASSETS[$mime])) {
+            if (filesize($tmp) > self::ASSETS[$mime] * 1024 * 1024) {
+                throw AbilityException::invalid(__('A .:ext file can be :size MB at most.', ['ext' => $ext, 'size' => self::ASSETS[$mime]]));
+            }
+
+            if (($problem = $this->unsafe($mime, $tmp)) !== null) {
+                throw AbilityException::invalid($problem);
+            }
+        } elseif ($mime === 'image/svg+xml') {
+            file_put_contents($tmp, $this->svg->clean((string) file_get_contents($tmp)));
+        } elseif (str_starts_with($mime, 'image/')) {
+            if (! $this->images->dimensions($tmp)) {
+                throw AbilityException::invalid(__('This image could not be read.'));
+            }
+
+            // Remove EXIF (location, camera) by re-encoding photos.
+            if ($mime === 'image/jpeg' && cms()->setting('media', 'strip_metadata', true)) {
+                $this->images->strip($tmp, 'jpg');
+            }
+        }
+
+        return [$mime, $ext];
+    }
+
     public function importUrl(string $url, ?User $user = null, string $folder = ''): MediaItem
+    {
+        return $this->store(...[...$this->fetched($url), $user, $folder]);
+    }
+
+    public function importBase64(string $filename, string $data, ?User $user = null, string $folder = ''): MediaItem
+    {
+        return $this->store($this->decoded($data), $filename, $user, $folder);
+    }
+
+    /**
+     * A file from a public URL, in a temp file.
+     *
+     * @return array{0: string, 1: string} the temp file and the name it came with
+     */
+    public function fetched(string $url): array
     {
         try {
             $response = SafeFetcher::get($url, $this->maxBytes());
@@ -195,12 +223,12 @@ final class MediaStore
 
         $tmp = $this->tmp();
         file_put_contents($tmp, $response['body']);
-        $name = basename((string) parse_url($response['url'], PHP_URL_PATH)) ?: 'download';
 
-        return $this->store($tmp, $name, $user, $folder);
+        return [$tmp, basename((string) parse_url($response['url'], PHP_URL_PATH)) ?: 'download'];
     }
 
-    public function importBase64(string $filename, string $data, ?User $user = null, string $folder = ''): MediaItem
+    /** Base64 data (a data: URL too), in a temp file. */
+    public function decoded(string $data): string
     {
         $data = preg_replace('#^data:[^;]+;base64,#', '', $data) ?? $data;
         $binary = base64_decode($data, true);
@@ -212,7 +240,181 @@ final class MediaStore
         $tmp = $this->tmp();
         file_put_contents($tmp, $binary);
 
-        return $this->store($tmp, $filename, $user, $folder);
+        return $tmp;
+    }
+
+    /**
+     * Put another file in an item's place. The item stays what it was to everything that uses it: its id, name,
+     * alt text, caption, focal point and folder. Its address changes: files are served to be kept for a year
+     * by their address, so new bytes at the old one would not reach anyone who has seen it. What names the
+     * file by its id follows by itself; what names it by its address is rewritten (MediaReferences::repoint).
+     * Variants are made again from the new pixels. The temp file is moved or removed.
+     */
+    public function replace(MediaItem $item, string $tmp, string $originalName): MediaItem
+    {
+        try {
+            $this->protect();
+            ['mime' => $mime, 'ext' => $ext, 'hash' => $hash] = $this->replacing($item, $tmp, $originalName);
+
+            if ($hash === $item->hash) {
+                return $item;
+            }
+
+            $old = $item->path;
+            $relative = $this->readdressed($old, $ext);
+            $target = Files::within(public_path(), $relative);
+
+            Files::ensureDir(dirname($target));
+
+            if (! @rename($tmp, $target) && ! @copy($tmp, $target)) {
+                throw new AbilityException(__('Could not save the file.'));
+            }
+
+            @chmod($target, 0o644);
+            clearstatcache(true, $target);
+            $this->variants->forget($item);
+            [$width, $height] = $this->dimensions($target, $mime);
+            $item->fill(['path' => $relative, 'filename' => basename($relative), 'mime' => $mime, 'size' => filesize($target), 'width' => $width, 'height' => $height, 'hash' => $hash]);
+            $this->saved($item);
+            @unlink(Files::within(public_path(), $old));
+            app(MediaReferences::class)->repoint($old, $relative);
+
+            return $item;
+        } finally {
+            if (is_file($tmp)) {
+                @unlink($tmp);
+            }
+        }
+    }
+
+    /**
+     * Whether a file may take an item's place, or why not: it passes what every upload passes and is of the
+     * item's kind. Changes nothing but the temp file, which a check may clean (an SVG). replace() asks the same.
+     *
+     * @return array{mime: string, ext: string, hash: string}
+     */
+    public function replacing(MediaItem $item, string $tmp, string $originalName): array
+    {
+        [$mime, $ext] = $this->admit($tmp, $originalName);
+
+        if ((new MediaItem(['mime' => $mime]))->kind() !== $item->kind()) {
+            throw AbilityException::invalid(__('Replace a file with one of its kind: an image with an image, a video with a video.'));
+        }
+
+        return ['mime' => $mime, 'ext' => $ext, 'hash' => (string) hash_file('sha256', $tmp)];
+    }
+
+    /** Another address for a file whose bytes change: where it was, by the name it had, with a new suffix. */
+    private function readdressed(string $path, string $ext): string
+    {
+        return dirname($path).'/'.(preg_replace('/-[a-z0-9]{4}$/', '', pathinfo($path, PATHINFO_FILENAME)) ?: 'file').'-'.Str::lower(Str::random(4)).'.'.$ext;
+    }
+
+    /**
+     * Turn a picture by quarter turns (clockwise) and cut it to a rectangle (in pixels of the turned picture):
+     * the same item with new pixels, at a new address like every file whose bytes change (see replace()).
+     * The focal point stays on what it marked.
+     *
+     * @param  array{x: int, y: int, width: int, height: int}|null  $crop
+     */
+    public function transform(MediaItem $item, int $rotate = 0, ?array $crop = null): MediaItem
+    {
+        [$format, $size, $crop] = $this->transforming($item, $rotate, $crop);
+        $file = Files::within(public_path(), $item->path);
+        [$fx, $fy] = match ($rotate) {
+            90 => [100 - $item->focal_y, $item->focal_x],
+            180 => [100 - $item->focal_x, 100 - $item->focal_y],
+            270 => [$item->focal_y, 100 - $item->focal_x],
+            default => [$item->focal_x, $item->focal_y],
+        };
+
+        // Measured before the file is written over.
+        [$w, $h] = $this->standing($item, $rotate);
+
+        try {
+            $this->images->edit($file, $format, $rotate, $crop);
+        } catch (Throwable $e) {
+            throw AbilityException::invalid($e->getMessage());
+        }
+
+        if ($crop !== null) {
+            $fx = (int) round(max(0, min(100, ($fx / 100 * $w - $crop['x']) / $crop['width'] * 100)));
+            $fy = (int) round(max(0, min(100, ($fy / 100 * $h - $crop['y']) / $crop['height'] * 100)));
+        }
+
+        $old = $item->path;
+        $relative = $this->readdressed($old, pathinfo($old, PATHINFO_EXTENSION));
+        $moved = Files::within(public_path(), $relative);
+
+        if (! @rename($file, $moved)) {
+            throw new AbilityException(__('Could not save the file.'));
+        }
+
+        clearstatcache(true, $moved);
+        $this->variants->forget($item);
+        // The size is read back: a photo that was stored turned (EXIF) is written upright.
+        $size = $this->images->dimensions($moved) ?? $size;
+        $item->fill(['path' => $relative, 'filename' => basename($relative), 'size' => filesize($moved), 'width' => $size[0], 'height' => $size[1], 'hash' => (string) hash_file('sha256', $moved), 'focal_x' => $fx, 'focal_y' => $fy]);
+        $this->saved($item);
+        app(MediaReferences::class)->repoint($old, $relative);
+
+        return $item;
+    }
+
+    /**
+     * What a transform would do, or why it can't: the format it is written in, the size it ends at and the
+     * rectangle that is cut, held inside the picture.
+     *
+     * @param  array{x: int, y: int, width: int, height: int}|null  $crop
+     * @return array{0: string, 1: array{0: int, 1: int}, 2: ?array{x: int, y: int, width: int, height: int}}
+     */
+    public function transforming(MediaItem $item, int $rotate = 0, ?array $crop = null): array
+    {
+        $format = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$item->mime] ?? null;
+
+        if ($format === null || ! $item->width || ! $item->height) {
+            throw AbilityException::invalid(__('Only JPEG, PNG and WebP images can be rotated and cropped.'));
+        }
+
+        if (! in_array($rotate, [0, 90, 180, 270], true) || ($rotate === 0 && $crop === null)) {
+            throw AbilityException::invalid(__('Give a rotation of 90, 180 or 270 degrees, a crop, or both.'));
+        }
+
+        [$w, $h] = $this->standing($item, $rotate);
+
+        if ($crop !== null) {
+            $x = max(0, min($w - 1, (int) ($crop['x'] ?? 0)));
+            $y = max(0, min($h - 1, (int) ($crop['y'] ?? 0)));
+            $crop = ['x' => $x, 'y' => $y, 'width' => max(1, min($w - $x, (int) ($crop['width'] ?? $w))), 'height' => max(1, min($h - $y, (int) ($crop['height'] ?? $h)))];
+            [$w, $h] = [$crop['width'], $crop['height']];
+        }
+
+        return [$format, [$w, $h], $crop];
+    }
+
+    /**
+     * A picture's size as it stands after a turn: upright first (a JPEG kept with its metadata may lie on its
+     * side in the file and be turned by its EXIF orientation, which is how it is shown and how it is edited),
+     * then turned. A crop and the focal point are measured against this, not against the stored numbers.
+     *
+     * @return array{0: int, 1: int}
+     */
+    private function standing(MediaItem $item, int $rotate): array
+    {
+        [$w, $h] = $this->images->upright(Files::within(public_path(), $item->path)) ?? [(int) $item->width, (int) $item->height];
+
+        return $rotate === 90 || $rotate === 270 ? [$h, $w] : [$w, $h];
+    }
+
+    /** An item whose file changed: saved, written to its record, and said to whoever listens. */
+    private function saved(MediaItem $item): void
+    {
+        $this->manifest()->locked(function () use ($item) {
+            $item->save();
+            $this->manifest()->write($item);
+        });
+
+        cms()->hooks()->dispatch('media.updated', $item);
     }
 
     public function update(MediaItem $item, array $attributes): MediaItem
@@ -454,6 +656,18 @@ final class MediaStore
         }
 
         return mb_substr(trim((string) preg_replace('/[^\p{L}\p{M}\p{N}]+/u', '-', mb_strtolower($name)), '-'), 0, 80);
+    }
+
+    /** The file the admin's upload endpoint parked under a token (MediaController::upload), or a refusal. */
+    public static function uploaded(string $token): string
+    {
+        $file = storage_path('app/uploads/'.$token);
+
+        if (! preg_match('/^[0-9a-f]{24}$/', $token) || ! is_file($file)) {
+            throw AbilityException::invalid(__('No file was uploaded.'));
+        }
+
+        return $file;
     }
 
     private function tmp(): string
