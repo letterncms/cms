@@ -92,6 +92,31 @@ final class Blueprint
                 if (! $ok) {
                     throw new InvalidArgumentException(__('The condition of :field must name fields beside it, each with a value or a list of values.', ['field' => $name]));
                 }
+
+                foreach (array_keys($rule) as $handle) {
+                    $depends[$field->handle][(string) $handle] = true;
+                }
+            }
+        }
+
+        // A field that waits for one that waits for it would never show: followed from each field, no condition comes back to it.
+        foreach ($depends ?? [] as $start => $_) {
+            $seen = [];
+            $next = [$start];
+
+            while ($next !== []) {
+                $handle = array_pop($next);
+
+                foreach (array_keys($depends[$handle] ?? []) as $on) {
+                    if ($on === $start) {
+                        throw new InvalidArgumentException(__('The conditions of :field depend on the field itself.', ['field' => $path.$start]));
+                    }
+
+                    if (! isset($seen[$on])) {
+                        $seen[$on] = true;
+                        $next[] = $on;
+                    }
+                }
             }
         }
     }

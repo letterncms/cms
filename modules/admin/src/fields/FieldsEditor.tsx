@@ -4,6 +4,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { plural, t, useManifest, type FieldDef, type FieldProps, type FieldTypeDef } from '@letterncms/sdk'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Badge, Button, EmptyState, FieldError, Fields, Icon, IconButton, List, Popover, Row, cn } from '../ui'
+import { Conditions } from './BuilderFields'
+import { conditionCycles, followRename, nextCondition, type Sibling } from './conditions'
 
 export type RawField = Record<string, any> & { handle?: string; type?: string; label?: string; import?: string }
 
@@ -12,11 +14,12 @@ export type RawField = Record<string, any> & { handle?: string; type?: string; l
  * blueprints and, nested, for the sub-fields of groups and repeaters.
  */
 /** The options every field has, whatever its type. */
-function commonOptions(depth: number, renamed: boolean): FieldDef[] {
+function commonOptions(depth: number, renamed: boolean, taken: string[]): FieldDef[] {
   return [
     { handle: 'label', type: 'text', label: t('Label'), width: 'half' },
     // Said only once it applies: the handle of a field that already holds values was changed.
-    { handle: 'handle', type: 'text', label: t('Handle'), width: 'half', instructions: renamed ? t('Changing it orphans existing values.') : undefined },
+    // Typed freely and taken when the box is left: one rename, which the conditions beside it can follow.
+    { handle: 'handle', type: 'text', component: 'handle-input', label: t('Handle'), width: 'half', taken, instructions: renamed ? t('Changing it orphans existing values.') : undefined },
     { handle: 'instructions', type: 'text', label: t('Instructions') },
     { handle: 'required', type: 'toggle', label: t('Required'), width: 'third' },
     ...(depth === 0 ? [{ handle: 'property', type: 'toggle', label: t('Show as Property'), width: 'third' as const }] : []),
@@ -121,6 +124,7 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
 function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, errors, path, saved }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; body?: string; depth: number; errors?: Record<string, string>; path: string; saved: Set<string> }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const ids = fields.map((f, i) => f.handle ?? `import-${f.import}-${i}`)
+  const cycles = useMemo(() => conditionCycles(fields), [fields])
   const onDragEnd = (e: DragEndEvent) => {
     if (!e.over || e.active.id === e.over.id) return
     onChange(arrayMove(fields, ids.indexOf(String(e.active.id)), ids.indexOf(String(e.over.id))))
@@ -139,6 +143,9 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
                   type={types.find((ft) => ft.key === field.type)}
                   open={openIndex === i}
                   isBody={field.handle === body}
+                  // What a condition can name: the fields beside this one, with their choices.
+                  siblings={fields.filter((f, j) => j !== i && f.handle && !f.import).map((f) => ({ handle: f.handle!, label: f.label || f.handle!, type: f.type ?? 'text', ...(f.type === 'select' && f.options && typeof f.options === 'object' ? { options: Array.isArray(f.options) ? Object.fromEntries(f.options.map((o: string) => [o, o])) : f.options } : {}) }))}
+                  circular={cycles.has(field.handle ?? '')}
                   depth={depth}
                   errors={errors}
                   path={`${path}.${i}`}
@@ -146,9 +153,14 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
                   renamed={depth === 0 && !!field.handle && !saved.has(field.handle) && [...saved].some((h) => !fields.some((f) => f.handle === h))}
                   dragHandle={handle}
                   onToggle={() => onOpen(openIndex === i ? null : i)}
-                  onChange={(f) => onChange(fields.map((x, j) => (j === i ? f : x)))}
+                  // A new handle is followed by the conditions beside it that named the old one; a field that goes takes those conditions with it.
+                  onChange={(f) => {
+                    const next = fields.map((x, j) => (j === i ? f : x))
+                    onChange(field.handle && f.handle && f.handle !== field.handle ? followRename(next, field.handle, f.handle) : next)
+                  }}
                   onRemove={() => {
-                    onChange(fields.filter((_, j) => j !== i))
+                    const rest = fields.filter((_, j) => j !== i)
+                    onChange(field.handle ? followRename(rest, field.handle, null) : rest)
                     onOpen(null)
                   }}
                   onDuplicate={() => onChange([...fields.slice(0, i + 1), { ...field, handle: `${field.handle}_copy`, label: t('{label} copy', { label: field.label ?? field.handle }) }, ...fields.slice(i + 1)])}
@@ -173,7 +185,7 @@ function Sortable({ id, children }: { id: string; children: (handle: ReactNode) 
   )
 }
 
-function FieldRow({ field, type, open, isBody, depth, errors, path, renamed, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; depth: number; errors?: Record<string, string>; path: string; renamed?: boolean; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
+function FieldRow({ field, type, open, isBody, siblings, circular, depth, errors, path, renamed, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; siblings: Sibling[]; circular: boolean; depth: number; errors?: Record<string, string>; path: string; renamed?: boolean; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
   // What the last save refused about this field itself; its sub-fields show their own.
   const problem = (key: string) => errors?.[`${path}.${key}`]
   const refused = !!errors && Object.keys(errors).some((key) => key.startsWith(`${path}.`))
@@ -196,7 +208,7 @@ function FieldRow({ field, type, open, isBody, depth, errors, path, renamed, dra
   }
 
   return (
-    <div className={cn('rounded-lg border bg-bg transition-shadow', refused ? 'border-danger' : open ? 'border-border-strong' : 'border-border', open && 'shadow-pop')}>
+    <div className={cn('rounded-lg border bg-bg transition-shadow', refused || circular ? 'border-danger' : open ? 'border-border-strong' : 'border-border', open && 'shadow-pop')}>
       <div className="flex h-11 items-center gap-2 px-2">
         {dragHandle}
         <span className="grid size-6 shrink-0 place-items-center rounded-xs bg-active text-muted"><Icon name={type?.icon ?? 'field'} size={14} /></span>
@@ -207,6 +219,7 @@ function FieldRow({ field, type, open, isBody, depth, errors, path, renamed, dra
         </Button>
         {isBody && <Badge>{t('Body')}</Badge>}
         {field.required && <Badge>{t('Required')}</Badge>}
+        {(field.if || field.required_if) && <Badge>{t('Conditional')}</Badge>}
         {field.section === 'sidebar' && <Badge>{t('Property')}</Badge>}
         {Array.isArray(field.fields) && <span className="text-xs text-faint">{plural(field.fields.length, '{count} field', '{count} fields')}</span>}
         {/* Which type is said beside it, once. */}
@@ -218,12 +231,12 @@ function FieldRow({ field, type, open, isBody, depth, errors, path, renamed, dra
         <div className="space-y-5 border-t border-border p-4">
           {/* What every field has, edited with fields like everything else. */}
           <Fields
-            fields={commonOptions(depth, !!renamed)}
+            fields={commonOptions(depth, !!renamed, siblings.map((s) => s.handle))}
             values={{ ...field, width: field.width ?? 'full', property: field.section === 'sidebar' }}
             errors={errors}
             context={{ path: path.split('.') }}
             onChange={(h, v) => {
-              if (h === 'handle') onChange({ ...field, handle: String(v ?? '').toLowerCase().replace(/[^a-z0-9_]/g, '') })
+              if (h === 'handle') onChange({ ...field, handle: String(v ?? '') })
               else if (h === 'property') set('section', v ? 'sidebar' : undefined)
               else if (h === 'width') set('width', v === 'full' ? undefined : v)
               else set(h, v)
@@ -236,8 +249,19 @@ function FieldRow({ field, type, open, isBody, depth, errors, path, renamed, dra
               <Fields fields={type.config.map((c) => ({ ...c, width: c.type === 'json' || c.type === 'fields' ? 'full' : 'half' }))} values={field} onChange={(h, v) => set(h, v)} errors={errors} context={{ depth: depth + 1, path: path.split('.') }} />
             </div>
           )}
-          <div className="flex justify-between border-t border-border pt-3">
-            <Button size="sm" variant="ghost" icon="copy" onClick={onDuplicate}>{t('Duplicate')}</Button>
+          {/* Its conditions, where it has any; a field without one has only the button that adds the first. */}
+          {(field.if || field.required_if) && (
+            <div className="border-t border-border pt-4">
+              <div className="cms-label mb-3">{t('Conditions')}</div>
+              <Conditions field={field} siblings={siblings} onChange={onChange} />
+              {circular && <FieldError>{t('These conditions depend on this field itself, through the fields they name.')}</FieldError>}
+            </div>
+          )}
+          <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-3">
+            <div className="flex flex-wrap gap-1">
+              <Button size="sm" variant="ghost" icon="copy" onClick={onDuplicate}>{t('Duplicate')}</Button>
+              {nextCondition(field, siblings) && <Button size="sm" variant="ghost" icon="plus" onClick={() => onChange(nextCondition(field, siblings)!)}>{t('Add Condition')}</Button>}
+            </div>
             <Button size="sm" variant="destructive" icon="trash" onClick={onRemove}>{t('Remove Field')}</Button>
           </div>
         </div>

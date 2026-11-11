@@ -1,6 +1,8 @@
-import { CmsError, invalidate, loadManifest, navigate, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
+import { CmsError, invalidate, loadManifest, navigate, plural, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
 import { useEffect, useRef, useState } from 'react'
 import { FieldsEditor, type RawField } from '../fields/FieldsEditor'
+import { PartName } from '../fields/BuilderFields'
+import { IconButton } from './Button'
 import { Button } from './Button'
 import { confirm } from './Dialog'
 import { NotFoundState } from './EmptyState'
@@ -11,7 +13,7 @@ import { Page, type Crumb } from './Page'
 import { SaveBar } from './SaveBar'
 import { Spinner } from './Spinner'
 import { toast } from './toast'
-import { Tabs } from './Segmented'
+import { Segmented, Tabs } from './Segmented'
 
 export interface BlueprintDefinition {
   title: string
@@ -43,6 +45,11 @@ export interface BlueprintKind {
   /** The crumbs to the editor, once it has loaded; `back` and the definition's title by default. */
   crumbs?: (def: BlueprintDefinition) => Crumb[]
   entries?: string
+  /**
+   * Its items come in kinds, each with fields of its own beside the first (`blueprints` of the definition):
+   * the Fields tab then switches between them. Answers how many items were made with one.
+   */
+  blueprints?: (handle: string) => Promise<number>
   /** What every item has without a field; null when nothing. */
   builtIn?: string | null
   /** Give complex blueprints separate fields and grouped settings views. */
@@ -51,7 +58,7 @@ export interface BlueprintKind {
 
 function editableDefinition(source: any): BlueprintDefinition | null {
   if (!source) return null
-  const { handle: _h, resolvedFields: _r, schema: _s, data: _d, settings: _x, count: _c, deletable: _v, publishedAt: _p, updatedAt: _u, createdAt: _a, ...rest } = source
+  const { handle: _h, resolvedFields: _r, resolvedBlueprints: _b, schema: _s, data: _d, settings: _x, count: _c, deletable: _v, publishedAt: _p, updatedAt: _u, createdAt: _a, ...rest } = source
   return { ...rest, fields: source.fields ?? [] }
 }
 
@@ -73,6 +80,11 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const operation = useRef(false)
   const [tab, setTab] = useTab(['fields', 'settings'])
+  // Which set of fields is on view: the definition's own (''), or one of its named blueprints.
+  const [current, setCurrent] = useState('')
+  // The blueprints there were when the editor opened: items are stored under those handles.
+  const savedBlueprints = useRef<Set<string> | null>(null)
+  if (source.data && !savedBlueprints.current) savedBlueprints.current = new Set(Object.keys(source.data.blueprints ?? {}))
   const removable = !!kind.remove && !!source.data && (kind.canRemove?.(source.data) ?? true)
 
   useEffect(() => {
@@ -113,7 +125,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     } catch (e) {
       setSaveError(e instanceof Error && e.constructor !== TypeError ? e.message : t('Couldn’t save. Check your connection.'))
       if (e instanceof CmsError && e.type === 'invalid_input') {
-        const about = Object.fromEntries(Object.entries(e.details).filter(([path]) => path.startsWith('fields.')))
+        const about = Object.fromEntries(Object.entries(e.details).filter(([path]) => path.startsWith('fields.') || path.startsWith('blueprints.')))
         setFieldErrors(about)
         // The field it is about is on the Fields tab.
         if (Object.keys(about).length) setTab('fields')
@@ -145,7 +157,39 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     }
   }
 
+  // The named blueprints, in the order they are written.
+  const blueprints: Record<string, { title?: string; fields?: RawField[] }> = def?.blueprints && typeof def.blueprints === 'object' && !Array.isArray(def.blueprints) ? def.blueprints : {}
+  const named = blueprints[current] ? current : ''
+  const setBlueprints = (next: [string, { title?: string; fields?: RawField[] }][]) => patch({ blueprints: next.length ? Object.fromEntries(next) : undefined })
+  const changeBlueprint = (handle: string, change: { title?: string; fields?: RawField[] }) => setBlueprints(Object.entries(blueprints).map(([h, b]) => (h === handle ? [h, { ...b, ...change }] : [h, b])))
+  const addBlueprint = () => {
+    let handle = 'kind'
+    for (let n = 2; blueprints[handle]; n++) handle = `kind_${n}`
+    setBlueprints([...Object.entries(blueprints), [handle, { title: t('Blueprint'), fields: [] }]])
+    setCurrent(handle)
+  }
+  const renameBlueprint = (from: string, to: string) => {
+    setBlueprints(Object.entries(blueprints).map(([h, b]) => (h === from ? [to, b] : [h, b])))
+    setCurrent(to)
+  }
+  // What was made with it stays, without these fields: said with how many there are, before it is taken away.
+  const removeBlueprint = async (handle: string) => {
+    if (savedBlueprints.current?.has(handle)) {
+      let count = 0
+      try { count = await kind.blueprints!(handle) } catch (e) { toast.error(e); return }
+      const title = blueprints[handle]?.title || handle
+      if (!(await confirm({
+        title: t('Remove “{title}”?', { title }),
+        description: count > 0 ? plural(count, '{count} entry was made with it. It keeps its values, without these fields.', '{count} entries were made with it. They keep their values, without these fields.') : undefined,
+        confirm: t('Remove Blueprint'), danger: true,
+      }))) return
+    }
+    setBlueprints(Object.entries(blueprints).filter(([h]) => h !== handle))
+    setCurrent('')
+  }
+
   const discard = () => {
+    setCurrent('')
     setDef(editableDefinition(source.data))
     setDirty(false)
     setSaveError(null)
@@ -176,7 +220,32 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         <div className="max-w-[960px]">
           <Tabs value={tab} onChange={setTab} tabs={[{ value: 'fields', label: t('Fields') }, { value: 'settings', label: t('Settings') }]} className="mb-6" />
           {tab === 'fields' ? (
-            <FieldsEditor heading={false} fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
+            <>
+              {/* The kinds of item, where there can be several: one set of fields on view at a time, in the same editor. */}
+              {kind.blueprints && (
+                <div className="mb-4 flex flex-wrap items-center gap-2" data-blueprints>
+                  <Segmented aria-label={t('Blueprints')} value={named} onChange={setCurrent} options={[{ value: '', label: def.singular || def.title }, ...Object.entries(blueprints).map(([handle, b]) => ({ value: handle, label: b.title || handle }))]} />
+                  <IconButton icon="plus" label={t('Add Blueprint')} onClick={addBlueprint} />
+                </div>
+              )}
+              {named === '' ? (
+                <FieldsEditor heading={false} fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
+              ) : (
+                <div key={named}>
+                  <div className="mb-5 max-w-[640px]">
+                    <PartName
+                      name={blueprints[named].title ?? ''} handle={named} taken={Object.keys(blueprints).filter((h) => h !== named)}
+                      renamed={!savedBlueprints.current?.has(named) && [...(savedBlueprints.current ?? [])].some((h) => !blueprints[h])}
+                      onName={(title) => changeBlueprint(named, { title })} onHandle={(handle) => renameBlueprint(named, handle)}
+                    />
+                  </div>
+                  <FieldsEditor heading={false} fields={blueprints[named].fields ?? []} onChange={(fields) => changeBlueprint(named, { fields })} body={def.body} errors={fieldErrors} path={`blueprints.${named}.fields`} />
+                  <div className="mt-10 border-t border-border pt-6">
+                    <Button variant="destructive" icon="trash" className="-ml-2" disabled={saving} onClick={() => void removeBlueprint(named)}>{t('Remove Blueprint')}</Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div>
               {/* A rule between two sections, none after the last: what follows draws its own. */}

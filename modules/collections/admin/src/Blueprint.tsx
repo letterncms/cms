@@ -14,10 +14,12 @@ const kind = (handle: string): BlueprintKind => ({
   canRemove: (source) => source.deletable === true,
   back: { label: t('Collections'), to: '/collections', icon: 'collection' },
   entries: `/content/${handle}`,
+  // A collection's entries can come in kinds, each with fields of its own; how many were made with one is said before it is removed.
+  blueprints: (blueprint) => run<{ total: number }>('entries/list', { collection: handle, perPage: 1, filters: [{ field: 'blueprint', value: blueprint }] }).then((page) => page.total),
   settingsSections: [
     { title: t('General'), handles: ['title', 'singular', 'icon'] },
     // Not "Entries", the button in the bar that leaves this screen, and not "Structure", the label of its first field.
-    { title: t('Content'), handles: ['structure', 'body'] },
+    { title: t('Content'), handles: ['structure', 'body', 'taxonomy'] },
     { title: t('Default Display'), handles: ['default_view', 'default_columns'], bare: true },
     { title: t('Publishing'), handles: ['route', 'template'] },
   ],
