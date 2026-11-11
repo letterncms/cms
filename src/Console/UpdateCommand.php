@@ -9,9 +9,9 @@ use Cms\Update\ReleaseFeed;
 use RuntimeException;
 
 /** Check and update from the command line. In cron, `--security-only` is what an admin's visit does without one. */
-final class PackagesUpdateCommand extends Command
+final class UpdateCommand extends Command
 {
-    protected $signature = 'packages:update {--security-only : Only what would update by itself} {--check : Only say what is on offer}';
+    protected $signature = 'update {--security-only : Only what would update by itself} {--check : Only say what is on offer}';
 
     protected $description = 'Update the core: check the signed list, then download, verify and switch';
 

@@ -161,7 +161,7 @@ final class Installer
             'super' => true,
         ]);
 
-        cms()->hooks()->dispatch('cms.sync');
+        cms()->hooks()->dispatch('cms.migrated');
 
         Files::putJson(storage_path('installed.json'), ['version' => Cms::VERSION, 'installedAt' => now()->toIso8601String()]);
 
@@ -179,7 +179,7 @@ final class Installer
         // A convenience: a problem with it must never leave the site half-installed.
         try {
             cms()->hooks()->dispatch('cms.installed', $user);
-            cms()->hooks()->dispatch('cms.sync');
+            cms()->hooks()->dispatch('cms.migrated');
         } catch (Throwable $e) {
             report($e);
         }

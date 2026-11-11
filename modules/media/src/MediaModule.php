@@ -76,11 +76,11 @@ final class MediaModule extends Plugin
         ]], permission: 'media.view');
     }
 
-    /** content/media comes in with git or FTP: the table follows on sync, install, a full build or an admin visit. */
+    /** content/media comes in with git or FTP: the table follows on `cms migrate`, install, a full build or an admin visit. */
     private function mediaAsContent(): void
     {
         // A full build imports it too (SiteBuilder::buildAll).
-        $this->cms()->hooks()->on('cms.sync', fn () => $this->app->make(MediaManifest::class)->import());
+        $this->cms()->hooks()->on('cms.migrated', fn () => $this->app->make(MediaManifest::class)->import());
 
         if ($this->app->runningInConsole()) {
             $this->commands([Console\MediaCheckCommand::class]);

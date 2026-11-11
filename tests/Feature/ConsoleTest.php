@@ -16,7 +16,7 @@ final class ConsoleTest extends TestCase
     /** @return array{0: int, 1: mixed, 2: string} exit code, the decoded document, the raw output */
     private function cli(string $command, array $params = []): array
     {
-        // Its own buffer: a command that calls another (sync runs migrate) would leave only that one's output behind.
+        // Its own buffer: a command that calls another (plugin enable runs migrate) would leave only that one's output behind.
         $code = Artisan::call($command, $params, $buffer = new BufferedOutput);
         $output = $buffer->fetch();
 
@@ -162,7 +162,7 @@ final class ConsoleTest extends TestCase
         $ours = array_filter(Artisan::all(), static fn ($command) => $command instanceof Command);
         $this->assertArrayHasKey('run', $ours);
         $this->assertArrayHasKey('plugins', $ours);
-        $this->assertArrayHasKey('sync', $ours);
+        $this->assertArrayHasKey('migrate', $ours);
 
         foreach ($ours as $name => $command) {
             $this->assertTrue($command->getDefinition()->hasOption('json'), "{$name} has no --json");
@@ -180,7 +180,7 @@ final class ConsoleTest extends TestCase
         $this->assertContains('letterncms/content', array_column($document['data']['plugins'], 'name'));
         $this->assertStringStartsWith('{', $output);
 
-        [$code, $document] = $this->cli('sync', ['--json' => true]);
+        [$code, $document] = $this->cli('migrate', ['--json' => true]);
         $this->assertSame(0, $code);
         $this->assertArrayHasKey('done', $document['data']);
 
@@ -211,7 +211,7 @@ final class ConsoleTest extends TestCase
 
             return false;
         });
-        [$code, $document, $output] = $this->cli('sync', ['--json' => true]);
+        [$code, $document, $output] = $this->cli('migrate', ['--json' => true]);
         $this->assertCount(1, $reported);
         $this->assertInstanceOf(\Illuminate\Database\QueryException::class, $reported[0]);
         $this->assertSame(1, $code);

@@ -17,7 +17,7 @@ use Throwable;
  *   content/media/<id>.yaml   id and path are required; what is left out is read from the file
  *
  * Everything that changes media writes through here, and import() brings the table
- * in line after files changed by git, FTP or a tool. It runs on `php cms sync`, on
+ * in line after files changed by git, FTP or a tool. It runs on `php cms migrate`, on
  * install, before a full build, after an admin request and when a page asks for an
  * id the table doesn't know, whichever comes first.
  */

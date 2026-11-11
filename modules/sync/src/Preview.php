@@ -168,7 +168,7 @@ final class Preview
         $missing = array_filter(array_diff_key($b, $a), static fn (array $c) => ! $c['nullable'] && ! $c['default']);
         [$column, $has, $lacks] = $extra !== [] ? [reset($extra), $source, $dest] : ($missing !== [] ? [array_key_first($missing), $dest, $source] : [null, '', '']);
 
-        return $column === null ? null : __('The :table table has a :column column on :has but not on :lacks. Bring both sites to the same versions and run php cms sync on each, then sync.', ['table' => $table, 'column' => $column, 'has' => $has, 'lacks' => $lacks]);
+        return $column === null ? null : __('The :table table has a :column column on :has but not on :lacks. Bring both sites to the same versions and run php cms migrate on each, then sync.', ['table' => $table, 'column' => $column, 'has' => $has, 'lacks' => $lacks]);
     }
 
     /** @return list<array{handle: string, from: int, to: int}> */
