@@ -52,6 +52,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const profile = mkdtempSync(join(tmpdir(), 'cms-site-checks-'))
 const port = 9400 + Math.floor(Math.random() * 400)
 const browser = spawn(chrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--window-size=1280,800', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' })
+// The browser goes with the checks, however they end: a crash or Ctrl-C must not leave it running.
+const stopBrowser = () => {
+  if (browser.exitCode === null && browser.signalCode === null) browser.kill()
+}
+process.once('exit', stopBrowser)
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.once(signal, () => { stopBrowser(); process.exit(130) })
+process.once('uncaughtException', (error) => { stopBrowser(); console.error(error); process.exit(1) })
+process.once('unhandledRejection', (error) => { stopBrowser(); console.error(error); process.exit(1) })
 for (let i = 0; i < 100; i++) {
   if (await fetch(`http://127.0.0.1:${port}/json/version`).then(() => true, () => false)) break
   await sleep(100)
