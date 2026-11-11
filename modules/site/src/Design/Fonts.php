@@ -19,10 +19,25 @@ final class Fonts
     /** Google serves woff2 only to browsers it recognizes. */
     private const string BROWSER = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
+    /** Tests answer in Google's place: fn (string $url): string, throwing RuntimeException for what isn't there. */
+    public ?\Closure $fetcher = null;
+
     public function __construct(private readonly Design $design) {}
 
-    /** @return list<array> the font entries added to the design system */
-    public function import(string $family, bool $italic = false): array
+    private function fetch(string $url, int $max): string
+    {
+        return $this->fetcher ? ($this->fetcher)($url) : SafeFetcher::get($url, $max, 20, 3, self::BROWSER)['body'];
+    }
+
+    /**
+     * Download a family as it really is: the weights its variable axis spans (or the static weights it has),
+     * upright, italic or both, each file once.
+     *
+     * @param  string  $style  normal, italic or both; italic is left out when the family has none
+     * @param  list<int>  $weights  static weights to take when the family has no weight axis; 400 to 700 of what it has otherwise
+     * @return list<array> the font entries added to the design system
+     */
+    public function import(string $family, string $style = 'normal', array $weights = []): array
     {
         $family = trim($family);
 
@@ -30,45 +45,84 @@ final class Fonts
             throw new InvalidArgumentException(__('Use the family name as Google Fonts shows it, like “Inter Tight”.'));
         }
 
-        $name = str_replace(' ', '+', $family);
-        $axes = $italic ? ':ital,wght@0,100..900;1,100..900' : ':wght@100..900';
-        $css = null;
+        // What the family has, from Google's own description of it: asking for more is an error there.
+        try {
+            $about = json_decode((string) preg_replace('/^\)\]\}\'\s*/', '', $this->fetch('https://fonts.google.com/metadata/fonts/'.rawurlencode($family), 500_000)), true);
+        } catch (RuntimeException) {
+            $about = null;
+        }
 
-        // Variable weights when the family has them, else the common static weights.
-        foreach ([$axes, $italic ? ':ital,wght@0,400;0,500;0,600;0,700;1,400;1,700' : ':wght@400;500;600;700', ''] as $variant) {
-            try {
-                $css = SafeFetcher::get("https://fonts.googleapis.com/css2?family={$name}{$variant}&display=swap", 500_000, 15, 3, self::BROWSER)['body'];
-                break;
-            } catch (RuntimeException) {
+        if (! is_array($about) || ! is_array($about['fonts'] ?? null)) {
+            throw new InvalidArgumentException(__('Google Fonts has no family called “:family”.', ['family' => $family]));
+        }
+
+        $has = array_map('strval', array_keys($about['fonts']));
+        $upright = array_values(array_filter($has, 'ctype_digit'));
+        $slanted = array_map(static fn (string $key) => substr($key, 0, -1), array_values(array_filter($has, static fn (string $key) => str_ends_with($key, 'i'))));
+        $styles = match (true) {
+            $style === 'italic' && $slanted !== [] => [1 => $slanted],
+            $style === 'both' && $slanted !== [] && $upright !== [] => [0 => $upright, 1 => $slanted],
+            $upright !== [] => [0 => $upright],
+            default => [1 => $slanted],
+        };
+        $axis = current(array_filter((array) ($about['axes'] ?? []), static fn ($a) => is_array($a) && ($a['tag'] ?? null) === 'wght')) ?: null;
+        $tuples = [];
+
+        foreach ($styles as $ital => $available) {
+            if ($axis !== null) {
+                $tuples[] = [$ital, ((int) $axis['min']).'..'.((int) $axis['max'])];
+
                 continue;
+            }
+
+            $wanted = array_values(array_intersect($available, array_map('strval', $weights ?: [400, 500, 600, 700]))) ?: [in_array('400', $available, true) ? '400' : $available[0]];
+
+            foreach ($wanted as $weight) {
+                $tuples[] = [$ital, $weight];
             }
         }
 
-        if ($css === null) {
-            throw new InvalidArgumentException(__('Google Fonts has no family called “:family”.', ['family' => $family]));
+        $ital = count($styles) > 1 || isset($styles[1]);
+        $query = ($ital ? 'ital,wght@' : 'wght@').implode(';', array_map(static fn (array $t) => $ital ? "{$t[0]},{$t[1]}" : $t[1], $tuples));
+
+        try {
+            $css = $this->fetch('https://fonts.googleapis.com/css2?family='.str_replace(' ', '+', $family).':'.$query.'&display=swap', 500_000);
+        } catch (RuntimeException) {
+            throw new InvalidArgumentException(__('Google Fonts has no Latin .woff2 files for “:family”.', ['family' => $family]));
         }
 
         // Only the latin subset of each face.
         preg_match_all('#/\*\s*latin\s*\*/\s*@font-face\s*\{([^}]*)\}#', $css, $faces);
-        $added = [];
         $slug = Str::slug($family);
+        $files = [];
 
         foreach ($faces[1] as $face) {
             if (! preg_match('#src:\s*url\((https://fonts\.gstatic\.com/[^)]+\.woff2)\)#', $face, $src)) {
                 continue;
             }
 
-            $style = preg_match('/font-style:\s*italic/', $face) ? 'italic' : 'normal';
-            $weight = preg_match('/font-weight:\s*([\d ]+);/', $face, $w) ? trim($w[1]) : '400';
-            $file = $slug.'-'.str_replace(' ', '-', $weight).($style === 'italic' ? '-italic' : '').'.woff2';
-            $data = SafeFetcher::get($src[1], 2_000_000, 20, 3, self::BROWSER)['body'];
+            $italic = (bool) preg_match('/font-style:\s*italic/', $face);
+            $weight = preg_match('/font-weight:\s*([\d ]+);/', $face, $w) ? array_map('intval', explode(' ', trim($w[1]))) : [400];
+            // One file serves every weight that names it: kept once, for the span of them.
+            $files[$src[1]] ??= ['italic' => $italic, 'min' => min($weight), 'max' => max($weight)];
+            $files[$src[1]]['min'] = min($files[$src[1]]['min'], ...$weight);
+            $files[$src[1]]['max'] = max($files[$src[1]]['max'], ...$weight);
+        }
+
+        $added = [];
+
+        foreach ($files as $url => $face) {
+            $data = $this->fetch($url, 2_000_000);
 
             if (! str_starts_with($data, 'wOF2')) {
                 continue;
             }
 
+            $weight = $face['min'] === $face['max'] ? (string) $face['min'] : "{$face['min']} {$face['max']}";
+            $file = $slug.'-'.str_replace(' ', '-', $weight).($face['italic'] ? '-italic' : '').'.woff2';
             Files::put($this->design->path('fonts/'.$file), $data);
-            $added[] = ['family' => $family, 'src' => 'fonts/'.$file, 'weight' => $weight, 'style' => $style, 'preload' => $style === 'normal' && ! str_contains($weight, ' ') ? $weight === '400' : $style === 'normal'];
+            // The upright face that holds 400 is what a page starts with.
+            $added[] = ['family' => $family, 'src' => 'fonts/'.$file, 'weight' => $weight, 'style' => $face['italic'] ? 'italic' : 'normal', 'preload' => ! $face['italic'] && $face['min'] <= 400 && $face['max'] >= 400];
         }
 
         if ($added === []) {
@@ -100,12 +154,26 @@ final class Fonts
         return $font;
     }
 
-    /** Add font faces to the design system (replacing earlier faces of the family). */
+    /** Add font faces to the design system (replacing earlier faces of the family, and their files nothing names any more). */
     private function remember(string $family, array $faces, bool $replace = true): void
     {
         $json = $this->design->json();
-        $fonts = $replace ? array_values(array_filter($json->fonts(), static fn ($f) => ($f['family'] ?? null) !== $family)) : $json->fonts();
-        $json->setFonts([...$fonts, ...$faces]);
+        $before = $json->fonts();
+        // What the family already says about its fallback stays with it.
+        $kept = array_intersect_key((array) (current(array_filter($before, static fn ($f) => ($f['family'] ?? null) === $family && isset($f['fallback']))) ?: []), array_flip(DesignCompiler::FALLBACK));
+        $fonts = $replace ? array_values(array_filter($before, static fn ($f) => ($f['family'] ?? null) !== $family)) : $before;
+        $fonts = [...$fonts, ...array_map(static fn (array $face) => [...$face, ...$kept], $faces)];
+        $json->setFonts($fonts);
         $json->save();
+
+        $named = array_map(static fn ($f) => basename((string) ($f['src'] ?? '')), $fonts);
+
+        foreach ($replace ? $before : [] as $old) {
+            $file = basename((string) ($old['src'] ?? ''));
+
+            if (($old['family'] ?? null) === $family && preg_match('/^[\w.-]+\.woff2$/', $file) && ! in_array($file, $named, true)) {
+                @unlink($this->design->path('fonts/'.$file));
+            }
+        }
     }
 }

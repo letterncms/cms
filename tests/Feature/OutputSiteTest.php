@@ -182,8 +182,10 @@ final class OutputSiteTest extends TestCase
         $this->assertSame([], $this->ability('design/fonts-import', ['family' => '!!'], 'invalid_input'));
         $this->app->bind(\Cms\Modules\Site\Design\Fonts::class, static fn () => new class
         {
-            public function import(string $family, bool $italic): array
+            public function import(string $family, string $style = 'normal', array $weights = []): array
             {
+                $italic = $style !== 'normal';
+
                 return [
                     ['family' => $family, 'src' => 'fonts/inter-100-900.woff2', 'weight' => '100 900', 'style' => 'normal', 'preload' => true],
                     ...($italic ? [['family' => $family, 'src' => 'fonts/inter-100-900-italic.woff2', 'weight' => '100 900', 'style' => 'italic', 'preload' => false]] : []),
