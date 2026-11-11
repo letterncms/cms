@@ -64,6 +64,12 @@ final class BlocksField extends FieldType
      * The blocks up to a Teaser Ends Here block or the word budget, in document order. A container
      * keeps what fits; a leaf that doesn't fit is dropped, never cut, and the rest with it.
      */
+    /** A block's props are a map, also when it has none: `{}`, not the `[]` PHP's empty array becomes. */
+    public function export(mixed $value, Field $field): mixed
+    {
+        return is_array($value) ? Document::jsonable($value) : $value;
+    }
+
     public function teaser(mixed $value, Field $field, int $words): mixed
     {
         $budget = $words;

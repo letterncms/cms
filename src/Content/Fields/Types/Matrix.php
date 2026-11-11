@@ -107,6 +107,18 @@ class Matrix extends FieldType
         ));
     }
 
+    /** Each row through the fields of its kind: a blocks field inside a row has maps that can be empty too. */
+    public function export(mixed $value, Field $field): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $kinds = $this->kinds($field);
+
+        return array_map(static fn ($row) => is_array($row) && isset($kinds[$row['type'] ?? '']) ? $kinds[$row['type']]['blueprint']->export($row) : $row, $value);
+    }
+
     public function toText(mixed $value, Field $field): string
     {
         $kinds = $this->kinds($field);

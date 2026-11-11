@@ -316,6 +316,23 @@ final class Blueprint
         return $data;
     }
 
+    /**
+     * An entry's data as JSON must carry it (FieldType::export), field by field. Keys this blueprint doesn't
+     * know are left as they are, and data without any stays an empty array: whoever sends it knows it is a map.
+     */
+    public function export(array $data): array
+    {
+        $types = self::types();
+
+        foreach ($this->fields as $field) {
+            if (array_key_exists($field->handle, $data)) {
+                $data[$field->handle] = $types->resolve($field->type)->export($data[$field->handle], $field);
+            }
+        }
+
+        return $data;
+    }
+
     public function toText(array $data): string
     {
         $types = self::types();

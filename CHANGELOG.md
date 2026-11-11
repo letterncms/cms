@@ -60,6 +60,7 @@
 - In the builder, a block that a behaviour draws (a canvas, a chart) is no longer a blank: while it is empty it says which behaviour draws it and that the preview shows it. The canvas still runs no scripts.
 - `design/update` with only part of the page transition, such as `{"transition": {"navigation": "client"}}`, keeps the transition's other settings instead of dropping its type and duration.
 - The **Icon** block shows its **Custom SVG** when there is one. It showed the named icon instead, and since a new Icon starts with one, the SVG only appeared after the name was cleared.
+- Every answer sends `{}` where a map is empty: a block's `props` at any depth, also inside matrix rows and repeater items, came back as `[]` from the content API and from abilities (`entries/get`, `entries/create` and the rest, `blocks/from-markdown`, `components/list`), and so did an entry's `data` without fields in the content API. A typed client reads `[]` as a list.
 
 ## 0.22.0 (2026-11-11)
 
