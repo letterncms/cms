@@ -50,7 +50,7 @@ final class EntriesView
             'columns' => $columns,
             'search' => ['param' => 'search', 'placeholder' => __('Search :items', ['items' => __($collection->title)])],
             'filters' => [
-                ['param' => 'status', 'label' => __('Status'), 'display' => 'segmented', 'default' => 'any', 'options' => array_map(static fn ($value, $label) => ['value' => $value, 'label' => $label], ['any', 'published', 'draft'], [__('All'), __('Published'), __('Drafts')])],
+                ['param' => 'status', 'label' => __('Status'), 'display' => 'segmented', 'default' => 'any', 'options' => array_map(static fn ($value, $label) => ['value' => $value, 'label' => $label], ['any', 'active', 'draft', 'expired'], [__('All'), __('Published'), __('Drafts'), __('Expired')])],
                 ...(count($locales) > 1 ? [['param' => 'locale', 'label' => __('Language'), 'display' => 'segmented', 'default' => $this->cms->defaultLocale(), 'options' => array_map(fn (string $code) => ['value' => $code, 'label' => strtoupper($code), 'title' => self::languageName($code)], $locales)]] : []),
             ],
             'paged' => ['perPage' => $this->perPage],
@@ -64,14 +64,14 @@ final class EntriesView
                 // The row itself opens it; in the menu, beside a pencil, the act has its name, for those who may do it.
                 ['label' => __('Edit'), 'icon' => 'edit', 'to' => $open, 'can' => "entries.{$handle}.edit"],
                 ['label' => __('Duplicate'), 'icon' => 'copy', 'ability' => 'entries/duplicate', 'input' => $entry, 'then' => 'open', 'to' => "/content/{$handle}/{result.id}", 'can' => "entries.{$handle}.create"],
-                ['label' => __('Publish'), 'icon' => 'rocket', 'ability' => 'entries/publish', 'input' => $entry, 'success' => __('Published'), 'when' => '{row.displayStatus} is draft, changed', 'can' => "entries.{$handle}.publish"],
+                ['label' => __('Publish'), 'icon' => 'rocket', 'ability' => 'entries/publish', 'input' => $entry, 'success' => __('Published'), 'when' => '{row.displayStatus} is draft, changed, expired', 'can' => "entries.{$handle}.publish"],
                 ['label' => __('Unpublish'), 'icon' => 'eye-off', 'ability' => 'entries/unpublish', 'input' => $entry, 'success' => __('Unpublished'), 'unless' => '{row.displayStatus} is draft', 'can' => "entries.{$handle}.publish"],
                 ['label' => __('Copy URL'), 'icon' => 'link', 'copy' => '{origin}{row.uri}', 'success' => __('URL copied'), 'when' => '{row.uri}'],
                 ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'entries/delete', 'input' => $entry, 'success' => __('Deleted'), 'can' => "entries.{$handle}.delete",
                     'confirm' => ['title' => str_replace('{title}', '{row.title}', __('Delete “{title}”?')), 'text' => __('This cannot be undone.'), 'confirm' => __('Delete'), 'danger' => true]],
             ],
             'bulk' => [
-                ['label' => __('Publish'), 'each' => true, 'ability' => 'entries/publish', 'input' => $entry, 'some' => '{row.displayStatus} is draft, changed', 'can' => "entries.{$handle}.publish",
+                ['label' => __('Publish'), 'each' => true, 'ability' => 'entries/publish', 'input' => $entry, 'some' => '{row.displayStatus} is draft, changed, expired', 'can' => "entries.{$handle}.publish",
                     'success' => ['one' => __('Published {count} entry'), 'other' => __('Published {count} entries')]],
                 ['label' => __('Unpublish'), 'each' => true, 'ability' => 'entries/unpublish', 'input' => $entry, 'some' => '{row.displayStatus} is not draft', 'can' => "entries.{$handle}.publish",
                     'success' => ['one' => __('Unpublished {count} entry'), 'other' => __('Unpublished {count} entries')]],
@@ -196,6 +196,8 @@ final class EntriesView
         }
         $columns[] = ['id' => 'author', 'key' => 'author', 'label' => __('Author'), 'format' => 'person', 'width' => '132px', 'sort' => 'author_id', 'empty' => __('Unassigned')];
         $columns[] = ['id' => 'published', 'key' => 'published', 'label' => __('Published')];
+        // When its publication ends, for those it does: a column to show, off until asked for.
+        $columns[] = ['id' => 'ends', 'key' => 'expiresAt', 'label' => __('Ends'), 'format' => 'date', 'width' => '112px', 'sort' => 'expires_at'];
         $columns[] = ['id' => 'updated', 'key' => 'updated', 'label' => __('Updated')];
 
         // Default Display Fields name columns as collection settings do (`field:<handle>`, `uri`, `author`).

@@ -281,7 +281,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'collection' => self::HANDLE,
                 'locale' => ['type' => 'string'],
-                'status' => ['type' => 'string', 'enum' => ['any', 'published', 'draft', 'live'], 'default' => 'any', 'description' => 'live: published, its time has come and its end date has not.'],
+                'status' => ['type' => 'string', 'enum' => ['any', 'published', 'draft', 'live', 'expired', 'active'], 'default' => 'any', 'description' => 'live: published, its time has come and its end date has not. expired: published, and its end date has passed. active: published and not expired (live or scheduled).'],
                 'search' => ['type' => 'string', 'maxLength' => 200],
                 'parentId' => ['type' => ['string', 'null'], 'description' => 'Tree collections: children of this entry; null for top level.'],
                 'sort' => ['type' => 'string', 'pattern' => self::SORT, 'description' => 'Field to sort by: title, slug, uri, status, locale, published_at, updated_at, created_at, position, author_id (by the author’s name) or a data field. Prefix with - for descending, e.g. -published_at. Empty values sort last.'],

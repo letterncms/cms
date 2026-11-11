@@ -292,7 +292,8 @@ export function DateField({ field, value, onChange, error, disabled }: FieldProp
       disabled={disabled}
       required={!!field.required}
     />
-    {withTime && typeof field.timezone === 'string' && <p className="m-0 mt-1 text-xs text-faint">{timeZone}</p>}
+    {/* Which zone the time is in; `zone: false` where a form says it once for several dates. */}
+    {withTime && typeof field.timezone === 'string' && field.zone !== false && <p className="m-0 mt-1 text-xs text-faint">{timeZone}</p>}
     {localError && <p id={`${fieldControlId(field)}-local-error`} role="alert" className="m-0 mt-1 text-xs text-danger">{localError}</p>}
     </div>
   )

@@ -121,6 +121,8 @@ final class DatabaseDriver implements EntryDriver
         match ($query->status) {
             'published' => $builder->where('status', 'published'),
             'draft' => $builder->where('status', 'draft'),
+            'expired' => $builder->where('status', 'published')->whereNotNull('expires_at')->where('expires_at', '<=', now()),
+            'active' => $builder->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now())),
             'live' => $builder->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()))
                 ->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now())),
             default => null,

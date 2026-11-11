@@ -29,6 +29,8 @@ const dotTones: Record<string, string> = {
   // Changes not yet live: the brand's yellow, with a halo so it holds on white.
   changed: 'bg-signal ring-2 ring-signal-soft',
   scheduled: 'bg-warning',
+  // Its publication ran out: off the site, and not by anyone's hand. Not a draft's grey.
+  expired: 'bg-warning ring-2 ring-warning-soft',
   success: 'bg-success',
   warning: 'bg-warning',
   danger: 'bg-danger',
@@ -47,5 +49,5 @@ export function StatusDot({ status, label, className }: { status: string; label?
 }
 
 export function statusLabel(status: string): string {
-  return { published: t('Published'), draft: t('Draft'), changed: t('Changes'), scheduled: t('Scheduled') }[status] ?? status
+  return { published: t('Published'), draft: t('Draft'), changed: t('Changes'), scheduled: t('Scheduled'), expired: t('Expired') }[status] ?? status
 }

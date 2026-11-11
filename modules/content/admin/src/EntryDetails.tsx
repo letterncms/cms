@@ -62,6 +62,8 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
   const info: [string, ReactNode][] = [
     ...((!system || collection.route || summary?.within) ? [[t('Status'), <StatusDot key="status" status={status} label={statusLabel(status)} className="text-text" />] as [string, ReactNode]] : []),
     ...(entry?.publishedAt && status !== 'draft' ? [[status === 'scheduled' ? t('Goes Live') : t('Published'), <time key="published" dateTime={entry.publishedAt} title={manifest.site.timezone}>{date(entry.publishedAt)}</time>] as [string, ReactNode]] : []),
+    // When it comes off the site again, while that is still ahead or just passed.
+    ...(entry?.expiresAt && status !== 'draft' ? [[status === 'expired' ? t('Ended') : t('Ends'), <time key="ends" dateTime={entry.expiresAt} title={manifest.site.timezone}>{date(entry.expiresAt)}</time>] as [string, ReactNode]] : []),
     ...(builder ? [
       ...(entry && collection.structure === 'tree' ? [[t('Parent'), entry.parentId ? parent.data?.[0]?.title ?? (parent.isLoading ? t('Loading…') : '') : t('None')] as [string, ReactNode]] : []),
       ...(summary?.within ? [] : [[t('Collection'), collection.title] as [string, ReactNode]]),
@@ -188,18 +190,23 @@ interface PublicationDialogProps {
   changes: boolean
   busy: boolean
   onClose: () => void
-  onPublish: (at: string) => Promise<boolean>
+  /** `expiresAt`: the end date as it now is, null for none; left out when it was not touched. */
+  onPublish: (at: string, expiresAt?: string | null) => Promise<boolean>
 }
 
 export function PublicationDialog({ entry, changes, busy, onClose, onPublish }: PublicationDialogProps) {
   const manifest = useManifest()
   const [at, setAt] = useState<string | null>(entry?.publishedAt ?? null)
+  // An end that has passed is no end any more: publishing again starts without one.
+  const kept = entry?.expiresAt && new Date(entry.expiresAt).getTime() > Date.now() ? entry.expiresAt : null
+  const [ends, setEnds] = useState<string | null>(kept)
   const [error, setError] = useState<string | undefined>()
+  const [endsError, setEndsError] = useState<string | undefined>()
   const scheduled = entry?.displayStatus === 'scheduled'
-  const live = entry?.status === 'published' && !scheduled
+  const live = entry?.status === 'published' && !scheduled && entry?.displayStatus !== 'expired'
   const time = at ? new Date(at).getTime() : NaN
   const future = time > Date.now()
-  const moved = !!at && time !== new Date(entry?.publishedAt ?? 0).getTime()
+  const moved = (!!at && time !== new Date(entry?.publishedAt ?? 0).getTime()) || ends !== kept
   // The button says what happens; with nothing to change, there is nothing to press.
   const label = future || (!at && !live) ? (scheduled ? t('Change Schedule') : t('Schedule'))
     : live ? (changes ? t('Publish Changes') : t('Change Date'))
@@ -215,7 +222,11 @@ export function PublicationDialog({ entry, changes, busy, onClose, onPublish }: 
       setError(t('Unpublish this entry before scheduling it for a future date.'))
       return
     }
-    if (await onPublish(at!)) onClose()
+    if (ends && !(new Date(ends).getTime() > Math.max(Date.now(), time))) {
+      setEndsError(t('Choose an end after the publication date, and not in the past.'))
+      return
+    }
+    if (await onPublish(at!, ends === kept ? undefined : ends)) onClose()
   }
 
   return (
@@ -232,14 +243,20 @@ export function PublicationDialog({ entry, changes, busy, onClose, onPublish }: 
     >
       <Fields
         fields={[{
-          handle: 'at', type: 'date', time: true, timezone: manifest.site.timezone,
-          label: t('Date and Time'), required: true,
+          handle: 'at', type: 'date', time: true, timezone: manifest.site.timezone, zone: false,
+          label: t('Starts'), required: true,
+        }, {
+          // The zone is said once, under the last of the two.
+          handle: 'ends', type: 'date', time: true, timezone: manifest.site.timezone, label: t('Ends'),
         }]}
-        values={{ at }}
-        onChange={(_, value) => { setAt(value); setError(undefined) }}
-        errors={error ? { at: error } : {}}
+        values={{ at, ends }}
+        onChange={(handle, value) => {
+          if (handle === 'ends') { setEnds(value || null); setEndsError(undefined) } else { setAt(value); setError(undefined) }
+        }}
+        errors={{ ...(error ? { at: error } : {}), ...(endsError ? { ends: endsError } : {}) }}
         disabled={busy}
       />
+      {ends && <Button variant="ghost" size="sm" icon="close" className="-ml-2 mt-1" disabled={busy} onClick={() => { setEnds(null); setEndsError(undefined) }}>{t('Remove End Date')}</Button>}
     </Dialog>
   )
 }

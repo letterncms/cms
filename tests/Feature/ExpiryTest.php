@@ -166,4 +166,46 @@ final class ExpiryTest extends TestCase
         $this->assertSame('Offer, extended', $this->ability('entries/update', ['id' => $entry['id'], 'publish' => true])['title']);
         $this->assertTrue($this->cms()->entries()->find($entry['id'])->isLive());
     }
+
+    public function test_a_list_can_show_when_entries_end(): void
+    {
+        $get = fn (string $handle) => $this->cms()->abilities()->execute('views/get', ['id' => 'content', 'params' => ['collection' => $handle]], AbilityContext::forUser($this->admin(), 'admin'));
+        $records = $get('posts')['root']['children'][0]['props'];
+        $ends = array_column($records['columns'], null, 'key')['expiresAt'];
+        $this->assertSame(['Ends', 'date', true, 'expires_at'], [$ends['label'], $ends['format'], $ends['hidden'], $ends['sort']]);
+
+        // Published means on the site or about to be: what ran out has a filter of its own, and can be published again from its row.
+        $this->assertSame(['any', 'active', 'draft', 'expired'], array_column($records['filters'][0]['options'], 'value'));
+        $publish = array_values(array_filter($records['actions'], static fn (array $a) => ($a['ability'] ?? '') === 'entries/publish'))[0];
+        $this->assertSame('{row.displayStatus} is draft, changed, expired', $publish['when']);
+        $this->assertSame('{row.displayStatus} is draft, changed, expired', $records['bulk'][0]['some']);
+
+        // A collection can have it on from the start.
+        $this->ability('collections/save', ['handle' => 'offers', 'definition' => ['title' => 'Offers', 'default_columns' => ['status', 'ends'], 'fields' => []]]);
+        $shown = array_column($get('offers')['root']['children'][0]['props']['columns'], 'hidden', 'key');
+        $this->assertFalse($shown['expiresAt']);
+    }
+
+    public function test_expired_and_active_are_statuses_to_ask_for_on_both_drivers(): void
+    {
+        $this->at('2026-06-01 12:00:00');
+
+        foreach (['posts', 'notes'] as $collection) {
+            foreach ([['Ran out', 'published', '2026-06-10T00:00:00+00:00'], ['Stays', 'published', null], ['Draft', 'draft', null]] as [$title, $status, $ends]) {
+                $this->ability('entries/create', ['collection' => $collection, 'title' => $title, 'data' => ['excerpt' => 'x'], 'status' => $status, ...($ends ? ['expiresAt' => $ends] : [])]);
+            }
+            $this->ability('entries/create', ['collection' => $collection, 'title' => 'Later', 'data' => ['excerpt' => 'x'], 'status' => 'published', 'at' => '2026-08-01T00:00:00+00:00']);
+        }
+
+        $this->at('2026-06-11 00:00:00');
+        $this->cms()->entries()->flush();
+
+        foreach (['posts', 'notes'] as $collection) {
+            $titles = fn (string $status) => array_column($this->ability('entries/list', ['collection' => $collection, 'status' => $status, 'sort' => 'title'])['items'], 'title');
+            $this->assertSame(['Ran out'], $titles('expired'), $collection);
+            $this->assertSame(['Later', 'Stays'], $titles('active'), $collection);
+            $this->assertSame(['Later', 'Ran out', 'Stays'], $titles('published'), $collection);
+            $this->assertSame(['Stays'], $titles('live'), $collection);
+        }
+    }
 }

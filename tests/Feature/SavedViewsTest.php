@@ -127,7 +127,7 @@ final class SavedViewsTest extends TestCase
         // A preference saved by another request meanwhile is not written over by a stale copy of the account.
         $stale = User::query()->findOrFail($ada->id);
         $this->as(User::query()->findOrFail($ada->id), 'account/update', ['preferences' => ['theme' => 'light']]);
-        $this->as($stale, 'saved-views/create', ['list' => 'entries.pages', 'name' => 'Published', 'state' => ['query' => ['status' => 'published']]]);
+        $this->as($stale, 'saved-views/create', ['list' => 'entries.pages', 'name' => 'Published', 'state' => ['query' => ['status' => 'active']]]);
         $kept = $ada->fresh()->preferences;
         $this->assertSame(['light', ['Drafts', 'Published']], [$kept['theme'], array_column($kept['views'], 'name')]);
     }

@@ -162,7 +162,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
   const [moving, setMoving] = useState(false)
   const [replacing, setReplacing] = useState(false)
   const retry = useRef<() => Promise<unknown>>(() => control.save())
-  const lastSave = useRef<{ publish?: boolean; at?: string }>({})
+  const lastSave = useRef<{ publish?: boolean; at?: string; expiresAt?: string | null }>({})
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const busy = phase === 'saving'
 
@@ -203,7 +203,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
     }
   }
   // A failed save says so under the bar (SaveFeedback), not in a toast as well.
-  const save = async (options: { publish?: boolean; at?: string; expectedVersion?: string } = {}) => {
+  const save = async (options: { publish?: boolean; at?: string; expiresAt?: string | null; expectedVersion?: string } = {}) => {
     lastSave.current = options
     retry.current = () => control.save(options)
     try {
@@ -218,10 +218,10 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
     retry.current = () => control.save()
     await control.save()
   }
-  const publish = async (at?: string): Promise<boolean> => {
+  const publish = async (at?: string, expiresAt?: string | null): Promise<boolean> => {
     if (!actions.publish) return false
     setSending(true)
-    const result = await save({ publish: true, ...(at ? { at } : {}) })
+    const result = await save({ publish: true, ...(at ? { at } : {}), ...(expiresAt !== undefined ? { expiresAt } : {}) })
     setSending(false)
     if (!result) return false
     toast.success(result.displayStatus === 'scheduled' ? t('Scheduled') : t('Published'))
@@ -409,7 +409,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
     : null
   const workspace = editorProps ? panelsFor('entry.editor', editorProps)[0] : null
   const status = entry?.displayStatus ?? 'draft'
-  const live = entry?.status === 'published' && status !== 'scheduled'
+  const live = entry?.status === 'published' && status !== 'scheduled' && status !== 'expired'
   // Saving and publishing queue up, so publishing never has to wait for an autosave.
   const upToDate = live && !dirty && !entry?.hasDraft
   const titleError = !entry && dirty && !working.title.trim()
@@ -576,7 +576,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
           changes={dirty || !!entry?.hasDraft}
           busy={busy}
           onClose={() => setPublishing(false)}
-          onPublish={(at) => publish(at)}
+          onPublish={(at, expiresAt) => publish(at, expiresAt)}
         />
       )}
     {moving && entry && <EntryMoveDialog entry={entry} collection={shownCollection} busy={busy || replacing} onClose={() => setMoving(false)} onMove={move} />}
