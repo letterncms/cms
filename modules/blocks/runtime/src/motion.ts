@@ -204,6 +204,7 @@ const end = (built: Built) => {
 }
 
 function setup(el: HTMLElement) {
+  if (registry.has(el)) return
   let animations: Animation[] = []
   try {
     animations = JSON.parse(el.dataset.cmsMotion ?? '[]')
@@ -259,6 +260,9 @@ export function resumeAll() {
   looping().forEach((a) => a.play())
 }
 
+const toggled = new WeakSet<Element>()
+let printing = false
+
 /** A visitor's way to stop what moves by itself (WCAG 2.2.2). Stays hidden when nothing runs or nothing should. */
 function toggles() {
   const key = 'cms-motion-paused'
@@ -270,7 +274,8 @@ function toggles() {
     }
   }
   document.querySelectorAll<HTMLButtonElement>('[data-cms-motion-toggle]').forEach((button) => {
-    if (reduced()) return
+    if (reduced() || toggled.has(button)) return
+    toggled.add(button)
     const set = (paused: boolean) => {
       paused ? pauseAll() : resumeAll()
       button.setAttribute('aria-pressed', String(paused))
@@ -295,6 +300,7 @@ export function start() {
   document.querySelectorAll<HTMLElement>('[data-cms-motion]').forEach(setup)
   toggles()
   // Print everything that hasn't scrolled into view.
-  addEventListener('beforeprint', () => document.getAnimations().forEach((a) => a.playState === 'paused' && a.finish()))
+  if (!printing) addEventListener('beforeprint', () => document.getAnimations().forEach((a) => a.playState === 'paused' && a.finish()))
+  printing = true
   resolveReady()
 }

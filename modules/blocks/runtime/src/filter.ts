@@ -76,10 +76,12 @@ function setup(root: HTMLElement) {
   root.addEventListener('input', (event) => {
     if ((event.target as Element).closest('[data-cms-filter-control]')) apply(true)
   })
-  addEventListener('popstate', read)
+  addEventListener('popstate', () => root.isConnected && read())
   if (location.search) read()
 }
 
+const done = new WeakSet<Element>()
+
 export function start() {
-  document.querySelectorAll<HTMLElement>('[data-cms-filter]').forEach(setup)
+  document.querySelectorAll<HTMLElement>('[data-cms-filter]').forEach((root) => done.has(root) || (done.add(root), setup(root)))
 }

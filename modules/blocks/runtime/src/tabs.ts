@@ -1,6 +1,10 @@
 // Tabs by the WAI-ARIA pattern. Panels are real HTML, and `hidden="until-found"` lets find-in-page open them.
+const done = new WeakSet<Element>()
+
 export function start() {
   document.querySelectorAll<HTMLElement>('[data-cms-tabs]').forEach((root) => {
+    if (done.has(root)) return
+    done.add(root)
     const list = root.querySelector<HTMLElement>(':scope > [role=tablist]')
     if (!list) return
     const tabs = [...list.querySelectorAll<HTMLElement>('[role=tab]')]
