@@ -106,7 +106,7 @@ export function NumberField({ field, value, onChange, error, disabled }: FieldPr
  * means "not set" (choosing it clears the field); `input: false`
  * hides the number box beside it (when the owner draws its own).
  */
-function SliderField({ field, value, onChange, disabled }: FieldProps<number | null>) {
+export function SliderField({ field, value, onChange, disabled }: FieldProps<number | null>) {
   const min = (field.min as number | undefined) ?? 0
   const max = (field.max as number | undefined) ?? 100
   const step = (field.step as number | undefined) ?? 1

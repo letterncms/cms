@@ -18,6 +18,15 @@ final class FileField extends MediaField
 
     public function icon(): string { return 'file'; }
 
+    /** Picked from the library like any media. */
+    public function component(): string { return 'media'; }
+
+    /** The picker shows what the field takes (check()): every kind of file unless `accept` narrows it, and no image. */
+    public function definition(array $definition): array
+    {
+        return ['accept' => '*', ...$definition, 'except' => 'image/*'];
+    }
+
     public function description(): string { return 'Documents and other files from the media library; images go in a media field.'; }
 
     public function schema(Field $field): array

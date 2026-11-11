@@ -7,7 +7,7 @@ const KINDS = ['all', 'image', 'video', 'audio', 'pdf', 'file'] as const
 type Kind = (typeof KINDS)[number]
 
 interface MediaFilters { search: string; kind: Kind; folder: string | null }
-const mediaInput = (filters: MediaFilters, page: number, sort: string | null) => ({ search: filters.search || undefined, kind: filters.kind, folder: filters.folder, page, perPage: 60, sort: sort ?? undefined })
+const mediaInput = (filters: MediaFilters, page: number, sort: string | null, only: { accept?: string; except?: string } = {}) => ({ ...only, search: filters.search || undefined, kind: filters.kind, folder: filters.folder, page, perPage: 60, sort: sort ?? undefined })
 
 function filterFields(): FieldDef[] {
   return [
@@ -21,7 +21,7 @@ function filterFields(): FieldDef[] {
  * clicking selects (for media fields and image blocks). `bar`: the page's bar has the
  * Upload button (the Media place, a view), so the library has none of its own.
  */
-export function Library({ mode = 'manage', accept = '*', multiple = false, selected = [], onSelectionChange, autoUpload = false, bar = false }: { mode?: 'manage' | 'pick'; accept?: string; multiple?: boolean; selected?: string[]; onSelectionChange?: (ids: string[], items: MediaItem[]) => void; autoUpload?: boolean; bar?: boolean }) {
+export function Library({ mode = 'manage', accept = '*', except, multiple = false, selected = [], onSelectionChange, autoUpload = false, bar = false }: { mode?: 'manage' | 'pick'; accept?: string; except?: string; multiple?: boolean; selected?: string[]; onSelectionChange?: (ids: string[], items: MediaItem[]) => void; autoUpload?: boolean; bar?: boolean }) {
   const { query } = useLocation()
   const startKind: Kind = accept.startsWith('image') ? 'image' : accept.startsWith('video') ? 'video' : accept === 'application/pdf' ? 'pdf' : 'all'
   // On the Media place the filters are in the address too: its count reads them (MediaModule::places), and a link keeps them.
@@ -29,6 +29,8 @@ export function Library({ mode = 'manage', accept = '*', multiple = false, selec
     ? { search: query.search ?? '', kind: (KINDS as readonly string[]).includes(query.kind ?? '') ? query.kind as Kind : 'all', folder: query.folder || null }
     : { search: '', kind: startKind, folder: null })
   const { kind, folder } = filters
+  // A picker lists what its field takes: a family of types (image/*) is the kind filter, anything narrower is asked of the list.
+  const only = mode === 'pick' ? { accept: accept !== '*' && !/^(image|video)\/\*$/.test(accept) && accept !== 'application/pdf' ? accept : undefined, except } : {}
   useEffect(() => {
     if (bar) setQuery({ search: filters.search || null, kind: filters.kind === 'all' ? null : filters.kind, folder: filters.folder })
   }, [bar, filters])
@@ -43,7 +45,7 @@ export function Library({ mode = 'manage', accept = '*', multiple = false, selec
   const [chosen, setChosen] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const [open, setOpen] = useState<MediaItem | null>(null)
-  const list = useAbility<{ items: MediaItem[]; total: number; page: number; pages: number; folders: string[] }>('media/list', mediaInput(filters, page, sort), { placeholderData: (p) => p })
+  const list = useAbility<{ items: MediaItem[]; total: number; page: number; pages: number; folders: string[] }>('media/list', mediaInput(filters, page, sort, only), { placeholderData: (p) => p })
   const items = list.data?.items ?? []
   const allow = can('media.upload')
   const filter = (handle: string, value: unknown) => { setPage(1); setChosen(new Set()); setFilters((f) => ({ ...f, [handle]: value })) }
@@ -94,7 +96,7 @@ export function Library({ mode = 'manage', accept = '*', multiple = false, selec
   const blank = !filtered && kind === 'all' && !list.isError && list.data?.total === 0
   const body = (
     <div className="min-w-0">
-      <DataView id="media" label={t('Media')} items={items} source={{ ability: 'media/list', input: mediaInput(filters, 1, sort), perPage: 60 }} rowKey={(item) => item.id} onRowClick={toggle} defaultView="grid" image={preview}
+      <DataView id="media" label={t('Media')} items={items} source={{ ability: 'media/list', input: mediaInput(filters, 1, sort, only), perPage: 60 }} rowKey={(item) => item.id} onRowClick={toggle} defaultView="grid" image={preview}
         pagination={list.data && { page: list.data.page, pages: list.data.pages, total: list.data.total, perPage: 60, onPage: setPage }}
         loading={list.isLoading} stale={list.isPlaceholderData} error={list.isError} onRetry={() => void list.refetch()}
         // Uploaded is a column of its own; a file is never "published".

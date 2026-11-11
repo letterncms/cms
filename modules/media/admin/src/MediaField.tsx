@@ -54,6 +54,7 @@ export function MediaField({ field, value, onChange, disabled }: FieldProps<stri
           <Library
             mode="pick"
             accept={accept}
+            except={typeof field.except === 'string' ? field.except : undefined}
             multiple={max > 1}
             selected={picked}
             onSelectionChange={(next) => {

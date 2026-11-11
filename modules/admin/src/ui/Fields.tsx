@@ -23,12 +23,16 @@ export interface FieldsProps {
 
 /** Conditional fields: `if: { otherField: value | [values] }`. */
 /** Field types that need a panel's full width: in a row of label and control, their label goes above them. */
-export const wideFieldTypes = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'repeater', 'tags', 'entries', 'group', 'properties', 'fields', 'blocks']
+export const wideFieldTypes = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'file', 'repeater', 'matrix', 'table', 'geo', 'link', 'date-range', 'tags', 'entries', 'terms', 'group', 'properties', 'fields', 'blocks']
 
 export function visible(field: FieldDef, values: Record<string, any>): boolean {
-  const rule = field.if as Record<string, unknown> | undefined
-  if (!rule) return true
-  return Object.entries(rule).every(([handle, expected]) => (Array.isArray(expected) ? expected.includes(values[handle]) : values[handle] === expected))
+  return holds(field.if, values)
+}
+
+/** A condition (`if`, `required_if`): every field it names holds the value, or one of the values. None: it holds. */
+function holds(rule: unknown, values: Record<string, any>): boolean {
+  if (!rule || typeof rule !== 'object') return true
+  return Object.entries(rule as Record<string, unknown>).every(([handle, expected]) => (Array.isArray(expected) ? expected.includes(values[handle]) : values[handle] === expected))
 }
 
 const widths: Record<string, string> = { full: 'col-span-6', half: 'col-span-6 md:col-span-3', third: 'col-span-6 md:col-span-2', 'two-thirds': 'col-span-6 md:col-span-4' }
@@ -118,7 +122,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
               </>
             ) : (
               // A single select always holds a value: marking it required tells nobody anything.
-              <Field label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} required={field.required && !(field.type === 'select' && !field.multiple)}>
+              <Field label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} required={(field.required || (!!field.required_if && holds(field.required_if, values))) && !(field.type === 'select' && !field.multiple)}>
                 {control}
               </Field>
             )}

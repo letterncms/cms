@@ -1,6 +1,7 @@
 import { registry } from '@letterncms/sdk'
-import { CodeField, ColorField, DateField, EmailField, IconField, JsonField, MarkdownField, NumberField, SelectField, SlugField, TextField, TextareaField, ToggleField, UrlField } from './basic'
-import { EntriesField, GroupField, RepeaterField, TagsField, UsersField } from './complex'
+import { CodeField, ColorField, DateField, EmailField, IconField, JsonField, MarkdownField, NumberField, SelectField, SliderField, SlugField, TextField, TextareaField, ToggleField, UrlField } from './basic'
+import { EntriesField, GroupField, MatrixField, RepeaterField, TagsField, UsersField } from './complex'
+import { DateRangeField, GeoField, LinkValueField, TableField, TimeField } from './structured'
 import { FieldsConfigField } from './FieldsEditor'
 import { RichTextField } from './RichTextField'
 import { CommandQueryField } from './CommandQueryField'
@@ -17,7 +18,9 @@ export function registerCoreFields() {
     text: TextField, textarea: TextareaField, richtext: RichTextField, markdown: MarkdownField, number: NumberField,
     toggle: ToggleField, select: SelectField, date: DateField, slug: SlugField, url: UrlField, email: EmailField,
     color: ColorField, entries: EntriesField, users: UsersField, tags: TagsField, code: CodeField, json: JsonField,
-    icon: IconField, group: GroupField, repeater: RepeaterField, fields: FieldsConfigField, 'command-query': CommandQueryField, link: LinkField, ease: EaseField,
+    icon: IconField, group: GroupField, repeater: RepeaterField, matrix: MatrixField,
+    // `link` is the address picker (`{ type: 'url', component: 'link' }`); the link field type's value has its label with it.
+    'link-value': LinkValueField, 'date-range': DateRangeField, time: TimeField, range: SliderField, table: TableField, geo: GeoField, fields: FieldsConfigField, 'command-query': CommandQueryField, link: LinkField, ease: EaseField,
   }
   for (const [key, component] of Object.entries(map)) registry.fields.set(key, component)
 }

@@ -156,6 +156,8 @@ final class MediaModule extends Plugin
                 'search' => ['type' => 'string', 'maxLength' => 120],
                 'kind' => ['type' => 'string', 'enum' => ['all', 'image', 'video', 'audio', 'pdf', 'file'], 'default' => 'all'],
                 'folder' => ['type' => ['string', 'null']],
+                'accept' => ['type' => 'string', 'maxLength' => 300, 'description' => 'Only files of these types, separated by commas, as a field\'s `accept` has them: application/pdf, video/*.'],
+                'except' => ['type' => 'string', 'maxLength' => 300, 'description' => 'Leave out files of these types: image/* for what a file field takes.'],
                 'sort' => ['type' => 'string', 'enum' => ['name', '-name', 'size', '-size', 'folder', '-folder', 'created_at', '-created_at', 'updated_at', '-updated_at'], 'default' => '-created_at'],
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 60],
@@ -181,6 +183,22 @@ final class MediaModule extends Plugin
 
                 if (array_key_exists('folder', $in) && $in['folder'] !== null) {
                     $q->where('folder', $in['folder']);
+                }
+
+                // What a field takes (MediaField::accepts): a type, or a family of types as image/*.
+                $types = static fn (string $list): array => array_values(array_filter(array_map('trim', explode(',', $list)), static fn (string $t) => $t !== '' && $t !== '*' && $t !== '*/*'));
+                $like = static fn (string $type): string => str_ends_with($type, '/*') ? str_replace(['%', '_'], ['\\%', '\\_'], substr($type, 0, -1)).'%' : str_replace(['%', '_'], ['\\%', '\\_'], $type);
+
+                if (($accept = $types((string) ($in['accept'] ?? ''))) !== []) {
+                    $q->where(static function ($w) use ($accept, $like): void {
+                        foreach ($accept as $type) {
+                            $w->orWhere('mime', 'like', $like($type));
+                        }
+                    });
+                }
+
+                foreach ($types((string) ($in['except'] ?? '')) as $type) {
+                    $q->where('mime', 'not like', $like($type));
                 }
 
                 $page = $q->paginate($in['perPage'], ['*'], 'page', $in['page']);
