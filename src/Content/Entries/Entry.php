@@ -46,6 +46,12 @@ final class Entry
         return app(CollectionRepository::class)->findOrFail($this->collection);
     }
 
+    /** The fields this entry has: its collection's, or those of the blueprint it was made with. */
+    public function blueprint(): \Cms\Content\Fields\Blueprint
+    {
+        return $this->collection()->blueprint($this->blueprint);
+    }
+
     public function isPublished(): bool
     {
         return $this->status === 'published';
@@ -156,6 +162,7 @@ final class Entry
         return [
             'id' => $this->id,
             'collection' => $this->collection,
+            'blueprint' => $this->blueprint,
             'locale' => $this->locale,
             'title' => $working['title'],
             'slug' => $working['slug'],

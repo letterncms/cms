@@ -197,7 +197,7 @@ final class FileDriver implements EntryDriver
 
         $data = array_diff_key($meta, array_flip(self::RESERVED));
 
-        if ($collection->body && ($field = $collection->blueprint()->field($collection->body))) {
+        if ($collection->body && ($field = $collection->blueprint(isset($meta['blueprint']) ? (string) $meta['blueprint'] : null)->field($collection->body))) {
             $type = $this->types->resolve($field->type);
             $data[$collection->body] = $type->serializesToMarkdown() ? $type->fromMarkdown($body, $field) : ($data[$collection->body] ?? null);
         }
@@ -253,7 +253,7 @@ final class FileDriver implements EntryDriver
         $data = $entry->data;
         $body = '';
 
-        if ($collection->body && ($field = $collection->blueprint()->field($collection->body))) {
+        if ($collection->body && ($field = $collection->blueprint($entry->blueprint)->field($collection->body))) {
             $type = $this->types->resolve($field->type);
 
             if ($type->serializesToMarkdown()) {

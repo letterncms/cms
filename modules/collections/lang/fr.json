@@ -5,6 +5,7 @@
   "{count} drafts": "{count} brouillons",
   "A collection with this handle already exists.": "Une collection utilise déjà cet identifiant.",
   "Advanced": "Avancé",
+  "Blueprints are given by handle, each with a title and its fields.": "Les modèles sont donnés par identifiant, chacun avec un titre et ses champs.",
   "Changed {time}": "Modifié {time}",
   "Collection Fields": "Champs de la collection",
   "Collections": "Collections",

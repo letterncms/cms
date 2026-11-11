@@ -141,6 +141,10 @@ final class MediaReferences
 
         foreach (cms()->collections()->all() as $collection) {
             $this->collect($collection->blueprint()->toArray(), $handles);
+
+            foreach (array_keys($collection->blueprints()) as $name) {
+                $this->collect($collection->blueprint($name)->toArray(), $handles);
+            }
         }
 
         // Blocks may be off on this site: blueprints are all there is then.

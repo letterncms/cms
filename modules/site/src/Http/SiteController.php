@@ -149,7 +149,7 @@ final class SiteController
 
         if (is_array($data)) {
             try {
-                $working->data = $working->collection()->blueprint()->process(array_replace($working->data, $data), partial: true);
+                $working->data = $working->blueprint()->process(array_replace($working->data, $data), partial: true);
             } catch (\Cms\Support\Schema\SchemaException $e) {
                 return $this->respond('<!doctype html><p>'.e($e->getMessage()).'</p>', 422);
             }

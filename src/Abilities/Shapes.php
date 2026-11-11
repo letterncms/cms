@@ -37,7 +37,7 @@ final class Shapes
     public static function entry(): Shape
     {
         return Shape::of([
-            'id' => Shape::STRING, 'collection' => Shape::STRING, 'locale' => Shape::STRING, 'title' => Shape::STRING, 'slug' => Shape::STRING,
+            'id' => Shape::STRING, 'collection' => Shape::STRING, 'blueprint' => Shape::STRING_OR_NULL, 'locale' => Shape::STRING, 'title' => Shape::STRING, 'slug' => Shape::STRING,
             'uri' => Shape::STRING_OR_NULL, 'status' => Shape::STRING, 'displayStatus' => Shape::STRING, 'hasDraft' => Shape::BOOLEAN,
             'data' => Shape::open('Field values by field handle; what each may be is the collection\'s schema (collections/get).'),
             'originId' => Shape::STRING_OR_NULL, 'parentId' => Shape::STRING_OR_NULL, 'position' => Shape::INTEGER, 'authorId' => Shape::STRING_OR_NULL,
@@ -104,6 +104,7 @@ final class Shapes
             'fields' => [Shape::open('A field as written (handle, type and what its type takes: fields/types), or the import of a fieldset ({import, prefix?}); `resolvedFields` has them with the imports expanded.')],
             'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'default_view' => Shape::enum('table', 'grid', 'calendar'),
             'default_columns' => Shape::nullable([Shape::STRING]), 'resolvedFields' => [self::field()], 'schema' => self::dataSchema(),
+            'resolvedBlueprints?' => [Shape::of(['handle' => Shape::STRING, 'title' => Shape::STRING, 'resolvedFields' => [self::field()], 'schema' => self::dataSchema()])],
             ...$more,
         ])->andMore('Whatever else the collection\'s YAML holds, as written: the settings plugins add (the `settings` of collections/get lists them as fields), `routes` by language, `published_at` and `updated_at`.');
     }

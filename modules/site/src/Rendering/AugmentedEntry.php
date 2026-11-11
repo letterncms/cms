@@ -80,7 +80,7 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
             return $this->cache[$handle];
         }
 
-        $blueprint = $this->entry->collection()->blueprint();
+        $blueprint = $this->entry->blueprint();
         $field = $blueprint->field($handle);
         $value = $this->entry->data[$handle] ?? null;
 

@@ -31,7 +31,7 @@ final class DeliveryController
             ($teasers = $this->cms->entries()->gate()->teaserIds()) && $query->where('id', 'not in', $teasers);
         }
 
-        $relations = $collection->blueprint()->relations();
+        $relations = $collection->relations();
 
         foreach ((array) $request->query('filter', []) as $field => $value) {
             if (! is_string($field) || ! is_scalar($value)) {

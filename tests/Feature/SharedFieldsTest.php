@@ -57,12 +57,14 @@ final class SharedFieldsTest extends TestCase
             $this->assertSame(['price', 'photos'], $this->ability('entries/get', ['id' => $stuhl->id])['sharedFields']);
             $this->assertArrayNotHasKey('sharedFields', $this->ability('entries/get', ['id' => $chair->id]));
 
-            // The original changes: the translation has it, live at once since nothing of its own waits.
+            // The original is a draft nobody published: its change waits in the published translation's draft,
+            // and what the translation serves stays as it was published.
             $rebuilt = [];
             $content->update($chair->id, ['data' => ['price' => 120, 'summary' => 'A good chair.']]);
             $de = $this->read($stuhl->id);
-            $this->assertSame([120, 'Ein Stuhl.', false], [$de->data['price'], $de->data['summary'], $de->hasDraft()], $collection);
+            $this->assertSame([100, 120, 'Ein Stuhl.', true], [$de->data['price'], $de->working()['data']['price'], $de->working()['data']['summary'], $de->hasDraft()], $collection);
             $this->assertSame([$stuhl->id], $rebuilt);
+            $this->assertSame('changed', $de->displayStatus());
 
             // A translation cannot change it, and what it changes of its own is kept.
             $content->update($stuhl->id, ['data' => ['price' => 1, 'summary' => 'Ein guter Stuhl.']]);
@@ -95,9 +97,31 @@ final class SharedFieldsTest extends TestCase
         $chair = $content->create('products', ['title' => 'Chair', 'data' => ['price' => 100]]);
         $stuhl = $content->create('products', ['title' => 'Stuhl', 'locale' => 'de', 'originId' => $chair->id]);
 
-        $this->ability('entries/update', ['id' => $chair->id, 'data' => ['price' => 200], 'dryRun' => true]);
+        $dry = $this->ability('entries/update', ['id' => $chair->id, 'data' => ['price' => 200], 'dryRun' => true]);
 
+        // It says which translations the change would rewrite.
+        $this->assertSame([[$chair->id, 'en'], [$stuhl->id, 'de']], array_map(static fn (array $c) => [$c['id'], $c['locale'] ?? 'en'], $dry['changes']));
+        $this->assertSame(['price', 'photos'], $dry['changes'][1]['fields']);
+        $this->assertCount(1, $this->ability('entries/update', ['id' => $chair->id, 'data' => ['summary' => 'Only words.'], 'dryRun' => true])['changes']);
         $this->assertSame(100, $this->read($stuhl->id)->data['price']);
         $this->assertSame(100, $this->read($chair->id)->data['price']);
+    }
+
+    public function test_a_draft_original_never_changes_what_a_published_translation_serves(): void
+    {
+        $content = $this->cms()->entryService();
+        $chair = $content->create('products', ['title' => 'Chair', 'status' => 'published', 'data' => ['price' => 100]]);
+        $stuhl = $content->create('products', ['title' => 'Stuhl', 'locale' => 'de', 'originId' => $chair->id, 'status' => 'published']);
+        $entwurf = $content->create('products', ['title' => 'Stuhl 2', 'locale' => 'de', 'originId' => $chair->id]);
+        $content->unpublish($chair->id);
+
+        // Saved by someone who need not be able to publish: nothing live moves.
+        $content->update($chair->id, ['data' => ['price' => 1]]);
+        $this->assertSame([100, 1], [$this->read($stuhl->id)->data['price'], $this->read($stuhl->id)->working()['data']['price']]);
+        $this->assertSame(1, $this->read($entwurf->id)->data['price'], 'A translation that is a draft itself simply has it.');
+
+        // Types count: 1 is not "1", so a text that says the same is still a change. Published, it is live everywhere.
+        $content->publish($chair->id);
+        $this->assertSame([1, false], [$this->read($stuhl->id)->data['price'], $this->read($stuhl->id)->hasDraft()]);
     }
 }

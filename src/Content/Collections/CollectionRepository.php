@@ -100,6 +100,10 @@ final class CollectionRepository
     {
         $existing = $this->find($collection->handle);
         $collection->blueprint()->schema(); // throws on invalid field definitions
+
+        foreach (array_keys($collection->blueprints()) as $name) {
+            $collection->blueprint($name)->schema();
+        }
         Yaml::write($this->file($collection->handle), [...$collection->toYaml(), ...RecordTimestamps::saved($existing?->toYaml())]);
         $this->collections = null;
         $this->hooks->dispatch('collection.saved', $collection);

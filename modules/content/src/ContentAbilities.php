@@ -235,13 +235,17 @@ final class ContentAbilities
 
         $a->register('collections/schema', [
             'label' => 'Collection Schema',
-            'description' => 'JSON Schema for the entries of one collection: `data` is what an entry\'s data must follow to be published, `draft` what a draft may be (required fields may be empty), and `create` and `update` are the whole input of entries/create and entries/update for this collection. Validation errors name the same paths (data.summary, data.blocks.0.props.text).',
+            'description' => 'JSON Schema for the entries of one collection: `data` is what an entry\'s data must follow to be published, `draft` what a draft may be (required fields may be empty), and `create` and `update` are the whole input of entries/create and entries/update for this collection. A collection with several blueprints has the same four per blueprint under `blueprints` (its `create` fixes `blueprint` to its handle); the ones at the top are for an entry made without one. Validation errors name the same paths (data.summary, data.blocks.0.props.text).',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['handle' => self::HANDLE], 'required' => ['handle']],
             'output' => Shape::of([
                 'handle' => Shape::STRING, 'title' => Shape::STRING, 'data' => Shapes::dataSchema(), 'draft' => Shapes::dataSchema(),
                 'create' => Shape::open(self::INPUT_SCHEMA), 'update' => Shape::open(self::INPUT_SCHEMA),
+                'blueprints?' => [Shape::of([
+                    'handle' => Shape::STRING, 'title' => Shape::STRING, 'data' => Shapes::dataSchema(), 'draft' => Shapes::dataSchema(),
+                    'create' => Shape::open(self::INPUT_SCHEMA), 'update' => Shape::open(self::INPUT_SCHEMA),
+                ])],
             ]),
             'handler' => fn (array $in) => self::schemaOf($this->cms, $this->cms->collections()->find($in['handle']) ?? throw new AbilityException('Collection not found.', 'not_found')),
         ]);
@@ -371,7 +375,7 @@ final class ContentAbilities
                     }
                 }
 
-                $shared = $entry->originId === null ? [] : $entry->collection()->blueprint()->shared();
+                $shared = $entry->originId === null ? [] : $entry->blueprint()->shared();
 
                 return [...$entry->toArray(), 'translations' => $translations ?: (object) [], ...($shared === [] ? [] : ['sharedFields' => $shared])];
             },
@@ -412,6 +416,7 @@ final class ContentAbilities
             },
             'input' => ['type' => 'object', 'properties' => [
                 'collection' => self::HANDLE,
+                'blueprint' => [...self::HANDLE, 'description' => 'For a collection with several blueprints (collections/schema lists them): the one this entry is made with and keeps. Left out: the collection\'s own fields.'],
                 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 500],
                 'slug' => ['type' => 'string', 'maxLength' => 191],
                 'data' => ['type' => 'object', 'default' => []],
@@ -460,7 +465,7 @@ final class ContentAbilities
                 $before = $this->cms->entries()->find($in['id'])?->working() ?? [];
                 $entry = $update($in, $ctx);
 
-                return [$this->change($in['publish'] ? 'update-published' : 'update', $entry, ['fields' => self::changed($before, $entry->working(), array_keys($in['data'] ?? []))])];
+                return $this->withTranslations([$this->change($in['publish'] ? 'update-published' : 'update', $entry, ['fields' => self::changed($before, $entry->working(), array_keys($in['data'] ?? []))])]);
             }),
             'handler' => fn (array $in, AbilityContext $ctx) => $update($in, $ctx)->toArray(),
         ]);
@@ -475,7 +480,7 @@ final class ContentAbilities
             'dryRun' => function (array $in, AbilityContext $ctx) use ($publish): array {
                 $entry = $this->dry(fn () => $publish($in, $ctx));
 
-                return [$this->change($entry->isScheduled() ? 'schedule' : 'publish', $entry, ['at' => $entry->publishedAt?->toIso8601String(), 'expiresAt' => $entry->expiresAt?->toIso8601String(), 'uri' => $entry->uri])];
+                return $this->withTranslations([$this->change($entry->isScheduled() ? 'schedule' : 'publish', $entry, ['at' => $entry->publishedAt?->toIso8601String(), 'expiresAt' => $entry->expiresAt?->toIso8601String(), 'uri' => $entry->uri])]);
             },
             'handler' => fn (array $in, AbilityContext $ctx) => $publish($in, $ctx)->toArray(),
         ]);
@@ -487,7 +492,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => ['id' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['id']],
             'answer' => $this->answer('unpublished'),
             'output' => Shapes::entry(),
-            'dryRun' => fn (array $in, AbilityContext $ctx): array => [$this->change('unpublish', $this->dry(fn () => $unpublish($in, $ctx)))],
+            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->withTranslations([$this->change('unpublish', $this->dry(fn () => $unpublish($in, $ctx)))]),
             'handler' => fn (array $in, AbilityContext $ctx) => $unpublish($in, $ctx)->toArray(),
         ]);
 
@@ -620,7 +625,7 @@ final class ContentAbilities
                 $before = $revision ? ($this->cms->entries()->find($revision['entryId'])?->working() ?? []) : [];
                 $entry = $restore($in, $ctx);
 
-                return [$this->change('restore', $entry, ['revisionId' => $in['revisionId'], 'fields' => self::changed($before, $entry->working())])];
+                return $this->withTranslations([$this->change('restore', $entry, ['revisionId' => $in['revisionId'], 'fields' => self::changed($before, $entry->working())])]);
             }),
             'handler' => fn (array $in, AbilityContext $ctx) => $restore($in, $ctx)->toArray(),
         ]);
@@ -698,8 +703,8 @@ final class ContentAbilities
         // From free tags to terms, written once: the handler runs it, a dry run runs the same in the entry service's dry mode.
         $import = function (array $in, AbilityContext $ctx) use ($taxonomy, $content): array {
             $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
-            $from = $collection->blueprint()->field($in['from']);
-            $into = $collection->blueprint()->field($in['into']);
+            $from = $collection->field($in['from']);
+            $into = $collection->field($in['into']);
 
             if ($from?->type !== 'tags' || $into?->type !== 'terms') {
                 throw AbilityException::invalid(__('`from` must be a tags field and `into` a terms field of this collection.'));
@@ -767,7 +772,7 @@ final class ContentAbilities
             'label' => 'Import Terms from Tags',
             'description' => 'Turn the free tags of a collection into terms of a taxonomy: every tag of the tags field `from` becomes a published term of the taxonomy the terms field `into` picks from (found by its title, whatever its case, and created when it is not there, in the entry\'s language; a tag whose slug another term already has gets a slug of its own and is listed under `collisions`, in a dry run as a change with action `collision`), and each entry gets its terms in `into`, added to those it has. `clear: true` empties the tags afterwards. Published entries without waiting changes stay published with their terms, on the date they had (a scheduled one stays scheduled); others get them in their draft. Running it again changes nothing.',
             'permission' => fn (?User $user, array $in) => $this->allowed($user, (string) ($in['collection'] ?? ''), 'edit') && $this->allowed($user, (string) ($in['collection'] ?? ''), 'publish')
-                && $this->allowed($user, (string) ($this->cms->collections()->find((string) ($in['collection'] ?? ''))?->blueprint()->field((string) ($in['into'] ?? ''))?->get('taxonomy') ?? ''), 'publish'),
+                && $this->allowed($user, (string) ($this->cms->collections()->find((string) ($in['collection'] ?? ''))?->field((string) ($in['into'] ?? ''))?->get('taxonomy') ?? ''), 'publish'),
             'input' => ['type' => 'object', 'properties' => [
                 'collection' => self::HANDLE,
                 'from' => ['type' => 'string', 'format' => 'handle', 'description' => 'The tags field to read.'],
@@ -836,7 +841,7 @@ final class ContentAbilities
      */
     private function listItems(Collection $collection, array $entries, array $fields): array
     {
-        $fields = array_values(array_filter(array_map(static fn (string $handle) => $collection->blueprint()->field($handle), array_unique($fields))));
+        $fields = array_values(array_filter(array_map(static fn (string $handle) => $collection->field($handle), array_unique($fields))));
         $data = array_map(static fn (Entry $e) => (array) ($e->working()['data'] ?? []), $entries);
         $ids = static fn (mixed $value) => array_values(array_filter((array) $value, static fn ($id) => is_string($id) && $id !== ''));
 
@@ -904,20 +909,34 @@ final class ContentAbilities
      */
     public static function schemaOf(Cms $cms, Collection $collection): array
     {
-        $data = $collection->blueprint()->schema();
-        $draft = $collection->blueprint()->schema(partial: true);
-        $input = static function (string $ability) use ($cms, $collection, $draft): array {
-            $schema = $cms->abilities()->get($ability)?->input() ?? ['type' => 'object'];
-            $schema['properties']['data'] = [...$draft, 'description' => 'Field values by handle. To publish, required fields must be filled (see `data`).'];
+        // One set of schemas per blueprint: the collection's own fields, then each named one.
+        $of = static function (?string $name) use ($cms, $collection): array {
+            $data = $collection->blueprint($name)->schema();
+            $draft = $collection->blueprint($name)->schema(partial: true);
+            $input = static function (string $ability) use ($cms, $collection, $draft, $name): array {
+                $schema = $cms->abilities()->get($ability)?->input() ?? ['type' => 'object'];
+                $schema['properties']['data'] = [...$draft, 'description' => 'Field values by handle. To publish, required fields must be filled (see `data`).'];
 
-            if (isset($schema['properties']['collection'])) {
-                $schema['properties']['collection'] = ['const' => $collection->handle];
-            }
+                if (isset($schema['properties']['collection'])) {
+                    $schema['properties']['collection'] = ['const' => $collection->handle];
+                }
 
-            return $schema;
+                if ($name !== null && isset($schema['properties']['blueprint'])) {
+                    $schema['properties']['blueprint'] = ['const' => $name];
+                    $schema['required'] = [...(array) ($schema['required'] ?? []), 'blueprint'];
+                }
+
+                return $schema;
+            };
+
+            return ['data' => $data, 'draft' => $draft, 'create' => $input('entries/create'), 'update' => $input('entries/update')];
         };
+        $named = $collection->blueprints();
 
-        return ['handle' => $collection->handle, 'title' => $collection->title, 'data' => $data, 'draft' => $draft, 'create' => $input('entries/create'), 'update' => $input('entries/update')];
+        return [
+            'handle' => $collection->handle, 'title' => $collection->title, ...$of(null),
+            ...($named === [] ? [] : ['blueprints' => array_map(static fn (string $name, array $blueprint) => ['handle' => $name, 'title' => $blueprint['title'], ...$of($name)], array_keys($named), $named)]),
+        ];
     }
 
     /** An entry as a list screen has it: its summary, the languages it is in (multilingual sites) and the `fields` asked for. */
@@ -946,6 +965,15 @@ final class ContentAbilities
     private function dry(\Closure $run): mixed
     {
         return $this->cms->entryService()->dry($run);
+    }
+
+    /**
+     * A dry run's changes, with the translations the same run would rewrite: a change to shared fields
+     * (`localizable: false`) of an original is a change to every language of it.
+     */
+    private function withTranslations(array $changes): array
+    {
+        return [...$changes, ...array_map(fn (Entry $translation) => $this->change('update', $translation, ['locale' => $translation->locale, 'fields' => $translation->blueprint()->shared(), 'because' => 'shared fields of its original']), $this->cms->entryService()->sharedWith())];
     }
 
     /** One line of a dry run's report: what would happen to which entry, named as it would be afterwards. One not made yet has no id. */
