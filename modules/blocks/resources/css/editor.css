@@ -11,6 +11,23 @@ html {
   pointer-events: none;
 }
 
+/* A block that a behaviour draws (a canvas, a chart) has nothing in it here: it names the behaviour, quietly, at a size that can be seen and selected. */
+[data-cms-behavior-label]:empty {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  padding: 12px;
+  border-radius: inherit;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  text-align: center;
+}
+[data-cms-behavior-label]:empty::before {
+  content: attr(data-cms-behavior-label);
+  color: rgb(127 127 127);
+  font: 500 0.8125rem/1.4 ui-sans-serif, system-ui, sans-serif;
+  pointer-events: none;
+}
+
 [data-cms-ghost] {
   opacity: 0.4;
   pointer-events: none;

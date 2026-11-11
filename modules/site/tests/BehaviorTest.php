@@ -88,7 +88,12 @@ final class BehaviorTest extends TestCase
     {
         Files::put(content_path('design/scripts/tilt.js'), "export function mount() {}\n");
         $this->app->make(Code::class)->flush();
-        $this->assertStringNotContainsString('data-cms-behavior', $this->app->make(Renderer::class)->blocks([['id' => 'b1', 'type' => 'box', 'behavior' => ['module' => 'tilt'], 'children' => []]]));
+        $canvas = $this->app->make(Renderer::class)->blocks([['id' => 'b1', 'type' => 'box', 'behavior' => [['module' => 'tilt'], ['module' => 'cue']], 'children' => []], ['id' => 'b2', 'type' => 'box', 'children' => []]]);
+        $this->assertStringNotContainsString('data-cms-behavior=', $canvas);
+        $this->assertStringNotContainsString('data-cms-props', $canvas);
+        $this->assertSame(1, substr_count($canvas, ' data-cms-behavior-label="'), 'only the block that has one');
+        $this->assertStringContainsString('data-cms-behavior-label="Drawn by “tilt, cue” on the site. Open the preview to see it."', $canvas);
+        $this->assertStringContainsString('[data-cms-behavior-label]:empty::before', $canvas, 'the canvas’s stylesheet shows it');
 
         $warnings = [];
         $this->cms()->hooks()->on('render.warning', function (string $message) use (&$warnings) {
@@ -96,7 +101,7 @@ final class BehaviorTest extends TestCase
         });
         $html = $this->page('Typo', [['type' => 'box', 'behavior' => ['module' => 'tillt'], 'children' => []]]);
 
-        $this->assertStringNotContainsString('data-cms-behavior', $html);
+        $this->assertStringNotContainsString('data-cms-behavior', $html, 'and the site never carries the canvas’s label');
         $this->assertStringNotContainsString('data-features', $html);
         $this->assertStringContainsString('scripts/tillt.js', $warnings[0]);
     }

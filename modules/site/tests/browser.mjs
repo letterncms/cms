@@ -298,6 +298,17 @@ const checks = {
     await tab.close()
   },
 
+  /** The builder's canvas runs no scripts: a block a behaviour draws names it instead of being a blank. */
+  async canvas() {
+    const tab = await open('/canvas')
+    const drawn = await tab.evaluate('(() => { const el = document.getElementById("drawn"); return { text: getComputedStyle(el, "::before").content, height: el.getBoundingClientRect().height, mounted: el.dataset.mounted ?? null } })()')
+    equal(drawn.text.includes('probe'), true, `an empty block says which behaviour draws it (${drawn.text})`)
+    equal(drawn.height >= 96, true, 'at a size that can be seen and selected')
+    equal(drawn.mounted, null, 'and nothing ran')
+    equal(await tab.evaluate('getComputedStyle(document.getElementById("filled"), "::before").content'), 'none', 'a block with content of its own shows that')
+    await tab.close()
+  },
+
   /** The Motion Toggle tells scripts too: an attribute, an event, and reducedMotion in behaviours. */
   async toggle() {
     const tab = await open('/toggle')
