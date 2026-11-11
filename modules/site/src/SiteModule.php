@@ -771,5 +771,15 @@ final class SiteModule extends Plugin
             'The site’s design tokens (use as token:group.name), fonts, element styles, button variants, page transition and breakpoints. Compose with these instead of raw values.',
             fn () => $this->app->make(Design::class)->json()->toArray()
         );
+
+        // Where the front end's own surface is described, for an agent that only read the general guide.
+        $this->cms()->hooks()->addFilter('agent.guide', static fn (string $guide) => $guide."\n".<<<'TXT'
+        Front end:
+        - Motion, scripts and page transitions are data on blocks and in the design, not theme files: read cms://blocks for `motion` (load, appear, scroll with pin, scrub and progress), `behavior` (a script of the design mounted on a block, one or several), `persist` and `code`, and cms://site/code for the scripts, styles and libraries beside the design (design-code/list, design-code/save, design-vendor/create).
+        - A scroll animation with pin, scrub or progress: true tells its element how far along it is (--cms-progress, and a cms:progress event), so a number that counts with the scroll needs a few lines in a behaviour and no library.
+        - design/update changes the page transition one setting at a time ({"transition": {"navigation": "client"}} keeps its type and duration); the other sections it takes are replaced whole.
+        - design/fonts-import brings a Google Fonts family as it is (style: normal, italic or both); give its faces a `fallback` with size and ascent metrics through design/update `fonts` so text doesn’t move when the font arrives.
+        - Element styles reach a tag inside a tag ("h1 em", "nav a:hover"); what needs a class is custom CSS (design-code/set-custom) or a stylesheet beside the design.
+        TXT);
     }
 }
