@@ -285,17 +285,29 @@ final class Renderer
             $foot[] = '<script type="module" src="'.e($src).'"></script>';
         }
 
+        // Pages swapped without a page load: every public page brings the script that does it, and the same import map,
+        // since a page can't take another's place when its modules would resolve differently.
+        $client = $context->mode !== PageContext::EDITOR && $context->mode !== PageContext::PREVIEW && $design->transition()['navigation'] === 'client';
+        $client && $this->blocks->uses('navigate');
+
         $foot = $this->hooks->filter('site.foot', $foot, $context);
 
         // An import map counts from the first module on: it goes in the head, on pages that load one of the design's.
-        if ((bool) $this->hooks->filter('site.modules', $modules !== [] || $context->modules, $context) && ($map = $this->code->importMapTag()) !== '') {
+        if ((bool) $this->hooks->filter('site.modules', $modules !== [] || $context->modules || $client, $context) && ($map = $this->code->importMapTag()) !== '') {
             $context->dependencies['design:importmap'] = true;
             $head[] = $map;
         }
-        $skip = ! $context->editor && str_contains($body, 'id="main"') ? '<a class="cms-skip" href="#main">'.e(__('Skip to content')).'</a>' : '';
+        $skipLink = ! $context->editor && str_contains($body, 'id="main"') ? '<a class="cms-skip" href="#main">'.e(__('Skip to content')).'</a>' : '';
         $alpine = ! $context->editor && (! empty($this->blocks->features['logic']) || ! empty($this->blocks->features['ajax'])) ? ' x-data' : '';
 
-        $html = '<!doctype html><html lang="'.e($locale).'" dir="'.e($dir).'"><head>'.implode("\n", $head).'</head><body'.$alpine.'>'.$skip.$body.implode("\n", $foot).'</body></html>';
+        // Paths the navigation script never fetches in place of a page load. A plugin adds its own
+        // (a cart, a sign-out) with the `site.navigate.skip` filter.
+        $skip = $client ? ' data-cms-navigate-skip="'.e(implode(' ', array_filter(
+            (array) $this->hooks->filter('site.navigate.skip', ['/admin', '/api', '/install', '/media', '/_cms', '/__preview'], $context),
+            static fn ($prefix) => is_string($prefix) && preg_match('#^/[A-Za-z0-9._~/-]*$#', $prefix),
+        ))).'"' : '';
+
+        $html = '<!doctype html><html lang="'.e($locale).'" dir="'.e($dir).'"'.$skip.'><head>'.implode("\n", $head).'</head><body'.$alpine.'>'.$skipLink.$body.implode("\n", $foot).'</body></html>';
         $html = $this->hooks->filter('site.html', $html, $context);
 
         return $context->editor || config('app.debug') && $context->preview ? $html : $this->minifier->minify($html);

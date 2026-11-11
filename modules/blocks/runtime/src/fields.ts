@@ -85,7 +85,10 @@ function tags(box: HTMLElement) {
   })
 }
 
+const done = new WeakSet<Element>()
+const once = <T extends Element>(setup: (el: T) => void) => (el: T) => done.has(el) || (done.add(el), setup(el))
+
 export function start() {
-  document.querySelectorAll<HTMLInputElement>('input.cms-range').forEach(slider)
-  document.querySelectorAll<HTMLElement>('[data-cms-tags]').forEach(tags)
+  document.querySelectorAll<HTMLInputElement>('input.cms-range').forEach(once(slider))
+  document.querySelectorAll<HTMLElement>('[data-cms-tags]').forEach(once(tags))
 }
