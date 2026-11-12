@@ -50,7 +50,7 @@ export function FiltersField({ field, value, onChange, context, disabled }: Fiel
   return (
     <div className="min-w-0 flex-1">
       <div className="flex h-7 items-center gap-2">
-        <RowLabel field={field} />
+        <RowLabel field={field} className={parts.length ? '!w-auto' : undefined} />
         <span className="min-w-0 flex-1 truncate text-xs text-faint">{parts.length ? '' : t('None')}</span>
         {missing.length > 0 && (
           <Menu
@@ -64,22 +64,26 @@ export function FiltersField({ field, value, onChange, context, disabled }: Fiel
           />
         )}
       </div>
-      {parts.map((part, i) => {
-        const fn = FUNCTIONS.find((f) => f.name === part.name)
-        const sub: FieldDef = fn
-          ? { handle: `${field.handle}-${part.name}`, type: 'text', component: 'blocks-value', label: fn.label(), unit: fn.unit, step: fn.step, min: fn.min, max: fn.max, placeholder: fn.initial }
-          : { handle: `${field.handle}-${part.name}`, type: 'text', component: 'blocks-value', label: part.name, unit: '' }
-        return (
-          <div key={part.name + i} className="flex h-7 items-center gap-2">
-            <span className="flex w-[88px] shrink-0 items-center gap-1.5 truncate pl-2 text-xs text-muted">
-              <Icon name={fn?.icon ?? 'faders'} size={13} className="shrink-0 text-faint" />
-              {fn?.label() ?? part.name}
-            </span>
-            <SubField field={sub} value={fn?.unit === '%' && /^[\d.]+$/.test(part.value) ? `${Math.round(parseFloat(part.value) * 1000) / 10}%` : part.value || null} onChange={(v) => set(parts.map((p, j) => (j === i ? { ...p, value: String(v ?? fn?.initial ?? '') } : p)))} disabled={disabled} context={context} />
-            <RemoveButton label={t('Remove Filter')} onClick={() => set(parts.filter((_, j) => j !== i))} />
-          </div>
-        )
-      })}
+      {parts.length > 0 && (
+        <div className="mt-1 space-y-1">
+          {parts.map((part, i) => {
+            const fn = FUNCTIONS.find((f) => f.name === part.name)
+            const sub: FieldDef = fn
+              ? { handle: `${field.handle}-${part.name}`, type: 'text', component: 'blocks-value', label: fn.label(), unit: fn.unit, step: fn.step, min: fn.min, max: fn.max, placeholder: fn.initial }
+              : { handle: `${field.handle}-${part.name}`, type: 'text', component: 'blocks-value', label: part.name, unit: '' }
+            return (
+              <div key={part.name + i} className="flex h-7 items-center gap-2">
+                <span className="flex w-[88px] shrink-0 items-center gap-1.5 truncate pl-2 text-xs text-muted">
+                  <Icon name={fn?.icon ?? 'faders'} size={13} className="shrink-0 text-faint" />
+                  {fn?.label() ?? part.name}
+                </span>
+                <SubField field={sub} value={fn?.unit === '%' && /^[\d.]+$/.test(part.value) ? `${Math.round(parseFloat(part.value) * 1000) / 10}%` : part.value || null} onChange={(v) => set(parts.map((p, j) => (j === i ? { ...p, value: String(v ?? fn?.initial ?? '') } : p)))} disabled={disabled} context={context} />
+                <RemoveButton label={t('Remove Filter')} onClick={() => set(parts.filter((_, j) => j !== i))} />
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
