@@ -2,7 +2,7 @@
     "name": "letterncms/globals",
     "description": "Site-wide values such as contact details or a footer, in global sets with fields of their own.",
     "type": "cms-plugin",
-    "version": "0.30.0",
+    "version": "0.30.1",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"

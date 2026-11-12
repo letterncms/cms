@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.30.1 (2026-11-12)
+
 ### Changed
 
 - **Settings panels, dashboard widgets, and empty settings sections share a softer fill and the same corners.** Groups have room between them, and translated settings sit in their own groups. Admin tables share one design with inset highlights for hovered and selected rows.
