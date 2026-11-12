@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  *   - the Markdown files under content/collections: block trees in the front matter and the
  *     `::: pattern` directives of a Block Markdown body (templates, components, pages);
  *   - the working copies of file entries in storage/drafts;
- *   - every YAML and JSON file under content/ (global sets and their values, collections, fieldsets,
+ *   - every YAML and JSON file under content/ (globals and their values, collections, fieldsets,
  *     the profile's fields, a site's own block and component files).
  *
  * Only three things are renamed, each told by its shape and never by a search through text: a block
@@ -225,7 +225,7 @@ return new class extends Migration
     }
 
     /**
-     * What a site defines and keeps as YAML or JSON under content/: global sets with their values, collections
+     * What a site defines and keeps as YAML or JSON under content/: globals with their values, collections
      * and fieldsets, the profile's fields, block and component files of its own. Not the media library's
      * records and not the libraries the design imports: neither holds blocks.
      */

@@ -16,7 +16,7 @@ export function useScreenSidebar() {
  *   out or folded away as each person last left it (folded the first time, so the
  *   screen gets the room). The way back returns to where the screen was opened
  *   from in this visit, else to `backTo` (its list).
- * - `nested`: sections of one screen (the design system's). They go under the
+ * - `nested`: sections of one screen (the design's). They go under the
  *   screen's row in the sidebar, which stays as it is; only when that row isn't
  *   there (under More) do they take the sidebar over as above, out from the start.
  *   `useScreenSidebar().nested` says which, so rows can drop their icons under the row.

@@ -290,7 +290,7 @@ final class Elements
         $b = $d['block'];
         $type = in_array($b['type'] ?? 'text', ['text', 'search', 'email', 'password', 'number', 'date', 'range', 'checkbox', 'switch', 'select', 'textarea'], true) ? ($b['type'] ?? 'text') : 'text';
         $common = ' aria-label="'.e((string) ($b['label'] ?? '')).'"'.(! empty($b['name']) ? ' name="'.e((string) $b['name']).'"' : '');
-        // It looks like every other field of the site (the design system's `fields`); a checkbox, switch or slider has its own look there.
+        // It looks like every other field of the site (the design's `fields`); a checkbox, switch or slider has its own look there.
         $attrs = static fn (string $class) => (string) preg_replace('/\bclass="/', 'class="'.$class.' ', (string) $d['attrs'], 1);
 
         if ($type === 'select') {

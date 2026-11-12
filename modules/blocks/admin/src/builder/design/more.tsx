@@ -103,7 +103,7 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
   }
 }
 
-/** Properties the inspector has rows for, as the Design System offers them for an element's or a button's style. */
+/** Properties the inspector has rows for, as the Design offers them for an element's or a button's style. */
 function designStyles(): Record<string, Partial<FieldDef>> {
   return {
     display: choice(t('Display'), ['block', 'inline', 'inline-block', 'flex', 'grid', 'none']),
@@ -214,7 +214,7 @@ export function StyleSection({ s, group, title, open, empty, children }: { s: St
 }
 
 /**
- * One row of a style in the Design System: its field, inline, and a ⋯ menu at the end
+ * One row of a style in the Design: its field, inline, and a ⋯ menu at the end
  * (shown on hover) with what can be done to it. Every row keeps the menu's place, so
  * controls line up whether or not a row has one.
  */
@@ -222,7 +222,7 @@ export function StyleRow({ field, value, onChange, actions, disabled, bare }: { 
   // A shadow list (`bare`) brings its own label and add button.
   return (
     <div className="group/row flex items-start gap-1">
-      {/* The Design System's label column, as its other rows (Page Transition, Prose spacing) have it. */}
+      {/* The Design's label column, as its other rows (Page Transition, Prose spacing) have it. */}
       <Fields bare={bare} layout={bare ? undefined : 'inline'} labelWidth={120} className="min-w-0 flex-1" disabled={disabled} fields={[field]} values={{ [field.handle]: value ?? null }} onChange={(_, v) => onChange(v)} />
       <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center">
         {actions.length > 0 && !disabled && (
@@ -237,7 +237,7 @@ export function StyleRow({ field, value, onChange, actions, disabled, bare }: { 
 }
 
 /**
- * `blocks-more` — a style of the Design System: only what it sets, row by row, each with
+ * `blocks-more` — a style of the Design: only what it sets, row by row, each with
  * its control and a ⋯ menu to remove it, and a + that adds a property, its `controls`
  * (Font, Size, Margin…) first and then every other one. A new style starts empty.
  * `hidden` are properties drawn elsewhere. The value is the declarations.
@@ -260,7 +260,7 @@ export function MoreStylesField({ field, value, onChange, disabled }: FieldProps
   // A control is a row while it sets something, or since it was just added.
   const setControls = controls.filter((control) => keysOf(control).some((key) => key in decl) || control.handle === adding)
   const extras = [...Object.keys(decl).filter((key) => !hidden.has(key)), ...(adding && !(adding in decl) && !controls.some((c) => c.handle === adding) ? [adding] : [])]
-  // A style of the Design System can take what has no control there: the panels' extra properties, and these the inspector has rows for.
+  // A style of the Design can take what has no control there: the panels' extra properties, and these the inspector has rows for.
   const others = [...Object.keys(more).filter((key) => more[key].group !== 'item' && more[key].group !== 'layout'), ...Object.keys(designStyles())].filter((key) => !hidden.has(key) && !extras.includes(key))
   const offered = [...controls.filter((control) => !setControls.includes(control)).map((control) => control.handle), ...byLabel(others, more)]
   const labels = Object.fromEntries(controls.map((control) => [control.handle, String(control.label)]))

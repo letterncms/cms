@@ -173,10 +173,10 @@ final class AgentsGuide
     {
         $places = [
             'content/collections/' => 'Each collection\'s definition (`<handle>.yaml`: fields, route, driver) and, for collections kept in files, its entries (`<handle>/*.md`)',
-            'content/design/' => 'The design system: `tokens.json`, `fonts/`, and the site\'s own `scripts/` and `styles/`',
+            'content/design/' => 'The design: `tokens.json`, `fonts/`, and the site\'s own `scripts/` and `styles/`',
             'content/globals/' => 'Site-wide values such as the footer\'s, one file per set',
             'content/navigation/' => 'Menus',
-            'content/schemas/' => 'The content model as JSON Schema, one file per collection, blueprint and global set'.($blocks ? ', and `blocks.json` for what a blocks field holds' : '').'. The site writes them whenever a definition changes: read them, never edit them',
+            'content/schemas/' => 'The content model as JSON Schema, one file per collection, blueprint and global'.($blocks ? ', and `blocks.json` for what a blocks field holds' : '').'. The site writes them whenever a definition changes: read them, never edit them',
             'content/media/' => 'Media records, one YAML file per item (the files are in `public/media/`); `php cms migrate` reads them in',
             'config/' => 'Settings, one YAML file per group: `site.yaml` (name, URL, languages), `plugins.yaml` (what is on)',
             'plugins/' => 'Installed plugins. Composer or the store puts them here',

@@ -14,7 +14,7 @@ use Throwable;
 
 /**
  * The site's content model as JSON Schema files, in `content/schemas/`: one per collection and per
- * blueprint of a collection, one per global set, and what modules add (the Blocks module: the block
+ * blueprint of a collection, one per global, and what modules add (the Blocks module: the block
  * document). An agent or an editor's tooling working in the site's folder reads what an entry must look
  * like without booting the site, and a pull request shows a change to the model as a diff.
  *
@@ -24,7 +24,7 @@ use Throwable;
  * definitions give, and removes any other `.json` in it.
  *
  * Written when the site is installed and whenever a definition changes: a collection, a fieldset or a
- * global set saved or deleted, an entry of a collection the system keeps (templates, components: they
+ * global saved or deleted, an entry of a collection the system keeps (templates, components: they
  * are the choices of a field), and `cms migrate`, which is what picks up a definition edited by hand.
  * `php cms schemas` writes them too, `--check` only says whether they are current.
  */
@@ -91,8 +91,8 @@ final class SchemaFiles
 
             foreach ($this->cms->globals()->all() as $set) {
                 $documents["globals/{$set->handle}.json"] = self::document(
-                    "{$set->title}: the values of a global set",
-                    "The values of the global set `{$set->handle}`, by field handle.",
+                    "{$set->title}: the values of a global",
+                    "The values of the global `{$set->handle}`, by field handle.",
                     $set->blueprint()->schema(partial: true),
                 );
             }

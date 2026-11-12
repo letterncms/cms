@@ -20,7 +20,7 @@ use Throwable;
  * Turns this site into a kit: what it holds and how it looks, in the layout a kit has (Kit). Only content and
  * design travel: the collections and their published entries (in the file layout, whatever driver they use;
  * drafts only when asked for), the templates and components, but no other collection a plugin owns, the
- * global sets, the menus, the design folder, the media something names, what plugins keep beside the
+ * globals, the menus, the design folder, the media something names, what plugins keep beside the
  * content (`kits.content`: a folder, or a `<name>.yaml` file), and the settings a kit may carry (`kits.settings`). Never accounts, tokens,
  * secrets, submissions, analytics, the audit log, licences or the rest of config/.
  */

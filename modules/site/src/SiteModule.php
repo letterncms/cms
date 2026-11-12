@@ -56,12 +56,12 @@ final class SiteModule extends Plugin
 
     public function boot(): void
     {
-        // An agent's way into the design system: `/adjust-design` in the assistant's chat, a prompt for MCP clients.
+        // An agent's way into the design: `/adjust-design` in the assistant's chat, a prompt for MCP clients.
         $this->cms()->skills()->register('adjust-design', [
             'label' => 'Adjust the Design',
-            'description' => 'Change the design system so the site feels a certain way.',
+            'description' => 'Change the design so the site feels a certain way.',
             'icon' => 'palette',
-            'prompt' => 'Change the design system so the site feels the way asked here: {feel}. Read cms://site/design first and change design tokens rather than individual blocks. Say what you changed and why.',
+            'prompt' => 'Change the design so the site feels the way asked here: {feel}. Read cms://site/design first and change design tokens rather than individual blocks. Say what you changed and why.',
             'arguments' => [['name' => 'feel', 'description' => 'How the site should feel', 'required' => true]],
             'permission' => 'settings.manage',
         ]);
@@ -596,8 +596,8 @@ final class SiteModule extends Plugin
         ]);
 
         $abilities->register('design/get', [
-            'label' => 'Design System',
-            'description' => 'The site’s design system (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, form fields, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
+            'label' => 'Design',
+            'description' => 'The site’s design (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, form fields, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'output' => Shape::of([
@@ -610,7 +610,7 @@ final class SiteModule extends Plugin
                 ]],
                 'fonts' => [['family?' => Shape::STRING, 'src?' => Shape::STRING, 'weight?' => Shape::either(Shape::STRING, Shape::INTEGER), 'style?' => Shape::STRING, 'preload?' => Shape::BOOLEAN, 'display?' => Shape::STRING, 'fallback?' => Shape::either(Shape::STRING, [Shape::STRING]), 'sizeAdjust?' => Shape::STRING, 'ascentOverride?' => Shape::STRING, 'descentOverride?' => Shape::STRING, 'lineGapOverride?' => Shape::STRING]],
                 'fontFiles' => [Shape::STRING],
-                'styles' => self::described(Shape::map(self::declarationsShape()), 'Declarations by element. `elements` lists the ones the Design System offers; any tag works, alone or up to three deep with a space (inside) or " > " (directly inside), with one state or part at the end: "h1 em", "li > a", "nav a:hover", "li::marker". A class a block carries (its `class`, or the is-… of a state binding) works the same way, alone or on a tag: ".note", "span.note", ".note em", ".card.is-open > a:hover"; lowercase letters, digits and hyphens, never one that starts with cms-. No ids or attributes: those are custom.css.'),
+                'styles' => self::described(Shape::map(self::declarationsShape()), 'Declarations by element. `elements` lists the ones the Design offers; any tag works, alone or up to three deep with a space (inside) or " > " (directly inside), with one state or part at the end: "h1 em", "li > a", "nav a:hover", "li::marker". A class a block carries (its `class`, or the is-… of a state binding) works the same way, alone or on a tag: ".note", "span.note", ".note em", ".card.is-open > a:hover"; lowercase letters, digits and hyphens, never one that starts with cms-. No ids or attributes: those are custom.css.'),
                 'prose' => Shape::raw([
                     ...Shape::of(['spacing?' => ['blocks?' => self::cssValue(), 'headings?' => self::cssValue(), 'afterHeadings?' => self::cssValue(), 'items?' => self::cssValue()]])->toSchema(),
                     'additionalProperties' => self::declarationsShape()->toSchema(),
@@ -659,7 +659,7 @@ final class SiteModule extends Plugin
         ]);
 
         $abilities->register('design/update', [
-            'label' => 'Update Design System',
+            'label' => 'Update Design',
             'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, form fields, fonts or the page transition. Sections you pass replace the stored ones, except `transition`, whose settings you name are changed and the others kept (null removes one, back to its default). The site rebuilds.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
@@ -669,7 +669,7 @@ final class SiteModule extends Plugin
                 'rename' => ['type' => 'object', 'description' => 'old path => new path, within a group; references follow'],
                 'styles' => ['type' => 'object', 'description' => 'Element styles: {"h1": {"fontSize": "token:text.5xl"}, "h1 em": {"fontStyle": "italic"}, "nav a:hover": {"color": "token:color.primary"}}. A key is a tag, or up to three tags with a space (inside) or " > " (directly inside), with one state or part at the end. A class a block carries works in the same places, alone or on a tag: {".note em": {"fontStyle": "italic"}, "span.note": {"fontFamily": "token:font.serif"}, ".card.is-open": {"borderColor": "token:color.primary"}}; lowercase, never one that starts with cms-. No ids or attributes. A key that does not fit is refused by name.'],
                 'prose' => ['type' => 'object', 'description' => 'Long-form text, in any block with the prose prop (Prose, under Typography): element styles, and `spacing`, the flow between its blocks, custom ones too: {"spacing": {"blocks": "1.1em", "headings": "1.8em", "afterHeadings": "0.6em", "items": "0.35em"}, "h2": {"fontSize": "token:text.2xl", "marginTop": "2.5rem"}}. An element\'s marginTop replaces the spacing before it.'],
-                'buttons' => ['type' => 'object', 'description' => 'Button variants, each a look by state: {"primary": {"base": {"backgroundColor": "token:color.primary", "borderRadius": "token:radius.md"}, "hover": {...}, "active": {...}, "focus-visible": {...}}}; `surface` names the background a variant is made for ("token:color.band"), where the Design System shows it. Sizes are not set here: height, padding and text size come from the control tokens (control.sm-height, control.md-padding, control.lg-text…), which fields share.'],
+                'buttons' => ['type' => 'object', 'description' => 'Button variants, each a look by state: {"primary": {"base": {"backgroundColor": "token:color.primary", "borderRadius": "token:radius.md"}, "hover": {...}, "active": {...}, "focus-visible": {...}}}; `surface` names the background a variant is made for ("token:color.band"), where the Design shows it. Sizes are not set here: height, padding and text size come from the control tokens (control.sm-height, control.md-padding, control.lg-text…), which fields share.'],
                 'fields' => ['type' => 'object', 'description' => 'Every form field of the site, part by part, over the defaults (design/get fieldStyles has each part, property, type and default): {"field": {"height": "3rem", "background": "token:color.raised", "radius": "token:radius.md"}, "checkbox": {"checked": "token:color.primary", "mark": "check"}, "switch": {"on": "token:color.primary"}}. Parts: field (every boxed field), hover, focus, invalid, disabled, label, help, spacing (with size: the control size of fields in forms), select, textarea, checkbox, radio, switch, slider, tags, chips, file. A value is CSS, a token, or field:part.key to follow another property.'],
                 'fonts' => ['type' => 'array'],
                 'transition' => ['type' => 'object', 'description' => 'Merged into the stored transition: name only what changes. null removes a setting, which then has its default (type none, duration 0.3, navigation document).', 'properties' => ['type' => ['type' => ['string', 'null'], 'enum' => ['none', 'fade', 'slide', 'scale', null]], 'duration' => ['type' => ['number', 'null']], 'navigation' => ['type' => ['string', 'null'], 'enum' => ['document', 'client', null], 'description' => 'client: links to pages of the site swap the page without a page load, inside the transition, so blocks with `persist` live on across pages. document (default): the browser loads every page.']]],
@@ -686,7 +686,7 @@ final class SiteModule extends Plugin
         ]);
 
         $abilities->register('design/preview', [
-            'label' => 'Preview Design System',
+            'label' => 'Preview Design',
             'description' => 'The stylesheet the site would get with these changes (the design/update input, plus css), without saving. For live previews.',
             'permission' => 'settings.manage',
             'annotations' => ['readOnly' => true],
@@ -732,7 +732,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/fonts-import', [
             'label' => 'Add a Google Font',
-            'description' => 'Download a Google Fonts family (latin) into content/design/fonts so it is self-hosted, and add it to the design system: the weights its variable axis really spans as one file, or the static weights it has; upright, italic or both. Then use it in a font token. Text does not move when the font arrives: each face gets a fallback read from the font’s own tables, {"fallback": "Arial", "sizeAdjust": "103.63%", "ascentOverride": "88.48%", "descentOverride": "24.32%", "lineGapOverride": "0%"} (Arial for a sans, Times New Roman for a serif, Courier New for a monospace family), which draws that local font at the web font’s size first; the font tokens that name the family get it by themselves. Change those numbers with design/update `fonts`: importing the family again keeps what its faces say.',
+            'description' => 'Download a Google Fonts family (latin) into content/design/fonts so it is self-hosted, and add it to the design: the weights its variable axis really spans as one file, or the static weights it has; upright, italic or both. Then use it in a font token. Text does not move when the font arrives: each face gets a fallback read from the font’s own tables, {"fallback": "Arial", "sizeAdjust": "103.63%", "ascentOverride": "88.48%", "descentOverride": "24.32%", "lineGapOverride": "0%"} (Arial for a sans, Times New Roman for a serif, Courier New for a monospace family), which draws that local font at the web font’s size first; the font tokens that name the family get it by themselves. Change those numbers with design/update `fonts`: importing the family again keeps what its faces say.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
@@ -751,7 +751,7 @@ final class SiteModule extends Plugin
 
         $abilities->register('design/fonts-upload', [
             'label' => 'Upload a Font',
-            'description' => 'Add a .woff2 file (base64) to content/design/fonts and the design system.',
+            'description' => 'Add a .woff2 file (base64) to content/design/fonts and the design.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 60],
@@ -978,7 +978,7 @@ final class SiteModule extends Plugin
     private function adminUi(): void
     {
         $admin = $this->cms()->admin();
-        $admin->nav('design', ['label' => 'Design System', 'path' => '/design', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
+        $admin->nav('design', ['label' => 'Design', 'path' => '/design', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
         // A kit is mostly a design: it sits with the design, after what it brings (templates, components).
         $admin->nav('kits', ['label' => 'Site Kits', 'path' => '/kits', 'icon' => 'box', 'section' => 'design', 'order' => 90, 'permission' => 'settings.manage']);
         $admin->command('kits', ['label' => 'Site Kits', 'icon' => 'box', 'path' => '/kits', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);
@@ -992,7 +992,7 @@ final class SiteModule extends Plugin
     {
         $this->cms()->context()->register(
             'cms://site/design',
-            'Design System',
+            'Design',
             'The site’s design tokens (use as token:group.name), fonts, element styles, button variants, page transition and breakpoints. Compose with these instead of raw values.',
             fn () => $this->app->make(Design::class)->json()->toArray()
         );

@@ -7,7 +7,7 @@ namespace Cms\Content\Fields\Types;
 use Cms\Content\Fields\Field;
 use Cms\Content\Fields\FieldType;
 
-/** The name of an admin icon (collections, global sets, cards on a site…). `options` narrows the choice. */
+/** The name of an admin icon (collections, globals, cards on a site…). `options` narrows the choice. */
 class Icon extends FieldType
 {
     public function key(): string { return 'icon'; }

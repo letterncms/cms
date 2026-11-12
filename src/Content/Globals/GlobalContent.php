@@ -8,7 +8,7 @@ use Cms\Content\Fields\Blueprint;
 use Cms\Support\RecordTimestamps;
 
 /** Site-wide values (footer, contact details, social links…) with their own fields. */
-final class GlobalSet
+final class GlobalContent
 {
     private ?Blueprint $blueprint = null;
 

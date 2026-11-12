@@ -67,7 +67,7 @@ function editableDefinition(source: any): BlueprintDefinition | null {
 }
 
 /**
- * Edits whatever has a blueprint — a collection, a global set, user profiles —
+ * Edits whatever has a blueprint — a collection, a global, user profiles —
  * through the abilities its kind names. Modules describe their kind and render this.
  */
 export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {

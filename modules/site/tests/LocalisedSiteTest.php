@@ -247,7 +247,7 @@ final class LocalisedSiteTest extends TestCase
             ['type' => 'paragraph', 'props' => ['text' => '', 'tag' => 'p'], 'bind' => ['text' => 'globals.ui.gone']],
             ['type' => 'repeat', 'props' => ['source' => 'languages'], 'children' => [['type' => 'link', 'bind' => ['label' => 'item.locale', 'url' => 'item.url', 'attr:hreflang' => 'item.locale']]]],
         ]]]);
-        $this->cms()->globals()->save(\Cms\Content\Globals\GlobalSet::fromArray('ui', [
+        $this->cms()->globals()->save(\Cms\Content\Globals\GlobalContent::fromArray('ui', [
             'fields' => [['handle' => 'gone', 'type' => 'text', 'label' => 'Gone']],
             'data' => ['gone' => 'Page not found'],
             'locales' => ['de' => ['gone' => 'Seite nicht gefunden']],

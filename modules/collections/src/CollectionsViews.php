@@ -47,7 +47,7 @@ final class CollectionsViews
                     ['key' => 'count', 'label' => __('Entries'), 'width' => '90px', 'align' => 'end', 'format' => 'number', 'unit' => ['one' => __('{count} Entry'), 'other' => __('{count} Entries')]],
                 ],
                 'open' => ['label' => __('Open'), 'to' => '/collections/{row.handle}'],
-                // A menu in each row, as a global set, a menu and a language have. Deleting stays in the collection's settings, where it says how many entries go with it.
+                // A menu in each row, as a global, a menu and a language have. Deleting stays in the collection's settings, where it says how many entries go with it.
                 'actions' => [
                     ['label' => __('Edit Fields'), 'icon' => 'field', 'to' => '/collections/{row.handle}'],
                     // Only for someone who may see that collection's entries.

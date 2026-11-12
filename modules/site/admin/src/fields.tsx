@@ -2,7 +2,7 @@ import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
 import { Button, fieldControlId, Fields, Icon, IconButton, Input, Popover, Tooltip, cn } from '@letterncms/ui'
 import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
-/* Field components of the design system editor — the controls core fields can't
+/* Field components of the design editor — the controls core fields can't
    express: fluid sizes, font stacks, CSS declarations, easing curves, shadows and
    font files. Compact (xs) like the canvas inspector, whose value control (a number
    with its unit, scrubbed or typed) they use when Blocks has drawn it. */

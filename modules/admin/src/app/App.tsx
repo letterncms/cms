@@ -165,7 +165,7 @@ export function App() {
   const manifest = useManifest()
   const settings = inSettings(manifest, location.path)
   const place = placeAt(manifest.nav, location.path)
-  // Sections of one screen (the design system's) go under its row, where the screen was opened; the sidebar stays the one it was.
+  // Sections of one screen (the design's) go under its row, where the screen was opened; the sidebar stays the one it was.
   // Only when that row is not there (under More, or in settings) do they take the sidebar over, like any screen's own list.
   const nested = !!claim?.nested && !settings && !!place && manifest.sidebar.sections.some((s) => s.items.includes(place.id)) && isPinned(manifest.sidebar, place.id)
   const own = claim && !nested ? claim : null

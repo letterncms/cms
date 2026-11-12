@@ -1,8 +1,8 @@
 /* Form fields, for every form on the site: the forms people build, the account pages, the
    checkout, list filters and the Input block. Their size is the control size scale buttons share
    (--control-height, --control-padding, --control-text, by data-size); everything they look like
-   is a --field-* property from the design system (FieldStyles), so a site styles its fields once.
-   [data-cms-state] shows a state without the pointer or keyboard, for the design system's specimens. */
+   is a --field-* property from the design (FieldStyles), so a site styles its fields once.
+   [data-cms-state] shows a state without the pointer or keyboard, for the design's specimens. */
 @layer components {
   .cms-form { display: grid; gap: var(--field-spacing-fields); }
   .cms-field, .cms-form [data-field] { display: grid; gap: var(--field-spacing-label); align-content: start; min-width: 0; }
@@ -43,7 +43,7 @@
   select.cms-input:not([multiple]) {
     cursor: pointer; text-overflow: ellipsis;
     padding-inline-end: calc(var(--control-padding) + 2 * var(--field-select-arrow-size) + 0.5rem);
-    /* A chevron of two strokes, in a color the design system sets. */
+    /* A chevron of two strokes, in a color the design sets. */
     --cms-arrow: transparent calc(50% - 0.75px), var(--field-select-arrow-color) calc(50% - 0.75px) calc(50% + 0.75px), transparent calc(50% + 0.75px);
     background-image: linear-gradient(45deg, var(--cms-arrow)), linear-gradient(135deg, var(--cms-arrow));
     background-position: right calc(var(--control-padding) + var(--field-select-arrow-size)) center, right var(--control-padding) center;

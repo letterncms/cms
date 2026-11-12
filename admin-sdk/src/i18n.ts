@@ -4,7 +4,7 @@ import { boot } from './api'
  * The admin speaks the user's language. Labels are written in English and are their
  * own key; core and every package ship `lang/<code>.json` dictionaries, merged by the
  * server and handed over at boot. A missing translation shows the English text.
- * Write English labels, headings and actions in title case ("Design System");
+ * Write English labels, headings and actions in title case ("Design");
  * descriptions, instructions and messages use sentence case. Translations follow
  * the capitalization conventions of their language.
  *

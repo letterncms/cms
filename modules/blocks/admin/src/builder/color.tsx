@@ -55,7 +55,7 @@ function fromHsv(h: number, s: number, v: number, a: number): Rgba {
   return { r: f(5), g: f(3), b: f(1), a }
 }
 
-/** Whether the browser can draw this color (tokens count: the design system defines them). */
+/** Whether the browser can draw this color (tokens count: the design defines them). */
 export function validColor(value: string): boolean {
   if (/^token:[a-z]+\.[a-z0-9-]+(\/\d{1,3})?$/.test(value)) return true
   return typeof CSS !== 'undefined' && CSS.supports('color', value)

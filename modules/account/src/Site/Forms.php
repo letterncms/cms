@@ -13,7 +13,7 @@ use Cms\Users\UserFields;
 
 /**
  * The account pages' forms, as blocks. Plain HTML that works without JavaScript. They carry no
- * look of their own: fields and buttons look as the site's design system says, and a
+ * look of their own: fields and buttons look as the site's design says, and a
  * designer styles and moves each block like any other.
  */
 final class Forms

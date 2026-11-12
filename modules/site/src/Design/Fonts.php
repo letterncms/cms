@@ -73,7 +73,7 @@ final class Fonts
      *
      * @param  string  $style  normal, italic or both; italic is left out when the family has none
      * @param  list<int>  $weights  static weights to take when the family has no weight axis; 400 to 700 of what it has otherwise
-     * @return list<array> the font entries added to the design system
+     * @return list<array> the font entries added to the design
      */
     public function import(string $family, string $style = 'normal', array $weights = []): array
     {
@@ -190,7 +190,7 @@ final class Fonts
         return $this->remember(trim($family), [$font], replace: false)[0];
     }
 
-    /** Add font faces to the design system (replacing earlier faces of the family, and their files nothing names any more). */
+    /** Add font faces to the design (replacing earlier faces of the family, and their files nothing names any more). */
     private function remember(string $family, array $faces, bool $replace = true): array
     {
         $json = $this->design->json();

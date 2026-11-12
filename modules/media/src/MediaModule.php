@@ -224,7 +224,7 @@ final class MediaModule extends Plugin
 
         $a->register('media/get', [
             'label' => 'Get Media',
-            'description' => 'One file, with every entry, global set and design file that uses it (usedBy).',
+            'description' => 'One file, with every entry, global and design file that uses it (usedBy).',
             'permission' => 'media.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],

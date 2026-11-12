@@ -443,7 +443,7 @@ final class BlockRenderer
                 'cms-'.str_replace('/', '-', $type->name),
                 $this->styles->classes($style),
                 $this->sanitizeClass((string) ($node['class'] ?? '')),
-                // Long-form text: the design system's Prose styles and spacing, for every block inside.
+                // Long-form text: the design's Prose styles and spacing, for every block inside.
                 ! empty($props['prose']) ? 'cms-prose' : '',
                 $extra['class'],
                 implode(' ', $motion['classes'] ?? []),

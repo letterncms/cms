@@ -123,7 +123,7 @@ final class MediaReferences
     }
 
     /**
-     * What uses one item, each thing once: an entry with its collection (where it opens), a global set, the design.
+     * What uses one item, each thing once: an entry with its collection (where it opens), a global, the design.
      *
      * @return list<array{kind: string, id: string, title: string, collection: ?string, locale: ?string}>
      */

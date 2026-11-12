@@ -329,7 +329,7 @@ final class MediaTest extends TestCase
 
         $this->assertSame([$item->id, []], [$get()['id'], $get()['usedBy']]);
 
-        // Twice in one global set, once in the design, once in an entry: three things use it.
+        // Twice in one global, once in the design, once in an entry: three things use it.
         \Cms\Support\Yaml::write(content_path('globals/brand.yaml'), ['logo' => ['image' => $item->id], 'note' => "media:{$item->id}"]);
         Files::put(content_path('design/tokens.json'), (string) json_encode(['color' => ['hero' => "media:{$item->id}"]]));
         $collection = array_key_first($this->cms()->collections()->all());

@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use Cms\Support\Files;
 
 /**
- * The site's design system, kept with its content so it is edited in the CMS,
+ * The site's design, kept with its content so it is edited in the CMS,
  * versioned in git and readable by agents:
  *
  *   content/design/tokens.json   tokens, fonts, element styles, prose, buttons, page transition (DesignJson)

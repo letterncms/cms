@@ -11,7 +11,7 @@ use Cms\Cms;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Content\Entries\FileDriver;
-use Cms\Content\Globals\GlobalSet;
+use Cms\Content\Globals\GlobalContent;
 use Cms\Modules\Media\MediaItem;
 use Cms\Modules\Collections\CollectionAbilities;
 use Cms\Modules\Media\MediaManifest;
@@ -534,9 +534,9 @@ final class KitApplier
             $same = $mine !== null && [$mine->title, $mine->icon, $mine->fields, $mine->data, $mine->locales] == [(string) ($raw['title'] ?? ucfirst($handle)), (string) ($raw['icon'] ?? 'globe'), array_values((array) ($raw['fields'] ?? [])), (array) ($raw['data'] ?? []), (array) ($raw['locales'] ?? [])];
 
             try {
-                GlobalSet::fromArray($handle, $raw)->blueprint()->schema();
+                GlobalContent::fromArray($handle, $raw)->blueprint()->schema();
             } catch (Throwable $e) {
-                throw AbilityException::invalid(__('The kit’s global set “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
+                throw AbilityException::invalid(__('The kit’s global “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
             }
 
             $run['steps'][] = $this->step($run, 'global', $handle, $path, $mine !== null, $same, ['raw' => $raw, 'title' => (string) ($raw['title'] ?? ucfirst($handle))]);
@@ -902,7 +902,7 @@ final class KitApplier
             $raw = $step['raw'];
             $raw['data'] = $this->remap((array) ($raw['data'] ?? []), $run);
             $raw['locales'] = array_intersect_key($this->remap((array) ($raw['locales'] ?? []), $run), array_flip($run['locales']));
-            $set = GlobalSet::fromArray($step['name'], array_diff_key($raw, ['published_at' => 1, 'updated_at' => 1]));
+            $set = GlobalContent::fromArray($step['name'], array_diff_key($raw, ['published_at' => 1, 'updated_at' => 1]));
             $this->cms->globals()->save($set);
             $this->cms->hooks()->dispatch('globals.saved', $set);
         }

@@ -74,7 +74,7 @@ final class AdminRegistry
      *
      * A plugin's main screen is called what the plugin is: leave out `label`
      * and the item takes the plugin's name (`extra.cms.label`). Its other
-     * screens (the design system's) name themselves.
+     * screens (the design's) name themselves.
      *
      * @param  array{label?: string, path: string, icon?: string, section?: string, order?: int, pinned?: bool, shortcut?: ?string, permission?: ?string, visible?: ?callable(User): bool, badge?: ?callable}  $item
      */

@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use Cms\Support\Files;
 
 /**
- * content/design/tokens.json — the design system of a site.
+ * content/design/tokens.json — the design of a site.
  *
  *   tokens       DTCG design tokens (color, font, text, leading, tracking, weight, space, radius, shadow, container, control, breakpoint, duration, ease);
  *                control holds the size scale of buttons and fields: control.sm-height, control.md-padding, control.lg-text…
@@ -171,7 +171,7 @@ final class DesignJson
 
     /**
      * Rename a token within its group, keeping its place, and point every
-     * reference in the design system (token:old → token:new) at the new name.
+     * reference in the design (token:old → token:new) at the new name.
      */
     public function renameToken(string $from, string $to): void
     {

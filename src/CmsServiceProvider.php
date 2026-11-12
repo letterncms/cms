@@ -269,7 +269,7 @@ final class CmsServiceProvider extends ServiceProvider
         // A collection that imports a fieldset has other fields once the fieldset changes: read again, in this request too.
         $hooks->on('fieldset.saved', fn () => $this->app->make(CollectionRepository::class)->flush(), 80);
 
-        foreach (['collection.saved', 'collection.deleted', 'fieldset.saved', 'global-set.saved', 'global-set.deleted', 'cms.migrated'] as $action) {
+        foreach (['collection.saved', 'collection.deleted', 'fieldset.saved', 'global.saved', 'global.deleted', 'cms.migrated'] as $action) {
             $hooks->on($action, $schemas, 90);
         }
 

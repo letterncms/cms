@@ -25,7 +25,7 @@ export function Typography({ s, prose }: { s: StyleApi; prose?: { on: boolean; o
 
   return (
     <StyleSection s={s} group="typography" title={t('Typography')} empty={!any && !prose?.on}>
-      {/* Long-form text: the design system's Prose spacing and styles reach every block inside. */}
+      {/* Long-form text: the design's Prose spacing and styles reach every block inside. */}
       {prose && <PanelFields fields={[{ handle: 'prose', type: 'toggle', label: t('Prose') }]} values={{ prose: prose.on }} onChange={(_, v) => prose.onChange(!!v)} />}
       <StyleFields
         s={s}

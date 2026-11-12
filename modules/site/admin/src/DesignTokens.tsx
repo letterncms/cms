@@ -185,7 +185,7 @@ function changes(base: Draft, draft: Draft) {
 }
 
 /**
- * The design system editor: tokens, fonts, element and button styles, motion and
+ * The design editor: tokens, fonts, element and button styles, motion and
  * custom code, with the real site beside it. Every edit previews live (the server
  * compiles the draft) and is written to content/design on save.
  */
@@ -283,8 +283,8 @@ export default function DesignTokens() {
   if (!theme.data || !current) {
     return (
       <div className="flex h-full flex-col">
-        <Topbar crumbs={[{ label: t('Design System'), icon: 'palette' }]} />
-        <QueryError title={t('Couldn’t load the design system')} onRetry={() => void theme.refetch()} retrying={theme.isRefetching} />
+        <Topbar crumbs={[{ label: t('Design'), icon: 'palette' }]} />
+        <QueryError title={t('Couldn’t load the design')} onRetry={() => void theme.refetch()} retrying={theme.isRefetching} />
       </div>
     )
   }
@@ -384,7 +384,7 @@ export default function DesignTokens() {
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        crumbs={[{ label: t('Design System'), icon: 'palette' }, { label: sections().flatMap((g) => g.items).find((item) => item.value === section)?.label ?? '' }]}
+        crumbs={[{ label: t('Design'), icon: 'palette' }, { label: sections().flatMap((g) => g.items).find((item) => item.value === section)?.label ?? '' }]}
         actions={
           <>
             <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>
@@ -394,9 +394,9 @@ export default function DesignTokens() {
           </>
         }
       />
-      {/* The sections are rows under Design System in the sidebar: no column of their own, and the sidebar stays the one it was. */}
-      <ScreenSidebar title={t('Design System')} backTo="/" backLabel={t('Dashboard')} nested>
-        <nav aria-label={t('Design System')} className={sidebar.nested ? 'space-y-px' : 'px-2 pb-4'}>
+      {/* The sections are rows under Design in the sidebar: no column of their own, and the sidebar stays the one it was. */}
+      <ScreenSidebar title={t('Design')} backTo="/" backLabel={t('Dashboard')} nested>
+        <nav aria-label={t('Design')} className={sidebar.nested ? 'space-y-px' : 'px-2 pb-4'}>
           {sections().map((group, index) => (
             <div key={group.group} className={cn('space-y-px', index > 0 && (sidebar.nested ? 'mt-1' : 'mt-4'))}>
               {!sidebar.nested && <div className="cms-label flex h-7 items-center px-2">{group.group}</div>}
@@ -668,7 +668,7 @@ function styles(files: Font[]): string {
   return files.some((font) => font.style === 'italic') ? `${range} · ${t('Italic')}` : range
 }
 
-/** What people call the elements the design system styles. */
+/** What people call the elements the design styles. */
 function elementLabel(selector: string): string {
   const names: Record<string, string> = {
     html: t('Page'), body: t('Body'), h1: t('Heading 1'), h2: t('Heading 2'), h3: t('Heading 3'), h4: t('Heading 4'), h5: t('Heading 5'), h6: t('Heading 6'),

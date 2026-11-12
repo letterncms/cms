@@ -66,7 +66,7 @@ final class Toolbox
             sort($resources);
             $tools[] = [
                 'name' => self::CONTEXT_TOOL,
-                'description' => 'Read site context for planning: '.implode(', ', $resources).'. cms://collections has content types and field schemas, cms://site/design the design system (tokens, fonts, element styles), cms://blocks the block catalog.',
+                'description' => 'Read site context for planning: '.implode(', ', $resources).'. cms://collections has content types and field schemas, cms://site/design the design (tokens, fonts, element styles), cms://blocks the block catalog.',
                 'input_schema' => ['type' => 'object', 'properties' => ['uri' => ['type' => 'string', 'enum' => $resources]], 'required' => ['uri']],
                 'eager_input_streaming' => true,
             ];

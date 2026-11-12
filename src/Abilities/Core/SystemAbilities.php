@@ -65,7 +65,7 @@ final class SystemAbilities
 
         $a->register('schemas/status', [
             'label' => 'Schema Files',
-            'description' => 'The JSON Schema files of the content model in content/schemas/: one per collection (collections/<handle>.json), per blueprint of a collection (collections/<handle>.<blueprint>.json) and per global set (globals/<handle>.json), and what modules add (blocks.json). Each file\'s `state` is `current`, `missing`, `changed` (the definitions give another file) or `stale` (no definition gives it any more). The site writes them itself whenever a definition changes: `current` is false only after a file was edited or removed by hand.',
+            'description' => 'The JSON Schema files of the content model in content/schemas/: one per collection (collections/<handle>.json), per blueprint of a collection (collections/<handle>.<blueprint>.json) and per global (globals/<handle>.json), and what modules add (blocks.json). Each file\'s `state` is `current`, `missing`, `changed` (the definitions give another file) or `stale` (no definition gives it any more). The site writes them itself whenever a definition changes: `current` is false only after a file was edited or removed by hand.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'output' => Shape::of(['current' => Shape::BOOLEAN, 'folder' => Shape::STRING, 'files' => [$files]]),
