@@ -153,7 +153,7 @@ final class OutputAccountsTest extends TestCase
         }
     }
 
-    public function test_global_sets(): void
+    public function test_globals(): void
     {
         $me = $this->admin();
 
@@ -226,7 +226,7 @@ final class OutputAccountsTest extends TestCase
         $empty = $this->run_('audit/list', [], $me);
         $this->assertSame(0, $empty['total']);
 
-        // Changes to an entry, a setting, a global set and a person, by people, the system and someone since deleted.
+        // Changes to an entry, a setting, a global and a person, by people, the system and someone since deleted.
         $entry = $this->run_('entries/create', ['collection' => 'pages', 'title' => 'About'], $editor, 'admin');
         $this->run_('entries/update', ['id' => $entry['id'], 'data' => ['summary' => 'One']], $editor, 'admin');
         $this->run_('entries/update', ['id' => $entry['id'], 'data' => ['summary' => 'Two']], $editor, 'admin');

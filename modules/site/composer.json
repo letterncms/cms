@@ -1,6 +1,6 @@
 {
     "name": "letterncms/site",
-    "description": "The design system, page templates and the site renderer, with previews and static builds.",
+    "description": "The design, page templates and the site renderer, with previews and static builds.",
     "type": "cms-plugin",
     "version": "0.30.3",
     "license": "MIT",

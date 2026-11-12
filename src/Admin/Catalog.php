@@ -127,7 +127,7 @@ final class Catalog
                 'fields' => ['type' => 'array', 'maxItems' => 80, 'items' => ['type' => 'object']],
                 'save' => $this->object(['ability' => $id, 'input' => ['type' => 'object', 'default' => []], 'as' => $id], ['ability']),
                 'after' => ['type' => 'string', 'enum' => ['refresh', 'manifest']], 'width' => ['type' => 'string', 'enum' => ['narrow', 'wide']],
-                // What the fields are told about where they are (a global set's `locale`).
+                // What the fields are told about where they are (a global's `locale`).
                 'context' => ['type' => 'object'],
             ], ['save'])],
             'ui/settings' => ['label' => 'A settings page’s form', 'children' => false, 'props' => $this->object(['namespace' => $s], ['namespace'])],

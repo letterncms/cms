@@ -2,7 +2,7 @@ import { invalidate, locale, plural, run, t } from '@letterncms/sdk'
 import { confirm, toast } from '@letterncms/ui'
 import type { MediaItem } from './upload'
 
-/** What uses a file: an entry (with its collection, where it opens), a global set or the design. */
+/** What uses a file: an entry (with its collection, where it opens), a global or the design. */
 export interface MediaUse { kind: string; id: string; title: string; collection: string | null; locale: string | null }
 
 /** Where something that uses a file opens, when it has a screen of its own. */

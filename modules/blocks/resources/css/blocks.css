@@ -20,7 +20,7 @@
   .cms-mc > :nth-child(10) { --i: 9; } .cms-mc > :nth-child(11) { --i: 10; } .cms-mc > :nth-child(12) { --i: 11; } .cms-mc > :nth-child(n+13) { --i: 12; }
   .cms-motion-toggle[hidden] { display: none; }
 
-  /* Forms. Fields, and the space between them, are the design system's (`fields` in tokens.json, fields.css). */
+  /* Forms. Fields, and the space between them, are the design's (`fields` in tokens.json, fields.css). */
   .cms-form__hp { position: absolute !important; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .cms-form__submit { justify-self: start; }
   .cms-form__row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-3, 0.75rem); align-items: start; }
@@ -106,7 +106,7 @@
   fieldset.cms-filter-choice { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; min-inline-size: 0; }
   .cms-filter__legend { padding: 0; margin-bottom: var(--space-1, 0.375rem); }
   fieldset.cms-filter-choice > .cms-filter__legend { flex-basis: 100%; float: left; }
-  /* Chips are the design system's (.cms-chip); the list look is the filter's own. */
+  /* Chips are the design's (.cms-chip); the list look is the filter's own. */
   .cms-filter__option { position: relative; cursor: pointer; }
   .cms-filter__option input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
   .cms-filter__count { opacity: .65; font-size: .85em; font-variant-numeric: tabular-nums; }
@@ -150,7 +150,7 @@
   a.cms-card { transition: transform 160ms ease, box-shadow 160ms ease; }
   a.cms-card:hover { transform: translateY(-2px); }
 
-  /* A row of buttons. Buttons themselves are the design system's (buttons.css). */
+  /* A row of buttons. Buttons themselves are the design's (buttons.css). */
   .cms-buttons { display: flex; flex-wrap: wrap; gap: var(--space-3, 0.75rem); }
   .cms-buttons[data-justify="center"] { justify-content: center; }
   .cms-buttons[data-justify="end"] { justify-content: flex-end; }
@@ -159,7 +159,7 @@
   .cms-heading__link { float: left; margin-left: -1.1em; width: 1.1em; color: var(--color-muted, rgb(0 0 0 / .45)); text-decoration: none; opacity: 0; transition: opacity 150ms ease; }
   .cms-heading:hover .cms-heading__link, .cms-heading__link:focus-visible { opacity: 1; }
 
-  /* The Input block looks like every other field (the design system's `fields`); a slider takes the width. */
+  /* The Input block looks like every other field (the design's `fields`); a slider takes the width. */
   input.cms-input[type="range"] { width: 100%; accent-color: var(--color-primary, auto); }
 
   .cms-icon { display: inline-flex; flex: none; width: 1.25em; height: 1.25em; line-height: 0; }

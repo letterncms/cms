@@ -8,7 +8,7 @@ use Cms\Modules\Blocks\Css;
 use Cms\Modules\Blocks\StyleCompiler;
 
 /**
- * Turns the design system into one stylesheet: a small reset, @font-face rules,
+ * Turns the design into one stylesheet: a small reset, @font-face rules,
  * tokens as custom properties (+ dark mode), element defaults, prose styles,
  * form fields, button variants and page transitions. custom.css is appended by Design.
  */
@@ -47,7 +47,7 @@ final class DesignCompiler
     private const string NAME = '\.(?!cms-)[a-z][a-z0-9-]{0,40}';
 
     /**
-     * Is this a selector the design may style? ELEMENTS are the ones the Design System offers; beside them a small
+     * Is this a selector the design may style? ELEMENTS are the ones the Design offers; beside them a small
      * grammar covers what a site otherwise wrote custom CSS for, and nothing that could select by id or attribute,
      * reach the runtime's own classes or break out of the rule:
      *
@@ -68,7 +68,7 @@ final class DesignCompiler
             || preg_match('/^'.$part.'(?: (?:> )?'.$part.'){0,2}(?::hover|:focus-visible|:active|:first-child|:last-child|::before|::after|::marker|::placeholder)?$/D', $selector) === 1);
     }
 
-    /** The elements prose styles: every one is in the Design System's prose sample. */
+    /** The elements prose styles: every one is in the Design's prose sample. */
     public const array PROSE_ELEMENTS = [
         'h2', 'h3', 'h4', 'p', 'a', 'a:hover', 'strong', 'em', 'mark', 'small', 'code', 'kbd', 'pre', 'blockquote', 'hr', 'ul', 'ol', 'li', 'img', 'figcaption', 'table', 'th', 'td', '::selection',
     ];

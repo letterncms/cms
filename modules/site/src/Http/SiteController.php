@@ -28,7 +28,7 @@ final class SiteController
 {
     public function __construct(private readonly Cms $cms, private readonly Renderer $renderer) {}
 
-    /** Every form field, or every button, in each of its states: the Design System's live specimen. */
+    /** Every form field, or every button, in each of its states: the Design's live specimen. */
     public function specimen(string $kind): SymfonyResponse
     {
         $html = $this->renderer->specimen(static fn () => app(\Cms\Modules\Site\Design\Specimen::class)->html($kind), match ($kind) { 'buttons' => __('Buttons'), 'sizes' => __('Sizes'), 'prose' => __('Prose'), default => __('Form Fields') });

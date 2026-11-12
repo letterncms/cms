@@ -10,8 +10,8 @@ use Cms\Modules\Blocks\Elements;
 use Cms\Modules\Blocks\Icons;
 
 /**
- * The design system's specimens: every kind of form field, and every button, in each of
- * their states, drawn by the site's own stylesheet. The Design System shows one part at a
+ * The design's specimens: every kind of form field, and every button, in each of
+ * their states, drawn by the site's own stylesheet. The Design shows one part at a
  * time (body[data-show]); data-cms-state shows a state without the pointer or keyboard.
  */
 final class Specimen
@@ -29,7 +29,7 @@ final class Specimen
             $html .= '<section class="specimen" data-part="'.e($part).'"><div class="specimen-title" role="heading" aria-level="2">'.e($title).'</div>'.$content.'</section>';
         }
 
-        // One column that always shows everything, part after part (titles are not h2s: the site styles those); the Design System scrolls to the part being edited and marks it.
+        // One column that always shows everything, part after part (titles are not h2s: the site styles those); the Design scrolls to the part being edited and marks it.
         $style = 'body{margin:0;min-height:0;background:var(--color-background,#fff);color:var(--color-foreground,inherit)}'
             .'.specimen-board{display:grid;gap:48px;max-width:34rem;padding:40px 32px}'
             .'.specimen{display:grid;gap:16px;scroll-margin:32px}'
@@ -149,7 +149,7 @@ final class Specimen
 
     /**
      * An article with every element prose can style (DesignCompiler::PROSE_ELEMENTS), each marked as the part the
-     * Design System shows while it is edited, and blocks of their own in it: a callout that is prose too, with
+     * Design shows while it is edited, and blocks of their own in it: a callout that is prose too, with
      * paragraphs of its own, and a button, which keeps its look.
      *
      * @return array<string, array{string, string}>

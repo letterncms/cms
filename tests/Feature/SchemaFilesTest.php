@@ -116,7 +116,7 @@ final class SchemaFilesTest extends TestCase
         $this->assertNotContains('collections/events.talk.json', $this->files());
     }
 
-    public function test_the_files_follow_a_fieldset_and_a_global_set(): void
+    public function test_the_files_follow_a_fieldset_and_a_global(): void
     {
         $this->ability('fieldsets/save', ['handle' => 'venue', 'title' => 'Venue', 'fields' => [['handle' => 'city', 'type' => 'text']]]);
         $this->ability('collections/save', ['handle' => 'events', 'definition' => ['title' => 'Events', 'fields' => [['import' => 'venue']]]]);
@@ -127,7 +127,7 @@ final class SchemaFilesTest extends TestCase
         $this->assertSame(['city', 'country'], array_keys($this->schema('collections/events.json')['properties']));
 
         $set = $this->ability('globals/save', ['handle' => 'company', 'title' => 'Company', 'fields' => [['handle' => 'phone', 'type' => 'text']]]);
-        $this->assertSame('Company: the values of a global set', $this->schema('globals/company.json')['title']);
+        $this->assertSame('Company: the values of a global', $this->schema('globals/company.json')['title']);
         $this->assertSame(['phone'], array_keys($this->schema('globals/company.json')['properties']));
 
         $this->ability('globals/delete', ['handle' => $set['handle'] ?? 'company']);

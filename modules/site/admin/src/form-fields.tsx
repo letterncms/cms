@@ -196,7 +196,7 @@ export function fieldVars(schema: FieldSchema, values: FieldValues): string {
 }
 
 /**
- * The form fields of the design system: one row for what every field shares, then each
+ * The form fields of the design: one row for what every field shares, then each
  * state and each kind of field, each opening on its controls. `onShow` says which part of
  * the specimen to draw: the open row's, or all of it.
  */

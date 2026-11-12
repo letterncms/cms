@@ -1,5 +1,5 @@
 /* Buttons. Their size is the control size scale fields share (data-size → --control-*), their
-   look a variant from the design system. Three layers, so nothing depends on specificity: the
+   look a variant from the design. Three layers, so nothing depends on specificity: the
    base and the core variants, then the site's variants, then shapes and states, which a
    variant can't undo. [data-cms-state] shows a state without the pointer, for the specimen. */
 @layer components {

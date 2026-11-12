@@ -136,7 +136,7 @@
   "Free-form labels, separated by Enter or a comma.": "Étiquettes libres, séparées par Entrée ou une virgule.",
   "GD or Imagick (images)": "GD ou Imagick (images)",
   "Get View": "Obtenir la vue",
-  "Global set \":handle\" does not exist.": "L’ensemble global « :handle » n’existe pas.",
+  "Global \":handle\" does not exist.": "L’contenu global « :handle » n’existe pas.",
   "Go to Dashboard": "Aller au tableau de bord",
   "Green": "Vert",
   "Grid": "Grille",

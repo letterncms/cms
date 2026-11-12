@@ -19,7 +19,7 @@ const manifest = {
   settingsNav: [{ id: 'system', label: 'System', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }],
 }
 const boot = { base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
-const titles = ['Refine the launch page', 'Draft the autumn newsletter', 'Review page descriptions', 'Update the design system', 'Plan next month’s content']
+const titles = ['Refine the launch page', 'Draft the autumn newsletter', 'Review page descriptions', 'Update the design', 'Plan next month’s content']
 let chats = Array.from({ length: 70 }, (_, i) => ({ id: `chat-${i + 1}`, title: titles[i] ?? `Earlier conversation ${i + 1}`, updatedAt: new Date(Date.now() - i * 3600000).toISOString() }))
 let requests = [], created = 0
 const surface = {

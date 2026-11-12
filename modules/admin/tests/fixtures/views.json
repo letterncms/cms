@@ -554,17 +554,17 @@
         "root": {
             "type": "ui/page",
             "props": {
-                "title": "Global Sets",
+                "title": "Globals",
                 "icon": "globe",
                 "actions": [
                     {
-                        "label": "New Global Set",
+                        "label": "New Global",
                         "icon": "plus",
                         "variant": "primary",
                         "ability": "globals/save",
                         "form": {
-                            "title": "New Global Set",
-                            "confirm": "Create Global Set",
+                            "title": "New Global",
+                            "confirm": "Create Global",
                             "fields": [
                                 {
                                     "handle": "title",
@@ -600,7 +600,7 @@
                     "type": "ui/records",
                     "props": {
                         "id": "globals",
-                        "label": "Global Sets",
+                        "label": "Globals",
                         "key": "handle",
                         "source": {
                             "ability": "globals/list",
@@ -639,7 +639,7 @@
                         ],
                         "empty": {
                             "icon": "globe",
-                            "title": "No global sets yet"
+                            "title": "No globals yet"
                         }
                     }
                 }

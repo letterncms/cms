@@ -47,7 +47,7 @@ export function TokenList({ group, value, onPick, detach }: { group: string; val
   const { byGroup } = useTokens()
   const tokens = byGroup.get(group) ?? []
   const current = typeof value === 'string' && value.startsWith('token:') ? value.slice(6).split('/')[0] : null
-  if (!tokens.length) return <p className="m-0 px-2 py-2 text-2xs text-faint">{t('No {group} tokens in the design system.', { group })}</p>
+  if (!tokens.length) return <p className="m-0 px-2 py-2 text-2xs text-faint">{t('No {group} tokens in the design.', { group })}</p>
   return (
     <div>
       <p className="cms-label m-0 px-2 pb-1 pt-1.5 !text-2xs">{t('Tokens')}</p>

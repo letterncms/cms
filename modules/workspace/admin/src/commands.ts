@@ -55,7 +55,7 @@ registry.composer.set('workspace-create', {
   },
 })
 
-// Every screen and global set, but the one on view.
+// Every screen and global, but the one on view.
 registry.composer.set('workspace-places', {
   trigger: '/', label: t('Go To'), order: 30,
   search: (query) => {

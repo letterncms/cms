@@ -232,10 +232,10 @@ final class EntriesTest extends TestCase
         $this->cms()->entryService()->create('notes', ['title' => 'B', 'status' => 'published', 'data' => ['list' => 'Newsletter']]);
     }
 
-    public function test_globals_values(): void
+    public function test_global_values(): void
     {
-        $set = new \Cms\Content\Globals\GlobalSet('footer', 'Footer', 'globe', [['handle' => 'tagline', 'type' => 'text'], ['handle' => 'year', 'type' => 'number']]);
-        $this->cms()->globals()->save($set);
+        $global = new \Cms\Content\Globals\GlobalContent('footer', 'Footer', 'globe', [['handle' => 'tagline', 'type' => 'text'], ['handle' => 'year', 'type' => 'number']]);
+        $this->cms()->globals()->save($global);
 
         $this->cms()->globals()->updateValues('footer', ['tagline' => 'Made with care', 'year' => '2026']);
         $this->cms()->globals()->updateValues('footer', ['tagline' => 'Mit Sorgfalt gemacht'], 'de');

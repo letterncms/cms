@@ -25,7 +25,7 @@ Everything on this page is made of blocks. Open it in the admin, press / to add 
 ::::: column
 ### Shape the design
 
-Open Design System in the admin’s sidebar to change colors, fonts and spacing. Every page follows.
+Open Design in the admin’s sidebar to change colors, fonts and spacing. Every page follows.
 :::::
 ::::: column
 ### Model your content

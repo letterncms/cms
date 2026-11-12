@@ -17,7 +17,7 @@
   .cms-skip:focus { top: 1rem; }
 }
 @layer elements {
-  /* Prose is a flow of blocks, whatever they are, spaced by the design system's Prose spacing. An element that only
+  /* Prose is a flow of blocks, whatever they are, spaced by the design's Prose spacing. An element that only
      holds blocks (data-cms-contents: Page Content without a box of its own) is looked through. A block inside keeps
      its own layout: a Box or Repeat is not text (as a list or a link), and one with text of its own is Prose too. */
   .cms-prose > * + *, .cms-prose > [data-cms-contents] > * + *, .cms-prose > * + [data-cms-contents] > :first-child { margin-top: var(--prose-blocks, 1.1em); }

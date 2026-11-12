@@ -126,7 +126,7 @@ const optionKey = (key: string) => key.replace(/^[^A-Za-z_]+/, '').slice(0, 41)
 /**
  * A behaviour written for the site: the script of the design mounted on the block (`behavior`), when it runs and
  * with which options, and the scripts and styles the block brings to its page (`code`). The files are the ones
- * Design System › Code lists; putting them on a block needs the same permission as editing them.
+ * Design › Code lists; putting them on a block needs the same permission as editing them.
  */
 function ScriptBehavior({ node }: { node: BlockNode }) {
   const { store } = useEditorContext()

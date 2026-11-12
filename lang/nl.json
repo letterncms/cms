@@ -136,7 +136,7 @@
   "Free-form labels, separated by Enter or a comma.": "Vrije labels, gescheiden door Enter of een komma.",
   "GD or Imagick (images)": "GD of Imagick (afbeeldingen)",
   "Get View": "Weergave ophalen",
-  "Global set \":handle\" does not exist.": "Globale set \":handle\" bestaat niet.",
+  "Global \":handle\" does not exist.": "Globale inhoud \":handle\" bestaat niet.",
   "Go to Dashboard": "Naar dashboard",
   "Green": "Groen",
   "Grid": "Raster",

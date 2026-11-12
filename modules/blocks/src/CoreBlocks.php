@@ -57,7 +57,7 @@ final class CoreBlocks
                 'description' => 'A container for anything.',
                 'keywords' => ['div', 'frame', 'container', 'group', 'wrapper', 'flex', 'stack', 'row', 'nav', 'header'],
                 'children' => true, 'html' => 'div',
-                'fields' => [$tags(Elements::BOX_TAGS, 'div'), ...$link, ['handle' => 'prose', 'type' => 'toggle', 'label' => 'Prose', 'about' => 'Long-form text: the design system’s Prose spacing and styles for every block inside.', 'design' => true], ['handle' => 'type', 'type' => 'select', 'label' => 'Button Type', 'options' => ['button' => 'Button', 'submit' => 'Submit'], 'default' => 'button', 'if' => ['tag' => 'button'], 'advanced' => true]],
+                'fields' => [$tags(Elements::BOX_TAGS, 'div'), ...$link, ['handle' => 'prose', 'type' => 'toggle', 'label' => 'Prose', 'about' => 'Long-form text: the design’s Prose spacing and styles for every block inside.', 'design' => true], ['handle' => 'type', 'type' => 'select', 'label' => 'Button Type', 'options' => ['button' => 'Button', 'submit' => 'Submit'], 'default' => 'button', 'if' => ['tag' => 'button'], 'advanced' => true]],
                 'render' => Elements::box(...),
                 'example' => ['tag' => 'nav'],
             ],
@@ -502,7 +502,7 @@ final class CoreBlocks
                 'description' => 'Where each page’s content goes.', 'keywords' => ['slot', 'content', 'body', 'main', 'template'],
                 'fields' => [
                     ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Wrap in a Container', 'about' => 'Give the content one box to size and space. Without it, its blocks join the layout around it.'],
-                    ['handle' => 'prose', 'type' => 'toggle', 'label' => 'Prose', 'about' => 'Long-form text: the design system’s Prose spacing and styles for every block inside.', 'design' => true],
+                    ['handle' => 'prose', 'type' => 'toggle', 'label' => 'Prose', 'about' => 'Long-form text: the design’s Prose spacing and styles for every block inside.', 'design' => true],
                     ['handle' => 'permalinks', 'type' => 'toggle', 'label' => 'Add # Links to Headings'],
                 ],
                 'render' => Elements::outlet(...),

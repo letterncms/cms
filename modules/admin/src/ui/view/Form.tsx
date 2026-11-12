@@ -24,7 +24,7 @@ export interface FormProps {
   width?: 'narrow' | 'wide'
   onDirty?: (dirty: boolean) => void
   settings?: boolean
-  /** What the fields are told about where they are, such as a global set's `locale`. */
+  /** What the fields are told about where they are, such as a global's `locale`. */
   context?: Record<string, unknown>
 }
 
