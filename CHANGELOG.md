@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.29.0 (2026-11-12)
+
 ### Fixed
 
 - **Switches show their knob in the monochrome accent.** In dark mode, a switch that is on in the white accent no longer loses its white knob on the white track.
