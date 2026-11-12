@@ -26,6 +26,12 @@ export function settingsIds(manifest: Manifest): Set<string> {
   return new Set(manifest.settingsNav.flatMap((s) => s.items))
 }
 
+/** Where settings open: General, or the first page this person may see (their account). */
+export function settingsHome(manifest: Manifest): string | undefined {
+  const general = manifest.nav.find((n) => n.id === 'settings.site')
+  return general?.path ?? manifest.nav.find((n) => n.id === manifest.settingsNav[0]?.items[0])?.path
+}
+
 function settingsPlace(manifest: Manifest, path: string): boolean {
   const item = placeAt(manifest.nav, path)
   return !!item && settingsIds(manifest).has(item.id)

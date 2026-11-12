@@ -1,6 +1,6 @@
 import { boot, can, getManifest, loadManifest, navigate, run, setManifest, setPreference, t, type Arrangement, type Manifest, type Sidebar } from '@letterncms/sdk'
 import { confirm, toast } from '../ui'
-import { inSettings, placeAt } from '../ui/place'
+import { inSettings, placeAt, settingsHome } from '../ui/place'
 
 /**
  * The sidebar people pin: items in sections, those that are `hidden` wait
@@ -179,11 +179,8 @@ export function lastApp(): string {
   return manifest.nav.find((n) => n.id === first)?.path ?? '/'
 }
 
-/** Settings open on General, as /settings does (or the first page this person may see, their account). */
 export function openSettings() {
-  const manifest = getManifest()
-  const general = manifest.nav.find((n) => n.id === 'settings.site')
-  const to = general?.path ?? manifest.nav.find((n) => n.id === manifest.settingsNav[0]?.items[0])?.path
+  const to = settingsHome(getManifest())
   if (to) navigate(to)
 }
 
