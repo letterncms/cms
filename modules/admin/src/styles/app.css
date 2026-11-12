@@ -549,6 +549,8 @@
       box-shadow: var(--cms-shadow-sheet);
     }
     .cms-shell[data-inset]:not([data-sidebar]) .cms-dock[data-open][data-full]:not([data-floating]) .cms-dock-panel { width: calc(100vw - 16px); }
+    /* On the sheet the chat you are in is the desk's tone, as on the drawer, so it still reads. */
+    .cms-shell[data-inset] .cms-dock[data-full] .cms-sidebar-row-active { background: var(--cms-active); box-shadow: none; }
     /* The banner is above the screen's sheet, not the chat's. */
     .cms-shell[data-inset]:has(.cms-dock[data-full]) .cms-leading { translate: 0 0; }
     .cms-shell[data-inset]:not([data-sidebar]):has(.cms-dock[data-full]) .cms-leading { translate: 8px 0; }
