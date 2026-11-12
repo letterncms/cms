@@ -1,0 +1,1 @@
+function e(e){let t=e.map(e=>Math.round((e.parentElement??e).getBoundingClientRect().top)),n=-1,r=NaN;return t.map(e=>(Math.abs(e-r)<2||(n++,r=e),n))}export{e as t};
