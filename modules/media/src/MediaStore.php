@@ -19,7 +19,7 @@ final class MediaStore
         'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp', 'image/avif' => 'avif', 'image/svg+xml' => 'svg',
         'application/pdf' => 'pdf', 'video/mp4' => 'mp4', 'video/webm' => 'webm', 'video/quicktime' => 'mov',
         'audio/mpeg' => 'mp3', 'audio/mp4' => 'm4a', 'audio/ogg' => 'ogg', 'audio/wav' => 'wav', 'audio/x-wav' => 'wav',
-        'text/plain' => 'txt', 'text/csv' => 'csv',
+        'text/plain' => 'txt', 'text/csv' => 'csv', 'text/markdown' => 'md',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
@@ -501,8 +501,17 @@ final class MediaStore
             }
         }
 
-        if ($mime === 'text/plain' && strtolower(pathinfo($name, PATHINFO_EXTENSION)) === 'csv') {
-            return 'text/csv';
+        // Plain text is told apart by what it is called: a table, or Markdown.
+        if (in_array($mime, ['text/plain', 'text/markdown', 'text/x-markdown'], true)) {
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+            if ($ext === 'csv' && $mime === 'text/plain') {
+                return 'text/csv';
+            }
+
+            if (in_array($ext, ['md', 'markdown'], true) || $mime !== 'text/plain') {
+                return 'text/markdown';
+            }
         }
 
         return $mime;

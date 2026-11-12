@@ -2,6 +2,7 @@ import { can, locale, setQuery, t, useAbility, useLocation, type FieldDef } from
 import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, NoMatches, SelectionBar, cn, copyText, drawing, formatBytes, readViewPrefs } from '@letterncms/ui'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { deleteFiles } from './actions'
+import { DocumentPreview, hasDocumentPreview } from './documents'
 import { FilePanel } from './FilePanel'
 import { FileTile, KINDS, acceptKind, kindOptions, kindWords, type MediaKind } from './kinds'
 import { FolderTree, MoveDialog, folderActions, folderAfter, folderName } from './Folders'
@@ -112,7 +113,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
       void send(mode === 'pick' && !multiple ? files.slice(0, 1) : files)
     },
   }
-  const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className={cn('absolute inset-0 size-full', drawing(item.thumb) ? 'object-contain p-4' : 'object-cover')} style={drawing(item.thumb) ? undefined : { objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : <FileTile item={item} />
+  const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className={cn('absolute inset-0 size-full', drawing(item.thumb) ? 'object-contain p-4' : 'object-cover')} style={drawing(item.thumb) ? undefined : { objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : hasDocumentPreview(item) ? <DocumentPreview item={item} /> : <FileTile item={item} />
   // What a picker opens on (images, for an image field) is where it starts, not something someone filtered by:
   // an empty library says so and offers the upload, never "No matches".
   // Nor is the folder on view: an empty folder is empty, not a search that found nothing.

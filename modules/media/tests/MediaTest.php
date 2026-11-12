@@ -154,6 +154,20 @@ final class MediaTest extends TestCase
         }
     }
 
+    public function test_plain_text_is_told_apart_by_its_name_into_a_table_or_markdown(): void
+    {
+        $file = tempnam(sys_get_temp_dir(), 'md');
+        file_put_contents($file, "# Notes\n\nSome *words*.\n");
+        $store = app(MediaStore::class);
+
+        $this->assertSame('text/markdown', $store->detect($file, 'notes.md'));
+        $this->assertSame('text/markdown', $store->detect($file, 'notes.markdown'));
+        $this->assertSame('text/plain', $store->detect($file, 'notes.txt'));
+        $this->assertSame('text/csv', $store->detect($file, 'notes.csv'));
+        $this->assertSame('md', MediaStore::TYPES['text/markdown']);
+        unlink($file);
+    }
+
     public function test_the_library_filters_by_every_kind_and_a_texture_is_no_image(): void
     {
         $types = ['photo.jpg' => 'image/jpeg', 'film.mp4' => 'video/mp4', 'song.mp3' => 'audio/mpeg', 'report.pdf' => 'application/pdf', 'chair.glb' => 'model/gltf-binary', 'room.gltf' => 'model/gltf+json',

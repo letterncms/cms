@@ -9,7 +9,9 @@
     "dev": "vite build --watch --mode development",
     "typecheck": "tsc -p ."
   },
-  "dependencies": {},
+  "dependencies": {
+    "pdfjs-dist": "^6.5.438"
+  },
   "devDependencies": {
     "@letterncms/admin": "workspace:*",
     "@letterncms/sdk": "workspace:*",
