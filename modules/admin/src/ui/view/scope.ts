@@ -37,6 +37,31 @@ export function fill<T>(value: T, scope: Scope): T {
   return value
 }
 
+/** A filter whose resting value splits a list in parts (a language), where "All" or "Any" only narrows it. */
+export function splits(filter: { default?: unknown; all?: unknown }): boolean {
+  return filter.all === undefined && !['', 'any', 'all'].includes(String(filter.default ?? ''))
+}
+
+type Node = { type: string; props?: Record<string, unknown>; children?: Node[] }
+
+/**
+ * The address a place reads: what it names, over the resting values of the filters that split its lists.
+ * A list in a language with no `?locale=` shows the language its chip says, and so does what counts it.
+ */
+export function placeQuery(root: Node, address: Record<string, string>): Record<string, string> {
+  const resting: Record<string, string> = {}
+  const walk = (node: Node) => {
+    if (node.type === 'ui/records') {
+      for (const filter of (node.props?.filters ?? []) as { param: string; default?: unknown; all?: unknown }[]) {
+        if (splits(filter) && !(filter.param in resting)) resting[filter.param] = String(filter.default)
+      }
+    }
+    node.children?.forEach(walk)
+  }
+  walk(root)
+  return { ...resting, ...Object.fromEntries(Object.entries(address).filter(([, v]) => v !== '')) }
+}
+
 /** Input for an ability: filled in, and without the keys that came out empty (no filter, no search). */
 export function input(value: Record<string, unknown> | unknown[] | undefined, scope: Scope): Record<string, unknown> {
   // An empty input can arrive as a list (PHP's `[]`): it is no input.
