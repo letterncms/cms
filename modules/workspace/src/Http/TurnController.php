@@ -79,7 +79,7 @@ final class TurnController
 
         $thread = empty($data['thread'])
             ? new Thread(['user_id' => $user->id, 'turns' => [], 'title' => ''])
-            : Thread::query()->where('user_id', $user->id)->findOrFail($data['thread']);
+            : Thread::mine($user->id)->findOrFail($data['thread']);
 
         $lock = $thread->exists ? Cache::lock("cms-workspace:{$thread->id}", 900) : null;
 
