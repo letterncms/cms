@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { fill, holds, input, safeUrl } from '../src/ui/view/scope.ts'
+import { fill, holds, input, placeQuery, safeUrl } from '../src/ui/view/scope.ts'
 
 const scope = { params: { id: '7' }, query: { locale: '' }, row: { id: 'a1', name: 'Ada', tags: ['x'], user: { name: 'Bea' }, to: null } }
 
@@ -40,4 +40,20 @@ test('links are web addresses or the site’s own, never scripts', () => {
   assert.equal(safeUrl('//evil.example'), null)
   assert.equal(safeUrl('data:text/html,hi'), null)
   assert.equal(safeUrl(''), null)
+})
+
+test('a list split by language reads the lit language while the address names none, and so does its count', () => {
+  // As ContentModule draws a collection of a site in English and Dutch.
+  const list = { type: 'ui/records', props: { source: { ability: 'entries/list', input: { collection: 'surveys', locale: '{query.locale}', status: '{query.status}' } }, filters: [
+    { param: 'status', label: 'Status', display: 'segmented', default: 'any' },
+    { param: 'locale', label: 'Language', display: 'segmented', default: 'en' },
+  ] } }
+  const root = { type: 'ui/page', props: { count: { source: { ability: 'entries/list', input: { collection: 'surveys', locale: '{query.locale}', perPage: 1 } } } }, children: [list] }
+  const scope = (address) => ({ params: {}, query: placeQuery(root, address) })
+
+  assert.deepEqual(input(list.props.source.input, scope({})), { collection: 'surveys', locale: 'en' })
+  assert.deepEqual(input(root.props.count.source.input, scope({})), { collection: 'surveys', locale: 'en', perPage: 1 })
+  // What the address names wins; "All" stays no filter at all.
+  assert.deepEqual(input(list.props.source.input, scope({ locale: 'nl', status: 'draft' })), { collection: 'surveys', locale: 'nl', status: 'draft' })
+  assert.deepEqual(input(list.props.source.input, scope({ locale: '' })), { collection: 'surveys', locale: 'en' })
 })

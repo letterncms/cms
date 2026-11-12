@@ -8,7 +8,7 @@ import { useActions, type ActionAsker, type ActionRunner } from './actions'
 import { ViewContext } from './context'
 import { recordsLoad, type RecordsProps } from './Records'
 import { ViewNodeView } from './render'
-import { fill, input, type Scope } from './scope'
+import { fill, input, placeQuery, type Scope } from './scope'
 
 /**
  * Draws a view's tree for the person looking: its lists and forms load through their abilities, its buttons run theirs.
@@ -18,7 +18,8 @@ import { fill, input, type Scope } from './scope'
  */
 export function View({ root, params = {}, embedded = false, run, ask }: { root: ViewNode; params?: Record<string, string>; embedded?: boolean; run?: ActionRunner; ask?: ActionAsker }) {
   const { query: address, path } = useLocation()
-  const query = embedded ? NONE : address
+  // A list split by language shows the lit one while the address names none, and so does its count.
+  const query = useMemo(() => placeQuery(root, embedded ? NONE : address), [root, embedded, address])
   const manifest = useManifest()
   const scope: Scope = useMemo(() => ({ params, query, user: manifest.user, origin: window.location.origin }), [params, query, manifest.user])
   const refresh = useCallback(() => {}, [])
@@ -83,7 +84,7 @@ export function viewRoute(id: string, path: string, options: { private?: boolean
     // The place appears whole: its view, then what its tab on view loads, before it shows.
     load: async (params, location) => {
       const view = await prefetchAbility<ViewDocument>('views/get', { id, params })
-      const scope = { params, query: location.query, user: getManifest().user, origin: window.location.origin }
+      const scope = { params, query: placeQuery(view.root, location.query), user: getManifest().user, origin: window.location.origin }
       await Promise.all(loads(view.root, location.query.tab).map(([ability, input]) => prefetchAbility(ability, input).catch(() => undefined)))
       function loads(node: ViewNode, tab: string | undefined): [string, Record<string, unknown>][] {
         const p = node.props ?? {}

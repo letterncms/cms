@@ -22,7 +22,7 @@ import { readViewPrefs, useViewPrefs } from '../viewPrefs'
 import { ActionButton, place, shown } from './actions'
 import { useView } from './context'
 import { formatValue, mediaIds, plainValue, type MediaThumb } from './formats'
-import { at, fill, holds, input, safeUrl, type Scope } from './scope'
+import { at, fill, holds, input, safeUrl, splits, type Scope } from './scope'
 
 interface Column {
   key: string
@@ -72,7 +72,7 @@ interface Column {
 }
 
 /** A filter whose resting value shows everything ("All", "Any"): it narrows the list. Any other splits it in parts, such as a language. */
-const narrows = (f: Filter) => f.all !== undefined || ['', 'any', 'all'].includes(String(f.default ?? ''))
+const narrows = (f: Filter) => !splits(f)
 
 interface Filter {
   param: string

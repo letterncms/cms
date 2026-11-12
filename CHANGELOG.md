@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- A collection's list on a site with several languages shows the language whose chip is lit, also before one is picked, and the number beside its name counts that language. It showed the entries of every language under **EN**.
 - A collection with many fields opens its list again: with more than twelve columns to offer, the list showed “Allows at most 12 items” instead of its entries.
 
 ## 0.25.0 (2026-11-12)
