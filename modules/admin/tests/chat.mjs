@@ -72,14 +72,14 @@ try {
   await wait(() => dock() && toggle() && screen() === 'Pages', 'admin did not load')
   await test('The chat is a dock beside the page, out of the way until asked for, and never saves an empty chat', async () => {
     assert(!isOpen() && dock().inert, 'dock is not closed at the start')
-    assert(toggle().getAttribute('aria-pressed') === 'false', 'top bar toggle does not say the chat is closed')
+    assert(toggle() && !toggle().hasAttribute('aria-pressed'), 'top bar has no Chat button while the chat is closed')
     assert(!document.querySelector('.cms-side-panel nav[aria-label="Chats"]'), 'chats are listed in the main sidebar')
     const sidebar = document.querySelector('.cms-side-panel'), before = sidebar.getBoundingClientRect()
     toggle().click()
     await wait(() => isOpen() && document.activeElement === composer(), 'toggle did not open the dock with the focus in its composer')
     assert(!isFull() && !dock().inert && location.pathname === '/admin/content/pages', 'opening the dock left the page')
     assert(screen() === 'Pages' && !document.querySelector('.cms-sheet').inert, 'the page beside the dock is not live')
-    assert(toggle()?.getAttribute('aria-pressed') === 'true', 'top bar toggle left its place beside a docked chat, or does not say it is open')
+    assert(!toggle(), 'the Chat button stayed in the top bar beside a docked chat')
     await settle()
     await wait(() => document.querySelector('.cms-sheet').getBoundingClientRect().right <= dock().querySelector('.cms-dock-panel').getBoundingClientRect().left + 1, 'dock covers the page instead of sitting beside it')
     await wait(() => historyRows().length === 30, 'a new chat does not list the first page of chats')
@@ -184,12 +184,12 @@ try {
       assert(asked === 0 && !document.querySelector('[role="dialog"], [role="alertdialog"]') && screen() === 'Pages', 'the chat asked about leaving a page it never left')
     } finally { window.confirm = original; unblock() }
   })
-  await test('Detached, the chat floats over the page and the top bar toggle closes it', async () => {
-    control('Detach').click(); await wait(() => dock().hasAttribute('data-floating') && toggle(), 'Detach did not float the chat')
-    assert(toggle().getAttribute('aria-pressed') === 'true', 'toggle does not say the floating chat is open')
-    toggle().click(); await wait(() => !isOpen() && toggle()?.getAttribute('aria-pressed') === 'false', 'toggle did not close the floating chat')
-    toggle().click(); await wait(() => isOpen(), 'toggle did not reopen the floating chat')
-    control('Dock Beside the Page').click(); await wait(() => !dock().hasAttribute('data-floating') && toggle()?.getAttribute('aria-pressed') === 'true', 'chat did not dock again')
+  await test('Detached, the chat floats over the page, and closing it brings the Chat button back with the focus on it', async () => {
+    control('Detach').click(); await wait(() => dock().hasAttribute('data-floating'), 'Detach did not float the chat')
+    assert(!toggle(), 'the Chat button stayed in the top bar beside a floating chat')
+    control('Close').click(); await wait(() => !isOpen() && toggle() && document.activeElement === toggle(), 'closing the floating chat did not bring the Chat button back with the focus on it')
+    toggle().click(); await wait(() => isOpen() && !toggle(), 'the Chat button did not reopen the floating chat')
+    control('Dock Beside the Page').click(); await wait(() => !dock().hasAttribute('data-floating') && !toggle(), 'chat did not dock again')
   })
   await test('The shortcut opens the chat, keeps it from the page, and puts it away from inside', async () => {
     control('Close').click(); await wait(() => !isOpen(), 'Close failed')

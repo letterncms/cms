@@ -1,16 +1,27 @@
 import { t } from '@letterncms/sdk'
-import { Button, Spinner, Tooltip, cn } from '@letterncms/ui'
-import { panel, usePanel } from './store'
+import { Button, Spinner, Tooltip } from '@letterncms/ui'
+import { useLayoutEffect, useRef } from 'react'
+import { panel, toggleReturn, usePanel } from './store'
 
-/** In every screen's bar: opens the thread as you left it, and closes it again. It stays in its place while the thread is out, pressed. */
+/** In every screen's bar while the thread is away: a filled button that opens it as you left it. The thread's own close puts it back. */
 export function ChatToggle() {
   const { mode, working, awaiting } = usePanel()
   const open = mode !== 'closed'
+  const ref = useRef<HTMLButtonElement>(null)
+  // Only coming back from the thread eases in, and takes the focus: a screen that loads with it closed just has it.
+  useLayoutEffect(() => {
+    const button = ref.current
+    if (open || !button) return
+    const { back, focus } = toggleReturn()
+    button.toggleAttribute('data-back', back)
+    if (focus) button.focus()
+  }, [open])
+  if (open) return null
   return (
     <Tooltip content={t('Chat')} shortcut="mod+j" side="bottom">
-      <Button data-workspace-toggle variant="ghost" icon={!open && (working || awaiting) ? undefined : 'comment'} aria-pressed={open} onClick={() => (open ? panel.close() : panel.open())} className={cn('aria-pressed:bg-active aria-pressed:text-ink', !open && 'text-muted hover:text-text')}>
-        {!open && awaiting && <span role="status" aria-label={t('Waiting for your go-ahead')} className="size-1.5 rounded-full bg-signal ring-1 ring-border-strong" />}
-        {!open && !awaiting && working && <span role="status" aria-label={t('Working…')}><Spinner size={12} /></span>}
+      <Button ref={ref} data-workspace-toggle variant="ghost" icon={working || awaiting ? undefined : 'comment'} onClick={() => panel.open()} className="cms-chat-toggle bg-hover! text-ink! hover:bg-active! [&_svg]:opacity-100">
+        {awaiting && <span role="status" aria-label={t('Waiting for your go-ahead')} className="size-1.5 rounded-full bg-signal ring-1 ring-border-strong" />}
+        {!awaiting && working && <span role="status" aria-label={t('Working…')}><Spinner size={12} /></span>}
         <span className="max-sm:sr-only">{t('Chat')}</span>
       </Button>
     </Tooltip>

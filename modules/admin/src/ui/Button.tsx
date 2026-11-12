@@ -18,7 +18,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variants: Record<ButtonVariant, string> = {
   primary: 'bg-ink text-ink-contrast shadow-edge hover:bg-ink-hover active:bg-ink-active',
   // A sheet of its own: a hairline ring and the slightest lift.
-  secondary: 'bg-float text-text shadow-raise ring-1 ring-border-strong hover:bg-float-hover active:bg-float-active',
+  secondary: 'bg-float text-text shadow-raise ring-1 ring-inset ring-border-strong hover:bg-float-hover active:bg-float-active',
   ghost: 'bg-transparent text-text hover:bg-hover active:bg-active',
   // The way into deleting or removing something: red words on nothing. It opens a confirm, which ends in `danger`.
   destructive: 'bg-transparent text-danger hover:bg-danger-soft active:bg-danger-soft',
