@@ -9,7 +9,13 @@
 ### Changed
 
 - **Breaking.** **The body is set on its field.** Open a blocks, Markdown or rich text field in a collection's fields and check **Use as Body**: its row says **Body**, and choosing another field takes it over. Each blueprint has its own, of any of those types, or none. The **Body Field** setting is gone. In YAML it is `body: true` on the field, in place of `body: <handle>` on the collection, which is no longer read: move it onto the field. `Collection::body($blueprint)`, `Entry::body()` and `Blueprint::body()` give the field; `FieldType::body()` says whether a type can be one, and `fields/types` reports it. Needs Import 0.4 and Market 0.19.
-- **A plugin in the Store has a page of its own**, at `/plugins/store/<vendor>/<name>`, with its crumbs leading back to the Store, in place of a panel over the list. Installed's **View in Store** leads there, and the old `?item=` links still do. `@letterncms/ui`: `Slideover` is gone; a panel at the right is an `InspectorPanel`.
+- **Plugins is one list.** The store and what is installed are the same list, with **Installed** as its filter: an installed plugin has its switch and a menu (**Settings**, **Uninstall**) where the store offers **Install**. **Built In** is a settings page, under System.
+- **A plugin has a page of its own**, at `/plugins/store/<vendor>/<name>`, with its crumbs leading back to Plugins, in place of a panel over the list. The old `?item=` links still lead there. `@letterncms/ui`: `Slideover` is gone; a panel at the right is an `InspectorPanel`, and `PanelHeader` is the first row of every one.
+- **A media file opens in the panel at the right**, not a dialog, and its details are kept as they are typed.
+- **Each site kit keeps its own chats.** A chat belongs to the kit the site was when it started: switching kits lists that kit's chats, and the open chat makes way for a new one.
+- **The full-size chat is a sheet, like the screen**, and shows the current chat. Its header keeps what is used all the time; where the chat sits is in its menu.
+- **Drag the sidebar wider**, as the chat can.
+- The **Settings** crumb leads straight to where settings open, and the sidebar switches to settings with the screen.
 
 ## 0.27.0 (2026-11-12)
 
