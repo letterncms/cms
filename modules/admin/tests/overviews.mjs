@@ -21,12 +21,12 @@ const entry = (id, title) => ({ id, collection: 'posts', locale: 'en', title, sl
 const forms = [{ publishedAt: null, updatedAt: null, handle: 'contact', title: 'Contact', fields: 3, enabled: true, new: 2, total: 8 }, { publishedAt: '2026-10-02T12:00:00+02:00', updatedAt: '2026-10-03T12:00:00+02:00', handle: 'quote', title: 'Quote Request', fields: 7, enabled: false, new: 0, total: 20 }]
 const media = Array.from({ length: 61 }, (_, i) => ({ id: `file-${i}`, name: i === 0 ? 'A very long image name to check truncation and action controls' : `Project image ${String(i).padStart(2, '0')}`, filename: `project-${i}.jpg`, kind: 'image', mime: 'image/jpeg', url: '/fixture.svg', thumb: '/fixture.svg', alt: i % 2 ? 'Project image' : '', size: (i + 1) * 1200, folder: i % 2 ? 'Projects' : '', width: 1200, height: 800, focal: { x: 50, y: 50 }, caption: '', publishedAt: null, updatedAt: '2026-10-27T13:00:00Z', createdAt: new Date(Date.UTC(2026, 9, 27, 0, i)).toISOString() }))
 const plugin = (name, label) => ({ name: `letterncms/${name}`, type: 'plugin', themeKind: null, version: '0.1.0', installedVersion: '0.1.0', label, description: `The ${label} plugin.`, icon: 'plugin', firstParty: true, builtIn: true, core: false, required: false, enabled: true, active: true, problem: null, dependents: [], settings: [] })
-// More than a screenful at a glance: the plugin list gets search and a display menu.
+// More than a screenful at a glance: Built In gets search and a display menu.
 const packages = [['forms', 'Forms'], ['seo', 'SEO'], ['newsletter', 'Newsletter'], ['assistant', 'Assistant'], ['analytics', 'Analytics'], ['brevo', 'Brevo'], ['sync', 'Sync'], ['search', 'Search'], ['redirects', 'Redirects'], ['bookings', 'Bookings']].map(([name, label]) => plugin(name, label))
 const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true }
 // Records that happen on a day: the one kind of overview that offers a calendar.
 const eventsCollection = { ...collection, handle: 'events', title: 'Events', singular: 'Event', newLabel: 'New Event', icon: 'calendar', structure: 'dated' }
-const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
+const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['built-in', 'Built In', '/built-in', 'box'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const manifest = {
   views: mounted,
@@ -106,9 +106,9 @@ try {
     assert(rows().length === 2 && !cards().length, 'globals are not a plain table')
   })
   await test('Long lists get search and display; Grid only with pictures, Calendar only with days', async () => {
-    await open('/plugins', 'Bookings')
-    assert(searchBox() && button('Display'), 'long plugin list lacks search or display')
-    assert(!views().length, 'plugins without pictures offer other views')
+    await open('/built-in', 'Bookings')
+    assert(searchBox() && button('Display'), 'long Built In list lacks search or display')
+    assert(!views().length, 'Built In without pictures offers other views')
     await open('/media', 'Project image')
     assert(searchBox('Search Files') && button('Display'), 'media lacks search or display')
     assert(views().join() === 'Table,Grid', 'media views: ' + views().join())
@@ -164,7 +164,7 @@ try {
     assert(!button('Display'), 'reset short list still shows its display menu')
   })
   await test('Search no-match state uses the shared No matches and Clear Filters recovers', async () => {
-    await open('/plugins', 'Bookings')
+    await open('/built-in', 'Bookings')
     type(searchBox(), 'does-not-exist')
     await wait(() => noMatches()?.textContent.includes('No matches'), 'no-match state missing')
     assert(!main().querySelector('[role="table"]'), 'empty headers shown above no matches')
@@ -176,15 +176,15 @@ try {
   })
   await test('Column choices persist across navigation and Reset Display restores them', async () => {
     await openDisplay()
-    assert(options().Version === true && options().On === true && !('Published' in options()), 'plugin columns: ' + JSON.stringify(options()))
-    await toggle('Version')
+    assert(options().Package === false && options().On === true && !('Published' in options()), 'Built In columns: ' + JSON.stringify(options()))
+    await toggle('Package')
     await closeDisplay()
-    assert(!headerLabels().includes('Version'), 'column did not hide')
+    assert(headerLabels().includes('Package'), 'column did not show')
     await open('/forms', 'Quote Request')
-    await open('/plugins', 'Bookings')
-    assert(!headerLabels().includes('Version'), 'column choice lost on navigation')
+    await open('/built-in', 'Bookings')
+    assert(headerLabels().includes('Package'), 'column choice lost on navigation')
     await resetDisplay()
-    assert(headerLabels().includes('Version'), 'reset did not restore the column')
+    assert(!headerLabels().includes('Package'), 'reset did not restore the columns')
   })
   await test('Media uses shared cards, table, selection, real pagination and server sorting', async () => {
     await open('/media', 'Project image')
@@ -357,7 +357,7 @@ try {
     return last
   }
   await test('Every overview table keeps headers, rows and action buttons aligned', async () => {
-    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/media', 'Project image'], ['/navigation', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/plugins', 'Bookings'], ['/settings/seo?tab=redirects', '301'], ['/forms/contact?tab=submissions', 'Received'], ['/content/posts', 'Beta post'], ['/content/pages', 'Parent page'], ['/content/events', 'Launch event']]
+    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/media', 'Project image'], ['/navigation', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/built-in', 'Bookings'], ['/settings/seo?tab=redirects', '301'], ['/forms/contact?tab=submissions', 'Received'], ['/content/posts', 'Beta post'], ['/content/pages', 'Parent page'], ['/content/events', 'Launch event']]
     for (const [path, expected] of routes) {
       navigate(path); await wait(() => text().includes(expected) && !document.querySelector('[role="progressbar"]'), 'table audit failed to open ' + path); await sleep(50)
       if (view('Table')) await switchView('Table')
@@ -474,7 +474,11 @@ serve('Overview', async (req, res, url) => {
     else if (ability === 'audit/list') data = { ...page([{ id: 'audit-1', ability: 'entries/publish', label: 'Publish Entry', subject: 'Alpha post', to: '/content/posts/alpha', transport: 'rest', user: { id: 'ada', name: 'Ada Example' }, createdAt: '2026-10-27T12:00:00Z', input: {} }]), filters: { people: [{ id: 'ada', name: 'Ada Example' }], actions: [{ value: 'entries/publish', label: 'Publish Entry' }] } }
     else if (ability === 'redirects/list') data = [{ from: '/old', to: '/new', status: 301 }]
     else if (ability === 'settings/get') data = { label: 'SEO', description: '', icon: 'seo', fields: [], values: {} }
-    else if (ability === 'packages/list') data = { items: [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type === 'module' ? p.core && !p.required : input.type !== 'plugin' || !p.core).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
+    // Built In lists what comes with the CMS: here the same ten, as modules, so it is a long list.
+    else if (ability === 'packages/list') data = { items: (input.type === 'module' ? packages.map((p) => ({ ...p, core: true })) : [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type !== 'plugin' || !p.core)).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
+    // Plugins is the store's list: a store with nothing in it, so what is installed is what it shows.
+    else if (ability === 'package-stores/list') data = { items: [{ id: 'default', name: 'Lettern', url: null, default: true, fingerprint: null, problem: null }] }
+    else if (ability === 'packages/catalog') data = { store: 'default', items: [], freshness: 'ok', problem: null, error: null }
     else throw new Error('Unexpected ability: ' + ability)
     return json(res, 200, { data })
   }

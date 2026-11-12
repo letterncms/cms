@@ -16,7 +16,7 @@ final class ViewFixturesTest extends TestCase
 {
     /** The places the fixtures open, and the params they open them with. */
     private const PLACES = [
-        ['audit', []], ['users', []], ['plugins', []], ['globals', []], ['collections', []],
+        ['audit', []], ['users', []], ['plugins', []], ['built-in', []], ['globals', []], ['collections', []],
         ['forms', []], ['media', []], ['navigation', []], ['languages', []], ['settings', ['namespace' => 'seo']],
         // A form of its own: "Contact", with the name, email and message every new form starts with.
         ['form', ['handle' => 'contact']],

@@ -461,6 +461,92 @@
             ]
         }
     },
+    "built-in": {
+        "id": "built-in",
+        "path": "/built-in",
+        "package": "letterncms/packages",
+        "root": {
+            "type": "ui/page",
+            "props": {
+                "title": "Built In",
+                "icon": "box"
+            },
+            "children": [
+                {
+                    "type": "ui/records",
+                    "props": {
+                        "id": "packages.modules",
+                        "label": "Built In",
+                        "key": "name",
+                        "search": {
+                            "placeholder": "Search"
+                        },
+                        "source": {
+                            "ability": "packages/list",
+                            "input": {
+                                "type": "module",
+                                "optional": true
+                            }
+                        },
+                        "columns": [
+                            {
+                                "key": "label",
+                                "label": "Name",
+                                "width": "minmax(160px,1fr)",
+                                "icon": "icon",
+                                "muted": "note",
+                                "warning": "problem"
+                            },
+                            {
+                                "key": "enabled",
+                                "label": "On",
+                                "width": "72px",
+                                "align": "end",
+                                "format": "switch",
+                                "ariaLabel": "{row.label} on",
+                                "disabled": "locked",
+                                "reason": "keptOn",
+                                "action": {
+                                    "label": "On",
+                                    "ability": "packages/switch",
+                                    "input": {
+                                        "name": "{row.name}",
+                                        "on": "{value}"
+                                    },
+                                    "success": "{result.message}",
+                                    "then": "manifest",
+                                    "props": []
+                                }
+                            },
+                            {
+                                "key": "name",
+                                "label": "Package",
+                                "format": "code",
+                                "hidden": true
+                            }
+                        ],
+                        "open": {
+                            "label": "Open",
+                            "to": "{row.to}",
+                            "when": "{row.to}",
+                            "input": [],
+                            "props": []
+                        },
+                        "actions": [
+                            {
+                                "label": "Settings",
+                                "icon": "settings",
+                                "to": "{row.settingsTo}",
+                                "when": "{row.settingsTo}",
+                                "input": [],
+                                "props": []
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    },
     "globals": {
         "id": "globals",
         "path": "/globals",

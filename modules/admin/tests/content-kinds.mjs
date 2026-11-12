@@ -14,13 +14,13 @@ const video = [
   { handle: 'length', type: 'number', label: 'Length' },
   { handle: 'summary', type: 'textarea', label: 'Summary' },
   { handle: 'credit', type: 'text', label: 'Credit', section: 'sidebar' },
-  { handle: 'body', type: 'markdown', label: 'Body' },
+  { handle: 'body', type: 'markdown', label: 'Body', body: true },
 ]
 const own = [
   { handle: 'kind', type: 'select', label: 'Kind', options: { text: 'Text', video: 'Video' } },
-  { handle: 'body', type: 'markdown', label: 'Body' },
+  { handle: 'body', type: 'markdown', label: 'Body', body: true },
 ]
-export const collection = { ...summary, body: 'body', route: '/news/{slug}', sort: 'title', default_view: 'table', default_columns: null, fields: own, resolvedFields: own, schema: {}, count: 1, deletable: true, settings: [],
+export const collection = { ...summary, route: '/news/{slug}', sort: 'title', default_view: 'table', default_columns: null, fields: own, resolvedFields: own, schema: {}, count: 1, deletable: true, settings: [],
   blueprints: { video: { title: 'Video', fields: video } }, resolvedBlueprints: [{ handle: 'video', title: 'Video', resolvedFields: video }] }
 export const entry = {
   id: '01hentry000000000000000000', collection: 'news', blueprint: 'video', locale: 'en', title: 'The Film', slug: 'the-film', uri: '/news/the-film', status: 'published', displayStatus: 'published', hasDraft: false,

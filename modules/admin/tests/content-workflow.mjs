@@ -55,8 +55,8 @@ const fields = [
 const definition = (handle) => {
   if (realSite) return realSources.find((source) => source.collection.handle === handle)?.collection
   const collection = collections.find((collection) => collection.handle === handle)
-  const resolvedFields = [...fields, { handle: 'body', type: 'blocks', label: 'Body' }]
-  return { ...collection, singular: collection.singular, body: 'body', ...(collection.routable ? { route: '/{slug}' } : {}), sort: 'title', default_view: 'table', fields: resolvedFields, resolvedFields, schema: {} }
+  const resolvedFields = [...fields, { handle: 'body', type: 'blocks', label: 'Body', body: true }]
+  return { ...collection, singular: collection.singular, ...(collection.routable ? { route: '/{slug}' } : {}), sort: 'title', default_view: 'table', fields: resolvedFields, resolvedFields, schema: {} }
 }
 const people = [...realSources.map((source) => source.entry.author).filter(Boolean), { id: 'ada', name: 'Ada Example', initials: 'AE', avatar: null }, { id: 'grace', name: 'Grace Hopper', initials: 'GH', avatar: null }]
 const fixtureComponent = { handle: 'fixture-component', title: 'Fixture component', synced: true, category: 'Fixture', description: '', props: [{ handle: 'title', type: 'text', label: 'Title', default: 'Shared component default title' }], blocks: [{ id: 'shared-component-heading', type: 'heading', props: { text: 'Shared component default title', level: 2 }, bind: { text: { source: 'props.title' } } }] }
