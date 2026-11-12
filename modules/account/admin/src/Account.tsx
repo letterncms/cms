@@ -56,8 +56,8 @@ export function Profile() {
   ]
   // Empty: follow the admin's default language (Settings → General → Admin Language).
   const language: FieldDef[] = [{ handle: 'locale', type: 'select', label: t('Language'), required: true, options: { '': t('Admin Default'), ...languages() } }]
-  // Empty: follow the admin's accent (Settings → General → Admin Accent), shown as the first swatch.
-  const accent: FieldDef[] = [{ handle: 'accent', type: 'color', component: 'accent', label: t('Accent'), inherit: site.accent ?? null }]
+  // Empty: follow the admin's accent (Settings → General → Theme Color).
+  const accent: FieldDef[] = [{ handle: 'accent', type: 'select', component: 'accent', label: t('Theme Color'), inherit: site.accent ?? null }]
 
   // Every section of the page starts at the same edge: no avatar beside the fields (it is in the account menu).
   return (

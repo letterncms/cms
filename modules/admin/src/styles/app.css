@@ -80,7 +80,7 @@
     min-height: 100%;
   }
 
-  /* Selected text is highlighted, as with a marker on paper: the brand's yellow. */
+  /* Selected text is highlighted, as with a marker on paper: the accent's wash. */
   ::selection {
     background: var(--cms-signal-soft);
     color: var(--cms-ink);
@@ -273,6 +273,24 @@
   .cms-pressable:focus-visible { outline: 2px solid var(--cms-focus); outline-offset: 2px; }
   .cms-pressable[data-inset]:focus-visible { outline-offset: -2px; }
   .cms-pressable:disabled { pointer-events: none; }
+
+  /* A colour to choose (`AccentPicker`), `--swatch` its fill: edged in a deeper shade of itself, not a grey
+     line, a step deeper pointed at, and chosen, ringed in its deepest shade a gap away from it. */
+  .cms-swatch {
+    --swatch-edge: color-mix(in oklch, var(--swatch) 82%, #000);
+    background: var(--swatch);
+    box-shadow: inset 0 0 0 1px var(--swatch-edge);
+    transition: box-shadow var(--cms-duration-fast) var(--ease-out), transform var(--cms-duration-fast) var(--ease-out);
+  }
+  .cms-swatch:hover { box-shadow: inset 0 0 0 1.5px var(--swatch-edge); }
+  .cms-swatch:active { transform: scale(0.94); }
+  .cms-swatch[aria-checked="true"] {
+    --swatch-ring: color-mix(in oklch, var(--swatch) 68%, #000);
+    box-shadow: inset 0 0 0 1px var(--swatch-edge), 0 0 0 2px var(--cms-bg), 0 0 0 4px var(--swatch-ring);
+  }
+  /* On dark a light swatch (Monochrome's) deepens toward the page instead of vanishing into it. */
+  [data-theme="dark"] .cms-swatch[aria-checked="true"] { --swatch-ring: color-mix(in oklch, var(--swatch) 70%, #fff); }
+  @media (prefers-reduced-motion: reduce) { .cms-swatch:active { transform: none; } }
 
   .cms-focus-ring {
     outline: none;

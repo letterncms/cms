@@ -16,10 +16,10 @@ export function Switch({ checked, onChange, disabled, label, size = 'md', 'aria-
       checked={checked}
       onCheckedChange={(v) => onChange(v)}
       disabled={disabled}
-      className={cn('relative inline-flex shrink-0 items-center rounded-full bg-border-strong p-0.5 transition-colors duration-base ease-out hover:bg-border-hover data-[checked]:bg-ink data-[checked]:hover:bg-ink-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45', track)}
+      className={cn('relative inline-flex shrink-0 items-center rounded-full bg-border-strong p-0.5 transition-colors duration-base ease-out hover:bg-border-hover data-[checked]:bg-signal data-[checked]:hover:bg-signal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45', track)}
     >
       {/* Dark: a light thumb on the off track, a dark one on the light ink track. */}
-      <BaseSwitch.Thumb className={cn('block rounded-full bg-float shadow-raise transition-[translate,background-color] duration-base ease-out dark:bg-muted dark:data-[checked]:bg-ink-contrast', thumb)} />
+      <BaseSwitch.Thumb className={cn('block rounded-full bg-float shadow-raise transition-[translate,background-color] duration-base ease-out dark:bg-muted data-[checked]:bg-knob dark:data-[checked]:bg-knob', thumb)} />
     </BaseSwitch.Root>
   )
   return label ? (
@@ -43,9 +43,9 @@ export function Checkbox({ checked, onChange, disabled, label, indeterminate }: 
       onCheckedChange={(v) => onChange(v)}
       disabled={disabled}
       // 16px to see, 28px to hit.
-      className="relative inline-flex size-4 shrink-0 items-center justify-center rounded-xs border border-border-strong bg-bg transition-[background-color,border-color] duration-base ease-out before:absolute before:-inset-1.5 before:content-[''] hover:border-[color-mix(in_srgb,var(--cms-border-strong),var(--cms-ink)_16%)] data-[checked]:border-ink data-[checked]:bg-ink data-[indeterminate]:border-ink data-[indeterminate]:bg-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45"
+      className="relative inline-flex size-4 shrink-0 items-center justify-center rounded-xs border border-border-strong bg-bg transition-[background-color,border-color] duration-base ease-out before:absolute before:-inset-1.5 before:content-[''] hover:border-[color-mix(in_srgb,var(--cms-border-strong),var(--cms-ink)_16%)] data-[checked]:border-signal data-[checked]:bg-signal data-[indeterminate]:border-signal data-[indeterminate]:bg-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45"
     >
-      <BaseCheckbox.Indicator className="flex text-ink-contrast">
+      <BaseCheckbox.Indicator className="flex text-signal-ink">
         {indeterminate ? <span className="block h-0.5 w-2 rounded-full bg-current" /> : <Icon name="check" size={12} />}
       </BaseCheckbox.Indicator>
     </BaseCheckbox.Root>

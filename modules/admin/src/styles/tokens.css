@@ -4,12 +4,15 @@
  *
  * The direction: paper on a desk. The desk (surface) is the warm gray the sidebar and panels sit on;
  * the page (bg) is the white sheet the work happens on; menus and dialogs (float) are sheets lifted above it.
- * Ink is warm near-black. Yellow is the one colour of the brand: publishing, going live, and highlighted text.
- * Blue is for focus and selection, nothing else. Edges are hairlines; shadows only lift what floats.
+ * Ink is warm near-black. The accent (amber unless the site or a person chose another, see
+ * Cms\Admin\Accent) is publishing, going live, switches that are on, highlights, focus and selection.
+ * Blue is for information alone. Edges are hairlines; shadows only lift what floats.
  */
 
 /* Sizes, motion and layers: the same in light and dark, so they are set once, here. */
 :root {
+  /* The knob of a switch that is on: white on any accent, in light and dark. */
+  --cms-knob: #ffffff;
   --cms-inspector-width: 320px;
 
   /* Motion. fast: something leaving. base: a state answering the pointer.
@@ -43,6 +46,9 @@
   /* Hover and pressed states are a film of ink, so one value works on the desk, the page and a float alike. */
   --cms-hover: rgb(42 38 30 / 0.045);
   --cms-active: rgb(42 38 30 / 0.07);
+  /* A control filled at rest without being a sheet of its own (the chat's button), and pointed at. */
+  --cms-tonal: rgb(42 38 30 / 0.08);
+  --cms-tonal-hover: rgb(42 38 30 / 0.11);
 
   --cms-border: #ebe9e4;
   --cms-border-strong: #dcd9d2;
@@ -61,18 +67,20 @@
   /* Placeholders and disabled labels: not read as content, so below AA on purpose. */
   --cms-ghost: #a3a098;
 
-  /* The accent: the brand's yellow unless the site or the person chose another (Settings → General, Account),
-     which sets these two alone. Everything else of it follows from them. */
-  --cms-signal: #ffe100;
+  /* The accent, the admin's theme colour: amber unless the site or the person chose another (Settings → General,
+     Account; Cms\Admin\Accent sets these and focus). Its washes and fills pointed at follow from them. */
+  --cms-signal: #e9b03c;
   --cms-signal-ink: #1c1b18;
   /* What a fill deepens toward when pointed at or pressed, whatever the accent and the words on it. */
   --cms-shade: #1c1b18;
-  /* A wash of yellow: highlighted text, an unpublished-changes mark's halo. Never a surface for a whole region. */
+  /* A wash of the accent: highlighted text, an unpublished-changes mark's halo. Never a surface for a whole region. */
   --cms-signal-soft: color-mix(in srgb, var(--cms-signal) 28%, #fff);
-  --cms-focus: #2563eb;
-  --cms-focus-soft: rgb(37 99 235 / 0.1);
+  /* Focus and selection follow the accent: a line 3:1 on the page, a wash and the wash pointed at. Amber's line
+     is amber itself (2:1 on white, with its halo, --cms-shadow-focus): any deeper is brown. */
+  --cms-focus: #e9b03c;
+  --cms-focus-soft: rgb(233 176 60 / 0.2);
   /* A selected row that is pointed at: a step deeper than the wash. */
-  --cms-focus-hover: rgb(37 99 235 / 0.14);
+  --cms-focus-hover: rgb(233 176 60 / 0.24);
   --cms-success: #18794e;
   --cms-success-soft: rgb(24 121 78 / 0.1);
   --cms-warning: #a8590b;
@@ -95,8 +103,9 @@
   --cms-thumb: var(--cms-float);
   /* The edge of a field or a switch that is pointed at. */
   --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
-  /* Blue as text on its own wash (an info badge): a step toward ink so it still reads. */
-  --cms-info: color-mix(in srgb, var(--cms-focus) 84%, var(--cms-ink));
+  /* Blue as text on its own wash (an info badge): a step toward ink so it still reads. Blue is information's alone. */
+  --cms-info: color-mix(in srgb, #2563eb 84%, var(--cms-ink));
+  --cms-info-soft: rgb(37 99 235 / 0.1);
   /* Green, amber and red as words on their own wash (a badge), the same way: 5:1 or more on the page, the desk and a float. */
   --cms-on-success: color-mix(in srgb, var(--cms-success) 85%, var(--cms-ink));
   --cms-on-warning: color-mix(in srgb, var(--cms-warning) 85%, var(--cms-ink));
@@ -113,7 +122,7 @@
      focus: a field that has the focus. Focus is one thing everywhere, a 2px line of the focus colour: an outline 2px off a button,
      inset on a row or a tab, and on a field its own edge and this, with a wash around it. */
   --cms-shadow-edge: inset 0 1px 0 rgb(255 255 255 / 0.1);
-  --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 18%, transparent);
+  --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-signal) 22%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
   /* rule: a hairline along the bottom of a row of tabs, drawn inside it so nothing overflows. underline: the tab on view, over that hairline. */
   --cms-shadow-rule: inset 0 -1px 0 var(--cms-border);
@@ -130,6 +139,8 @@
   --cms-float: #222220;
   --cms-hover: rgb(255 253 245 / 0.055);
   --cms-active: rgb(255 253 245 / 0.09);
+  --cms-tonal: rgb(255 253 245 / 0.1);
+  --cms-tonal-hover: rgb(255 253 245 / 0.14);
 
   --cms-border: #2a2a27;
   --cms-border-strong: #3a3a36;
@@ -145,9 +156,10 @@
   --cms-ghost: #6b6964;
 
   --cms-signal-soft: color-mix(in srgb, var(--cms-signal) 16%, transparent);
-  --cms-focus: #5c8dff;
-  --cms-focus-soft: rgb(92 141 255 / 0.16);
-  --cms-focus-hover: rgb(92 141 255 / 0.22);
+  --cms-focus: #e9b03c;
+  --cms-focus-soft: rgb(233 176 60 / 0.16);
+  --cms-focus-hover: rgb(233 176 60 / 0.22);
+  --cms-info-soft: rgb(92 141 255 / 0.16);
   --cms-success: #4cc38a;
   --cms-success-soft: rgb(76 195 138 / 0.14);
   --cms-warning: #f0a540;
@@ -167,7 +179,7 @@
   /* In the dark the slip is lit: clearly lighter than its track, which is a 9% film. */
   --cms-thumb: color-mix(in srgb, var(--cms-float), var(--cms-ink) 30%);
   --cms-border-hover: color-mix(in srgb, var(--cms-border-strong), var(--cms-ink) 12%);
-  --cms-info: color-mix(in srgb, var(--cms-focus) 60%, var(--cms-ink));
+  --cms-info: color-mix(in srgb, #5c8dff 60%, var(--cms-ink));
   --cms-on-success: color-mix(in srgb, var(--cms-success) 85%, var(--cms-ink));
   --cms-on-warning: color-mix(in srgb, var(--cms-warning) 85%, var(--cms-ink));
   --cms-on-danger: color-mix(in srgb, var(--cms-danger) 85%, var(--cms-ink));
@@ -178,7 +190,7 @@
   --cms-shadow-pop: 0 0 0 1px rgb(0 0 0 / 0.2), 0 4px 12px -2px rgb(0 0 0 / 0.35), 0 12px 32px -8px rgb(0 0 0 / 0.45);
   --cms-shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.25), 0 12px 24px -6px rgb(0 0 0 / 0.4), 0 32px 64px -16px rgb(0 0 0 / 0.55);
   --cms-shadow-edge: 0 0 #0000;
-  --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-focus) 32%, transparent);
+  --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-signal) 24%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
   --cms-shadow-rule: inset 0 -1px 0 var(--cms-border);
   --cms-shadow-underline: inset 0 -2px 0 var(--cms-ink);

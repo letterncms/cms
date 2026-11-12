@@ -98,7 +98,7 @@ export function EaseField({ field, value, onChange, disabled }: FieldProps<strin
                 onChange(option.value)
                 setOpen(false)
               }}
-              className={cn('flex flex-col items-center gap-1 rounded-xs px-1 pb-1 pt-1.5 text-2xs leading-tight hover:bg-hover', chosen ? 'bg-focus/12 text-focus' : 'text-muted')}
+              className={cn('flex flex-col items-center gap-1 rounded-xs px-1 pb-1 pt-1.5 text-2xs leading-tight hover:bg-hover', chosen ? 'bg-focus-soft text-ink' : 'text-muted')}
             >
               <EaseCurve curve={curveOf(option.value) ?? NAMED.ease} size={36} className={chosen ? 'text-focus' : 'text-text'} />
               <span className="w-full truncate text-center">{option.label}</span>

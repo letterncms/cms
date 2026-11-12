@@ -4,12 +4,16 @@
 
 ### Added
 
-- **Choose the admin's accent.** The colour of **Publish**, **Go Live**, highlights and the chat's bubble was always the brand's yellow. **Admin Accent** under **Settings → General** sets it for everyone, and **Account → Profile → Accent** lets each person pick their own, with **Use Admin Default** to follow everyone's again. Pick one of six swatches or type any colour; the words on it are dark or light, whichever reads better, and its washes follow, in light and dark. The admin shows the colour as you pick it and paints it before the first frame. Plugins that use the `signal` colours follow it, and `AccentPicker` in `@letterncms/ui` is the control.
+- **A theme colour for the admin.** **Theme Color** under **Settings → General** sets it for everyone, and **Account → Profile → Theme Color** lets each person pick their own, with **Use Admin Default** to follow everyone's again. Choose amber, orange, pink, violet, blue, green or monochrome (the admin's own ink: black on light, near white on dark). One colour carries through the whole admin: **Publish** and **Go Live**, switches that are on, ticked boxes, chosen options, highlights, selected rows, focus rings and the chat's bubble. The words on every colour reach 4.5:1 and every focus line 3:1 in light and dark, amber's on light aside, which stays amber with a halo. The admin shows the colour as you pick it and paints it before the first frame. Plugins that use the `signal` and `focus` colours follow it, and `AccentPicker` in `@letterncms/ui` is the control.
+- `@letterncms/ui`: the `tonal` button, filled at rest without being a sheet of its own (`bg-tonal`, `bg-tonal-hover`).
 - `@letterncms/ui`: the `comment-solid` icon, the speech bubble filled.
+- Design tokens: `info-soft`, the wash of an info badge, which stays blue whatever the theme colour.
 
 ### Changed
 
-- **Chat** in the top bar has a solid speech bubble in the admin's accent.
+- **The admin's accent is amber**, warmer than the brand's lemon yellow and easier to see on white. Focus and selection, which were blue, follow it too; information alone stays blue.
+- **Chat** in the top bar is a `tonal` button a shade deeper than before, with a solid speech bubble in the theme colour.
+- Switches that are on, ticked boxes and chosen options are filled with the theme colour instead of ink.
 
 ## 0.24.0 (2026-11-12)
 

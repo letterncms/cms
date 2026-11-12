@@ -3,7 +3,7 @@ import { cn } from './cn'
 import { Icon } from './Icon'
 import { Spinner } from './Spinner'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'danger' | 'publish'
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'tonal' | 'destructive' | 'danger' | 'publish'
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -20,11 +20,13 @@ const variants: Record<ButtonVariant, string> = {
   // A sheet of its own: a hairline ring and the slightest lift.
   secondary: 'bg-float text-text shadow-raise ring-1 ring-inset ring-border-strong hover:bg-float-hover active:bg-float-active',
   ghost: 'bg-transparent text-text hover:bg-hover active:bg-active',
+  // Filled at rest without being a sheet of its own: one per bar at most (the chat's button).
+  tonal: 'bg-tonal text-ink hover:bg-tonal-hover active:bg-tonal-hover',
   // The way into deleting or removing something: red words on nothing. It opens a confirm, which ends in `danger`.
   destructive: 'bg-transparent text-danger hover:bg-danger-soft active:bg-danger-soft',
   // The last step of a destructive confirm, nothing else.
   danger: 'bg-danger text-white dark:text-ink-contrast hover:bg-danger-hover active:bg-danger-active',
-  // The brand's yellow is for going live: Publish, Publish site, Go live.
+  // The accent, the theme colour, is for going live: Publish, Publish site, Go live.
   publish: 'bg-signal text-signal-ink hover:bg-signal-hover active:bg-signal-active',
 }
 

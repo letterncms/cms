@@ -47,6 +47,9 @@
   --color-float: var(--cms-float);
   --color-hover: var(--cms-hover);
   --color-active: var(--cms-active);
+  --color-tonal: var(--cms-tonal);
+  --color-knob: var(--cms-knob);
+  --color-tonal-hover: var(--cms-tonal-hover);
   --color-border: var(--cms-border);
   --color-border-strong: var(--cms-border-strong);
   --color-border-float: var(--cms-border-float);
@@ -81,6 +84,7 @@
   --color-thumb: var(--cms-thumb);
   --color-border-hover: var(--cms-border-hover);
   --color-info: var(--cms-info);
+  --color-info-soft: var(--cms-info-soft);
   --color-on-success: var(--cms-on-success);
   --color-on-warning: var(--cms-on-warning);
   --color-on-danger: var(--cms-on-danger);

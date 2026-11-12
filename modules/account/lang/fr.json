@@ -1,6 +1,5 @@
 {
   ":browser on :system": ":browser sur :system",
-  "Accent": "Couleur d’accent",
   "Address": "Adresse",
   "Device": "Appareil",
   "Every other browser has to sign in again.": "Tous les autres navigateurs devront se reconnecter.",
@@ -14,6 +13,7 @@
   "Signed out": "Déconnecté",
   "Signed out everywhere else": "Déconnecté partout ailleurs",
   "That is not one of your other sessions.": "Ce n’est pas l’une de vos autres sessions.",
+  "Theme Color": "Couleur du thème",
   "This Device": "Cet appareil",
   "This site keeps its sessions where they can’t be listed (its session driver), so you can’t sign out of them here. Changing your password signs you out everywhere.": "Ce site garde ses sessions là où elles ne peuvent pas être listées (son pilote de session) : vous ne pouvez donc pas vous en déconnecter ici. Changer votre mot de passe vous déconnecte partout.",
   "Unknown Device": "Appareil inconnu",

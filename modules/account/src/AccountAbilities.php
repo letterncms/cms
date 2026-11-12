@@ -110,7 +110,7 @@ final class AccountAbilities
                 if (isset($in['preferences'])) {
                     // Saved views are kept under `views` by their own abilities (saved-views/…), which check them: not written from here.
                     $preferences = array_diff_key($in['preferences'], ['views' => true]);
-                    // Their own accent is one colour as #rrggbb; anything else follows the site's (see Accent).
+                    // Their own accent is one of the set; anything else follows the site's (see Accent).
                     if (array_key_exists('accent', $preferences)) {
                         $preferences['accent'] = Accent::normalize($preferences['accent']);
                     }
