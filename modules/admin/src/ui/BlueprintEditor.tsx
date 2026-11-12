@@ -273,7 +273,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
                 if (!fields.length) return null
                 return (
                   <Section key={section.title} title={section.title}>
-                    <Fields bare={section.bare} fields={fields} values={def} context={{ blueprintFields: source.data?.resolvedFields?.filter((f: FieldDef) => !source.data.fields?.some((own: RawField) => own.handle === f.handle)) }} onChange={(h, v) => patch({ [h]: v })} disabled={saving} />
+                    <Fields layout="settings" bare={section.bare} fields={fields} values={def} context={{ blueprintFields: source.data?.resolvedFields?.filter((f: FieldDef) => !source.data.fields?.some((own: RawField) => own.handle === f.handle)) }} onChange={(h, v) => patch({ [h]: v })} disabled={saving} />
                   </Section>
                 )
               })}
@@ -294,7 +294,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
             <div className="border-b border-border pb-2">
               <h2 className="m-0 flex h-7 items-center text-sm font-semibold text-ink">{t('Settings')}</h2>
             </div>
-            <Fields fields={settings} values={def} onChange={(h, v) => patch({ [h]: v })} />
+            <Fields layout="settings" fields={settings} values={def} onChange={(h, v) => patch({ [h]: v })} />
           </aside>
         )}
       </div>}

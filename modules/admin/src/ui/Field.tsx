@@ -3,19 +3,32 @@ import { cn } from './cn'
 import { locale, t } from '@letterncms/sdk'
 import { Icon } from './Icon'
 import { Tooltip } from './Tooltip'
+import { SettingRow } from './SettingsPanel'
 
 /** Label + control + help/error. Every form row in the admin uses this. */
-export function Field({ label, htmlFor, instructions, error, required, children, className, aside }: { label?: ReactNode; htmlFor?: string; instructions?: ReactNode; error?: string; required?: boolean; children: ReactNode; className?: string; aside?: ReactNode }) {
+export function Field({ label, htmlFor, instructions, error, required, children, className, aside, setting }: { label?: ReactNode; htmlFor?: string; instructions?: ReactNode; error?: string; required?: boolean; children: ReactNode; className?: string; aside?: ReactNode; setting?: 'inline' | 'stacked' | 'end' }) {
+  const caption = label && (
+    <label htmlFor={htmlFor} className={cn('text-sm font-medium text-text', setting === 'end' && 'cursor-pointer')}>
+      {label}
+      {required && <span aria-hidden="true" className="ml-0.5 font-normal text-faint">*</span>}
+    </label>
+  )
+  const help = !error && instructions && <p id={htmlFor ? `${htmlFor}-help` : undefined} className="m-0 mt-1 text-xs text-muted">{instructions}</p>
+  const issue = error && <FieldError id={htmlFor ? `${htmlFor}-error` : undefined}>{error}</FieldError>
+  if (setting) {
+    const text = (caption || aside || help) && (
+      <>
+        <div className="flex flex-wrap items-center gap-x-2">{caption}{aside}</div>
+        {setting === 'end' && issue ? issue : help}
+      </>
+    )
+    return <SettingRow label={text} layout={setting} className={className}>{children}{setting !== 'end' && issue}</SettingRow>
+  }
   return (
     <div className={cn('min-w-0', className)}>
       {(label || aside) && (
         <div className="mb-1.5 flex min-h-5 items-center gap-2">
-          {label && (
-            <label htmlFor={htmlFor} className="text-sm font-medium text-text">
-              {label}
-              {required && <span aria-hidden="true" className="ml-0.5 font-normal text-faint">*</span>}
-            </label>
-          )}
+          {caption}
           {aside && <div className="ml-auto flex items-center gap-1">{aside}</div>}
         </div>
       )}

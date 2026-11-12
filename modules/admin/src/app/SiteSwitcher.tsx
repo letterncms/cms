@@ -9,7 +9,7 @@ function SiteMark({ size = 22 }: { size?: number }) {
   const [broken, setBroken] = useState<string | null>(null)
 
   return favicon && broken !== favicon
-    ? <img src={favicon} width={size} height={size} alt="" onError={() => setBroken(favicon)} className="shrink-0 rounded-[5px] object-contain" />
+    ? <img src={favicon} width={size} height={size} alt="" onError={() => setBroken(favicon)} className="shrink-0 rounded-sm object-contain" />
     : <BrandMark size={size} />
 }
 

@@ -1386,6 +1386,7 @@
             "props": {
                 "title": "SEO",
                 "icon": "seo",
+                "width": "narrow",
                 "actions": []
             },
             "children": [

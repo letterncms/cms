@@ -1,5 +1,5 @@
 import { loadManifest, navigate, run, queryClient, setManifest, t, useAbility, useManifest } from '@letterncms/sdk'
-import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
+import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, Pressable, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 
 interface Kit {
@@ -121,13 +121,13 @@ function KitCard({ kit, busy, onChoose, onStartOver, onEdit, onDelete }: { kit: 
   const canDelete = !kit.active
 
   return (
-    <li className="group relative">
-      <button
-        type="button"
+    <li className="cms-reveal-row relative">
+      <Pressable
+        inset
         onClick={onChoose}
         disabled={!chooseable}
         aria-current={kit.active || undefined}
-        className={`flex w-full flex-col overflow-hidden rounded-lg border bg-bg p-0 text-left outline-none transition-[border-color,box-shadow] duration-base enabled:cursor-pointer ${kit.active ? 'border-[var(--cms-focus)] shadow-[var(--cms-shadow-focus)]' : 'border-border enabled:hover:border-border-strong enabled:hover:shadow-sm focus-visible:border-[var(--cms-focus)] focus-visible:shadow-[var(--cms-shadow-focus)]'}`}
+        className={`flex w-full flex-col overflow-hidden rounded-lg border bg-bg p-0 text-left transition-[border-color,box-shadow] duration-base enabled:cursor-pointer ${kit.active ? 'border-focus shadow-focus' : 'border-border enabled:hover:border-border-strong enabled:hover:shadow-sm'}`}
       >
         <span className="relative block aspect-[16/10] w-full overflow-hidden border-b border-border bg-sunken">
           {kit.previews[0]
@@ -140,16 +140,16 @@ function KitCard({ kit, busy, onChoose, onStartOver, onEdit, onDelete }: { kit: 
             {kit.description && <span className="block truncate text-xs text-muted">{kit.description}</span>}
           </span>
           {kit.active && <Badge tone="neutral">{t('Current')}</Badge>}
-          {!kit.active && !needs && kit.suits && <span className="shrink-0 text-xs font-medium text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{switching ? t('Switching…') : t('Switch||kit')}</span>}
+          {!kit.active && !needs && kit.suits && <span className="cms-reveal shrink-0 text-xs font-medium text-muted">{switching ? t('Switching…') : t('Switch||kit')}</span>}
         </span>
-      </button>
+      </Pressable>
       {needs && (
         <div className="mt-2 flex items-center gap-2 text-xs text-muted">
           <span className="min-w-0 flex-1 truncate">{t('Needs {plugins}', { plugins: kit.missingPlugins.join(', ') })}</span>
           <Button size="sm" onClick={() => navigate('/plugins')}>{t('Open Store')}</Button>
         </div>
       )}
-      <div className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open]:opacity-100">
+      <div className="cms-reveal absolute right-2 top-2">
         <Menu
           align="end"
           trigger={<IconButton icon="dots" label={t('More')} size="sm" disabled={busy !== null} />}
@@ -226,9 +226,9 @@ function KitDetails({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
         <Field label={t('Thumbnail')}>
           <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { setPicture(e.target.files?.[0] ?? null); setRemoved(false) }} />
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => file.current?.click()} className="grid h-14 w-24 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-sm border border-border bg-sunken p-0 text-faint hover:border-border-strong">
+            <Pressable compact aria-label={picture || current ? t('Replace') : t('Upload')} onClick={() => file.current?.click()} className="grid h-14 w-24 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-sm border border-border bg-sunken p-0 text-faint hover:border-border-strong">
               {shown || current ? <img src={shown ?? current} alt="" className="size-full object-cover object-top" /> : <Icon name="upload" size={18} />}
-            </button>
+            </Pressable>
             <div className="flex min-w-0 flex-col items-start gap-1">
               <Button size="sm" onClick={() => file.current?.click()}>{picture || current ? t('Replace') : t('Upload')}</Button>
               {(picture || current) && <Button size="sm" variant="ghost" onClick={() => { setPicture(null); setRemoved(true); if (file.current) file.current.value = '' }}>{t('Remove')}</Button>}

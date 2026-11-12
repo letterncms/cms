@@ -186,7 +186,7 @@ const fitTrack = (values: unknown[]) => `minmax(120px,${Math.min(360, Math.max(1
  * list looks and works alike.
  */
 export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, address, display = true, controls }: RecordsProps) {
-  const { scope, act } = useView()
+  const { scope, act, settings } = useView()
   const { query: location } = useLocation()
   const [ownText, setOwnText] = useState('')
   const [ownPage, setOwnPage] = useState(1)
@@ -404,6 +404,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     )}
     <DataView<Row>
       id={listId}
+      framed={settings}
       label={label}
       items={items}
       prefs={prefs}
@@ -439,7 +440,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       columns={toColumns(columns)}
       empty={filtered
         ? <NoMatches onClear={() => { if (address) setQuery({ [searchParam]: null, page: null, ...Object.fromEntries(filters.map((f) => [f.param, null])) }); else { setOwnText(''); setOwnChosen({}); setOwnPage(1) } }} />
-        : <EmptyState compact={empty?.size === 'sm'} icon={empty?.icon ?? 'inbox'} title={empty?.title ?? t('Nothing here yet')} action={empty?.action && <ActionButton action={empty.action} />} />}
+        : <EmptyState compact={settings || empty?.size === 'sm'} icon={empty?.icon ?? 'inbox'} title={empty?.title ?? t('Nothing here yet')} action={empty?.action && <ActionButton action={empty.action} />} />}
     />
     {selection && (
       <SelectionBar count={picked.size} onClear={() => setPicked(new Set())}>

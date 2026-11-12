@@ -1,7 +1,7 @@
 import { CmsError, invalidate, languages, loadManifest, locale, plural, run, t, useAbility, useManifest, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
 import qrcode from 'qrcode-generator'
 import { useEffect, useState } from 'react'
-import { Badge, Button, Dialog, Fields, List, Row, SaveBar, copyText, toast } from '@letterncms/ui'
+import { Badge, Button, Dialog, Fields, SaveBar, SettingRow, SettingsPanel, copyText, toast } from '@letterncms/ui'
 
 /**
  * The Profile section of Account: name and email, the site's profile fields (content/users.yaml) and the
@@ -55,18 +55,18 @@ export function Profile() {
     ...(values.email !== user.email ? [{ handle: 'currentPassword', type: 'text', label: t('Current Password'), secret: true, width: 'half' as const, autocomplete: 'current-password' }] : []),
   ]
   // Empty: follow the admin's default language (Settings → General → Admin Language).
-  const language: FieldDef[] = [{ handle: 'locale', type: 'select', label: t('Language'), required: true, options: { '': t('Admin Default'), ...languages() } }]
-  // Empty: follow the admin's accent (Settings → General → Theme Color).
-  const accent: FieldDef[] = [{ handle: 'accent', type: 'select', component: 'accent', label: t('Theme Color'), inherit: site.accent ?? null }]
+  const preferences: FieldDef[] = [
+    { handle: 'locale', type: 'select', label: t('Language'), required: true, options: { '': t('Admin Default'), ...languages() } },
+    { handle: 'accent', type: 'select', component: 'accent', label: t('Theme Color'), inherit: site.accent ?? null },
+  ]
 
   // Every section of the page starts at the same edge: no avatar beside the fields (it is in the account menu).
   return (
-    <div>
+    <div className="space-y-3">
       <SaveBar dirty={dirty} saving={busy} error={failed} onSave={() => void save()} onDiscard={discard} />
-      <Fields fields={fields} values={values} onChange={set} errors={errors} />
-      {(profile.data?.resolvedFields ?? []).length > 0 && <Fields className="mt-4" fields={profile.data!.resolvedFields} values={values.data} onChange={(h, v) => set('data', { ...values.data, [h]: v })} errors={errors} />}
-      <Fields className="mt-4" fields={language} values={values} onChange={set} errors={errors} />
-      <Fields className="mt-4" fields={accent} values={values} onChange={set} errors={errors} />
+      <Fields layout="settings" fields={fields} values={values} onChange={set} errors={errors} />
+      {profile.data && <Fields layout="settings" fields={profile.data.resolvedFields} values={values.data} onChange={(h, v) => set('data', { ...values.data, [h]: v })} errors={errors} />}
+      <Fields layout="settings" fields={preferences} values={values} onChange={set} errors={errors} />
     </div>
   )
 }
@@ -82,18 +82,14 @@ export function Security() {
 
   return (
     <>
-      <List>
-        <Row className="min-h-12">
-          <span className="min-w-0 flex-1 truncate">{t('Password')}</span>
+      <SettingsPanel>
+        <SettingRow label={t('Password')} layout="end">
           <Button onClick={() => setOpen('password')}>{t('Change Password')}</Button>
-        </Row>
-        <Row className="min-h-12">
-          <span className="min-w-0 truncate">{t('Two-Factor Authentication')}</span>
-          <Badge tone={user.twoFactor ? 'success' : 'neutral'}>{user.twoFactor ? t('On') : t('Off')}</Badge>
-          <span className="flex-1" />
+        </SettingRow>
+        <SettingRow layout="end" label={<span className="flex flex-wrap items-center gap-x-2 gap-y-1">{t('Two-Factor Authentication')} <Badge tone={user.twoFactor ? 'success' : 'neutral'}>{user.twoFactor ? t('On') : t('Off')}</Badge></span>}>
           {user.twoFactor ? <Button variant="destructive" onClick={() => setOpen('off')}>{t('Turn Off')}</Button> : <Button onClick={() => setOpen('setup')}>{t('Set Up')}</Button>}
-        </Row>
-      </List>
+        </SettingRow>
+      </SettingsPanel>
       {open === 'password' && (
         <SecretDialog
           title={t('Change Password')} submitLabel={t('Change Password')} done={t('Password changed')} onClose={close}
