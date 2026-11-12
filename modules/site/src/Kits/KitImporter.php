@@ -59,7 +59,7 @@ final class KitImporter
 
             $this->files->read($kit = Kit::load($root, 'site', $handle));
 
-            if ($this->kits->find($handle)?->source === 'builtin' || (is_dir($this->kits->path($handle)) && ! $replace)) {
+            if (is_dir($this->kits->path($handle)) && ! $replace) {
                 throw AbilityException::conflict(__('There is a kit “:handle” already. Choose another handle, or replace it.', ['handle' => $handle]));
             }
 

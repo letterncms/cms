@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Artisan;
 
 final class KitsTest extends TestCase
 {
+    use InstallsMinimalKit;
+
     protected function plugins(): array
     {
         return ['letterncms/blocks', 'letterncms/site', 'letterncms/navigation', 'letterncms/languages', 'letterncms/seo'];
@@ -29,6 +31,12 @@ final class KitsTest extends TestCase
     protected function collections(): array
     {
         return [];
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->installMinimalKit();
     }
 
     protected function tearDown(): void
@@ -239,13 +247,6 @@ final class KitsTest extends TestCase
         $this->assertSame(['Studio Two', '', []], [$kit['name'], $kit['description'], $kit['previews']]);
         $this->assertFileDoesNotExist(site_path('kits/studio/previews/home.png'));
 
-        try {
-            $this->ability('kits/update', ['handle' => 'minimal', 'name' => 'Mine']);
-            $this->fail('a kit that comes with the CMS is not changed');
-        } catch (AbilityException $e) {
-            $this->assertSame('conflict', $e->type);
-        }
-
         // What was edited survives the site leaving that kit.
         $this->ability('kits/switch', ['handle' => 'studio']);
         $this->ability('kits/update', ['handle' => 'studio', 'description' => 'Edited']);
@@ -297,7 +298,33 @@ final class KitsTest extends TestCase
 
         Files::putJson(storage_path('installed.json'), ['version' => '1', 'kit' => 'gone-from-the-store']);
         $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
-        $this->assertNotNull($this->cms()->collections()->find('posts'), 'a kit that never arrived leaves the one that is always here');
+        $this->assertNull($this->cms()->collections()->find('posts'), 'a kit that never arrived leaves the site empty');
+        $this->assertNull(Installer::kit(), 'and no kit’s: it is not claimed to be one that is not there');
+    }
+
+    public function test_the_kit_a_new_site_starts_from_is_deleted_like_any_other_once_the_site_is_another(): void
+    {
+        $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
+        $this->assertSame('minimal', $this->kits()->active());
+        $this->kit('studio', ['content/collections/pages.yaml' => "title: Pages\nsingular: Page\ndriver: database\nroute: '/{slug}'\nsort: position\nfields:\n  -\n    handle: content\n    type: blocks\n    label: Content\n"]);
+        $this->ability('kits/switch', ['handle' => 'studio']);
+
+        $this->ability('kits/delete', ['handle' => 'minimal']);
+        $this->assertNull($this->kits()->find('minimal'));
+        $this->assertArrayNotHasKey('minimal', $this->kits()->saved());
+        $this->assertDirectoryDoesNotExist(site_path('kits/minimal'));
+
+        try {
+            $this->ability('kits/delete', ['handle' => 'studio']);
+            $this->fail('a site is always a kit that is there, or none');
+        } catch (AbilityException $e) {
+            $this->assertSame('conflict', $e->type);
+        }
+
+        if (! \Cms\Install\Installer::installed()) {
+            // Its card is on the setup before the store has answered.
+            $this->assertSame(1, substr_count((string) $this->get('/install')->getContent(), 'value="minimal"'));
+        }
     }
 
     public function test_export_then_apply_to_an_empty_site_builds_the_same_pages(): void
@@ -583,7 +610,7 @@ final class KitsTest extends TestCase
 
     public function test_dates_ahead_of_the_export_stay_as_far_ahead(): void
     {
-        $posts = (string) file_get_contents(Kits::builtin().'/minimal/content/collections/posts.yaml');
+        $posts = (string) file_get_contents(__DIR__.'/fixtures/kits/minimal/content/collections/posts.yaml');
         $this->kit('dated', [
             'content/collections/posts.yaml' => $posts,
             'content/collections/posts/past.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaaa1\ntitle: Past\nstatus: published\npublished_at: '2025-12-01T09:00:00+00:00'\n---\n\nWritten before.\n",
@@ -777,29 +804,27 @@ final class KitsTest extends TestCase
         $this->assertNotNull($this->kits()->find('elsewhere'));
 
         Files::put(site_path('kits/Bad.Name/kit.json'), '{}');
-        Files::put(site_path('kits/minimal/kit.json'), json_encode(['handle' => 'minimal', 'name' => 'Mine', 'version' => '1.0.0']));
         Files::put(site_path('kits/nope/readme.txt'), 'no kit.json');
         $this->kits()->flush();
         $listed = $this->ability('kits/list');
         $this->assertContains('kits/nope', array_column($listed['problems'], 'folder'));
         $this->assertContains('kits/Bad.Name', array_column($listed['problems'], 'folder'), 'a folder that is no kit is named, not passed over');
-        $this->assertContains('kits/minimal', array_column($listed['problems'], 'folder'), 'nor one that would stand in for a built-in kit');
         $this->assertSame('minimal', $listed['kits'][0]['handle'], 'minimal first');
     }
 
     public function test_the_installer_offers_each_kit_once_the_one_here_first(): void
     {
-        $this->kit('fathomline', ['content/design/tokens.json' => '{"tokens":{}}']);
+        $this->kit('atelier', ['content/design/tokens.json' => '{"tokens":{}}']);
         $item = static fn (string $package, string $type = 'kit') => ['package' => $package, 'type' => $type, 'action' => 'install', 'access' => ['allowed' => true], 'title' => ucfirst(explode('/', $package)[1]), 'preview' => null, 'icon' => null];
         $offered = \Cms\Http\Controllers\InstallController::storeKits(
-            [$item('letterncms/fathomline'), $item('acme/studio'), $item('acme/studio'), $item('letterncms/minimal'), $item('letterncms/forms', 'plugin')],
+            [$item('letterncms/atelier'), $item('acme/studio'), $item('acme/studio'), $item('letterncms/minimal'), $item('letterncms/forms', 'plugin')],
             array_keys($this->kits()->all()),
         );
         $this->assertSame(['acme-studio'], array_column($offered, 'handle'), 'what this site has is offered as it is here, and a store kit once');
 
         if (! \Cms\Install\Installer::installed()) {
             $page = (string) $this->get('/install')->getContent();
-            $this->assertSame(1, substr_count($page, 'value="fathomline"'));
+            $this->assertSame(1, substr_count($page, 'value="atelier"'));
             $this->assertSame(1, substr_count($page, 'value="minimal"'));
         }
     }

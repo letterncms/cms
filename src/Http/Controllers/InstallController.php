@@ -38,6 +38,8 @@ final class InstallController
             'text' => self::text(),
             'kits' => array_values(array_map(static fn (Kit $kit) => ['handle' => $kit->handle, 'name' => $kit->name(), 'preview' => $kit->toArray()['previews'][0] ?? null], app(Kits::class)->all())),
             'defaultKit' => Kits::DEFAULT,
+            'defaultName' => __('Minimal'),
+            'defaultPackage' => \Cms\Packages\PackageManifest::VENDOR.'/'.Kits::DEFAULT,
             'requirements' => $installer->requirements(),
             'nonce' => $nonce,
             'drivers' => \PDO::getAvailableDrivers(),
@@ -102,7 +104,7 @@ final class InstallController
     }
 
     /**
-     * The store's free kits a setup may fetch, once each: a kit this site already has (built in, put in kits/ by
+     * The store's free kits a setup may fetch, once each: a kit this site already has (put in kits/ by
      * Composer or by hand) is the one offered, and the store's copy of it is left out.
      *
      * @param  list<array<string, mixed>>  $items  the catalog as StoreClient describes it
@@ -197,7 +199,7 @@ final class InstallController
             'kits' => __('Start From'),
             'addingKit' => __('Adding the kit :name…'),
             'kitFailed' => __('The kit you chose couldn’t be fetched.'),
-            'useMinimal' => __('Start From Minimal'),
+            'useMinimal' => __('Start Without a Kit'),
             'adding' => __('Finishing Your Site'),
             'addingOne' => __('Adding :package…'),
             'finishing' => __('Putting your site together…'),

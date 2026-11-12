@@ -42,7 +42,7 @@
       <div class="field"><label for="site_url">{{ $text['siteUrl'] }}</label><input id="site_url" name="site_url" type="url" required value="{{ $url }}"></div>
     </section>
 
-    {{-- What the site starts as: a picture and a name per kit, the one that comes with the CMS chosen. --}}
+    {{-- What the site starts as: a picture and a name per kit, the one a new site starts from chosen (it is the store's: its card is here before the store answers). --}}
     <section>
       <h2 id="kits-heading">{{ $text['kits'] }}</h2>
       <div role="radiogroup" aria-labelledby="kits-heading"><ul class="kits" id="kits">
@@ -52,6 +52,12 @@
             <span class="name"><input type="radio" name="kit" value="{{ $kit['handle'] }}" @checked($kit['handle'] === $defaultKit)>{{ $kit['name'] }}</span>
           </label></li>
         @endforeach
+        @unless (collect($kits)->contains('handle', $defaultKit))
+          <li><label>
+            <span class="blank" aria-hidden="true"></span>
+            <span class="name"><input type="radio" name="kit" value="{{ $defaultKit }}" checked>{{ $defaultName }}</span>
+          </label></li>
+        @endunless
       </ul></div>
       <input type="hidden" name="kit_from_store" id="kit_from_store" value="0">
     </section>
@@ -136,11 +142,18 @@
   // The store's kits join the list when the store answers; a slow or absent store leaves the ones here.
   const kitList = document.getElementById('kits');
   const fromStore = document.getElementById('kit_from_store');
-  const packages = {};
+  const packages = { @json($defaultKit): @json($defaultPackage) };
   fetch('/install/kits', { headers: { 'Accept': 'application/json' } }).then((res) => res.ok ? res.json() : { kits: [] }).then(({ kits = [] }) => {
     for (const kit of kits) {
       // One card per kit: the one this site has already stands for any other copy.
-      if ([...kitList.querySelectorAll('input[name=kit]')].some((input) => input.value === kit.handle)) continue;
+      const here = [...kitList.querySelectorAll('input[name=kit]')].find((input) => input.value === kit.handle);
+      if (here) {
+        // Its card was drawn without a picture, before the store answered.
+        const card = here.closest('label');
+        const blank = card.querySelector('.blank');
+        if (blank && kit.preview) blank.replaceWith(Object.assign(document.createElement('img'), { src: kit.preview, alt: '', width: 480, height: 300, loading: 'lazy' }));
+        continue;
+      }
       packages[kit.handle] = kit.package;
       const row = document.createElement('li');
       const label = document.createElement('label');
@@ -274,7 +287,7 @@
   }
 
   document.getElementById('skip').addEventListener('click', () => finish());
-  // The kit chosen could not be fetched: the site starts from Minimal, because the person said so.
+  // The kit chosen could not be fetched: the site starts without one, because the person said so.
   document.getElementById('minimal').addEventListener('click', () => { session.kitPackage = null; finish(); });
   document.getElementById('add').addEventListener('click', async () => {
     const chosen = [...document.querySelectorAll('#packages input:checked')].map((box) => box.value);
@@ -320,7 +333,7 @@
         bar.style.width = '90%';
         await install(step);
       } catch (e) {
-        // Said where it can be acted on: try again, or start from the kit that is always here.
+        // Said where it can be acted on: try again, or start without a kit.
         show('pick');
         pickError.textContent = text.kitFailed + ' ' + (e.message || '');
         document.getElementById('minimal').classList.remove('hidden');

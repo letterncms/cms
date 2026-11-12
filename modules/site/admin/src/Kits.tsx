@@ -7,7 +7,7 @@ interface Kit {
   name: string
   description: string
   version: string
-  source: 'builtin' | 'site' | 'saved'
+  source: 'site' | 'saved'
   previews: string[]
   suits: boolean
   missingPlugins: string[]
@@ -67,25 +67,6 @@ export default function Kits() {
     }
   }
 
-  const designOnly = async (kit: Kit) => {
-    const ok = await confirm({
-      title: t('Use the design of {name}?', { name: kit.name }),
-      description: t('Templates, components, fonts and styles are replaced with {name}’s. Your pages, posts and menus stay.', { name: kit.name }),
-      confirm: t('Use Design'),
-    })
-    if (!ok) return
-    setBusy(kit.handle)
-    try {
-      await run('kits/apply', { handle: kit.handle, mode: 'design', clash: 'replace' })
-      await queryClient.invalidateQueries()
-      toast.success(t('{name}’s design is on this site', { name: kit.name }))
-    } catch (e) {
-      toast.error(e)
-    } finally {
-      setBusy(null)
-    }
-  }
-
   // A kit's zip, as Export Site makes it: kept in kits/, where it can be switched to.
   const importKit = async (zip: File) => {
     setImporting(true)
@@ -121,7 +102,7 @@ export default function Kits() {
       ) : (
         <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
           {list.data.kits.map((kit) => (
-            <KitCard key={kit.handle} kit={kit} busy={busy} onChoose={() => void choose(kit)} onStartOver={() => void startOver(kit)} onDesign={() => void designOnly(kit)} onEdit={() => setEditing(kit)} onDelete={() => void remove(kit)} />
+            <KitCard key={kit.handle} kit={kit} busy={busy} onChoose={() => void choose(kit)} onStartOver={() => void startOver(kit)} onEdit={() => setEditing(kit)} onDelete={() => void remove(kit)} />
           ))}
         </ul>
       )}
@@ -132,13 +113,12 @@ export default function Kits() {
   )
 }
 
-function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit, onDelete }: { kit: Kit; busy: string | null; onChoose: () => void; onStartOver: () => void; onDesign: () => void; onEdit: () => void; onDelete: () => void }) {
+function KitCard({ kit, busy, onChoose, onStartOver, onEdit, onDelete }: { kit: Kit; busy: string | null; onChoose: () => void; onStartOver: () => void; onEdit: () => void; onDelete: () => void }) {
   const needs = kit.missingPlugins.length > 0
   const switching = busy === kit.handle
   const chooseable = !kit.active && kit.suits && !needs && busy === null
   const canReset = kit.source !== 'saved' && (kit.active || kit.edited)
-  const canEdit = kit.source !== 'builtin'
-  const canDelete = canEdit && !kit.active
+  const canDelete = !kit.active
 
   return (
     <li className="group relative">
@@ -169,20 +149,17 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit, onDelete 
           <Button size="sm" onClick={() => navigate('/plugins')}>{t('Open Store')}</Button>
         </div>
       )}
-      {(canEdit || canDelete || canReset || (!kit.active && kit.source !== 'saved' && kit.suits)) && (
-        <div className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open]:opacity-100">
-          <Menu
-            align="end"
-            trigger={<IconButton icon="dots" label={t('More')} size="sm" disabled={busy !== null} />}
-            items={[
-              canEdit && { label: t('Edit Details'), icon: 'edit', onSelect: onEdit },
-              !kit.active && kit.source !== 'saved' && kit.suits && !needs && { label: t('Use Only the Design'), icon: 'palette', onSelect: onDesign },
-              canReset && { label: t('Start Over'), icon: 'arrow-counter-clockwise', danger: true, onSelect: onStartOver },
-              canDelete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: onDelete },
-            ]}
-          />
-        </div>
-      )}
+      <div className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open]:opacity-100">
+        <Menu
+          align="end"
+          trigger={<IconButton icon="dots" label={t('More')} size="sm" disabled={busy !== null} />}
+          items={[
+            { label: t('Edit Details'), icon: 'edit', onSelect: onEdit },
+            canReset && { label: t('Start Over'), icon: 'arrow-counter-clockwise', danger: true, onSelect: onStartOver },
+            canDelete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: onDelete },
+          ]}
+        />
+      </div>
     </li>
   )
 }

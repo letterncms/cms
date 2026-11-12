@@ -16,6 +16,8 @@ use Illuminate\Support\Str;
 /** `cms migrate` renames the block `pattern` to `component` in what a site has stored. */
 final class ComponentBlockMigrationTest extends TestCase
 {
+    use \Cms\Modules\Site\Tests\InstallsMinimalKit;
+
     private const string MIGRATION = '2026_11_13_000000_rename_pattern_block_to_component';
 
     protected function plugins(): array
@@ -312,6 +314,7 @@ final class ComponentBlockMigrationTest extends TestCase
 
     public function test_a_site_without_the_old_block_is_left_as_it_is(): void
     {
+        $this->installMinimalKit();
         $kits = $this->app->make(\Cms\Modules\Site\Kits\Kits::class);
         $this->app->make(\Cms\Modules\Site\Kits\KitApplier::class)->apply($kits->findOrFail('minimal'), 'full', 'replace', $this->admin(), withoutPlugins: true);
         $files = $this->files();

@@ -35,7 +35,7 @@ final class Kit
 
     private const string PREVIEW = '/^previews\/[a-z0-9][a-z0-9_-]{0,60}\.(png|jpg|webp)$/D';
 
-    /** @param  'builtin'|'site'|'saved'  $source  where it was found: inside the CMS, in the site's kits/ folder, or kept aside by a switch (Kits::saved) */
+    /** @param  'site'|'saved'  $source  where it was found: in the site's kits/ folder, or kept aside by a switch (Kits::saved) */
     private function __construct(
         public readonly string $handle,
         public readonly string $path,
