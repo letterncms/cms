@@ -49,7 +49,7 @@ final class AdminAccentTest extends TestCase
 
     public function test_monochrome_is_the_admins_own_ink_in_either_theme(): void
     {
-        $this->assertStringStartsWith(':root,[data-theme]{--cms-signal:var(--cms-ink);--cms-signal-ink:var(--cms-ink-contrast);', Accent::css('monochrome'));
+        $this->assertStringStartsWith(':root,[data-theme]{--cms-tint:#8a8a8a;--cms-signal:var(--cms-ink);--cms-signal-ink:var(--cms-ink-contrast);', Accent::css('monochrome'));
         $this->assertStringContainsString('--cms-focus:var(--cms-ink);', Accent::css('monochrome'));
     }
 

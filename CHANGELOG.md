@@ -11,6 +11,7 @@
 
 ### Changed
 
+- **The admin's greys take on its theme colour.** The desk, the sidebar, hover and pressed films, tabs and filters, the chat's button, edges and wells are a neutral grey with a little of the theme colour in it: warm with amber, cool slate with blue, a hint of rose with pink, plain grey with monochrome. In dark mode the page and menus lean toward it too. Words keep their colours.
 - **The admin's accent is amber**, warmer than the brand's lemon yellow and easier to see on white. Focus and selection, which were blue, follow it too; information alone stays blue.
 - **Chat** in the top bar is a `tonal` button a shade deeper than before, with a solid speech bubble in the theme colour.
 - Switches that are on, ticked boxes and chosen options are filled with the theme colour instead of ink.

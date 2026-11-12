@@ -38,24 +38,28 @@
    Colours and shadows only: `data-theme` on a piece inside the admin sets that piece in the theme it names
    (the save bar is set in the other one), and that turns these around and nothing else. */
 :root, [data-theme="light"] {
+  /* The greys are the theme's: a neutral grey with a little of the accent in it (--cms-tint), so the desk, the
+     films, the edges and the wells lean toward it. The page and what floats stay white; words never change. */
+  --cms-tint: var(--cms-signal);
   /* Layers, deepest first: desk (sidebar, panels), page (the sheet), float (menus, popovers, dialogs). */
-  --cms-surface: #f4f3ef;
-  --cms-sunken: #f8f7f4;
+  --cms-surface: color-mix(in oklab, #f4f4f4, var(--cms-tint) 7%);
+  --cms-sunken: color-mix(in oklab, #f8f8f8, var(--cms-tint) 5%);
   --cms-bg: #ffffff;
   --cms-float: #ffffff;
-  /* Hover and pressed states are a film of ink, so one value works on the desk, the page and a float alike. */
-  --cms-hover: rgb(42 38 30 / 0.045);
-  --cms-active: rgb(42 38 30 / 0.07);
+  /* Hover and pressed states are a film of the theme's ink, so one value works on the desk, the page and a float alike. */
+  --cms-film: color-mix(in oklab, #2a2a2a, var(--cms-tint) 30%);
+  --cms-hover: color-mix(in srgb, var(--cms-film) 4.5%, transparent);
+  --cms-active: color-mix(in srgb, var(--cms-film) 7%, transparent);
   /* A control filled at rest without being a sheet of its own (the chat's button), and pointed at. */
-  --cms-tonal: rgb(42 38 30 / 0.08);
-  --cms-tonal-hover: rgb(42 38 30 / 0.11);
+  --cms-tonal: color-mix(in srgb, var(--cms-film) 8%, transparent);
+  --cms-tonal-hover: color-mix(in srgb, var(--cms-film) 11%, transparent);
 
-  --cms-border: #ebe9e4;
-  --cms-border-strong: #dcd9d2;
+  --cms-border: color-mix(in oklab, #eaeaea, var(--cms-tint) 8%);
+  --cms-border-strong: color-mix(in oklab, #dadada, var(--cms-tint) 10%);
   /* Edges of layers above the page. float: popovers, menus, selects, toasts — with a shadow, so lighter than border-strong.
      modal: dialogs and sheets on the overlay — darker than the dimmed page under them. */
-  --cms-border-float: #e3e1db;
-  --cms-border-modal: #cfccc4;
+  --cms-border-float: color-mix(in oklab, #e2e2e2, var(--cms-tint) 8%);
+  --cms-border-modal: color-mix(in oklab, #cecece, var(--cms-tint) 10%);
 
   --cms-ink: #1c1b18;
   --cms-ink-contrast: #ffffff;
@@ -133,19 +137,21 @@
 
 [data-theme="dark"] {
   /* Dark keeps the order: the desk is the deepest layer, the page a step up, a float a step above that. */
-  --cms-surface: #121211;
-  --cms-sunken: #161615;
-  --cms-bg: #1a1a18;
-  --cms-float: #222220;
-  --cms-hover: rgb(255 253 245 / 0.055);
-  --cms-active: rgb(255 253 245 / 0.09);
-  --cms-tonal: rgb(255 253 245 / 0.1);
-  --cms-tonal-hover: rgb(255 253 245 / 0.14);
+  /* In the dark the whole of it leans toward the accent, the page and what floats too. */
+  --cms-surface: color-mix(in oklab, #121212, var(--cms-tint) 7%);
+  --cms-sunken: color-mix(in oklab, #161616, var(--cms-tint) 7%);
+  --cms-bg: color-mix(in oklab, #1a1a1a, var(--cms-tint) 6%);
+  --cms-float: color-mix(in oklab, #222222, var(--cms-tint) 7%);
+  --cms-film: color-mix(in oklab, #ffffff, var(--cms-tint) 22%);
+  --cms-hover: color-mix(in srgb, var(--cms-film) 5.5%, transparent);
+  --cms-active: color-mix(in srgb, var(--cms-film) 9%, transparent);
+  --cms-tonal: color-mix(in srgb, var(--cms-film) 10%, transparent);
+  --cms-tonal-hover: color-mix(in srgb, var(--cms-film) 14%, transparent);
 
-  --cms-border: #2a2a27;
-  --cms-border-strong: #3a3a36;
-  --cms-border-float: #34342f;
-  --cms-border-modal: #43433e;
+  --cms-border: color-mix(in oklab, #2a2a2a, var(--cms-tint) 9%);
+  --cms-border-strong: color-mix(in oklab, #3a3a3a, var(--cms-tint) 10%);
+  --cms-border-float: color-mix(in oklab, #343434, var(--cms-tint) 9%);
+  --cms-border-modal: color-mix(in oklab, #434343, var(--cms-tint) 10%);
 
   --cms-ink: #f5f4f0;
   --cms-ink-contrast: #1a1a18;
