@@ -234,7 +234,7 @@ final class CmsServiceProvider extends ServiceProvider
             ['handle' => 'admin_language', 'type' => 'select', 'label' => 'Admin Language', 'dynamic' => 'admin-languages', 'placeholder' => 'Browser Language', 'width' => 'half'],
             // Empty: the brand's own. Publish, highlights and the chat's button take it; Account overrides it for one person.
             ['handle' => 'admin_accent', 'type' => 'select', 'component' => 'accent', 'dynamic' => 'admin-accents', 'label' => 'Theme Color'],
-        ], icon: 'globe', description: 'Name, address, language and timezone.', order: 0, section: 'site');
+        ], icon: 'globe', description: 'Name, address, language and timezone.', order: -1, section: 'account');
 
         // The defaults everyone's sidebar and home screen start from. Each is saved where it is arranged
         // (Customize Sidebar, the home screen's Customize → Save as Default), so they have no page.
@@ -323,7 +323,7 @@ final class CmsServiceProvider extends ServiceProvider
         $admin->section('main', '', 0);
         $admin->section('content', __('Content'), 10);
         $admin->section('design', __('Design'), 20);
-        // The settings sidebar, the same on every site: your own account, the site's General page and what
+        // The settings sidebar, the same on every site: the site's General page, your own account and what
         // runs the installation, as one group without a name; then who works on it; then each plugin's page,
         // named by the plugin (see Navigation::PLUGINS).
         $admin->section('account', '', 0, settings: true);
