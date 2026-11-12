@@ -154,7 +154,7 @@ final class TwoSitesTest extends TestCase
     /** @return array<string, string> */
     private function env(string $site): array
     {
-        return [...self::ENV, 'DB_DATABASE' => $site.'/storage/database/test.sqlite', 'DB_PREFIX' => $site === $this->remote ? 'p_' : '', 'FIXTURE_SITE' => $site];
+        return [...self::ENV, 'DB_DATABASE' => $site.'/storage/database/test.sqlite', 'DB_PREFIX' => $site === $this->remote ? 'p_' : '', 'FIXTURE_SITE' => $site, 'CMS_AUTOLOAD' => dirname((string) (new \ReflectionClass(\Composer\Autoload\ClassLoader::class))->getFileName(), 2).'/autoload.php'];
     }
 
     private function artisan(string $role, string $command, array $params): array

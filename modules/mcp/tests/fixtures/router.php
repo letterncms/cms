@@ -18,7 +18,8 @@ if (is_file($file.'/index.html')) {
     return;
 }
 
-require dirname(__DIR__, 4).'/vendor/autoload.php';
+// The test run's own autoloader (a workspace keeps it outside this repository), or this clone's.
+require getenv('CMS_AUTOLOAD') ?: dirname(__DIR__, 4).'/vendor/autoload.php';
 
 $app = Bootstrap::create(dirname(__DIR__, 4), $site);
 $kernel = $app->make(Kernel::class);

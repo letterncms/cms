@@ -196,7 +196,7 @@ final class McpEndToEndTest extends TestCase
     /** @return array<string, string> */
     private function env(): array
     {
-        return [...self::ENV, 'DB_DATABASE' => $this->site.'/storage/database/cms.sqlite', 'FIXTURE_SITE' => $this->site];
+        return [...self::ENV, 'DB_DATABASE' => $this->site.'/storage/database/cms.sqlite', 'FIXTURE_SITE' => $this->site, 'CMS_AUTOLOAD' => dirname((string) (new \ReflectionClass(\Composer\Autoload\ClassLoader::class))->getFileName(), 2).'/autoload.php'];
     }
 
     private function step(string $command, array $args = []): mixed

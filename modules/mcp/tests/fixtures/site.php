@@ -12,7 +12,8 @@ use Illuminate\Contracts\Console\Kernel as Console;
 
 $cms = dirname(__DIR__, 4);
 
-require $cms.'/vendor/autoload.php';
+// The test run's own autoloader (a workspace keeps it outside this repository), or this clone's.
+require getenv('CMS_AUTOLOAD') ?: $cms.'/vendor/autoload.php';
 
 [, $site, $command] = $argv;
 $args = json_decode($argv[3] ?? '{}', true) ?: [];
