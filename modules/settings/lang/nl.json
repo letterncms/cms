@@ -1,5 +1,6 @@
 {
   "Admin Arrangement": "Indeling van de admin",
+  "General": "Algemeen",
   "Get Settings": "Instellingen ophalen",
   "List Settings Pages": "Instellingenpagina’s weergeven",
   "Nothing called “:name” is arranged here.": "Er wordt hier niets met de naam “:name” ingedeeld.",
@@ -11,6 +12,5 @@
   "Settings": "Instellingen",
   "The settings screen every module and plugin configures itself through, and the sidebar editor.": "Het instellingenscherm waarmee elke module en plugin wordt ingesteld, en de zijbalkeditor.",
   "Unknown settings.": "Onbekende instellingen.",
-  "Update Settings": "Instellingen bijwerken",
-  "General": "Algemeen"
+  "Update Settings": "Instellingen bijwerken"
 }

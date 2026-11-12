@@ -4,11 +4,13 @@ import { css } from '@codemirror/lang-css'
 import { html } from '@codemirror/lang-html'
 import { javascript } from '@codemirror/lang-javascript'
 import { json } from '@codemirror/lang-json'
-import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
+import { diagnosticCount, linter, lintGutter, lintKeymap, type Diagnostic } from '@codemirror/lint'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars, keymap, lineNumbers, placeholder as placeholderText } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
+import { t } from '@letterncms/sdk'
 
 /**
  * The code editor CodeEditor loads on first use, so the admin's first paint never carries it.
@@ -24,6 +26,27 @@ const languages: Record<string, () => Extension> = {
   ts: () => javascript({ typescript: true }),
   json: () => json(),
 }
+
+/**
+ * Mistakes in the code, as its language's parser finds them: what it couldn't read, what is missing,
+ * and in HTML a closing tag that closes nothing. Shown underlined, with the reason on hover.
+ */
+const mistakes = linter((view) => {
+  const found: Diagnostic[] = []
+  const doc = view.state.doc
+  syntaxTree(view.state).cursor().iterate((node) => {
+    if (found.length >= 100) return false
+    if (node.type.isError) {
+      const text = doc.sliceString(node.from, Math.min(node.to, node.from + 24)).split('\n')[0].trim()
+      // A missing piece has no width: it is marked on the character where it should have been.
+      const from = node.from === node.to && node.from > 0 && node.from === doc.lineAt(node.from).to ? node.from - 1 : node.from
+      found.push({ from, to: Math.max(node.to, Math.min(from + 1, doc.length)), severity: 'error', message: text ? t('Unexpected “{text}”', { text }) : t('Something is missing here') })
+    } else if (node.name === 'MismatchedCloseTag') {
+      found.push({ from: node.from, to: node.to, severity: 'error', message: t('“{tag}” closes a tag that isn’t open', { tag: doc.sliceString(node.from, node.to) }) })
+    }
+  })
+  return found
+}, { delay: 400 })
 
 const highlight = HighlightStyle.define([
   { tag: [tags.keyword, tags.operatorKeyword, tags.modifier, tags.controlKeyword, tags.definitionKeyword, tags.moduleKeyword], color: 'var(--cms-code-keyword)' },
@@ -60,6 +83,13 @@ const theme = EditorView.theme({
   '.cm-completionIcon': { display: 'none' },
   '.cm-panels': { backgroundColor: 'var(--cms-surface)', color: 'var(--cms-text)', borderColor: 'var(--cms-border)' },
   '.cm-searchMatch': { backgroundColor: 'var(--cms-signal-soft)' },
+  '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy var(--cms-danger)', textDecorationSkipInk: 'none', textUnderlineOffset: '3px' },
+  '.cm-tooltip-lint': { padding: '0' },
+  '.cm-diagnostic': { padding: '6px 10px', fontFamily: 'var(--font-sans)', fontSize: '12px', lineHeight: '16px' },
+  '.cm-diagnostic-error': { borderLeft: '2px solid var(--cms-danger)' },
+  '.cm-lint-marker-error': { content: 'none' },
+  '.cm-gutter-lint': { width: '14px' },
+  '.cm-gutter-lint .cm-gutterElement': { padding: '0 0 0 6px' },
   '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--cms-focus-soft)', outline: '1px solid var(--cms-focus)' },
 })
 
@@ -76,6 +106,8 @@ export interface EditorOptions {
   describedBy?: string
   onChange: (value: string) => void
   onFocus: (focused: boolean) => void
+  /** How many mistakes the code has now. */
+  onErrors: (count: number) => void
 }
 
 export interface Editor {
@@ -97,7 +129,7 @@ export function createEditor(options: EditorOptions): Editor {
     state: EditorState.create({
       doc: options.value,
       extensions: [
-        options.full ? [lineNumbers(), highlightActiveLineGutter()] : EditorView.lineWrapping,
+        options.full ? [lintGutter(), lineNumbers(), highlightActiveLineGutter()] : EditorView.lineWrapping,
         highlightSpecialChars(),
         history(),
         drawSelection(),
@@ -107,17 +139,19 @@ export function createEditor(options: EditorOptions): Editor {
         autocompletion({ icons: false }),
         highlightActiveLine(),
         highlightSelectionMatches(),
-        keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, ...completionKeymap, indentWithTab]),
+        keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, ...completionKeymap, ...lintKeymap, indentWithTab]),
         EditorState.tabSize.of(2),
         syntaxHighlighting(highlight),
         theme,
-        languages[options.language ?? '']?.() ?? [],
+        languages[options.language ?? ''] ? [languages[options.language ?? '']!(), mistakes] : [],
         options.placeholder ? placeholderText(options.placeholder) : [],
         EditorView.contentAttributes.of(attributes),
         editable.of(lock(!!options.disabled)),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) options.onChange(update.state.doc.toString())
           if (update.focusChanged) options.onFocus(update.view.hasFocus)
+          const errors = diagnosticCount(update.state)
+          if (errors !== diagnosticCount(update.startState)) options.onErrors(errors)
         }),
       ],
     }),

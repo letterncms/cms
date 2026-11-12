@@ -16,9 +16,9 @@
   "Get Global Set": "Globale set ophalen",
   "Global Set Fields": "Velden van een globale set",
   "Global Sets": "Globale sets",
-  "Site-wide values such as contact details or a footer, in global sets with fields of their own.": "Waarden voor de hele site, zoals contactgegevens of een footer, in globale sets met eigen velden.",
   "Icon": "Pictogram",
   "Its values are deleted too.": "De waarden worden ook verwijderd.",
+  "Language": "Taal",
   "List Global Sets": "Globale sets weergeven",
   "Manage Global Sets and Fields": "Globale sets en velden beheren",
   "Name": "Naam",
@@ -28,10 +28,10 @@
   "Quick links to your global sets.": "Snelkoppelingen naar je globale sets.",
   "Save Global Set": "Globale set opslaan",
   "Saved :name": ":name opgeslagen",
+  "Site-wide values such as contact details or a footer, in global sets with fields of their own.": "Waarden voor de hele site, zoals contactgegevens of een footer, in globale sets met eigen velden.",
   "Text": "Tekst",
   "The fields of one global set, in the blueprint editor.": "De velden van één globale set, in de blauwdrukeditor.",
   "Update Global Set Values": "Waarden van een globale set bijwerken",
   "Use letters or numbers in the name.": "Gebruik letters of cijfers in de naam.",
-  "View Global Sets": "Globale sets bekijken",
-  "Language": "Taal"
+  "View Global Sets": "Globale sets bekijken"
 }

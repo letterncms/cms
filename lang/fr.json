@@ -11,6 +11,7 @@
   "\":handle\" is part of every account; choose another field handle.": "« :handle » fait partie de chaque compte ; choisissez un autre identifiant de champ.",
   "“:handle” is reserved. Choose another field handle.": "« :handle » est réservé. Choisissez un autre identifiant de champ.",
   "“:taxonomy” is not a taxonomy to archive by.": "« :taxonomy » n’est pas une taxonomie pour des archives.",
+  "{\"value\": \"Label\"}": "{\"value\": \"Libellé\"}",
   "{count} entries": "{count} entrées",
   "{count} entry": "{count} entrée",
   "/blog/{slug}": "/blog/{slug}",
@@ -367,6 +368,7 @@
   "This person is unavailable.": "Cette personne est indisponible.",
   "This release needs :what on this host.": "Cette version nécessite :what sur cet hébergeur.",
   "This reset link is invalid or has expired.": "Ce lien de réinitialisation n’est pas valide ou a expiré.",
+  "This server has everything :brand needs": "Ce serveur a tout ce dont :brand a besoin",
   "This server is missing something :brand needs. Fix what is marked, then check again.": "Il manque à ce serveur quelque chose dont :brand a besoin. Corrigez ce qui est signalé, puis vérifiez à nouveau.",
   "This server’s clock looks wrong. Updates are paused. The public site is not affected.": "L’horloge de ce serveur semble fausse. Les mises à jour sont suspendues. Le site public n’est pas touché.",
   "This site does not change its own files. Update it through your deploy.": "Ce site ne modifie pas ses propres fichiers. Mettez-le à jour par votre déploiement.",
@@ -402,6 +404,7 @@
   "URL": "URL",
   "URL Pattern": "Modèle d’URL",
   "Use a language code like en, de or fr-CA.": "Utilisez un code de langue comme en, de ou fr-CA.",
+  "Use at least 10 characters, with letters and numbers.": "Utilisez au moins 10 caractères, avec des lettres et des chiffres.",
   "Use lowercase letters, digits and underscores, starting with a letter.": "Utilisez des minuscules, des chiffres et des tirets bas, en commençant par une lettre.",
   "Use POST for abilities that change data.": "Utilisez POST pour les actions qui modifient des données.",
   "Use the move or publication action to change structure or publication timing.": "Utilisez l’action de déplacement ou de publication pour modifier la structure ou l’horaire de publication.",
@@ -418,8 +421,5 @@
   "You do not have access to the admin.": "Vous n’avez pas accès à l’administration.",
   "Your Account": "Votre compte",
   "Your session expired. Reload the page.": "Votre session a expiré. Rechargez la page.",
-  "Your sign-in expired. Please start again.": "Votre connexion a expiré. Recommencez.",
-  "{\"value\": \"Label\"}": "{\"value\": \"Libellé\"}",
-  "Use at least 10 characters, with letters and numbers.": "Utilisez au moins 10 caractères, avec des lettres et des chiffres.",
-  "This server has everything :brand needs": "Ce serveur a tout ce dont :brand a besoin"
+  "Your sign-in expired. Please start again.": "Votre connexion a expiré. Recommencez."
 }

@@ -16,9 +16,9 @@
   "Get Global Set": "Obtenir un ensemble global",
   "Global Set Fields": "Champs d’un ensemble global",
   "Global Sets": "Ensembles globaux",
-  "Site-wide values such as contact details or a footer, in global sets with fields of their own.": "Des valeurs pour tout le site, comme les coordonnées ou un pied de page, dans des ensembles globaux avec leurs propres champs.",
   "Icon": "Icône",
   "Its values are deleted too.": "Ses valeurs sont aussi supprimées.",
+  "Language": "Langue",
   "List Global Sets": "Lister les ensembles globaux",
   "Manage Global Sets and Fields": "Gérer les ensembles globaux et leurs champs",
   "Name": "Nom",
@@ -28,10 +28,10 @@
   "Quick links to your global sets.": "Accès rapide à vos ensembles globaux.",
   "Save Global Set": "Enregistrer l’ensemble global",
   "Saved :name": ":name enregistré",
+  "Site-wide values such as contact details or a footer, in global sets with fields of their own.": "Des valeurs pour tout le site, comme les coordonnées ou un pied de page, dans des ensembles globaux avec leurs propres champs.",
   "Text": "Texte",
   "The fields of one global set, in the blueprint editor.": "Les champs d’un ensemble global, dans l’éditeur de modèle.",
   "Update Global Set Values": "Mettre à jour les valeurs d’un ensemble global",
   "Use letters or numbers in the name.": "Utilisez des lettres ou des chiffres dans le nom.",
-  "View Global Sets": "Voir les ensembles globaux",
-  "Language": "Langue"
+  "View Global Sets": "Voir les ensembles globaux"
 }

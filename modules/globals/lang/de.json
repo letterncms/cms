@@ -16,9 +16,9 @@
   "Get Global Set": "Globalen Inhalt abrufen",
   "Global Set Fields": "Felder eines globalen Inhalts",
   "Global Sets": "Globale Inhalte",
-  "Site-wide values such as contact details or a footer, in global sets with fields of their own.": "Werte für die ganze Website, etwa Kontaktdaten oder eine Fußzeile, in globalen Sets mit eigenen Feldern.",
   "Icon": "Icon",
   "Its values are deleted too.": "Die zugehörigen Werte werden ebenfalls gelöscht.",
+  "Language": "Sprache",
   "List Global Sets": "Globale Inhalte auflisten",
   "Manage Global Sets and Fields": "Globale Inhalte und Felder verwalten",
   "Name": "Name",
@@ -28,10 +28,10 @@
   "Quick links to your global sets.": "Schnellzugriff auf deine globalen Inhalte.",
   "Save Global Set": "Globalen Inhalt speichern",
   "Saved :name": ":name gespeichert",
+  "Site-wide values such as contact details or a footer, in global sets with fields of their own.": "Werte für die ganze Website, etwa Kontaktdaten oder eine Fußzeile, in globalen Sets mit eigenen Feldern.",
   "Text": "Text",
   "The fields of one global set, in the blueprint editor.": "Die Felder eines globalen Inhalts, im Blueprint-Editor.",
   "Update Global Set Values": "Werte eines globalen Inhalts aktualisieren",
   "Use letters or numbers in the name.": "Verwende Buchstaben oder Ziffern im Namen.",
-  "View Global Sets": "Globale Inhalte ansehen",
-  "Language": "Sprache"
+  "View Global Sets": "Globale Inhalte ansehen"
 }

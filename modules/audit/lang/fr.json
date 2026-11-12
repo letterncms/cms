@@ -1,8 +1,5 @@
 {
-  "Changed Site Kit Details": "Détails du kit de site modifiés",
-  "Deleted Site Kit": "Kit de site supprimé",
-  "Imported Site Kit": "Kit de site importé",
-  "Switched Site Kit": "Kit de site changé",
+  ":first and :count more": ":first et :count de plus",
   "{count} time": "{count} fois",
   "{count} times": "{count} fois",
   "Ability": "Capacité",
@@ -27,6 +24,7 @@
   "Change": "Modification",
   "Changed Automatic Security Updates": "Mises à jour de sécurité automatiques modifiées",
   "Changed Pulls and Pushes": "Récupérations et envois modifiés",
+  "Changed Site Kit Details": "Détails du kit de site modifiés",
   "Changed the Default Language’s Prefix": "Préfixe de la langue par défaut modifié",
   "Changed Where Design Scripts and Styles Load": "Chargement des scripts et styles du design modifié",
   "Checked for Updates": "Mises à jour vérifiées",
@@ -53,6 +51,7 @@
   "Deleted Media": "Médias supprimés",
   "Deleted Media Folder": "Dossier de médias supprimé",
   "Deleted Menu": "Menu supprimé",
+  "Deleted Site Kit": "Kit de site supprimé",
   "Deleted user": "Utilisateur supprimé",
   "Deleted User": "Utilisateur supprimé",
   "Deleted View": "Vue supprimée",
@@ -70,6 +69,7 @@
   "Gave Access": "Accès accordé",
   "Hid the Guided Start": "Démarrage guidé masqué",
   "Imported Media": "Médias importés",
+  "Imported Site Kit": "Kit de site importé",
   "Imported Terms from Tags": "Termes importés depuis les étiquettes",
   "Installation": "Installation",
   "Installed Plugin": "Plugin installé",
@@ -127,6 +127,7 @@
   "Started Update": "Mise à jour lancée",
   "Subject": "Objet",
   "Switched Release": "Version changée",
+  "Switched Site Kit": "Kit de site changé",
   "System": "Système",
   "That is :count changes, more than :limit in one file. Narrow it to a person, an action or a shorter time.": "Cela fait :count modifications, plus que :limit dans un seul fichier. Limitez à une personne, une action ou une période plus courte.",
   "Today": "Aujourd’hui",
@@ -163,6 +164,5 @@
   "When": "Quand",
   "Who": "Qui",
   "Who changed what across the site, and when.": "Qui a modifié quoi sur le site, et quand.",
-  "Wrote Schema Files": "Fichiers de schéma écrits",
-  ":first and :count more": ":first et :count de plus"
+  "Wrote Schema Files": "Fichiers de schéma écrits"
 }

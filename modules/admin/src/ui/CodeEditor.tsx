@@ -34,7 +34,8 @@ const PADDING = 16
 
 /**
  * Source code in a field: highlighted for its language, with brackets that close and match, search,
- * undo and Tab to indent (Escape, then Tab, leaves it). The button at its top right opens it large.
+ * undo and Tab to indent (Escape, then Tab, leaves it). Mistakes are underlined and counted under it.
+ * The button at its top right opens it large.
  */
 export function CodeEditor({ value, onChange, language, placeholder, disabled = false, invalid = false, rows = 8, id, label, describedBy, fixed = false, full = false }: CodeEditorProps) {
   const host = useRef<HTMLDivElement>(null)
@@ -46,12 +47,13 @@ export function CodeEditor({ value, onChange, language, placeholder, disabled = 
   const [focused, setFocused] = useState(false)
   const [ready, setReady] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [errors, setErrors] = useState(0)
 
   useEffect(() => {
     let gone = false
     void load().then(({ createEditor }) => {
       if (gone || !host.current) return
-      editor.current = createEditor({ parent: host.current, value: latest.current, language, placeholder, disabled, full, label, id, describedBy, onChange: (v) => change.current(v), onFocus: setFocused })
+      editor.current = createEditor({ parent: host.current, value: latest.current, language, placeholder, disabled, full, label, id, describedBy, onChange: (v) => change.current(v), onFocus: setFocused, onErrors: setErrors })
       setReady(true)
       if (full) editor.current.focus()
     })
@@ -80,6 +82,7 @@ export function CodeEditor({ value, onChange, language, placeholder, disabled = 
         {/* Until it arrives, the code as it will stand, so nothing moves. */}
         {!ready && <pre aria-hidden className="m-0 min-h-(--cms-code-rows) whitespace-pre-wrap break-words px-2.5 py-[7px] font-mono leading-5 text-text">{value || <span className="text-ghost">{placeholder}</span>}</pre>}
       </div>
+      {errors > 0 && <p role="status" className="m-0 mt-1 text-2xs text-danger">{errors === 1 ? t('1 error') : t('{count} errors', { count: errors })}</p>}
       {!fixed && !full && (
         <>
           <IconButton icon="maximize" label={t('Expand')} size="xs" onClick={() => setExpanded(true)} className="cms-reveal !absolute right-1 top-1 bg-bg" />

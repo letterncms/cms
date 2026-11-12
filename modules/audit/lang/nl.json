@@ -1,8 +1,5 @@
 {
-  "Changed Site Kit Details": "Sitekit-gegevens gewijzigd",
-  "Deleted Site Kit": "Sitekit verwijderd",
-  "Imported Site Kit": "Sitekit geïmporteerd",
-  "Switched Site Kit": "Sitekit gewisseld",
+  ":first and :count more": ":first en :count meer",
   "{count} time": "{count} keer",
   "{count} times": "{count} keer",
   "Ability": "Vaardigheid",
@@ -27,6 +24,7 @@
   "Change": "Wijziging",
   "Changed Automatic Security Updates": "Automatische beveiligingsupdates gewijzigd",
   "Changed Pulls and Pushes": "Ophalen en versturen gewijzigd",
+  "Changed Site Kit Details": "Sitekit-gegevens gewijzigd",
   "Changed the Default Language’s Prefix": "Voorvoegsel van de standaardtaal gewijzigd",
   "Changed Where Design Scripts and Styles Load": "Gewijzigd waar ontwerpscripts en -stijlen laden",
   "Checked for Updates": "Op updates gecontroleerd",
@@ -53,6 +51,7 @@
   "Deleted Media": "Media verwijderd",
   "Deleted Media Folder": "Mediamap verwijderd",
   "Deleted Menu": "Menu verwijderd",
+  "Deleted Site Kit": "Sitekit verwijderd",
   "Deleted user": "Verwijderde gebruiker",
   "Deleted User": "Gebruiker verwijderd",
   "Deleted View": "Weergave verwijderd",
@@ -70,6 +69,7 @@
   "Gave Access": "Toegang gegeven",
   "Hid the Guided Start": "Begeleide start verborgen",
   "Imported Media": "Media geïmporteerd",
+  "Imported Site Kit": "Sitekit geïmporteerd",
   "Imported Terms from Tags": "Termen uit tags geïmporteerd",
   "Installation": "Installatie",
   "Installed Plugin": "Plug-in geïnstalleerd",
@@ -127,6 +127,7 @@
   "Started Update": "Update gestart",
   "Subject": "Onderwerp",
   "Switched Release": "Van release gewisseld",
+  "Switched Site Kit": "Sitekit gewisseld",
   "System": "Systeem",
   "That is :count changes, more than :limit in one file. Narrow it to a person, an action or a shorter time.": "Dat zijn :count wijzigingen, meer dan :limit in één bestand. Beperk het tot één persoon, één actie of een kortere tijd.",
   "Today": "Vandaag",
@@ -163,6 +164,5 @@
   "When": "Wanneer",
   "Who": "Wie",
   "Who changed what across the site, and when.": "Wie wat heeft gewijzigd op de site, en wanneer.",
-  "Wrote Schema Files": "Schemabestanden geschreven",
-  ":first and :count more": ":first en :count meer"
+  "Wrote Schema Files": "Schemabestanden geschreven"
 }

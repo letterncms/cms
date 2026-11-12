@@ -13,8 +13,12 @@
   "Connected Agents": "Agents connectés",
   "Copied": "Copié",
   "Copy": "Copier",
+  "Disconnect": "Déconnecter",
+  "Disconnect {name}?": "Déconnecter {name} ?",
+  "Disconnect Agent": "Déconnecter l’agent",
   "Everything you can do in the admin": "Tout ce que vous pouvez faire dans l’admin",
   "Full Access": "Accès complet",
+  "It stops working until you connect it again.": "Il cesse de fonctionner jusqu’à ce que vous le connectiez à nouveau.",
   "Look, never change anything": "Consulter, ne jamais rien modifier",
   "MCP": "MCP",
   "MCP Server URL": "URL du serveur MCP",
@@ -26,9 +30,5 @@
   "The redirect address does not match the app’s registration.": "L’adresse de redirection ne correspond pas à l’enregistrement de l’application.",
   "This app cannot connect": "Cette application ne peut pas se connecter",
   "This app is not registered.": "Cette application n’est pas enregistrée.",
-  "Your account cannot use the admin, so it cannot connect apps.": "Votre compte n’a pas accès à l’admin et ne peut donc pas connecter d’applications.",
-  "Disconnect": "Déconnecter",
-  "Disconnect {name}?": "Déconnecter {name} ?",
-  "Disconnect Agent": "Déconnecter l’agent",
-  "It stops working until you connect it again.": "Il cesse de fonctionner jusqu’à ce que vous le connectiez à nouveau."
+  "Your account cannot use the admin, so it cannot connect apps.": "Votre compte n’a pas accès à l’admin et ne peut donc pas connecter d’applications."
 }

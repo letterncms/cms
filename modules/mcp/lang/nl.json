@@ -13,8 +13,12 @@
   "Connected Agents": "Verbonden agents",
   "Copied": "Gekopieerd",
   "Copy": "Kopiëren",
+  "Disconnect": "Loskoppelen",
+  "Disconnect {name}?": "{name} loskoppelen?",
+  "Disconnect Agent": "Agent loskoppelen",
   "Everything you can do in the admin": "Alles wat jij in de admin kunt",
   "Full Access": "Volledige toegang",
+  "It stops working until you connect it again.": "Hij werkt niet meer tot je hem opnieuw verbindt.",
   "Look, never change anything": "Kijken, nooit iets wijzigen",
   "MCP": "MCP",
   "MCP Server URL": "URL van de MCP-server",
@@ -26,9 +30,5 @@
   "The redirect address does not match the app’s registration.": "Het redirectadres komt niet overeen met de registratie van de app.",
   "This app cannot connect": "Deze app kan geen verbinding maken",
   "This app is not registered.": "Deze app is niet geregistreerd.",
-  "Your account cannot use the admin, so it cannot connect apps.": "Je account heeft geen toegang tot de admin en kan dus geen apps verbinden.",
-  "Disconnect": "Loskoppelen",
-  "Disconnect {name}?": "{name} loskoppelen?",
-  "Disconnect Agent": "Agent loskoppelen",
-  "It stops working until you connect it again.": "Hij werkt niet meer tot je hem opnieuw verbindt."
+  "Your account cannot use the admin, so it cannot connect apps.": "Je account heeft geen toegang tot de admin en kan dus geen apps verbinden."
 }

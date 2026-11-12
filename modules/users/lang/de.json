@@ -1,10 +1,10 @@
 {
-  "{label} copy": "{label} Kopie",
   ":name invited you to edit :site.": ":name hat dich eingeladen, :site zu bearbeiten.",
   "{count} people": "{count} Personen",
   "{count} people in all": "{count} Personen insgesamt",
   "{count} person": "{count} Person",
   "{count} person in all": "{count} Person insgesamt",
+  "{label} copy": "{label} Kopie",
   "{name} deleted": "{name} gelöscht",
   "{name} reactivated": "{name} reaktiviert",
   "{name} suspended": "{name} gesperrt",

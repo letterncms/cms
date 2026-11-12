@@ -11,6 +11,7 @@
   "\":handle\" is part of every account; choose another field handle.": "„:handle“ gehört zu jedem Konto; wähle einen anderen Handle für das Feld.",
   "“:handle” is reserved. Choose another field handle.": "„:handle“ ist reserviert. Wähle einen anderen Handle.",
   "“:taxonomy” is not a taxonomy to archive by.": "„:taxonomy“ ist keine Taxonomie für Archive.",
+  "{\"value\": \"Label\"}": "{\"value\": \"Bezeichnung\"}",
   "{count} entries": "{count} Einträge",
   "{count} entry": "{count} Eintrag",
   "/blog/{slug}": "/blog/{slug}",
@@ -367,6 +368,7 @@
   "This person is unavailable.": "Diese Person ist nicht verfügbar.",
   "This release needs :what on this host.": "Dieses Release braucht :what auf diesem Host.",
   "This reset link is invalid or has expired.": "Dieser Link zum Zurücksetzen ist ungültig oder abgelaufen.",
+  "This server has everything :brand needs": "Dieser Server hat alles, was :brand braucht",
   "This server is missing something :brand needs. Fix what is marked, then check again.": "Diesem Server fehlt etwas, das :brand braucht. Behebe, was markiert ist, und prüfe dann erneut.",
   "This server’s clock looks wrong. Updates are paused. The public site is not affected.": "Die Uhr dieses Servers scheint falsch zu gehen. Updates sind pausiert. Die öffentliche Website ist nicht betroffen.",
   "This site does not change its own files. Update it through your deploy.": "Diese Website ändert ihre eigenen Dateien nicht. Aktualisiere sie über dein Deployment.",
@@ -402,6 +404,7 @@
   "URL": "URL",
   "URL Pattern": "URL-Muster",
   "Use a language code like en, de or fr-CA.": "Verwende einen Sprachcode wie en, de oder fr-CA.",
+  "Use at least 10 characters, with letters and numbers.": "Verwende mindestens 10 Zeichen, mit Buchstaben und Zahlen.",
   "Use lowercase letters, digits and underscores, starting with a letter.": "Verwende Kleinbuchstaben, Ziffern und Unterstriche und beginne mit einem Buchstaben.",
   "Use POST for abilities that change data.": "Verwende POST für Abilities, die Daten ändern.",
   "Use the move or publication action to change structure or publication timing.": "Verwende die Aktion zum Verschieben oder Veröffentlichen, um die Struktur oder den Veröffentlichungszeitpunkt zu ändern.",
@@ -418,8 +421,5 @@
   "You do not have access to the admin.": "Du hast keinen Zugriff auf den Admin.",
   "Your Account": "Dein Konto",
   "Your session expired. Reload the page.": "Deine Sitzung ist abgelaufen. Lade die Seite neu.",
-  "Your sign-in expired. Please start again.": "Deine Anmeldung ist abgelaufen. Bitte beginne noch einmal.",
-  "{\"value\": \"Label\"}": "{\"value\": \"Bezeichnung\"}",
-  "Use at least 10 characters, with letters and numbers.": "Verwende mindestens 10 Zeichen, mit Buchstaben und Zahlen.",
-  "This server has everything :brand needs": "Dieser Server hat alles, was :brand braucht"
+  "Your sign-in expired. Please start again.": "Deine Anmeldung ist abgelaufen. Bitte beginne noch einmal."
 }

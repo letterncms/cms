@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.27.0 (2026-11-12)
+
 ### Added
 
 - **Switch between site kits, and back.** Choose a kit from the site's name at the top of the sidebar, or on **Site Kits**: the site is that kit at once, with nothing to decide. What the site was is saved with the kit it was, drafts included, so switching back brings it as you left it, and the toast has **Undo**. A kit's menu has **Start Over** (the kit as it came) and **Use Only the Design**. `kits/switch` and `php cms kit:switch` do the same for agents and the command line; `kits/list` says which kit the site is (`active`) and which have a saved copy (`edited`). Accounts, the media library, submissions, analytics and every setting a kit doesn't carry stay through a switch. See [Site kits](https://docs.lettern.org/design/site-kits).

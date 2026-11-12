@@ -1,5 +1,6 @@
 {
   "Admin Arrangement": "Disposition de l’admin",
+  "General": "Général",
   "Get Settings": "Obtenir les paramètres",
   "List Settings Pages": "Lister les pages de paramètres",
   "Nothing called “:name” is arranged here.": "Rien ne s’appelle « :name » ici.",
@@ -11,6 +12,5 @@
   "Settings": "Paramètres",
   "The settings screen every module and plugin configures itself through, and the sidebar editor.": "L’écran de paramètres par lequel chaque module et plugin se configure, et l’éditeur de la barre latérale.",
   "Unknown settings.": "Paramètres inconnus.",
-  "Update Settings": "Mettre à jour les paramètres",
-  "General": "Général"
+  "Update Settings": "Mettre à jour les paramètres"
 }
