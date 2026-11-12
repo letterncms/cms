@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.24.0 (2026-11-12)
+
 ### Added
 
 - `audit.unrecorded` (filter): a plugin leaves a call out of the Audit Log, by the ability, its input and its answer: a call made over and over for one change, such as each turn of an import, keeping the one that finishes it.
