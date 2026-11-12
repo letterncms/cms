@@ -17,6 +17,10 @@
 - **Drag the sidebar wider**, as the chat can.
 - The **Settings** crumb leads straight to where settings open, and the sidebar switches to settings with the screen.
 
+### Fixed
+
+- A behavior drawn in the builder's canvas that is still loading when the canvas renders again no longer leaves the page's import map behind in the admin.
+
 ## 0.27.0 (2026-11-12)
 
 ### Added

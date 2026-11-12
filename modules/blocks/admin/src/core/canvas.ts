@@ -207,8 +207,12 @@ export function canvasBehaviors() {
     if (!win) return
     try {
       const map = await lend(d, spec.src)
+      // Undone while its imports were read: the map lent for it goes too, or it outlives the canvas it was for.
+      if (entry.abort.signal.aborted) {
+        map?.remove()
+        return
+      }
       if (map) maps.push(map)
-      if (entry.abort.signal.aborted) return
       const module: Behavior = await import(/* @vite-ignore */ spec.src)
       // A script that has not said it draws in the canvas is not run there.
       if (entry.abort.signal.aborted || module.canvas !== true) return
