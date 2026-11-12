@@ -19,7 +19,7 @@ class Toggle extends FieldType
 
     public function schema(Field $field): array
     {
-        return ['type' => 'boolean', 'description' => $field->instructions ?: $field->label];
+        return ['type' => 'boolean', 'description' => $field->description()];
     }
 
     public function normalize(mixed $value, Field $field): mixed

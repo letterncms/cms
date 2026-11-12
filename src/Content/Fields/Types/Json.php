@@ -22,6 +22,6 @@ class Json extends FieldType
 
     public function schema(Field $field): array
     {
-        return ['description' => $field->instructions ?: $field->label];
+        return ['description' => $field->description()];
     }
 }

@@ -23,7 +23,7 @@ class Number extends FieldType
             'type' => $field->get('decimals') ? 'number' : 'integer',
             'minimum' => $field->get('min'),
             'maximum' => $field->get('max'),
-            'description' => $field->instructions ?: $field->label,
+            'description' => $field->description(),
         ], static fn ($v) => $v !== null), $field);
     }
 

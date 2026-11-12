@@ -36,7 +36,7 @@ final class DataSources
             'list' => [
                 'label' => 'A list in this scope',
                 'description' => 'Any list the page already has: item.children, entry.tags, props.items…',
-                'fields' => [['handle' => 'path', 'type' => 'text', 'label' => 'List', 'placeholder' => 'item.children', 'required' => true]],
+                'fields' => [['handle' => 'path', 'type' => 'text', 'label' => 'List', 'placeholder' => 'item.children', 'required' => true, 'about' => 'e.g. item.children or entry.gallery']],
                 'item' => [],
                 'resolve' => static function (array $props, Scope $scope): array {
                     $value = $scope->get((string) ($props['path'] ?? ''));

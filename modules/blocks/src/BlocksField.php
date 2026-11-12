@@ -24,7 +24,7 @@ final class BlocksField extends FieldType
     {
         return [
             'type' => 'array',
-            'description' => ($field->instructions ?: $field->label).'. A list of blocks: {type, props, style?, children?}. See blocks/types for the catalog and cms://blocks for examples.',
+            'description' => $field->description().'. A list of blocks: {type, props, style?, children?}. See blocks/types for the catalog and cms://blocks for examples.',
             'items' => [
                 'type' => 'object',
                 'properties' => [
@@ -142,7 +142,7 @@ final class BlocksField extends FieldType
     public function configFields(): array
     {
         return [
-            ['handle' => 'allowed', 'type' => 'tags', 'label' => 'Allowed Blocks', 'placeholder' => 'Every Block'],
+            ['handle' => 'allowed', 'type' => 'tags', 'label' => 'Allowed Blocks', 'placeholder' => 'Every Block', 'about' => 'Leave empty to allow every block.'],
         ];
     }
 }

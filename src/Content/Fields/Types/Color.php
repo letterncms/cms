@@ -23,7 +23,7 @@ class Color extends FieldType
         return $this->nullable([
             'type' => 'string',
             'pattern' => '^(token:[a-z0-9.-]+|#[0-9a-fA-F]{3,8}|(rgb|hsl|oklch)a?\([^)]*\))$',
-            'description' => ($field->instructions ?: $field->label).' — prefer design tokens like token:primary',
+            'description' => $field->description().' — prefer design tokens like token:primary',
         ], $field);
     }
 }

@@ -22,7 +22,7 @@ class Url extends Text
         // `reference: true` also takes a page by id (entry:<id>, optionally #section), which follows the page when it moves.
         $format = $field->get('reference') ? ['pattern' => '^(https?://|/|#|\\?|mailto:|tel:|entry:[a-z0-9]+(#[\\w-]+)?$)'] : ['format' => 'uri-reference'];
 
-        return $this->nullable(['type' => 'string', ...$format, 'maxLength' => 2048, 'description' => $field->instructions ?: $field->label], $field);
+        return $this->nullable(['type' => 'string', ...$format, 'maxLength' => 2048, 'description' => $field->description()], $field);
     }
 
     /** A cleared link is no link: null, not an empty string. */

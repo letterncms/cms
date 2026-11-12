@@ -32,7 +32,7 @@ class Terms extends Entries
     public function schema(Field $field): array
     {
         // For agents, so in English like every schema.
-        $about = ($field->instructions ?: $field->label).' (ids of terms of the taxonomy '.$field->get('taxonomy').', see terms/list; a slug or title of an existing term is taken too)';
+        $about = $field->description().' (ids of terms of the taxonomy '.$field->get('taxonomy').', see terms/list; a slug or title of an existing term is taken too)';
 
         return array_filter([
             'type' => 'array',

@@ -20,7 +20,7 @@ class Date extends FieldType
 
     public function schema(Field $field): array
     {
-        return $this->nullable(['type' => 'string', 'format' => $field->get('time') ? 'date-time' : 'date', 'description' => $field->instructions ?: $field->label], $field);
+        return $this->nullable(['type' => 'string', 'format' => $field->get('time') ? 'date-time' : 'date', 'description' => $field->description()], $field);
     }
 
     public function normalize(mixed $value, Field $field): mixed

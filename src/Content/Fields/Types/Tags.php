@@ -19,7 +19,7 @@ class Tags extends FieldType
 
     public function schema(Field $field): array
     {
-        return ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 64], 'maxItems' => 100, 'description' => $field->instructions ?: $field->label];
+        return ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 64], 'maxItems' => 100, 'description' => $field->description()];
     }
 
     public function normalize(mixed $value, Field $field): mixed

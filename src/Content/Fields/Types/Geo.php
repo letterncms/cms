@@ -32,7 +32,7 @@ class Geo extends FieldType
             ],
             'required' => ['lat', 'lng'],
             'additionalProperties' => false,
-            'description' => ($field->instructions ?: $field->label).' — decimal degrees, and the address as text',
+            'description' => $field->description().' — decimal degrees, and the address as text',
         ], $field);
     }
 

@@ -26,7 +26,7 @@ class MediaField extends FieldType
             'type' => 'array',
             'items' => ['type' => 'string', 'description' => 'Media id (see media/list), or an https:// or /path URL'],
             'maxItems' => $field->get('max'),
-            'description' => ($field->instructions ?: $field->label).' — media ids from media/list or media/import',
+            'description' => $field->description().' — media ids from media/list or media/import',
         ], static fn ($v) => $v !== null);
     }
 

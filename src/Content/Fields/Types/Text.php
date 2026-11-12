@@ -23,7 +23,7 @@ class Text extends FieldType
             'type' => 'string',
             'maxLength' => (int) $field->get('max', 500),
             'minLength' => $field->get('min'),
-            'description' => $field->instructions ?: $field->label,
+            'description' => $field->description(),
         ], static fn ($v) => $v !== null), $field);
     }
 

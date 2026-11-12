@@ -49,7 +49,7 @@ class Link extends FieldType
         ];
         $kinds = $this->kinds($field);
         // For agents, so in English like every schema.
-        $about = ($field->instructions ?: $field->label).' — {type, value}: entry (value: an entry id'.($field->get('collections') ? ' from '.implode(', ', (array) $field->get('collections')) : '').'), url (an address, /path or #anchor), email, phone, media (a media id). A string is read as one: https://…, /path, entry:<id>, mailto:…, tel:….';
+        $about = $field->description().' — {type, value}: entry (value: an entry id'.($field->get('collections') ? ' from '.implode(', ', (array) $field->get('collections')) : '').'), url (an address, /path or #anchor), email, phone, media (a media id). A string is read as one: https://…, /path, entry:<id>, mailto:…, tel:….';
 
         return $this->nullable([
             'type' => 'object',

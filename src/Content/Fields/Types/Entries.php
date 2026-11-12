@@ -28,7 +28,7 @@ class Entries extends FieldType
             'type' => 'array',
             'items' => ['type' => 'string', 'format' => 'ulid'],
             'maxItems' => $field->get('max'),
-            'description' => ($field->instructions ?: $field->label).' (entry ids'.($field->get('collections') ? ' from: '.implode(', ', (array) $field->get('collections')) : '').')',
+            'description' => $field->description().' (entry ids'.($field->get('collections') ? ' from: '.implode(', ', (array) $field->get('collections')) : '').')',
         ], static fn ($v) => $v !== null);
     }
 

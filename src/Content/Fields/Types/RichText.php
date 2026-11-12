@@ -20,7 +20,7 @@ class RichText extends FieldType
 
     public function schema(Field $field): array
     {
-        return $this->nullable(['type' => 'string', 'description' => ($field->instructions ?: $field->label).' (HTML: p, h2-h4, ul, ol, li, a, strong, em, code, blockquote)'], $field);
+        return $this->nullable(['type' => 'string', 'description' => $field->description().' (HTML: p, h2-h4, ul, ol, li, a, strong, em, code, blockquote)'], $field);
     }
 
     public function normalize(mixed $value, Field $field): mixed
@@ -39,6 +39,6 @@ class RichText extends FieldType
 
     public function configFields(): array
     {
-        return [['handle' => 'inline', 'type' => 'toggle', 'label' => 'Inline Only']];
+        return [['handle' => 'inline', 'type' => 'toggle', 'label' => 'Inline Only', 'about' => 'No paragraphs, headings or lists.']];
     }
 }
