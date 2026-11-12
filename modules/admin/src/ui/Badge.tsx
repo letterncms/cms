@@ -12,7 +12,7 @@ const tones: Record<Tone, string> = {
   success: 'bg-success-soft text-on-success',
   warning: 'bg-warning-soft text-on-warning',
   danger: 'bg-danger-soft text-on-danger',
-  info: 'bg-focus-soft text-info',
+  info: 'bg-info-soft text-info',
   signal: 'bg-signal text-signal-ink',
 }
 
@@ -28,7 +28,7 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; 
 const dotTones: Record<string, string> = {
   published: 'bg-success',
   draft: 'bg-faint',
-  // Changes not yet live: the brand's yellow, with a halo so it holds on white.
+  // Changes not yet live: the accent, with a halo so it holds on white.
   changed: 'bg-signal ring-2 ring-signal-soft',
   scheduled: 'bg-warning',
   // Its publication ran out: off the site, and not by anyone's hand. Not a draft's grey.

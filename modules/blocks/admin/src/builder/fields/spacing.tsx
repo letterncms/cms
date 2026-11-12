@@ -188,7 +188,7 @@ function SideEditor({ box, sides, value, onChange, close, context }: { box: Box;
               <Pressable compact key={token.path}
                 title={`${token.path} · ${typeof token.value === 'object' && token.value ? Object.values(token.value).join('–') : String(token.value)}`}
                 onClick={() => pick(`token:${token.path}`)}
-                className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === `token:${token.path}` ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}
+                className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === `token:${token.path}` ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')}
               >
                 {token.name}
               </Pressable>
@@ -198,14 +198,14 @@ function SideEditor({ box, sides, value, onChange, close, context }: { box: Box;
       ) : (
         <div className="mt-2 flex flex-wrap gap-1">
           {PRESETS.map((p) => (
-            <Pressable compact key={p} onClick={() => pick(p)} className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === p ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
+            <Pressable compact key={p} onClick={() => pick(p)} className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === p ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')}>
               {p.replace('px', '')}
             </Pressable>
           ))}
         </div>
       )}
       {box === 'margin' && (
-        <Pressable compact onClick={() => pick('auto')} className={cn('mt-1 h-6 rounded-xs px-1.5 text-2xs', value === 'auto' ? 'bg-focus text-white' : 'bg-sunken text-text hover:bg-hover')}>
+        <Pressable compact onClick={() => pick('auto')} className={cn('mt-1 h-6 rounded-xs px-1.5 text-2xs', value === 'auto' ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')}>
           {t('Auto')}
         </Pressable>
       )}

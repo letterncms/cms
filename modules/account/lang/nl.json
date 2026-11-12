@@ -1,6 +1,5 @@
 {
   ":browser on :system": ":browser op :system",
-  "Accent": "Accentkleur",
   "Address": "Adres",
   "Device": "Apparaat",
   "Every other browser has to sign in again.": "Elke andere browser moet opnieuw inloggen.",
@@ -14,6 +13,7 @@
   "Signed out": "Uitgelogd",
   "Signed out everywhere else": "Overal elders uitgelogd",
   "That is not one of your other sessions.": "Dat is geen van je andere sessies.",
+  "Theme Color": "Themakleur",
   "This Device": "Dit apparaat",
   "This site keeps its sessions where they can’t be listed (its session driver), so you can’t sign out of them here. Changing your password signs you out everywhere.": "Deze site bewaart sessies waar ze niet op te sommen zijn (de sessiedriver), dus je kunt je hier niet uit sessies afmelden. Je wachtwoord wijzigen meldt je overal af.",
   "Unknown Device": "Onbekend apparaat",

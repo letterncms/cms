@@ -214,7 +214,7 @@ export function SelectField({ field, value, onChange, error, disabled }: FieldPr
               aria-pressed={on}
               // 44px under a finger by itself, so its touch area never lies over the chip beside it.
               compact
-              className={cn('h-7 rounded-sm [@media(pointer:coarse)]:h-11 px-2.5 text-sm font-medium transition-[background-color,box-shadow,color] duration-base ease-out disabled:opacity-45', on ? 'bg-ink text-ink-contrast' : 'bg-float text-text shadow-raise ring-1 ring-inset ring-border-strong hover:bg-float-hover')}
+              className={cn('h-7 rounded-sm [@media(pointer:coarse)]:h-11 px-2.5 text-sm font-medium transition-[background-color,box-shadow,color] duration-base ease-out disabled:opacity-45', on ? 'bg-signal text-signal-ink hover:bg-signal-hover' : 'bg-float text-text shadow-raise ring-1 ring-inset ring-border-strong hover:bg-float-hover')}
             >
               {o.label}
             </Pressable>
@@ -338,17 +338,17 @@ export function EmailField({ field, value, onChange, error, disabled }: FieldPro
   return <Input {...props} type="email" icon={props.icon ?? 'mail'} value={value ?? ''} onChange={(e) => onChange(e.target.value)} invalid={!!error} disabled={disabled} />
 }
 
-/** The admin's accent (`{ type: 'color', component: 'accent' }`): swatches and any colour. `inherit` offers following the site's. */
+/** The admin's accent (`{ type: 'select', component: 'accent' }`): its swatches. `inherit` offers following the site's. */
 export function AccentField({ field, value, onChange, disabled }: FieldProps<string | null>) {
   const inherit = 'inherit' in field ? (field.inherit as string | null) : undefined
   // The admin wears what is picked while it is being picked; what is saved comes back with the manifest, and leaving puts it back.
   const picked = useRef(false)
   useEffect(() => {
-    if (picked.current) applyAccent(value ?? inherit)
+    if (picked.current) applyAccent(value ?? inherit ?? null)
     picked.current = true
   }, [value, inherit])
   useEffect(() => () => applyAccent(accentOf(getManifest())), [])
-  return <AccentPicker id={fieldControlId(field)} value={value} onChange={onChange} inherit={inherit} disabled={disabled} />
+  return <AccentPicker value={value} onChange={onChange} inherit={inherit} disabled={disabled} />
 }
 
 export function ColorField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {

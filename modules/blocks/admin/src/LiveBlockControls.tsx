@@ -20,7 +20,7 @@ export function BoundaryInserter({ target, position, ...picker }: PickerProps & 
   const rect = position(target.rect)
   return <>
     <div data-cms-insertion-line className={cn('pointer-events-none absolute z-raised rounded-full bg-focus', target.axis === 'x' ? 'cms-block-line-y' : 'cms-block-line-x')} style={{ ...rect, minWidth: 2, minHeight: 2 }} />
-    <Picker {...picker} label={t('Insert Block')} className="cms-block-plus absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-xs bg-focus text-white shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + rect.height / 2 }}
+    <Picker {...picker} label={t('Insert Block')} className="cms-block-plus absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-xs bg-signal text-signal-ink shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + rect.height / 2 }}
       data={{ 'data-cms-inserter': `${target.parentId ?? ''}:${target.index}` }} />
   </>
 }

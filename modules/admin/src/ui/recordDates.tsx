@@ -23,7 +23,7 @@ export function longDate(iso: string): string {
 export function DateCell({ iso, relative = false, wide = false }: { iso: string | null | undefined; relative?: boolean; wide?: boolean }) {
   if (!iso || !Number.isFinite(Date.parse(iso))) return <span data-wide="" className="text-faint">—</span>
   const future = Date.parse(iso) > Date.now()
-  return <time dateTime={iso} data-wide={wide && !future ? '' : undefined} className={cn('inline-flex items-center gap-1 truncate text-xs tabular-nums', future ? 'text-focus' : 'text-muted')} title={longDate(iso)}>
+  return <time dateTime={iso} data-wide={wide && !future ? '' : undefined} className={cn('inline-flex items-center gap-1 truncate text-xs tabular-nums', future ? 'text-info' : 'text-muted')} title={longDate(iso)}>
     {future && <Icon name="clock" size={12} />}
     {relative ? timeAgo(iso) : shortDate(iso)}
   </time>

@@ -37,6 +37,8 @@ final class Manifest
                 // What everyone's admin is accented with, unless they chose their own (the `accent` preference).
                 'accent' => Accent::site(),
             ],
+            // The accents there are to choose, with what each paints: see Accent.
+            'accents' => Accent::presets(),
             'user' => [...$user->toPublic(), 'grants' => $user->super ? ['*'] : $user->grants(), 'preferences' => $user->preferences ?? (object) []],
             // Filled in by their modules; empty when those are off. The shared widget catalog comes from $admin.
             'collections' => [],

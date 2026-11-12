@@ -159,7 +159,7 @@ button.primary:disabled:not([aria-busy]) { opacity: 1; background: var(--cms-fil
 .options small { display: block; color: var(--cms-muted); font-size: var(--text-xs); line-height: var(--text-xs--line-height); }
 .badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: var(--radius-xs); background: var(--cms-active); color: var(--cms-muted); font-size: var(--text-2xs); font-weight: 500; vertical-align: 1px; }
 
-/* Something under way, as the kit's `Meter` draws it: ink on a pressed track. (Yellow is for going live.) */
+/* Something under way, as the kit's `Meter` draws it: ink on a pressed track. (The accent is for going live.) */
 .track { height: 6px; border-radius: 999px; background: var(--cms-active); overflow: hidden; }
 .bar { width: 0; height: 100%; border-radius: 999px; background: var(--cms-ink); transition: width var(--cms-duration-slow) ease-out; }
 .status { min-height: 20px; margin-top: 12px; color: var(--cms-muted); }
