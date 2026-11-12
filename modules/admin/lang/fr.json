@@ -342,5 +342,10 @@
   "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe.",
   "{type} Options": "Options de {type}",
   "Choose": "Choisir",
-  "Phone||number": "Téléphone"
+  "Phone||number": "Téléphone",
+  "Choose a Date": "Choisir une date",
+  "Clear Date": "Effacer la date",
+  "Enter a time such as {example}.": "Saisissez une heure comme {example}.",
+  "No date": "Aucune date",
+  "Time": "Heure"
 }

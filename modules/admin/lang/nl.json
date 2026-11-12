@@ -342,5 +342,10 @@
   "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord.",
   "{type} Options": "Opties voor {type}",
   "Choose": "Kiezen",
-  "Phone||number": "Telefoon"
+  "Phone||number": "Telefoon",
+  "Choose a Date": "Kies een datum",
+  "Clear Date": "Datum wissen",
+  "Enter a time such as {example}.": "Vul een tijd in zoals {example}.",
+  "No date": "Geen datum",
+  "Time": "Tijd"
 }

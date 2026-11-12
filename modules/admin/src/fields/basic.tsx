@@ -2,7 +2,7 @@ import { fieldControlId } from '../ui/fieldIdentity'
 import { Pressable } from '../ui/Pressable'
 import { getManifest, t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { AccentPicker, Checkbox, accentOf, applyAccent, ColorInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
+import { AccentPicker, Checkbox, accentOf, applyAccent, ColorInput, DateInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, TimeInput, Tooltip, cn, writeTime } from '../ui'
 import type { SelectAction } from '../ui/Select'
 import { slugify } from '../ui/slugify'
 import { formatDateTimeInZone, parseDateTimeInZone } from '../ui/dateTime'
@@ -95,7 +95,8 @@ export function NumberField({ field, value, onChange, error, disabled }: FieldPr
       step={field.step as number | undefined ?? (field.decimals ? 'any' : 1)}
       min={field.min as number | undefined}
       max={field.max as number | undefined}
-      suffix={field.suffix as string | undefined}
+      // The unit goes with a number: while there is none, the placeholder ("Forever") stands alone.
+      suffix={value === null || value === undefined || (value as unknown) === '' ? undefined : field.suffix as string | undefined}
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
       invalid={!!error}
@@ -262,12 +263,13 @@ export function IconField({ field, value, onChange, error, disabled }: FieldProp
 export function DateField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
   const withTime = !!field.time
   const timeZone = typeof field.timezone === 'string' ? field.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone
+  // The wall time in the zone, `YYYY-MM-DDTHH:MM`, or the day alone: the day and the time are chosen apart.
   const format = (instant: string | null) => instant ? withTime ? formatDateTimeInZone(instant, timeZone) : instant.slice(0, 10) : ''
   const [local, setLocal] = useState(() => format(value))
   const [localError, setLocalError] = useState<string | null>(null)
+  const [badTime, setBadTime] = useState(false)
   const emitted = useRef(value)
   const previousZone = useRef(timeZone)
-  const input = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (value === emitted.current && previousZone.current === timeZone) return
     emitted.current = value
@@ -275,31 +277,37 @@ export function DateField({ field, value, onChange, error, disabled }: FieldProp
     setLocal(format(value))
     setLocalError(null)
   }, [value, timeZone, withTime])
-  useEffect(() => { input.current?.setCustomValidity(localError ?? '') }, [localError])
+  // A time chosen before its day waits here for one.
+  const [held, setHeld] = useState<string | null>(null)
+  const day = local.slice(0, 10) || null
+  const time = withTime ? local.slice(11, 16) || held : null
+  const set = (nextDay: string | null, nextTime: string | null) => {
+    // A day without a time starts at nine.
+    const wall = nextDay ? withTime ? `${nextDay}T${nextTime ?? '09:00'}` : nextDay : ''
+    setLocal(wall)
+    setHeld(nextDay ? null : nextTime)
+    if (!nextDay) {
+      setLocalError(null)
+      emitted.current = null
+      onChange(null)
+      return
+    }
+    const parsed: ReturnType<typeof parseDateTimeInZone> = withTime ? parseDateTimeInZone(wall, timeZone) : { value: wall }
+    setLocalError(parsed.error === 'nonexistent' ? t('This time does not exist in {timezone} because the clocks change. Choose another time.', { timezone: timeZone }) : parsed.error === 'ambiguous' ? t('This time occurs twice in {timezone} because the clocks change. Choose another time.', { timezone: timeZone }) : parsed.error ? t('Enter a valid date and time.') : null)
+    emitted.current = parsed.value
+    onChange(parsed.value)
+  }
+  const id = fieldControlId(field)
+  const described = localError || badTime ? `${id}-local-error` : error ? `${id}-error` : undefined
   return (
-    <div className="max-w-60">
-    <Input
-      ref={input}
-      id={fieldControlId(field)}
-      aria-label={field.label || undefined}
-      aria-describedby={localError ? `${fieldControlId(field)}-local-error` : error ? `${fieldControlId(field)}-error` : undefined}
-      type={withTime ? 'datetime-local' : 'date'}
-      value={local}
-      onChange={(e) => {
-        const next = e.target.value
-        setLocal(next)
-        const parsed: ReturnType<typeof parseDateTimeInZone> = next && withTime ? parseDateTimeInZone(next, timeZone) : { value: next || null }
-        setLocalError(parsed.error === 'nonexistent' ? t('This time does not exist in {timezone} because the clocks change. Choose another time.', { timezone: timeZone }) : parsed.error === 'ambiguous' ? t('This time occurs twice in {timezone} because the clocks change. Choose another time.', { timezone: timeZone }) : parsed.error ? t('Enter a valid date and time.') : null)
-        emitted.current = parsed.value
-        onChange(parsed.value)
-      }}
-      invalid={!!error || !!localError}
-      disabled={disabled}
-      required={!!field.required}
-    />
-    {/* Which zone the time is in; `zone: false` where a form says it once for several dates. */}
-    {withTime && typeof field.timezone === 'string' && field.zone !== false && <p className="m-0 mt-1 text-xs text-faint">{timeZone}</p>}
-    {localError && <p id={`${fieldControlId(field)}-local-error`} role="alert" className="m-0 mt-1 text-xs text-danger">{localError}</p>}
+    <div className="max-w-80">
+      <div className="flex min-w-0 items-center gap-2">
+        <DateInput id={id} aria-label={field.label || undefined} aria-describedby={described} value={day} onChange={(d) => set(d, time)} invalid={!!error || !!localError} disabled={disabled} required={!!field.required} />
+        {withTime && <TimeInput aria-label={t('Time')} aria-describedby={described} value={time} onChange={(next) => set(day, next)} onInvalid={setBadTime} invalid={!!error || !!localError} disabled={disabled} />}
+      </div>
+      {/* Which zone the time is in; `zone: false` where a form says it once for several dates. */}
+      {withTime && typeof field.timezone === 'string' && field.zone !== false && <p className="m-0 mt-1 text-xs text-faint">{timeZone}</p>}
+      {(localError || badTime) && <p id={`${id}-local-error`} role="alert" className="m-0 mt-1 text-xs text-danger">{localError ?? t('Enter a time such as {example}.', { example: writeTime('19:30') })}</p>}
     </div>
   )
 }

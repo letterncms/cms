@@ -125,6 +125,8 @@ final class ContentModule extends Plugin
         }
 
         $records = ['type' => 'ui/records', 'props' => $view->records($collection, $user)];
+        // An empty list offers its one action: the same New as the bar's.
+        $records['props']['empty']['action'] = array_diff_key($new[0], ['key' => true]);
         $page = ['title' => __($collection->title), 'icon' => $collection->icon];
         $features = $handle === 'pages' ? $this->builtinGroups($user) : [];
 

@@ -226,5 +226,9 @@
   "You already have a view with this name.": "Je hebt al een weergave met deze naam.",
   "You have :count saved views. Delete one to save another.": "Je hebt :count opgeslagen weergaven. Verwijder er een om een nieuwe op te slaan.",
   "Your unsaved edits will be replaced.": "Je niet-opgeslagen wijzigingen worden vervangen.",
-  "Your version and its history are deleted. The page shows what comes with the feature.": "Je versie en de geschiedenis ervan worden verwijderd. De pagina toont wat de functie meebrengt."
+  "Your version and its history are deleted. The page shows what comes with the feature.": "Je versie en de geschiedenis ervan worden verwijderd. De pagina toont wat de functie meebrengt.",
+  "Discard unpublished changes to “{title}”?": "Niet-gepubliceerde wijzigingen aan ‘{title}’ weggooien?",
+  "Every change since it was last published is lost. The published version stays as it is.": "Elke wijziging sinds de laatste publicatie gaat verloren. De gepubliceerde versie blijft zoals ze is.",
+  "It leaves the site and its address stops working until it is published again. Its content is kept as a draft.": "Het verdwijnt van de site en het adres werkt pas weer als het opnieuw is gepubliceerd. De inhoud blijft bewaard als concept.",
+  "Unpublish “{title}”?": "‘{title}’ depubliceren?"
 }

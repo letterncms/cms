@@ -88,11 +88,17 @@ export function formatValue(value: unknown, { format = 'text', tones, labels, cu
   }
 }
 
-/** A file size in the admin's language (“12 kB”, “1,4 Mo”). */
+/** A file size in the admin's language (“155 B”, “12 kB”, “1,4 Mo”). */
 export function formatBytes(bytes: number): string {
   const [unit, value, digits] = bytes < 1024 ? ['byte', bytes, 0] : bytes < 1024 ** 2 ? ['kilobyte', bytes / 1024, 0] : bytes < 1024 ** 3 ? ['megabyte', bytes / 1024 ** 2, 1] : ['gigabyte', bytes / 1024 ** 3, 1]
-  // Bytes in short form read “109 byte”; narrow is “109B”, like kB and MB.
-  return new Intl.NumberFormat(locale(), { style: 'unit', unit: unit as string, unitDisplay: unit === 'byte' ? 'narrow' : 'short', maximumFractionDigits: digits as number }).format(value as number)
+  // Bytes in short form read “109 byte”, narrow “109B”: the narrow unit, set apart from its number as kB and MB are.
+  const written = new Intl.NumberFormat(locale(), { style: 'unit', unit: unit as string, unitDisplay: unit === 'byte' ? 'narrow' : 'short', maximumFractionDigits: digits as number }).format(value as number)
+  return unit === 'byte' ? written.replace(/(\d)(?=[^\d\s.,\u00a0\u202f])/u, '$1\u00a0') : written
+}
+
+/** A drawing (an SVG) is shown whole in its tile, never cropped like a photo. */
+export function drawing(url: string | null | undefined): boolean {
+  return !!url && /\.svgz?(\?|#|$)/i.test(url)
 }
 
 /** A value for client sorting and searching: what it reads as, not how it is drawn. */
@@ -120,7 +126,7 @@ function MediaCell({ value, media }: { value: unknown; media?: Map<string, Media
   const src = mediaSource(ids[0], media)
   return <span className="flex items-center gap-1">
     <span className="grid size-6 shrink-0 place-items-center overflow-hidden rounded-xs border border-border bg-sunken text-faint">
-      {src ? <img src={src} alt="" loading="lazy" className="size-full object-cover" /> : <Icon name="file" size={12} />}
+      {src ? <img src={src} alt="" loading="lazy" className={cn('size-full', drawing(src) ? 'object-contain p-0.5' : 'object-cover')} /> : <Icon name="file" size={12} />}
     </span>
     {ids.length > 1 && <span className="text-2xs text-faint">+{ids.length - 1}</span>}
   </span>

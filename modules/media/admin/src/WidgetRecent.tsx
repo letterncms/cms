@@ -1,5 +1,5 @@
 import { can, invalidate, Link, plural, t, useAbility } from '@letterncms/sdk'
-import { Fields, Icon, Skeleton, toast, Widget } from '@letterncms/ui'
+import { Fields, Icon, Skeleton, Widget, cn, drawing, toast } from '@letterncms/ui'
 import { useState } from 'react'
 import { kindIcon } from './kinds'
 import { upload, type MediaItem } from './upload'
@@ -43,7 +43,7 @@ export default function WidgetRecent() {
         {list.data?.items.map((item) => (
           <Link key={item.id} to="/media" title={item.name} className="group relative block aspect-square overflow-hidden rounded-sm border border-border bg-surface">
             {item.thumb ? (
-              <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="size-full object-cover transition-opacity duration-base group-hover:opacity-85" />
+              <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className={cn('size-full transition-opacity duration-base group-hover:opacity-85', drawing(item.thumb) ? 'object-contain p-2' : 'object-cover')} />
             ) : (
               <span className="flex size-full flex-col items-center justify-center gap-1 px-1.5 text-faint transition-colors duration-base group-hover:bg-hover">
                 <Icon name={kindIcon[item.kind] ?? 'file'} size={18} />

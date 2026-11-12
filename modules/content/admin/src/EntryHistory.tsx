@@ -1,6 +1,6 @@
 import { locale, t, timeAgo, useAbility, type Entry, type EntryContent, type FieldDef } from '@letterncms/sdk'
 import { Button, Dialog, EmptyState, QueryError, Spinner, cn } from '@letterncms/ui'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 
 interface Revision {
   id: string
@@ -224,12 +224,43 @@ function Version({ revision, title, working, fields, author, editable, onClose, 
             {diff.map((change, index) => (
               <div key={index} role="row" className={cn(grid, 'text-sm', index > 0 && (change.label ? 'border-t border-border' : 'border-t border-border/50'))}>
                 <span role="rowheader" className="min-w-0 break-words text-muted">{change.label}</span>
-                <span role="cell" className={cn('min-w-0 break-words', change.now ? 'text-danger line-through decoration-danger/40' : 'text-faint')}>{change.now || '—'}</span>
-                <span role="cell" className={cn('min-w-0 break-words', change.then ? 'text-success' : 'text-faint')}>{change.then || '—'}</span>
+                {change.now && change.then ? (
+                  // Both have words: what they share reads plain, and only the words that differ are marked.
+                  <>
+                    <span role="cell" className="min-w-0 break-words text-text">{marked(change.now, change.then, 'del')}</span>
+                    <span role="cell" className="min-w-0 break-words text-text">{marked(change.now, change.then, 'add')}</span>
+                  </>
+                ) : (
+                  <>
+                    <span role="cell" className={cn('min-w-0 break-words', change.now ? 'text-danger line-through decoration-danger/40' : 'text-faint')}>{change.now || '—'}</span>
+                    <span role="cell" className={cn('min-w-0 break-words', change.then ? 'text-success' : 'text-faint')}>{change.then || '—'}</span>
+                  </>
+                )}
               </div>
             ))}
           </div>
         )}
     </Dialog>
   )
+}
+
+/**
+ * One side of two texts, word by word: the words both share plain, the ones only this side has marked (struck in
+ * red where restoring takes them away, green where it brings them). Past a few hundred words it marks the whole.
+ */
+function marked(now: string, then: string, side: 'del' | 'add') {
+  const a = now.split(/(\s+)/)
+  const b = then.split(/(\s+)/)
+  const own = side === 'del' ? a : b
+  const style = side === 'del' ? 'text-danger line-through decoration-danger/40' : 'text-success'
+  if (a.length * b.length > 250_000) return <span className={style}>{own.join('')}</span>
+  // The longest run they share, by a table of common lengths; what is not in it is this side's own.
+  const m = a.length, n = b.length
+  const table = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1))
+  for (let i = m - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--) table[i][j] = a[i] === b[j] ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1])
+  const kept = new Set<number>()
+  for (let i = 0, j = 0; i < m && j < n;) {
+    if (a[i] === b[j]) { kept.add(side === 'del' ? i : j); i++; j++ } else if (table[i + 1][j] >= table[i][j + 1]) i++; else j++
+  }
+  return <>{own.map((word, k) => kept.has(k) || !word.trim() ? <Fragment key={k}>{word}</Fragment> : <span key={k} className={style}>{word}</span>)}</>
 }

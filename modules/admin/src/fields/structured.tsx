@@ -1,5 +1,5 @@
 import { t, useAbility, type FieldProps } from '@letterncms/sdk'
-import { Button, IconButton, Input, fieldControlId, cn } from '../ui'
+import { Button, IconButton, Input, TimeInput, fieldControlId, cn } from '../ui'
 import { DateField } from './basic'
 import { LinkField } from './LinkField'
 
@@ -77,18 +77,7 @@ export function DateRangeField({ field, value, onChange, disabled, error, contex
 
 /** `time` — a time of day. */
 export function TimeField({ field, value, onChange, disabled, error }: FieldProps<string | null>) {
-  return (
-    <Input
-      id={fieldControlId(field)}
-      type="time"
-      step={field.seconds ? 1 : 60}
-      value={value ?? ''}
-      invalid={!!error}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.value || null)}
-      className="max-w-36 tabular-nums"
-    />
-  )
+  return <TimeInput id={fieldControlId(field)} aria-label={field.label || undefined} aria-describedby={field.describedBy as string | undefined} value={value ?? null} seconds={!!field.seconds} invalid={!!error} disabled={disabled} required={!!field.required} onChange={onChange} />
 }
 
 /** `geo` — an address in words, and where it is in degrees. */

@@ -260,6 +260,25 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
     setReplacing(false)
     invalidate('entries/', 'revisions/', 'content/')
   }
+  // Both lose something for good or take the page off the site: each says what, and runs only once agreed to.
+  const discard = async () => {
+    if (!entry || !(await confirm({
+      title: t('Discard unpublished changes to “{title}”?', { title: entry.title }),
+      description: t('Every change since it was last published is lost. The published version stays as it is.'),
+      confirm: t('Discard Changes'),
+      danger: true,
+    }))) return
+    await replace('entries/discard-draft')
+  }
+  const unpublish = async () => {
+    if (!entry || !(await confirm({
+      title: t('Unpublish “{title}”?', { title: entry.title }),
+      description: t('It leaves the site and its address stops working until it is published again. Its content is kept as a draft.'),
+      confirm: t('Unpublish'),
+      danger: true,
+    }))) return
+    await replace('entries/unpublish')
+  }
   const remove = async () => {
     if (!entry || !actions.delete || !(await confirm({
       title: t('Delete “{title}”?', { title: entry.title }),
@@ -496,7 +515,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
                   trigger={<Button variant="ghost" className="!gap-1 !px-1.5 !font-normal"><StatusDot status={status} label={statusLabel(status)} className="text-sm" /><Icon name="chevron-down" size={12} className="shrink-0 text-faint" /></Button>}
                   items={[
                     { label: t('Publication Date…'), icon: 'calendar', onSelect: () => setPublishing(true) },
-                    entry && actions.unpublish && { label: t('Unpublish'), icon: 'eye-off', onSelect: () => { void replace('entries/unpublish') } },
+                    entry && actions.unpublish && { label: t('Unpublish'), icon: 'eye-off', onSelect: () => { void unpublish() } },
                   ]}
                 />
               ) : (
@@ -536,11 +555,11 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
                 },
                 entry && actions.discard && entry.hasDraft && {
                   label: t('Discard Unpublished Changes'), icon: 'undo',
-                  onSelect: () => { void replace('entries/discard-draft') },
+                  onSelect: () => { void discard() },
                 },
                 entry && actions.unpublish && !(actions.publish && upToDate) && {
                   label: t('Unpublish'), icon: 'eye-off',
-                  onSelect: () => { void replace('entries/unpublish') },
+                  onSelect: () => { void unpublish() },
                 },
                 // What agents, the API and URLs know the entry by: copied whole, where Info could only show its start.
                 entry && { label: t('Copy ID'), icon: 'hash', onSelect: () => void copyText(entry.id, { copied: t('ID copied') }) },

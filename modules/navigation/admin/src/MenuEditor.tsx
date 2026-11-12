@@ -1,5 +1,5 @@
 import { can, invalidate, navigate, run, t, useAbility, useManifest, type FieldDef, type SurfaceComponentProps } from '@letterncms/sdk'
-import { Badge, Button, EmptyState, Fields, Icon, IconButton, List, Menu as Actions, NoMatches, NotFoundState, Popover, QueryError, Row as ListRow, SaveBar, Skeleton, SortableTree, Spinner, cn, confirm, toast } from '@letterncms/ui'
+import { Badge, Button, EmptyState, Fields, Icon, IconButton, List, Menu as Actions, NoMatches, NotFoundState, Popover, QueryError, Row as ListRow, nativeName, SaveBar, Skeleton, SortableTree, Spinner, cn, confirm, toast } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 interface Target {
@@ -218,7 +218,6 @@ function Row({ item, ctx, expanded, disabled, onToggle, onPatch, onRemove, autoF
   const languages = site.locales.filter((code: string) => code !== site.defaultLocale)
   // Something to open the row for: where a link goes, or what the item says in the site's other languages.
   const more = link || languages.length > 0
-  const language = (code: string) => new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? code
 
   return (
     <div className={cn('rounded-lg border bg-bg transition-shadow', expanded ? 'border-border-strong shadow-pop' : 'border-border')}>
@@ -257,19 +256,30 @@ function Row({ item, ctx, expanded, disabled, onToggle, onPatch, onRemove, autoF
           className="gap-y-2.5! border-t border-border p-4"
           disabled={disabled}
           fields={[
-            ...(link ? [{ handle: 'url', type: 'url', component: 'link', label: t('Link'), placeholder: t('Choose a page or paste a link') }] : []),
+            // One value per language reads as everywhere else: the value's name, then one field for each language, by its own name.
+            ...(languages.length === 0
+              ? (link ? [{ handle: 'url', type: 'url', component: 'link', label: t('Link'), placeholder: t('Choose a page or paste a link') } as FieldDef] : [])
+              : [
+                  // The site's own language is the row's label, above: here are the others.
+                  { handle: 'labels', type: 'group', label: t('Label'), fields: languages.map((code: string): FieldDef => ({ handle: code, type: 'text', label: nativeName(code), placeholder: item.label || item.target?.title || undefined })) } as FieldDef,
+                  ...(link ? [{ handle: 'urls', type: 'group', label: t('Link'), fields: site.locales.map((code: string): FieldDef => ({ handle: code, type: 'url', component: 'link', label: nativeName(code), placeholder: code === site.defaultLocale ? t('Choose a page or paste a link') : item.url || undefined })) } as FieldDef] : []),
+                ]),
             { handle: 'newTab', type: 'toggle', label: t('Open in a New Tab'), display: 'checkbox' },
-            // What this item says, and for a link where it goes, in the site's other languages.
-            ...languages.flatMap((code: string): FieldDef[] => [
-              { handle: `label:${code}`, type: 'text', label: t('Label in {language}', { language: language(code) }), placeholder: item.label || item.target?.title || undefined, width: link ? 'half' : undefined },
-              ...(link ? [{ handle: `url:${code}`, type: 'url', component: 'link', label: t('Link in {language}', { language: language(code) }), placeholder: item.url || undefined, width: 'half' } as FieldDef] : []),
-            ]),
           ]}
-          values={{ url: item.url ?? '', newTab: !!item.newTab, ...Object.fromEntries(languages.flatMap((code: string) => [[`label:${code}`, item.locales?.[code]?.label ?? ''], [`url:${code}`, item.locales?.[code]?.url ?? '']])) }}
+          values={{
+            url: item.url ?? '', newTab: !!item.newTab,
+            labels: Object.fromEntries(languages.map((code: string) => [code, item.locales?.[code]?.label ?? ''])),
+            urls: Object.fromEntries(site.locales.map((code: string) => [code, code === site.defaultLocale ? item.url ?? '' : item.locales?.[code]?.url ?? ''])),
+          }}
           onChange={(h, v) => {
-            const [key, code] = h.split(':')
-            if (!code) return onPatch(h === 'newTab' ? { newTab: v || undefined } : { url: v })
-            onPatch({ locales: { ...item.locales, [code]: { ...item.locales?.[code], [key]: v } } })
+            if (h === 'newTab') return onPatch({ newTab: v || undefined })
+            if (h === 'url') return onPatch({ url: v })
+            // A group answers with all of its languages: the site's own is the item's, the others its translations.
+            const key = h === 'labels' ? 'label' : 'url'
+            const all = (v ?? {}) as Record<string, string>
+            const locales = { ...item.locales }
+            for (const code of languages) locales[code] = { ...locales[code], [key]: all[code] ?? '' }
+            onPatch(key === 'url' ? { url: all[site.defaultLocale] ?? '', locales } : { locales })
           }}
         />
       )}

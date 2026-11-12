@@ -29,3 +29,11 @@ test('invalid calendar values are rejected', () => {
   }
   assert.equal(formatDateTimeInZone('bad-value', 'Europe/Brussels'), '')
 })
+
+test('a time is read however it is typed, in 24 or 12 hours', async () => {
+  const { readTime } = await import('../src/ui/dateTime.ts')
+  for (const [typed, read] of [['19:03', '19:03'], ['7:03 PM', '19:03'], ['7:03 p.m.', '19:03'], ['7pm', '19:00'], ['12 am', '00:00'], ['12:30 PM', '12:30'], ['1903', '19:03'], ['9', '09:00'], ['19.03', '19:03'], ['19h03', '19:03']]) assert.equal(readTime(typed), read, typed)
+  for (const typed of ['25:00', '13 pm', '7:60', 'soon', '']) assert.equal(readTime(typed), null, typed)
+  assert.equal(readTime('7:03:09 pm', true), '19:03:09')
+  assert.equal(readTime('19:03', true), '19:03:00')
+})

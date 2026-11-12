@@ -226,5 +226,9 @@
   "You already have a view with this name.": "Du hast bereits eine Ansicht mit diesem Namen.",
   "You have :count saved views. Delete one to save another.": "Du hast :count gespeicherte Ansichten. Lösche eine, um eine weitere zu speichern.",
   "Your unsaved edits will be replaced.": "Deine ungespeicherten Änderungen werden ersetzt.",
-  "Your version and its history are deleted. The page shows what comes with the feature.": "Deine Version und ihr Verlauf werden gelöscht. Die Seite zeigt, was die Funktion mitbringt."
+  "Your version and its history are deleted. The page shows what comes with the feature.": "Deine Version und ihr Verlauf werden gelöscht. Die Seite zeigt, was die Funktion mitbringt.",
+  "Discard unpublished changes to “{title}”?": "Unveröffentlichte Änderungen an „{title}“ verwerfen?",
+  "Every change since it was last published is lost. The published version stays as it is.": "Jede Änderung seit der letzten Veröffentlichung geht verloren. Die veröffentlichte Fassung bleibt, wie sie ist.",
+  "It leaves the site and its address stops working until it is published again. Its content is kept as a draft.": "Es verschwindet von der Website, und seine Adresse funktioniert erst wieder, wenn es erneut veröffentlicht wird. Der Inhalt bleibt als Entwurf erhalten.",
+  "Unpublish “{title}”?": "„{title}“ zurückziehen?"
 }

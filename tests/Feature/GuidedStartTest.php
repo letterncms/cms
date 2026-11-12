@@ -60,6 +60,21 @@ final class GuidedStartTest extends TestCase
         }
     }
 
+    public function test_the_first_page_goes_where_the_sites_pages_are(): void
+    {
+        $this->install();
+        // Before "pages" by name, and with pages of its own, but not at the root of the site.
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('articles', ['title' => 'Articles', 'route' => '/articles/{slug}', 'fields' => []]));
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('authors', ['title' => 'Authors', 'fields' => []]));
+        $page = static fn (array $start) => array_values(array_filter($start['steps'], static fn (array $s) => $s['id'] === 'page'))[0]['to'];
+
+        $this->assertSame('/content/pages/new', $page($this->start()));
+
+        // Without a collection at the root, the first with pages of its own.
+        $this->cms()->collections()->delete('pages');
+        $this->assertSame('/content/articles/new', $page($this->start()));
+    }
+
     public function test_a_step_is_done_when_the_site_says_so(): void
     {
         $admin = $this->admin();

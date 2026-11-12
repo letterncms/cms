@@ -9,6 +9,15 @@
 ### Fixed
 
 - A site kit whose collection files its entries under a taxonomy the kit also brings, or picks from another of its collections, applies whatever order their names come in, and a kit in more languages than the site applies too: its entries in those languages are no longer refused before the languages are added. A collection the site keeps its own of (`skip`) is checked as the site's, so a kit collection that needs the kit's version of it is refused before anything is written, not halfway through.
+- **Dates and times read the admin's way.** A date field, the publication dialog among them, shows its day as the admin's language writes it ("Nov 11, 2026") with a month to pick it from, and its time as "7:03 PM" or "19:03", typed either way. They were the browser's own controls, which followed the browser's language. `DateInput` and `TimeInput` in `@letterncms/ui` are the controls.
+- A version in an entry's history marks only the words that differ from now, not the whole paragraph.
+- A tags field that can't be changed (an entry someone else is editing, a value set in another language) looks closed like the fields around it, without its tags' remove buttons.
+- **Discard Unpublished Changes** and **Unpublish** ask first, and say what is lost: they ran at once.
+- One way to switch the language on view and one for a value in each language: a global set switches its language with the codes a list has (EN, DE, FR, named in full on hover), and a menu item's label and link in other languages are one field each, named by the language, as on the settings screens. The menu wrote "Label in français".
+- An empty list offers its one action (**New Post**, **New Token**, **Upload** in an empty folder), and says the collection's name as it is written ("No Audit Things yet", not "No audit things yet").
+- An SVG is shown whole in the media library, a media field and the dashboard, not cropped like a photo. A size in bytes reads "155 B", like "109 kB".
+- **Create the First Page** on a new site's Dashboard goes to the collection whose pages sit at the root of the site, else the first with pages of their own: it went to the first collection by name.
+- The Info panel names an entry's language ("English", not "en"), and a long URL is cut short within the panel, whole on hover.
 - **Focus rings stand out on every theme colour.** The focus line is the theme colour wherever it reaches 3:1 against the page, the sidebar and a chosen row, and otherwise the same hue made darker (light) or lighter (dark) until it does. Amber's on light is a deeper amber; it was 2:1.
 - Form-like pages share one column: a collection's fields and settings now sit in the same centred width as Settings, a menu and a global set.
 - On a phone, a screen's bar with two actions keeps the primary one's words and shows the other as its icon, so neither runs off the screen (Languages). A count in a list reads "104 Entries" without "Entries" before it.

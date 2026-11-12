@@ -9,6 +9,7 @@ import { EmptyState } from '../EmptyState'
 import { Icon } from '../Icon'
 import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
+import { Segmented } from '../Segmented'
 import { useShortcut } from '../shortcuts'
 import { Spinner } from '../Spinner'
 import { Stat } from '../Widget'
@@ -122,15 +123,24 @@ function TabbedPage({ node, tabs, path }: { node: ViewNode; tabs: ViewNode; path
   const { scope } = useView()
   const counts = useTabCounts(list, scope)
   const mark = useCallback((id: string, on: boolean) => setDirty((d) => d[id] === on ? d : { ...d, [id]: on }), [])
+  const panels = list.filter((c) => opened.includes(String(c.props.id))).map((c, i) => (
+    <div key={String(c.props.id)} hidden={c.props.id !== tab}>
+      <TabProvider id={String(c.props.id)} mark={mark}>{stacked(c.children, `${path}.t${i}`)}</TabProvider>
+    </div>
+  ))
   return (
     <Page width={width} crumbs={crumbs(node)} actions={<DirtyScope dirty={!!dirty[tab]}><Buttons actions={current?.props.actions} alongside={actions} bar /><Buttons actions={actions} alongside={current?.props.actions} bar /></DirtyScope>}>
-      <ScreenTabs value={tab} onChange={setTab} tabs={list.map((c) => ({ value: String(c.props.id), label: String(c.props.label), count: counts[String(c.props.id)], indicator: !!dirty[String(c.props.id)] }))}>
-        {list.filter((c) => opened.includes(String(c.props.id))).map((c, i) => (
-          <div key={String(c.props.id)} hidden={c.props.id !== tab}>
-            <TabProvider id={String(c.props.id)} mark={mark}>{stacked(c.children, `${path}.t${i}`)}</TabProvider>
-          </div>
-        ))}
-      </ScreenTabs>
+      {tabs.props?.display === 'segmented' ? (
+        // The same thing in another language, as a list switches it: the codes, each named in full on hover.
+        <>
+          <Segmented aria-label={tabs.props.label} className="mb-6" value={tab} onChange={setTab} options={list.map((c) => ({ value: String(c.props.id), label: String(c.props.label), title: c.props.title ? String(c.props.title) : undefined }))} />
+          {panels}
+        </>
+      ) : (
+        <ScreenTabs value={tab} onChange={setTab} tabs={list.map((c) => ({ value: String(c.props.id), label: String(c.props.label), count: counts[String(c.props.id)], indicator: !!dirty[String(c.props.id)] }))}>
+          {panels}
+        </ScreenTabs>
+      )}
     </Page>
   )
 }

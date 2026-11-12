@@ -22,13 +22,14 @@ export function TagsField({ field, value, onChange, disabled }: FieldProps<strin
     } else if (e.key === 'Backspace' && draft === '' && tags.length) onChange(tags.slice(0, -1))
   }
   return (
-    <div className="cms-input flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1 focus-within:border-focus focus-within:shadow-focus">
+    // Closed (a field set in another language, an entry someone else holds): the look of every closed field, and no way to remove a tag.
+    <div data-disabled={disabled || undefined} className="cms-input flex min-h-8 flex-wrap items-center gap-1 rounded-md px-1.5 py-1 focus-within:border-focus focus-within:shadow-focus">
       {tags.map((tag) => (
-        <span key={tag} className="inline-flex h-5 items-center gap-1 rounded-xs bg-active pl-1.5 pr-0.5 text-xs font-medium text-text">
+        <span key={tag} className={cn('inline-flex h-5 items-center gap-1 rounded-xs bg-active pl-1.5 text-xs font-medium text-text', disabled ? 'pr-1.5' : 'pr-0.5')}>
           {tag}
-          <Pressable compact disabled={disabled} onClick={() => onChange(tags.filter((x) => x !== tag))} className="grid size-4 place-items-center rounded-xs text-faint hover:bg-active hover:text-text" aria-label={t('Remove {tag}', { tag })}>
+          {!disabled && <Pressable compact onClick={() => onChange(tags.filter((x) => x !== tag))} className="grid size-4 place-items-center rounded-xs text-faint hover:bg-active hover:text-text" aria-label={t('Remove {tag}', { tag })}>
             <Icon name="close" size={10} />
-          </Pressable>
+          </Pressable>}
         </span>
       ))}
       <input
