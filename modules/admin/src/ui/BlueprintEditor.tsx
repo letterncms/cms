@@ -225,15 +225,19 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
           <Tabs value={tab} onChange={setTab} tabs={[{ value: 'fields', label: t('Fields') }, { value: 'settings', label: t('Settings') }]} className="mb-6" />
           {tab === 'fields' ? (
             <>
-              {/* The kinds of item, where there can be several: one set of fields on view at a time, in the same editor. */}
-              {kind.blueprints && (
-                <div className="mb-4 flex flex-wrap items-center gap-2" data-blueprints>
+              {/* The kinds of item, once there are several: a switch between them, one set of fields on view at a time. */}
+              {kind.blueprints && Object.keys(blueprints).length > 0 && (
+                <div className="mb-5 flex flex-wrap items-center gap-2" data-blueprints>
                   <Segmented aria-label={t('Blueprints')} value={named} onChange={setCurrent} options={[{ value: '', label: def.singular || def.title }, ...Object.entries(blueprints).map(([handle, b]) => ({ value: handle, label: b.title || handle }))]} />
                   <IconButton icon="plus" label={t('Add Blueprint')} onClick={addBlueprint} />
                 </div>
               )}
               {named === '' ? (
-                <FieldsEditor heading={false} fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
+                <FieldsEditor
+                  heading={false} fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors}
+                  // With one kind there is no switch yet: adding the second sits quietly beside Add Field.
+                  actions={kind.blueprints && !Object.keys(blueprints).length && <Button variant="ghost" icon="plus" onClick={addBlueprint}>{t('Add Blueprint')}</Button>}
+                />
               ) : (
                 <div key={named}>
                   <div className="mb-5">
