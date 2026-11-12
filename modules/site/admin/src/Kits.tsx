@@ -1,4 +1,4 @@
-import { loadManifest, navigate, run, queryClient, setManifest, t, useAbility, useManifest } from '@letterncms/sdk'
+import { can, loadManifest, navigate, run, queryClient, setManifest, t, useAbility, useManifest } from '@letterncms/sdk'
 import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, Pressable, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 
@@ -89,6 +89,7 @@ export default function Kits() {
     <Page title={t('Site Kits')} actions={(
       <>
         <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void importKit(e.target.files[0])} />
+        {can('packages.manage') && <Button icon="search" onClick={() => navigate('/kits/store')}>{t('Browse Store')}</Button>}
         <Button icon="upload" loading={importing} onClick={() => file.current?.click()}>{t('Import Site')}</Button>
         <Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>
       </>
