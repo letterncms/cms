@@ -112,6 +112,7 @@
  "database": "ph:database",
  "zap": "ph:lightning",
  "comment": "ph:chat-circle",
+ "comment-solid": "ph:chat-circle-fill",
  "bell": "ph:bell",
  "star": "ph:star",
  "grid": "ph:grid-four",
