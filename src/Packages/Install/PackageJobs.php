@@ -12,7 +12,6 @@ use Cms\Packages\SiteComposer;
 use Cms\Support\Crypto\Ed25519;
 use Cms\Support\Files;
 use Cms\Support\Remote;
-use Cms\Update\Layout;
 use Illuminate\Support\Carbon;
 use RuntimeException;
 use Throwable;
@@ -64,11 +63,6 @@ class PackageJobs
     {
         return $this->locked(function () use ($spec) {
             $this->cms->guardFileMods();
-
-            // A site Composer manages has one source of truth: its composer.json.
-            if ($this->app->make(Layout::class)->managed() === 'composer') {
-                throw new RuntimeException(__('This site is managed with Composer. Run: composer require :package', ['package' => (string) ($spec['package'] ?? '<package>')]));
-            }
 
             if ($running = $this->running()) {
                 throw new RuntimeException(__('Another install is running: :package.', ['package' => (string) ($running['package'] ?? '')]));

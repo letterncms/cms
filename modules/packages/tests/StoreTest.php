@@ -137,6 +137,28 @@ final class StoreTest extends TestCase
         return array_values(array_filter($catalog['items'], static fn (array $i) => $i['package'] === $package))[0];
     }
 
+    public function test_a_site_composer_manages_installs_from_the_admin_and_names_it_in_composer_json(): void
+    {
+        @unlink($this->site.'/runtime/current');
+        Files::putJson($this->site.'/composer.json', ['name' => 'acme/site', 'require' => ['letterncms/cms' => '>=0.26 <1']]);
+        Files::put($this->site.'/composer.lock', '{}');
+        $this->list('acme/forms', '1.2.0');
+
+        $job = $this->install('acme/forms');
+
+        $this->assertSame('done', $job['state'], (string) ($job['error'] ?? ''));
+        $this->assertTrue($this->cms()->packages()->isActive('acme/forms'));
+        $this->assertSame(['acme/forms' => '^1.2', 'letterncms/cms' => '>=0.26 <1'], Files::readJson($this->site.'/composer.json')['require']);
+        // The lock still says what is in vendor/: composer update brings it level.
+        $this->assertFileExists($this->site.'/composer.lock');
+
+        $this->cms()->abilities()->execute('packages/uninstall', ['name' => 'acme/forms', 'deleteFiles' => true], \Cms\Abilities\AbilityContext::system());
+
+        $this->assertDirectoryDoesNotExist($this->site.'/plugins/acme-forms');
+        $this->assertSame(['letterncms/cms' => '>=0.26 <1'], Files::readJson($this->site.'/composer.json')['require']);
+        $this->assertFileExists($this->site.'/composer.lock');
+    }
+
     public function test_browse_and_install_a_free_plugin_in_one_go(): void
     {
         $this->list('acme/forms', '1.0.0', [], [], ['src/Forms.php' => "<?php\n"]);

@@ -6,11 +6,13 @@ namespace Cms\Packages;
 
 use Cms\Foundation\Application;
 use Cms\Support\Files;
+use Cms\Update\Layout;
 use Throwable;
 
 /**
- * Keeps a self-updating site's composer.json saying what it runs, so it can move to Composer at any
- * time with `composer update`. A lock file from before the change no longer describes the site, so it goes.
+ * Keeps a site's composer.json saying what it runs when the admin adds or takes away a package, so the
+ * next `composer update` agrees with it. On a self-updating site the lock goes, as it no longer describes
+ * the site; on one Composer manages it stays, still true for vendor/ until that update.
  */
 final class SiteComposer
 {
@@ -53,10 +55,13 @@ final class SiteComposer
 
             if (is_array($composer) && is_writable($file)) {
                 Files::putJson($file, $change($composer));
-                @unlink($this->app->sitePath('composer.lock'));
+
+                if ($this->app->make(Layout::class)->managed() !== 'composer') {
+                    @unlink($this->app->sitePath('composer.lock'));
+                }
             }
         } catch (Throwable $e) {
-            // Only the move to Composer needs it, and that can name its plugins by hand.
+            // composer.json can always name its plugins by hand.
             report($e);
         }
     }

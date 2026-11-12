@@ -186,7 +186,6 @@
   "This paid package has no free download for local sites. Buy it, or upload a copy you own.": "Dieses kostenpflichtige Paket hat keinen kostenlosen Download für lokale Websites. Kaufe es oder lade eine Kopie hoch, die dir gehört.",
   "This server’s clock looks wrong, so installs are paused.": "Die Uhr dieses Servers scheint falsch zu gehen, daher sind Installationen pausiert.",
   "This server’s clock looks wrong. Installs are paused. The public site is not affected.": "Die Uhr dieses Servers scheint falsch zu gehen. Installationen sind pausiert. Die öffentliche Website ist nicht betroffen.",
-  "This site is managed with Composer. Run: composer remove :package": "Diese Website wird mit Composer verwaltet. Führe aus: composer remove :package",
   "This store doesn’t say what changed.": "Dieser Store gibt nicht an, was sich geändert hat.",
   "This version of :package is blocked by the store for security reasons.": "Diese Version von :package ist aus Sicherheitsgründen vom Store gesperrt.",
   "This version was withdrawn: {reason}": "Diese Version wurde zurückgezogen: {reason}",

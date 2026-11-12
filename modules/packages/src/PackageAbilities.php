@@ -123,10 +123,6 @@ final class PackageAbilities
 
         // The plugin an uninstall is for, refused where the uninstall is.
         $removable = function (array $in): \Cms\Packages\PackageManifest {
-            if ($in['deleteFiles'] && app(\Cms\Update\Layout::class)->managed() === 'composer') {
-                throw new AbilityException(__('This site is managed with Composer. Run: composer remove :package', ['package' => $in['name']]), 'invalid');
-            }
-
             return $this->cms->packages()->uninstallable($in['name']);
         };
 
