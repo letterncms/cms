@@ -153,4 +153,14 @@ final class CollectionDefaultsTest extends TestCase
         $this->assertTrue($this->cms()->abilities()->execute('collections/get', ['handle' => 'testimonials'], $ctx)['system']);
         $this->assertFalse($this->cms()->abilities()->execute('collections/get', ['handle' => 'testimonials'], $ctx)['deletable']);
     }
+
+    public function test_the_body_can_be_a_field_of_any_blueprint(): void
+    {
+        $collection = Collection::fromArray('notes', ['title' => 'Notes', 'fields' => [['handle' => 'summary', 'type' => 'text']], 'blueprints' => [
+            'long' => ['title' => 'Long', 'fields' => [['handle' => 'content', 'type' => 'markdown', 'label' => 'Text']]],
+            'built' => ['title' => 'Built', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'label' => 'Page'], ['handle' => 'intro', 'type' => 'richtext', 'label' => 'Intro']]],
+        ]]);
+        $settings = array_column($this->cms()->collections()->settingsFields($collection), null, 'handle');
+        $this->assertSame(['content', 'intro'], array_keys($settings['body']['options'] ?? []));
+    }
 }

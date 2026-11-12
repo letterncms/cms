@@ -372,6 +372,8 @@ export interface FieldContext {
   errors?: Record<string, string>
   entry?: Entry
   collection?: string
+  /** The blueprint of the entry being edited, when it has one. */
+  blueprint?: string
   locale?: string
   /** Current (unsaved) entry title. */
   title?: string
@@ -388,7 +390,8 @@ export interface EntryPanelProps {
   /** Complete working snapshot, including editorial metadata, for previews. */
   content: EntryContent
   entry: Entry | null
-  collection: { handle: string; title: string; singular: string; body?: string; route?: string; structure?: 'list' | 'tree' | 'dated'; resolvedFields: FieldDef[] }
+  /** `blueprint` names the blueprint whose fields `resolvedFields` are, when the entry has one. */
+  collection: { handle: string; title: string; singular: string; body?: string; route?: string; structure?: 'list' | 'tree' | 'dated'; resolvedFields: FieldDef[]; blueprint?: string }
   values: Record<string, any>
   title: string
   setValue: (handle: string, value: any) => void

@@ -367,7 +367,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
   }
   const properties = placement.document.filter((field) => !WIDE_FIELDS.includes(field.type))
   const mainFields = placement.document.filter((field) => WIDE_FIELDS.includes(field.type))
-  const fieldContext = { entry: entry ?? undefined, collection: collection.handle, locale: contentLocale }
+  const fieldContext = { entry: entry ?? undefined, collection: collection.handle, blueprint: collection.blueprint, locale: contentLocale }
   // The version's dialog showed what changes and asked: nothing more to confirm here.
   const restore = async (revisionId: string) => {
     if (actions.restore) await replace('revisions/restore', { revisionId })

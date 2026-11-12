@@ -28,6 +28,7 @@
 
 - Pressing `Enter` in the chat's `/` menu before its lines are in picks the first line for what was typed, never a line left from the last few letters, and what follows `/` is never sent as a message.
 - The plugin page in the store can be scrolled again.
+- **Body Field** offers the fields of every blueprint, not only the collection's own, and a new entry of a blueprint is previewed with that blueprint's fields.
 
 ## 0.26.1 (2026-11-12)
 

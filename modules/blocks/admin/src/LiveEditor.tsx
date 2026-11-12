@@ -26,6 +26,8 @@ import { openSlash, slashPlacement, useSlash, useSlashDismiss } from './write/sl
 
 interface Props {
   collection?: string
+  /** The blueprint of an unsaved entry, which the preview renders it with. */
+  blueprint?: string
   entryId?: string | null
   content: EntryContent
   onInspect: (id: string) => void
@@ -78,7 +80,7 @@ function pixels(value: string | undefined): number {
 }
 
 /** The site's renderer is the editor. React owns only explicit inline text slots. */
-export function LiveEditor({ collection, entryId, content, onInspect, standalone, onTitleChange }: Props) {
+export function LiveEditor({ collection, blueprint, entryId, content, onInspect, standalone, onTitleChange }: Props) {
   const { store, types, allowed, fieldHandle, readOnly = false } = useEditorContext()
   const components = useComponentTitles()
   const nodes = useEditor(store, (state) => state.nodes)
@@ -351,7 +353,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
       const capturedStructure = structure()
       const controller = new AbortController(); abort.current = controller
       try {
-        const { text: html, headers } = await requestText('POST', entryId ? `/__preview/${entryId}` : '/__preview', { ...content, collection, field: fieldHandle, standalone, data: { ...content.data, [fieldHandle]: store.get().nodes }, play: false }, { signal: controller.signal })
+        const { text: html, headers } = await requestText('POST', entryId ? `/__preview/${entryId}` : '/__preview', { ...content, collection, ...(entryId ? {} : { blueprint }), field: fieldHandle, standalone, data: { ...content.data, [fieldHandle]: store.get().nodes }, play: false }, { signal: controller.signal })
         if (!state.alive || controller.signal.aborted || (sequence !== request.current && capturedStructure !== structure())) return
         const scope = headers.get('X-Cms-Editor-Document')
         if (!scope) throw new Error(t('The editor could not load its rendering context.'))
@@ -373,7 +375,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
   useEffect(() => {
     request.current++
     scheduleRender()
-  }, [entryId, collection, content, nodes, fieldHandle, standalone, retry])
+  }, [entryId, collection, blueprint, content, nodes, fieldHandle, standalone, retry])
   useEffect(() => {
     rendering.current.alive = true
     if (rendering.current.queued) scheduleRender()

@@ -121,7 +121,9 @@ final class SiteController
             if (! is_string($locale) || ! in_array($locale, $this->cms->locales(), true)) {
                 return $this->refuse(__('Choose an existing locale.'));
             }
-            $working = new Entry(id: strtolower((string) Str::ulid()), collection: $handle, locale: $locale, slug: '', title: '', data: $collection->blueprint()->defaults(), authorId: $user->id);
+            // An unsaved entry has the fields of the blueprint it is being made with.
+            $blueprint = is_string($name = $request->json('blueprint')) && isset($collection->blueprints()[$name]) ? $name : null;
+            $working = new Entry(id: strtolower((string) Str::ulid()), collection: $handle, locale: $locale, slug: '', title: '', data: $collection->blueprint($blueprint)->defaults(), authorId: $user->id, blueprint: $blueprint);
             $parentId = $request->json('parentId');
             if (is_string($parentId) && $parentId !== '') {
                 $parent = $this->cms->entries()->find($parentId);
@@ -162,7 +164,7 @@ final class SiteController
         $collection = $working->collection();
         $working->uri = app(UriBuilder::class)->build($working, $collection, fn (string $parentId) => $this->cms->entries()->find($parentId));
         $field = $request->json('field');
-        if ($field !== null && (! is_string($field) || $collection->blueprint()->field($field)?->type !== 'blocks')) {
+        if ($field !== null && (! is_string($field) || $working->blueprint()->field($field)?->type !== 'blocks')) {
             return $this->respond('<!doctype html><p>'.e(__('Choose a blocks field.')).'</p>', 422);
         }
         $document = $editor ? bin2hex(random_bytes(16)) : null;
