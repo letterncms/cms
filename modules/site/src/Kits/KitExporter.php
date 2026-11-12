@@ -254,7 +254,7 @@ final class KitExporter
      *
      * @return ?array{0: string, 1: string}
      */
-    private function preview(array $about): ?array
+    public function preview(array $about): ?array
     {
         if (empty($about['preview'])) {
             return null;

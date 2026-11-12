@@ -144,9 +144,22 @@ final class KitApplier
         }
 
         $handle = $active ?? 'site';
-        $name = ($this->kits->find($handle) ?? $this->kits->saved()[$handle] ?? null)?->name() ?? trim((string) config('app.name')) ?: $handle;
+        $known = $this->kits->find($handle) ?? $this->kits->saved()[$handle] ?? null;
+        $name = $known?->name() ?? trim((string) config('app.name')) ?: $handle;
+        $about = ['handle' => $handle, 'name' => mb_substr($name, 0, 80)];
 
-        return $this->exporter->export($this->kits->savedPath($handle), ['handle' => $handle, 'name' => mb_substr($name, 0, 80)], replace: true, drafts: true)['kit'];
+        // What the kit says of itself stays as it was edited, thumbnail included.
+        if ($known !== null) {
+            $known->description() !== '' && $about['description'] = $known->description();
+            $picture = $known->previews()[0] ?? null;
+
+            if ($picture !== null && is_file($file = $known->path.'/'.$picture)) {
+                $about['preview'] = base64_encode((string) file_get_contents($file));
+                $about['previewType'] = pathinfo($picture, PATHINFO_EXTENSION);
+            }
+        }
+
+        return $this->exporter->export($this->kits->savedPath($handle), $about, replace: true, drafts: true)['kit'];
     }
 
     /** @return list<string> the plugins a kit needs that are not running here */

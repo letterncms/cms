@@ -224,6 +224,36 @@ final class KitsTest extends TestCase
         $this->assertSame('Mine', $own['kit']['description']);
     }
 
+    public function test_a_kits_details_can_be_changed_but_not_a_built_in_kits(): void
+    {
+        $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
+        $this->kit('studio', ['content/collections/pages.yaml' => "title: Pages\nsingular: Page\ndriver: database\nroute: '/{slug}'\nsort: position\nfields:\n  -\n    handle: content\n    type: blocks\n    label: Content\n", 'content/collections/pages/studio-home.md' => "---\nid: 01studio00000000000000000a\ntitle: Studio Home\nstatus: published\n---\n"]);
+        $png = base64_encode(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+
+        $kit = $this->ability('kits/update', ['handle' => 'studio', 'name' => 'Studio Two', 'description' => 'Dark', 'preview' => $png, 'previewType' => 'png'])['kit'];
+        $this->assertSame(['Studio Two', 'Dark'], [$kit['name'], $kit['description']]);
+        $this->assertCount(1, $kit['previews']);
+        $this->assertFileExists(site_path('kits/studio/previews/home.png'));
+
+        $kit = $this->ability('kits/update', ['handle' => 'studio', 'description' => '', 'removePreview' => true])['kit'];
+        $this->assertSame(['Studio Two', '', []], [$kit['name'], $kit['description'], $kit['previews']]);
+        $this->assertFileDoesNotExist(site_path('kits/studio/previews/home.png'));
+
+        try {
+            $this->ability('kits/update', ['handle' => 'minimal', 'name' => 'Mine']);
+            $this->fail('a kit that comes with the CMS is not changed');
+        } catch (AbilityException $e) {
+            $this->assertSame('conflict', $e->type);
+        }
+
+        // What was edited survives the site leaving that kit.
+        $this->ability('kits/switch', ['handle' => 'studio']);
+        $this->ability('kits/update', ['handle' => 'studio', 'description' => 'Edited']);
+        $this->ability('kits/switch', ['handle' => 'minimal']);
+        $this->assertSame('Edited', $this->kits()->find('studio')->description());
+        $this->assertSame('Studio Two', $this->kits()->saved()['studio']->name());
+    }
+
     public function test_the_kit_a_setup_chose_or_none(): void
     {
         $this->assertContains('kit', array_keys(Installer::rules()));
