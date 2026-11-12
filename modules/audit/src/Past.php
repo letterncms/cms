@@ -63,6 +63,7 @@ final class Past
             'globals/save' => __('Saved Global Set'),
             'globals/set' => __('Updated Global Set Values'),
             'kits/apply' => __('Applied Site Kit'),
+            'kits/switch' => __('Switched Site Kit'),
             'kits/export' => __('Exported Site as a Kit'),
             'languages/create' => __('Added Language'),
             'languages/delete' => __('Removed Language'),
