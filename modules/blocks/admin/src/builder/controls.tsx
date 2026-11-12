@@ -24,9 +24,10 @@ function collapsed(): Record<string, boolean> {
  * A titled group of rows. Every title works the same way: it folds and unfolds the
  * section (a folded one shows its caret), and `actions` sit at the right. Whether it
  * is open is remembered per title; `open` is the default. `empty` (nothing set) dims
- * the title; an empty section with an add action says so when opened, and adding opens it.
+ * the title; an empty section with an add action says so when opened, and adding opens it,
+ * unless it has `fields` of its own to fill: then they show.
  */
-export function Section({ title, children, open: initial = true, actions, empty }: { title: string; children: ReactNode; open?: boolean; actions?: ReactNode; empty?: boolean }) {
+export function Section({ title, children, open: initial = true, actions, empty, fields }: { title: string; children: ReactNode; open?: boolean; actions?: ReactNode; empty?: boolean; fields?: boolean }) {
   const [open, setOpenState] = useState(() => collapsed()[title] === undefined ? initial : !collapsed()[title])
   const setOpen = (next: boolean) => {
     setOpenState(next)
@@ -47,7 +48,7 @@ export function Section({ title, children, open: initial = true, actions, empty 
         {/* Adding something shows it: the section opens. */}
         {actions && <span className="contents" onClickCapture={() => !open && setOpen(true)}>{actions}</span>}
       </header>
-      {open && <div className="space-y-1 px-4 pb-3">{empty && actions ? <p className="m-0 flex h-7 items-center text-xs text-faint">{t('None')}</p> : children}</div>}
+      {open && <div className="space-y-1 px-4 pb-3">{empty && actions && !fields ? <p className="m-0 flex h-7 items-center text-xs text-faint">{t('None')}</p> : children}</div>}
     </section>
   )
 }

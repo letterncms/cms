@@ -206,7 +206,7 @@ export function StyleSection({ s, group, title, open, empty, children }: { s: St
   const mine = Object.keys(more).filter((key) => more[key].group === group)
   const shown = mine.filter((key) => s.value(key) !== undefined || key === adding)
   return (
-    <Section title={title} open={open} empty={empty && shown.length === 0} actions={<AddStyle properties={byLabel(mine.filter((key) => !shown.includes(key)), more)} onPick={setAdding} />}>
+    <Section title={title} open={open} empty={empty && shown.length === 0} fields actions={<AddStyle properties={byLabel(mine.filter((key) => !shown.includes(key)), more)} onPick={setAdding} />}>
       {children}
       {shown.length > 0 && <StyleFields s={s} fields={shown.map((key) => ({ ...fieldOf(key, more), set: (v: unknown) => { if (key === adding) setAdding(null); s.set(key, v as string) } }) as StyleField)} />}
     </Section>
