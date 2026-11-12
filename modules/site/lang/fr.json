@@ -223,6 +223,7 @@
   "Durations": "Durées",
   "Easing": "Accélération",
   "Edit Custom CSS and JavaScript": "Modifier le CSS et le JavaScript personnalisés",
+  "Its scripts run in the browser of everyone who opens the site, the builder or a preview, administrators too.": "Ses scripts s’exécutent dans le navigateur de chaque personne qui ouvre le site, l’éditeur de page ou un aperçu, administrateurs compris.",
   "Editing code needs the “Edit custom CSS and JavaScript” permission.": "Modifier le code nécessite l’autorisation « Modifier le CSS et le JavaScript personnalisés ».",
   "Effect": "Effet",
   "Either": "Les deux",

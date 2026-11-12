@@ -11,6 +11,7 @@ import { accepts, choiceToNodes, insertionPoint, componentFits } from './core/in
 import { saveComponent } from './core/SaveComponent'
 import { insertionTargets, pickDropTarget, pickHoverTarget, type BlockBox, type InsertionTarget, type Rect } from './core/insertionTargets'
 import { QuickInserter } from './core/QuickInserter'
+import { canvasBehaviors } from './core/canvas'
 import { morphDocument } from './core/morph'
 import { useBlockDrag } from './core/useBlockDrag'
 import { BlockToolbar, BoundaryInserter, ContainerAppender, DocumentAppender, LiveDragPreview } from './LiveBlockControls'
@@ -149,6 +150,9 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
   }
   const structure = () => indexed.current.map(({ node, parentId, index }) => `${parentId}:${index}:${node.id}:${node.type}:${node.type === 'list' ? node.props.items?.length ?? 0 : ''}`).join('|')
   const abort = useRef<AbortController | null>(null)
+  // Behaviours that draw in the canvas too (core/canvas.ts): undone before every render of it, mounted after.
+  const drawn = useRef(canvasBehaviors())
+  useEffect(() => () => drawn.current.unmount(), [])
   const latest = useRef({ content, onInspect, readOnly, layout, onTitleChange })
   latest.current = { content, onInspect, readOnly, layout, onTitleChange }
   // A block inside a Repeat is drawn once per item, marked as a prototype: its first item stands for it.
@@ -353,12 +357,14 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
         if (!scope) throw new Error(t('The editor could not load its rendering context.'))
         const next = new DOMParser().parseFromString(html, 'text/html')
         if (!next.querySelector(`[data-cms-editor-root="${scope}"]`)) throw new Error(t('This template has no content outlet. Choose a template that includes the content field.'))
-        next.querySelectorAll('script').forEach((script) => { script.type = 'text/cms-off'; script.removeAttribute('src') })
+        next.querySelectorAll('script').forEach((script) => { if (script.type === 'importmap') script.dataset.cmsImportmap = ''; script.type = 'text/cms-off'; script.removeAttribute('src') })
         token.current = scope
         const d = frame.current?.contentDocument
         if (d?.documentElement?.hasAttribute('data-cms-bridge-ready')) {
+          drawn.current.unmount()
           morphDocument(d, next); d.documentElement.setAttribute('data-cms-bridge-ready', '')
           collectSlots(d)
+          drawn.current.mount(d)
         } else if (frame.current) frame.current.srcdoc = next.documentElement.outerHTML
         if (sequence === request.current) setError(null)
       } catch (failure) { if (!controller.signal.aborted && sequence === request.current) { setError(failure instanceof Error ? failure.message : String(failure)); setLoading(false) } }
@@ -431,6 +437,7 @@ export function LiveEditor({ collection, entryId, content, onInspect, standalone
     d.documentElement.setAttribute('data-cms-bridge-ready', '')
     const style = d.createElement('style'); style.dataset.cmsBridge = ''; style.textContent = bridgeCss; d.head.appendChild(style)
     setDoc(d); collectSlots(d); setLoading(false)
+    drawn.current.unmount(); drawn.current.mount(d)
     d.addEventListener('submit', (event) => event.preventDefault(), true)
     d.addEventListener('dragstart', (event) => event.preventDefault())
     d.addEventListener('focusout', (event) => { if ((event.target as HTMLElement).isContentEditable) setWriting(false); scheduleRender() })

@@ -176,6 +176,18 @@ final class SiteModule extends Plugin
 
             return $url;
         });
+        // A behaviour that draws in the builder's canvas too (`export const canvas = true`): its published file there.
+        // Its page carries the import map, which the editor lends the admin so the script finds what it imports.
+        $hooks->addFilter('blocks.behavior.canvas', static function (?string $url, string $module) use ($code) {
+            $url = $code()->canvas($module) ? $code()->url('scripts', $module) : null;
+
+            if ($url !== null && ($context = PageContext::current()) !== null) {
+                $context->dependencies["design:scripts/{$module}"] = true;
+                $context->modules = true;
+            }
+
+            return $url;
+        });
         $hooks->on('render.depend', static fn (string $key) => PageContext::depend($key));
         // Mail wears the site's colours, from whichever tokens this design has.
         $hooks->addFilter('email.colors', static function (array $colors) use ($design) {
@@ -751,7 +763,9 @@ final class SiteModule extends Plugin
         ]);
 
         $this->cms()->permissions()->register('site.build', 'Publish the Site', 'Site', roles: ['editor']);
-        $this->cms()->permissions()->register('site.code', 'Edit Custom CSS and JavaScript', 'Design', trusted: true);
+        // Trusted: a design's scripts run as whoever opens the site, the builder (behaviors that draw there) or a
+        // preview, administrators included. Only administrators hold it by default, and a kit with code needs it.
+        $this->cms()->permissions()->register('site.code', 'Edit Custom CSS and JavaScript', 'Design', 'Its scripts run in the browser of everyone who opens the site, the builder or a preview, administrators too.', trusted: true);
 
         // Collections and entries choose from the site's templates.
         $this->cms()->hooks()->addFilter('fields.options.templates', fn (array $options, ?string $collection = null) => array_replace($options, $this->app->make(Templates::class)->options($collection)));

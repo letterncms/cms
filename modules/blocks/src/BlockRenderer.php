@@ -866,8 +866,17 @@ final class BlockRenderer
 
         // The canvas runs no scripts, so a block that a behaviour draws would be a blank there. It says which
         // behaviour it waits for instead (editor.css shows it while the block is empty); the preview runs it.
-        if ($this->editor && ($names = array_column(Document::behaviors($node['behavior'] ?? null), 'module')) !== []) {
-            $attrs['data-cms-behavior-label'] = __('Drawn by “:name” on the site. Open the preview to see it.', ['name' => implode(', ', $names)]);
+        // A behaviour that draws in the canvas too (`blocks.behavior.canvas`) is handed to the editor, which
+        // mounts it there itself; the name stays for as long as nothing is drawn.
+        $drawn = null;
+        if ($this->editor && ($behaviors = Document::behaviors($node['behavior'] ?? null)) !== []) {
+            $canvas = [];
+            foreach ($behaviors as $behavior) {
+                $url = $this->hooks->filter('blocks.behavior.canvas', null, $behavior['module']);
+                is_string($url) && $url !== '' && $canvas[] = array_filter(['src' => $url, 'props' => $this->behaviorProps($behavior) ?: null], static fn ($v) => $v !== null);
+            }
+            $canvas !== [] && $drawn = (string) json_encode($canvas, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $attrs['data-cms-behavior-label'] = __('Drawn by “:name” on the site. Open the preview to see it.', ['name' => implode(', ', array_column($behaviors, 'module'))]);
         }
 
         if (($compiled['scroll'] ?? []) !== []) {
@@ -884,9 +893,11 @@ final class BlockRenderer
             $attrs['id'] = 'cms-'.$id.(isset($this->named[$id]) ? $this->iteration : '');
         }
 
-        foreach (['data-cms-node', 'data-cms-document', 'data-cms-editor-root', 'data-cms-type', 'data-cms-prop', 'data-cms-index', 'data-cms-entry-field', 'data-cms-instance-document', 'data-cms-instance-node', 'data-cms-instance-prop', 'data-cms-instance-type', 'data-cms-instance-format', 'data-cms-instance-value', 'data-cms-proto', 'data-cms-proto-document'] as $managed) {
+        foreach (['data-cms-canvas', 'data-cms-node', 'data-cms-document', 'data-cms-editor-root', 'data-cms-type', 'data-cms-prop', 'data-cms-index', 'data-cms-entry-field', 'data-cms-instance-document', 'data-cms-instance-node', 'data-cms-instance-prop', 'data-cms-instance-type', 'data-cms-instance-format', 'data-cms-instance-value', 'data-cms-proto', 'data-cms-proto-document'] as $managed) {
             unset($attrs[$managed]);
         }
+        // Only the renderer names a script for the editor to run, never an attribute somebody typed.
+        $drawn !== null && $attrs['data-cms-canvas'] = $drawn;
         if ($this->editor && $this->editorDocument !== null && $id !== '') {
             $attrs['data-cms-document'] = $this->editorDocument;
             $attrs['data-cms-node'] = $id;
@@ -923,7 +934,6 @@ final class BlockRenderer
      */
     private function behavior(array $node): array
     {
-        $scope = $this->currentScope();
         $specs = [];
 
         foreach (Document::behaviors($node['behavior'] ?? null) as $behavior) {
@@ -933,11 +943,7 @@ final class BlockRenderer
                 continue;
             }
 
-            $props = $behavior['props'] ?? [];
-            // Text may name data, like any text in a block: "{props.speed}" in a component, "{entry.title}" on a page.
-            array_walk_recursive($props, static function (mixed &$value) use ($scope): void {
-                is_string($value) && Scope::isTemplate($value) && Scope::valid($value) && $value = $scope->interpolate($value);
-            });
+            $props = $this->behaviorProps($behavior);
             $specs[] = array_filter(['src' => $url, 'props' => $props !== [] ? $props : null, 'when' => $behavior['when'] ?? null], static fn ($v) => $v !== null);
         }
 
@@ -953,6 +959,18 @@ final class BlockRenderer
             'data-cms-props' => isset($specs[0]['props']) ? (string) json_encode($specs[0]['props'], $json) : null,
             'data-cms-when' => $specs[0]['when'] ?? null,
         ], static fn ($v) => $v !== null);
+    }
+
+    /** A behaviour's props as the script gets them. Text may name data, like any text in a block: "{props.speed}" in a component, "{entry.title}" on a page. */
+    private function behaviorProps(array $behavior): array
+    {
+        $scope = $this->currentScope();
+        $props = $behavior['props'] ?? [];
+        array_walk_recursive($props, static function (mixed &$value) use ($scope): void {
+            is_string($value) && Scope::isTemplate($value) && Scope::valid($value) && $value = $scope->interpolate($value);
+        });
+
+        return $props;
     }
 
     /** @return list<string> the block ids a node's attributes name (`aria-controls: "#panel"`) */
