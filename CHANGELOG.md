@@ -9,6 +9,9 @@
 ### Fixed
 
 - A site kit whose collection files its entries under a taxonomy the kit also brings, or picks from another of its collections, applies whatever order their names come in, and a kit in more languages than the site applies too: its entries in those languages are no longer refused before the languages are added. A collection the site keeps its own of (`skip`) is checked as the site's, so a kit collection that needs the kit's version of it is refused before anything is written, not halfway through.
+- **Focus rings stand out on every theme colour.** The focus line is the theme colour wherever it reaches 3:1 against the page, the sidebar and a chosen row, and otherwise the same hue made darker (light) or lighter (dark) until it does. Amber's on light is a deeper amber; it was 2:1.
+- Form-like pages share one column: a collection's fields and settings now sit in the same centred width as Settings, a menu and a global set.
+- On a phone, a screen's bar with two actions keeps the primary one's words and shows the other as its icon, so neither runs off the screen (Languages). A count in a list reads "104 Entries" without "Entries" before it.
 - The Audit Log no longer opens with **Ran Automatic Updates** for every visit to the admin: a visit that finds no security update to move along changed nothing, and is left out. Every step of an update that runs is still there, the one that finishes or fails it too.
 - A collection's list on a site with several languages shows the language whose chip is lit, also before one is picked, and the number beside its name counts that language. It showed the entries of every language under **EN**.
 - A collection with many fields opens its list again: with more than twelve columns to offer, the list showed “Allows at most 12 items” instead of its entries.

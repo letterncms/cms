@@ -211,7 +211,8 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
 
   return (
     <Page
-      width="wide"
+      // A form, in the width of every form-like page (settings, a menu, a form's fields); a side column of settings needs more.
+      width={settings.length > 0 && !kind.settingsSections ? 'wide' : 'narrow'}
       title={kind.settingsSections ? def.title : undefined}
       crumbs={kind.crumbs?.(def) ?? [kind.back, { label: kind.remove ? def.title : t('Profile Fields') }]}
       actions={kind.entries && <Button icon="arrow-up-right" onClick={() => navigate(kind.entries!)}>{t('Entries')}</Button>}
@@ -220,7 +221,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       <RowUsage.Provider value={kind.rows ?? null}>
       <div inert={saving || removing}>
       {kind.settingsSections ? (
-        <div className="max-w-[960px]">
+        <div>
           <Tabs value={tab} onChange={setTab} tabs={[{ value: 'fields', label: t('Fields') }, { value: 'settings', label: t('Settings') }]} className="mb-6" />
           {tab === 'fields' ? (
             <>
@@ -235,7 +236,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
                 <FieldsEditor heading={false} fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
               ) : (
                 <div key={named}>
-                  <div className="mb-5 max-w-[640px]">
+                  <div className="mb-5">
                     <PartName
                       name={blueprints[named].title ?? ''} handle={named} taken={Object.keys(blueprints).filter((h) => h !== named)}
                       renamed={!savedBlueprints.current?.has(named) && [...(savedBlueprints.current ?? [])].some((h) => !blueprints[h])}
@@ -251,8 +252,8 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
             </>
           ) : (
             <div>
-              {/* The kit's sections, one under the other in the form's width: the settings of every other screen are laid out so. */}
-              <div className="max-w-[640px]">
+              {/* The kit's sections, one under the other: the settings of every other screen are laid out so. */}
+              <div>
               {[...kind.settingsSections, { title: t('More Settings'), handles: settings.filter((f) => !kind.settingsSections!.some((s) => s.handles.includes(f.handle))).map((f) => f.handle), bare: false }].map((section) => {
                 const fields = section.handles.flatMap((h) => settings.filter((f) => f.handle === h))
                 if (!fields.length) return null
@@ -267,7 +268,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
             </div>
           )}
         </div>
-      ) : <div className={settings.length > 0 ? 'grid grid-cols-1 gap-10 lg:grid-cols-[1fr_300px]' : 'max-w-[760px]'}>
+      ) : <div className={settings.length > 0 ? 'grid grid-cols-1 gap-10 lg:grid-cols-[1fr_300px]' : undefined}>
         <div className="min-w-0">
           <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
           {removal}

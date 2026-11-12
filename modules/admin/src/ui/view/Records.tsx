@@ -317,8 +317,8 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       value: paged || sorting || own.sort === false || !display ? undefined : (row: Row) => plainValue(at(row, own.key), own.labels),
       // Days are read newest first.
       descFirst: ['date', 'datetime', 'ago'].includes(own.format ?? '') || (own.format === 'field' && ['date', 'number'].includes(own.field?.type ?? '')),
-      // These say what they are without a heading: a dot and its word, an address, a face, badges, a switch.
-      bare: own.bare ?? ['status', 'address', 'person', 'badges', 'switch', 'languages', 'media'].includes(own.format ?? ''),
+      // These say what they are without a heading: a dot and its word, an address, a face, badges, a switch, a count in its own words.
+      bare: own.bare ?? (!!own.unit || ['status', 'address', 'person', 'badges', 'switch', 'languages', 'media'].includes(own.format ?? '')),
       control: own.format === 'switch',
       // The same dot and words as the column's own (formats.tsx): the tone from `tones`, the words from `labels`.
       status: own.format === 'status' ? (row: Row) => {

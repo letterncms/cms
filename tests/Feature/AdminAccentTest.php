@@ -27,7 +27,7 @@ final class AdminAccentTest extends TestCase
 
         $this->get('/admin')->assertOk()
             ->assertSee('<style id="cms-accent">:root,[data-theme]{--cms-signal:#0d74ce;--cms-signal-ink:#ffffff;--cms-focus:#0d74ce;--cms-focus-soft:rgb(13 116 206 / 0.12);--cms-focus-hover:rgb(13 116 206 / 0.16)}', false)
-            ->assertSee('[data-theme="dark"]{--cms-focus:#2f87d5;', false);
+            ->assertSee('[data-theme="dark"]{--cms-focus:#2280dc;', false);
         $this->getJson('/api/admin/manifest')->assertOk()->assertJsonPath('data.site.accent', 'blue');
     }
 
@@ -64,21 +64,32 @@ final class AdminAccentTest extends TestCase
         $this->cms()->abilities()->execute('settings/update', ['namespace' => 'site', 'values' => ['admin_accent' => '#123456']], $ctx);
     }
 
-    /** WCAG 2.2: the words on each fill 4.5:1 (1.4.3) and its focus line 3:1 on the page, the desk and a float (1.4.11), light and dark. */
+    /** WCAG 2.2: the words on each fill 4.5:1 (1.4.3) and its focus line 3:1 on every surface it is drawn on (1.4.11), light and dark. */
     public function test_every_accent_reads_in_light_and_in_dark(): void
     {
         foreach (Accent::PRESETS as $name => $preset) {
             $this->assertGreaterThanOrEqual(4.5, $this->contrast($preset['fill'], $preset['ink']), "{$name}: words on the fill");
             if (isset($preset['dark'])) {
                 $this->assertGreaterThanOrEqual(4.5, $this->contrast($preset['dark']['fill'], $preset['dark']['ink']), "{$name}: words on the fill on dark");
+
+                continue;
             }
-            // Amber's line on light is amber itself, haloed: any deeper is brown.
-            foreach ([...($name === 'amber' ? [] : [[$preset['focus'][0], ['#ffffff', '#f4f3ef']]]), [$preset['focus'][1], ['#1a1a18', '#222220']]] as [$line, $pages]) {
-                foreach ($pages as $page) {
-                    $this->assertGreaterThanOrEqual(3.0, $this->contrast($line, $page), "{$name}: focus {$line} on {$page}");
+            foreach ([false, true] as $dark) {
+                $line = Accent::focus($preset['fill'], $dark);
+                foreach ([...Accent::surfaces($preset['fill'], $dark), ...($dark ? ['#1a1a18', '#222220'] : ['#ffffff', '#f4f3ef'])] as $surface) {
+                    $this->assertGreaterThanOrEqual(3.0, $this->contrast($line, $surface), "{$name}: focus {$line} on {$surface}");
                 }
             }
         }
+    }
+
+    /** The brand's own paints nothing: the tokens hold its line, the one it would derive. */
+    public function test_the_tokens_hold_ambers_own_focus_line(): void
+    {
+        $tokens = (string) file_get_contents(dirname(__DIR__, 2).'/modules/admin/src/styles/tokens.css');
+        preg_match_all('/--cms-focus:\s*(#[0-9a-f]{6});/', $tokens, $lines);
+
+        $this->assertSame([Accent::focus('#e9b03c', false), Accent::focus('#e9b03c', true)], $lines[1]);
     }
 
     private function contrast(string $a, string $b): float
