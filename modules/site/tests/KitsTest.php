@@ -254,6 +254,39 @@ final class KitsTest extends TestCase
         $this->assertSame('Studio Two', $this->kits()->saved()['studio']->name());
     }
 
+    public function test_a_kit_is_deleted_with_its_saved_copy_but_not_the_one_the_site_is(): void
+    {
+        $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
+        $this->kit('studio', ['content/collections/pages.yaml' => "title: Pages\nsingular: Page\ndriver: database\nroute: '/{slug}'\nsort: position\nfields:\n  -\n    handle: content\n    type: blocks\n    label: Content\n"]);
+        $this->ability('kits/switch', ['handle' => 'studio']);
+        $this->ability('kits/switch', ['handle' => 'minimal']);
+        $this->assertArrayHasKey('studio', $this->kits()->saved());
+
+        foreach (['minimal', 'nothing'] as $handle) {
+            try {
+                $this->ability('kits/delete', ['handle' => $handle]);
+                $this->fail("{$handle} is not deleted");
+            } catch (AbilityException $e) {
+                $this->assertContains($e->type, ['conflict', 'not_found']);
+            }
+        }
+
+        $this->ability('kits/switch', ['handle' => 'studio']);
+
+        try {
+            $this->ability('kits/delete', ['handle' => 'studio']);
+            $this->fail('the kit the site is is not deleted');
+        } catch (AbilityException $e) {
+            $this->assertSame('conflict', $e->type);
+        }
+
+        $this->ability('kits/switch', ['handle' => 'minimal']);
+        $this->ability('kits/delete', ['handle' => 'studio']);
+        $this->assertNull($this->kits()->find('studio'));
+        $this->assertArrayNotHasKey('studio', $this->kits()->saved());
+        $this->assertDirectoryDoesNotExist(site_path('kits/studio'));
+    }
+
     public function test_the_kit_a_setup_chose_or_none(): void
     {
         $this->assertContains('kit', array_keys(Installer::rules()));

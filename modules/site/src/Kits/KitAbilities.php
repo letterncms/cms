@@ -145,6 +145,23 @@ final class KitAbilities
             },
         ]);
 
+        $abilities->register('kits/delete', [
+            'label' => 'Delete a Site Kit',
+            'description' => 'Delete a kit: its folder in the site’s kits/ and the copy kept of it when the site left it, so what was changed in it is gone too (the site itself is untouched). {"handle": "studio"}. Not the kit the site is now (switch first), and not one that comes with the CMS. A kit a Composer package put in kits/ comes back with the next composer install.',
+            'permission' => 'settings.manage',
+            'annotations' => ['destructive' => true],
+            'input' => ['type' => 'object', 'properties' => $handle, 'required' => ['handle']],
+            'output' => Shape::of(['handle' => Shape::STRING]),
+            'dryRun' => static function (array $in) use ($editor): array {
+                return array_map(static fn (string $folder) => ['action' => 'delete', 'type' => 'kit', 'name' => basename($folder), 'path' => str_contains($folder, '/storage/') ? 'storage/kits/'.basename($folder) : 'kits/'.basename($folder)], $editor()->removable((string) $in['handle']));
+            },
+            'handler' => static function (array $in) use ($editor): array {
+                $editor()->delete((string) $in['handle']);
+
+                return ['handle' => (string) $in['handle']];
+            },
+        ]);
+
         $abilities->register('kits/import', [
             'label' => 'Import a Site Kit',
             'description' => 'Put a kit that came as a zip into this site’s kits/, so it can be switched to (kits/switch) or applied (kits/apply): {"content": "<base64 of the zip>", "encoding": "base64"}, the zip Export Site makes or any kit’s folder zipped. The zip is read without trust and the kit is checked whole before it is kept; nothing of the site changes. A kit of a handle that exists is refused unless `replace`.',
