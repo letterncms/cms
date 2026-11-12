@@ -12,7 +12,6 @@ import { OverviewControls, nextTableSort, type OverviewView } from './ViewContro
 import { useRecordNavigation } from './recordNavigation'
 import { useViewPrefs, type CalendarDate, type ViewPrefs, type ViewPrefsChange } from './viewPrefs'
 import { withRecordDateColumns } from './recordDates'
-import { SettingsPanel } from './SettingsPanel'
 
 interface BaseDataViewProps<T> {
   id: string
@@ -55,8 +54,6 @@ interface BaseDataViewProps<T> {
   empty: ReactNode
   /** A list read as it is (a ranked top 8): no view, column or sort choices. */
   plain?: boolean
-  /** Draw the table or its state in a settings panel, below its toolbar. */
-  framed?: boolean
   /** The list has an order made by hand (a tree dragged into place): its own order is called that, not "Default". */
   manual?: boolean
   /** Records that hold others, drawn as a tree in the table; `items` is its top level. */
@@ -78,7 +75,7 @@ export const FEW = 8
 const isDate = (iso: string | null | undefined) => !!iso && Number.isFinite(Date.parse(iso))
 
 /** Search, display preferences and selection use the same components as Content collections. */
-export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, controls: extra, header, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, framed, manual = false, tree, calendarSource, prefs: kept }: DataViewProps<T>) {
+export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, controls: extra, header, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, manual = false, tree, calendarSource, prefs: kept }: DataViewProps<T>) {
   // A tree's records, each before the ones it holds: what is selected, searched and shown as cards.
   const every = flattenTree(items, tree?.children)
   // Date columns and the calendar only for dates the records have.
@@ -163,7 +160,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
         {visible.slice(1).filter((c) => c.card === 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="m-0 mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{c.render(item)}</div>)}
         <dl className="m-0 mt-3 space-y-1 text-xs text-muted">{visible.slice(1).filter((c) => c.card !== 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="flex min-w-0 gap-2"><dt className="shrink-0 text-faint">{c.label}</dt><dd className="m-0 ml-auto min-w-0 truncate">{c.render(item)}</dd></div>)}</dl>
       </DataCard>)}
-    </DataGrid> : framed ? <SettingsPanel className="[&_[data-table-frame]]:mx-0 [&_[data-table-frame]]:px-0">{table}</SettingsPanel> : table}
+    </DataGrid> : table}
 
     {view !== 'calendar' && pagination && <PagePagination {...pagination} />}
   </div>

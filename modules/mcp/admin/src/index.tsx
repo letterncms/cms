@@ -1,6 +1,6 @@
 import './styles.css'
 import { invalidate, registry, run, t, timeAgo, useAbility } from '@letterncms/sdk'
-import { Button, SettingRow, SettingsPanel, confirm, copyText, toast } from '@letterncms/ui'
+import { Button, Input, SettingRow, SettingsPanel, Textarea, confirm, copyText, selectFieldTextOnClick, toast } from '@letterncms/ui'
 import { lazy } from 'react'
 
 interface Connected { agents: { name: string; connectedAt: string | null; lastUsedAt: string | null }[] }
@@ -22,11 +22,13 @@ function Agents() {
       toast.error(e)
     }
   }
-  const row = (label: string, value: string) => (
+  const row = (label: string, value: string, multiline = false) => (
     <SettingRow label={label}>
-      <div className="flex min-h-9 items-center gap-2 rounded-sm bg-sunken py-1.5 pl-3 pr-1.5 font-mono text-xs">
-        <span className="min-w-0 flex-1 break-words">{value}</span>
-        <Button size="xs" variant="ghost" icon="copy" className="font-sans" onClick={() => void copyText(value, { copied: t('Copied') })}>{t('Copy')}</Button>
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        {multiline
+          ? <Textarea readOnly rows={1} aria-label={label} value={value} onClick={selectFieldTextOnClick} className="!min-h-8 font-mono text-xs" />
+          : <Input readOnly aria-label={label} value={value} onClick={selectFieldTextOnClick} className="font-mono [&>input]:text-xs" />}
+        <Button size="sm" icon="copy" onClick={() => void copyText(value, { copied: t('Copied') })}>{t('Copy')}</Button>
       </div>
     </SettingRow>
   )
@@ -39,7 +41,7 @@ function Agents() {
           </SettingRow>
         ))}
         {row(t('MCP Server URL'), endpoint)}
-        {row('Claude Code', command)}
+        {row('Claude Code', command, true)}
       </SettingsPanel>
     </div>
   )

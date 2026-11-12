@@ -1,6 +1,6 @@
 import { registry, t, useManifestIfLoaded, type FieldContext, type FieldDef } from '@letterncms/sdk'
 import { Pressable } from './Pressable'
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import { cn } from './cn'
 import { Field, FieldError, SharedMark } from './Field'
 import { fieldControlId } from './fieldIdentity'
@@ -39,6 +39,7 @@ function holds(rule: unknown, values: Record<string, any>): boolean {
 
 const widths: Record<string, string> = { full: 'col-span-6', half: 'col-span-6 md:col-span-3', third: 'col-span-6 md:col-span-2', 'two-thirds': 'col-span-6 md:col-span-4' }
 const compactSettings = new Set(['text', 'url', 'email', 'slug', 'number', 'select', 'icon'])
+const standaloneSettings = new Set(['group', 'repeater', 'matrix', 'table', 'properties', 'fields', 'blocks'])
 
 /** Renders a blueprint: each field with the component registered for its type. */
 export function Fields({ fields, values, onChange, errors = {}, context = {}, disabled, className, bare, layout = 'stacked', labelWidth }: FieldsProps) {
@@ -92,14 +93,17 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
     )
   }
 
-  const rows = shown.map((field) => {
+  const settings = layout === 'settings'
+  const panels: { key: string; panel: boolean; rows: ReactNode[] }[] = []
+  const rows: ReactNode[] = []
+  for (const field of shown) {
     const type = manifest?.fieldTypes.find((ft) => ft.key === field.type)
     // A field may ask for another component than its type's (a json value with its own editor).
     const component = field.component ?? type?.component ?? field.type
     const Component = registry.fields.get(component) ?? registry.fields.get('json')
-    if (!Component) return null
+    if (!Component) continue
     const stock = component === field.type
-    const settingToggle = layout === 'settings' && field.type === 'toggle' && stock
+    const settingToggle = settings && field.type === 'toggle' && stock
     const required = (field.required || (!!field.required_if && holds(field.required_if, values))) && !(field.type === 'select' && !field.multiple)
     const aside = typeof field.shared === 'string' ? <SharedMark from={field.shared} /> : undefined
     const control = (
@@ -109,27 +113,41 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
         onChange={(v: unknown) => onChange(field.handle, v)}
         error={fieldError(field)}
         disabled={closed(field)}
-        context={{ ...context, values, errors }}
+        context={{ ...context, layout: settings ? 'settings' : undefined, values, errors }}
       />
     )
-    if (layout === 'settings') {
-      const compact = component === 'accent' || (stock && (
+    if (settings) {
+      const compact = component === 'accent' || component === 'link' || (stock && (
         (compactSettings.has(field.type) && !field.multiple && !field.block)
         || (field.type === 'media' && field.max === 1)
       ))
-      return (
-        <div key={field.handle} data-field={field.handle} className={field.className as string | undefined}>
-          {bare || (field.type === 'toggle' && !settingToggle) ? (
-            <SettingRow>{control}{fieldError(field) && <FieldError id={`${controlId(field)}-error`}>{fieldError(field)}</FieldError>}</SettingRow>
-          ) : (
-            <Field setting={settingToggle ? 'end' : compact ? 'inline' : 'stacked'} label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} required={required} aside={aside}>
-              {control}
-            </Field>
-          )}
+      // Give composite editors their own surface, with the label outside it.
+      const group = stock && field.type === 'group'
+      const panel = !!field.label && !bare && !standaloneSettings.has(field.type)
+      const id = controlId(field)
+      const error = fieldError(field)
+      const issue = error && <FieldError id={`${id}-error`}>{error}</FieldError>
+      const row = group && !bare ? (
+        <fieldset key={field.handle} data-field={field.handle} aria-describedby={accessible(field).describedBy} className={cn('min-w-0 border-0 p-0', field.className as string | undefined)}>
+          {field.label && <legend className="mb-2 text-sm font-semibold text-ink">{field.label}{required && <span aria-hidden="true" className="ml-0.5 font-normal text-faint">*</span>}</legend>}
+          {aside}
+          {!error && field.instructions && <p id={`${id}-help`} className="m-0 mb-2 text-xs text-muted">{field.instructions}</p>}
+          {control}
+          {issue}
+        </fieldset>
+      ) : (
+        <div key={field.handle} data-field={field.handle} className={cn('min-w-0', field.className as string | undefined)}>
+          {bare || !field.label || (field.type === 'toggle' && !settingToggle)
+            ? panel ? <SettingRow>{control}{issue}</SettingRow> : <>{control}{issue}</>
+            : <Field setting={panel ? settingToggle ? 'end' : compact ? 'inline' : 'stacked' : undefined} label={field.label} htmlFor={id} instructions={field.instructions} error={error} required={required} aside={aside}>{control}</Field>}
         </div>
       )
+      const last = panels.at(-1)
+      if (panel && last?.panel) last.rows.push(row)
+      else panels.push({ key: field.handle, panel, rows: [row] })
+      continue
     }
-    return (
+    rows.push(
       <div
         key={field.handle}
         data-field={field.handle}
@@ -153,8 +171,12 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
         )}
       </div>
     )
-  })
-  if (layout === 'settings') return rows.some(Boolean) ? <SettingsPanel className={className}>{rows}</SettingsPanel> : null
+  }
+  if (settings) return panels.length > 0 ? (
+    <div className={cn('grid min-w-0 gap-4', className)}>
+      {panels.map(({ key, panel, rows }) => panel ? <SettingsPanel key={key}>{rows}</SettingsPanel> : rows)}
+    </div>
+  ) : null
   return <div className={cn('grid grid-cols-6 gap-x-4 gap-y-4', className)}>{rows}</div>
 }
 

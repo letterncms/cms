@@ -98,14 +98,14 @@ function markColumns(table: HTMLElement, hidden: Set<number>) {
  * beside it), the title gives way a little, then the columns right of it go one by one, from the
  * right; the row's actions stay.
  */
-export function TableFrame({ template, label, busy, children }: { template: string; label?: string; busy?: boolean; children: ReactNode }) {
+export function TableFrame({ template, label, busy, fitColumns = true, children }: { template: string; label?: string; busy?: boolean; fitColumns?: boolean; children: ReactNode }) {
   const frame = useRef<HTMLDivElement>(null)
   const table = useRef<HTMLDivElement>(null)
   const tracks = useMemo(() => tracksOf(template), [template])
   const [{ shrink, dropped }, setFit] = useState({ shrink: false, dropped: 0 })
   useLayoutEffect(() => {
     const element = frame.current
-    if (!element) return
+    if (!element || !fitColumns) return
     const wide = window.matchMedia('(min-width: 640px)')
     const fit = () => {
       const style = getComputedStyle(element)
@@ -117,8 +117,8 @@ export function TableFrame({ template, label, busy, children }: { template: stri
     const observer = new ResizeObserver(fit)
     observer.observe(element)
     return () => observer.disconnect()
-  }, [tracks])
-  const hidden = useMemo(() => new Set(yielding(tracks).slice(0, dropped)), [tracks, dropped])
+  }, [tracks, fitColumns])
+  const hidden = useMemo(() => new Set(fitColumns ? yielding(tracks).slice(0, dropped) : []), [tracks, dropped, fitColumns])
   // Rows come and go without this frame drawing again (a tree opening): each one is marked as it arrives.
   useLayoutEffect(() => {
     const element = table.current
@@ -129,23 +129,18 @@ export function TableFrame({ template, label, busy, children }: { template: stri
     observer.observe(element, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [hidden])
-  const columns = shrink ? tracks.map(shrunk).filter((_, i) => !hidden.has(i)).join(' ') : template
+  const columns = fitColumns && shrink ? tracks.map(shrunk).filter((_, i) => !hidden.has(i)).join(' ') : template
   // `cms-table` (app.css): row checkboxes show on hover or focus, and all of them once one is ticked.
-  // Every row draws its hairline below; the frame tucks the last one away (rows may be nested, as in a tree, so `:last-child` can't tell).
   return <div ref={frame} data-table-frame className="-mx-4 overflow-x-auto overflow-y-hidden px-4 md:-mx-6 md:px-6 [scrollbar-width:thin]">
-    <div ref={table} role="table" aria-label={label} aria-busy={busy} className="cms-table -mb-px sm:min-w-fit" style={{ '--cols': columns } as CSSProperties}>{children}</div>
+    <div ref={table} role="table" aria-label={label} aria-busy={busy} className="cms-table sm:min-w-fit" style={{ '--cols': columns } as CSSProperties}>{children}</div>
   </div>
 }
 
 /** A 40px row on hairlines (two lines on a phone). `active`: the keyboard cursor is on it. */
 export function TableRow({ children, header, selected, active, className, recordId }: { children: ReactNode; header?: boolean; selected?: boolean; active?: boolean; className?: string; recordId?: string }) {
-  return <div role="row" data-entry={recordId} className={cn(
-    'grid items-center gap-x-5 border-b border-border px-3 [grid-template-columns:var(--cols)]',
-    header ? 'h-8 text-xs font-medium text-faint max-sm:hidden' : 'group cms-reveal-row relative min-h-10 max-sm:has-[[data-table-actions]]:pr-14 text-sm transition-colors duration-base hover:bg-hover max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
-    // Chosen rows lie pressed in, like the sidebar's place on view: the checkbox says the rest. No colour of their own.
-    selected && 'bg-active hover:bg-active',
-    active && !selected && 'bg-hover',
-    active && 'shadow-cursor',
+  return <div role="row" data-entry={recordId} data-table-row={header ? undefined : ''} data-selected={selected || undefined} data-cursor={active || undefined} className={cn(
+    'grid items-center gap-x-5 px-3 [grid-template-columns:var(--cols)]',
+    header ? 'h-9 text-xs font-medium text-muted max-sm:hidden' : 'group cms-reveal-row relative min-h-10 text-sm max-sm:has-[[data-table-actions]]:pr-14 max-sm:flex max-sm:min-h-[52px] max-sm:flex-wrap max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2',
     className,
   )}>{children}</div>
 }
