@@ -39,7 +39,7 @@ const usedSurfaces = new Set()
 const fixture = `import { createElement as h } from 'react'; import { registry } from '@letterncms/sdk'; import { Topbar, Widget, WidgetRow } from '@letterncms/ui'; registry.components.set('fixture/context', ({props}) => h('p', null, props.title)); registry.widgets.set('fixture-widget', () => h(Widget, null, h(WidgetRow, { title: 'A live record from the plugin', description: 'The same widget renders on Home and in chat', icon: 'file' }))); ${JSON.stringify(nav)}.forEach(n => registry.routes.set(n.path, { path: n.path, component: () => h('div', null, h(Topbar, { crumbs: [{ label: n.label, icon: n.icon }] }), h('main', {style:{padding:32}}, h('h1', null, n.label))) }));`
 const editedItems = new Map()
 const runner = `
-import { navigate, queryClient, blockNavigation, unregister, reregister, registry, loadManifest } from '@letterncms/sdk'
+import { events, navigate, queryClient, blockNavigation, unregister, reregister, registry, loadManifest } from '@letterncms/sdk'
 const results = [], output = document.querySelector('#results')
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const assert = (value, message) => { if (!value) throw new Error(message) }
@@ -138,17 +138,17 @@ try {
     assert(composer().value === 'Unfinished landing page idea', 'new draft was lost')
     fill(''); await sleep(30)
   })
-  await test('New Chat leaves a saved conversation and keeps its reply draft, which the command does not throw away', async () => {
-    const command = registry.commands.get('workspace')
+  await test('Asking from elsewhere leaves a saved conversation and keeps its reply draft, which it does not throw away', async () => {
+    const ask = () => events.emit('chat.ask')
     row('Refine the launch page').click(); await wait(() => dock().textContent.includes('Reply for chat-1'), 'saved chat did not open')
     fill('Reply draft'); await sleep(30)
-    command.perform(); await sleep(50)
-    assert(heading() === 'Refine the launch page' && composer().value === 'Reply draft', 'the New Chat command discarded a reply draft')
+    ask(); await sleep(50)
+    assert(heading() === 'Refine the launch page' && composer().value === 'Reply draft', 'asking from elsewhere discarded a reply draft')
     newChat(); await wait(() => welcome() && composer().value === '', 'New Chat did not start fresh')
     await wait(() => row('Refine the launch page')?.textContent.includes('Draft'), 'the list does not mark the reply draft')
     row('Refine the launch page').click(); await wait(() => composer().value === 'Reply draft', 'reply draft was discarded')
     fill(''); await sleep(30)
-    command.perform(); await wait(() => welcome() && heading() === 'Chat', 'the New Chat command kept a finished chat')
+    ask(); await wait(() => welcome() && heading() === 'Chat', 'asking from elsewhere kept a finished chat')
   })
   await test('Older chats load in pages as the list scrolls, without losing the active conversation', async () => {
     const list = () => dock().querySelector('nav[aria-label="Chats"]')
