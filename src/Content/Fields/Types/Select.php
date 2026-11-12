@@ -59,7 +59,7 @@ class Select extends FieldType
     public function configFields(): array
     {
         return [
-            ['handle' => 'options', 'type' => 'json', 'label' => 'Options', 'instructions' => 'Map of value → label.'],
+            ['handle' => 'options', 'type' => 'json', 'label' => 'Options', 'placeholder' => '{"value": "Label"}'],
             ['handle' => 'multiple', 'type' => 'toggle', 'label' => 'Allow Multiple'],
             ['handle' => 'display', 'type' => 'select', 'label' => 'Display', 'options' => ['dropdown' => 'Dropdown', 'radio' => 'Radio buttons', 'segmented' => 'Segmented']],
         ];

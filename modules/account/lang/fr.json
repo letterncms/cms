@@ -34,7 +34,6 @@
   "Anything using it stops working immediately.": "Tout ce qui l’utilise cesse aussitôt de fonctionner.",
   "API Tokens": "Jetons d’API",
   "Ask for a new link": "Demander un nouveau lien",
-  "At least 10 characters, with letters and numbers.": "Au moins 10 caractères, avec des lettres et des chiffres.",
   "Back to sign-in": "Retour à la connexion",
   "Button Label": "Texte du bouton",
   "Change password": "Changer le mot de passe",
@@ -130,7 +129,6 @@
   "Save the password": "Enregistrer le mot de passe",
   "Save Your Recovery Codes": "Enregistrez vos codes de récupération",
   "Saved.": "Enregistré.",
-  "Scan the code with your authenticator app, then enter the code it shows.": "Scannez le code avec votre app d’authentification, puis saisissez le code affiché.",
   "Security": "Sécurité",
   "Send the link": "Envoyer le lien",
   "Set Up": "Configurer",
@@ -207,5 +205,7 @@
   "Expires {date}": "Expire le {date}",
   "It is shown only once": "Il n’est affiché qu’une fois",
   "Never expires": "N’expire jamais",
-  "Your password and two-factor sign-in, each with the one thing to do about it.": "Votre mot de passe et l’authentification à deux facteurs, chacun avec la seule chose à faire."
+  "Your password and two-factor sign-in, each with the one thing to do about it.": "Votre mot de passe et l’authentification à deux facteurs, chacun avec la seule chose à faire.",
+  "Code From the App": "Code de l’application",
+  "Scan With Your Authenticator App": "Scannez avec votre application d’authentification"
 }

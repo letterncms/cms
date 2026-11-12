@@ -192,7 +192,7 @@ function Reset({ token, email, invite, onDone }: { token: string; email: string;
       className="space-y-4"
     >
       <Heading title={invite ? t('Welcome') : t('Choose a New Password')}>{email}</Heading>
-      <Fields fields={[{ handle: 'password', type: 'text', label: t('New Password'), secret: true, size: 'lg', autocomplete: 'new-password', autofocus: true, instructions: t('At least 10 characters, with letters and numbers.') }]} values={{ password }} onChange={(_, v) => setPassword(v ?? '')} />
+      <Fields fields={[{ handle: 'password', type: 'text', label: t('New Password'), secret: true, size: 'lg', autocomplete: 'new-password', autofocus: true }]} values={{ password }} onChange={(_, v) => setPassword(v ?? '')} />
       <ErrorNote error={error} />
       <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
         {t('Save Password')}

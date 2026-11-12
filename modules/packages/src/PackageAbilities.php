@@ -90,8 +90,8 @@ final class PackageAbilities
                         'installedVersion' => $manager->installedVersion($package->name),
                         'dependents' => $dependents,
                         'settings' => $settingsOf,
-                        // In words, for a list: what it is (its description's first clause), and why its switch stays on. A problem is said instead of the first, by `problem`.
-                        'note' => self::gist($translated['description'] ?? $package->description),
+                        // In words, for a list: what it is, as the Store says it too (a problem is said instead, by `problem`), and why its switch stays on.
+                        'note' => $translated['description'] ?? $package->description,
                         'keptOn' => match (true) {
                             $package->required => __('Required'),
                             $enabled && $dependents !== [] => __('Needed by :names', ['names' => implode(', ', array_map(static fn ($d) => $labels[$d] ?? $d, $dependents))]),
@@ -257,10 +257,14 @@ final class PackageAbilities
         return $package ? self::translated($package, app(Translations::class)->current())['label'] ?? $package->label : $name;
     }
 
-    /** A description's first clause ("Site analytics on your own server"): one line in a list, cut at a colon, semicolon or dash, never at a comma mid-list. */
-    private static function gist(string $description): string
+    /**
+     * A package's name and description as the admin says them, in its language: what Installed and the Store both show.
+     *
+     * @return array{label: string, description: string}
+     */
+    public static function words(PackageManifest $package, ?string $locale = null): array
     {
-        return trim((string) preg_split('/[:;]\s|\s[—–]\s|\.(\s|$)/u', $description, 2)[0]);
+        return [...['label' => $package->label, 'description' => $package->description], ...self::translated($package, $locale ?? app(Translations::class)->current())];
     }
 
     /**

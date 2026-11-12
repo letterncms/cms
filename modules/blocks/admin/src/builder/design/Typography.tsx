@@ -55,7 +55,6 @@ export function Typography({ s, prose }: { s: StyleApi; prose?: { on: boolean; o
             component: 'blocks-group',
             label: t('Text Stroke'),
             keys: ['textStroke'],
-            instructions: t('Outlined text (set the color to transparent)'),
             get: () => stroke,
             set: (v) => {
               const next = { ...stroke, ...changed(stroke, v) }

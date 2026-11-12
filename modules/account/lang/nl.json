@@ -34,7 +34,6 @@
   "Anything using it stops working immediately.": "Alles wat hem gebruikt, werkt meteen niet meer.",
   "API Tokens": "API-tokens",
   "Ask for a new link": "Vraag een nieuwe link aan",
-  "At least 10 characters, with letters and numbers.": "Minstens 10 tekens, met letters en cijfers.",
   "Back to sign-in": "Terug naar inloggen",
   "Button Label": "Knoptekst",
   "Change password": "Wachtwoord wijzigen",
@@ -130,7 +129,6 @@
   "Save the password": "Wachtwoord opslaan",
   "Save Your Recovery Codes": "Bewaar je herstelcodes",
   "Saved.": "Opgeslagen.",
-  "Scan the code with your authenticator app, then enter the code it shows.": "Scan de code met je authenticator-app en voer daarna de getoonde code in.",
   "Security": "Beveiliging",
   "Send the link": "De link versturen",
   "Set Up": "Instellen",
@@ -207,5 +205,7 @@
   "Expires {date}": "Verloopt op {date}",
   "It is shown only once": "Hij wordt maar één keer getoond",
   "Never expires": "Verloopt nooit",
-  "Your password and two-factor sign-in, each with the one thing to do about it.": "Je wachtwoord en tweestapsverificatie, elk met het ene dat je eraan kunt doen."
+  "Your password and two-factor sign-in, each with the one thing to do about it.": "Je wachtwoord en tweestapsverificatie, elk met het ene dat je eraan kunt doen.",
+  "Code From the App": "Code uit de app",
+  "Scan With Your Authenticator App": "Scan met je authenticator-app"
 }

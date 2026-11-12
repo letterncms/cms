@@ -22,10 +22,8 @@
   "Change Schedule": "Planning wijzigen",
   "Changed": "Gewijzigd",
   "Check every published page for SEO, GEO and accessibility problems and propose fixes.": "Controleer elke gepubliceerde pagina op SEO-, GEO- en toegankelijkheidsproblemen en stel oplossingen voor.",
-  "Choose a new parent for “{title}”.": "Kies een nieuw bovenliggend item voor “{title}”.",
   "Choose a publication date and time.": "Kies een publicatiedatum en -tijd.",
   "Choose an end after the publication date, and not in the past.": "Kies een einde na de publicatiedatum, en niet in het verleden.",
-  "Choose Root to place this entry at the top level.": "Kies Hoofdniveau om dit item op het hoogste niveau te plaatsen.",
   "Close Panel": "Paneel sluiten",
   "Collection": "Collectie",
   "Collection not found.": "Collectie niet gevonden.",
@@ -115,7 +113,6 @@
   "Look Up Entries": "Items opzoeken",
   "More Actions": "Meer acties",
   "Move": "Verplaatsen",
-  "Move {type}": "{type} verplaatsen",
   "Move Entry": "Item verplaatsen",
   "Move…": "Verplaatsen…",
   "Moved": "Verplaatst",
@@ -230,5 +227,6 @@
   "Discard unpublished changes to “{title}”?": "Niet-gepubliceerde wijzigingen aan ‘{title}’ weggooien?",
   "Every change since it was last published is lost. The published version stays as it is.": "Elke wijziging sinds de laatste publicatie gaat verloren. De gepubliceerde versie blijft zoals ze is.",
   "It leaves the site and its address stops working until it is published again. Its content is kept as a draft.": "Het verdwijnt van de site en het adres werkt pas weer als het opnieuw is gepubliceerd. De inhoud blijft bewaard als concept.",
-  "Unpublish “{title}”?": "‘{title}’ depubliceren?"
+  "Unpublish “{title}”?": "‘{title}’ depubliceren?",
+  "Move “{title}”": "‘{title}’ verplaatsen"
 }

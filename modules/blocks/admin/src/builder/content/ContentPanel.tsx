@@ -127,7 +127,7 @@ export function ContentPanel({ node }: { node: BlockNode }) {
         <PanelFields
           fields={[
             { handle: 'shown', type: 'toggle', size: 'sm', label: t('Show on the Site') },
-            { handle: 'visible', type: 'text', component: 'blocks-bind', label: t('Only If'), paths, placeholder: t('Always'), status: bind.visible ? 'own' : undefined, reset: () => setBind('visible', null), instructions: t('Shown only when this data has a value') },
+            { handle: 'visible', type: 'text', component: 'blocks-bind', label: t('Only If'), paths, placeholder: t('Always'), status: bind.visible ? 'own' : undefined, reset: () => setBind('visible', null) },
             { handle: 'hidden', type: 'text', component: 'blocks-bind', label: t('Hide If'), paths, placeholder: t('Never'), status: bind.hidden ? 'own' : undefined, reset: () => setBind('hidden', null) },
           ]}
           values={{ shown: !node.hidden, visible: bind.visible, hidden: bind.hidden }}
@@ -141,8 +141,8 @@ export function ContentPanel({ node }: { node: BlockNode }) {
           fields={[
             { handle: 'label', type: 'text', size: 'sm', commit: 'blur', label: t('Layer Name'), placeholder: type?.title },
             // A block with an anchor of its own (a heading's, with its # link) has the one field for it.
-            ...(advanced.some((f) => f.handle === 'anchor') && !node.anchor ? [] : [{ handle: 'anchor', type: 'text', size: 'sm', commit: 'blur', label: t('Anchor'), placeholder: t('None'), mono: true, instructions: t('Link to it with #anchor') } as FieldDef]),
-            { handle: 'class', type: 'text', size: 'sm', commit: 'blur', label: t('Classes'), placeholder: t('None'), mono: true, instructions: t('Extra CSS classes, styled in the Design System or custom CSS') },
+            ...(advanced.some((f) => f.handle === 'anchor') && !node.anchor ? [] : [{ handle: 'anchor', type: 'text', size: 'sm', commit: 'blur', label: t('Anchor'), placeholder: t('None'), mono: true } as FieldDef]),
+            { handle: 'class', type: 'text', size: 'sm', commit: 'blur', label: t('Classes'), placeholder: t('None'), mono: true },
             // The name pages share for an element that lives on when they swap; it carries what runs in it, so it needs the code permission.
             ...(can('site.code') ? [{ handle: 'persist', type: 'text', size: 'sm', commit: 'blur', label: t('Persist As'), placeholder: 'player', mono: true } as FieldDef] : []),
           ]}
@@ -261,7 +261,7 @@ function RepeatSource({ node }: { node: BlockNode }) {
   return (
     <Body>
       <PanelFields
-        fields={[{ handle: 'source', type: 'select', size: 'sm', label: t('List'), required: true, options: (catalog.sources ?? []).map((s) => ({ value: s.name, label: s.label })), instructions: source?.description }]}
+        fields={[{ handle: 'source', type: 'select', size: 'sm', label: t('List'), required: true, options: (catalog.sources ?? []).map((s) => ({ value: s.name, label: s.label })) }]}
         values={{ source: node.props?.source }}
         onChange={(_, v) => v && set('source', v)}
       />

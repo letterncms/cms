@@ -12,6 +12,15 @@ namespace Cms\Modules\Audit;
  */
 final class Past
 {
+    /** Abilities by the names they had: the log keeps what was recorded then, and reads it as the ability now. */
+    public const array RENAMED = ['pages/customise' => 'pages/customize'];
+
+    /** @return list<string> An ability's name now and every name it had. */
+    public static function names(string $ability): array
+    {
+        return [$ability, ...array_keys(self::RENAMED, $ability, true)];
+    }
+
     /** @return array<string, string> ability => label, in the reader's language */
     public static function labels(): array
     {

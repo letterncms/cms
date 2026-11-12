@@ -112,13 +112,10 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
             <div className="cms-label px-2 pb-1">{group}</div>
             <List className="border-y-0! divide-y-0!">
               {list.map((type) => (
-                <Row key={type.key} className="items-start rounded-md px-2 py-1.5" onClick={() => { onAdd(type); setOpen(false); setQ('') }}>
-                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-xs border border-border bg-sunken text-muted"><Icon name={type.icon} size={14} /></span>
-                  {/* What a type is for is read whole: a line cut short says less than none. */}
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">{type.label}</span>
-                    {type.description && <span className="block text-xs text-faint">{type.description}</span>}
-                  </span>
+                <Row key={type.key} className="items-center rounded-md px-2 py-1.5" onClick={() => { onAdd(type); setOpen(false); setQ('') }}>
+                  {/* A type by its name and its icon; what it is for still finds it in the search. */}
+                  <span className="grid size-6 shrink-0 place-items-center rounded-xs border border-border bg-sunken text-muted"><Icon name={type.icon} size={14} /></span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{type.label}</span>
                 </Row>
               ))}
             </List>

@@ -42,8 +42,9 @@ final class AuditModule extends Plugin
         $cms->hooks()->addFilter('audit.past', static fn (array $past): array => $past + Past::labels());
 
         // What a change was made to, while it is still there to be named: a deleted entry has no title afterwards.
-        $cms->hooks()->on('ability.executing', function (Ability $ability, array $input): void {
-            $this->subjects[self::call($ability, $input)] = $this->app->make(AuditAbilities::class)->entryTitle($ability->name, $input);
+        // A plugin names what its own abilities were made to with the `audit.subject` filter (a webhook by its name).
+        $cms->hooks()->on('ability.executing', function (Ability $ability, array $input, AbilityContext $context): void {
+            $this->subjects[self::call($ability, $input)] = $this->cms()->hooks()->filter('audit.subject', $this->app->make(AuditAbilities::class)->subjectBefore($ability, $input, $context), $ability->name, $input);
         });
 
         $cms->hooks()->on('ability.executed', function (Ability $ability, array $input, mixed $result, AbilityContext $context): void {

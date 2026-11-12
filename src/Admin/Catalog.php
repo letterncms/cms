@@ -162,7 +162,7 @@ final class Catalog
 
         return ['type' => 'object', 'additionalProperties' => false, 'required' => ['label'], 'properties' => [
             'label' => $s, 'icon' => ['type' => 'string', 'maxLength' => 60],
-            'variant' => ['type' => 'string', 'enum' => ['primary', 'default', 'ghost', 'danger']],
+            'variant' => ['type' => 'string', 'enum' => ['primary', 'default', 'ghost', 'destructive', 'danger']],
             'ability' => ['type' => 'string', 'maxLength' => 160], 'input' => ['type' => 'object', 'default' => []],
             'to' => $s, 'href' => $s,
             'confirm' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['title'], 'properties' => ['title' => $counted, 'text' => $s, 'confirm' => $s, 'danger' => ['type' => 'boolean']]],

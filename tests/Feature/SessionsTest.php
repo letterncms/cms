@@ -68,6 +68,8 @@ final class SessionsTest extends TestCase
         $this->assertSame(['This Device', null, null], array_column($list, 'currentLabel'));
         $this->assertSame('203.0.113.7', $list[1]['ip']);
         $this->assertNotContains($here, array_column($list, 'id'), 'a session id never leaves the server');
+        // The first so many: this one, then the ones used last.
+        $this->assertSame(['Chrome on macOS', 'Safari on iPhone'], array_column($this->cms()->abilities()->execute('sessions/list', ['limit' => 2], $ctx), 'device'));
 
         // One, after a dry run that names it and ends nothing.
         $dry = $this->cms()->abilities()->execute('sessions/delete', ['id' => $list[1]['id'], 'dryRun' => true], $ctx);

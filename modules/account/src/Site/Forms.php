@@ -96,7 +96,8 @@ final class Forms
         $links = static fn (array $items) => '<p class="cms-account-links">'.implode('', array_map(static fn (array $item) => $link(...$item), $items)).'</p>';
         $email = ['name' => 'email', 'type' => 'email', 'label' => __('Email'), 'autocomplete' => 'email', 'required' => true];
         $password = static fn (string $name, string $label, string $auto) => ['name' => $name, 'type' => 'password', 'label' => $label, 'autocomplete' => $auto, 'required' => true];
-        $newPassword = $password('password', __('Password'), 'new-password') + ['help' => __('At least 10 characters, with letters and numbers.')];
+        // What a password takes is said when one falls short (Passwords::message()), not under the field.
+        $newPassword = $password('password', __('Password'), 'new-password');
         $confirm = $password('current', __('Your password'), 'current-password');
         $honeypot = ['name' => '_cms_website', 'type' => 'honeypot', 'label' => __('Leave this empty')];
 
@@ -125,7 +126,7 @@ final class Forms
                 ...array_map(fn (Field $f) => $this->profileField($f, $user), $this->profileFields()),
             ], __('Save'), '', null],
             'email' => [[['name' => 'email', 'type' => 'email', 'label' => __('New email address'), 'autocomplete' => 'email', 'required' => true, 'help' => $user ? __('Now: :email', ['email' => $user->email]) : null], $confirm], __('Send the link'), '', null],
-            'password' => [[$confirm, $password('password', __('New password'), 'new-password') + ['help' => __('At least 10 characters, with letters and numbers.')]], __('Change password'), '', null],
+            'password' => [[$confirm, $password('password', __('New password'), 'new-password')], __('Change password'), '', null],
             'export' => [[$confirm], __('Download my data'), '', null],
             'delete' => $this->deleteDefinition($user, $confirm),
             'sign-out' => [[], __('Sign out'), '', null],

@@ -39,6 +39,6 @@ class RichText extends FieldType
 
     public function configFields(): array
     {
-        return [['handle' => 'inline', 'type' => 'toggle', 'label' => 'Inline Only', 'instructions' => 'No paragraphs, headings or lists.']];
+        return [['handle' => 'inline', 'type' => 'toggle', 'label' => 'Inline Only']];
     }
 }

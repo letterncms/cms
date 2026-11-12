@@ -189,12 +189,13 @@ final class AccountAbilities
 
         $a->register('sessions/list', [
             'label' => 'Where I Am Signed In',
-            'description' => 'Your sessions: the browser and system each was opened on, where from, when you signed in and when it was last used. `current` is the one this request runs in.',
+            'description' => 'Your sessions: the browser and system each was opened on, where from, when you signed in and when it was last used. `current` is the one this request runs in, and comes first; the rest go from the most recently used. `limit` keeps the first so many.',
             'permission' => $signedIn,
             'expose' => Ability::ADMIN_ONLY,
             'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 500]], 'additionalProperties' => false],
             'output' => Shape::of([['id' => Shape::STRING, 'device' => Shape::STRING, 'ip' => Shape::STRING_OR_NULL, 'signedInAt' => Shape::STRING_OR_NULL, 'lastActiveAt' => Shape::STRING_OR_NULL, 'current' => Shape::BOOLEAN, 'currentLabel' => Shape::STRING_OR_NULL]]),
-            'handler' => fn (array $in, AbilityContext $ctx) => $sessions()->of($ctx->user),
+            'handler' => fn (array $in, AbilityContext $ctx) => array_slice($sessions()->of($ctx->user), 0, $in['limit'] ?? null),
         ]);
 
         $a->register('sessions/delete', [

@@ -37,7 +37,8 @@ final class AccountViews
             ]], 'children' => [
                 ['type' => 'ui/records', 'props' => [
                     'id' => 'sessions', 'label' => __('Signed In'), 'search' => false, 'display' => false,
-                    'source' => ['ability' => 'sessions/list'],
+                    // The ten used last, this one first: everything older goes with Sign Out Everywhere Else.
+                    'source' => ['ability' => 'sessions/list', 'input' => ['limit' => 10]],
                     'columns' => [
                         ['key' => 'device', 'label' => __('Device'), 'format' => 'strong', 'badge' => 'currentLabel', 'width' => 'minmax(140px,1fr)'],
                         ['key' => 'ip', 'label' => __('Address'), 'format' => 'code', 'width' => '120px'],
@@ -66,7 +67,7 @@ final class AccountViews
                         ['label' => __('Revoke'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'tokens/delete', 'input' => ['id' => '{row.id}'], 'success' => __('Token revoked'),
                             'confirm' => ['title' => __('Revoke “{row.name}”?'), 'text' => __('Anything using it stops working immediately.'), 'confirm' => __('Revoke'), 'danger' => true]],
                     ],
-                    'empty' => ['size' => 'sm', 'title' => __('No tokens yet')],
+                    'empty' => ['size' => 'sm', 'title' => __('No tokens yet'), 'action' => ['label' => __('New Token'), 'icon' => 'plus', 'component' => 'account/new-token']],
                 ]],
             ]],
         ]];

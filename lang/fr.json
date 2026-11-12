@@ -168,7 +168,6 @@
   "Is required.": "Est obligatoire.",
   "It did not start.": "Il n’a pas démarré.",
   "Items must be unique.": "Les éléments doivent être uniques.",
-  "Its entries are terms that other entries are filed under.": "Ses entrées sont des termes sous lesquels d’autres entrées sont classées.",
   "JSON": "JSON",
   "Language": "Langue",
   "Link": "Lien",
@@ -184,7 +183,6 @@
   "Look Up People": "Rechercher des personnes",
   "Manage all content, media and the site build.": "Gérer tout le contenu, les médias et la génération du site.",
   "Manage Settings": "Gérer les paramètres",
-  "Map of value → label.": "Correspondance valeur → libellé.",
   "Markdown": "Markdown",
   "Matrix": "Matrice",
   "Max Length": "Longueur maximale",
@@ -209,7 +207,6 @@
   "Name, address, language and timezone.": "Nom, adresse, langue et fuseau horaire.",
   "Needs at least :count items.": "Nécessite au moins :count éléments.",
   "No database server answered at :server. Check the host and port: on most shared hosting the host is “localhost”.": "Aucun serveur de base de données n’a répondu à :server. Vérifiez l’hôte et le port : sur la plupart des hébergements mutualisés, l’hôte est « localhost ».",
-  "No paragraphs, headings or lists.": "Sans paragraphes, titres ni listes.",
   "No site builder is on.": "Aucun générateur de site n’est activé.",
   "No view :id.": "Aucune vue :id.",
   "None": "Aucun",
@@ -425,5 +422,7 @@
   "You do not have access to the admin.": "Vous n’avez pas accès à l’administration.",
   "Your Account": "Votre compte",
   "Your session expired. Reload the page.": "Votre session a expiré. Rechargez la page.",
-  "Your sign-in expired. Please start again.": "Votre connexion a expiré. Recommencez."
+  "Your sign-in expired. Please start again.": "Votre connexion a expiré. Recommencez.",
+  "{\"value\": \"Label\"}": "{\"value\": \"Libellé\"}",
+  "Use at least 10 characters, with letters and numbers.": "Utilisez au moins 10 caractères, avec des lettres et des chiffres."
 }

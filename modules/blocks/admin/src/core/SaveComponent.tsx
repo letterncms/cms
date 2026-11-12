@@ -84,7 +84,7 @@ export function saveComponent(store: EditorStore, canReference: boolean) {
           />
           <Fields
             disabled={!canReference}
-            fields={[{ handle: 'synced', type: 'toggle', label: canReference ? t('Keep Every Copy in Sync') : t('Saved as a section: components can’t be placed here'), instructions: canReference ? t('Off: a section that is copied when inserted.') : undefined }]}
+            fields={[{ handle: 'synced', type: 'toggle', label: canReference ? t('Keep Every Copy in Sync') : t('Saved as a section: components can’t be placed here') }]}
             values={values}
             onChange={(h, v) => set(h, !!v)}
           />

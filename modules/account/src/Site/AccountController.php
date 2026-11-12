@@ -435,7 +435,7 @@ final class AccountController
     {
         $valid = is_string($password) && Validator::make(['password' => $password], ['password' => ['required', 'string', ...Passwords::rules()]])->passes();
 
-        return $valid ? null : __('At least 10 characters, with letters and numbers.');
+        return $valid ? null : Passwords::message();
     }
 
     private function back(string $form, string $to, ?string $message, string $tone = 'ok', array $errors = [], array $old = []): RedirectResponse

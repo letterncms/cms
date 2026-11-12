@@ -48,14 +48,14 @@ export const presets = (): Preset[] => [
   { name: t('Slide in Panel'), group: 'event', make: () => ({ trigger: { type: 'event' }, steps: [{ target: 'self', from: { xPercent: 100 }, duration: 0.5, ease: 'expo.out' }, { target: 'children', from: { opacity: 0, x: 24 }, duration: 0.4, ease, stagger: 0.05 }] as MotionStep[] }) },
 ]
 
-export const triggers = (): Record<string, { label: string; icon: string; help: string }> => ({
-  appear: { label: t('Appear'), icon: 'eye', help: t('Plays once as it scrolls into view.') },
-  scroll: { label: t('Scroll'), icon: 'mouse-scroll', help: t('Follows the scroll between a start and an end point.') },
-  hover: { label: t('Hover'), icon: 'hand-pointing', help: t('Plays on hover and focus, reverses after.') },
-  press: { label: t('Press'), icon: 'hand-tap', help: t('Plays while pressed.') },
-  load: { label: t('Page Load'), icon: 'rocket', help: t('Plays as the page paints, with no script. Delay stops at 0.2s and stagger at 0.3s.') },
-  loop: { label: t('Loop'), icon: 'refresh', help: t('Stops within 5 seconds, unless it repeats forever. Then the page needs a Motion Toggle block.') },
-  event: { label: t('On Event'), icon: 'broadcast', help: t('Plays from a “Play animation” action in Events.') },
+export const triggers = (): Record<string, { label: string; icon: string }> => ({
+  appear: { label: t('Appear'), icon: 'eye' },
+  scroll: { label: t('Scroll'), icon: 'mouse-scroll' },
+  hover: { label: t('Hover'), icon: 'hand-pointing' },
+  press: { label: t('Press'), icon: 'hand-tap' },
+  load: { label: t('Page Load'), icon: 'rocket' },
+  loop: { label: t('Loop'), icon: 'refresh' },
+  event: { label: t('On Event'), icon: 'broadcast' },
 })
 
 export const propertyLabels = (): Record<string, string> => ({
