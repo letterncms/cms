@@ -128,7 +128,8 @@ final class HttpApiTest extends TestCase
         $this->get('/')->assertRedirect('/install');
         $this->get('/admin')->assertRedirect('/install');
         $this->getJson('/api/v1/abilities')->assertStatus(503)->assertJsonPath('error.type', 'not_installed');
-        $this->get('/install')->assertOk();
+        // What a person acts on, never the server's paths or every driver PHP has: a ready server is one line.
+        $this->get('/install')->assertOk()->assertDontSee(base_path(), false)->assertDontSee('dblib')->assertDontSee('Optional, e.g.');
     }
 
     public function test_installer_enforces_the_password_rules_from_every_entry_point(): void
@@ -144,6 +145,8 @@ final class HttpApiTest extends TestCase
         } catch (\Cms\Abilities\AbilityException $e) {
             $this->assertSame('invalid_input', $e->type);
             $this->assertArrayHasKey('password', $e->details);
+            // One message that says all a password takes, where the form only says it once one falls short.
+            $this->assertSame(['Use at least 10 characters, with letters and numbers.'], (array) $e->details['password']);
         }
 
         $this->assertFileDoesNotExist(storage_path('installed.json'));

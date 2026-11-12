@@ -18,9 +18,14 @@
   <section id="requirements">
     <h2>{{ $text['requirements'] }}</h2>
     <ul class="checks">
-      @foreach ($requirements as $check)
-        <li class="{{ $check['ok'] ? '' : 'bad' }}"><span class="label"><span class="dot" aria-hidden="true"></span>{{ $check['label'] }}</span><span class="detail" title="{{ $check['detail'] }}">{{ $check['detail'] }}</span></li>
-      @endforeach
+      {{-- Ready: one line with its mark. Not: only what has to be fixed. --}}
+      @if ($ok)
+        <li><span class="label"><span class="pass" aria-hidden="true">{!! \Cms\Admin\StandaloneStyle::icon('check') !!}</span>{{ $text['ready'] }}</span></li>
+      @else
+        @foreach (collect($requirements)->reject->ok as $check)
+          <li class="bad"><span class="label"><span class="dot" aria-hidden="true"></span>{{ $check['label'] }}</span>@if ($check['detail'] !== '')<span class="detail">{{ $check['detail'] }}</span>@endif</li>
+        @endforeach
+      @endif
     </ul>
   </section>
 
@@ -72,7 +77,7 @@
           <div class="field"><label for="db_username">{{ $text['username'] }}</label><input id="db_username" name="db_username" autocomplete="off"></div>
           <div class="field"><label for="db_password">{{ $text['password'] }}</label><span class="reveal"><input id="db_password" name="db_password" type="password" autocomplete="new-password"><button type="button" data-reveal aria-pressed="false" aria-label="{{ $text['showPassword'] }}"><span class="off">{!! \Cms\Admin\StandaloneStyle::icon('eye') ?: e($text['showPassword']) !!}</span><span class="on">{!! \Cms\Admin\StandaloneStyle::icon('eye-off') ?: e($text['showPassword']) !!}</span></button></span></div>
         </div>
-        <div class="field"><label for="db_prefix">{{ $text['prefix'] }}</label><input id="db_prefix" name="db_prefix" placeholder="{{ $text['prefixPlaceholder'] }}" pattern="[a-z0-9_]*"></div>
+        <div class="field"><label for="db_prefix">{{ $text['prefix'] }}</label><input id="db_prefix" name="db_prefix" placeholder="cms_" pattern="[a-z0-9_]*"></div>
       </div>
     </section>
 
@@ -80,7 +85,7 @@
       <h2>{{ $text['account'] }}</h2>
       <div class="field"><label for="name">{{ $text['name'] }}</label><input id="name" name="name" required autocomplete="name"></div>
       <div class="field"><label for="email">{{ $text['email'] }}</label><input id="email" name="email" type="email" required autocomplete="email"></div>
-      <div class="field"><label for="password">{{ $text['password'] }}</label><span class="reveal"><input id="password" name="password" type="password" required minlength="10" autocomplete="new-password"><button type="button" data-reveal aria-pressed="false" aria-label="{{ $text['showPassword'] }}"><span class="off">{!! \Cms\Admin\StandaloneStyle::icon('eye') ?: e($text['showPassword']) !!}</span><span class="on">{!! \Cms\Admin\StandaloneStyle::icon('eye-off') ?: e($text['showPassword']) !!}</span></button></span><div class="help">{{ $text['passwordHelp'] }}</div></div>
+      <div class="field"><label for="password">{{ $text['password'] }}</label><span class="reveal"><input id="password" name="password" type="password" required autocomplete="new-password"><button type="button" data-reveal aria-pressed="false" aria-label="{{ $text['showPassword'] }}"><span class="off">{!! \Cms\Admin\StandaloneStyle::icon('eye') ?: e($text['showPassword']) !!}</span><span class="on">{!! \Cms\Admin\StandaloneStyle::icon('eye-off') ?: e($text['showPassword']) !!}</span></button></span></div>
     </section>
 
     @if ($needsToken)

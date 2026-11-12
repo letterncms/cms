@@ -64,7 +64,6 @@
   "Another field uses this handle.": "Ein anderes Feld verwendet diesen Handle.",
   "Another install is running: :package.": "Eine andere Installation läuft bereits: :package.",
   "Another install step is running. Try again in a moment.": "Ein anderer Installationsschritt läuft bereits. Versuche es gleich noch einmal.",
-  "At least 10 characters, with letters and numbers.": "Mindestens 10 Zeichen, mit Buchstaben und Ziffern.",
   "Authentication required.": "Anmeldung erforderlich.",
   "Author": "Autor",
   "Basic": "Grundlegend",
@@ -220,7 +219,6 @@
   "Number": "Zahl",
   "Only plain http(s) URLs are allowed.": "Nur einfache http(s)-URLs sind erlaubt.",
   "Only tree collections have a parent.": "Nur Baumsammlungen haben einen übergeordneten Eintrag.",
-  "Optional, e.g. cms_": "Optional, z. B. cms_",
   "Options": "Optionen",
   "Orange": "Orange",
   "Package :name is not installed.": "Das Paket :name ist nicht installiert.",
@@ -424,5 +422,6 @@
   "Your session expired. Reload the page.": "Deine Sitzung ist abgelaufen. Lade die Seite neu.",
   "Your sign-in expired. Please start again.": "Deine Anmeldung ist abgelaufen. Bitte beginne noch einmal.",
   "{\"value\": \"Label\"}": "{\"value\": \"Bezeichnung\"}",
-  "Use at least 10 characters, with letters and numbers.": "Verwende mindestens 10 Zeichen, mit Buchstaben und Zahlen."
+  "Use at least 10 characters, with letters and numbers.": "Verwende mindestens 10 Zeichen, mit Buchstaben und Zahlen.",
+  "This server has everything :brand needs": "Dieser Server hat alles, was :brand braucht"
 }

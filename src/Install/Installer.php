@@ -75,7 +75,8 @@ final class Installer
     {
         $checks = [
             [__('PHP 8.4 or newer'), version_compare(PHP_VERSION, '8.4.0', '>='), PHP_VERSION],
-            ['PDO (MySQL or SQLite)', extension_loaded('pdo_mysql') || extension_loaded('pdo_sqlite'), implode(', ', PDO::getAvailableDrivers())],
+            // Only the drivers this needs, by the names a host's panel uses.
+            ['PDO (MySQL or SQLite)', extension_loaded('pdo_mysql') || extension_loaded('pdo_sqlite'), implode(', ', array_values(array_intersect_key(['mysql' => 'MySQL', 'sqlite' => 'SQLite'], array_flip(PDO::getAvailableDrivers()))))],
             ['mbstring', extension_loaded('mbstring'), ''],
             ['zip', class_exists(\ZipArchive::class), ''],
             ['curl', function_exists('curl_init'), ''],
@@ -86,7 +87,8 @@ final class Installer
 
         foreach (['storage', 'config', 'content', 'public', 'plugins'] as $dir) {
             $path = $this->app->sitePath($dir);
-            $checks[] = [__(':dir/ is writable', ['dir' => $dir]), (is_dir($path) || @mkdir($path, 0o775, true)) && is_writable($path), $path];
+            // The folder by its name in the site, which is what a person changes: never the server's whole path.
+            $checks[] = [__(':dir/ is writable', ['dir' => $dir]), (is_dir($path) || @mkdir($path, 0o775, true)) && is_writable($path), ''];
         }
 
         return array_map(static fn ($c) => ['label' => $c[0], 'ok' => (bool) $c[1], 'detail' => (string) $c[2]], $checks);
