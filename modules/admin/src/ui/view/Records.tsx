@@ -130,7 +130,10 @@ export interface RecordsProps {
   address?: boolean
   /** `false`: read as it is, a ranked list: no Display menu, no sorting by its headers. */
   display?: boolean
-  /** A catalog component drawn in the toolbar before Display, with these props: a control that belongs with the list's view (its saved views). */
+  /**
+   * A catalog component that belongs with the list's view (its saved views), drawn twice with these props and a `slot`:
+   * `header` above the toolbar (its tabs), `toolbar` in the toolbar before Display (what saves the list as it is).
+   */
   controls?: { component: string; props?: Record<string, unknown> }
 }
 
@@ -401,7 +404,8 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       dateSort={dateKeys}
       calendar={!!calendar}
       manual={!!tree}
-      controls={controls ? <Control {...controls} /> : undefined}
+      header={controls ? <Control {...controls} slot="header" /> : undefined}
+      controls={controls ? <Control {...controls} slot="toolbar" /> : undefined}
       plain={!display}
       selection={selection}
       image={imageColumn ? (row) => <CardImage row={row} column={imageColumn} media={media} /> : undefined}
@@ -435,12 +439,12 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   )
 }
 
-/** A catalog component in the list's toolbar: drawn with its props and where the list is. */
-function Control({ component, props = {} }: { component: string; props?: Record<string, unknown> }) {
+/** A catalog component with the list: drawn with its props, the place it is in (`slot`) and where the list is. */
+function Control({ component, props = {}, slot }: { component: string; props?: Record<string, unknown>; slot: 'header' | 'toolbar' }) {
   const { scope, disabled } = useView()
   useSyncExternalStore(registry.components.subscribe, registry.components.version)
   const Component = registry.components.get(component) as ComponentType<SurfaceComponentProps> | undefined
-  return Component ? <Suspense fallback={null}><Component props={fill(props, scope)} disabled={disabled} onAction={() => {}} scope={scope} /></Suspense> : null
+  return Component ? <Suspense fallback={null}><Component props={{ ...fill(props, scope) as Record<string, unknown>, slot }} disabled={disabled} onAction={() => {}} scope={scope} /></Suspense> : null
 }
 
 /** One cell: the value as its format writes it, with the row's icon, a quieter second value or its problem. */

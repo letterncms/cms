@@ -121,7 +121,6 @@
   "New :item": ":Item erstellen",
   "New Component": "Neue Komponente",
   "New Form": "Neues Formular",
-  "New Name": "Neuer Name",
   "New Page": "Neue Seite",
   "New Post": "Neuer Beitrag",
   "New Template": "Neue Vorlage",
@@ -215,7 +214,6 @@
   "View": "Ansehen",
   "View on Site": "Auf der Website ansehen",
   "View saved": "Ansicht gespeichert",
-  "Views": "Ansichten",
   "What the page is for and what it should say": "Wofür die Seite da ist und was darauf stehen soll",
   "Who it is for": "Für wen es gedacht ist",
   "Write a Blog Post": "Blogbeitrag schreiben",
@@ -228,5 +226,8 @@
   "Every change since it was last published is lost. The published version stays as it is.": "Jede Änderung seit der letzten Veröffentlichung geht verloren. Die veröffentlichte Fassung bleibt, wie sie ist.",
   "It leaves the site and its address stops working until it is published again. Its content is kept as a draft.": "Es verschwindet von der Website, und seine Adresse funktioniert erst wieder, wenn es erneut veröffentlicht wird. Der Inhalt bleibt als Entwurf erhalten.",
   "Unpublish “{title}”?": "„{title}“ zurückziehen?",
-  "Move “{title}”": "„{title}“ verschieben"
+  "Move “{title}”": "„{title}“ verschieben",
+  "Save as New View": "Als neue Ansicht speichern",
+  "Update “{name}”": "„{name}“ aktualisieren",
+  "Reset": "Zurücksetzen"
 }

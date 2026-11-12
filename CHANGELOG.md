@@ -11,6 +11,7 @@
 ### Changed
 
 - **Site Kits** is a grid of kits with their pictures, not a list that opens a dialog of options. Choosing one switches to it; the settings of Bring In and Already on This Site are gone from the screen. Putting a kit on top of a site, choosing what happens to what clashes, stays in `kits/apply` and `kit:apply`.
+- **Saved views are tabs above a collection's list**, after **All**, in place of the **Views** menu. Change the list and **Save View** appears beside **Display**; on a saved view its tab shows a dot, and **Save View** updates it or saves a new one while **Reset** puts it back. Choose the tab you are on to rename or delete it. Without saved views there are no tabs.
 - A collection's blueprints are a menu at the start of the **Add Field** row, named for the one on view: switch, add, rename and remove them there. The row stays where it is whether there is one blueprint or several, and adding one asks for its name.
 
 ### Fixed

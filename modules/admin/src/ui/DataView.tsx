@@ -35,6 +35,8 @@ interface BaseDataViewProps<T> {
   toolbar?: ReactNode
   /** Drawn at the end of the toolbar, before Display: a control of the caller's that belongs with the list's view (its saved views). */
   controls?: ReactNode
+  /** Drawn above the toolbar: the caller's own row for the list's views (its saved views, as tabs). */
+  header?: ReactNode
   defaultView?: 'table' | 'grid' | 'calendar'
   /** Offer a calendar: for records that happen on a day (orders, events), not for settings-like lists. */
   calendar?: boolean
@@ -73,7 +75,7 @@ export const FEW = 8
 const isDate = (iso: string | null | undefined) => !!iso && Number.isFinite(Date.parse(iso))
 
 /** Search, display preferences and selection use the same components as Content collections. */
-export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, controls: extra, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, manual = false, tree, calendarSource, prefs: kept }: DataViewProps<T>) {
+export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, controls: extra, header, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, manual = false, tree, calendarSource, prefs: kept }: DataViewProps<T>) {
   // A tree's records, each before the ones it holds: what is selected, searched and shown as cards.
   const every = flattenTree(items, tree?.children)
   // Date columns and the calendar only for dates the records have.
@@ -144,6 +146,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
     onReset={changed ? () => { setPrefs({ view: null, columns: null, sort: null, calendarDate: 'published' }); onSort?.(null); setQuery({ month: null }) } : undefined}>{extra}</OverviewControls>
 
   return <div ref={scope}>
+    {header}
     {!blank && (searchable || toolbar || display || (!plain && (views.length > 1 || !!extra))) && <TableToolbar>
       {searchable && <Fields bare layout="inline" className="w-full sm:w-60" fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder: searchPlaceholder ?? t('Search {items}', { items: label }) }]} values={{ search }} onChange={(_, value) => setSearch(String(value ?? ''))} />}
       {toolbar}
