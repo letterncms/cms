@@ -1,5 +1,6 @@
 import { invalidate, run, t } from '@letterncms/sdk'
-import { Badge, Button, cn, Icon, prompt, toast } from '@letterncms/ui'
+import { Badge, Button, cn, confirm, Icon, prompt, toast } from '@letterncms/ui'
+import { driveJob, type Job } from './installing'
 
 /** A package in a store's catalog, as this site sees it: what can be done with it here. */
 export interface Item {
@@ -20,6 +21,45 @@ export interface Item {
   installed: string | null
   action: 'install' | 'update' | 'installed' | 'buy' | 'incompatible' | 'blocked'
   access: { allowed?: boolean; reason?: string; message?: string; buy_url?: string }
+}
+
+interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[]; access: { allowed?: boolean; message?: string } }
+
+/** Where a plugin's own page in the store is: its package name, and the store when it isn't the default one. */
+export const itemPath = (item: Pick<Item, 'package' | 'store'>) => `/plugins/store/${item.package}${item.store && item.store !== 'default' ? `?store=${encodeURIComponent(item.store)}` : ''}`
+
+/** Turn On After Install, as the store's menu last set it in this visit: the list and a plugin's page install alike. */
+export const installing = { turnOn: true }
+
+/** Asks, then installs or updates a plugin and what it needs, step by step. True once it's done; a failure is said in a toast. */
+export async function installItem(item: Item, onStep: (step: string | null) => void): Promise<boolean> {
+  try {
+    const plan = await run<Plan>('packages/plan-install', { store: item.store, package: item.package, version: item.latest ?? undefined })
+    const lines = plan.steps.filter((s) => !s.enable_only).map((s) => `${s.title} ${s.version}`)
+    const yes = await confirm({
+      title: item.installed ? t('Update {name}?', { name: item.title }) : t('Install {name}?', { name: item.title }),
+      description: [lines.length > 1 ? t('Also installs what it needs: {list}.', { list: lines.join(', ') }) : '', plan.capabilities.length ? t('It may use: {list}.', { list: plan.capabilities.join(', ') }) : '', t('This code runs with full access to your site.')].filter(Boolean).join(' '),
+      confirm: item.installed ? t('Update') : t('Install'),
+    })
+    if (!yes) return false
+    for (const s of plan.steps) {
+      if (s.enable_only) {
+        await run('packages/enable', { name: s.package })
+        continue
+      }
+      onStep(t('Installing {name}…', { name: s.title }))
+      const job = await run<Job>('packages/install', { store: item.store, package: s.package, version: s.version, turnOn: installing.turnOn })
+      await driveJob(job)
+    }
+    invalidate('packages/')
+    toast.success(item.installed ? t('{name} updated', { name: item.title }) : t('{name} installed', { name: item.title }))
+    return true
+  } catch (e) {
+    toast.error(e)
+    return false
+  } finally {
+    onStep(null)
+  }
 }
 
 export const priceLabel = (item: Item) => (item.pricing === 'free' ? t('Free') : t('Paid'))

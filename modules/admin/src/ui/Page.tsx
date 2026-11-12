@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { cn } from './cn'
 import { Icon } from './Icon'
 import { homedSettings, inSettings, noteParent, placeAt, wayBack } from './place'
-import { WorkspaceContext } from './Slideover'
+import { WorkspaceContext } from './WorkspaceContext'
 import { Tabs } from './Segmented'
 import { Spinner } from './Spinner'
 

@@ -510,7 +510,7 @@
                                             {
                                                 "label": "View in Store",
                                                 "icon": "plugin",
-                                                "to": "/plugins?tab=store&item={row.name}",
+                                                "to": "/plugins/store/{row.name}",
                                                 "when": "{row.inStore}",
                                                 "input": [],
                                                 "props": []

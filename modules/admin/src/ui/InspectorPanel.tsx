@@ -6,7 +6,7 @@ import { IconButton } from './Button'
 import { Icon } from './Icon'
 import { cn } from './cn'
 import { SheetHandle } from './Dialog'
-import { WorkspaceContext } from './Slideover'
+import { WorkspaceContext } from './WorkspaceContext'
 
 /** A workspace inspector docks on desktop and becomes a focus-managed sheet on smaller screens. */
 export function useWideInspector() {

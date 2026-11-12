@@ -220,5 +220,7 @@
   "What Changed": "Änderungen",
   "What it installed stays, without update offers.": "Was sie installiert hat, bleibt, ohne Update-Angebote.",
   "What It Needs": "Was es braucht",
-  "Works With": "Funktioniert mit"
+  "Works With": "Funktioniert mit",
+  "Back to {label}": "Zurück zu {label}",
+  "Not Found": "Nicht gefunden"
 }

@@ -6,6 +6,10 @@
 
 - **Code fields point out mistakes.** CSS, JavaScript, TypeScript, JSON and HTML are checked as you type: a mistake is underlined with what is wrong on hover, the number of them shows under the field, and the large editor marks their lines. ⇧⌘M lists them.
 
+### Changed
+
+- **A plugin in the Store has a page of its own**, at `/plugins/store/<vendor>/<name>`, with its crumbs leading back to the Store, in place of a panel over the list. Installed's **View in Store** leads there, and the old `?item=` links still do. `@letterncms/ui`: `Slideover` is gone; a panel at the right is an `InspectorPanel`.
+
 ## 0.27.0 (2026-11-12)
 
 ### Added

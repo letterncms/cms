@@ -88,7 +88,7 @@ final class PackagesViews
             'actions' => [
                 ['label' => __('Settings'), 'icon' => 'settings', 'to' => '{row.settingsTo}', 'when' => '{row.settingsTo}'],
                 // What a plugin is (who makes it, what changed, what it needs) is told where it is sold.
-                ['label' => __('View in Store'), 'icon' => 'plugin', 'to' => '/plugins?tab=store&item={row.name}', 'when' => '{row.inStore}'],
+                ['label' => __('View in Store'), 'icon' => 'plugin', 'to' => '/plugins/store/{row.name}', 'when' => '{row.inStore}'],
                 // What another plugin needs stays.
                 ['label' => __('Uninstall…'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'packages/uninstall', 'input' => ['name' => '{row.name}', 'deleteFiles' => true], 'disabled' => '{row.dependents}',
                     'confirm' => ['title' => __('Uninstall {row.label}?'), 'text' => __('Its database tables, settings and files are removed.'), 'confirm' => __('Uninstall'), 'danger' => true],

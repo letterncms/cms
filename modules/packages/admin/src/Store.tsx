@@ -1,13 +1,11 @@
-import { invalidate, locale, run, t, useAbility, useLocation, can, navigate, plural } from '@letterncms/sdk'
+import { invalidate, Link, locale, run, t, useAbility, useLocation, can, navigate, plural } from '@letterncms/sdk'
 import { Badge, Button, confirm, EmptyState, Icon, IconButton, Input, List, Menu, NoMatches, prompt, Select, Skeleton, toast } from '@letterncms/ui'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { driveJob, JobFailed, type Job } from './installing'
-import { StoreDetail } from './StoreDetail'
-import { Action, addLicenseKey, ItemIcon, priceLabel, type Item } from './storeItem'
+import { Action, addLicenseKey, installing, installItem, ItemIcon, itemPath, priceLabel, type Item } from './storeItem'
 
 interface Catalog { store: string; items: Item[]; freshness: 'ok' | 'stale' | 'expired' | 'clock' | 'none'; problem: string | null; error: string | null }
 interface StoreInfo { id: string; name: string; url: string | null; default: boolean; fingerprint: string | null; problem: string | null }
-interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[]; access: { allowed?: boolean; message?: string } }
 type Sort = 'popular' | 'name' | 'installed'
 
 const CHUNK = 2 * 1024 * 1024
@@ -45,12 +43,13 @@ export function Store() {
   const [category, setCategory] = useState('')
   const [pricing, setPricing] = useState('all')
   const [sort, setSort] = useState<Sort>('popular')
-  const [chosen, setOpen] = useState<Item | null>(null)
-  // `?item=<package>` opens a plugin's page here: Installed's View in Store leads to it.
+  // An older link to a plugin's page (`?item=<package>`) leads to its page of its own.
   const { query } = useLocation()
+  useEffect(() => { if (query.item) navigate(itemPath({ package: query.item, store: query.store ?? 'default' }), { replace: true }) }, [query.item, query.store])
   const [busy, setBusy] = useState<string | null>(null)
   const [step, setStep] = useState<string | null>(null)
-  const [turnOn, setTurnOn] = useState(true)
+  const [turnOn, setTurnOnHere] = useState(installing.turnOn)
+  const setTurnOn = (change: (on: boolean) => boolean) => setTurnOnHere((on) => (installing.turnOn = change(on)))
   const file = useRef<HTMLInputElement>(null)
   const data = catalog.data
   // What's installed here brings its own icon: an older store's listing may have none.
@@ -58,8 +57,6 @@ export function Store() {
   const icons = Object.fromEntries((local.data?.items ?? []).map((p) => [p.name, p.icon]))
   const current = stores.data?.items.find((s) => s.id === store)
   const all = data?.items ?? []
-  const open = chosen ?? (query.item ? all.find((i) => i.package === query.item) ?? null : null)
-  const close = () => { setOpen(null); if (query.item) navigate('/plugins?tab=store', { replace: true }) }
 
   // Only what this store has: no empty categories, and price only once something costs money.
   const categories = useMemo(() => {
@@ -96,31 +93,8 @@ export function Store() {
 
   const install = async (item: Item) => {
     setBusy(item.package)
-    try {
-      const plan = await run<Plan>('packages/plan-install', { store: item.store, package: item.package, version: item.latest ?? undefined })
-      const lines = plan.steps.filter((s) => !s.enable_only).map((s) => `${s.title} ${s.version}`)
-      const yes = await confirm({
-        title: item.installed ? t('Update {name}?', { name: item.title }) : t('Install {name}?', { name: item.title }),
-        description: [lines.length > 1 ? t('Also installs what it needs: {list}.', { list: lines.join(', ') }) : '', plan.capabilities.length ? t('It may use: {list}.', { list: plan.capabilities.join(', ') }) : '', t('This code runs with full access to your site.')].filter(Boolean).join(' '),
-        confirm: item.installed ? t('Update') : t('Install'),
-      })
-      if (!yes) return
-      for (const s of plan.steps) {
-        if (s.enable_only) {
-          await run('packages/enable', { name: s.package })
-          continue
-        }
-        setStep(t('Installing {name}…', { name: s.title }))
-        const job = await run<Job>('packages/install', { store: item.store, package: s.package, version: s.version, turnOn })
-        await driveJob(job)
-      }
-      await after(item.installed ? t('{name} updated', { name: item.title }) : t('{name} installed', { name: item.title }))
-    } catch (e) {
-      toast.error(e)
-    } finally {
-      setBusy(null)
-      setStep(null)
-    }
+    if (await installItem(item, setStep)) await catalog.refetch()
+    setBusy(null)
   }
 
   const upload = async (chosen: File) => {
@@ -197,7 +171,7 @@ export function Store() {
     : data.error ? t('Can’t reach the store. {error}', { error: data.error })
     : null
 
-  const card = (item: Item) => <Card key={item.package} item={item} priced={priced} authored={authored} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} onOpen={() => setOpen(item)} onInstall={() => void install(item)} />
+  const card = (item: Item) => <Card key={item.package} item={item} priced={priced} authored={authored} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} to={itemPath(item)} onInstall={() => void install(item)} />
 
   return (
     <div>
@@ -243,22 +217,21 @@ export function Store() {
         </>
       )}
 
-      {open && <StoreDetail item={all.find((i) => i.package === open.package) ?? open} icon={icons[open.package]} onClose={close} busy={busy === open.package} locked={busy !== null} onInstall={() => void install(open)} />}
     </div>
   )
 }
 
 /**
  * One plugin as a row of the store's list: what it is, what it does in a line, its version, and the one thing
- * to do with it here. Its name opens the plugin.
+ * to do with it here. Its name leads to the plugin's page.
  */
-function Card({ item, icon, priced, authored, busy, locked, onOpen, onInstall }: { item: Item; icon?: string; priced: boolean; authored: boolean; busy: boolean; locked: boolean; onOpen: () => void; onInstall: () => void }) {
+function Card({ item, icon, priced, authored, busy, locked, to, onInstall }: { item: Item; icon?: string; priced: boolean; authored: boolean; busy: boolean; locked: boolean; to: string; onInstall: () => void }) {
   return (
     <div role="listitem" className="flex min-h-16 items-center gap-3 px-3 py-2">
       <ItemIcon item={item} icon={icon} />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <Button variant="ghost" className="-ml-2.5 min-w-0 font-medium text-ink" onClick={onOpen}><span className="truncate">{item.title}</span></Button>
+          <Link to={to} className="min-w-0 truncate rounded-xs text-sm font-medium text-ink no-underline hover:underline hover:underline-offset-2">{item.title}</Link>
           {priced && <Badge>{priceLabel(item)}</Badge>}
         </div>
         <p className="m-0 truncate text-xs text-muted">{[authored && t('By {name}', { name: item.author.name || item.package }), item.summary].filter(Boolean).join(' · ')}</p>

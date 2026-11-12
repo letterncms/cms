@@ -9,7 +9,7 @@ import { Sidebar, StateBack, type OwnSidebar } from './Sidebar'
 import { isPinned, leaveSettings, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
 import { inSettings, itemAt, noteLocation, placeAt } from '../ui/place'
 import { useShortcut } from '../ui/shortcuts'
-import { WorkspaceContext } from '../ui/Slideover'
+import { WorkspaceContext } from '../ui/WorkspaceContext'
 import { dockState, type DockState } from '../ui/Dock'
 
 function specificity(path: string): number {

@@ -1,6 +1,6 @@
 import { useContext, useLayoutEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { WorkspaceContext } from './Slideover'
+import { WorkspaceContext } from './WorkspaceContext'
 
 /** Whether the sidebar is out on a screen with a state of its own, and whether its list is nested under the screen's row. */
 export function useScreenSidebar() {

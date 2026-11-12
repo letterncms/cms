@@ -220,5 +220,7 @@
   "What Changed": "Wat er veranderd is",
   "What it installed stays, without update offers.": "Wat ze installeerde blijft, zonder aangeboden updates.",
   "What It Needs": "Wat het nodig heeft",
-  "Works With": "Werkt met"
+  "Works With": "Werkt met",
+  "Back to {label}": "Terug naar {label}",
+  "Not Found": "Niet gevonden"
 }

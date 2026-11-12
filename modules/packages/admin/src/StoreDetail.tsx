@@ -1,7 +1,7 @@
-import { locale, t, useAbility } from '@letterncms/sdk'
-import { Badge, Button, cn, Icon, IconButton, Pressable, Skeleton, Slideover, Tabs } from '@letterncms/ui'
+import { locale, navigate, t, useAbility, useLocation } from '@letterncms/sdk'
+import { Badge, Button, cn, Icon, IconButton, NotFoundState, Page, Pressable, Skeleton, Tabs } from '@letterncms/ui'
 import { useState } from 'react'
-import { Action, addLicenseKey, ItemIcon, priceLabel, type Item } from './storeItem'
+import { Action, addLicenseKey, installItem, ItemIcon, priceLabel, type Item } from './storeItem'
 
 interface Detail extends Item {
   description_html: string
@@ -27,14 +27,44 @@ const atLeast = (constraint: string) => {
   return found ? t('{version} or later', { version: found[1] }) : constraint
 }
 
-/** One plugin, as its store page shows it: what it does with pictures, what changed, and the facts beside them. */
-export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { item: Item; icon?: string; onClose: () => void; busy: boolean; locked: boolean; onInstall: () => void }) {
+const STORE = '/plugins?tab=store'
+
+/**
+ * One plugin's page in the store, at /plugins/store/<vendor>/<name> (`?store=` for another store than the default):
+ * what it does with pictures, what changed, and the facts beside them. Its crumbs lead back to the store's list.
+ */
+export default function StoreItem({ params }: { params: Record<string, string> }) {
+  const { query } = useLocation()
+  const store = query.store || 'default'
+  const name = `${params.vendor}/${params.name}`
+  const catalog = useAbility<{ items: Item[] }>('packages/catalog', { store })
+  const local = useAbility<{ items: { name: string; icon: string }[] }>('packages/list', { type: 'all' })
+  const item = catalog.data?.items.find((i) => i.package === name)
+  const crumbs = [{ label: t('Plugins'), to: '/plugins', icon: 'plugin' }, { label: t('Store'), to: STORE }]
+  if (!item) {
+    return (
+      <Page crumbs={[...crumbs, { label: catalog.isLoading ? name : t('Not Found') }]}>
+        {catalog.isLoading ? <Skeleton className="h-14 w-72" /> : <NotFoundState icon="plugin" action={<Button onClick={() => navigate(STORE)}>{t('Back to {label}', { label: t('Store') })}</Button>} />}
+      </Page>
+    )
+  }
+  return <Page width="wide" crumbs={[...crumbs, { label: item.title }]}><ItemPage key={item.package} item={item} icon={local.data?.items.find((p) => p.name === item.package)?.icon} refetch={() => void catalog.refetch()} /></Page>
+}
+
+function ItemPage({ item, icon, refetch }: { item: Item; icon?: string; refetch: () => void }) {
   const detail = useAbility<Detail>('packages/item', { store: item.store, package: item.package })
   const d = detail.data
-  const [expanded, setExpanded] = useState(true)
   const [tab, setTab] = useState<'overview' | 'changelog'>('overview')
+  const [busy, setBusy] = useState(false)
+  const [step, setStep] = useState<string | null>(null)
 
-  const addKey = async () => { if (await addLicenseKey()) onClose() }
+  const install = async () => {
+    setBusy(true)
+    if (await installItem(item, setStep)) refetch()
+    setBusy(false)
+  }
+  const addKey = async () => { if (await addLicenseKey()) refetch() }
+  const locked = busy
 
   const releases = d?.releases ?? []
   const facts: [string, React.ReactNode][] = [
@@ -57,22 +87,22 @@ export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { 
   ].filter(Boolean) as { label: string; href: string; icon: string }[]
 
   return (
-    <Slideover id="store-item" open expanded={expanded} onExpandedChange={setExpanded} onOpenChange={(next) => { if (!next) onClose() }} title={item.title} icon="plugin">
-      <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl p-4 sm:p-6">
+    <>
         <header className="flex flex-wrap items-start gap-4">
           <ItemIcon item={item} icon={icon} size="lg" />
           {/* Its words keep a column's width: on a phone the buttons go under them instead of squeezing them to a word a line. */}
           <div className="min-w-0 flex-1 basis-56">
-            <h2 className="m-0 text-xl font-medium text-ink">{item.title}</h2>
+            <h1 className="m-0 text-xl font-medium text-ink">{item.title}</h1>
             <p className="m-0 mt-0.5 text-sm text-muted">{t('By {name}', { name: item.author.name || item.package })}</p>
             <p className="m-0 mt-2 max-w-2xl text-sm text-text">{item.summary}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {item.action === 'buy' && <Button disabled={locked} onClick={() => void addKey()}>{t('Add License Key')}</Button>}
-            <Action item={item} busy={busy} locked={locked} onInstall={onInstall} size="md" />
+            <Action item={item} busy={busy} locked={locked} onInstall={() => void install()} size="md" />
           </div>
         </header>
         {item.access.message && <p className="m-0 mt-3 text-xs text-muted">{item.access.message}</p>}
+        {step && <p role="status" className="m-0 mt-3 text-sm text-muted">{step}</p>}
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
           <div className="min-w-0">
@@ -135,9 +165,7 @@ export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { 
             )}
           </aside>
         </div>
-      </div>
-      </div>
-    </Slideover>
+    </>
   )
 }
 
