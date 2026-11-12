@@ -484,7 +484,7 @@ export default function DesignTokens() {
 
           {section === 'space' && (
             <>
-              <Group onAdd={() => add('space', '1rem')} addLabel={addLabel('space')}>
+              <Group title={t('Spacing')} onAdd={() => add('space', '1rem')} addLabel={addLabel('space')}>
                 {byGroup('space').map((token) => (
                   <Row key={token.from ?? token.path} token={token} {...actions} after={<Bar value={token.value} of={byGroup('space')} />}>
                     {value(token, { component: 'site-size' })}
@@ -714,9 +714,10 @@ function boxFields(): FieldDef[] {
     { handle: 'backgroundColor', type: 'color', component: 'blocks-color', label: t('Fill'), placeholder: t('None') },
     {
       handle: 'border', type: 'group', component: 'blocks-group', label: t('Border'),
+      // One control saying "None", as Fill does, until there is a colour: then its width beside it.
       fields: [
-        { handle: 'borderWidth', type: 'text', component: 'blocks-value', label: t('Border Width'), placeholder: '0', min: 0, className: '!flex-none w-[64px]' },
         { handle: 'borderColor', type: 'color', component: 'blocks-color', label: t('Border Color'), placeholder: t('None') },
+        { handle: 'borderWidth', type: 'text', component: 'blocks-value', label: t('Border Width'), placeholder: '0', min: 0, className: '!flex-none w-[64px]', unless: { borderColor: [null, ''] } },
       ],
     },
     { handle: 'borderRadius', type: 'text', component: 'blocks-value', label: t('Radius'), group: 'radius', unit: 'px', units: ['px', 'rem', '%'], min: 0, placeholder: '0' },

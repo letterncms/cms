@@ -9,6 +9,7 @@
 ### Fixed
 
 - A site kit whose collection files its entries under a taxonomy the kit also brings, or picks from another of its collections, applies whatever order their names come in, and a kit in more languages than the site applies too: its entries in those languages are no longer refused before the languages are added. A collection the site keeps its own of (`skip`) is checked as the site's, so a kit collection that needs the kit's version of it is refused before anything is written, not halfway through.
+- Design System › Spacing has a heading and adds a step with its **+**, as Containers and Breakpoints do, and a style's **Border** is one control saying "None" until it has a colour, as **Fill** is, its width beside it once it does.
 - **The Audit Log names what each change was made to**, also a change made by id: what is removed (a revoked token, a deleted file or chat) by what its dry run said it would remove, kept with the change, and what is still there (a tested webhook) by its name when the log is read. Plugins name theirs with the `audit.subject` filter. An action whose ability was renamed since reads as it is called now, once in the filter ("Customized Built-In Page", not "Customise Pages").
 - **Signed In** under Account lists the ten browsers used last, this one first; **Sign Out Everywhere Else** ends the rest too. `sessions/list` takes `limit`.
 - Plugins › Installed and the Store name and describe a plugin the same way, in its own words and the admin's language, and a name is never cut short ("F…"): its description gives way.

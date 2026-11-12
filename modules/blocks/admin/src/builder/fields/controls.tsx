@@ -10,8 +10,11 @@ import { TokenButton, TokenChip, useTokenOf, useTypedToken } from './tokens'
 
 /** Conditional sub-fields (`if`), as in Fields. */
 export function shown(field: FieldDef, values: Record<string, any>): boolean {
+  const matches = (rule: Record<string, unknown>) => Object.entries(rule).every(([h, expected]) => (Array.isArray(expected) ? expected.includes(values[h]) : values[h] === expected))
+  // `unless` hides a sub-field while its sibling holds one of these (`{ borderColor: [null, ''] }`: a width once there is a colour).
   const rule = field.if as Record<string, unknown> | undefined
-  return !rule || Object.entries(rule).every(([h, expected]) => (Array.isArray(expected) ? expected.includes(values[h]) : values[h] === expected))
+  const unless = field.unless as Record<string, unknown> | undefined
+  return (!rule || matches(rule)) && !(unless && Object.entries(unless).every(([h, expected]) => (Array.isArray(expected) ? expected.includes(values[h] ?? null) : (values[h] ?? null) === expected)))
 }
 
 /** One field definition drawn with its registered component — for composite fields. */
