@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **A list of tags in a settings panel sits in the right column,** beside its name, like the other short settings.
+
 ## 0.32.0 (2026-11-12)
 
 ### Added

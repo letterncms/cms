@@ -38,7 +38,7 @@ function holds(rule: unknown, values: Record<string, any>): boolean {
 }
 
 const widths: Record<string, string> = { full: 'col-span-6', half: 'col-span-6 md:col-span-3', third: 'col-span-6 md:col-span-2', 'two-thirds': 'col-span-6 md:col-span-4' }
-const compactSettings = new Set(['text', 'url', 'email', 'slug', 'number', 'select', 'icon'])
+const compactSettings = new Set(['text', 'url', 'email', 'slug', 'number', 'select', 'icon', 'tags'])
 const standaloneSettings = new Set(['group', 'repeater', 'matrix', 'table', 'properties', 'fields', 'blocks'])
 
 /** Renders a blueprint: each field with the component registered for its type. */
