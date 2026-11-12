@@ -7,7 +7,7 @@ import { changedFrom, GroupedFields } from '../GroupedFields'
 import { SaveBar } from '../SaveBar'
 import { SettingRow, SettingsPanel } from '../SettingsPanel'
 import { Skeleton, Spinner } from '../Spinner'
-import { TabContext, useView } from './context'
+import { isSettingsTab, TabContext, useView } from './context'
 import { at, input } from './scope'
 
 export interface FormProps {
@@ -35,7 +35,7 @@ export interface FormProps {
 export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields: own, into, save, after, width = 'narrow', onDirty, context, settings: ownSettings }: FormProps) {
   const { scope, settings: settingsPage } = useView()
   const tab = useContext(TabContext)
-  const settings = ownSettings ?? (settingsPage || tab?.id === 'settings')
+  const settings = ownSettings ?? (settingsPage || isSettingsTab(tab?.id))
   const frame = width === 'wide' ? 'w-full' : 'mx-auto w-full max-w-[640px]'
   const loadInput = input(source?.input, scope)
   const data = useAbility<unknown>(source?.ability ?? 'abilities/list', loadInput, { enabled: !!source, refetchOnWindowFocus: false })
