@@ -1,5 +1,5 @@
 import { can, locale, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
-import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, formatBytes, readViewPrefs } from '@letterncms/ui'
+import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, drawing, formatBytes, readViewPrefs } from '@letterncms/ui'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { deleteFiles } from './actions'
 import { FileDialog } from './FileDialog'
@@ -77,6 +77,8 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
     onSelectionChange?.(next, [item])
   }
 
+  // Where Upload is in the screen's bar, an empty folder still offers it, under a name of its own.
+  const emptyUpload = allow ? <Fields layout="inline" bare fields={uploader({ handle: 'files-here', variant: 'secondary' })} values={{}} onChange={(_, files) => void send(files)} /> : null
   const uploadButton = (autofocus = false, variant = mode === 'manage' ? 'primary' : 'secondary') => allow ? <Fields layout="inline" bare fields={uploader({ variant, autofocus })} values={{}} onChange={(_, files) => void send(files)} /> : null
 
   const select = (ids: string[], on: boolean, records = items) => {
@@ -110,7 +112,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
       void send(mode === 'pick' && !multiple ? files.slice(0, 1) : files)
     },
   }
-  const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className="absolute inset-0 size-full object-cover" style={{ objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : <FileTile item={item} />
+  const preview = (item: MediaItem) => item.thumb ? <img src={item.thumb} alt={item.alt ?? ''} loading="lazy" className={cn('absolute inset-0 size-full', drawing(item.thumb) ? 'object-contain p-4' : 'object-cover')} style={drawing(item.thumb) ? undefined : { objectPosition: `${item.focal.x}% ${item.focal.y}%` }} /> : <FileTile item={item} />
   // What a picker opens on (images, for an image field) is where it starts, not something someone filtered by:
   // an empty library says so and offers the upload, never "No matches".
   // Nor is the folder on view: an empty folder is empty, not a search that found nothing.
@@ -165,7 +167,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
           manages && { label: t('Move to Folder'), icon: 'folder', onSelect: () => setMoving([item]) },
           mode === 'manage' && can('media.delete') && { label: t('Delete'), icon: 'trash', danger: true, disabled: deleting, onSelect: () => void deleteItems([item.id]) },
         ]} />}
-        empty={filtered ? <NoMatches onClear={() => { setFilters((f) => ({ search: '', kind: bar ? 'all' : startKind, folder: f.folder })); setPage(1) }} /> : <EmptyState icon={folder === null ? 'media' : 'folder'} title={folder !== null ? t('No files in this folder') : kind === 'image' ? t('No images yet') : kind === 'video' ? t('No videos yet') : t('No files yet')} action={bar ? undefined : uploadButton(false, 'secondary')} />}
+        empty={filtered ? <NoMatches onClear={() => { setFilters((f) => ({ search: '', kind: bar ? 'all' : startKind, folder: f.folder })); setPage(1) }} /> : <EmptyState icon={folder === null ? 'media' : 'folder'} title={folder !== null ? t('No files in this folder') : kind === 'image' ? t('No images yet') : kind === 'video' ? t('No videos yet') : t('No files yet')} action={bar ? emptyUpload : uploadButton(false, 'secondary')} />}
       />
 
       {/* Opened to upload (?upload=1): the picker, with the page's own button in its bar. */}

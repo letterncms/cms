@@ -82,7 +82,7 @@ final class EntriesView
                     'confirm' => ['title' => ['one' => __('Delete {count} entry?'), 'other' => __('Delete {count} entries?')], 'text' => __('This cannot be undone.'), 'confirm' => __('Delete'), 'danger' => true],
                     'success' => ['one' => __('Deleted {count} entry'), 'other' => __('Deleted {count} entries')]],
             ],
-            'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => mb_strtolower(__($collection->title))])],
+            'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => __($collection->title)])],
             'defaultView' => $defaultView = in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
             // The person's saved views of this list, beside Display: what narrows the list is what a view can keep.
             'controls' => ['component' => 'content/views', 'props' => ['list' => "entries.{$handle}", 'defaultView' => $defaultView, 'params' => ['search', 'status', ...(count($locales) > 1 ? ['locale'] : [])]]],
@@ -178,7 +178,7 @@ final class EntriesView
         $cards = $collection->defaultColumns === null ? array_filter([$media ? "field:{$media['handle']}" : null, $excerpt ? "field:{$excerpt['handle']}" : null]) : [];
 
         // Beside a title, quieter: who is editing that entry right now (`editingBy`), when something that knows says so.
-        $columns = [['id' => 'title', 'key' => 'title', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)', 'sort' => 'title', 'empty' => __('Untitled'), 'muted' => 'editingBy']];
+        $columns = [['id' => 'title', 'key' => 'title', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)', 'sort' => 'title', 'empty' => __('Untitled'), 'muted' => 'editingBy', 'mutedWhole' => true]];
 
         if ($routable) {
             $columns[] = ['id' => 'uri', 'key' => 'uri', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'sort' => 'uri'];

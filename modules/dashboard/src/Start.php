@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Dashboard;
 
 use Cms\Cms;
+use Cms\Content\Collections\Collection;
 use Cms\Support\Files;
 use Cms\Users\User;
 use Illuminate\Support\Facades\DB;
@@ -51,12 +52,13 @@ final class Start
             }
         }
 
-        foreach ($this->cms->collections()->all() as $collection) {
-            if (! $collection->system && $user->hasPermission("entries.{$collection->handle}.create")) {
-                $steps[] = ['id' => 'page', 'label' => __('Create the First Page'), 'to' => "/content/{$collection->handle}/new", 'done' => $since !== null && $this->createdSince($since)];
+        // A page goes in the collection whose pages sit at the root of the site (`/{slug}`), else the first with
+        // pages of their own, else the first: never only the first by name.
+        $candidates = array_values(array_filter($this->cms->collections()->all(), static fn ($c) => ! $c->system && $user->hasPermission("entries.{$c->handle}.create")));
+        usort($candidates, static fn ($a, $b) => self::rank($a) <=> self::rank($b));
 
-                break;
-            }
+        if (($pages = $candidates[0] ?? null) !== null) {
+            $steps[] = ['id' => 'page', 'label' => __('Create the First Page'), 'to' => "/content/{$pages->handle}/new", 'done' => $since !== null && $this->createdSince($since)];
         }
 
         if ($this->cms->isActive('letterncms/mcp') && $user->hasPermission('tokens.manage')) {
@@ -116,5 +118,15 @@ final class Start
     private function file(): string
     {
         return storage_path('app/start.json');
+    }
+
+    /** 0: its pages are at the root of the site; 1: they have a URL of their own; 2: they have none. Ties keep their order. */
+    private static function rank(Collection $collection): int
+    {
+        if (! $collection->routable()) {
+            return 2;
+        }
+
+        return str_starts_with(ltrim((string) $collection->route, '/'), '{') ? 0 : 1;
     }
 }

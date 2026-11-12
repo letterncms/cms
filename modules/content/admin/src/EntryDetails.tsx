@@ -1,5 +1,5 @@
 import { can, locale, t, useAbility, useManifest, type Entry, type EntryContent, type EntryPanelProps, type EntrySummary, type FieldDef } from '@letterncms/sdk'
-import { Button, Dialog, Fields, PersonPicker, QueryError, SharedMark, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes } from '@letterncms/ui'
+import { Button, Dialog, Fields, nativeName, PersonPicker, QueryError, SharedMark, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 
 /** The pages features bring (sign in, checkout), as `pages/builtin` gives them, by what brought them. */
@@ -67,7 +67,7 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
     ...(builder ? [
       ...(entry && collection.structure === 'tree' ? [[t('Parent'), entry.parentId ? parent.data?.[0]?.title ?? (parent.isLoading ? t('Loading…') : '') : t('None')] as [string, ReactNode]] : []),
       ...(summary?.within ? [] : [[t('Collection'), collection.title] as [string, ReactNode]]),
-      ...(manifest.site.locales.length > 1 ? [[t('Language'), entry?.locale ?? manifest.site.defaultLocale] as [string, ReactNode]] : []),
+      ...(manifest.site.locales.length > 1 ? [[t('Language'), nativeName(entry?.locale ?? manifest.site.defaultLocale)] as [string, ReactNode]] : []),
       ...(entry?.createdAt ? [[t('Created'), date(entry.createdAt)] as [string, ReactNode]] : []),
       ...(entry?.updatedAt ? [[t('Updated'), date(entry.updatedAt)] as [string, ReactNode]] : []),
     ] : []),

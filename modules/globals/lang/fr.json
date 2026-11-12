@@ -32,5 +32,6 @@
   "The fields of one global set, in the blueprint editor.": "Les champs d’un ensemble global, dans l’éditeur de modèle.",
   "Update Global Set Values": "Mettre à jour les valeurs d’un ensemble global",
   "Use letters or numbers in the name.": "Utilisez des lettres ou des chiffres dans le nom.",
-  "View Global Sets": "Voir les ensembles globaux"
+  "View Global Sets": "Voir les ensembles globaux",
+  "Language": "Langue"
 }

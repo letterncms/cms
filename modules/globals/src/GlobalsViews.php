@@ -72,11 +72,12 @@ final class GlobalsViews
             // No icon: on a phone a bar's button with one is only its icon, and this is the only thing to do here.
             ['label' => __('Edit Fields'), 'to' => "/globals/{$handle}/fields", 'can' => 'globals.manage'],
         ]], 'children' => count($locales) > 1
-            ? [['type' => 'ui/tabs', 'children' => array_map(static fn (string $l) => ['type' => 'ui/tab', 'props' => ['id' => $l, 'label' => self::languageName($l)], 'children' => [$form($l)]], $locales)]]
+            // The language on view is switched as a list's is: its code, named in full on hover.
+            ? [['type' => 'ui/tabs', 'props' => ['display' => 'segmented', 'label' => __('Language')], 'children' => array_map(static fn (string $l) => ['type' => 'ui/tab', 'props' => ['id' => $l, 'label' => strtoupper($l), 'title' => self::languageName($l)], 'children' => [$form($l)]], $locales)]]
             : [$form(null)]];
     }
 
-    /** "Deutsch" for "de", in the language itself: a tab says which language it holds, not its code. */
+    /** "Deutsch" for "de", in the language itself: what its code stands for. */
     private static function languageName(string $code): string
     {
         $name = class_exists(\Locale::class) ? (string) \Locale::getDisplayName(str_replace('-', '_', $code), str_replace('-', '_', $code)) : '';

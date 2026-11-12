@@ -37,7 +37,8 @@ final class Catalog
             // `sort`: true sorts among what is loaded; a name is what the list's ability sorts by (its `sort.param`).
             // A word to mark the row with, as a badge (a key of the row); what a number counts, said with it on a phone: {one, other} with {count}.
             'badge' => $id, 'unit' => $this->object(['one' => $s, 'other' => $s], ['one', 'other']),
-            'muted' => $id, 'sort' => ['type' => ['boolean', 'string'], 'maxLength' => 120], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
+            // `muted`: a quieter second value beside it, cut short before the value is; `mutedWhole` keeps it whole and cuts the value first (who is editing, beside a title).
+            'muted' => $id, 'mutedWhole' => ['type' => 'boolean'], 'sort' => ['type' => ['boolean', 'string'], 'maxLength' => 120], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
             // A row's own icon, what an empty value reads as, a row's problem in words (drawn as a warning), and a switch's per-row label, lock and why it is locked.
             'icon' => $id, 'empty' => $s, 'warning' => $id, 'ariaLabel' => $s, 'disabled' => $id, 'reason' => $id,
             // As wide as its longest value (an address); a few lines on a card instead of a labeled value; on cards from the start; the field a `field` value belongs to; every language there is, for `languages`.
@@ -55,8 +56,8 @@ final class Catalog
                 // How many there are, beside the title: a number in an ability's answer (a list's `total`).
                 'count' => $this->object(['source' => $source, 'at' => $id], ['source']),
             ], ['title'])],
-            'ui/tabs' => ['label' => 'Tabs (each child a ui/tab); a plugin with settings kept here gets its Settings tab', 'children' => true, 'props' => $this->object([])],
-            'ui/tab' => ['label' => 'One tab', 'children' => true, 'props' => $this->object(['id' => $id, 'label' => $s, 'actions' => ['type' => 'array', 'maxItems' => 6, 'items' => $action], 'count' => $this->object(['source' => $source, 'at' => $id], ['source'])], ['id', 'label'])],
+            'ui/tabs' => ['label' => 'Tabs (each child a ui/tab); a plugin with settings kept here gets its Settings tab. display: segmented switches the same thing in another language (short labels, each tab\'s title on hover), named by label', 'children' => true, 'props' => $this->object(['display' => ['type' => 'string', 'enum' => ['tabs', 'segmented']], 'label' => $s])],
+            'ui/tab' => ['label' => 'One tab', 'children' => true, 'props' => $this->object(['id' => $id, 'label' => $s, 'title' => $s, 'actions' => ['type' => 'array', 'maxItems' => 6, 'items' => $action], 'count' => $this->object(['source' => $source, 'at' => $id], ['source'])], ['id', 'label'])],
             'ui/section' => ['label' => 'Titled group', 'children' => true, 'props' => $this->object(['title' => $s, 'actions' => ['type' => 'array', 'maxItems' => 4, 'items' => $action]])],
             'ui/stack' => ['label' => 'Stack', 'children' => true, 'surface' => true, 'props' => $this->object([])],
             'ui/grid' => ['label' => 'Responsive grid', 'children' => true, 'surface' => true, 'props' => $this->object(['columns' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 4, 'default' => 2]])],

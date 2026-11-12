@@ -570,9 +570,20 @@ try {
     // The site's timezone is named under the start and under the end: both are on the site's clock.
     assert(document.querySelector('[role="dialog"]').textContent.split('Europe/Brussels').length === 3, 'The site timezone is not under both dates: ' + document.querySelector('[role="dialog"]').textContent)
     // The same clock time a day apart in both controls is a day apart on the site's clock: both read the site's zone.
-    const wall = (days) => { const d = new Date(Date.now() + days * 86400000); return d.toISOString().slice(0, 11) + '09:30' }
-    setInput(document.querySelector('#f-at'), wall(2))
-    setInput(document.querySelector('#f-ends'), wall(3))
+    // A day is picked from the month the date control opens, a time typed into its own field the admin's way.
+    const day = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10)
+    const pick = async (control, date) => {
+      control.click()
+      await wait(() => document.querySelector('[role="grid"]'), 'The month did not open')
+      while (!document.querySelector('[data-day="' + date + '"]')) { button('Next Month').click(); await new Promise((r) => setTimeout(r, 50)) }
+      document.querySelector('[data-day="' + date + '"]').click()
+      await wait(() => !document.querySelector('[role="grid"]'), 'The month did not close')
+    }
+    const times = () => [...document.querySelectorAll('[role="dialog"] input[aria-label="Time"]')]
+    await pick(document.querySelector('#f-at'), day(2))
+    await pick(document.querySelector('#f-ends'), day(3))
+    for (const time of times()) { setInput(time, '9:30 AM'); time.dispatchEvent(new FocusEvent('focusout', { bubbles: true })) }
+    await wait(() => times().every((time) => time.value === '9:30 AM'), 'The times were not read the admin\'s way: ' + times().map((time) => time.value))
     await wait(() => button('Schedule', document.querySelector('[role="dialog"]')), 'Schedule confirmation not ready')
     button('Schedule', document.querySelector('[role="dialog"]')).click()
     await waitAsync(async () => (await state()).entries['post-1'].displayStatus === 'scheduled', 'Scheduling did not persist')
