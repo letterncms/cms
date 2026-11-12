@@ -108,3 +108,11 @@
   .cms-thread-chip button::after { content: ""; position: absolute; inset: -12px; }
   button.cms-thread-chip::after { content: ""; position: absolute; inset: -9px; }
 }
+
+/* The chat button leaves at once with the thread coming in; back from it, it settles into place. */
+@media (prefers-reduced-motion: no-preference) {
+  .cms-chat-toggle[data-back] { animation: cms-chat-toggle-back 160ms var(--ease-out); }
+}
+@keyframes cms-chat-toggle-back {
+  from { opacity: 0; transform: scale(0.96); }
+}

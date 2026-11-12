@@ -34,7 +34,7 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   // An editor's document (`title`) names the screen before its crumbs do: "Home", not "Pages".
   const named = firstText(title)
   useScreenContext({ title: named ?? firstText(last?.label), icon: last?.icon ?? crumbs[0]?.icon })
-  // What every screen's bar has, before the screen's own actions.
+  // What every screen's bar has, after the screen's own actions: the chat is always last, at the edge it opens from.
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const ends = panelsFor('topbar.end', {})
   const claimed = useContext(WorkspaceContext)?.sidebar?.claimed
@@ -96,8 +96,8 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
       {title && <div className="cms-topbar-title absolute max-w-[28%] -translate-x-1/2 truncate text-sm font-medium text-ink max-lg:hidden">{title}</div>}
       {(actions || ends.length > 0) && (
         <div className="ml-auto flex shrink-0 items-center justify-end gap-1">
-          {ends.map(({ id, component: End }) => <End key={id} />)}
           {actions}
+          {ends.map(({ id, component: End }) => <End key={id} />)}
         </div>
       )}
     </header>

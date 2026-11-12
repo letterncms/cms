@@ -65,6 +65,16 @@ let state: State = { ...restored(), fresh: 0, history: false, title: '', prompt:
 let returnTo: string | null = null
 /** What had the focus before the dock took it. */
 let returnFocus: Element | null = null
+/** When the thread was last put away, and whether the chat button takes the focus when it comes back. */
+let closedAt = -Infinity
+let toggleFocus = false
+
+/** The chat button, drawn again: whether the thread was put away a moment ago, and whether the focus is its to take (once). */
+export function toggleReturn(): { back: boolean; focus: boolean } {
+  const focus = toggleFocus
+  toggleFocus = false
+  return { back: performance.now() - closedAt < 300, focus }
+}
 
 export function threadPath(id: string | null) {
   return id ? `/chat/${encodeURIComponent(id)}` : '/chat/new'
@@ -121,9 +131,10 @@ export const panel = {
     const full = state.mode === 'full'
     panel.set({ mode: 'closed' })
     if (full) navigate(returnTo ?? '/', { overlay: returnTo !== null })
-    // Back where it was, or to what opens it again.
+    // Back where it was, or to what opens it again: the chat button, drawn again now that the thread is gone, takes it as it comes.
+    closedAt = performance.now()
     if (returnFocus instanceof HTMLElement && returnFocus.isConnected && returnFocus !== document.body) returnFocus.focus()
-    else document.querySelector<HTMLElement>('[data-workspace-toggle]')?.focus()
+    else toggleFocus = true
     returnFocus = null
   },
   /** ⌘J: bring it up; from inside it, put it away again. */

@@ -214,7 +214,7 @@ export function SelectField({ field, value, onChange, error, disabled }: FieldPr
               aria-pressed={on}
               // 44px under a finger by itself, so its touch area never lies over the chip beside it.
               compact
-              className={cn('h-7 rounded-sm [@media(pointer:coarse)]:h-11 px-2.5 text-sm font-medium transition-[background-color,box-shadow,color] duration-base ease-out disabled:opacity-45', on ? 'bg-ink text-ink-contrast' : 'bg-float text-text shadow-raise ring-1 ring-border-strong hover:bg-float-hover')}
+              className={cn('h-7 rounded-sm [@media(pointer:coarse)]:h-11 px-2.5 text-sm font-medium transition-[background-color,box-shadow,color] duration-base ease-out disabled:opacity-45', on ? 'bg-ink text-ink-contrast' : 'bg-float text-text shadow-raise ring-1 ring-inset ring-border-strong hover:bg-float-hover')}
             >
               {o.label}
             </Pressable>

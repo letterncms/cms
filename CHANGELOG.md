@@ -30,6 +30,8 @@
 
 ### Changed
 
+- **Chat** in the top bar is a filled button now, a shade deeper when pointed at, always last in the bar, beside the edge the chat opens from, and it steps aside while the chat is open: the chat's own Close puts it away and brings the button back, with the focus on it.
+- Secondary buttons draw their outline inside their edge, so they are as tall as every other button beside them.
 - **Breaking.** A string of your own that ends in `||` and lowercase words (`'Cats||dogs and birds'`, in `__()`, `t()`, a field's label or options) now shows only the words before the `||`: write it differently, or give it a translation. Any other `||` stays part of the text.
 - A list on a phone names its values: each one in a row is led by its column's name ("Updated last week", "Entries 3"), unless it says what it is (a status, an address, a person). A date the status already tells and a value that is missing stay out of the row.
 - A calendar shows each record's status as a dot before its title.
