@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- A collection's **Fields** tab shows its blueprints as a switch only once it has two. Until then **Add Blueprint** sits beside **Add Field**, instead of a lone tab with the collection's name.
+
 ## 0.26.1 (2026-11-12)
 
 ### Fixed
