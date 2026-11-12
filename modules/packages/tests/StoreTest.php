@@ -192,6 +192,8 @@ final class StoreTest extends TestCase
 
         $this->assertSame('done', $job['state'], (string) ($job['error'] ?? ''));
         $this->assertFileExists($this->site.'/kits/studio/kit.json');
+        // Marked as Composer marks the same tree, so composer update may take it over.
+        $this->assertFileExists($this->site.'/kits/studio/.composer-kit');
         $this->assertDirectoryDoesNotExist($this->site.'/plugins/studio');
         $this->assertFalse($this->cms()->packages()->isEnabled('letterncms/studio'), 'a kit is not a plugin to switch on');
         $this->assertSame('installed', $this->itemIn($this->client->catalog(), 'letterncms/studio')['action']);
