@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.25.0 (2026-11-12)
+
 ### Added
 
 - **A theme colour for the admin.** **Theme Color** under **Settings → General** sets it for everyone, and **Account → Profile → Theme Color** lets each person pick their own, with **Use Admin Default** to follow everyone's again. Choose amber, orange, pink, violet, blue, green or monochrome (the admin's own ink: black on light, near white on dark). One colour carries through the whole admin: **Publish** and **Go Live**, switches that are on, ticked boxes, chosen options, highlights, selected rows, focus rings and the chat's bubble. The words on every colour reach 4.5:1 and every focus line 3:1 in light and dark, amber's on light aside, which stays amber with a halo. The admin shows the colour as you pick it and paints it before the first frame. Plugins that use the `signal` and `focus` colours follow it, and `AccentPicker` in `@letterncms/ui` is the control.
