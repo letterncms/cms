@@ -19,7 +19,7 @@ final class KitAbilities
     {
         return [
         'handle' => Shape::STRING, 'name' => Shape::STRING, 'description' => Shape::STRING, 'version' => Shape::STRING, 'license' => Shape::STRING_OR_NULL,
-        'source' => Shape::enum('builtin', 'site'), 'cms' => Shape::STRING_OR_NULL, 'plugins' => [Shape::STRING], 'languages' => [Shape::STRING], 'previews' => [Shape::STRING],
+        'source' => Shape::enum('builtin', 'site', 'saved'), 'active' => Shape::BOOLEAN, 'edited' => Shape::BOOLEAN, 'cms' => Shape::STRING_OR_NULL, 'plugins' => [Shape::STRING], 'languages' => [Shape::STRING], 'previews' => [Shape::STRING],
         'demo' => Shape::STRING_OR_NULL, 'suits' => Shape::BOOLEAN, 'missingPlugins' => [Shape::STRING], 'code' => Shape::BOOLEAN,
         ];
     }
@@ -41,8 +41,10 @@ final class KitAbilities
         $describe = static fn (Kit $kit) => [
             ...$kit->toArray(),
             'suits' => $kit->suits(Cms::VERSION),
-            'missingPlugins' => $applier()->missingPlugins($kit),
+            'missingPlugins' => $kit->source === 'saved' ? [] : $applier()->missingPlugins($kit),
             'code' => $applier()->carriesCode($kit),
+            'active' => $kits()->active() === $kit->handle,
+            'edited' => isset($kits()->saved()[$kit->handle]),
         ];
         $modes = ['mode' => ['type' => 'string', 'enum' => KitApplier::MODES, 'description' => 'design: tokens, fonts, templates, components, scripts, styles and libraries. full (the default): all that, and the collections, entries, global sets, menus, media and languages.'],
             'clash' => ['type' => 'string', 'enum' => KitApplier::CLASHES, 'description' => 'What happens where the site already has something of the same name: refuse (the default: nothing is applied while there is one), skip (the site keeps its own), replace (the kit’s takes its place, after a snapshot in storage/backups), rename (an entry comes in beside the site’s under a new slug; what has no second name is kept).'],
@@ -62,7 +64,8 @@ final class KitAbilities
             'annotations' => ['readOnly' => true],
             'output' => Shape::of(['kits' => [self::kit()], 'problems' => [['folder' => Shape::STRING, 'problem' => Shape::STRING]]]),
             'handler' => static fn () => [
-                'kits' => array_values(array_map($describe, $kits()->all())),
+                // The sites kept aside that are no kit here (one that was never a kit's, a kit that was removed) are listed too: they can be switched back to.
+                'kits' => array_values(array_map($describe, [...$kits()->all(), ...array_diff_key($kits()->saved(), $kits()->all())])),
                 'problems' => array_map(static fn (string $folder, string $problem) => ['folder' => 'kits/'.$folder, 'problem' => $problem], array_keys($kits()->problems()), array_values($kits()->problems())),
             ],
         ]);
@@ -75,7 +78,7 @@ final class KitAbilities
             'input' => ['type' => 'object', 'properties' => [...$handle, ...$modes], 'required' => ['handle']],
             'output' => Shape::of([...self::kit(), 'plan?' => ['mode' => Shape::STRING, 'clash' => Shape::STRING, 'steps' => [self::step()]]]),
             'handler' => static function (array $in) use ($kits, $applier, $describe): array {
-                $kit = $kits()->findOrFail((string) $in['handle']);
+                $kit = $kits()->saved()[(string) $in['handle']] ?? $kits()->findOrFail((string) $in['handle']);
 
                 if (! isset($in['mode'])) {
                     return $describe($kit);
@@ -104,6 +107,26 @@ final class KitAbilities
                 $mayApply($applier()->plan($kit, (string) ($in['mode'] ?? 'full'), (string) ($in['clash'] ?? 'refuse')), $context);
 
                 return $applier()->apply($kit, (string) ($in['mode'] ?? 'full'), (string) ($in['clash'] ?? 'refuse'), $context->user, withoutPlugins: (bool) ($in['withoutPlugins'] ?? false));
+            },
+        ]);
+
+        $abilities->register('kits/switch', [
+            'label' => 'Switch Site Kit',
+            'description' => 'Make this site another kit: {"handle": "fathomline"}. The site you leave is saved first, drafts and all (a copy per kit, in storage/kits), and switching back brings that copy, so nothing is lost by trying a kit. What a kit carries is replaced (collections, entries, global sets, menus, design, what plugins keep beside the content, the settings a kit may carry); accounts, media, submissions and every other setting stay. `fresh` brings the kit as it came and lets go of the copy that was kept: start over. Answers with `saved`, the kit the site left. kits/apply puts a kit on top of the site instead, choosing what happens to what clashes.',
+            'permission' => 'settings.manage',
+            'input' => ['type' => 'object', 'properties' => [...$handle, 'fresh' => ['type' => 'boolean', 'description' => 'The kit as it came, not as this site left it.']], 'required' => ['handle']],
+            'output' => Shape::of(['switched' => Shape::BOOLEAN, 'kit' => self::kit(), 'saved?' => ['handle' => Shape::STRING, 'name' => Shape::STRING], 'steps' => [self::step()], 'backup' => Shape::STRING_OR_NULL]),
+            'handler' => static function (array $in, AbilityContext $context) use ($kits, $applier, $describe): array {
+                $kit = $kits()->saved()[(string) $in['handle']] ?? $kits()->findOrFail((string) $in['handle']);
+
+                if ($applier()->carriesCode($kit) && ! $context->can('site.code')) {
+                    throw AbilityException::forbidden(__('The kit “:name” brings scripts or styles, and switching to it needs the permission to edit custom CSS and JavaScript.', ['name' => $kit->handle]));
+                }
+
+                $result = $applier()->switchTo((string) $in['handle'], (bool) ($in['fresh'] ?? false), $context->user);
+                $kits()->flush();
+
+                return [...array_filter($result, static fn ($v, $k) => $k !== 'saved' || $v !== null, ARRAY_FILTER_USE_BOTH), 'kit' => $describe($kits()->saved()[$result['kit']] ?? $kits()->findOrFail($result['kit']))];
             },
         ]);
 

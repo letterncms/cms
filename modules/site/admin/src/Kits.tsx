@@ -1,179 +1,146 @@
-import { loadManifest, navigate, plural, queryClient, run, setManifest, t, useAbility } from '@letterncms/sdk'
-import { Button, Checkbox, Dialog, EmptyState, Field, Input, List, Notice, Page, QueryError, Row, Segmented, Skeleton, download, slugify, toast } from '@letterncms/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { navigate, run, queryClient, t, useAbility } from '@letterncms/sdk'
+import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Menu, Notice, Page, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
+import { useState } from 'react'
 
 interface Kit {
   handle: string
   name: string
+  description: string
   version: string
-  source: 'builtin' | 'site'
+  source: 'builtin' | 'site' | 'saved'
   previews: string[]
   suits: boolean
   missingPlugins: string[]
-  code: boolean
+  active: boolean
+  /** The site was this kit, was changed, and was left: that is kept, and comes back. */
+  edited: boolean
 }
-
-interface Step {
-  action: 'create' | 'replace' | 'rename' | 'merge' | 'skip' | 'clash'
-  type: string
-  name: string
-  /** What a person knows it by: an entry's or a collection's title. */
-  title?: string
-  /** An entry's collection. */
-  collection?: string
-  as?: string
-  note?: string
-}
-
-type Mode = 'design' | 'full'
-type Clash = 'refuse' | 'skip' | 'replace' | 'rename'
 
 /**
- * The site kits this site can take in, next to the design they mostly are: one row per kit, and applying one
- * shows what it would do here, from the same plan kits/apply runs, before anything is written.
+ * The kits this site can be, as cards: choosing one makes the site that kit at once. What the site was is kept with
+ * the kit it was, so there is nothing to confirm and nothing to lose: choose the other to be it again, edits and all.
  */
 export default function Kits() {
   const list = useAbility<{ kits: Kit[]; problems: { folder: string; problem: string }[] }>('kits/list')
-  const [applying, setApplying] = useState<Kit | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
 
+  const choose = async (kit: Kit) => {
+    setBusy(kit.handle)
+    await switchKit(kit, { home: false })
+    setBusy(null)
+  }
+
+  const startOver = async (kit: Kit) => {
+    const ok = await confirm({
+      title: t('Start {name} over?', { name: kit.name }),
+      description: kit.active ? t('The site goes back to {name} as it came. What you changed is gone.', { name: kit.name }) : t('{name} goes back to how it came. What you changed in it is gone.', { name: kit.name }),
+      confirm: t('Start Over'),
+      danger: true,
+    })
+    if (!ok) return
+    setBusy(kit.handle)
+    await switchKit(kit, { fresh: true, home: false })
+    setBusy(null)
+  }
+
+  const designOnly = async (kit: Kit) => {
+    const ok = await confirm({
+      title: t('Use the design of {name}?', { name: kit.name }),
+      description: t('Templates, components, fonts and styles are replaced with {name}’s. Your pages, posts and menus stay.', { name: kit.name }),
+      confirm: t('Use Design'),
+    })
+    if (!ok) return
+    setBusy(kit.handle)
+    try {
+      await run('kits/apply', { handle: kit.handle, mode: 'design', clash: 'replace' })
+      await queryClient.invalidateQueries()
+      toast.success(t('{name}’s design is on this site', { name: kit.name }))
+    } catch (e) {
+      toast.error(e)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
-    <Page title={t('Site Kits')} width="narrow" actions={<Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>}>
+    <Page title={t('Site Kits')} actions={<Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>}>
       {list.isPending ? (
-        <List>{[0, 1].map((i) => <Row key={i}><Skeleton className="h-10 w-16 rounded-sm" /><Skeleton className="h-4 w-32" /></Row>)}</List>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[4/3] w-full rounded-lg" />)}</div>
       ) : list.error ? (
         <QueryError title={t('Site kits could not be loaded')} message={t('Try again in a moment.')} onRetry={() => list.refetch()} retrying={list.isFetching} />
       ) : list.data.kits.length === 0 ? (
         <EmptyState icon="box" title={t('No site kits')} />
       ) : (
-        <List>
+        <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
           {list.data.kits.map((kit) => (
-            <Row key={kit.handle} onClick={() => setApplying(kit)} className="py-2">
-              <Preview kit={kit} className="h-10 w-16" />
-              <span className="min-w-0 flex-1 truncate font-medium text-ink">{kit.name}</span>
-              <span className="shrink-0 tabular-nums text-muted">{kit.version}</span>
-            </Row>
+            <KitCard key={kit.handle} kit={kit} busy={busy} onChoose={() => void choose(kit)} onStartOver={() => void startOver(kit)} onDesign={() => void designOnly(kit)} />
           ))}
-        </List>
+        </ul>
       )}
       {list.data?.problems.map((p) => <Notice key={p.folder} tone="warning" title={p.folder} className="mt-4">{p.problem}</Notice>)}
-      {applying && <ApplyKit kit={applying} onClose={() => setApplying(null)} />}
       {exporting && <ExportSite onClose={() => setExporting(false)} />}
     </Page>
   )
 }
 
-function Preview({ kit, className }: { kit: Kit; className?: string }) {
-  return kit.previews[0]
-    ? <img src={kit.previews[0]} alt="" className={`shrink-0 rounded-sm border border-border bg-sunken object-cover object-top ${className ?? ''}`} />
-    : <span aria-hidden className={`shrink-0 rounded-sm border border-border bg-sunken ${className ?? ''}`} />
-}
-
-/** What a step brings, in a word: a template and a component are entries of their own collections. */
-function kindOf(step: Step): string {
-  if (step.type === 'entry') return step.collection === 'components' ? t('Component') : step.collection === 'templates' ? t('Template') : t('Entry')
-  const kinds: Record<string, string> = { collection: t('Collection'), global: t('Global Set'), menu: t('Menu'), media: t('File'), file: t('File'), setting: t('Setting'), language: t('Language'), library: t('Library||code'), tokens: t('Design Tokens'), font: t('Font'), custom: t('Custom Code'), script: t('Script'), style: t('Style'), load: t('Script Loading') }
-  // Where the name already says what it is, the kind says where it belongs.
-  if (step.type === 'tokens' || step.type === 'load') return t('Design')
-  return kinds[step.type] ?? step.type
-}
-
-/** What a step brings, as a person names it: its title, else its file's name without folder or extension ("spotlight"), else what it is. */
-function nameOf(step: Step): string {
-  if (step.title) return step.title
-  if (step.type === 'tokens') return t('Design Tokens')
-  if (step.type === 'load') return t('Script Loading')
-  return step.name.split('/').pop()!.replace(/\.[a-z0-9]+$/i, '')
-}
-
-/** What applying would do, counted, the clashes by name, and the choice of what happens to them. */
-function ApplyKit({ kit, onClose }: { kit: Kit; onClose: () => void }) {
-  const [mode, setMode] = useState<Mode>('full')
-  const [clash, setClash] = useState<Clash>('refuse')
-  const [busy, setBusy] = useState(false)
-  const [withoutPlugins, setWithoutPlugins] = useState(false)
-  const plan = useAbility<{ plan: { steps: Step[] } }>('kits/get', { handle: kit.handle, mode, clash })
-  useEffect(() => { if (plan.error) console.error(plan.error) }, [plan.error])
-  // What is already here, by name, whatever is chosen for it: the plan that settles nothing.
-  const unsettled = useAbility<{ plan: { steps: Step[] } }>('kits/get', { handle: kit.handle, mode, clash: 'refuse' })
-  const steps = plan.data?.plan.steps ?? []
-  const clashes = useMemo(() => (unsettled.data?.plan.steps ?? []).filter((s) => s.action === 'clash'), [unsettled.data])
-  const counts = useMemo(() => {
-    const out: Partial<Record<Step['action'], number>> = {}
-    for (const s of steps) out[s.action] = (out[s.action] ?? 0) + 1
-    return out
-  }, [steps])
-  const named = clash !== 'refuse' || clashes.length === 0
-  const missing = kit.missingPlugins.length > 0
-  const lines: [Step['action'], string][] = [
-    ['create', plural(counts.create ?? 0, '{count} new item', '{count} new items')],
-    ['replace', plural(counts.replace ?? 0, '{count} replaced', '{count} replaced')],
-    ['rename', plural(counts.rename ?? 0, '{count} added under a new name', '{count} added under new names')],
-    ['merge', plural(counts.merge ?? 0, '{count} list joined', '{count} lists joined')],
-    ['skip', plural(counts.skip ?? 0, '{count} left as it is', '{count} left as they are')],
-  ]
-
-  const apply = async () => {
-    setBusy(true)
-    try {
-      await run('kits/apply', { handle: kit.handle, mode, clash, withoutPlugins })
-      await queryClient.invalidateQueries()
-      setManifest(await loadManifest())
-      toast.success(t('{name} applied', { name: kit.name }))
-      onClose()
-    } catch (e) {
-      toast.error(e)
-    } finally {
-      setBusy(false)
-    }
-  }
+function KitCard({ kit, busy, onChoose, onStartOver, onDesign }: { kit: Kit; busy: string | null; onChoose: () => void; onStartOver: () => void; onDesign: () => void }) {
+  const needs = kit.missingPlugins.length > 0
+  const switching = busy === kit.handle
+  const chooseable = !kit.active && kit.suits && !needs && busy === null
+  const canReset = kit.source !== 'saved' && (kit.active || kit.edited)
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} title={kit.name} size="md" onSubmit={apply} submitLabel={t('Apply Kit')} busy={busy}
-      submitDisabled={!kit.suits || plan.isPending || !!plan.error || !named || (missing && !withoutPlugins) || steps.every((s) => s.action === 'skip')}>
-      <div className="flex flex-col gap-5">
-        <Field label={t('Bring In')}>
-          <Segmented<Mode> block value={mode} onChange={setMode} aria-label={t('Bring In')} options={[{ value: 'full', label: t('Design and Content') }, { value: 'design', label: t('Design Only') }]} />
-        </Field>
-        {!kit.suits && <Notice tone="danger" title={t('Made for another version')} />}
-        {missing && (
-          <>
-            {/* Add them from the store first, or take the kit without them, knowing what of it needs them may not show. */}
-            <Notice tone="warning" title={t('Needs {plugins}', { plugins: kit.missingPlugins.join(', ') })}
-              action={<Button size="sm" onClick={() => navigate('/plugins?tab=store')}>{t('Open Store')}</Button>} />
-            <Checkbox checked={withoutPlugins} onChange={setWithoutPlugins} label={t('Apply Without Them')} />
-          </>
-        )}
-        {plan.error ? (
-          // What exactly is wrong is for whoever reads the console: here it is said plainly.
-          <QueryError compact title={t('This kit can’t be applied')} message={t('Something in the kit doesn’t fit this site.')} onRetry={() => plan.refetch()} retrying={plan.isFetching} />
-        ) : plan.isPending ? (
-          <List>{[0, 1, 2].map((i) => <Row key={i}><Skeleton className="h-4 w-40" /></Row>)}</List>
-        ) : (
-          <List>
-            {lines.filter(([action]) => counts[action]).map(([action, label]) => <Row key={action}><span className="text-text">{label}</span></Row>)}
-          </List>
-        )}
-        {(clashes.length > 0 || clash !== 'refuse') && (
-          <Field label={t('Already on This Site')}>
-            {/* Nothing is chosen until someone chooses: a clash is never settled for them. */}
-            <Segmented<Clash> block value={clash} onChange={setClash} aria-label={t('Already on This Site')}
-              options={[{ value: 'skip', label: t('Keep the Site’s') }, { value: 'replace', label: t('Replace') }, { value: 'rename', label: t('Keep Both') }]} />
-          </Field>
-        )}
-        {clashes.length > 0 && (
-          <List>
-            {clashes.map((s) => (
-              <Row key={s.type + s.name}>
-                <span className="min-w-0 flex-1 truncate text-text">{nameOf(s)}</span>
-                <span className="shrink-0 text-xs text-muted">{kindOf(s)}</span>
-              </Row>
-            ))}
-          </List>
-        )}
-      </div>
-    </Dialog>
+    <li className="group relative">
+      <button
+        type="button"
+        onClick={onChoose}
+        disabled={!chooseable}
+        aria-current={kit.active || undefined}
+        className={`flex w-full flex-col overflow-hidden rounded-lg border bg-bg p-0 text-left outline-offset-2 transition-[border-color,box-shadow] duration-base enabled:cursor-pointer ${kit.active ? 'border-ink' : 'border-border enabled:hover:border-border-strong enabled:hover:shadow-sm'}`}
+      >
+        <span className="relative block aspect-[16/10] w-full overflow-hidden border-b border-border bg-sunken">
+          {kit.previews[0]
+            ? <img src={kit.previews[0]} alt="" className={`size-full object-cover object-top transition-opacity ${switching ? 'opacity-50' : ''}`} />
+            : <span className="grid size-full place-items-center text-faint"><Icon name="layout" size={28} /></span>}
+          {kit.active && <Badge tone="signal" className="absolute left-2 top-2">{t('Current')}</Badge>}
+        </span>
+        <span className="flex items-center gap-2 px-3 py-2.5">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-ink">{kit.name}</span>
+            <span className="block truncate text-xs text-muted">{caption(kit)}</span>
+          </span>
+          {!kit.active && !needs && kit.suits && <span className="shrink-0 text-xs font-medium text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{switching ? t('Switching…') : t('Switch||kit')}</span>}
+        </span>
+      </button>
+      {needs && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted">
+          <span className="min-w-0 flex-1 truncate">{t('Needs {plugins}', { plugins: kit.missingPlugins.join(', ') })}</span>
+          <Button size="sm" onClick={() => navigate('/plugins?tab=store')}>{t('Open Store')}</Button>
+        </div>
+      )}
+      {(canReset || (!kit.active && kit.source !== 'saved' && kit.suits)) && (
+        <div className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open]:opacity-100">
+          <Menu
+            align="end"
+            trigger={<IconButton icon="dots" label={t('More')} size="sm" disabled={busy !== null} />}
+            items={[
+              !kit.active && kit.source !== 'saved' && kit.suits && !needs && { label: t('Use Only the Design'), icon: 'palette', onSelect: onDesign },
+              canReset && { label: t('Start Over'), icon: 'arrow-counter-clockwise', danger: true, onSelect: onStartOver },
+            ]}
+          />
+        </div>
+      )}
+    </li>
   )
+}
+
+/** One line under a kit's name: what the site is to it, else what it is. */
+function caption(kit: Kit): string {
+  if (!kit.suits) return t('Made for another version')
+  if (kit.active) return kit.edited ? t('Saved as you leave it') : t('How it came')
+  if (kit.edited) return t('Saved as you left it')
+  return kit.description || kit.version
 }
 
 function ExportSite({ onClose }: { onClose: () => void }) {

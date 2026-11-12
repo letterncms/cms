@@ -59,7 +59,95 @@ final class KitApplier
         private readonly Design $design,
         private readonly Code $code,
         private readonly Vendor $vendor,
+        private readonly Kits $kits,
+        private readonly KitExporter $exporter,
+        private readonly KitClearer $clearer,
     ) {}
+
+    /**
+     * Make this site another kit, in one step: the site you leave is saved (a kit's own copy, in storage/kits,
+     * drafts and all), what a kit carries is cleared, and the kit comes in whole. Switching back brings the
+     * saved copy, so nothing is lost by trying a kit; `$fresh` brings the kit as it came instead, and lets go
+     * of the copy that was kept. A failure puts the site back as it was.
+     *
+     * @return array{switched: bool, kit: string, saved: ?array{handle: string, name: string}, steps: list<array>, backup: ?string}
+     */
+    public function switchTo(string $handle, bool $fresh = false, ?User $user = null): array
+    {
+        $active = $this->kits->active();
+
+        if ($handle === $active && ! $fresh) {
+            return ['switched' => false, 'kit' => $handle, 'saved' => null, 'steps' => [], 'backup' => null];
+        }
+
+        $pristine = $this->kits->find($handle);
+        $kept = $this->kits->saved()[$handle] ?? null;
+        $target = $fresh ? ($pristine ?? throw AbilityException::invalid(__('“:handle” has no original to start over from.', ['handle' => $handle]))) : ($kept ?? $this->kits->findOrFail($handle));
+
+        if (! $target->suits(Cms::VERSION)) {
+            throw AbilityException::invalid(__('The kit “:name” needs :brand :versions, and this is :version.', ['name' => $target->handle, 'versions' => (string) $target->cms(), 'version' => Cms::VERSION]));
+        }
+
+        // What the kit as it comes needs; a kept copy was made on this site, with what it ran then.
+        $missing = $pristine !== null ? $this->missingPlugins($pristine) : [];
+
+        if ($missing !== []) {
+            throw new AbilityException(__('The kit “:name” needs plugins this site doesn’t run: :plugins. Add them first.', ['name' => $target->handle, 'plugins' => implode(', ', $missing)]), 'conflict', ['plugins' => $missing]);
+        }
+
+        // Read before anything is touched: a kit that can't be used is refused with the site as it is.
+        $this->files->read($target);
+        // A site with no kit of its own is kept as `site`: when that is the kit asked for, it is read from a copy.
+        $staged = null;
+
+        if ($target->source === 'saved' && $target->handle === ($active ?? 'site')) {
+            $staged = storage_path('framework/kit-switch-'.bin2hex(random_bytes(4)));
+            Files::copyDirectory($target->path, $staged.'/'.$target->handle);
+            $target = Kit::load($staged.'/'.$target->handle, 'saved');
+        }
+
+        $leaving = $this->keep($active);
+        $backup = $this->snapshot($target);
+
+        try {
+            $this->clearer->clear();
+            $applied = $this->apply($target, 'full', 'refuse', $user, withoutPlugins: true, check: false);
+        } catch (Throwable $e) {
+            // The site was saved a moment ago: it comes back.
+            if ($leaving !== null) {
+                try {
+                    $this->clearer->clear();
+                    $this->apply($leaving, 'full', 'refuse', $user, withoutPlugins: true, check: false);
+                } catch (Throwable) {
+                    // The snapshot in storage/backups still has it.
+                }
+            }
+
+            throw $e;
+        } finally {
+            $staged !== null && Files::deleteDirectory($staged);
+        }
+
+        $fresh && Files::deleteDirectory($this->kits->savedPath($handle));
+        $this->kits->activate($handle);
+        $this->kits->flush();
+        app(\Cms\Content\Schemas\SchemaFiles::class)->refresh();
+
+        return ['switched' => true, 'kit' => $handle, 'saved' => $leaving !== null && $leaving->handle !== $handle ? ['handle' => $leaving->handle, 'name' => $leaving->name()] : null, 'steps' => self::report($applied['steps']), 'backup' => $backup];
+    }
+
+    /** The site as it is, kept aside under the handle of the kit it is (or `site`), unless there is nothing in it yet. */
+    private function keep(?string $active): ?Kit
+    {
+        if (! glob(content_path('collections').'/*.yaml') && ! glob(content_path('globals').'/*.yaml')) {
+            return null;
+        }
+
+        $handle = $active ?? 'site';
+        $name = ($this->kits->find($handle) ?? $this->kits->saved()[$handle] ?? null)?->name() ?? trim((string) config('app.name')) ?: $handle;
+
+        return $this->exporter->export($this->kits->savedPath($handle), ['handle' => $handle, 'name' => mb_substr($name, 0, 80)], replace: true, drafts: true)['kit'];
+    }
 
     /** @return list<string> the plugins a kit needs that are not running here */
     public function missingPlugins(Kit $kit): array

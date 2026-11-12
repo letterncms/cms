@@ -2,9 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- **Switch between site kits, and back.** Choose a kit from the site's name at the top of the sidebar, or on **Site Kits**: the site is that kit at once, with nothing to decide. What the site was is saved with the kit it was, drafts included, so switching back brings it as you left it, and the toast has **Undo**. A kit's menu has **Start Over** (the kit as it came) and **Use Only the Design**. `kits/switch` and `php cms kit:switch` do the same for agents and the command line; `kits/list` says which kit the site is (`active`) and which have a saved copy (`edited`). Accounts, the media library, submissions, analytics and every setting a kit doesn't carry stay through a switch. See [Site kits](https://docs.lettern.org/design/site-kits).
+- **The site's favicon is its mark in the admin.** The sidebar shows it beside the site's name, and the product's mark until the site has one.
+- The site's name in the sidebar opens a menu: **Dashboard**, **Open Site**, the site's kits and **Manage Kits**. The name itself still opens the site.
+
 ### Changed
 
+- **Site Kits** is a grid of kits with their pictures, not a list that opens a dialog of options. Choosing one switches to it; the settings of Bring In and Already on This Site are gone from the screen. Putting a kit on top of a site, choosing what happens to what clashes, stays in `kits/apply` and `kit:apply`.
 - A collection's blueprints are a menu at the start of the **Add Field** row, named for the one on view: switch, add, rename and remove them there. The row stays where it is whether there is one blueprint or several, and adding one asks for its name.
+
+### Fixed
+
+- The plugin page in the store can be scrolled again.
 
 ## 0.26.1 (2026-11-12)
 

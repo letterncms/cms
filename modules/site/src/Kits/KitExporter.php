@@ -147,7 +147,7 @@ final class KitExporter
     }
 
     /** @return array<string, Collection> the collections whose definitions or entries travel */
-    private function collections(): array
+    public function collections(): array
     {
         $out = [];
 
@@ -269,7 +269,7 @@ final class KitExporter
     }
 
     /** @return list<string> every plain file under a folder, as paths inside it, without what is hidden */
-    private function tree(string $root): array
+    public function tree(string $root): array
     {
         if (! is_dir($root)) {
             return [];

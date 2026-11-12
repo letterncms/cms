@@ -58,7 +58,7 @@ export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { 
 
   return (
     <Slideover id="store-item" open expanded={expanded} onExpandedChange={setExpanded} onOpenChange={(next) => { if (!next) onClose() }} title={item.title} icon="plugin">
-      <div className="mx-auto max-w-5xl p-4 sm:p-6">
+      <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl p-4 sm:p-6">
         <header className="flex flex-wrap items-start gap-4">
           <ItemIcon item={item} icon={icon} size="lg" />
           {/* Its words keep a column's width: on a phone the buttons go under them instead of squeezing them to a word a line. */}
@@ -135,6 +135,7 @@ export function StoreDetail({ item, icon, onClose, busy, locked, onInstall }: { 
             )}
           </aside>
         </div>
+      </div>
       </div>
     </Slideover>
   )
