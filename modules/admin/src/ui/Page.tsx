@@ -3,7 +3,7 @@ import { Fragment, Suspense, createContext, isValidElement, useContext, useEffec
 import { createPortal } from 'react-dom'
 import { cn } from './cn'
 import { Icon } from './Icon'
-import { homedSettings, inSettings, noteParent, placeAt, wayBack } from './place'
+import { homedSettings, inSettings, noteParent, placeAt, settingsHome, wayBack } from './place'
 import { WorkspaceContext } from './WorkspaceContext'
 import { Tabs } from './Segmented'
 import { Spinner } from './Spinner'
@@ -27,9 +27,10 @@ export interface Crumb {
 export function Topbar({ crumbs: own = [], back, title, actions, children, className, slot }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void }) {
   const manifest = useManifestIfLoaded()
   const { path } = useLocation()
-  // A place of the settings sidebar says so first, on every one of its screens.
+  // A place of the settings sidebar says so first, on every one of its screens; it leads where settings open, never through /settings's redirect.
   const settings = !!manifest && inSettings(manifest, path)
-  const crumbs = settings ? [{ label: t('Settings'), to: '/settings', icon: undefined }, ...own.map((c) => ({ ...c, icon: undefined }))] : own
+  const home = settings ? settingsHome(manifest) : undefined
+  const crumbs = settings ? [{ label: t('Settings'), to: home === path ? undefined : home, icon: undefined }, ...own.map((c) => ({ ...c, icon: undefined }))] : own
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
   // An editor's document (`title`) names the screen before its crumbs do: "Home", not "Pages".
