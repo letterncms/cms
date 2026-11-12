@@ -65,6 +65,7 @@ final class Past
             'kits/apply' => __('Applied Site Kit'),
             'kits/switch' => __('Switched Site Kit'),
             'kits/import' => __('Imported Site Kit'),
+            'kits/update' => __('Changed Site Kit Details'),
             'kits/export' => __('Exported Site as a Kit'),
             'languages/create' => __('Added Language'),
             'languages/delete' => __('Removed Language'),

@@ -1,4 +1,4 @@
-import { navigate, run, queryClient, t, useAbility, useManifest } from '@letterncms/sdk'
+import { loadManifest, navigate, run, queryClient, setManifest, t, useAbility, useManifest } from '@letterncms/sdk'
 import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 
@@ -24,6 +24,7 @@ export default function Kits() {
   const list = useAbility<{ kits: Kit[]; problems: { folder: string; problem: string }[] }>('kits/list')
   const [busy, setBusy] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [editing, setEditing] = useState<Kit | null>(null)
   const file = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
 
@@ -100,21 +101,23 @@ export default function Kits() {
       ) : (
         <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
           {list.data.kits.map((kit) => (
-            <KitCard key={kit.handle} kit={kit} busy={busy} onChoose={() => void choose(kit)} onStartOver={() => void startOver(kit)} onDesign={() => void designOnly(kit)} />
+            <KitCard key={kit.handle} kit={kit} busy={busy} onChoose={() => void choose(kit)} onStartOver={() => void startOver(kit)} onDesign={() => void designOnly(kit)} onEdit={() => setEditing(kit)} />
           ))}
         </ul>
       )}
       {list.data?.problems.map((p) => <Notice key={p.folder} tone="warning" title={p.folder} className="mt-4">{p.problem}</Notice>)}
-      {exporting && <ExportSite onClose={() => setExporting(false)} />}
+      {exporting && <KitDetails onClose={() => setExporting(false)} />}
+      {editing && <KitDetails kit={editing} onClose={() => setEditing(null)} />}
     </Page>
   )
 }
 
-function KitCard({ kit, busy, onChoose, onStartOver, onDesign }: { kit: Kit; busy: string | null; onChoose: () => void; onStartOver: () => void; onDesign: () => void }) {
+function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit }: { kit: Kit; busy: string | null; onChoose: () => void; onStartOver: () => void; onDesign: () => void; onEdit: () => void }) {
   const needs = kit.missingPlugins.length > 0
   const switching = busy === kit.handle
   const chooseable = !kit.active && kit.suits && !needs && busy === null
   const canReset = kit.source !== 'saved' && (kit.active || kit.edited)
+  const canEdit = kit.source !== 'builtin'
 
   return (
     <li className="group relative">
@@ -145,12 +148,13 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign }: { kit: Kit; bus
           <Button size="sm" onClick={() => navigate('/plugins?tab=store')}>{t('Open Store')}</Button>
         </div>
       )}
-      {(canReset || (!kit.active && kit.source !== 'saved' && kit.suits)) && (
+      {(canEdit || canReset || (!kit.active && kit.source !== 'saved' && kit.suits)) && (
         <div className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open]:opacity-100">
           <Menu
             align="end"
             trigger={<IconButton icon="dots" label={t('More')} size="sm" disabled={busy !== null} />}
             items={[
+              canEdit && { label: t('Edit Details'), icon: 'edit', onSelect: onEdit },
               !kit.active && kit.source !== 'saved' && kit.suits && !needs && { label: t('Use Only the Design'), icon: 'palette', onSelect: onDesign },
               canReset && { label: t('Start Over'), icon: 'arrow-counter-clockwise', danger: true, onSelect: onStartOver },
             ]}
@@ -167,14 +171,20 @@ const bytesToBase64 = (bytes: Uint8Array) => {
   return btoa(binary)
 }
 
-function ExportSite({ onClose }: { onClose: () => void }) {
+/**
+ * What a kit says of itself: a name, a description and a thumbnail. One form for both ways in: **Export Site** (no `kit`: it makes
+ * a kit of this site, and the description it leaves empty is the site's) and **Edit Details** of a kit that is there.
+ */
+function KitDetails({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
   const site = useManifest().site
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+  const [name, setName] = useState(kit?.name ?? '')
+  const [description, setDescription] = useState(kit?.description ?? '')
   const [picture, setPicture] = useState<File | null>(null)
+  const [removed, setRemoved] = useState(false)
   const [busy, setBusy] = useState(false)
   const file = useRef<HTMLInputElement>(null)
-  const handle = slugify(name)
+  const handle = kit?.handle ?? slugify(name)
+  const current = !removed && !picture ? kit?.previews[0] : undefined
   const type = picture ? ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' } as Record<string, string>)[picture.type] : undefined
   const shown = useMemo(() => (picture ? URL.createObjectURL(picture) : null), [picture])
 
@@ -182,6 +192,17 @@ function ExportSite({ onClose }: { onClose: () => void }) {
     setBusy(true)
     try {
       const preview = picture && type ? { preview: bytesToBase64(new Uint8Array(await picture.arrayBuffer())), previewType: type } : {}
+
+      if (kit) {
+        await run('kits/update', { handle, name: name.trim(), description: description.trim(), ...preview, ...(removed ? { removePreview: true } : {}) })
+        await queryClient.invalidateQueries()
+        await queryClient.refetchQueries()
+        setManifest(await loadManifest())
+        toast.success(t('{name} saved', { name: name.trim() }))
+        onClose()
+        return
+      }
+
       // The kit as a zip, downloaded: nothing is added to this site.
       const made = await run<{ kit: Kit; files: number }>('kits/export', { handle, name: name.trim(), ...(description.trim() ? { description: description.trim() } : {}), ...preview, zip: true })
       download(made)
@@ -195,7 +216,7 @@ function ExportSite({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} title={t('Export Site')} size="sm" onSubmit={save} submitLabel={t('Export Site')} busy={busy} submitDisabled={!handle || (!!picture && !type)}>
+    <Dialog open onOpenChange={(open) => !open && onClose()} title={kit ? t('Edit Details') : t('Export Site')} size="sm" onSubmit={save} submitLabel={kit ? t('Save') : t('Export Site')} busy={busy} submitDisabled={!handle || (!!picture && !type)}>
       <div className="flex flex-col gap-4">
         <Field label={t('Name')} htmlFor="kit-name">
           <Input id="kit-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus maxLength={80} />
@@ -204,14 +225,14 @@ function ExportSite({ onClose }: { onClose: () => void }) {
           <Textarea id="kit-description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={site.description || undefined} maxLength={400} />
         </Field>
         <Field label={t('Thumbnail')}>
-          <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => setPicture(e.target.files?.[0] ?? null)} />
+          <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { setPicture(e.target.files?.[0] ?? null); setRemoved(false) }} />
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => file.current?.click()} className="grid h-14 w-24 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-sm border border-border bg-sunken p-0 text-faint hover:border-border-strong">
-              {shown ? <img src={shown} alt="" className="size-full object-cover object-top" /> : <Icon name="upload" size={18} />}
+              {shown || current ? <img src={shown ?? current} alt="" className="size-full object-cover object-top" /> : <Icon name="upload" size={18} />}
             </button>
             <div className="flex min-w-0 flex-col items-start gap-1">
-              <Button size="sm" onClick={() => file.current?.click()}>{picture ? t('Replace') : t('Upload')}</Button>
-              {picture && <Button size="sm" variant="ghost" onClick={() => { setPicture(null); if (file.current) file.current.value = '' }}>{t('Remove')}</Button>}
+              <Button size="sm" onClick={() => file.current?.click()}>{picture || current ? t('Replace') : t('Upload')}</Button>
+              {(picture || current) && <Button size="sm" variant="ghost" onClick={() => { setPicture(null); setRemoved(true); if (file.current) file.current.value = '' }}>{t('Remove')}</Button>}
               {picture && !type && <span className="text-xs text-danger">{t('Use a .png, .jpg or .webp.')}</span>}
             </div>
           </div>

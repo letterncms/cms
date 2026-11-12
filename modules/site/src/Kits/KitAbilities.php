@@ -35,8 +35,9 @@ final class KitAbilities
      * @param  Closure(): KitApplier  $applier
      * @param  Closure(): KitExporter  $exporter
      * @param  Closure(): KitImporter  $importer
+     * @param  Closure(): KitEditor  $editor
      */
-    public static function register(Cms $cms, Closure $kits, Closure $applier, Closure $exporter, Closure $importer): void
+    public static function register(Cms $cms, Closure $kits, Closure $applier, Closure $exporter, Closure $importer, Closure $editor): void
     {
         $abilities = $cms->abilities();
         $describe = static fn (Kit $kit) => [
@@ -128,6 +129,19 @@ final class KitAbilities
                 $kits()->flush();
 
                 return [...array_filter($result, static fn ($v, $k) => $k !== 'saved' || $v !== null, ARRAY_FILTER_USE_BOTH), 'kit' => $describe($kits()->saved()[$result['kit']] ?? $kits()->findOrFail($result['kit']))];
+            },
+        ]);
+
+        $abilities->register('kits/update', [
+            'label' => 'Change a Site Kit’s Details',
+            'description' => 'Change what a kit says of itself: its `name`, its `description` (empty takes it away) and its thumbnail (`preview`, base64, with `previewType` png, jpg or webp; or `removePreview`). {"handle": "studio", "name": "Studio Two"}. Only a kit in the site’s kits/ (and the copy kept of it) can be changed; one that comes with the CMS can’t. The kit’s files are not touched.',
+            'permission' => 'settings.manage',
+            'input' => ['type' => 'object', 'properties' => [...$handle, 'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 80], 'description' => ['type' => 'string', 'maxLength' => 400], 'preview' => ['type' => 'string', 'description' => 'A picture, base64 (at most 5 MB); with previewType.'], 'previewType' => ['type' => 'string', 'enum' => ['png', 'jpg', 'webp']], 'removePreview' => ['type' => 'boolean']], 'required' => ['handle']],
+            'output' => Shape::of(['kit' => self::kit()]),
+            'handler' => static function (array $in) use ($kits, $editor, $describe): array {
+                $editor()->update((string) $in['handle'], array_diff_key($in, ['handle' => 1]));
+
+                return ['kit' => $describe($kits()->find((string) $in['handle']) ?? $kits()->saved()[(string) $in['handle']])];
             },
         ]);
 
