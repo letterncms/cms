@@ -372,7 +372,6 @@
   "This server’s clock looks wrong. Updates are paused. The public site is not affected.": "De klok van deze server lijkt niet te kloppen. Updates zijn gepauzeerd. De openbare site merkt er niets van.",
   "This site does not change its own files. Update it through your deploy.": "Deze site wijzigt zijn eigen bestanden niet. Werk hem bij via je deploy.",
   "This site is managed with Composer. Add plugins with: composer require letterncms/seo": "Deze site wordt beheerd met Composer. Voeg plugins toe met: composer require letterncms/seo",
-  "This site is managed with Composer. Run: composer require :package": "Deze site wordt beheerd met Composer. Voer uit: composer require :package",
   "This site is managed with Composer. Update it with composer update.": "Deze site wordt beheerd met Composer. Werk hem bij met composer update.",
   "This site now runs :version, and it checked itself after the switch. Nothing else is needed.": "Deze site draait nu :version en heeft zichzelf na de overschakeling gecontroleerd. Er is niets anders nodig.",
   "This surface action is unavailable.": "Deze interfaceactie is niet beschikbaar.",

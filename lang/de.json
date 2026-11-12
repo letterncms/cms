@@ -372,7 +372,6 @@
   "This server’s clock looks wrong. Updates are paused. The public site is not affected.": "Die Uhr dieses Servers scheint falsch zu gehen. Updates sind pausiert. Die öffentliche Website ist nicht betroffen.",
   "This site does not change its own files. Update it through your deploy.": "Diese Website ändert ihre eigenen Dateien nicht. Aktualisiere sie über dein Deployment.",
   "This site is managed with Composer. Add plugins with: composer require letterncms/seo": "Diese Website wird mit Composer verwaltet. Füge Plugins hinzu mit: composer require letterncms/seo",
-  "This site is managed with Composer. Run: composer require :package": "Diese Website wird mit Composer verwaltet. Führe aus: composer require :package",
   "This site is managed with Composer. Update it with composer update.": "Diese Website wird mit Composer verwaltet. Aktualisiere sie mit composer update.",
   "This site now runs :version, and it checked itself after the switch. Nothing else is needed.": "Diese Website läuft jetzt mit :version und hat sich nach dem Wechsel selbst geprüft. Mehr ist nicht nötig.",
   "This surface action is unavailable.": "Diese Aktion der Oberfläche ist nicht verfügbar.",
