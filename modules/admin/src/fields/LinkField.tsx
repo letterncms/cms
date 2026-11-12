@@ -1,5 +1,6 @@
 import { fieldControlId } from '../ui/fieldIdentity'
 import { Pressable } from '../ui/Pressable'
+import { controlSizes } from '../ui/controlSize'
 import { can, t, useAbility, useManifest, type EntrySummary, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon, Popover, Spinner, Switch, cn } from '../ui'
@@ -24,7 +25,9 @@ export function LinkField({ field, value, onChange, disabled }: FieldProps<strin
   // `autofocus` (a link being added from a toolbar) opens the picker right away.
   const [open, setOpen] = useState(!!field.autofocus && !disabled)
   const link = parse(value ?? '')
-  const xs = field.size === 'xs'
+  const size = field.size === 'xs' || field.size === 'sm' || field.size === 'lg' ? field.size : 'md'
+  const xs = size === 'xs'
+  const padding = { xs: 'gap-1.5 px-1.5', sm: 'gap-2 px-2', md: 'gap-2 px-2.5', lg: 'gap-2 px-3' }[size]
   const onNewTab = field.onNewTab as ((on: boolean) => void) | undefined
   const newTab = !!field.newTab
 
@@ -46,7 +49,8 @@ export function LinkField({ field, value, onChange, disabled }: FieldProps<strin
             aria-label={field.label || t('Link')}
             className={cn(
               'cms-input flex w-full min-w-0 items-center text-left',
-              xs ? 'h-6 gap-1.5 rounded-xs pl-1.5 pr-1.5 text-xs' : 'h-8 gap-2 rounded-md pl-2.5 pr-2.5 text-sm',
+              controlSizes[size],
+              padding,
               link.kind !== 'none' && (xs ? 'pr-6' : 'pr-8'),
             )}
           >

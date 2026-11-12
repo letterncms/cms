@@ -187,7 +187,7 @@ function Access({ id, value, onChange }: { id: string; value: Staged; onChange: 
         <Field label={held.length > 0 || value.add.length > 0 ? t('Access Name') : t('Page Access')} htmlFor="person-access">
           <div className="flex items-center gap-2">
             <Input id="person-access" className="min-w-0 flex-1" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }} />
-            <Button disabled={name.trim() === ''} onClick={add}>{t('Add Access')}</Button>
+            <Button size="md" disabled={name.trim() === ''} onClick={add}>{t('Add Access')}</Button>
           </div>
         </Field>
       )}

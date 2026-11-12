@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { calendarDayKey, calendarRange } from './calendar'
 import { readTime } from './dateTime'
 import { cn } from './cn'
+import { controlSizes } from './controlSize'
 import { Icon } from './Icon'
 import { IconButton } from './Button'
 import { Input } from './Input'
@@ -28,7 +29,7 @@ export function DateInput({ value, onChange, id, disabled, invalid, required, si
       aria-invalid={invalid || undefined}
       aria-required={required || undefined}
       // A field's own look (cms-input): its edge, hover, focus, invalid and disabled states are every field's.
-      className={cn('cms-input flex w-full min-w-0 items-center gap-2 text-left', size === 'sm' ? 'h-7 rounded-sm px-2 text-sm' : 'h-8 rounded-md px-2.5 text-sm', className)}
+      className={cn('cms-input flex w-full min-w-0 items-center gap-2 text-left', controlSizes[size], size === 'sm' ? 'px-2' : 'px-2.5', className)}
     >
       <Icon name="calendar" size={14} className="shrink-0 text-faint" />
       <span className={cn('min-w-0 flex-1 truncate tabular-nums', !day && 'text-ghost')}>{day ? writeDay(day) : t('Choose a Date')}</span>

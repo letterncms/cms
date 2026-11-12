@@ -1,5 +1,6 @@
 import { forwardRef, useLayoutEffect, useRef, type InputHTMLAttributes, type MouseEvent, type TextareaHTMLAttributes } from 'react'
 import { cn } from './cn'
+import { controlSizes, type ControlSize } from './controlSize'
 import { Icon } from './Icon'
 
 /** `.cms-input` (app.css) draws the field: border, hover, focus, invalid, disabled, quiet, and white slips on the desk. */
@@ -14,15 +15,13 @@ export function selectFieldTextOnClick(event: MouseEvent<HTMLInputElement | HTML
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   icon?: string
-  size?: 'xs' | 'sm' | 'md' | 'lg'
+  size?: ControlSize
   invalid?: boolean
   suffix?: React.ReactNode
   /** `quiet`: no border until hovered or focused — for inline edits in a table or a toolbar. */
   appearance?: 'default' | 'quiet'
 }
 
-// xs is the inspector density; md the forms'.
-const heights = { xs: 'h-6 rounded-xs text-xs', sm: 'h-7 rounded-sm text-sm', md: 'h-8 rounded-md text-sm', lg: 'h-10 rounded-lg text-base' }
 const padding = { xs: ['pl-1.5', 'pr-1.5', 'pl-6', 'left-1.5'], sm: ['pl-2', 'pr-2', 'pl-7', 'left-2'], md: ['pl-2.5', 'pr-2.5', 'pl-[30px]', 'left-2.5'], lg: ['pl-3', 'pr-3', 'pl-9', 'left-3'] }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ icon, size = 'md', invalid, suffix, appearance = 'default', className, ...props }, ref) {
@@ -31,7 +30,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ i
     // As wide as its place, also in a row beside other controls, unless the caller gives it a width.
     <div className={cn('relative flex min-w-0 items-center', !/(^|\s)([\w-]+:)*!?w-/.test(className ?? '') && 'w-full', className)}>
       {icon && <Icon name={icon} size={size === 'xs' ? 12 : 14} className={cn('pointer-events-none absolute z-raised text-faint', iconAt)} />}
-      <input ref={ref} aria-invalid={invalid || undefined} className={cn(base, appearance === 'quiet' && 'cms-input-quiet', heights[size], icon ? withIcon : left, suffix ? 'pr-16' : right)} {...props} />
+      <input ref={ref} aria-invalid={invalid || undefined} className={cn(base, appearance === 'quiet' && 'cms-input-quiet', controlSizes[size], icon ? withIcon : left, suffix ? 'pr-16' : right)} {...props} />
       {suffix && <div className="absolute right-2 flex items-center gap-1 text-xs text-faint">{suffix}</div>}
     </div>
   )
@@ -79,7 +78,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         grow()
         onInput?.(e)
       }}
-      className={cn(appearance === 'plain' ? 'w-full min-h-0 resize-none rounded-none border-0 bg-transparent p-0 outline-none' : cn(base, appearance === 'quiet' && 'cms-input-quiet', 'block min-h-[72px] rounded-md px-2.5 py-[7px] leading-[20px] resize-none'), className)}
+      className={cn(appearance === 'plain' ? 'w-full min-h-0 resize-none rounded-none border-0 bg-transparent p-0 outline-none' : cn(base, appearance === 'quiet' && 'cms-input-quiet', 'block resize-none rounded-md px-2.5 leading-5', props.rows === 1 ? 'min-h-8 py-1.25' : 'min-h-[72px] py-[7px]'), className)}
       {...props}
     />
   )

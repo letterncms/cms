@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Buttons line up with their fields** when you copy agent details, show or copy a connection key, or add page access. Link and colour pickers match the fields around them, and long agent details wrap on narrow screens.
+
 ## 0.30.2 (2026-11-12)
 
 ### Changed
