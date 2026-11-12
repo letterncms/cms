@@ -1,11 +1,11 @@
-import { adminUrl, CmsError, Link, panelsFor, registry, t, useAction, useLocation, useManifest, type ComposerOption, type SurfaceAction } from '@letterncms/sdk'
+import { adminUrl, CmsError, Link, navigate, panelsFor, registry, t, useAction, useLocation, useManifest, type ComposerOption, type SurfaceAction } from '@letterncms/sdk'
 import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, useShortcutLabel, type ActionAsker, type ActionRunner } from '@letterncms/ui'
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Composer, coarse } from './Composer'
 import { History, NewChatButton } from './History'
 import { Rename } from './Rename'
 import { Markdown } from './Markdown'
-import { agent, panel, threadAt, useFloating, usePanel } from './store'
+import { agent, chooseMode, chosenMode, panel, ready, setup, threadAt, useFloating, usePanel } from './store'
 import { answerText, OPEN, opened, type AnswerTurn, type Call, type Part, type Turn, type UserTurn } from './transcript'
 import { go, useThread } from './useThread'
 
@@ -61,6 +61,8 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
   const column = full && wide
   const thread = useThread(id, fresh)
   const answering = agent()
+  // AI picked before it's set up: the composer says what's missing instead of searching.
+  const unset = chosenMode() === 'ai' && !ready() ? setup() : null
   useEffect(() => panel.set({ awaiting: thread.awaiting.length > 0 }), [thread.awaiting.length])
   const remove = useAction<{ deleted: boolean }, { id: string }>('threads/delete', {
     invalidates: ['threads/list'],
@@ -107,7 +109,7 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
   const sendable = !!draft.trim() || !!skill
   const blocked = thread.busy || thread.loading || remove.isPending || editing !== null
   const submit = () => {
-    if (!sendable || blocked) return
+    if (!sendable || blocked || unset) return
     pinned.current = true
     // A skill says enough by itself.
     thread.send(draft.trim() || skill!.label)
@@ -232,7 +234,7 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
             {thread.loading ? (
               <div className="grid h-full place-items-center text-faint"><Spinner /></div>
             ) : thread.turns.length === 0 ? (
-              <Welcome asking={!!answering} />
+              <Welcome asking={!!answering || !!unset} />
             ) : (
               <Runner.Provider value={{ run: runner, ask }}><div className="cms-thread-turns cms-thread-width space-y-6 py-5">
                 {thread.turns.map((turn, i) => (
@@ -259,11 +261,24 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
             </div>
           )}
 
+          {unset && (
+            <div className="cms-thread-width w-full shrink-0 pb-2">
+              <Notice
+                tone="info"
+                icon="sparkle"
+                title={t('{name} isn’t set up yet', { name: unset.label })}
+                action={unset.to ? <Button size="sm" onClick={() => navigate(unset.to!)}>{t('Set Up')}</Button> : <Button size="sm" variant="secondary" onClick={() => chooseMode('local')}>{t('Use Local')}</Button>}
+              >
+                {unset.to ? null : t('Ask an administrator to set it up.')}
+              </Notice>
+            </div>
+          )}
+
           {thread.awaiting.length > 0 && editing === null && <Approval calls={thread.awaiting} onDecide={thread.decide} />}
 
           <div className="cms-thread-footer cms-thread-width w-full shrink-0">
             <Composer
-              placeholder={thread.awaiting.length ? t('Or say what to do instead…') : answering ? t('Ask anything, or / for a command') : t('Search, or / for a command')}
+              placeholder={thread.awaiting.length ? t('Or say what to do instead…') : answering || unset ? t('Ask anything, or / for a command') : t('Search, or / for a command')}
               focus={focus}
               busy={blocked}
               onSubmit={submit}
@@ -271,13 +286,13 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
             >
               <div className="flex items-center gap-2 px-2 pb-2">
                 <div className="flex min-w-0 flex-1 items-center">
-                  <Mode agent={answering} />
+                  <Mode />
                   {footer.map(({ id: panelId, component: Footer }) => <Footer key={panelId} {...composerProps} />)}
                 </div>
                 {thread.busy && answering ? (
                   <IconButton icon="stop" label={t('Stop')} variant="secondary" onClick={thread.stop} />
                 ) : (
-                  <IconButton icon="arrow-up" label={answering ? t('Send') : t('Search')} variant="primary" onClick={submit} disabled={!sendable || blocked || !!commands[key]} />
+                  <IconButton icon="arrow-up" label={answering ? t('Send') : t('Search')} variant="primary" onClick={submit} disabled={!sendable || blocked || !!unset || !!commands[key]} />
                 )}
               </div>
             </Composer>
@@ -288,15 +303,41 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
   )
 }
 
-/** Whether the composer asks the AI or searches and runs commands on the site alone: always in view, next to the model. */
-function Mode({ agent }: { agent: { label: string } | null }) {
+/** Whether plain words go to the AI or stay on the site, next to the model: switched here, offered once there is an AI to switch to. */
+function Mode() {
+  usePanel()
+  const ai = ready() ?? setup()
+  const local = !ai || chosenMode() === 'local'
+  const label = (
+    <span className="flex items-center gap-1">
+      <Icon name={local ? 'desktop' : 'sparkle'} size={12} className="shrink-0" />
+      {local ? t('Local search') : t('Assistant')}
+    </span>
+  )
+  if (!ai) {
+    return (
+      <Tooltip content={t('Searches and runs commands on this site')}>
+        <span tabIndex={0} data-mode="local" className="flex h-7 shrink-0 items-center rounded-sm px-2 text-xs text-muted outline-offset-1">{label}</span>
+      </Tooltip>
+    )
+  }
   return (
-    <Tooltip content={agent ? t('{name} answers', { name: agent.label }) : t('Searches and runs commands on this site')}>
-      <span tabIndex={0} data-mode={agent ? 'ai' : 'local'} className={cn('flex h-7 shrink-0 items-center gap-1 rounded-sm px-2 text-xs outline-offset-1', agent ? 'text-text' : 'text-muted')}>
-        <Icon name={agent ? 'sparkle' : 'desktop'} size={12} />
-        {agent ? t('AI') : t('Local')}
-      </span>
-    </Tooltip>
+    <Menu
+      side="top"
+      align="start"
+      className="w-48"
+      trigger={
+        <Button variant="ghost" data-mode={local ? 'local' : 'ai'} aria-label={t('Mode: {name}', { name: local ? t('Local search') : t('Assistant') })} className={cn('shrink-0 !gap-1 !pl-2 !pr-1.5 !text-xs !font-normal hover:!text-text data-[popup-open]:bg-hover data-[popup-open]:!text-text', local ? '!text-muted' : '!text-text')}>
+          {label}
+          <Icon name="chevron-down" size={12} className="shrink-0 text-faint" />
+        </Button>
+      }
+      items={[
+        { label: t('Mode'), heading: true },
+        { label: t('Assistant'), icon: 'sparkle', checked: !local, onSelect: () => chooseMode('ai') },
+        { label: t('Local search'), icon: 'desktop', checked: local, onSelect: () => chooseMode('local') },
+      ]}
+    />
   )
 }
 

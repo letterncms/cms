@@ -9,6 +9,7 @@ use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Packages\Plugin;
 use Cms\Support\Schema\Shape;
+use Cms\Users\User;
 
 /**
  * Claude in the workspace: the agent that answers plain language in its threads
@@ -42,6 +43,19 @@ final class AssistantModule extends Plugin
         ], icon: 'sparkle', description: 'API key, models and approvals.', order: 60, section: 'system');
 
         $this->abilities();
+
+        // The chat offers AI before it is set up: switching to it says what is missing, and where to add it.
+        $this->cms()->hooks()->addFilter('admin.manifest', function (array $manifest, User $user) {
+            if (! $user->hasPermission('assistant.use') || $this->app->make(Claude::class)->configured()) {
+                return $manifest;
+            }
+            $workspace = (array) ($manifest['config']['workspace'] ?? []);
+
+            return [...$manifest, 'config' => [...($manifest['config'] ?? []), 'workspace' => [...$workspace, 'setup' => [
+                'label' => $this->app->make(Agent::class)->label(),
+                'to' => $user->hasPermission('settings.manage') ? '/settings/assistant' : null,
+            ]]]];
+        });
 
         $this->adminModule();
     }

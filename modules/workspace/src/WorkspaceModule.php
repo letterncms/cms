@@ -43,6 +43,7 @@ final class WorkspaceModule extends Plugin
             $agent = $this->app->make(Workspace::class)->agent();
 
             return [...$manifest, 'config' => [...($manifest['config'] ?? []), 'workspace' => [
+                ...(array) ($manifest['config']['workspace'] ?? []),
                 'agent' => $agent->available($user) ? ['name' => $agent->name(), 'label' => $agent->label()] : null,
             ]]];
         });

@@ -120,8 +120,13 @@
   "Where people work: threads at the right edge of the admin, answered with views, for commands, search and an agent when there is one.": "Là où l’on travaille : des discussions sur le bord droit de l’admin, avec des vues pour réponses, pour les commandes, la recherche et un agent s’il y en a un.",
   "Working…": "En cours…",
   "Workspace": "Espace de travail",
-  "AI": "IA",
-  "Local": "Local",
-  "{name} answers": "{name} répond",
-  "Searches and runs commands on this site": "Recherche et exécute des commandes sur ce site"
+  "Searches and runs commands on this site": "Recherche et exécute des commandes sur ce site",
+  "Mode": "Mode",
+  "Mode: {name}": "Mode : {name}",
+  "{name} isn’t set up yet": "{name} n’est pas encore configuré",
+  "Set Up": "Configurer",
+  "Use Local": "Utiliser le mode local",
+  "Ask an administrator to set it up.": "Demandez à un administrateur de le configurer.",
+  "Assistant": "Assistant",
+  "Local search": "Recherche locale"
 }

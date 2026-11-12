@@ -1,7 +1,7 @@
 import { getManifest, registry, run, t, type ComposerPanelProps } from '@letterncms/sdk'
 
-/** Whether Claude answers this person in the workspace's threads: what it puts under @ and / and in the composer is only there then. */
-export const answering = (agent = getManifest().config?.workspace?.agent as ComposerPanelProps['agent'] | undefined) => agent?.name === 'assistant'
+/** Whether Claude answers this person in the workspace's threads (set up, and not switched to Local): what it puts under @ and / and in the composer is only there then. */
+export const answering = (agent = getManifest().user.preferences?.['workspace.mode'] === 'local' ? null : getManifest().config?.workspace?.agent as ComposerPanelProps['agent'] | undefined) => agent?.name === 'assistant'
 const matches = (query: string, ...words: (string | undefined)[]) => words.some((word) => word?.toLowerCase().includes(query.toLowerCase()))
 
 let skills: Promise<{ name: string; label: string; description: string; icon: string }[]> | null = null

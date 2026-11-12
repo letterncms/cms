@@ -120,8 +120,13 @@
   "Working…": "Wird ausgeführt…",
   "Workspace": "Arbeitsbereich",
   "Would Change": "Würde sich ändern",
-  "AI": "KI",
-  "Local": "Lokal",
-  "{name} answers": "{name} antwortet",
-  "Searches and runs commands on this site": "Sucht und führt Befehle auf dieser Website aus"
+  "Searches and runs commands on this site": "Sucht und führt Befehle auf dieser Website aus",
+  "Mode": "Modus",
+  "Mode: {name}": "Modus: {name}",
+  "{name} isn’t set up yet": "{name} ist noch nicht eingerichtet",
+  "Set Up": "Einrichten",
+  "Use Local": "Lokal verwenden",
+  "Ask an administrator to set it up.": "Bitte eine Administratorin oder einen Administrator, es einzurichten.",
+  "Assistant": "Assistent",
+  "Local search": "Lokale Suche"
 }

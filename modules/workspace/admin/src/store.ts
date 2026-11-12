@@ -1,4 +1,4 @@
-import { boot, getManifest, navigate, useScreen, type ComposerOption, type ContextItem } from '@letterncms/sdk'
+import { boot, getManifest, navigate, setPreference, useScreen, type ComposerOption, type ContextItem } from '@letterncms/sdk'
 import { useSyncExternalStore } from 'react'
 
 /** Where the thread is: out of the way, docked beside the page, or taking the whole window (a thread's own URL). */
@@ -45,6 +45,8 @@ interface State {
   working: { thread: string | null; title: string } | null
   /** Calls in the thread wait for this person's go-ahead. */
   awaiting: boolean
+  /** The mode last switched to here, so what reads it is drawn again (the preference holds it). */
+  chosen?: 'ai' | 'local'
 }
 
 const OPEN = 'cms.chat.open'
@@ -87,9 +89,33 @@ export function threadAt(path: string): string | null | undefined {
   return match ? (match[1] === 'new' ? null : decodeURIComponent(match[1])) : undefined
 }
 
-/** The agent that answers plain language for this person, when there is one: without it, a message is a search and nothing mentions AI. */
-export function agent(): { name: string; label: string } | null {
+const MODE = 'workspace.mode'
+
+/** Whether plain words go to the AI or stay on the site (a search), as this person last switched it; until then, AI once it's set up. */
+export function chosenMode(): 'ai' | 'local' {
+  const saved = getManifest().user.preferences?.[MODE]
+  return saved === 'local' || saved === 'ai' ? saved : ready() ? 'ai' : 'local'
+}
+
+/** Switch it: from the next message on, in every thread. */
+export function chooseMode(mode: 'ai' | 'local') {
+  void setPreference(MODE, mode).catch(() => {})
+  panel.set({ chosen: mode })
+}
+
+/** The agent this site has for this person, set up and theirs to use, whatever mode they're in. */
+export function ready(): { name: string; label: string } | null {
   return (getManifest().config?.workspace?.agent as { name: string; label: string } | null | undefined) ?? null
+}
+
+/** An agent this person could use once it's set up: its name, and where to set it up when they may. */
+export function setup(): { label: string; to: string | null } | null {
+  return (getManifest().config?.workspace?.setup as { label: string; to: string | null } | null | undefined) ?? null
+}
+
+/** The agent that answers plain language now: none in Local mode, or without one, and then a message is a search. */
+export function agent(): { name: string; label: string } | null {
+  return chosenMode() === 'local' ? null : ready()
 }
 
 const here = () => window.location.pathname.slice(boot.base.length) || '/'

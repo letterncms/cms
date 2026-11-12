@@ -445,8 +445,13 @@ final class AssistantTest extends TestCase
         $this->cms()->settingsRegistry()->save('assistant', ['api_key' => '']);
         putenv('ANTHROPIC_API_KEY');
 
-        // Without a key nothing answers plain language: a message is a search, and nothing mentions Claude.
-        $this->getJson('/api/admin/manifest')->assertOk()->assertJsonPath('data.config.workspace.agent', null);
+        // Without a key nothing answers plain language: a message is a search.
+        $this->getJson('/api/admin/manifest')->assertOk()->assertJsonPath('data.config.workspace.agent', null)
+            ->assertJsonPath('data.config.workspace.setup', ['label' => 'Claude', 'to' => '/settings/assistant']);
+        // Switching the chat to the assistant says where it's set up: Settings for those who may change them, an administrator for the rest.
+        $this->actingAs($this->userWithRole('author'));
+        $this->getJson('/api/admin/manifest')->assertOk()->assertJsonPath('data.config.workspace.setup', ['label' => 'Claude', 'to' => null]);
+        $this->actingAs($this->admin());
         $events = $this->chat(['message' => 'Hi']);
         $this->assertSame('search', self::said($events)['kind']);
         $this->assertNull(Thread::query()->sole()->agent);

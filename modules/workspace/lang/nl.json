@@ -120,8 +120,13 @@
   "Where people work: threads at the right edge of the admin, answered with views, for commands, search and an agent when there is one.": "Waar mensen werken: chats aan de rechterkant van de admin, beantwoord met weergaven, voor opdrachten, zoeken en een agent als die er is.",
   "Working…": "Bezig…",
   "Workspace": "Werkplek",
-  "AI": "AI",
-  "Local": "Lokaal",
-  "{name} answers": "{name} antwoordt",
-  "Searches and runs commands on this site": "Zoekt en voert opdrachten uit op deze site"
+  "Searches and runs commands on this site": "Zoekt en voert opdrachten uit op deze site",
+  "Mode": "Modus",
+  "Mode: {name}": "Modus: {name}",
+  "{name} isn’t set up yet": "{name} is nog niet ingesteld",
+  "Set Up": "Instellen",
+  "Use Local": "Lokaal gebruiken",
+  "Ask an administrator to set it up.": "Vraag een beheerder om het in te stellen.",
+  "Assistant": "Assistent",
+  "Local search": "Lokaal zoeken"
 }

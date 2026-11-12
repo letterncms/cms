@@ -36,8 +36,9 @@ export function Notice({ tone = 'info', icon, title, children, action, onDismiss
   const look = tones[tone]
   const shown = icon === undefined ? look.icon : icon
   return (
-    <div role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'} className={cn('flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-sm', look.box, className)}>
-      {shown && <Icon name={shown} size={16} className={cn('mt-0.5 shrink-0', look.color)} />}
+    <div role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'} className={cn('flex gap-2.5 rounded-lg border px-3.5 py-3 text-sm', title && children ? 'items-start' : 'items-center', look.box, className)}>
+      {/* One line sits level with its icon (and a button beside it); two lines start at the first. */}
+      {shown && <Icon name={shown} size={16} className={cn('shrink-0', !!title && !!children && 'mt-0.5', look.color)} />}
       <div className="min-w-0 flex-1 self-center [overflow-wrap:anywhere]">
         {title && <div className="font-medium text-ink">{title}</div>}
         {children && <div className={title ? 'mt-0.5 text-muted' : 'text-text'}>{children}</div>}
