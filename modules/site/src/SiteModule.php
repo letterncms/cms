@@ -141,6 +141,7 @@ final class SiteModule extends Plugin
             'site' => [
                 ...$manifest['site'],
                 'favicon' => \Cms\Modules\Blocks\Media::url(cms()->setting('site', 'favicon')),
+                'description' => (string) cms()->setting('site', 'description'),
                 'kits' => $user->hasPermission('settings.manage') ? $kits()->switcher() : [],
             ],
         ]);

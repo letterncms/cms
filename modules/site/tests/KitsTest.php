@@ -210,6 +210,20 @@ final class KitsTest extends TestCase
         @unlink($zip);
     }
 
+    public function test_an_export_takes_a_thumbnail_and_the_sites_description_when_none_is_given(): void
+    {
+        $this->apply('minimal');
+        $this->cms()->settingsRegistry()->save('site', ['description' => 'Our studio in Ghent']);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+        $made = $this->ability('kits/export', ['handle' => 'shown', 'name' => 'Shown', 'preview' => base64_encode($png), 'previewType' => 'png']);
+        $this->assertSame('Our studio in Ghent', $made['kit']['description']);
+        $this->assertCount(1, $made['kit']['previews']);
+        $this->assertFileExists(site_path('kits/shown/previews/home.png'));
+
+        $own = $this->ability('kits/export', ['handle' => 'own', 'name' => 'Own', 'description' => 'Mine']);
+        $this->assertSame('Mine', $own['kit']['description']);
+    }
+
     public function test_the_kit_a_setup_chose_or_none(): void
     {
         $this->assertContains('kit', array_keys(Installer::rules()));
