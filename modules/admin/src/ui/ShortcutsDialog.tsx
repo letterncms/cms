@@ -21,11 +21,13 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
     ...registry.commands.all().filter((c) => c.shortcut).map((c) => ({ keys: c.shortcut!, label: c.label })),
     ...(manifest?.nav ?? []).filter((n) => n.shortcut).map((n) => ({ keys: n.shortcut!, label: n.label, group: t('Go To') })),
   ]
+  // A key, or a command, said once: Open Settings is a shortcut of the frame and a command of `/`.
   const seen = new Set<string>()
   const groups = new Map<string, ShortcutInfo[]>()
   for (const info of all) {
-    if (seen.has(info.keys)) continue
+    if (seen.has(info.keys) || seen.has(`label:${info.label}`)) continue
     seen.add(info.keys)
+    seen.add(`label:${info.label}`)
     const group = info.group ?? t('General')
     groups.set(group, [...(groups.get(group) ?? []), info])
   }

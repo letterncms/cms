@@ -46,6 +46,8 @@ export interface ComposerOption extends ContextItem {
   detail?: string
   /** A heading of its own among its source's lines (the abilities of one plugin). */
   group?: string
+  /** The key that does the same anywhere, shown at the end of its line (`mod+shift+,`). */
+  shortcut?: string
   /** Picking it does this. */
   perform?: () => void
   /** Picking it writes this in the message. */

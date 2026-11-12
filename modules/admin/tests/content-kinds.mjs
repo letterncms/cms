@@ -85,7 +85,7 @@ try {
   assert(document.querySelector('input[value="https://example.com/film.mp4"]'), 'The blueprint\\'s values are not in its fields')
   check('An entry shows the fields of its blueprint')
 
-  // New, from anywhere (a link straight to /new, as the command palette and the home screen's widget go): the kind is asked first.
+  // New, from anywhere (a link straight to /new, as / in a thread and the home screen's widget go): the kind is asked first.
   navigate('/content/news/new')
   const dialog = await until(() => document.querySelector('[role="dialog"]'), 'New did not ask which kind')
   assert([...dialog.querySelectorAll('[role="listitem"]')].map((row) => row.textContent.trim()).join('|') === 'Article|Video', 'The kinds are not the collection\\'s own and its blueprints')

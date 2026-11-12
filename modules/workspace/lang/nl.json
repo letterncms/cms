@@ -17,6 +17,8 @@
   "Allow All": "Alles toestaan",
   "Allow these {count} actions?": "Deze {count} acties toestaan?",
   "Allow this action?": "Deze actie toestaan?",
+  "Ask": "Vragen",
+  "Ask {name}": "Vraag het {name}",
   "Ask anything, or / for a command": "Vraag wat je wilt, of / voor een opdracht",
   "Authentication required.": "Je moet ingelogd zijn.",
   "Back to Chat": "Terug naar de chat",

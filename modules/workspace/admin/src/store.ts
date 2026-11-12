@@ -18,6 +18,8 @@ interface State {
   history: boolean
   /** Bumped to move the focus into the list of chats (All Chats). */
   focusList?: number
+  /** Bumped when ⌘K writes a `/` in the composer, so the composer puts the caret after it. */
+  palette: number
   thread: string | null
   /** Bumped for a fresh thread, so a new one starts over even when the last was never saved (its first turn failed). */
   fresh: number
@@ -60,7 +62,7 @@ function restored(): Pick<State, 'mode' | 'thread' | 'detached'> {
 }
 
 const listeners = new Set<() => void>()
-let state: State = { ...restored(), fresh: 0, history: false, title: '', prompt: null, searching: false, focus: 0, contextPath: '/', dismissed: [], selectedText: '', attached: {}, skills: {}, commands: {}, drafts: {}, options: {}, working: null, awaiting: false }
+let state: State = { ...restored(), fresh: 0, palette: 0, history: false, title: '', prompt: null, searching: false, focus: 0, contextPath: '/', dismissed: [], selectedText: '', attached: {}, skills: {}, commands: {}, drafts: {}, options: {}, working: null, awaiting: false }
 /** Where maximizing started, to return to. */
 let returnTo: string | null = null
 /** What had the focus before the dock took it. */
@@ -109,6 +111,35 @@ function persist() {
 
 const key = () => state.thread ?? 'new'
 
+/** A `/…` line at the end of a draft: what ⌘K writes, and what is typed after it. */
+const SLASH = /(^|\n)\/[^\n]*$/
+
+/** The `/` ⌘K wrote, while its menu is open: in which thread's composer, and whether the dock came out only for it (and goes again with it). */
+let palette: { key: string; opened: boolean } | null = null
+
+/** The menu ⌘K opened is done with: its `/…` line goes from the draft, unless what was typed is kept. */
+function letGo(strip: boolean) {
+  const was = palette
+  palette = null
+  const draft = was ? state.drafts[was.key] ?? '' : ''
+  if (was && strip && SLASH.test(draft)) panel.set({ drafts: { ...state.drafts, [was.key]: draft.replace(SLASH, '') } })
+  return was
+}
+
+/** What the last click away pressed: a click on Search that let go of the menu has done its work, and doesn't open it again. */
+let letGoBy: Element | null = null
+
+// A click anywhere but the dock lets go of the menu ⌘K opened, as of any palette. What the dock opens over the page (a menu, a dialog) is the dock's.
+document.addEventListener('pointerdown', (e) => {
+  letGoBy = null
+  if (!palette || !(e.target instanceof Element) || e.target.closest('.cms-dock, [role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"]')) return
+  letGoBy = e.target
+  panel.dismissPalette()
+}, true)
+
+/** A modal dialog of the page (a confirmation, Customize Sidebar) has the keys, and everything under it is inert, the dock with it. */
+const modal = () => !!document.querySelector('.cms-dock')?.parentElement?.closest('[data-base-ui-inert]')
+
 /** The one thread of the admin: where it is, in-memory drafts and picks survive moving between screens. */
 export const panel = {
   get: () => state,
@@ -127,6 +158,7 @@ export const panel = {
     } else panel.set({ focus: state.focus + 1 })
   },
   close() {
+    letGo(true)
     if (state.mode === 'closed') return
     const full = state.mode === 'full'
     panel.set({ mode: 'closed' })
@@ -136,6 +168,42 @@ export const panel = {
     if (returnFocus instanceof HTMLElement && returnFocus.isConnected && returnFocus !== document.body) returnFocus.focus()
     else toggleFocus = true
     returnFocus = null
+  },
+  /**
+   * ⌘K and the sidebar's Search: the composer with `/` written and its menu open, everything the admin can find and do.
+   * What is written stays: the `/` goes on a line of its own after it. From inside, ⌘K puts the menu away again.
+   */
+  palette(from?: Element | null) {
+    if (modal() || (from && letGoBy && from.contains(letGoBy))) return
+    const inside = state.mode !== 'closed' && !!document.activeElement?.closest('.cms-dock')
+    if (palette && inside) return panel.dismissPalette()
+    const at = key()
+    // A command asking for its input gives the composer back; the list of chats goes back to the thread.
+    if (state.commands[at]) panel.command(null)
+    const draft = state.drafts[at] ?? ''
+    const next = SLASH.test(draft) ? draft : draft.trim() ? `${draft.trimEnd()}\n/` : '/'
+    palette = { key: at, opened: state.mode === 'closed' || (palette?.opened ?? false) }
+    if (state.mode === 'closed') returnFocus = document.activeElement
+    panel.set({ mode: state.mode === 'closed' ? 'docked' : state.mode, history: false, drafts: { ...state.drafts, [at]: next }, palette: state.palette + 1, focus: state.focus + 1 })
+  },
+  /** Whether the menu on view is the one ⌘K opened. */
+  inPalette: () => palette !== null && palette.key === key(),
+  /** Esc, a click away, ⌘K again: its line goes, and a dock that came out only for it goes again. */
+  dismissPalette() {
+    const was = letGo(true)
+    if (was?.opened) panel.close()
+  },
+  /** A line was picked. One that does its work elsewhere (a place, the theme) leaves no dock behind that came out only for it; one that answers in the thread keeps it. */
+  pickedFromPalette(elsewhere: boolean) {
+    const was = letGo(true)
+    if (!was?.opened || !elsewhere) return
+    panel.close()
+    // What was picked takes the admin elsewhere: the focus goes there, not to the chat button.
+    toggleFocus = false
+  },
+  /** The `/` was written away, or the caret left it: what is there now is someone's message, kept as it is. */
+  leavePalette() {
+    if (palette?.key === key()) letGo(false)
   },
   /** ⌘J: bring it up; from inside it, put it away again. */
   toggle() {
@@ -154,6 +222,7 @@ export const panel = {
   },
   /** Open a thread where the thread is. */
   select(id: string | null) {
+    if (id !== state.thread) letGo(true)
     if (state.mode === 'full') visit(id)
     if (state.mode === 'closed') returnFocus = document.activeElement
     panel.set({ thread: id, mode: state.mode === 'closed' ? 'docked' : state.mode, history: false, prompt: null, focus: state.focus + 1 })
@@ -168,6 +237,10 @@ export const panel = {
     if (state.drafts[key()]?.trim()) panel.select(state.thread)
     else panel.newChat()
     if (prompt?.trim()) panel.set({ prompt: prompt.trim(), searching: false })
+  },
+  /** Send these words in the thread on view, as a message or (without an agent) a search. */
+  send(prompt: string) {
+    if (prompt.trim()) panel.set({ prompt: prompt.trim(), searching: false })
   },
   /** Search in the thread on view, without asking the agent. */
   search(query: string) {

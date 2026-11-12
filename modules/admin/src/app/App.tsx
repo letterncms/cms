@@ -2,7 +2,7 @@ import { brand, confirmLeaving, events, matchPath, navigate, onLinkIntent, panel
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { NotFound } from '../screens/NotFound'
 import { cn, confirm, IconButton, ShortcutsDialog, SHORTCUTS_KEY, Tooltip } from '../ui'
-import { CommandPalette } from './CommandPalette'
+import './commands'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Sidebar, StateBack, type OwnSidebar } from './Sidebar'
@@ -108,7 +108,6 @@ export function App() {
   const { route, params } = resolve(location.path)
   // The left panel stays as it is left: there or hidden, on every screen, until someone changes it.
   const [hidden, setHidden] = useState(() => stored('cms.sidebar') === 'collapsed')
-  const [palette, setPalette] = useState(false)
   const [customizing, setCustomizing] = useState(false)
   const [shortcuts, setShortcuts] = useState(false)
   // Below tablet width it opens over the screen and goes again with the next screen.
@@ -190,7 +189,8 @@ export function App() {
   }
 
   useEffect(() => { try { localStorage.setItem('cms.sidebar', hidden ? 'collapsed' : 'open') } catch { /* private window: not remembered */ } }, [hidden])
-  useShortcut('mod+k', () => setPalette((p) => !p), true, t('Search and Commands'))
+  // Search is the chat's `/`, with everything the admin finds and does: the chat opens it (see the workspace module).
+  useShortcut('mod+k', () => events.emit('search.open'), true, t('Search and Commands'))
   useShortcut(SETTINGS_SHORTCUT, toggleSettings, true, t('Open Settings'))
   // `?` lists every key that works here. Not while a dialog is open: the key belongs to it.
   useShortcut(SHORTCUTS_KEY, () => { if (!document.querySelector('[role="dialog"], [role="alertdialog"]')) setShortcuts(true) }, true, t('Keyboard Shortcuts'))
@@ -229,7 +229,7 @@ export function App() {
   useShortcut('escape', (e) => {
     if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable], [role="dialog"], [role="menu"], [role="listbox"], .cms-dock, [data-cms-screen]')) return
     if (!document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) leaveSettings()
-  }, settings && !palette && !customizing && !(narrow && expanded))
+  }, settings && !customizing && !(narrow && expanded))
   useEffect(() => {
     if (!route && location.path === '/' && first && first !== '/') navigate(first, { replace: true })
   }, [route, location.path, first])
@@ -241,7 +241,7 @@ export function App() {
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', {})
   const sidebarShown = !narrow && (own ? ownOpen : !hidden)
-  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={() => { setPalette(true); setExpanded(false) }} onNavigate={onNavigate} />
+  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} />
   const sidebarOut = narrow ? expanded : sidebarShown
   const toggleLabel = own
     ? sidebarOut ? t('Hide {name}', { name: own.title }) : t('Show {name}', { name: own.title })
@@ -328,7 +328,6 @@ export function App() {
             <Dock />
           </ErrorBoundary>
         ))}
-        <CommandPalette open={palette} onOpenChange={setPalette} />
         <CustomizeSidebar open={customizing} onOpenChange={setCustomizing} />
         <ShortcutsDialog open={shortcuts} onOpenChange={setShortcuts} />
       </div>

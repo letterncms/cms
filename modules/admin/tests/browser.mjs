@@ -1,6 +1,6 @@
 // Runs the browser fixture checks headless: each starts its own server with the built admin
 // and fixture APIs, prints the URL to open, and exits when the page reports its results.
-//   node modules/admin/tests/browser.mjs [chat command-palette …]   (CHROME=path for another browser)
+//   node modules/admin/tests/browser.mjs [chat navigation …]   (CHROME=path for another browser)
 import { spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
-const all = ['navigation', 'command-palette', 'overviews', 'chat', 'inspector', 'content-workflow', 'content-kinds', 'builder']
+const all = ['navigation', 'overviews', 'chat', 'inspector', 'content-workflow', 'content-kinds', 'builder']
 const chosen = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const chrome = [process.env.CHROME, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find((path) => path && existsSync(path))
 if (!chrome) {

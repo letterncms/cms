@@ -26,7 +26,7 @@ export default function EntryEditor({ params }: { params: Record<string, string>
   const { query } = useLocation()
   // An entry has the fields of the blueprint it was made with; a new one, of the kind chosen for it (?blueprint=).
   const blueprint = isNew ? (defined?.resolvedBlueprints?.some((b) => b.handle === query.blueprint) ? query.blueprint! : null) : entryQuery.data?.blueprint ?? null
-  // Wherever New was pressed (the list, the command palette, a widget): with several kinds and none chosen yet, that is asked first.
+  // Wherever New was pressed (the list, / in a thread, a widget): with several kinds and none chosen yet, that is asked first.
   const asks = isNew && !!defined?.resolvedBlueprints?.length && query.blueprint === undefined
   // On a translation, the fields that hold one value for every language are the original's: shown, not changed here.
   const shared = entryQuery.data?.sharedFields

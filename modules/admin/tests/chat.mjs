@@ -13,7 +13,7 @@ const manifest = {
   brand: { name: 'Acme', domain: '', product_url: '', docs_url: '', support_email: '', mark: '', wordmark: '' }, site: { name: 'Acme', url: '', locales: ['en'], defaultLocale: 'en', timezone: 'UTC' },
   user: { id: 'test', name: 'Alex Morgan', email: 'alex@example.invalid', initials: 'AM', roles: [], super: true, grants: ['*'], preferences: {}, data: {}, twoFactor: false },
   packages: { active: ['cms/admin', 'letterncms/workspace', 'letterncms/assistant', 'fixture'], pending: {} },
-  modules: [{ id: 'fixture', url: '/fixture.js' }, { id: 'letterncms/workspace', url: '/_cms/assets/cms-workspace/admin.js' }, { id: 'letterncms/assistant', url: '/_cms/assets/cms-assistant/admin.js' }],
+  modules: [{ id: 'fixture', url: '/fixture.js' }, { id: 'letterncms/content', url: '/_cms/assets/cms-content/admin.js' }, { id: 'letterncms/workspace', url: '/_cms/assets/cms-workspace/admin.js' }, { id: 'letterncms/assistant', url: '/_cms/assets/cms-assistant/admin.js' }],
   styles: ['/_cms/assets/cms-workspace/admin.css', '/_cms/assets/cms-assistant/admin.css'], settings: [], collections: [], globals: [], fieldTypes: [], commands: [], widgets: [{ id: 'fixture-widget', label: 'Live plugin widget', icon: 'grid', description: 'Shared with Home', column: 'side', enabled: true, source: 'Fixture' }], dashboard: [], config: { workspace: { agent: { name: 'assistant', label: 'Claude' } } }, nav,
   sidebar: { sections: ['main', 'content', 'design'].map((id) => ({ id, label: id === 'main' ? '' : id[0].toUpperCase() + id.slice(1), items: nav.filter((n) => n.section === id).map((n) => n.id) })), hidden: [], personal: false },
   settingsNav: [{ id: 'system', label: 'System', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }],
@@ -67,6 +67,14 @@ const open = async id => { navigate('/chat/' + id); await wait(() => isFull() &&
 // Opening, closing and resizing the dock are transitions; geometry is compared once they end.
 const settle = () => Promise.all(document.getAnimations().filter(a => a instanceof CSSTransition).map(a => a.finished.catch(() => {})))
 const shortcut = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true, bubbles: true }))
+// ⌘K on a Mac, Ctrl+K elsewhere: the admin's frame takes mod+k and the chat opens its /.
+const mac = /Mac|iPhone|iPad/.test(navigator.platform)
+const search = (target = document.activeElement ?? document.body) => target.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true }))
+const lines = () => [...dock().querySelectorAll('[role="option"]')]
+const chosenLine = () => dock().querySelector('[role="option"][aria-selected="true"]')
+const menu = () => dock().querySelector('[role="listbox"]')
+const settled = () => menu() && !menu().textContent.includes('Looking…') && lines().length > 0
+const press = (key, init = {}) => composer().dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))
 try {
   navigate('/content/pages')
   await wait(() => dock() && toggle() && screen() === 'Pages', 'admin did not load')
@@ -204,6 +212,63 @@ try {
     await wait(() => document.activeElement === composer(), 'reopened chat has no focus')
     composer().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(() => !isOpen(), 'Escape did not put the chat away')
     shortcut(); await wait(() => isOpen(), 'shortcut did not reopen the chat'); fill(''); await sleep(30)
+  })
+  await test('⌘K opens the chat with / and its menu, and Esc puts both away again', async () => {
+    control('Close').click(); await wait(() => !isOpen(), 'Close failed')
+    document.activeElement.blur(); search()
+    await wait(() => isOpen() && document.activeElement === composer() && composer().value === '/', '⌘K did not open the chat with / in its composer')
+    await wait(settled, 'the / menu did not open')
+    const said = menu().textContent
+    for (const label of ['Go To', 'Posts', 'Commands', 'Customize Sidebar…', 'Keyboard Shortcuts']) assert(said.includes(label), 'the menu has no ' + label)
+    assert(!said.includes('Pages') || lines().every(el => el.textContent !== 'Pages'), 'the screen on view is offered as a place to go')
+    assert(chosenLine() === lines()[0], 'the first line is not chosen')
+    assert(composer().selectionStart === 1 && composer().selectionEnd === 1, 'the caret is not after the /')
+    press('Escape')
+    await wait(() => !isOpen() && composer().value === '', 'Esc did not put the menu and the chat away')
+  })
+  await test('What was written stays: the / goes on its own line, and picking a place goes there and gives the draft back', async () => {
+    toggle().click(); await wait(() => isOpen(), 'chat did not open')
+    fill('Keep this thought  '); await sleep(30)
+    control('Close').click(); await wait(() => !isOpen(), 'Close failed')
+    document.activeElement.blur(); search()
+    await wait(() => composer().value === 'Keep this thought\\n/' && settled(), '⌘K did not add a / line after the draft')
+    fill('Keep this thought\\n/pos'); await wait(() => chosenLine()?.textContent === 'Posts', 'the closest place is not first')
+    press('Enter')
+    await wait(() => screen() === 'Posts' && !isOpen(), 'picking a place did not go there and put the chat away')
+    assert(document.activeElement !== toggle(), 'the Chat button took the focus from the place opened')
+    toggle().click(); await wait(() => isOpen() && composer().value === 'Keep this thought', 'the draft did not come back as it was')
+  })
+  await test('⌘K again from inside, a click away, or the sidebar’s Search', async () => {
+    search(composer()); await wait(() => composer().value === 'Keep this thought\\n/' && settled(), '⌘K in an open chat did not open the menu')
+    search(composer()); await wait(() => composer().value === 'Keep this thought' && !menu(), '⌘K again did not put the menu away')
+    assert(isOpen(), 'the chat, open before, was put away with the menu')
+    fill(''); await sleep(30)
+    control('Close').click(); await wait(() => !isOpen(), 'Close failed')
+    const button = document.querySelector('.cms-side-panel button[aria-label="Search"]')
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); button.click()
+    await wait(() => isOpen() && composer().value === '/' && settled(), 'Search did not open the menu in the chat')
+    document.querySelector('[data-cms-screen] h1').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await wait(() => !isOpen() && composer().value === '', 'a click on the page did not let go of the menu')
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); button.click()
+    await wait(() => isOpen() && settled(), 'Search did not open the menu again')
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); button.click(); await sleep(80)
+    assert(!isOpen() && composer().value === '', 'Search again did not put the menu away')
+  })
+  await test('The frame’s commands run from the menu, and only the theme not in use is offered', async () => {
+    const before = document.documentElement.dataset.theme, other = before === 'dark' ? 'Light' : 'Dark'
+    search(); await wait(() => settled(), 'menu did not open')
+    fill('/mode'); await wait(() => lines().some(el => el.textContent.includes('Switch to ' + other + ' Mode')), 'the other theme is not offered')
+    assert(!lines().some(el => el.textContent.includes('Switch to ' + (other === 'Dark' ? 'Light' : 'Dark') + ' Mode')), 'the theme in use is offered')
+    fill('/keyboard'); await wait(() => chosenLine()?.textContent.startsWith('Keyboard Shortcuts'), 'Keyboard Shortcuts not first')
+    assert(chosenLine().querySelector('kbd'), 'a command with a key does not show it')
+    press('Enter')
+    await wait(() => document.querySelector('[role="dialog"]')?.textContent.includes('Keyboard Shortcuts') && !isOpen(), 'the command did not run, or left the chat out')
+    const shown = [...document.querySelectorAll('[role="dialog"] li')].map(li => li.firstChild.textContent)
+    assert(shown.filter(label => label === 'Keyboard Shortcuts').length === 1 && shown.includes('Search and Commands'), 'the overlay lists a key twice or misses ⌘K: ' + shown.join(', '))
+    search(); await sleep(80)
+    assert(!isOpen() && document.querySelector('[role="dialog"]'), '⌘K opened the chat under a dialog')
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(() => !document.querySelector('[role="dialog"]'), 'the overlay did not close')
+    navigate('/content/pages'); await wait(() => screen() === 'Pages', 'CMS navigation failed')
   })
   await test('Browser back and forward restore the selected chat', async () => {
     await open('chat-1'); await open('chat-2'); history.back(); await wait(() => dock().textContent.includes('Reply for chat-1') && heading() === 'Refine the launch page', 'back failed')
@@ -509,6 +574,25 @@ try {
     assert(sent.search === 'Pricing' && !('message' in sent) && !('context' in sent), 'plain words were not a search')
     await fetch('/__test/agent', { method: 'POST', body: 'on' }); await loadManifest()
   })
+  await test('Words that match nothing are asked, entries are found, and Enter typed early waits for the lines', async () => {
+    newChat(); await wait(() => welcome(), 'new chat failed')
+    search(composer()); await wait(() => settled(), 'menu did not open')
+    fill('/hello there'); await wait(() => chosenLine()?.textContent.startsWith('Ask Claude'), 'asking is not the first line for words that match nothing')
+    assert(lines().some(el => el.textContent === 'Search for “hello there”'), 'search is not offered')
+    fill('/launch'); await wait(() => lines().some(el => el.textContent.startsWith('Autumn launch')), 'content is not found')
+    assert(menu().textContent.indexOf('Ask Claude') > menu().textContent.indexOf('Autumn launch'), 'asking comes before what was found')
+    fill('/build si'); press('Enter')
+    await wait(() => dock().textContent.includes('Built the site'), 'Enter before the lines were in did not pick the first')
+    assert(isOpen() && composer().value === '', 'a command answered in the thread put the chat away or left its /')
+    assert(!(await state()).requests.some(r => r.kind === 'chat' && r.input.message?.startsWith('/')), 'what followed / was sent as words')
+    search(composer()); await wait(() => settled(), 'menu did not open')
+    fill('/what should I write next'); await wait(() => chosenLine()?.textContent.startsWith('Ask Claude'), 'ask not first')
+    press('Enter')
+    await wait(() => [...dock().querySelectorAll('.cms-thread-bubble')].some(el => el.textContent === 'what should I write next'), 'asking did not send the words in the thread')
+    assert(isOpen(), 'asking put the chat away')
+    await wait(() => !dock().querySelector('[aria-label="Stop"]'), 'the answer did not finish')
+    newChat(); await wait(() => welcome(), 'new chat failed')
+  })
   output.textContent += '\\nAll ' + results.length + ' chat checks passed.'
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results }) })
 } catch (error) {
@@ -526,6 +610,9 @@ serve('Chat', async (req, res, url) => {
     requests.push({ ability, input })
     if (ability === 'assistant/status') return json(res, 200, { data: { configured: true, model: 'claude-opus-5-5', models } })
     if (ability === 'account/update') return json(res, 200, { data: {} })
+    if (ability === 'assistant/skills') return json(res, 200, { data: [] })
+    if (ability === 'entries/get' || ability === 'collections/get') return json(res, 404, { error: { message: 'Not in this fixture', type: 'not_found' } })
+    if (ability === 'content/search') return json(res, 200, { data: /launch/i.test(input.query) ? [{ id: 'e-launch', collection: 'pages', locale: 'en', title: 'Autumn launch', slug: 'autumn-launch', uri: '/autumn-launch', status: 'draft', displayStatus: 'draft', parentId: null, position: 0, authorId: null, author: null, version: '1' }] : [] })
     if (ability === 'threads/list') return json(res, 200, { data: chats.slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 30)) })
     if (ability === 'threads/rename' && input.title) {
       const chat = chats.find(c => c.id === input.id)

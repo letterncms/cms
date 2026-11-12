@@ -13,12 +13,18 @@
 
 ### Changed
 
+- **⌘K is the chat.** `⌘K` and the sidebar's **Search** open the chat with `/` typed and its menu open: places, the theme, Customize Sidebar, Keyboard Shortcuts, settings, making and running things, and entries by their title, all in one list. Words that match nothing are asked of the agent, or searched without one. A place or a setting picked there puts away a chat that came out only for it; a command answers in the thread. What you had written stays, with the `/` on a line after it, and `Esc`, `⌘K` again or a click elsewhere takes the `/` away. The separate command palette is gone.
 - **Site Kits** is a grid of kits with their pictures, not a list that opens a dialog of options. Choosing one switches to it; the settings of Bring In and Already on This Site are gone from the screen. Putting a kit on top of a site, choosing what happens to what clashes, stays in `kits/apply` and `kit:apply`.
 - **Saved views are tabs above a collection's list**, after **All**, in place of the **Views** menu. Change the list and **Save View** appears beside **Display**; on a saved view its tab shows a dot, and **Save View** updates it or saves a new one while **Reset** puts it back. Choose the tab you are on to rename or delete it. Without saved views there are no tabs.
 - A collection's blueprints are a menu at the start of the **Add Field** row, named for the one on view: switch, add, rename and remove them there. The row stays where it is whether there is one blueprint or several, and adding one asks for its name.
 
+### Deprecated
+
+- `acceptsQuery` on a registered command: nothing offers a command for any typed text any more, since anything typed after `/` can be asked or searched. A command may now say `when` it is offered, and a line under `/` may show its `shortcut`.
+
 ### Fixed
 
+- Pressing `Enter` in the chat's `/` menu before its lines are in picks the first line for what was typed, never a line left from the last few letters, and what follows `/` is never sent as a message.
 - The plugin page in the store can be scrolled again.
 
 ## 0.26.1 (2026-11-12)
