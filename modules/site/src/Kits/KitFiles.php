@@ -29,8 +29,11 @@ final class KitFiles
     /** The most one file of each kind may be, in bytes. A media file has the library's own limit. */
     private const array LIMITS = ['text' => 2_000_000, 'code' => 500_000, 'font' => 5_000_000, 'preview' => 5_000_000];
 
-    /** A folder or file name: no dot first (nothing hidden, never ".."), nothing a shell or a URL reads. */
-    private const string SEGMENT = '/^[A-Za-z0-9_@][A-Za-z0-9._@-]{0,120}$/D';
+    /**
+     * A folder or file name: no dot first (nothing hidden, never ".."), nothing a shell or a URL reads, and as long
+     * as a file system allows (255), so every entry a site has fits: a slug is up to 180 letters, then "-2" and ".md".
+     */
+    private const string SEGMENT = '/^[A-Za-z0-9_@][A-Za-z0-9._@-]{0,254}$/D';
 
     /** Names a server may run instead of serve, wherever they sit in a file's name. */
     private const string RUNNABLE = '/\.(php\d?|phtml|phar|pl|py|cgi|sh|asp|aspx|jsp|htaccess)(\.|\/|$)/i';

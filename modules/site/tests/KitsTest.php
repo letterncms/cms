@@ -164,6 +164,16 @@ final class KitsTest extends TestCase
         $this->cms()->entryService()->create('people', ['title' => 'Ines', 'data' => ['portrait' => [$picture['id']], 'posts' => [$post->id]], 'status' => 'published'], $admin);
         $about = $this->cms()->entries()->query()->collection('pages')->where('slug', 'about')->first();
         $this->cms()->entryService()->create('pages', ['title' => 'Über uns', 'slug' => 'ueber-uns', 'locale' => 'de', 'originId' => $about->id, 'status' => 'published', 'data' => ['content' => '::: section {"props":{"width":"prose"}}'."\n# Über uns\n:::"]], $admin);
+        // A headline as long as a title may be makes the longest slug there is (180 letters), and its twin one longer still.
+        $headline = 'An exceptionally long headline that keeps going well past what any column could reasonably hold, written to see where a list cuts it short, wraps it or pushes the other columns out of the way';
+        foreach ([1, 2] as $_) {
+            $this->cms()->entryService()->create('posts', ['title' => $headline, 'status' => 'published'], $admin);
+        }
+        $long = $this->cms()->entries()->query()->collection('posts')->where('title', $headline)->get();
+        $long = array_map(static fn ($e) => $e->slug, $long);
+        sort($long);
+        $this->assertSame(180, strlen($long[0]));
+        $this->assertSame($long[0].'-2', $long[1]);
         $this->cms()->saveSite(['description' => 'A calm site']);
         $before = $this->pages();
 
@@ -175,6 +185,7 @@ final class KitsTest extends TestCase
         $this->assertFileExists($folder.'/content/media/'.$picture['id'].'.yaml');
         $this->assertFileDoesNotExist($folder.'/content/media/'.$unused['id'].'.yaml', 'only the media something names');
         $this->assertFileExists($folder.'/content/collections/pages/de/ueber-uns.md');
+        $this->assertFileExists($folder.'/content/collections/posts/'.$long[1].'.md', 'a site exports every entry it can make');
         $this->assertSame(['description' => 'A calm site', 'search_index' => true], Yaml::read($folder.'/config/site.yaml'), 'never the name, the address or the rest of config/');
         $everything = implode("\n", array_map('file_get_contents', array_filter(glob($folder.'/{,*/,*/*/,*/*/*/,*/*/*/*/}*', GLOB_BRACE), 'is_file')));
         $this->assertStringNotContainsString($admin->id, $everything, 'nobody’s account travels');
