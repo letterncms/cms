@@ -1,0 +1,1 @@
+var e=new Map,t={on(t,n){return e.has(t)||e.set(t,new Set),e.get(t).add(n),()=>e.get(t)?.delete(n)},emit(t,n){e.get(t)?.forEach(e=>e(n))}};export{t};
