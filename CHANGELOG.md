@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- `@letterncms/ui`: the `comment-solid` icon, the speech bubble filled.
+
+### Changed
+
+- **Chat** in the top bar has a solid speech bubble, so it reads as one filled shape with its button.
+
 ## 0.24.0 (2026-11-12)
 
 ### Added
