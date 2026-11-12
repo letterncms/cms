@@ -1,5 +1,5 @@
 import { registry } from '@letterncms/sdk'
-import { CodeField, ColorField, DateField, EmailField, IconField, JsonField, MarkdownField, NumberField, SelectField, SliderField, SlugField, TextField, TextareaField, ToggleField, UrlField } from './basic'
+import { AccentField, CodeField, ColorField, DateField, EmailField, IconField, JsonField, MarkdownField, NumberField, SelectField, SliderField, SlugField, TextField, TextareaField, ToggleField, UrlField } from './basic'
 import { EntriesField, GroupField, MatrixField, RepeaterField, TagsField, UsersField } from './complex'
 import { DateRangeField, GeoField, LinkValueField, TableField, TimeField } from './structured'
 import { FieldsConfigField } from './FieldsEditor'
@@ -21,7 +21,7 @@ export function registerCoreFields() {
     color: ColorField, entries: EntriesField, users: UsersField, tags: TagsField, code: CodeField, json: JsonField,
     icon: IconField, group: GroupField, repeater: RepeaterField, matrix: MatrixField,
     // `link` is the address picker (`{ type: 'url', component: 'link' }`); the link field type's value has its label with it.
-    'link-value': LinkValueField, 'date-range': DateRangeField, time: TimeField, range: SliderField, table: TableField, geo: GeoField, fields: FieldsConfigField, 'matrix-types': MatrixTypesField, 'handle-input': HandleField, 'command-query': CommandQueryField, link: LinkField, ease: EaseField,
+    'link-value': LinkValueField, 'date-range': DateRangeField, time: TimeField, range: SliderField, table: TableField, geo: GeoField, fields: FieldsConfigField, 'matrix-types': MatrixTypesField, 'handle-input': HandleField, 'command-query': CommandQueryField, link: LinkField, ease: EaseField, accent: AccentField,
   }
   for (const [key, component] of Object.entries(map)) registry.fields.set(key, component)
 }

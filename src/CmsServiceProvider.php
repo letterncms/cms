@@ -232,6 +232,8 @@ final class CmsServiceProvider extends ServiceProvider
             ['handle' => 'locale', 'type' => 'text', 'label' => 'Language', 'default' => 'en', 'required' => true, 'width' => 'half', 'placeholder' => 'en'],
             // Empty: each person's browser decides (English when the CMS doesn't speak it); Account → Appearance overrides it.
             ['handle' => 'admin_language', 'type' => 'select', 'label' => 'Admin Language', 'dynamic' => 'admin-languages', 'placeholder' => 'Browser Language', 'width' => 'half'],
+            // Empty: the brand's own. Publish, highlights and the chat's button take it; Account overrides it for one person.
+            ['handle' => 'admin_accent', 'type' => 'color', 'component' => 'accent', 'label' => 'Admin Accent'],
         ], icon: 'globe', description: 'Name, address, language and timezone.', order: 0, section: 'site');
 
         // The defaults everyone's sidebar and home screen start from. Each is saved where it is arranged
@@ -298,6 +300,12 @@ final class CmsServiceProvider extends ServiceProvider
 
         if (isset($values['locales'])) {
             $values['locales'] = array_values(array_unique([$locale, ...array_map('strval', (array) $values['locales'])]));
+        }
+
+        // An accent is one colour as #rrggbb; the brand's own is kept as nothing, so it follows the brand.
+        if (($values['admin_accent'] ?? null) !== null && $values['admin_accent'] !== '') {
+            $accent = Admin\Accent::normalize($values['admin_accent']) ?? throw AbilityException::invalid(__('Use a colour like #2f6bff.'), ['admin_accent' => __('Use a colour like #2f6bff.')]);
+            $values['admin_accent'] = $accent === Admin\Accent::DEFAULT ? null : $accent;
         }
 
         return $values;

@@ -83,6 +83,8 @@ final class AdminShell
         // (their choice follows them to a browser that has never seen it), else what this browser kept, else the system's.
         $theirs = $admin ? (((array) ($user->preferences ?? []))['theme'] ?? null) : null;
         $theirs = json_encode(in_array($theirs, ['light', 'dark', 'system'], true) ? $theirs : null);
+        // The accent before the first paint as well: theirs, else the site's (see Accent). The admin changes it in place.
+        $accent = '<style id="cms-accent">'.Accent::css(Accent::for($admin ? $user : null)).'</style>';
         $scheme = "try{var a={$theirs},p=a||localStorage.getItem('cms.theme');if(a)localStorage.setItem('cms.theme',a);document.documentElement.dataset.theme=p==='dark'||(p!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}";
 
         $html = <<<HTML
@@ -97,6 +99,7 @@ final class AdminShell
 <script nonce="{$nonce}">{$scheme}</script>
 <link rel="icon" href="{$favicon}" type="image/svg+xml">
 {$css}
+{$accent}
 <script type="importmap" nonce="{$nonce}">{$map}</script>
 {$preloads}
 <script nonce="{$nonce}">window.__CMS__ = {$bootJson};</script>
