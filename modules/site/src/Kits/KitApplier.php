@@ -112,11 +112,11 @@ final class KitApplier
         return ['kit' => $kit, 'mode' => $mode, 'clash' => $clash, 'steps' => $run['steps'], 'code' => $this->bringsCode($run['steps']), 'plugins' => $this->missingPlugins($kit), 'run' => $run];
     }
 
-    /** The steps as an ability or a command reports them: without what only the apply needs. */
+    /** The steps as an ability or a command reports them: without what only the apply needs, with what a person knows each by (`title`, an entry's `collection`). */
     public static function report(array $steps): array
     {
         return array_map(static fn (array $step) => array_filter([
-            'action' => $step['action'], 'type' => $step['type'], 'name' => $step['name'], 'path' => $step['path'] ?? null, 'as' => $step['as'] ?? null, 'note' => $step['note'] ?? null,
+            'action' => $step['action'], 'type' => $step['type'], 'name' => $step['name'], 'title' => $step['title'] ?? null, 'collection' => $step['type'] === 'entry' ? $step['collection'] ?? null : null, 'path' => $step['path'] ?? null, 'as' => $step['as'] ?? null, 'note' => $step['note'] ?? null,
         ], static fn ($v) => $v !== null), $steps);
     }
 
@@ -235,7 +235,7 @@ final class KitApplier
             $same = $item !== null && $item->hash === $hash && $item->path === $record['path'];
             // The same id with another file, or another file already at that path.
             $taken = $item !== null || (is_file($file) && hash_file('sha256', $file) !== $hash);
-            $run['steps'][] = $this->step($run, 'media', (string) $record['path'], $run['contents']['media'][$id], $taken, $same, ['id' => $id, 'record' => $record]);
+            $run['steps'][] = $this->step($run, 'media', (string) $record['path'], $run['contents']['media'][$id], $taken, $same, ['id' => $id, 'record' => $record, 'title' => (string) ($record['name'] ?? '') ?: basename((string) $record['path'])]);
         }
     }
 
@@ -317,7 +317,7 @@ final class KitApplier
 
             // The same definition, however each file happens to write it.
             $same = $exists && $theirs !== null && array_diff_key(Collection::fromArray($handle, Yaml::read($file))->toYaml(), $stamps) == array_diff_key($theirs->toYaml(), $stamps);
-            $steps[$handle] = $this->step($run, 'collection', $handle, $run['contents']['collections'][$handle], $exists, $same, ['definition' => $definition]);
+            $steps[$handle] = $this->step($run, 'collection', $handle, $run['contents']['collections'][$handle], $exists, $same, ['definition' => $definition, 'title' => (string) ($definition['title'] ?? $handle)]);
             $brings = in_array($steps[$handle]['action'], ['create', 'replace'], true);
             $brings && $theirs !== null && $beside[$handle] = $theirs;
         }
@@ -403,7 +403,7 @@ final class KitApplier
                 $under = $parent['key'] ?? $entry->locale.'|';
                 $key = $under.'/'.$entry->slug;
                 $found = $parent !== null && in_array($parent['action'], ['create', 'rename'], true) ? null : ($existing[$key] ?? null);
-                $step = $this->step($run, 'entry', $name, $file, $found !== null, false, ['entry' => $entry, 'collection' => $handle, 'slug' => $entry->slug], renamable: true);
+                $step = $this->step($run, 'entry', $name, $file, $found !== null, false, ['entry' => $entry, 'collection' => $handle, 'slug' => $entry->slug, 'title' => $entry->title !== '' ? $entry->title : $entry->slug], renamable: true);
 
                 if ($step['action'] === 'rename') {
                     for ($i = 2; isset($existing[$under.'/'.$entry->slug.'-'.$i]) || isset($planned['#'.$under.'/'.$entry->slug.'-'.$i]); $i++);
@@ -438,7 +438,7 @@ final class KitApplier
                 throw AbilityException::invalid(__('The kit’s global set “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
             }
 
-            $run['steps'][] = $this->step($run, 'global', $handle, $path, $mine !== null, $same, ['raw' => $raw]);
+            $run['steps'][] = $this->step($run, 'global', $handle, $path, $mine !== null, $same, ['raw' => $raw, 'title' => (string) ($raw['title'] ?? ucfirst($handle))]);
         }
     }
 
@@ -454,7 +454,7 @@ final class KitApplier
                 throw AbilityException::invalid(__('The kit’s menu “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
             }
 
-            $run['steps'][] = $this->step($run, 'menu', $handle, $path, is_file(content_path("navigation/{$handle}.yaml")), false, ['raw' => $raw]);
+            $run['steps'][] = $this->step($run, 'menu', $handle, $path, is_file(content_path("navigation/{$handle}.yaml")), false, ['raw' => $raw, 'title' => (string) ($raw['title'] ?? ucfirst($handle))]);
         }
     }
 

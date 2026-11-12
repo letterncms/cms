@@ -58,7 +58,6 @@
   "{name} added": "{name} toegevoegd",
   "{name} applied": "{name} toegepast",
   "{name} deleted": "{name} verwijderd",
-  "{name} exported": "{name} geëxporteerd",
   "{name} updated": "{name} bijgewerkt",
   "A block of its own, such as a callout, keeps the same spacing as the text around it.": "Een eigen blok, zoals een kader, houdt dezelfde ruimte als de tekst eromheen.",
   "A button keeps its own look in prose.": "Een knop houdt in lopende tekst zijn eigen uiterlijk.",
@@ -667,5 +666,19 @@
   "Width": "Breedte",
   "With Prose on, its own paragraphs are spaced the same way.": "Met Lopende tekst aan krijgen de eigen alinea’s dezelfde ruimte.",
   "Working…": "Bezig…",
-  "Write a Design Script or Style": "Een script of stijl van het ontwerp schrijven"
+  "Write a Design Script or Style": "Een script of stijl van het ontwerp schrijven",
+  "Component": "Component",
+  "Custom Code": "Eigen code",
+  "Design Tokens": "Designtokens",
+  "Entry": "Item",
+  "File": "Bestand",
+  "Global Set": "Globale set",
+  "Language": "Taal",
+  "Library||code": "Bibliotheek",
+  "Menu": "Menu",
+  "Script": "Script",
+  "Script Loading": "Scripts laden",
+  "Setting": "Instelling",
+  "Something in the kit doesn’t fit this site.": "Iets in deze kit past niet bij deze site.",
+  "{name} exported": "{name} geëxporteerd"
 }

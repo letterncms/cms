@@ -222,6 +222,10 @@ final class KitsTest extends TestCase
         $this->assertContains('style styles/spotlight', $names);
         $this->assertContains('menu main', $names);
         $this->assertNotContains('tokens tokens.json', $names, 'what the site has the same of is left alone, not a clash');
+        // Each is named as a person knows it: the kit's title, and an entry's collection to say what kind it is.
+        $homeStep = array_values(array_filter($clashes, static fn ($s) => $s['name'] === 'pages/home'))[0];
+        $this->assertSame(['pages', 'Home'], [$homeStep['collection'], $homeStep['title']]);
+        $this->assertSame('Main', array_values(array_filter($clashes, static fn ($s) => $s['name'] === 'main'))[0]['title'] ?? null);
 
         try {
             $this->ability('kits/apply', ['handle' => 'minimal', 'dryRun' => true]);
@@ -677,6 +681,19 @@ final class KitsTest extends TestCase
         $this->assertSame('kits/mine', $made['path']);
         $this->assertSame('site', $made['kit']['source']);
         $this->assertContains('mine', array_column($this->ability('kits/list')['kits'], 'handle'));
+
+        // As a zip to download: the kit in a folder of its handle, and nothing left on the site.
+        $zipped = $this->ability('kits/export', ['handle' => 'takeaway', 'name' => 'Takeaway', 'zip' => true]);
+        $this->assertSame(['takeaway.zip', 'application/zip', 'base64'], [$zipped['name'], $zipped['type'], $zipped['encoding']]);
+        $file = tempnam(sys_get_temp_dir(), 'kit');
+        file_put_contents($file, base64_decode($zipped['content']));
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($file));
+        $this->assertSame('Takeaway', json_decode((string) $zip->getFromName('takeaway/kit.json'), true)['name']);
+        $zip->close();
+        unlink($file);
+        $this->assertDirectoryDoesNotExist(site_path('kits/takeaway'));
+        $this->assertSame([], glob(storage_path('app/kit-export-*')) ?: []);
 
         try {
             $this->ability('kits/export', ['handle' => 'minimal', 'name' => 'Mine']);

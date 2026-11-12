@@ -58,7 +58,6 @@
   "{name} added": "{name} ajouté",
   "{name} applied": "{name} appliqué",
   "{name} deleted": "{name} supprimé",
-  "{name} exported": "{name} exporté",
   "{name} updated": "{name} mis à jour",
   "A block of its own, such as a callout, keeps the same spacing as the text around it.": "Un bloc à part, comme un encadré, garde le même espacement que le texte autour.",
   "A button keeps its own look in prose.": "Un bouton garde son propre style dans le texte courant.",
@@ -667,5 +666,19 @@
   "Width": "Largeur",
   "With Prose on, its own paragraphs are spaced the same way.": "Avec Texte courant activé, ses propres paragraphes sont espacés de la même façon.",
   "Working…": "En cours…",
-  "Write a Design Script or Style": "Écrire un script ou un style du design"
+  "Write a Design Script or Style": "Écrire un script ou un style du design",
+  "Component": "Composant",
+  "Custom Code": "Code personnalisé",
+  "Design Tokens": "Jetons de design",
+  "Entry": "Entrée",
+  "File": "Fichier",
+  "Global Set": "Ensemble global",
+  "Language": "Langue",
+  "Library||code": "Bibliothèque",
+  "Menu": "Menu",
+  "Script": "Script",
+  "Script Loading": "Chargement des scripts",
+  "Setting": "Paramètre",
+  "Something in the kit doesn’t fit this site.": "Quelque chose dans ce kit ne convient pas à ce site.",
+  "{name} exported": "{name} exporté"
 }
