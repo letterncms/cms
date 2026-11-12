@@ -1,7 +1,7 @@
 import { locale, navigate, t, useAbility, useLocation } from '@letterncms/sdk'
-import { Badge, Button, cn, Icon, IconButton, NotFoundState, Page, Pressable, Skeleton, Tabs } from '@letterncms/ui'
+import { Badge, Button, cn, Icon, IconButton, NotFoundState, Page, Pressable, Skeleton, Switch, Tabs, Tooltip } from '@letterncms/ui'
 import { useState } from 'react'
-import { Action, addLicenseKey, installItem, ItemIcon, priceLabel, type Item } from './storeItem'
+import { Action, addLicenseKey, installItem, ItemIcon, priceLabel, switchPlugin, uninstallPlugin, type Installed, type Item } from './storeItem'
 
 interface Detail extends Item {
   description_html: string
@@ -27,7 +27,7 @@ const atLeast = (constraint: string) => {
   return found ? t('{version} or later', { version: found[1] }) : constraint
 }
 
-const STORE = '/plugins?tab=store'
+const PLUGINS = '/plugins'
 
 /**
  * One plugin's page in the store, at /plugins/store/<vendor>/<name> (`?store=` for another store than the default):
@@ -38,20 +38,21 @@ export default function StoreItem({ params }: { params: Record<string, string> }
   const store = query.store || 'default'
   const name = `${params.vendor}/${params.name}`
   const catalog = useAbility<{ items: Item[] }>('packages/catalog', { store })
-  const local = useAbility<{ items: { name: string; icon: string }[] }>('packages/list', { type: 'all' })
+  const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'all' })
   const item = catalog.data?.items.find((i) => i.package === name)
-  const crumbs = [{ label: t('Plugins'), to: '/plugins', icon: 'plugin' }, { label: t('Store'), to: STORE }]
+  const crumbs = [{ label: t('Plugins'), to: PLUGINS, icon: 'plugin' }]
   if (!item) {
     return (
       <Page crumbs={[...crumbs, { label: catalog.isLoading ? name : t('Not Found') }]}>
-        {catalog.isLoading ? <Skeleton className="h-14 w-72" /> : <NotFoundState icon="plugin" action={<Button onClick={() => navigate(STORE)}>{t('Back to {label}', { label: t('Store') })}</Button>} />}
+        {catalog.isLoading ? <Skeleton className="h-14 w-72" /> : <NotFoundState icon="plugin" action={<Button onClick={() => navigate(PLUGINS)}>{t('Back to {label}', { label: t('Plugins') })}</Button>} />}
       </Page>
     )
   }
-  return <Page width="wide" crumbs={[...crumbs, { label: item.title }]}><ItemPage key={item.package} item={item} icon={local.data?.items.find((p) => p.name === item.package)?.icon} refetch={() => void catalog.refetch()} /></Page>
+  return <Page width="wide" crumbs={[...crumbs, { label: item.title }]}><ItemPage key={item.package} item={item} plugin={local.data?.items.find((p) => p.name === item.package)} refetch={() => { void catalog.refetch(); void local.refetch() }} /></Page>
 }
 
-function ItemPage({ item, icon, refetch }: { item: Item; icon?: string; refetch: () => void }) {
+function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; refetch: () => void }) {
+  const icon = plugin?.icon
   const detail = useAbility<Detail>('packages/item', { store: item.store, package: item.package })
   const d = detail.data
   const [tab, setTab] = useState<'overview' | 'changelog'>('overview')
@@ -98,7 +99,16 @@ function ItemPage({ item, icon, refetch }: { item: Item; icon?: string; refetch:
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {item.action === 'buy' && <Button disabled={locked} onClick={() => void addKey()}>{t('Add License Key')}</Button>}
-            <Action item={item} busy={busy} locked={locked} onInstall={() => void install()} size="md" />
+            {/* Here already: where it is set up, on or off, an update, and the way to remove it. Not yet: what the store offers. */}
+            {plugin ? <>
+              {plugin.settingsTo && <Button size="md" icon="settings" onClick={() => navigate(plugin.settingsTo!)}>{t('Settings')}</Button>}
+              {(() => {
+                const toggle = <span className="inline-flex"><Switch checked={plugin.enabled} disabled={locked || plugin.locked} onChange={(on) => void switchPlugin(plugin, on).then(refetch)} label={t('On')} /></span>
+                return plugin.locked && plugin.keptOn ? <Tooltip content={plugin.keptOn}>{toggle}</Tooltip> : toggle
+              })()}
+              {item.action === 'update' && <Action item={item} busy={busy} locked={locked} onInstall={() => void install()} size="md" />}
+              <Button size="md" icon="trash" variant="ghost" disabled={locked || plugin.dependents.length > 0} title={plugin.dependents.length ? plugin.keptOn ?? undefined : undefined} onClick={() => void uninstallPlugin(plugin).then((gone) => gone && refetch())}>{t('Uninstall')}</Button>
+            </> : <Action item={item} busy={busy} locked={locked} onInstall={() => void install()} size="md" />}
           </div>
         </header>
         {item.access.message && <p className="m-0 mt-3 text-xs text-muted">{item.access.message}</p>}

@@ -1,12 +1,15 @@
-import { invalidate, Link, locale, run, t, useAbility, useLocation, can, navigate, plural } from '@letterncms/sdk'
-import { Badge, Button, confirm, EmptyState, Icon, IconButton, Input, List, Menu, NoMatches, prompt, Select, Skeleton, toast } from '@letterncms/ui'
+import { invalidate, Link, locale, run, t, useAbility, useLocation, can, navigate, plural, setQuery } from '@letterncms/sdk'
+import { Badge, Button, cn, confirm, EmptyState, Icon, IconButton, Input, List, Menu, NoMatches, prompt, Segmented, Select, Skeleton, toast } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { driveJob, JobFailed, type Job } from './installing'
-import { Action, addLicenseKey, installing, installItem, ItemIcon, itemPath, priceLabel, type Item } from './storeItem'
+import { Action, addLicenseKey, installing, installItem, ItemIcon, itemPath, PluginControls, priceLabel, type Installed, type Item } from './storeItem'
 
 interface Catalog { store: string; items: Item[]; freshness: 'ok' | 'stale' | 'expired' | 'clock' | 'none'; problem: string | null; error: string | null }
 interface StoreInfo { id: string; name: string; url: string | null; default: boolean; fingerprint: string | null; problem: string | null }
-type Sort = 'popular' | 'name' | 'installed'
+type Sort = 'popular' | 'name'
+
+/** One plugin in the list: what the store says of it, what is installed here, or both. */
+interface Row { key: string; item?: Item; plugin?: Installed }
 
 const CHUNK = 2 * 1024 * 1024
 
@@ -31,9 +34,9 @@ async function uploadZip(file: File, allowUnsigned: boolean): Promise<Job> {
 
 
 /**
- * Browse and install from a store: signed files, checked here. Works on every site, with nothing sold here at all.
- * Search and sort sit above the categories; with nothing narrowed, featured plugins come first, then all of them
- * in the store's own order. Every card is the same size.
+ * Every plugin in one list: the store's, and what is installed here, from the store or a zip. Installed is a filter,
+ * not a place of its own. An installed plugin has its switch and its menu (settings, uninstall) where the store
+ * would offer Install. Search and sort sit above the categories; with nothing narrowed, featured plugins come first.
  */
 export function Store() {
   const [store, setStore] = useState('default')
@@ -45,6 +48,9 @@ export function Store() {
   const [sort, setSort] = useState<Sort>('popular')
   // An older link to a plugin's page (`?item=<package>`) leads to its page of its own.
   const { query } = useLocation()
+  // All of them, or what is installed here: in the address, so a link (and the way back from a plugin's page) keeps it.
+  const show: 'all' | 'installed' = query.show === 'installed' ? 'installed' : 'all'
+  const setShow = (next: 'all' | 'installed') => setQuery({ show: next === 'all' ? null : next })
   useEffect(() => { if (query.item) navigate(itemPath({ package: query.item, store: query.store ?? 'default' }), { replace: true }) }, [query.item, query.store])
   const [busy, setBusy] = useState<string | null>(null)
   const [step, setStep] = useState<string | null>(null)
@@ -53,8 +59,10 @@ export function Store() {
   const file = useRef<HTMLInputElement>(null)
   const data = catalog.data
   // What's installed here brings its own icon: an older store's listing may have none.
-  const local = useAbility<{ items: { name: string; icon: string }[] }>('packages/list', { type: 'all' })
+  const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'all' })
   const icons = Object.fromEntries((local.data?.items ?? []).map((p) => [p.name, p.icon]))
+  const plugins = useMemo(() => (local.data?.items ?? []).filter((p) => !p.core), [local.data])
+  const installedHere = new Map(plugins.map((p) => [p.name, p]))
   const current = stores.data?.items.find((s) => s.id === store)
   const all = data?.items ?? []
 
@@ -66,20 +74,31 @@ export function Store() {
   }, [all])
   const sellsSomething = all.some((i) => i.pricing !== 'free') && all.some((i) => i.pricing === 'free')
 
+  // The store's plugins, each with what is installed of it here; then what is installed from elsewhere (a zip, another store).
+  const rows = useMemo<Row[]>(() => {
+    const listed = new Set(all.map((i) => i.package))
+    return [
+      ...all.map((item) => ({ key: item.package, item, plugin: installedHere.get(item.package) })),
+      ...plugins.filter((p) => !listed.has(p.name)).map((plugin) => ({ key: plugin.name, plugin })),
+    ]
+  }, [all, plugins])
+  const installedCount = rows.filter((r) => r.plugin).length
+
   const items = useMemo(() => {
     const terms = search.trim().toLocaleLowerCase(locale()).split(/\s+/).filter(Boolean)
-    const found = all.filter((i) => {
-      const text = `${i.title} ${i.summary} ${i.package} ${i.author.name} ${i.categories.join(' ')}`.toLocaleLowerCase(locale())
-      return (!category || i.categories.includes(category)) && (pricing === 'all' || (pricing === 'free') === (i.pricing === 'free')) && terms.every((term) => text.includes(term))
+    const found = rows.filter(({ item, plugin }) => {
+      if (show === 'installed' && !plugin) return false
+      const text = (item ? `${item.title} ${item.summary} ${item.package} ${item.author.name} ${item.categories.join(' ')}` : `${plugin!.label} ${plugin!.note} ${plugin!.name}`).toLocaleLowerCase(locale())
+      // Category and price are the store's words: what it doesn't list has neither.
+      return (!category || !!item?.categories.includes(category)) && (pricing === 'all' || (!!item && (pricing === 'free') === (item.pricing === 'free'))) && terms.every((term) => text.includes(term))
     })
-    if (sort === 'name') return [...found].sort((a, b) => a.title.localeCompare(b.title, locale()))
-    if (sort === 'installed') return [...found].sort((a, b) => Number(!!b.installed) - Number(!!a.installed))
+    if (sort === 'name') return [...found].sort((a, b) => title(a).localeCompare(title(b), locale()))
     return found
-  }, [all, search, category, pricing, sort])
+  }, [rows, show, search, category, pricing, sort])
 
   const narrowed = search.trim() !== '' || category !== '' || pricing !== 'all'
   // One list: what the store features leads it, in the store's own order, and is not listed a second time.
-  const listed = !narrowed && sort === 'popular' ? [...items.filter((i) => i.featured), ...items.filter((i) => !i.featured)] : items
+  const listed = !narrowed && sort === 'popular' ? [...items.filter((r) => r.item?.featured), ...items.filter((r) => !r.item?.featured)] : items
   // What every card would say alike is said by none: the price where nothing is sold, the author where there is one.
   const priced = all.some((i) => i.pricing !== 'free')
   const authored = new Set(all.map((i) => i.author.name || i.package)).size > 1
@@ -87,13 +106,13 @@ export function Store() {
 
   const after = async (message: string) => {
     invalidate('packages/')
-    await catalog.refetch()
+    await Promise.all([catalog.refetch(), local.refetch()])
     toast.success(message)
   }
 
   const install = async (item: Item) => {
     setBusy(item.package)
-    if (await installItem(item, setStep)) await catalog.refetch()
+    if (await installItem(item, setStep)) await Promise.all([catalog.refetch(), local.refetch()])
     setBusy(null)
   }
 
@@ -171,7 +190,7 @@ export function Store() {
     : data.error ? t('Can’t reach the store. {error}', { error: data.error })
     : null
 
-  const card = (item: Item) => <Card key={item.package} item={item} priced={priced} authored={authored} icon={icons[item.package]} busy={busy === item.package} locked={busy !== null} to={itemPath(item)} onInstall={() => void install(item)} />
+  const card = (row: Row) => <Card key={row.key} row={row} priced={priced} authored={authored} icon={icons[row.key]} busy={busy === row.key} locked={busy !== null} onInstall={() => row.item && void install(row.item)} />
 
   return (
     <div>
@@ -179,16 +198,17 @@ export function Store() {
 
       {/* Find first: search and order, then what to narrow it to. */}
       <div className="mb-3 flex min-h-10 flex-wrap items-center gap-2">
-        <Input size="sm" className="w-full sm:w-72" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}', { items: t('Plugins') })} aria-label={t('Search')} />
-        <div className="w-40 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={sort} onChange={(v) => setSort((v ?? 'popular') as Sort)} aria-label={t('Sort')} options={[{ value: 'popular', label: t('Most Popular') }, { value: 'name', label: t('Name') }, { value: 'installed', label: t('Installed First') }]} /></div>
-        {categories.some(([, count]) => count > 1) && <div className="w-40 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={category || 'all'} onChange={(v) => setCategory(!v || v === 'all' ? '' : v)} aria-label={t('Category')} options={[{ value: 'all', label: t('All Categories') }, ...categories.map(([name]) => ({ value: name, label: name }))]} /></div>}
+        <Segmented size="sm" value={show} onChange={setShow} aria-label={t('Show')} options={[{ value: 'all', label: t('All') }, { value: 'installed', label: t('Installed'), count: installedCount || undefined }]} />
+        <Input size="sm" className="w-full sm:w-auto sm:min-w-44 sm:flex-1" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}', { items: t('Plugins') })} aria-label={t('Search')} />
+        <div className="w-36 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={sort} onChange={(v) => setSort((v ?? 'popular') as Sort)} aria-label={t('Sort')} options={[{ value: 'popular', label: t('Most Popular') }, { value: 'name', label: t('Name') }]} /></div>
+        {categories.some(([, count]) => count > 1) && <div className="w-36 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={category || 'all'} onChange={(v) => setCategory(!v || v === 'all' ? '' : v)} aria-label={t('Category')} options={[{ value: 'all', label: t('All Categories') }, ...categories.map(([name]) => ({ value: name, label: name }))]} /></div>}
         {sellsSomething && <div className="w-28 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('Any Price') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="flex items-center gap-1 max-sm:ml-auto">
           {(stores.data?.items.length ?? 0) > 1 && <div className="w-40 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} /></div>}
-          <Button variant="ghost" icon="upload" disabled={busy !== null} onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>
           <Menu
             trigger={<IconButton icon="more" label={t('More')} />}
             items={[
+              { label: t('Upload Zip'), icon: 'upload', disabled: busy !== null, onSelect: () => file.current?.click() },
               { label: t('Check Now'), icon: 'refresh', disabled: busy !== null, onSelect: () => void refresh() },
               // A key for what was bought belongs here too, before anything paid is installed and a Licenses tab exists.
               priced && { label: t('Add License Key'), icon: 'key', onSelect: () => void addLicenseKey() },
@@ -209,6 +229,8 @@ export function Store() {
       ) : items.length === 0 ? (
         narrowed
           ? <NoMatches onClear={clear} />
+          : show === 'installed'
+          ? <EmptyState icon="plugin" title={t('No plugins installed yet')} action={<Button onClick={() => setShow('all')}>{t('Browse Plugins')}</Button>} />
           : <EmptyState icon="download" title={t('Nothing in this store yet')} action={<Button onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>} />
       ) : (
         <>
@@ -221,23 +243,32 @@ export function Store() {
   )
 }
 
+const title = (row: Row) => row.item?.title ?? row.plugin!.label
+
 /**
- * One plugin as a row of the store's list: what it is, what it does in a line, its version, and the one thing
- * to do with it here. Its name leads to the plugin's page.
+ * One plugin as a row of the list: what it is, what it does in a line (or what's wrong with it), its version, and
+ * what to do with it here: install it, or once it's here its switch and menu. Its name leads to its page.
  */
-function Card({ item, icon, priced, authored, busy, locked, to, onInstall }: { item: Item; icon?: string; priced: boolean; authored: boolean; busy: boolean; locked: boolean; to: string; onInstall: () => void }) {
+function Card({ row: { item, plugin }, icon, priced, authored, busy, locked, onInstall }: { row: Row; icon?: string; priced: boolean; authored: boolean; busy: boolean; locked: boolean; onInstall: () => void }) {
+  const to = item ? itemPath(item) : plugin!.to
+  const name = item?.title ?? plugin!.label
+  const line = plugin?.problem ?? (item ? [authored && t('By {name}', { name: item.author.name || item.package }), item.summary].filter(Boolean).join(' · ') : plugin!.note)
   return (
     <div role="listitem" className="flex min-h-16 items-center gap-3 px-3 py-2">
-      <ItemIcon item={item} icon={icon} />
+      {item ? <ItemIcon item={item} icon={icon} /> : <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-sunken text-ink"><Icon name={plugin!.icon || 'plugin'} size={20} /></span>}
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <Link to={to} className="min-w-0 truncate rounded-xs text-sm font-medium text-ink no-underline hover:underline hover:underline-offset-2">{item.title}</Link>
-          {priced && <Badge>{priceLabel(item)}</Badge>}
+          {to ? <Link to={to} className="min-w-0 truncate rounded-xs text-sm font-medium text-ink no-underline hover:underline hover:underline-offset-2">{name}</Link> : <span className="min-w-0 truncate text-sm font-medium text-ink">{name}</span>}
+          {priced && item && !plugin && <Badge>{priceLabel(item)}</Badge>}
         </div>
-        <p className="m-0 truncate text-xs text-muted">{[authored && t('By {name}', { name: item.author.name || item.package }), item.summary].filter(Boolean).join(' · ')}</p>
+        <p className={cn('m-0 truncate text-xs', plugin?.problem ? 'text-warning' : 'text-muted')}>{line}</p>
       </div>
-      <span className="shrink-0 text-xs tabular-nums text-muted max-sm:hidden">{item.latest}</span>
-      <div className="shrink-0"><Action item={item} busy={busy} locked={locked} onInstall={onInstall} /></div>
+      <span className="shrink-0 text-xs tabular-nums text-muted max-sm:hidden">{plugin?.version ?? item?.latest}</span>
+      <div className="flex shrink-0 items-center gap-2">
+        {/* Here already: an update if there is one, then its switch and menu. Not yet: what the store offers. */}
+        {item && (!plugin || item.action === 'update') && <Action item={item} busy={busy} locked={locked} onInstall={onInstall} />}
+        {plugin && <PluginControls plugin={plugin} disabled={locked} />}
+      </div>
     </div>
   )
 }

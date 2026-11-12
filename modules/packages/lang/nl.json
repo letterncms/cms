@@ -222,5 +222,13 @@
   "What It Needs": "Wat het nodig heeft",
   "Works With": "Werkt met",
   "Back to {label}": "Terug naar {label}",
-  "Not Found": "Niet gevonden"
+  "Not Found": "Niet gevonden",
+  "{name} on": "{name} aan",
+  "Actions for {name}": "Acties voor {name}",
+  "All": "Alle",
+  "Browse Plugins": "Plugins bekijken",
+  "Every plugin: the installed ones to switch on or off, set up or uninstall, and a store's to install, or a zip to upload.": "Alle plugins: geïnstalleerde om aan of uit te zetten, in te stellen of te verwijderen, die van een store om te installeren, of een zip om te uploaden.",
+  "No plugins installed yet": "Nog geen plugins geïnstalleerd",
+  "Show": "Tonen",
+  "Uninstall {name}?": "{name} verwijderen?"
 }

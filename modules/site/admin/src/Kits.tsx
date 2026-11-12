@@ -166,7 +166,7 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit, onDelete 
       {needs && (
         <div className="mt-2 flex items-center gap-2 text-xs text-muted">
           <span className="min-w-0 flex-1 truncate">{t('Needs {plugins}', { plugins: kit.missingPlugins.join(', ') })}</span>
-          <Button size="sm" onClick={() => navigate('/plugins?tab=store')}>{t('Open Store')}</Button>
+          <Button size="sm" onClick={() => navigate('/plugins')}>{t('Open Store')}</Button>
         </div>
       )}
       {(canEdit || canDelete || canReset || (!kit.active && kit.source !== 'saved' && kit.suits)) && (

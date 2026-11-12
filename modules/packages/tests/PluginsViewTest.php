@@ -7,7 +7,7 @@ namespace Cms\Modules\Packages\Tests;
 use Cms\Abilities\AbilityContext;
 use Cms\Tests\TestCase;
 
-/** Plugins is a view: the plugins by name, each with a switch, the store and updates, and where each is set up. */
+/** Plugins is a view: every plugin in one list with updates beside it; Built In is a settings page; each plugin says where it is set up. */
 final class PluginsViewTest extends TestCase
 {
     public function test_plugins_lists_plugins_only_by_name_with_where_each_is_set_up(): void
@@ -17,23 +17,21 @@ final class PluginsViewTest extends TestCase
         $view = $this->cms()->abilities()->execute('views/get', ['id' => 'plugins'], $ctx)['root'];
         $tabs = $view['children'][0]['children'];
 
-        $this->assertSame(['installed', 'built-in', 'store', 'updates'], array_slice(array_column(array_column($tabs, 'props'), 'id'), 0, 4));
+        // One list of every plugin (the store's and what is installed here), then updates: Built In is a settings page of its own.
+        $this->assertSame(['plugins', 'updates'], array_slice(array_column(array_column($tabs, 'props'), 'id'), 0, 2));
+        $this->assertContains('packages/store', array_column($tabs[0]['children'], 'type'));
+        $this->assertNotContains('built-in', array_column(array_column($tabs, 'props'), 'id'));
 
         // Built In: the modules that can be switched off, never a required one, nothing to uninstall.
-        $builtIn = $tabs[1]['children'][0];
+        $builtIn = $this->cms()->abilities()->execute('views/get', ['id' => 'built-in'], $ctx)['root']['children'][0];
         $this->assertSame(['type' => 'module', 'optional' => true], $builtIn['props']['source']['input']);
         $this->assertSame([], array_filter($builtIn['props']['actions'], static fn ($a) => ($a['ability'] ?? null) === 'packages/uninstall'));
+        $this->assertSame('packages/switch', array_column($builtIn['props']['columns'], 'action', 'key')['enabled']['ability']);
+        $this->assertSame('system', $this->cms()->admin()->navItems()['built-in']['section']);
         $modules = $this->cms()->abilities()->execute('packages/list', ['type' => 'module', 'optional' => true], $ctx)['items'];
         $this->assertNotContains('letterncms/media', array_column($modules, 'name'));
         $this->assertNotContains('letterncms/license', array_column($modules, 'name'), 'Required, as Modules needs it.');
         $this->assertSame([], array_filter($modules, static fn ($m) => $m['required']));
-        $records = array_values(array_filter($tabs[0]['children'], static fn ($n) => $n['type'] === 'ui/records'))[0];
-        $this->assertSame('packages/switch', array_column($records['props']['columns'], 'action', 'key')['enabled']['ability']);
-
-        $columns = array_column($records['props']['columns'], null, 'key');
-        $this->assertSame('locked', $columns['enabled']['disabled']);
-        $this->assertSame('keptOn', $columns['enabled']['reason']);
-        $this->assertSame('{row.to}', $records['props']['open']['when']);
 
         $list = $this->cms()->abilities()->execute('packages/list', ['type' => 'plugin'], $ctx);
         $items = $list['items'];

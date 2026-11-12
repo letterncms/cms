@@ -1,5 +1,5 @@
-import { invalidate, run, t } from '@letterncms/sdk'
-import { Badge, Button, cn, confirm, Icon, prompt, toast } from '@letterncms/ui'
+import { invalidate, loadManifest, navigate, run, t } from '@letterncms/sdk'
+import { Badge, Button, cn, confirm, Icon, IconButton, Menu, prompt, Switch, toast, Tooltip, type MenuItemDef } from '@letterncms/ui'
 import { driveJob, type Job } from './installing'
 
 /** A package in a store's catalog, as this site sees it: what can be done with it here. */
@@ -21,6 +21,23 @@ export interface Item {
   installed: string | null
   action: 'install' | 'update' | 'installed' | 'buy' | 'incompatible' | 'blocked'
   access: { allowed?: boolean; reason?: string; message?: string; buy_url?: string }
+}
+
+/** A plugin installed here, as `packages/list` says it: on or off, what keeps it on, where it is set up. */
+export interface Installed {
+  name: string
+  version: string
+  label: string
+  note: string
+  icon: string
+  core: boolean
+  enabled: boolean
+  locked: boolean
+  keptOn: string | null
+  problem: string | null
+  dependents: string[]
+  to: string | null
+  settingsTo: string | null
 }
 
 interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[]; access: { allowed?: boolean; message?: string } }
@@ -96,10 +113,59 @@ export function Action({ item, busy, locked, onInstall, size = 'sm' }: { item: I
     case 'buy':
       return item.listing_url ? <Button size={size} onClick={(e) => { e.stopPropagation(); window.open(item.listing_url!, '_blank', 'noopener') }}>{t('Buy on Store')}</Button> : <span className="text-xs text-muted">{t('Paid Plugin')}</span>
     case 'installed':
-      return <span className="inline-flex items-center gap-1 text-xs text-muted"><Icon name="check" size={14} />{t('Installed')}</span>
+      // An installed plugin has its switch and menu instead (PluginControls); a kit is used where kits are.
+      return item.type === 'kit' ? <Button size={size} variant="ghost" onClick={(e) => { e.stopPropagation(); navigate('/kits') }}>{t('Open')}</Button> : null
     case 'blocked':
       return <Badge tone="danger">{t('Blocked')}</Badge>
     default:
       return <span className="text-xs text-muted">{t('Not for this version')}</span>
   }
+}
+
+/** Turns an installed plugin on or off, then has the admin follow (its screens come and go without a reload). */
+export async function switchPlugin(plugin: Installed, on: boolean): Promise<void> {
+  try {
+    const done = await run<{ message: string }>('packages/switch', { name: plugin.name, on })
+    toast.success(done.message)
+    invalidate('packages/')
+    await loadManifest()
+  } catch (e) {
+    toast.error(e)
+  }
+}
+
+/** Asks, then removes a plugin with its data and files. True once it is gone. */
+export async function uninstallPlugin(plugin: Installed): Promise<boolean> {
+  if (!await confirm({ title: t('Uninstall {name}?', { name: plugin.label }), description: t('Its database tables, settings and files are removed.'), confirm: t('Uninstall'), danger: true })) return false
+  try {
+    const done = await run<{ message: string }>('packages/uninstall', { name: plugin.name, deleteFiles: true })
+    toast.success(done.message)
+    invalidate('packages/')
+    await loadManifest()
+    return true
+  } catch (e) {
+    toast.error(e)
+    return false
+  }
+}
+
+/** What else is done with an installed plugin: where it is set up, and the way to remove it (not while another needs it). */
+export function pluginMenu(plugin: Installed, after?: () => void): (MenuItemDef | false | null)[] {
+  return [
+    !!plugin.settingsTo && { label: t('Settings'), icon: 'settings', onSelect: () => navigate(plugin.settingsTo!) },
+    !!plugin.to && plugin.to !== plugin.settingsTo && { label: t('Open'), icon: 'arrow-right', onSelect: () => navigate(plugin.to!) },
+    (!!plugin.settingsTo || !!plugin.to) && { separator: true, label: '' },
+    { label: t('Uninstall…'), icon: 'trash', danger: true, disabled: plugin.dependents.length > 0, description: plugin.keptOn && plugin.dependents.length ? plugin.keptOn : undefined, onSelect: () => void uninstallPlugin(plugin).then((gone) => gone && after?.()) },
+  ]
+}
+
+/** An installed plugin's switch and its menu: what stays on says why. */
+export function PluginControls({ plugin, disabled }: { plugin: Installed; disabled?: boolean }) {
+  const toggle = <span className="inline-flex"><Switch checked={plugin.enabled} disabled={disabled || plugin.locked} onChange={(on) => void switchPlugin(plugin, on)} aria-label={t('{name} on', { name: plugin.label })} /></span>
+  return (
+    <div className="flex items-center gap-1">
+      {plugin.locked && plugin.keptOn ? <Tooltip content={plugin.keptOn}>{toggle}</Tooltip> : toggle}
+      <Menu align="end" trigger={<IconButton icon="more" label={t('Actions for {name}', { name: plugin.label })} size="sm" />} items={pluginMenu(plugin)} />
+    </div>
+  )
 }

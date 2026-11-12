@@ -222,5 +222,13 @@
   "What It Needs": "Ce qu’il faut",
   "Works With": "Fonctionne avec",
   "Back to {label}": "Retour à {label}",
-  "Not Found": "Introuvable"
+  "Not Found": "Introuvable",
+  "{name} on": "{name} activé",
+  "Actions for {name}": "Actions pour {name}",
+  "All": "Tous",
+  "Browse Plugins": "Parcourir les plugins",
+  "Every plugin: the installed ones to switch on or off, set up or uninstall, and a store's to install, or a zip to upload.": "Tous les plugins : ceux installés à activer ou désactiver, configurer ou désinstaller, ceux d’un store à installer, ou un zip à téléverser.",
+  "No plugins installed yet": "Aucun plugin installé pour l’instant",
+  "Show": "Afficher",
+  "Uninstall {name}?": "Désinstaller {name} ?"
 }
