@@ -3,7 +3,6 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
 import { Menu, type MenuItemDef } from './Menu'
-import { Tooltip } from './Tooltip'
 
 export interface SegmentOption<T extends string> {
   value: T
@@ -66,13 +65,13 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
 }
 
 /**
- * A row of tabs. `fit` (a narrow panel's header): when the labels don't fit, tabs with an
- * `icon` show only it, with the label as a tooltip, until there is room again. A tab with a
+ * A row of tabs. `fit` (a narrow panel's header): when the labels don't fit, the tabs move
+ * closer together, and past that the row scrolls sideways; a tab always shows its label. A tab with a
  * `menu` shows a chevron while it is the chosen one, and choosing it again opens the menu (a saved view's Rename, Delete).
  */
 export function Tabs<T extends string>({ value, onChange, tabs, className, id, bordered = true, size = 'sm', fit }: { value: T; onChange: (v: T) => void; tabs: { value: T; label: string; icon?: string; count?: number; indicator?: boolean; menu?: (MenuItemDef | false | null | undefined)[] }[]; className?: string; id?: string; bordered?: boolean; size?: 'xs' | 'sm'; fit?: boolean }) {
   const row = useRef<HTMLDivElement>(null)
-  // The width the labels need, measured while they show; icons take over below it.
+  // The width the labels need at the usual spacing; below it the tabs sit closer.
   const [needs, setNeeds] = useState<number | null>(null)
   const labels = tabs.map((tab) => tab.label).join('\n')
   useLayoutEffect(() => setNeeds(null), [labels])
@@ -86,20 +85,41 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
     return () => observer.disconnect()
   }, [fit, labels, needs === null])
   const compact = fit && needs !== null
+  // Which ends have tabs scrolled out of sight: that end fades, so the row reads as one that scrolls.
+  const [hidden, setHidden] = useState({ start: false, end: false })
+  useLayoutEffect(() => {
+    const el = row.current
+    if (!el) return
+    const check = () => setHidden((current) => {
+      const start = el.scrollLeft > 1
+      const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+      return current.start === start && current.end === end ? current : { start, end }
+    })
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    const observer = new ResizeObserver(check)
+    observer.observe(el)
+    return () => { el.removeEventListener('scroll', check); observer.disconnect() }
+  }, [labels, compact])
+  // The chosen tab is never one of the hidden ones.
+  useLayoutEffect(() => {
+    row.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [value, compact])
+  const fade = hidden.start && hidden.end ? '[mask-image:linear-gradient(to_right,transparent,black_24px,black_calc(100%-24px),transparent)]'
+    : hidden.start ? '[mask-image:linear-gradient(to_right,transparent,black_24px)]'
+    : hidden.end ? '[mask-image:linear-gradient(to_left,transparent,black_24px)]' : undefined
   return (
     // Many plugin tabs scroll sideways rather than wrapping their labels. The rule is an inset shadow the active underline covers, so nothing overflows vertically.
-    // A page's tabs sit 20px apart on their hairline; unbordered ones (in a panel's own header row) 16px.
+    // A page's tabs sit 20px apart on their hairline; unbordered ones (in a panel's own header row) 16px, or 12px where that doesn't fit.
     // The row clips what reaches outside it, so on a touch screen a tab is 44px tall itself.
-    <div ref={row} role="tablist" className={cn('flex min-h-9 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [@media(pointer:coarse)]:min-h-11', bordered ? 'gap-5 shadow-rule' : 'gap-4', className)}>
+    <div ref={row} role="tablist" className={cn('flex min-h-9 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [@media(pointer:coarse)]:min-h-11', bordered ? 'gap-5 shadow-rule' : compact ? 'gap-3' : 'gap-4', fade, className)}>
       {tabs.map((t, index) => {
-        const iconOnly = compact && !!t.icon
         const menu = value === t.value && t.menu?.some(Boolean) ? t.menu : undefined
         const tab = (
           <button
             key={t.value}
             id={id ? `${id}-${t.value}` : undefined}
             aria-controls={id ? `${id}-${t.value}-panel` : undefined}
-            aria-label={iconOnly ? t.label : undefined}
             role="tab"
             type="button"
             aria-selected={value === t.value}
@@ -116,14 +136,14 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
             }}
             className={cn('flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap font-medium outline-offset-[-2px] transition-[color,box-shadow] duration-base ease-out', size === 'xs' ? 'text-xs' : 'text-sm', value === t.value ? 'text-ink shadow-underline' : 'text-muted hover:text-text')}
           >
-            {iconOnly ? <Icon name={t.icon!} size={16} /> : t.label}
+            {t.label}
             {t.indicator && <><span className="size-1.5 shrink-0 rounded-full bg-signal" aria-hidden /><span className="sr-only">{translate('Unsaved changes')}</span></>}
             {t.count !== undefined && <span className="text-xs font-normal tabular-nums text-faint">{t.count}</span>}
             {menu && <Icon name="chevron-down" size={14} className="-ml-0.5 shrink-0 text-faint" />}
           </button>
         )
         if (menu) return <Menu key={t.value} align="start" trigger={tab} items={menu} />
-        return iconOnly ? <Tooltip key={t.value} content={t.label} side="bottom">{tab}</Tooltip> : tab
+        return tab
       })}
     </div>
   )
