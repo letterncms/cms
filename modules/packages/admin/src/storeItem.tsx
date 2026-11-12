@@ -42,8 +42,8 @@ export interface Installed {
 
 interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[]; access: { allowed?: boolean; message?: string } }
 
-/** Where a plugin's own page in the store is: its package name, and the store when it isn't the default one. */
-export const itemPath = (item: Pick<Item, 'package' | 'store'>) => `/plugins/store/${item.package}${item.store && item.store !== 'default' ? `?store=${encodeURIComponent(item.store)}` : ''}`
+/** A listing's page, with a store in the address when it differs from the default. */
+export const itemPath = (item: Pick<Item, 'package' | 'store'> & Partial<Pick<Item, 'type'>>) => `/${item.type === 'kit' ? 'kits' : 'plugins'}/store/${item.package}${item.store && item.store !== 'default' ? `?store=${encodeURIComponent(item.store)}` : ''}`
 
 /** Turn On After Install, as the store's menu last set it in this visit: the list and a plugin's page install alike. */
 export const installing = { turnOn: true }
@@ -68,7 +68,7 @@ export async function installItem(item: Item, onStep: (step: string | null) => v
       const job = await run<Job>('packages/install', { store: item.store, package: s.package, version: s.version, turnOn: installing.turnOn })
       await driveJob(job)
     }
-    invalidate('packages/')
+    invalidate('packages/', ...(item.type === 'kit' ? ['kits/'] : []))
     toast.success(item.installed ? t('{name} updated', { name: item.title }) : t('{name} installed', { name: item.title }))
     return true
   } catch (e) {
@@ -111,7 +111,7 @@ export function Action({ item, busy, locked, onInstall, size = 'sm' }: { item: I
     case 'update':
       return <Button size={size} variant="primary" loading={busy} disabled={locked} onClick={(e) => { e.stopPropagation(); onInstall() }}>{item.action === 'update' ? t('Update') : t('Install')}</Button>
     case 'buy':
-      return item.listing_url ? <Button size={size} onClick={(e) => { e.stopPropagation(); window.open(item.listing_url!, '_blank', 'noopener') }}>{t('Buy on Store')}</Button> : <span className="text-xs text-muted">{t('Paid Plugin')}</span>
+      return item.listing_url ? <Button size={size} onClick={(e) => { e.stopPropagation(); window.open(item.listing_url!, '_blank', 'noopener') }}>{t('Buy on Store')}</Button> : <span className="text-xs text-muted">{item.type === 'kit' ? t('Paid') : t('Paid Plugin')}</span>
     case 'installed':
       // An installed plugin has its switch and menu instead (PluginControls); a kit is used where kits are.
       return item.type === 'kit' ? <Button size={size} variant="ghost" onClick={(e) => { e.stopPropagation(); navigate('/kits') }}>{t('Open')}</Button> : null

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **Site kits have their own place in the admin.** Open **Browse Store** in **Site Kits** to find, install or update a kit. The **Plugins** list shows plugins only.
+
 ## 0.30.1 (2026-11-12)
 
 ### Changed

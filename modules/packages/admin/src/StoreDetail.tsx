@@ -1,7 +1,7 @@
 import { locale, navigate, t, useAbility, useLocation } from '@letterncms/sdk'
 import { Badge, Button, cn, Icon, IconButton, NotFoundState, Page, Pressable, Skeleton, Switch, Tabs, Tooltip } from '@letterncms/ui'
-import { useState } from 'react'
-import { Action, addLicenseKey, installItem, ItemIcon, priceLabel, switchPlugin, uninstallPlugin, type Installed, type Item } from './storeItem'
+import { useEffect, useState } from 'react'
+import { Action, addLicenseKey, installItem, ItemIcon, itemPath, priceLabel, switchPlugin, uninstallPlugin, type Installed, type Item } from './storeItem'
 
 interface Detail extends Item {
   description_html: string
@@ -30,25 +30,31 @@ const atLeast = (constraint: string) => {
 const PLUGINS = '/plugins'
 
 /**
- * One plugin's page in the store, at /plugins/store/<vendor>/<name> (`?store=` for another store than the default):
- * what it does with pictures, what changed, and the facts beside them. Its crumbs lead back to the store's list.
+ * A listing's pictures, changelog and details, with crumbs back to its catalog.
  */
 export default function StoreItem({ params }: { params: Record<string, string> }) {
-  const { query } = useLocation()
+  const { path, query } = useLocation()
+  const kits = path.startsWith('/kits/')
   const store = query.store || 'default'
   const name = `${params.vendor}/${params.name}`
   const catalog = useAbility<{ items: Item[] }>('packages/catalog', { store })
-  const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'all' })
+  const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'plugin' }, { enabled: !kits })
   const item = catalog.data?.items.find((i) => i.package === name)
-  const crumbs = [{ label: t('Plugins'), to: PLUGINS, icon: 'plugin' }]
+  // Keep links to kits from before they had their own catalog working.
+  const redirect = item && (item.type === 'kit') !== kits ? itemPath(item) : null
+  useEffect(() => { if (redirect) navigate(redirect, { replace: true }) }, [redirect])
+  const crumbs = kits
+    ? [{ label: t('Site Kits'), to: '/kits', icon: 'box' }, { label: t('Browse Store'), to: '/kits/store' }]
+    : [{ label: t('Plugins'), to: PLUGINS, icon: 'plugin' }]
+  if (redirect) return null
   if (!item) {
     return (
       <Page crumbs={[...crumbs, { label: catalog.isLoading ? name : t('Not Found') }]}>
-        {catalog.isLoading ? <Skeleton className="h-14 w-72" /> : <NotFoundState icon="plugin" action={<Button onClick={() => navigate(PLUGINS)}>{t('Back to {label}', { label: t('Plugins') })}</Button>} />}
+        {catalog.isLoading ? <Skeleton className="h-14 w-72" /> : <NotFoundState icon={kits ? 'box' : 'plugin'} action={<Button onClick={() => navigate(kits ? '/kits/store' : PLUGINS)}>{t('Back to {label}', { label: kits ? t('Browse Store') : t('Plugins') })}</Button>} />}
       </Page>
     )
   }
-  return <Page width="wide" crumbs={[...crumbs, { label: item.title }]}><ItemPage key={item.package} item={item} plugin={local.data?.items.find((p) => p.name === item.package)} refetch={() => { void catalog.refetch(); void local.refetch() }} /></Page>
+  return <Page width="wide" crumbs={[...crumbs, { label: item.title }]}><ItemPage key={item.package} item={item} plugin={local.data?.items.find((p) => p.name === item.package)} refetch={() => { void catalog.refetch(); if (!kits) void local.refetch() }} /></Page>
 }
 
 function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; refetch: () => void }) {

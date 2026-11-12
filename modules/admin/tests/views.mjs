@@ -48,19 +48,7 @@ export const views = {
   users: () => users(),
   'users-person': ({ id }) => users(id),
   plugins: () => page('Plugins', 'plugin', tabs(
-    tab('installed', 'Installed', [{ type: 'ui/records', props: {
-      id: 'packages.plugins', label: 'Plugins', key: 'name', source: { ability: 'packages/list', input: { type: 'plugin' } },
-      columns: [
-        { key: 'label', label: 'Name', width: 'minmax(128px,0.4fr)' },
-        { key: 'note', label: 'Description', width: 'minmax(160px,1fr)', format: 'muted' },
-        { key: 'version', label: 'Version', width: '80px' },
-        { key: 'enabled', label: 'On', width: '48px', format: 'switch', action: { label: 'On', ability: 'packages/switch', input: { name: '{row.name}', on: '{value}' }, success: '{result.message}', then: 'manifest' } },
-      ],
-      open: { label: 'Open', to: '{row.to}' },
-      actions: [{ label: 'Settings', icon: 'settings', to: '{row.settingsTo}', when: '{row.settingsTo}' }],
-      empty: { icon: 'plugin', title: 'No plugins yet' },
-    } }]),
-    tab('store', 'Store', [{ type: 'packages/store', props: {} }]),
+    tab('plugins', 'Plugins', [{ type: 'packages/store', props: {} }]),
     tab('updates', 'Updates', [{ type: 'packages/updates', props: {} }]),
   )),
   globals: () => page('Global Sets', 'globe', [{ type: 'ui/records', props: {
