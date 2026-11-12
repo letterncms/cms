@@ -254,7 +254,7 @@ export function App() {
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', {})
   const sidebarShown = !narrow && (own ? ownOpen : !hidden)
-  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} />
+  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} settings={settings} />
   const sidebarOut = narrow ? expanded : sidebarShown
   const toggleLabel = own
     ? sidebarOut ? t('Hide {name}', { name: own.title }) : t('Show {name}', { name: own.title })
@@ -280,7 +280,7 @@ export function App() {
             <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
               <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
             </Tooltip>
-            {!dock.full && <StateBack own={own} drawer={narrow && expanded} onNavigate={() => setExpanded(false)} />}
+            {!dock.full && <StateBack own={own} settings={settings} drawer={narrow && expanded} onNavigate={() => setExpanded(false)} />}
           </div>
         )}
         {narrow ? (

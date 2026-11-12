@@ -3,13 +3,13 @@ import { Pressable } from '../ui/Pressable'
 import { DndContext } from '../ui/dnd'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, events, Link, navigate, panelsFor, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
+import { boot, events, Link, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
 import { SiteSwitcher } from './SiteSwitcher'
 import { setThemePreference, useThemePreference } from '../ui/theme'
 import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
-import { inSettings, parentWay, placeAt, subscribeParent, wayBack } from '../ui/place'
+import { parentWay, placeAt, settingsHome, subscribeParent, wayBack } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {
@@ -31,6 +31,8 @@ interface SidebarProps {
   onSearch: () => void
   /** Called when a link is followed (the overlay sidebar on narrow screens closes). */
   onNavigate?: () => void
+  /** Whether the screen on view is a settings page: the sidebar switches with the screen, not ahead of it while the next one loads. */
+  settings: boolean
 }
 
 
@@ -44,10 +46,9 @@ const depth = { main: 0, settings: 1, screen: 2 } as const
  * the main sidebar (what each person pinned, More for the rest) and, on a settings page, the settings sidebar with a way back. Same frame,
  * same rows, same footer — only the list changes. A screen's own state (the editor's Outline) is the screen's: its list, no footer.
  */
-export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate }: SidebarProps) {
+export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate, settings }: SidebarProps) {
   const manifest = useManifest()
   const { path, search } = useLocation()
-  const settings = inSettings(manifest, path)
   const state = own ? 'screen' : settings ? 'settings' : 'main'
   const active = placeAt(manifest.nav, path)?.id
 
@@ -277,12 +278,11 @@ function StateTitle({ children }: { children: ReactNode }) {
  * where the main state has the site's name. It returns to where you came from: out of settings, the last screen before
  * them; from a screen's own sidebar, the screen it was opened from (else the one it names, its list).
  */
-export function StateBack({ own, onNavigate, drawer }: Pick<SidebarProps, 'own' | 'onNavigate' | 'drawer'>) {
+export function StateBack({ own, onNavigate, drawer, settings }: Pick<SidebarProps, 'own' | 'onNavigate' | 'drawer' | 'settings'>) {
   const manifest = useManifest()
-  const { path } = useLocation()
   // On a phone the top bar shows the screen's own crumb only: back is then one screen up, to the crumb before it.
   const parent = useSyncExternalStore(subscribeParent, parentWay)
-  if (!own && !inSettings(manifest, path)) return null
+  if (!own && !settings) return null
   const way = own ? wayBack(manifest, { to: own.backTo, label: own.backLabel }) : { to: lastApp(), label: placeAt(manifest.nav, lastApp().split('?')[0])?.label ?? t('Dashboard') }
   const label = way.label
   const back = () => {
@@ -345,6 +345,12 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
 
   const chooseTheme = setThemePreference
 
+  // Settings' first page is ready by the time the button is pressed, so the screen and the sidebar switch together.
+  const warmSettings = () => {
+    const to = settingsHome(manifest)
+    if (!settings && to) prefetch(to)
+  }
+
   const toggleSettings = () => {
     if (settings) leaveSettings()
     else openSettings()
@@ -379,7 +385,7 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
         ]}
       />
       <Tooltip content={settings ? t('Close Settings') : t('Settings')} shortcut={SETTINGS_SHORTCUT} side="top">
-        <IconButton icon="settings" label={settings ? t('Close Settings') : t('Settings')} title={undefined} size="sm" active={settings} onClick={toggleSettings} />
+        <IconButton icon="settings" label={settings ? t('Close Settings') : t('Settings')} title={undefined} size="sm" active={settings} onClick={toggleSettings} onPointerEnter={warmSettings} onFocus={warmSettings} />
       </Tooltip>
     </div>
   )
