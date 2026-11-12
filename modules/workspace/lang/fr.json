@@ -119,5 +119,9 @@
   "What should we work on?": "Sur quoi travaillons-nous ?",
   "Where people work: threads at the right edge of the admin, answered with views, for commands, search and an agent when there is one.": "Là où l’on travaille : des discussions sur le bord droit de l’admin, avec des vues pour réponses, pour les commandes, la recherche et un agent s’il y en a un.",
   "Working…": "En cours…",
-  "Workspace": "Espace de travail"
+  "Workspace": "Espace de travail",
+  "AI": "IA",
+  "Local": "Local",
+  "{name} answers": "{name} répond",
+  "Searches and runs commands on this site": "Recherche et exécute des commandes sur ce site"
 }

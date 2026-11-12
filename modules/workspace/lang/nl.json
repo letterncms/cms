@@ -119,5 +119,9 @@
   "What should we work on?": "Waar gaan we aan werken?",
   "Where people work: threads at the right edge of the admin, answered with views, for commands, search and an agent when there is one.": "Waar mensen werken: chats aan de rechterkant van de admin, beantwoord met weergaven, voor opdrachten, zoeken en een agent als die er is.",
   "Working…": "Bezig…",
-  "Workspace": "Werkplek"
+  "Workspace": "Werkplek",
+  "AI": "AI",
+  "Local": "Lokaal",
+  "{name} answers": "{name} antwoordt",
+  "Searches and runs commands on this site": "Zoekt en voert opdrachten uit op deze site"
 }

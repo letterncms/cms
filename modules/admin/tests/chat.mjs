@@ -568,11 +568,13 @@ try {
     await wait(() => composer().placeholder === 'Search, or / for a command', 'the composer still offers to ask')
     assert(!dock().querySelector('[aria-label="Add Context"]') && !dock().querySelector('[aria-label^="Model: "]'), 'context or a model picker without an agent')
     assert(!/Claude|\bAI\b|assistant/i.test(dock().textContent), 'the thread mentions AI')
+    assert(dock().querySelector('[data-mode="local"]')?.textContent === 'Local', 'the composer does not say it is local')
     fill('Pricing'); await sleep(30); composer().form.requestSubmit()
     await wait(() => dock().textContent.includes('Found Pricing'), 'the search did not answer')
     const sent = (await state()).requests.findLast(r => r.kind === 'chat').input
     assert(sent.search === 'Pricing' && !('message' in sent) && !('context' in sent), 'plain words were not a search')
     await fetch('/__test/agent', { method: 'POST', body: 'on' }); await loadManifest()
+    newChat(); await wait(() => dock().querySelector('[data-mode="ai"]')?.textContent === 'AI', 'the composer does not say the AI answers')
   })
   await test('Words that match nothing are asked, entries are found, and Enter typed early waits for the lines', async () => {
     newChat(); await wait(() => welcome(), 'new chat failed')

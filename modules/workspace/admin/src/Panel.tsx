@@ -271,6 +271,7 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
             >
               <div className="flex items-center gap-2 px-2 pb-2">
                 <div className="flex min-w-0 flex-1 items-center">
+                  <Mode agent={answering} />
                   {footer.map(({ id: panelId, component: Footer }) => <Footer key={panelId} {...composerProps} />)}
                 </div>
                 {thread.busy && answering ? (
@@ -284,6 +285,18 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
         </>}
       </section>
     </div>
+  )
+}
+
+/** Whether the composer asks the AI or searches and runs commands on the site alone: always in view, next to the model. */
+function Mode({ agent }: { agent: { label: string } | null }) {
+  return (
+    <Tooltip content={agent ? t('{name} answers', { name: agent.label }) : t('Searches and runs commands on this site')}>
+      <span tabIndex={0} data-mode={agent ? 'ai' : 'local'} className={cn('flex h-7 shrink-0 items-center gap-1 rounded-sm px-2 text-xs outline-offset-1', agent ? 'text-text' : 'text-muted')}>
+        <Icon name={agent ? 'sparkle' : 'desktop'} size={12} />
+        {agent ? t('AI') : t('Local')}
+      </span>
+    </Tooltip>
   )
 }
 
