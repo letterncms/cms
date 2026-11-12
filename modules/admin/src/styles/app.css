@@ -122,82 +122,6 @@
   /* A hairline on the inside of a swatch's edge, rounded as the swatch is. */
   .cms-swatch-edge { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--cms-border-strong); pointer-events: none; }
 
-  .cms-slideover {
-    position: fixed;
-    z-index: var(--cms-z-overlay);
-    top: 12px;
-    right: 12px;
-    display: flex;
-    flex-direction: column;
-    width: min(460px, calc(100vw - 24px));
-    height: calc(100dvh - 24px);
-    overflow: hidden;
-    border: 1px solid var(--cms-border-float);
-    border-radius: var(--radius-xl);
-    background: var(--cms-float);
-    box-shadow: var(--cms-shadow-dialog);
-    outline: none;
-    transition: transform var(--cms-duration-move) var(--ease-out), opacity var(--cms-duration-move) var(--ease-out);
-  }
-
-  .cms-slideover[hidden] { display: none; }
-
-  .cms-slideover[data-workspace] {
-    position: absolute;
-    width: min(460px, calc(100% - 24px));
-    height: calc(100% - 24px);
-  }
-
-  .cms-slideover[data-expanded] {
-    inset: 0;
-    width: 100%;
-    height: 100dvh;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .cms-slideover[data-workspace][data-expanded] {
-    width: 100%;
-    height: 100%;
-  }
-
-  .cms-slideover[data-starting-style],
-  .cms-slideover[data-ending-style] {
-    opacity: 0;
-    transform: translateX(calc(100% + 12px));
-  }
-
-  .cms-slideover-header {
-    display: flex;
-    min-height: 48px;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px 8px 18px;
-    border-bottom: 1px solid var(--cms-border);
-  }
-
-  @media (max-width: 639px) {
-    .cms-slideover {
-      inset: 0;
-      width: 100%;
-      height: 100dvh;
-      border: 0;
-      border-radius: 0;
-    }
-    .cms-slideover[data-workspace] {
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cms-slideover { transition: opacity var(--cms-duration-base) linear; }
-    .cms-slideover[data-starting-style],
-    .cms-slideover[data-ending-style] { transform: none; }
-  }
-
   /* Touch: a button is at least 44px to hit, whatever its size to see. */
   @media (pointer: coarse) {
     /* Options that stand side by side (a segmented control) reach up and down only: sideways each one's area would lie over its neighbour. */
@@ -598,9 +522,11 @@
       border-radius: var(--radius-lg);
       overflow: hidden;
       box-shadow: var(--cms-shadow-sheet);
-      transition: margin-left var(--cms-panel-speed) var(--ease-out);
+      transition: margin var(--cms-panel-speed) var(--ease-out);
     }
     .cms-shell[data-inset]:not([data-sidebar]) .cms-sheet { margin-left: 8px; }
+    /* A panel beside the sheet starts at its edge: its rules run on from the sheet's, with no strip of desk between. */
+    .cms-shell[data-inset]:has([data-cms-inspector]) .cms-sheet { margin-right: 0; }
     /* Next to the sheet the dock is on the desk too: no rule of its own between them. */
     .cms-shell[data-inset] .cms-dock:not([data-floating]) .cms-dock-panel { box-shadow: none; }
   }
@@ -610,6 +536,7 @@
   /* Docked on the desk beside the sheet, its first row lines up with the sheet's top bar, as an inspector's does. */
   @media (min-width: 1100px) {
     .cms-shell[data-inset] .cms-dock:not([data-floating]):not([data-full]) .cms-dock-inner { padding-top: 8px; }
+    .cms-shell[data-inset]:has(.cms-dock[data-open]:not([data-floating]):not([data-full])) .cms-sheet { margin-right: 0; }
   }
   /* The sidebar button and the way back: in the sidebar's first row, or in the sheet's top bar while the sidebar is away. */
   .cms-leading {
