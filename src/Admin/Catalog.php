@@ -96,7 +96,8 @@ final class Catalog
             'ui/records' => ['label' => 'Records from an ability: table, search, filters, pages, row actions', 'children' => false, 'props' => $this->object([
                 // Or literal `rows`: what a command or search found, as it was then.
                 'id' => $id, 'label' => $s, 'source' => $source, 'rows' => ['type' => 'array', 'maxItems' => 200, 'items' => ['type' => 'object']], 'at' => $id, 'key' => $id,
-                'columns' => ['type' => 'array', 'minItems' => 1, 'maxItems' => 12, 'items' => $column],
+                // A collection's list has a column for each field it can show, most of them waiting in Display: as many as a saved view keeps.
+                'columns' => ['type' => 'array', 'minItems' => 1, 'maxItems' => 60, 'items' => $column],
                 'search' => ['anyOf' => [$this->object(['param' => $id, 'placeholder' => $s]), ['type' => 'boolean', 'const' => false]]],
                 'filters' => ['type' => 'array', 'maxItems' => 4, 'items' => $this->object([
                     'param' => $id, 'label' => $s, 'all' => $s,

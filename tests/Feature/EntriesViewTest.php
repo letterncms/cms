@@ -60,6 +60,26 @@ final class EntriesViewTest extends TestCase
         $this->assertSame(['en', 'de'], array_column($records['filters'][1]['options'], 'value'));
     }
 
+    public function test_a_collection_with_many_fields_lists_them_all(): void
+    {
+        $fields = array_map(static fn (int $i) => ['handle' => "reading{$i}", 'type' => 'text', 'label' => "Reading {$i}"], range(1, 16));
+        $this->cms()->collections()->save(Collection::fromArray('surveys', ['title' => 'Surveys', 'fields' => $fields]));
+
+        $records = $this->records('surveys', $this->admin());
+
+        $this->assertContains('values.reading16', array_column($records['columns'], 'key'));
+
+        // However many there are, the list offers what the catalog takes, the first fields first.
+        $fields = array_map(static fn (int $i) => ['handle' => "reading{$i}", 'type' => 'text', 'label' => "Reading {$i}"], range(1, 80));
+        $this->cms()->collections()->save(Collection::fromArray('surveys', ['title' => 'Surveys', 'fields' => $fields]));
+        $keys = array_column($this->records('surveys', $this->admin())['columns'], 'key');
+
+        $this->assertLessThanOrEqual(60, count($keys));
+        $this->assertContains('values.reading50', $keys);
+        $this->assertNotContains('values.reading51', $keys);
+        $this->assertContains('updated', $keys);
+    }
+
     public function test_a_dated_collection_sorts_newest_first_and_offers_a_calendar(): void
     {
         $records = $this->records('posts', $this->admin());

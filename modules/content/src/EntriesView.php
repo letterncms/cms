@@ -24,6 +24,9 @@ final class EntriesView
         'tags' => '180px', 'media' => '64px', 'url' => '180px', 'email' => '180px', 'slug' => '160px', 'color' => '112px',
     ];
 
+    /** How many of a collection's fields its list offers as columns: with its own ten at most, within the catalog's sixty. */
+    private const int FIELD_COLUMNS = 50;
+
     /** The types entries/list can sort by. */
     private const array SORTABLE = ['text', 'select', 'toggle', 'date', 'number', 'url', 'email', 'slug', 'color'];
 
@@ -189,10 +192,15 @@ final class EntriesView
         }
         $columns[] = ['id' => 'status', 'key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '104px', 'sort' => 'status'];
 
+        $listed = 0;
         foreach ($fields as $field) {
             $type = (string) $field['type'];
             if (! isset(self::WIDTHS[$type]) || in_array($field['handle'], ['title', 'slug'], true) || in_array($field['component'] ?? null, ['title', 'uri'], true)) {
                 continue;
+            }
+            // The first fields that fit, beside the list's own columns, within what `ui/records` takes.
+            if (++$listed > self::FIELD_COLUMNS) {
+                break;
             }
             $columns[] = [
                 'id' => "field:{$field['handle']}", 'key' => "values.{$field['handle']}", 'label' => (string) (($field['label'] ?? '') ?: $field['handle']),
