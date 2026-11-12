@@ -2,7 +2,7 @@
     "name": "letterncms/site",
     "description": "The design system, page templates and the site renderer, with previews and static builds.",
     "type": "cms-plugin",
-    "version": "0.26.0",
+    "version": "0.26.1",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"
