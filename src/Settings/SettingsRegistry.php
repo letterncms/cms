@@ -193,6 +193,27 @@ final class SettingsRegistry
         return $key === null ? $values : (array_key_exists($key, $values) && $values[$key] !== null ? $values[$key] : $default);
     }
 
+    /**
+     * Run with these values over the namespace's, in memory only: what a dry run needs to see the site as a change
+     * would leave it (a kit's languages, before they are added). Nothing is written and nothing is kept afterwards.
+     */
+    public function staged(string $namespace, array $values, callable $run): mixed
+    {
+        $had = array_key_exists($namespace, $this->cache);
+        $before = $this->cache[$namespace] ?? null;
+        $this->cache[$namespace] = [...$this->get($namespace), ...$values];
+
+        try {
+            return $run();
+        } finally {
+            if ($had) {
+                $this->cache[$namespace] = $before;
+            } else {
+                unset($this->cache[$namespace]);
+            }
+        }
+    }
+
     /** Read the namespace from its files again next time: for code that changed a file itself, as a migration does. */
     public function forget(string $namespace): void
     {
