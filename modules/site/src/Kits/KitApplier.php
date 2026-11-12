@@ -154,7 +154,8 @@ final class KitApplier
         // Collections the apply would make are there for the entries to be checked against, in memory only. The
         // real apply runs this first too: an entry the site would refuse stops it before a single file is copied.
         // A new site's first kit leaves it out (`check`): there is nothing of the site's to keep whole yet.
-        ($dry || $check) && $this->cms->collections()->staged($staged, fn () => $entries->dry(fn () => $this->writeEntries($run, $user)));
+        // The languages it would add count as the site's for that check, so their entries aren't refused for being in one.
+        ($dry || $check) && $this->cms->settingsRegistry()->staged('site', ['locales' => $run['locales']], fn () => $this->cms->collections()->staged($staged, fn () => $entries->dry(fn () => $this->writeEntries($run, $user))));
 
         if ($dry) {
             return ['kit' => $kit->handle, 'mode' => $mode, 'steps' => self::report($plan['steps']), 'backup' => null];
@@ -283,12 +284,10 @@ final class KitApplier
     private function planCollections(array &$run): void
     {
         $stamps = ['published_at' => 1, 'updated_at' => 1];
+        $definitions = [];
 
         foreach ($run['contents']['collections'] as $handle => $path) {
             $definition = $this->files->yaml($run['kit'], $path);
-            $file = content_path("collections/{$handle}.yaml");
-            $exists = is_file($file);
-
             $theirs = $this->cms->collections()->find($handle);
 
             // A plugin's own collection (templates, components, a form's pages) is the plugin's: a kit brings its entries, never its definition.
@@ -296,25 +295,61 @@ final class KitApplier
                 throw AbilityException::invalid(__('The kit’s collection “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => __('a kit brings no definition of a plugin’s collection, and keeps its entries in files or the database')]));
             }
 
-            try {
-                // What collections/save checks, before anything is written.
-                $collection = CollectionAbilities::check($handle, array_diff_key($definition, $stamps));
-                // The same definition, however each file happens to write it.
-                $same = $exists && array_diff_key(Collection::fromArray($handle, Yaml::read($file))->toYaml(), $stamps) == array_diff_key($collection->toYaml(), $stamps);
-                $collection->blueprint()->schema();
+            $definitions[$handle] = array_diff_key($definition, $stamps);
+        }
 
-                foreach (array_keys($collection->blueprints()) as $name) {
-                    $collection->blueprint($name)->schema();
-                }
-            } catch (Throwable $e) {
-                throw AbilityException::invalid(__('The kit’s collection “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
+        // What happens to each is decided first: only what the site takes (create, replace) is checked, and checked
+        // beside the others it takes, so a collection may file its entries under a taxonomy of the kit
+        // (journal → topics), whatever order their files come in, and never under one the site keeps its own of.
+        $steps = [];
+        $beside = [];
+
+        foreach ($definitions as $handle => $definition) {
+            $file = content_path("collections/{$handle}.yaml");
+            $exists = is_file($file);
+
+            try {
+                $theirs = Collection::fromArray($handle, $definition);
+            } catch (Throwable) {
+                // Checked below, where the problem is said.
+                $theirs = null;
             }
 
-            $step = $this->step($run, 'collection', $handle, $path, $exists, $same, ['definition' => array_diff_key($definition, $stamps)]);
+            // The same definition, however each file happens to write it.
+            $same = $exists && $theirs !== null && array_diff_key(Collection::fromArray($handle, Yaml::read($file))->toYaml(), $stamps) == array_diff_key($theirs->toYaml(), $stamps);
+            $steps[$handle] = $this->step($run, 'collection', $handle, $run['contents']['collections'][$handle], $exists, $same, ['definition' => $definition]);
+            $brings = in_array($steps[$handle]['action'], ['create', 'replace'], true);
+            $brings && $theirs !== null && $beside[$handle] = $theirs;
+        }
+
+        $taken = array_filter($definitions, static fn (string $handle) => in_array($steps[$handle]['action'], ['create', 'replace'], true), ARRAY_FILTER_USE_KEY);
+        $checked = $this->cms->collections()->staged($beside, function () use ($taken): array {
+            $out = [];
+
+            foreach ($taken as $handle => $definition) {
+                try {
+                    // What collections/save checks, before anything is written.
+                    $collection = CollectionAbilities::check($handle, $definition);
+                    $collection->blueprint()->schema();
+
+                    foreach (array_keys($collection->blueprints()) as $name) {
+                        $collection->blueprint($name)->schema();
+                    }
+                } catch (Throwable $e) {
+                    throw AbilityException::invalid(__('The kit’s collection “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
+                }
+
+                $out[$handle] = $collection;
+            }
+
+            return $out;
+        });
+
+        foreach ($steps as $handle => $step) {
             $run['steps'][] = $step;
             // The entries are checked against the definition the site will have once this is done.
-            $brings = in_array($step['action'], ['create', 'replace'], true);
-            $run['collections'][$handle] = ['collection' => $brings ? $collection : $this->cms->collections()->findOrFail($handle), 'staged' => $brings];
+            $brings = isset($checked[$handle]);
+            $run['collections'][$handle] = ['collection' => $brings ? $checked[$handle] : $this->cms->collections()->findOrFail($handle), 'staged' => $brings];
         }
     }
 
@@ -647,7 +682,7 @@ final class KitApplier
 
     private function writeCollections(array $run, AbilityContext $context): void
     {
-        foreach ($this->doing($run, 'collection') as $step) {
+        foreach (self::dependencyOrder($this->doing($run, 'collection')) as $step) {
             $definition = $step['definition'];
 
             if (isset($definition['template'], $run['renamed']['templates'][$definition['template']])) {
@@ -660,6 +695,51 @@ final class KitApplier
 
         $this->cms->collections()->flush();
         $this->cms->entries()->flush();
+    }
+
+    /**
+     * Collections in an order each one's fields can be saved in: one that another names (its taxonomy, the
+     * collections an entries field picks from) comes before it. Names that aren't the kit's are left to the site.
+     *
+     * @param  list<array>  $steps
+     * @return list<array>
+     */
+    private static function dependencyOrder(array $steps): array
+    {
+        $bringing = array_column($steps, 'name');
+        $names = static function (mixed $value) use (&$names): array {
+            $out = [];
+            foreach (is_array($value) ? $value : [] as $key => $item) {
+                if ($key === 'taxonomy' && is_string($item)) {
+                    $out[] = $item;
+                } elseif ($key === 'collections' && is_array($item)) {
+                    array_push($out, ...array_filter($item, 'is_string'));
+                } else {
+                    array_push($out, ...$names($item));
+                }
+            }
+
+            return $out;
+        };
+        $needs = [];
+        foreach ($steps as $step) {
+            $needs[$step['name']] = array_values(array_intersect(array_diff($names($step['definition']), [$step['name']]), $bringing));
+        }
+
+        $ordered = [];
+        $done = [];
+        while ($steps !== []) {
+            $ready = array_filter($steps, static fn (array $step) => array_diff($needs[$step['name']], $done) === []);
+            // A ring of collections that name each other goes as it came: collections/save says what is wrong.
+            $ready = $ready === [] ? [array_key_first($steps) => reset($steps)] : $ready;
+            foreach ($ready as $i => $step) {
+                $ordered[] = $step;
+                $done[] = $step['name'];
+                unset($steps[$i]);
+            }
+        }
+
+        return $ordered;
     }
 
     /** Entries the site lacks are created first, originals before their translations; then the ones that take another's place. */

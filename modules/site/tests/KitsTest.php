@@ -275,6 +275,141 @@ final class KitsTest extends TestCase
         $this->assertSame(4, $this->cms()->entries()->query()->collection('templates')->count());
     }
 
+    public function test_a_kit_whose_collection_files_under_its_own_taxonomy_in_its_own_languages_applies(): void
+    {
+        // Notes come before topics by name, and are filed under them; the kit speaks Dutch too, the site not yet.
+        $this->kit('field', [
+            'content/collections/notes.yaml' => "title: Notes\ndriver: files\nstructure: dated\nroute: '/notes/{slug}'\nfields:\n  - { handle: topics, type: terms, label: Topics, taxonomy: topics }\n  - { handle: about, type: entries, label: About, collections: [topics], max: 1 }\n",
+            'content/collections/topics.yaml' => "title: Topics\ndriver: files\nstructure: tree\nroute: '/topics/{slug}'\ntaxonomy: true\nfields: []\n",
+            'content/collections/topics/tides.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Tides\nstatus: published\n---\n",
+            'content/collections/topics/nl/getij.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab2\ntitle: Getij\nstatus: published\norigin: 01aaaaaaaaaaaaaaaaaaaaaab1\n---\n",
+            'content/collections/notes/slack.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab3\ntitle: Slack\nstatus: published\npublished_at: '2025-12-01T09:00:00+00:00'\ntopics: [01aaaaaaaaaaaaaaaaaaaaaab1]\n---\n\nSlack water.\n",
+            'content/collections/notes/nl/kentering.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab4\ntitle: Kentering\nstatus: published\npublished_at: '2025-12-01T09:00:00+00:00'\norigin: 01aaaaaaaaaaaaaaaaaaaaaab3\ntopics: [01aaaaaaaaaaaaaaaaaaaaaab2]\n---\n\nDood tij.\n",
+        ], ['languages' => ['en', 'nl']]);
+        $this->assertNotContains('nl', $this->cms()->locales());
+
+        $this->apply('field', 'full', 'rename');
+
+        $this->assertContains('nl', $this->cms()->locales());
+        $this->assertTrue($this->cms()->collections()->findOrFail('topics')->isTaxonomy());
+        $slack = $this->cms()->entries()->query()->collection('notes')->ungated()->where('slug', 'slack')->first();
+        $tides = $this->cms()->entries()->query()->collection('topics')->ungated()->where('slug', 'tides')->first();
+        $this->assertSame([$tides->id], $slack->data['topics'], 'filed under the topic as the kit brought it');
+        $this->assertSame('nl', $this->cms()->entries()->query()->collection('notes')->ungated()->where('slug', 'kentering')->first()?->locale);
+    }
+
+    /** The kit of the test above: notes filed under its own topics, in English and Dutch. */
+    private function fieldKit(array $more = []): void
+    {
+        $this->kit('field', [
+            'content/collections/notes.yaml' => "title: Notes\ndriver: files\nstructure: dated\nroute: '/notes/{slug}'\nfields:\n  - { handle: topics, type: terms, label: Topics, taxonomy: topics }\n",
+            'content/collections/topics.yaml' => "title: Topics\ndriver: files\nstructure: tree\nroute: '/topics/{slug}'\ntaxonomy: true\nfields: []\n",
+            'content/collections/topics/tides.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Tides\nstatus: published\n---\n",
+            'content/collections/topics/nl/getij.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab2\ntitle: Getij\nstatus: published\norigin: 01aaaaaaaaaaaaaaaaaaaaaab1\n---\n",
+            'content/collections/notes/slack.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab3\ntitle: Slack\nstatus: published\npublished_at: '2025-12-01T09:00:00+00:00'\ntopics: [01aaaaaaaaaaaaaaaaaaaaaab1]\n---\n\nSlack water.\n",
+            ...$more,
+        ], ['languages' => ['en', 'nl']]);
+    }
+
+    /** A collection of the site's own, with one published entry in it. */
+    private function sitePage(string $collection, string $route, string $slug): \Cms\Content\Entries\Entry
+    {
+        $this->cms()->collections()->find($collection) ?? $this->ability('collections/save', ['handle' => $collection, 'definition' => ['title' => ucfirst($collection), 'driver' => 'files', 'route' => $route, 'fields' => []]]);
+        $this->cms()->collections()->flush();
+
+        return $this->cms()->entryService()->create($collection, ['title' => ucfirst($slug), 'slug' => $slug, 'status' => 'published'], $this->admin());
+    }
+
+    public function test_a_dry_run_names_the_language_a_kit_adds_and_the_site_keeps_its_addresses(): void
+    {
+        $harbour = $this->sitePage('places', '/places/{slug}', 'harbour');
+        $this->fieldKit();
+
+        $dry = $this->ability('kits/apply', ['handle' => 'field', 'dryRun' => true]);
+        $this->assertContains(['action' => 'create', 'type' => 'language', 'name' => 'nl'], array_map(static fn ($s) => array_intersect_key($s, array_flip(['action', 'type', 'name'])), $dry['changes']));
+        $this->assertNotContains('nl', $this->cms()->locales(), 'a dry run adds no language');
+
+        $this->apply('field');
+
+        // The site's default language has no prefix, multilingual or not: what it had stays where it was.
+        $this->assertContains('nl', $this->cms()->locales());
+        $this->assertSame('/places/harbour', $this->cms()->entries()->find($harbour->id)->uri);
+        $this->assertSame('/nl/topics/getij', $this->cms()->entries()->query()->collection('topics')->ungated()->where('slug', 'getij')->first()?->uri);
+    }
+
+    public function test_a_kit_that_fails_after_adding_a_language_takes_it_away_again(): void
+    {
+        $this->fieldKit();
+        $site = (string) file_get_contents(site_path('config/site.yaml'));
+        $this->cms()->hooks()->on('collection.saved', static fn () => throw new \RuntimeException('The disk is full.'));
+
+        try {
+            $this->apply('field');
+            $this->fail('the failure reached nobody');
+        } catch (\Throwable) {
+        }
+
+        $this->assertSame($site, file_get_contents(site_path('config/site.yaml')));
+        $this->assertNotContains('nl', $this->cms()->locales());
+        $this->assertNull($this->cms()->collections()->find('notes'));
+    }
+
+    public function test_a_kit_applied_twice_is_left_alone_or_comes_in_beside_itself(): void
+    {
+        $this->fieldKit();
+        $this->apply('field');
+        $count = fn (string $collection) => $this->cms()->entries()->query()->collection($collection)->ungated()->count();
+
+        $this->apply('field', 'full', 'skip');
+        $this->assertSame([2, 1], [$count('topics'), $count('notes')], 'skip: the site keeps what it has');
+
+        $this->apply('field', 'full', 'rename');
+        $this->assertSame([4, 2], [$count('topics'), $count('notes')]);
+        $copy = $this->cms()->entries()->query()->collection('notes')->ungated()->where('slug', 'slack-2')->first();
+        $tides = $this->cms()->entries()->query()->collection('topics')->ungated()->where('slug', 'tides-2')->first();
+        $this->assertSame([$tides->id], $copy->data['topics'], 'the copy is filed under the copy of its topic');
+    }
+
+    public function test_a_kit_archive_at_an_address_a_site_page_has_is_refused_before_anything_is_written(): void
+    {
+        $this->sitePage('places', '/topics/{slug}', 'tides');
+        $this->kit('atlas', [
+            'content/collections/notes.yaml' => "title: Notes\ndriver: files\nroute: '/notes/{slug}'\narchives:\n  topics: '/topics/{slug}'\nfields:\n  - { handle: topics, type: terms, label: Topics, taxonomy: topics }\n",
+            'content/collections/topics.yaml' => "title: Topics\ndriver: files\ntaxonomy: true\nfields: []\n",
+            'content/collections/topics/tides.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac1\ntitle: Tides\nstatus: published\n---\n",
+            'content/collections/notes/slack.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac2\ntitle: Slack\nstatus: published\ntopics: [01aaaaaaaaaaaaaaaaaaaaaac1]\n---\n",
+        ]);
+
+        foreach ([true, false] as $dry) {
+            try {
+                $this->ability('kits/apply', ['handle' => 'atlas', 'dryRun' => $dry]);
+                $this->fail('the archive would take the site’s page’s address');
+            } catch (AbilityException $e) {
+                $this->assertStringContainsString('archive URL /topics/tides', $e->getMessage());
+            }
+        }
+
+        $this->assertNull($this->cms()->collections()->find('notes'));
+        $this->assertNull($this->cms()->collections()->find('topics'));
+        $this->assertFileDoesNotExist(content_path('collections/notes.yaml'));
+    }
+
+    public function test_a_collection_the_site_keeps_its_own_of_is_checked_as_the_sites(): void
+    {
+        // The site has topics of its own, not a taxonomy: skipped, the kit's notes can't file under them.
+        $this->ability('collections/save', ['handle' => 'topics', 'definition' => ['title' => 'Topics', 'driver' => 'files', 'route' => '/t/{slug}', 'fields' => []]]);
+        $this->fieldKit();
+
+        try {
+            $this->app->make(KitApplier::class)->plan($this->kits()->findOrFail('field'), 'full', 'skip');
+            $this->fail('the plan checked notes against the kit’s topics, which the site doesn’t take');
+        } catch (AbilityException $e) {
+            $this->assertStringContainsString('“notes”', $e->getMessage());
+        }
+
+        $this->assertNull($this->cms()->collections()->find('notes'));
+    }
+
     public function test_dates_ahead_of_the_export_stay_as_far_ahead(): void
     {
         $posts = (string) file_get_contents(Kits::builtin().'/minimal/content/collections/posts.yaml');
