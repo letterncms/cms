@@ -378,7 +378,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
           time('duration', t('Duration')),
           time('delay', t('Delay')),
           ...when(target !== 'self', time('stagger', t('Stagger'), { step: 0.01 })),
-          ...when(count > 1, time('at', t('Starts At||time'), { placeholder: t('After') })),
+          ...when(count > 1, time('at', t('Starts At'), { placeholder: t('After') })),
           { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: [...(byGroup.get('ease') ?? []).map((ease) => ({ value: `token:${ease.path}`, label: ease.name, curve: String(ease.value) })), ...eases()] },
         ]}
         values={{ duration: `${step.duration ?? 0.6}s`, delay: step.delay !== undefined ? `${step.delay}s` : undefined, stagger: step.stagger !== undefined ? `${step.stagger}s` : undefined, at: step.at !== undefined ? `${step.at}s` : undefined, ease: step.ease }}
