@@ -27,7 +27,7 @@ final class KitAbilities
     /** One step of applying a kit: what it does (`clash` stands in the way), to what, from which of the kit's files. */
     public static function step(): array
     {
-        return ['action' => Shape::enum('create', 'replace', 'rename', 'merge', 'skip', 'clash'), 'type' => Shape::STRING, 'name' => Shape::STRING, 'path?' => Shape::STRING, 'as?' => Shape::STRING, 'note?' => Shape::STRING];
+        return ['action' => Shape::enum('create', 'replace', 'rename', 'merge', 'skip', 'clash'), 'type' => Shape::STRING, 'name' => Shape::STRING, 'title?' => Shape::STRING, 'collection?' => Shape::STRING, 'path?' => Shape::STRING, 'as?' => Shape::STRING, 'note?' => Shape::STRING];
     }
 
     /**
@@ -118,11 +118,15 @@ final class KitAbilities
 
         $abilities->register('kits/export', [
             'label' => 'Export as a Site Kit',
-            'description' => 'Make this site into a kit in the site’s kits/<handle>: its collections and published entries (drafts with `drafts`), templates and components, global sets, menus, design (tokens, fonts, scripts, styles, libraries), the media something names and the settings a kit carries; never accounts, tokens, secrets, submissions, analytics, the audit log or licences. {"handle": "studio", "name": "Studio"}. kits/apply takes it into another site, and `php cms kit:export <folder>` writes one anywhere. An existing kit of that handle is refused unless `replace`.',
+            'description' => 'Make this site into a kit, in the site’s kits/<handle> or, with `zip`, as a zip file to download (`{name, type, content, encoding: "base64"}`, the kit in a folder named <handle>; nothing is written to the site): its collections and published entries (drafts with `drafts`), templates and components, global sets, menus, design (tokens, fonts, scripts, styles, libraries), the media something names and the settings a kit carries; never accounts, tokens, secrets, submissions, analytics, the audit log or licences. {"handle": "studio", "name": "Studio"}. kits/apply takes it into another site, and `php cms kit:export <folder>` writes one anywhere. An existing kit of that handle is refused unless `replace`.',
             'permission' => 'settings.manage',
-            'input' => ['type' => 'object', 'properties' => [...$about, 'replace' => ['type' => 'boolean'], 'drafts' => ['type' => 'boolean', 'description' => 'Take drafts along too: without it only published entries go.']], 'required' => ['handle', 'name']],
-            'output' => Shape::of(['kit' => self::kit(), 'path' => Shape::STRING, 'files' => Shape::INTEGER, 'bytes' => Shape::INTEGER]),
+            'input' => ['type' => 'object', 'properties' => [...$about, 'replace' => ['type' => 'boolean'], 'drafts' => ['type' => 'boolean', 'description' => 'Take drafts along too: without it only published entries go.'], 'zip' => ['type' => 'boolean', 'description' => 'Answer with the kit as a zip file instead of putting it in kits/.']], 'required' => ['handle', 'name']],
+            'output' => Shape::of(['kit' => self::kit(), 'path?' => Shape::STRING, 'files' => Shape::INTEGER, 'bytes' => Shape::INTEGER, 'name?' => Shape::STRING, 'type?' => Shape::STRING, 'content?' => Shape::STRING, 'encoding?' => Shape::STRING]),
             'dryRun' => static function (array $in) use ($kits, $exporter, $pick): array {
+                if (! empty($in['zip'])) {
+                    return array_map(static fn (string $path) => ['action' => 'create', 'type' => 'file', 'path' => $in['handle'].'.zip/'.$in['handle'].'/'.$path], array_keys($exporter()->files($pick($in), (bool) ($in['drafts'] ?? false))));
+                }
+
                 $folder = $kits()->path((string) $in['handle']);
                 $kit = $kits()->find((string) $in['handle']);
 
@@ -133,6 +137,28 @@ final class KitAbilities
                 return array_map(static fn (string $path) => ['action' => is_file($folder.'/'.$path) ? 'replace' : 'create', 'type' => 'file', 'path' => 'kits/'.$in['handle'].'/'.$path], array_keys($exporter()->files($pick($in), (bool) ($in['drafts'] ?? false))));
             },
             'handler' => static function (array $in) use ($kits, $exporter, $pick, $describe): array {
+                // To take away: made beside the site's own files, zipped, and gone again.
+                if (! empty($in['zip'])) {
+                    $stage = storage_path('app/kit-export-'.bin2hex(random_bytes(4)));
+
+                    try {
+                        $result = $exporter()->export($stage.'/'.$in['handle'], $pick($in), drafts: (bool) ($in['drafts'] ?? false));
+                        $zip = new \ZipArchive;
+                        $file = $stage.'/'.$in['handle'].'.zip';
+                        $zip->open($file, \ZipArchive::CREATE);
+
+                        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($stage.'/'.$in['handle'], \FilesystemIterator::SKIP_DOTS)) as $item) {
+                            $zip->addFile($item->getPathname(), $in['handle'].'/'.substr($item->getPathname(), strlen($stage.'/'.$in['handle']) + 1));
+                        }
+
+                        $zip->close();
+
+                        return ['kit' => $describe($result['kit']), 'files' => $result['files'], 'bytes' => $result['bytes'], 'name' => $in['handle'].'.zip', 'type' => 'application/zip', 'content' => base64_encode((string) file_get_contents($file)), 'encoding' => 'base64'];
+                    } finally {
+                        \Cms\Support\Files::deleteDirectory($stage);
+                    }
+                }
+
                 if ($kits()->find((string) $in['handle'])?->source === 'builtin') {
                     throw AbilityException::conflict(__('There is a kit “:handle” already. Choose another handle, or replace it.', ['handle' => (string) $in['handle']]));
                 }

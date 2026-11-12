@@ -1,6 +1,6 @@
-import { invalidate, loadManifest, navigate, plural, queryClient, run, setManifest, t, useAbility } from '@letterncms/sdk'
-import { Button, Checkbox, Dialog, EmptyState, Field, Input, List, Notice, Page, QueryError, Row, Segmented, Skeleton, slugify, toast } from '@letterncms/ui'
-import { useMemo, useState } from 'react'
+import { loadManifest, navigate, plural, queryClient, run, setManifest, t, useAbility } from '@letterncms/sdk'
+import { Button, Checkbox, Dialog, EmptyState, Field, Input, List, Notice, Page, QueryError, Row, Segmented, Skeleton, download, slugify, toast } from '@letterncms/ui'
+import { useEffect, useMemo, useState } from 'react'
 
 interface Kit {
   handle: string
@@ -17,6 +17,10 @@ interface Step {
   action: 'create' | 'replace' | 'rename' | 'merge' | 'skip' | 'clash'
   type: string
   name: string
+  /** What a person knows it by: an entry's or a collection's title. */
+  title?: string
+  /** An entry's collection. */
+  collection?: string
   as?: string
   note?: string
 }
@@ -65,6 +69,23 @@ function Preview({ kit, className }: { kit: Kit; className?: string }) {
     : <span aria-hidden className={`shrink-0 rounded-sm border border-border bg-sunken ${className ?? ''}`} />
 }
 
+/** What a step brings, in a word: a template and a component are entries of their own collections. */
+function kindOf(step: Step): string {
+  if (step.type === 'entry') return step.collection === 'components' ? t('Component') : step.collection === 'templates' ? t('Template') : t('Entry')
+  const kinds: Record<string, string> = { collection: t('Collection'), global: t('Global Set'), menu: t('Menu'), media: t('File'), file: t('File'), setting: t('Setting'), language: t('Language'), library: t('Library||code'), tokens: t('Design Tokens'), font: t('Font'), custom: t('Custom Code'), script: t('Script'), style: t('Style'), load: t('Script Loading') }
+  // Where the name already says what it is, the kind says where it belongs.
+  if (step.type === 'tokens' || step.type === 'load') return t('Design')
+  return kinds[step.type] ?? step.type
+}
+
+/** What a step brings, as a person names it: its title, else its file's name without folder or extension ("spotlight"), else what it is. */
+function nameOf(step: Step): string {
+  if (step.title) return step.title
+  if (step.type === 'tokens') return t('Design Tokens')
+  if (step.type === 'load') return t('Script Loading')
+  return step.name.split('/').pop()!.replace(/\.[a-z0-9]+$/i, '')
+}
+
 /** What applying would do, counted, the clashes by name, and the choice of what happens to them. */
 function ApplyKit({ kit, onClose }: { kit: Kit; onClose: () => void }) {
   const [mode, setMode] = useState<Mode>('full')
@@ -72,6 +93,7 @@ function ApplyKit({ kit, onClose }: { kit: Kit; onClose: () => void }) {
   const [busy, setBusy] = useState(false)
   const [withoutPlugins, setWithoutPlugins] = useState(false)
   const plan = useAbility<{ plan: { steps: Step[] } }>('kits/get', { handle: kit.handle, mode, clash })
+  useEffect(() => { if (plan.error) console.error(plan.error) }, [plan.error])
   // What is already here, by name, whatever is chosen for it: the plan that settles nothing.
   const unsettled = useAbility<{ plan: { steps: Step[] } }>('kits/get', { handle: kit.handle, mode, clash: 'refuse' })
   const steps = plan.data?.plan.steps ?? []
@@ -123,7 +145,8 @@ function ApplyKit({ kit, onClose }: { kit: Kit; onClose: () => void }) {
           </>
         )}
         {plan.error ? (
-          <QueryError compact title={t('This kit can’t be applied')} message={plan.error.message} onRetry={() => plan.refetch()} retrying={plan.isFetching} />
+          // What exactly is wrong is for whoever reads the console: here it is said plainly.
+          <QueryError compact title={t('This kit can’t be applied')} message={t('Something in the kit doesn’t fit this site.')} onRetry={() => plan.refetch()} retrying={plan.isFetching} />
         ) : plan.isPending ? (
           <List>{[0, 1, 2].map((i) => <Row key={i}><Skeleton className="h-4 w-40" /></Row>)}</List>
         ) : (
@@ -140,7 +163,12 @@ function ApplyKit({ kit, onClose }: { kit: Kit; onClose: () => void }) {
         )}
         {clashes.length > 0 && (
           <List>
-            {clashes.map((s) => <Row key={s.type + s.name}><span className="min-w-0 truncate font-mono text-xs text-muted">{s.name}</span></Row>)}
+            {clashes.map((s) => (
+              <Row key={s.type + s.name}>
+                <span className="min-w-0 flex-1 truncate text-text">{nameOf(s)}</span>
+                <span className="shrink-0 text-xs text-muted">{kindOf(s)}</span>
+              </Row>
+            ))}
           </List>
         )}
       </div>
@@ -156,9 +184,10 @@ function ExportSite({ onClose }: { onClose: () => void }) {
   const save = async () => {
     setBusy(true)
     try {
-      const made = await run<{ kit: Kit; files: number }>('kits/export', { handle, name: name.trim() })
-      invalidate('kits/')
-      toast.success(t('{name} exported', { name: made.kit.name }), { description: `kits/${made.kit.handle}` })
+      // The kit as a zip, downloaded: nothing is added to this site.
+      const made = await run<{ kit: Kit; files: number }>('kits/export', { handle, name: name.trim(), zip: true })
+      download(made)
+      toast.success(t('{name} exported', { name: made.kit.name }))
       onClose()
     } catch (e) {
       toast.error(e)

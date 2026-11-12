@@ -1,5 +1,6 @@
 import { CmsError, loadManifest, navigate, queryClient, registry, run, t, type ViewAction } from '@letterncms/sdk'
 import { Suspense, useCallback, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { download } from '../download'
 import { Button } from '../Button'
 import { ComponentBoundary } from '../ComponentBoundary'
 import { confirm, Dialog } from '../Dialog'
@@ -35,7 +36,7 @@ export function useActions(scope: Scope, refresh: () => void, runner?: ActionRun
     // A thread says what happened in the turn it adds; anywhere else, a toast does.
     if (action.success && !runner) toast.success(fill(action.success, after))
     const then = Array.isArray(action.then) ? action.then : action.then ? [action.then] : []
-    if (then.includes('download')) save(result)
+    if (then.includes('download')) download(result)
     if (then.includes('manifest')) await loadManifest()
     // Whatever the change touched shows it now, here and on every other screen.
     void queryClient.invalidateQueries()
@@ -190,14 +191,3 @@ export function shown(actions: ViewAction[] | undefined, scope: Scope): ViewActi
   return (actions ?? []).filter((a) => holds(a.when, scope) && !(a.unless !== undefined && holds(a.unless, scope)))
 }
 
-/** A file an ability answered with (`{name, type, content}`), saved where the browser keeps downloads. */
-function save(result: unknown) {
-  const file = result as { name?: string; type?: string; content?: string } | null
-  if (!file || typeof file.content !== 'string') return
-  const url = URL.createObjectURL(new Blob([file.content], { type: file.type ?? 'application/octet-stream' }))
-  const link = Object.assign(document.createElement('a'), { href: url, download: file.name ?? 'download' })
-  document.body.append(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
