@@ -212,7 +212,7 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
       )}
       {!renaming && badges.map((b) => (
         <Tooltip key={b.icon} content={b.title}>
-          <span className="grid size-5 shrink-0 place-items-center text-faint">
+          <span className="grid size-5 shrink-0 place-items-center text-faint group-hover:hidden group-focus-visible:hidden">
             <Icon name={b.icon} size={12} />
           </span>
         </Tooltip>
