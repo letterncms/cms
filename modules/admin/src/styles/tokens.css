@@ -79,9 +79,9 @@
   --cms-shade: #1c1b18;
   /* A wash of the accent: highlighted text, an unpublished-changes mark's halo. Never a surface for a whole region. */
   --cms-signal-soft: color-mix(in srgb, var(--cms-signal) 28%, #fff);
-  /* Focus and selection follow the accent: a line 3:1 on the page, a wash and the wash pointed at. Amber's line
-     is amber itself (2:1 on white, with its halo, --cms-shadow-focus): any deeper is brown. */
-  --cms-focus: #e9b03c;
+  /* Focus and selection follow the accent: a line 3:1 on the page, the desk and a chosen row, a wash and the wash
+     pointed at. Amber's line on light is amber made darker until it stands out so (Cms\Admin\Accent::focus). */
+  --cms-focus: #a97a05;
   --cms-focus-soft: rgb(233 176 60 / 0.2);
   /* A selected row that is pointed at: a step deeper than the wash. */
   --cms-focus-hover: rgb(233 176 60 / 0.24);

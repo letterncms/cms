@@ -10,25 +10,23 @@ use Cms\Users\User;
  * The admin's accent, its theme colour: going live (Publish, Go Live), switches that are on, highlights, focus,
  * selection and the chat's bubble, one colour in all of them. The site chooses it for everyone (Settings →
  * General → Theme Color) and a person may choose their own (Account, the `accent` preference), from a set
- * whose words on each fill reach 4.5:1 and whose focus lines reach 3:1 on the page, in light and in dark
- * (WCAG 2.2, 1.4.3 and 1.4.11), but for amber's on light. Nothing chosen is amber, which the tokens already are.
+ * whose words on each fill reach 4.5:1 (WCAG 2.2, 1.4.3). The focus line is the fill wherever it stands out 3:1
+ * from every surface it is drawn on, else the fill made darker (light) or lighter (dark) until it does (1.4.11).
+ * Nothing chosen is amber, which the tokens already are, its line among them.
  */
 final class Accent
 {
     public const string DEFAULT = 'amber';
 
-    /**
-     * Each accent: its fill (also its mark, a switch that is on, the washes), the words on it, and its focus
-     * line on light and on dark. Amber's line is amber, 2:1 on white, with its halo: a deeper one is brown.
-     */
+    /** Each accent: its fill (also its mark, a switch that is on, the washes and its focus line) and the words on it. */
     public const array PRESETS = [
-        'amber' => ['label' => 'Amber', 'fill' => '#e9b03c', 'ink' => '#1c1b18', 'focus' => ['#e9b03c', '#e9b03c'], 'wash' => [0.2, 0.16]],
-        'orange' => ['label' => 'Orange', 'fill' => '#f76b15', 'ink' => '#1c1b18', 'focus' => ['#e86515', '#f76b15']],
-        'pink' => ['label' => 'Pink', 'fill' => '#e94184', 'ink' => '#1c1b18', 'focus' => ['#e94184', '#e94184']],
-        'violet' => ['label' => 'Violet', 'fill' => '#6e56cf', 'ink' => '#ffffff', 'focus' => ['#6e56cf', '#8874d8']],
-        'blue' => ['label' => 'Blue', 'fill' => '#0d74ce', 'ink' => '#ffffff', 'focus' => ['#0d74ce', '#2f87d5']],
-        'green' => ['label' => 'Green', 'fill' => '#30a46c', 'ink' => '#1c1b18', 'focus' => ['#2f9f69', '#30a46c']],
-        'monochrome' => ['label' => 'Monochrome', 'fill' => '#1c1b18', 'ink' => '#ffffff', 'focus' => ['#1c1b18', '#f5f4f0'], 'dark' => ['fill' => '#f5f4f0', 'ink' => '#1a1a18']],
+        'amber' => ['label' => 'Amber', 'fill' => '#e9b03c', 'ink' => '#1c1b18', 'wash' => [0.2, 0.16]],
+        'orange' => ['label' => 'Orange', 'fill' => '#f76b15', 'ink' => '#1c1b18'],
+        'pink' => ['label' => 'Pink', 'fill' => '#e94184', 'ink' => '#1c1b18'],
+        'violet' => ['label' => 'Violet', 'fill' => '#6e56cf', 'ink' => '#ffffff'],
+        'blue' => ['label' => 'Blue', 'fill' => '#0d74ce', 'ink' => '#ffffff'],
+        'green' => ['label' => 'Green', 'fill' => '#30a46c', 'ink' => '#1c1b18'],
+        'monochrome' => ['label' => 'Monochrome', 'fill' => '#1c1b18', 'ink' => '#ffffff', 'dark' => ['fill' => '#f5f4f0', 'ink' => '#1a1a18']],
     ];
 
     /** How much of the accent a selection's wash is, on light and on dark, unless an accent says otherwise. */
@@ -80,13 +78,121 @@ final class Accent
         if (isset($preset['dark'])) {
             return self::INK;
         }
-        ['fill' => $fill, 'ink' => $ink, 'focus' => [$focusLight, $focusDark]] = $preset;
+        ['fill' => $fill, 'ink' => $ink] = $preset;
+        [$focusLight, $focusDark] = [self::focus($fill, false), self::focus($fill, true)];
         [$washLight, $washDark] = $preset['wash'] ?? self::WASH;
         $rgb = implode(' ', array_map('hexdec', str_split(substr($fill, 1), 2)));
         $theme = static fn (string $focus, float $wash, float $more): string => "--cms-focus:{$focus};--cms-focus-soft:rgb({$rgb} / {$wash});--cms-focus-hover:rgb({$rgb} / ".($wash + $more).')';
 
         return ":root,[data-theme]{--cms-signal:{$fill};--cms-signal-ink:{$ink};".$theme($focusLight, $washLight, 0.04).'}'
             .'[data-theme="dark"]{'.$theme($focusDark, $washDark, 0.06).'}';
+    }
+
+    /**
+     * The focus line of a fill in a theme: the fill itself where it stands out 3:1 from every surface a line is
+     * drawn on, else the same hue a step darker (light) or lighter (dark) at a time, keeping its chroma where the
+     * screen can show it, until it does.
+     */
+    public static function focus(string $fill, bool $dark): string
+    {
+        $surfaces = self::surfaces($fill, $dark);
+        [$l, $a, $b] = self::oklab($fill);
+        [$chroma, $hue] = [hypot($a, $b), atan2($b, $a)];
+        $line = $fill;
+
+        for ($step = 0; $step < 200 && $l >= 0 && $l <= 1; $step++) {
+            $line = self::inGamut($l, $chroma, $hue);
+            if (min(array_map(static fn (string $surface) => self::contrast($line, $surface), $surfaces)) >= 3.0) {
+                return $line;
+            }
+            $l += $dark ? 0.005 : -0.005;
+        }
+
+        return $dark ? '#ffffff' : '#000000';
+    }
+
+    /**
+     * Where a focus line is drawn, as the tokens mix them with this accent: the page, the desk and a row chosen on
+     * it (light); the desk, the page, a float and a row chosen on it (dark).
+     *
+     * @return list<string>
+     */
+    public static function surfaces(string $fill, bool $dark): array
+    {
+        if (! $dark) {
+            $desk = self::mix('#f4f4f4', $fill, 0.07);
+
+            return ['#ffffff', $desk, self::mix($desk, self::mix('#2a2a2a', $fill, 0.3), 0.07)];
+        }
+        $float = self::mix('#222222', $fill, 0.07);
+
+        return [self::mix('#121212', $fill, 0.07), self::mix('#1a1a1a', $fill, 0.06), $float, self::mix($float, self::mix('#ffffff', $fill, 0.22), 0.09)];
+    }
+
+    /** WCAG's contrast ratio of two colours. */
+    public static function contrast(string $a, string $b): float
+    {
+        [$hi, $lo] = [max(self::luminance($a), self::luminance($b)), min(self::luminance($a), self::luminance($b))];
+
+        return ($hi + 0.05) / ($lo + 0.05);
+    }
+
+    /** Two colours mixed in Oklab, `$share` of the second, as CSS's color-mix(in oklab, …) does. */
+    private static function mix(string $a, string $b, float $share): string
+    {
+        [$x, $y] = [self::oklab($a), self::oklab($b)];
+
+        return self::hex(self::fromOklab($x[0] + ($y[0] - $x[0]) * $share, $x[1] + ($y[1] - $x[1]) * $share, $x[2] + ($y[2] - $x[2]) * $share));
+    }
+
+    /** A colour of this lightness and hue with as much of the chroma as the screen can show. */
+    private static function inGamut(float $l, float $chroma, float $hue): string
+    {
+        for (; $chroma > 0; $chroma -= 0.002) {
+            $rgb = self::fromOklab($l, $chroma * cos($hue), $chroma * sin($hue));
+            if (min($rgb) >= -0.0005 && max($rgb) <= 1.0005) {
+                return self::hex($rgb);
+            }
+        }
+
+        return self::hex(self::fromOklab($l, 0, 0));
+    }
+
+    /** @return array{float, float, float} */
+    private static function oklab(string $hex): array
+    {
+        [$r, $g, $b] = array_map(static fn (string $pair) => self::linear(hexdec($pair) / 255), str_split(substr($hex, 1), 2));
+        $l = (0.4122214708 * $r + 0.5363325363 * $g + 0.0514459929 * $b) ** (1 / 3);
+        $m = (0.2119034982 * $r + 0.6806995451 * $g + 0.1073969566 * $b) ** (1 / 3);
+        $s = (0.0883024619 * $r + 0.2817188376 * $g + 0.6299787005 * $b) ** (1 / 3);
+
+        return [0.2104542553 * $l + 0.7936177850 * $m - 0.0040720468 * $s, 1.9779984951 * $l - 2.4285922050 * $m + 0.4505937099 * $s, 0.0259040371 * $l + 0.7827717662 * $m - 0.8086757660 * $s];
+    }
+
+    /** @return array{float, float, float} linear sRGB */
+    private static function fromOklab(float $L, float $a, float $b): array
+    {
+        $l = ($L + 0.3963377774 * $a + 0.2158037573 * $b) ** 3;
+        $m = ($L - 0.1055613458 * $a - 0.0638541728 * $b) ** 3;
+        $s = ($L - 0.0894841775 * $a - 1.2914855480 * $b) ** 3;
+
+        return [4.0767416621 * $l - 3.3077115913 * $m + 0.2309699292 * $s, -1.2684380046 * $l + 2.6097574011 * $m - 0.3413193965 * $s, -0.0041960863 * $l - 0.7034186147 * $m + 1.7076147010 * $s];
+    }
+
+    /** @param array{float, float, float} $rgb linear sRGB */
+    private static function hex(array $rgb): string
+    {
+        return '#'.implode('', array_map(static function (float $v): string {
+            $v = max(0.0, min(1.0, $v));
+            $v = $v <= 0.0031308 ? 12.92 * $v : 1.055 * $v ** (1 / 2.4) - 0.055;
+
+            return str_pad(dechex((int) round($v * 255)), 2, '0', STR_PAD_LEFT);
+        }, $rgb));
+    }
+
+    private static function linear(float $v): float
+    {
+        return $v <= 0.04045 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4;
     }
 
     /** The words on a colour: the darker or the lighter ink, whichever stands out more. */
@@ -99,11 +205,7 @@ final class Accent
 
     public static function luminance(string $hex): float
     {
-        $c = array_map(static function (string $pair): float {
-            $v = hexdec($pair) / 255;
-
-            return $v <= 0.03928 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4;
-        }, str_split(substr($hex, 1), 2));
+        $c = array_map(static fn (string $pair): float => self::linear(hexdec($pair) / 255), str_split(substr($hex, 1), 2));
 
         return 0.2126 * $c[0] + 0.7152 * $c[1] + 0.0722 * $c[2];
     }

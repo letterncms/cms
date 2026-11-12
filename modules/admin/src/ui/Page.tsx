@@ -122,7 +122,7 @@ function firstText(node: ReactNode): string | undefined {
  * Standard screen: one compact bar that names the screen (its crumbs, the last one being
  * the screen) with what can be done on the right, then the content at a readable width.
  * No second, bigger title under it, and no line explaining the screen: it explains itself.
- * `narrow` is the form column of settings and accounts.
+ * `narrow` is the one column of every form-like page: settings, an account, a blueprint, a menu, a form.
  */
 export function Page({ crumbs = [], actions, title, children, width = 'default', className }: { crumbs?: Crumb[]; actions?: ReactNode; title?: ReactNode; children: ReactNode; width?: 'narrow' | 'default' | 'wide' | 'full'; className?: string }) {
   const max = { narrow: 'max-w-[688px]', default: 'max-w-[1080px]', wide: 'max-w-[1400px]', full: 'max-w-none' }[width]

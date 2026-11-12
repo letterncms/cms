@@ -55,9 +55,11 @@ function Buttons({ actions, size, bar, alongside = [] }: { actions?: ViewAction[
   const { scope } = useView()
   const list = shown(actions, scope)
   // In a page's bar on a phone, a button with an icon is its icon: the page's name keeps its room. Counted with what
-  // stands beside them in the same bar (a tab's actions and the page's), or three buttons push the name out.
-  const many = list.length + shown(alongside, scope).length > 2
-  return list.length > 0 ? <>{list.map((a, i) => <Fragment key={i}><ActionButton action={a} size={size} compact={bar && !!a.icon ? (many ? true : 'label') : false} />{bar && a.key && <ActionKey action={a} />}</Fragment>)}</> : null
+  // stands beside them in the same bar (a tab's actions and the page's): of two, the primary keeps its words and the
+  // other is its icon; of three or more, every one is its icon.
+  const count = list.length + shown(alongside, scope).length
+  const compact = (a: ViewAction): boolean | 'label' => !bar || !a.icon ? false : count > 2 || (count === 2 && a.variant !== 'primary') ? true : 'label'
+  return list.length > 0 ? <>{list.map((a, i) => <Fragment key={i}><ActionButton action={a} size={size} compact={compact(a)} />{bar && a.key && <ActionKey action={a} />}</Fragment>)}</> : null
 }
 
 /** A page's action on a key of its own (`c` for a new entry), as the person looking may take it. */
