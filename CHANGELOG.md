@@ -8,6 +8,9 @@
 - **The site's favicon is its mark in the admin.** The sidebar shows it beside the site's name, and the product's mark until the site has one.
 - The site's name in the sidebar opens a menu: **Dashboard**, **Open Site**, the site's kits and **Manage Kits**. The name itself still opens the site.
 
+- **Import Site** on Site Kits puts a kit's zip, the one **Export Site** downloads, into the site's kits, ready to switch to. The zip is read without trust and the kit checked whole before it is kept. `kits/import` does the same for agents.
+- **Redirects travel with a kit** (with Forms' forms: see their changelogs), so switching kits doesn't leave old addresses pointing at pages the new kit doesn't have.
+
 ### Changed
 
 - **Site Kits** is a grid of kits with their pictures, not a list that opens a dialog of options. Choosing one switches to it; the settings of Bring In and Already on This Site are gone from the screen. Putting a kit on top of a site, choosing what happens to what clashes, stays in `kits/apply` and `kit:apply`.

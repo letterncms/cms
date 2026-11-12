@@ -21,7 +21,7 @@ use Throwable;
  * design travel: the collections and their published entries (in the file layout, whatever driver they use;
  * drafts only when asked for), the templates and components, but no other collection a plugin owns, the
  * global sets, the menus, the design folder, the media something names, what plugins keep beside the
- * content (`kits.content`), and the settings a kit may carry (`kits.settings`). Never accounts, tokens,
+ * content (`kits.content`: a folder, or a `<name>.yaml` file), and the settings a kit may carry (`kits.settings`). Never accounts, tokens,
  * secrets, submissions, analytics, the audit log, licences or the rest of config/.
  */
 final class KitExporter
@@ -75,6 +75,9 @@ final class KitExporter
                 foreach ($this->tree(content_path($folder)) as $relative) {
                     preg_match('/\.(yaml|json|md)$/', $relative) && $out["content/{$folder}/{$relative}"] = (string) file_get_contents(content_path("{$folder}/{$relative}"));
                 }
+
+                // A plugin that keeps one file beside the content (redirects.yaml) names it by what is before the dot.
+                is_file($single = content_path("{$folder}.yaml")) && ! is_link($single) && $out["content/{$folder}.yaml"] = (string) file_get_contents($single);
             }
         }
 

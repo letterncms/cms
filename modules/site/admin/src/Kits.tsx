@@ -1,6 +1,6 @@
 import { navigate, run, queryClient, t, useAbility } from '@letterncms/sdk'
 import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Menu, Notice, Page, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 interface Kit {
   handle: string
@@ -24,6 +24,8 @@ export default function Kits() {
   const list = useAbility<{ kits: Kit[]; problems: { folder: string; problem: string }[] }>('kits/list')
   const [busy, setBusy] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const file = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
 
   const choose = async (kit: Kit) => {
     setBusy(kit.handle)
@@ -63,8 +65,32 @@ export default function Kits() {
     }
   }
 
+  // A kit's zip, as Export Site makes it: kept in kits/, where it can be switched to.
+  const importKit = async (zip: File) => {
+    setImporting(true)
+    try {
+      const bytes = new Uint8Array(await zip.arrayBuffer())
+      let binary = ''
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+      const made = await run<{ kit: Kit }>('kits/import', { content: btoa(binary), encoding: 'base64' })
+      await queryClient.invalidateQueries()
+      toast.success(t('{name} imported', { name: made.kit.name }))
+    } catch (e) {
+      toast.error(e)
+    } finally {
+      setImporting(false)
+      if (file.current) file.current.value = ''
+    }
+  }
+
   return (
-    <Page title={t('Site Kits')} actions={<Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>}>
+    <Page title={t('Site Kits')} actions={(
+      <>
+        <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void importKit(e.target.files[0])} />
+        <Button icon="upload" loading={importing} onClick={() => file.current?.click()}>{t('Import Site')}</Button>
+        <Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>
+      </>
+    )}>
       {list.isPending ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[4/3] w-full rounded-lg" />)}</div>
       ) : list.error ? (
