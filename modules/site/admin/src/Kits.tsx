@@ -123,19 +123,19 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign }: { kit: Kit; bus
         onClick={onChoose}
         disabled={!chooseable}
         aria-current={kit.active || undefined}
-        className={`flex w-full flex-col overflow-hidden rounded-lg border bg-bg p-0 text-left outline-offset-2 transition-[border-color,box-shadow] duration-base enabled:cursor-pointer ${kit.active ? 'border-ink' : 'border-border enabled:hover:border-border-strong enabled:hover:shadow-sm'}`}
+        className="flex w-full flex-col overflow-hidden rounded-lg border border-border bg-bg p-0 text-left outline-offset-2 transition-[border-color,box-shadow] duration-base enabled:cursor-pointer enabled:hover:border-border-strong enabled:hover:shadow-sm"
       >
         <span className="relative block aspect-[16/10] w-full overflow-hidden border-b border-border bg-sunken">
           {kit.previews[0]
             ? <img src={kit.previews[0]} alt="" className={`size-full object-cover object-top transition-opacity ${switching ? 'opacity-50' : ''}`} />
             : <span className="grid size-full place-items-center text-faint"><Icon name="layout" size={28} /></span>}
-          {kit.active && <Badge tone="signal" className="absolute left-2 top-2">{t('Current')}</Badge>}
         </span>
         <span className="flex items-center gap-2 px-3 py-2.5">
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-ink">{kit.name}</span>
-            <span className="block truncate text-xs text-muted">{caption(kit)}</span>
+            {kit.description && <span className="block truncate text-xs text-muted">{kit.description}</span>}
           </span>
+          {kit.active && <Badge tone="neutral">{t('Current')}</Badge>}
           {!kit.active && !needs && kit.suits && <span className="shrink-0 text-xs font-medium text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{switching ? t('Switching…') : t('Switch||kit')}</span>}
         </span>
       </button>
@@ -159,14 +159,6 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign }: { kit: Kit; bus
       )}
     </li>
   )
-}
-
-/** One line under a kit's name: what the site is to it, else what it is. */
-function caption(kit: Kit): string {
-  if (!kit.suits) return t('Made for another version')
-  if (kit.active) return kit.edited ? t('Saved as you leave it') : t('How it came')
-  if (kit.edited) return t('Saved as you left it')
-  return kit.description || kit.version
 }
 
 function ExportSite({ onClose }: { onClose: () => void }) {
