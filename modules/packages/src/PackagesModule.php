@@ -34,6 +34,12 @@ final class PackagesModule extends Plugin
             $jobs->verifier('upload:inspected', fn (array $job) => $this->app->make(StoreClient::class)->verifyUploadInspected($job));
         });
 
+        // Every admin visit ticks automatic updates along; a tick that did nothing (`acted` false: no step of
+        // an update ran, none started, nothing failed) changed nothing, so it stays out of the Audit Log, which
+        // would otherwise open with one for every visit.
+        $cms->hooks()->addFilter('audit.unrecorded', static fn (bool $skip, string $ability, array $input, mixed $result): bool => $skip
+            || ($ability === 'packages/update-tick' && is_array($result) && ($result['acted'] ?? true) === false));
+
         // The admin shell asks in the background, so no page waits on a store or a release list.
         $cms->hooks()->addFilter('admin.manifest', function (array $manifest, User $user): array {
             $manifest['config']['packages'] = self::shellState($user);

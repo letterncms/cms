@@ -447,7 +447,8 @@ final class StoreTest extends TestCase
 
         for ($i = 0; $i < 15; $i++) {
             $answer = $abilities->execute('packages/update-tick', [], $editor);
-            $this->assertSame(['more', 'drive'], array_keys($answer));
+            $this->assertSame(['more', 'drive', 'acted'], array_keys($answer));
+            $this->assertTrue($answer['acted'], 'every tick of an update that runs did something');
 
             if (! $answer['more']) {
                 break;
