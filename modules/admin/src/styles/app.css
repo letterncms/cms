@@ -607,6 +607,10 @@
   @media (min-width: 768px) and (max-width: 1099px) {
     .cms-shell[data-inset] .cms-dock[data-open]:not([data-floating]) .cms-dock-panel { box-shadow: var(--cms-shadow-dialog); }
   }
+  /* Docked on the desk beside the sheet, its first row lines up with the sheet's top bar, as an inspector's does. */
+  @media (min-width: 1100px) {
+    .cms-shell[data-inset] .cms-dock:not([data-floating]):not([data-full]) .cms-dock-inner { padding-top: 8px; }
+  }
   /* The sidebar button and the way back: in the sidebar's first row, or in the sheet's top bar while the sidebar is away. */
   .cms-leading {
     left: 8px;

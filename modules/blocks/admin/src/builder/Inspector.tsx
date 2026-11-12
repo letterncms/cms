@@ -106,7 +106,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
             />
           </div>
         ) : (
-          <Button variant="ghost" onDoubleClick={() => !readOnly && setRenaming(true)} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !pl-1 !pr-0 text-left !font-semibold !text-ink" title={readOnly ? undefined : t('Double-Click to Rename')}>
+          <Button variant="ghost" onDoubleClick={() => !readOnly && setRenaming(true)} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !pl-1 !pr-0 text-left !font-medium !text-ink" title={readOnly ? undefined : t('Double-Click to Rename')}>
             <span className="truncate">{blockName(node, types, components)}</span>
           </Button>
         )}

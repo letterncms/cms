@@ -82,7 +82,7 @@ export function PanelHeader({ title, icon, children, actions, onBack, backLabel,
     <div className={cn('flex h-12 shrink-0 items-center gap-1 pr-2', onBack ? 'pl-2' : 'pl-4', bordered && 'border-b border-border', className)}>
       {onBack && <IconButton icon="arrow-left" label={backLabel ? t('Back to {name}', { name: backLabel }) : t('Back')} size="sm" onClick={onBack} />}
       {icon && <Icon name={icon} size={16} className={cn('shrink-0 text-muted', onBack && 'ml-1')} />}
-      {children ?? <span className={cn('min-w-0 flex-1 truncate text-sm font-semibold text-ink', (onBack || icon) && 'pl-1')}>{title}</span>}
+      {children ?? <span className={cn('min-w-0 flex-1 truncate text-sm font-medium text-ink', (onBack || icon) && 'pl-1')}>{title}</span>}
       {actions}
       {/* A phone's sheet has its grip to close it. */}
       {onClose && <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={onClose} className="max-sm:in-[.cms-panel-sheet]:hidden" />}
