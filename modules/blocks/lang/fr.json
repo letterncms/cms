@@ -1108,7 +1108,7 @@
   "Zoom While Scrolling": "Zoom au défilement",
   "Forever||repeat": "Indéfiniment",
   "Message||shape": "Bulle",
-  "Starts At": "Commence à",
+  "Starts At||time": "Commence à",
   "Stop||gradient": "Repère",
   "When||condition": "Quand",
   "Add||to a number": "Additionner",

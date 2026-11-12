@@ -1108,7 +1108,7 @@
   "Zoom While Scrolling": "Zoomen tijdens scrollen",
   "Forever||repeat": "Oneindig",
   "Message||shape": "Tekstballon",
-  "Starts At": "Begint bij",
+  "Starts At||time": "Begint bij",
   "Stop||gradient": "Stop",
   "When||condition": "Wanneer",
   "Add||to a number": "Optellen",
