@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Code fields point out mistakes.** CSS, JavaScript, TypeScript, JSON and HTML are checked as you type: a mistake is underlined with what is wrong on hover, the number of them shows under the field, and the large editor marks their lines. ⇧⌘M lists them.
+
 ## 0.27.0 (2026-11-12)
 
 ### Added

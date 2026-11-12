@@ -4,7 +4,7 @@ import { css } from '@codemirror/lang-css'
 import { html } from '@codemirror/lang-html'
 import { javascript } from '@codemirror/lang-javascript'
 import { json } from '@codemirror/lang-json'
-import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
+import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree, syntaxTreeAvailable } from '@codemirror/language'
 import { diagnosticCount, linter, lintGutter, lintKeymap, type Diagnostic } from '@codemirror/lint'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
@@ -33,6 +33,8 @@ const languages: Record<string, () => Extension> = {
  */
 const mistakes = linter((view) => {
   const found: Diagnostic[] = []
+  // A parse still under way ends where it stopped, which reads as a mistake: wait until it has read everything.
+  if (!syntaxTreeAvailable(view.state)) return found
   const doc = view.state.doc
   syntaxTree(view.state).cursor().iterate((node) => {
     if (found.length >= 100) return false
@@ -46,7 +48,7 @@ const mistakes = linter((view) => {
     }
   })
   return found
-}, { delay: 400 })
+}, { delay: 400, needsRefresh: (update) => syntaxTree(update.state) !== syntaxTree(update.startState) })
 
 const highlight = HighlightStyle.define([
   { tag: [tags.keyword, tags.operatorKeyword, tags.modifier, tags.controlKeyword, tags.definitionKeyword, tags.moduleKeyword], color: 'var(--cms-code-keyword)' },
