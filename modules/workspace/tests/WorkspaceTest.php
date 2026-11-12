@@ -11,6 +11,7 @@ use Cms\Contracts\Agent;
 use Cms\Contracts\AgentMessage;
 use Cms\Contracts\Defaults\NoAgent;
 use Cms\Modules\Workspace\Answers;
+use Cms\Install\Installer;
 use Cms\Modules\Workspace\Thread;
 use Cms\Modules\Workspace\Workspace;
 use Cms\Tests\TestCase;
@@ -340,6 +341,19 @@ final class WorkspaceTest extends TestCase
         $this->postJson('/api/admin/abilities/threads/rename', ['id' => $ids[1]])->assertOk()->assertJsonPath('data.title', 'Chat 1');
         $this->postJson('/api/admin/abilities/threads/delete', ['id' => $ids[2]])->assertOk()->assertJsonPath('data.deleted', true);
         $this->assertSame(2, Thread::query()->count());
+    }
+
+    public function test_chats_are_of_the_kit_the_site_was(): void
+    {
+        $owner = $this->admin();
+        $this->actingAs($owner);
+        $here = Thread::query()->create(['user_id' => $owner->id, 'title' => 'Here']);
+        $there = Thread::query()->create(['user_id' => $owner->id, 'title' => 'There', 'kit' => 'elsewhere']);
+
+        $this->assertSame(Installer::kit(), $here->kit);
+        $this->assertSame([$here->id], array_column($this->postJson('/api/admin/abilities/threads/list')->json('data'), 'id'));
+        $this->postJson('/api/admin/abilities/threads/get', ['id' => $there->id])->assertNotFound();
+        $this->postJson('/api/admin/workspace/turn', ['thread' => $there->id, 'search' => 'menu'])->assertNotFound();
     }
 
     public function test_an_agent_streams_its_answer_into_the_neutral_transcript_and_learns_what_the_person_did(): void

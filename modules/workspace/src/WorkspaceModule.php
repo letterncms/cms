@@ -59,7 +59,7 @@ final class WorkspaceModule extends Plugin
         $a = $this->cms()->abilities();
         // A thread is its person's: only the admin's own client reads it.
         $mine = Ability::ADMIN_ONLY;
-        $threads = static fn (AbilityContext $c) => Thread::query()->where('user_id', $c->user?->id ?? throw new AbilityException(__('Authentication required.'), 'unauthenticated'));
+        $threads = static fn (AbilityContext $c) => Thread::mine($c->user?->id ?? throw new AbilityException(__('Authentication required.'), 'unauthenticated'));
         $workspace = fn () => $this->app->make(Workspace::class);
 
         $a->register('threads/list', [
