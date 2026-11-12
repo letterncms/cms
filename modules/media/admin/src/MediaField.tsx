@@ -1,6 +1,7 @@
 import { plural, t, useAbility, type FieldProps } from '@letterncms/sdk'
 import { Button, Dialog, Icon, IconButton, cn, drawing } from '@letterncms/ui'
 import { useState } from 'react'
+import { DocumentPreview, hasDocumentPreview } from './documents'
 import { FileTile } from './kinds'
 import { Library } from './Library'
 import type { MediaItem } from './upload'
@@ -24,7 +25,7 @@ export function MediaField({ field, value, onChange, disabled }: FieldProps<stri
           const isUrl = id.startsWith('/') || id.startsWith('http')
           return (
             <div key={id} className="cms-reveal-row relative size-24 overflow-hidden rounded-md border border-border bg-sunken">
-              {m?.thumb || isUrl ? <img src={m?.thumb ?? id} alt={m?.alt ?? ''} className={cn('h-full w-full', drawing(m?.thumb ?? id) ? 'object-contain p-1' : 'object-cover')} /> : m ? <FileTile item={m} size={20} /> : <div className="grid h-full place-items-center text-muted"><Icon name="file" size={20} /></div>}
+              {m?.thumb || isUrl ? <img src={m?.thumb ?? id} alt={m?.alt ?? ''} className={cn('h-full w-full', drawing(m?.thumb ?? id) ? 'object-contain p-1' : 'object-cover')} /> : m ? hasDocumentPreview(m) ? <DocumentPreview item={m} /> : <FileTile item={m} size={20} /> : <div className="grid h-full place-items-center text-muted"><Icon name="file" size={20} /></div>}
               {!disabled && (
                 <IconButton icon="close" label={t('Remove')} size="xs" variant="secondary" className="cms-reveal absolute right-1 top-1" onClick={() => onChange(ids.filter((x) => x !== id))} />
               )}

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Documents show what is inside them in the media library.** A PDF shows its first page, and a text, CSV or Markdown file shows its first lines, on its tile, in the media picker and in the file's details, where a PDF scrolls through its first five pages. Markdown files (`.md`) can be uploaded and keep their name.
+
 ## 0.31.0 (2026-11-12)
 
 ### Changed

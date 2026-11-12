@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { deleteFiles, useHref, type MediaUse } from './actions'
 import { CropDialog } from './Crop'
 import { MoveDialog } from './Folders'
+import { DocumentPreview, hasDocumentPreview } from './documents'
 import { FileTile, kindWords } from './kinds'
 import { FocalPoint } from './FocalPoint'
 import { upload, type MediaItem } from './upload'
@@ -104,8 +105,10 @@ export function FilePanel({ item: listed, folders, onClose }: { item: MediaItem;
           <img src={url} alt={item.alt ?? ''} className="mx-auto block max-h-[44vh] max-w-full rounded-md bg-sunken" />
         ) : item.kind === 'video' ? (
           <video key={url} src={url} controls className="max-h-[44vh] w-full rounded-md bg-sunken" />
+        ) : hasDocumentPreview(item) ? (
+          <DocumentPreview item={item} panel />
         ) : (
-          // Nothing here draws a model, a texture, an animation or a document: it is shown as what it is.
+          // Nothing here draws a model, a texture or an animation: it is shown as what it is.
           <FileTile item={item} size={28} className="h-32 rounded-md bg-sunken" />
         )}
 
