@@ -48,7 +48,8 @@ final class AuditLabelsTest extends TestCase
     public function test_the_log_narrows_to_a_period_or_to_dates(): void
     {
         $admin = $this->admin();
-        foreach (['entries/publish' => now()->subHour(), 'entries/update' => now()->subDays(10), 'entries/create' => now()->subDays(40)] as $ability => $at) {
+        // Earlier today, also in the first hour after midnight.
+        foreach (['entries/publish' => now()->subHour()->max(now()->startOfDay()), 'entries/update' => now()->subDays(10), 'entries/create' => now()->subDays(40)] as $ability => $at) {
             DB::table('audit_log')->insert(['id' => strtolower((string) Str::ulid()), 'user_id' => $admin->id, 'ability' => $ability, 'transport' => 'admin', 'input' => '{}', 'created_at' => $at]);
         }
         $ctx = AbilityContext::forUser($admin, 'admin');
