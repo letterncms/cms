@@ -121,7 +121,6 @@
   "New :item": ":Item toevoegen",
   "New Component": "Nieuw component",
   "New Form": "Nieuw formulier",
-  "New Name": "Nieuwe naam",
   "New Page": "Nieuwe pagina",
   "New Post": "Nieuw bericht",
   "New Template": "Nieuw sjabloon",
@@ -215,7 +214,6 @@
   "View": "Bekijken",
   "View on Site": "Bekijken op site",
   "View saved": "Weergave opgeslagen",
-  "Views": "Weergaven",
   "What the page is for and what it should say": "Waar de pagina voor is en wat erop moet staan",
   "Who it is for": "Voor wie het is",
   "Write a Blog Post": "Blogbericht schrijven",
@@ -228,5 +226,8 @@
   "Every change since it was last published is lost. The published version stays as it is.": "Elke wijziging sinds de laatste publicatie gaat verloren. De gepubliceerde versie blijft zoals ze is.",
   "It leaves the site and its address stops working until it is published again. Its content is kept as a draft.": "Het verdwijnt van de site en het adres werkt pas weer als het opnieuw is gepubliceerd. De inhoud blijft bewaard als concept.",
   "Unpublish “{title}”?": "‘{title}’ depubliceren?",
-  "Move “{title}”": "‘{title}’ verplaatsen"
+  "Move “{title}”": "‘{title}’ verplaatsen",
+  "Save as New View": "Opslaan als nieuwe weergave",
+  "Update “{name}”": "“{name}” bijwerken",
+  "Reset": "Terugzetten"
 }

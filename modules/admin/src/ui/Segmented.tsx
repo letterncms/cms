@@ -2,6 +2,7 @@ import { t as translate } from '@letterncms/sdk'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
+import { Menu, type MenuItemDef } from './Menu'
 import { Tooltip } from './Tooltip'
 
 export interface SegmentOption<T extends string> {
@@ -66,9 +67,10 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
 
 /**
  * A row of tabs. `fit` (a narrow panel's header): when the labels don't fit, tabs with an
- * `icon` show only it, with the label as a tooltip, until there is room again.
+ * `icon` show only it, with the label as a tooltip, until there is room again. A tab with a
+ * `menu` shows a chevron while it is the chosen one, and choosing it again opens the menu (a saved view's Rename, Delete).
  */
-export function Tabs<T extends string>({ value, onChange, tabs, className, id, bordered = true, size = 'sm', fit }: { value: T; onChange: (v: T) => void; tabs: { value: T; label: string; icon?: string; count?: number; indicator?: boolean }[]; className?: string; id?: string; bordered?: boolean; size?: 'xs' | 'sm'; fit?: boolean }) {
+export function Tabs<T extends string>({ value, onChange, tabs, className, id, bordered = true, size = 'sm', fit }: { value: T; onChange: (v: T) => void; tabs: { value: T; label: string; icon?: string; count?: number; indicator?: boolean; menu?: (MenuItemDef | false | null | undefined)[] }[]; className?: string; id?: string; bordered?: boolean; size?: 'xs' | 'sm'; fit?: boolean }) {
   const row = useRef<HTMLDivElement>(null)
   // The width the labels need, measured while they show; icons take over below it.
   const [needs, setNeeds] = useState<number | null>(null)
@@ -91,6 +93,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
     <div ref={row} role="tablist" className={cn('flex min-h-9 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [@media(pointer:coarse)]:min-h-11', bordered ? 'gap-5 shadow-rule' : 'gap-4', className)}>
       {tabs.map((t, index) => {
         const iconOnly = compact && !!t.icon
+        const menu = value === t.value && t.menu?.some(Boolean) ? t.menu : undefined
         const tab = (
           <button
             key={t.value}
@@ -101,7 +104,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
             type="button"
             aria-selected={value === t.value}
             tabIndex={value === t.value ? 0 : -1}
-            onClick={() => onChange(t.value)}
+            onClick={menu ? undefined : () => onChange(t.value)}
             onKeyDown={(e) => {
               const next = e.key === 'ArrowRight' ? (index + 1) % tabs.length
                 : e.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
@@ -116,8 +119,10 @@ export function Tabs<T extends string>({ value, onChange, tabs, className, id, b
             {iconOnly ? <Icon name={t.icon!} size={16} /> : t.label}
             {t.indicator && <><span className="size-1.5 shrink-0 rounded-full bg-signal" aria-hidden /><span className="sr-only">{translate('Unsaved changes')}</span></>}
             {t.count !== undefined && <span className="text-xs font-normal tabular-nums text-faint">{t.count}</span>}
+            {menu && <Icon name="chevron-down" size={14} className="-ml-0.5 shrink-0 text-faint" />}
           </button>
         )
+        if (menu) return <Menu key={t.value} align="start" trigger={tab} items={menu} />
         return iconOnly ? <Tooltip key={t.value} content={t.label} side="bottom">{tab}</Tooltip> : tab
       })}
     </div>

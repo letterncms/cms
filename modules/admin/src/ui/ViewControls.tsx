@@ -65,7 +65,8 @@ function ViewSwitcher({ value, onChange, views = allViews }: { value: OverviewVi
 /** Every overview presents the same menu, view choices and reset behavior; `display: false` when there is nothing to set. */
 export function OverviewControls({ onView, views, display = true, children, ...options }: ComponentProps<typeof DisplayOptions> & { onView: (view: OverviewView) => void; views?: OverviewView[]; display?: boolean; children?: ReactNode }) {
   if (!children && !display && (views ?? allViews).length < 2) return null
-  return <div className="ml-auto flex shrink-0 items-center gap-2">
+  // Wraps on a phone rather than reaching past the screen (a saved view's Reset and Save beside Display).
+  return <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
     {children}
     {display && <DisplayOptions {...options} />}
     <ViewSwitcher value={options.view} onChange={onView} views={views} />
