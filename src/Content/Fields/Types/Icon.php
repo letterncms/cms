@@ -20,6 +20,6 @@ class Icon extends FieldType
 
     public function schema(Field $field): array
     {
-        return $this->nullable(['type' => 'string', 'pattern' => '^[a-z0-9-]{1,40}$', 'description' => $field->instructions ?: $field->label], $field);
+        return $this->nullable(['type' => 'string', 'pattern' => '^[a-z0-9-]{1,40}$', 'description' => $field->description()], $field);
     }
 }

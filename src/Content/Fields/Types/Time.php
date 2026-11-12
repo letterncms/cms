@@ -23,7 +23,7 @@ class Time extends FieldType
         return $this->nullable([
             'type' => 'string',
             'pattern' => '^([01][0-9]|2[0-3]):[0-5][0-9]'.($field->get('seconds') ? ':[0-5][0-9]' : '').'$',
-            'description' => ($field->instructions ?: $field->label).($field->get('seconds') ? ' (HH:MM:SS)' : ' (HH:MM)'),
+            'description' => $field->description().($field->get('seconds') ? ' (HH:MM:SS)' : ' (HH:MM)'),
         ], $field);
     }
 

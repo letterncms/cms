@@ -87,7 +87,7 @@ final class BlocksModule extends Plugin
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Template'],
                     ['handle' => 'description', 'type' => 'textarea', 'label' => 'Description', 'section' => 'sidebar'],
-                    ['handle' => 'collections', 'type' => 'select', 'label' => 'Offered For', 'multiple' => true, 'dynamic' => 'collections', 'section' => 'sidebar', 'placeholder' => 'Everywhere'],
+                    ['handle' => 'collections', 'type' => 'select', 'label' => 'Offered For', 'multiple' => true, 'dynamic' => 'collections', 'section' => 'sidebar', 'placeholder' => 'Everywhere', 'about' => 'Leave empty to offer it everywhere.'],
                 ],
             ]);
             $collections[Components::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Components::COLLECTION, [

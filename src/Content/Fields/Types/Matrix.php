@@ -50,7 +50,7 @@ class Matrix extends FieldType
             'type' => 'array',
             'items' => $row,
             'maxItems' => $field->get('max'),
-            'description' => $field->instructions ?: $field->label,
+            'description' => $field->description(),
         ], static fn ($v) => $v !== null);
     }
 

@@ -20,7 +20,7 @@ class Markdown extends FieldType
 
     public function schema(Field $field): array
     {
-        return $this->nullable(['type' => 'string', 'description' => ($field->instructions ?: $field->label).' (GitHub-flavored Markdown)'], $field);
+        return $this->nullable(['type' => 'string', 'description' => $field->description().' (GitHub-flavored Markdown)'], $field);
     }
 
     public function normalize(mixed $value, Field $field): mixed

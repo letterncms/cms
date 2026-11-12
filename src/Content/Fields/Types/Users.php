@@ -22,7 +22,7 @@ class Users extends FieldType
 
     public function schema(Field $field): array
     {
-        return array_filter(['type' => 'array', 'items' => ['type' => 'string'], 'maxItems' => $field->get('max'), 'description' => $field->instructions ?: $field->label], static fn ($v) => $v !== null);
+        return array_filter(['type' => 'array', 'items' => ['type' => 'string'], 'maxItems' => $field->get('max'), 'description' => $field->description()], static fn ($v) => $v !== null);
     }
 
     public function normalize(mixed $value, Field $field): mixed

@@ -24,7 +24,7 @@ class Group extends FieldType
 
     public function schema(Field $field): array
     {
-        return [...$this->blueprint($field)->schema(), 'description' => $field->instructions ?: $field->label];
+        return [...$this->blueprint($field)->schema(), 'description' => $field->description()];
     }
 
     public function normalize(mixed $value, Field $field): mixed

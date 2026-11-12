@@ -74,6 +74,15 @@ final readonly class Field
         return $this->config[$key] ?? $default;
     }
 
+    /**
+     * What the field is for, in the site's JSON Schemas, the API and to agents: its instructions, else its `about`
+     * (said only there, where the admin's label and placeholder carry it), else its label.
+     */
+    public function description(): string
+    {
+        return $this->instructions ?: (is_string($this->config['about'] ?? null) && $this->config['about'] !== '' ? $this->config['about'] : $this->label);
+    }
+
     public function toArray(): array
     {
         return array_filter([

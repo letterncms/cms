@@ -31,7 +31,7 @@ class Table extends FieldType
             'type' => 'array',
             'items' => ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 2000], 'maxItems' => self::COLUMNS],
             'maxItems' => (int) $field->get('max', 500),
-            'description' => ($field->instructions ?: $field->label).' — rows of text cells'.($this->header($field) ? ', the first row is the header' : ''),
+            'description' => $field->description().' — rows of text cells'.($this->header($field) ? ', the first row is the header' : ''),
         ];
     }
 

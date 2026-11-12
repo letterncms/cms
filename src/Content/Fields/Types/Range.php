@@ -26,7 +26,7 @@ class Range extends FieldType
             'type' => $this->whole($min, $step) ? 'integer' : 'number',
             'minimum' => $min,
             'maximum' => $max,
-            'description' => ($field->instructions ?: $field->label)." ({$min} to {$max}, in steps of {$step})",
+            'description' => $field->description()." ({$min} to {$max}, in steps of {$step})",
         ], $field);
     }
 

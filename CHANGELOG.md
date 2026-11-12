@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Agents learn what a field is for again.** The site's JSON Schema files, the API and MCP had only a field's label ("Alt Text") where they said what it does, since the admin dropped the helper lines under its fields. A field now says it in `about`, which only agents read: every core block and setting that lost a line has it back. See [Fields](https://docs.lettern.org/content/fields).
+
 ## 0.26.0 (2026-11-12)
 
 ### Added

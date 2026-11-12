@@ -29,7 +29,7 @@ class DateRange extends FieldType
             'properties' => ['start' => $date, 'end' => $date],
             'required' => $field->get('draft') ? [] : ['start', 'end'],
             'additionalProperties' => false,
-            'description' => $field->instructions ?: $field->label,
+            'description' => $field->description(),
         ], $field);
     }
 

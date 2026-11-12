@@ -21,7 +21,7 @@ class Code extends FieldType
 
     public function schema(Field $field): array
     {
-        return $this->nullable(['type' => 'string', 'maxLength' => 200000, 'description' => ($field->instructions ?: $field->label).' ('.$field->get('language', 'plain').')'], $field);
+        return $this->nullable(['type' => 'string', 'maxLength' => 200000, 'description' => $field->description().' ('.$field->get('language', 'plain').')'], $field);
     }
 
     public function configFields(): array

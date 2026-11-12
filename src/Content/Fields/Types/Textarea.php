@@ -18,7 +18,7 @@ class Textarea extends Text
 
     public function schema(Field $field): array
     {
-        return $this->nullable(['type' => 'string', 'maxLength' => (int) $field->get('max', 20000), 'description' => $field->instructions ?: $field->label], $field);
+        return $this->nullable(['type' => 'string', 'maxLength' => (int) $field->get('max', 20000), 'description' => $field->description()], $field);
     }
 
     public function normalize(mixed $value, Field $field): mixed

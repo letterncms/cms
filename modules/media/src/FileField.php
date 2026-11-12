@@ -32,7 +32,7 @@ final class FileField extends MediaField
     public function schema(Field $field): array
     {
         // For agents, so in English like every schema.
-        $about = ($field->instructions ?: $field->label).' — ids of files that are not images, from media/list or media/import';
+        $about = $field->description().' — ids of files that are not images, from media/list or media/import';
 
         return array_filter([
             'type' => 'array',

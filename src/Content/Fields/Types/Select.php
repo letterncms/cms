@@ -22,7 +22,7 @@ class Select extends FieldType
     {
         $values = array_map('strval', array_keys($this->options($field)));
         $one = $values === [] ? ['type' => 'string'] : ['type' => 'string', 'enum' => $values];
-        $description = $field->instructions ?: $field->label;
+        $description = $field->description();
 
         if ($field->get('multiple')) {
             return ['type' => 'array', 'items' => $one, 'uniqueItems' => true, 'description' => $description];
@@ -59,7 +59,7 @@ class Select extends FieldType
     public function configFields(): array
     {
         return [
-            ['handle' => 'options', 'type' => 'json', 'label' => 'Options', 'placeholder' => '{"value": "Label"}'],
+            ['handle' => 'options', 'type' => 'json', 'label' => 'Options', 'placeholder' => '{"value": "Label"}', 'about' => 'Map of value → label.'],
             ['handle' => 'multiple', 'type' => 'toggle', 'label' => 'Allow Multiple'],
             ['handle' => 'display', 'type' => 'select', 'label' => 'Display', 'options' => ['dropdown' => 'Dropdown', 'radio' => 'Radio buttons', 'segmented' => 'Segmented']],
         ];
