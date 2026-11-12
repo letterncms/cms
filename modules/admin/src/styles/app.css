@@ -434,27 +434,35 @@
     min-width: var(--cms-dock-width);
     min-height: 0;
   }
-  .cms-dock-handle {
+  /* The edge that drags a panel wider: a line on the sheet's edge, only as tall as the sheet. */
+  .cms-resize-handle {
     position: absolute;
     inset-block: 0;
-    left: 0;
     z-index: var(--cms-z-raised);
     width: 7px;
     cursor: col-resize;
     touch-action: none;
     outline-offset: -2px;
   }
-  .cms-dock-handle::after {
+  .cms-resize-handle::after {
     content: "";
     position: absolute;
     inset-block: 0;
-    left: 0;
     width: 2px;
+    border-radius: 1px;
     background: var(--cms-focus);
     opacity: 0;
     transition: opacity var(--cms-duration-base) var(--ease-out) var(--cms-duration-fast);
   }
-  .cms-dock-handle:hover::after, .cms-dock[data-resizing] .cms-dock-handle::after { opacity: 1; }
+  .cms-resize-handle[data-grows="left"]::after { left: 0; }
+  .cms-resize-handle[data-grows="right"]::after { right: 0; }
+  .cms-resize-handle:hover::after, .cms-resize-handle:active::after, .cms-resize-handle:focus-visible::after { opacity: 1; }
+  .cms-dock-handle { left: 0; }
+  .cms-sidebar-handle { left: calc(var(--cms-sidebar-width) - 7px); }
+  .cms-shell[data-resizing] .cms-side-panel, .cms-shell[data-resizing] .cms-sheet, .cms-shell[data-resizing] .cms-dock-panel { transition: none; }
+  @media (min-width: 768px) {
+    .cms-shell[data-inset] .cms-resize-handle { inset-block: calc(8px + var(--radius-lg)); }
+  }
 
   @media (max-width: 1099px) {
     .cms-dock[data-open] { width: 0; }
@@ -536,6 +544,8 @@
   /* Docked on the desk beside the sheet, its first row lines up with the sheet's top bar, as an inspector's does. */
   @media (min-width: 1100px) {
     .cms-shell[data-inset] .cms-dock:not([data-floating]):not([data-full]) .cms-dock-inner { padding-top: 8px; }
+    /* Beside the sheet it is the desk itself, so the sheet's shadow shows on that edge as on the others. */
+    .cms-shell[data-inset] .cms-dock[data-open]:not([data-floating]):not([data-full]) .cms-dock-panel { background: transparent; }
     .cms-shell[data-inset]:has(.cms-dock[data-open]:not([data-floating]):not([data-full])) .cms-sheet { margin-right: 0; }
   }
   /* At full size the chat is a sheet of its own, inset from the window as the screen is, so the sidebar button lines up with its first row. */

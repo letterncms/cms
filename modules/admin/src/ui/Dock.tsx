@@ -1,6 +1,7 @@
-import { events, t } from '@letterncms/sdk'
-import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { events } from '@letterncms/sdk'
+import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { cn } from './cn'
+import { ResizeHandle } from './ResizeHandle'
 
 export interface DockState {
   open: boolean
@@ -60,25 +61,6 @@ export function Dock({ open, full, floating, label, className, children }: { ope
     setWidth(value)
     try { localStorage.setItem(KEY, String(value)) } catch { /* Optional preference. */ }
   }
-  const drag = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return
-    e.preventDefault()
-    const handle = e.currentTarget
-    const pointer = e.pointerId
-    const right = element.current?.getBoundingClientRect().right ?? window.innerWidth
-    handle.setPointerCapture(pointer)
-    setResizing(true)
-    const move = (event: globalThis.PointerEvent) => resize(right - event.clientX)
-    const stop = () => {
-      handle.removeEventListener('pointermove', move)
-      handle.removeEventListener('pointerup', stop)
-      handle.removeEventListener('pointercancel', stop)
-      setResizing(false)
-    }
-    handle.addEventListener('pointermove', move)
-    handle.addEventListener('pointerup', stop)
-    handle.addEventListener('pointercancel', stop)
-  }
   const move = (e: PointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
     if (!floats || e.button !== 0 || !target.closest('[data-dock-drag]') || target.closest('button, a, input')) return
@@ -107,13 +89,6 @@ export function Dock({ open, full, floating, label, className, children }: { ope
     handle.addEventListener('pointerup', stop)
     handle.addEventListener('pointercancel', stop)
   }
-  const nudge = (e: KeyboardEvent<HTMLDivElement>) => {
-    const step = { ArrowLeft: 24, ArrowRight: -24 }[e.key]
-    if (!step) return
-    e.preventDefault()
-    resize(width + step)
-  }
-
   return (
     <aside
       ref={element}
@@ -129,19 +104,7 @@ export function Dock({ open, full, floating, label, className, children }: { ope
     >
       <div ref={panel} className="cms-dock-panel" onPointerDown={move}>
         {open && !full && !floats && (
-          <div
-            role="separator"
-            tabIndex={0}
-            aria-orientation="vertical"
-            aria-label={t('Resize Panel')}
-            aria-valuemin={MIN}
-            aria-valuemax={MAX}
-            aria-valuenow={width}
-            onPointerDown={drag}
-            onDoubleClick={() => resize(DEFAULT)}
-            onKeyDown={nudge}
-            className="cms-dock-handle"
-          />
+          <ResizeHandle value={width} min={MIN} max={MAX} grows="left" onResize={resize} onReset={() => resize(DEFAULT)} onResizing={setResizing} className="cms-dock-handle" />
         )}
         <div className="cms-dock-inner">{children}</div>
       </div>

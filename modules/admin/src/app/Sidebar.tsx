@@ -71,7 +71,7 @@ export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate }
   }, [own, nested, onNavigate])
 
   return (
-    <aside ref={aside} className={cn('flex h-full shrink-0 flex-col', drawer ? 'w-[min(320px,86vw)] bg-float shadow-dialog' : 'w-[248px] bg-surface pt-2')}>
+    <aside ref={aside} className={cn('flex h-full shrink-0 flex-col', drawer ? 'w-[min(320px,86vw)] bg-float shadow-dialog' : 'w-[var(--cms-sidebar-size,248px)] bg-surface pt-2')}>
       <div key={state} data-direction={direction.current} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
         {own ? (
           <>

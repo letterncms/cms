@@ -1,7 +1,7 @@
 import { brand, confirmLeaving, events, matchPath, navigate, onLinkIntent, panelsFor, registry, ScreenLocation, t, useManifest, useScreen, useScreenContext, useScreenLocation, type Location, type RouteDef } from '@letterncms/sdk'
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { NotFound } from '../screens/NotFound'
-import { cn, confirm, IconButton, ShortcutsDialog, SHORTCUTS_KEY, Tooltip } from '../ui'
+import { cn, confirm, IconButton, ResizeHandle, ShortcutsDialog, SHORTCUTS_KEY, Tooltip } from '../ui'
 import './commands'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -58,6 +58,11 @@ export function screenReady(path: string, search = ''): Promise<unknown> {
 
 const prepareScreen = (location: Location) => screenReady(location.path, location.search)
 
+const SIDEBAR_WIDTH = 248
+const SIDEBAR_MIN = 200
+const SIDEBAR_MAX = 400
+const clampSidebar = (width: number) => Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(width)))
+
 function stored(key: string): string | null {
   try {
     return localStorage.getItem(key)
@@ -108,6 +113,14 @@ export function App() {
   const { route, params } = resolve(location.path)
   // The left panel stays as it is left: there or hidden, on every screen, until someone changes it.
   const [hidden, setHidden] = useState(() => stored('cms.sidebar') === 'collapsed')
+  // As wide as it was dragged, on every screen.
+  const [sidebarWidth, setSidebarWidth] = useState(() => clampSidebar(Number(stored('cms.sidebar.width')) || SIDEBAR_WIDTH))
+  const [resizingSidebar, setResizingSidebar] = useState(false)
+  const resizeSidebar = (width: number) => {
+    const next = clampSidebar(width)
+    setSidebarWidth(next)
+    try { localStorage.setItem('cms.sidebar.width', String(next)) } catch { /* private window: not remembered */ }
+  }
   const [customizing, setCustomizing] = useState(false)
   const [shortcuts, setShortcuts] = useState(false)
   // Below tablet width it opens over the screen and goes again with the next screen.
@@ -255,14 +268,15 @@ export function App() {
         className="cms-shell relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
         data-sidebar={sidebarShown ? '' : undefined}
         data-inset={inset ? '' : undefined}
-        style={{ '--cms-sidebar-width': sidebarShown ? '248px' : '0px', '--cms-sidebar-toggle': !sidebarShown ? `${leadingWidth + 4}px` : '0px', '--cms-banner-height': `${bannerHeight}px`, ...(claims.instant ? { '--cms-panel-speed': '0s' } : {}) } as CSSProperties}
+        data-resizing={resizingSidebar || undefined}
+        style={{ '--cms-sidebar-size': `${sidebarWidth}px`, '--cms-sidebar-width': sidebarShown ? `${sidebarWidth}px` : '0px', '--cms-sidebar-toggle': !sidebarShown ? `${leadingWidth + 4}px` : '0px', '--cms-banner-height': `${bannerHeight}px`, ...(claims.instant ? { '--cms-panel-speed': '0s' } : {}) } as CSSProperties}
       >
         <DocumentTitle />
         {/* The first stop for the keyboard: straight to the screen, past the sidebar. */}
         <a href="#cms-content" className="cms-skip" onClick={(e) => { e.preventDefault(); content.current?.focus({ preventScroll: true }) }}>{t('Skip to Content')}</a>
         {/* One place, above whatever is there: the sidebar coming and going never moves these. First for the keyboard too, as they are on view. */}
         {!(dock.open && narrow) && (
-          <div ref={setLeading} data-drawer={narrow && expanded ? '' : undefined} className={cn('cms-leading absolute flex max-w-[232px] items-center gap-1 [@media(pointer:coarse)]:gap-4', narrow && expanded ? 'z-tooltip' : 'z-bar')}>
+          <div ref={setLeading} data-drawer={narrow && expanded ? '' : undefined} className={cn('cms-leading absolute flex max-w-[calc(var(--cms-sidebar-size)-16px)] items-center gap-1 [@media(pointer:coarse)]:gap-4', narrow && expanded ? 'z-tooltip' : 'z-bar')}>
             <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
               <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
             </Tooltip>
@@ -279,9 +293,12 @@ export function App() {
             </>
           )
         ) : (
-          <div className="cms-side-panel" style={{ '--cms-side-panel-width': '248px' } as CSSProperties} data-hidden={!sidebarShown || undefined} inert={!sidebarShown}>
-            {sidebar()}
-          </div>
+          <>
+            <div className="cms-side-panel" style={{ '--cms-side-panel-width': 'var(--cms-sidebar-size)' } as CSSProperties} data-hidden={!sidebarShown || undefined} inert={!sidebarShown}>
+              {sidebar()}
+            </div>
+            {sidebarShown && <ResizeHandle value={sidebarWidth} min={SIDEBAR_MIN} max={SIDEBAR_MAX} grows="right" onResize={resizeSidebar} onReset={() => resizeSidebar(SIDEBAR_WIDTH)} onResizing={setResizingSidebar} label={t('Resize Sidebar')} className="cms-sidebar-handle" />}
+          </>
         )}
         <div className="cms-desk-main flex min-w-0 flex-1 flex-col">
           {banners.length > 0 && (
