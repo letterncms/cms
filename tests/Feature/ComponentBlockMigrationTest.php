@@ -26,12 +26,12 @@ final class ComponentBlockMigrationTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'body' => 'content', 'fields' => [
-                ['handle' => 'content', 'type' => 'blocks', 'allowed' => ['heading', 'pattern', 'box']],
+            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'fields' => [
+                ['handle' => 'content', 'type' => 'blocks', 'body' => true, 'allowed' => ['heading', 'pattern', 'box']],
                 ['handle' => 'kind', 'type' => 'select', 'options' => ['pattern' => 'Pattern', 'plain' => 'Plain']],
                 ['handle' => 'allowed', 'type' => 'tags'],
             ]],
-            'notes' => ['title' => 'Notes', 'driver' => 'files', 'route' => '/notes/{slug}', 'body' => 'body', 'fields' => [['handle' => 'body', 'type' => 'markdown'], ['handle' => 'aside', 'type' => 'blocks']]],
+            'notes' => ['title' => 'Notes', 'driver' => 'files', 'route' => '/notes/{slug}', 'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true], ['handle' => 'aside', 'type' => 'blocks']]],
         ];
     }
 

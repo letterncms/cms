@@ -138,7 +138,7 @@ final class PluginIsolationTest extends TestCase
         Yaml::write($site.'/config/plugins.yaml', ['enabled' => $enabled]);
         // Public accounts on, as a site that sells or gates content has them.
         Yaml::write($site.'/config/accounts.yaml', ['enabled' => true, 'sign_up' => 'open']);
-        Yaml::write($site.'/content/collections/pages.yaml', ['title' => 'Pages', 'singular' => 'Page', 'route' => '/{slug}', 'home' => 'home', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]]);
+        Yaml::write($site.'/content/collections/pages.yaml', ['title' => 'Pages', 'singular' => 'Page', 'route' => '/{slug}', 'home' => 'home', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]]);
         touch($site.'/db.sqlite');
         @mkdir($site.'/plugins', 0o777, true);
 

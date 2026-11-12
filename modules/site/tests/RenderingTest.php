@@ -18,8 +18,8 @@ final class RenderingTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'posts' => ['title' => 'Posts', 'structure' => 'dated', 'route' => '/blog/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks'], ['handle' => 'excerpt', 'type' => 'textarea']]],
+            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'posts' => ['title' => 'Posts', 'structure' => 'dated', 'route' => '/blog/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'excerpt', 'type' => 'textarea']]],
         ];
     }
 
@@ -28,8 +28,6 @@ final class RenderingTest extends TestCase
         $settings = fn (string $handle) => array_column($this->cms()->collections()->settingsFields($this->cms()->collections()->find($handle)), null, 'handle');
 
         $pages = $settings('pages');
-        $this->assertSame(['content' => 'Content'], $pages['body']['options']);
-        $this->assertSame('None', $pages['body']['placeholder']);
         $this->assertArrayNotHasKey('editor', $pages, 'editing capabilities come from fields, not a collection mode');
         $this->assertSame('template', $pages['template']['handle']);
 

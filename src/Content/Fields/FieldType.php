@@ -98,7 +98,16 @@ abstract class FieldType
         return [];
     }
 
-    /** Whether this type can be the body of a flat-file entry. */
+    /**
+     * Whether a field of this type can be an entry's body (`body: true` on the field): the main content, which
+     * the editor gives the room, the site renders as the page's content and a file entry keeps below its front matter.
+     */
+    public function body(): bool
+    {
+        return false;
+    }
+
+    /** Whether this type is written as Markdown where it is the body of a file entry. */
     public function serializesToMarkdown(): bool
     {
         return false;
@@ -142,6 +151,7 @@ abstract class FieldType
             'group' => $this->group(),
             'component' => $this->component(),
             'config' => $this->configFields(),
+            'body' => $this->body(),
         ];
     }
 

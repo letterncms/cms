@@ -19,7 +19,7 @@ final class ConditionalFieldsTest extends TestCase
         ['handle' => 'featured', 'type' => 'toggle'],
         ['handle' => 'source', 'type' => 'url', 'required' => true, 'if' => ['kind' => ['video', 'audio']]],
         ['handle' => 'teaser', 'type' => 'textarea', 'required_if' => ['featured' => true]],
-        ['handle' => 'body', 'type' => 'markdown'],
+        ['handle' => 'body', 'type' => 'markdown', 'body' => true],
     ];
 
     protected function collections(): array
@@ -27,7 +27,7 @@ final class ConditionalFieldsTest extends TestCase
         return [
             ...parent::collections(),
             'clips' => ['title' => 'Clips', 'fields' => self::FIELDS],
-            'memos' => ['title' => 'Memos', 'driver' => 'files', 'body' => 'body', 'fields' => self::FIELDS],
+            'memos' => ['title' => 'Memos', 'driver' => 'files', 'fields' => self::FIELDS],
         ];
     }
 

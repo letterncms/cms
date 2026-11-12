@@ -101,7 +101,7 @@ final class CollectionAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => self::HANDLE,
                 'createOnly' => ['type' => 'boolean', 'default' => false, 'description' => 'Reject an existing handle when creating a collection.'],
-                'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, body (the main content field handle; empty for fields only), section (default sidebar group), nav_order (default sidebar priority, lower first), fields[], archives (optional: {<taxonomy handle>: "/blog/topics/{slug}"} or {<taxonomy>: {route, routes: {<locale>: pattern}}}: every term of that taxonomy gets a page listing the entries of this collection filed under it, at an address no page has), blueprints (optional: {<handle>: {title, fields[]}} for a collection whose entries come in several kinds with fields of their own; an entry is made with one and keeps it)'],
+                'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, section (default sidebar group), nav_order (default sidebar priority, lower first), fields[] (`body: true` on one blocks, markdown or richtext field makes it the main content, which the editor gives the room and the site renders as the page; without one, entries are a form of fields), archives (optional: {<taxonomy handle>: "/blog/topics/{slug}"} or {<taxonomy>: {route, routes: {<locale>: pattern}}}: every term of that taxonomy gets a page listing the entries of this collection filed under it, at an address no page has), blueprints (optional: {<handle>: {title, fields[]}}, each with its own body field, for a collection whose entries come in several kinds with fields of their own; an entry is made with one and keeps it)'],
             ], 'required' => ['handle', 'definition']],
             'output' => self::collection(),
             'handler' => function (array $in) {
@@ -200,6 +200,7 @@ final class CollectionAbilities
         }
 
         foreach ($collection->blueprints() as $name => $blueprint) {
+            FieldProblems::refuse($blueprint['fields'], $reserved, "blueprints.{$name}.fields");
             Blueprint::validate($blueprint['fields'], $name.': ');
         }
 
@@ -228,7 +229,7 @@ final class CollectionAbilities
         return Shape::of([
             'handle' => Shape::STRING, 'title' => Shape::STRING, 'singular' => Shape::STRING, 'icon' => Shape::STRING, 'description?' => Shape::STRING,
             'driver' => Shape::STRING, 'structure' => Shape::STRING, 'route?' => Shape::STRING, 'template' => Shape::STRING, 'sort' => Shape::STRING,
-            'home?' => Shape::STRING, 'body?' => Shape::STRING, 'revisions?' => Shape::BOOLEAN, 'per_page?' => Shape::INTEGER, 'section?' => Shape::STRING,
+            'home?' => Shape::STRING, 'revisions?' => Shape::BOOLEAN, 'per_page?' => Shape::INTEGER, 'section?' => Shape::STRING,
             'system?' => Shape::BOOLEAN, 'default_view' => Shape::STRING, 'default_columns' => Shape::nullable([Shape::STRING]),
             'fields' => [Shape::open('A field as written (handle, type and what its type takes: fields/types lists each type\'s config) or the import of a fieldset ({import, prefix?}).')],
             'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'resolvedFields' => [Shapes::field()],

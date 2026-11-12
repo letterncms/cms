@@ -12,6 +12,8 @@ final class BlocksField extends FieldType
 {
     public function key(): string { return 'blocks'; }
 
+    public function body(): bool { return true; }
+
     public function label(): string { return 'Blocks'; }
 
     public function icon(): string { return 'blocks'; }

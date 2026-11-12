@@ -359,7 +359,7 @@ final class OutputCollaborationTest extends TestCase
         // Everything a definition may say, and a key of its own.
         $definition = [
             'title' => 'Recipes', 'singular' => 'Recipe', 'icon' => 'file', 'description' => 'What we cook.', 'driver' => 'files', 'structure' => 'tree',
-            'route' => '/recipes/{slug}', 'template' => 'recipe', 'sort' => 'title', 'home' => 'start', 'body' => 'steps', 'revisions' => false, 'per_page' => 5,
+            'route' => '/recipes/{slug}', 'template' => 'recipe', 'sort' => 'title', 'home' => 'start', 'revisions' => false, 'per_page' => 5,
             'section' => 'kitchen', 'default_view' => 'grid', 'default_columns' => ['status', 'field:steps'], 'nav_order' => 3, 'routes' => ['de' => '/rezepte/{slug}'],
             'fields' => [['handle' => 'steps', 'type' => 'textarea', 'label' => 'Steps', 'required' => true, 'instructions' => 'One per line.', 'width' => 'half']],
         ];

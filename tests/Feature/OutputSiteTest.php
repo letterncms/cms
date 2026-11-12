@@ -19,7 +19,7 @@ final class OutputSiteTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks'], ['handle' => 'cover', 'type' => 'media'], ['handle' => 'note', 'type' => 'textarea'], ['handle' => 'link', 'type' => 'text']]],
+            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'cover', 'type' => 'media'], ['handle' => 'note', 'type' => 'textarea'], ['handle' => 'link', 'type' => 'text']]],
         ];
     }
 

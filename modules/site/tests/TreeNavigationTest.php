@@ -18,7 +18,7 @@ final class TreeNavigationTest extends TestCase
     protected function collections(): array
     {
         return [
-            'guide' => ['title' => 'Guide', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'template' => 'guide', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks'], ['handle' => 'group', 'type' => 'text']]],
+            'guide' => ['title' => 'Guide', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'template' => 'guide', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'group', 'type' => 'text']]],
         ];
     }
 

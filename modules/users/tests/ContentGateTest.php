@@ -25,22 +25,22 @@ final class ContentGateTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'home' => 'home', 'body' => 'blocks', 'fields' => [['handle' => 'blocks', 'type' => 'blocks'], ['handle' => 'related', 'type' => 'entries']]],
+            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'home' => 'home', 'fields' => [['handle' => 'blocks', 'type' => 'blocks', 'body' => true], ['handle' => 'related', 'type' => 'entries']]],
             // A course site: a course is a page, its lessons are children, a lesson can be a free sample.
-            'courses' => ['title' => 'Courses', 'structure' => 'tree', 'route' => '/courses/{parent_uri}/{slug}', 'body' => 'body', 'fields' => [['handle' => 'body', 'type' => 'markdown']]],
+            'courses' => ['title' => 'Courses', 'structure' => 'tree', 'route' => '/courses/{parent_uri}/{slug}', 'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true]]],
             // A membership magazine: everything is a teaser for non-members, unless it says otherwise.
-            'articles' => ['title' => 'Articles', 'structure' => 'dated', 'route' => '/articles/{slug}', 'body' => 'blocks', 'gate' => ['mode' => 'teaser', 'access' => ['subscriber'], 'teaser_words' => 6, 'teaser_fields' => ['excerpt']], 'fields' => [
+            'articles' => ['title' => 'Articles', 'structure' => 'dated', 'route' => '/articles/{slug}', 'gate' => ['mode' => 'teaser', 'access' => ['subscriber'], 'teaser_words' => 6, 'teaser_fields' => ['excerpt']], 'fields' => [
                 ['handle' => 'excerpt', 'type' => 'textarea'],
                 ['handle' => 'secret_note', 'type' => 'text'],
-                ['handle' => 'blocks', 'type' => 'blocks'],
+                ['handle' => 'blocks', 'type' => 'blocks', 'body' => true],
             ]],
             // News filed under topics, with a page per topic: the term's archive.
             'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'fields' => []],
-            'news' => ['title' => 'News', 'structure' => 'dated', 'route' => '/news/{slug}', 'template' => 'news', 'body' => 'blocks', 'archives' => ['topics' => '/news/topics/{slug}'], 'fields' => [
+            'news' => ['title' => 'News', 'structure' => 'dated', 'route' => '/news/{slug}', 'template' => 'news', 'archives' => ['topics' => '/news/topics/{slug}'], 'fields' => [
                 ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics'],
-                ['handle' => 'blocks', 'type' => 'blocks'],
+                ['handle' => 'blocks', 'type' => 'blocks', 'body' => true],
             ]],
-            'guides' => ['title' => 'Guides', 'driver' => 'files', 'route' => '/guides/{slug}', 'body' => 'body', 'fields' => [['handle' => 'body', 'type' => 'markdown']]],
+            'guides' => ['title' => 'Guides', 'driver' => 'files', 'route' => '/guides/{slug}', 'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true]]],
         ];
     }
 

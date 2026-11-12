@@ -69,6 +69,12 @@ final readonly class Field
         return $this->condition('required_if');
     }
 
+    /** Marked as its blueprint's body (`body: true`); Blueprint::body() says whether it is one. */
+    public function isBody(): bool
+    {
+        return ($this->config['body'] ?? false) === true;
+    }
+
     public function get(string $key, mixed $default = null): mixed
     {
         return $this->config[$key] ?? $default;

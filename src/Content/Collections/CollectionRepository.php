@@ -60,18 +60,6 @@ final class CollectionRepository
      */
     public function settingsFields(?Collection $collection = null): array
     {
-        // One handle for every blueprint: each entry's body is the field of that handle in its own blueprint,
-        // of whichever type it has there, and a blueprint without it has none. So any blueprint's field can be it.
-        $bodies = [];
-
-        foreach ($collection ? [null, ...array_keys($collection->blueprints())] : [] as $name) {
-            foreach ($collection->blueprint($name)->fields() as $field) {
-                if (in_array($field->type, ['blocks', 'markdown', 'richtext'], true)) {
-                    $bodies[$field->handle] ??= $field->label;
-                }
-            }
-        }
-
         $fields = [
             ['handle' => 'title', 'type' => 'text', 'label' => 'Name', 'required' => true, 'width' => 'half'],
             ['handle' => 'singular', 'type' => 'text', 'label' => 'Entry Name', 'width' => 'half'],
@@ -88,10 +76,6 @@ final class CollectionRepository
 
         if ($taxonomies !== [] && $collection?->routable()) {
             $fields[] = ['handle' => 'archives', 'type' => 'json', 'component' => 'collection-archives', 'label' => 'Term Archives', 'options' => $taxonomies];
-        }
-
-        if ($bodies !== []) {
-            $fields[] = ['handle' => 'body', 'type' => 'select', 'label' => 'Body Field', 'placeholder' => 'None', 'options' => $bodies];
         }
 
         return Blueprint::make($this->hooks->filter('collections.settings', $fields, $collection))->toArray();

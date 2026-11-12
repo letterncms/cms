@@ -339,8 +339,7 @@ final class AdminTest extends TestCase
     {
         $settings = array_column($this->cms()->collections()->settingsFields($this->cms()->collections()->find('posts')), null, 'handle');
 
-        $this->assertSame(['title', 'singular', 'icon', 'route', 'structure', 'default_view', 'taxonomy', 'default_columns', 'body'], array_keys($settings));
-        $this->assertSame(['body' => 'Body'], $settings['body']['options']);
+        $this->assertSame(['title', 'singular', 'icon', 'route', 'structure', 'default_view', 'taxonomy', 'default_columns'], array_keys($settings));
         $this->assertSame('icon', $settings['icon']['type']);
     }
 

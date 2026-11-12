@@ -22,12 +22,12 @@ final class TermArchivesTest extends TestCase
 
     protected function collections(): array
     {
-        $fields = [['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics'], ['handle' => 'content', 'type' => 'blocks']];
+        $fields = [['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics'], ['handle' => 'content', 'type' => 'blocks', 'body' => true]];
 
         return [
-            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'body' => 'content', 'fields' => [['handle' => 'description', 'type' => 'textarea'], ['handle' => 'content', 'type' => 'blocks']]],
-            'posts' => ['title' => 'Posts', 'structure' => 'dated', 'route' => '/blog/{slug}', 'body' => 'content', 'fields' => $fields, 'archives' => ['topics' => ['route' => '/blog/topics/{slug}', 'routes' => ['de' => '/blog/themen/{slug}']]]],
+            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'fields' => [['handle' => 'description', 'type' => 'textarea'], ['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'posts' => ['title' => 'Posts', 'structure' => 'dated', 'route' => '/blog/{slug}', 'fields' => $fields, 'archives' => ['topics' => ['route' => '/blog/topics/{slug}', 'routes' => ['de' => '/blog/themen/{slug}']]]],
             'memos' => ['title' => 'Memos', 'driver' => 'files', 'route' => '/memos/{slug}', 'fields' => [['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics']], 'archives' => ['topics' => '/memos/topics/{slug}']],
         ];
     }

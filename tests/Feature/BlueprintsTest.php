@@ -13,10 +13,10 @@ use Cms\Tests\TestCase;
 final class BlueprintsTest extends TestCase
 {
     private const array DEFINITION = [
-        'route' => '/news/{slug}', 'body' => 'body',
-        'fields' => [['handle' => 'body', 'type' => 'markdown'], ['handle' => 'summary', 'type' => 'textarea', 'default' => 'None yet.']],
+        'route' => '/news/{slug}',
+        'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true], ['handle' => 'summary', 'type' => 'textarea', 'default' => 'None yet.']],
         'blueprints' => [
-            'video' => ['title' => 'Video', 'fields' => [['handle' => 'body', 'type' => 'markdown'], ['handle' => 'source', 'type' => 'url', 'required' => true], ['handle' => 'length', 'type' => 'number', 'default' => 60, 'localizable' => false]]],
+            'video' => ['title' => 'Video', 'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true], ['handle' => 'source', 'type' => 'url', 'required' => true], ['handle' => 'length', 'type' => 'number', 'default' => 60, 'localizable' => false]]],
             'gallery' => ['fields' => [['handle' => 'about', 'type' => 'entries', 'collections' => ['pages']]]],
         ],
     ];

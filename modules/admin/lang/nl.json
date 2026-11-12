@@ -47,7 +47,9 @@
   "Appearance": "Weergave",
   "Ascending": "Oplopend",
   "Author": "Auteur",
+  "Back": "Terug",
   "Back to {label}": "Terug naar {label}",
+  "Back to {name}": "Terug naar {name}",
   "Back to Sign In": "Terug naar inloggen",
   "Before": "Voor",
   "Blueprints": "Blauwdrukken",
@@ -71,6 +73,7 @@
   "Clear Filters": "Filters wissen",
   "Clear Selection": "Selectie wissen",
   "Close": "Sluiten",
+  "Close Panel": "Paneel sluiten",
   "Close Settings": "Instellingen sluiten",
   "Code": "Code",
   "Collapse": "Inklappen",
@@ -168,7 +171,6 @@
   "Manage Kits": "Kits beheren",
   "Manual Order": "Handmatige volgorde",
   "Match System Appearance": "Systeemweergave volgen",
-  "Minimize": "Minimaliseren",
   "Missing page": "Ontbrekende pagina",
   "Missing Type": "Type ontbreekt",
   "More": "Meer",
@@ -341,6 +343,7 @@
   "Updated": "Bijgewerkt",
   "URL": "URL",
   "Use Admin Default": "Standaard van de admin gebruiken",
+  "Use as Body": "Gebruiken als hoofdtekst",
   "Value": "Waarde",
   "Verify Code": "Code controleren",
   "Web Address": "Webadres",
@@ -350,8 +353,5 @@
   "Write in Markdown…": "Schrijf in Markdown…",
   "Yes": "Ja",
   "You are not allowed to do this": "Je hebt hier geen toestemming voor",
-  "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord.",
-  "Back": "Terug",
-  "Back to {name}": "Terug naar {name}",
-  "Close Panel": "Paneel sluiten"
+  "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord."
 }

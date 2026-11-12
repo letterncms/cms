@@ -208,7 +208,7 @@ final class ContentAbilities
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'output' => Shape::of([
-                'defaults' => Shape::open('The start of a collection definition, as collections/save takes it (title, fields, body…): what the active plugins give a new collection, empty when none does.'),
+                'defaults' => Shape::open('The start of a collection definition, as collections/save takes it (title, fields…): what the active plugins give a new collection, empty when none does.'),
                 'settings' => [Shapes::field()],
             ]),
             'handler' => fn () => [
@@ -264,7 +264,7 @@ final class ContentAbilities
             'annotations' => ['readOnly' => true],
             'output' => Shape::of([[
                 'key' => Shape::STRING, 'label' => Shape::STRING, 'icon' => Shape::STRING, 'description' => Shape::STRING, 'group' => Shape::STRING,
-                'component' => Shape::STRING, 'config' => [Shapes::field()],
+                'component' => Shape::STRING, 'config' => [Shapes::field()], 'body' => Shape::BOOLEAN,
             ]]),
             'handler' => fn () => array_values(array_map(static fn ($t) => $t->toArray(), $this->cms->fields()->all())),
         ]);

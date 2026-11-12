@@ -24,7 +24,7 @@ final class CollectionDefaultsTest extends TestCase
             'definition' => [...$options['defaults'], 'title' => 'Services'],
         ], $ctx);
         $this->assertSame([], $saved['fields']);
-        $this->assertNull($this->cms()->collections()->findOrFail('services')->body);
+        $this->assertNull($this->cms()->collections()->findOrFail('services')->body());
         $entry = $this->cms()->entryService()->create('services', ['title' => 'Consulting'], $ctx->user);
         $this->assertSame([], $entry->data);
     }
@@ -154,13 +154,33 @@ final class CollectionDefaultsTest extends TestCase
         $this->assertFalse($this->cms()->abilities()->execute('collections/get', ['handle' => 'testimonials'], $ctx)['deletable']);
     }
 
-    public function test_the_body_can_be_a_field_of_any_blueprint(): void
+    public function test_each_blueprint_marks_its_own_body(): void
     {
-        $collection = Collection::fromArray('notes', ['title' => 'Notes', 'fields' => [['handle' => 'summary', 'type' => 'text']], 'blueprints' => [
-            'long' => ['title' => 'Long', 'fields' => [['handle' => 'content', 'type' => 'markdown', 'label' => 'Text']]],
-            'built' => ['title' => 'Built', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'label' => 'Page'], ['handle' => 'intro', 'type' => 'richtext', 'label' => 'Intro']]],
+        $ctx = AbilityContext::system();
+        $save = fn (array $definition) => $this->cms()->abilities()->execute('collections/save', ['handle' => 'notes', 'definition' => ['title' => 'Notes', ...$definition]], $ctx);
+        $saved = $save(['fields' => [['handle' => 'summary', 'type' => 'text']], 'blueprints' => [
+            'long' => ['title' => 'Long', 'fields' => [['handle' => 'text', 'type' => 'markdown', 'body' => true]]],
+            'built' => ['title' => 'Built', 'fields' => [['handle' => 'page', 'type' => 'richtext', 'body' => true], ['handle' => 'intro', 'type' => 'markdown']]],
         ]]);
-        $settings = array_column($this->cms()->collections()->settingsFields($collection), null, 'handle');
-        $this->assertSame(['content', 'intro'], array_keys($settings['body']['options'] ?? []));
+        $this->assertArrayNotHasKey('body', $saved);
+        $collection = $this->cms()->collections()->findOrFail('notes');
+        $this->assertSame([null, 'text', 'page'], [$collection->body()?->handle, $collection->body('long')?->handle, $collection->body('built')?->handle]);
+        $this->assertTrue($saved['resolvedBlueprints'][1]['resolvedFields'][0]['body']);
+        $this->assertArrayNotHasKey('body', array_column($this->cms()->collections()->settingsFields($collection), null, 'handle'));
+        $this->assertTrue($this->cms()->fields()->get('markdown')->toArray()['body']);
+
+        // One body to a blueprint, of a type that can be one, and only among its own fields: each refused beside the field.
+        foreach ([
+            'blueprints.long.fields.1.body' => ['blueprints' => ['long' => ['title' => 'Long', 'fields' => [['handle' => 'a', 'type' => 'markdown', 'body' => true], ['handle' => 'b', 'type' => 'richtext', 'body' => true]]]]],
+            'fields.0.body' => ['fields' => [['handle' => 'summary', 'type' => 'text', 'body' => true]]],
+            'fields.0.fields.0.body' => ['fields' => [['handle' => 'parts', 'type' => 'group', 'fields' => [['handle' => 'text', 'type' => 'markdown', 'body' => true]]]]],
+        ] as $path => $definition) {
+            try {
+                $save($definition);
+                $this->fail("{$path} was accepted.");
+            } catch (AbilityException $e) {
+                $this->assertArrayHasKey($path, $e->details);
+            }
+        }
     }
 }

@@ -13,7 +13,6 @@ export interface CollectionDef {
   route?: string
   template?: string
   sort: string
-  body?: string
   group?: 'content' | 'design'
   home?: string
   fields: FieldDef[]

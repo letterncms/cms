@@ -53,7 +53,7 @@ final class Renderer
 
         // What the template's Page content will render, for the blocks that name each other across the two.
         $this->blocks->outletNodes = function () use ($entry): array {
-            $field = $entry->collection()->body;
+            $field = $entry->body()?->handle;
             $value = $field ? (new AugmentedEntry($entry))->field($field) : null;
 
             return $value instanceof BlocksDocument ? $value->nodes : [];
@@ -240,7 +240,7 @@ final class Renderer
     /** The entry's own content: its body field (blocks, Markdown or rich text). */
     private function body(Entry $entry): string
     {
-        $field = $entry->collection()->body;
+        $field = $entry->body()?->handle;
         $value = $field ? (new AugmentedEntry($entry))->field($field) : null;
 
         $html = match (true) {

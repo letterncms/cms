@@ -19,9 +19,9 @@ final class TaxonomyPagesTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'posts' => ['title' => 'Posts', 'route' => '/blog/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks'], ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics']]],
+            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'posts' => ['title' => 'Posts', 'route' => '/blog/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics']]],
         ];
     }
 

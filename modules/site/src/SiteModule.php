@@ -478,7 +478,7 @@ final class SiteModule extends Plugin
                 'item' => ['text' => __('Heading Text'), 'id' => __('Anchor (link to #id)'), 'level' => __('Level (2–4)')],
                 'resolve' => static function (array $props, Scope $scope) use ($entry) {
                     $current = $entry($scope);
-                    $body = $current ? $current->entry->collection()->body : null;
+                    $body = $current?->entry->body()?->handle;
                     $value = $body ? $current->field($body) : null;
 
                     return $value instanceof BlocksDocument ? array_map(static fn ($h) => [...$h, 'url' => '#'.$h['id']], (new Anchors)->headings($value->nodes, (int) ($props['depth'] ?? 3))) : [];
