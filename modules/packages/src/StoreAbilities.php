@@ -290,14 +290,18 @@ final class StoreAbilities
         ]);
 
         // Any signed-in person's visit moves an automatic security update along. It takes no input, runs
-        // only what the rules already decided, and its answer holds no secret.
+        // only what the rules already decided, and its answer holds no secret. `acted` says whether it did
+        // anything: ran a step of a core update, of an automatic plugin update, started one, or failed. A
+        // tick that did none of that changed nothing, and the Audit Log leaves it out (PackagesModule).
         $a->register('packages/update-tick', [
             'label' => 'Automatic Updates',
             'description' => 'Advance automatic security updates by one step.',
             'permission' => static fn ($user) => $user !== null,
             'expose' => ['mcp' => false, 'assistant' => false],
-            'output' => Shape::of(['more' => Shape::BOOLEAN, 'drive' => Shape::BOOLEAN]),
+            'output' => Shape::of(['more' => Shape::BOOLEAN, 'drive' => Shape::BOOLEAN, 'acted' => Shape::BOOLEAN]),
             'handler' => static function () use ($client, $core, $feed, $jobs) {
+                $acted = false;
+
                 try {
                     if ($feed()->due()) {
                         $feed()->check();
@@ -305,9 +309,11 @@ final class StoreAbilities
                     }
 
                     $step = $core()->auto();
+                    // A step of a core update ran: it has a state (done, failed…), where one that is blocked has a reason.
+                    $acted = isset($step['state']);
 
                     if ($step['more'] || ($step['state'] ?? '') === 'done') {
-                        return ['more' => $step['more'], 'drive' => $core()->status()['drive']];
+                        return ['more' => $step['more'], 'drive' => $core()->status()['drive'], 'acted' => true];
                     }
 
                     $running = $jobs()->running();
@@ -315,7 +321,7 @@ final class StoreAbilities
                     if ($running && ($running['context']['auto'] ?? false)) {
                         $job = $jobs()->step((string) $running['id']);
 
-                        return ['more' => $job['state'] === 'running', 'drive' => false];
+                        return ['more' => $job['state'] === 'running', 'drive' => false, 'acted' => true];
                     }
 
                     if (! $running && ! ($core()->status()['managed'] ?? null) && $next = $client()->nextSecurityUpdate()) {
@@ -324,13 +330,15 @@ final class StoreAbilities
                         $running['context']['auto'] = true;
                         $jobs()->saveJob($running);
 
-                        return ['more' => true, 'drive' => false];
+                        return ['more' => true, 'drive' => false, 'acted' => true];
                     }
                 } catch (Throwable $e) {
                     report($e);
+
+                    return ['more' => false, 'drive' => false, 'acted' => true];
                 }
 
-                return ['more' => false, 'drive' => false];
+                return ['more' => false, 'drive' => false, 'acted' => $acted];
             },
         ]);
     }
