@@ -1,5 +1,6 @@
 {
   ":browser on :system": ":browser auf :system",
+  "Accent": "Akzentfarbe",
   "Address": "Adresse",
   "Device": "Gerät",
   "Every other browser has to sign in again.": "Jeder andere Browser muss sich erneut anmelden.",

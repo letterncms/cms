@@ -34,6 +34,8 @@ final class Manifest
                 'locales' => $this->cms->locales(),
                 'defaultLocale' => $this->cms->defaultLocale(),
                 'timezone' => config('app.timezone'),
+                // What everyone's admin is accented with, unless they chose their own (the `accent` preference).
+                'accent' => Accent::site(),
             ],
             'user' => [...$user->toPublic(), 'grants' => $user->super ? ['*'] : $user->grants(), 'preferences' => $user->preferences ?? (object) []],
             // Filled in by their modules; empty when those are off. The shared widget catalog comes from $admin.

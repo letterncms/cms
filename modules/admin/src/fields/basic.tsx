@@ -1,8 +1,8 @@
 import { fieldControlId } from '../ui/fieldIdentity'
 import { Pressable } from '../ui/Pressable'
-import { t, type FieldProps } from '@letterncms/sdk'
+import { getManifest, t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Checkbox, ColorInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
+import { AccentPicker, Checkbox, accentOf, applyAccent, ColorInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, Tooltip, cn } from '../ui'
 import type { SelectAction } from '../ui/Select'
 import { slugify } from '../ui/slugify'
 import { formatDateTimeInZone, parseDateTimeInZone } from '../ui/dateTime'
@@ -336,6 +336,19 @@ export function UrlField({ field, value, onChange, error, disabled }: FieldProps
 export function EmailField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
   const props = inputProps(field)
   return <Input {...props} type="email" icon={props.icon ?? 'mail'} value={value ?? ''} onChange={(e) => onChange(e.target.value)} invalid={!!error} disabled={disabled} />
+}
+
+/** The admin's accent (`{ type: 'color', component: 'accent' }`): swatches and any colour. `inherit` offers following the site's. */
+export function AccentField({ field, value, onChange, disabled }: FieldProps<string | null>) {
+  const inherit = 'inherit' in field ? (field.inherit as string | null) : undefined
+  // The admin wears what is picked while it is being picked; what is saved comes back with the manifest, and leaving puts it back.
+  const picked = useRef(false)
+  useEffect(() => {
+    if (picked.current) applyAccent(value ?? inherit)
+    picked.current = true
+  }, [value, inherit])
+  useEffect(() => () => applyAccent(accentOf(getManifest())), [])
+  return <AccentPicker id={fieldControlId(field)} value={value} onChange={onChange} inherit={inherit} disabled={disabled} />
 }
 
 export function ColorField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {

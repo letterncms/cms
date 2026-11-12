@@ -5,20 +5,20 @@ import { Badge, Button, Dialog, Fields, List, Row, SaveBar, copyText, toast } fr
 
 /**
  * The Profile section of Account: name and email, the site's profile fields (content/users.yaml) and the
- * admin's language, all drawn as fields and saved together from the bar. Changing the email asks for the
+ * admin's language and accent, all drawn as fields and saved together from the bar. Changing the email asks for the
  * password; a new language starts the admin again in it. The theme is not here: it is the account menu's.
  */
 export function Profile() {
-  const { user } = useManifest()
+  const { user, site } = useManifest()
   const profile = useAbility<{ resolvedFields: FieldDef[] }>('user-fields/get')
-  const initial: Record<string, any> = { name: user.name, email: user.email, currentPassword: '', data: user.data ?? {}, locale: user.locale ?? '' }
+  const initial: Record<string, any> = { name: user.name, email: user.email, currentPassword: '', data: user.data ?? {}, locale: user.locale ?? '', accent: user.preferences?.accent ?? null }
   const [changes, setChanges] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
   const values = { ...initial, ...changes }
   const changed = (key: string) => key in changes && JSON.stringify(changes[key]) !== JSON.stringify(initial[key])
-  const dirty = ['name', 'email', 'data', 'locale'].some(changed)
+  const dirty = ['name', 'email', 'data', 'locale', 'accent'].some(changed)
   const set = (handle: string, value: any) => { setChanges((c) => ({ ...c, [handle]: value })); setErrors(({ [handle]: _, ...rest }) => rest) }
 
   const discard = () => { setChanges({}); setErrors({}); setFailed(null) }
@@ -34,6 +34,7 @@ export function Profile() {
         ...(emailChanged ? { email: values.email, currentPassword: values.currentPassword } : {}),
         ...(changed('data') ? { data: values.data } : {}),
         ...(changed('locale') ? { locale: values.locale || null } : {}),
+        ...(changed('accent') ? { preferences: { accent: values.accent } } : {}),
       }
       if (Object.keys(input).length > 0) await run('account/update', input)
       // The whole admin is drawn in the language: start it again in the new one.
@@ -55,6 +56,8 @@ export function Profile() {
   ]
   // Empty: follow the admin's default language (Settings → General → Admin Language).
   const language: FieldDef[] = [{ handle: 'locale', type: 'select', label: t('Language'), required: true, options: { '': t('Admin Default'), ...languages() } }]
+  // Empty: follow the admin's accent (Settings → General → Admin Accent), shown as the first swatch.
+  const accent: FieldDef[] = [{ handle: 'accent', type: 'color', component: 'accent', label: t('Accent'), inherit: site.accent ?? null }]
 
   // Every section of the page starts at the same edge: no avatar beside the fields (it is in the account menu).
   return (
@@ -63,6 +66,7 @@ export function Profile() {
       <Fields fields={fields} values={values} onChange={set} errors={errors} />
       {(profile.data?.resolvedFields ?? []).length > 0 && <Fields className="mt-4" fields={profile.data!.resolvedFields} values={values.data} onChange={(h, v) => set('data', { ...values.data, [h]: v })} errors={errors} />}
       <Fields className="mt-4" fields={language} values={values} onChange={set} errors={errors} />
+      <Fields className="mt-4" fields={accent} values={values} onChange={set} errors={errors} />
     </div>
   )
 }

@@ -238,7 +238,7 @@ export interface WidgetInfo {
 export interface Manifest {
   cms: { version: string; debug: boolean }
   brand: BrandInfo
-  site: { name: string; url: string; locales: string[]; defaultLocale: string; timezone: string }
+  site: { name: string; url: string; locales: string[]; defaultLocale: string; timezone: string; /** The admin's accent for everyone, `#rrggbb`, or null for the brand's own: Settings → General. */ accent?: string | null }
   user: User & { grants: string[]; preferences: Record<string, unknown> }
   collections: CollectionSummary[]
   globals: ({ handle: string; title: string; icon: string } & RecordTimestamps)[]

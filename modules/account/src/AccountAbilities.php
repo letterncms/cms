@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Account;
 
 use Cms\Abilities\Ability;
+use Cms\Admin\Accent;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator as LaravelValidator;
 use Cms\Abilities\AbilityContext;
@@ -108,7 +109,12 @@ final class AccountAbilities
 
                 if (isset($in['preferences'])) {
                     // Saved views are kept under `views` by their own abilities (saved-views/…), which check them: not written from here.
-                    $user->preferences = array_replace((array) ($user->preferences ?? []), array_diff_key($in['preferences'], ['views' => true]));
+                    $preferences = array_diff_key($in['preferences'], ['views' => true]);
+                    // Their own accent is one colour as #rrggbb; anything else follows the site's (see Accent).
+                    if (array_key_exists('accent', $preferences)) {
+                        $preferences['accent'] = Accent::normalize($preferences['accent']);
+                    }
+                    $user->preferences = array_filter(array_replace((array) ($user->preferences ?? []), $preferences), static fn (mixed $value, mixed $key) => $key !== 'accent' || $value !== null, ARRAY_FILTER_USE_BOTH);
                 }
 
                 if (isset($in['data'])) {

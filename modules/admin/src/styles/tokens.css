@@ -61,10 +61,14 @@
   /* Placeholders and disabled labels: not read as content, so below AA on purpose. */
   --cms-ghost: #a3a098;
 
+  /* The accent: the brand's yellow unless the site or the person chose another (Settings → General, Account),
+     which sets these two alone. Everything else of it follows from them. */
   --cms-signal: #ffe100;
   --cms-signal-ink: #1c1b18;
+  /* What a fill deepens toward when pointed at or pressed, whatever the accent and the words on it. */
+  --cms-shade: #1c1b18;
   /* A wash of yellow: highlighted text, an unpublished-changes mark's halo. Never a surface for a whole region. */
-  --cms-signal-soft: #fff6b8;
+  --cms-signal-soft: color-mix(in srgb, var(--cms-signal) 28%, #fff);
   --cms-focus: #2563eb;
   --cms-focus-soft: rgb(37 99 235 / 0.1);
   /* A selected row that is pointed at: a step deeper than the wash. */
@@ -79,10 +83,10 @@
   /* The solid fills pointed at and pressed: mixes, not films, so a button reads the same on the sheet, the desk and a float. */
   --cms-ink-hover: color-mix(in srgb, var(--cms-ink) 88%, var(--cms-bg));
   --cms-ink-active: color-mix(in srgb, var(--cms-ink) 80%, var(--cms-bg));
-  --cms-danger-hover: color-mix(in srgb, var(--cms-danger) 90%, var(--cms-signal-ink));
-  --cms-danger-active: color-mix(in srgb, var(--cms-danger) 82%, var(--cms-signal-ink));
-  --cms-signal-hover: color-mix(in srgb, var(--cms-signal) 92%, var(--cms-signal-ink));
-  --cms-signal-active: color-mix(in srgb, var(--cms-signal) 86%, var(--cms-signal-ink));
+  --cms-danger-hover: color-mix(in srgb, var(--cms-danger) 90%, var(--cms-shade));
+  --cms-danger-active: color-mix(in srgb, var(--cms-danger) 82%, var(--cms-shade));
+  --cms-signal-hover: color-mix(in srgb, var(--cms-signal) 92%, var(--cms-shade));
+  --cms-signal-active: color-mix(in srgb, var(--cms-signal) 86%, var(--cms-shade));
   --cms-float-hover: var(--cms-sunken);
   --cms-float-active: color-mix(in srgb, var(--cms-float), var(--cms-ink) 7%);
   /* A solid tint for what lies on the page and must not show through: initials, the chosen option of a segmented control in the dark. */
@@ -140,7 +144,7 @@
   --cms-faint: #93918a;
   --cms-ghost: #6b6964;
 
-  --cms-signal-soft: rgb(255 225 0 / 0.16);
+  --cms-signal-soft: color-mix(in srgb, var(--cms-signal) 16%, transparent);
   --cms-focus: #5c8dff;
   --cms-focus-soft: rgb(92 141 255 / 0.16);
   --cms-focus-hover: rgb(92 141 255 / 0.22);
@@ -153,10 +157,10 @@
 
   --cms-ink-hover: color-mix(in srgb, var(--cms-ink) 88%, var(--cms-bg));
   --cms-ink-active: color-mix(in srgb, var(--cms-ink) 80%, var(--cms-bg));
-  --cms-danger-hover: color-mix(in srgb, var(--cms-danger) 90%, var(--cms-signal-ink));
-  --cms-danger-active: color-mix(in srgb, var(--cms-danger) 82%, var(--cms-signal-ink));
-  --cms-signal-hover: color-mix(in srgb, var(--cms-signal) 92%, var(--cms-signal-ink));
-  --cms-signal-active: color-mix(in srgb, var(--cms-signal) 86%, var(--cms-signal-ink));
+  --cms-danger-hover: color-mix(in srgb, var(--cms-danger) 90%, var(--cms-shade));
+  --cms-danger-active: color-mix(in srgb, var(--cms-danger) 82%, var(--cms-shade));
+  --cms-signal-hover: color-mix(in srgb, var(--cms-signal) 92%, var(--cms-shade));
+  --cms-signal-active: color-mix(in srgb, var(--cms-signal) 86%, var(--cms-shade));
   --cms-float-hover: color-mix(in srgb, var(--cms-float), var(--cms-ink) 5.5%);
   --cms-float-active: color-mix(in srgb, var(--cms-float), var(--cms-ink) 9%);
   --cms-fill: color-mix(in srgb, var(--cms-float), var(--cms-ink) 12%);
