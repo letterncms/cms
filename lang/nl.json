@@ -64,7 +64,6 @@
   "Another field uses this handle.": "Een ander veld gebruikt deze sleutel.",
   "Another install is running: :package.": "Er loopt al een andere installatie: :package.",
   "Another install step is running. Try again in a moment.": "Er loopt al een installatiestap. Probeer het zo opnieuw.",
-  "At least 10 characters, with letters and numbers.": "Minstens 10 tekens, met letters en cijfers.",
   "Authentication required.": "Je moet ingelogd zijn.",
   "Author": "Auteur",
   "Basic": "Basis",
@@ -220,7 +219,6 @@
   "Number": "Getal",
   "Only plain http(s) URLs are allowed.": "Alleen gewone http(s)-URL’s zijn toegestaan.",
   "Only tree collections have a parent.": "Alleen boomcollecties kunnen een bovenliggend item hebben.",
-  "Optional, e.g. cms_": "Optioneel, bijv. cms_",
   "Options": "Opties",
   "Orange": "Oranje",
   "Package :name is not installed.": "Pakket :name is niet geïnstalleerd.",
@@ -424,5 +422,6 @@
   "Your session expired. Reload the page.": "Je sessie is verlopen. Laad de pagina opnieuw.",
   "Your sign-in expired. Please start again.": "Je inlogsessie is verlopen. Begin opnieuw.",
   "{\"value\": \"Label\"}": "{\"value\": \"Label\"}",
-  "Use at least 10 characters, with letters and numbers.": "Gebruik minstens 10 tekens, met letters en cijfers."
+  "Use at least 10 characters, with letters and numbers.": "Gebruik minstens 10 tekens, met letters en cijfers.",
+  "This server has everything :brand needs": "Deze server heeft alles wat :brand nodig heeft"
 }

@@ -142,6 +142,8 @@ button.primary:disabled:not([aria-busy]) { opacity: 1; background: var(--cms-fil
 .checks .detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--cms-muted); font-family: var(--font-mono); font-size: var(--text-xs); }
 .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--cms-success); }
 .bad .dot { background: var(--cms-danger); }
+.pass { display: flex; flex: none; color: var(--cms-success); }
+.pass svg { width: 16px; height: 16px; }
 /* What is missing is read whole, on a line of its own where the row is short of room. */
 .checks .bad .detail { flex-basis: 100%; white-space: normal; text-align: left; padding-left: 15px; color: var(--cms-text); }
 /* Facts, each with its name: a quiet name, the value in ink. */

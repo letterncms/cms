@@ -41,7 +41,7 @@ export function standaloneCss(styles) {
  * The few icons those pages show, as the admin draws them (src/lib/icon-data.ts): `{ name: '<svg …>' }`,
  * 16px, in the colour of the words around them.
  */
-export function standaloneIcons(lib, names = ['eye', 'eye-off']) {
+export function standaloneIcons(lib, names = ['eye', 'eye-off', 'check']) {
   const data = readFileSync(join(lib, 'icon-data.ts'), 'utf8')
   const icons = JSON.parse(data.slice(data.indexOf('= {') + 2, data.lastIndexOf('}') + 1))
   return Object.fromEntries(names.map((name) => {

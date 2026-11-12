@@ -35,7 +35,7 @@ test('the values are the admin\u2019s: tokens.css and theme.css, as they are', (
 
 test('the pages get the admin\u2019s own icons, as markup', () => {
   const icons = standaloneIcons(fileURLToPath(new URL('../src/lib', import.meta.url)))
-  assert.deepEqual(Object.keys(icons), ['eye', 'eye-off'])
+  assert.deepEqual(Object.keys(icons), ['eye', 'eye-off', 'check'])
   for (const svg of Object.values(icons)) assert.match(svg, /^<svg [^>]*fill="currentColor"[^>]*><path /)
   assert.throws(() => standaloneIcons(fileURLToPath(new URL('../src/lib', import.meta.url)), ['no-such-icon']))
 })
