@@ -247,6 +247,7 @@
   "Remove": "Retirer",
   "Remove “{title}”?": "Retirer « {title} » ?",
   "Remove {tag}": "Retirer {tag}",
+  "Rename Blueprint": "Renommer le modèle",
   "Remove Blueprint": "Retirer le modèle",
   "Remove Condition": "Supprimer la condition",
   "Remove Field": "Supprimer le champ",

@@ -35,7 +35,7 @@ function commonOptions(depth: number, renamed: boolean, taken: string[]): FieldD
   ]
 }
 
-export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, addLabel, builtIn = null, errors, path = 'fields', heading = true, actions }: {
+export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, addLabel, builtIn = null, errors, path = 'fields', heading = true, leading }: {
   fields: RawField[]; onChange: (fields: RawField[]) => void; body?: string; depth?: number; emptyText?: string; addLabel?: string; builtIn?: string | null
   /** What a refused save said, by the path of the option it is about (`fields.2.handle`, `fields.0.fields.1.type`). */
   errors?: Record<string, string>
@@ -43,8 +43,8 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
   path?: string
   /** `false` under a tab that already says "Fields": the row keeps Add Field, without the word again. */
   heading?: boolean
-  /** More to do with these fields, beside Add Field (Add Blueprint). */
-  actions?: ReactNode
+  /** What these fields belong to, at the start of the Add Field row (the blueprint menu). */
+  leading?: ReactNode
 }) {
   const types = useManifest().fieldTypes
   const [open, setOpen] = useState<number | null>(null)
@@ -67,9 +67,9 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
       {depth === 0 ? (
         <div className={cn('mb-3 flex items-center gap-2', heading && 'border-b border-border pb-2')}>
           {heading && <h2 className="m-0 text-sm font-semibold text-ink">{t('Fields')}</h2>}
+          {leading}
           {builtIn && <p className="m-0 min-w-0 flex-1 truncate text-xs text-faint">{builtIn}</p>}
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {actions}
+          <div className="ml-auto shrink-0">
             <AddField types={types} onAdd={add} />
           </div>
         </div>
