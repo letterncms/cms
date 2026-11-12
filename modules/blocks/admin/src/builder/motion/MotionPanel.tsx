@@ -60,7 +60,7 @@ export function MotionPanel({ node }: { node: BlockNode }) {
           items={[
             ...groups.flatMap((g) => [{ label: groupLabel(g), heading: true }, ...all.filter((p) => p.group === g && (!p.text || text)).map((p) => ({ label: p.name, icon: kinds[p.make().trigger.type]?.icon, onSelect: () => add(p) }))]),
             { separator: true, label: '' },
-            { label: t('Custom Animation'), icon: 'wand', onSelect: () => add() },
+            { label: t('Custom Animation'), icon: 'animated', onSelect: () => add() },
           ]}
         />
       }
@@ -68,7 +68,7 @@ export function MotionPanel({ node }: { node: BlockNode }) {
       {list.map((m) => (
         <div key={m.id} className={cn('rounded-sm border', open === m.id ? 'border-border-strong' : 'border-border')}>
           <div className="flex h-8 items-center gap-1.5 pl-2 pr-1">
-            <Icon name={kinds[m.trigger.type]?.icon ?? 'wand'} size={13} className="shrink-0 text-muted" />
+            <Icon name={kinds[m.trigger.type]?.icon ?? 'animated'} size={13} className="shrink-0 text-muted" />
             <Button variant="ghost" onClick={() => setOpen(open === m.id ? null : m.id)} aria-expanded={open === m.id} className="min-w-0 flex-1 shrink !justify-start !gap-1.5 !bg-transparent !px-0 text-left !text-xs">
               <span className="truncate font-medium text-ink">{m.name || kinds[m.trigger.type]?.label}</span>
               <span className="shrink-0 font-normal text-faint">{kinds[m.trigger.type]?.label}</span>

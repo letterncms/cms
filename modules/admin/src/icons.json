@@ -223,6 +223,6 @@
  "arrows-out-simple": "ph:arrows-out-simple",
  "scissors": "ph:scissors",
  "faders": "ph:faders",
- "animated": "ph:play-circle",
+ "animated": "ph:path",
  "interactive": "ph:cursor-click"
 }
