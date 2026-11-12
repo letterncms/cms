@@ -15,6 +15,8 @@ use Cms\Tests\TestCase;
  */
 final class BrowserFixturesTest extends TestCase
 {
+    use InstallsMinimalKit;
+
     protected function plugins(): array
     {
         return ['letterncms/blocks', 'letterncms/site'];
@@ -105,6 +107,7 @@ final class BrowserFixturesTest extends TestCase
     /** A new site as it starts: the pages of the kit minimal, with the security policy a new site has. */
     public function test_the_minimal_kit_builds_under_its_policy(): void
     {
+        $this->installMinimalKit();
         $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
         $this->assertTrue((bool) $this->cms()->setting('site', 'csp'));
         // This test site has a collection of its own already, which install leaves alone: the kit's pages go in by hand.

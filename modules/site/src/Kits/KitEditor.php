@@ -10,7 +10,7 @@ use Cms\Support\Files;
 /**
  * Changes what a kit says of itself: its name, its description and its thumbnail. Only the kit's own kit.json
  * and previews/ are written, in the kit's folder in kits/ and in the copy kept when the site leaves it, so both
- * say the same. A kit that comes with the CMS is not the site's to change.
+ * say the same.
  */
 final class KitEditor
 {
@@ -21,12 +21,10 @@ final class KitEditor
      */
     public function update(string $handle, array $changes): void
     {
-        $folders = array_filter([$this->kits->find($handle)?->source === 'site' ? $this->kits->path($handle) : null, isset($this->kits->saved()[$handle]) ? $this->kits->savedPath($handle) : null]);
+        $folders = array_filter([$this->kits->find($handle) !== null ? $this->kits->path($handle) : null, isset($this->kits->saved()[$handle]) ? $this->kits->savedPath($handle) : null]);
 
         if ($folders === []) {
-            throw $this->kits->find($handle) !== null
-                ? AbilityException::conflict(__('The kit “:handle” comes with :brand and is not changed here: export the site to make a kit of your own.', ['handle' => $handle]))
-                : AbilityException::notFound(__('There is no kit “:handle” here. kits/list has the ones there are.', ['handle' => $handle]));
+            throw AbilityException::notFound(__('There is no kit “:handle” here. kits/list has the ones there are.', ['handle' => $handle]));
         }
 
         $preview = $this->exporter->preview($changes);
@@ -71,7 +69,7 @@ final class KitEditor
 
     /**
      * The folders deleting a kit would remove: its folder in kits/ and the copy kept when the site left it.
-     * The kit the site is, and a kit that comes with the CMS, are not removed.
+     * The kit the site is is not removed: a site is one kit that is there, or none.
      *
      * @return list<string>
      */
@@ -82,10 +80,6 @@ final class KitEditor
 
         if ($kit === null && $saved === null) {
             throw AbilityException::notFound(__('There is no kit “:handle” here. kits/list has the ones there are.', ['handle' => $handle]));
-        }
-
-        if ($kit?->source === 'builtin') {
-            throw AbilityException::conflict(__('The kit “:handle” comes with :brand and is not deleted. Start it over to let go of your changes to it.', ['handle' => $handle]));
         }
 
         if ($this->kits->active() === $handle) {

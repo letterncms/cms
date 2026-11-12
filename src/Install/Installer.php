@@ -136,9 +136,9 @@ final class Installer
             }
         }
 
-        // The kit is fetched, if it has to be, once the site exists; one that is here is checked now.
+        // The kit is fetched, if it has to be, once the site exists (the one a new site starts from is the store's like any other); one that is here is checked now.
         $kit = (string) ($input['kit'] ?? '') ?: Kits::DEFAULT;
-        $store = (bool) ($input['kit_from_store'] ?? false);
+        $store = (bool) ($input['kit_from_store'] ?? false) || $kit === Kits::DEFAULT;
 
         if ($kit !== self::NO_KIT && ! $store && $this->app->make(Kits::class)->find($kit) === null) {
             throw AbilityException::invalid(__('There is no kit “:handle” here.', ['handle' => $kit]), ['kit' => __('Choose one of: :names.', ['names' => implode(', ', array_keys($this->app->make(Kits::class)->all()))])]);

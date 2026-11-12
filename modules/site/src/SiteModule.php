@@ -118,7 +118,7 @@ final class SiteModule extends Plugin
     }
 
     /**
-     * Site kits: a new site starts from the one its setup chose (minimal unless someone chose another), when it
+     * Site kits: a new site starts from the one its setup chose (minimal, a kit of the store, unless someone chose another), when it
      * has no collections of its own yet, and any site can take one in later or be made into one.
      */
     private function kits(): void
@@ -130,8 +130,14 @@ final class SiteModule extends Plugin
             $chosen = \Cms\Install\Installer::kit();
 
             if ($chosen !== null && ! glob(content_path('collections').'/*.yaml')) {
-                // A kit from the store that could not be fetched leaves the site with the one that is always here.
-                $this->app->make(Kits\KitApplier::class)->apply($kits()->find($chosen) ?? $kits()->findOrFail(Kits\Kits::DEFAULT), 'full', 'skip', $user, withoutPlugins: true, check: false);
+                // A kit that could not be fetched leaves the site empty, and no kit's: it is not claimed to be one that isn't there.
+                if (($kit = $kits()->find($chosen)) === null) {
+                    $kits()->activate(\Cms\Install\Installer::NO_KIT);
+
+                    return;
+                }
+
+                $this->app->make(Kits\KitApplier::class)->apply($kit, 'full', 'skip', $user, withoutPlugins: true, check: false);
             }
         });
 

@@ -38,6 +38,8 @@ final class McpEndToEndTest extends TestCase
         $this->site = sys_get_temp_dir().'/cms-mcp-'.bin2hex(random_bytes(6));
         Files::ensureDir($this->site.'/storage/database');
         touch($this->site.'/storage/database/cms.sqlite');
+        // The kit a new site starts from is the store's: here is a copy, where Composer would have put it.
+        Files::copyDirectory(dirname(__DIR__, 2).'/site/tests/fixtures/kits/minimal', $this->site.'/kits/minimal');
         $this->token = (string) $this->step('install', ['url' => $this->url()]);
         $this->server = new Process([PHP_BINARY, '-S', '127.0.0.1:'.$this->port, __DIR__.'/fixtures/router.php'], $this->site, $this->env());
         $this->server->setTimeout(null);

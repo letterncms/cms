@@ -19,7 +19,7 @@ final class KitAbilities
     {
         return [
         'handle' => Shape::STRING, 'name' => Shape::STRING, 'description' => Shape::STRING, 'version' => Shape::STRING, 'license' => Shape::STRING_OR_NULL,
-        'source' => Shape::enum('builtin', 'site', 'saved'), 'active' => Shape::BOOLEAN, 'edited' => Shape::BOOLEAN, 'cms' => Shape::STRING_OR_NULL, 'plugins' => [Shape::STRING], 'languages' => [Shape::STRING], 'previews' => [Shape::STRING],
+        'source' => Shape::enum('site', 'saved'), 'active' => Shape::BOOLEAN, 'edited' => Shape::BOOLEAN, 'cms' => Shape::STRING_OR_NULL, 'plugins' => [Shape::STRING], 'languages' => [Shape::STRING], 'previews' => [Shape::STRING],
         'demo' => Shape::STRING_OR_NULL, 'suits' => Shape::BOOLEAN, 'missingPlugins' => [Shape::STRING], 'code' => Shape::BOOLEAN,
         ];
     }
@@ -61,7 +61,7 @@ final class KitAbilities
 
         $abilities->register('kits/list', [
             'label' => 'Site Kits',
-            'description' => 'The site kits this site can take in: complete sites to start from, copied once (kits/apply), after which the site owns every file. minimal is part of the CMS; the rest are folders in the site’s kits/ (composer require of a package of type cms-kit puts one there, and kits/export makes one). `problems` names folders in kits/ that are not kits.',
+            'description' => 'The site kits this site can take in: complete sites to start from, copied once (kits/apply), after which the site owns every file. Each is a folder in the site’s kits/ (composer require of a package of type cms-kit puts one there, the store installs one, and kits/export makes one); none is part of the CMS. `problems` names folders in kits/ that are not kits.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'output' => Shape::of(['kits' => [self::kit()], 'problems' => [['folder' => Shape::STRING, 'problem' => Shape::STRING]]]),
@@ -134,7 +134,7 @@ final class KitAbilities
 
         $abilities->register('kits/update', [
             'label' => 'Change a Site Kit’s Details',
-            'description' => 'Change what a kit says of itself: its `name`, its `description` (empty takes it away) and its thumbnail (`preview`, base64, with `previewType` png, jpg or webp; or `removePreview`). {"handle": "studio", "name": "Studio Two"}. Only a kit in the site’s kits/ (and the copy kept of it) can be changed; one that comes with the CMS can’t. The kit’s files are not touched.',
+            'description' => 'Change what a kit says of itself: its `name`, its `description` (empty takes it away) and its thumbnail (`preview`, base64, with `previewType` png, jpg or webp; or `removePreview`). {"handle": "studio", "name": "Studio Two"}. Only a kit in the site’s kits/ (and the copy kept of it) can be changed. The kit’s files are not touched.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [...$handle, 'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 80], 'description' => ['type' => 'string', 'maxLength' => 400], 'preview' => ['type' => 'string', 'description' => 'A picture, base64 (at most 5 MB); with previewType.'], 'previewType' => ['type' => 'string', 'enum' => ['png', 'jpg', 'webp']], 'removePreview' => ['type' => 'boolean']], 'required' => ['handle']],
             'output' => Shape::of(['kit' => self::kit()]),
@@ -147,7 +147,7 @@ final class KitAbilities
 
         $abilities->register('kits/delete', [
             'label' => 'Delete a Site Kit',
-            'description' => 'Delete a kit: its folder in the site’s kits/ and the copy kept of it when the site left it, so what was changed in it is gone too (the site itself is untouched). {"handle": "studio"}. Not the kit the site is now (switch first), and not one that comes with the CMS. A kit a Composer package put in kits/ comes back with the next composer install.',
+            'description' => 'Delete a kit: its folder in the site’s kits/ and the copy kept of it when the site left it, so what was changed in it is gone too (the site itself is untouched). {"handle": "studio"}. Not the kit the site is now (switch first): a site is always one kit that is there, or none at all. A kit a Composer package put in kits/ comes back with the next composer install.',
             'permission' => 'settings.manage',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => $handle, 'required' => ['handle']],
@@ -208,7 +208,7 @@ final class KitAbilities
                 $folder = $kits()->path((string) $in['handle']);
                 $kit = $kits()->find((string) $in['handle']);
 
-                if ($kit?->source === 'builtin' || (is_dir($folder) && empty($in['replace']))) {
+                if (is_dir($folder) && empty($in['replace'])) {
                     throw AbilityException::conflict(__('There is a kit “:handle” already. Choose another handle, or replace it.', ['handle' => (string) $in['handle']]));
                 }
 
@@ -235,10 +235,6 @@ final class KitAbilities
                     } finally {
                         \Cms\Support\Files::deleteDirectory($stage);
                     }
-                }
-
-                if ($kits()->find((string) $in['handle'])?->source === 'builtin') {
-                    throw AbilityException::conflict(__('There is a kit “:handle” already. Choose another handle, or replace it.', ['handle' => (string) $in['handle']]));
                 }
 
                 $folder = $kits()->path((string) $in['handle']);

@@ -6,6 +6,14 @@
 
 - **Switches show their knob in the monochrome accent.** In dark mode, a switch that is on in the white accent no longer loses its white knob on the white track.
 
+### Changed
+
+- **Breaking.** Minimal, the kit a new site starts from, is a kit of the store like any other and no longer comes with the CMS: setup fetches it (`php cms install` and the browser installer do, and `composer require letterncms/minimal` puts it in `kits/`), it has a card on **Site Kits**, you can edit its details, and you can delete it when the site is another kit. A kit that can't be fetched leaves the site empty, with no kit, when you choose **Start Without a Kit** in the browser installer. A site is always one kit that is there, or none: the kit the site is can't be deleted.
+
+### Removed
+
+- **Use Only the Design** on a kit's menu in **Site Kits**. `php cms kit:apply <handle> --mode=design` and `kits/apply` with `mode: design` still bring a kit's design.
+
 ## 0.28.1 (2026-11-12)
 
 ### Changed
