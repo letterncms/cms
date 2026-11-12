@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.31.0 (2026-11-12)
+
 ### Changed
 
 - **Breaking.** The admin, dashboard and agent tools call these features **Globals** and **Design**. The Globals dashboard widget uses the ID `globals`. PHP code uses `GlobalContent` for an individual global, and the definition hooks are `global.saved` and `global.deleted`.
