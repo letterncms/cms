@@ -1,6 +1,6 @@
 import { can, invalidate, run, t, useAbility } from '@letterncms/sdk'
-import { Button, Dialog, Field, Fields, Icon, IconButton, List, Row, confirm, copyText, formatBytes, toast } from '@letterncms/ui'
-import { useRef, useState } from 'react'
+import { Button, Field, Fields, Icon, IconButton, List, PanelHeader, Row, confirm, copyText, formatBytes, toast } from '@letterncms/ui'
+import { useEffect, useRef, useState } from 'react'
 import { deleteFiles, useHref, type MediaUse } from './actions'
 import { CropDialog } from './Crop'
 import { MoveDialog } from './Folders'
@@ -8,8 +8,11 @@ import { FileTile, kindWords } from './kinds'
 import { FocalPoint } from './FocalPoint'
 import { upload, type MediaItem } from './upload'
 
-/** One file: what it is, its words, where it is used, and the way to delete it. A form: Save is the dialog's own button. */
-export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem; folders: string[]; onClose: () => void }) {
+/**
+ * One file, in the inspector at the right: what it is, its words, where it is used, and the way to delete it.
+ * Like the builder's inspector it has no Save: a change is kept a moment after it is made, and on the way out.
+ */
+export function FilePanel({ item: listed, folders, onClose }: { item: MediaItem; folders: string[]; onClose: () => void }) {
   // The file as it is now: replacing, rotating and cropping change it at once, ahead of the list behind.
   const [item, setItem] = useState(listed)
   const [draft, setDraft] = useState({ name: item.name, alt: item.alt ?? '', caption: item.caption ?? '' })
@@ -19,8 +22,6 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
   const [cropping, setCropping] = useState(false)
   const [working, setWorking] = useState<'rotate' | 'replace' | null>(null)
   const [focal, setFocal] = useState(item.focal)
-  const [busy, setBusy] = useState(false)
-  const dirty = draft.name !== item.name || draft.alt !== (item.alt ?? '') || draft.caption !== (item.caption ?? '') || focal.x !== item.focal.x || focal.y !== item.focal.y
   const editable = can('media.edit')
   const uses = useAbility<{ usedBy: MediaUse[] }>('media/get', { id: item.id })
   const usedBy = uses.data?.usedBy ?? []
@@ -57,29 +58,38 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
     }
   }
 
-  const save = async () => {
-    setBusy(true)
-    try {
-      await run('media/update', { id: item.id, ...draft, focal })
-      invalidate('media/')
-      onClose()
-    } catch (error) {
-      toast.error(error)
-      setBusy(false)
-    }
+  // What was last kept, and what waits to be: words as they are typed, the focal point as it is dragged.
+  const kept = useRef({ ...draft, focal })
+  const pending = useRef<{ draft: typeof draft; focal: typeof focal } | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const flush = () => {
+    clearTimeout(timer.current)
+    const next = pending.current
+    pending.current = null
+    if (!next) return
+    const values = { ...next.draft, name: next.draft.name.trim() || kept.current.name, focal: next.focal }
+    if (JSON.stringify(values) === JSON.stringify(kept.current)) return
+    kept.current = values
+    run('media/update', { id: item.id, ...values }).then(() => invalidate('media/'), toast.error)
   }
-
-  // Cropping takes the sheet over: one dialog, one Cancel, and back to the details as they were, unsaved words included.
-  if (cropping) return <CropDialog item={item} src={picture} onClose={(cropped) => { setCropping(false); if (cropped) changed(cropped) }} />
+  const keep = (nextDraft: typeof draft, nextFocal: typeof focal) => {
+    if (!editable) return
+    pending.current = { draft: nextDraft, focal: nextFocal }
+    clearTimeout(timer.current)
+    timer.current = setTimeout(flush, 600)
+  }
+  // Another file opened, or the panel closed: what was typed is kept, not lost.
+  useEffect(() => flush, [])
 
   return (
-    <Dialog open onOpenChange={(next) => !next && onClose()} title={item.name} {...(editable ? { onSubmit: () => void save(), submitLabel: t('Save'), submitDisabled: !dirty, busy } : {})}>
-      <div className="flex min-w-0 flex-col gap-4">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <PanelHeader title={draft.name || item.name} onClose={() => { flush(); onClose() }} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         {photo ? (
           editable
             ? (
               <div>
-                <FocalPoint src={picture} value={focal} onChange={setFocal} />
+                <FocalPoint src={picture} value={focal} onChange={(next) => { setFocal(next); keep(draft, next) }} />
                 {/* What changes the picture itself, under it. */}
                 {tools && (
                   <div className="mt-2 flex items-center justify-center gap-2">
@@ -120,7 +130,7 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
             { handle: 'caption', type: 'textarea', label: t('Caption'), rows: 2 },
           ]}
           values={draft}
-          onChange={(h, v) => setDraft({ ...draft, [h]: v ?? '' })}
+          onChange={(h, v) => { const next = { ...draft, [h]: v ?? '' }; setDraft(next); keep(next, focal) }}
         />
 
         {usedBy.length > 0 && (
@@ -140,7 +150,7 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
           <div className="flex flex-wrap items-center gap-2 pb-0.5">
             {editable && <Button size="sm" icon="upload" loading={working === 'replace'} disabled={working !== null} onClick={() => input.current?.click()}>{t('Replace File')}</Button>}
             {editable && <Button size="sm" icon="folder" onClick={() => setMoving(true)}>{t('Move to Folder')}</Button>}
-            {can('media.delete') && <Button size="sm" variant="destructive" icon="trash" onClick={async () => { if ((await deleteFiles([item])).length) onClose() }}>{t('Delete File')}</Button>}
+            {can('media.delete') && <Button size="sm" variant="destructive" icon="trash" onClick={async () => { flush(); if ((await deleteFiles([item])).length) onClose() }}>{t('Delete File')}</Button>}
           </div>
         )}
         {/* What opens from here has a form of its own: its submit rises through React's tree, and must not save this one too. */}
@@ -148,8 +158,9 @@ export function FileDialog({ item: listed, folders, onClose }: { item: MediaItem
             {/* Another file of the same kind, for this one's place. */}
             <input ref={input} type="file" className="hidden" accept={{ image: 'image/*', video: 'video/*', audio: 'audio/*', pdf: 'application/pdf' }[item.kind as string]} onChange={(e) => { const chosen = e.target.files?.[0]; e.target.value = ''; if (chosen) void replace(chosen) }} />
             {moving && <MoveDialog files={[{ id: item.id, folder }]} folders={folders} onClose={(to) => { setMoving(false); if (to !== undefined) setFolder(to) }} />}
+            {cropping && <CropDialog item={item} src={picture} onClose={(cropped) => { setCropping(false); if (cropped) changed(cropped) }} />}
         </div>
       </div>
-    </Dialog>
+    </div>
   )
 }

@@ -5,7 +5,7 @@ import {
 } from '@letterncms/sdk'
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import {
-  Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, NotFoundState, Notice, Page, QueryError,
+  Button, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, PanelHeader, NotFoundState, Notice, Page, QueryError,
   ScreenSidebar, SharedMark, Spinner, StatusDot, Tabs, statusLabel, Tooltip, Topbar, confirm, cn, entryActionAvailability,
   copyText, fieldControlId, toast, useShortcut, useWideInspector,
 } from '@letterncms/ui'
@@ -374,7 +374,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
   }
   const sidebar = (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border pl-4 pr-2">
+      <PanelHeader onClose={() => setSidebarOpen(false)}>
         <Tabs
           id="entry-sidebar"
           value={active}
@@ -384,8 +384,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
           fit
           className="h-full min-w-0 flex-1"
         />
-        <IconButton icon="close" label={t('Close Panel')} onClick={() => setSidebarOpen(false)} />
-      </div>
+      </PanelHeader>
       <div
         role="tabpanel"
         id={`entry-sidebar-${active}-panel`}

@@ -1,8 +1,8 @@
 import { can, locale, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
-import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, Menu, NoMatches, SelectionBar, cn, copyText, drawing, formatBytes, readViewPrefs } from '@letterncms/ui'
+import { Badge, Button, DataView, EmptyState, Fields, Icon, IconButton, InspectorPanel, Menu, NoMatches, SelectionBar, cn, copyText, drawing, formatBytes, readViewPrefs } from '@letterncms/ui'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { deleteFiles } from './actions'
-import { FileDialog } from './FileDialog'
+import { FilePanel } from './FilePanel'
 import { FileTile, KINDS, acceptKind, kindOptions, kindWords, type MediaKind } from './kinds'
 import { FolderTree, MoveDialog, folderActions, folderAfter, folderName } from './Folders'
 import { libraryFolder, uploadAll, type MediaItem } from './upload'
@@ -144,7 +144,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
         dates={(item) => ({ publishedAt: null, updatedAt: item.updatedAt })}
         sort={sort} dateSort={{ updated: 'updated_at' }} onSort={(sort) => { setPage(1); setSort(sort) }}
         selection={pick ? undefined : { ids: chosen, onSelect: select }}
-        // The file that is open has its sheet over it: its tile is not marked as selected, which is what the checkboxes are for.
+        // The file that is open is in the panel beside: its tile is not marked as selected, which is what the checkboxes are for.
         selected={pick ? (item) => selected.includes(item.id) : undefined}
         plain={pick}
         toolbar={blank ? undefined : <>
@@ -175,7 +175,7 @@ export function Library({ mode = 'manage', accept = '*', except, multiple = fals
 
       {mode === 'manage' && <SelectionBar count={chosen.size} onClear={() => setChosen(new Set())}>{manages && <Button size="sm" variant="ghost" onClick={() => setMoving(items.filter((item) => chosen.has(item.id)))}>{t('Move to Folder')}</Button>}{can('media.delete') && <Button size="sm" variant="destructive" loading={deleting} onClick={() => void deleteItems([...chosen])}>{t('Delete')}</Button>}</SelectionBar>}
 
-      {mode === 'manage' && open && <FileDialog key={open.id} item={items.find((i) => i.id === open.id) ?? open} folders={folders} onClose={() => setOpen(null)} />}
+      {mode === 'manage' && <InspectorPanel sheet open={!!open} onOpenChange={(next) => !next && setOpen(null)} title={open?.name ?? t('Media')}>{open && <FilePanel key={open.id} item={items.find((i) => i.id === open.id) ?? open} folders={folders} onClose={() => setOpen(null)} />}</InspectorPanel>}
       {moving && moving.length > 0 && <MoveDialog files={moving} folders={folders} onClose={(to) => { setMoving(null); if (to !== undefined) setChosen(new Set()) }} />}
       </div>
     </div>

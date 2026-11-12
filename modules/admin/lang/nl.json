@@ -350,5 +350,8 @@
   "Write in Markdown…": "Schrijf in Markdown…",
   "Yes": "Ja",
   "You are not allowed to do this": "Je hebt hier geen toestemming voor",
-  "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord."
+  "You can sign in with your new password.": "Je kunt nu inloggen met je nieuwe wachtwoord.",
+  "Back": "Terug",
+  "Back to {name}": "Terug naar {name}",
+  "Close Panel": "Paneel sluiten"
 }

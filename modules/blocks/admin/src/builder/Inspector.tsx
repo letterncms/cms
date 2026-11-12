@@ -1,5 +1,5 @@
 import { can, t } from '@letterncms/sdk'
-import { Button, Icon, IconButton, Menu, Tabs, cn, copyText } from '@letterncms/ui'
+import { Button, IconButton, Menu, PanelHeader, Tabs, copyText } from '@letterncms/ui'
 import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
 import { saveComponent } from '../core/SaveComponent'
@@ -74,24 +74,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col" data-blocks-inspector>
       {/* The first row lines up with the sheet's top bar: the way back, what is selected, and what to do with it. */}
-      <div className={cn('flex h-12 shrink-0 items-center gap-1 pr-3', onBack ? 'pl-2 max-sm:pl-4' : 'pl-4')}>
-        {/* A phone's sheet has one way out, its ×: the way to the page's own details is in the block's menu there. */}
-        {onBack && <IconButton icon="arrow-left" label={backLabel ? t('Back to {name}', { name: backLabel }) : t('Back')} size="sm" onClick={onBack} className="max-sm:!hidden" />}
-        <Icon name={node.type === 'component' ? 'symbol' : type?.icon ?? 'square'} size={16} className="ml-1 shrink-0 text-muted" />
-        {renaming ? (
-          <div className="min-w-0 flex-1 pl-1" onBlur={() => setRenaming(false)} onKeyUp={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()}>
-            <PanelFields
-              bare
-              fields={[{ handle: 'label', type: 'text', size: 'sm', commit: 'blur', label: t('Name'), autofocus: true, placeholder: type?.title }]}
-              values={{ label: node.label ?? '' }}
-              onChange={(_, v: string) => store.updateNode(node.id, { label: v.trim() || undefined })}
-            />
-          </div>
-        ) : (
-          <Button variant="ghost" onDoubleClick={() => !readOnly && setRenaming(true)} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !pl-1 !pr-0 text-left !font-semibold !text-ink" title={readOnly ? undefined : t('Double-Click to Rename')}>
-            <span className="truncate">{blockName(node, types, components)}</span>
-          </Button>
-        )}
+      <PanelHeader bordered={false} onBack={onBack} backLabel={backLabel} onClose={onClose} icon={node.type === 'component' ? 'symbol' : type?.icon ?? 'square'} actions={
         <Menu
           align="end"
           trigger={<IconButton icon="more" label={t('Block Actions')} size="sm" />}
@@ -106,15 +89,28 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
                 saveComponent(store, componentFits(store, types, allowed))
               },
             },
-            !!onBack && !!backLabel && window.matchMedia('(max-width: 639px)').matches && { label: t('{name} Details', { name: backLabel }), icon: 'sidebar', onSelect: onBack },
             // What scripts, animations and "Scroll To" know the block by.
             { label: t('Copy ID'), icon: 'hash', onSelect: () => void copyText(node.id, { copied: t('Copied {reference}', { reference: node.id }) }) },
             { separator: true, label: '' },
             { label: t('Delete'), icon: 'trash', shortcut: '⌫', danger: true, disabled: readOnly, onSelect: () => store.remove(node.id) },
           ]}
         />
-        {onClose && <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={onClose} className="max-sm:in-[.cms-block-sheet]:hidden" />}
-      </div>
+      }>
+        {renaming ? (
+          <div className="min-w-0 flex-1 pl-1" onBlur={() => setRenaming(false)} onKeyUp={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()}>
+            <PanelFields
+              bare
+              fields={[{ handle: 'label', type: 'text', size: 'sm', commit: 'blur', label: t('Name'), autofocus: true, placeholder: type?.title }]}
+              values={{ label: node.label ?? '' }}
+              onChange={(_, v: string) => store.updateNode(node.id, { label: v.trim() || undefined })}
+            />
+          </div>
+        ) : (
+          <Button variant="ghost" onDoubleClick={() => !readOnly && setRenaming(true)} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !pl-1 !pr-0 text-left !font-semibold !text-ink" title={readOnly ? undefined : t('Double-Click to Rename')}>
+            <span className="truncate">{blockName(node, types, components)}</span>
+          </Button>
+        )}
+      </PanelHeader>
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border pl-4 pr-3">
         <Tabs<Tab>
           id={tabsId}

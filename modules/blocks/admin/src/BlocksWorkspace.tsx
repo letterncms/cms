@@ -1,5 +1,5 @@
 import { events, plural, t, useScreenContext, type EntryEditorProps } from '@letterncms/sdk'
-import { Button, Dialog, IconButton, InspectorPanel, Menu, Popover, QueryError, ScreenSidebar, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
+import { Button, Dialog, IconButton, InspectorPanel, Menu, PanelHeader, Popover, QueryError, ScreenSidebar, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorProvider, useCatalog, useEditorContext, type DocRef } from './core/context'
@@ -149,11 +149,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
       </main>
       <InspectorPanel sheet className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={inspecting && selected ? types.get(selected.type)?.title ?? t('Block') : props.collection.singular}>
         {inspecting && selected ? count > 1 ? <>
-          <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border pl-2 pr-3">
-            <IconButton icon="arrow-left" label={t('Back to {name}', { name: props.collection.singular })} size="sm" onClick={entryDetails} />
-            <span className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-ink">{plural(count, '{count} block selected', '{count} blocks selected')}</span>
-            <IconButton icon="close" label={t('Close Panel')} size="sm" onClick={() => props.setSidebarOpen(false)} className="max-sm:hidden" />
-          </div>
+          <PanelHeader title={plural(count, '{count} block selected', '{count} blocks selected')} onBack={entryDetails} backLabel={props.collection.singular} onClose={() => props.setSidebarOpen(false)} />
           {!readOnly && <div className="px-2 py-3"><Button variant="destructive" size="sm" icon="trash" onClick={() => store.removeSelection()}>{t('Delete')}</Button></div>}
         </> : <Inspector node={selected} onBack={entryDetails} backLabel={props.collection.singular} onClose={() => props.setSidebarOpen(false)} /> : props.sidebar}
       </InspectorPanel>

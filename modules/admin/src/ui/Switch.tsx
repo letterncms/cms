@@ -26,7 +26,8 @@ export function Switch({ checked, onChange, disabled, label, size = 'md', 'aria-
     // `align-top`: on the baseline, a box with a tick in it and an empty one sit at different heights, and their rows differ by 2px.
     <label className="inline-flex items-center gap-2 align-top text-sm">
       {control}
-      <span id={labelId}>{label}</span>
+      {/* A label only for screen readers takes no room: no gap beside a lone box. */}
+      <span id={labelId} className="has-[>.sr-only:only-child]:absolute">{label}</span>
     </label>
   ) : (
     control
@@ -54,7 +55,8 @@ export function Checkbox({ checked, onChange, disabled, label, indeterminate }: 
     // `align-top`: on the baseline, a box with a tick in it and an empty one sit at different heights, and their rows differ by 2px.
     <label className="inline-flex items-center gap-2 align-top text-sm">
       {control}
-      <span id={labelId}>{label}</span>
+      {/* A label only for screen readers takes no room: no gap beside a lone box. */}
+      <span id={labelId} className="has-[>.sr-only:only-child]:absolute">{label}</span>
     </label>
   ) : (
     control

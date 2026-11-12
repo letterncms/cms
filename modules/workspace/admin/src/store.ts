@@ -1,4 +1,5 @@
 import { boot, getManifest, navigate, setPreference, useScreen, type ComposerOption, type ContextItem } from '@letterncms/sdk'
+import { useInspectorOpen } from '@letterncms/ui'
 import { useSyncExternalStore } from 'react'
 
 /** Where the thread is: out of the way, docked beside the page, or taking the whole window (a thread's own URL). */
@@ -308,7 +309,8 @@ export function usePanel(): State {
   return useSyncExternalStore(panel.subscribe, panel.get)
 }
 
-/** Over the page: by choice, or because the screen has the right edge in use. */
+/** Over the page: by choice, or because the right edge is in use (the screen says so, or a panel is open there), as in the builder. */
 export function useFloating() {
-  return { chosen: usePanel().detached, required: useScreen().rightEdge === true }
+  const inspector = useInspectorOpen()
+  return { chosen: usePanel().detached, required: useScreen().rightEdge === true || inspector }
 }

@@ -32,7 +32,7 @@ export function DataCard({ title, href, onClick, icon, image, children, footer, 
       {children}
       {footer && <div className="mt-auto flex items-center gap-2 pt-3 text-xs text-muted">{footer}</div>}
     </div>
-    {onSelect && <div className={cn('absolute z-raised flex transition-opacity duration-base', image !== undefined ? 'left-2 top-2 rounded-sm bg-float p-1 shadow-raise' : 'left-3 top-3.5 bg-bg', !selected && 'cms-reveal')}>
+    {onSelect && <div className={cn('absolute z-raised flex transition-opacity duration-base', image !== undefined ? 'left-2.5 top-2.5 rounded-xs shadow-raise' : 'left-3 top-3.5 bg-bg', !selected && 'cms-reveal')}>
       <Checkbox checked={!!selected} onChange={onSelect} label={<span className="sr-only">{t('Select Item')}</span>} />
     </div>}
     {actions && <div className={cn('absolute right-2 top-2 z-raised rounded-sm', image !== undefined ? 'bg-float shadow-raise' : 'bg-bg')}>{actions}</div>}

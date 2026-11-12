@@ -350,5 +350,8 @@
   "Write in Markdown…": "Schreibe in Markdown…",
   "Yes": "Ja",
   "You are not allowed to do this": "Dazu hast du keine Berechtigung",
-  "You can sign in with your new password.": "Du kannst dich mit deinem neuen Passwort anmelden."
+  "You can sign in with your new password.": "Du kannst dich mit deinem neuen Passwort anmelden.",
+  "Back": "Zurück",
+  "Back to {name}": "Zurück zu {name}",
+  "Close Panel": "Panel schließen"
 }
