@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.30.0 (2026-11-12)
+
 ### Changed
 
 - **Settings are easier to scan.** Related options sit in panels with aligned labels and controls. Larger editors have the full row, and fields stack where space is tight. Account and plugin settings use the same layout.
