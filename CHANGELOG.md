@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **General comes first in settings.** The settings sidebar now lists General above Account.
+
 ## 0.28.0 (2026-11-12)
 
 ### Added
