@@ -129,36 +129,55 @@ try {
   await close('Sections')
   check('Removing a row type says how many rows were made with it')
 
-  // Blueprints are a switch over the same editor: every option of a field, and a handle that can be typed anew.
-  const kindsOf = () => [...document.querySelectorAll('[data-blueprints] [role="radio"]')].map((b) => b.textContent.trim())
-  assert(kindsOf().join('|') === 'Article|Video', 'The switch does not list the collection\\'s own fields and its blueprints: ' + kindsOf().join('|'))
-  ;[...document.querySelectorAll('[data-blueprints] [role="radio"]')][1].click()
+  // Blueprints are a menu at the start of the Add Field row: the collection's own fields, then each blueprint, over the same editor.
+  const trigger = () => document.querySelector('[data-blueprints]')
+  const items = () => [...document.querySelectorAll('[role="menuitem"]')]
+  const menu = async () => { (await until(() => trigger(), 'The Add Field row has no blueprint menu')).click(); return until(() => items().length && items(), 'The blueprint menu does not open') }
+  const shut = async () => { document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await until(() => !items().length, 'The blueprint menu stays open') }
+  const choose = async (label) => { const item = (await menu()).find((i) => i.textContent.trim() === label); assert(item, 'The blueprint menu has no ' + label); item.click(); await until(() => !items().length, 'The blueprint menu stays open after ' + label); await pause() }
+  const kindsOf = async () => { const labels = (await menu()).map((i) => i.textContent.trim()).filter((label) => !label.endsWith(' Blueprint')); await shut(); return labels }
+  let blueprintNames = await kindsOf()
+  assert(blueprintNames.join('|') === 'Article|Video', "The menu does not list the collection's own fields and its blueprints: " + blueprintNames.join('|'))
+  await choose('Video')
+  assert(trigger().textContent.includes('Video'), 'The menu does not name the blueprint on view: ' + trigger().textContent)
   box = await open('Video Address')
-  assert(box.textContent.includes('Show as Property'), 'A blueprint\\'s field has fewer options than the collection\\'s')
+  assert(box.textContent.includes('Show as Property'), "A blueprint's field has fewer options than the collection's")
   await close('Video Address')
   // Taking away a blueprint entries were made with says how many first.
-  press('Remove Blueprint').click()
+  await choose('Remove Blueprint')
   const question = await until(() => document.querySelector('[role="alertdialog"]'), 'Removing a blueprint with entries asks nothing')
   assert(question.textContent.includes('3 entries were made with it'), 'The question does not say how many entries: ' + question.textContent)
   press('Cancel', question).click()
   await until(() => !document.querySelector('[role="alertdialog"]'), 'The question stayed')
-  assert(kindsOf().length === 2, 'Cancel removed the blueprint')
-  const name = await until(() => [...document.querySelectorAll('input')].find((input) => input.value === 'video'), 'No handle for the blueprint')
+  assert((await kindsOf()).length === 2, 'Cancel removed the blueprint')
+  // Rename Blueprint writes its handle anew, and says what that does to entries made with it.
+  await choose('Rename Blueprint')
+  const renaming = await until(() => document.querySelector('[role="dialog"]'), 'Rename Blueprint asks nothing')
+  const name = await until(() => [...renaming.querySelectorAll('input')].find((input) => input.value === 'video'), 'No handle for the blueprint')
+  assert(renaming.textContent.includes('Changing it orphans existing values.'), "Changing a saved blueprint's handle does not warn")
   await type(name, '')
   assert(name.value === '', 'The last letter of a handle cannot be deleted')
   await type(name, 'clip')
   await leave(name)
-  await until(() => kindsOf().length === 2 && [...document.querySelectorAll('input')].some((input) => input.value === 'clip'), 'The new handle was not taken')
-  assert(document.querySelector('#cms').textContent.includes('Changing it orphans existing values.'), 'Changing a saved blueprint\\'s handle does not warn')
+  assert(name.value === 'clip', 'The handle did not take what was typed: ' + name.value)
+  press('Rename Blueprint', renaming).click()
+  await until(() => !document.querySelector('[role="dialog"]'), 'Rename Blueprint stays open')
   definition = await savedDefinition()
   assert(Object.keys(definition.blueprints).join() === 'clip' && !('resolvedBlueprints' in definition), 'The blueprint was not saved under its new handle: ' + Object.keys(definition.blueprints ?? {}).join())
   check('Blueprints are edited in the same editor, and their handle can be rewritten')
 
-  press('Add Blueprint').click()
-  await until(() => kindsOf().length === 3, 'No blueprint was added')
-  press('Remove Blueprint').click()
-  await until(() => kindsOf().length === 2, 'A blueprint nobody saved needs no question')
+  // Adding one asks for its name; one nobody saved goes without a question.
+  await choose('Add Blueprint')
+  const adding = await until(() => document.querySelector('[role="dialog"]'), 'Add Blueprint asks nothing')
+  await type(adding.querySelector('input'), 'Gallery')
+  press('Add Blueprint', adding).click()
+  await until(() => !document.querySelector('[role="dialog"]'), 'Add Blueprint stays open')
+  blueprintNames = await kindsOf()
+  assert(blueprintNames.join('|') === 'Article|Video|Gallery', 'No blueprint was added: ' + blueprintNames.join('|'))
+  assert(trigger().textContent.includes('Gallery'), 'The new blueprint is not the one on view')
+  await choose('Remove Blueprint')
   assert(!document.querySelector('[role="alertdialog"]'), 'A blueprint nobody saved was asked about')
+  assert((await kindsOf()).length === 2, 'A blueprint nobody saved was not removed')
   check('A new blueprint goes without a question')
 
   // A collection's term archives are rows in its settings: a taxonomy and an address each.
