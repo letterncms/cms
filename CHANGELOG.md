@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- **Export Site** works for a site with a long title among its entries: an entry whose headline ran past about 120 characters made the export refuse its own file. A kit's file names may now be as long as a file system allows.
 - A site kit whose collection files its entries under a taxonomy the kit also brings, or picks from another of its collections, applies whatever order their names come in, and a kit in more languages than the site applies too: its entries in those languages are no longer refused before the languages are added. A collection the site keeps its own of (`skip`) is checked as the site's, so a kit collection that needs the kit's version of it is refused before anything is written, not halfway through.
 - The installer says what a person acts on: a ready server is one line with a check mark, one that isn't lists only what is missing, by the folder's name in the site (never the server's whole path) and only the database drivers it can use. The password's rule is said when one falls short, and the table prefix's placeholder is "cms_".
 - Applying a site kit names what is already on the site by its title and kind ("Home · Entry", "Footer · Component"), not its path, and a kit that can't be applied says so in plain words, the detail in the browser's console. `kits/get` steps carry `title` and an entry's `collection`.
