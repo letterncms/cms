@@ -25,7 +25,6 @@ export interface BlueprintDefinition {
   driver?: string
   template?: string
   sort?: string
-  body?: string
   home?: string
   editor?: 'document' | 'canvas'
   fields: RawField[]
@@ -55,6 +54,8 @@ export interface BlueprintKind {
   rows?: (field: string, rowType: string) => Promise<number>
   /** What every item has without a field; null when nothing. */
   builtIn?: string | null
+  /** One field of each blueprint can be its items' body (a collection's entries): its fields offer Use as Body. */
+  bodies?: boolean
   /** Give complex blueprints separate fields and grouped settings views. */
   settingsSections?: { title: string; handles: string[]; bare?: boolean }[]
 }
@@ -257,7 +258,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
               {/* One set of fields on view at a time, in the same editor: which one is a menu in the Add Field row, so nothing moves. */}
               <FieldsEditor
                 key={named}
-                heading={false} body={def.body} errors={fieldErrors} leading={blueprintMenu}
+                heading={false} bodies={kind.bodies} errors={fieldErrors} leading={blueprintMenu}
                 {...(named === ''
                   ? { fields: def.fields, onChange: setFields, builtIn: kind.builtIn }
                   : { fields: blueprints[named].fields ?? [], onChange: (fields: RawField[]) => changeBlueprint(named, { fields }), path: `blueprints.${named}.fields` })}
@@ -283,7 +284,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
         </div>
       ) : <div className={settings.length > 0 ? 'grid grid-cols-1 gap-10 lg:grid-cols-[1fr_300px]' : undefined}>
         <div className="min-w-0">
-          <FieldsEditor fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors} />
+          <FieldsEditor fields={def.fields} onChange={setFields} bodies={kind.bodies} builtIn={kind.builtIn} errors={fieldErrors} />
           {removal}
         </div>
 

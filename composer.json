@@ -21,7 +21,8 @@
         "letterncms/analytics": "<0.7",
         "letterncms/brevo": "<0.5",
         "letterncms/forms": "<0.12",
-        "letterncms/market": "<0.15",
+        "letterncms/import": "<0.4",
+        "letterncms/market": "<0.19",
         "letterncms/seo": "<0.8"
     },
     "autoload": {

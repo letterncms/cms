@@ -41,7 +41,7 @@ export default function EntryEditor({ params }: { params: Record<string, string>
     invalidate('collections/get')
   }
   // An editor with a workspace of its own (the builder) holds the sidebar from the first frame, so nothing slides away once it has loaded.
-  const bodyField = collection?.resolvedFields.find((field) => field.handle === collection.body)
+  const bodyField = collection?.resolvedFields.find((field) => field.body)
   const holds = !!bodyField && panelsFor('entry.editor', { bodyField } as EntryEditorProps).length > 0
   const hold = holds && <ScreenSidebar title={t('Outline||structure')} backTo={list.path} backLabel={list.label}>{null}</ScreenSidebar>
 
@@ -346,8 +346,8 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
   const entryActions = registry.entryActions.all().filter((action) => action.when?.(panelProps) ?? true).sort((a, b) => (a.order ?? 50) - (b.order ?? 50))
   const sidebarPanels = panelsFor('entry.sidebar', panelProps)
   const bodyPanels = panelsFor('entry.body', panelProps)
-  const bodyHandle = collection.body
-  const bodyField = collection.resolvedFields.find((field) => field.handle === bodyHandle)
+  const bodyField = collection.resolvedFields.find((field) => field.body)
+  const bodyHandle = bodyField?.handle
   const placement = resolveEntryFields(
     collection.resolvedFields, bodyHandle, [...sidebarPanels, ...bodyPanels],
   )

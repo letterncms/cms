@@ -23,6 +23,7 @@ final class FieldProblems
         $types = app(FieldTypeRegistry::class);
         $problems = [];
         $seen = [];
+        $body = false;
 
         foreach (array_values($raw) as $i => $definition) {
             // An import brings a fieldset's fields, checked where the fieldset is saved.
@@ -49,6 +50,16 @@ final class FieldProblems
                 $problems["{$at}.type"] = __('The field type “:type” is not available.', ['type' => $type]);
             }
 
+            // One field of a blueprint is its body, and only of a type that can be.
+            if (array_key_exists('body', $definition)) {
+                if (! is_bool($definition['body']) || ($definition['body'] && ($depth > 0 || ($types->has($type) && ! $types->get($type)->body())))) {
+                    $problems["{$at}.body"] = __('Only a blocks, Markdown or rich text field can be the body.');
+                } elseif ($definition['body'] && $body) {
+                    $problems["{$at}.body"] = __('Another field is the body.');
+                }
+                $body = $body || $definition['body'] === true;
+            }
+
             if (array_key_exists('fields', $definition)) {
                 $sub = $definition['fields'];
 
@@ -66,9 +77,9 @@ final class FieldProblems
     }
 
     /** Refuse the definitions when something is wrong with them: one problem in words, all of them by path. */
-    public static function refuse(array $raw, array $reserved = []): void
+    public static function refuse(array $raw, array $reserved = [], string $path = 'fields'): void
     {
-        $problems = self::of($raw, $reserved);
+        $problems = self::of($raw, $reserved, $path);
 
         if ($problems === []) {
             return;

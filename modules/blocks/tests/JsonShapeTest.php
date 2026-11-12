@@ -18,7 +18,7 @@ final class JsonShapeTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'api' => true, 'fields' => [['handle' => 'content', 'type' => 'blocks'], ['handle' => 'related', 'type' => 'entries', 'collections' => ['notes']]]],
+            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'api' => true, 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'related', 'type' => 'entries', 'collections' => ['notes']]]],
             'notes' => ['title' => 'Notes', 'api' => true, 'fields' => []],
             'layouts' => ['title' => 'Layouts', 'fields' => [
                 ['handle' => 'rows', 'type' => 'matrix', 'types' => [['handle' => 'band', 'label' => 'Band', 'fields' => [['handle' => 'body', 'type' => 'blocks']]]]],

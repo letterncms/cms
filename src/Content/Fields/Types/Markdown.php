@@ -12,6 +12,8 @@ class Markdown extends FieldType
 {
     public function key(): string { return 'markdown'; }
 
+    public function body(): bool { return true; }
+
     public function label(): string { return __('Markdown'); }
 
     public function icon(): string { return 'markdown'; }

@@ -52,6 +52,12 @@ final class Entry
         return $this->collection()->blueprint($this->blueprint);
     }
 
+    /** Its body field: the one its blueprint marks `body: true`, or null. */
+    public function body(): ?\Cms\Content\Fields\Field
+    {
+        return $this->blueprint()->body();
+    }
+
     public function isPublished(): bool
     {
         return $this->status === 'published';

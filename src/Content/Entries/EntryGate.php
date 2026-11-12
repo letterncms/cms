@@ -159,13 +159,11 @@ final class EntryGate
     /** Only what is meant to be public: an allow-list, so a new field is never out in the open by accident. */
     private function teaser(Entry $entry, array $rule): array
     {
-        $collection = $entry->collection();
         $data = array_intersect_key($entry->data, array_flip([...self::ALWAYS_PUBLIC, ...$rule['fields']]));
-        $body = $collection->body;
-        $field = $body ? $entry->blueprint()->field($body) : null;
+        $field = $entry->body();
 
-        if ($field && array_key_exists($body, $entry->data)) {
-            $data[$body] = $this->cms->app()->make(FieldTypeRegistry::class)->resolve($field->type)->teaser($entry->data[$body], $field, $rule['words']);
+        if ($field && array_key_exists($field->handle, $entry->data)) {
+            $data[$field->handle] = $this->cms->app()->make(FieldTypeRegistry::class)->resolve($field->type)->teaser($entry->data[$field->handle], $field, $rule['words']);
         }
 
         return $data;

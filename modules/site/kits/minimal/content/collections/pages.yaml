@@ -5,11 +5,11 @@ structure: tree
 route: '/{parent_uri}/{slug}'
 home: home
 template: page
-body: content
 fields:
   -
     handle: content
     type: blocks
+    body: true
     label: Content
   -
     handle: template

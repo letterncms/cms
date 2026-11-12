@@ -18,10 +18,10 @@ final class EditorRenderingTest extends TestCase
 
     protected function collections(): array
     {
-        return ['pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'body' => 'content', 'fields' => [
-            ['handle' => 'content', 'type' => 'blocks'], ['handle' => 'aside', 'type' => 'blocks'], ['handle' => 'summary', 'type' => 'text'],
+        return ['pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'fields' => [
+            ['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'aside', 'type' => 'blocks'], ['handle' => 'summary', 'type' => 'text'],
         ], 'blueprints' => ['note' => ['title' => 'Note', 'fields' => [
-            ['handle' => 'content', 'type' => 'markdown'], ['handle' => 'hero', 'type' => 'blocks'],
+            ['handle' => 'content', 'type' => 'markdown', 'body' => true], ['handle' => 'hero', 'type' => 'blocks'],
         ]]]]];
     }
 

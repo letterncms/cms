@@ -27,7 +27,7 @@ final class VendorTest extends TestCase
 
     protected function collections(): array
     {
-        return ['pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]]];
+        return ['pages' => ['title' => 'Pages', 'route' => '/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]]];
     }
 
     protected function setUp(): void

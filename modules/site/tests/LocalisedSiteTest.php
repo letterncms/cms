@@ -24,8 +24,8 @@ final class LocalisedSiteTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'home' => 'home', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'news' => ['title' => 'News', 'structure' => 'dated', 'route' => '/news/{slug}', 'routes' => ['de' => '/neuigkeiten/{slug}'], 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
+            'pages' => ['title' => 'Pages', 'structure' => 'tree', 'route' => '/{parent_uri}/{slug}', 'home' => 'home', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'news' => ['title' => 'News', 'structure' => 'dated', 'route' => '/news/{slug}', 'routes' => ['de' => '/neuigkeiten/{slug}'], 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
         ];
     }
 

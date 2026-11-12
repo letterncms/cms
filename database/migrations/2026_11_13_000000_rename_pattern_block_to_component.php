@@ -160,14 +160,13 @@ return new class extends Migration
                 return true;
             }
 
-            if ($collection->body === null) {
-                return false;
-            }
+            // Its body as the site wrote it then: `body: <handle>` on the collection, or `body: true` on the field.
+            $legacy = is_string($collection->get('body')) ? $collection->get('body') : null;
 
             foreach ([null, ...array_keys($collection->blueprints())] as $blueprint) {
-                $field = $collection->blueprint($blueprint)->field($collection->body);
+                $field = $collection->body($blueprint) ?? ($legacy === null ? null : $collection->blueprint($blueprint)->field($legacy));
 
-                if ($field === null || $field->type === 'blocks') {
+                if ($field?->type === 'blocks' || ($legacy !== null && $field === null)) {
                     return true;
                 }
             }

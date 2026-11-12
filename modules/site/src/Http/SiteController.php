@@ -168,9 +168,10 @@ final class SiteController
             return $this->respond('<!doctype html><p>'.e(__('Choose a blocks field.')).'</p>', 422);
         }
         $document = $editor ? bin2hex(random_bytes(16)) : null;
-        $blocks = (array) ($working->data[$field ?? $collection->body ?? 'blocks'] ?? []);
+        $body = $working->body()?->handle;
+        $blocks = (array) ($working->data[$field ?? $body ?? 'blocks'] ?? []);
 
-        if ($field !== null && $field !== $collection->body) {
+        if ($field !== null && $field !== $body) {
             $html = $this->renderer->blocks($blocks, $working, $working->title, $editor, $document);
         } else {
             $html = match ($working->collection) {

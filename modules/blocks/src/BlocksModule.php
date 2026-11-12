@@ -75,27 +75,26 @@ final class BlocksModule extends Plugin
         });
 
         $this->cms()->hooks()->addFilter('collections.defaults', static fn (array $defaults) => $defaults + [
-            'body' => 'content',
-            'fields' => [['handle' => 'content', 'type' => 'blocks', 'label' => 'Content']],
+            'fields' => [['handle' => 'content', 'type' => 'blocks', 'label' => 'Content', 'body' => true]],
         ]);
 
         $this->cms()->hooks()->addFilter('collections', static function (array $collections) {
             $collections[Templates::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Templates::COLLECTION, [
                 'title' => 'Templates', 'singular' => 'Template', 'icon' => 'layout', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'design', 'nav_order' => 20, 'system' => true, 'body' => 'blocks', 'sort' => 'title',
+                'section' => 'design', 'nav_order' => 20, 'system' => true, 'sort' => 'title',
                 'description' => 'The frame around each page: header, footer and layout. Default frames every page without one of its own; Not found shows when a page is missing.',
                 'fields' => [
-                    ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Template'],
+                    ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Template', 'body' => true],
                     ['handle' => 'description', 'type' => 'textarea', 'label' => 'Description', 'section' => 'sidebar'],
                     ['handle' => 'collections', 'type' => 'select', 'label' => 'Offered For', 'multiple' => true, 'dynamic' => 'collections', 'section' => 'sidebar', 'placeholder' => 'Everywhere', 'about' => 'Leave empty to offer it everywhere.'],
                 ],
             ]);
             $collections[Components::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Components::COLLECTION, [
                 'title' => 'Components', 'singular' => 'Component', 'icon' => 'symbol', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'design', 'nav_order' => 30, 'system' => true, 'body' => 'blocks', 'sort' => 'title',
+                'section' => 'design', 'nav_order' => 30, 'system' => true, 'sort' => 'title',
                 'description' => 'Reusable designs. A synced one (a header, a card) changes everywhere it is used; a section is copied when you insert it.',
                 'fields' => [
-                    ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Component'],
+                    ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Component', 'body' => true],
                     // With the handle, in the details' first group: one group of rows, labeled alike, then Info.
                     ['handle' => 'synced', 'type' => 'toggle', 'label' => 'Synced', 'default' => true, 'section' => 'sidebar'],
                     ['handle' => 'category', 'type' => 'text', 'label' => 'Category', 'section' => 'sidebar'],
@@ -597,7 +596,7 @@ final class BlocksModule extends Plugin
                 'behavior attaches a script of the design to one element, for what motion and logic can’t say (GSAP, WebGL, smooth scroll): {"behavior": {"module": "tilt", "props": {"max": 8}, "when": "visible"}} runs `export function mount(el, props, {token, reducedMotion, signal})` of content/design/scripts/tilt.js when the element is in the document, and the function it returns (and `export function unmount(el)`) when it leaves, page transitions included. token("color.primary") reads a design token where the element is; signal aborts on unmount. when: load (default), visible (fetched a screen before it is seen), idle, or loaded (after the page’s load event and its fonts, for a script that measures text or layout). Text in props may name data: "{props.speed}", "{entry.title}". Anyone who edits the page writes props, so a script treats them as untrusted input: never as HTML (innerHTML), code, or an address to load without checking it. reducedMotion is true when the visitor’s system asks for less motion or they paused motion with the page’s Motion Toggle block; the behaviour is mounted again when that changes. Outside a behaviour, the toggle sets <html data-cms-motion="paused"> and dispatches cms:motion on document with detail.paused. A block can carry several: "behavior": [{"module": "tilt"}, {"module": "cue", "props": {…}}], each mounted by itself; their scripts load side by side, so none may count on another having mounted first. Scripts never run in the editor’s canvas: an empty block with a behaviour shows a quiet placeholder naming it there, and the preview runs it. Give such a block a size in its style so the canvas shows its place.',
                 'persist keeps one element alive across pages when the design’s transition has navigation: "client": {"type": "box", "persist": "stage", "behavior": {"module": "scene"}} in the template is the same element, still mounted, on every page that has a block with that persist name (a WebGL canvas, a music player). Scripts hear `cms:before-leave` (cancelable; event.detail.waitUntil(promise) holds the swap for an animation out) and `cms:after-enter` on document, and can call window.cmsNavigate.go(url) and .prefetch(url). A link to the page one is already on scrolls to its top and loads nothing. A link inside an element with the attribute data-cms-reload always loads the page, as does any link with a query string. With client navigation a module script runs once per visit, not once per page, and so does an inline script whose text a page before it already ran: do a page’s own work in a behaviour’s mount, or on cms:after-enter.',
                 'attrs that name another element take a block’s id: {"attrs": {"aria-labelledby": "#hero-title", "aria-controls": "#panel"}} becomes that block’s id on the page (its anchor, a heading’s own, or one made for it), in aria-labelledby, aria-describedby, aria-controls, aria-owns, aria-details, aria-flowto, aria-activedescendant, aria-errormessage and for. Give the block you point at an `id` in the document; a plain word is an id you wrote yourself and stays as it is.',
-                'Templates and components are entries of the "templates" and "components" collections (body field: blocks). entries/update saves a draft; entries/publish (or publish: true) makes it live and rebuilds the pages that use it.',
+                'Templates and components are entries of the "templates" and "components" collections (their body is the `blocks` field). entries/update saves a draft; entries/publish (or publish: true) makes it live and rebuilds the pages that use it.',
                 'Prefer existing components and sections (components/list) to keep sites consistent. You can send entry data for a blocks field as Block Markdown (a string).',
             ],
             'blocks' => $this->app->make(BlockRegistry::class)->catalog(),

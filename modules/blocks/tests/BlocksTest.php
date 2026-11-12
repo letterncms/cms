@@ -26,14 +26,14 @@ final class BlocksTest extends TestCase
         $admin = $this->admin();
         $ctx = AbilityContext::forUser($admin, 'admin');
         $options = $this->cms()->abilities()->execute('collections/options', [], $ctx);
-        $this->assertSame('content', $options['defaults']['body']);
-        $this->assertSame('blocks', $options['defaults']['fields'][0]['type']);
+        $this->assertArrayNotHasKey('body', $options['defaults']);
+        $this->assertSame(['blocks', true], [$options['defaults']['fields'][0]['type'], $options['defaults']['fields'][0]['body']]);
         $this->cms()->abilities()->execute('collections/save', [
             'handle' => 'articles', 'createOnly' => true,
             'definition' => [...$options['defaults'], 'title' => 'Articles'],
         ], $ctx);
         $collection = $this->cms()->collections()->findOrFail('articles');
-        $this->assertSame('blocks', $collection->blueprint()->field($collection->body)->type);
+        $this->assertSame(['content', 'blocks'], [$collection->body()?->handle, $collection->body()?->type]);
         $entry = $this->cms()->entryService()->create('articles', [
             'title' => 'A shared document', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]],
         ], $admin);
@@ -48,8 +48,8 @@ final class BlocksTest extends TestCase
     protected function collections(): array
     {
         return [
-            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'docs' => ['title' => 'Docs', 'driver' => 'files', 'route' => '/docs/{slug}', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
+            'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'docs' => ['title' => 'Docs', 'driver' => 'files', 'route' => '/docs/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
         ];
     }
 

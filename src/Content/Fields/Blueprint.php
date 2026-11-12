@@ -45,6 +45,7 @@ final class Blueprint
 
         $types = self::types();
         $seen = [];
+        $body = null;
 
         foreach (self::expand($raw) as $definition) {
             $field = Field::fromArray($definition);
@@ -57,6 +58,17 @@ final class Blueprint
 
             if (! $types->has($field->type)) {
                 throw new InvalidArgumentException(__('Unknown field type ":type" for field :field.', ['type' => $field->type, 'field' => $name]));
+            }
+
+            if (array_key_exists('body', $field->config)) {
+                if (! is_bool($field->config['body']) || ($field->isBody() && ($depth > 0 || ! $types->get($field->type)->body()))) {
+                    throw new InvalidArgumentException(__('Only a blocks, Markdown or rich text field of the blueprint itself can be the body, not :field.', ['field' => $name]));
+                }
+
+                if ($field->isBody() && $body !== null) {
+                    throw new InvalidArgumentException(__(':field and :other are both the body. Choose one.', ['field' => $name, 'other' => $body]));
+                }
+                $body = $field->isBody() ? $name : $body;
             }
 
             if (array_key_exists('fields', $field->config)) {
@@ -129,6 +141,18 @@ final class Blueprint
     public function without(array $handles): self
     {
         return new self(array_values(array_filter($this->fields, static fn (Field $field) => ! in_array($field->handle, $handles, true))));
+    }
+
+    /** The field marked `body: true`, of a type that can be one: an entry's main content. Null when it has none. */
+    public function body(): ?Field
+    {
+        foreach ($this->fields as $field) {
+            if ($field->isBody() && self::types()->has($field->type) && self::types()->get($field->type)->body()) {
+                return $field;
+            }
+        }
+
+        return null;
     }
 
     /** @return list<Field> */

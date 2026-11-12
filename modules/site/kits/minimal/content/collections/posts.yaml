@@ -4,11 +4,11 @@ icon: article
 structure: dated
 route: '/blog/{slug}'
 template: post
-body: content
 fields:
   -
     handle: content
     type: blocks
+    body: true
     label: Content
   -
     handle: tags

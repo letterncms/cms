@@ -39,7 +39,7 @@ abstract class TestCase extends BaseTestCase
                 ['handle' => 'body', 'type' => 'markdown'],
                 ['handle' => 'tags', 'type' => 'tags'],
             ]],
-            'notes' => ['title' => 'Notes', 'singular' => 'Note', 'driver' => 'files', 'structure' => 'tree', 'route' => '/notes/{parent_uri}/{slug}', 'body' => 'body', 'fields' => [['handle' => 'body', 'type' => 'markdown']]],
+            'notes' => ['title' => 'Notes', 'singular' => 'Note', 'driver' => 'files', 'structure' => 'tree', 'route' => '/notes/{parent_uri}/{slug}', 'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true]]],
         ];
     }
 

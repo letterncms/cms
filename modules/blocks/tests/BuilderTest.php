@@ -31,8 +31,8 @@ final class BuilderTest extends TestCase
         foreach (['database', 'files'] as $driver) {
             foreach (['list', 'tree', 'dated'] as $structure) {
                 $handle = $driver.'_'.$structure;
-                $definition = ['title' => 'Shared content', 'driver' => $driver, 'structure' => $structure, 'body' => 'content', 'fields' => [
-                    ['handle' => 'content', 'type' => 'blocks'], ['handle' => 'category', 'type' => 'text'],
+                $definition = ['title' => 'Shared content', 'driver' => $driver, 'structure' => $structure, 'fields' => [
+                    ['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'category', 'type' => 'text'],
                 ]];
                 $saved = $abilities->execute('collections/save', ['handle' => $handle, 'definition' => $definition], $ctx);
                 $this->assertArrayNotHasKey('editor', $saved);
@@ -58,7 +58,7 @@ final class BuilderTest extends TestCase
     {
         $abilities = $this->cms()->abilities();
         $ctx = AbilityContext::forUser($this->admin(), 'admin');
-        $definition = ['title' => 'Flexible content', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]];
+        $definition = ['title' => 'Flexible content', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]];
         $abilities->execute('collections/save', ['handle' => 'flexible', 'definition' => $definition], $ctx);
         $changed = $abilities->execute('collections/save', ['handle' => 'flexible', 'definition' => [...$definition, 'fields' => [['handle' => 'content', 'type' => 'markdown']]]], $ctx);
         $this->assertSame('markdown', $changed['resolvedFields'][0]['type']);
@@ -233,7 +233,7 @@ final class BuilderTest extends TestCase
     public function test_components_and_templates_are_entries_with_drafts(): void
     {
         $this->assertTrue($this->cms()->collections()->find('components')->system);
-        $this->assertSame('blocks', $this->cms()->collections()->find('templates')->body);
+        $this->assertSame('blocks', $this->cms()->collections()->find('templates')->body()?->handle);
         $this->assertArrayNotHasKey('editor', $this->cms()->collections()->find('templates')->toArray());
 
         $card = $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [
@@ -267,8 +267,8 @@ final class BuilderTest extends TestCase
     public function test_templates_are_offered_for_every_collection_whose_pages_choose_one(): void
     {
         // Like the account and store pages: a system collection whose pages pick a template.
-        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('screens', ['title' => 'Account Pages', 'system' => true, 'body' => 'blocks', 'fields' => [
-            ['handle' => 'blocks', 'type' => 'blocks'], ['handle' => 'template', 'type' => 'select', 'dynamic' => 'templates'],
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('screens', ['title' => 'Account Pages', 'system' => true, 'fields' => [
+            ['handle' => 'blocks', 'type' => 'blocks', 'body' => true], ['handle' => 'template', 'type' => 'select', 'dynamic' => 'templates'],
         ]]));
         $offered = array_column($this->cms()->collections()->find('templates')->blueprint()->toArray(), 'options', 'handle')['collections'];
 

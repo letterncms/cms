@@ -25,7 +25,7 @@ final class FieldTypesTest extends TestCase
         ['handle' => 'prices', 'type' => 'table'],
         ['handle' => 'place', 'type' => 'geo'],
         ['handle' => 'downloads', 'type' => 'file', 'accept' => 'application/pdf, text/*'],
-        ['handle' => 'body', 'type' => 'markdown'],
+        ['handle' => 'body', 'type' => 'markdown', 'body' => true],
     ];
 
     protected function collections(): array
@@ -33,7 +33,7 @@ final class FieldTypesTest extends TestCase
         return [
             ...parent::collections(),
             'venues' => ['title' => 'Venues', 'route' => '/venues/{slug}', 'fields' => self::FIELDS],
-            'places' => ['title' => 'Places', 'driver' => 'files', 'route' => '/places/{slug}', 'body' => 'body', 'fields' => self::FIELDS],
+            'places' => ['title' => 'Places', 'driver' => 'files', 'route' => '/places/{slug}', 'fields' => self::FIELDS],
         ];
     }
 

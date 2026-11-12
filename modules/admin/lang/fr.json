@@ -47,7 +47,9 @@
   "Appearance": "Apparence",
   "Ascending": "Croissant",
   "Author": "Auteur",
+  "Back": "Retour",
   "Back to {label}": "Retour à {label}",
+  "Back to {name}": "Retour à {name}",
   "Back to Sign In": "Retour à la connexion",
   "Before": "Avant",
   "Blueprints": "Modèles",
@@ -71,6 +73,7 @@
   "Clear Filters": "Effacer les filtres",
   "Clear Selection": "Effacer la sélection",
   "Close": "Fermer",
+  "Close Panel": "Fermer le panneau",
   "Close Settings": "Fermer les paramètres",
   "Code": "Code",
   "Collapse": "Réduire",
@@ -168,7 +171,6 @@
   "Manage Kits": "Gérer les kits",
   "Manual Order": "Ordre manuel",
   "Match System Appearance": "Suivre l’apparence du système",
-  "Minimize": "Réduire",
   "Missing page": "Page manquante",
   "Missing Type": "Type manquant",
   "More": "Plus",
@@ -341,6 +343,7 @@
   "Updated": "Mis à jour",
   "URL": "URL",
   "Use Admin Default": "Utiliser celle de l’admin",
+  "Use as Body": "Utiliser comme corps",
   "Value": "Valeur",
   "Verify Code": "Vérifier le code",
   "Web Address": "Adresse web",
@@ -350,8 +353,5 @@
   "Write in Markdown…": "Écrire en Markdown…",
   "Yes": "Oui",
   "You are not allowed to do this": "Vous n’êtes pas autorisé à effectuer cette action",
-  "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe.",
-  "Back": "Retour",
-  "Back to {name}": "Retour à {name}",
-  "Close Panel": "Fermer le panneau"
+  "You can sign in with your new password.": "Vous pouvez vous connecter avec votre nouveau mot de passe."
 }

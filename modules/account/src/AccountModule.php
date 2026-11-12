@@ -152,10 +152,10 @@ final class AccountModule extends Plugin
         $this->cms()->hooks()->addFilter('collections', static function (array $collections) {
             $collections[Screens::COLLECTION] ??= Collection::fromArray(Screens::COLLECTION, [
                 'title' => 'Account Pages', 'singular' => 'Account Page', 'icon' => 'user', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'design', 'system' => true, 'body' => 'blocks', 'sort' => 'title',
+                'section' => 'design', 'system' => true, 'sort' => 'title',
                 'description' => 'Your versions of the sign-in and account pages. A page without a version here uses the standard one.',
                 'fields' => [
-                    ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Page'],
+                    ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Page', 'body' => true],
                     ['handle' => 'template', 'type' => 'select', 'label' => 'Template', 'dynamic' => 'templates', 'section' => 'sidebar'],
                 ],
             ]);

@@ -12,6 +12,8 @@ class RichText extends FieldType
 {
     public function key(): string { return 'richtext'; }
 
+    public function body(): bool { return true; }
+
     public function label(): string { return __('Rich Text'); }
 
     public function icon(): string { return 'richtext'; }

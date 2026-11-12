@@ -131,6 +131,8 @@ export interface FieldDef {
   default?: unknown
   width?: 'full' | 'half' | 'third' | 'two-thirds'
   section?: string
+  /** An entry's main content: the editor gives it the room, the site renders it as the page. One field of a blueprint, of a type whose `body` is true. */
+  body?: boolean
   /** Render with this admin component instead of the type's own (e.g. a json value with a custom editor). */
   component?: string
   /** Presentation options the core components understand: an icon in the input, its size, autofill, monospace, `display` (segmented, checkbox). */
@@ -164,6 +166,8 @@ export interface FieldTypeDef {
   group: string
   component: string
   config: FieldDef[]
+  /** Whether a field of this type can be an entry's body. */
+  body?: boolean
 }
 
 export interface CollectionSummary {
@@ -391,7 +395,7 @@ export interface EntryPanelProps {
   content: EntryContent
   entry: Entry | null
   /** `blueprint` names the blueprint whose fields `resolvedFields` are, when the entry has one. */
-  collection: { handle: string; title: string; singular: string; body?: string; route?: string; structure?: 'list' | 'tree' | 'dated'; resolvedFields: FieldDef[]; blueprint?: string }
+  collection: { handle: string; title: string; singular: string; route?: string; structure?: 'list' | 'tree' | 'dated'; resolvedFields: FieldDef[]; blueprint?: string }
   values: Record<string, any>
   title: string
   setValue: (handle: string, value: any) => void

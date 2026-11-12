@@ -37,7 +37,6 @@ final class Collection
         public readonly string $template,
         public readonly string $sort,
         public readonly array $fields,
-        public readonly ?string $body,
         public readonly ?string $home,
         public readonly bool $revisions,
         public readonly int $perPage,
@@ -76,7 +75,7 @@ final class Collection
     {
         $structure = (string) ($data['structure'] ?? 'list');
         $template = (string) ($data['template'] ?? '');
-        $known = ['title', 'singular', 'icon', 'description', 'driver', 'structure', 'route', 'template', 'sort', 'fields', 'body', 'home', 'revisions', 'per_page', 'section', 'system', 'default_view', 'default_columns'];
+        $known = ['title', 'singular', 'icon', 'description', 'driver', 'structure', 'route', 'template', 'sort', 'fields', 'home', 'revisions', 'per_page', 'section', 'system', 'default_view', 'default_columns'];
 
         if (isset($data['default_columns']) && (! is_array($data['default_columns']) || ! array_is_list($data['default_columns']))) {
             throw new InvalidArgumentException(__('Default display fields must be a list of column IDs.'));
@@ -94,7 +93,6 @@ final class Collection
             template: $template,
             sort: (string) ($data['sort'] ?? match ($structure) { 'tree' => 'position', 'dated' => '-published_at', default => 'title' }),
             fields: array_values((array) ($data['fields'] ?? [])),
-            body: isset($data['body']) ? (string) $data['body'] : null,
             home: isset($data['home']) ? (string) $data['home'] : null,
             revisions: (bool) ($data['revisions'] ?? true),
             perPage: (int) ($data['per_page'] ?? 10),
@@ -122,6 +120,12 @@ final class Collection
         }
 
         return $this->blueprint ??= Blueprint::make($this->fields);
+    }
+
+    /** The body field of a blueprint (the collection's own fields by default): see Blueprint::body(). */
+    public function body(?string $blueprint = null): ?\Cms\Content\Fields\Field
+    {
+        return $this->blueprint($blueprint)->body();
     }
 
     /** @return array<string, array{title: string, fields: list<array>}> The named blueprints, beside the one in `fields`. */
@@ -247,7 +251,6 @@ final class Collection
             'template' => $this->template,
             'sort' => $this->sort,
             'home' => $this->home,
-            'body' => $this->body,
             'revisions' => $this->revisions ? null : false,
             'per_page' => $this->perPage !== 10 ? $this->perPage : null,
             'section' => $this->section !== 'content' ? $this->section : null,

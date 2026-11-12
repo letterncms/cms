@@ -15,7 +15,7 @@ registry.panels.set('site-preview', { slot: 'entry.toolbar', component: PreviewD
 registry.entryActions.set('site-preview', {
   label: t('Preview'), icon: 'eye', order: 10,
   // A live page with nothing unpublished is seen on the site itself (the editor's View on Site).
-  when: ({ collection, entry }) => !!(collection.route || collection.body)
+  when: ({ collection, entry }) => !!(collection.route || collection.resolvedFields.some((field) => field.body))
     && !(entry?.uri && entry.status === 'published' && entry.displayStatus !== 'scheduled' && !entry.hasDraft),
   perform: () => events.emit('entry.preview'),
 })

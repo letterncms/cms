@@ -21,7 +21,9 @@ export type RawField = Record<string, any> & { handle?: string; type?: string; l
  * blueprints and, nested, for the sub-fields of groups and repeaters.
  */
 /** The options every field has, whatever its type. */
-function commonOptions(depth: number, renamed: boolean, taken: string[]): FieldDef[] {
+function commonOptions(depth: number, renamed: boolean, taken: string[], body: 'off' | 'offered' | 'on'): FieldDef[] {
+  // Its yes-or-no options share a row: halves, or thirds once Use as Body is one of them. The body is the page itself, never a property beside it.
+  const width = body === 'off' ? 'half' as const : 'third' as const
   return [
     { handle: 'label', type: 'text', label: t('Label'), width: 'half' },
     // Said only once it applies: the handle of a field that already holds values was changed.
@@ -30,13 +32,17 @@ function commonOptions(depth: number, renamed: boolean, taken: string[]): FieldD
     { handle: 'instructions', type: 'text', label: t('Instructions') },
     { handle: 'width', type: 'select', label: t('Width'), display: 'segmented', options: { full: t('Full'), half: '½', third: '⅓' } },
     // The two yes-or-no options have a row to themselves: beside a labelled control they hung under its label's line.
-    { handle: 'required', type: 'toggle', label: t('Required'), display: 'checkbox', width: 'half' },
-    ...(depth === 0 ? [{ handle: 'property', type: 'toggle', label: t('Show as Property'), display: 'checkbox', width: 'half' as const }] : []),
+    { handle: 'required', type: 'toggle', label: t('Required'), display: 'checkbox', width },
+    ...(body !== 'off' ? [{ handle: 'body', type: 'toggle', label: t('Use as Body'), display: 'checkbox', width }] : []),
+    ...(depth === 0 && body !== 'on' ? [{ handle: 'property', type: 'toggle', label: t('Show as Property'), display: 'checkbox', width }] : []),
   ]
 }
 
-export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, addLabel, builtIn = null, errors, path = 'fields', heading = true, leading }: {
-  fields: RawField[]; onChange: (fields: RawField[]) => void; body?: string; depth?: number; emptyText?: string; addLabel?: string; builtIn?: string | null
+export function FieldsEditor({ fields, onChange, bodies = false, depth = 0, emptyText, addLabel, builtIn = null, errors, path = 'fields', heading = true, leading }: {
+  fields: RawField[]; onChange: (fields: RawField[]) => void; depth?: number;
+  /** One of these fields can be the body (`body: true`): a collection's own fields, not a global's or a group's. */
+  bodies?: boolean
+  emptyText?: string; addLabel?: string; builtIn?: string | null
   /** What a refused save said, by the path of the option it is about (`fields.2.handle`, `fields.0.fields.1.type`). */
   errors?: Record<string, string>
   /** Where these fields are in what was saved: `fields`, or `fields.<i>.fields` for a field's sub-fields. */
@@ -77,7 +83,7 @@ export function FieldsEditor({ fields, onChange, body, depth = 0, emptyText, add
       {fields.length === 0 ? (
         depth === 0 ? <EmptyState icon="field" title={t('No fields yet')} /> : <p className="m-0 mb-2 rounded-md border border-dashed border-border-strong px-3 py-3 text-xs text-faint">{emptyText ?? t('No fields yet.')}</p>
       ) : (
-        <FieldList fields={fields} types={types} openIndex={open} onOpen={setOpen} onChange={onChange} body={body} depth={depth} errors={errors} path={path} saved={saved} />
+        <FieldList fields={fields} types={types} openIndex={open} onOpen={setOpen} onChange={onChange} bodies={bodies && depth === 0} depth={depth} errors={errors} path={path} saved={saved} />
       )}
       {depth > 0 && <div className="mt-2"><AddField types={types} onAdd={add} label={addLabel ?? t('Add Sub-Field')} align="start" nested /></div>}
     </div>
@@ -129,7 +135,7 @@ export function AddField({ types, onAdd, label, align = 'end', nested }: { types
   )
 }
 
-function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, errors, path, saved }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; body?: string; depth: number; errors?: Record<string, string>; path: string; saved: Set<string> }) {
+function FieldList({ fields, types, openIndex, onOpen, onChange, bodies, depth, errors, path, saved }: { fields: RawField[]; types: FieldTypeDef[]; openIndex: number | null; onOpen: (i: number | null) => void; onChange: (f: RawField[]) => void; bodies: boolean; depth: number; errors?: Record<string, string>; path: string; saved: Set<string> }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   // What Undo puts a removed field back into: the fields of the moment it is pressed.
   const latest = useRef({ fields, onChange })
@@ -153,7 +159,8 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
                   field={field}
                   type={types.find((ft) => ft.key === field.type)}
                   open={openIndex === i}
-                  isBody={field.handle === body}
+                  // Offered where a field of its type can be the body; one that already is says so, also where it can't be (and the save says why).
+                  body={field.body ? 'on' : bodies && types.find((ft) => ft.key === field.type)?.body ? 'offered' : 'off'}
                   // What a condition can name: the fields beside this one, with their choices.
                   siblings={fields.filter((f, j) => j !== i && f.handle && !f.import).map((f) => ({ handle: f.handle!, label: f.label || f.handle!, type: f.type ?? 'text', ...(f.type === 'select' && f.options && typeof f.options === 'object' ? { options: Array.isArray(f.options) ? Object.fromEntries(f.options.map((o: string) => [o, o])) : f.options } : {}) }))}
                   circular={cycles.has(field.handle ?? '')}
@@ -166,7 +173,8 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
                   onToggle={() => onOpen(openIndex === i ? null : i)}
                   // A new handle is followed by the conditions beside it that named the old one; a field that goes takes those conditions with it.
                   onChange={(f) => {
-                    const next = fields.map((x, j) => (j === i ? f : x))
+                    // One body per blueprint: the field made the body takes it from the one that was.
+                    const next = fields.map((x, j) => (j === i ? f : f.body && !field.body && x.body ? withoutKey(x, 'body') : x))
                     onChange(field.handle && f.handle && f.handle !== field.handle ? followRename(next, field.handle, f.handle) : next)
                   }}
                   onRemove={() => {
@@ -193,6 +201,11 @@ function FieldList({ fields, types, openIndex, onOpen, onChange, body, depth, er
   )
 }
 
+function withoutKey(field: RawField, key: string): RawField {
+  const { [key]: _, ...rest } = field
+  return rest
+}
+
 function Sortable({ id, children }: { id: string; children: (handle: ReactNode) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   return (
@@ -204,7 +217,7 @@ function Sortable({ id, children }: { id: string; children: (handle: ReactNode) 
   )
 }
 
-function FieldRow({ field, type, open, isBody, siblings, circular, depth, errors, path, renamed, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; isBody: boolean; siblings: Sibling[]; circular: boolean; depth: number; errors?: Record<string, string>; path: string; renamed?: boolean; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
+function FieldRow({ field, type, open, body, siblings, circular, depth, errors, path, renamed, dragHandle, onToggle, onChange, onRemove, onDuplicate }: { field: RawField; type?: FieldTypeDef; open: boolean; body: 'off' | 'offered' | 'on'; siblings: Sibling[]; circular: boolean; depth: number; errors?: Record<string, string>; path: string; renamed?: boolean; dragHandle: ReactNode; onToggle: () => void; onChange: (f: RawField) => void; onRemove: () => void; onDuplicate: () => void }) {
   // What the last save refused about this field itself; its sub-fields show their own.
   const problem = (key: string) => errors?.[`${path}.${key}`]
   const refused = !!errors && Object.keys(errors).some((key) => key.startsWith(`${path}.`))
@@ -236,7 +249,7 @@ function FieldRow({ field, type, open, isBody, siblings, circular, depth, errors
           <span className="min-w-[4ch] truncate text-sm font-medium text-text">{field.label || field.handle}</span>
           <span className="truncate font-mono text-xs font-normal text-faint max-sm:hidden">{field.handle}</span>
         </Button>
-        {isBody && <Badge>{t('Body')}</Badge>}
+        {body === 'on' && <Badge>{t('Body')}</Badge>}
         {field.required && <Badge>{t('Required')}</Badge>}
         {(field.if || field.required_if) && <Badge>{t('Conditional')}</Badge>}
         {field.section === 'sidebar' && <Badge>{t('Property')}</Badge>}
@@ -250,13 +263,14 @@ function FieldRow({ field, type, open, isBody, siblings, circular, depth, errors
         <div className="space-y-5 border-t border-border p-4">
           {/* What every field has, edited with fields like everything else. */}
           <Fields
-            fields={commonOptions(depth, !!renamed, siblings.map((s) => s.handle))}
-            values={{ ...field, width: field.width ?? 'full', property: field.section === 'sidebar' }}
+            fields={commonOptions(depth, !!renamed, siblings.map((s) => s.handle), body)}
+            values={{ ...field, width: field.width ?? 'full', property: field.section === 'sidebar', body: !!field.body }}
             errors={errors}
             context={{ path: path.split('.') }}
             onChange={(h, v) => {
               if (h === 'handle') onChange({ ...field, handle: String(v ?? '') })
               else if (h === 'property') set('section', v ? 'sidebar' : undefined)
+              else if (h === 'body') onChange(v ? { ...withoutKey(field, 'section'), body: true } : withoutKey(field, 'body'))
               else if (h === 'width') set('width', v === 'full' ? undefined : v)
               else set(h, v)
             }}

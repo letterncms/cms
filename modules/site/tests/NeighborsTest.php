@@ -18,9 +18,9 @@ final class NeighborsTest extends TestCase
     protected function collections(): array
     {
         return [
-            'soundings' => ['title' => 'Soundings', 'route' => '/soundings/{slug}', 'template' => 'sounding', 'sort' => 'position', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'logbook' => ['title' => 'Logbook', 'structure' => 'dated', 'route' => '/log/{slug}', 'template' => 'sounding', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
-            'manual' => ['title' => 'Manual', 'structure' => 'tree', 'route' => '/manual/{parent_uri}/{slug}', 'template' => 'sounding', 'body' => 'content', 'fields' => [['handle' => 'content', 'type' => 'blocks']]],
+            'soundings' => ['title' => 'Soundings', 'route' => '/soundings/{slug}', 'template' => 'sounding', 'sort' => 'position', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'logbook' => ['title' => 'Logbook', 'structure' => 'dated', 'route' => '/log/{slug}', 'template' => 'sounding', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'manual' => ['title' => 'Manual', 'structure' => 'tree', 'route' => '/manual/{parent_uri}/{slug}', 'template' => 'sounding', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
         ];
     }
 

@@ -23,7 +23,7 @@ final class MatrixFieldTest extends TestCase
         return [
             ...parent::collections(),
             'landings' => ['title' => 'Landings', 'route' => '/l/{slug}', 'fields' => [self::SECTIONS]],
-            'guides' => ['title' => 'Guides', 'driver' => 'files', 'route' => '/g/{slug}', 'body' => 'body', 'fields' => [self::SECTIONS, ['handle' => 'body', 'type' => 'markdown']]],
+            'guides' => ['title' => 'Guides', 'driver' => 'files', 'route' => '/g/{slug}', 'fields' => [self::SECTIONS, ['handle' => 'body', 'type' => 'markdown', 'body' => true]]],
         ];
     }
 

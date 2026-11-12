@@ -13,7 +13,7 @@ use RuntimeException;
 
 /**
  * Flat-file entries: content/collections/<handle>/[<locale>/][<parent>/]<slug>.md
- * with YAML frontmatter. The collection's `body` field is written as the
+ * with YAML frontmatter. The body field of its blueprint is written as the
  * Markdown body. Working-copy drafts live in storage/drafts (not in git).
  */
 final class FileDriver implements EntryDriver
@@ -233,9 +233,9 @@ final class FileDriver implements EntryDriver
 
         $data = array_diff_key($meta, array_flip(self::RESERVED));
 
-        if ($collection->body && ($field = $collection->blueprint(isset($meta['blueprint']) ? (string) $meta['blueprint'] : null)->field($collection->body))) {
+        if ($field = $collection->body(isset($meta['blueprint']) ? (string) $meta['blueprint'] : null)) {
             $type = $this->types->resolve($field->type);
-            $data[$collection->body] = $type->serializesToMarkdown() ? $type->fromMarkdown($body, $field) : ($data[$collection->body] ?? null);
+            $data[$field->handle] = $type->serializesToMarkdown() ? $type->fromMarkdown($body, $field) : ($data[$field->handle] ?? null);
         }
 
         // A file written by hand for a kit may leave its id out: nothing can name it, and it gets a new one anyway.
@@ -290,12 +290,12 @@ final class FileDriver implements EntryDriver
         $data = $entry->data;
         $body = '';
 
-        if ($collection->body && ($field = $collection->blueprint($entry->blueprint)->field($collection->body))) {
+        if ($field = $collection->body($entry->blueprint)) {
             $type = $this->types->resolve($field->type);
 
             if ($type->serializesToMarkdown()) {
-                $body = $type->toMarkdown($data[$collection->body] ?? null, $field);
-                unset($data[$collection->body]);
+                $body = $type->toMarkdown($data[$field->handle] ?? null, $field);
+                unset($data[$field->handle]);
             }
         }
 
