@@ -11,7 +11,7 @@
 
 /* Sizes, motion and layers: the same in light and dark, so they are set once, here. */
 :root {
-  /* The knob of a switch that is on: white on any accent, in light and dark. */
+  /* The knob of a switch that is on: white on any accent, in light and dark; the ink accent (monochrome) sets it to its contrast colour. */
   --cms-knob: #ffffff;
   --cms-inspector-width: 320px;
 

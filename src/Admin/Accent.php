@@ -33,7 +33,7 @@ final class Accent
     private const array WASH = [0.12, 0.16];
 
     /** The admin's ink as the accent: the same tokens as a primary button's, in whichever theme. */
-    private const string INK = ':root,[data-theme]{--cms-tint:#8a8a8a;--cms-signal:var(--cms-ink);--cms-signal-ink:var(--cms-ink-contrast);--cms-signal-hover:var(--cms-ink-hover);--cms-signal-active:var(--cms-ink-active);--cms-focus:var(--cms-ink);--cms-focus-soft:color-mix(in srgb,var(--cms-ink) 8%,transparent);--cms-focus-hover:color-mix(in srgb,var(--cms-ink) 12%,transparent)}';
+    private const string INK = ':root,[data-theme]{--cms-tint:#8a8a8a;--cms-signal:var(--cms-ink);--cms-signal-ink:var(--cms-ink-contrast);--cms-knob:var(--cms-ink-contrast);--cms-signal-hover:var(--cms-ink-hover);--cms-signal-active:var(--cms-ink-active);--cms-focus:var(--cms-ink);--cms-focus-soft:color-mix(in srgb,var(--cms-ink) 8%,transparent);--cms-focus-hover:color-mix(in srgb,var(--cms-ink) 12%,transparent)}';
 
     /** One of the accents by its name, or null for anything else. */
     public static function normalize(mixed $value): ?string
