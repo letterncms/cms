@@ -24,7 +24,7 @@ export function AccentPicker({ value, onChange, inherit, disabled }: { value: st
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <div role="radiogroup" aria-label={t('Theme Color')} className="flex items-center gap-2">
+      <div role="radiogroup" aria-label={t('Theme Color')} className="flex min-w-0 flex-wrap items-center gap-2 [@media(pointer:coarse)]:gap-4 [@media(pointer:coarse)]:py-2">
         {set.map((accent) => {
           const on = accent.name === worn
           // Monochrome is the admin's ink: shown as it is in this theme.

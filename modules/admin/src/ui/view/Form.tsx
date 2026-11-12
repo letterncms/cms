@@ -5,7 +5,8 @@ import { QueryError } from '../QueryError'
 import { Fields } from '../Fields'
 import { changedFrom, GroupedFields } from '../GroupedFields'
 import { SaveBar } from '../SaveBar'
-import { Spinner } from '../Spinner'
+import { SettingRow, SettingsPanel } from '../SettingsPanel'
+import { Skeleton, Spinner } from '../Spinner'
 import { TabContext, useView } from './context'
 import { at, input } from './scope'
 
@@ -22,16 +23,20 @@ export interface FormProps {
   after?: 'refresh' | 'manifest'
   width?: 'narrow' | 'wide'
   onDirty?: (dirty: boolean) => void
+  settings?: boolean
   /** What the fields are told about where they are, such as a global set's `locale`. */
   context?: Record<string, unknown>
 }
 
 /**
- * A form as every settings page draws it: fields in their sections, switches in a group,
+ * A form as every settings page draws it: fields in panels by section,
  * and the save bar while something changed. `?field=<handle>` opens it at one of its fields.
  */
-export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields: own, into, save, after, width = 'narrow', onDirty, context }: FormProps) {
-  const { scope } = useView()
+export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields: own, into, save, after, width = 'narrow', onDirty, context, settings: ownSettings }: FormProps) {
+  const { scope, settings: settingsPage } = useView()
+  const tab = useContext(TabContext)
+  const settings = ownSettings ?? (settingsPage || tab?.id === 'settings')
+  const frame = width === 'wide' ? 'w-full' : 'mx-auto w-full max-w-[640px]'
   const loadInput = input(source?.input, scope)
   const data = useAbility<unknown>(source?.ability ?? 'abilities/list', loadInput, { enabled: !!source, refetchOnWindowFocus: false })
   const loaded = source ? data.data : {}
@@ -42,7 +47,6 @@ export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields:
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const dirty = changedFrom(values, saved)
-  const tab = useContext(TabContext)
   useEffect(() => {
     onDirty?.(dirty)
     tab?.dirty(tab.id, dirty)
@@ -86,14 +90,20 @@ export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields:
   }
 
   if (source && data.isError) return <QueryError title={t('Something went wrong')} message={data.error.message} onRetry={() => void data.refetch()} />
-  if (source && (data.isLoading || !data.data)) return <div className="grid place-items-center py-10 text-faint"><Spinner /></div>
+  if (source && (data.isLoading || !data.data)) {
+    return settings ? (
+      <SettingsPanel className={frame}>
+        {[1, 2, 3].map((row) => <SettingRow key={row} label={<Skeleton className="h-3 w-24" />}><Skeleton className="h-8 w-full rounded-sm" /></SettingRow>)}
+      </SettingsPanel>
+    ) : <div className="grid place-items-center py-10 text-faint"><Spinner /></div>
+  }
 
   return (
-    <div className={width === 'wide' ? 'w-full' : 'mx-auto w-full max-w-[640px]'}>
+    <div className={frame}>
       {/* A list edited whole is its one field, under the tab that names it: no label of its own. */}
       {into
-        ? <Fields bare fields={fields} values={values ?? saved} onChange={(h, v) => setValues({ ...(values ?? saved), [h]: v })} errors={errors} context={context} />
-        : <GroupedFields fields={fields} values={values ?? saved} onChange={(h, v) => setValues({ ...(values ?? saved), [h]: v })} errors={errors} context={context} />}
+        ? <Fields bare layout={settings ? 'settings' : 'stacked'} fields={fields} values={values ?? saved} onChange={(h, v) => setValues({ ...(values ?? saved), [h]: v })} errors={errors} context={context} />
+        : <GroupedFields settings={!!settings} fields={fields} values={values ?? saved} onChange={(h, v) => setValues({ ...(values ?? saved), [h]: v })} errors={errors} context={context} />}
       <SaveBar dirty={dirty} saving={busy} error={error} onSave={() => void submit()} onDiscard={discard} />
     </div>
   )
@@ -101,7 +111,7 @@ export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields:
 
 /** A settings page's form: its namespace's fields, saved with settings/update. */
 export function SettingsView({ namespace, onDirty }: { namespace: string; onDirty?: (dirty: boolean) => void }) {
-  return <Form source={{ ability: 'settings/get', input: { namespace } }} save={{ ability: 'settings/update', input: { namespace } }} after="manifest" onDirty={onDirty} />
+  return <Form settings source={{ ability: 'settings/get', input: { namespace } }} save={{ ability: 'settings/update', input: { namespace } }} after="manifest" onDirty={onDirty} />
 }
 
 /** `?field=<handle>`: once the form has drawn it, the field scrolls into view and takes focus; the address forgets it. */

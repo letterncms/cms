@@ -2,6 +2,7 @@ import { getManifest, prefetchAbility, setQuery, t, useAbility, useLocation, use
 import { useCallback, useEffect, useMemo, type ComponentType } from 'react'
 import { QueryError } from '../QueryError'
 import { Page } from '../Page'
+import { inSettings } from '../place'
 import { Spinner } from '../Spinner'
 import { Widget } from '../Widget'
 import { useActions, type ActionAsker, type ActionRunner } from './actions'
@@ -33,7 +34,7 @@ export function View({ root, params = {}, embedded = false, run, ask }: { root: 
     if (action) void act(action, {}).catch(() => {})
   }, [wanted, root, act])
   return (
-    <ViewContext.Provider value={{ scope, refresh, act, disabled: false, at: embedded ? path : undefined }}>
+    <ViewContext.Provider value={{ scope, refresh, act, disabled: false, at: embedded ? path : undefined, settings: !embedded && inSettings(manifest, path) }}>
       <ViewNodeView node={root} path="root" />
       {layer}
     </ViewContext.Provider>

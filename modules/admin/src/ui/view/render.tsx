@@ -12,6 +12,7 @@ import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
 import { useShortcut } from '../shortcuts'
 import { Spinner } from '../Spinner'
+import { SettingsPanel } from '../SettingsPanel'
 import { Stat } from '../Widget'
 import { WidgetSlot } from '../WidgetSlot'
 import { ActionButton, shown } from './actions'
@@ -262,6 +263,13 @@ function NoticeNode({ node }: { node: ViewNode }) {
   return <Notice tone={tone} title={title} action={action && <ActionButton action={action} size="sm" />}>{text}</Notice>
 }
 
+function EmptyNode({ node }: { node: ViewNode }) {
+  const { settings } = useView()
+  const { size, icon = 'inbox', title = t('Nothing here yet'), action } = node.props
+  const body = <EmptyState compact={settings || size === 'sm'} icon={icon} title={title} action={action && <ActionButton action={action} />} />
+  return settings ? <SettingsPanel>{body}</SettingsPanel> : body
+}
+
 function LiteralTable({ node }: { node: ViewNode }) {
   const { columns, rows } = node.props as { columns: string[]; rows: (string | number | boolean | null)[][] }
   const items = rows.map((values, id) => ({ id: String(id), values }))
@@ -330,7 +338,7 @@ const builtins: Record<string, Renderer> = {
   'ui/diff': Diff,
   'ui/preview': ({ node }) => safeUrl(node.props.url) ? <iframe src={safeUrl(node.props.url)!} title={node.props.title ?? t('Preview')} sandbox="allow-same-origin allow-scripts allow-forms" className="w-full rounded-lg border border-border bg-white" style={{ height: node.props.height ?? 480 }} /> : null,
   'ui/redirect': Redirect,
-  'ui/empty': ({ node }) => <EmptyState compact={node.props.size === 'sm'} icon={node.props.icon ?? 'inbox'} title={node.props.title ?? t('Nothing here yet')} action={node.props.action && <ActionButton action={node.props.action} />} />,
+  'ui/empty': EmptyNode,
   'ui/action': SurfaceAction,
   'ui/links': Links,
   'ui/actions': ({ node }) => <div className="flex flex-wrap items-center gap-2"><Buttons actions={node.props.items} /></div>,

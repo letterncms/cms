@@ -70,7 +70,7 @@ final class SettingsModule extends Plugin
             return ['type' => 'ui/page', 'props' => ['title' => __($schema['label']), 'icon' => $schema['icon']], 'children' => [['type' => 'ui/redirect', 'props' => ['to' => $home.(str_contains($home, '?') ? '&' : '?').'tab=settings']]]];
         }
 
-        return ['type' => 'ui/page', 'props' => ['title' => __($schema['label']), 'icon' => $schema['icon'], 'actions' => []], 'children' => [
+        return ['type' => 'ui/page', 'props' => ['title' => __($schema['label']), 'icon' => $schema['icon'], 'width' => 'narrow', 'actions' => []], 'children' => [
             ['type' => 'ui/tabs', 'children' => [
                 ['type' => 'ui/tab', 'props' => ['id' => 'settings', 'label' => __('General')], 'children' => [['type' => 'ui/settings', 'props' => ['namespace' => $namespace]]]],
             ]],

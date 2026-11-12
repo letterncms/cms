@@ -5,6 +5,7 @@ import { cn } from './cn'
 import { Field, FieldError, SharedMark } from './Field'
 import { fieldControlId } from './fieldIdentity'
 import { Tooltip } from './Tooltip'
+import { SettingRow, SettingsPanel } from './SettingsPanel'
 
 export interface FieldsProps {
   fields: FieldDef[]
@@ -16,8 +17,8 @@ export interface FieldsProps {
   className?: string
   /** Hide labels for single inline fields. */
   bare?: boolean
-  /** `stacked` (default): labels above, a 6-column grid. `inline`: compact rows with the label left — for inspectors and toolbars. */
-  layout?: 'stacked' | 'inline'
+  /** `stacked`: form grid. `inline`: compact inspector rows. `settings`: rows in a settings panel. */
+  layout?: 'stacked' | 'inline' | 'settings'
   /** `inline`: the label column's width in px (88, the inspector's, unless a screen lines its rows up to another). */
   labelWidth?: number
 }
@@ -37,6 +38,7 @@ function holds(rule: unknown, values: Record<string, any>): boolean {
 }
 
 const widths: Record<string, string> = { full: 'col-span-6', half: 'col-span-6 md:col-span-3', third: 'col-span-6 md:col-span-2', 'two-thirds': 'col-span-6 md:col-span-4' }
+const compactSettings = new Set(['text', 'url', 'email', 'slug', 'number', 'select', 'icon'])
 
 /** Renders a blueprint: each field with the component registered for its type. */
 export function Fields({ fields, values, onChange, errors = {}, context = {}, disabled, className, bare, layout = 'stacked', labelWidth }: FieldsProps) {
@@ -90,50 +92,70 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
     )
   }
 
-  return (
-    <div className={cn('grid grid-cols-6 gap-x-4 gap-y-4', className)}>
-      {fields.filter((field) => visible(field, values)).map((field) => {
-        const type = manifest?.fieldTypes.find((ft) => ft.key === field.type)
-        // A field may ask for another component than its type's (a json value with its own editor).
-        const Component = registry.fields.get(field.component ?? type?.component ?? field.type) ?? registry.fields.get('json')
-        if (!Component) return null
-        const control = (
-          <Component
-            field={accessible(field)}
-            value={values[field.handle] ?? field.default ?? null}
-            onChange={(v: unknown) => onChange(field.handle, v)}
-            error={fieldError(field)}
-            disabled={closed(field)}
-            context={{ ...context, values, errors }}
-          />
-        )
-        return (
-          <div
-            key={field.handle}
-            data-field={field.handle}
-            className={cn(
-              widths[field.width ?? 'full'] ?? widths.full,
-              // A switch beside a labeled control lines up with that control, not its label.
-              !bare && field.type === 'toggle' && field.display !== 'checkbox' && field.width && field.width !== 'full' && 'md:pt-8',
-              field.className as string | undefined,
-            )}
-          >
-            {bare || field.type === 'toggle' ? (
-              <>
-                {control}
-                {fieldError(field) && <FieldError id={`${controlId(field)}-error`}>{fieldError(field)}</FieldError>}
-              </>
-            ) : (
-              // A single select always holds a value: marking it required tells nobody anything.
-              <Field label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} aside={typeof field.shared === 'string' ? <SharedMark from={field.shared} /> : undefined} required={(field.required || (!!field.required_if && holds(field.required_if, values))) && !(field.type === 'select' && !field.multiple)}>
-                {control}
-              </Field>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
+  const rows = shown.map((field) => {
+    const type = manifest?.fieldTypes.find((ft) => ft.key === field.type)
+    // A field may ask for another component than its type's (a json value with its own editor).
+    const component = field.component ?? type?.component ?? field.type
+    const Component = registry.fields.get(component) ?? registry.fields.get('json')
+    if (!Component) return null
+    const stock = component === field.type
+    const settingToggle = layout === 'settings' && field.type === 'toggle' && stock
+    const required = (field.required || (!!field.required_if && holds(field.required_if, values))) && !(field.type === 'select' && !field.multiple)
+    const aside = typeof field.shared === 'string' ? <SharedMark from={field.shared} /> : undefined
+    const control = (
+      <Component
+        field={{ ...accessible(field), ...(settingToggle ? { labelPlacement: 'external' } : {}) }}
+        value={values[field.handle] ?? field.default ?? null}
+        onChange={(v: unknown) => onChange(field.handle, v)}
+        error={fieldError(field)}
+        disabled={closed(field)}
+        context={{ ...context, values, errors }}
+      />
+    )
+    if (layout === 'settings') {
+      const compact = component === 'accent' || (stock && (
+        (compactSettings.has(field.type) && !field.multiple && !field.block)
+        || (field.type === 'media' && field.max === 1)
+      ))
+      return (
+        <div key={field.handle} data-field={field.handle} className={field.className as string | undefined}>
+          {bare || (field.type === 'toggle' && !settingToggle) ? (
+            <SettingRow>{control}{fieldError(field) && <FieldError id={`${controlId(field)}-error`}>{fieldError(field)}</FieldError>}</SettingRow>
+          ) : (
+            <Field setting={settingToggle ? 'end' : compact ? 'inline' : 'stacked'} label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} required={required} aside={aside}>
+              {control}
+            </Field>
+          )}
+        </div>
+      )
+    }
+    return (
+      <div
+        key={field.handle}
+        data-field={field.handle}
+        className={cn(
+          widths[field.width ?? 'full'] ?? widths.full,
+          // A switch beside a labeled control lines up with that control, not its label.
+          !bare && field.type === 'toggle' && field.display !== 'checkbox' && field.width && field.width !== 'full' && 'md:pt-8',
+          field.className as string | undefined,
+        )}
+      >
+        {bare || field.type === 'toggle' ? (
+          <>
+            {control}
+            {fieldError(field) && <FieldError id={`${controlId(field)}-error`}>{fieldError(field)}</FieldError>}
+          </>
+        ) : (
+          // A single select always holds a value: marking it required tells nobody anything.
+          <Field label={field.label} htmlFor={controlId(field)} instructions={field.instructions} error={fieldError(field)} aside={aside} required={required}>
+            {control}
+          </Field>
+        )}
+      </div>
+    )
+  })
+  if (layout === 'settings') return rows.some(Boolean) ? <SettingsPanel className={className}>{rows}</SettingsPanel> : null
+  return <div className={cn('grid grid-cols-6 gap-x-4 gap-y-4', className)}>{rows}</div>
 }
 
 /**

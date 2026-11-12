@@ -158,6 +158,12 @@ export function SliderField({ field, value, onChange, disabled }: FieldProps<num
 
 /** A yes/no value: a switch with its label, or `display: checkbox` for lists of choices and selection. */
 export function ToggleField({ field, value, onChange, disabled }: FieldProps<boolean>) {
+  if (field.labelPlacement === 'external') {
+    const props = { id: fieldControlId(field), checked: !!value, onChange, disabled, 'aria-describedby': field.describedBy }
+    return field.display === 'checkbox'
+      ? <Checkbox {...props} indeterminate={field.indeterminate === true} />
+      : <Switch {...props} size={field.size === 'sm' || field.size === 'xs' ? 'sm' : 'md'} />
+  }
   if (field.display === 'checkbox') {
     return <Checkbox checked={!!value} indeterminate={field.indeterminate === true} onChange={onChange} disabled={disabled} label={field.label ? <span>{field.label}{field.instructions ? <span className="text-xs text-muted"> {field.instructions as string}</span> : null}</span> : undefined} />
   }
