@@ -209,11 +209,11 @@ final class AdminRegistry
     }
 
     /**
-     * @param  array{label: string, icon?: string, group?: string, path?: string, ability?: string, input?: array, keywords?: list<string>, permission?: ?string}  $command
+     * @param  array{label: string, icon?: string, path?: string, ability?: string, input?: array, keywords?: list<string>, permission?: ?string}  $command
      */
     public function command(string $id, array $command): void
     {
-        $this->commands[$id] = ['id' => $id, 'icon' => 'command', 'group' => 'Actions', 'permission' => null, ...$command];
+        $this->commands[$id] = ['id' => $id, 'icon' => 'command', 'permission' => null, ...$command];
     }
 
     /** @return array<string, array{id: string, label: string, order: int, settings: bool}> */

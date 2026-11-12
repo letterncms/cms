@@ -261,7 +261,7 @@ export interface Manifest {
   dashboard: ArrangedSection[]
   /** The home screen as arranged for this user (hidden = in the gallery); `personal` when they arranged their own. */
   home?: { layout: Arrangement; personal: boolean }
-  commands: { id: string; label: string; icon: string; group: string; path?: string; ability?: string; input?: Record<string, unknown>; keywords?: string[] }[]
+  commands: { id: string; label: string; icon: string; path?: string; ability?: string; input?: Record<string, unknown>; keywords?: string[] }[]
   /** The language the manifest's labels are in. */
   locale?: string
   /** Values modules share with every admin user, by settings namespace (see useConfig). */

@@ -16,11 +16,10 @@ async function sendTest(): Promise<void> {
   }
 }
 
-/** Command palette: send a test email to yourself. */
+/** Under / in the chat (and ⌘K): send a test email to yourself. */
 registry.commands.set('email-test', {
   label: t('Send Test Email'),
   icon: 'mail',
-  group: t('Email'),
   keywords: ['smtp', 'email', 'mail', 'test'],
   perform: sendTest,
 })

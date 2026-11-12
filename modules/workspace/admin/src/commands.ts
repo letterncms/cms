@@ -78,7 +78,7 @@ registry.composer.set('workspace-commands', {
   search: async (query) => {
     const abilities = await runnable()
     return [
-      ...registry.commands.all().filter((c) => c.id !== 'workspace' && !c.acceptsQuery && c.when?.() !== false && matches(query, c.label, ...(c.keywords ?? []))).map((c): ComposerOption => ({
+      ...registry.commands.all().filter((c) => c.when?.() !== false && matches(query, c.label, ...(c.keywords ?? []))).map((c): ComposerOption => ({
         id: `command:${c.id}`, label: c.label, icon: c.icon ?? 'command', shortcut: c.shortcut, perform: () => void c.perform(),
       })),
       // One with an ability runs in the thread, asking for what it needs (Invite User), even when it has a screen of its own too.

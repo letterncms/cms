@@ -19,9 +19,9 @@
 - **Saved views are tabs above a collection's list**, after **All**, in place of the **Views** menu. Change the list and **Save View** appears beside **Display**; on a saved view its tab shows a dot, and **Save View** updates it or saves a new one while **Reset** puts it back. Choose the tab you are on to rename or delete it. Without saved views there are no tabs.
 - A collection's blueprints are a menu at the start of the **Add Field** row, named for the one on view: switch, add, rename and remove them there. The row stays where it is whether there is one blueprint or several, and adding one asks for its name.
 
-### Deprecated
+### Removed
 
-- `acceptsQuery` on a registered command: nothing offers a command for any typed text any more, since anything typed after `/` can be asked or searched. A command may now say `when` it is offered, and a line under `/` may show its `shortcut`.
+- **Breaking.** `acceptsQuery` and `group` on a command registered in the admin, `group` on one declared in PHP (`$cms->admin()->command()`), and the text `perform` was given: anything typed after `/` is asked or searched, so no command takes it. A command says `when` it is offered instead, and a line under `/` shows its `shortcut`. The workspace's New Chat command is gone too: ask in the chat from elsewhere with `events.emit('chat.ask', words)`.
 
 ### Fixed
 

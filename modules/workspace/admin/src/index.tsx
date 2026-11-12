@@ -4,7 +4,7 @@ import { ChatToggle } from './ChatToggle'
 import './commands'
 import { NewChatRow } from './NewChatRow'
 import { WorkspacePanel } from './Panel'
-import { agent, panel } from './store'
+import { panel } from './store'
 
 // The thread at the right edge of every screen; its toggle in each screen's bar; a fresh one first in the sidebar.
 registry.panels.set('workspace', { slot: 'shell.dock', component: WorkspacePanel })
@@ -15,15 +15,8 @@ registry.entryActions.set('workspace-chat', { label: t('Chat'), icon: 'comment',
 // A thread's own URL is the dock at full size, over the page it came from. The dock owns streaming, so the route draws nothing.
 registry.routes.set('/chat/:id', { path: '/chat/:id', component: () => null, overlay: true })
 
-// New Chat, for what asks from elsewhere (the Dashboard's Ask): with an agent, the words go with it.
-registry.commands.set('workspace', {
-  label: t('New Chat'),
-  icon: 'compose',
-  group: t('Chat'),
-  get keywords() { return ['chat', 'thread', 'command', 'run', ...(agent() ? ['ai', 'ask', 'help', 'write', 'build'] : [])] },
-  shortcut: 'mod+j',
-  perform: (query?: string) => panel.ask(query),
-})
+// What asks from elsewhere (the Dashboard's Ask): the chat, with those words sent in it.
+events.on<string | undefined>('chat.ask', (prompt) => panel.ask(prompt))
 
 // ⌘K and the sidebar's Search (the admin's frame says when): the thread's `/`, which finds and does everything.
 events.on<{ from?: Element } | undefined>('search.open', (opened) => panel.palette(opened?.from))
