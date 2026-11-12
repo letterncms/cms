@@ -477,7 +477,7 @@ serve('Overview', async (req, res, url) => {
     // Built In lists what comes with the CMS: here the same ten, as modules, so it is a long list.
     else if (ability === 'packages/list') data = { items: (input.type === 'module' ? packages.map((p) => ({ ...p, core: true })) : [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type !== 'plugin' || !p.core)).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
     // Plugins is the store's list: a store with nothing in it, so what is installed is what it shows.
-    else if (ability === 'package-stores/list') data = { items: [{ id: 'default', name: 'Lettern', url: null, default: true, fingerprint: null, problem: null }] }
+    else if (ability === 'package-stores/list') data = { items: [{ id: 'default', name: 'Default Store', url: null, default: true, fingerprint: null, problem: null }] }
     else if (ability === 'packages/catalog') data = { store: 'default', items: [], freshness: 'ok', problem: null, error: null }
     else throw new Error('Unexpected ability: ' + ability)
     return json(res, 200, { data })
