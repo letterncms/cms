@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { t, useAbility, type EntrySummary, type FieldProps } from '@letterncms/sdk'
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Button, Fields, Icon, IconButton, Input, Menu, Popover, PersonPicker, fieldControlId, Spinner, StatusDot, cn } from '../ui'
+import { TableFrame, TableHeader, TableRow } from '../ui/DataTable'
 
 export function TagsField({ field, value, onChange, disabled }: FieldProps<string[]>) {
   const tags = Array.isArray(value) ? value : []
@@ -156,11 +157,8 @@ export function UsersField({ field, value, onChange, disabled }: FieldProps<stri
 
 export function GroupField({ field, value, onChange, disabled, context }: FieldProps<Record<string, any>>) {
   const values = value && typeof value === 'object' ? value : {}
-  return (
-    <div className="rounded-lg border border-border p-4">
-      <Fields fields={(field.fields as any[]) ?? []} values={values} onChange={(h, v) => onChange({ ...values, [h]: v })} context={{ ...context, path: [...(context.path ?? []), field.handle] }} errors={context.errors} disabled={disabled} />
-    </div>
-  )
+  const fields = <Fields layout={context.layout} fields={(field.fields as any[]) ?? []} values={values} onChange={(h, v) => onChange({ ...values, [h]: v })} context={{ ...context, path: [...(context.path ?? []), field.handle] }} errors={context.errors} disabled={disabled} />
+  return context.layout === 'settings' ? fields : <div className="rounded-lg border border-border p-4">{fields}</div>
 }
 
 export function RepeaterField({ field, value, onChange, disabled, context }: FieldProps<Record<string, any>[]>) {
@@ -243,24 +241,28 @@ function RepeaterTable({ field, items, onChange, disabled, context, max, fields 
       )}
       {items.length === 0 && typeof field.empty === 'string' && <p className="m-0 py-2 text-sm text-muted">{field.empty}</p>}
       {items.length > 0 && (
-        <div role="table" aria-label={field.label} className="overflow-x-auto rounded-lg border border-border">
+        <TableFrame label={field.label} template={template} fitColumns={false}>
           {/* On a phone each row is a card of labelled fields, one under the other: a row of three fields does not fit. */}
-          <div role="row" className="grid min-w-fit gap-2 border-b border-border bg-sunken px-3 py-2 text-xs font-medium text-muted max-sm:hidden" style={{ gridTemplateColumns: template }}>
-            {fields.map((f) => <span key={f.handle} role="columnheader">{f.label}</span>)}
-            <span role="columnheader" className="sr-only">{remove}</span>
-          </div>
-          {items.map((item, i) => (
-            <div key={i} role="row" className="grid min-w-fit items-center gap-2 px-3 py-1.5 max-sm:!flex max-sm:min-w-0 max-sm:flex-col max-sm:items-stretch max-sm:py-3 [&+&]:border-t [&+&]:border-border" style={{ gridTemplateColumns: template }}>
-              {fields.map((f) => (
-                <div key={f.handle} role="cell" className="min-w-0">
-                  <span aria-hidden className="mb-1 block text-xs text-muted sm:hidden">{f.label}</span>
-                  <Fields bare fields={[{ ...f, size: 'sm' }]} values={item} onChange={(h, v) => onChange(items.map((it, j) => (j === i ? { ...it, [h]: v } : it)))} context={{ ...context, path: [...(context.path ?? []), field.handle, String(i)] }} errors={context.errors} disabled={disabled} />
+          <TableRow header>
+            {fields.map((f) => <TableHeader key={f.handle} label={f.label} />)}
+            <TableHeader label={remove} hiddenLabel />
+          </TableRow>
+          <div role="rowgroup">
+            {items.map((item, i) => (
+              <TableRow key={i} className="py-2 max-sm:flex-col max-sm:items-stretch max-sm:gap-y-2 max-sm:py-3">
+                {fields.map((f) => (
+                  <div key={f.handle} role="cell" className="min-w-0">
+                    <span aria-hidden className="mb-1 block text-xs text-muted sm:hidden">{f.label}</span>
+                    <Fields bare fields={[{ ...f, size: 'sm' }]} values={item} onChange={(h, v) => onChange(items.map((it, j) => (j === i ? { ...it, [h]: v } : it)))} context={{ ...context, path: [...(context.path ?? []), field.handle, String(i)] }} errors={context.errors} disabled={disabled} />
+                  </div>
+                ))}
+                <div role="cell" className="flex justify-end">
+                  <IconButton icon="trash" label={remove} size="xs" disabled={disabled} onClick={() => onChange(items.filter((_, j) => j !== i))} />
                 </div>
-              ))}
-              <IconButton icon="trash" label={remove} size="xs" disabled={disabled} onClick={() => onChange(items.filter((_, j) => j !== i))} className="max-sm:self-end" />
-            </div>
-          ))}
-        </div>
+              </TableRow>
+            ))}
+          </div>
+        </TableFrame>
       )}
     </div>
   )

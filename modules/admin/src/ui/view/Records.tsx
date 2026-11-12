@@ -404,7 +404,6 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     )}
     <DataView<Row>
       id={listId}
-      framed={settings}
       label={label}
       items={items}
       prefs={prefs}
@@ -440,7 +439,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       columns={toColumns(columns)}
       empty={filtered
         ? <NoMatches onClear={() => { if (address) setQuery({ [searchParam]: null, page: null, ...Object.fromEntries(filters.map((f) => [f.param, null])) }); else { setOwnText(''); setOwnChosen({}); setOwnPage(1) } }} />
-        : <EmptyState compact={settings || empty?.size === 'sm'} icon={empty?.icon ?? 'inbox'} title={empty?.title ?? t('Nothing here yet')} action={empty?.action && <ActionButton action={empty.action} />} />}
+        : <EmptyState compact={empty?.size === 'sm'} className={settings && empty?.size === 'sm' ? 'cms-panel' : undefined} icon={empty?.icon ?? 'inbox'} title={empty?.title ?? t('Nothing here yet')} action={empty?.action && <ActionButton action={empty.action} />} />}
     />
     {selection && (
       <SelectionBar count={picked.size} onClear={() => setPicked(new Set())}>

@@ -135,8 +135,9 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
             </div>
           )}
           {close && (title || description) && <Base.Close render={<IconButton icon="close" label={t('Close')} size="sm" className="!absolute right-2 top-2 max-sm:hidden" />} />}
-          {body && <div data-dialog-body onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)} className={cn('min-h-0 flex-1 overflow-auto px-5 max-sm:px-4', title || description ? 'pt-1' : 'pt-5 max-sm:pt-1', !footer && 'pb-5 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))]')}>{body}</div>}
-          {footer && <div data-dialog-footer className="flex shrink-0 items-center justify-end gap-2 px-5 pb-5 pt-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-3 max-sm:px-4 max-sm:pb-[calc(24px+env(safe-area-inset-bottom))] max-sm:[&>button]:h-11 max-sm:[&>button]:w-full">{footer}</div>}
+          {/* Leave room inside the scroll area for the first and last controls' focus rings. */}
+          {body && <div data-dialog-body onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)} className={cn('min-h-0 flex-1 overflow-auto scroll-py-1.5 px-5 max-sm:px-4', title || description ? 'pt-1.5' : 'pt-5 max-sm:pt-1.5', footer ? 'pb-1.5' : 'pb-5 max-sm:pb-[calc(16px+env(safe-area-inset-bottom))]')}>{body}</div>}
+          {footer && <div data-dialog-footer className={cn('flex shrink-0 items-center justify-end gap-2 px-5 pb-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-3 max-sm:px-4 max-sm:pb-[calc(24px+env(safe-area-inset-bottom))] max-sm:[&>button]:h-11 max-sm:[&>button]:w-full', body ? 'pt-3.5' : 'pt-5')}>{footer}</div>}
         </Base.Popup>
       </Base.Portal>
     </Base.Root>

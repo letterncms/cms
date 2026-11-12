@@ -56,10 +56,9 @@
 
   --cms-border: color-mix(in oklab, #eaeaea, var(--cms-tint) 8%);
   --cms-border-strong: color-mix(in oklab, #dadada, var(--cms-tint) 10%);
-  /* Edges of layers above the page. float: popovers, menus, selects, toasts — with a shadow, so lighter than border-strong.
-     modal: dialogs and sheets on the overlay — darker than the dimmed page under them. */
-  --cms-border-float: color-mix(in oklab, #e2e2e2, var(--cms-tint) 8%);
-  --cms-border-modal: color-mix(in oklab, #cecece, var(--cms-tint) 10%);
+  /* Floating surfaces use a quieter edge on the page and a stronger one over a backdrop. */
+  --cms-border-float: color-mix(in oklab, #cbcbcb, var(--cms-tint) 8%);
+  --cms-border-modal: color-mix(in oklab, #a8a8a8, var(--cms-tint) 8%);
 
   --cms-ink: #1c1b18;
   --cms-ink-contrast: #ffffff;
@@ -159,8 +158,8 @@
 
   --cms-border: color-mix(in oklab, #2a2a2a, var(--cms-tint) 9%);
   --cms-border-strong: color-mix(in oklab, #3a3a3a, var(--cms-tint) 10%);
-  --cms-border-float: color-mix(in oklab, #343434, var(--cms-tint) 9%);
-  --cms-border-modal: color-mix(in oklab, #434343, var(--cms-tint) 10%);
+  --cms-border-float: color-mix(in oklab, #464646, var(--cms-tint) 8%);
+  --cms-border-modal: color-mix(in oklab, #595959, var(--cms-tint) 8%);
 
   --cms-ink: #f5f4f0;
   --cms-ink-contrast: #1a1a18;

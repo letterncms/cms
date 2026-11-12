@@ -790,11 +790,38 @@
 }
 
 @layer components {
+  .cms-panel {
+    border-radius: var(--radius-lg);
+    background-color: color-mix(in oklab, var(--cms-sunken) 75%, transparent);
+  }
+
+  /* A single surface behind each row keeps its highlight clear of the rules and of the table's edges. */
+  [data-table-row] { isolation: isolate; }
+  [data-table-row]::before, [data-table-row]::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+  }
+  [data-table-row]::before {
+    inset: 3px 2px 2px;
+    z-index: -1;
+    border-radius: var(--radius-md);
+    transition: background-color var(--cms-duration-base) var(--ease-out);
+  }
+  [data-table-row]::after {
+    inset: 0 0.75rem auto;
+    height: 1px;
+    background: var(--cms-border);
+  }
+  [data-table-row]:focus-within::before, [data-table-row][data-cursor]::before { background: var(--cms-hover); }
+  [data-table-row][data-cursor]::before { box-shadow: var(--cms-shadow-cursor); }
   /* Tables: a row's checkbox keeps its column but shows only on hover or focus, or for every row once one is ticked. Touch screens always show it. */
   @media (hover: hover) {
-    .cms-table [role="checkbox"] { transition: opacity var(--cms-duration-base) var(--ease-out); }
-    .cms-table:not(:has([role="checkbox"]:is([data-checked], [data-indeterminate]))) [role="row"]:not(:hover, :focus-within) [role="checkbox"] { opacity: 0; }
+    [data-table-row]:hover::before { background: var(--cms-hover); }
+    .cms-table [data-row-check] [role="checkbox"] { transition: opacity var(--cms-duration-base) var(--ease-out); }
+    .cms-table:not(:has([data-row-check] [role="checkbox"]:is([data-checked], [data-indeterminate]))) [role="row"]:not(:hover, :focus-within) [data-row-check] [role="checkbox"] { opacity: 0; }
   }
+  [data-table-row][data-selected]::before { background: var(--cms-active); }
 }
 
 /* Sections under a row keep one rhythm, however the screen groups them: 1px between rows, as everywhere in the sidebar. */

@@ -271,8 +271,7 @@ function NoticeNode({ node }: { node: ViewNode }) {
 function EmptyNode({ node }: { node: ViewNode }) {
   const { settings } = useView()
   const { size, icon = 'inbox', title = t('Nothing here yet'), action } = node.props
-  const body = <EmptyState compact={settings || size === 'sm'} icon={icon} title={title} action={action && <ActionButton action={action} />} />
-  return settings ? <SettingsPanel>{body}</SettingsPanel> : body
+  return <EmptyState compact={size === 'sm'} className={settings && size === 'sm' ? 'cms-panel' : undefined} icon={icon} title={title} action={action && <ActionButton action={action} />} />
 }
 
 function LiteralTable({ node }: { node: ViewNode }) {

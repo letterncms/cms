@@ -62,7 +62,7 @@ export function Profile() {
 
   // Every section of the page starts at the same edge: no avatar beside the fields (it is in the account menu).
   return (
-    <div className="space-y-3">
+    <div className="grid gap-4">
       <SaveBar dirty={dirty} saving={busy} error={failed} onSave={() => void save()} onDiscard={discard} />
       <Fields layout="settings" fields={fields} values={values} onChange={set} errors={errors} />
       {profile.data && <Fields layout="settings" fields={profile.data.resolvedFields} values={values.data} onChange={(h, v) => set('data', { ...values.data, [h]: v })} errors={errors} />}

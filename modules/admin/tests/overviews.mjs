@@ -231,9 +231,10 @@ try {
     await open('/content/posts', 'Beta post')
     assert(main().querySelector('[role="table"]'), 'entry table missing')
     const row = (id) => main().querySelector('[role="row"][data-entry="' + id + '"]')
-    assert(getComputedStyle(row('alpha')).boxShadow === 'none', 'cursor shown before moving')
-    key('j'); await wait(() => getComputedStyle(row('alpha')).boxShadow !== 'none', 'keyboard cursor not visible')
-    key('j'); await wait(() => getComputedStyle(row('beta')).boxShadow !== 'none' && getComputedStyle(row('alpha')).boxShadow === 'none', 'cursor did not move')
+    const hasCursor = (id) => getComputedStyle(row(id), '::before').boxShadow !== 'none'
+    assert(!hasCursor('alpha'), 'cursor shown before moving')
+    key('j'); await wait(() => hasCursor('alpha'), 'keyboard cursor not visible')
+    key('j'); await wait(() => hasCursor('beta') && !hasCursor('alpha'), 'cursor did not move')
     key('x'); await wait(() => selectedCount() === 1, 'keyboard selection failed')
     assert(row('beta').querySelector('[role="checkbox"]').getAttribute('aria-checked') === 'true', 'keyboard selection not shown on the row')
     key('Escape'); await wait(() => selectedCount() === 0, 'Escape did not clear the selection')

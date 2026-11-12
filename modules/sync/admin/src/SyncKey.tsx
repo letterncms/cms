@@ -1,5 +1,5 @@
 import { t, useAbility } from '@letterncms/sdk'
-import { Button, IconButton, Input, SettingRow, SettingsPanel, Skeleton, copyText } from '@letterncms/ui'
+import { Button, IconButton, Input, SettingRow, SettingsPanel, Skeleton, copyText, selectFieldTextOnClick } from '@letterncms/ui'
 import { useState } from 'react'
 import type { Overview } from './shared'
 
@@ -20,11 +20,7 @@ export default function SyncKey() {
       <SettingRow>
         {key ? (
           <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
-              {shown
-                ? <Input readOnly autoFocus value={key} aria-label={t('Connection key')} className="w-full font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
-                : <div aria-label={t('Connection key')} className="flex h-8 items-center truncate rounded-sm border border-border bg-bg px-2.5 font-mono text-xs"><span className="truncate">{masked}</span></div>}
-            </div>
+            <Input key={shown ? 'shown' : 'masked'} readOnly autoFocus={shown} value={shown ? key : masked} aria-label={t('Connection key')} className="min-w-0 flex-1 font-mono [&>input]:text-xs" onFocus={shown ? (e) => e.currentTarget.select() : undefined} onClick={selectFieldTextOnClick} />
             <IconButton icon={shown ? 'eye-off' : 'eye'} label={shown ? t('Hide') : t('Show')} onClick={() => setShown(!shown)} />
             <Button icon="copy" onClick={() => void copy()}>{t('Copy')}</Button>
           </div>

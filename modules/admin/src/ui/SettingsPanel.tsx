@@ -3,7 +3,7 @@ import { cn } from './cn'
 
 /** One group of settings, with dividers inset to the rows' content. */
 export function SettingsPanel({ children, className, as: Tag = 'div' }: { children: ReactNode; className?: string; as?: 'div' | 'dl' }) {
-  return <Tag data-settings-panel className={cn('@container m-0 min-w-0 divide-y divide-border rounded-xl border border-border bg-surface/55 px-4 sm:px-5 dark:bg-float/65', className)}>{children}</Tag>
+  return <Tag data-settings-panel className={cn('cms-panel @container min-w-0 divide-y divide-border px-4 sm:px-5', className)}>{children}</Tag>
 }
 
 /** A setting's name and control. Longer editors and narrow panels stack. */

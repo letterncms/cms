@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- **Settings panels, dashboard widgets, and empty settings sections share a softer fill and the same corners.** Groups have room between them, and translated settings sit in their own groups. Admin tables share one design with inset highlights for hovered and selected rows.
+- **Copyable connection details use read-only fields.** Click the server URL, setup command or connection key to select its text, or use the Copy button beside it.
+- **Floating controls are easier to see.** Dialogs, menus and dropdowns use a clearer outline, and the focus ring stays visible on the last field in a dialog.
+
 ## 0.30.0 (2026-11-12)
 
 ### Changed

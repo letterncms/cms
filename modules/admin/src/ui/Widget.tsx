@@ -75,7 +75,7 @@ export function Widget({ title, action, query, loading, skeleton, empty, childre
 
   return (
     // A tile pressed into the sheet: no border, no shadow, its title and one way further.
-    <section aria-labelledby={heading ? headingId : undefined} className={cn('@container min-w-0 rounded-lg bg-sunken p-4', className)}>
+    <section aria-labelledby={heading ? headingId : undefined} className={cn('cms-panel @container min-w-0 p-4', className)}>
       {heading && (
         <header className="mb-3 flex h-6 items-center gap-2">
           <h2 id={headingId} className="m-0 min-w-0 flex-1 truncate text-sm font-semibold text-ink">

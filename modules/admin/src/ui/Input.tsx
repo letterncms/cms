@@ -1,9 +1,16 @@
-import { forwardRef, useLayoutEffect, useRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, useLayoutEffect, useRef, type InputHTMLAttributes, type MouseEvent, type TextareaHTMLAttributes } from 'react'
 import { cn } from './cn'
 import { Icon } from './Icon'
 
 /** `.cms-input` (app.css) draws the field: border, hover, focus, invalid, disabled, quiet, and white slips on the desk. */
 const base = 'cms-input w-full'
+
+/** A plain click selects a copyable value, leaving native range selection intact. */
+export function selectFieldTextOnClick(event: MouseEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  if (event.defaultPrevented || event.button !== 0 || event.detail !== 1 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+  const field = event.currentTarget
+  if (field.selectionStart !== null && field.selectionStart === field.selectionEnd) field.select()
+}
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   icon?: string
