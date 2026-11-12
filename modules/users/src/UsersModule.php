@@ -35,7 +35,7 @@ final class UsersModule extends Plugin
         $this->gating();
 
         $cms->admin()->nav('users', ['label' => 'Users', 'path' => '/users', 'icon' => 'users', 'section' => 'people', 'order' => 10, 'permission' => 'users.view']);
-        // In a thread it asks right there (users/create without a password invites); in ⌘K it opens the form.
+        // Under / in a thread (and ⌘K) it asks right there (users/create without a password invites); its path is the form, for whoever can't run it there.
         $cms->admin()->command('new-user', ['label' => 'Invite User', 'icon' => 'user-plus', 'path' => '/users/new', 'ability' => 'users/create', 'permission' => 'users.manage']);
         UsersViews::register($cms);
         $cms->admin()->widget('users-team', ['label' => 'Team', 'description' => 'The people on this site, their roles and when they were last here.', 'icon' => 'users', 'column' => 'side', 'order' => 50, 'permission' => 'users.view']);

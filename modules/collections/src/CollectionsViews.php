@@ -25,7 +25,7 @@ final class CollectionsViews
 
         $views = $cms->views();
         $views->register('collections', '/collections', static fn () => self::list($cms), permission: 'collections.manage');
-        // From the command palette: the list with the new-collection dialog open. Closing it leaves the list.
+        // From / in a thread: the list with the new-collection dialog open. Closing it leaves the list.
         $views->register('collections-new', '/collections/new', static fn () => self::list($cms, ['type' => 'collections/new']), permission: 'collections.manage');
         $views->register('collections-collection', '/collections/:handle', static fn (User $user, array $params) => self::collection($cms, (string) ($params['handle'] ?? '')), permission: 'collections.manage');
     }

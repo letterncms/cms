@@ -40,7 +40,7 @@ function keep(pref: ThemePreference) {
 
 const chosen = new Set<() => void>()
 
-/** The preference itself (not the theme it comes to), wherever it was last chosen: the menu, the palette, another browser. */
+/** The preference itself (not the theme it comes to), wherever it was last chosen: the menu, the chat's `/`, another browser. */
 export function useThemePreference(): ThemePreference {
   return useSyncExternalStore((listener) => { chosen.add(listener); return () => { chosen.delete(listener) } }, getThemePreference)
 }

@@ -35,8 +35,12 @@ export interface CommandDef {
   group?: string
   keywords?: string[]
   shortcut?: string
-  /** When true the palette offers this command for any typed text and passes it in (e.g. "Ask the CMS …"). */
+  /**
+   * @deprecated ⌘K is the chat's `/` now, where anything typed can be asked or searched: such a command is not offered.
+   */
   acceptsQuery?: boolean
+  /** Offered only while this says so (the theme not in use, an update waiting). */
+  when?: () => boolean
   perform: (query?: string) => void | Promise<void>
 }
 

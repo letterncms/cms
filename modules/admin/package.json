@@ -17,7 +17,6 @@
     "@dnd-kit/utilities": "3.2.2",
     "@letterncms/sdk": "workspace:*",
     "@tanstack/react-query": "5.105.0",
-    "cmdk": "1.1.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "sonner": "2.0.8"

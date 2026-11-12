@@ -1,5 +1,5 @@
 import './styles.css'
-import { getManifest, prefetchAbility, registry, run, t, type ComposerOption, type EntrySummary } from '@letterncms/sdk'
+import { getManifest, navigate, prefetchAbility, registry, run, t, type ComposerOption, type EntrySummary } from '@letterncms/sdk'
 import { lazy } from 'react'
 import { TitleField, UriField } from './TitleField'
 
@@ -33,4 +33,13 @@ registry.composer.set('entries', {
     ? await run<EntrySummary[]>('content/search', { query, limit: 6 })
     : await run<EntrySummary[]>('content/recent', { limit: 6 })
   ).map(entryOption),
+})
+
+// / in a chat (and ⌘K, which opens it): any entry by what was typed, opened where it is edited. After the commands, as it comes later.
+registry.composer.set('entries-open', {
+  trigger: '/', label: t('Content'), order: 70,
+  search: async (query) => query.trim().length < 2 ? [] : (await run<EntrySummary[]>('content/search', { query: query.trim(), limit: 8 })).map((entry) => {
+    const { read, ...option } = entryOption(entry)
+    return { ...option, id: `open:${entry.id}`, detail: entry.uri ?? option.detail, perform: () => navigate(option.to!) }
+  }),
 })

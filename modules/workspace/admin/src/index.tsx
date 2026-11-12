@@ -1,5 +1,5 @@
 import './styles.css'
-import { registry, t } from '@letterncms/sdk'
+import { events, registry, t } from '@letterncms/sdk'
 import { ChatToggle } from './ChatToggle'
 import './commands'
 import { NewChatRow } from './NewChatRow'
@@ -15,16 +15,18 @@ registry.entryActions.set('workspace-chat', { label: t('Chat'), icon: 'comment',
 // A thread's own URL is the dock at full size, over the page it came from. The dock owns streaming, so the route draws nothing.
 registry.routes.set('/chat/:id', { path: '/chat/:id', component: () => null, overlay: true })
 
-// New Chat in the command palette: with an agent, what was typed goes with it (read as the palette asks, so it follows the manifest).
+// New Chat, for what asks from elsewhere (the Dashboard's Ask): with an agent, the words go with it.
 registry.commands.set('workspace', {
   label: t('New Chat'),
   icon: 'compose',
   group: t('Chat'),
   get keywords() { return ['chat', 'thread', 'command', 'run', ...(agent() ? ['ai', 'ask', 'help', 'write', 'build'] : [])] },
   shortcut: 'mod+j',
-  get acceptsQuery() { return agent() !== null },
   perform: (query?: string) => panel.ask(query),
 })
+
+// ⌘K and the sidebar's Search (the admin's frame says when): the thread's `/`, which finds and does everything.
+events.on<{ from?: Element } | undefined>('search.open', (opened) => panel.palette(opened?.from))
 
 // Either modifier opens it, on every platform; the dock says the key by name for the shortcuts overlay.
 window.addEventListener('keydown', (e) => {

@@ -93,7 +93,7 @@ export function InlineEditable({ html, onChange, tag = 'div', placeholder, class
         return
       }
       if (mod && e.key.toLowerCase() === 'k') {
-        // A link here, not the command palette.
+        // A link here, not search.
         e.preventDefault()
         e.stopPropagation()
         ref.current?.ownerDocument.dispatchEvent(new CustomEvent('cms:link'))

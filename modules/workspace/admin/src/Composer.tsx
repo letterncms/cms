@@ -1,7 +1,7 @@
-import { registry, t, useScreen, type ComposerOption, type ComposerSource, type ContextItem, type FieldDef, type Registered } from '@letterncms/sdk'
-import { Button, Fields, Icon, Pressable, Spinner, Textarea, Tooltip, cn } from '@letterncms/ui'
+import { prefetch, registry, t, useScreen, type ComposerOption, type ComposerSource, type ContextItem, type FieldDef, type Registered } from '@letterncms/sdk'
+import { Button, Fields, Icon, Kbd, Pressable, Spinner, Textarea, Tooltip, cn } from '@letterncms/ui'
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
-import { runnable } from './commands'
+import { answersHere, runnable } from './commands'
 import { attachments, hints, offered } from './context'
 import { fillTemplate } from '@letterncms/ui'
 import { answers, chosenWords, commandInput, ready, schemaFields } from './schema'
@@ -34,16 +34,31 @@ interface Group {
   options: ComposerOption[]
 }
 
+/** How well a line answers what was typed: its name is it, starts with it, has a word that does, has it; or only its other words do. */
+function rank(option: ComposerOption, query: string): number {
+  const term = query.trim().toLowerCase()
+  if (!term) return 0
+  const label = option.label.trim().toLowerCase()
+  if (label === term) return 4
+  if (label.startsWith(term)) return 3
+  if (label.split(/[\s\-–—/]+/).some((word) => word.startsWith(term))) return 2
+  return label.includes(term) ? 1 : 0
+}
+
 /** What the sources registered for this trigger find, as they find it. A slow one doesn't hold up the rest. */
 function useOptions(trigger: Trigger | null) {
   const version = useSyncExternalStore(registry.composer.subscribe, registry.composer.version)
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(false)
+  /** What every source has answered for: until it is what is typed, the lines on view are an earlier query's. */
+  const [done, setDone] = useState<string | null>(null)
   const char = trigger?.char
   const query = trigger?.query
+  const asked = char ? char + (query ?? '') : null
   useEffect(() => {
     if (!char) {
       setGroups([])
+      setDone(null)
       return
     }
     let canceled = false
@@ -52,7 +67,7 @@ function useOptions(trigger: Trigger | null) {
     const timer = setTimeout(() => {
       const found = new Map<string, ComposerOption[]>()
       let pending = sources.length
-      if (!pending) setLoading(false)
+      if (!pending) { setLoading(false); setDone(char + (query ?? '')) }
       for (const source of sources) {
         void Promise.resolve().then(() => source.search(query ?? '')).catch(() => [] as ComposerOption[]).then((options) => {
           if (canceled) return
@@ -62,7 +77,7 @@ function useOptions(trigger: Trigger | null) {
           const byLabel = new Map<string, Group>()
           for (const s of sources) {
             for (const option of found.get(s.id) ?? []) {
-              const said = option.label.trim().toLowerCase()
+              const said = `${option.kind ?? ''}:${option.label.trim().toLowerCase()}`
               if (seen.has(said)) continue
               seen.add(said)
               const label = option.group ?? s.label
@@ -70,8 +85,9 @@ function useOptions(trigger: Trigger | null) {
               byLabel.get(label)!.options.push(option)
             }
           }
-          setGroups([...byLabel.values()])
-          if (--pending === 0) setLoading(false)
+          // In each group the closest names first; lines that rank alike keep their source's order.
+          setGroups([...byLabel.values()].map((group) => ({ ...group, options: group.options.map((option, i) => ({ option, i, rank: rank(option, query ?? '') })).sort((a, b) => b.rank - a.rank || a.i - b.i).map(({ option }) => option) })))
+          if (--pending === 0) { setLoading(false); setDone(char + (query ?? '')) }
         })
       }
     }, query ? 120 : 0)
@@ -80,7 +96,7 @@ function useOptions(trigger: Trigger | null) {
       clearTimeout(timer)
     }
   }, [char, query, version])
-  return { groups, loading }
+  return { groups, loading, settled: !loading && asked !== null && done === asked }
 }
 
 /** The chips: what the message carries. Each comes off with its ×. Only with an agent: a search or a command carries nothing. */
@@ -161,6 +177,7 @@ function Picker({ id, trigger, groups, loading, active, onActive, onPick }: { id
                 <Icon name={option.icon ?? 'file'} size={14} className="shrink-0 text-muted" />
                 <span className="shrink-0 truncate">{option.label}</span>
                 {option.detail && <span className="min-w-0 flex-1 truncate text-xs text-faint">{option.detail}</span>}
+                {option.shortcut && <span className="ml-auto shrink-0 pl-2 [@media(pointer:coarse)]:hidden"><Kbd keys={option.shortcut} /></span>}
               </div>
             )
           })}
@@ -262,7 +279,7 @@ export interface ComposerProps {
  * as it is typed. Enter sends, Shift+Enter breaks the line. A command that needs input asks for it here.
  */
 export function Composer({ placeholder, focus, busy, onSubmit, onCommand, children }: ComposerProps) {
-  const { drafts, thread, commands } = usePanel()
+  const { drafts, thread, commands, palette } = usePanel()
   const key = thread ?? 'new'
   const draft = drafts[key] ?? ''
   const pending = commands[key] ?? null
@@ -272,10 +289,17 @@ export function Composer({ placeholder, focus, busy, onSubmit, onCommand, childr
   const [closedAt, setClosedAt] = useState<number | null>(null)
   const [active, setActive] = useState(0)
   const listId = useId()
+  // ⌘K wrote a `/`: the caret goes after it in the same render, so its menu is open the moment the composer is drawn.
+  const [written, setWritten] = useState(palette)
+  if (written !== palette) {
+    setWritten(palette)
+    setCaret(draft.length)
+    setClosedAt(null)
+  }
 
   const found = pending ? null : triggerAt(draft, caret, mentions)
   const trigger = found && found.start !== closedAt ? found : null
-  const { groups, loading } = useOptions(trigger)
+  const { groups, loading, settled } = useOptions(trigger)
   const options = groups.flatMap((group) => group.options)
   const open = trigger !== null
 
@@ -297,9 +321,37 @@ export function Composer({ placeholder, focus, busy, onSubmit, onCommand, childr
     if (at >= 0 && at !== active) setActive(at)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.map((o) => o.id).join('|')])
+  const enter = useRef(false)
+  useEffect(() => { enter.current = false }, [trigger?.char, trigger?.query])
+  useEffect(() => {
+    if (!enter.current || !settled) return
+    enter.current = false
+    if (options.length > 0) pick(options[Math.min(active, options.length - 1)])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled])
+  // A place about to be opened starts loading while it is chosen.
+  const chosen = open ? options[Math.min(active, options.length - 1)] : undefined
+  useEffect(() => { if (chosen?.to && chosen.perform) prefetch(chosen.to) }, [chosen?.to, chosen?.perform])
   const choose = (index: number) => { setActive(index); setActiveId(options[index]?.id ?? null) }
-  // Writing away from a closed picker opens it again the next time.
-  useEffect(() => { if (!found) setClosedAt(null) }, [found])
+  // Writing away from a closed picker opens it again the next time; the menu ⌘K opened is let go of, the words kept.
+  useEffect(() => {
+    if (found) return
+    setClosedAt(null)
+    panel.leavePalette()
+  }, [found])
+  // And the caret after the `/`, with what was typed after it before selected, so typing starts over.
+  useEffect(() => {
+    if (!palette || !panel.inPalette()) return
+    const frame = requestAnimationFrame(() => {
+      const el = input.current
+      if (!el) return
+      el.focus()
+      const text = el.value
+      el.setSelectionRange(text.lastIndexOf('/') + 1, text.length)
+      setCaret(text.length)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [palette])
 
   const write = (text: string, at: number) => {
     panel.draft(text)
@@ -311,18 +363,27 @@ export function Composer({ placeholder, focus, busy, onSubmit, onCommand, childr
   }
   const pick = (option: ComposerOption) => {
     if (!trigger) return
-    const before = draft.slice(0, trigger.start)
     const after = draft.slice(trigger.start + 1 + trigger.query.length)
+    // A `/` on a line of its own after the message takes its line with it.
+    const before = after ? draft.slice(0, trigger.start) : draft.slice(0, trigger.start).replace(/\n$/, '')
+    // From ⌘K: what is picked is the palette's answer. Done elsewhere (a place, the theme), a dock that came out only for it goes again.
+    if (panel.inPalette() && (option.perform || option.command || option.skill)) {
+      panel.draft(before + after)
+      setCaret(before.length)
+      panel.pickedFromPalette(!!option.perform && !answersHere.has(option))
+      if (option.perform) option.perform()
+      else if (option.skill) panel.set({ skills: { ...panel.get().skills, [key]: option } })
+      else runCommand(option)
+      if (!option.perform || panel.get().mode !== 'closed') requestAnimationFrame(() => input.current?.focus())
+      return
+    }
     if (option.insert !== undefined) {
       write(before + option.insert + after, before.length + option.insert.length)
       return
     }
     if (option.command) {
       write(before + after, before.length)
-      const chosen = option.command.input ?? {}
-      // Nothing it requires is missing and it takes nothing back: it runs at once. Anything else asks here first.
-      if (!option.command.load && !option.command.scope && ready(option.command.schema, chosen) && !option.command.destructive) void onCommand(option, chosen, false)
-      else panel.command({ option, values: {} })
+      runCommand(option)
       return
     }
     if (option.perform || option.skill) {
@@ -335,6 +396,12 @@ export function Composer({ placeholder, focus, busy, onSubmit, onCommand, childr
     const mention = `@${option.label} `
     write(before + mention + after, before.length + mention.length)
     panel.set({ attached: { ...panel.get().attached, [key]: [...(panel.get().attached[key] ?? []).filter((item) => item.id !== option.id), option] } })
+  }
+  const runCommand = (option: ComposerOption) => {
+    const chosen = option.command!.input ?? {}
+    // Nothing it requires is missing and it takes nothing back: it runs at once. Anything else asks here first.
+    if (!option.command!.load && !option.command!.scope && ready(option.command!.schema, chosen) && !option.command!.destructive) void onCommand(option, chosen, false)
+    else panel.command({ option, values: {} })
   }
   const addContext = () => {
     const at = input.current?.selectionStart ?? draft.length
@@ -349,15 +416,31 @@ export function Composer({ placeholder, focus, busy, onSubmit, onCommand, childr
         choose((active + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
         return
       }
-      if (e.key === 'Enter' || e.key === 'Tab') {
+      if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
         e.preventDefault()
-        pick(options[Math.min(active, options.length - 1)])
+        // Typed faster than the lines come: the first line for what is typed, once it is in, never an earlier query's.
+        if (settled) pick(options[Math.min(active, options.length - 1)])
+        else enter.current = true
         return
       }
     }
     if (open && e.key === 'Escape') {
       e.preventDefault()
-      setClosedAt(trigger.start)
+      // The menu ⌘K opened goes with its `/`, as a palette does; one typed only closes, the words kept.
+      if (!panel.inPalette()) setClosedAt(trigger.start)
+      else {
+        panel.dismissPalette()
+        const rest = panel.get().drafts[key] ?? ''
+        setCaret(rest.length)
+        requestAnimationFrame(() => input.current?.setSelectionRange(rest.length, rest.length))
+      }
+      return
+    }
+    // Likewise with no lines yet; with none at all, a `/` someone typed is their words, and the menu ⌘K opened sends nothing.
+    if (open && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (!settled) enter.current = true
+      else if (!panel.inPalette()) onSubmit()
       return
     }
     if (e.key === 'Enter' && !e.shiftKey) {

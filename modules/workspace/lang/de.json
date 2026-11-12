@@ -12,6 +12,8 @@
   "Allow All": "Alle erlauben",
   "Allow these {count} actions?": "Diese {count} Aktionen erlauben?",
   "Allow this action?": "Diese Aktion erlauben?",
+  "Ask": "Fragen",
+  "Ask {name}": "{name} fragen",
   "Ask anything, or / for a command": "Frage alles, oder / für einen Befehl",
   "Authentication required.": "Anmeldung erforderlich.",
   "Back to Chat": "Zurück zum Chat",

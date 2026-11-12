@@ -81,7 +81,7 @@ final class AdminTest extends TestCase
         $this->assertSame(['globals', 'collection.pages', 'collection.notes', 'collection.posts', 'collection.products', 'media', 'navigation'], $result['sidebar']['sections'][1]['items']);
         $this->assertSame(['collection.pages'], $result['sidebar']['hidden']);
         $this->assertTrue($result['sidebar']['personal']);
-        // Under More, still in the list the command palette offers.
+        // Under More, still among the places / in a thread offers.
         $this->assertContains('collection.pages', array_column($result['nav'], 'id'));
 
         // Someone else still sees the site's sidebar.
@@ -219,7 +219,7 @@ final class AdminTest extends TestCase
         // The default sidebar and home screen are saved where they are arranged: no page of their own.
         $this->assertNotContains('settings.admin', array_column($result['nav'], 'id'));
         $this->assertNotContains('admin', array_column($this->app->make(Manifest::class)->build($this->admin())['settings'], 'namespace'));
-        // Settings pages are not something to pin, but the command palette finds them.
+        // Settings pages are not something to pin, but / in a thread finds them.
         $this->assertNotContains('users', array_merge(...array_column($result['sidebar']['sections'], 'items')));
         $this->assertContains('settings.site', array_column($result['nav'], 'id'));
     }

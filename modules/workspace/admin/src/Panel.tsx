@@ -80,7 +80,7 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
 
-  // Words handed over from the command palette or the Dashboard.
+  // Words handed over from / (Ask) or the Dashboard.
   useEffect(() => {
     if (!open || !prompt || thread.busy || thread.loading || remove.isPending || editing !== null) return
     panel.set({ prompt: null, searching: false })

@@ -18,7 +18,7 @@ const structures = (): Record<Structure, string> => ({
 
 /**
  * The new-collection dialog: from the New Collection button (it closes itself), or at
- * /collections/new from the command palette, where closing it leaves the list.
+ * /collections/new from / in a thread, where closing it leaves the list.
  */
 export default function NewCollection({ close }: SurfaceComponentProps) {
   const list = useAbility<CollectionRow[]>('collections/list')

@@ -1,4 +1,4 @@
-import { getManifest, navigate, onManifest, registry, run, t, type ComposerOption, type FieldDef } from '@letterncms/sdk'
+import { boot, getManifest, navigate, onManifest, registry, run, t, type ComposerOption, type FieldDef } from '@letterncms/sdk'
 import { askable } from './schema'
 import { agent, panel } from './store'
 
@@ -24,10 +24,22 @@ const matches = (query: string, ...words: (string | undefined)[]) => {
   return query.trim().toLowerCase().split(/\s+/).filter(Boolean).every((term) => said.includes(term))
 }
 
-// With an agent, Enter asks it; `/` and words search the admin instead, without it. (Without one, Enter searches.)
+/** Lines whose `perform` answers in the thread: picked from ⌘K, they keep the dock out. */
+export const answersHere = new WeakSet<ComposerOption>()
+const here = (option: ComposerOption) => { answersHere.add(option); return option }
+
+// Last, for whatever was typed: ask the agent, or search everything. When nothing else matches, Enter does the first.
 registry.composer.set('workspace-search', {
   trigger: '/', label: t('Search'), order: 90,
-  search: (query) => agent() && query.trim().length > 1 ? [{ id: 'search', label: t('Search for “{query}”', { query: query.trim() }), icon: 'search', perform: () => panel.search(query) }] : [],
+  search: (query) => {
+    const words = query.trim()
+    if (words.length < 2) return []
+    const ask = agent()
+    return [
+      ...(ask ? [here({ id: 'ask', label: t('Ask {name}', { name: ask.label }), detail: `“${words}”`, icon: 'comment', group: t('Ask'), perform: () => panel.send(words) })] : []),
+      here({ id: 'search', label: t('Search for “{query}”', { query: words }), icon: 'search', perform: () => panel.search(words) }),
+    ]
+  },
 })
 
 // `/` in a thread: making things first, then the places to go, what the admin's screens offer, and every ability the person may run.
@@ -43,11 +55,21 @@ registry.composer.set('workspace-create', {
   },
 })
 
+// Every screen and global set, but the one on view.
 registry.composer.set('workspace-places', {
   trigger: '/', label: t('Go To'), order: 30,
   search: (query) => {
-    const nav = getManifest().nav.filter((n) => !n.home && matches(query, n.label))
-    return nav.slice(0, query ? 8 : 6).map((n) => ({ id: `go:${n.id}`, label: n.label, icon: n.icon, perform: () => navigate(n.path) }))
+    const manifest = getManifest()
+    const on = window.location.pathname.slice(boot.base.length) || '/'
+    const places = [
+      // A screen's Settings tab is in no sidebar (settings have one home): it is found by the screen's name, "Media Settings".
+      ...manifest.nav.filter((n) => !n.home || n.id.startsWith('settings.')).map((n) => ({
+        id: `go:${n.id}`, icon: n.icon, path: n.path,
+        label: n.home && n.id.startsWith('settings.') ? t('{name} Settings', { name: manifest.nav.find((h) => h.id === n.home)?.label ?? n.label }) : n.label,
+      })),
+      ...manifest.globals.map((g) => ({ id: `go:global:${g.handle}`, label: g.title, icon: g.icon, path: `/globals/${g.handle}` })),
+    ].filter((place) => place.path !== on && matches(query, place.label))
+    return places.slice(0, query ? 8 : 6).map(({ path, ...place }) => ({ ...place, to: path, perform: () => navigate(path) }))
   },
 })
 
@@ -56,10 +78,10 @@ registry.composer.set('workspace-commands', {
   search: async (query) => {
     const abilities = await runnable()
     return [
-      ...registry.commands.all().filter((c) => c.id !== 'workspace' && !c.acceptsQuery && matches(query, c.label, ...(c.keywords ?? []))).map((c): ComposerOption => ({
-        id: `command:${c.id}`, label: c.label, icon: c.icon ?? 'command', perform: () => void c.perform(),
+      ...registry.commands.all().filter((c) => c.id !== 'workspace' && !c.acceptsQuery && c.when?.() !== false && matches(query, c.label, ...(c.keywords ?? []))).map((c): ComposerOption => ({
+        id: `command:${c.id}`, label: c.label, icon: c.icon ?? 'command', shortcut: c.shortcut, perform: () => void c.perform(),
       })),
-      // One with an ability runs in the thread, asking for what it needs (Invite User), even when ⌘K opens a screen for it.
+      // One with an ability runs in the thread, asking for what it needs (Invite User), even when it has a screen of its own too.
       ...getManifest().commands.filter((c) => matches(query, c.label, ...(c.keywords ?? []))).map((c): ComposerOption => {
         const ability = c.ability ? abilities.find((a) => a.name === c.ability) : undefined
         return c.ability && (ability || !c.path)

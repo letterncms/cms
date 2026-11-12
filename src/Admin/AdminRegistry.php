@@ -18,7 +18,7 @@ use Cms\Users\User;
  * - nav:      sidebar items, each in a section; pinned ones show in the sidebar, the rest under More (people pin their own, see Navigation)
  * - modules:  ES modules executed by the admin (register routes, field components, panels…)
  * - widgets:  home-screen widgets with a default column, on or off by default (people arrange their own, see letterncms/dashboard)
- * - commands: command-palette entries that run an ability or navigate
+ * - commands: what / in a thread (and ⌘K) offers to run an ability or navigate
  * - arranged: parts of the admin that admins arrange (the sidebar; the home screen when its module is on)
  */
 final class AdminRegistry
