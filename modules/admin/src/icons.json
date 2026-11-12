@@ -222,5 +222,7 @@
  "perspective": "ph:perspective",
  "arrows-out-simple": "ph:arrows-out-simple",
  "scissors": "ph:scissors",
- "faders": "ph:faders"
+ "faders": "ph:faders",
+ "animated": "ph:play-circle",
+ "interactive": "ph:cursor-click"
 }

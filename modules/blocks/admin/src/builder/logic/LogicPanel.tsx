@@ -357,7 +357,7 @@ function Handler({ title, mods, onMods, actions, onActions, onRemove, variables,
   return (
     <div className="space-y-1.5 rounded-sm border border-border p-1.5">
       <div className="flex items-center gap-1">
-        <Icon name="zap" size={14} className="shrink-0 text-muted" />
+        <Icon name="interactive" size={14} className="shrink-0 text-muted" />
         {typeof title === 'string' ? <span className="min-w-0 flex-1 text-xs font-medium [overflow-wrap:anywhere]">{title}</span> : title}
         {onMods && (
           <Menu

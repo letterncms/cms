@@ -140,8 +140,8 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
   const [renaming, setRenaming] = useState(false)
   const component = node.type === 'component'
   const badges = [
-    node.motion?.length && { icon: 'wand', title: t('Animated') },
-    node.logic && { icon: 'zap', title: t('Interactive') },
+    node.motion?.length && { icon: 'animated', title: t('Animated') },
+    node.logic && { icon: 'interactive', title: t('Interactive') },
     node.bind && Object.keys(node.bind).some((k) => k !== 'visible' && k !== 'hidden') && { icon: 'database', title: t('Connected to Data') },
     (node.logic?.show || node.bind?.visible || node.bind?.hidden) && { icon: 'eye-off', title: node.logic?.show ? t('Shown when {condition}', { condition: node.logic.show }) : t('Shown conditionally') },
   ].filter(Boolean) as { icon: string; title: string }[]
@@ -212,11 +212,13 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
       )}
       {!renaming && badges.map((b) => (
         <Tooltip key={b.icon} content={b.title}>
-          <span className="grid size-5 shrink-0 place-items-center text-faint group-hover:hidden">
+          <span className="grid size-5 shrink-0 place-items-center text-faint">
             <Icon name={b.icon} size={12} />
           </span>
         </Tooltip>
       ))}
+      {/* Shown on hover; a plain class, since an important one in the utilities layer beats every important variant. */}
+      <span className={node.hidden ? 'contents' : 'hidden group-hover:contents group-focus-visible:contents [@media(hover:none)]:contents'}>
       <Tooltip content={node.hidden ? t('Show') : t('Hide')}>
         <IconButton
           icon={node.hidden ? 'eye-off' : 'eye'}
@@ -229,9 +231,10 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
             store.updateNode(node.id, { hidden: !node.hidden || undefined })
           }}
           onPointerDown={(e) => e.stopPropagation()}
-          className={cn('!text-faint hover:!text-ink', !node.hidden && '!hidden group-hover:!inline-flex group-focus-visible:!inline-flex [@media(hover:none)]:!inline-flex')}
+          className="!text-faint hover:!text-ink"
         />
       </Tooltip>
+      </span>
     </div>
   )
 }
