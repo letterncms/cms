@@ -2,7 +2,7 @@ import { fieldControlId } from '../ui/fieldIdentity'
 import { Pressable } from '../ui/Pressable'
 import { getManifest, t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { AccentPicker, Checkbox, accentOf, applyAccent, ColorInput, DateInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, TimeInput, Tooltip, cn, writeTime } from '../ui'
+import { AccentPicker, Checkbox, CodeEditor, accentOf, applyAccent, ColorInput, DateInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, TimeInput, Tooltip, cn, writeTime } from '../ui'
 import type { SelectAction } from '../ui/Select'
 import { slugify } from '../ui/slugify'
 import { formatDateTimeInZone, parseDateTimeInZone } from '../ui/dateTime'
@@ -66,7 +66,7 @@ export function TextareaField({ field, value, onChange, error, disabled }: Field
 }
 
 export function CodeField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {
-  return <Textarea id={fieldControlId(field)} value={value ?? ''} onChange={(e) => onChange(e.target.value)} rows={(field.rows as number) ?? 8} placeholder={(field.placeholder as string) ?? ''} spellCheck={false} invalid={!!error} disabled={disabled} className="font-mono text-xs leading-5" />
+  return <CodeEditor id={fieldControlId(field)} value={value ?? ''} onChange={onChange} language={field.language as string | undefined} rows={(field.rows as number) ?? 8} placeholder={(field.placeholder as string) ?? ''} label={field.label || undefined} describedBy={field.describedBy as string | undefined} invalid={!!error} disabled={disabled} />
 }
 
 export function MarkdownField({ field, value, onChange, error, disabled }: FieldProps<string | null>) {

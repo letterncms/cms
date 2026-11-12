@@ -200,7 +200,7 @@ export function CodeBlock({ node }: { node: BlockNode }) {
   const { settings, readOnly } = useWrite()
   return (
     <div className="group/code relative py-1" onFocus={() => store.select(node.id)}>
-      <Fields bare disabled={readOnly} fields={[{ handle: 'code', type: 'code', label: t('Code'), placeholder: t('Code'), rows: 3 }]} values={{ code: node.props.code ?? '' }} onChange={(_, code) => store.updateProps(node.id, { code: code ?? '' }, `code:${node.id}`)} />
+      <Fields bare disabled={readOnly} fields={[{ handle: 'code', type: 'code', label: t('Code'), placeholder: t('Code'), rows: 3, language: node.props.language }]} values={{ code: node.props.code ?? '' }} onChange={(_, code) => store.updateProps(node.id, { code: code ?? '' }, `code:${node.id}`)} />
       <Pressable onClick={() => settings(node.id)} className="absolute right-2 top-2.5 rounded-xs px-1.5 font-mono text-2xs text-faint hover:bg-hover hover:text-text">
         {node.props.language && node.props.language !== 'plain' ? node.props.language : t('Plain Text')}
       </Pressable>

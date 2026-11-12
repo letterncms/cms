@@ -33,7 +33,7 @@ function File({ path, name, open, onToggle, edited, onEdit, allowed, onDelete }:
     <Disclosure open={open} onToggle={onToggle} label={<span className="font-mono">{name}</span>} menu={menu(t('File Actions'), allowed ? [{ label: t('Delete'), icon: 'trash', danger: true, onSelect: onDelete }] : [])}>
       {loaded.isError ? <QueryError compact onRetry={() => void loaded.refetch()} retrying={loaded.isRefetching} />
         : edited === undefined && !loaded.data ? <Loading />
-        : <Fields bare fields={[{ handle: 'contents', type: 'code', label: name, rows: 14 }]} values={{ contents: edited ?? loaded.data?.contents ?? '' }} onChange={(_, v) => onEdit(v ?? '')} disabled={!allowed} />}
+        : <Fields bare fields={[{ handle: 'contents', type: 'code', label: name, rows: 14, language: path.endsWith('.css') ? 'css' : 'javascript' }]} values={{ contents: edited ?? loaded.data?.contents ?? '' }} onChange={(_, v) => onEdit(v ?? '')} disabled={!allowed} />}
     </Disclosure>
   )
 }
@@ -105,7 +105,7 @@ export function CodeFiles({ css, js, onCustom, edits, onEdit }: { css: string; j
     <Group title={title} onAdd={allowed ? () => void addFile(kind) : undefined} addLabel={add}>
       {/* The site's own file first: the same kind of thing as the files under it, on every page. */}
       <Disclosure open={open === site.handle} onToggle={() => setOpen(open === site.handle ? null : site.handle)} label={site.label} menu={<span className="size-6 shrink-0" />}>
-        <Fields bare fields={[{ handle: site.handle, type: 'code', label: site.label, rows: 14, placeholder: site.placeholder }]} values={{ [site.handle]: site.value }} onChange={(_, v) => onCustom({ [site.handle]: v ?? '' })} disabled={!allowed} />
+        <Fields bare fields={[{ handle: site.handle, type: 'code', label: site.label, rows: 14, placeholder: site.placeholder, language: site.handle === 'css' ? 'css' : 'javascript' }]} values={{ [site.handle]: site.value }} onChange={(_, v) => onCustom({ [site.handle]: v ?? '' })} disabled={!allowed} />
       </Disclosure>
       {files.isError ? <QueryError compact onRetry={() => void files.refetch()} retrying={files.isRefetching} />
         : !files.data ? <Loading />

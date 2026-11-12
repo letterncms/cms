@@ -128,6 +128,15 @@
   --cms-shadow-edge: inset 0 1px 0 rgb(255 255 255 / 0.1);
   --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-signal) 22%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
+
+  /* Code, as the code editor colours it. */
+  --cms-code-keyword: #8a3fbf;
+  --cms-code-string: #1d7a47;
+  --cms-code-number: #a85a0c;
+  --cms-code-property: #2f5fc4;
+  --cms-code-tag: #b8305f;
+  --cms-code-function: #6b4fd6;
+  --cms-code-comment: var(--cms-faint);
   /* rule: a hairline along the bottom of a row of tabs, drawn inside it so nothing overflows. underline: the tab on view, over that hairline. */
   --cms-shadow-rule: inset 0 -1px 0 var(--cms-border);
   --cms-shadow-underline: inset 0 -2px 0 var(--cms-ink);
@@ -198,6 +207,14 @@
   --cms-shadow-edge: 0 0 #0000;
   --cms-shadow-focus: 0 0 0 1px var(--cms-focus), 0 0 0 4px color-mix(in srgb, var(--cms-signal) 24%, transparent);
   --cms-shadow-cursor: inset 2px 0 0 var(--cms-focus);
+
+  --cms-code-keyword: #c99bf0;
+  --cms-code-string: #80cfa0;
+  --cms-code-number: #eeb36e;
+  --cms-code-property: #8fb3ff;
+  --cms-code-tag: #f08db0;
+  --cms-code-function: #b3a4ff;
+  --cms-code-comment: var(--cms-faint);
   --cms-shadow-rule: inset 0 -1px 0 var(--cms-border);
   --cms-shadow-underline: inset 0 -2px 0 var(--cms-ink);
   color-scheme: dark;
