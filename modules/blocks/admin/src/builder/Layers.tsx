@@ -146,6 +146,37 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
     (node.logic?.show || node.bind?.visible || node.bind?.hidden) && { icon: 'eye-off', title: node.logic?.show ? t('Shown when {condition}', { condition: node.logic.show }) : t('Shown conditionally') },
   ].filter(Boolean) as { icon: string; title: string }[]
 
+  const name = (
+    <span
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        if (!readOnly) setRenaming(true)
+      }}
+      title={readOnly || badges.length ? undefined : t('Double-Click to Rename')}
+      className={cn('min-w-0 flex-1 truncate', node.hidden ? 'text-faint line-through decoration-faint/60' : plain && 'text-muted')}
+    >
+      {label}
+      {hint && <span className={cn('ml-1.5', selected ? 'text-muted' : 'text-faint')}>{hint}</span>}
+    </span>
+  )
+  // The badges give way to the hide toggle on hover, so the name's tooltip says what they mean.
+  const named = badges.length ? (
+    <Tooltip
+      content={
+        <span className="grid gap-1">
+          {badges.map((b) => (
+            <span key={b.icon} className="flex items-center gap-1.5">
+              <Icon name={b.icon} size={12} />
+              {b.title}
+            </span>
+          ))}
+        </span>
+      }
+    >
+      {name}
+    </Tooltip>
+  ) : name
+
   return (
     <div
       ref={setNodeRef}
@@ -198,24 +229,12 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
           />
         </div>
       ) : (
-        <span
-          onDoubleClick={(e) => {
-            e.stopPropagation()
-            if (!readOnly) setRenaming(true)
-          }}
-          title={readOnly ? undefined : t('Double-Click to Rename')}
-          className={cn('min-w-0 flex-1 truncate', node.hidden ? 'text-faint line-through decoration-faint/60' : plain && 'text-muted')}
-        >
-          {label}
-          {hint && <span className={cn('ml-1.5', selected ? 'text-muted' : 'text-faint')}>{hint}</span>}
-        </span>
+        named
       )}
       {!renaming && badges.map((b) => (
-        <Tooltip key={b.icon} content={b.title}>
-          <span className="grid size-5 shrink-0 place-items-center text-faint group-hover:hidden group-focus-visible:hidden">
-            <Icon name={b.icon} size={12} />
-          </span>
-        </Tooltip>
+        <span key={b.icon} role="img" aria-label={b.title} className="grid size-5 shrink-0 place-items-center text-faint group-hover:hidden group-focus-visible:hidden">
+          <Icon name={b.icon} size={12} />
+        </span>
       ))}
       {/* Shown on hover; a plain class, since an important one in the utilities layer beats every important variant. */}
       <span className={node.hidden ? 'contents' : 'hidden group-hover:contents group-focus-visible:contents [@media(hover:none)]:contents'}>
