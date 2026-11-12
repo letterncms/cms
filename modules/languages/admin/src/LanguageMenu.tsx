@@ -1,5 +1,5 @@
 import { invalidate, navigate, run, t, useAbility, useManifest, type Entry } from '@letterncms/sdk'
-import { Button, Menu, toast } from '@letterncms/ui'
+import { LanguagePicker, toast } from '@letterncms/ui'
 import { useState } from 'react'
 import { nativeName } from './names'
 
@@ -38,22 +38,19 @@ export function LanguageMenu({ entry, collection, save }: { entry: Entry | null;
   const missing = versions.data?.missing ?? []
   const canTranslate = languages.data?.canTranslate ?? false
 
+  const versions_ = versions.data?.versions ?? [{ id: entry.id, locale: entry.locale, status: entry.status }]
+  const drafts = new Set(versions_.filter((v) => v.status !== 'published' && v.status !== 'changed').map((v) => v.locale))
+
   return (
-    <Menu
-      trigger={<Button variant="ghost" size="sm" icon="translate" loading={busy} title={t('Languages')}>{entry.locale.toUpperCase()}</Button>}
-      items={[
-        { label: t('Languages'), heading: true },
-        ...(versions.data?.versions ?? []).map((v) => ({
-          label: v.status === 'published' || v.status === 'changed' ? nativeName(v.locale) : t('{language} · draft', { language: nativeName(v.locale) }),
-          checked: v.id === entry.id,
-          onSelect: () => v.id !== entry.id && navigate(`/content/${collection.handle}/${v.id}`),
-        })),
-        missing.length > 0 && { separator: true, label: '' },
-        ...missing.flatMap((m) => [
-          canTranslate && { label: t('Translate into {language}', { language: nativeName(m.locale) }), icon: 'sparkle', onSelect: () => start(m.locale, true) },
-          { label: canTranslate ? t('Copy for Manual Translation ({code})', { code: m.locale.toUpperCase() }) : t('Add {language} Version', { language: nativeName(m.locale) }), icon: 'copy', onSelect: () => start(m.locale, false) },
-        ]),
-      ]}
+    <LanguagePicker
+      value={entry.locale}
+      loading={busy}
+      languages={versions_.map((v) => ({ code: v.locale, note: drafts.has(v.locale) ? t('Draft') : undefined }))}
+      onChange={(code) => { const v = versions_.find((x) => x.locale === code); if (v) navigate(`/content/${collection.handle}/${v.id}`) }}
+      more={missing.flatMap((m) => [
+        canTranslate && { label: t('Translate into {language}', { language: nativeName(m.locale) }), icon: 'sparkle', onSelect: () => start(m.locale, true) },
+        { label: canTranslate ? t('Copy for Manual Translation ({code})', { code: m.locale.toUpperCase() }) : t('Add {language} Version', { language: nativeName(m.locale) }), icon: 'copy', onSelect: () => start(m.locale, false) },
+      ])}
     />
   )
 }

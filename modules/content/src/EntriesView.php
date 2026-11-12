@@ -54,7 +54,7 @@ final class EntriesView
             'search' => ['param' => 'search', 'placeholder' => __('Search :items', ['items' => __($collection->title)])],
             'filters' => [
                 ['param' => 'status', 'label' => __('Status'), 'display' => 'segmented', 'default' => 'any', 'options' => array_map(static fn ($value, $label) => ['value' => $value, 'label' => $label], ['any', 'active', 'draft', 'expired'], [__('All'), __('Published'), __('Drafts'), __('Expired')])],
-                ...(count($locales) > 1 ? [['param' => 'locale', 'label' => __('Language'), 'display' => 'segmented', 'default' => $this->cms->defaultLocale(), 'options' => array_map(fn (string $code) => ['value' => $code, 'label' => strtoupper($code), 'title' => self::languageName($code)], $locales)]] : []),
+                ...(count($locales) > 1 ? [['param' => 'locale', 'label' => __('Language'), 'display' => 'language', 'default' => $this->cms->defaultLocale(), 'options' => array_map(fn (string $code) => ['value' => $code, 'label' => strtoupper($code), 'title' => self::languageName($code)], $locales)]] : []),
             ],
             'paged' => ['perPage' => $this->perPage],
             // The collection's own order while nobody picked one: the tree, for pages.
@@ -85,7 +85,7 @@ final class EntriesView
             'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => __($collection->title)])],
             'defaultView' => $defaultView = in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
             // The person's saved views of this list, beside Display: what narrows the list is what a view can keep.
-            'controls' => ['component' => 'content/views', 'props' => ['list' => "entries.{$handle}", 'defaultView' => $defaultView, 'params' => ['search', 'status', ...(count($locales) > 1 ? ['locale'] : [])]]],
+            'controls' => ['component' => 'content/views', 'props' => ['list' => "entries.{$handle}", 'defaultView' => $defaultView, 'params' => ['search', 'status']]],
             ...($dated ? ['calendar' => [
                 'dated' => ['sort' => '{field}', 'filters' => [['field' => '{field}', 'operator' => '>=', 'value' => '{start}'], ['field' => '{field}', 'operator' => '<', 'value' => '{end}']]],
                 'undated' => ['sort' => '-updated_at', 'filters' => [['field' => '{field}', 'operator' => 'null']]],

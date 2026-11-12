@@ -13,6 +13,7 @@
 
 ### Changed
 
+- **One language menu, always in the top bar.** A list of entries, a global and an entry editor each show the language on view by name, beside the screen's actions, with every language in its menu: no more row of codes above a list or tabs above a global's fields. A list's language is no longer part of a saved view. For view schemas, `ui/tabs` and a `Records` filter take `display: language` (the tabs' `segmented` is gone), and `InTopbar` puts something of a page's content in its bar.
 - **Delete a site kit** from its menu on Site Kits, after a confirmation: the kit's folder goes, and the copy kept of it with what you changed. The kit the site is now, and the kits that come with Lettern, can't be deleted. `kits/delete` does the same for agents, with a dry run.
 - **Edit a kit's name, description and thumbnail** from its menu on Site Kits: **Edit Details** opens the form **Export Site** uses, filled in. A kit that comes with Lettern can't be changed; the copy kept when you leave a kit keeps what you edited. `kits/update` does the same for agents.
 - **Export Site** asks for a description and a thumbnail, both optional: a kit without a description says what the site says of itself (the text shown as the field's placeholder), and the thumbnail is the picture its card shows. The current kit on Site Kits has the outline a focused field has. `kits/export` takes `preview` and `previewType`.

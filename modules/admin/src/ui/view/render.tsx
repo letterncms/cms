@@ -7,9 +7,9 @@ import { ComponentBoundary } from '../ComponentBoundary'
 import { DataTable } from '../DataTable'
 import { EmptyState } from '../EmptyState'
 import { Icon } from '../Icon'
+import { LanguagePicker } from '../LanguagePicker'
 import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
-import { Segmented } from '../Segmented'
 import { useShortcut } from '../shortcuts'
 import { Spinner } from '../Spinner'
 import { Stat } from '../Widget'
@@ -128,15 +128,12 @@ function TabbedPage({ node, tabs, path }: { node: ViewNode; tabs: ViewNode; path
       <TabProvider id={String(c.props.id)} mark={mark}>{stacked(c.children, `${path}.t${i}`)}</TabProvider>
     </div>
   ))
+  // The same thing in another language: the language on view by name in the bar, every other one in its menu.
+  const language = tabs.props?.display === 'language' && list.length > 1
+  const bar = <DirtyScope dirty={!!dirty[tab]}><Buttons actions={current?.props.actions} alongside={actions} bar /><Buttons actions={actions} alongside={current?.props.actions} bar /></DirtyScope>
   return (
-    <Page width={width} crumbs={crumbs(node)} actions={<DirtyScope dirty={!!dirty[tab]}><Buttons actions={current?.props.actions} alongside={actions} bar /><Buttons actions={actions} alongside={current?.props.actions} bar /></DirtyScope>}>
-      {tabs.props?.display === 'segmented' ? (
-        // The same thing in another language, as a list switches it: the codes, each named in full on hover.
-        <>
-          <Segmented aria-label={tabs.props.label} className="mb-6" value={tab} onChange={setTab} options={list.map((c) => ({ value: String(c.props.id), label: String(c.props.label), title: c.props.title ? String(c.props.title) : undefined }))} />
-          {panels}
-        </>
-      ) : (
+    <Page width={width} crumbs={crumbs(node)} actions={language ? <><LanguagePicker value={tab} languages={list.map((c) => String(c.props.id))} onChange={setTab} />{bar}</> : bar}>
+      {language ? panels : (
         <ScreenTabs value={tab} onChange={setTab} tabs={list.map((c) => ({ value: String(c.props.id), label: String(c.props.label), count: counts[String(c.props.id)], indicator: !!dirty[String(c.props.id)] }))}>
           {panels}
         </ScreenTabs>

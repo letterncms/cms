@@ -56,7 +56,7 @@ final class Catalog
                 // How many there are, beside the title: a number in an ability's answer (a list's `total`).
                 'count' => $this->object(['source' => $source, 'at' => $id], ['source']),
             ], ['title'])],
-            'ui/tabs' => ['label' => 'Tabs (each child a ui/tab); a plugin with settings kept here gets its Settings tab. display: segmented switches the same thing in another language (short labels, each tab\'s title on hover), named by label', 'children' => true, 'props' => $this->object(['display' => ['type' => 'string', 'enum' => ['tabs', 'segmented']], 'label' => $s])],
+            'ui/tabs' => ['label' => 'Tabs (each child a ui/tab); a plugin with settings kept here gets its Settings tab. display: language switches the same thing in another language (each tab\'s id a language code), from a menu in the page\'s bar, named by label', 'children' => true, 'props' => $this->object(['display' => ['type' => 'string', 'enum' => ['tabs', 'language']], 'label' => $s])],
             'ui/tab' => ['label' => 'One tab', 'children' => true, 'props' => $this->object(['id' => $id, 'label' => $s, 'title' => $s, 'actions' => ['type' => 'array', 'maxItems' => 6, 'items' => $action], 'count' => $this->object(['source' => $source, 'at' => $id], ['source'])], ['id', 'label'])],
             'ui/section' => ['label' => 'Titled group', 'children' => true, 'props' => $this->object(['title' => $s, 'actions' => ['type' => 'array', 'maxItems' => 4, 'items' => $action]])],
             'ui/stack' => ['label' => 'Stack', 'children' => true, 'surface' => true, 'props' => $this->object([])],
@@ -104,8 +104,8 @@ final class Catalog
                     'param' => $id, 'label' => $s, 'all' => $s,
                     'options' => ['type' => 'array', 'items' => $this->object(['value' => ['type' => ['string', 'number', 'boolean']], 'label' => $s, 'title' => $s], ['value', 'label'])],
                     'at' => $id, 'value' => $id, 'text' => $id,
-                    // Every choice in view, one always on; `default` stands for none.
-                    'display' => ['type' => 'string', 'enum' => ['segmented']], 'default' => $id,
+                    // segmented: every choice in view, one always on; `default` stands for none. language: the list's language (each value a code), from a menu in the page's bar.
+                    'display' => ['type' => 'string', 'enum' => ['segmented', 'language']], 'default' => $id,
                 ], ['param', 'label'])],
                 'paged' => $this->object(['perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100]]),
                 // Sorted by the ability: the input that takes a column's `sort` name (`-` first for descending), and its order while none is chosen.

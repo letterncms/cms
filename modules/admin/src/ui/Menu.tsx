@@ -11,6 +11,8 @@ export interface MenuItemDef {
   description?: string
   icon?: string
   shortcut?: string
+  /** Quiet words at the end of the row: a code, a state. */
+  hint?: string
   danger?: boolean
   disabled?: boolean
   onSelect?: () => void
@@ -73,6 +75,7 @@ function Items({ items, parts }: { items: (MenuItemDef | false | null | undefine
             <span className="block truncate text-xs text-faint">{it.description}</span>
           </span>
         ) : <span className="min-w-0 flex-1 truncate">{it.label}</span>}
+        {it.hint && <span className="shrink-0 text-xs text-faint">{it.hint}</span>}
         {it.checked && <Icon name="check" size={16} className="shrink-0 text-ink" />}
         {it.shortcut && <Kbd keys={it.shortcut} bare className="ml-2" />}
       </parts.Item>

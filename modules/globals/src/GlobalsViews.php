@@ -73,7 +73,7 @@ final class GlobalsViews
             ['label' => __('Edit Fields'), 'to' => "/globals/{$handle}/fields", 'can' => 'globals.manage'],
         ]], 'children' => count($locales) > 1
             // The language on view is switched as a list's is: its code, named in full on hover.
-            ? [['type' => 'ui/tabs', 'props' => ['display' => 'segmented', 'label' => __('Language')], 'children' => array_map(static fn (string $l) => ['type' => 'ui/tab', 'props' => ['id' => $l, 'label' => strtoupper($l), 'title' => self::languageName($l)], 'children' => [$form($l)]], $locales)]]
+            ? [['type' => 'ui/tabs', 'props' => ['display' => 'language', 'label' => __('Language')], 'children' => array_map(static fn (string $l) => ['type' => 'ui/tab', 'props' => ['id' => $l, 'label' => strtoupper($l), 'title' => self::languageName($l)], 'children' => [$form($l)]], $locales)]]
             : [$form(null)]];
     }
 

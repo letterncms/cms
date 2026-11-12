@@ -1,5 +1,6 @@
 import { Link, panelsFor, registry, t, useLocation, useManifestIfLoaded, useScreenContext, useTab } from '@letterncms/sdk'
-import { Fragment, Suspense, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Fragment, Suspense, createContext, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from './cn'
 import { Icon } from './Icon'
 import { homedSettings, inSettings, noteParent, placeAt, wayBack } from './place'
@@ -23,7 +24,7 @@ export interface Crumb {
  * (and on a phone that one leads to the crumb before the screen).
  * `title` stands in the middle of the window (an editor's document).
  */
-export function Topbar({ crumbs: own = [], back, title, actions, children, className }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string }) {
+export function Topbar({ crumbs: own = [], back, title, actions, children, className, slot }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void }) {
   const manifest = useManifestIfLoaded()
   const { path } = useLocation()
   // A place of the settings sidebar says so first, on every one of its screens.
@@ -94,8 +95,9 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
       </div>
       {/* In the middle of the window, whatever is beside it: the bar itself starts after the sidebar. */}
       {title && <div className="cms-topbar-title absolute max-w-[28%] -translate-x-1/2 truncate text-sm font-medium text-ink max-lg:hidden">{title}</div>}
-      {(actions || ends.length > 0) && (
+      {(actions || ends.length > 0 || slot) && (
         <div className="ml-auto flex shrink-0 items-center justify-end gap-1">
+          {slot && <span ref={slot} className="contents" />}
           {actions}
           {ends.map(({ id, component: End }) => <End key={id} />)}
         </div>
@@ -127,14 +129,23 @@ function firstText(node: ReactNode): string | undefined {
 export function Page({ crumbs = [], actions, title, children, width = 'default', className }: { crumbs?: Crumb[]; actions?: ReactNode; title?: ReactNode; children: ReactNode; width?: 'narrow' | 'default' | 'wide' | 'full'; className?: string }) {
   const max = { narrow: 'max-w-[688px]', default: 'max-w-[1080px]', wide: 'max-w-[1400px]', full: 'max-w-none' }[width]
   const trail = crumbs.length > 0 ? crumbs : title ? [{ label: title }] : []
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
   return (
     <div className="flex min-h-full flex-col">
-      <Topbar crumbs={trail} actions={actions} />
+      <Topbar crumbs={trail} actions={actions} slot={setSlot} />
       <main className={cn('mx-auto w-full flex-1 px-4 pb-24 pt-3 md:px-6 md:pt-4', max, className)}>
-        {children}
+        <TopbarSlot.Provider value={slot}>{children}</TopbarSlot.Provider>
       </main>
     </div>
   )
+}
+
+const TopbarSlot = createContext<HTMLElement | null>(null)
+
+/** Something of what a page shows that belongs in its bar, before the page's actions: the language a list or a global is in. Outside a page it stays where it is. */
+export function InTopbar({ children }: { children: ReactNode }) {
+  const slot = useContext(TopbarSlot)
+  return slot ? createPortal(children, slot) : <>{children}</>
 }
 
 /** The settings namespace the screen on view keeps as its Settings tab (see `ScreenTabs`): on the screen itself, not on a page under it (a form of Forms). */

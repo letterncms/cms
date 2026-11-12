@@ -11,6 +11,8 @@ import { DataView, FEW } from '../DataView'
 import { confirm } from '../Dialog'
 import { EmptyState, NoMatches } from '../EmptyState'
 import { Fields } from '../Fields'
+import { LanguagePicker } from '../LanguagePicker'
+import { InTopbar } from '../Page'
 import { Menu } from '../Menu'
 import { Notice } from '../Notice'
 import { Select } from '../Select'
@@ -85,8 +87,8 @@ interface Filter {
   at?: string
   value?: string
   text?: string
-  /** `segmented`: every choice in view, one of them always on (`default` stands for none). */
-  display?: 'segmented'
+  /** `segmented`: every choice in view, one of them always on (`default` stands for none). `language`: the language the list is in, picked in the page's bar (each option's `value` a language code). */
+  display?: 'segmented' | 'language'
   default?: string
 }
 
@@ -257,7 +259,8 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   const narrow = searching.id === id && searching.on
   const offered = segmented.filter((f) => narrow || !narrows(f))
   // Nothing to search or narrow by: no toolbar, and no empty band where it would be.
-  const toolbar = ((narrow && server) || offered.length > 0 || filters.some((f) => f.display !== 'segmented')) && (
+  const selects = filters.filter((f) => !f.display)
+  const toolbar = ((narrow && server) || offered.length > 0 || selects.length > 0) && (
     <span className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents">
       {((narrow && server) || offered.length > 0) && <Fields bare layout="inline" className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents" fields={[
         ...(narrow && server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search'), className: 'w-full sm:w-60' }] : []),
@@ -268,7 +271,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
         setChosen({ ...chosen, [h]: v === f?.default ? '' : String(v ?? '') })
         if (!address) setPage(1)
       }} />}
-      {filters.filter((f) => f.display !== 'segmented').map((f) => {
+      {selects.map((f) => {
         const options = f.options ?? (Array.isArray(at(response, f.at)) ? (at(response, f.at) as Row[]).map((o) => ({ value: String(at(o, f.value ?? 'value')), label: String(at(o, f.text ?? 'label')) })) : [])
         return (
           // On a phone the select filters share a row, half each, instead of stacking at half width beside nothing.
@@ -383,8 +386,17 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     }
   } : undefined
 
+  // The language a list is in, beside the page's actions as on every screen in more than one language.
+  const languages = filters.filter((f) => f.display === 'language' && (f.options?.length ?? 0) > 1).map((f) => (
+    <InTopbar key={f.param}>
+      <LanguagePicker value={chosen[f.param] || f.default || String(f.options![0].value)} languages={f.options!.map((o) => String(o.value))}
+        onChange={(code) => { setChosen({ ...chosen, [f.param]: code === f.default ? '' : code }); if (!address) setPage(1) }} />
+    </InTopbar>
+  ))
+
   return (
     <>
+    {languages}
     {failures.length > 0 && (
       <Notice tone="warning" className="mb-3" title={t('Failed items remain selected. Retry the action for these items.')}>
         <ul className="m-0 space-y-1 pl-4">{failures.map((f) => <li key={f.id}><span className="font-medium text-text">{f.title}</span>: {f.message}</li>)}</ul>
