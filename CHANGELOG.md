@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- A collection with many fields opens its list again: with more than twelve columns to offer, the list showed “Allows at most 12 items” instead of its entries.
+
 ## 0.25.0 (2026-11-12)
 
 ### Added
