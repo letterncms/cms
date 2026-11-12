@@ -36,6 +36,9 @@ class PackageJobs
 
     private const int KEEP_BACKUPS = 7 * 86_400;
 
+    /** What letterncms/composer-plugin leaves in a kit's folder it installed (Installer::MARKER). */
+    private const string COMPOSER_KIT = '.composer-kit';
+
     /** @var array<string, callable(array<string, mixed>): void> Verifiers by name, registered by whoever starts jobs */
     private array $verifiers = [];
 
@@ -304,6 +307,9 @@ class PackageJobs
                 Files::deleteDirectory($stage);
                 throw new RuntimeException($e->getMessage(), 0, $e);
             }
+
+            // The tree Composer installs, so Composer may take it over: letterncms/composer-plugin only replaces a kit marked as its own.
+            Files::put($stage.'/'.$job['top'].'/'.self::COMPOSER_KIT, "Composer put this kit here. composer remove takes it away.\n");
         }
 
         // Hosts running PHP as the user refuse group-writable scripts.
