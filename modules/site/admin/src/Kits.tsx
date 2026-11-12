@@ -47,6 +47,26 @@ export default function Kits() {
     setBusy(null)
   }
 
+  const remove = async (kit: Kit) => {
+    const ok = await confirm({
+      title: t('Delete {name}?', { name: kit.name }),
+      description: t('The kit goes, with what you changed in it. Your site stays as it is.'),
+      confirm: t('Delete'),
+      danger: true,
+    })
+    if (!ok) return
+    setBusy(kit.handle)
+    try {
+      await run('kits/delete', { handle: kit.handle })
+      await queryClient.invalidateQueries()
+      toast.success(t('{name} deleted', { name: kit.name }))
+    } catch (e) {
+      toast.error(e)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const designOnly = async (kit: Kit) => {
     const ok = await confirm({
       title: t('Use the design of {name}?', { name: kit.name }),
@@ -101,7 +121,7 @@ export default function Kits() {
       ) : (
         <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
           {list.data.kits.map((kit) => (
-            <KitCard key={kit.handle} kit={kit} busy={busy} onChoose={() => void choose(kit)} onStartOver={() => void startOver(kit)} onDesign={() => void designOnly(kit)} onEdit={() => setEditing(kit)} />
+            <KitCard key={kit.handle} kit={kit} busy={busy} onChoose={() => void choose(kit)} onStartOver={() => void startOver(kit)} onDesign={() => void designOnly(kit)} onEdit={() => setEditing(kit)} onDelete={() => void remove(kit)} />
           ))}
         </ul>
       )}
@@ -112,12 +132,13 @@ export default function Kits() {
   )
 }
 
-function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit }: { kit: Kit; busy: string | null; onChoose: () => void; onStartOver: () => void; onDesign: () => void; onEdit: () => void }) {
+function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit, onDelete }: { kit: Kit; busy: string | null; onChoose: () => void; onStartOver: () => void; onDesign: () => void; onEdit: () => void; onDelete: () => void }) {
   const needs = kit.missingPlugins.length > 0
   const switching = busy === kit.handle
   const chooseable = !kit.active && kit.suits && !needs && busy === null
   const canReset = kit.source !== 'saved' && (kit.active || kit.edited)
   const canEdit = kit.source !== 'builtin'
+  const canDelete = canEdit && !kit.active
 
   return (
     <li className="group relative">
@@ -148,7 +169,7 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit }: { kit: 
           <Button size="sm" onClick={() => navigate('/plugins?tab=store')}>{t('Open Store')}</Button>
         </div>
       )}
-      {(canEdit || canReset || (!kit.active && kit.source !== 'saved' && kit.suits)) && (
+      {(canEdit || canDelete || canReset || (!kit.active && kit.source !== 'saved' && kit.suits)) && (
         <div className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open]:opacity-100">
           <Menu
             align="end"
@@ -157,6 +178,7 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign, onEdit }: { kit: 
               canEdit && { label: t('Edit Details'), icon: 'edit', onSelect: onEdit },
               !kit.active && kit.source !== 'saved' && kit.suits && !needs && { label: t('Use Only the Design'), icon: 'palette', onSelect: onDesign },
               canReset && { label: t('Start Over'), icon: 'arrow-counter-clockwise', danger: true, onSelect: onStartOver },
+              canDelete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: onDelete },
             ]}
           />
         </div>

@@ -13,6 +13,7 @@
 
 ### Changed
 
+- **Delete a site kit** from its menu on Site Kits, after a confirmation: the kit's folder goes, and the copy kept of it with what you changed. The kit the site is now, and the kits that come with Lettern, can't be deleted. `kits/delete` does the same for agents, with a dry run.
 - **Edit a kit's name, description and thumbnail** from its menu on Site Kits: **Edit Details** opens the form **Export Site** uses, filled in. A kit that comes with Lettern can't be changed; the copy kept when you leave a kit keeps what you edited. `kits/update` does the same for agents.
 - **Export Site** asks for a description and a thumbnail, both optional: a kit without a description says what the site says of itself (the text shown as the field's placeholder), and the thumbnail is the picture its card shows. The current kit on Site Kits has the outline a focused field has. `kits/export` takes `preview` and `previewType`.
 - **⌘K is the chat.** `⌘K` and the sidebar's **Search** open the chat with `/` typed and its menu open: places, the theme, Customize Sidebar, Keyboard Shortcuts, settings, making and running things, and entries by their title, all in one list. Words that match nothing are asked of the agent, or searched without one. A place or a setting picked there puts away a chat that came out only for it; a command answers in the thread. What you had written stays, with the `/` on a line after it, and `Esc`, `⌘K` again or a click elsewhere takes the `/` away. The separate command palette is gone.

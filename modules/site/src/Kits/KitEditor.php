@@ -68,4 +68,39 @@ final class KitEditor
 
         $this->kits->flush();
     }
+
+    /**
+     * The folders deleting a kit would remove: its folder in kits/ and the copy kept when the site left it.
+     * The kit the site is, and a kit that comes with the CMS, are not removed.
+     *
+     * @return list<string>
+     */
+    public function removable(string $handle): array
+    {
+        $kit = $this->kits->find($handle);
+        $saved = $this->kits->saved()[$handle] ?? null;
+
+        if ($kit === null && $saved === null) {
+            throw AbilityException::notFound(__('There is no kit “:handle” here. kits/list has the ones there are.', ['handle' => $handle]));
+        }
+
+        if ($kit?->source === 'builtin') {
+            throw AbilityException::conflict(__('The kit “:handle” comes with :brand and is not deleted. Start it over to let go of your changes to it.', ['handle' => $handle]));
+        }
+
+        if ($this->kits->active() === $handle) {
+            throw AbilityException::conflict(__('The site is the kit “:handle” now. Switch to another kit first.', ['handle' => $handle]));
+        }
+
+        return array_values(array_filter([$kit?->path, $saved?->path]));
+    }
+
+    public function delete(string $handle): void
+    {
+        foreach ($this->removable($handle) as $folder) {
+            Files::deleteDirectory($folder);
+        }
+
+        $this->kits->flush();
+    }
 }
