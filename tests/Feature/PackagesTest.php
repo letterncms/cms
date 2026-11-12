@@ -90,6 +90,29 @@ final class PackagesTest extends TestCase
         $this->assertArrayHasKey('acme/base', $this->cms()->packages()->pending());
     }
 
+    public function test_a_plugin_that_arrives_on_is_installed_without_waiting_for_an_admin(): void
+    {
+        // As Composer or a kit leaves it on a site that runs every plugin in plugins/: on, never installed.
+        \Illuminate\Support\Facades\DB::table('packages')->where('name', 'acme/base')->delete();
+        \Illuminate\Support\Facades\DB::table('migrations')->where('migration', 'like', '%acme_things')->delete();
+        Schema::drop('acme_things');
+        unlink(storage_path('acme-installed'));
+
+        $packages = $this->cms()->packages();
+        $this->assertSame(['acme/base' => 'installed'], $packages->installArrivals());
+        $this->assertTrue(Schema::hasTable('acme_things'));
+        $this->assertSame('1.0.0', file_get_contents(storage_path('acme-installed')));
+        $this->assertSame([], $packages->installArrivals());
+
+        // An upgrade still waits for the admin.
+        $file = $this->site.'/plugins/base/composer.json';
+        file_put_contents($file, json_encode(['version' => '1.1.0'] + json_decode(file_get_contents($file), true)));
+        touch($file, time() + 5);
+        $packages->refresh();
+        $this->assertSame([], $packages->installArrivals());
+        $this->assertArrayHasKey('acme/base', $packages->pending());
+    }
+
     public function test_rebuilt_assets_are_republished(): void
     {
         $manifest = $this->cms()->packages()->active()['acme/base'];

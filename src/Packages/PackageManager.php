@@ -150,6 +150,49 @@ final class PackageManager
                 $this->registerPackage($package);
             });
         }
+
+        $this->app->booted(fn () => $this->installArrivals());
+    }
+
+    /**
+     * Install the plugins that are on but were never installed: put in plugins/ by Composer, a kit or by hand
+     * on a site that runs every plugin there. Their own code reads tables that don't exist yet, so this can't
+     * wait for an admin. An install only adds what the plugin brings; upgrades still wait (see pending()).
+     *
+     * @return array<string, string> What sync() reports for each
+     */
+    public function installArrivals(): array
+    {
+        if (! $this->hasStateTable()) {
+            return [];
+        }
+
+        // One query on every boot, not one for each package.
+        $arrived = function (): array {
+            $known = array_flip(DB::table('packages')->pluck('name')->all());
+
+            return array_filter($this->active(), fn (PackageManifest $p) => ! isset($known[$p->name]) && $this->needsInstall($p));
+        };
+
+        if ($arrived() === []) {
+            return [];
+        }
+
+        // Another process installing them: this one carries on as it would have.
+        return Files::locked($this->app->storagePath('locks/packages-install.lock'), function () use ($arrived): array {
+            $done = [];
+
+            foreach ($arrived() as $package) {
+                $this->syncOne($package, null, false, $done);
+            }
+
+            return $done;
+        }, static fn () => []);
+    }
+
+    private function needsInstall(PackageManifest $package): bool
+    {
+        return $package->provider || is_dir($package->path('database/migrations'));
     }
 
     /**
@@ -410,37 +453,41 @@ final class PackageManager
         foreach ($this->active() as $package) {
             $installed = $this->installedVersion($package->name);
 
-            if (self::rolledBack($installed, $package)) {
-                continue;
-            }
-
-            if ($installed === $package->version) {
-                $this->guard($package, function () use ($package, $step, &$done): void {
-                    if ($this->migrate($package, $step)) {
-                        $done[$package->name] = 'migrated';
-                    }
-                });
-
-                continue;
-            }
-
-            $this->guard($package, function () use ($package, $installed, $step, &$done): void {
-                $this->migrate($package, $step);
-                $provider = $this->providers[$package->name] ?? $this->lateProvider($package);
-
-                $installed === null ? $provider?->install() : $provider?->upgrade($installed);
-
-                $this->recordVersion($package);
-                $this->assets->ensure($package);
-                $done[$package->name] = $installed === null ? 'installed' : "upgraded from {$installed}";
-            });
-
-            if (isset($this->failedNow[$package->name])) {
-                $done[$package->name] = $this->inactive[$package->name] ?? 'failed';
+            if (! self::rolledBack($installed, $package)) {
+                $this->syncOne($package, $installed, $step, $done);
             }
         }
 
         return $done;
+    }
+
+    /** @param  array<string, string>  $done */
+    private function syncOne(PackageManifest $package, ?string $installed, bool $step, array &$done): void
+    {
+        if ($installed === $package->version) {
+            $this->guard($package, function () use ($package, $step, &$done): void {
+                if ($this->migrate($package, $step)) {
+                    $done[$package->name] = 'migrated';
+                }
+            });
+
+            return;
+        }
+
+        $this->guard($package, function () use ($package, $installed, $step, &$done): void {
+            $this->migrate($package, $step);
+            $provider = $this->providers[$package->name] ?? $this->lateProvider($package);
+
+            $installed === null ? $provider?->install() : $provider?->upgrade($installed);
+
+            $this->recordVersion($package);
+            $this->assets->ensure($package);
+            $done[$package->name] = $installed === null ? 'installed' : "upgraded from {$installed}";
+        });
+
+        if (isset($this->failedNow[$package->name])) {
+            $done[$package->name] = $this->inactive[$package->name] ?? 'failed';
+        }
     }
 
     /**
@@ -465,7 +512,7 @@ final class PackageManager
             }
 
             // Nothing to run (no migrations, no provider hooks): just record the version.
-            if (! $package->provider && ! is_dir($package->path('database/migrations'))) {
+            if (! $this->needsInstall($package)) {
                 $this->hasStateTable() && $this->recordVersion($package);
                 continue;
             }
