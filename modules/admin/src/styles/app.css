@@ -538,6 +538,21 @@
     .cms-shell[data-inset] .cms-dock:not([data-floating]):not([data-full]) .cms-dock-inner { padding-top: 8px; }
     .cms-shell[data-inset]:has(.cms-dock[data-open]:not([data-floating]):not([data-full])) .cms-sheet { margin-right: 0; }
   }
+  /* At full size the chat is a sheet of its own, inset from the window as the screen is, so the sidebar button lines up with its first row. */
+  @media (min-width: 768px) {
+    .cms-shell[data-inset] .cms-dock[data-open][data-full]:not([data-floating]) .cms-dock-panel {
+      inset-block: 8px;
+      right: 8px;
+      width: calc(100vw - var(--cms-sidebar-width, 0px) - 8px);
+      border-radius: var(--radius-lg);
+      background: var(--cms-bg);
+      box-shadow: var(--cms-shadow-sheet);
+    }
+    .cms-shell[data-inset]:not([data-sidebar]) .cms-dock[data-open][data-full]:not([data-floating]) .cms-dock-panel { width: calc(100vw - 16px); }
+    /* The banner is above the screen's sheet, not the chat's. */
+    .cms-shell[data-inset]:has(.cms-dock[data-full]) .cms-leading { translate: 0 0; }
+    .cms-shell[data-inset]:not([data-sidebar]):has(.cms-dock[data-full]) .cms-leading { translate: 8px 0; }
+  }
   /* The sidebar button and the way back: in the sidebar's first row, or in the sheet's top bar while the sidebar is away. */
   .cms-leading {
     left: 8px;
