@@ -228,6 +228,23 @@ try {
     controlIds = [...document.querySelectorAll('input[id],textarea[id],select[id]')].map((control) => control.id)
     assert(new Set(controlIds).size === controlIds.length, 'Page metadata IDs collide')
   })
+  await test('A behaviour that says so draws in the canvas, and is mounted afresh after an edit', async () => {
+    await wait(() => liveDoc().querySelector('#fixture-drawn')?.dataset.drawn === '7', 'The canvas behaviour was not mounted with its props and its import')
+    assert(globalThis.__canvasFixture.own, 'The behaviour was not handed the canvas, its window and its document')
+    assert(liveDoc().querySelector('#fixture-named').dataset.drawn === undefined, 'A behaviour that does not say so, or comes from another host, ran in the canvas')
+    const lent = [...document.querySelectorAll('script[type=importmap][data-cms-canvas]')].map((script) => Object.keys(JSON.parse(script.textContent).imports))
+    assert(JSON.stringify(lent) === '[["canvas-mark"]]', 'The admin was lent more of the page\'s import map than the behaviour imports: ' + JSON.stringify(lent))
+    assert(liveFrame().contentWindow.__fixturePreviewRan !== true, 'Site scripts ran in edit mode')
+    const before = globalThis.__canvasFixture.mounts
+    const title = document.querySelector('#f-title'), original = title.value
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    set.call(title, original + ' again'); title.dispatchEvent(new Event('input', { bubbles: true }))
+    await wait(() => globalThis.__canvasFixture.mounts > before && liveDoc().querySelector('#fixture-drawn')?.dataset.drawn === '7', 'The canvas behaviour was not mounted again after the edit')
+    assert(globalThis.__canvasFixture.unmounts >= before, 'The canvas behaviour was not undone before the canvas rendered again')
+    assert(document.querySelectorAll('script[type=importmap][data-cms-canvas]').length === 1, 'The lent import map was not taken away with the behaviour it was lent for')
+    set.call(title, original); title.dispatchEvent(new Event('input', { bubbles: true }))
+    await settle()
+  })
   await test('An unsaved entry renders through the same collection editor endpoint', async () => {
     await open('/content/posts/new', 'Untitled')
     const calls = (await state()).requests.filter((request) => request.ability === '__preview')
@@ -659,9 +676,24 @@ serve('Content workflow', async (req, res, url) => {
     }
     const edit = !input.play
     res.writeHead(200, { 'Content-Type': 'text/html', ...(edit ? { 'X-Cms-Editor-Document': editorToken } : {}) })
-    return res.end(`<!doctype html><html><head><style>body{font:18px/1.65 system-ui;margin:0;padding:48px;color:#111;background:white}h1{font-size:40px;line-height:1.2}#fixture-entry-title{font-size:42px;line-height:1.2;max-width:680px;margin:0 auto 32px}.story{display:flow-root;max-width:680px;margin:0 auto;padding:24px 0 56px}.story section{padding:24px 0;margin:28px 0}.story p{margin:24px 0;min-height:1lh}.story h1,.story h2{margin:24px 0}.story h2{font-size:30px;line-height:1.3}.story li{min-height:1lh}</style></head><body><h1 id="fixture-entry-title">${escape(input.title ?? '')}</h1><main id="fixture-preview" class="story"${edit ? ` data-cms-editor-root="${editorToken}"` : ''}>${renderBlocks(input.data.body ?? [], edit)}</main>${edit ? prototypes() : ''}<script>window.__fixturePreviewRan = true</script></body></html>`)
+    // A behaviour that draws in the canvas, one that does not, and the import map the first one needs.
+    const drawn = edit ? `<div id="fixture-drawn" style="position:absolute;top:0;left:0;width:1px;height:1px;overflow:hidden" data-cms-canvas='[{"src":"/_cms/site/scripts/canvas.js","props":{"ground":7}}]' data-cms-behavior-label="Drawn by “field”"></div><div id="fixture-named" style="position:absolute;top:0;left:0;width:1px;height:1px;overflow:hidden" data-cms-canvas='[{"src":"/_cms/site/scripts/plain.js"},{"src":"//elsewhere.example/_cms/site/scripts/canvas.js"}]' data-cms-behavior-label="Drawn by “plain”"></div>` : ''
+    return res.end(`<!doctype html><html><head><script type="importmap">{"imports":{"canvas-mark":"/_cms/site/scripts/canvas-mark.js","unused-lib":"/_cms/site/vendor/unused/index.js"}}</script><style>body{font:18px/1.65 system-ui;margin:0;padding:48px;color:#111;background:white}h1{font-size:40px;line-height:1.2}#fixture-entry-title{font-size:42px;line-height:1.2;max-width:680px;margin:0 auto 32px}.story{display:flow-root;max-width:680px;margin:0 auto;padding:24px 0 56px}.story section{padding:24px 0;margin:28px 0}.story p{margin:24px 0;min-height:1lh}.story h1,.story h2{margin:24px 0}.story h2{font-size:30px;line-height:1.3}.story li{min-height:1lh}</style></head><body><h1 id="fixture-entry-title">${escape(input.title ?? '')}</h1><main id="fixture-preview" class="story"${edit ? ` data-cms-editor-root="${editorToken}"` : ''}>${renderBlocks(input.data.body ?? [], edit)}</main>${edit ? prototypes() : ''}${drawn}<script>window.__fixturePreviewRan = true</script></body></html>`)
 
   }
+  // Scripts of the design the canvas mounts: one says it draws there, by a name the page's import map resolves; one does not.
+  const script = (code) => { res.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' }); return res.end(code) }
+  if (url.pathname === '/_cms/site/scripts/canvas-mark.js') return script(`export const mark = (el, ground) => { el.dataset.drawn = String(ground) }`)
+  if (url.pathname === '/_cms/site/scripts/canvas.js') return script(`import { mark } from 'canvas-mark'
+export const canvas = true
+export function mount(el, props, context) {
+  const count = globalThis.__canvasFixture ??= { mounts: 0, unmounts: 0, own: true }
+  count.mounts++
+  count.own = count.own && context.canvas === true && context.window === el.ownerDocument.defaultView && context.document === el.ownerDocument
+  mark(el, props.ground)
+  return () => { count.unmounts++; delete el.dataset.drawn }
+}`)
+  if (url.pathname === '/_cms/site/scripts/plain.js') return script(`export function mount(el) { el.dataset.drawn = 'plain' }`)
   if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
   if (url.pathname === '/api/admin/batch') {
     const input = await body(req)

@@ -223,6 +223,7 @@
   "Durations": "Duur",
   "Easing": "Easing",
   "Edit Custom CSS and JavaScript": "Eigen CSS en JavaScript bewerken",
+  "Its scripts run in the browser of everyone who opens the site, the builder or a preview, administrators too.": "De scripts draaien in de browser van iedereen die de site, de paginabouwer of een voorbeeld opent, ook van beheerders.",
   "Editing code needs the “Edit custom CSS and JavaScript” permission.": "Code bewerken vraagt het recht “Eigen CSS en JavaScript bewerken”.",
   "Effect": "Effect",
   "Either": "Allebei",

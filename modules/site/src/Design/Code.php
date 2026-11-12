@@ -206,6 +206,17 @@ final class Code
         return ['scripts' => $code['scripts'] ?? [], 'styles' => $code['styles'] ?? []];
     }
 
+    /**
+     * Whether a script draws in the builder's canvas too: it says so with `export const canvas = true`.
+     * A behaviour that does is mounted there by the editor; any other is named on its block instead.
+     */
+    public function canvas(string $name): bool
+    {
+        $file = preg_match(Document::CODE_NAME, $name) ? ($this->files('scripts')[$name] ?? null) : null;
+
+        return $file !== null && preg_match('/^export\s+const\s+canvas\s*=\s*true\b/m', (string) file_get_contents($file)) === 1;
+    }
+
     /** The URL a file is published at (written when it changed), or null when there is no such file. */
     public function url(string $kind, string $name): ?string
     {

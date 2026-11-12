@@ -106,6 +106,29 @@ final class BehaviorTest extends TestCase
         $this->assertStringContainsString('scripts/tillt.js', $warnings[0]);
     }
 
+    public function test_a_behaviour_that_says_so_is_handed_to_the_canvas(): void
+    {
+        Files::put(content_path('design/scripts/field.js'), "// Draws in the builder too.\nexport const canvas = true\nexport function mount() {}\n");
+        Files::put(content_path('design/scripts/tilt.js'), "export function mount() {}\n// export const canvas = true, one day\n");
+        $this->app->make(Code::class)->flush();
+
+        $canvas = $this->app->make(Renderer::class)->blocks([
+            ['id' => 'b1', 'type' => 'box', 'behavior' => [['module' => 'field', 'props' => ['seed' => 3]], ['module' => 'tilt']], 'children' => []],
+            ['id' => 'b2', 'type' => 'box', 'behavior' => ['module' => 'tilt'], 'children' => []],
+            // Typed by hand, it names no script for the editor to run.
+            ['id' => 'b3', 'type' => 'box', 'attrs' => ['data-cms-canvas' => '[{"src":"/media/x.js"}]'], 'children' => []],
+        ]);
+
+        $this->assertSame(1, preg_match('/data-cms-canvas="([^"]+)"/', $canvas, $m), 'only the block whose script says so');
+        $specs = json_decode(html_entity_decode($m[1]), true);
+        $this->assertCount(1, $specs, 'tilt does not say so, beside it');
+        $this->assertMatchesRegularExpression('#^/_cms/site/scripts/field-[0-9a-f]{10}\.js$#', $specs[0]['src']);
+        $this->assertSame(['seed' => 3], $specs[0]['props']);
+        $this->assertStringNotContainsString('/media/x.js', $canvas);
+        $this->assertSame(2, substr_count($canvas, ' data-cms-behavior-label="'), 'the name stays until something is drawn');
+        $this->assertStringNotContainsString('data-cms-behavior=', $canvas, 'the canvas still runs no script of its own');
+    }
+
     public function test_what_is_saved_is_a_name_and_plain_settings(): void
     {
         $this->assertSame([], Document::behavior(['module' => '../../x']));
