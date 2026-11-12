@@ -2,7 +2,7 @@
     "name": "letterncms/collaboration",
     "description": "Comments with @mentions and email notifications, who is viewing or editing a page, and an inbox of what needs you.",
     "type": "cms-plugin",
-    "version": "0.25.0",
+    "version": "0.26.0",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.26.0 (2026-11-12)
+
 ### Added
 
 - **Behaviors that draw in the builder.** A block behavior whose script says `export const canvas = true` runs in the builder's canvas too, so a WebGL scene, a chart or a drawn plate shows there as on the site instead of its name. It is mounted with the same `mount(el, props, context)` and cleanup as on the site, undone before every edit renders the canvas again and mounted afresh after it. Its context says `canvas: true` and carries the canvas's own `window` and `document`, for the size, scroll and media queries a script reads. Any other behavior keeps the name it shows there now.
