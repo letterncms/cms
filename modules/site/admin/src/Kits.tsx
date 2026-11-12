@@ -1,6 +1,6 @@
-import { navigate, run, queryClient, t, useAbility } from '@letterncms/sdk'
-import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Menu, Notice, Page, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
-import { useRef, useState } from 'react'
+import { navigate, run, queryClient, t, useAbility, useManifest } from '@letterncms/sdk'
+import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, QueryError, Skeleton, confirm, download, slugify, switchKit, toast, Dialog } from '@letterncms/ui'
+import { useMemo, useRef, useState } from 'react'
 
 interface Kit {
   handle: string
@@ -123,7 +123,7 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign }: { kit: Kit; bus
         onClick={onChoose}
         disabled={!chooseable}
         aria-current={kit.active || undefined}
-        className="flex w-full flex-col overflow-hidden rounded-lg border border-border bg-bg p-0 text-left outline-offset-2 transition-[border-color,box-shadow] duration-base enabled:cursor-pointer enabled:hover:border-border-strong enabled:hover:shadow-sm"
+        className={`flex w-full flex-col overflow-hidden rounded-lg border bg-bg p-0 text-left outline-none transition-[border-color,box-shadow] duration-base enabled:cursor-pointer ${kit.active ? 'border-[var(--cms-focus)] shadow-[var(--cms-shadow-focus)]' : 'border-border enabled:hover:border-border-strong enabled:hover:shadow-sm focus-visible:border-[var(--cms-focus)] focus-visible:shadow-[var(--cms-shadow-focus)]'}`}
       >
         <span className="relative block aspect-[16/10] w-full overflow-hidden border-b border-border bg-sunken">
           {kit.previews[0]
@@ -161,16 +161,29 @@ function KitCard({ kit, busy, onChoose, onStartOver, onDesign }: { kit: Kit; bus
   )
 }
 
+const bytesToBase64 = (bytes: Uint8Array) => {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(binary)
+}
+
 function ExportSite({ onClose }: { onClose: () => void }) {
+  const site = useManifest().site
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [picture, setPicture] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
+  const file = useRef<HTMLInputElement>(null)
   const handle = slugify(name)
+  const type = picture ? ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' } as Record<string, string>)[picture.type] : undefined
+  const shown = useMemo(() => (picture ? URL.createObjectURL(picture) : null), [picture])
 
   const save = async () => {
     setBusy(true)
     try {
+      const preview = picture && type ? { preview: bytesToBase64(new Uint8Array(await picture.arrayBuffer())), previewType: type } : {}
       // The kit as a zip, downloaded: nothing is added to this site.
-      const made = await run<{ kit: Kit; files: number }>('kits/export', { handle, name: name.trim(), zip: true })
+      const made = await run<{ kit: Kit; files: number }>('kits/export', { handle, name: name.trim(), ...(description.trim() ? { description: description.trim() } : {}), ...preview, zip: true })
       download(made)
       toast.success(t('{name} exported', { name: made.kit.name }))
       onClose()
@@ -182,10 +195,28 @@ function ExportSite({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} title={t('Export Site')} size="sm" onSubmit={save} submitLabel={t('Export Site')} busy={busy} submitDisabled={!handle}>
-      <Field label={t('Name')} htmlFor="kit-name">
-        <Input id="kit-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus maxLength={80} />
-      </Field>
+    <Dialog open onOpenChange={(open) => !open && onClose()} title={t('Export Site')} size="sm" onSubmit={save} submitLabel={t('Export Site')} busy={busy} submitDisabled={!handle || (!!picture && !type)}>
+      <div className="flex flex-col gap-4">
+        <Field label={t('Name')} htmlFor="kit-name">
+          <Input id="kit-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus maxLength={80} />
+        </Field>
+        <Field label={t('Description')} htmlFor="kit-description">
+          <Textarea id="kit-description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={site.description || undefined} maxLength={400} />
+        </Field>
+        <Field label={t('Thumbnail')}>
+          <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => setPicture(e.target.files?.[0] ?? null)} />
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => file.current?.click()} className="grid h-14 w-24 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-sm border border-border bg-sunken p-0 text-faint hover:border-border-strong">
+              {shown ? <img src={shown} alt="" className="size-full object-cover object-top" /> : <Icon name="upload" size={18} />}
+            </button>
+            <div className="flex min-w-0 flex-col items-start gap-1">
+              <Button size="sm" onClick={() => file.current?.click()}>{picture ? t('Replace') : t('Upload')}</Button>
+              {picture && <Button size="sm" variant="ghost" onClick={() => { setPicture(null); if (file.current) file.current.value = '' }}>{t('Remove')}</Button>}
+              {picture && !type && <span className="text-xs text-danger">{t('Use a .png, .jpg or .webp.')}</span>}
+            </div>
+          </div>
+        </Field>
+      </div>
     </Dialog>
   )
 }

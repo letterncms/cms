@@ -103,9 +103,14 @@ final class KitExporter
             $out["public/{$path}"] = (string) file_get_contents(public_path($path));
         }
 
+        // A picture to choose the kit by: the one given, as previews/home.<type>.
+        if (($preview = $this->preview($about)) !== null) {
+            $out['previews/home.'.$preview[0]] = $preview[1];
+        }
+
         ksort($out);
 
-        return ['kit.json' => json_encode($this->manifest($about), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n", ...$out];
+        return ['kit.json' => json_encode($this->manifest($about, $preview !== null ? 'previews/home.'.$preview[0] : null), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n", ...$out];
     }
 
     /**
@@ -244,8 +249,29 @@ final class KitExporter
         return $out;
     }
 
+    /**
+     * The picture an export was given (`preview`, base64, with `previewType`): its type and bytes, or null for none.
+     *
+     * @return ?array{0: string, 1: string}
+     */
+    private function preview(array $about): ?array
+    {
+        if (empty($about['preview'])) {
+            return null;
+        }
+
+        $bytes = base64_decode((string) $about['preview'], true);
+        $type = (string) ($about['previewType'] ?? '');
+
+        if ($bytes === false || ! in_array($type, ['png', 'jpg', 'webp'], true) || strlen($bytes) > 5_000_000) {
+            throw AbilityException::invalid(__('The picture must be a .png, .jpg or .webp of at most 5 MB.'));
+        }
+
+        return [$type, $bytes];
+    }
+
     /** @param  array{handle: string, name: string, description?: ?string, version?: ?string, license?: ?string}  $about */
-    private function manifest(array $about): array
+    private function manifest(array $about, ?string $preview = null): array
     {
         $plugins = array_keys(array_filter($this->cms->packages()->active(), static fn ($package) => ! $package->core));
         sort($plugins);
@@ -254,7 +280,9 @@ final class KitExporter
         $manifest = array_filter([
             'handle' => $about['handle'],
             'name' => $about['name'],
-            'description' => $about['description'] ?? null,
+            // Left out, the kit says what the site says of itself.
+            'description' => trim((string) ($about['description'] ?? '')) !== '' ? $about['description'] : (mb_substr(trim((string) $this->cms->setting('site', 'description')), 0, 400) ?: null),
+            'previews' => $preview !== null ? [$preview] : null,
             'version' => $about['version'] ?? '1.0.0',
             'license' => $about['license'] ?? null,
             // What it was made on, and every later release of that line: a kit is content, and content keeps.

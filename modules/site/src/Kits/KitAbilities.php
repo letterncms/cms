@@ -155,9 +155,11 @@ final class KitAbilities
         $about = [
             ...$handle,
             'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 80],
-            'description' => ['type' => 'string', 'maxLength' => 400],
+            'description' => ['type' => 'string', 'maxLength' => 400, 'description' => 'What the site’s own description says when left out.'],
             'version' => ['type' => 'string', 'pattern' => '^\d{1,5}\.\d{1,5}\.\d{1,5}$', 'description' => '1.0.0 when left out.'],
             'license' => ['type' => 'string', 'maxLength' => 60],
+            'preview' => ['type' => 'string', 'description' => 'A picture to choose the kit by, base64 (at most 5 MB); with previewType.'],
+            'previewType' => ['type' => 'string', 'enum' => ['png', 'jpg', 'webp']],
         ];
         $pick = static fn (array $in) => array_filter(array_intersect_key($in, $about), static fn ($v) => $v !== null && $v !== '');
 
