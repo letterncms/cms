@@ -4,7 +4,7 @@
   "{count} property": "{count} propriété",
   "{name} Details": "Détails : {name}",
   "`from` must be a tags field and `into` a terms field of this collection.": "`from` doit être un champ de tags et `into` un champ de termes de cette collection.",
-  "A person's saved views of one list, as a menu in the list's toolbar: apply one, or keep the list as it is under a name.": "Les vues enregistrées d’une personne pour une liste, dans un menu de la barre d’outils : en appliquer une, ou conserver la liste telle quelle sous un nom.",
+  "A person's saved views of one list, as tabs above it: apply one, and save, update or reset the list once it differs from its tab.": "Les vues enregistrées d’une personne pour une liste, en onglets au-dessus : en appliquer une, et enregistrer, mettre à jour ou rétablir la liste dès qu’elle diffère de son onglet.",
   "Access denied": "Accès refusé",
   "Add a title to save": "Ajoutez un titre pour enregistrer",
   "Address Taken": "Adresse prise",
