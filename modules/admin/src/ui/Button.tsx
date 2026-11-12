@@ -1,10 +1,11 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { cn } from './cn'
+import { controlSizes, type ControlSize } from './controlSize'
 import { Icon } from './Icon'
 import { Spinner } from './Spinner'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'tonal' | 'destructive' | 'danger' | 'publish'
-export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
+export type ButtonSize = ControlSize
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -30,11 +31,11 @@ const variants: Record<ButtonVariant, string> = {
   publish: 'bg-signal text-signal-ink hover:bg-signal-hover active:bg-signal-active',
 }
 
-const sizes: Record<ButtonSize, string> = {
-  xs: 'h-6 px-2 gap-1 text-xs rounded-xs',
-  sm: 'h-7 px-2.5 gap-1.5 text-sm rounded-sm',
-  md: 'h-8 px-3 gap-1.5 text-sm rounded-md',
-  lg: 'h-10 px-4 gap-2 text-base rounded-lg',
+const spacing: Record<ButtonSize, string> = {
+  xs: 'px-2 gap-1',
+  sm: 'px-2.5 gap-1.5',
+  md: 'px-3 gap-1.5',
+  lg: 'px-4 gap-2',
 }
 
 const iconSizes: Record<ButtonSize, number> = { xs: 14, sm: 16, md: 16, lg: 16 }
@@ -60,7 +61,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         // Faded ink still looks like something to press (and in the dark it is the brightest thing there): a primary that is off is a pale fill with quiet words.
         !loading && (variant === 'primary' ? 'disabled:bg-fill disabled:text-faint disabled:shadow-none' : 'disabled:opacity-45'),
         variants[variant],
-        sizes[size],
+        controlSizes[size],
+        spacing[size],
         loading && !icon && 'relative',
         className,
       )}

@@ -20,9 +20,9 @@ export default function SyncKey() {
       <SettingRow>
         {key ? (
           <div className="flex items-center gap-2">
-            <Input key={shown ? 'shown' : 'masked'} readOnly autoFocus={shown} value={shown ? key : masked} aria-label={t('Connection key')} className="min-w-0 flex-1 font-mono [&>input]:text-xs" onFocus={shown ? (e) => e.currentTarget.select() : undefined} onClick={selectFieldTextOnClick} />
-            <IconButton icon={shown ? 'eye-off' : 'eye'} label={shown ? t('Hide') : t('Show')} onClick={() => setShown(!shown)} />
-            <Button icon="copy" onClick={() => void copy()}>{t('Copy')}</Button>
+            <Input key={shown ? 'shown' : 'masked'} readOnly autoFocus={shown} value={shown ? key : masked} aria-label={t('Connection key')} className="min-w-0 flex-1 font-mono" onFocus={shown ? (e) => e.currentTarget.select() : undefined} onClick={selectFieldTextOnClick} />
+            <IconButton size="md" icon={shown ? 'eye-off' : 'eye'} label={shown ? t('Hide') : t('Show')} onClick={() => setShown(!shown)} />
+            <Button size="md" icon="copy" onClick={() => void copy()}>{t('Copy')}</Button>
           </div>
         ) : <Skeleton className="h-8" />}
       </SettingRow>

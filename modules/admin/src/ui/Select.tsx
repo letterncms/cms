@@ -3,6 +3,7 @@ import { Select as Base } from '@base-ui/react/select'
 import { navigate, t } from '@letterncms/sdk'
 import { useState, type ReactNode } from 'react'
 import { cn } from './cn'
+import { controlSizes } from './controlSize'
 import { NoMatches } from './EmptyState'
 import { Icon } from './Icon'
 
@@ -51,7 +52,7 @@ export interface SelectAction {
 /** Over this many options, the list opens with a search field at the top. */
 const SEARCHABLE = 12
 
-const triggerSizes = { xs: 'h-6 gap-1.5 rounded-xs pl-1.5 pr-1 text-xs', sm: 'h-7 gap-2 rounded-sm pl-2 pr-1.5 text-sm', md: 'h-8 gap-2 rounded-md pl-2.5 pr-2 text-sm' }
+const triggerSpacing = { xs: 'gap-1.5 pl-1.5 pr-1', sm: 'gap-2 pl-2 pr-1.5', md: 'gap-2 pl-2.5 pr-2' }
 // Clipped: squeezed to nothing in a row, its chevrons stay inside its edge.
 const triggerClass = 'cms-input flex w-full min-w-0 items-center overflow-hidden text-left'
 const popupClass = 'cms-pop max-h-[min(360px,var(--available-height))] min-w-[max(var(--anchor-width),200px)] max-w-[var(--available-width)] overflow-auto overscroll-contain p-1 outline-none'
@@ -71,7 +72,7 @@ export function Select(props: SelectProps) {
         aria-label={ariaLabel}
         aria-describedby={describedBy}
         aria-invalid={invalid || undefined}
-        className={cn(triggerClass, triggerSizes[size], className)}
+        className={cn(triggerClass, controlSizes[size], triggerSpacing[size], className)}
       >
         <TriggerValue current={current} placeholder={placeholder} defaultLabel={defaultLabel} valueHint={valueHint} />
         <Base.Icon render={<Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />} />
@@ -155,7 +156,7 @@ function SearchableSelect({ value, onChange, options, placeholder, valueHint, si
         aria-label={ariaLabel}
         aria-describedby={describedBy}
         aria-invalid={invalid || undefined}
-        className={cn(triggerClass, triggerSizes[size], className)}
+        className={cn(triggerClass, controlSizes[size], triggerSpacing[size], className)}
       >
         <TriggerValue current={current ?? undefined} placeholder={placeholder} defaultLabel={defaultLabel} valueHint={valueHint} />
         <Icon name="chevrons-up-down" size={14} className="shrink-0 text-faint" />
