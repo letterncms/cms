@@ -168,7 +168,6 @@
   "Is required.": "Ist ein Pflichtfeld.",
   "It did not start.": "Es wurde nicht gestartet.",
   "Items must be unique.": "Elemente müssen eindeutig sein.",
-  "Its entries are terms that other entries are filed under.": "Die Einträge darin sind Begriffe, unter denen andere Einträge eingeordnet werden.",
   "JSON": "JSON",
   "Language": "Sprache",
   "Link": "Link",
@@ -184,7 +183,6 @@
   "Look Up People": "Personen nachschlagen",
   "Manage all content, media and the site build.": "Alle Inhalte, Medien und den Build der Website verwalten.",
   "Manage Settings": "Einstellungen verwalten",
-  "Map of value → label.": "Zuordnung Wert → Beschriftung.",
   "Markdown": "Markdown",
   "Matrix": "Matrix",
   "Max Length": "Maximale Länge",
@@ -209,7 +207,6 @@
   "Name, address, language and timezone.": "Name, Adresse, Sprache und Zeitzone.",
   "Needs at least :count items.": "Braucht mindestens :count Elemente.",
   "No database server answered at :server. Check the host and port: on most shared hosting the host is “localhost”.": "Unter :server hat kein Datenbankserver geantwortet. Prüfe Host und Port: Bei den meisten Shared-Hosting-Angeboten lautet der Host „localhost“.",
-  "No paragraphs, headings or lists.": "Keine Absätze, Überschriften oder Listen.",
   "No site builder is on.": "Kein Website-Builder ist aktiv.",
   "No view :id.": "Keine Ansicht :id.",
   "None": "Ohne",
@@ -425,5 +422,7 @@
   "You do not have access to the admin.": "Du hast keinen Zugriff auf den Admin.",
   "Your Account": "Dein Konto",
   "Your session expired. Reload the page.": "Deine Sitzung ist abgelaufen. Lade die Seite neu.",
-  "Your sign-in expired. Please start again.": "Deine Anmeldung ist abgelaufen. Bitte beginne noch einmal."
+  "Your sign-in expired. Please start again.": "Deine Anmeldung ist abgelaufen. Bitte beginne noch einmal.",
+  "{\"value\": \"Label\"}": "{\"value\": \"Bezeichnung\"}",
+  "Use at least 10 characters, with letters and numbers.": "Verwende mindestens 10 Zeichen, mit Buchstaben und Zahlen."
 }

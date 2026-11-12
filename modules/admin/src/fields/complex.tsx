@@ -231,6 +231,8 @@ export function RepeaterField({ field, value, onChange, disabled, context }: Fie
 function RepeaterTable({ field, items, onChange, disabled, context, max, fields }: { field: FieldProps['field']; items: Record<string, any>[]; onChange: (items: Record<string, any>[]) => void; disabled?: boolean; context: FieldProps['context']; max: number; fields: any[] }) {
   const blank = () => Object.fromEntries(fields.map((f) => [f.handle, f.default ?? (f.type === 'toggle' ? false : '')]))
   const template = `${fields.map((f) => f.width === 'narrow' || f.type === 'select' || f.type === 'number' || f.type === 'toggle' ? '160px' : 'minmax(160px,1fr)').join(' ')} 32px`
+  // A row that is a part goes with Remove; one that is a record of its own (a redirect) says `removeLabel: Delete`.
+  const remove = typeof field.removeLabel === 'string' ? field.removeLabel : t('Remove')
   return (
     <div className="space-y-2">
       {/* `add: false`: rows come from elsewhere (a dialog in the page's bar), not from here. */}
@@ -245,7 +247,7 @@ function RepeaterTable({ field, items, onChange, disabled, context, max, fields 
           {/* On a phone each row is a card of labelled fields, one under the other: a row of three fields does not fit. */}
           <div role="row" className="grid min-w-fit gap-2 border-b border-border bg-sunken px-3 py-2 text-xs font-medium text-muted max-sm:hidden" style={{ gridTemplateColumns: template }}>
             {fields.map((f) => <span key={f.handle} role="columnheader">{f.label}</span>)}
-            <span role="columnheader" className="sr-only">{t('Remove')}</span>
+            <span role="columnheader" className="sr-only">{remove}</span>
           </div>
           {items.map((item, i) => (
             <div key={i} role="row" className="grid min-w-fit items-center gap-2 px-3 py-1.5 max-sm:!flex max-sm:min-w-0 max-sm:flex-col max-sm:items-stretch max-sm:py-3 [&+&]:border-t [&+&]:border-border" style={{ gridTemplateColumns: template }}>
@@ -255,7 +257,7 @@ function RepeaterTable({ field, items, onChange, disabled, context, max, fields 
                   <Fields bare fields={[{ ...f, size: 'sm' }]} values={item} onChange={(h, v) => onChange(items.map((it, j) => (j === i ? { ...it, [h]: v } : it)))} context={{ ...context, path: [...(context.path ?? []), field.handle, String(i)] }} errors={context.errors} disabled={disabled} />
                 </div>
               ))}
-              <IconButton icon="trash" label={t('Remove')} size="xs" disabled={disabled} onClick={() => onChange(items.filter((_, j) => j !== i))} className="max-sm:self-end" />
+              <IconButton icon="trash" label={remove} size="xs" disabled={disabled} onClick={() => onChange(items.filter((_, j) => j !== i))} className="max-sm:self-end" />
             </div>
           ))}
         </div>

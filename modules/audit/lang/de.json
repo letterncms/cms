@@ -159,5 +159,6 @@
   "When": "Wann",
   "Who": "Wer",
   "Who changed what across the site, and when.": "Wer was auf der Website geändert hat, und wann.",
-  "Wrote Schema Files": "Schemadateien geschrieben"
+  "Wrote Schema Files": "Schemadateien geschrieben",
+  ":first and :count more": ":first und :count weitere"
 }

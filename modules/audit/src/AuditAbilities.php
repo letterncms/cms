@@ -6,6 +6,8 @@ namespace Cms\Modules\Audit;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Cms\Abilities\Ability;
+use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Admin\Translations;
@@ -42,6 +44,48 @@ final class AuditAbilities
         $entry = $this->cms->entries()->findMany([$id])[0] ?? null;
 
         return $entry ? ($entry->title !== '' ? $entry->title : __('Untitled')) : null;
+    }
+
+    /**
+     * What a change is about to be made to, named while it is still there: a deleted entry's title, else, for an
+     * ability that removes something and whose input names nothing itself (only an id), what its own dry run says
+     * it would remove. Whatever is still there afterwards is named when the log is read (`audit.subject`).
+     */
+    public function subjectBefore(Ability $ability, array $input, AbilityContext $context): ?string
+    {
+        if (($title = $this->entryTitle($ability->name, $input)) !== null) {
+            return $title;
+        }
+
+        if (! $ability->isDestructive() || $ability->dryRun === null || self::named($input) !== null) {
+            return null;
+        }
+
+        try {
+            $changes = array_values(array_filter((array) ($ability->dryRun)($input, $context), 'is_array'));
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $first = $changes === [] ? null : self::named($changes[0]);
+
+        return $first === null ? null : (count($changes) > 1 ? __(':first and :count more', ['first' => $first, 'count' => count($changes) - 1]) : $first);
+    }
+
+    /** What an input or a change names: its title, name, label, handle, email, path or address, or where a redirect goes from and to. */
+    private static function named(array $values): ?string
+    {
+        foreach (['title', 'name', 'label', 'handle', 'email', 'path', 'url'] as $key) {
+            if (is_string($values[$key] ?? null) && trim($values[$key]) !== '') {
+                return mb_strimwidth(trim($values[$key]), 0, 80, '…');
+            }
+        }
+
+        if (is_string($values['from'] ?? null) && is_string($values['to'] ?? null) && $values['from'] !== '') {
+            return mb_strimwidth($values['from'].' → '.$values['to'], 0, 80, '…');
+        }
+
+        return null;
     }
 
     public function register(AbilityRegistry $a): void
@@ -137,7 +181,7 @@ final class AuditAbilities
         }
 
         if (isset($in['ability'])) {
-            $query->where('ability', $in['ability']);
+            $query->whereIn('ability', Past::names(Past::RENAMED[$in['ability']] ?? $in['ability']));
         }
 
         // Days are the site's: its time zone is the app's, which the log's times are written in.
@@ -200,6 +244,7 @@ final class AuditAbilities
         $ids = DB::table('audit_log')->whereNotNull('user_id')->distinct()->pluck('user_id');
         $people = User::query()->whereIn('id', $ids)->orderBy('name')->get(['id', 'name'])->map(static fn (User $u) => ['id' => (string) $u->id, 'name' => $u->name])->all();
         $actions = DB::table('audit_log')->distinct()->pluck('ability')
+            ->map(static fn (string $name) => Past::RENAMED[$name] ?? $name)->unique()
             ->map(fn (string $name) => ['value' => $name, 'label' => $this->label($name)])
             ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
 
@@ -224,7 +269,12 @@ final class AuditAbilities
             $named = is_string($input[self::SUBJECT] ?? null) ? $input[self::SUBJECT] : null;
             unset($input[self::SUBJECT]);
             [$subject, $to] = $this->subject($row->ability, $input, $entries, $settings);
-            $subject ??= $named;
+            // What is still there to open goes by its name now; anything else by the name it had when it changed,
+            // else, for a change recorded before names were kept, what a plugin can still say of it.
+            if ($to === null && $named !== null) {
+                $subject = $named;
+            }
+            $subject ??= $this->cms->hooks()->filter('audit.subject', null, (string) $row->ability, $input);
 
             return [
                 'row' => $row, 'input' => $input,
@@ -242,6 +292,7 @@ final class AuditAbilities
      */
     public function label(string $ability): string
     {
+        $ability = Past::RENAMED[$ability] ?? $ability;
         $this->past ??= (array) $this->cms->hooks()->filter('audit.past', []);
 
         if (is_string($this->past[$ability] ?? null)) {
@@ -391,12 +442,6 @@ final class AuditAbilities
             return [$this->cms->packages()->repository()->find($input['name'])?->label ?? $input['name'], '/plugins'];
         }
 
-        foreach (['title', 'name', 'label', 'handle', 'email'] as $key) {
-            if (is_string($input[$key] ?? null) && trim($input[$key]) !== '') {
-                return [mb_strimwidth(trim($input[$key]), 0, 80, '…'), null];
-            }
-        }
-
-        return [null, null];
+        return [self::named($input), null];
     }
 }

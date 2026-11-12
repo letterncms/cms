@@ -34,7 +34,6 @@
   "Anything using it stops working immediately.": "Alles, was damit arbeitet, funktioniert sofort nicht mehr.",
   "API Tokens": "API-Tokens",
   "Ask for a new link": "Neuen Link anfordern",
-  "At least 10 characters, with letters and numbers.": "Mindestens 10 Zeichen, mit Buchstaben und Ziffern.",
   "Back to sign-in": "Zurück zur Anmeldung",
   "Button Label": "Beschriftung der Schaltfläche",
   "Change password": "Passwort ändern",
@@ -135,7 +134,6 @@
   "Save Your Recovery Codes": "Sichere deine Wiederherstellungscodes",
   "Saved.": "Gespeichert.",
   "Says when two-factor authentication is off or an API token lies unused.": "Meldet, wenn die Zwei-Faktor-Authentifizierung aus ist oder ein API-Token ungenutzt bleibt.",
-  "Scan the code with your authenticator app, then enter the code it shows.": "Scanne den Code mit deiner Authenticator-App und gib dann den angezeigten Code ein.",
   "Security": "Sicherheit",
   "Send the link": "Link senden",
   "Set Up": "Einrichten",
@@ -207,5 +205,7 @@
   "Your password is changed. Please sign in.": "Dein Passwort wurde geändert. Bitte melde dich an.",
   "Your password is not correct.": "Dein Passwort stimmt nicht.",
   "Your session expired. Please try again.": "Deine Sitzung ist abgelaufen. Bitte versuche es erneut.",
-  "Your versions of the sign-in and account pages. A page without a version here uses the standard one.": "Deine Versionen der Anmelde- und Kontoseiten. Eine Seite ohne eigene Version hier verwendet die Standardseite."
+  "Your versions of the sign-in and account pages. A page without a version here uses the standard one.": "Deine Versionen der Anmelde- und Kontoseiten. Eine Seite ohne eigene Version hier verwendet die Standardseite.",
+  "Code From the App": "Code aus der App",
+  "Scan With Your Authenticator App": "Mit deiner Authenticator-App scannen"
 }

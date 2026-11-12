@@ -187,8 +187,10 @@ function TwoFactorSetup({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} size="sm" title={t('Set Up Two-Factor Authentication')} description={t('Scan the code with your authenticator app, then enter the code it shows.')} submitLabel={t('Turn On')} busy={busy} submitDisabled={!setup || code.replace(/\D/g, '').length !== 6} onSubmit={() => void confirmCode()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()} size="sm" title={t('Set Up Two-Factor Authentication')} submitLabel={t('Turn On')} busy={busy} submitDisabled={!setup || code.replace(/\D/g, '').length !== 6} onSubmit={() => void confirmCode()}>
       <div className="space-y-4">
+        {/* The two steps by their labels: scan, then the code the app shows. */}
+        <p className="m-0 text-sm font-medium text-ink">{t('Scan With Your Authenticator App')}</p>
         <div className="mx-auto size-44 rounded-lg bg-white p-3 [&_svg]:size-full" role="img" aria-label={t('QR code')} dangerouslySetInnerHTML={{ __html: qr }} />
         {setup && (
           <div className="flex items-center gap-2 rounded-sm bg-sunken py-1.5 pl-3 pr-1.5">
@@ -196,7 +198,7 @@ function TwoFactorSetup({ onClose }: { onClose: () => void }) {
             <Button size="xs" variant="ghost" icon="copy" onClick={() => void copy(setup.secret)}>{t('Copy')}</Button>
           </div>
         )}
-        <Fields fields={[{ handle: 'code', type: 'text', label: t('Code'), placeholder: '123 456', max: 7, mono: true, autofocus: true, inputmode: 'numeric', autocomplete: 'one-time-code' }]} values={{ code }} onChange={(_, v) => setCode(v ?? '')} />
+        <Fields fields={[{ handle: 'code', type: 'text', label: t('Code From the App'), placeholder: '123 456', max: 7, mono: true, autofocus: true, inputmode: 'numeric', autocomplete: 'one-time-code' }]} values={{ code }} onChange={(_, v) => setCode(v ?? '')} />
       </div>
     </Dialog>
   )

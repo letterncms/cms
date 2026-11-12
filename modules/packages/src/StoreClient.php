@@ -563,6 +563,8 @@ final class StoreClient
     private function describe(string $id, array $item, array $payload): array
     {
         $installed = $this->installedVersion($item);
+        $local = $installed !== null ? $this->cms->packages()->repository()->find((string) ($item['package'] ?? '')) : null;
+        $own = $local !== null ? PackageAbilities::words($local) : null;
         $entry = $this->latestCompatible($item, null);
         $origin = self::origin((string) ($payload['store'] ?? ''));
         $icon = (string) ($item['icon'] ?? '');
@@ -582,8 +584,9 @@ final class StoreClient
             'store' => $id,
             'package' => (string) $item['package'],
             'type' => (string) ($item['type'] ?? 'plugin'),
-            'title' => mb_substr((string) ($item['title'] ?? $item['package']), 0, 120),
-            'summary' => mb_substr((string) ($item['summary'] ?? ''), 0, 300),
+            // A plugin this site has is named and described as Installed names it: its own words, in the admin's language.
+            'title' => mb_substr($own['label'] ?? (string) ($item['title'] ?? $item['package']), 0, 120),
+            'summary' => mb_substr($own['description'] ?? (string) ($item['summary'] ?? ''), 0, 300),
             'icon' => self::origin($icon) === $origin ? $icon : null,
             // A site kit's picture of itself, from the store's own origin like the icon.
             'preview' => is_string($item['preview'] ?? null) && self::origin($item['preview']) === $origin ? $item['preview'] : null,

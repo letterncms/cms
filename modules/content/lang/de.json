@@ -22,10 +22,8 @@
   "Change Schedule": "Planung ändern",
   "Changed": "Geändert",
   "Check every published page for SEO, GEO and accessibility problems and propose fixes.": "Prüfe jede veröffentlichte Seite auf SEO-, GEO- und Barrierefreiheitsprobleme und schlage Korrekturen vor.",
-  "Choose a new parent for “{title}”.": "Wähle einen neuen übergeordneten Eintrag für „{title}“.",
   "Choose a publication date and time.": "Wähle Datum und Uhrzeit der Veröffentlichung.",
   "Choose an end after the publication date, and not in the past.": "Wähle ein Ende nach dem Veröffentlichungsdatum, das nicht in der Vergangenheit liegt.",
-  "Choose Root to place this entry at the top level.": "Wähle „Oberste Ebene“, um diesen Eintrag ganz nach oben zu setzen.",
   "Close Panel": "Panel schließen",
   "Collection": "Sammlung",
   "Collection not found.": "Sammlung nicht gefunden.",
@@ -115,7 +113,6 @@
   "Look Up Entries": "Einträge nachschlagen",
   "More Actions": "Weitere Aktionen",
   "Move": "Verschieben",
-  "Move {type}": "{type} verschieben",
   "Move Entry": "Eintrag verschieben",
   "Move…": "Verschieben…",
   "Moved": "Verschoben",
@@ -230,5 +227,6 @@
   "Discard unpublished changes to “{title}”?": "Unveröffentlichte Änderungen an „{title}“ verwerfen?",
   "Every change since it was last published is lost. The published version stays as it is.": "Jede Änderung seit der letzten Veröffentlichung geht verloren. Die veröffentlichte Fassung bleibt, wie sie ist.",
   "It leaves the site and its address stops working until it is published again. Its content is kept as a draft.": "Es verschwindet von der Website, und seine Adresse funktioniert erst wieder, wenn es erneut veröffentlicht wird. Der Inhalt bleibt als Entwurf erhalten.",
-  "Unpublish “{title}”?": "„{title}“ zurückziehen?"
+  "Unpublish “{title}”?": "„{title}“ zurückziehen?",
+  "Move “{title}”": "„{title}“ verschieben"
 }

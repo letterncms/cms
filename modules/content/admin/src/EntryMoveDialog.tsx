@@ -62,8 +62,7 @@ export function EntryMoveDialog({ entry, collection, busy, onClose, onMove }: En
   return (
     <Dialog
       open
-      title={t('Move {type}', { type: collection.singular })}
-      description={t('Choose a new parent for “{title}”.', { title: entry.title })}
+      title={t('Move “{title}”', { title: entry.title })}
       onOpenChange={(open) => { if (!open && !pending) onClose() }}
       footer={
         <>
@@ -96,7 +95,6 @@ export function EntryMoveDialog({ entry, collection, busy, onClose, onMove }: En
                   ...options,
                   { value: parentId!, label: t('Unavailable parent') },
                 ],
-                instructions: t('Choose Root to place this entry at the top level.'),
               }]}
               values={{ parentId: parentId ?? '' }}
               onChange={(_, value) => { setParentId(value || null); setError(null) }}

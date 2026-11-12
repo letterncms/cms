@@ -96,7 +96,7 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
 
   const fields: FieldDef[] = [
     { handle: 'name', type: 'text', size: 'sm', commit: 'blur', label: t('Name') },
-    { handle: 'type', type: 'select', size: 'sm', label: t('Trigger'), required: true, options: Object.entries(kinds).map(([value, d]) => ({ value, label: d.label })), instructions: kinds[trigger.type]?.help },
+    { handle: 'type', type: 'select', size: 'sm', label: t('Trigger'), required: true, options: Object.entries(kinds).map(([value, d]) => ({ value, label: d.label })) },
   ]
   const after: FieldDef[] = [
     ...when(
@@ -115,7 +115,7 @@ function MotionEditor({ node, motion, onChange }: { node: BlockNode; motion: Mot
       loop,
       { handle: 'repeat', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Repeat||again'), required: true, options: [{ value: '0', label: t('Once') }, { value: '1', label: t('Twice') }, { value: '-1', label: t('Forever||repeat') }] },
       { handle: 'yoyo', type: 'toggle', size: 'sm', label: t('Back and Forth') },
-      { handle: 'hold', type: 'number', size: 'sm', label: t('Loop as a Timeline, Resting (s)'), if: { repeat: '-1' }, instructions: t('On Appear: all steps loop together while on screen.') },
+      { handle: 'hold', type: 'number', size: 'sm', label: t('Loop as a Timeline, Resting (s)'), if: { repeat: '-1' } },
     ),
     ...when(trigger.type === 'scroll' || trigger.type === 'appear', { handle: 'watch', type: 'select', component: 'blocks-node', label: t('Watch'), placeholder: t('This Element'), exclude: node.id }),
   ]

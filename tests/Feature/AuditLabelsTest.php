@@ -22,14 +22,32 @@ final class AuditLabelsTest extends TestCase
         $log = $this->cms()->abilities()->execute('audit/list', [], AbilityContext::forUser($admin, 'admin'));
         $labels = array_column($log['items'], 'label', 'ability');
 
-        $this->assertSame('Customise Pages', $labels['pages/customise']);
+        $this->assertSame('Customized Built-In Page', $labels['pages/customise'], 'a renamed ability reads as it is called now');
         $this->assertSame('Delete Form Submissions', $labels['form-submissions/delete']);
         $this->assertSame('Published Entry', $labels['entries/publish'], 'an ability that is there goes by what happened');
 
-        // The filter offers the same words.
+        // The filter offers the same words, a renamed one once under its name now, and narrows to every row it had.
         foreach ($log['filters']['actions'] as $action) {
             $this->assertDoesNotMatchRegularExpression('#^[a-z-]+/[a-z-]+$#', $action['label'], "{$action['value']} is offered by its raw name");
         }
+        $this->assertNotContains('pages/customise', array_column($log['filters']['actions'], 'value'));
+        $this->assertSame(['pages/customise'], array_column($this->cms()->abilities()->execute('audit/list', ['ability' => 'pages/customize'], AbilityContext::forUser($admin, 'admin'))['items'], 'ability'));
+    }
+
+    public function test_a_change_made_by_id_is_named_by_what_its_dry_run_says(): void
+    {
+        $admin = $this->admin();
+        $ctx = AbilityContext::forUser($admin, 'admin');
+        $token = $this->cms()->abilities()->execute('tokens/create', ['name' => 'Deploy Bot'], $ctx);
+        $this->cms()->abilities()->execute('tokens/delete', ['id' => (string) $token['id']], $ctx);
+
+        $row = $this->cms()->abilities()->execute('audit/list', ['ability' => 'tokens/delete'], $ctx)['items'][0];
+        $this->assertSame(['Revoked API Token', 'Deploy Bot'], [$row['label'], $row['subject']]);
+
+        // A plugin names its own with the `audit.subject` filter.
+        $this->cms()->hooks()->addFilter('audit.subject', static fn (?string $subject, string $ability) => $ability === 'tokens/create' ? 'Named by a plugin' : $subject);
+        $this->cms()->abilities()->execute('tokens/create', ['name' => 'Second'], $ctx);
+        $this->assertSame('Named by a plugin', $this->cms()->abilities()->execute('audit/list', ['ability' => 'tokens/create'], $ctx)['items'][0]['subject']);
     }
 
     public function test_a_deleted_entry_is_named_by_the_title_it_had(): void

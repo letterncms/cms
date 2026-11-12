@@ -1,5 +1,6 @@
 import { abilityKey, CmsError, loadManifest, queryClient, run, setQuery, t, useAbility, useLocation, type FieldDef } from '@letterncms/sdk'
 import { useContext, useEffect, useState } from 'react'
+import { confirm } from '../Dialog'
 import { QueryError } from '../QueryError'
 import { Fields } from '../Fields'
 import { changedFrom, GroupedFields } from '../GroupedFields'
@@ -56,6 +57,12 @@ export function Form({ source, fieldsAt = 'fields', valuesAt = 'values', fields:
 
   const submit = async () => {
     if (!values || !dirty) return
+    // A change that loses something asks first, as it is saved: a field's `confirmChange` says from which value, and what is lost.
+    for (const field of fields) {
+      const ask = field.confirmChange as { from: unknown; title: string; text?: string; confirm: string } | undefined
+      if (ask && field.handle in values && saved[field.handle] === ask.from && values[field.handle] !== ask.from
+        && !(await confirm({ title: ask.title, description: ask.text, confirm: ask.confirm, danger: true }))) return
+    }
     setBusy(true)
     setError(null)
     try {

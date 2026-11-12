@@ -48,7 +48,7 @@ export type ViewThen = 'refresh' | 'manifest' | 'back' | 'open' | 'download'
 export interface ViewAction {
   label: string
   icon?: string
-  variant?: 'primary' | 'default' | 'ghost' | 'danger'
+  variant?: 'primary' | 'default' | 'ghost' | 'destructive' | 'danger'
   ability?: string
   input?: Record<string, unknown>
   to?: string

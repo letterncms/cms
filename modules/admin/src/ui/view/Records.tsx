@@ -39,6 +39,8 @@ interface Column {
   labels?: Record<string, string>
   /** A second value, quieter, after the first: a change and what it was about. */
   muted?: string
+  /** The muted value is read whole, and the value is cut short first (who is editing, beside a title). */
+  mutedWhole?: boolean
   /** A key of the row holding a word to mark it with, as a badge after the value: "Default". */
   badge?: string
   /** What a number counts, said with it where the column's header is not on view (a phone's row): `{ one: '{count} Link', other: '{count} Links' }`. */
@@ -291,7 +293,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     const name = plainValue(at(row, columns[0].key), columns[0].labels)
     // A row with nothing to do keeps the room a menu takes, so every row's cells line up.
     if (all.length === 0) return <span aria-hidden className="inline-block size-6" />
-    const items = (list: RowAction[]) => list.map((a) => ({ label: a.label, icon: a.icon, danger: a.variant === 'danger', disabled: a.disabled !== undefined && holds(a.disabled, rowScope(row)), onSelect: () => void act(a, { row }).catch(() => {}) }))
+    const items = (list: RowAction[]) => list.map((a) => ({ label: a.label, icon: a.icon, danger: a.variant === 'danger' || a.variant === 'destructive', disabled: a.disabled !== undefined && holds(a.disabled, rowScope(row)), onSelect: () => void act(a, { row }).catch(() => {}) }))
     const more = (className: string) => <IconButton icon="more" size="xs" className={className} label={name ? t('Actions for {name}', { name: String(name) }) : t('Actions')} />
     return <>
       {inline.map((a, i) => <IconButton key={i} icon={a.icon!} size="xs" label={a.label} className="max-sm:hidden" onClick={() => void act(a, { row }).catch(() => {})} />)}
@@ -352,7 +354,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     // Once per row, each with its own version: what failed stays selected, with why.
     if (action.confirm) {
       const c = fill({ ...action.confirm, title: counted(action.confirm.title, count)! }, { ...scope, count })
-      if (!(await confirm({ title: c.title, description: c.text, confirm: c.confirm ?? action.label, danger: c.danger ?? action.variant === 'danger' }))) return
+      if (!(await confirm({ title: c.title, description: c.text, confirm: c.confirm ?? action.label, danger: c.danger ?? (action.variant === 'danger' || action.variant === 'destructive') }))) return
     }
     setBulkBusy(true)
     setFailures([])
@@ -457,12 +459,12 @@ function Cell({ row, column: c, media, first }: { row: Row; column: Column; medi
   return (
     <span className="flex min-w-0 items-baseline gap-2">
       {icon ? <Icon name={String(icon)} size={14} className="shrink-0 self-center text-muted" /> : null}
-      {/* Beside a title, the note is what must be read whole (who is editing): there the title is cut short first. */}
-      <span className={first && second && !problem ? 'min-w-0 truncate' : 'max-w-full shrink-0 truncate'}>{value}</span>
+      {/* The value is read whole and what follows gives way, unless the note must be (who is editing, `mutedWhole`): then the value is cut short first. */}
+      <span className={first && second && !problem && c.mutedWhole ? 'min-w-0 truncate' : 'max-w-full shrink-0 truncate'}>{value}</span>
       {badge ? <Badge className="shrink-0 self-center font-normal">{String(badge)}</Badge> : null}
       {problem
         ? <span className="flex min-w-0 items-center gap-1 font-normal text-warning"><Icon name="warning" size={12} className="shrink-0" /><span className="truncate">{String(problem)}</span></span>
-        : second ? <span className={cn('font-normal text-muted', first ? 'shrink-0 max-sm:hidden' : 'min-w-0 truncate')}>{String(second)}</span> : null}
+        : second ? <span className={cn('font-normal text-muted', first && c.mutedWhole ? 'shrink-0 max-sm:hidden' : 'min-w-0 truncate', first && !c.mutedWhole && 'max-sm:hidden')}>{String(second)}</span> : null}
     </span>
   )
 }

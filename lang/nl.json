@@ -168,7 +168,6 @@
   "Is required.": "Is verplicht.",
   "It did not start.": "Het is niet gestart.",
   "Items must be unique.": "Elementen moeten uniek zijn.",
-  "Its entries are terms that other entries are filed under.": "De items zijn termen waaronder andere items worden ingedeeld.",
   "JSON": "JSON",
   "Language": "Taal",
   "Link": "Link",
@@ -184,7 +183,6 @@
   "Look Up People": "Personen zoeken",
   "Manage all content, media and the site build.": "Alle content, media en de sitebuild beheren.",
   "Manage Settings": "Instellingen beheren",
-  "Map of value → label.": "Lijst van waarde → label.",
   "Markdown": "Markdown",
   "Matrix": "Matrix",
   "Max Length": "Maximale lengte",
@@ -209,7 +207,6 @@
   "Name, address, language and timezone.": "Naam, adres, taal en tijdzone.",
   "Needs at least :count items.": "Heeft minstens :count elementen nodig.",
   "No database server answered at :server. Check the host and port: on most shared hosting the host is “localhost”.": "Geen databaseserver gevonden op :server. Controleer host en poort: bij de meeste shared hosting is de host “localhost”.",
-  "No paragraphs, headings or lists.": "Geen alinea’s, koppen of lijsten.",
   "No site builder is on.": "Er staat geen sitebuilder aan.",
   "No view :id.": "Geen weergave :id.",
   "None": "Geen",
@@ -425,5 +422,7 @@
   "You do not have access to the admin.": "Je hebt geen toegang tot de beheeromgeving.",
   "Your Account": "Je account",
   "Your session expired. Reload the page.": "Je sessie is verlopen. Laad de pagina opnieuw.",
-  "Your sign-in expired. Please start again.": "Je inlogsessie is verlopen. Begin opnieuw."
+  "Your sign-in expired. Please start again.": "Je inlogsessie is verlopen. Begin opnieuw.",
+  "{\"value\": \"Label\"}": "{\"value\": \"Label\"}",
+  "Use at least 10 characters, with letters and numbers.": "Gebruik minstens 10 tekens, met letters en cijfers."
 }

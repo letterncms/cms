@@ -25,7 +25,6 @@ export function Position({ s }: { s: StyleApi }) {
               { value: 'fixed', label: t('Fixed') },
               { value: 'sticky', label: t('Sticky') },
             ],
-            instructions: position === 'absolute' ? t('Placed inside the nearest positioned parent') : position === 'fixed' ? t('Stays in the window while the page scrolls') : position === 'sticky' ? t('Sticks once its parent scrolls past the offset') : undefined,
           },
           placed && {
             handle: 'offsets',
@@ -36,7 +35,7 @@ export function Position({ s }: { s: StyleApi }) {
             fields: (['top', 'right', 'bottom', 'left'] as const).map((side) => ({ handle: side, type: 'text', component: 'blocks-value', label: { top: t('Top'), right: t('Right'), bottom: t('Bottom'), left: t('Left') }[side], title: { top: t('Top'), right: t('Right'), bottom: t('Bottom'), left: t('Left') }[side], prefix: side[0].toUpperCase(), placeholder: 'auto', group: 'space', keywords: ['auto'] })),
           },
           placed && { handle: 'zIndex', type: 'text', component: 'blocks-value', label: t('Z-index'), unit: '', placeholder: 'auto', prefixIcon: 'collection' },
-          { handle: 'isolation', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Isolation'), placeholder: 'auto', options: [{ value: 'auto', label: t('Auto') }, { value: 'isolate', label: t('Isolate') }], instructions: t('A new stacking context: keeps blend modes and z-index inside') },
+          { handle: 'isolation', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Isolation'), placeholder: 'auto', options: [{ value: 'auto', label: t('Auto') }, { value: 'isolate', label: t('Isolate') }] },
         ]}
       />
     </StyleSection>

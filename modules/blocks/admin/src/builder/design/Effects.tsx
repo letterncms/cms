@@ -20,7 +20,7 @@ export function Effects({ s }: { s: StyleApi }) {
       />
       <StyleFields s={s} bare fields={[{ handle: 'boxShadow', type: 'text', component: 'blocks-shadows', label: t('Shadows'), group: 'shadow' }]} />
       <StyleFields s={s} bare fields={[{ handle: 'filter', type: 'text', component: 'blocks-filters', label: t('Filters') }]} />
-      <StyleFields s={s} bare fields={[{ handle: 'backdropFilter', type: 'text', component: 'blocks-filters', label: t('Backdrop'), instructions: t('Filters what is behind the element, like frosted glass') }]} />
+      <StyleFields s={s} bare fields={[{ handle: 'backdropFilter', type: 'text', component: 'blocks-filters', label: t('Backdrop') }]} />
       <StyleFields
         s={s}
         fields={[

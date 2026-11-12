@@ -50,7 +50,7 @@ export function Transform({ s }: { s: StyleApi }) {
             set: (v) => Object.entries(changed(skew, v)).forEach(([k, x]) => setSkew(k as 'X' | 'Y', x ?? null)),
           },
           { handle: 'transformOrigin', type: 'json', component: 'blocks-origin', label: t('Origin'), className: 'items-start py-0.5 [&>label]:leading-6' },
-          { handle: 'perspective', type: 'text', component: 'blocks-value', label: t('Perspective'), prefixIcon: 'perspective', placeholder: 'none', keywords: ['none'], instructions: t('Depth for children rotated in 3D') },
+          { handle: 'perspective', type: 'text', component: 'blocks-value', label: t('Perspective'), prefixIcon: 'perspective', placeholder: 'none', keywords: ['none'] },
         ]}
       />
     </StyleSection>

@@ -48,7 +48,7 @@ export function useActions(scope: Scope, refresh: () => void, runner?: ActionRun
     const here = { ...scope, ...local }
     if (action.confirm) {
       const c = fill(action.confirm, here)
-      if (!(await confirm({ title: c.title, description: c.text, confirm: c.confirm ?? action.label, danger: c.danger ?? action.variant === 'danger' }))) return
+      if (!(await confirm({ title: c.title, description: c.text, confirm: c.confirm ?? action.label, danger: c.danger ?? (action.variant === 'danger' || action.variant === 'destructive') }))) return
     }
     if (action.copy !== undefined) {
       await navigator.clipboard.writeText(String(fill(action.copy, here) ?? ''))
