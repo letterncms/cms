@@ -82,7 +82,7 @@ final class SiteModule extends Plugin
         $this->policy();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([Console\BuildCommand::class, Console\CheckLinksCommand::class, Console\KitApplyCommand::class, Console\KitExportCommand::class, Console\KitListCommand::class, Console\VendorCommand::class]);
+            $this->commands([Console\BuildCommand::class, Console\CheckLinksCommand::class, Console\KitApplyCommand::class, Console\KitExportCommand::class, Console\KitListCommand::class, Console\KitSwitchCommand::class, Console\VendorCommand::class]);
         }
     }
 
@@ -134,6 +134,16 @@ final class SiteModule extends Plugin
                 $this->app->make(Kits\KitApplier::class)->apply($kits()->find($chosen) ?? $kits()->findOrFail(Kits\Kits::DEFAULT), 'full', 'skip', $user, withoutPlugins: true, check: false);
             }
         });
+
+        // The site's own mark and the kits it can be, for the admin's header: its favicon when it has one, and the switcher for whoever may switch.
+        $this->cms()->hooks()->addFilter('admin.manifest', static fn (array $manifest, User $user) => [
+            ...$manifest,
+            'site' => [
+                ...$manifest['site'],
+                'favicon' => \Cms\Modules\Blocks\Media::url(cms()->setting('site', 'favicon')),
+                'kits' => $user->hasPermission('settings.manage') ? $kits()->switcher() : [],
+            ],
+        ]);
 
         // A kit the store fetched is checked as any kit is, while it is still being unpacked (PackageJobs).
         $this->cms()->hooks()->on('packages.kit.staged', fn (string $dir, string $handle) => $this->app->make(Kits\KitFiles::class)->read(Kits\Kit::load($dir, 'site', $handle)));

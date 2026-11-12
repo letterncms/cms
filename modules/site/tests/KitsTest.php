@@ -131,6 +131,50 @@ final class KitsTest extends TestCase
         $this->assertCount(3, $this->cms()->entries()->query()->collection('posts')->get());
     }
 
+    public function test_switching_kits_keeps_what_the_site_was_and_brings_it_back(): void
+    {
+        $admin = $this->admin();
+        $this->cms()->hooks()->dispatch('cms.installed', $admin);
+        $this->assertSame('minimal', $this->kits()->active());
+
+        $this->kit('studio', [
+            'content/collections/pages.yaml' => "title: Pages\nsingular: Page\ndriver: database\nroute: '/{slug}'\nsort: position\nfields:\n  -\n    handle: content\n    type: blocks\n    label: Content\n",
+            'content/collections/pages/studio-home.md' => "---\nid: 01studio00000000000000000a\ntitle: Studio Home\nstatus: published\n---\n",
+        ]);
+
+        // An edit made in the kit the site is.
+        $home = $this->cms()->entries()->query()->collection('pages')->where('slug', 'home')->first();
+        $this->cms()->entryService()->update($home->id, ['title' => 'Our Home'], $admin, publish: true);
+        $this->cms()->entryService()->create('posts', ['title' => 'A Draft I Wrote', 'status' => 'draft'], $admin);
+
+        $result = $this->ability('kits/switch', ['handle' => 'studio']);
+        $this->assertTrue($result['switched']);
+        $this->assertSame(['handle' => 'minimal', 'name' => 'Minimal'], $result['saved']);
+        $this->assertSame('studio', $this->kits()->active());
+        $this->assertSame(['Studio Home'], array_map(static fn ($e) => $e->title, $this->cms()->entries()->query()->collection('pages')->get()));
+        $this->assertNull($this->cms()->collections()->find('posts'), 'what the other kit brought is gone');
+        $this->assertFileDoesNotExist(content_path('navigation/main.yaml'));
+
+        // Back: the site as it was left, drafts included, not the kit as it came.
+        $this->assertSame('studio', $this->ability('kits/switch', ['handle' => 'minimal'])['saved']['handle']);
+        $this->assertSame('minimal', $this->kits()->active());
+        $this->assertNotNull($this->cms()->entries()->query()->collection('pages')->where('title', 'Our Home')->first());
+        $this->assertCount(4, $this->cms()->entries()->query()->collection('posts')->get());
+
+        // Nothing to do when it already is.
+        $this->assertFalse($this->ability('kits/switch', ['handle' => 'minimal'])['switched']);
+
+        // Start over: the kit as it came, and the copy let go of.
+        $this->ability('kits/switch', ['handle' => 'minimal', 'fresh' => true]);
+        $this->assertNull($this->cms()->entries()->query()->collection('pages')->where('title', 'Our Home')->first());
+        $this->assertCount(3, $this->cms()->entries()->query()->collection('posts')->get());
+        $this->assertArrayNotHasKey('minimal', $this->kits()->saved());
+
+        $kits = array_column($this->ability('kits/list')['kits'], null, 'handle');
+        $this->assertTrue($kits['minimal']['active']);
+        $this->assertTrue($kits['studio']['edited']);
+    }
+
     public function test_the_kit_a_setup_chose_or_none(): void
     {
         $this->assertContains('kit', array_keys(Installer::rules()));

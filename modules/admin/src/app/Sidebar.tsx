@@ -6,7 +6,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { boot, events, Link, navigate, panelsFor, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
-import { BrandMark } from './Brand'
+import { SiteSwitcher } from './SiteSwitcher'
 import { setThemePreference, useThemePreference } from '../ui/theme'
 import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
 import { inSettings, parentWay, placeAt, subscribeParent, wayBack } from '../ui/place'
@@ -121,14 +121,7 @@ function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => v
     <>
       {/* The shell's sidebar button holds the first place in the row, in every state. */}
       <div className="flex h-12 shrink-0 items-center gap-1 pl-10 pr-2">
-        {/* One site, so no switcher: the name opens it. */}
-        <Tooltip content={t('Open Site')} side="bottom">
-          <a href={manifest.site.url || '/'} target="_blank" rel="noopener" className="group flex h-8 min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left no-underline outline-offset-[-2px] hover:bg-hover">
-            <BrandMark size={22} />
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-ink">{manifest.site.name}</span>
-            <Icon name="external" size={12} className="shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
-          </a>
-        </Tooltip>
+        <SiteSwitcher />
         <Tooltip content={t('Search')} shortcut="mod+k" side="bottom">
           <IconButton icon="search" label={t('Search')} title={undefined} size="sm" onClick={onSearch} />
         </Tooltip>
