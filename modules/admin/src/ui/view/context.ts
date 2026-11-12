@@ -25,6 +25,8 @@ export const useView = () => useContext(ViewContext)
 /** The tab a node is drawn in, so a form there can mark the tab while it has changes. */
 export const TabContext = createContext<{ id: string; dirty: (id: string, dirty: boolean) => void } | null>(null)
 
+export const isSettingsTab = (id: string | undefined) => id === 'settings' || id === 'options'
+
 /** For a component in a view's tab: marks the tab while what it edits has unsaved changes, as a form there does. */
 export function useTabDirty(dirty: boolean) {
   const tab = useContext(TabContext)

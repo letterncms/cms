@@ -1,6 +1,6 @@
 import { abilityKey, Link, locale, navigate, registry, run, t, useAbility, useManifest, type SurfaceComponentProps, type ViewAction, type ViewNode } from '@letterncms/sdk'
 import { useQueries } from '@tanstack/react-query'
-import { Fragment, Suspense, useCallback, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
+import { Fragment, Suspense, useCallback, useContext, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { Button } from '../Button'
 import { cn } from '../cn'
 import { ComponentBoundary } from '../ComponentBoundary'
@@ -12,11 +12,11 @@ import { Notice } from '../Notice'
 import { Page, ScreenTabs, Section, useScreenTabs } from '../Page'
 import { useShortcut } from '../shortcuts'
 import { Spinner } from '../Spinner'
-import { SettingsPanel } from '../SettingsPanel'
+import { SettingRow, SettingsPanel } from '../SettingsPanel'
 import { Stat } from '../Widget'
 import { WidgetSlot } from '../WidgetSlot'
 import { ActionButton, shown } from './actions'
-import { TabContext, useView, ViewContext } from './context'
+import { isSettingsTab, TabContext, useView, ViewContext } from './context'
 import { Form, SettingsView } from './Form'
 import { formatValue, type FormatOptions } from './formats'
 import { Records, type RecordsProps } from './Records'
@@ -157,6 +157,7 @@ function TabProvider({ id, mark, children }: { id: string; mark: (id: string, di
 
 function Detail({ node }: { node: ViewNode }) {
   const { scope } = useView()
+  const tab = useContext(TabContext)
   const { items, source, record, raw, rawLabel, empty } = node.props
   const loaded = useAbility<unknown>(source?.ability ?? 'abilities/list', input(source?.input, scope), { enabled: !!source })
   const rows: [string, ReactNode][] = items
@@ -167,11 +168,15 @@ function Detail({ node }: { node: ViewNode }) {
     : record && typeof record === 'object' ? summary(record as Record<string, unknown>) : []
   return (
     <div className="flex flex-col gap-5">
-      {rows.length > 0 ? (
+      {rows.length === 0 ? <p className="m-0 text-sm text-muted">{empty ?? t('Nothing else was sent.')}</p> : isSettingsTab(tab?.id) ? (
+        <SettingsPanel as="dl">
+          {rows.map(([label, value], i) => <SettingRow key={i} definition label={label}>{value}</SettingRow>)}
+        </SettingsPanel>
+      ) : (
         <dl className="m-0 grid grid-cols-[minmax(96px,auto)_minmax(0,1fr)] gap-x-6 gap-y-2 text-sm">
           {rows.map(([label, value], i) => <Fragment key={i}><dt className="text-muted">{label}</dt><dd className="m-0 min-w-0 break-words text-text">{value}</dd></Fragment>)}
         </dl>
-      ) : <p className="m-0 text-sm text-muted">{empty ?? t('Nothing else was sent.')}</p>}
+      )}
       {raw !== undefined && raw !== null && (typeof raw !== 'object' || Object.keys(raw).length > 0) && (
         <details className="group">
           <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-xs text-muted hover:text-text [&::-webkit-details-marker]:hidden">

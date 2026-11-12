@@ -25,7 +25,7 @@ function Agents() {
   const row = (label: string, value: string) => (
     <SettingRow label={label}>
       <div className="flex min-h-9 items-center gap-2 rounded-sm bg-sunken py-1.5 pl-3 pr-1.5 font-mono text-xs">
-        <span className="min-w-0 flex-1 break-all">{value}</span>
+        <span className="min-w-0 flex-1 break-words">{value}</span>
         <Button size="xs" variant="ghost" icon="copy" className="font-sans" onClick={() => void copyText(value, { copied: t('Copied') })}>{t('Copy')}</Button>
       </div>
     </SettingRow>
