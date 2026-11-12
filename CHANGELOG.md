@@ -20,6 +20,7 @@
 ### Fixed
 
 - The plugin page in the store can be scrolled again.
+- **Body Field** offers the fields of every blueprint, not only the collection's own, and a new entry of a blueprint is previewed with that blueprint's fields.
 
 ## 0.26.1 (2026-11-12)
 

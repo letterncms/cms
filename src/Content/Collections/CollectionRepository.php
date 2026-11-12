@@ -60,11 +60,15 @@ final class CollectionRepository
      */
     public function settingsFields(?Collection $collection = null): array
     {
+        // One handle for every blueprint: each entry's body is the field of that handle in its own blueprint,
+        // of whichever type it has there, and a blueprint without it has none. So any blueprint's field can be it.
         $bodies = [];
 
-        foreach ($collection?->blueprint()->fields() ?? [] as $field) {
-            if (in_array($field->type, ['blocks', 'markdown', 'richtext'], true)) {
-                $bodies[$field->handle] = $field->label;
+        foreach ($collection ? [null, ...array_keys($collection->blueprints())] : [] as $name) {
+            foreach ($collection->blueprint($name)->fields() as $field) {
+                if (in_array($field->type, ['blocks', 'markdown', 'richtext'], true)) {
+                    $bodies[$field->handle] ??= $field->label;
+                }
             }
         }
 

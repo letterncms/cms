@@ -20,7 +20,9 @@ final class EditorRenderingTest extends TestCase
     {
         return ['pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'body' => 'content', 'fields' => [
             ['handle' => 'content', 'type' => 'blocks'], ['handle' => 'aside', 'type' => 'blocks'], ['handle' => 'summary', 'type' => 'text'],
-        ]]];
+        ], 'blueprints' => ['note' => ['title' => 'Note', 'fields' => [
+            ['handle' => 'content', 'type' => 'markdown'], ['handle' => 'hero', 'type' => 'blocks'],
+        ]]]]];
     }
 
     private function xpath(string $html): DOMXPath
@@ -98,6 +100,21 @@ final class EditorRenderingTest extends TestCase
         $this->assertCount(1, $xpath->query('//p[text()="Template source"][@data-cms-prop="text"]'));
         $this->assertCount(0, $xpath->query('//p[text()="Sample body"][@data-cms-node or @data-cms-prop]'));
         $this->assertCount(1, $xpath->query('//*[@data-cms-editor-root]'));
+    }
+
+    public function test_an_entry_is_previewed_with_the_fields_of_its_blueprint(): void
+    {
+        $this->template([['type' => 'outlet']]);
+        $this->actingAs($this->admin());
+        // Its body is the blueprint's own field of that handle: Markdown here, blocks in the collection's fields.
+        $this->postJson('/__preview', ['collection' => 'pages', 'blueprint' => 'note', 'title' => 'Note', 'data' => ['content' => 'A *Markdown* body']])
+            ->assertOk()->assertSee('<em>Markdown</em>', false);
+        $hero = ['hero' => [['id' => 'hero-source', 'type' => 'paragraph', 'props' => ['text' => 'Hero text']]]];
+        $this->postJson('/__preview', ['collection' => 'pages', 'blueprint' => 'note', 'field' => 'hero', 'title' => 'Note', 'data' => $hero])->assertOk()->assertSee('Hero text');
+        $this->postJson('/__preview', ['collection' => 'pages', 'field' => 'hero', 'title' => 'Page', 'data' => $hero])->assertStatus(422);
+        $this->postJson('/__preview', ['collection' => 'pages', 'blueprint' => 'missing', 'field' => 'hero', 'title' => 'Page', 'data' => $hero])->assertStatus(422);
+        $note = $this->cms()->entryService()->create('pages', ['title' => 'Saved note', 'slug' => 'saved-note', 'blueprint' => 'note', 'data' => $hero]);
+        $this->postJson("/__preview/{$note->id}", ['field' => 'hero', 'title' => 'Saved note', 'data' => $hero])->assertOk()->assertSee('Hero text');
     }
 
     public function test_unsaved_entries_and_other_blocks_fields_use_the_same_renderer_without_saving(): void

@@ -143,7 +143,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
     <ScreenSidebar title={t('Outline||structure')} backTo={props.listPath} backLabel={props.listLabel ?? props.collection.title}><Layers /></ScreenSidebar>
     <div className="flex min-h-0 flex-1">
       <main id={fieldControlId(props.bodyField)} tabIndex={-1} aria-label={props.bodyField.label} aria-describedby={props.errors[props.bodyField.handle] ? `${fieldControlId(props.bodyField)}-error` : undefined} className="flex min-w-0 flex-1 flex-col outline-none" data-editor-document>
-        <LiveEditor collection={props.collection.handle} entryId={props.entry?.id} content={props.content} onTitleChange={!['templates', 'components'].includes(props.collection.handle) ? props.setTitle : undefined} onInspect={inspect} />
+        <LiveEditor collection={props.collection.handle} blueprint={props.collection.blueprint} entryId={props.entry?.id} content={props.content} onTitleChange={!['templates', 'components'].includes(props.collection.handle) ? props.setTitle : undefined} onInspect={inspect} />
         {props.errors[props.bodyField.handle] && <p id={`${fieldControlId(props.bodyField)}-error`} role="alert" className="m-0 shrink-0 px-3 py-2 text-xs text-danger">{props.errors[props.bodyField.handle]}</p>}
         <div className="max-h-[30vh] shrink-0 overflow-y-auto">{props.footer}</div>
       </main>

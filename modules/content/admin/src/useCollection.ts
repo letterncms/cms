@@ -20,13 +20,15 @@ export interface CollectionDef {
   resolvedFields: FieldDef[]
   /** The other blueprints of a collection that has several, each with its fields. */
   resolvedBlueprints?: { handle: string; title: string; resolvedFields: FieldDef[] }[]
+  /** Set by withBlueprint: the blueprint whose fields are in resolvedFields. */
+  blueprint?: string
   schema: Record<string, unknown>
 }
 
 /** A collection with the fields of one of its blueprints in place of its own: what an entry made with it is edited by. */
 export function withBlueprint(collection: CollectionDef, blueprint: string | null | undefined): CollectionDef {
   const named = blueprint ? collection.resolvedBlueprints?.find((b) => b.handle === blueprint) : undefined
-  return named ? { ...collection, resolvedFields: named.resolvedFields } : collection
+  return named ? { ...collection, resolvedFields: named.resolvedFields, blueprint: named.handle } : collection
 }
 
 export function useCollection(handle: string) {

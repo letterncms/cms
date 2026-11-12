@@ -9,5 +9,5 @@ export function PreviewDialog({ entry, content, collection }: EntryPanelProps) {
   const [open, setOpen] = useState(false)
   useEffect(() => events.on('entry.preview', () => setOpen(true)), [])
   if (!open) return null
-  return <Suspense fallback={<Spinner />}><Preview entry={entry} collection={collection.handle} content={content} onClose={() => setOpen(false)} /></Suspense>
+  return <Suspense fallback={<Spinner />}><Preview entry={entry} collection={collection.handle} blueprint={collection.blueprint} content={content} onClose={() => setOpen(false)} /></Suspense>
 }
