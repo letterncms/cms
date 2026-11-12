@@ -175,6 +175,41 @@ final class KitsTest extends TestCase
         $this->assertTrue($kits['studio']['edited']);
     }
 
+    public function test_a_kit_zip_is_imported_and_a_bad_one_refused(): void
+    {
+        $this->apply('minimal');
+        $made = $this->ability('kits/export', ['handle' => 'copy', 'name' => 'Copy', 'zip' => true]);
+        $imported = $this->ability('kits/import', ['content' => $made['content'], 'encoding' => 'base64']);
+        $this->assertSame('copy', $imported['kit']['handle']);
+        $this->assertFileExists(site_path('kits/copy/kit.json'));
+
+        try {
+            $this->ability('kits/import', ['content' => $made['content'], 'encoding' => 'base64']);
+            $this->fail('a kit of that handle is refused');
+        } catch (AbilityException $e) {
+            $this->assertSame('conflict', $e->type);
+        }
+
+        $this->ability('kits/import', ['content' => $made['content'], 'encoding' => 'base64', 'replace' => true]);
+
+        $zip = tempnam(sys_get_temp_dir(), 'z');
+        $archive = new \ZipArchive;
+        $archive->open($zip, \ZipArchive::OVERWRITE);
+        $archive->addFromString('bad/kit.json', json_encode(['handle' => 'bad', 'name' => 'Bad', 'version' => '1.0.0']));
+        $archive->addFromString('bad/content/run.php', '<?php');
+        $archive->close();
+
+        try {
+            $this->ability('kits/import', ['content' => base64_encode((string) file_get_contents($zip)), 'encoding' => 'base64']);
+            $this->fail('a kit with a file a server would run is refused');
+        } catch (AbilityException $e) {
+            $this->assertSame('invalid_input', $e->type);
+        }
+
+        $this->assertDirectoryDoesNotExist(site_path('kits/bad'));
+        @unlink($zip);
+    }
+
     public function test_the_kit_a_setup_chose_or_none(): void
     {
         $this->assertContains('kit', array_keys(Installer::rules()));

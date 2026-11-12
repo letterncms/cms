@@ -124,7 +124,7 @@ final class SiteModule extends Plugin
     private function kits(): void
     {
         $kits = fn () => $this->app->make(Kits\Kits::class);
-        Kits\KitAbilities::register($this->cms(), $kits, fn () => $this->app->make(Kits\KitApplier::class), fn () => $this->app->make(Kits\KitExporter::class));
+        Kits\KitAbilities::register($this->cms(), $kits, fn () => $this->app->make(Kits\KitApplier::class), fn () => $this->app->make(Kits\KitExporter::class), fn () => $this->app->make(Kits\KitImporter::class));
 
         $this->cms()->hooks()->on('cms.installed', function (User $user) use ($kits): void {
             $chosen = \Cms\Install\Installer::kit();

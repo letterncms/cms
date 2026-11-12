@@ -59,6 +59,8 @@ final class KitClearer
                 foreach ($this->exporter->tree(content_path($folder)) as $relative) {
                     preg_match('/\.(yaml|json|md)$/', $relative) && @unlink(content_path("{$folder}/{$relative}"));
                 }
+
+                is_file($single = content_path("{$folder}.yaml")) && ! is_link($single) && @unlink($single);
             }
         }
 

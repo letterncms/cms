@@ -34,8 +34,9 @@ final class KitAbilities
      * @param  Closure(): Kits  $kits
      * @param  Closure(): KitApplier  $applier
      * @param  Closure(): KitExporter  $exporter
+     * @param  Closure(): KitImporter  $importer
      */
-    public static function register(Cms $cms, Closure $kits, Closure $applier, Closure $exporter): void
+    public static function register(Cms $cms, Closure $kits, Closure $applier, Closure $exporter, Closure $importer): void
     {
         $abilities = $cms->abilities();
         $describe = static fn (Kit $kit) => [
@@ -127,6 +128,27 @@ final class KitAbilities
                 $kits()->flush();
 
                 return [...array_filter($result, static fn ($v, $k) => $k !== 'saved' || $v !== null, ARRAY_FILTER_USE_BOTH), 'kit' => $describe($kits()->saved()[$result['kit']] ?? $kits()->findOrFail($result['kit']))];
+            },
+        ]);
+
+        $abilities->register('kits/import', [
+            'label' => 'Import a Site Kit',
+            'description' => 'Put a kit that came as a zip into this site’s kits/, so it can be switched to (kits/switch) or applied (kits/apply): {"content": "<base64 of the zip>", "encoding": "base64"}, the zip Export Site makes or any kit’s folder zipped. The zip is read without trust and the kit is checked whole before it is kept; nothing of the site changes. A kit of a handle that exists is refused unless `replace`.',
+            'permission' => 'settings.manage',
+            'input' => ['type' => 'object', 'properties' => ['content' => ['type' => 'string', 'description' => 'The zip file, base64.'], 'encoding' => ['type' => 'string', 'enum' => ['base64']], 'replace' => ['type' => 'boolean']], 'required' => ['content', 'encoding']],
+            'output' => Shape::of(['kit' => self::kit()]),
+            'handler' => static function (array $in) use ($importer, $describe): array {
+                $zip = tempnam(sys_get_temp_dir(), 'kit');
+                $data = base64_decode((string) $in['content'], true);
+
+                try {
+                    $data === false && throw AbilityException::invalid(__('That is not a zip file.'));
+                    file_put_contents($zip, $data);
+
+                    return ['kit' => $describe($importer()->import($zip, (bool) ($in['replace'] ?? false)))];
+                } finally {
+                    @unlink($zip);
+                }
             },
         ]);
 
