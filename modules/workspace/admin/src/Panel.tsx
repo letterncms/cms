@@ -1,5 +1,5 @@
 import { adminUrl, CmsError, Link, navigate, panelsFor, registry, t, useAction, useLocation, useManifest, type ComposerOption, type SurfaceAction } from '@letterncms/sdk'
-import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, useShortcutLabel, type ActionAsker, type ActionRunner } from '@letterncms/ui'
+import { Button, Dock, Icon, IconButton, Menu, Notice, Spinner, Surface, Textarea, Tooltip, View, cn, confirm, copyText, fillTemplate, toast, useShortcutLabel, type ActionAsker, type ActionRunner, type MenuItemDef } from '@letterncms/ui'
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Composer, coarse } from './Composer'
 import { History, NewChatButton } from './History'
@@ -168,6 +168,17 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
     else panel.close()
   }
 
+  // Where the chat sits, then what to do with this one: the header keeps only what is used all the time.
+  const place: MenuItemDef[] = !canMaximize || full ? [] : [
+    ...(float.required ? [] : [{ label: float.chosen ? t('Dock Beside the Page') : t('Detach'), icon: float.chosen ? 'sidebar' : 'detach', onSelect: () => panel.set({ detached: !float.chosen }) }]),
+    { label: t('Full Size'), icon: 'maximize', onSelect: () => panel.maximize() },
+  ]
+  const actions: MenuItemDef[] = !id || listing ? [] : [
+    { label: t('Rename Chat'), icon: 'edit', disabled: thread.loading, onSelect: () => setRenaming(true) },
+    { label: t('Delete Chat'), icon: 'trash', danger: true, disabled: thread.busy || thread.loading || remove.isPending, onSelect: deleteThread },
+  ]
+  const menu: MenuItemDef[] = [...place, ...(place.length && actions.length ? [{ label: '', separator: true }] : []), ...actions]
+
   return (
     <div className="cms-thread flex h-full min-h-0" data-full={full || undefined} onKeyDown={onKeyDown}>
       {column && (
@@ -196,23 +207,12 @@ function Thread({ open, full }: { open: boolean; full: boolean }) {
               <IconButton icon="history" label={t('All Chats')} title={undefined} onClick={() => panel.set({ history: true, focusList: (panel.get().focusList ?? 0) + 1 })} />
             </Tooltip>
           )}
-          {id && !listing && (
-            <Menu
-              trigger={<IconButton icon="more" label={t('Chat Actions')} disabled={remove.isPending} />}
-              items={[
-                { label: t('Rename Chat'), icon: 'edit', disabled: thread.loading, onSelect: () => setRenaming(true) },
-                { label: t('Delete Chat'), icon: 'trash', danger: true, disabled: thread.busy || thread.loading || remove.isPending, onSelect: deleteThread },
-              ]}
-            />
+          {menu.length > 0 && (
+            <Menu trigger={<IconButton icon="more" label={t('Chat Actions')} disabled={remove.isPending} />} items={menu} />
           )}
-          {canMaximize && !full && !float.required && (
-            <Tooltip content={float.chosen ? t('Dock Beside the Page') : t('Detach')} side="bottom">
-              <IconButton icon={float.chosen ? 'sidebar' : 'detach'} label={float.chosen ? t('Dock Beside the Page') : t('Detach')} title={undefined} onClick={() => panel.set({ detached: !float.chosen })} />
-            </Tooltip>
-          )}
-          {canMaximize && (
-            <Tooltip content={full ? t('Back to the Page') : t('Full Size')} side="bottom">
-              <IconButton icon={full ? 'minimize' : 'maximize'} label={full ? t('Back to the Page') : t('Full Size')} title={undefined} onClick={() => (full ? panel.minimize() : panel.maximize())} />
+          {full && (
+            <Tooltip content={t('Back to the Page')} side="bottom">
+              <IconButton icon="minimize" label={t('Back to the Page')} title={undefined} onClick={() => panel.minimize()} />
             </Tooltip>
           )}
           {!full && (

@@ -51,6 +51,13 @@ const isOpen = () => !!dock()?.hasAttribute('data-open')
 const isFull = () => !!dock()?.hasAttribute('data-full')
 const composer = () => dock().querySelector('textarea[role="combobox"]')
 const control = label => dock().querySelector('button[aria-label="' + label + '"]')
+const menuItems = () => [...document.querySelectorAll('[role="menuitem"]')]
+// Where the chat sits and what to do with it are in its menu.
+const choose = async label => {
+  control('Chat Actions').click()
+  await wait(() => menuItems().some(el => el.textContent === label), label + ' missing from Chat Actions')
+  menuItems().find(el => el.textContent === label).click()
+}
 // A fresh thread: the + in the thread's header, which a new empty thread leaves out, or the sidebar's New Chat.
 const newChat = () => (control('New Chat') ?? document.querySelector('.cms-side-panel button[aria-label="New Chat"]')).click()
 const button = label => [...dock().querySelectorAll('button')].find(el => el.textContent.trim() === label)
@@ -186,18 +193,18 @@ try {
     let asked = 0
     window.confirm = () => { asked++; return false }
     try {
-      control('Full Size').click(); await wait(() => isFull() && location.pathname === '/admin/chat/new', 'Full Size did not open the chat URL')
+      await choose('Full Size'); await wait(() => isFull() && location.pathname === '/admin/chat/new', 'Full Size did not open the chat URL')
       assert(screen() === 'Pages' && document.querySelector('.cms-sheet').inert, 'the page underneath was replaced or stays interactive')
       control('Back to the Page').click(); await wait(() => !isFull() && isOpen() && location.pathname === '/admin/content/pages', 'Back to the Page did not return to the page')
       assert(asked === 0 && !document.querySelector('[role="dialog"], [role="alertdialog"]') && screen() === 'Pages', 'the chat asked about leaving a page it never left')
     } finally { window.confirm = original; unblock() }
   })
   await test('Detached, the chat floats over the page, and closing it brings the Chat button back with the focus on it', async () => {
-    control('Detach').click(); await wait(() => dock().hasAttribute('data-floating'), 'Detach did not float the chat')
+    await choose('Detach'); await wait(() => dock().hasAttribute('data-floating'), 'Detach did not float the chat')
     assert(!toggle(), 'the Chat button stayed in the top bar beside a floating chat')
     control('Close').click(); await wait(() => !isOpen() && toggle() && document.activeElement === toggle(), 'closing the floating chat did not bring the Chat button back with the focus on it')
     toggle().click(); await wait(() => isOpen() && !toggle(), 'the Chat button did not reopen the floating chat')
-    control('Dock Beside the Page').click(); await wait(() => !dock().hasAttribute('data-floating') && !toggle(), 'chat did not dock again')
+    await choose('Dock Beside the Page'); await wait(() => !dock().hasAttribute('data-floating') && !toggle(), 'chat did not dock again')
   })
   await test('The shortcut opens the chat, keeps it from the page, and puts it away from inside', async () => {
     control('Close').click(); await wait(() => !isOpen(), 'Close failed')
