@@ -4,7 +4,7 @@
 
 ### Changed
 
-- A collection's **Fields** tab shows its blueprints as a switch only once it has two. Until then **Add Blueprint** sits beside **Add Field**, instead of a lone tab with the collection's name.
+- A collection's blueprints are a menu at the start of the **Add Field** row, named for the one on view: switch, add, rename and remove them there. The row stays where it is whether there is one blueprint or several, and adding one asks for its name.
 
 ## 0.26.1 (2026-11-12)
 

@@ -1,10 +1,11 @@
 import { CmsError, invalidate, loadManifest, navigate, plural, run, t, useAbility, useTab, type FieldDef } from '@letterncms/sdk'
 import { useEffect, useRef, useState } from 'react'
 import { FieldsEditor, RowUsage, type RawField } from '../fields/FieldsEditor'
-import { PartName } from '../fields/BuilderFields'
-import { IconButton } from './Button'
 import { Button } from './Button'
-import { confirm } from './Dialog'
+import { confirm, prompt } from './Dialog'
+import { Icon } from './Icon'
+import { Menu } from './Menu'
+import { slugify } from './slugify'
 import { NotFoundState } from './EmptyState'
 import { Notice } from './Notice'
 import { QueryError } from './QueryError'
@@ -13,7 +14,7 @@ import { Page, Section, type Crumb } from './Page'
 import { SaveBar } from './SaveBar'
 import { Spinner } from './Spinner'
 import { toast } from './toast'
-import { Segmented, Tabs } from './Segmented'
+import { Tabs } from './Segmented'
 
 export interface BlueprintDefinition {
   title: string
@@ -164,14 +165,25 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
   const named = blueprints[current] ? current : ''
   const setBlueprints = (next: [string, { title?: string; fields?: RawField[] }][]) => patch({ blueprints: next.length ? Object.fromEntries(next) : undefined })
   const changeBlueprint = (handle: string, change: { title?: string; fields?: RawField[] }) => setBlueprints(Object.entries(blueprints).map(([h, b]) => (h === handle ? [h, { ...b, ...change }] : [h, b])))
-  const addBlueprint = () => {
-    let handle = 'kind'
-    for (let n = 2; blueprints[handle]; n++) handle = `kind_${n}`
-    setBlueprints([...Object.entries(blueprints), [handle, { title: t('Blueprint'), fields: [] }]])
+  const nameFields = (handle: string | null): FieldDef[] => [
+    { handle: 'title', type: 'text', label: t('Name'), required: true },
+    ...(handle === null ? [] : [{ handle: 'handle', type: 'text', component: 'handle-input', label: t('Handle'), taken: Object.keys(blueprints).filter((h) => h !== handle), instructions: savedBlueprints.current?.has(handle) ? t('Changing it orphans existing values.') : undefined } as FieldDef]),
+  ]
+  const addBlueprint = async () => {
+    const values = await prompt({ title: t('Add Blueprint'), fields: nameFields(null), confirm: t('Add Blueprint') })
+    const title = String(values?.title ?? '').trim()
+    if (!title) return
+    const base = slugify(title).replace(/-/g, '_') || 'kind'
+    let handle = base
+    for (let n = 2; blueprints[handle]; n++) handle = `${base}_${n}`
+    setBlueprints([...Object.entries(blueprints), [handle, { title, fields: [] }]])
     setCurrent(handle)
   }
-  const renameBlueprint = (from: string, to: string) => {
-    setBlueprints(Object.entries(blueprints).map(([h, b]) => (h === from ? [to, b] : [h, b])))
+  const renameBlueprint = async (from: string) => {
+    const values = await prompt({ title: t('Rename Blueprint'), fields: nameFields(from), values: { title: blueprints[from]?.title ?? '', handle: from }, confirm: t('Rename Blueprint') })
+    if (!values) return
+    const to = String(values.handle || from)
+    setBlueprints(Object.entries(blueprints).map(([h, b]) => (h === from ? [to, { ...b, title: String(values.title ?? '').trim() || b.title }] : [h, b])))
     setCurrent(to)
   }
   // What was made with it stays, without these fields: said with how many there are, before it is taken away.
@@ -189,6 +201,23 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
     setBlueprints(Object.entries(blueprints).filter(([h]) => h !== handle))
     setCurrent('')
   }
+
+  // The kinds of item: the one on view, a menu to switch, add, rename and remove. There from the first, so it reads as one.
+  const blueprintMenu = kind.blueprints && def && (
+    <Menu
+      align="start"
+      trigger={<Button variant="ghost" icon="stack" className="-ml-2 min-w-0" data-blueprints><span className="truncate">{named ? blueprints[named].title || named : def.singular || def.title}</span><Icon name="chevron-down" size={14} className="shrink-0 text-faint" /></Button>}
+      items={[
+        { label: t('Blueprints'), heading: true },
+        { label: def.singular || def.title, checked: named === '', onSelect: () => setCurrent('') },
+        ...Object.entries(blueprints).map(([handle, b]) => ({ label: b.title || handle, checked: named === handle, onSelect: () => setCurrent(handle) })),
+        { label: '', separator: true },
+        { label: t('Add Blueprint'), icon: 'plus', onSelect: () => void addBlueprint() },
+        named !== '' && { label: t('Rename Blueprint'), icon: 'edit', onSelect: () => void renameBlueprint(named) },
+        named !== '' && { label: t('Remove Blueprint'), icon: 'trash', danger: true, disabled: saving, onSelect: () => void removeBlueprint(named) },
+      ]}
+    />
+  )
 
   const discard = () => {
     setCurrent('')
@@ -225,34 +254,14 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
           <Tabs value={tab} onChange={setTab} tabs={[{ value: 'fields', label: t('Fields') }, { value: 'settings', label: t('Settings') }]} className="mb-6" />
           {tab === 'fields' ? (
             <>
-              {/* The kinds of item, once there are several: a switch between them, one set of fields on view at a time. */}
-              {kind.blueprints && Object.keys(blueprints).length > 0 && (
-                <div className="mb-5 flex flex-wrap items-center gap-2" data-blueprints>
-                  <Segmented aria-label={t('Blueprints')} value={named} onChange={setCurrent} options={[{ value: '', label: def.singular || def.title }, ...Object.entries(blueprints).map(([handle, b]) => ({ value: handle, label: b.title || handle }))]} />
-                  <IconButton icon="plus" label={t('Add Blueprint')} onClick={addBlueprint} />
-                </div>
-              )}
-              {named === '' ? (
-                <FieldsEditor
-                  heading={false} fields={def.fields} onChange={setFields} body={def.body} builtIn={kind.builtIn} errors={fieldErrors}
-                  // With one kind there is no switch yet: adding the second sits quietly beside Add Field.
-                  actions={kind.blueprints && !Object.keys(blueprints).length && <Button variant="ghost" icon="plus" onClick={addBlueprint}>{t('Add Blueprint')}</Button>}
-                />
-              ) : (
-                <div key={named}>
-                  <div className="mb-5">
-                    <PartName
-                      name={blueprints[named].title ?? ''} handle={named} taken={Object.keys(blueprints).filter((h) => h !== named)}
-                      renamed={!savedBlueprints.current?.has(named) && [...(savedBlueprints.current ?? [])].some((h) => !blueprints[h])}
-                      onName={(title) => changeBlueprint(named, { title })} onHandle={(handle) => renameBlueprint(named, handle)}
-                    />
-                  </div>
-                  <FieldsEditor heading={false} fields={blueprints[named].fields ?? []} onChange={(fields) => changeBlueprint(named, { fields })} body={def.body} errors={fieldErrors} path={`blueprints.${named}.fields`} />
-                  <div className="mt-10 border-t border-border pt-6">
-                    <Button variant="destructive" icon="trash" className="-ml-2" disabled={saving} onClick={() => void removeBlueprint(named)}>{t('Remove Blueprint')}</Button>
-                  </div>
-                </div>
-              )}
+              {/* One set of fields on view at a time, in the same editor: which one is a menu in the Add Field row, so nothing moves. */}
+              <FieldsEditor
+                key={named}
+                heading={false} body={def.body} errors={fieldErrors} leading={blueprintMenu}
+                {...(named === ''
+                  ? { fields: def.fields, onChange: setFields, builtIn: kind.builtIn }
+                  : { fields: blueprints[named].fields ?? [], onChange: (fields: RawField[]) => changeBlueprint(named, { fields }), path: `blueprints.${named}.fields` })}
+              />
             </>
           ) : (
             <div>
