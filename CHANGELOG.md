@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.32.1 (2026-11-13)
+
 ### Changed
 
 - **A list of tags in a settings panel sits in the right column,** beside its name, like the other short settings.
