@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.36.0 (2026-11-13)
+
 ### Added
 
 - **Patterns**: arrangements of blocks to start from, like a hero, a gallery or a whole page. Inserting one puts a copy on the page, to change as you like. Find them under **Design → Patterns**, shown as pictures grouped by category, and in a **Patterns** tab of the block inserter. Save any blocks as a pattern from their menu with **Save as Pattern**. A new page can start from a pattern of the category **Pages**. Plugins can ship patterns with the `blocks.pattern-sources` filter, and agents use `patterns/list` and `patterns/save`.
