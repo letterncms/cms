@@ -237,6 +237,8 @@ export interface WidgetInfo {
   view?: string
   /** The link in its header ("All Orders"). */
   action?: { label: string; to: string }
+  /** What a view-drawn widget says while its view has nothing in it. */
+  empty?: string
 }
 
 export interface Manifest {

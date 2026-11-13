@@ -10,7 +10,7 @@ interface EmailStatus {
   latest: { id: string; to: string; subject: string; tag: string | null; status: 'sent' | 'failed'; error: string | null; createdAt: string }[]
 }
 
-/** Home-screen widget: whether email gets out, and the latest messages. Nothing while email is set up and none was sent: how it is sent is on the Email settings. */
+/** Home-screen widget: whether email gets out, and the latest messages. */
 export default function WidgetEmail() {
   const manifest = useManifest()
   const status = useAbility<EmailStatus>('email/status', { limit: 4 }, { refetchInterval: 60_000 })
@@ -42,10 +42,10 @@ export default function WidgetEmail() {
     </div>
   )
 
-  if (!status.isError && (!s || (s.transport.delivers && s.sent === 0 && s.failed === 0 && s.latest.length === 0))) return null
+  const unused = !!s && s.transport.delivers && s.sent === 0 && s.failed === 0 && s.latest.length === 0
 
   return (
-    <Widget action={{ label: t('Settings'), to: '/settings/email' }} query={status}>
+    <Widget action={{ label: t('Settings'), to: '/settings/email' }} query={status} empty={unused && { title: t('No email sent yet') }}>
       {s && (
         <div className="space-y-4">
           <div className="flex items-start gap-3">

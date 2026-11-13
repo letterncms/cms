@@ -14,15 +14,14 @@ interface Pkg {
   installedVersion: string | null
 }
 
-/** Home-screen widget: what about the installation needs attention — database updates waiting, plugins that failed. Nothing while all is well: the version and the plugins are on Plugins. */
+/** Home-screen widget: what about the installation needs attention — database updates waiting, plugins that failed. */
 export default function WidgetSystem() {
   const list = useAbility<{ items: Pkg[]; errors: string[] }>('packages/list', { type: 'all' })
   const [updating, setUpdating] = useState(false)
   const all = list.data?.items ?? []
 
-  const extensions = all
   const pending = all.filter((p) => p.active && p.installedVersion !== p.version)
-  const troubled = extensions.filter((p) => p.enabled && p.problem)
+  const troubled = all.filter((p) => p.enabled && p.problem)
   const broken = list.data?.errors ?? []
 
   const update = async () => {
@@ -39,10 +38,10 @@ export default function WidgetSystem() {
     }
   }
 
-  if (!list.isError && (!list.data || (pending.length === 0 && troubled.length === 0 && broken.length === 0))) return null
+  const healthy = !!list.data && pending.length === 0 && troubled.length === 0 && broken.length === 0
 
   return (
-    <Widget action={{ label: t('Plugins'), to: '/plugins' }} query={list}>
+    <Widget action={{ label: t('Plugins'), to: '/plugins' }} query={list} empty={healthy && { title: t('Everything is up to date') }}>
       {list.data && (
         <div>
           <div>

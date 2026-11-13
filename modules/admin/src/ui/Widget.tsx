@@ -11,12 +11,13 @@ import { Skeleton } from './Spinner'
  * Home-screen widgets. The home screen gives each widget its registration (label, icon)
  * through context; the widget draws its body inside `<Widget>`, which supplies the
  * header, loading skeleton, error and empty states — so every widget, core or plugin,
- * looks and behaves the same:
+ * looks and behaves the same. A widget always draws: when it has nothing to say it says so
+ * through `empty`, never by rendering nothing:
  *
  *   export default function LatestReviews() {
  *     const reviews = useAbility<Review[]>('reviews/latest', { limit: 5 })
  *     return (
- *       <Widget action={{ label: t('All Reviews'), to: '/reviews' }} query={reviews} empty={reviews.data?.length === 0 && { icon: 'star', title: t('No reviews yet') }}>
+ *       <Widget action={{ label: t('All Reviews'), to: '/reviews' }} query={reviews} empty={reviews.data?.length === 0 && { title: t('No reviews yet') }}>
  *         {reviews.data?.map((r) => <WidgetRow key={r.id} to={`/reviews/${r.id}`} icon="star" title={r.title} meta={timeAgo(r.createdAt)} />)}
  *       </Widget>
  *     )
@@ -58,7 +59,7 @@ export interface WidgetProps {
   loading?: boolean
   /** The loading placeholder; rows by default. */
   skeleton?: ReactNode
-  /** Shown instead of the body when truthy. */
+  /** Shown instead of the body when truthy; its icon is the widget's own unless it brings one. */
   empty?: WidgetEmpty | false | null
   children?: ReactNode
   className?: string
@@ -102,7 +103,7 @@ export function Widget({ title, action, query, loading, skeleton, empty, childre
       ) : failed ? (
         <QueryError compact onRetry={query?.refetch && (() => query.refetch?.())} />
       ) : empty ? (
-        <EmptyState compact {...empty} />
+        <EmptyState compact {...empty} icon={empty.icon ?? meta?.icon} />
       ) : (
         children
       )}
