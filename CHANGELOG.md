@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.36.2 (2026-11-13)
+
 ### Fixed
 
 - A page's Markdown version (`/page.md`), `llms.txt`, `robots.txt` and the other text files a site builds show curly quotes, accents and other special characters correctly, instead of as "â€™" and the like. On Apache they are now sent as UTF-8; existing sites get this with their next build or `cms migrate`.
