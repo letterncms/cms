@@ -1,0 +1,1 @@
+import{r as e}from"./chunks/rolldown-runtime-XKyaHtl9.js";import{t}from"./chunks/client-CqGaja2F.js";var n=e(t(),1),r=n.default??n,{createRoot:i,hydrateRoot:a,version:o}=r;export{i as createRoot,r as default,a as hydrateRoot,o as version};
