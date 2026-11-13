@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.36.1 (2026-11-13)
+
 ### Fixed
 
 - Embeds and plugins' players, like a Spotify playlist or a map, show in the editor as they do on the site, instead of as blocked content. The editor lets in the same frames as the site's pages.
