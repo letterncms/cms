@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.35.2 (2026-11-13)
+
 ### Changed
 
 - The sidebar account button shows just your name and avatar in a shorter row. The default account avatar uses your theme color, and New Chat sits with the other sidebar links.
