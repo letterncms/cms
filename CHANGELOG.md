@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.33.0 (2026-11-13)
+
 ### Changed
 
 - **Every Dashboard widget now shows up, with its title, whenever you add it.** Agents, Email, Security, Sync, System, Team and Activity used to draw nothing while there was nothing to report; each now says so, like Recent Uploads does ("No agents connected", "Everything is up to date"). A widget a plugin draws from a view takes the same line from its new `empty` setting.
