@@ -1,0 +1,36 @@
+{
+  "entry": "main-BWqGrwiI.js",
+  "css": [
+    "assets/style-BNIzsPeL.css"
+  ],
+  "fonts": [
+    "assets/InstrumentSans-Latin-BbzFLZTg.woff2"
+  ],
+  "imports": {
+    "react": "react-CXI3ya14.js",
+    "react/jsx-runtime": "react-jsx-runtime-Cf8ynG-2.js",
+    "react-dom": "react-dom-CtTcmTbb.js",
+    "react-dom/client": "react-dom-client-DrSq2T34.js",
+    "@tanstack/react-query": "tanstack-react-query-D1oA9GEW.js",
+    "@letterncms/sdk": "letterncms-sdk-l4ehLu87.js",
+    "@letterncms/ui": "letterncms-ui-BjorDDjP.js",
+    "@dnd-kit/core": "dnd-kit-core-DC02x_kX.js",
+    "@dnd-kit/sortable": "dnd-kit-sortable-Du6GUEmz.js",
+    "@dnd-kit/utilities": "dnd-kit-utilities-DkshHPVx.js"
+  },
+  "preload": [
+    "chunks/rolldown-runtime-XKyaHtl9.js",
+    "chunks/client-CqGaja2F.js",
+    "chunks/react-DlmbjZJV.js",
+    "chunks/src-eX12vPxS.js",
+    "chunks/jsx-runtime-LKYXHABd.js",
+    "chunks/useMutation-DYNBVAw_.js",
+    "chunks/events-CVpu8HF_.js",
+    "chunks/ui-BLLRLVTq.js",
+    "chunks/utilities.esm-q7c7JCuL.js",
+    "chunks/core.esm-C_b5CInw.js",
+    "chunks/dnd-DEeq4YyZ.js",
+    "chunks/sortable.esm-DBGLWvyi.js",
+    "react-CXI3ya14.js"
+  ]
+}
