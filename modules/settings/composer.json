@@ -2,7 +2,7 @@
     "name": "letterncms/settings",
     "description": "The settings screen every module and plugin configures itself through, and the sidebar editor.",
     "type": "cms-plugin",
-    "version": "0.35.0",
+    "version": "0.35.1",
     "license": "MIT",
     "require": {
         "letterncms/cms": "*"

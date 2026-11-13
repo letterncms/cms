@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.35.1 (2026-11-13)
+
 ### Fixed
 
 - Use `--start-from` to choose a Site at installation.
