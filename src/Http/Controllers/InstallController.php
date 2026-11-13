@@ -31,7 +31,7 @@ final class InstallController
         $locale = $this->locale($request);
 
         // A store's pictures come from the store: the one place besides this site an image may.
-        $store = self::origin((string) (app(StoreClient::class)->stores()[0]['url'] ?? ''));
+        $store = self::origin((string) (app(StoreClient::class)->catalogUrl() ?? ''));
 
         return response()->view('cms::install', [
             'locale' => $locale,
@@ -119,7 +119,7 @@ final class InstallController
             [$vendor, $name] = explode('/', (string) ($item['package'] ?? ''), 2) + [1 => ''];
             $handle = $vendor === \Cms\Packages\PackageManifest::VENDOR ? $name : "{$vendor}-{$name}";
 
-            if (($item['type'] ?? null) === 'kit' && ($item['action'] ?? null) === 'install' && ($item['access']['allowed'] ?? false)
+            if (($item['type'] ?? null) === 'kit' && ($item['action'] ?? null) === 'install'
                 && Files::isHandle($handle) && ! in_array($handle, $here, true) && ! isset($kits[$handle])) {
                 $kits[$handle] = ['handle' => $handle, 'name' => (string) $item['title'], 'package' => (string) $item['package'], 'preview' => $item['preview'] ?? $item['icon'] ?? null];
             }
@@ -203,7 +203,6 @@ final class InstallController
             'adding' => __('Finishing Your Site'),
             'addingOne' => __('Adding :package…'),
             'finishing' => __('Putting your site together…'),
-            'paid' => __('Paid'),
             'composerSite' => __('This site is managed with Composer. Add plugins with: composer require letterncms/seo'),
             'noStore' => __('The store can’t be reached right now. You can add them later, under Plugins in the sidebar.'),
         ];

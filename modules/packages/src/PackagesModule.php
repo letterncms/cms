@@ -29,7 +29,6 @@ final class PackagesModule extends Plugin
         // The engine in core knows nothing about stores: who vouches for a download is decided here.
         $this->app->afterResolving(PackageJobs::class, function (PackageJobs $jobs): void {
             $jobs->verifier('store', fn (array $job) => $this->app->make(StoreClient::class)->verifyDownload($job));
-            $jobs->verifier('store:inspected', fn (array $job) => $this->app->make(StoreClient::class)->verifyInspected($job));
             $jobs->verifier('upload', fn (array $job) => $this->app->make(StoreClient::class)->verifyUpload($job));
             $jobs->verifier('upload:inspected', fn (array $job) => $this->app->make(StoreClient::class)->verifyUploadInspected($job));
         });
@@ -71,8 +70,6 @@ final class PackagesModule extends Plugin
             $store = app(StoreClient::class)->updates();
 
             return [...$out,
-                // Never silent: a fix this site can't fetch, and a known problem with what it runs.
-                'stuck' => array_values(array_column(array_filter($store['packages'], static fn (array $p) => $p['security'] && ! $p['allowed']), 'label')),
                 'advisories' => array_column($store['advisories'], 'label'),
                 'version' => $offer['current'],
                 'state' => $status['state'],

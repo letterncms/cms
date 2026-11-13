@@ -25,7 +25,7 @@ final class Areas
     /** What a site keeps, whatever moves: what code runs, its licence, and Sync's own files. */
     private const array NEVER = [
         'content' => ['media/'],
-        'config' => ['plugins.yaml', 'license.key', 'licenses/', 'sync.yaml'],
+        'config' => ['plugins.yaml', 'sync.yaml'],
     ];
 
     public function root(string $area): string

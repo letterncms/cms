@@ -80,7 +80,7 @@ class PackageJobs
                 'turn_on' => $spec['turn_on'] ?? true,
                 'context' => $spec['context'] ?? [],
                 'source' => $spec['source'] ?? [],
-                ...array_intersect_key($spec, array_flip(['package', 'version', 'url', 'zip', 'headers', 'size', 'sha256', 'verifier'])),
+                ...array_intersect_key($spec, array_flip(['package', 'version', 'url', 'zip', 'size', 'sha256', 'verifier'])),
             ];
             $this->save($job);
 
@@ -245,7 +245,7 @@ class PackageJobs
         }
 
         $path = $this->incoming($job);
-        $this->remote->toFile((string) $job['url'], $path, (int) ceil((int) $job['size'] * 1.01) + 1024, (array) ($job['headers'] ?? []));
+        $this->remote->toFile((string) $job['url'], $path, (int) ceil((int) $job['size'] * 1.01) + 1024);
         $job['zip'] = $path;
         $this->save($job);
 

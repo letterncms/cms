@@ -3,7 +3,7 @@ import { Banner } from '@letterncms/ui'
 import { useEffect } from 'react'
 import { driveTick } from './installing'
 
-interface ShellState extends Record<string, unknown> { tick: boolean; version?: string; state?: string; error?: string | null; security?: string | null; update?: string | null; yanked?: string | null; supportEnded?: string | null; stuck?: string[]; advisories?: string[] }
+interface ShellState extends Record<string, unknown> { tick: boolean; version?: string; state?: string; error?: string | null; security?: string | null; update?: string | null; yanked?: string | null; supportEnded?: string | null; advisories?: string[] }
 
 let ticking = false
 
@@ -36,7 +36,6 @@ export function UpdateRunner() {
     : state.yanked ? t('This version was withdrawn: {reason}', { reason: state.yanked })
     : state.supportEnded ? t('This major version stopped getting security fixes in {date}.', { date: state.supportEnded })
     : state.advisories?.length ? t('A security advisory covers: {list}.', { list: state.advisories.join(', ') })
-    : state.stuck?.length ? t('A security fix for {list} needs a license or a connection to the store.', { list: state.stuck.join(', ') })
     : state.security ? t('A security update is ready: {version}.', { version: state.security })
     : null
 

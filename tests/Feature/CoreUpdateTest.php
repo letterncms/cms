@@ -162,7 +162,7 @@ final class CoreUpdateTest extends TestCase
         $this->assertNotNull($this->feed->check());
 
         // A licence key may sign tokens, never a feed or a package.
-        $this->remote->routes[self::FEED] = Signing::feed('cms-updates', ['product' => 'letterncms/cms', 'releases' => []], DevKeys::LICENSE);
+        $this->remote->routes[self::FEED] = Signing::feed('cms-updates', ['product' => 'letterncms/cms', 'releases' => []], 'wrong-role');
         $this->assertNotNull($this->feed->check());
         $this->assertNull($this->feed->feed());
     }

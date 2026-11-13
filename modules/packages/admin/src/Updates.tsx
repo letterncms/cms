@@ -20,7 +20,7 @@ interface Offer {
 interface Updates {
   core: Offer
   status: { state: string; target?: string; previous?: string; error?: string; drive?: boolean }
-  packages: { package: string; label: string; installed: string; version: string; security: boolean; store: string; allowed: boolean; message: string | null; buy_url: string | null; backup: boolean }[]
+  packages: { package: string; label: string; installed: string; version: string; security: boolean; backup: boolean }[]
   advisories: { package: string; label: string; version: string; severity: string; advisory: string | null }[]
   unverified: string[]
 }
@@ -110,10 +110,10 @@ export function UpdatesPanel() {
     }
   }
 
-  const updatePackage = async (name: string, store: string, version: string) => {
+  const updatePackage = async (name: string, version: string) => {
     setBusy(name)
     try {
-      const job = await run<Job>('packages/install', { store, package: name, version })
+      const job = await run<Job>('packages/install', { package: name, version })
       await driveJob(job)
       toast.success(t('{name} updated', { name }))
       await reload()
@@ -221,9 +221,8 @@ export function UpdatesPanel() {
                 <span className="min-w-0 truncate font-medium">{p.label}</span>
                 <span className="shrink-0 text-xs text-muted">{p.installed} → {p.version}</span>
                 {p.security && <Badge tone="warning">{t('Security')}</Badge>}
-                <span className="min-w-0 flex-1 truncate text-xs text-muted">{p.message}</span>
-                {p.allowed ? <Button size="sm" variant="primary" loading={busy === p.package} disabled={busy !== null} onClick={() => void updatePackage(p.package, p.store, p.version)}>{t('Update')}</Button>
-                  : p.buy_url ? <Button size="sm" onClick={() => window.open(p.buy_url!, '_blank', 'noopener')}>{t('Extend License')}</Button> : null}
+                <span className="flex-1" />
+                <Button size="sm" variant="primary" loading={busy === p.package} disabled={busy !== null} onClick={() => void updatePackage(p.package, p.version)}>{t('Update')}</Button>
                 {p.backup && <Button size="sm" variant="ghost" disabled={busy !== null} onClick={async () => { await run('packages/rollback', { package: p.package }); await reload() }}>{t('Go Back')}</Button>}
               </Row>
             ))}

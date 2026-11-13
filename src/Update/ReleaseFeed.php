@@ -57,7 +57,6 @@ class ReleaseFeed
             if ($url = $trust->endpoint('trust')) {
                 try {
                     $store->accept($this->remote->get($url, 1_000_000, 3));
-                    $store->checkedNow();
                 } catch (Throwable) {
                     // The feed may still be reachable, and signed under keys we know.
                 }

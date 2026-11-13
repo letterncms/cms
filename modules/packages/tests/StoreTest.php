@@ -9,7 +9,6 @@ use Cms\Abilities\AbilityException;
 use Cms\Modules\Packages\StoreClient;
 use Cms\Packages\Install\HostFacts;
 use Cms\Packages\Install\PackageJobs;
-use Cms\Support\Crypto\Base64Url;
 use Cms\Support\Files;
 use Cms\Support\Remote;
 use Cms\Support\Yaml;
@@ -17,7 +16,6 @@ use Cms\Tests\Support\FakeRemote;
 use Cms\Tests\Support\Signing;
 use Cms\Tests\TestCase;
 use Cms\Trust\DevKeys;
-use Cms\Trust\Envelope;
 use Cms\Trust\TrustRegistry;
 use Illuminate\Support\Carbon;
 use ZipArchive;
@@ -129,7 +127,7 @@ final class StoreTest extends TestCase
 
     private function install(string $package, ?string $version = null): array
     {
-        return $this->finish($this->client->install(StoreClient::DEFAULT, $package, $version));
+        return $this->finish($this->client->install($package, $version));
     }
 
     private function itemIn(array $catalog, string $package): array
@@ -168,7 +166,6 @@ final class StoreTest extends TestCase
         $this->assertSame('ok', $catalog['freshness']);
         $this->assertSame('install', $item['action']);
         $this->assertSame('1.0.0', $item['latest']);
-        $this->assertSame(['allowed' => true], $item['access']);
 
         $job = $this->install('acme/forms');
 
@@ -199,9 +196,9 @@ final class StoreTest extends TestCase
         $this->assertSame('installed', $this->itemIn($this->client->catalog(), 'letterncms/studio')['action']);
         // Its demo is the store's own page; one elsewhere is not shown.
         $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => self::STORE.'/kits/studio/']);
-        $this->assertSame(self::STORE.'/kits/studio/', $this->client->item(StoreClient::DEFAULT, 'letterncms/studio')['demo_url']);
+        $this->assertSame(self::STORE.'/kits/studio/', $this->client->item('letterncms/studio')['demo_url']);
         $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => 'https://evil.example/kits/studio/']);
-        $this->assertNull($this->client->item(StoreClient::DEFAULT, 'letterncms/studio')['demo_url']);
+        $this->assertNull($this->client->item('letterncms/studio')['demo_url']);
 
         // A kit that carries something a server would run is refused before it is unpacked.
         $this->list('letterncms/sneaky', '1.0.0', [], ['type' => 'kit', 'first_party' => true], [...$kit, 'public/media/x.php' => '<?php'], ['type' => 'cms-kit']);
@@ -284,7 +281,7 @@ final class StoreTest extends TestCase
     {
         $entry = $this->list('acme/forms', '1.0.0');
 
-        $this->items[0]['versions'][0] = Signing::version('acme/forms', ['kid' => DevKeys::LICENSE] + $entry, DevKeys::LICENSE);
+        $this->items[0]['versions'][0] = Signing::version('acme/forms', ['kid' => 'wrong-role'] + $entry, 'wrong-role');
         $this->publishCatalog();
         $this->assertStringContainsString('signature', $this->install('acme/forms')['error']);
 
@@ -307,7 +304,7 @@ final class StoreTest extends TestCase
         $this->assertSame('expired', $this->client->catalog()['freshness']);
         $this->assertNotSame([], $this->client->catalog()['items']);
         $this->expectExceptionMessage('current');
-        $this->client->install(StoreClient::DEFAULT, 'acme/forms', null);
+        $this->client->install('acme/forms', null);
     }
 
     public function test_an_older_catalog_is_refused(): void
@@ -347,106 +344,13 @@ final class StoreTest extends TestCase
         $this->assertSame('dev_trust', $store->problem());
     }
 
-    public function test_case_85_a_paid_plugin_on_a_local_host_needs_its_author_to_allow_it(): void
-    {
-        $this->app->make(\Cms\Settings\SettingsRegistry::class)->save('site', ['url' => 'http://staging.example.com']);
-        $this->list('acme/paid', '1.0.0', [], ['pricing' => 'paid']);
-        $this->assertSame('buy', $this->itemIn($this->client->catalog(), 'acme/paid')['action']);
-
-        $this->items = [];
-        $this->list('acme/open', '1.0.0', [], ['pricing' => 'paid', 'dev_download' => true]);
-        $url = self::STORE.'/api/store/v1/download/acme/open/1.0.0';
-        $this->remote->routes[$url.'?use=nonpublic&site_host=staging.example.com'] = $this->remote->routes[$url];
-        $this->assertSame('done', $this->install('acme/open')['state']);
-    }
-
-    public function test_a_paid_plugin_is_gated_by_the_licence(): void
-    {
-        $this->list('acme/paid', '1.0.0', [], ['pricing' => 'paid']);
-
-        // No licence: offered for sale, not for install.
-        $item = $this->itemIn($this->client->catalog(), 'acme/paid');
-        $this->assertSame('buy', $item['action']);
-        $this->assertSame(self::STORE.'/store/acme-paid', $item['access']['buy_url']);
-
-        try {
-            $this->client->install(StoreClient::DEFAULT, 'acme/paid', null);
-            $this->fail('A paid package installed without a license.');
-        } catch (\RuntimeException $e) {
-            $this->assertStringContainsString('paid', $e->getMessage());
-        }
-
-        // A licence that names it, for this domain: the token goes to the store with the download.
-        $token = Signing::token(['iat' => gmdate('Y-m-d\TH:i:s\Z'), 'items' => [Signing::item(), Signing::item(['p' => 'acme/paid', 'upd' => '2099-01-01'])]]);
-        $abilities = $this->cms()->abilities();
-        $this->assertSame(['added' => true], $abilities->execute('packages/add-key', ['key' => $token], \Cms\Abilities\AbilityContext::forUser($this->admin())));
-        $this->assertSame('install', $this->itemIn($this->client->catalog(), 'acme/paid')['action']);
-
-        // Planning says whether it may be installed, and never what the download is fetched with.
-        $plan = $abilities->execute('packages/plan-install', ['package' => 'acme/paid'], \Cms\Abilities\AbilityContext::forUser($this->admin(), 'rest'));
-        $this->assertSame(['allowed' => true, 'reason' => 'ok'], $plan['access']);
-        $this->assertStringNotContainsString($token, (string) json_encode($plan));
-        $this->assertStringNotContainsString('X-Cms-License', (string) json_encode($plan));
-        $this->assertArrayHasKey('headers', $this->client->plan(StoreClient::DEFAULT, 'acme/paid')['access'], 'the client keeps them for the download');
-
-        $job = $this->install('acme/paid');
-
-        $this->assertSame('done', $job['state'], (string) ($job['error'] ?? ''));
-        $call = $this->remote->callsTo('/download/acme/paid/1.0.0')[0];
-        $this->assertSame(['X-Cms-License: '.$token], $call['headers']);
-        $this->assertStringContainsString('site_host=example.com', $call['url']);
-    }
-
-    public function test_a_licence_for_another_domain_or_another_product_opens_nothing(): void
-    {
-        $this->list('acme/paid', '1.0.0', [], ['pricing' => 'paid']);
-
-        Files::put($this->site.'/config/license.key', Signing::token(['iat' => gmdate('Y-m-d\TH:i:s\Z'), 'dom' => ['other.example'], 'items' => [Signing::item(['p' => 'acme/paid'])]]));
-        $this->assertSame('buy', $this->itemIn($this->client->catalog(), 'acme/paid')['action']);
-
-        Files::put($this->site.'/config/license.key', Signing::token(['iat' => gmdate('Y-m-d\TH:i:s\Z'), 'items' => [Signing::item(['p' => 'acme/else'])]]));
-        $this->assertSame('buy', $this->itemIn($this->client->catalog(), 'acme/paid')['action']);
-
-        Files::put($this->site.'/config/license.key', Signing::token(['iat' => gmdate('Y-m-d\TH:i:s\Z'), 'items' => [Signing::item(['p' => 'acme/paid', 'st' => 'refunded'])]]));
-        $this->assertSame('buy', $this->itemIn($this->client->catalog(), 'acme/paid')['action']);
-    }
-
-    public function test_the_store_can_still_say_no(): void
-    {
-        $this->list('acme/paid', '1.0.0', [], ['pricing' => 'paid']);
-        Files::put($this->site.'/config/license.key', Signing::token(['iat' => gmdate('Y-m-d\TH:i:s\Z'), 'items' => [Signing::item(['p' => 'acme/paid'])]]));
-        $this->remote->routes[self::STORE.'/api/store/v1/download/acme/paid/1.0.0?site_host=example.com'] = ['status' => 403, 'body' => '{"code":"not_entitled"}'];
-
-        $job = $this->install('acme/paid');
-
-        $this->assertSame('failed', $job['state']);
-        $this->assertStringContainsString('403', $job['error']);
-        $this->assertDirectoryDoesNotExist($this->site.'/plugins/acme-paid');
-    }
-
-    public function test_case_87_lapsed_updates_refuse_new_versions_but_security_goes_through(): void
-    {
-        Files::put($this->site.'/config/license.key', Signing::token(['iat' => gmdate('Y-m-d\TH:i:s\Z'), 'items' => [Signing::item(['p' => 'acme/paid', 'upd' => '2026-01-01'])]]));
-        $this->list('acme/paid', '1.0.0', ['released_at' => '2025-06-01T00:00:00Z'], ['pricing' => 'paid']);
-        $this->assertSame('done', $this->install('acme/paid')['state']);
-
-        $this->list('acme/paid', '1.1.0', ['released_at' => '2026-06-01T00:00:00Z']);
-        $update = $this->client->updates()['packages'][0];
-        $this->assertFalse($update['allowed']);
-        $this->assertStringContainsString('lapsed', $update['message']);
-
-        $this->list('acme/paid', '1.1.1', ['released_at' => '2026-07-01T00:00:00Z', 'security' => true, 'fixes' => '<1.1.1']);
-        $this->assertTrue($this->client->updates()['packages'][0]['allowed']);
-        $this->assertSame('1.1.1', $this->client->nextSecurityUpdate()['version']);
-    }
-
     public function test_case_61_a_core_style_security_fix_on_a_free_package_needs_nothing(): void
     {
         $this->list('acme/forms', '1.0.0');
         $this->install('acme/forms');
         $this->list('acme/forms', '1.0.1', ['security' => true, 'fixes' => '<1.0.1']);
 
-        $this->assertSame(['store' => 'default', 'package' => 'acme/forms', 'version' => '1.0.1'], $this->client->nextSecurityUpdate());
+        $this->assertSame(['package' => 'acme/forms', 'version' => '1.0.1'], $this->client->nextSecurityUpdate());
     }
 
     public function test_a_security_update_that_wants_more_capabilities_needs_a_person(): void
@@ -487,7 +391,7 @@ final class StoreTest extends TestCase
         $this->list('acme/forms', '1.0.0');
         $editor = AbilityContext::forUser($this->userWithRole('editor'));
 
-        foreach (['packages/install' => ['package' => 'acme/forms'], 'packages/catalog' => [], 'packages/update-start' => ['version' => '9.0.0'], 'package-stores/create' => ['url' => 'https://x.example']] as $name => $input) {
+        foreach (['packages/install' => ['package' => 'acme/forms'], 'packages/catalog' => [], 'packages/update-start' => ['version' => '9.0.0'], 'packages/plan-install' => ['package' => 'acme/forms']] as $name => $input) {
             try {
                 $this->cms()->abilities()->execute($name, $input, $editor);
                 $this->fail("An editor ran {$name}.");
@@ -660,7 +564,7 @@ final class StoreTest extends TestCase
         $this->assertStringContainsString('blocked', $job['error']);
 
         $this->expectExceptionMessage('blocked');
-        $this->client->install(StoreClient::DEFAULT, 'acme/forms', '1.0.0');
+        $this->client->install('acme/forms', '1.0.0');
     }
 
     public function test_a_yanked_version_is_not_offered(): void
@@ -684,7 +588,7 @@ final class StoreTest extends TestCase
         $this->list('acme/base', '1.2.0');
         $this->list('acme/addon', '1.0.0', ['requires' => ['packages' => ['acme/base' => '^1.0'], 'core' => '*'], 'capabilities' => ['network']]);
 
-        $plan = $this->client->plan(StoreClient::DEFAULT, 'acme/addon');
+        $plan = $this->client->plan('acme/addon');
         $this->assertSame(['acme/base', 'acme/addon'], array_column($plan['steps'], 'package'));
         $this->assertSame(['network'], $plan['capabilities']);
 
@@ -692,7 +596,7 @@ final class StoreTest extends TestCase
         $this->list('acme/b', '1.0.0', ['requires' => ['packages' => ['acme/a' => '*']]]);
 
         try {
-            $this->client->plan(StoreClient::DEFAULT, 'acme/a');
+            $this->client->plan('acme/a');
             $this->fail('A circle was planned.');
         } catch (\RuntimeException $e) {
             $this->assertStringContainsString('circle', $e->getMessage());
@@ -700,7 +604,7 @@ final class StoreTest extends TestCase
 
         $this->list('acme/lost', '1.0.0', ['requires' => ['packages' => ['acme/nowhere' => '^1.0']]]);
         $this->expectExceptionMessage('acme/nowhere');
-        $this->client->plan(StoreClient::DEFAULT, 'acme/lost');
+        $this->client->plan('acme/lost');
     }
 
     public function test_detail_html_from_a_hostile_store_is_cleaned_here(): void
@@ -711,7 +615,7 @@ final class StoreTest extends TestCase
             'screenshots' => ['https://store.invalid/1.png', 'https://evil.example/2.png'],
         ]);
 
-        $item = $this->client->item(StoreClient::DEFAULT, 'acme/forms');
+        $item = $this->client->item('acme/forms');
 
         $this->assertStringContainsString('<p>Fine</p>', $item['description_html']);
         $this->assertStringNotContainsString('script', $item['description_html']);
@@ -734,7 +638,7 @@ final class StoreTest extends TestCase
         $this->assertSame(['map-pin', true], [$items['acme/maps']['glyph'], $items['acme/maps']['featured']]);
         $this->assertSame([null, false], [$items['acme/odd']['glyph'], $items['acme/odd']['featured']]);
 
-        $item = $this->client->item(StoreClient::DEFAULT, 'acme/maps');
+        $item = $this->client->item('acme/maps');
         $this->assertSame([['url' => 'https://store.invalid/1.png', 'alt' => 'The map editor.']], $item['gallery']);
         $this->assertSame(['A map key'], $item['requirements']);
         $this->assertSame(['https://acme.example/docs', null], [$item['docs_url'], $item['repository_url']]);
@@ -748,69 +652,7 @@ final class StoreTest extends TestCase
         $this->publishCatalog();
 
         $this->expectExceptionMessage('own address');
-        $this->client->install(StoreClient::DEFAULT, 'acme/forms', null);
-    }
-
-    /** A store someone runs on their own, with its own root. */
-    private function addedStore(): array
-    {
-        $root = sodium_crypto_sign_seed_keypair(hash('sha256', 'other-root', true));
-        $release = sodium_crypto_sign_seed_keypair(hash('sha256', 'other-release', true));
-        $base = 'https://other.example';
-        $trust = Envelope::sign('cms-trust', ['type' => 'cms-trust', 'epoch' => 1, 'version' => 1, 'roots' => [['kid' => 'o-root', 'pub' => Base64Url::encode(sodium_crypto_sign_publickey($root))]], 'keys' => [['kid' => 'o-rel', 'role' => 'release', 'pub' => Base64Url::encode(sodium_crypto_sign_publickey($release))]]], ['o-root' => sodium_crypto_sign_secretkey($root)]);
-        $this->remote->routes[$base.'/api/store/v1/index.json'] = (string) json_encode(['name' => 'Other', 'api' => 1, 'trust_url' => $base.'/api/store/v1/trust.json', 'catalog_url' => $base.'/api/store/v1/catalog.json']);
-        $this->remote->routes[$base.'/api/store/v1/trust.json'] = $trust;
-
-        return [$base, sodium_crypto_sign_secretkey($release)];
-    }
-
-    public function test_adding_a_store_pins_its_key_only_on_a_confirmed_fingerprint(): void
-    {
-        [$base] = $this->addedStore();
-
-        $first = $this->client->addStore($base);
-        $this->assertFalse($first['added']);
-        $this->assertCount(1, $this->client->stores());
-
-        $this->assertFalse($this->client->addStore($base, 'wrong')['added']);
-        $this->assertCount(1, $this->client->stores());
-
-        $this->assertTrue($this->client->addStore($base, $first['fingerprint'])['added']);
-        $this->assertCount(2, $this->client->stores());
-        $this->assertFileExists($this->site.'/config/stores.yaml');
-
-        $this->client->removeStore($first['id']);
-        $this->assertCount(1, $this->client->stores());
-    }
-
-    public function test_an_added_store_cannot_provide_a_built_in_or_outbid_the_store_a_package_came_from(): void
-    {
-        [$base, $key] = $this->addedStore();
-        $first = $this->client->addStore($base);
-        $this->client->addStore($base, $first['fingerprint']);
-        $id = $first['id'];
-        $this->list('acme/forms', '1.0.0');
-        $this->install('acme/forms');
-
-        $signed = fn (string $package, string $version) => Signing::version($package, ['version' => $version, 'sha256' => str_repeat('a', 64), 'size' => 10, 'url' => $base.'/x.zip', 'requires' => []], 'o-rel', $key);
-        $this->remote->routes[$base.'/api/store/v1/catalog.json'] = Signing::feed('cms-catalog', ['store' => $base, 'items' => [
-            ['package' => 'letterncms/seo', 'title' => 'SEO', 'pricing' => 'free', 'versions' => [$signed('letterncms/seo', '99.0.0')]],
-            ['package' => 'acme/forms', 'title' => 'Forms', 'pricing' => 'free', 'versions' => [$signed('acme/forms', '9.0.0')]],
-        ]], 'o-rel', $key);
-
-        $catalog = $this->client->catalog($id, refresh: true);
-        $this->assertNull($catalog['error']);
-        $this->assertSame(['acme/forms'], array_column($catalog['items'], 'package'));
-
-        // A higher version in another store isn't offered: the package stays with the store it came from.
-        $this->assertSame([], $this->client->updates()['packages']);
-
-        // Its keys count for nothing on the default store either.
-        $this->remote->routes[self::CATALOG] = Signing::feed('cms-catalog', ['version' => 99, 'store' => self::STORE, 'items' => []], 'o-rel', $key);
-        $this->assertNotNull($this->client->refresh());
-
-        $this->expectExceptionMessage('default store');
-        $this->client->plan($id, 'letterncms/seo');
+        $this->client->install('acme/forms', null);
     }
 
     public function test_a_developer_checkout_is_never_swapped(): void
@@ -828,10 +670,10 @@ final class StoreTest extends TestCase
     {
         $this->list('acme/forms', '1.0.0');
         $this->list('acme/other', '1.0.0');
-        $this->client->install(StoreClient::DEFAULT, 'acme/forms', null);
+        $this->client->install('acme/forms', null);
 
         $this->expectExceptionMessage('acme/forms');
-        $this->client->install(StoreClient::DEFAULT, 'acme/other', null);
+        $this->client->install('acme/other', null);
     }
 
     public function test_the_upload_ability_takes_chunks_and_respects_who_may_skip_the_signature(): void

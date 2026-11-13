@@ -93,7 +93,7 @@
   "empty on both": "leeg op beide",
   "Empty on both sites: {groups}.": "Leeg op beide sites: {groups}.",
   "Entries in the database, with their history.": "Items in de database, met hun geschiedenis.",
-  "Everything in config/, except the plugins that are on and the license key. Secrets stay with each site.": "Alles in config/, behalve welke plugins aanstaan en de licentiesleutel. Geheimen blijven bij elke site.",
+  "Everything in config/, except which plugins are on. Secrets stay with each site.": "Alles in config/, behalve welke plugins aanstaan. Geheimen blijven bij elke site.",
   "Everything in content/: templates, components, collections kept in files, globals, forms and menus.": "Alles in content/: sjablonen, componenten, collecties in bestanden, globale inhoud, formulieren en menu's.",
   "files the same": "bestanden gelijk",
   "Files the same": "Bestanden gelijk",

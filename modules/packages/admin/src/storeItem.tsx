@@ -1,10 +1,9 @@
 import { invalidate, loadManifest, navigate, run, t } from '@letterncms/sdk'
-import { Badge, Button, cn, confirm, Icon, IconButton, Menu, prompt, Switch, toast, Tooltip, type MenuItemDef } from '@letterncms/ui'
+import { Badge, Button, cn, confirm, Icon, IconButton, Menu, Switch, toast, Tooltip, type MenuItemDef } from '@letterncms/ui'
 import { driveJob, type Job } from './installing'
 
 /** A package in a store's catalog, as this site sees it: what can be done with it here. */
 export interface Item {
-  store: string
   package: string
   type: string
   title: string
@@ -13,14 +12,12 @@ export interface Item {
   glyph: string | null
   featured: boolean
   categories: string[]
-  pricing: string
   first_party: boolean
   author: { name: string; url: string }
   listing_url: string | null
   latest: string | null
   installed: string | null
-  action: 'install' | 'update' | 'installed' | 'buy' | 'incompatible' | 'blocked'
-  access: { allowed?: boolean; reason?: string; message?: string; buy_url?: string }
+  action: 'install' | 'update' | 'installed' | 'incompatible' | 'blocked'
 }
 
 /** A plugin installed here, as `packages/list` says it: on or off, what keeps it on, where it is set up. */
@@ -40,10 +37,10 @@ export interface Installed {
   settingsTo: string | null
 }
 
-interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[]; access: { allowed?: boolean; message?: string } }
+interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[] }
 
-/** A listing's page, with a store in the address when it differs from the default. */
-export const itemPath = (item: Pick<Item, 'package' | 'store'> & Partial<Pick<Item, 'type'>>) => `/${item.type === 'kit' ? 'kits' : 'plugins'}/store/${item.package}${item.store && item.store !== 'default' ? `?store=${encodeURIComponent(item.store)}` : ''}`
+/** A listing's page, as shown in Plugins or Site Kits. */
+export const itemPath = (item: Pick<Item, 'package'> & Partial<Pick<Item, 'type'>>) => `/${item.type === 'kit' ? 'kits' : 'plugins'}/store/${item.package}`
 
 /** Turn On After Install, as the store's menu last set it in this visit: the list and a plugin's page install alike. */
 export const installing = { turnOn: true }
@@ -51,7 +48,7 @@ export const installing = { turnOn: true }
 /** Asks, then installs or updates a plugin and what it needs, step by step. True once it's done; a failure is said in a toast. */
 export async function installItem(item: Item, onStep: (step: string | null) => void): Promise<boolean> {
   try {
-    const plan = await run<Plan>('packages/plan-install', { store: item.store, package: item.package, version: item.latest ?? undefined })
+    const plan = await run<Plan>('packages/plan-install', { package: item.package, version: item.latest ?? undefined })
     const lines = plan.steps.filter((s) => !s.enable_only).map((s) => `${s.title} ${s.version}`)
     const yes = await confirm({
       title: item.installed ? t('Update {name}?', { name: item.title }) : t('Install {name}?', { name: item.title }),
@@ -65,7 +62,7 @@ export async function installItem(item: Item, onStep: (step: string | null) => v
         continue
       }
       onStep(t('Installing {name}…', { name: s.title }))
-      const job = await run<Job>('packages/install', { store: item.store, package: s.package, version: s.version, turnOn: installing.turnOn })
+      const job = await run<Job>('packages/install', { package: s.package, version: s.version, turnOn: installing.turnOn })
       await driveJob(job)
     }
     invalidate('packages/', ...(item.type === 'kit' ? ['kits/'] : []))
@@ -76,24 +73,6 @@ export async function installItem(item: Item, onStep: (step: string | null) => v
     return false
   } finally {
     onStep(null)
-  }
-}
-
-export const priceLabel = (item: Item) => (item.pricing === 'free' ? t('Free') : t('Paid'))
-
-/** A bought plugin's license key, asked for and added: the same words as on the Licenses tab. True once it is in. */
-export async function addLicenseKey(): Promise<boolean> {
-  const asked = await prompt({ title: t('Add License Key'), fields: [{ handle: 'key', type: 'textarea', label: t('License Key'), required: true }], confirm: t('Add License Key') })
-  const key = asked?.key as string | undefined
-  if (!key) return false
-  try {
-    await run('packages/add-key', { key })
-    invalidate('packages/')
-    toast.success(t('License key added'))
-    return true
-  } catch (e) {
-    toast.error(e)
-    return false
   }
 }
 
@@ -110,8 +89,6 @@ export function Action({ item, busy, locked, onInstall, size = 'sm' }: { item: I
     case 'install':
     case 'update':
       return <Button size={size} variant="primary" loading={busy} disabled={locked} onClick={(e) => { e.stopPropagation(); onInstall() }}>{item.action === 'update' ? t('Update') : t('Install')}</Button>
-    case 'buy':
-      return item.listing_url ? <Button size={size} onClick={(e) => { e.stopPropagation(); window.open(item.listing_url!, '_blank', 'noopener') }}>{t('Buy on Store')}</Button> : <span className="text-xs text-muted">{item.type === 'kit' ? t('Paid') : t('Paid Plugin')}</span>
     case 'installed':
       // An installed plugin has its switch and menu instead (PluginControls); a kit is used where kits are.
       return item.type === 'kit' ? <Button size={size} variant="ghost" onClick={(e) => { e.stopPropagation(); navigate('/kits') }}>{t('Open')}</Button> : null

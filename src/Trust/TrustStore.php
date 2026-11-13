@@ -9,9 +9,9 @@ use Cms\Support\Files;
 use Throwable;
 
 /**
- * The trust file in force for one store, and the counters that stop a feed going back in
+ * The trust file in force, and the counters that stop a feed going back in
  * time. The newest verified file wins between the anchor (shipped with the release, or
- * pinned when a store was added) and the one fetched last. A wiped storage/ falls back to
+ * shipped with the release) and the one fetched last. A wiped storage/ falls back to
  * the anchor. A development file counts only on local and test sites.
  */
 final class TrustStore
@@ -93,7 +93,7 @@ final class TrustStore
                 unset($state['feeds']);
             }
 
-            $state['trust'] = ['sha256' => hash('sha256', $json), 'fetched_at' => time()];
+            $state['trust'] = ['sha256' => hash('sha256', $json)];
             $this->writeState($state);
         } catch (Throwable) {
             return false;
@@ -102,22 +102,6 @@ final class TrustStore
         $this->current = $file;
 
         return true;
-    }
-
-    /** Note that a trust fetch worked, though it brought nothing new: a key it doesn't list really is unknown. */
-    public function checkedNow(): void
-    {
-        $state = $this->state();
-        $state['checked_at'] = time();
-        $this->writeState($state);
-    }
-
-    public function lastChecked(): ?int
-    {
-        $state = $this->state();
-        $at = max((int) ($state['checked_at'] ?? 0), (int) ($state['trust']['fetched_at'] ?? 0));
-
-        return $at > 0 ? $at : null;
     }
 
     /**

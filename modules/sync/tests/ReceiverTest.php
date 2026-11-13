@@ -145,7 +145,7 @@ final class ReceiverTest extends TestCase
     {
         $receiver = app(Receiver::class);
         $job = $this->job();
-        $receiver->begin($job, ['from' => [], 'direction' => 'push', 'tables' => [], 'areas' => ['config' => ['remove' => ['plugins.yaml', 'license.key']]], 'bytes' => 0]);
+        $receiver->begin($job, ['from' => [], 'direction' => 'push', 'tables' => [], 'areas' => ['config' => ['remove' => ['plugins.yaml']]], 'bytes' => 0]);
 
         foreach (['../.env', 'a/../../.env', '.htaccess', 'plugins.yaml', 'licenses/acme.key'] as $path) {
             try {

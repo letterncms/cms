@@ -7,46 +7,16 @@ namespace Cms\Trust;
 use Cms\Foundation\Application;
 use Cms\Support\Files;
 
-/** The trust store of the default store, and of each store a site added (its anchor pinned when it was added). */
+/** The signing keys trusted for the store and core updates. */
 final class TrustRegistry
 {
-    /** @var array<string, TrustStore> */
-    private array $stores = [];
+    private ?TrustStore $store = null;
 
     public function __construct(private readonly Application $app) {}
 
     public function default(): TrustStore
     {
-        return $this->stores['default'] ??= new TrustStore($this->anchor(), $this->directory(), 'default', $this->allowDev());
-    }
-
-    public function store(string $id): TrustStore
-    {
-        $id = (string) preg_replace('/[^a-z0-9-]/', '', $id);
-
-        return $id === 'default' ? $this->default() : ($this->stores[$id] ??= new TrustStore($this->anchorPath($id), $this->directory(), $id, $this->allowDev()));
-    }
-
-    /** @return list<string> Ids of the stores this site added */
-    public function added(): array
-    {
-        $ids = [];
-
-        foreach (glob($this->directory().'/*.anchor.json') ?: [] as $file) {
-            $ids[] = basename($file, '.anchor.json');
-        }
-
-        return $ids;
-    }
-
-    public function anchorPath(string $id): string
-    {
-        return $this->directory().'/'.preg_replace('/[^a-z0-9-]/', '', $id).'.anchor.json';
-    }
-
-    public function forget(string $id): void
-    {
-        unset($this->stores[$id]);
+        return $this->store ??= new TrustStore($this->anchor(), $this->directory(), 'default', $this->allowDev());
     }
 
     /**

@@ -270,7 +270,7 @@
     const catalog = await ability('packages/catalog', { refresh: true }).catch(() => ({ items: [] }));
     const items = (catalog.items || []).filter((item) => !item.installed && item.type !== 'kit');
     if (!items.length) return onward(text.noStore);
-    const rank = (item) => (session.recommended.includes(item.package) ? 0 : item.pricing === 'free' ? 1 : 2);
+    const rank = (item) => (session.recommended.includes(item.package) ? 0 : 1);
     items.sort((a, b) => rank(a) - rank(b) || session.recommended.indexOf(a.package) - session.recommended.indexOf(b.package) || a.title.localeCompare(b.title));
     for (const item of items) {
       const row = document.createElement('li');
@@ -278,7 +278,6 @@
       const box = Object.assign(document.createElement('input'), { type: 'checkbox', value: item.package, checked: session.recommended.includes(item.package) });
       const words = document.createElement('span');
       const title = Object.assign(document.createElement('strong'), { textContent: item.title });
-      if (item.pricing !== 'free') title.append(Object.assign(document.createElement('span'), { className: 'badge', textContent: text.paid }));
       words.append(title, Object.assign(document.createElement('small'), { textContent: item.summary }));
       label.append(box, words);
       row.append(label);

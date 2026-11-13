@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Sync;
 
-use Cms\Modules\License\Host\HostClass;
-use Cms\Modules\License\Host\HostClassifier;
 use RuntimeException;
 
 /** Turns a saved connection into the two ends of a sync, and a pasted key into a saved connection. */

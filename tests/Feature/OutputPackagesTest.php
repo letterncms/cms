@@ -10,14 +10,12 @@ use Cms\Modules\Packages\StoreClient;
 use Cms\Modules\Sync\LocalSite;
 use Cms\Modules\Sync\Receiver;
 use Cms\Packages\Install\PackageJobs;
-use Cms\Support\Crypto\Base64Url;
 use Cms\Support\Files;
 use Cms\Support\Remote;
 use Cms\Tests\Support\FakeRemote;
 use Cms\Tests\Support\Releases;
 use Cms\Tests\Support\Signing;
 use Cms\Tests\TestCase;
-use Cms\Trust\Envelope;
 use Cms\Trust\TrustRegistry;
 use Cms\Update\CoreUpdate;
 use Cms\Update\Layout;
@@ -118,21 +116,6 @@ final class OutputPackagesTest extends TestCase
     {
         // Before anything was fetched: no catalog, and saying so.
         $this->assertSame('none', $this->ability('packages/catalog')['freshness']);
-        $this->assertCount(1, $this->ability('package-stores/list')['items']);
-
-        // Another store, pinned only once its fingerprint is repeated.
-        $base = 'https://other.example';
-        $root = sodium_crypto_sign_seed_keypair(hash('sha256', 'other-root', true));
-        $release = sodium_crypto_sign_seed_keypair(hash('sha256', 'other-release', true));
-        $this->remote->routes[$base.'/api/store/v1/index.json'] = (string) json_encode(['name' => 'Other', 'api' => 1, 'trust_url' => $base.'/api/store/v1/trust.json', 'catalog_url' => $base.'/api/store/v1/catalog.json']);
-        $this->remote->routes[$base.'/api/store/v1/trust.json'] = Envelope::sign('cms-trust', ['type' => 'cms-trust', 'epoch' => 1, 'version' => 1, 'roots' => [['kid' => 'o-root', 'pub' => Base64Url::encode(sodium_crypto_sign_publickey($root))]], 'keys' => [['kid' => 'o-rel', 'role' => 'release', 'pub' => Base64Url::encode(sodium_crypto_sign_publickey($release))]]], ['o-root' => sodium_crypto_sign_secretkey($root)]);
-        $asked = $this->ability('package-stores/create', ['url' => $base]);
-        $this->assertFalse($asked['added']);
-        $this->assertTrue($this->ability('package-stores/create', ['url' => $base, 'confirm' => $asked['fingerprint']])['added']);
-        $this->assertCount(2, $this->ability('package-stores/list')['items']);
-        $this->assertSame(['removed' => $asked['id']], $this->ability('package-stores/delete', ['id' => $asked['id']]));
-
-        // The default store, with a listing that says everything a listing can.
         $this->list('acme/forms', '1.0.0', item: ['glyph' => 'map-pin', 'featured' => true]);
         $this->list('acme/paid', '1.0.0', item: ['pricing' => 'paid']);
         $this->remote->routes[self::STORE.'/api/store/v1/items/acme/forms.json'] = (string) json_encode([
@@ -144,15 +127,12 @@ final class OutputPackagesTest extends TestCase
 
         $catalog = $this->ability('packages/catalog', ['refresh' => true]);
         $this->assertNull($catalog['error']);
-        $this->assertCount(2, $catalog['items']);
+        $this->assertSame(['acme/forms'], array_column($catalog['items'], 'package'));
         $this->assertSame('>=8.4', array_column($catalog['items'], null, 'package')['acme/forms']['entry']['requires']['php']);
         $this->assertSame('A form', $this->ability('packages/item', ['package' => 'acme/forms'])['requirements'][0]);
-        // A listing the store says nothing more about.
-        $this->assertSame('', $this->ability('packages/item', ['package' => 'acme/paid'])['description_html']);
 
         $plan = $this->ability('packages/plan-install', ['package' => 'acme/forms']);
         $this->assertSame('install', $plan['steps'][0]['action']);
-        $this->assertFalse($this->ability('packages/plan-install', ['package' => 'acme/paid'])['access']['allowed']);
 
         $job = $this->install('acme/forms');
         $this->assertSame('done', $job['state'], (string) ($job['error'] ?? ''));
