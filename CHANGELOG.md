@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- New sites start from Starter, the new built-in site, instead of Minimal.
+
 ### Added
 
 - **Gallery** block: photos from the media library in 1 to 6 columns that fold up on tablets and phones, cropped to one shape or left as they are, with their captions. Turn on **Open Large on Click** to show each photo full screen, with arrow keys, buttons and swipes to go through them.

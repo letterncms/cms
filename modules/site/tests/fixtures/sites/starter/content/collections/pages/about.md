@@ -1,5 +1,5 @@
 ---
-id: 01kitminimal00000000000002
+id: 01kitstarter00000000000002
 title: About
 status: published
 position: 1

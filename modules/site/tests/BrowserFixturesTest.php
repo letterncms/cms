@@ -15,7 +15,7 @@ use Cms\Tests\TestCase;
  */
 final class BrowserFixturesTest extends TestCase
 {
-    use InstallsMinimalSite;
+    use InstallsStarterSite;
 
     protected function plugins(): array
     {
@@ -104,15 +104,15 @@ final class BrowserFixturesTest extends TestCase
         $target && Files::copyDirectory(public_path(), $target.'/client');
     }
 
-    /** A new site as it starts: the pages of the site minimal, with the security policy a new site has. */
-    public function test_the_minimal_site_builds_under_its_policy(): void
+    /** A new site as it starts: the pages of the site Starter, with the security policy a new site has. */
+    public function test_the_starter_site_builds_under_its_policy(): void
     {
-        $this->installMinimalSite();
+        $this->installStarterSite();
         $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
         $this->assertTrue((bool) $this->cms()->setting('site', 'csp'));
         // This test site has a collection of its own already, which install leaves alone: the site's pages go in by hand.
         $sites = $this->app->make(\Cms\Modules\Site\Sites\Sites::class);
-        $applied = $this->app->make(\Cms\Modules\Site\Sites\SiteApplier::class)->apply($sites->findOrFail('minimal'), 'full', 'replace', $this->admin(), withoutPlugins: true);
+        $applied = $this->app->make(\Cms\Modules\Site\Sites\SiteApplier::class)->apply($sites->findOrFail('starter'), 'full', 'replace', $this->admin(), withoutPlugins: true);
         $this->assertNotSame([], array_filter($applied['steps'], static fn (array $step) => $step['type'] === 'entry' && $step['action'] === 'create'));
 
         $status = $this->app->make(SiteBuilder::class)->buildAll();

@@ -1,5 +1,5 @@
 ---
-id: 01kitminimal00000000000005
+id: 01kitstarter00000000000005
 title: 'Reuse a component, keep one source'
 status: published
 tags:

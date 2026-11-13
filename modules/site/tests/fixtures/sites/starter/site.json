@@ -1,6 +1,6 @@
 {
-    "handle": "minimal",
-    "name": "Minimal",
+    "handle": "starter",
+    "name": "Starter",
     "description": "A home page, an about page and a blog with three posts, on one typeface and a calm design.",
     "version": "1.0.0",
     "license": "MIT",
