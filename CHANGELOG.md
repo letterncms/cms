@@ -2,12 +2,10 @@
 
 ## Unreleased
 
-### Changed
-
-- New sites start from Starter, the new built-in site, instead of Minimal.
-
 ### Added
 
+- **Patterns**: arrangements of blocks to start from, like a hero, a gallery or a whole page. Inserting one puts a copy on the page, to change as you like. Find them under **Design → Patterns**, shown as pictures grouped by category, and in a **Patterns** tab of the block inserter. Save any blocks as a pattern from their menu with **Save as Pattern**. A new page can start from a pattern of the category **Pages**. Plugins can ship patterns with the `blocks.pattern-sources` filter, and agents use `patterns/list` and `patterns/save`.
+- Sites carry their patterns when they are applied, also in design mode, and when they are exported.
 - **Gallery** block: photos from the media library in 1 to 6 columns that fold up on tablets and phones, cropped to one shape or left as they are, with their captions. Turn on **Open Large on Click** to show each photo full screen, with arrow keys, buttons and swipes to go through them.
 - **Carousel** block: any blocks as slides in a row that snaps, 1 to 4 to a view or each at its own width, with previous and next buttons. Without scripts it is a row that scrolls.
 - **Audio** block: a song, podcast or recording from the media library or an address, with a title above the player and a caption.
@@ -16,6 +14,8 @@
 
 ### Changed
 
+- **Breaking.** Components are always synced: **Make a Component** no longer has a switch to keep copies apart, and `components/save` no longer takes `synced`. Blocks to copy and change are now patterns.
+- New sites start from Starter, the new built-in site, instead of Minimal.
 - The **Video** block plays a file from the media library, and has **Aspect Ratio** and **Fit** to fill a hero or a box. An autoplaying video starts only when the visitor hasn't asked for less motion, and stops when the **Motion Toggle** pauses the page. Videos saved before stay as they were.
 - A block whose plugin is off now shows on the canvas with its name and its plugin's, and can be selected, moved and deleted. Its settings are shown read-only and kept as they are. The confirmation to uninstall a plugin says how many entries use its blocks.
 - A block that fails to render is left out of the page and listed among the build's warnings, with the page it is on.

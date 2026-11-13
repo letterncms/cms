@@ -507,6 +507,7 @@ final class SiteModule extends Plugin
 
         Route::middleware(['web', 'auth:web', 'cms.admin'])->group(static function (): void {
             Route::get('/__preview/{id}', [SiteController::class, 'preview'])->where('id', '[0-9a-z]{26}');
+            Route::get('/__pattern/{handle}', [SiteController::class, 'pattern'])->where('handle', '[a-z0-9][a-z0-9_-]{0,63}');
             Route::get('/__specimen/{kind}', [SiteController::class, 'specimen'])->whereIn('kind', ['fields', 'buttons', 'sizes', 'prose']);
             Route::post('/__preview', [SiteController::class, 'render']);
             Route::post('/__preview/{id}', [SiteController::class, 'render'])->where('id', '[0-9a-z]{26}');

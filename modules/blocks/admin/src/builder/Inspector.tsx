@@ -2,7 +2,7 @@ import { can, t } from '@letterncms/sdk'
 import { Button, IconButton, Menu, PanelHeader, Tabs, copyText } from '@letterncms/ui'
 import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
-import { saveComponent } from '../core/SaveComponent'
+import { saveComponent, savePattern } from '../core/SaveComponent'
 import type { BlockNode } from '../core/types'
 import { componentFits } from '../core/insert'
 import { ContentPanel } from './content/ContentPanel'
@@ -81,12 +81,20 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
           items={[
             { label: t('Rename'), icon: 'edit', disabled: readOnly, onSelect: () => setRenaming(true) },
             { label: t('Duplicate'), icon: 'copy', shortcut: 'mod+d', disabled: readOnly, onSelect: () => store.duplicate(node.id) },
-            component && {
+            component && componentFits(store, types, allowed) && {
               label: t('Make a Component'),
               icon: 'symbol',
               onSelect: () => {
                 if (!store.selection().includes(node.id)) store.select(node.id)
-                saveComponent(store, componentFits(store, types, allowed))
+                saveComponent(store)
+              },
+            },
+            !readOnly && can('entries.patterns.create') && {
+              label: t('Save as Pattern'),
+              icon: 'section-copy',
+              onSelect: () => {
+                if (!store.selection().includes(node.id)) store.select(node.id)
+                savePattern(store)
               },
             },
             // What scripts, animations and "Scroll To" know the block by.

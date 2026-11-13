@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Takes out of the site exactly what a site carries (SiteExporter says what that is), so that a site can take its
- * place: the collections and their entries, the templates' and components' entries, globals, menus, the
+ * place: the collections and their entries, the templates', components' and patterns' entries, globals, menus, the
  * design, what plugins keep beside the content and the settings a site may carry. Nothing else is touched:
  * accounts, the media library, submissions, analytics, secrets and the rest of config/ stay.
  *

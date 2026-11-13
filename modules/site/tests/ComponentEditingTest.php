@@ -23,7 +23,7 @@ final class ComponentEditingTest extends TestCase
 
     private function makeComponent(string $handle, array $props, array $blocks): \Cms\Content\Entries\Entry
     {
-        return $this->cms()->entryService()->create('components', ['title' => ucfirst($handle), 'slug' => $handle, 'status' => 'published', 'data' => ['synced' => true, 'props' => $props, 'blocks' => $blocks]]);
+        return $this->cms()->entryService()->create('components', ['title' => ucfirst($handle), 'slug' => $handle, 'status' => 'published', 'data' => ['props' => $props, 'blocks' => $blocks]]);
     }
 
     private function xpath(string $html): DOMXPath

@@ -67,7 +67,7 @@ final class EditorRenderingTest extends TestCase
 
     public function test_component_and_repeat_expansions_never_borrow_the_source_identity(): void
     {
-        $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [
+        $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => ['blocks' => [
             ['id' => 'collision', 'type' => 'paragraph', 'props' => ['text' => 'Component text']],
         ]]]);
         $entry = $this->cms()->entryService()->create('pages', ['title' => 'Example', 'data' => ['content' => [

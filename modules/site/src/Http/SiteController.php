@@ -15,6 +15,7 @@ use Cms\Content\Entries\UriBuilder;
 use Illuminate\Support\Str;
 use Cms\Modules\Blocks\Document;
 use Cms\Modules\Blocks\Components;
+use Cms\Modules\Blocks\Patterns;
 use Cms\Modules\Blocks\Templates;
 use Cms\Modules\Account\Site\Screens;
 use Cms\Modules\Site\Rendering\Renderer;
@@ -92,6 +93,15 @@ final class SiteController
         $result = $this->renderer->entry($entry->withWorkingCopy(), max(1, (int) $request->query('page', 1)), preview: true, editor: $document !== null, bodyDocument: $document);
 
         return $this->rendered($result['html'], $document);
+    }
+
+    /** A pattern alone in the site's design, as it would be copied in: its picture in lists and the inserter. Drafts included. */
+    public function pattern(Request $request, string $handle): Response
+    {
+        $pattern = app(Patterns::class)->find($handle, working: true);
+        abort_if($pattern === null || ! $request->user()?->hasPermission('admin.access'), 404);
+
+        return $this->rendered($this->renderer->blocks(app(Document::class)->normalize($pattern['blocks']), null, $pattern['title'], false, null), null);
     }
 
     /**
@@ -178,7 +188,7 @@ final class SiteController
                 Templates::COLLECTION => ($sample = $this->sample((string) $request->json('sample'), (array) ($working->data['collections'] ?? []), $user))
                     ? $this->renderer->entry($sample->withWorkingCopy(), 1, preview: true, editor: $editor, template: Templates::shape($working), templateDocument: $document)['html']
                     : $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
-                Components::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
+                Components::COLLECTION, Patterns::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
                 default => $this->renderer->entry($working, 1, preview: true, editor: $editor, bodyDocument: $document)['html'],
             };
         }

@@ -237,8 +237,7 @@ final class BuilderTest extends TestCase
         $this->assertArrayNotHasKey('editor', $this->cms()->collections()->find('templates')->toArray());
 
         $card = $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [
-            'synced' => true,
-            'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title', 'default' => 'Default title']],
+                        'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title', 'default' => 'Default title']],
             'blocks' => [['type' => 'heading', 'props' => ['level' => '3'], 'bind' => ['text' => 'props.title']]],
         ]]);
 

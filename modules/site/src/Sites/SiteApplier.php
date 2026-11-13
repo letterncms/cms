@@ -30,7 +30,7 @@ use Throwable;
 
 /**
  * Copies a site into this site, once. `design` brings what a site looks like: tokens, fonts, templates,
- * components, scripts, styles and libraries. `full` adds what it holds: collections, entries, globals,
+ * components, patterns, scripts, styles and libraries. `full` adds what it holds: collections, entries, globals,
  * menus, media, languages and the settings a site may carry.
  *
  * Nothing the site has is changed without being asked for. plan() names every step, and what already
@@ -47,7 +47,7 @@ final class SiteApplier
     public const array CLASHES = ['refuse', 'skip', 'replace', 'rename'];
 
     /** Collections that are part of the design: their entries come with `design`. */
-    private const array DESIGN = ['templates', 'components'];
+    private const array DESIGN = ['templates', 'components', 'patterns'];
 
     /** Block types that name a component by its slug. */
     private const array COMPONENT_BLOCKS = ['pattern', 'component'];
@@ -324,7 +324,7 @@ final class SiteApplier
         }
 
         if (! $run['full']) {
-            // The design's own pictures come with it: what its templates, components, tokens and styles name.
+            // The design's own pictures come with it: what its templates, components, patterns, tokens and styles name.
             $used = $this->mediaNamedBy($sitePackage, $run['contents'], array_keys($records), array_column($records, 'path', 'id'));
             $records = array_intersect_key($records, array_flip($used));
         }

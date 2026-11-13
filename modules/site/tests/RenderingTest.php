@@ -115,7 +115,7 @@ final class RenderingTest extends TestCase
     public function test_a_page_is_its_template_with_the_entry_in_the_outlet(): void
     {
         $content = $this->cms()->entryService();
-        $content->create('components', ['title' => 'Header', 'slug' => 'header', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [
+        $content->create('components', ['title' => 'Header', 'slug' => 'header', 'status' => 'published', 'data' => ['blocks' => [
             ['type' => 'box', 'props' => ['tag' => 'header'], 'children' => [['type' => 'link', 'props' => ['url' => '/'], 'bind' => ['label' => 'site.name']]]],
         ]]]);
         $content->create('templates', ['title' => 'Page', 'slug' => 'page', 'status' => 'published', 'data' => ['blocks' => [
@@ -162,7 +162,7 @@ final class RenderingTest extends TestCase
         };
         [$cover, $one, $two] = [$jpeg('cover.jpg', 10), $jpeg('one.jpg', 120), $jpeg('two.jpg', 240)];
         $content = $this->cms()->entryService();
-        $content->create('components', ['title' => 'Hero', 'slug' => 'hero', 'status' => 'published', 'data' => ['synced' => true, 'props' => [['handle' => 'image', 'type' => 'media', 'max' => 1]], 'blocks' => [
+        $content->create('components', ['title' => 'Hero', 'slug' => 'hero', 'status' => 'published', 'data' => ['props' => [['handle' => 'image', 'type' => 'media', 'max' => 1]], 'blocks' => [
             ['type' => 'image', 'props' => ['alt' => 'Hero'], 'bind' => ['image' => 'props.image']],
         ]]]);
         $content->create('templates', ['title' => 'Trip', 'slug' => 'trip', 'status' => 'published', 'data' => ['blocks' => [
@@ -180,11 +180,28 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('/_cms/img/'.$two.'/', $html);
     }
 
+    public function test_a_pattern_is_drawn_alone_in_the_sites_design_for_its_picture(): void
+    {
+        $saved = $this->cms()->abilities()->execute('patterns/save', ['handle' => 'hero', 'title' => 'Hero', 'category' => 'Heroes', 'publish' => false, 'blocks' => "## A pattern’s title\n\nIts words."], \Cms\Abilities\AbilityContext::system('test'));
+
+        $html = (string) $this->actingAs($this->admin())->get('/__pattern/hero')->assertOk()->assertHeader('Cache-Control', 'no-store, private')->getContent();
+        $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/design-\w+\.css">#', $html, 'in the site’s design');
+        $this->assertStringContainsString('A pattern’s title</h2>', $html, 'a draft too: it is drawn to be chosen');
+        $this->assertStringNotContainsString('data-cms-node', $html, 'a picture, not the canvas');
+
+        // Saved and edited in the canvas like a component: alone, with no template around it.
+        $canvas = (string) $this->postJson('/__preview/'.$saved['id'])->assertOk()->getContent();
+        $this->assertStringContainsString('data-cms-node', $canvas);
+
+        $this->get('/__pattern/nothing-here')->assertNotFound();
+        auth()->logout();
+        $this->assertNotSame(200, $this->get('/__pattern/hero')->getStatusCode(), 'for people who may open the admin');
+    }
+
     public function test_search_and_twins_read_the_text_of_components_and_repeats(): void
     {
         $content = $this->cms()->entryService();
-        $content->create('components', ['title' => 'Intro', 'slug' => 'intro', 'status' => 'published', 'data' => ['synced' => true,
-            'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title']],
+        $content->create('components', ['title' => 'Intro', 'slug' => 'intro', 'status' => 'published', 'data' => [            'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title']],
             'blocks' => [['type' => 'heading', 'props' => ['level' => '2'], 'bind' => ['text' => 'props.title']]],
         ]]);
         $content->create('posts', ['title' => 'Launch notes', 'slug' => 'launch', 'status' => 'published', 'data' => []]);
@@ -292,7 +309,7 @@ final class RenderingTest extends TestCase
 
     public function test_blocks_name_each_other_across_the_template_a_component_and_the_page(): void
     {
-        $this->cms()->entryService()->create('components', ['title' => 'Aside', 'slug' => 'aside', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [
+        $this->cms()->entryService()->create('components', ['title' => 'Aside', 'slug' => 'aside', 'status' => 'published', 'data' => ['blocks' => [
             ['id' => 'aside', 'type' => 'box', 'props' => ['tag' => 'aside'], 'attrs' => ['aria-labelledby' => '#frame-title', 'aria-describedby' => '#lede'], 'children' => []],
         ]]]);
         $this->cms()->entryService()->create('templates', ['title' => 'Named', 'slug' => 'named', 'status' => 'published', 'data' => ['blocks' => [

@@ -106,6 +106,7 @@ final class Past
             'packages/update-tick' => __('Ran Automatic Updates'),
             'packages/upload' => __('Uploaded Plugin'),
             'pages/customize' => __('Customized Built-In Page'),
+            'patterns/save' => __('Saved Pattern'),
             'revisions/restore' => __('Restored Revision'),
             'saved-views/create' => __('Saved View'),
             'saved-views/delete' => __('Deleted View'),

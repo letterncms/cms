@@ -9,15 +9,13 @@ use Cms\Extend\Hooks;
 use Cms\Cms;
 
 /**
- * Components and sections are entries of the `components` collection
- * (content/collections/components/*.md), so they have drafts, publishing,
- * history and comments like any entry. Plugins can add read-only ones through
+ * Components are entries of the `components` collection (content/collections/components/*.md), so they
+ * have drafts, publishing, history and comments like any entry. Plugins can add read-only ones through
  * the `blocks.component-sources` filter (folders of <handle>.json).
  *
- * A synced one is a **component**: inserted as a reference, it updates
- * everywhere, and its `props` (fields) let each instance set its own values —
- * blocks inside bind to them as `props.<handle>`. An unsynced one is a
- * section that is copied into the document.
+ * A component is inserted as a reference and changes everywhere it is used; its `props` (fields) let each
+ * instance set its own values, and blocks inside bind to them as `props.<handle>`. Blocks to copy and then
+ * change freely are a pattern (Patterns).
  */
 final class Components
 {
@@ -28,7 +26,7 @@ final class Components
 
     public function __construct(private readonly Cms $cms, private readonly Hooks $hooks) {}
 
-    /** @return array<string, array{handle: string, id: ?string, title: string, description: string, category: string, synced: bool, props: list<array>, blocks: list<array>, source: string, editable: bool}> */
+    /** @return array<string, array{handle: string, id: ?string, title: string, description: string, category: string, props: list<array>, blocks: list<array>, source: string, editable: bool}> */
     public function all(bool $working = false): array
     {
         $key = $working ? 'working' : 'live';
@@ -64,7 +62,7 @@ final class Components
         return $this->cache[$key] = $out;
     }
 
-    /** A component or section; with $working, its unpublished changes. Rendering one makes the page depend on it. */
+    /** A component; with $working, its unpublished changes. Rendering one makes the page depend on it. */
     public function find(string $handle, bool $working = false): ?array
     {
         $component = $this->all($working)[$handle] ?? null;
@@ -118,15 +116,12 @@ final class Components
 
     public static function shape(string $handle, ?string $id, array $data, string $source, bool $editable): array
     {
-        $synced = (bool) ($data['synced'] ?? false);
-
         return [
             'handle' => $handle,
             'id' => $id,
             'title' => (string) ($data['title'] ?? $handle),
             'description' => (string) ($data['description'] ?? ''),
-            'category' => (string) (($data['category'] ?? '') ?: ($synced ? 'Components' : 'Sections')),
-            'synced' => $synced,
+            'category' => (string) (($data['category'] ?? '') ?: 'Components'),
             'props' => array_values(array_filter((array) ($data['props'] ?? []), 'is_array')),
             'blocks' => array_values((array) ($data['blocks'] ?? [])),
             'source' => $source,

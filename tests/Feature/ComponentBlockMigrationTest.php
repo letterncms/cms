@@ -86,8 +86,7 @@ final class ComponentBlockMigrationTest extends TestCase
 
     public function test_entries_working_copies_and_revisions_in_the_database_follow(): void
     {
-        $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => ['synced' => true,
-            'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title', 'default' => 'Card']],
+        $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [            'props' => [['handle' => 'title', 'type' => 'text', 'label' => 'Title', 'default' => 'Card']],
             'blocks' => [['type' => 'heading', 'props' => ['level' => '3'], 'bind' => ['text' => 'props.title']]],
         ]]);
         $page = $this->cms()->entryService()->create('pages', ['title' => 'Home', 'slug' => 'home', 'status' => 'published', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Soon.']]]]]);

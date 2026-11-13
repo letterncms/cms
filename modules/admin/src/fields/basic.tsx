@@ -1,7 +1,7 @@
 import { fieldControlId } from '../ui/fieldIdentity'
 import { Pressable } from '../ui/Pressable'
 import { getManifest, t, type FieldProps } from '@letterncms/sdk'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import { AccentPicker, Checkbox, CodeEditor, accentOf, applyAccent, ColorInput, DateInput, IconButton, IconPicker, Input, Segmented, Select, Switch, Textarea, TimeInput, Tooltip, cn, writeTime } from '../ui'
 import type { SelectAction } from '../ui/Select'
 import { slugify } from '../ui/slugify'
@@ -35,14 +35,19 @@ export function TextField({ field, value, onChange, error, disabled }: FieldProp
   const commit = () => draft !== (value ?? '') && onChange(draft)
   // A secret can be looked at while it is typed: a password asked for once is otherwise a guess. Hidden again whenever the field is drawn anew.
   const [shown, setShown] = useState(false)
+  // `suggestions`: words people usually pick, offered as they type; any other is fine too.
+  const suggestions = Array.isArray(field.suggestions) ? (field.suggestions as unknown[]).filter((s): s is string => typeof s === 'string') : []
+  const suggested = useId()
   return (
+    <>
+    {suggestions.length > 0 && <datalist id={suggested}>{suggestions.map((s) => <option key={s} value={s} />)}</datalist>}
     <Input
       {...props}
       type={secret && !shown ? 'password' : 'text'}
       suffix={secret && !disabled ? <IconButton icon={shown ? 'eye-off' : 'eye'} label={t('Show Password')} size={props.size === 'lg' ? 'sm' : 'xs'} aria-pressed={shown} onClick={() => setShown(!shown)} className="-mr-1" /> : undefined}
       autoComplete={props.autoComplete ?? (secret ? 'new-password' : undefined)}
       spellCheck={secret || field.mono ? false : undefined}
-      list={field.list as string | undefined}
+      list={suggestions.length > 0 ? suggested : (field.list as string | undefined)}
       value={onBlur ? draft : (value ?? '')}
       onChange={(e) => (onBlur ? setDraft(e.target.value) : onChange(e.target.value))}
       onBlur={onBlur ? commit : undefined}
@@ -58,6 +63,7 @@ export function TextField({ field, value, onChange, error, disabled }: FieldProp
       invalid={!!error}
       disabled={disabled}
     />
+    </>
   )
 }
 
