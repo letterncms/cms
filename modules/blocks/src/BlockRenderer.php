@@ -378,7 +378,8 @@ final class BlockRenderer
         $type = $this->registry->get((string) ($node['type'] ?? ''));
 
         if (! $type || $this->depth > 32 || ($node['hidden'] ?? false)) {
-            return '';
+            // A block whose plugin is off or gone: kept as it is, nothing on the site, and on the canvas a block that says so.
+            return ! $type && $this->editor && $this->depth <= 32 && ! ($node['hidden'] ?? false) ? $this->missing($node) : '';
         }
 
         $scope = $this->currentScope();
@@ -472,15 +473,26 @@ final class BlockRenderer
 
             $html = $type->render ? (string) ($type->render)($data) : $this->view($type, $data);
 
+            // What the block needs in the browser comes with it to whichever page shows it.
+            if ($html !== '') {
+                foreach ($type->uses as $feature) {
+                    $this->uses($feature);
+                }
+            }
+
             // Words animate from spans in the HTML; text a script writes has no words to find.
             ($motion['split'] ?? null) !== null && empty($node['logic']['text']) && $html = TextSplit::html($html, $motion['split']['mask'], $motion['split']['chars']);
 
             // A pinned element stays put inside a wrapper it is scrolled through (Motion::scrolled).
             return ! empty($motion['pin']) && $html !== '' ? '<div class="cms-pin" data-cms-pin="'.e((string) $node['id']).'">'.$html.'</div>' : $html;
         } catch (Throwable $e) {
-            report($e);
+            // The page still builds without it. The log and the build say which block on which page, and `build --strict` fails on it.
+            $id = (string) ($node['id'] ?? '');
+            $page = $this->currentScope()->get('page.uri');
+            report(new \RuntimeException("The {$type->name} block {$id}".(is_string($page) ? " on {$page}" : '').' failed to render: '.$e->getMessage(), 0, $e));
+            $this->editor || $this->hooks->dispatch('render.warning', __('The :type block :id could not be shown: :message', ['type' => $type->title, 'id' => $id, 'message' => $e->getMessage()]));
 
-            return $this->editor ? '<div '.$this->editorAttributes($node, $type->name).' style="padding:1rem;border:1px dashed #dc2626;color:#dc2626;font:13px system-ui">Block “'.e($type->title).'” failed: '.e($e->getMessage()).'</div>' : '';
+            return $this->editor ? '<div '.$this->editorAttributes($node, $type->name).' data-cms-failed style="padding:1rem;border:1px dashed #dc2626;color:#dc2626;font:13px system-ui">'.e(__('Block “:block” failed: :message', ['block' => $type->title, 'message' => $e->getMessage()])).'</div>' : '';
         } finally {
             $this->depth--;
         }
@@ -758,14 +770,18 @@ final class BlockRenderer
 
     private function propValue(string $fieldType, mixed $value, bool $raw, bool $inline): mixed
     {
+        // A media field from the data: an image of the library (an Image), its id or an address, or a list of them (a Gallery's).
         if ($fieldType === 'media') {
-            $one = is_array($value) ? ($value[0] ?? null) : $value;
-
-            return match (true) {
+            $id = static fn (mixed $one): ?string => match (true) {
+                $one instanceof \Cms\Modules\Media\Image => $one->item->id,
                 is_object($one) && isset($one->id) => (string) $one->id,
-                is_string($one) => $one,
+                is_string($one) && $one !== '' => $one,
+                is_array($one) && is_string($one['id'] ?? $one['url'] ?? null) => (string) ($one['id'] ?? $one['url']),
                 default => null,
             };
+            $ids = array_values(array_filter(array_map($id, is_array($value) && array_is_list($value) ? $value : [$value])));
+
+            return $ids === [] ? null : $ids;
         }
 
         if (in_array($fieldType, ['url', 'link'], true)) {
@@ -1094,6 +1110,46 @@ final class BlockRenderer
         }
 
         return $properties;
+    }
+
+    /** The canvas's stand-in for a block of a type this site doesn't have now: its name, and its plugin's when one is installed. */
+    private function missing(array $node): string
+    {
+        $name = (string) ($node['type'] ?? '');
+        $plugin = $this->pluginOf($name);
+        $label = ucwords(str_replace(['-', '_'], ' ', basename($name))) ?: $name;
+        $text = match (true) {
+            $plugin === null => __(':block block — its plugin is not installed', ['block' => $label]),
+            $plugin['active'] => __(':block block — :plugin no longer has it', ['block' => $label, 'plugin' => $plugin['label']]),
+            default => __(':block block — its plugin, :plugin, is turned off', ['block' => $label, 'plugin' => $plugin['label']]),
+        };
+
+        return '<div '.$this->editorAttributes($node, $name).' data-cms-missing><div class="cms-placeholder">'.e($text).'</div></div>';
+    }
+
+    /**
+     * The installed plugin a block type comes from, by name, when it isn't on: its blocks are named after it
+     * (`forms/form` from letterncms/forms, `reviews/stars` from acme/reviews or acme/cms-reviews).
+     *
+     * @return array{name: string, label: string, active: bool}|null
+     */
+    public function pluginOf(string $type): ?array
+    {
+        $prefix = str_contains($type, '/') ? strtok($type, '/') : null;
+
+        if ($prefix === null || ! function_exists('cms')) {
+            return null;
+        }
+
+        foreach (cms()->packages()->repository()->all() as $package) {
+            $short = substr($package->name, strrpos($package->name, '/') + 1);
+
+            if (! $package->core && in_array($prefix, [$short, preg_replace('/^cms-/', '', $short)], true)) {
+                return ['name' => $package->name, 'label' => __($package->label), 'active' => cms()->packages()->isActive($package->name)];
+            }
+        }
+
+        return null;
     }
 
     private function editorAttributes(array $node, string $type): string

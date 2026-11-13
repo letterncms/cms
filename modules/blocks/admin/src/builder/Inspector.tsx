@@ -122,7 +122,7 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
           tabs={tabIds.map((id) => ({ value: id, label: { content: t('Content'), design: t('Design'), interact: t('Interact') }[id] }))}
         />
       </div>
-      <fieldset ref={panel} role="tabpanel" id={`${tabsId}-${tab}-panel`} aria-labelledby={`${tabsId}-${tab}`} disabled={readOnly} className="m-0 min-h-0 min-w-0 flex-1 overflow-y-auto border-0 p-0">
+      <fieldset ref={panel} role="tabpanel" id={`${tabsId}-${tab}-panel`} aria-labelledby={`${tabsId}-${tab}`} disabled={readOnly || (!type && node.type !== 'component')} className="m-0 min-h-0 min-w-0 flex-1 overflow-y-auto border-0 p-0">
         {/* Keyed by block so panel state (chosen border side, open rows, drafts) starts fresh per selection. */}
         <Fragment key={node.id}>
           {tab === 'design' && <DesignPanel node={node} />}

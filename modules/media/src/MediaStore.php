@@ -456,6 +456,25 @@ final class MediaStore
         cms()->hooks()->dispatch('media.deleted', $item);
     }
 
+    /** An MP4 file's ftyp box: its major brand is an audio one, or (when $compatible) one of the brands it lists is. */
+    private static function audioBrand(string $head, string $file, bool $compatible): bool
+    {
+        if (substr($head, 4, 4) !== 'ftyp') {
+            return false;
+        }
+
+        $audio = ['M4A ', 'M4B ', 'M4P '];
+
+        if (in_array(substr($head, 8, 4), $audio, true)) {
+            return true;
+        }
+
+        $size = unpack('N', substr($head, 0, 4))[1] ?? 0;
+        $box = $compatible && $size >= 16 && $size <= 256 ? (string) file_get_contents($file, false, null, 16, $size - 16) : '';
+
+        return array_any(str_split($box, 4), static fn (string $brand) => in_array($brand, $audio, true));
+    }
+
     public function detect(string $file, string $name): string
     {
         $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($file);
@@ -499,6 +518,18 @@ final class MediaStore
             if ($office && str_starts_with((string) $office, 'application/vnd.openxmlformats')) {
                 return (string) $office;
             }
+        }
+
+        // Audio goes by more than one name. An MP4 file whose brand says audio is audio (M4A, M4B audiobooks), whatever
+        // finfo calls it; one with a generic brand only when it is called .m4a and names an audio brand among its others.
+        if ($mime === 'audio/x-m4a' || ($mime === 'video/mp4' && self::audioBrand($head, $file, strtolower(pathinfo($name, PATHINFO_EXTENSION)) === 'm4a'))) {
+            return 'audio/mp4';
+        }
+
+        $audio = ['audio/x-mpeg' => 'audio/mpeg', 'audio/mp3' => 'audio/mpeg', 'audio/x-mp3' => 'audio/mpeg', 'audio/wave' => 'audio/wav', 'audio/vnd.wave' => 'audio/wav', 'audio/x-ogg' => 'audio/ogg', 'application/ogg' => 'audio/ogg'];
+
+        if (isset($audio[$mime])) {
+            return $audio[$mime];
         }
 
         // Plain text is told apart by what it is called: a table, or Markdown.

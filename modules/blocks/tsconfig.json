@@ -11,6 +11,7 @@
     ]
   },
   "include": [
-    "admin/src"
+    "admin/src",
+    "media"
   ]
 }

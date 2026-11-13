@@ -30,6 +30,11 @@ final class Image implements Htmlable, Stringable
         };
     }
 
+    public function __isset(string $key): bool
+    {
+        return in_array($key, ['url', 'alt', 'caption', 'width', 'height', 'mime', 'name', 'id'], true) && $this->__get($key) !== null;
+    }
+
     /** @param array{priority?: bool, aspect?: ?string, sizes?: string, class?: string, alt?: string} $options */
     public function img(array $options = []): string
     {

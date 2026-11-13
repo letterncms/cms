@@ -44,6 +44,50 @@ final class Uses
         return array_map(self::entries(...), $this->found()['components']);
     }
 
+    /** How many entries (pages, templates, components…) hold a block of this package, saved or in a draft: those it registered, or, while it is off, those named after it. */
+    public function package(string $package): int
+    {
+        $registry = app(BlockRegistry::class);
+        $renderer = app(BlockRenderer::class);
+        $ours = [];
+        $judge = static function (string $type) use (&$ours, $registry, $renderer, $package): bool {
+            return $ours[$type] ??= ($registry->get($type)?->package ?? $renderer->pluginOf($type)['name'] ?? null) === $package;
+        };
+        $count = 0;
+
+        foreach ($this->cms->entries()->query()->get() as $entry) {
+            foreach ([$entry->data, ...($entry->hasDraft() ? [(array) ($entry->working()['data'] ?? [])] : [])] as $data) {
+                if (self::holds($data, $judge)) {
+                    $count++;
+
+                    break;
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /** Whether a document holds, at any depth, a block whose type passes $judge. */
+    private static function holds(mixed $value, \Closure $judge): bool
+    {
+        if (! is_array($value)) {
+            return false;
+        }
+
+        if (is_string($value['type'] ?? null) && isset($value['id']) && $judge($value['type'])) {
+            return true;
+        }
+
+        foreach ($value as $inner) {
+            if (is_array($inner) && self::holds($inner, $judge)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static function entries(int $count): string
     {
         return $count === 1 ? __('1 entry') : __(':count entries', ['count' => $count]);

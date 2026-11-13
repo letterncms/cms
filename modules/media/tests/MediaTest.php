@@ -275,6 +275,36 @@ final class MediaTest extends TestCase
         return 'glTF'.pack('V', 2).pack('V', 20 + strlen($chunk)).pack('V', strlen($chunk)).'JSON'.$chunk;
     }
 
+    public function test_audio_is_taken_by_what_it_is_whatever_finfo_calls_it(): void
+    {
+        $store = app(MediaStore::class);
+        $frames = str_repeat("\xFF\xFB\x90\x64".str_repeat("\0", 413), 4);
+        $files = [
+            // An AAC file from Apple's tools or ffmpeg: finfo says audio/x-m4a.
+            'song.m4a' => "\x00\x00\x00\x1cftypM4A \x00\x00\x02\x00M4A isommp42".str_repeat("\0", 64),
+            // One with a generic brand that lists an audio one: finfo says video/mp4.
+            'voice.m4a' => "\x00\x00\x00\x1cftypisom\x00\x00\x02\x00isomM4A mp42".str_repeat("\0", 64),
+            'take.mp3' => "ID3\x03\x00\x00\x00\x00\x00\x00".$frames,
+            'plain.mp3' => $frames,
+            'rain.ogg' => "OggS\x00\x02".str_repeat("\0", 22)."\x01vorbis".str_repeat("\0", 64),
+            'room.wav' => "RIFF\x24\x00\x00\x00WAVEfmt ".str_repeat("\0", 64),
+        ];
+        $expected = ['song.m4a' => 'audio/mp4', 'voice.m4a' => 'audio/mp4', 'take.mp3' => 'audio/mpeg', 'plain.mp3' => 'audio/mpeg', 'rain.ogg' => 'audio/ogg', 'room.wav' => 'audio/x-wav'];
+
+        foreach ($files as $name => $bytes) {
+            $this->assertSame($expected[$name], $store->detect($this->tmp($bytes), $name), $name);
+        }
+
+        $item = $store->store($this->tmp($files['song.m4a']), 'Song.m4a');
+        $this->assertSame(['audio/mp4', 'audio'], [$item->mime, $item->kind()]);
+        $this->assertStringEndsWith('.m4a', $item->path);
+
+        // A video stays a video, also when someone calls it .m4a.
+        $video = "\x00\x00\x00\x1cftypisom\x00\x00\x02\x00isomiso2mp41".str_repeat("\0", 64);
+        $this->assertSame('video/mp4', $store->detect($this->tmp($video), 'clip.mp4'));
+        $this->assertSame('video/mp4', $store->detect($this->tmp($video), 'clip.m4a'));
+    }
+
     public function test_svg_is_sanitized(): void
     {
         $clean = app(SvgSanitizer::class)->clean('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" onload="alert(1)"><script>alert(1)</script><a href="javascript:alert(1)"><rect width="10" height="10" fill="red"/></a><foreignObject><div/></foreignObject><use href="https://evil.test/x.svg#a"/></svg>');

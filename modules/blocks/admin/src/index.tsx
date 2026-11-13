@@ -5,6 +5,8 @@ import { BlocksField } from './BlocksField'
 import { registerFields } from './builder/fields'
 import { registerBuilderIcons } from './builder/icons'
 import { IconField } from './builder/content/IconField'
+import { GalleryCard, MediaCard } from './write/Blocks'
+import { blockViews } from './write/WriteEditor'
 
 registerBuilderIcons()
 registry.fields.set('blocks', BlocksField)
@@ -20,6 +22,11 @@ registry.panels.set('blocks-editor', {
   when: (props) => props.bodyField.type === 'blocks',
 })
 registry.widgets.set('blocks-design', lazy(() => import('./WidgetDesign')))
+
+// Write mode shows the media blocks as a plugin's blocks are shown: through `blockViews`.
+blockViews.set('audio', MediaCard)
+blockViews.set('file', MediaCard)
+blockViews.set('gallery', GalleryCard)
 
 // What other modules build on through `@letterncms/blocks` in the import map (a form builder, say),
 // and the inspector's browser check mounts.

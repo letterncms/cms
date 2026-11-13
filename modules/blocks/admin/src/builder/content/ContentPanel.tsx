@@ -1,5 +1,5 @@
 import { can, navigate, t, useAbility, type FieldDef } from '@letterncms/sdk'
-import { fieldControlId, Button, Fields, IconButton, Tooltip, cn, wideFieldTypes } from '@letterncms/ui'
+import { fieldControlId, Button, Fields, IconButton, Notice, Tooltip, cn, wideFieldTypes } from '@letterncms/ui'
 import { useAnchors } from '../../core/anchors'
 import { useEditorContext } from '../../core/context'
 import type { ComponentDef } from '../../core/Inserter'
@@ -112,6 +112,16 @@ export function ContentPanel({ node }: { node: BlockNode }) {
   const repeat = node.type === 'repeat'
   const linkExtra = (f: FieldDef): Partial<FieldDef> | undefined =>
     f.component === 'link' || f.type === 'url' ? { anchors, ...(merged ? { newTab: !!node.props?.new_tab, onNewTab: (on: boolean) => setProp('new_tab', on || undefined) } : {}) } : undefined
+
+  // A block whose plugin is off: kept as it is, its settings shown and not changed, until the plugin is back.
+  if (!type && node.type !== 'component') {
+    return (
+      <Body>
+        <Notice title={t('Its plugin is off')}>{t('This block is kept as it is and shows again when its plugin is turned on.')}</Notice>
+        {Object.keys(node.props ?? {}).length > 0 && <pre aria-label={t('Settings')} className="m-0 mt-3 overflow-x-auto rounded-md bg-sunken p-3 font-mono text-xs text-muted">{JSON.stringify(node.props, null, 2)}</pre>}
+      </Body>
+    )
+  }
 
   return (
     <div>

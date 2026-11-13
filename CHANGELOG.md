@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Added
+
+- **Gallery** block: photos from the media library in 1 to 6 columns that fold up on tablets and phones, cropped to one shape or left as they are, with their captions. Turn on **Open Large on Click** to show each photo full screen, with arrow keys, buttons and swipes to go through them.
+- **Carousel** block: any blocks as slides in a row that snaps, 1 to 4 to a view or each at its own width, with previous and next buttons. Without scripts it is a row that scrolls.
+- **Audio** block: a song, podcast or recording from the media library or an address, with a title above the player and a caption.
+- **File** block: a download from the media library that shows the file's name, type and size, like "Menu.pdf · PDF, 240 KB".
+- Plugins can give their blocks a script and a stylesheet that load only on pages that use them: `BlockRegistry::feature()`, and `uses` in a block's definition.
+
+### Changed
+
+- The **Video** block plays a file from the media library, and has **Aspect Ratio** and **Fit** to fill a hero or a box. An autoplaying video starts only when the visitor hasn't asked for less motion, and stops when the **Motion Toggle** pauses the page. Videos saved before stay as they were.
+- A block whose plugin is off now shows on the canvas with its name and its plugin's, and can be selected, moved and deleted. Its settings are shown read-only and kept as they are. The confirmation to uninstall a plugin says how many entries use its blocks.
+- A block that fails to render is left out of the page and listed among the build's warnings, with the page it is on.
+
+### Fixed
+
+- An Image, Gallery or Video bound to an entry's media field, directly or through a component, shows its file again.
+- The media library takes M4A audio files from Apple's tools and other common audio file types.
+
 ## 0.35.2 (2026-11-13)
 
 ### Changed

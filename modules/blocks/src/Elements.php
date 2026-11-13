@@ -178,29 +178,47 @@ final class Elements
         return '<figure '.$d['attrs'].'>'.$inner.$caption.'</figure>';
     }
 
+    /**
+     * A file of the library, or an address: YouTube and Vimeo play in their own frame, any other in a <video>. The file wins
+     * when both are set. Autoplay plays muted and over and over, and only through the autoplay feature (MediaBlocks): not
+     * for visitors who ask for less motion, nor while the Motion Toggle has paused the page. Such a video has controls instead.
+     */
     public static function video(array $d): string
     {
         $b = $d['block'];
-        $embed = Embeds::video((string) ($b['url'] ?? ''), ! empty($b['autoplay']));
+        $autoplay = ! empty($b['autoplay']);
+        $file = Media::url($b['file'] ?? null);
+        $embed = $file !== null ? ['kind' => 'file', 'src' => $file] : Embeds::video((string) ($b['url'] ?? ''), $autoplay);
+        $aspect = is_string($b['aspect'] ?? null) && preg_match('#^\d{1,2}/\d{1,2}$#', $b['aspect']) ? $b['aspect'] : null;
 
         if (! $embed) {
-            return $d['editor'] ? self::mediaPlaceholder($d, 'play') : '';
+            return $d['editor'] ? self::mediaPlaceholder($d, 'play', $aspect ?? '16/9') : '';
         }
 
         $slot = self::editable($d, 'caption');
         $caption = ! empty($b['caption']) ? '<figcaption'.$slot.self::placeholder($d, 'caption').'>'.($b['caption'] ?? '').'</figcaption>' : '';
 
-        if ($embed['kind'] === 'iframe') {
-            $title = e(strip_tags((string) ($b['caption'] ?? '')) ?: 'Video');
-
-            return '<figure '.$d['attrs'].'><div class="cms-ratio" style="aspect-ratio:16/9"><iframe src="'.e($embed['src']).'" title="'.$title.'" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>'.$caption.'</figure>';
+        if ($autoplay && ! $d['editor']) {
+            // It moves for as long as it is on screen: the page needs a way to stop it (the Motion Toggle).
+            $d['renderer']->uses('autoplay');
+            $d['renderer']->uses('forever');
         }
 
-        $poster = Media::url($b['poster'] ?? null);
-        $flags = ! empty($b['autoplay']) ? ' autoplay muted loop playsinline' : (! empty($b['controls'] ?? true) ? ' controls' : '');
-        $flags .= empty($b['autoplay']) && ! empty($b['loop']) ? ' loop' : '';
+        if ($embed['kind'] === 'iframe') {
+            $title = e(strip_tags((string) ($b['caption'] ?? '')) ?: 'Video');
+            $still = $autoplay ? ' data-cms-autoplay="'.e($embed['src']).'" data-cms-still="'.e(Embeds::video((string) $b['url'])['src'] ?? '').'"' : '';
 
-        return '<figure '.$d['attrs'].'><video src="'.e($embed['src']).'"'.$flags.' preload="metadata"'.($poster ? ' poster="'.e($poster).'"' : '').'></video>'.$caption.'</figure>';
+            return '<figure '.$d['attrs'].'><div class="cms-ratio" style="aspect-ratio:'.($aspect ?? '16/9').'"><iframe src="'.e($embed['src']).'"'.$still.' title="'.$title.'" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>'.$caption.'</figure>';
+        }
+
+        // A file from elsewhere is loaded by the page: the site's security policy names its host.
+        $file !== null && cms()->hooks()->dispatch('site.policy.source', 'media', $file);
+        $poster = Media::url($b['poster'] ?? null);
+        // Autoplay starts from the script, so nothing moves before it knows whether it may.
+        $flags = $autoplay ? ' muted loop playsinline'.($d['editor'] ? '' : ' data-cms-autoplay') : (! empty($b['controls'] ?? true) ? ' controls' : '').(! empty($b['loop']) ? ' loop' : '').' playsinline';
+        $style = ($aspect !== null ? 'aspect-ratio:'.$aspect.';' : '').'object-fit:'.(($b['fit'] ?? 'cover') === 'contain' ? 'contain' : 'cover');
+
+        return '<figure '.$d['attrs'].'><video src="'.e($embed['src']).'"'.$flags.' preload="metadata"'.($poster ? ' poster="'.e($poster).'"' : '').' style="'.$style.'"></video>'.$caption.'</figure>';
     }
 
     /** Hidden until the motion runtime shows it: without scripts nothing runs forever, so there's nothing to pause. */
