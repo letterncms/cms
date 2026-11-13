@@ -129,10 +129,11 @@ function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => v
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={t('Main')}>
-        <SidebarStart onNavigate={onNavigate} />
+        {sections.length === 0 && <div className="space-y-px"><SidebarStart onNavigate={onNavigate} /></div>}
         {sections.map((section, index) => (index === 0 || section.items.length > 0) && (
           <div key={section.id} className={cn('space-y-px', index > 0 && 'mt-4')}>
             {section.label && section.items.length > 0 && <SectionLabel>{section.label}</SectionLabel>}
+            {index === 0 && <SidebarStart onNavigate={onNavigate} />}
             <Pinned section={section} items={items} active={active} onNavigate={onNavigate} nest={nest} />
             {/* Only what someone unpinned: nothing is put away by default. */}
             {index === 0 && more.length > 0 && <More groups={more} items={items} active={active} onNavigate={onNavigate} />}
@@ -147,8 +148,7 @@ function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => v
 function SidebarStart({ onNavigate }: { onNavigate?: () => void }) {
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const rows = panelsFor('sidebar.start', { onNavigate })
-  if (rows.length === 0) return null
-  return <div className="mb-4 space-y-px">{rows.map(({ id, component: Row }) => <Row key={id} onNavigate={onNavigate} />)}</div>
+  return rows.map(({ id, component: Row }) => <Row key={id} onNavigate={onNavigate} />)
 }
 
 /** A section's pinned items: drag to reorder, right-click for the rest. */
@@ -363,14 +363,13 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
         align="start"
         side="top"
         trigger={
-          <Pressable className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left outline-offset-[-2px] hover:bg-hover">
-            <Avatar name={manifest.user.name} initials={manifest.user.initials} src={manifest.user.avatar} size={24} />
-            <span className="min-w-0 flex-1">
-              {/* Named by what it shows, with what it is in front: a label of its own would hide the name from voice control. */}
-              <span className="sr-only">{labelled(t('Account'), '')}</span>
-              <span className="block truncate text-sm font-medium leading-4 text-text">{manifest.user.name}</span>
-              <span className="block truncate text-xs text-faint">{manifest.user.email}</span>
+          <Pressable className="flex h-9 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-left outline-offset-[-2px] hover:bg-hover">
+            <span aria-hidden="true" className="flex shrink-0">
+              <Avatar name={manifest.user.name} initials={manifest.user.initials} src={manifest.user.avatar} size={24} tone="accent" />
             </span>
+            {/* Keep the visible name in the button's accessible name. */}
+            <span className="sr-only">{labelled(t('Account'), '')}</span>
+            <span className="min-w-0 truncate text-sm font-medium text-text">{manifest.user.name}</span>
           </Pressable>
         }
         items={[

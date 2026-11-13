@@ -98,6 +98,14 @@ final class SitesTest extends TestCase
         return $dir;
     }
 
+    public function test_sites_appears_in_settings(): void
+    {
+        $navigation = $this->cms()->adminNav()->forUser($this->admin());
+
+        $this->assertContains('sites', array_merge(...array_column($navigation['settingsNav'], 'items')));
+        $this->assertNotContains('sites', array_merge(...array_column($navigation['sidebar']['sections'], 'items')));
+    }
+
     public function test_a_new_site_starts_from_minimal_a_working_block_blog(): void
     {
         $admin = $this->admin();

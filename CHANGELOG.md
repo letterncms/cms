@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- The sidebar account button shows just your name and avatar in a shorter row. The default account avatar uses your theme color, and New Chat sits with the other sidebar links.
+- Open **Sites** from **Settings**.
+
 ## 0.35.1 (2026-11-13)
 
 ### Fixed
