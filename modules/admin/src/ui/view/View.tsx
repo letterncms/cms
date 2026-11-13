@@ -105,14 +105,14 @@ export function viewRoute(id: string, path: string, options: { private?: boolean
 
 const widgets = new Map<string, ComponentType<{ id: string }>>()
 
-/** A home-screen widget drawn from a view: its tree in the widget's frame, with the link in its header. */
-export function viewWidget(id: string, action?: { label: string; to: string }): ComponentType<{ id: string }> {
-  const key = `${id}\n${action?.label ?? ''}\n${action?.to ?? ''}`
+/** A home-screen widget drawn from a view: its tree in the widget's frame, with the link in its header. A tree with nothing in it shows `empty`. */
+export function viewWidget(id: string, action?: { label: string; to: string }, empty?: string): ComponentType<{ id: string }> {
+  const key = `${id}\n${action?.label ?? ''}\n${action?.to ?? ''}\n${empty ?? ''}`
   let widget = widgets.get(key)
   if (!widget) {
     widget = () => {
       const view = useAbility<ViewDocument>('views/get', { id, params: {} })
-      return <Widget action={action} query={view}>{view.data && <View root={view.data.root} embedded />}</Widget>
+      return <Widget action={action} query={view} empty={!!view.data && !view.data.root.children?.length && { title: empty ?? t('Nothing to show') }}>{view.data && <View root={view.data.root} embedded />}</Widget>
     }
     widget.displayName = `ViewWidget(${id})`
     widgets.set(key, widget)

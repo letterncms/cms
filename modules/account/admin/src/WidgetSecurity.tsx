@@ -13,7 +13,7 @@ type Tone = 'warning'
 
 const MONTH = 30 * 86_400_000
 
-/** Home-screen widget: what about your own account's security wants doing, each item with the way to do it. Nothing while all is well: it doesn't restate the Account screen. */
+/** Home-screen widget: what about your own account's security wants doing, each item with the way to do it. */
 export default function WidgetSecurity() {
   const account = useAbility<User>('account/get')
   const mayTokens = can('tokens.manage')
@@ -26,10 +26,8 @@ export default function WidgetSecurity() {
   // Tokens nobody has used for a month are keys lying around: worth revoking.
   const idle = live.filter((tk) => (tk.lastUsedAt ? now - new Date(tk.lastUsedAt).getTime() : now - new Date(tk.createdAt ?? now).getTime()) > MONTH)
 
-  if (!account.isError && (loading || !me || (me.twoFactor && idle.length === 0))) return null
-
   return (
-    <Widget query={account}>
+    <Widget query={account} loading={loading} empty={!!me && me.twoFactor && idle.length === 0 && { title: t('Your account is secure') }}>
       {me && (
         <div>
           {!me.twoFactor && <Check tone="warning" label={t('Two-Factor Authentication')} value={t('Off')} action={<Button size="xs" onClick={() => navigate('/account')}>{t('Set Up')}</Button>} />}

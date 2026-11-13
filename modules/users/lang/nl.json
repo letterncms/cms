@@ -104,5 +104,6 @@
   "You cannot delete your own account here.": "Je kunt je eigen account hier niet verwijderen.",
   "You cannot suspend your own account.": "Je kunt je eigen account niet opschorten.",
   "You cannot take away your own roles. Ask another administrator.": "Je kunt je eigen rollen niet afnemen. Vraag het een andere beheerder.",
-  "You’re invited to :site": "Je bent uitgenodigd voor :site"
+  "You’re invited to :site": "Je bent uitgenodigd voor :site",
+  "You’re the only user": "Je bent de enige gebruiker"
 }

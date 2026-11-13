@@ -128,12 +128,12 @@ final class AdminRegistry
      * A home-screen widget; its component is registered in the admin module under the same id
      * (`registry.widgets.set(id, Component)`), or it is drawn from a `view`: a tree of catalog
      * components like any place's (see Views), built for whoever looks, with no admin build.
-     * `action` is the link in its header ("All Orders"), its label in English like the widget's. A plugin registers one when it has
+     * `action` is the link in its header ("All Orders"), its label in English like the widget's; `empty` is what a view-drawn widget says while its view has nothing in it ("No orders yet"). A plugin registers one when it has
      * something worth a glance, and none otherwise. The gallery shows label, icon and description; `enabled`
      * puts it on everyone's home screen until they rearrange it — keep that for the few
      * widgets nearly everyone wants.
      *
-     * @param  array{label: string, description: string, icon?: string, column?: 'main'|'side', enabled?: bool, assistant?: bool, permission?: ?string, order?: int, view?: array|\Closure(\Cms\Users\User): array, action?: array{label: string, to: string}}  $widget
+     * @param  array{label: string, description: string, icon?: string, column?: 'main'|'side', enabled?: bool, assistant?: bool, permission?: ?string, order?: int, view?: array|\Closure(\Cms\Users\User): array, action?: array{label: string, to: string}, empty?: string}  $widget
      */
     public function widget(string $id, array $widget): void
     {
@@ -181,6 +181,7 @@ final class AdminRegistry
             'enabled' => (bool) $w['enabled'],
             'source' => isset($packages[$w['package']]) ? $packages[$w['package']]->label : Brand::get(),
             ...($views->has(self::view($w['id'])) ? ['view' => self::view($w['id'])] : []),
+            ...(isset($w['empty']) ? ['empty' => (string) $w['empty']] : []),
             ...(isset($w['action']) ? ['action' => ['label' => (string) $w['action']['label'], 'to' => (string) $w['action']['to']]] : []),
         ], $this->widgetsForUser($user)));
     }

@@ -2,16 +2,14 @@ import { t, timeAgo, useAbility } from '@letterncms/sdk'
 import { Widget, WidgetRow } from '@letterncms/ui'
 import { RUNNING, type Overview } from './shared'
 
-/** Home-screen widget: the sites this one syncs with, and when each was last pulled or pushed. Nothing while no site is connected. */
+/** Home-screen widget: the sites this one syncs with, and when each was last pulled or pushed. */
 export default function WidgetSites() {
   const overview = useAbility<Overview>('sync/overview', undefined, { refetchInterval: 60_000 })
   const data = overview.data
   const running = data?.current && RUNNING.includes(data.current.status) ? data.current : null
 
-  if (!overview.isError && (!data || data.remotes.length === 0)) return null
-
   return (
-    <Widget query={overview} action={{ label: t('Open Sync'), to: '/sync' }}>
+    <Widget query={overview} action={{ label: t('Open Sync'), to: '/sync' }} empty={data?.remotes.length === 0 && { title: t('No sites connected') }}>
       {data?.remotes.slice(0, 6).map((r) => (
         <WidgetRow
           key={r.name}

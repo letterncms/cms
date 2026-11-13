@@ -65,7 +65,7 @@ async function syncViews(manifest: Manifest) {
   unregister(VIEWS)
   await registerAs(VIEWS, () => {
     for (const view of manifest.views ?? []) registry.routes.set(view.path, viewRoute(view.id, view.path, { private: view.private }))
-    for (const widget of manifest.widgets) if (widget.view) registry.widgets.set(widget.id, viewWidget(widget.view, widget.action))
+    for (const widget of manifest.widgets) if (widget.view) registry.widgets.set(widget.id, viewWidget(widget.view, widget.action, widget.empty))
   })
 }
 

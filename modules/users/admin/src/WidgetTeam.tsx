@@ -1,16 +1,14 @@
 import { can, navigate, plural, t, timeAgo, useAbility, useManifest, type User } from '@letterncms/sdk'
 import { Avatar, Button, Widget, WidgetRow } from '@letterncms/ui'
 
-/** Home-screen widget: the people on this site, most recently seen first. Nothing while you are the only one. */
+/** Home-screen widget: the people on this site, most recently seen first. */
 export default function WidgetTeam() {
   const manifest = useManifest()
   const team = useAbility<{ items: (User & { role: string })[]; total: number }>('users/recent', { limit: 5 })
   const manage = can('users.manage')
 
-  if (!team.isError && (!team.data || team.data.total <= 1)) return null
-
   return (
-    <Widget action={{ label: t('All Users'), to: '/users' }} query={team}>
+    <Widget action={{ label: t('All Users'), to: '/users' }} query={team} empty={!!team.data && team.data.total <= 1 && { title: t('You’re the only user'), action: manage && <Button size="sm" icon="user-plus" onClick={() => navigate('/users/new')}>{t('Invite User')}</Button> }}>
       {team.data && (
         <>
           {team.data.items.map((u) => (

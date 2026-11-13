@@ -104,5 +104,6 @@
   "You cannot delete your own account here.": "Vous ne pouvez pas supprimer votre propre compte ici.",
   "You cannot suspend your own account.": "Vous ne pouvez pas suspendre votre propre compte.",
   "You cannot take away your own roles. Ask another administrator.": "Vous ne pouvez pas retirer vos propres rôles. Demandez à un autre administrateur.",
-  "You’re invited to :site": "Vous êtes invité(e) sur :site"
+  "You’re invited to :site": "Vous êtes invité(e) sur :site",
+  "You’re the only user": "Vous êtes le seul utilisateur"
 }

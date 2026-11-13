@@ -7,15 +7,13 @@ interface Agents {
   activity: { id: string; ability: string; label: string; subject: string | null; createdAt: string }[]
 }
 
-/** Home-screen widget: the AI agents signed in to your account, and what they changed lately. Nothing while there are none. */
+/** Home-screen widget: the AI agents signed in to your account, and what they changed lately. */
 export default function WidgetAgents() {
   const agents = useAbility<Agents>('mcp/agents', { limit: 4 }, { refetchInterval: 60_000 })
   const a = agents.data
 
-  if (!agents.isError && (!a || (a.agents.length === 0 && a.activity.length === 0))) return null
-
   return (
-    <Widget action={{ label: t('Connect'), to: '/account#mcp' }} query={agents}>
+    <Widget action={{ label: t('Connect'), to: '/account#mcp' }} query={agents} empty={!!a && a.agents.length === 0 && a.activity.length === 0 && { title: t('No agents connected') }}>
       {a && (
         <>
           {a.agents.map((agent) => (
