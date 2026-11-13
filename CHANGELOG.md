@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Removed
+
+- **Breaking.** Plugins and Site Kits now browse Lettern’s store only. Adding stores and entering plugin license keys have been removed.
+
 ## 0.33.0 (2026-11-13)
 
 ### Changed

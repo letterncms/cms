@@ -30,7 +30,6 @@ final class PluginsViewTest extends TestCase
         $this->assertSame('system', $this->cms()->admin()->navItems()['built-in']['section']);
         $modules = $this->cms()->abilities()->execute('packages/list', ['type' => 'module', 'optional' => true], $ctx)['items'];
         $this->assertNotContains('letterncms/media', array_column($modules, 'name'));
-        $this->assertNotContains('letterncms/license', array_column($modules, 'name'), 'Required, as Modules needs it.');
         $this->assertSame([], array_filter($modules, static fn ($m) => $m['required']));
 
         $list = $this->cms()->abilities()->execute('packages/list', ['type' => 'plugin'], $ctx);

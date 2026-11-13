@@ -6,15 +6,12 @@ namespace Cms\Modules\Packages;
 
 use Cms\Cms;
 use Cms\Foundation\Application;
-use Cms\Modules\License\LicenseService;
 use Cms\Packages\PackageManifest;
 use Cms\Packages\Install\PackageJobs;
 use Cms\Support\Files;
 use Cms\Support\Html\Sanitizer;
 use Cms\Support\Remote;
-use Cms\Support\Yaml;
 use Cms\Trust\PackageSignature;
-use Cms\Trust\TrustFile;
 use Cms\Trust\TrustRegistry;
 use Composer\Semver\Semver;
 use Illuminate\Support\Carbon;
@@ -24,7 +21,6 @@ use Throwable;
 /**
  * Browses and installs from a store endpoint, on any site, with no store plugin in sight. A
  * store is a few static signed files: nothing here trusts the server, only the signatures.
- * A paid package needs a licence that names it; the store decides, this offers a way to buy.
  */
 final class StoreClient
 {
@@ -45,83 +41,10 @@ final class StoreClient
         private readonly PackageJobs $jobs,
     ) {}
 
-    /** @return list<array{id: string, url: ?string, name: string, default: bool, fingerprint: ?string, problem: ?string}> */
-    public function stores(): array
-    {
-        $default = $this->trust->default();
-        $out = [['id' => self::DEFAULT, 'url' => $this->catalogUrl(self::DEFAULT), 'name' => cms_brand(), 'default' => true, 'fingerprint' => $default->current()?->fingerprint(), 'problem' => $default->problem()]];
-
-        foreach ($this->added() as $id => $store) {
-            $trust = $this->trust->store($id);
-            $out[] = ['id' => $id, 'url' => (string) $store['url'], 'name' => (string) ($store['name'] ?? $id), 'default' => false, 'fingerprint' => $trust->current()?->fingerprint(), 'problem' => $trust->problem()];
-        }
-
-        return $out;
-    }
-
-    /**
-     * Add a store: read what it says about itself, and pin its root only once the admin has
-     * confirmed the fingerprint from the store's own documentation.
-     *
-     * @return array{name: string, fingerprint: string, added: bool, id: string}
-     */
-    public function addStore(string $url, ?string $confirm = null): array
-    {
-        $base = rtrim($url, '/');
-
-        if (! preg_match('#^https?://#i', $base)) {
-            throw new RuntimeException(__('A store address starts with https://.'));
-        }
-
-        $index = json_decode($this->remote->get($base.'/api/store/v1/index.json', 200_000, 5), true);
-
-        if (! is_array($index) || (int) ($index['api'] ?? 0) !== 1 || ! is_string($index['trust_url'] ?? null) || ! is_string($index['catalog_url'] ?? null)) {
-            throw new RuntimeException(__('That address does not answer like a store.'));
-        }
-
-        $json = $this->remote->get((string) $index['trust_url'], 1_000_000, 5);
-        $trust = TrustFile::selfSigned($json);
-
-        if (! $trust || $trust->roots() === []) {
-            throw new RuntimeException(__('The store has no valid trust file.'));
-        }
-
-        $fingerprint = $trust->fingerprint();
-        $id = substr(sha1($base), 0, 12);
-        $name = mb_substr((string) ($index['name'] ?? parse_url($base, PHP_URL_HOST)), 0, 80);
-
-        if ($confirm === null || trim(strtolower($confirm)) !== $fingerprint) {
-            return ['name' => $name, 'fingerprint' => $fingerprint, 'added' => false, 'id' => $id];
-        }
-
-        Files::put($this->trust->anchorPath($id), $json);
-        $this->trust->forget($id);
-        $stores = $this->added();
-        $stores[$id] = ['url' => $base, 'catalog' => (string) $index['catalog_url'], 'name' => $name];
-        Yaml::write($this->storesFile(), ['stores' => $stores]);
-
-        return ['name' => $name, 'fingerprint' => $fingerprint, 'added' => true, 'id' => $id];
-    }
-
-    public function removeStore(string $id): void
-    {
-        $stores = $this->added();
-
-        if (! isset($stores[$id])) {
-            throw new RuntimeException(__('That store is not on this site.'));
-        }
-
-        unset($stores[$id]);
-        Yaml::write($this->storesFile(), ['stores' => $stores]);
-        @unlink($this->catalogFile($id));
-        @unlink($this->trust->anchorPath($id));
-        $this->trust->forget($id);
-    }
-
     /** Fetch trust and the catalog. Anonymous: nothing about this site is sent. @return string|null What went wrong */
-    public function refresh(string $id = self::DEFAULT): ?string
+    public function refresh(): ?string
     {
-        $store = $this->trust->store($id);
+        $store = $this->trust->default();
 
         try {
             $trust = $store->current();
@@ -130,18 +53,17 @@ final class StoreClient
                 throw new RuntimeException($store->problem() === 'dev_trust' ? __('This build has no production signing keys yet, so it can’t trust a store.') : __('No trust file counts on this site.'));
             }
 
-            $trustUrl = $id === self::DEFAULT ? $trust->endpoint('trust') : (json_decode($this->remote->get(rtrim((string) $this->added()[$id]['url'], '/').'/api/store/v1/index.json', 200_000, 3), true)['trust_url'] ?? null);
+            $trustUrl = $trust->endpoint('trust');
 
             if (is_string($trustUrl) && $trustUrl !== '') {
                 try {
                     $store->accept($this->remote->get($trustUrl, 1_000_000, 3));
-                    $store->checkedNow();
                 } catch (Throwable) {
                     // The catalog may still verify under the keys already known.
                 }
             }
 
-            $url = $this->catalogUrl($id);
+            $url = $this->catalogUrl();
 
             if (! $url) {
                 throw new RuntimeException(__('No store address is known.'));
@@ -153,7 +75,7 @@ final class StoreClient
                 throw new RuntimeException(__('The catalog did not verify, or it is older than one seen before.'));
             }
 
-            Files::put($this->catalogFile($id), $json);
+            Files::put($this->catalogFile(), $json);
 
             return null;
         } catch (Throwable $e) {
@@ -161,39 +83,39 @@ final class StoreClient
         }
     }
 
-    /** @return array{store: string, items: list<array<string, mixed>>, freshness: string, problem: ?string, error: ?string} The catalog as this site sees it */
-    public function catalog(string $id = self::DEFAULT, bool $refresh = false): array
+    /** @return array{items: list<array<string, mixed>>, freshness: string, problem: ?string, error: ?string} The catalog as this site sees it */
+    public function catalog(bool $refresh = false): array
     {
         $error = null;
 
-        if ($refresh || ! is_file($this->catalogFile($id))) {
-            $error = $this->refresh($id);
+        if ($refresh || ! is_file($this->catalogFile())) {
+            $error = $this->refresh();
         }
 
-        $payload = $this->payload($id);
+        $payload = $this->payload();
         $items = [];
 
         foreach ((array) ($payload['items'] ?? []) as $item) {
-            // Delisted: no new sales, though whoever has it still gets its updates.
-            if (is_array($item) && $this->nameAllowed($id, (string) ($item['package'] ?? '')) && (empty($item['delisted']) || $this->cms->packages()->repository()->find((string) ($item['package'] ?? '')))) {
-                $items[] = $this->describe($id, $item, $payload);
+            // Delisted: no new installs, though whoever has it still gets its updates.
+            if (empty($item['delisted']) || $this->cms->packages()->repository()->find((string) $item['package'])) {
+                $items[] = $this->describe($item, $payload);
             }
         }
 
-        return ['store' => $id, 'items' => $items, 'freshness' => $this->freshness($payload), 'problem' => $this->trust->store($id)->problem(), 'error' => $error];
+        return ['items' => $items, 'freshness' => $this->freshness($payload), 'problem' => $this->trust->default()->problem(), 'error' => $error];
     }
 
     /** The listing's detail. Unsigned and from another server: its HTML is cleaned here, and only the store's own images survive. */
-    public function item(string $id, string $package): array
+    public function item(string $package): array
     {
-        $payload = $this->payload($id);
+        $payload = $this->payload();
         $item = $this->find($payload, $package);
 
         if (! $item) {
             throw new RuntimeException(__('That package is not in this store.'));
         }
 
-        $described = $this->describe($id, $item, $payload);
+        $described = $this->describe($item, $payload);
         $origin = self::origin((string) ($payload['store'] ?? ''));
         $detail = [];
 
@@ -222,7 +144,6 @@ final class StoreClient
             'demo_url' => self::origin((string) ($detail['demo_url'] ?? '')) === $origin ? self::link($detail['demo_url']) : null,
             'repository_url' => self::link($detail['repository_url'] ?? null),
             'releases' => array_values(array_map(static fn ($r) => ['version' => mb_substr((string) ($r['version'] ?? ''), 0, 40), 'released_at' => mb_substr((string) ($r['released_at'] ?? ''), 0, 32), 'notes' => mb_substr((string) ($r['notes'] ?? ''), 0, 4000), 'security' => (bool) ($r['security'] ?? false)], array_filter(array_slice((array) ($detail['releases'] ?? []), 0, 20), 'is_array'))),
-            'operator' => (string) ($detail['operator'] ?? parse_url((string) $payload['store'], PHP_URL_HOST)),
             'capabilities' => array_values(array_map('strval', (array) ($described['entry']['capabilities'] ?? []))),
             'requires' => (array) ($described['entry']['requires'] ?? []),
         ];
@@ -232,13 +153,13 @@ final class StoreClient
      * What installing a package means: its dependencies in order, what it may do, what it needs.
      * Refused with the reason when it can't work out.
      *
-     * @return array{steps: list<array{package: string, version: string, title: string, enable_only: bool, action: string}>, capabilities: list<string>, access: array<string, mixed>}
+     * @return array{steps: list<array{package: string, version: string, title: string, enable_only: bool, action: string}>, capabilities: list<string>}
      */
-    public function plan(string $id, string $package, ?string $version = null): array
+    public function plan(string $package, ?string $version = null): array
     {
-        $payload = $this->payload($id);
+        $payload = $this->payload();
         $steps = [];
-        $this->resolve($id, $payload, $package, $version, $steps, []);
+        $this->resolve($payload, $package, $version, $steps, []);
 
         $main = $this->find($payload, $package);
         $entry = $main ? $this->entry($main, $version) : null;
@@ -246,14 +167,13 @@ final class StoreClient
         return [
             'steps' => array_values($steps),
             'capabilities' => array_values(array_map('strval', (array) ($entry['capabilities'] ?? []))),
-            'access' => $main && $entry ? $this->gate($main, $entry, $id) : ['allowed' => true],
         ];
     }
 
     /** Start an install from the store. @return array<string, mixed> The job */
-    public function install(string $id, string $package, ?string $version, bool $turnOn = true): array
+    public function install(string $package, ?string $version, bool $turnOn = true): array
     {
-        $payload = $this->payload($id);
+        $payload = $this->payload();
         $this->requireFresh($payload);
         $item = $this->find($payload, $package);
         $entry = $item ? $this->entry($item, $version) : null;
@@ -264,27 +184,16 @@ final class StoreClient
 
         $this->refuseBlocked($payload, $package, (string) $entry['version']);
 
-        if (! $this->nameAllowed($id, $package)) {
-            throw new RuntimeException(__('Only the default store may provide :package.', ['package' => $package]));
-        }
-
-        $gate = $this->gate($item, $entry, $id);
-
-        if (! $gate['allowed']) {
-            throw new RuntimeException($gate['message']);
-        }
-
         return $this->jobs->start([
             'package' => $package,
             'version' => (string) $entry['version'],
-            'url' => $this->requireSameOrigin($payload, (string) $entry['url']).(string) ($gate['query'] ?? ''),
+            'url' => $this->requireSameOrigin($payload, (string) $entry['url']),
             'size' => (int) ($entry['size'] ?? 0),
             'sha256' => (string) $entry['sha256'],
-            'headers' => (array) ($gate['headers'] ?? []),
             'verifier' => 'store',
             'turn_on' => $turnOn,
-            'context' => ['store' => $id, 'entry' => $entry],
-            'source' => ['store' => $id, 'signed' => true],
+            'context' => ['entry' => $entry],
+            'source' => ['store' => self::DEFAULT, 'signed' => true],
         ]);
     }
 
@@ -296,7 +205,6 @@ final class StoreClient
      */
     public function verifyDownload(array $job): void
     {
-        $id = (string) $job['context']['store'];
         $entry = (array) $job['context']['entry'];
         $package = (string) $job['package'];
         $hash = @hash_file('sha256', (string) $job['zip']);
@@ -305,7 +213,7 @@ final class StoreClient
             throw new RuntimeException(__('The download is damaged, or not what the store listed. Nothing was changed.'));
         }
 
-        $payload = $this->payload($id);
+        $payload = $this->payload();
         $current = $this->find($payload, $package);
         $listed = $current ? $this->entry($current, (string) $entry['version'], allowYanked: true) : null;
 
@@ -317,16 +225,8 @@ final class StoreClient
 
         $core = Cms::VERSION;
 
-        if (! $this->trust->store($id)->versionVerifies($package, $entry, $core)) {
+        if (! $this->trust->default()->versionVerifies($package, $entry, $core)) {
             throw new RuntimeException(__('The signature on this package does not verify. Nothing was changed.'));
-        }
-    }
-
-    /** @param  array<string, mixed>  $job */
-    public function verifyInspected(array $job): void
-    {
-        if (! $this->nameAllowed((string) ($job['context']['store'] ?? ''), (string) $job['package'], (array) ($job['psr4'] ?? []))) {
-            throw new RuntimeException(__('Only the default store may provide :package.', ['package' => (string) $job['package']]));
         }
     }
 
@@ -342,16 +242,14 @@ final class StoreClient
         $signed = false;
         $claims = null;
 
-        foreach ($this->stores() as $store) {
-            $payload = $this->payload($store['id']);
+        $payload = $this->payload();
 
-            foreach ((array) ($payload['items'] ?? []) as $item) {
-                foreach ((array) ($item['versions'] ?? []) as $entry) {
-                    if (strtolower((string) ($entry['sha256'] ?? '')) === $hash && $this->freshness($payload) !== 'expired' && $this->trust->store($store['id'])->versionVerifies((string) $item['package'], $entry, Cms::VERSION)) {
-                        $this->refuseBlocked($payload, (string) $item['package'], (string) $entry['version']);
-                        $signed = $store['id'];
-                        $claims = ['package' => (string) $item['package'], 'version' => (string) $entry['version']];
-                    }
+        foreach ((array) ($payload['items'] ?? []) as $item) {
+            foreach ((array) ($item['versions'] ?? []) as $entry) {
+                if (strtolower((string) ($entry['sha256'] ?? '')) === $hash && $this->freshness($payload) !== 'expired' && $this->trust->default()->versionVerifies((string) $item['package'], $entry, Cms::VERSION)) {
+                    $this->refuseBlocked($payload, (string) $item['package'], (string) $entry['version']);
+                    $signed = self::DEFAULT;
+                    $claims = ['package' => (string) $item['package'], 'version' => (string) $entry['version']];
                 }
             }
         }
@@ -376,8 +274,7 @@ final class StoreClient
     /** @param  array<string, mixed>  $job */
     public function verifyUploadInspected(array $job): void
     {
-        $signed = $job['context']['signed'] ?? false;
-        $store = $signed === self::DEFAULT ? self::DEFAULT : ($signed ?: '');
+        $signed = ($job['context']['signed'] ?? false) === self::DEFAULT;
         $claims = $job['context']['claims'] ?? null;
 
         // What was signed is one name and version: a zip may not claim to be another.
@@ -385,13 +282,11 @@ final class StoreClient
             throw new RuntimeException(__('This zip is not the package its signature is for.'));
         }
 
-        if (! $this->nameAllowed((string) $store, (string) $job['package'], (array) ($job['psr4'] ?? []))) {
+        if (! $this->nameAllowed($signed, (string) $job['package'], (array) ($job['psr4'] ?? []))) {
             throw new RuntimeException(__('Only a signed package from the default store may use the name :package or the Cms namespace.', ['package' => (string) $job['package']]));
         }
 
-        foreach ($this->stores() as $entry) {
-            $this->refuseBlocked($this->payload($entry['id']), (string) $job['package'], (string) ($job['package_version'] ?? '0.0.0'));
-        }
+        $this->refuseBlocked($this->payload(), (string) $job['package'], (string) ($job['package_version'] ?? '0.0.0'));
     }
 
     /**
@@ -402,6 +297,7 @@ final class StoreClient
      */
     public function updates(): array
     {
+        $payload = $this->payload();
         $sources = $this->jobs->sources();
         $manager = $this->cms->packages();
         $packages = [];
@@ -416,12 +312,9 @@ final class StoreClient
             $record = $sources[$name] ?? null;
             $store = is_array($record) ? ($record['store'] ?? null) : null;
 
-            if (! is_string($store) || ($store !== self::DEFAULT && ! isset($this->added()[$store]))) {
+            if ($store !== self::DEFAULT) {
                 $unverified[] = $name;
-                $store = self::DEFAULT;
             }
-
-            $payload = $this->payload($store);
 
             foreach ((array) ($payload['blocked'] ?? []) as $block) {
                 if (($block['package'] ?? null) === $name && self::matches($manifest->version, (string) ($block['versions'] ?? ''))) {
@@ -440,17 +333,12 @@ final class StoreClient
                 continue;
             }
 
-            $gate = $this->gate($item, $entry, $store);
             $packages[] = [
                 'package' => $name,
                 'label' => $manifest->label,
                 'installed' => $manifest->version,
                 'version' => $entry['version'],
                 'security' => (bool) ($entry['security'] ?? false),
-                'store' => $store,
-                'allowed' => $gate['allowed'],
-                'message' => $gate['message'] ?? null,
-                'buy_url' => $item['listing_url'] ?? null,
                 'backup' => is_array($record) && ! empty($record['backup']) && is_dir((string) $record['backup']),
             ];
         }
@@ -462,7 +350,7 @@ final class StoreClient
      * Security versions of store packages update by themselves when that changes nothing else
      * about them. The next package to do that, if any.
      *
-     * @return array{store: string, package: string, version: string}|null
+     * @return array{package: string, version: string}|null
      */
     public function nextSecurityUpdate(): ?array
     {
@@ -471,63 +359,22 @@ final class StoreClient
         }
 
         foreach ($this->updates()['packages'] as $update) {
-            if (! $update['security'] || ! $update['allowed'] || (int) explode('.', (string) $update['installed'])[0] !== (int) explode('.', (string) $update['version'])[0]) {
+            if (! $update['security'] || (int) explode('.', (string) $update['installed'])[0] !== (int) explode('.', (string) $update['version'])[0]) {
                 continue;
             }
 
-            $payload = $this->payload((string) $update['store']);
+            $payload = $this->payload();
             $item = $this->find($payload, (string) $update['package']);
             $entry = $item ? $this->entry($item, (string) $update['version']) : null;
             $current = $item ? $this->entry($item, (string) $update['installed'], allowYanked: true) : null;
             $grew = array_diff((array) ($entry['capabilities'] ?? []), (array) ($current['capabilities'] ?? []));
 
             if ($this->freshness($payload) === 'ok' && $grew === []) {
-                return ['store' => (string) $update['store'], 'package' => (string) $update['package'], 'version' => (string) $update['version']];
+                return ['package' => (string) $update['package'], 'version' => (string) $update['version']];
             }
         }
 
         return null;
-    }
-
-    /** @param  array<string, mixed>  $item  @param  array<string, mixed>  $entry  @return array<string, mixed> Whether this licence opens this version, and what to tell the store */
-    public function gate(array $item, array $entry, string $store = self::DEFAULT): array
-    {
-        if (($item['pricing'] ?? 'free') === 'free') {
-            return ['allowed' => true];
-        }
-
-        $license = app(LicenseService::class);
-        $product = (string) $item['package'];
-        $state = $license->itemFor($product, $store);
-        $token = $license->token($store);
-        $headers = $token ? ['X-Cms-License: '.$token] : [];
-        $host = rawurlencode((string) $license->host()[0]);
-        $security = (bool) ($entry['security'] ?? false);
-        $buy = ['allowed' => false, 'reason' => $state['reason'], 'buy_url' => $item['listing_url'] ?? null];
-
-        if ($state['reason'] === 'nonpublic') {
-            // Paid plugins run free on a local or staging host, if its author lets them be fetched for that.
-            return ($item['dev_download'] ?? false) === true
-                ? ['allowed' => true, 'reason' => 'nonpublic', 'headers' => $headers, 'query' => "?use=nonpublic&site_host={$host}"]
-                : [...$buy, 'message' => __('This paid package has no free download for local sites. Buy it, or upload a copy you own.')];
-        }
-
-        if (in_array($state['reason'], ['ok', 'window_over'], true)) {
-            $covered = $state['upd'] === null || substr((string) ($entry['released_at'] ?? ''), 0, 10) <= $state['upd'];
-
-            if ($covered || $security) {
-                return ['allowed' => true, 'reason' => $state['reason'], 'headers' => $headers, 'query' => "?site_host={$host}"];
-            }
-
-            return [...$buy, 'reason' => 'updates_lapsed', 'message' => __('Updates for this package have lapsed. Extend the license to get this version.')];
-        }
-
-        // A security fix goes to anyone whose token ever named it; the store checks that.
-        if ($security && $token) {
-            return ['allowed' => true, 'reason' => 'security', 'headers' => $headers, 'query' => "?site_host={$host}"];
-        }
-
-        return [...$buy, 'message' => $security ? __('A security fix for this package needs its key. Add the key, or buy it.') : __('This is a paid plugin. Buy it, then add its key here.')];
     }
 
     /** Start an install from an uploaded zip. @return array<string, mixed> The job */
@@ -560,7 +407,7 @@ final class StoreClient
     }
 
     /** @return array<string, mixed> */
-    private function describe(string $id, array $item, array $payload): array
+    private function describe(array $item, array $payload): array
     {
         $installed = $this->installedVersion($item);
         $local = $installed !== null ? $this->cms->packages()->repository()->find((string) ($item['package'] ?? '')) : null;
@@ -568,20 +415,17 @@ final class StoreClient
         $entry = $this->latestCompatible($item, null);
         $origin = self::origin((string) ($payload['store'] ?? ''));
         $icon = (string) ($item['icon'] ?? '');
-        $gate = $entry ? $this->gate($item, $entry, $id) : ['allowed' => false];
         $blocked = $entry ? $this->blocked($payload, (string) $item['package'], (string) $entry['version']) : false;
 
         $action = match (true) {
             $blocked => 'blocked',
             ! $entry => 'incompatible',
             $installed !== null && version_compare($installed, (string) $entry['version'], '>=') => 'installed',
-            ! $gate['allowed'] => 'buy',
             $installed !== null => 'update',
             default => 'install',
         };
 
         return [
-            'store' => $id,
             'package' => (string) $item['package'],
             'type' => (string) ($item['type'] ?? 'plugin'),
             // A plugin this site has is named and described as Installed names it: its own words, in the admin's language.
@@ -594,14 +438,12 @@ final class StoreClient
             'glyph' => preg_match('/^[a-z0-9-]{1,60}$/', (string) ($item['glyph'] ?? '')) === 1 ? (string) $item['glyph'] : null,
             'featured' => (bool) ($item['featured'] ?? false),
             'categories' => array_values(array_map('strval', (array) ($item['categories'] ?? []))),
-            'pricing' => (string) ($item['pricing'] ?? 'free'),
             'first_party' => (bool) ($item['first_party'] ?? false),
             'author' => ['name' => (string) ($item['author']['name'] ?? ''), 'url' => (string) ($item['author']['url'] ?? '')],
             'listing_url' => self::origin((string) ($item['listing_url'] ?? '')) === $origin ? $item['listing_url'] : null,
             'latest' => $entry['version'] ?? null,
             'installed' => $installed,
             'action' => $action,
-            'access' => array_intersect_key($gate, array_flip(['allowed', 'reason', 'message', 'buy_url'])),
             'entry' => $entry,
         ];
     }
@@ -621,7 +463,7 @@ final class StoreClient
     }
 
     /** @param  array<string, array<string, mixed>>  $steps  @param  list<string>  $path */
-    private function resolve(string $id, array $payload, string $package, ?string $version, array &$steps, array $path): void
+    private function resolve(array $payload, string $package, ?string $version, array &$steps, array $path): void
     {
         if (in_array($package, $path, true)) {
             throw new RuntimeException(__('These packages depend on each other in a circle: :packages.', ['packages' => implode(', ', [...$path, $package])]));
@@ -636,10 +478,6 @@ final class StoreClient
 
         if (! $item || ! $entry) {
             throw new RuntimeException(__(':package is not in this store, or has no version for this site.', ['package' => $package]));
-        }
-
-        if (! $this->nameAllowed($id, $package)) {
-            throw new RuntimeException(__('Only the default store may provide :package.', ['package' => $package]));
         }
 
         foreach ((array) ($entry['requires']['packages'] ?? []) as $dep => $constraint) {
@@ -659,7 +497,7 @@ final class StoreClient
 
             $depItem = $this->find($payload, (string) $dep);
             $match = $depItem ? $this->entryFor($depItem, (string) $constraint) : null;
-            $this->resolve($id, $payload, (string) $dep, $match['version'] ?? null, $steps, [...$path, $package]);
+            $this->resolve($payload, (string) $dep, $match['version'] ?? null, $steps, [...$path, $package]);
         }
 
         $steps[$package] = ['package' => $package, 'version' => (string) $entry['version'], 'title' => (string) ($item['title'] ?? $package), 'enable_only' => false, 'action' => $this->cms->packages()->repository()->find($package) ? 'update' : 'install'];
@@ -762,9 +600,9 @@ final class StoreClient
     }
 
     /** The default store alone may provide the `letterncms/` vendor or the `Cms\` namespace: nothing else can pass for first-party. */
-    private function nameAllowed(string $store, string $package, array $psr4 = []): bool
+    private function nameAllowed(bool $signed, string $package, array $psr4 = []): bool
     {
-        if ($store === self::DEFAULT) {
+        if ($signed) {
             return true;
         }
 
@@ -819,27 +657,31 @@ final class StoreClient
         return $url;
     }
 
-    /** @return array<string, mixed> The verified catalog, or nothing */
     /** Whether a store's catalog, as last fetched, lists this package. Never asks the store: a list of plugins can't wait on it. */
-    public function lists(string $package, string $id = self::DEFAULT): bool
+    public function lists(string $package): bool
     {
         try {
-            return $this->find($this->payload($id), $package) !== null;
+            return $this->find($this->payload(), $package) !== null;
         } catch (\Throwable) {
             return false;
         }
     }
 
-    private function payload(string $id): array
+    private function payload(): array
     {
-        $file = $this->catalogFile($id);
+        $file = $this->catalogFile();
 
         if (! is_file($file)) {
             return [];
         }
 
-        $payload = $this->trust->store($id)->openFeed((string) @file_get_contents($file), 'cms-catalog', $this->now())['payload'] ?? [];
+        $payload = $this->trust->default()->openFeed((string) @file_get_contents($file), 'cms-catalog', $this->now())['payload'] ?? [];
         $this->yanked = (array) ($payload['yanked'] ?? []);
+
+        if (isset($payload['items'])) {
+            // Catalogs cached before the store became free-only may still include paid listings.
+            $payload['items'] = array_values(array_filter((array) $payload['items'], static fn ($item) => is_array($item) && ($item['pricing'] ?? 'free') === 'free'));
+        }
 
         return $payload;
     }
@@ -856,13 +698,9 @@ final class StoreClient
         return null;
     }
 
-    private function catalogUrl(string $id): ?string
+    public function catalogUrl(): ?string
     {
-        if ($id !== self::DEFAULT) {
-            return isset($this->added()[$id]) ? (string) $this->added()[$id]['catalog'] : null;
-        }
-
-        $override = trim(explode(',', (string) env('CMS_STORE_URLS', ''))[0]);
+        $override = $this->app->environment(['local', 'testing']) ? trim((string) env('CMS_STORE_URL', '')) : '';
 
         if ($override !== '') {
             return str_ends_with($override, '.json') ? $override : rtrim($override, '/').'/api/store/v1/catalog.json';
@@ -871,22 +709,9 @@ final class StoreClient
         return $this->trust->default()->current()?->endpoint('catalog');
     }
 
-    /** @return array<string, array<string, string>> */
-    private function added(): array
+    private function catalogFile(): string
     {
-        $file = $this->storesFile();
-
-        return is_file($file) ? (array) (Yaml::read($file)['stores'] ?? []) : [];
-    }
-
-    private function storesFile(): string
-    {
-        return $this->app->siteConfigPath('stores.yaml');
-    }
-
-    private function catalogFile(string $id): string
-    {
-        return $this->app->storagePath('packages/catalog-'.preg_replace('/[^a-z0-9-]/', '', $id).'.json');
+        return $this->app->storagePath('packages/catalog-default.json');
     }
 
     private static function matches(string $version, string $constraint): bool

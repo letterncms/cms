@@ -19,9 +19,7 @@ final class DevKeys
 
     public const string RELEASE = 'dev-release';
 
-    public const string LICENSE = 'dev-license';
 
-    public const string FAMILY = 'cms-dev';
 
     /** @return array{0: string, 1: string} [rawPublic, rawPrivate] */
     public static function pair(string $kid): array
@@ -54,15 +52,12 @@ final class DevKeys
             'roots' => [['kid' => self::ROOT, 'pub' => self::public(self::ROOT)]],
             'keys' => [
                 ['kid' => self::RELEASE, 'role' => 'release', 'pub' => self::public(self::RELEASE), 'nbf' => '2026-10-30', 'not_after' => null],
-                ['kid' => self::LICENSE, 'role' => 'license', 'pub' => self::public(self::LICENSE), 'nbf' => '2026-10-30', 'not_after' => null],
             ],
             'revoked' => [],
-            'license_family' => self::FAMILY,
             'endpoints' => [
                 'trust' => 'https://store.invalid/downloads/trust.json',
                 'updates' => 'https://store.invalid/downloads/releases.json',
                 'catalog' => 'https://store.invalid/api/store/v1/catalog.json',
-                'license' => 'https://store.invalid/api/license/v1',
             ],
             ...$overrides,
         ];

@@ -1,11 +1,10 @@
 import { invalidate, Link, locale, run, t, useAbility, useLocation, can, navigate, plural, setQuery } from '@letterncms/sdk'
-import { Badge, Button, cn, confirm, EmptyState, Icon, IconButton, Input, List, Menu, NoMatches, Page, prompt, Segmented, Select, Skeleton, toast } from '@letterncms/ui'
+import { Button, cn, confirm, EmptyState, Icon, IconButton, Input, List, Menu, NoMatches, Page, Segmented, Select, Skeleton, toast } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { driveJob, JobFailed, type Job } from './installing'
-import { Action, addLicenseKey, installing, installItem, ItemIcon, itemPath, PluginControls, priceLabel, type Installed, type Item } from './storeItem'
+import { Action, installing, installItem, ItemIcon, itemPath, PluginControls, type Installed, type Item } from './storeItem'
 
-interface Catalog { store: string; items: Item[]; freshness: 'ok' | 'stale' | 'expired' | 'clock' | 'none'; problem: string | null; error: string | null }
-interface StoreInfo { id: string; name: string; url: string | null; default: boolean; fingerprint: string | null; problem: string | null }
+interface Catalog { items: Item[]; freshness: 'ok' | 'stale' | 'expired' | 'clock' | 'none'; problem: string | null; error: string | null }
 type Sort = 'popular' | 'name'
 
 /** One plugin in the list: what the store says of it, what is installed here, or both. */
@@ -47,19 +46,16 @@ export function KitStore() {
 
 /** The store's catalog for plugins or site kits. The plugin list also includes locally installed plugins. */
 function StoreList({ kits }: { kits: boolean }) {
-  const [store, setStore] = useState('default')
-  const stores = useAbility<{ items: StoreInfo[] }>('package-stores/list')
-  const catalog = useAbility<Catalog>('packages/catalog', { store })
+  const catalog = useAbility<Catalog>('packages/catalog')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
-  const [pricing, setPricing] = useState('all')
   const [sort, setSort] = useState<Sort>('popular')
   // An older link to a plugin's page (`?item=<package>`) leads to its page of its own.
   const { query } = useLocation()
   // All of them, or what is installed here: in the address, so a link (and the way back from a plugin's page) keeps it.
   const show: 'all' | 'installed' = query.show === 'installed' ? 'installed' : 'all'
   const setShow = (next: 'all' | 'installed') => setQuery({ show: next === 'all' ? null : next })
-  useEffect(() => { if (query.item) navigate(itemPath({ package: query.item, store: query.store ?? 'default' }), { replace: true }) }, [query.item, query.store])
+  useEffect(() => { if (query.item) navigate(itemPath({ package: query.item }), { replace: true }) }, [query.item])
   const [busy, setBusy] = useState<string | null>(null)
   const [step, setStep] = useState<string | null>(null)
   const [turnOn, setTurnOnHere] = useState(installing.turnOn)
@@ -68,19 +64,17 @@ function StoreList({ kits }: { kits: boolean }) {
   const data = catalog.data
   const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'plugin' }, { enabled: !kits })
   const plugins = kits ? undefined : local.data?.items
-  const current = stores.data?.items.find((s) => s.id === store)
   const all = useMemo(() => (data?.items ?? []).filter((item) => (item.type === 'kit') === kits), [data, kits])
   const label = kits ? t('Site Kits') : t('Plugins')
 
-  // Only what this store has: no empty categories, and price only once something costs money.
+  // Only what this store has: no empty categories, each with a count.
   const categories = useMemo(() => {
     const counts = new Map<string, number>()
     for (const item of all) for (const c of item.categories) counts.set(c, (counts.get(c) ?? 0) + 1)
     return [...counts].sort((a, b) => a[0].localeCompare(b[0], locale()))
   }, [all])
-  const sellsSomething = all.some((i) => i.pricing !== 'free') && all.some((i) => i.pricing === 'free')
 
-  // The store's plugins, each with what is installed of it here; then what is installed from elsewhere (a zip, another store).
+  // The store's plugins, each with what is installed of it here; then what is installed from elsewhere (a local package or a zip).
   const rows = useMemo<Row[]>(() => {
     const installedHere = new Map((plugins ?? []).map((p) => [p.name, p]))
     const listed = new Set(all.map((i) => i.package))
@@ -97,20 +91,17 @@ function StoreList({ kits }: { kits: boolean }) {
       if (show === 'installed' && !isInstalled(row)) return false
       const { item, plugin } = row
       const text = (item ? `${item.title} ${item.summary} ${item.package} ${item.author.name} ${item.categories.join(' ')}` : `${plugin!.label} ${plugin!.note} ${plugin!.name}`).toLocaleLowerCase(locale())
-      // Category and price are the store's words: what it doesn't list has neither.
-      return (!category || !!item?.categories.includes(category)) && (pricing === 'all' || (!!item && (pricing === 'free') === (item.pricing === 'free'))) && terms.every((term) => text.includes(term))
+      return (!category || !!item?.categories.includes(category)) && terms.every((term) => text.includes(term))
     })
     if (sort === 'name') return [...found].sort((a, b) => title(a).localeCompare(title(b), locale()))
     return found
-  }, [rows, show, search, category, pricing, sort])
+  }, [rows, show, search, category, sort])
 
-  const narrowed = search.trim() !== '' || category !== '' || pricing !== 'all'
+  const narrowed = search.trim() !== '' || category !== ''
   // One list: what the store features leads it, in the store's own order, and is not listed a second time.
   const listed = !narrowed && sort === 'popular' ? [...items.filter((r) => r.item?.featured), ...items.filter((r) => !r.item?.featured)] : items
-  // What every card would say alike is said by none: the price where nothing is sold, the author where there is one.
-  const priced = all.some((i) => i.pricing !== 'free')
   const authored = new Set(all.map((i) => i.author.name || i.package)).size > 1
-  const clear = () => { setSearch(''); setCategory(''); setPricing('all') }
+  const clear = () => { setSearch(''); setCategory('') }
 
   const after = async (message: string) => {
     invalidate('packages/')
@@ -147,38 +138,10 @@ function StoreList({ kits }: { kits: boolean }) {
     }
   }
 
-  const addStore = async () => {
-    const asked = await prompt({ title: t('Add Store'), description: t('Code from a store runs with full access to this site. Add it only if you trust who runs it.'), fields: [{ handle: 'url', type: 'text', label: t('Store Address'), required: true, placeholder: 'https://' }], confirm: t('Check Store') })
-    const url = asked?.url as string | undefined
-    if (!url) return
-    try {
-      const first = await run<{ name: string; fingerprint: string; id: string }>('package-stores/create', { url })
-      const answer = await prompt({ title: t('Add {name}?', { name: first.name }), description: t('Compare this key fingerprint with the one in the store’s own documentation, then type it here: {fingerprint}', { fingerprint: first.fingerprint }), fields: [{ handle: 'fingerprint', type: 'text', label: t('Key Fingerprint'), required: true }], confirm: t('Add Store') })
-      const typed = answer?.fingerprint as string | undefined
-      if (!typed) return
-      const done = await run<{ added: boolean; id: string }>('package-stores/create', { url, confirm: typed })
-      if (!done.added) {
-        toast.error(t('That fingerprint does not match. The store was not added.'))
-        return
-      }
-      await stores.refetch()
-      setStore(done.id)
-    } catch (e) {
-      toast.error(e)
-    }
-  }
-
-  const removeStore = async () => {
-    if (!current || !(await confirm({ title: t('Remove {name}?', { name: current.name }), description: t('What it installed stays, without update offers.'), confirm: t('Remove Store'), danger: true }))) return
-    await run('package-stores/delete', { id: store })
-    setStore('default')
-    await stores.refetch()
-  }
-
   const refresh = async () => {
     setBusy('refresh')
     try {
-      const next = await run<Catalog>('packages/catalog', { store, refresh: true })
+      const next = await run<Catalog>('packages/catalog', { refresh: true })
       if (next.error) toast.error(next.error)
       invalidate('packages/catalog')
       await catalog.refetch()
@@ -198,7 +161,7 @@ function StoreList({ kits }: { kits: boolean }) {
     : data.error ? t('Can’t reach the store. {error}', { error: data.error })
     : null
 
-  const card = (row: Row) => <Card key={row.key} row={row} priced={priced} authored={authored} busy={busy === row.key} locked={busy !== null} onInstall={() => row.item && void install(row.item)} />
+  const card = (row: Row) => <Card key={row.key} row={row} authored={authored} busy={busy === row.key} locked={busy !== null} onInstall={() => row.item && void install(row.item)} />
 
   return (
     <div>
@@ -210,20 +173,13 @@ function StoreList({ kits }: { kits: boolean }) {
         <Input size="sm" className="w-full sm:w-auto sm:min-w-44 sm:flex-1" icon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search {items}', { items: label })} aria-label={t('Search')} />
         <div className="w-36 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={sort} onChange={(v) => setSort((v ?? 'popular') as Sort)} aria-label={t('Sort')} options={[{ value: 'popular', label: t('Most Popular') }, { value: 'name', label: t('Name') }]} /></div>
         {categories.some(([, count]) => count > 1) && <div className="w-36 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={category || 'all'} onChange={(v) => setCategory(!v || v === 'all' ? '' : v)} aria-label={t('Category')} options={[{ value: 'all', label: t('All Categories') }, ...categories.map(([name]) => ({ value: name, label: name }))]} /></div>}
-        {sellsSomething && <div className="w-28 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={pricing} onChange={(v) => setPricing(v ?? 'all')} aria-label={t('Price')} options={[{ value: 'all', label: t('Any Price') }, { value: 'free', label: t('Free') }, { value: 'paid', label: t('Paid') }]} /></div>}
         <div className="flex items-center gap-1 max-sm:ml-auto">
-          {(stores.data?.items.length ?? 0) > 1 && <div className="w-40 max-sm:min-w-0 max-sm:grow max-sm:basis-[calc(50%-0.25rem)]"><Select size="sm" value={store} onChange={(v) => setStore(v ?? 'default')} options={stores.data!.items.map((s) => ({ value: s.id, label: s.name }))} aria-label={t('Store')} /></div>}
           <Menu
             trigger={<IconButton icon="more" label={t('More')} />}
             items={[
               !kits && { label: t('Upload Zip'), icon: 'upload', disabled: busy !== null, onSelect: () => file.current?.click() },
               { label: t('Check Now'), icon: 'refresh', disabled: busy !== null, onSelect: () => void refresh() },
-              // A key for what was bought belongs here too, before anything paid is installed and a Licenses tab exists.
-              priced && { label: t('Add License Key'), icon: 'key', onSelect: () => void addLicenseKey() },
               !kits && { label: t('Turn On After Install'), checked: turnOn, onSelect: () => setTurnOn((on) => !on) },
-              { separator: true, label: '' },
-              { label: t('Add Store'), icon: 'plus', onSelect: () => void addStore() },
-              current && !current.default && { label: t('Remove {name}', { name: current.name }), icon: 'trash', danger: true, onSelect: () => void removeStore() },
             ]}
           />
         </div>
@@ -259,7 +215,7 @@ const title = (row: Row) => row.item?.title ?? row.plugin!.label
  * One plugin as a row of the list: what it is, what it does in a line (or what's wrong with it), its version, and
  * what to do with it here: install it, or once it's here its switch and menu. Its name leads to its page.
  */
-function Card({ row, priced, authored, busy, locked, onInstall }: { row: Row; priced: boolean; authored: boolean; busy: boolean; locked: boolean; onInstall: () => void }) {
+function Card({ row, authored, busy, locked, onInstall }: { row: Row; authored: boolean; busy: boolean; locked: boolean; onInstall: () => void }) {
   const { item, plugin } = row
   const to = item ? itemPath(item) : plugin!.to
   const name = item?.title ?? plugin!.label
@@ -270,7 +226,6 @@ function Card({ row, priced, authored, busy, locked, onInstall }: { row: Row; pr
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           {to ? <Link to={to} className="min-w-0 truncate rounded-xs text-sm font-medium text-ink no-underline hover:underline hover:underline-offset-2">{name}</Link> : <span className="min-w-0 truncate text-sm font-medium text-ink">{name}</span>}
-          {priced && item && !isInstalled(row) && <Badge>{priceLabel(item)}</Badge>}
         </div>
         <p className={cn('m-0 truncate text-xs', plugin?.problem ? 'text-warning' : 'text-muted')}>{line}</p>
       </div>

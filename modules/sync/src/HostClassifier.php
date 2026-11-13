@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Cms\Modules\License\Host;
+namespace Cms\Modules\Sync;
 
 /**
- * Whether a host needs a paid plugin's licence. Local machines and staging never do. No public suffix list
- * and no `intl`: the rules are few and they err on the side of not bothering anyone.
+ * Identifies local and staging hosts for the Sync connection list.
  */
 final class HostClassifier
 {

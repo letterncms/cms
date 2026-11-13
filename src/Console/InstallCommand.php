@@ -144,13 +144,13 @@ final class InstallCommand extends Command
         $store->refresh();
 
         foreach ($names as $name) {
-            foreach ($store->plan(StoreClient::DEFAULT, $name)['steps'] as $step) {
+            foreach ($store->plan($name)['steps'] as $step) {
                 $this->components->task("Adding {$step['title']}", function () use ($store, $jobs, $step) {
                     if ($step['enable_only']) {
                         return true;
                     }
 
-                    $job = $store->install(StoreClient::DEFAULT, $step['package'], $step['version']);
+                    $job = $store->install($step['package'], $step['version']);
 
                     while ($job['state'] === 'running') {
                         $job = $jobs->step($job['id']);

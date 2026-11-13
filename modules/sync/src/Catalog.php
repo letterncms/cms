@@ -39,7 +39,7 @@ final class Catalog
         'chats' => ['label' => 'Chats', 'description' => 'Each person’s threads in the workspace, with the assistant’s answers.', 'tables' => ['workspace_threads'], 'push' => false, 'pull' => true],
         'logs' => ['label' => 'Logs', 'description' => 'Sent email and the audit log.', 'tables' => ['email_log', 'audit_log'], 'push' => false, 'pull' => true],
         'files' => ['label' => 'Site Files', 'description' => 'Everything in content/: templates, components, collections kept in files, globals, forms and menus.', 'areas' => ['content'], 'push' => false, 'pull' => false],
-        'settings' => ['label' => 'Settings', 'description' => 'Everything in config/, except the plugins that are on and the license key. Secrets stay with each site.', 'areas' => ['config'], 'push' => false, 'pull' => false],
+        'settings' => ['label' => 'Settings', 'description' => 'Everything in config/, except which plugins are on. Secrets stay with each site.', 'areas' => ['config'], 'push' => false, 'pull' => false],
     ];
 
     /**

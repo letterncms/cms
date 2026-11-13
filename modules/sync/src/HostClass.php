@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cms\Modules\License\Host;
+namespace Cms\Modules\Sync;
 
 enum HostClass: string
 {

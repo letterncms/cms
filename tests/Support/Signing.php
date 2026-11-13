@@ -4,34 +4,13 @@ declare(strict_types=1);
 
 namespace Cms\Tests\Support;
 
-use Cms\Modules\License\Token\Paseto;
 use Cms\Trust\DevKeys;
 use Cms\Trust\Envelope;
 use Cms\Trust\PackageSignature;
 
-/** Signs the things a real seller, store or release job signs, with the public development keys. */
+/** Signs the things the store or release job signs, with the public development keys. */
 final class Signing
 {
-    /** A paid plugin's licence token. Items default to one active item. */
-    public static function token(array $claims = [], string $family = DevKeys::FAMILY, string $kid = DevKeys::LICENSE, ?string $private = null): string
-    {
-        $payload = [
-            'lid' => '01JBTESTLICENCE',
-            'iat' => '2026-11-02T10:00:00Z',
-            'rev' => 1,
-            'dom' => ['example.com'],
-            'items' => [self::item()],
-            ...$claims,
-        ];
-
-        return Paseto::sign((string) json_encode($payload), (string) json_encode(['kid' => $kid]), 'cms-license:1:'.$family, $private ?? DevKeys::private($kid));
-    }
-
-    public static function item(array $item = []): array
-    {
-        return ['p' => 'acme/forms', 'ed' => 'pro', 'st' => 'active', 'upd' => '2029-11-02', 'trm' => null, ...$item];
-    }
-
     /** A signed version entry for a catalog or feed. */
     public static function version(string $package, array $entry, string $kid = DevKeys::RELEASE, ?string $private = null): array
     {

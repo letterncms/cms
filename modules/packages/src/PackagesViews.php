@@ -10,7 +10,7 @@ use Cms\Users\User;
 /**
  * Plugins as data: every plugin in one list, the store's and the site's own, on or off with their settings a click
  * away (a catalog component: it installs step by step); then updates; and whatever else belongs here,
- * added with the `view.plugins` filter (the license module's Licenses). Of the CMS's own modules, those that can be
+ * added with the `view.plugins` filter. Of the CMS's own modules, those that can be
  * switched off are listed under Built In, a page of the settings; the required ones are not.
  */
 final class PackagesViews

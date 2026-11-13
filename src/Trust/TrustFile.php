@@ -9,7 +9,7 @@ use Cms\Support\Crypto\Base64Url;
 /**
  * Who may sign what. A root certifies this file; the file certifies the keys that
  * do the work, each for one role: `release` signs packages and feeds, `preview` the
- * same for 0.x only, and `license` signs licence tokens and nothing else.
+ * same for 0.x only.
  */
 final readonly class TrustFile
 {
@@ -24,7 +24,7 @@ final readonly class TrustFile
         return $opened ? new self($opened['payload']) : null;
     }
 
-    /** A file that verifies under its own roots: the shipped file, or one pinned by its fingerprint. */
+    /** A file that verifies under its own roots: the shipped file or a verified cached update. */
     public static function selfSigned(string $json): ?self
     {
         $envelope = json_decode($json, true);
@@ -94,11 +94,6 @@ final readonly class TrustFile
         }
 
         return null;
-    }
-
-    public function licenseFamily(): string
-    {
-        return (string) ($this->data['license_family'] ?? '');
     }
 
     public function endpoint(string $name): ?string

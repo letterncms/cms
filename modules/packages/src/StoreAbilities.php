@@ -7,7 +7,6 @@ namespace Cms\Modules\Packages;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
 use Cms\Cms;
-use Cms\Modules\License\LicenseService;
 use Cms\Packages\Install\PackageJobs;
 use Cms\Support\Files;
 use Cms\Support\Schema\Shape;
@@ -40,90 +39,44 @@ final class StoreAbilities
         $install = ['expose' => ['mcp' => false, 'assistant' => false], 'permission' => 'packages.manage'];
         $read = ['annotations' => ['readOnly' => true], 'permission' => 'packages.manage'];
 
-        $a->register('package-stores/list', [...$read,
-            'label' => 'List Stores',
-            'description' => 'The stores this site installs from, each with the fingerprint of its root key.',
-            'output' => Shape::of(['items' => [['id' => Shape::STRING, 'url' => Shape::STRING_OR_NULL, 'name' => Shape::STRING, 'default' => Shape::BOOLEAN, 'fingerprint' => Shape::STRING_OR_NULL, 'problem' => Shape::STRING_OR_NULL]]]),
-            'handler' => static fn () => ['items' => $client()->stores()],
-        ]);
-
-        $a->register('package-stores/create', [...$install,
-            'label' => 'Add Store',
-            'description' => 'Read a store\'s name and root key fingerprint. Pinned only when confirm repeats that fingerprint. Code from a store runs with full access to this site.',
-            'input' => ['type' => 'object', 'properties' => ['url' => ['type' => 'string', 'maxLength' => 500], 'confirm' => ['type' => 'string', 'maxLength' => 100]], 'required' => ['url']],
-            'output' => Shape::of(['name' => Shape::STRING, 'fingerprint' => Shape::STRING, 'added' => Shape::BOOLEAN, 'id' => Shape::STRING]),
-            'handler' => static fn (array $in) => $guard(static fn () => $client()->addStore($in['url'], $in['confirm'] ?? null)),
-        ]);
-
-        $a->register('package-stores/delete', [...$install,
-            'label' => 'Remove Store',
-            'description' => 'Forget a store. What it installed stays.',
-            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['id']],
-            'output' => Shape::of(['removed' => Shape::STRING]),
-            'handler' => static fn (array $in) => $guard(static function () use ($in, $client) {
-                $client()->removeStore($in['id']);
-
-                return ['removed' => $in['id']];
-            }),
-        ]);
-
         $a->register('packages/catalog', [...$read,
             'label' => 'Browse Store',
-            'description' => 'A store\'s signed catalog as this site sees it: for each package what can be done with it here, and whether this site has access to it.',
-            'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'refresh' => ['type' => 'boolean', 'default' => false]]],
-            'output' => Shape::of(['store' => Shape::STRING, 'items' => [self::listing()], 'freshness' => Shape::enum('ok', 'stale', 'expired', 'clock', 'none'), 'problem' => Shape::STRING_OR_NULL, 'error' => Shape::STRING_OR_NULL]),
-            'handler' => static fn (array $in) => $client()->catalog($in['store'], $in['refresh']),
+            'description' => 'The signed catalog of packages and what can be done with each on this site.',
+            'input' => ['type' => 'object', 'properties' => ['refresh' => ['type' => 'boolean', 'default' => false]]],
+            'output' => Shape::of(['items' => [self::listing()], 'freshness' => Shape::enum('ok', 'stale', 'expired', 'clock', 'none'), 'problem' => Shape::STRING_OR_NULL, 'error' => Shape::STRING_OR_NULL]),
+            'handler' => static fn (array $in) => $client()->catalog($in['refresh']),
         ]);
 
         $a->register('packages/item', [...$read,
             'label' => 'Store Package',
             'description' => 'One package\'s listing, its description cleaned on this site.',
-            'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['package']],
+            'input' => ['type' => 'object', 'properties' => ['package' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['package']],
             'output' => self::listing()->with([
                 'description_html' => Shape::STRING, 'screenshots' => [Shape::STRING], 'gallery' => [['url' => Shape::STRING, 'alt' => Shape::STRING]],
                 'requirements' => [Shape::STRING], 'docs_url' => Shape::STRING_OR_NULL, 'demo_url' => Shape::STRING_OR_NULL, 'repository_url' => Shape::STRING_OR_NULL,
                 'releases' => [['version' => Shape::STRING, 'released_at' => Shape::STRING, 'notes' => Shape::STRING, 'security' => Shape::BOOLEAN]],
-                'operator' => Shape::STRING, 'capabilities' => [Shape::STRING], 'requires' => self::requires(),
+                'capabilities' => [Shape::STRING], 'requires' => self::requires(),
             ]),
-            'handler' => static fn (array $in) => $guard(static fn () => $client()->item($in['store'], $in['package'])),
-        ]);
-
-        $a->register('packages/add-key', [...$install,
-            'label' => 'Add Paid Plugin Key',
-            'description' => 'Put the key for a paid plugin in place, so the store offers it here.',
-            'input' => ['type' => 'object', 'properties' => ['key' => ['type' => 'string', 'maxLength' => 8192]], 'required' => ['key']],
-            'output' => Shape::of(['added' => Shape::BOOLEAN]),
-            'handler' => static fn (array $in) => $guard(static function () use ($in) {
-                app(LicenseService::class)->install($in['key']);
-
-                return ['added' => true];
-            }),
+            'handler' => static fn (array $in) => $guard(static fn () => $client()->item($in['package'])),
         ]);
 
         $a->register('packages/plan-install', [...$read,
             'label' => 'Plan Install',
-            'description' => 'What installing a package means here: dependencies in order, capabilities, access. Refused with the reason when it can\'t work.',
-            'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200], 'version' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['package']],
+            'description' => 'What installing a package means here: dependencies in order, and capabilities. Refused with the reason when it can\'t work.',
+            'input' => ['type' => 'object', 'properties' => ['package' => ['type' => 'string', 'maxLength' => 200], 'version' => ['type' => 'string', 'maxLength' => 40]], 'required' => ['package']],
             'output' => Shape::of([
                 'steps' => [['package' => Shape::STRING, 'version' => Shape::STRING, 'title' => Shape::STRING, 'enable_only' => Shape::BOOLEAN, 'action' => Shape::enum('enable', 'install', 'update')]],
                 'capabilities' => [Shape::STRING],
-                'access' => self::access(),
             ]),
-            // The gate also holds what the download is fetched with (the license token as a header, the query): never part of an answer.
-            'handler' => static fn (array $in) => $guard(static function () use ($client, $in): array {
-                $plan = $client()->plan($in['store'], $in['package'], $in['version'] ?? null);
-                $plan['access'] = array_intersect_key((array) ($plan['access'] ?? []), array_flip(['allowed', 'reason', 'message', 'buy_url']));
-
-                return $plan;
-            }),
+            'handler' => static fn (array $in) => $guard(static fn () => $client()->plan($in['package'], $in['version'] ?? null)),
         ]);
 
         $a->register('packages/install', [...$install,
             'label' => 'Install Package',
             'description' => 'Start installing a package from a store. Drive it with packages/job-step until it\'s done.',
-            'input' => ['type' => 'object', 'properties' => ['store' => ['type' => 'string', 'default' => StoreClient::DEFAULT], 'package' => ['type' => 'string', 'maxLength' => 200], 'version' => ['type' => 'string', 'maxLength' => 40], 'turnOn' => ['type' => 'boolean', 'default' => true]], 'required' => ['package']],
+            'input' => ['type' => 'object', 'properties' => ['package' => ['type' => 'string', 'maxLength' => 200], 'version' => ['type' => 'string', 'maxLength' => 40], 'turnOn' => ['type' => 'boolean', 'default' => true]], 'required' => ['package']],
             'output' => self::jobShape(),
-            'handler' => static fn (array $in) => $guard(static fn () => self::job($client()->install($in['store'], $in['package'], $in['version'] ?? null, $in['turnOn']))),
+            'handler' => static fn (array $in) => $guard(static fn () => self::job($client()->install($in['package'], $in['version'] ?? null, $in['turnOn']))),
         ]);
 
         $a->register('packages/upload', [...$install,
@@ -325,7 +278,7 @@ final class StoreAbilities
                     }
 
                     if (! $running && ! ($core()->status()['managed'] ?? null) && $next = $client()->nextSecurityUpdate()) {
-                        $client()->install($next['store'], $next['package'], $next['version'], true);
+                        $client()->install($next['package'], $next['version'], true);
                         $running = $jobs()->running();
                         $running['context']['auto'] = true;
                         $jobs()->saveJob($running);
@@ -347,12 +300,11 @@ final class StoreAbilities
     private static function listing(): Shape
     {
         return Shape::of([
-            'store' => Shape::STRING, 'package' => Shape::STRING, 'type' => Shape::STRING, 'title' => Shape::STRING, 'summary' => Shape::STRING,
+            'package' => Shape::STRING, 'type' => Shape::STRING, 'title' => Shape::STRING, 'summary' => Shape::STRING,
             'icon' => Shape::STRING_OR_NULL, 'preview' => Shape::STRING_OR_NULL, 'glyph' => Shape::STRING_OR_NULL, 'featured' => Shape::BOOLEAN, 'categories' => [Shape::STRING],
-            'pricing' => Shape::STRING, 'first_party' => Shape::BOOLEAN, 'author' => ['name' => Shape::STRING, 'url' => Shape::STRING],
+            'first_party' => Shape::BOOLEAN, 'author' => ['name' => Shape::STRING, 'url' => Shape::STRING],
             'listing_url' => Shape::STRING_OR_NULL, 'latest' => Shape::STRING_OR_NULL, 'installed' => Shape::STRING_OR_NULL,
-            'action' => Shape::enum('blocked', 'incompatible', 'installed', 'buy', 'update', 'install'),
-            'access' => self::access(),
+            'action' => Shape::enum('blocked', 'incompatible', 'installed', 'update', 'install'),
             'entry' => Shape::nullable(Shape::of([
                 'version' => Shape::STRING, 'url?' => Shape::STRING, 'sha256?' => Shape::STRING, 'size?' => Shape::INTEGER, 'released_at?' => Shape::STRING, 'security?' => Shape::BOOLEAN,
                 'fixes?' => Shape::STRING_OR_NULL, 'first_party?' => Shape::BOOLEAN, 'capabilities?' => [Shape::STRING], 'requires?' => self::requires(), 'kid?' => Shape::STRING, 'sig?' => Shape::STRING,
@@ -368,11 +320,6 @@ final class StoreAbilities
     }
 
     /** StoreClient::gate(): whether this site may have a version, and why not. */
-    private static function access(): Shape
-    {
-        return Shape::of(['allowed' => Shape::BOOLEAN, 'reason?' => Shape::STRING, 'message?' => Shape::STRING, 'buy_url?' => Shape::STRING_OR_NULL]);
-    }
-
     /** What job() lets through of an install. */
     private static function jobShape(): Shape
     {
@@ -412,7 +359,7 @@ final class StoreAbilities
         return Shape::of([
             'packages' => [[
                 'package' => Shape::STRING, 'label' => Shape::STRING, 'installed' => Shape::STRING, 'version' => Shape::STRING, 'security' => Shape::BOOLEAN,
-                'store' => Shape::STRING, 'allowed' => Shape::BOOLEAN, 'message' => Shape::STRING_OR_NULL, 'buy_url' => Shape::STRING_OR_NULL, 'backup' => Shape::BOOLEAN,
+                'backup' => Shape::BOOLEAN,
             ]],
             'advisories' => [['package' => Shape::STRING, 'label' => Shape::STRING, 'version' => Shape::STRING, 'severity' => Shape::STRING, 'advisory' => Shape::STRING_OR_NULL]],
             'unverified' => [Shape::STRING],

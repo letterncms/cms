@@ -1,7 +1,7 @@
 import { locale, navigate, t, useAbility, useLocation } from '@letterncms/sdk'
 import { Badge, Button, cn, Icon, IconButton, NotFoundState, Page, Pressable, Skeleton, Switch, Tabs, Tooltip } from '@letterncms/ui'
 import { useEffect, useState } from 'react'
-import { Action, addLicenseKey, installItem, ItemIcon, itemPath, priceLabel, switchPlugin, uninstallPlugin, type Installed, type Item } from './storeItem'
+import { Action, installItem, ItemIcon, itemPath, switchPlugin, uninstallPlugin, type Installed, type Item } from './storeItem'
 
 interface Detail extends Item {
   description_html: string
@@ -11,7 +11,6 @@ interface Detail extends Item {
   demo_url?: string | null
   repository_url: string | null
   releases: { version: string; released_at: string; notes: string; security: boolean }[]
-  operator: string
   capabilities: string[]
   requires: { core?: string; php?: string }
 }
@@ -33,11 +32,10 @@ const PLUGINS = '/plugins'
  * A listing's pictures, changelog and details, with crumbs back to its catalog.
  */
 export default function StoreItem({ params }: { params: Record<string, string> }) {
-  const { path, query } = useLocation()
+  const { path } = useLocation()
   const kits = path.startsWith('/kits/')
-  const store = query.store || 'default'
   const name = `${params.vendor}/${params.name}`
-  const catalog = useAbility<{ items: Item[] }>('packages/catalog', { store })
+  const catalog = useAbility<{ items: Item[] }>('packages/catalog')
   const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'plugin' }, { enabled: !kits })
   const item = catalog.data?.items.find((i) => i.package === name)
   // Keep links to kits from before they had their own catalog working.
@@ -59,7 +57,7 @@ export default function StoreItem({ params }: { params: Record<string, string> }
 
 function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; refetch: () => void }) {
   const icon = plugin?.icon
-  const detail = useAbility<Detail>('packages/item', { store: item.store, package: item.package })
+  const detail = useAbility<Detail>('packages/item', { package: item.package })
   const d = detail.data
   const [tab, setTab] = useState<'overview' | 'changelog'>('overview')
   const [busy, setBusy] = useState(false)
@@ -70,7 +68,6 @@ function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; r
     if (await installItem(item, setStep)) refetch()
     setBusy(false)
   }
-  const addKey = async () => { if (await addLicenseKey()) refetch() }
   const locked = busy
 
   const releases = d?.releases ?? []
@@ -78,12 +75,10 @@ function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; r
     [t('Version'), item.latest ?? '—'],
     ...(item.installed && item.installed !== item.latest ? [[t('Installed Here'), item.installed] as [string, string]] : []),
     ...(releases[0]?.released_at ? [[t('Updated'), date(releases[0].released_at)] as [string, string]] : []),
-    [t('Price'), priceLabel(item)],
     ...(d?.requires.core ? [[t('Works With'), t('{brand} {version}', { version: atLeast(d.requires.core) })] as [string, string]] : []),
     ...(d?.requires.php ? [['PHP', atLeast(d.requires.php)] as [string, string]] : []),
     ...(item.categories.length ? [[t('Categories'), item.categories.join(', ')] as [string, string]] : []),
     [t('Made By'), item.author.url ? <a href={item.author.url} target="_blank" rel="noopener noreferrer" className="text-ink underline underline-offset-2">{item.author.name || item.package}</a> : item.author.name || item.package],
-    ...(d?.operator && item.pricing !== 'free' ? [[t('Sold By'), d.operator] as [string, string]] : []),
     [t('Package'), <code key="p" className="text-xs">{item.package}</code>],
   ]
   const links = [
@@ -104,7 +99,6 @@ function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; r
             <p className="m-0 mt-2 max-w-2xl text-sm text-text">{item.summary}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {item.action === 'buy' && <Button disabled={locked} onClick={() => void addKey()}>{t('Add License Key')}</Button>}
             {/* Here already: where it is set up, on or off, an update, and the way to remove it. Not yet: what the store offers. */}
             {plugin ? <>
               {plugin.settingsTo && <Button size="md" icon="settings" onClick={() => navigate(plugin.settingsTo!)}>{t('Settings')}</Button>}
@@ -117,7 +111,6 @@ function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; r
             </> : <Action item={item} busy={busy} locked={locked} onInstall={() => void install()} size="md" />}
           </div>
         </header>
-        {item.access.message && <p className="m-0 mt-3 text-xs text-muted">{item.access.message}</p>}
         {step && <p role="status" className="m-0 mt-3 text-sm text-muted">{step}</p>}
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">

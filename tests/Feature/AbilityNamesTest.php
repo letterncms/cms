@@ -41,9 +41,9 @@ final class AbilityNamesTest extends TestCase
         // Comments and chats, and holding an entry someone else is editing.
         'resolve', 'rename', 'take-over',
         // Packages, their installs and the core update.
-        'enable', 'disable', 'switch', 'install', 'uninstall', 'migrate', 'rollback', 'add-key', 'plan-install', 'job-step',
+        'enable', 'disable', 'switch', 'install', 'uninstall', 'migrate', 'rollback', 'plan-install', 'job-step',
         'update-check', 'update-start', 'update-step', 'update-switch', 'update-rollback', 'update-postpone', 'update-auto', 'update-tick',
-        // The site, its design, email and the license.
+        // The site, its design, and email.
         'build', 'preview', 'test', 'refresh',
         // The Sync module: the only place "sync" is said.
         'connect', 'disconnect', 'allow', 'renew-key', 'start', 'step', 'resume', 'cancel', 'undo',
@@ -70,11 +70,6 @@ final class AbilityNamesTest extends TestCase
 
     public function test_every_ability_is_a_thing_and_a_verb_from_the_lists(): void
     {
-        // The license abilities are there once a paid plugin is: here they are named without one.
-        if (! $this->cms()->abilities()->has('license/status')) {
-            (new \Cms\Modules\License\LicenseAbilities)->register($this->cms()->abilities());
-        }
-
         $abilities = $this->cms()->abilities()->all();
         $this->assertGreaterThan(150, count($abilities));
         $used = [];

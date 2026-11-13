@@ -10,7 +10,6 @@ use Cms\Support\Files;
 use Cms\Support\Remote;
 use Cms\Support\Yaml;
 use Cms\Tests\Support\FakeRemote;
-use Cms\Tests\Support\Signing;
 use Cms\Tests\TestCase;
 use Cms\Users\Totp;
 use Cms\Users\User;
@@ -25,10 +24,8 @@ final class OutputAccountsTest extends TestCase
 {
     protected function prepareSite(string $site): void
     {
-        // A paid plugin, so the licence abilities are there.
         $plugins = Yaml::read($site.'/config/plugins.yaml');
         Yaml::write($site.'/config/plugins.yaml', [...$plugins, 'enabled' => [...($plugins['enabled'] ?? []), 'acme/forms']]);
-        Files::put($site.'/plugins/forms/composer.json', (string) json_encode(['name' => 'acme/forms', 'type' => 'cms-plugin', 'version' => '1.0.0', 'extra' => ['cms' => ['license' => ['product' => 'acme/forms', 'paid' => true]]]]));
     }
 
     protected function tearDown(): void
@@ -253,25 +250,4 @@ final class OutputAccountsTest extends TestCase
         $this->assertSame('/settings/site', $mine['items'][0]['to']);
     }
 
-    public function test_the_license_key_comes_and_goes(): void
-    {
-        $this->app->instance(Remote::class, new FakeRemote);
-        $this->app->make(\Cms\Settings\SettingsRegistry::class)->save('site', ['url' => 'https://example.com']);
-        Carbon::setTestNow('2027-02-01 12:00:00');
-        $me = $this->admin();
-
-        $before = $this->run_('license/status', [], $me);
-        $this->assertSame('none', $before['token']);
-        $this->assertSame('acme/forms', $before['list'][0]['product']);
-
-        $installed = $this->run_('license/install', ['token' => Signing::token(['iat' => '2027-01-01T00:00:00Z'])], $me);
-        $this->assertSame('valid', $installed['token']);
-        $this->assertIsString($installed['lid']);
-        $this->assertSame('valid', $this->run_('license/status', [], $me)['token']);
-
-        // A dry run names the key that would go, and leaves it.
-        $this->assertSame([['action' => 'remove', 'type' => 'license', 'host' => $installed['host'], 'state' => 'valid']], $this->run_('license/delete', ['dryRun' => true], $me)['changes']);
-        $this->assertSame('valid', $this->run_('license/status', [], $me)['token']);
-        $this->assertSame('none', $this->run_('license/delete', [], $me)['token']);
-    }
 }
