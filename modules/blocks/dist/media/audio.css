@@ -1,0 +1,7 @@
+/* Audio block (MediaBlocks::audio): the browser's own player, in a quiet panel of the design's colours. */
+@layer components {
+  .cms-audio { padding: var(--space-4, 1rem) 1.25rem; border: 1px solid var(--color-border, rgb(0 0 0 / 0.1)); border-radius: var(--radius-lg, 0.75rem); background: var(--color-surface, transparent); }
+  .cms-audio__title { margin: 0 0 0.75rem; font-weight: var(--font-weight-semibold, 600); line-height: 1.4; color: var(--color-foreground, inherit); }
+  .cms-audio audio { display: block; width: 100%; color-scheme: inherit; }
+  .cms-audio figcaption { margin-top: 0.75rem; font-size: var(--text-sm, 0.875rem); line-height: 1.5; color: var(--color-muted, rgb(0 0 0 / 0.6)); }
+}
