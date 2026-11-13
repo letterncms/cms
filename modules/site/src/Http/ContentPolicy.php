@@ -294,7 +294,9 @@ final class ContentPolicy
     {
         $file = public_path('.htaccess');
         $current = is_file($file) ? (string) file_get_contents($file) : '';
+        // Text the CMS writes is UTF-8: said, or a browser takes a .md or .txt for Windows-1252 and "’" shows as "â€™".
         $block = self::BEGIN.": written by the CMS, and again whenever it differs. Change what is outside these lines.\n"
+            ."<IfModule mod_mime.c>\n    AddType text/markdown .md\n    AddCharset utf-8 .html .md .txt .xml .json .css .js .mjs .svg\n</IfModule>\n"
             ."<IfModule mod_headers.c>\n    <FilesMatch \"\\.html$\">\n        Header set X-Content-Type-Options \"nosniff\"\n"
             .($policy !== null ? "        Header set {$this->header()} \"{$policy}\"\n" : '')
             ."    </FilesMatch>\n</IfModule>\n".self::END."\n";
