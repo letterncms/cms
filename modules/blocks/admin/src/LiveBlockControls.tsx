@@ -33,10 +33,11 @@ export function ContainerAppender({ target, position, ...picker }: PickerProps &
 }
 
 /** An empty document: start writing, or pick a block. */
-export function DocumentAppender({ target, position, onWrite, ...picker }: PickerProps & { target: InsertionTarget; position: (rect: Rect) => Rect; onWrite?: () => void }) {
+export function DocumentAppender({ target, position, onWrite, onPattern, ...picker }: PickerProps & { target: InsertionTarget; position: (rect: Rect) => Rect; onWrite?: () => void; onPattern?: () => void }) {
   const rect = position(target.hitRect)
   return <div data-cms-document-appender className="cms-block-chrome pointer-events-auto absolute z-raised flex h-10 whitespace-nowrap -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-md border border-dashed border-border-strong bg-bg/90 py-1 pl-3 pr-1 shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + Math.max(24, Math.min(rect.height / 2, 120)) }}>
     {onWrite && <Pressable compact onClick={onWrite} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Write, or press “/” for blocks')}</Pressable>}
+    {onPattern && <><span className="mx-1 h-4 border-l border-border" /><Pressable compact onClick={onPattern} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Start From a Pattern')}</Pressable></>}
     <Picker {...picker} label={t('Insert Block')} className="size-8 rounded-xs text-muted hover:bg-hover hover:text-text" />
   </div>
 }
@@ -63,8 +64,10 @@ interface ToolbarProps {
   onMove: (direction: -1 | 1) => void
   onInsert: (side: 'before' | 'after') => void
   onDuplicate: () => void
-  /** Save the selection as a component or section, where the person may. */
+  /** Make the selection a component, where the person may and a component may stand there. */
   onMakeComponent?: () => void
+  /** Save a copy of the selection as a pattern, where the person may. */
+  onSavePattern?: () => void
   onDelete: () => void
   /** Whether the toolbar would cover the page's content (text, images, controls) at this place. */
   covers?: (rect: Rect) => boolean
@@ -75,7 +78,7 @@ interface ToolbarProps {
  * cover the page's content or leave the view — below it, or inside its top. A tall block keeps it at
  * the top of the view while it is partly scrolled away; it leaves with the block.
  */
-export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp, canMoveDown, onSelectParent, onDrag, onMove, onInsert, onDuplicate, onMakeComponent, onDelete, covers }: ToolbarProps) {
+export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp, canMoveDown, onSelectParent, onDrag, onMove, onInsert, onDuplicate, onMakeComponent, onSavePattern, onDelete, covers }: ToolbarProps) {
   const bar = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(240)
   useLayoutEffect(() => { if (bar.current) setWidth(bar.current.offsetWidth) })
@@ -101,6 +104,7 @@ export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp
       { label: t('Insert After'), icon: 'arrow-down', shortcut: 'alt+mod+y', onSelect: () => onInsert('after') },
       { label: t('Duplicate'), icon: 'duplicate', shortcut: 'mod+d', onSelect: onDuplicate },
       onMakeComponent && { label: t('Make a Component'), icon: 'symbol', onSelect: onMakeComponent },
+      onSavePattern && { label: t('Save as Pattern'), icon: 'section-copy', onSelect: onSavePattern },
       { separator: true, label: '' },
       { label: t('Delete'), icon: 'trash', danger: true, shortcut: '⌫', onSelect: onDelete },
     ]} />

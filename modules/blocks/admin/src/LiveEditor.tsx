@@ -1,4 +1,4 @@
-import { can, plural, requestText, t, type EntryContent } from '@letterncms/sdk'
+import { can, getManifest, plural, requestText, t, type EntryContent } from '@letterncms/sdk'
 import { QueryError, Spinner, deviceWidths, useShortcutLabel } from '@letterncms/ui'
 import { createPortal, flushSync } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -8,7 +8,8 @@ import { FormatToolbar } from './core/FormatToolbar'
 import { InlineEditable } from './core/InlineEditable'
 import { Inserter, type InsertChoice } from './core/Inserter'
 import { accepts, choiceToNodes, insertionPoint, componentFits } from './core/insert'
-import { saveComponent } from './core/SaveComponent'
+import { saveComponent, savePattern } from './core/SaveComponent'
+import { StartFromPattern, usePagePatterns } from './core/StartFromPattern'
 import { insertionTargets, pickDropTarget, pickHoverTarget, type BlockBox, type InsertionTarget, type Rect } from './core/insertionTargets'
 import { QuickInserter } from './core/QuickInserter'
 import { canvasBehaviors } from './core/canvas'
@@ -137,6 +138,10 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   const indexed = useRef(sourceIndex); indexed.current = sourceIndex
   /** The boundary the quick inserter is open on. */
   const [chooser, setChooser] = useState<InsertionTarget | null>(null)
+  // A new page of the site can start from a whole page: the patterns of the category Pages. Blank is where it is.
+  const [starting, setStarting] = useState(false)
+  const routable = !!collection && !!getManifest().collections.find((c) => c.handle === collection)?.routable
+  const pagePatterns = usePagePatterns(routable && !readOnly && !standalone)
   const chooserRef = useRef(chooser); chooserRef.current = chooser
   /** Insert before/after a block anchors to that block's edge rather than to the middle of the gap. */
   const chooserEdge = useRef<{ key: string; id: string; side: 'before' | 'after' } | null>(null)
@@ -582,6 +587,12 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   const frameOffset = useCallback(() => { const rect = frame.current!.getBoundingClientRect(); return { x: rect.left, y: rect.top, scale: layout.scale } }, [layout.scale])
   const boxStyle = (rect: Rect) => ({ left: layout.left + rect.left * layout.scale, top: rect.top * layout.scale, width: rect.width * layout.scale, height: rect.height * layout.scale })
   return <WriteContext.Provider value={api}>
+    {starting && <StartFromPattern open onOpenChange={setStarting} patterns={pagePatterns} onChoose={(pattern) => {
+      const copies = pattern.blocks.map((block) => tree.clone(block))
+      store.insert(null, 0, copies)
+      store.select(copies[0]?.id ?? null)
+      setStarting(false)
+    }} />}
     <div className="flex h-full min-h-0 flex-col" data-live-editor>
       {error && <QueryError compact message={error} onRetry={() => setRetry((value) => value + 1)} />}
       <div ref={viewport} onPointerLeave={() => { store.hover(null); showGap(null) }}
@@ -608,13 +619,14 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
               onSelectParent={() => parent && onInspect(parent.id)} onDrag={(event) => { setChooser(null); blockDrag.start(event, selectionOf(store.get()), label) }}
               onMove={(direction) => store.nudgeSelection(direction)} onInsert={(side) => requestAnimationFrame(() => openInserter(side))}
               onDuplicate={() => store.duplicateSelection()} onDelete={() => store.removeSelection()}
-              onMakeComponent={node.type !== 'component' && can('entries.components.create') ? () => saveComponent(store, componentFits(store, types, allowed)) : undefined}
+              onMakeComponent={node.type !== 'component' && can('entries.components.create') && componentFits(store, types, allowed) ? () => saveComponent(store) : undefined}
+              onSavePattern={can('entries.patterns.create') ? () => savePattern(store) : undefined}
               covers={covers} />
           })()}
           {!readOnly && !blockDrag.drag && gaps.filter((at) => at.inside).map((at) => {
             const picker = { open: !!chooser && targetKey(chooser) === targetKey(at), onOpenChange: (open: boolean) => setChooser(open ? at : null), returnFocus,
               children: <QuickInserter types={[...types.values()]} allowed={(type) => permits(at.parentId, [type.name])} onChoose={(choice) => choose(choice, at)} onClose={() => setChooser(null)} /> }
-            if (at.parentId === null) return nodes.length ? null : <DocumentAppender key="root" target={at} position={boxStyle} onWrite={permits(null) ? startWriting : undefined} {...picker} />
+            if (at.parentId === null) return nodes.length ? null : <DocumentAppender key="root" target={at} position={boxStyle} onWrite={permits(null) ? startWriting : undefined} onPattern={pagePatterns.length ? () => setStarting(true) : undefined} {...picker} />
             // Empty boxes are often decoration (dots, frames): their + appears only when you point at or select them.
             const top = at.hitRect.top, parent = tree.find(nodes, at.parentId)
             if (parent?.children?.length || top + at.hitRect.height < 0 || top > layout.height || !(picker.open || hovered === at.parentId || selectedIds.includes(at.parentId))) return null

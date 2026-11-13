@@ -22,6 +22,7 @@ registry.panels.set('blocks-editor', {
   when: (props) => props.bodyField.type === 'blocks',
 })
 registry.widgets.set('blocks-design', lazy(() => import('./WidgetDesign')))
+registry.components.set('blocks/patterns', lazy(() => import('./Patterns')))
 
 // Write mode shows the media blocks as a plugin's blocks are shown: through `blockViews`.
 blockViews.set('audio', MediaCard)

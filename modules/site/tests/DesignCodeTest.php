@@ -63,7 +63,7 @@ final class DesignCodeTest extends TestCase
             'components' => ['nav' => ['scripts' => ['nav']]],
         ]));
         $this->cms()->entryService()->create('templates', ['title' => 'Article', 'slug' => 'article', 'status' => 'published', 'data' => ['blocks' => [['type' => 'outlet']]]]);
-        $this->cms()->entryService()->create('components', ['title' => 'Nav', 'slug' => 'nav', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [['type' => 'paragraph', 'props' => ['text' => 'Menu']]]]]);
+        $this->cms()->entryService()->create('components', ['title' => 'Nav', 'slug' => 'nav', 'status' => 'published', 'data' => ['blocks' => [['type' => 'paragraph', 'props' => ['text' => 'Menu']]]]]);
         $this->app->make(\Cms\Modules\Blocks\Templates::class)->flush();
         $this->app->make(\Cms\Modules\Blocks\Components::class)->flush();
 

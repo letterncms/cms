@@ -19,7 +19,7 @@ use Throwable;
 /**
  * Turns this site into a site: what it holds and how it looks, in the layout a site has (Site). Only content and
  * design travel: the collections and their published entries (in the file layout, whatever driver they use;
- * drafts only when asked for), the templates and components, but no other collection a plugin owns, the
+ * drafts only when asked for), the templates, components and patterns, but no other collection a plugin owns, the
  * globals, the menus, the design folder, the media something names, what plugins keep beside the
  * content (`sites.content`: a folder, or a `<name>.yaml` file), and the settings a site may carry (`sites.settings`). Never accounts, tokens,
  * secrets, submissions, analytics, the audit log, licences or the rest of config/.
@@ -161,7 +161,7 @@ final class SiteExporter
 
         foreach ($this->cms->collections()->all() as $handle => $collection) {
             // A plugin's own collection (account pages, a store's pages) is the plugin's: only the design's travel.
-            if (Files::isHandle($handle) && (! $collection->system || in_array($handle, ['templates', 'components'], true))) {
+            if (Files::isHandle($handle) && (! $collection->system || in_array($handle, ['templates', 'components', 'patterns'], true))) {
                 $out[$handle] = $collection;
             }
         }

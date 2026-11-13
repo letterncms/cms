@@ -85,21 +85,21 @@ test('missing anchors append only when all proposed sibling types are allowed at
   assert.equal(location(nodes, 'deleted-anchor', ['paragraph', 'box'], types, ['paragraph']), null)
 })
 
-test('expanded component copies preserve sibling order and nested source data at a common parent', () => {
-  const component = { handle: 'mixed', title: 'Mixed content', synced: false, blocks: [
+test('expanded pattern copies preserve sibling order and nested source data at a common parent', () => {
+  const pattern = { handle: 'mixed', title: 'Mixed content', category: 'Text', keywords: [], description: '', id: null, editable: true, blocks: [
     { ...node('source-button', 'button'), props: { label: 'Read more' } },
     node('source-box', 'box', [{ ...node('source-text', 'paragraph'), props: { text: 'Nested words' } }]),
   ] }
-  const original = structuredClone(component)
-  const created = engine.choiceToNodes({ kind: 'component', component }, types)
+  const original = structuredClone(pattern)
+  const created = engine.choiceToNodes({ kind: 'pattern', pattern }, types)
   const nodes = nestedActions()
   const at = engine.insertionPoint(nodes, 'anchor', Array.from(created, (item) => item.type), types)
   assert.deepEqual(normalize(at), { parentId: 'outer', index: 1 })
   const result = engine.tree.insert(nodes, at.parentId, at.index, created)
   assert.deepEqual(Array.from(result[0].children, (item) => item.type), ['actions', 'button', 'box', 'paragraph'])
   assert.equal(result[0].children[2].children[0].props.text, 'Nested words')
-  assert.notEqual(created[0].id, component.blocks[0].id)
-  assert.notEqual(created[1].children[0].id, component.blocks[1].children[0].id)
-  assert.deepEqual(component, original, 'Insertion must not mutate the reusable source component.')
+  assert.notEqual(created[0].id, pattern.blocks[0].id)
+  assert.notEqual(created[1].children[0].id, pattern.blocks[1].children[0].id)
+  assert.deepEqual(pattern, original, 'Insertion must not mutate the reusable source pattern.')
   assert.deepEqual(nodes, nestedActions(), 'Finding an insertion point and inserting keep the original document immutable.')
 })

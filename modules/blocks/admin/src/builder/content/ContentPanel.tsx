@@ -236,7 +236,7 @@ function ComponentInstance({ node, paths, setBind, anchors }: { node: BlockNode;
   return (
     <Body>
       <PanelFields
-        fields={[{ handle: 'ref', type: 'select', size: 'sm', label: t('Component'), required: true, options: (list.data ?? []).filter((p) => p.synced).map((p) => ({ value: p.handle, label: p.title })) }]}
+        fields={[{ handle: 'ref', type: 'select', size: 'sm', label: t('Component'), required: true, options: (list.data ?? []).map((p) => ({ value: p.handle, label: p.title })) }]}
         values={{ ref: node.props?.ref }}
         onChange={(_, ref) => ref && store.updateProps(node.id, { ref, values: {} })}
       />

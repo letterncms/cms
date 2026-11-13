@@ -16,7 +16,7 @@ final class BlocksModule extends Plugin
 {
     public function register(): void
     {
-        foreach ([BlockRegistry::class, StyleCompiler::class, BlockRenderer::class, Components::class, Templates::class, DataSources::class, Document::class, MarkdownCodec::class] as $service) {
+        foreach ([BlockRegistry::class, StyleCompiler::class, BlockRenderer::class, Components::class, Patterns::class, Templates::class, DataSources::class, Document::class, MarkdownCodec::class] as $service) {
             $this->app->singleton($service);
         }
 
@@ -46,6 +46,15 @@ final class BlocksModule extends Plugin
         $permissions = $this->cms()->permissions();
         $permissions->register('blocks.html', 'Add Custom HTML Blocks', 'Content', trusted: true);
 
+        // Patterns are listed as pictures, by category: their place is the collection's, drawn as a gallery.
+        $this->cms()->admin()->component('blocks/patterns', ['label' => 'Patterns', 'description' => 'The site’s patterns and those plugins ship, as pictures grouped by category, each opening where it is edited.', 'surface' => false, 'permission' => 'entries.'.Patterns::COLLECTION.'.view', 'props' => ['type' => 'object', 'additionalProperties' => false, 'properties' => []]]);
+        $this->cms()->hooks()->addFilter('view.content', static function (array $tree, $user, array $params) {
+            if (($params['collection'] ?? null) !== Patterns::COLLECTION || ($tree['type'] ?? null) !== 'ui/page') {
+                return $tree;
+            }
+
+            return [...$tree, 'children' => [['type' => 'blocks/patterns']]];
+        });
         $this->cms()->admin()->widget('blocks-design', ['label' => 'Components and Templates', 'description' => 'Components and templates changed last.', 'icon' => 'palette', 'column' => 'main', 'order' => 50, 'permission' => 'entries.components.view']);
         $this->collections();
         $this->guardHtmlBlocks();
@@ -105,14 +114,23 @@ final class BlocksModule extends Plugin
             $collections[Components::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Components::COLLECTION, [
                 'title' => 'Components', 'singular' => 'Component', 'icon' => 'symbol', 'driver' => 'files', 'structure' => 'list',
                 'section' => 'design', 'nav_order' => 30, 'system' => true, 'sort' => 'title',
-                'description' => 'Reusable designs. A synced one (a header, a card) changes everywhere it is used; a section is copied when you insert it.',
+                'description' => 'Reusable designs, like a header or a card. A change to one shows everywhere it is used, and each place can fill in its properties.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Component', 'body' => true],
-                    // With the handle, in the details' first group: one group of rows, labeled alike, then Info.
-                    ['handle' => 'synced', 'type' => 'toggle', 'label' => 'Synced', 'default' => true, 'section' => 'sidebar'],
                     ['handle' => 'category', 'type' => 'text', 'label' => 'Category', 'section' => 'sidebar'],
                     ['handle' => 'description', 'type' => 'textarea', 'label' => 'Description', 'section' => 'sidebar'],
                     ['handle' => 'props', 'type' => 'properties', 'label' => 'Properties', 'section' => 'sidebar', 'placeholder' => 'No properties yet.', 'add' => 'Add Property'],
+                ],
+            ]);
+            $collections[Patterns::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Patterns::COLLECTION, [
+                'title' => 'Patterns', 'singular' => 'Pattern', 'icon' => 'section-copy', 'driver' => 'files', 'structure' => 'list',
+                'section' => 'design', 'nav_order' => 40, 'system' => true, 'sort' => 'title',
+                'description' => 'Arrangements of blocks to start from: a hero, a gallery, a whole page. Inserting one puts a copy on the page, to change as you like.',
+                'fields' => [
+                    ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Pattern', 'body' => true],
+                    ['handle' => 'category', 'type' => 'text', 'label' => 'Category', 'section' => 'sidebar', 'placeholder' => 'Heroes', 'suggestions' => Patterns::CATEGORIES],
+                    ['handle' => 'description', 'type' => 'textarea', 'label' => 'Description', 'section' => 'sidebar'],
+                    ['handle' => 'keywords', 'type' => 'tags', 'label' => 'Keywords', 'section' => 'sidebar'],
                 ],
             ]);
 
@@ -125,13 +143,14 @@ final class BlocksModule extends Plugin
         $hooks->addFilter('fields.options.sources', fn (array $options) => [...$options, ...array_column($this->app->make(DataSources::class)->catalog(), 'label', 'name')]);
         // content/schemas/blocks.json: what a blocks field holds, beside the schemas of the collections.
         $hooks->addFilter('schemas.documents', fn (array $documents) => [...$documents, 'blocks.json' => $this->app->make(DocumentSchema::class)->schema()]);
-        $hooks->addFilter('fields.options.components', fn (array $options) => [...$options, ...array_map(static fn ($p) => $p['title'], array_filter($this->app->make(Components::class)->all(), static fn ($p) => $p['synced']))]);
+        $hooks->addFilter('fields.options.components', fn (array $options) => [...$options, ...array_map(static fn ($p) => $p['title'], $this->app->make(Components::class)->all())]);
 
         foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted'] as $event) {
             $this->cms()->hooks()->on($event, function ($entry) {
-                if (in_array($entry->collection ?? null, [Templates::COLLECTION, Components::COLLECTION], true)) {
+                if (in_array($entry->collection ?? null, [Templates::COLLECTION, Components::COLLECTION, Patterns::COLLECTION], true)) {
                     $this->app->make(Templates::class)->flush();
                     $this->app->make(Components::class)->flush();
+                    $this->app->make(Patterns::class)->flush();
                 }
             });
         }
@@ -242,7 +261,7 @@ final class BlocksModule extends Plugin
     private function guardHtmlBlocks(): void
     {
         $this->cms()->hooks()->addFilter('ability.input', function (array $input, Ability $ability, AbilityContext $ctx) {
-            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'components/save', 'globals/set'], true)) {
+            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'components/save', 'patterns/save', 'globals/set'], true)) {
                 return $input;
             }
 
@@ -259,6 +278,7 @@ final class BlocksModule extends Plugin
             $existing = match ($ability->name) {
                 'entries/update' => ($entry = $this->cms()->entries()->find((string) ($input['id'] ?? ''))) ? $this->htmlBlocks($entry->working()) : [],
                 'components/save' => $this->htmlBlocks($this->app->make(Components::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
+                'patterns/save' => $this->htmlBlocks($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
                 default => [],
             };
 
@@ -278,7 +298,7 @@ final class BlocksModule extends Plugin
     private function guardBlockCode(): void
     {
         $this->cms()->hooks()->addFilter('ability.input', function (array $input, Ability $ability, AbilityContext $ctx) {
-            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'components/save', 'globals/set'], true)) {
+            if ($ctx->system || ! in_array($ability->name, ['entries/create', 'entries/update', 'components/save', 'patterns/save', 'globals/set'], true)) {
                 return $input;
             }
 
@@ -295,6 +315,7 @@ final class BlocksModule extends Plugin
             $existing = match ($ability->name) {
                 'entries/update' => ($entry = $this->cms()->entries()->find((string) ($input['id'] ?? ''))) ? $this->blockCode($entry->working()) : [],
                 'components/save' => $this->blockCode($this->app->make(Components::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
+                'patterns/save' => $this->blockCode($this->app->make(Patterns::class)->all(true)[(string) ($input['handle'] ?? '')] ?? []),
                 default => [],
             };
 
@@ -402,6 +423,7 @@ final class BlocksModule extends Plugin
         $a = $this->cms()->abilities();
         $components = fn () => $this->app->make(Components::class);
         $templates = fn () => $this->app->make(Templates::class);
+        $patterns = fn () => $this->app->make(Patterns::class);
         $document = fn () => $this->app->make(Document::class);
         $handle = ['type' => 'string', 'pattern' => '^[a-z0-9][a-z0-9_-]{0,63}$'];
 
@@ -471,8 +493,8 @@ final class BlocksModule extends Plugin
 
         // ── Components and templates (read helpers; edit them with the entries abilities) ──
         $a->register('components/list', [
-            'label' => 'List Components and Sections',
-            'description' => 'Entries of the components collection (plus those plugins ship). Synced ones are components: instances update everywhere and take property values. Others are sections copied on insert. Create and change them with entries/create and entries/update in the "components" collection.',
+            'label' => 'List Components',
+            'description' => 'Entries of the components collection (plus those plugins ship). A component is placed as a reference ({"type": "component", "props": {"ref": "<handle>", "values": {…}}}): it updates everywhere and takes property values. Blocks to copy and change are patterns (patterns/list). Create and change components with components/save, or entries/create and entries/update in the "components" collection.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['working' => ['type' => 'boolean', 'default' => false]]],
@@ -481,22 +503,21 @@ final class BlocksModule extends Plugin
         ]);
 
         $a->register('components/save', [
-            'label' => 'Save as Component or Section',
-            'description' => 'Create or replace an entry of the components collection by handle (slug). synced: true makes it a component. Saved as a draft of an existing one unless publish is true.',
+            'label' => 'Save as Component',
+            'description' => 'Create or replace an entry of the components collection by handle (slug). Saved as a draft of an existing one unless publish is true.',
             'permission' => fn (?\Cms\Users\User $user) => (bool) $user?->hasPermission('entries.'.Components::COLLECTION.'.create'),
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => $handle,
                 'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
                 'description' => ['type' => 'string', 'maxLength' => 500],
                 'category' => ['type' => 'string', 'maxLength' => 60],
-                'synced' => ['type' => 'boolean', 'default' => false],
                 'props' => ['type' => 'array'],
                 'blocks' => ['type' => 'array'],
                 'publish' => ['type' => 'boolean', 'default' => true],
             ], 'required' => ['handle', 'title', 'blocks']],
             'output' => self::componentShape()->with(['id' => Shape::STRING]),
             'handler' => function (array $in, \Cms\Abilities\AbilityContext $ctx) use ($components) {
-                $data = array_filter(['blocks' => $in['blocks'], 'synced' => (bool) ($in['synced'] ?? false), 'category' => $in['category'] ?? null, 'description' => $in['description'] ?? null, 'props' => $in['props'] ?? null], static fn ($v) => $v !== null);
+                $data = array_filter(['blocks' => $in['blocks'], 'category' => $in['category'] ?? null, 'description' => $in['description'] ?? null, 'props' => $in['props'] ?? null], static fn ($v) => $v !== null);
                 $existing = $components()->all(true)[$in['handle']]['id'] ?? null;
                 $content = $this->cms()->entryService();
                 $entry = $existing
@@ -505,6 +526,55 @@ final class BlocksModule extends Plugin
                 $components()->flush();
 
                 return ['id' => $entry->id, ...($components()->find($in['handle'], true) ?? [])];
+            },
+        ]);
+
+        $a->register('patterns/list', [
+            'label' => 'List Patterns',
+            'description' => 'Patterns: arrangements of blocks to start from (a hero, a gallery, a whole page), grouped by category. Insert one by copying its `blocks` into a document; the copy is then the page’s own. Patterns in the category "Pages" are offered as starting points for a new page. Entries of the patterns collection, plus those plugins ship (`editable: false`).',
+            'permission' => 'admin.access',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => [
+                'working' => ['type' => 'boolean', 'default' => false],
+                'category' => ['type' => 'string', 'maxLength' => 60, 'description' => 'Only this category, e.g. "Pages".'],
+            ]],
+            'output' => Shape::of([self::patternShape()]),
+            'handler' => fn (array $in) => array_values(array_map(
+                static fn (array $pattern) => [...$pattern, 'blocks' => Document::jsonable($pattern['blocks'])],
+                array_filter($patterns()->all((bool) ($in['working'] ?? false)), static fn (array $pattern) => ($in['category'] ?? '') === '' || strcasecmp($pattern['category'], (string) $in['category']) === 0),
+            )),
+        ]);
+
+        $a->register('patterns/save', [
+            'label' => 'Save as Pattern',
+            'description' => 'Create or replace a pattern by handle (slug): a title, a category (Heroes, Text, Media, Features, People, Lists, Calls to Action, Pages, or any other words), a description, keywords to find it by, and its blocks (a list of nodes, or Block Markdown). Saved as a draft of an existing one unless publish is true.',
+            'permission' => fn (?\Cms\Users\User $user) => (bool) $user?->hasPermission('entries.'.Patterns::COLLECTION.'.create'),
+            'input' => ['type' => 'object', 'properties' => [
+                'handle' => $handle,
+                'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 120],
+                'category' => ['type' => 'string', 'maxLength' => 60],
+                'description' => ['type' => 'string', 'maxLength' => 500],
+                'keywords' => ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 60], 'maxItems' => 20],
+                'blocks' => ['type' => ['array', 'string']],
+                'publish' => ['type' => 'boolean', 'default' => true],
+            ], 'required' => ['handle', 'title', 'blocks']],
+            'output' => self::patternShape()->with(['id' => Shape::STRING]),
+            'handler' => function (array $in, \Cms\Abilities\AbilityContext $ctx) use ($patterns) {
+                $blocks = is_string($in['blocks']) ? $this->app->make(MarkdownCodec::class)->decode($in['blocks']) : $in['blocks'];
+                $data = array_filter(['blocks' => $blocks, 'category' => $in['category'] ?? null, 'description' => $in['description'] ?? null, 'keywords' => $in['keywords'] ?? null], static fn ($v) => $v !== null);
+                $existing = $patterns()->all(true)[$in['handle']] ?? null;
+
+                if ($existing !== null && ! $existing['editable']) {
+                    throw AbilityException::invalid(__('“:title” comes with a plugin and can’t be changed. Save it under another name.', ['title' => $existing['title']]));
+                }
+
+                $content = $this->cms()->entryService();
+                $entry = $existing !== null
+                    ? $content->update((string) $existing['id'], ['title' => $in['title'], 'data' => $data], $ctx->user, (bool) ($in['publish'] ?? true))
+                    : $content->create(Patterns::COLLECTION, ['title' => $in['title'], 'slug' => $in['handle'], 'data' => $data, 'status' => ($in['publish'] ?? true) ? 'published' : 'draft'], $ctx->user);
+                $patterns()->flush();
+
+                return ['id' => $entry->id, ...($patterns()->find($in['handle'], true) ?? [])];
             },
         ]);
 
@@ -597,13 +667,21 @@ final class BlocksModule extends Plugin
     {
         return Shape::of([
             'handle' => Shape::STRING, 'id' => Shape::STRING_OR_NULL, 'title' => Shape::STRING, 'description' => Shape::STRING, 'category' => Shape::STRING,
-            'synced' => Shape::BOOLEAN, 'props' => [Shapes::field()], 'blocks' => [self::nodeShape(written: true)], 'source' => Shape::STRING, 'editable' => Shape::BOOLEAN,
+            'props' => [Shapes::field()], 'blocks' => [self::nodeShape(written: true)], 'source' => Shape::STRING, 'editable' => Shape::BOOLEAN,
+        ]);
+    }
+
+    private static function patternShape(): Shape
+    {
+        return Shape::of([
+            'handle' => Shape::STRING, 'id' => Shape::STRING_OR_NULL, 'title' => Shape::STRING, 'description' => Shape::STRING, 'category' => Shape::STRING,
+            'keywords' => [Shape::STRING], 'blocks' => [self::nodeShape(written: true)], 'source' => Shape::STRING, 'editable' => Shape::BOOLEAN,
         ]);
     }
 
     private function agentContext(): void
     {
-        $this->cms()->context()->register('cms://blocks', 'Blocks guide', 'How to compose pages, templates and components: node model, styles, bindings, Repeat, scripts and animations, with worked examples.', fn () => [
+        $this->cms()->context()->register('cms://blocks', 'Blocks guide', 'How to compose pages, templates, components and patterns: node model, styles, bindings, Repeat, scripts and animations, with worked examples.', fn () => [
             'rules' => [
                 'Everything visitors see is blocks: entries (their blocks field), templates (entries of the templates collection — they frame pages and contain one `outlet` block) and components (entries of the components collection — header, footer, cards). There are no theme files to edit.',
                 'A node: {type, props, style?, attrs?, bind?, logic?, motion?, children?, label?}. Omit ids — they are generated. Name important layers with `label`.',
@@ -614,7 +692,7 @@ final class BlocksModule extends Plugin
                 'bind connects props to data: {"text": "entry.title"}, {"url": "item.url"}, {"image": "entry.cover"}, {"visible": "entry.excerpt"}, {"state:active": "item.active"}, {"attr:aria-label": "item.label"}, {"style:backgroundImage": "item.image"}. Filters: |date:M j, Y |excerpt:120 |upper |default:Text |count |not.',
                 'Scope: site.*, entry.* (title, url, date, any field, parent, prev, next, children), globals.<global>.<field>, page.uri, item/index/first/last inside a Repeat, props.* inside a component, pagination.* after a paginated Repeat.',
                 'Repeat renders its children once per item of a data source (see blocks/types sources): entries {collection, sort, limit, hasTag, parent, paginate}, menu {menu}, children, headings, breadcrumbs, neighbors {show: both|previous|next, wrap} (the entries before and after this one, for a detail template; each item says its side: item.side is "previous" or "next", and item.previous and item.following are yes or no, so one Repeat labels both: bind {"visible": "item.following"} on the arrow that points on, {"state:next": "item.following"} for a style, or "item.side|is:next"), languages, list {path: "item.children"}. Nest Repeats for sub-menus.',
-                'Components: entries of the components collection with synced: true and props (fields). Instances: {"type":"component","props":{"ref":"card","values":{"title":"Fast"}}}; inside the component bind to props.title. Bind instance values to data with bind {"values.title": "item.title"}.',
+                'Components: entries of the components collection, with props (fields). Instances: {"type":"component","props":{"ref":"card","values":{"title":"Fast"}}}; inside the component bind to props.title. Bind instance values to data with bind {"values.title": "item.title"}.',
                 'logic compiles to Alpine.js (CSP build): data (state), on (events → actions: set, toggle, add, if, wait, play, scroll, copy, go, theme, focus, dispatch, fetch, lock, run), show + transition, states, text, attrs, model, target/merge (load links and forms into blocks), behaviors (scroll: is-scrolled/is-hidden on scroll, spy: scrollspy for in-page links, group: hover group, marquee, carousel: step through the first child with the buttons after it).',
                 'motion compiles to CSS (load, scroll, loop) or Web Animations (appear, hover, press, event): [{trigger: {type: appear|scroll|hover|press|load|loop|event, start, end, once, node}, on: [desktop|tablet|mobile], steps: [{target: self|children|words|lines|chars|#<node id>, mask, from, to, duration, delay, ease, stagger, at}], repeat, yoyo}]. A scroll trigger takes pin: "150vh" (the element holds at the top of the screen for that much scrolling while its steps play; true is 100vh) and scrub: 0.6 (the steps trail the scroll by about that many seconds, which needs the script). A scroll animation with trigger.progress: true (or with scrub) sets --cms-progress (0 to 1) on its element and dispatches cms:progress on it (event.detail.progress; null once less motion is asked for), so a number can count with the scroll in a few lines of a behaviour and no library. chars splits letters inside their words (the block says its text in aria-label; text with a link in it, or in a script that joins its letters, animates by word instead); lines are the lines the text is laid out in, with every trigger: masked, each line taking its turn (load, scroll and loop number them once the page is laid out and again when the width changes; without a script they go word by word). ease is a name (expo.out, back.out), cubic-bezier(), linear(), steps() or a curve of the design: token:ease.<name>. start and end read "<top|center|bottom> <top|center|bottom|N%>". load caps its delay at 0.2s and its stagger at 0.3s so it cannot hold back the page. repeat -1 needs a motion-toggle block on the page. Properties: opacity, x, y, xPercent, yPercent, scale, rotate, rotateX/Y, skewX/Y, perspective, blur, clipPath, colors, borderRadius. Use event triggers with a logic play action for menus and modals.',
                 'code brings files beside the design to the page a block is on: {"code": {"scripts": ["hero"], "styles": ["hero"]}} loads content/design/scripts/hero.js (an ES module) and content/design/styles/hero.css. Read cms://site/code for the files and for what loads on every page, with a template or with a component.',
@@ -622,7 +700,7 @@ final class BlocksModule extends Plugin
                 'persist keeps one element alive across pages when the design’s transition has navigation: "client": {"type": "box", "persist": "stage", "behavior": {"module": "scene"}} in the template is the same element, still mounted, on every page that has a block with that persist name (a WebGL canvas, a music player). Scripts hear `cms:before-leave` (cancelable; event.detail.waitUntil(promise) holds the swap for an animation out) and `cms:after-enter` on document, and can call window.cmsNavigate.go(url) and .prefetch(url). A link to the page one is already on scrolls to its top and loads nothing. A link inside an element with the attribute data-cms-reload always loads the page, as does any link with a query string. With client navigation a module script runs once per visit, not once per page, and so does an inline script whose text a page before it already ran: do a page’s own work in a behaviour’s mount, or on cms:after-enter.',
                 'attrs that name another element take a block’s id: {"attrs": {"aria-labelledby": "#hero-title", "aria-controls": "#panel"}} becomes that block’s id on the page (its anchor, a heading’s own, or one made for it), in aria-labelledby, aria-describedby, aria-controls, aria-owns, aria-details, aria-flowto, aria-activedescendant, aria-errormessage and for. Give the block you point at an `id` in the document; a plain word is an id you wrote yourself and stays as it is.',
                 'Templates and components are entries of the "templates" and "components" collections (their body is the `blocks` field). entries/update saves a draft; entries/publish (or publish: true) makes it live and rebuilds the pages that use it.',
-                'Prefer existing components and sections (components/list) to keep sites consistent. You can send entry data for a blocks field as Block Markdown (a string).',
+                'Prefer what the site has, to keep it consistent: components (components/list) placed as references, and patterns (patterns/list), whose blocks you copy into the page and then adapt. Start a new page from a pattern of the category "Pages" when one fits. Save an arrangement worth reusing with patterns/save. You can send entry data for a blocks field as Block Markdown (a string).',
             ],
             'blocks' => $this->app->make(BlockRegistry::class)->catalog(),
             'examples' => [

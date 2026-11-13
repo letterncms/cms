@@ -122,8 +122,7 @@ final class PlaceholdersTest extends TestCase
     public function test_unbound_data_shows_what_it_is_bound_to(): void
     {
         $this->cms()->entryService()->create('components', ['title' => 'Card', 'slug' => 'card', 'status' => 'published', 'data' => [
-            'synced' => true,
-            'props' => [
+                        'props' => [
                 ['handle' => 'title', 'type' => 'text', 'label' => 'Card title'],
                 ['handle' => 'link', 'type' => 'url', 'label' => 'Link'],
             ],

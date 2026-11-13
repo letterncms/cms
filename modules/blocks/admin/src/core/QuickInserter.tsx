@@ -1,7 +1,7 @@
 import { t } from '@letterncms/sdk'
 import { Button, Fields, Icon } from '@letterncms/ui'
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
-import { Inserter, useInsertItems, type InsertChoice, type InsertItem } from './Inserter'
+import { Inserter, itemIcon, itemKey, itemTitle, useInsertItems, type InsertChoice, type InsertItem } from './Inserter'
 import type { BlockTypeDef } from './types'
 
 const RECENT = 'cms:blocks:recent'
@@ -19,7 +19,7 @@ function remember(choice: InsertChoice) {
 
 /**
  * Gutenberg's quick inserter: search, six suggestions for this spot, and **Browse all** for the full
- * catalogue with components and sections. Every insertion control opens this same picker.
+ * catalogue with components and patterns. Every insertion control opens this same picker.
  */
 export function QuickInserter({ types, allowed, onChoose, onClose }: { types: BlockTypeDef[]; allowed: (type: BlockTypeDef) => boolean; onChoose: (choice: InsertChoice) => void; onClose: () => void }) {
   const [query, setQuery] = useState('')
@@ -57,9 +57,9 @@ export function QuickInserter({ types, allowed, onChoose, onClose }: { types: Bl
     </div>
     <div role="listbox" aria-label={query.trim() ? t('Results') : t('Suggestions')} className="grid grid-cols-3 gap-1 p-2">
       {items.map((item, index) => {
-        const title = item.kind === 'block' ? item.type.title : item.component.title
-        const icon = item.kind === 'block' ? item.type.icon : item.component.synced ? 'symbol' : 'section-copy'
-        return <Button key={item.kind === 'block' ? item.type.name : `p-${item.component.handle}`} variant="ghost" role="option" aria-selected={index === active} data-index={index}
+        const title = itemTitle(item)
+        const icon = itemIcon(item)
+        return <Button key={itemKey(item)} variant="ghost" role="option" aria-selected={index === active} data-index={index}
           onMouseMove={() => index !== active && setActive(index)} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item)}
           data-active={index === active || undefined} className="!h-[68px] min-w-0 shrink !flex-col !gap-1.5 !px-1">
           <Icon name={icon} size={20} />

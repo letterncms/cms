@@ -20,7 +20,7 @@ final class SiteApplyCommand extends Command
 {
     protected $signature = 'site:apply
         {handle : The site: site:list has them}
-        {--mode=full : design (tokens, fonts, templates, components, code) or full (and collections, entries, globals, menus, media)}
+        {--mode=full : design (tokens, fonts, templates, components, patterns, code) or full (and collections, entries, globals, menus, media)}
         {--clash=refuse : Where the site has something of the same name: refuse, skip, replace or rename}
         {--dry-run : Say every step, and write nothing}
         {--require-plugins : On a site Composer manages, composer require the plugins the site needs first}

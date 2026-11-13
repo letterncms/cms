@@ -116,7 +116,7 @@ final class JsonShapeTest extends TestCase
         $this->assertStringContainsString('"props":{}', $markdown);
         $this->assertStringNotContainsString('"props":[]', $markdown);
 
-        $this->cms()->entryService()->create('components', ['title' => 'Rule', 'slug' => 'rule', 'status' => 'published', 'data' => ['synced' => true, 'blocks' => [['type' => 'box', 'children' => [['type' => 'divider']]]]]]);
+        $this->cms()->entryService()->create('components', ['title' => 'Rule', 'slug' => 'rule', 'status' => 'published', 'data' => ['blocks' => [['type' => 'box', 'children' => [['type' => 'divider']]]]]]);
         app(\Cms\Modules\Blocks\Components::class)->flush();
         $list = $this->sent('components/list', []);
         $this->assertStringContainsString('"type":"divider","props":{}', $list);

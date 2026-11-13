@@ -200,7 +200,7 @@ final class ContentModule extends Plugin
      */
     private static function newLabel(string $singular): string
     {
-        $phrases = ['page' => __('New Page'), 'post' => __('New Post'), 'component' => __('New Component'), 'template' => __('New Template'), 'form' => __('New Form')];
+        $phrases = ['page' => __('New Page'), 'post' => __('New Post'), 'component' => __('New Component'), 'template' => __('New Template'), 'form' => __('New Form'), 'pattern' => __('New Pattern')];
 
         $item = __($singular);
 
@@ -229,7 +229,7 @@ final class ContentModule extends Plugin
             'prompt' => <<<'TXT'
             Build a page for this brief: {brief}
 
-            1. Read cms://site/design, cms://blocks and cms://collections. Check components/list for components and sections, templates/list for page templates.
+            1. Read cms://site/design, cms://blocks and cms://collections. Check components/list for components, patterns/list for patterns to start from (a whole page of the category Pages, or sections to copy in), and templates/list for page templates.
             2. Plan the sections (hero, proof, features, FAQ, call to action…) before writing. Lead with the answer; keep paragraphs short.
             3. Create the entry with entries.create in collection "{collection}" (pages if empty), body as blocks: top-level `section` blocks, styles only with tokens.
             4. Give every image alt text; write an SEO description (seo.description) of 70–160 characters.

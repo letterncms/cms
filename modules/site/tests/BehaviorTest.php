@@ -74,7 +74,7 @@ final class BehaviorTest extends TestCase
     {
         Files::put(content_path('design/scripts/counter.js'), "export function mount() {}\n");
         $this->app->make(Code::class)->flush();
-        $this->cms()->entryService()->create('components', ['title' => 'Counter', 'slug' => 'counter', 'status' => 'published', 'data' => ['synced' => true, 'props' => [['handle' => 'to', 'type' => 'text', 'label' => 'To']], 'blocks' => [
+        $this->cms()->entryService()->create('components', ['title' => 'Counter', 'slug' => 'counter', 'status' => 'published', 'data' => ['props' => [['handle' => 'to', 'type' => 'text', 'label' => 'To']], 'blocks' => [
             ['type' => 'paragraph', 'props' => ['text' => '0'], 'behavior' => ['module' => 'counter', 'props' => ['to' => '{props.to}']]],
         ]]]);
         $this->app->make(\Cms\Modules\Blocks\Components::class)->flush();

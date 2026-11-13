@@ -317,7 +317,6 @@ interface ComponentDef {
   handle: string
   id?: string | null
   title: string
-  synced: boolean
   props?: FieldDef[]
 }
 
