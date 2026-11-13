@@ -77,6 +77,8 @@ final class ContentPolicyTest extends TestCase
 
         $this->assertStringStartsWith("# The site's own.\nOptions -Indexes\n\n# BEGIN cms", $htaccess);
         $this->assertStringContainsString('Header set X-Content-Type-Options "nosniff"', $htaccess);
+        $this->assertStringContainsString("AddType text/markdown .md\n", $htaccess);
+        $this->assertMatchesRegularExpression('/^\s*AddCharset utf-8 .*\.md .*\.txt\b/m', $htaccess, 'a page\'s Markdown and the text files are read as UTF-8');
         $this->assertStringNotContainsString('Content-Security-Policy', $htaccess);
         $this->assertStringEndsWith("# END cms\n", $htaccess);
         $this->assertFileExists(public_path('media/.htaccess'), 'the media library\'s rules reach it the same way');
