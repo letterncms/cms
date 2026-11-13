@@ -131,7 +131,13 @@ final class ContentPolicyTest extends TestCase
         // The admin, a preview and the builder's canvas are not public pages.
         $entry = $this->cms()->entries()->findByUri('/one');
         $this->actingAs($this->admin());
-        $this->assertStringNotContainsString('sha256-', (string) $this->get('/admin')->headers->get('Content-Security-Policy'));
+        $admin = (string) $this->get('/admin')->headers->get('Content-Security-Policy');
+        $this->assertStringNotContainsString('sha256-', $admin);
+        // The canvas shows embeds and plugins' players as the site does: the admin frames what the site's pages may.
+        $this->cms()->hooks()->addFilter('site.policy', static fn (array $policy) => [...$policy, 'frame-src' => [...$policy['frame-src'], 'player.plugin.example']]);
+        $admin = (string) $this->get('/admin')->headers->get('Content-Security-Policy');
+        $this->assertMatchesRegularExpression("/frame-src 'self' [^;]*open\\.spotify\\.com[^;]*player\\.plugin\\.example/", $admin);
+        $this->assertStringContainsString('www.google.com', $admin);
         $this->assertFalse($this->get('/__preview/'.strtolower($entry->id))->assertOk()->headers->has('Content-Security-Policy'));
         $this->assertFalse($this->get('/__specimen/buttons')->assertOk()->headers->has('Content-Security-Policy'));
 

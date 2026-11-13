@@ -102,6 +102,8 @@ final class SiteModule extends Plugin
         $hooks->on('cms.installed', fn () => $this->cms()->settingsRegistry()->save('site', ['csp' => true]));
         // What code made a page load from (an image from elsewhere, a CDN, a video file): Images and Embeds say so.
         $hooks->on('site.policy.source', static fn (string $kind, mixed $url) => $policy()->source($kind, $url));
+        // The canvas shows pages as the site does: the admin lets in the frames the site's pages may hold.
+        $hooks->addFilter('admin.frames', static fn (array $frames) => [...$frames, ...$policy()->frames()]);
         // public/.htaccess is copied to a site once: the CMS's own lines in it are kept current here.
         $hooks->on('cms.migrated', static fn () => $policy()->publish());
         $hooks->on('settings.saved', static fn (string $namespace) => $namespace === 'site' && $policy()->publish());

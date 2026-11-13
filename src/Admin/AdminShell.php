@@ -119,7 +119,7 @@ HTML;
             "img-src 'self' data: blob: https:",
             "font-src 'self' data:",
             "connect-src 'self'",
-            "frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com",
+            'frame-src '.implode(' ', $this->frames()),
             "frame-ancestors 'self'",
             "base-uri 'self'",
             "form-action 'self'",
@@ -131,6 +131,19 @@ HTML;
             'Content-Security-Policy' => $csp,
             'X-Frame-Options' => 'SAMEORIGIN',
         ]);
+    }
+
+    /**
+     * Where frames in the admin may come from: the canvas holds a page as the site shows it, embeds and plugins'
+     * players included, so modules add what the site's pages may frame (`admin.frames`).
+     *
+     * @return list<string>
+     */
+    private function frames(): array
+    {
+        $frames = (array) $this->cms->hooks()->filter('admin.frames', ["'self'", 'https://www.youtube-nocookie.com', 'https://player.vimeo.com']);
+
+        return array_values(array_unique(array_filter($frames, static fn ($source) => is_string($source) && preg_match('#^[A-Za-z0-9\'*:/.+=_-]+$#D', $source))));
     }
 
     private function admin(): PackageManifest
