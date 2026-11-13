@@ -195,7 +195,7 @@ final class SettingsRegistry
 
     /**
      * Run with these values over the namespace's, in memory only: what a dry run needs to see the site as a change
-     * would leave it (a kit's languages, before they are added). Nothing is written and nothing is kept afterwards.
+     * would leave it (a site's languages, before they are added). Nothing is written and nothing is kept afterwards.
      */
     public function staged(string $namespace, array $values, callable $run): mixed
     {

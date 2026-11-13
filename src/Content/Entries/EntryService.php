@@ -214,7 +214,7 @@ final class EntryService
     }
 
     /**
-     * An entry that comes from somewhere else with its relations already written (a site kit): created under
+     * An entry that comes from somewhere else with its relations already written (a site): created under
      * the id its maker chose for it, so what the others say of it holds before it exists. It is validated,
      * named and published like any other; only what it names is taken as it stands, as for a copy.
      */

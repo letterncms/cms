@@ -15,13 +15,12 @@ use Illuminate\Database\Eloquent\Model;
  * transcript every client draws (see Transcript); `agent_state` is the agent's own (its
  * history in its provider's format, calls waiting for approval, a model). Title, turns and
  * the agent's state are encrypted at rest. `untrusted` sticks once the thread holds text
- * others may have written: an agent then asks before changes that go live. `kit` is the site
- * kit it was had with: its links and answers are of that site, so it lists only while the
- * site is that kit again (`mine`).
+ * others may have written: an agent then asks before changes that go live. `site` is the handle of the site where the chat began. Its links and answers are
+ * available when that site is active (`mine`).
  *
  * @property string $id
  * @property string $user_id
- * @property ?string $kit
+ * @property ?string $site
  * @property string $title
  * @property list<array> $turns
  * @property ?string $agent
@@ -45,16 +44,16 @@ class Thread extends Model
         static::creating(static function (self $thread): void {
             $thread->turns ??= [];
             $thread->title ??= '';
-            $thread->kit ??= Installer::kit();
+            $thread->site ??= Installer::site();
         });
     }
 
-    /** This person's chats with the site as it is: of the kit it is now. */
+    /** This person’s chats for the active site. */
     public static function mine(string $userId): Builder
     {
-        $kit = Installer::kit();
+        $sitePackage = Installer::site();
 
-        return static::query()->where('user_id', $userId)->where(static fn (Builder $q) => $kit === null ? $q->whereNull('kit') : $q->where('kit', $kit));
+        return static::query()->where('user_id', $userId)->where(static fn (Builder $q) => $sitePackage === null ? $q->whereNull('site') : $q->where('site', $sitePackage));
     }
 
     protected function casts(): array

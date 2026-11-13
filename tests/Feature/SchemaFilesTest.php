@@ -75,11 +75,11 @@ final class SchemaFilesTest extends TestCase
         $this->assertSame($this->ability('collections/schema', ['handle' => 'posts'])['data']['properties'], $posts['properties']);
     }
 
-    public function test_finishing_an_install_writes_them_even_when_the_site_kit_fails(): void
+    public function test_finishing_an_install_writes_them_even_when_the_site_site_fails(): void
     {
         \Cms\Support\Files::deleteDirectory($this->folder());
         $this->cms()->hooks()->on('cms.installed', static function (): never {
-            throw new \RuntimeException('The site kit broke.');
+            throw new \RuntimeException('The site broke.');
         });
 
         $this->app->make(Installer::class)->finish($this->admin());

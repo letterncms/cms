@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cms\Modules\Site\Kits;
+namespace Cms\Modules\Site\Sites;
 
 use Cms\Abilities\AbilityException;
 use Cms\Modules\Media\MediaManifest;
@@ -14,14 +14,14 @@ use Cms\Support\Yaml;
 use Throwable;
 
 /**
- * What a kit's folder holds, read without trusting it. A kit comes from somewhere else, so every file is one
+ * What a site's folder holds, read without trusting it. A site comes from somewhere else, so every file is one
  * the layout names, a plain file and no link, of a kind and a size a site keeps: a media file passes what an
  * upload passes, a script or stylesheet has a name the design's code may have, a library is what its lock
- * says. Anything else refuses the whole kit, by the file's name, before a single file is copied.
+ * says. Anything else refuses the whole site, by the file's name, before a single file is copied.
  */
-final class KitFiles
+final class SiteFiles
 {
-    /** Files a kit may hold in all, and their size together. */
+    /** Files a site may hold in all, and their size together. */
     private const int MAX_FILES = 5000;
 
     private const int MAX_BYTES = 512 * 1024 * 1024;
@@ -38,7 +38,7 @@ final class KitFiles
     /** Names a server may run instead of serve, wherever they sit in a file's name. */
     private const string RUNNABLE = '/\.(php\d?|phtml|phar|pl|py|cgi|sh|asp|aspx|jsp|htaccess)(\.|\/|$)/i';
 
-    /** What a repository leaves in a folder: never part of a kit, and never copied. */
+    /** What a repository leaves in a folder: never part of a site, and never copied. */
     private const array IGNORED = ['.gitkeep', '.gitignore', '.gitattributes', '.DS_Store'];
 
     private const array PREVIEW_TYPES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'webp' => 'image/webp'];
@@ -46,7 +46,7 @@ final class KitFiles
     public function __construct(private readonly MediaStore $media, private readonly MediaManifest $manifest) {}
 
     /**
-     * Everything the kit carries, by kind, as paths inside it.
+     * Everything the site carries, by kind, as paths inside it.
      *
      * @return array{
      *   collections: array<string, string>, entries: array<string, list<string>>, globals: array<string, string>, menus: array<string, string>,
@@ -55,7 +55,7 @@ final class KitFiles
      *   config: array<string, string>, other: array<string, list<string>>, previews: list<string>, code: bool, bytes: int
      * }
      */
-    public function read(Kit $kit): array
+    public function read(Site $sitePackage): array
     {
         $out = [
             'collections' => [], 'entries' => [], 'globals' => [], 'menus' => [], 'tokens' => null, 'custom' => [], 'load' => null, 'fonts' => [],
@@ -65,60 +65,60 @@ final class KitFiles
         $count = 0;
 
         foreach (['content', 'config', 'public', 'previews'] as $top) {
-            foreach ($this->walk($kit, $top) as $path) {
-                $size = (int) filesize($kit->path.'/'.$path);
+            foreach ($this->walk($sitePackage, $top) as $path) {
+                $size = (int) filesize($sitePackage->path.'/'.$path);
                 $out['bytes'] += $size;
 
                 if (++$count > self::MAX_FILES || $out['bytes'] > self::MAX_BYTES) {
-                    throw $this->refused($kit, __('it is larger than a kit may be (:files files, :size MB)', ['files' => self::MAX_FILES, 'size' => intdiv(self::MAX_BYTES, 1024 * 1024)]));
+                    throw $this->refused($sitePackage, __('it is larger than a site may be (:files files, :size MB)', ['files' => self::MAX_FILES, 'size' => intdiv(self::MAX_BYTES, 1024 * 1024)]));
                 }
 
-                $this->place($kit, $path, $size, $out);
+                $this->place($sitePackage, $path, $size, $out);
             }
         }
 
-        foreach ($kit->previews() as $preview) {
+        foreach ($sitePackage->previews() as $preview) {
             if (! in_array($preview, $out['previews'], true)) {
-                throw $this->refused($kit, __('kit.json names :file, which is not in it', ['file' => $preview]));
+                throw $this->refused($sitePackage, __('site.json names :file, which is not in it', ['file' => $preview]));
             }
         }
 
         foreach ($out['media'] as $id => $record) {
-            $this->admitMedia($kit, $id, $record, $out['mediaFiles']);
+            $this->admitMedia($sitePackage, $id, $record, $out['mediaFiles']);
         }
 
-        $this->admitVendor($kit, $out);
+        $this->admitVendor($sitePackage, $out);
         ksort($out['entries']);
         $out['code'] = $out['scripts'] !== [] || $out['styles'] !== [] || $out['vendor'] !== [] || $out['custom'] !== [] || $out['load'] !== null;
 
         return $out;
     }
 
-    /** A YAML file of the kit, as an array. */
-    public function yaml(Kit $kit, string $path): array
+    /** A YAML file of the site, as an array. */
+    public function yaml(Site $sitePackage, string $path): array
     {
         try {
-            return Yaml::read($kit->path.'/'.$path);
+            return Yaml::read($sitePackage->path.'/'.$path);
         } catch (Throwable $e) {
-            throw $this->refused($kit, __(':file can’t be read: :problem', ['file' => $path, 'problem' => $e->getMessage()]));
+            throw $this->refused($sitePackage, __(':file can’t be read: :problem', ['file' => $path, 'problem' => $e->getMessage()]));
         }
     }
 
-    /** A JSON file of the kit, as an array. */
-    public function json(Kit $kit, string $path): array
+    /** A JSON file of the site, as an array. */
+    public function json(Site $sitePackage, string $path): array
     {
-        $data = json_decode((string) file_get_contents($kit->path.'/'.$path), true);
+        $data = json_decode((string) file_get_contents($sitePackage->path.'/'.$path), true);
 
-        return is_array($data) ? $data : throw $this->refused($kit, __(':file is not JSON', ['file' => $path]));
+        return is_array($data) ? $data : throw $this->refused($sitePackage, __(':file is not JSON', ['file' => $path]));
     }
 
-    /** @return list<string> every file under one of the kit's folders, as paths inside the kit */
-    private function walk(Kit $kit, string $relative): array
+    /** @return list<string> every file under one of the site's folders, as paths inside the site */
+    private function walk(Site $sitePackage, string $relative): array
     {
-        $dir = $kit->path.'/'.$relative;
+        $dir = $sitePackage->path.'/'.$relative;
 
         if (is_link($dir)) {
-            throw $this->refused($kit, __(':file is a link', ['file' => $relative]));
+            throw $this->refused($sitePackage, __(':file is a link', ['file' => $relative]));
         }
 
         if (! is_dir($dir)) {
@@ -133,36 +133,36 @@ final class KitFiles
             }
 
             $path = $relative.'/'.$name;
-            $full = $kit->path.'/'.$path;
+            $full = $sitePackage->path.'/'.$path;
 
             if (is_link($full)) {
-                throw $this->refused($kit, __(':file is a link', ['file' => $path]));
+                throw $this->refused($sitePackage, __(':file is a link', ['file' => $path]));
             }
 
             if (! preg_match(self::SEGMENT, $name) || preg_match(self::RUNNABLE, $name)) {
-                throw $this->refused($kit, __(':file has a name a kit’s files can’t have', ['file' => $path]));
+                throw $this->refused($sitePackage, __(':file has a name a site’s files can’t have', ['file' => $path]));
             }
 
             if (is_dir($full)) {
                 if (substr_count($path, '/') > 12) {
-                    throw $this->refused($kit, __(':file is too deep in folders', ['file' => $path]));
+                    throw $this->refused($sitePackage, __(':file is too deep in folders', ['file' => $path]));
                 }
 
-                array_push($out, ...$this->walk($kit, $path));
+                array_push($out, ...$this->walk($sitePackage, $path));
             } elseif (is_file($full)) {
                 $out[] = $path;
             } else {
-                throw $this->refused($kit, __(':file is not a plain file', ['file' => $path]));
+                throw $this->refused($sitePackage, __(':file is not a plain file', ['file' => $path]));
             }
         }
 
         return $out;
     }
 
-    /** Put one file where its path says it belongs, or refuse the kit for it. */
-    private function place(Kit $kit, string $path, int $size, array &$out): void
+    /** Put one file where its path says it belongs, or refuse the site for it. */
+    private function place(Site $sitePackage, string $path, int $size, array &$out): void
     {
-        $limit = fn (string $kind) => $size <= self::LIMITS[$kind] ? true : throw $this->refused($kit, __(':file is larger than :size MB', ['file' => $path, 'size' => round(self::LIMITS[$kind] / 1_000_000, 1)]));
+        $limit = fn (string $kind) => $size <= self::LIMITS[$kind] ? true : throw $this->refused($sitePackage, __(':file is larger than :size MB', ['file' => $path, 'size' => round(self::LIMITS[$kind] / 1_000_000, 1)]));
         $handle = static fn (string $name) => Files::isHandle($name);
 
         switch (true) {
@@ -204,8 +204,8 @@ final class KitFiles
             case preg_match('#^content/design/fonts/([\w.-]+\.woff2)$#D', $path, $m) === 1:
                 $limit('font');
 
-                if (file_get_contents($kit->path.'/'.$path, false, null, 0, 4) !== 'wOF2') {
-                    throw $this->refused($kit, __(':file is not a .woff2 font', ['file' => $path]));
+                if (file_get_contents($sitePackage->path.'/'.$path, false, null, 0, 4) !== 'wOF2') {
+                    throw $this->refused($sitePackage, __(':file is not a .woff2 font', ['file' => $path]));
                 }
 
                 $out['fonts'][$m[1]] = $path;
@@ -217,7 +217,7 @@ final class KitFiles
                 try {
                     [$kind, $name] = Code::parse($m[1]);
                 } catch (Throwable $e) {
-                    throw $this->refused($kit, $path.': '.$e->getMessage());
+                    throw $this->refused($sitePackage, $path.': '.$e->getMessage());
                 }
 
                 $out[$kind][$name] = $path;
@@ -230,7 +230,7 @@ final class KitFiles
                 return;
             case preg_match('#^content/design/vendor/(.+\.js)$#D', $path, $m) === 1:
                 if ($size > Vendor::MAX_BYTES) {
-                    throw $this->refused($kit, __(':file is larger than :size MB', ['file' => $path, 'size' => round(Vendor::MAX_BYTES / 1_000_000, 1)]));
+                    throw $this->refused($sitePackage, __(':file is larger than :size MB', ['file' => $path, 'size' => round(Vendor::MAX_BYTES / 1_000_000, 1)]));
                 }
 
                 $out['vendor'][$m[1]] = $path;
@@ -243,7 +243,7 @@ final class KitFiles
                 return;
             case preg_match('#^public/(media/.+)$#D', $path, $m) === 1:
                 if ($size > $this->media->maxBytes()) {
-                    throw $this->refused($kit, __(':file is larger than this site’s upload limit', ['file' => $path]));
+                    throw $this->refused($sitePackage, __(':file is larger than this site’s upload limit', ['file' => $path]));
                 }
 
                 $out['mediaFiles'][$m[1]] = $path;
@@ -257,8 +257,8 @@ final class KitFiles
             case preg_match('#^previews/[^/]+\.(png|jpg|webp)$#D', $path, $m) === 1:
                 $limit('preview');
 
-                if ((new \finfo(FILEINFO_MIME_TYPE))->file($kit->path.'/'.$path) !== self::PREVIEW_TYPES[$m[1]]) {
-                    throw $this->refused($kit, __(':file is not the picture its name says', ['file' => $path]));
+                if ((new \finfo(FILEINFO_MIME_TYPE))->file($sitePackage->path.'/'.$path) !== self::PREVIEW_TYPES[$m[1]]) {
+                    throw $this->refused($sitePackage, __(':file is not the picture its name says', ['file' => $path]));
                 }
 
                 $out['previews'][] = $path;
@@ -272,25 +272,25 @@ final class KitFiles
                 return;
         }
 
-        throw $this->refused($kit, __(':file is not something a kit carries', ['file' => $path]));
+        throw $this->refused($sitePackage, __(':file is not something a site carries', ['file' => $path]));
     }
 
     /** A media record and its file pass what an upload passes; a file without a record is not media. */
-    private function admitMedia(Kit $kit, string $id, string $record, array $files): void
+    private function admitMedia(Site $sitePackage, string $id, string $record, array $files): void
     {
-        $data = $this->yaml($kit, $record);
+        $data = $this->yaml($sitePackage, $record);
 
         if (($data['id'] ?? null) !== $id || ! isset($files[(string) ($data['path'] ?? '')])) {
-            throw $this->refused($kit, __(':file does not name a file under public/media of the kit', ['file' => $record]));
+            throw $this->refused($sitePackage, __(':file does not name a file under public/media of the site', ['file' => $record]));
         }
 
-        if (($reason = $this->manifest->validate($data, $kit->path.'/public')) !== null) {
-            throw $this->refused($kit, __(':file is not a file the media library takes (:reason)', ['file' => 'public/'.$data['path'], 'reason' => $reason]));
+        if (($reason = $this->manifest->validate($data, $sitePackage->path.'/public')) !== null) {
+            throw $this->refused($sitePackage, __(':file is not a file the media library takes (:reason)', ['file' => 'public/'.$data['path'], 'reason' => $reason]));
         }
     }
 
     /** Every library file is one the lock names, and is what the lock says it is. */
-    private function admitVendor(Kit $kit, array $out): void
+    private function admitVendor(Site $sitePackage, array $out): void
     {
         if ($out['vendor'] === [] && $out['lock'] === null) {
             return;
@@ -298,23 +298,23 @@ final class KitFiles
 
         $named = [];
 
-        foreach (Vendor::locked($out['lock'] !== null ? $this->json($kit, $out['lock']) : []) as $entry) {
+        foreach (Vendor::locked($out['lock'] !== null ? $this->json($sitePackage, $out['lock']) : []) as $entry) {
             $named += $entry['files'];
         }
 
         foreach ($out['vendor'] as $local => $path) {
-            if (! isset($named[$local]) || ! hash_equals($named[$local], Vendor::hash((string) file_get_contents($kit->path.'/'.$path)))) {
-                throw $this->refused($kit, __(':file is not what the kit’s lock.json says', ['file' => $path]));
+            if (! isset($named[$local]) || ! hash_equals($named[$local], Vendor::hash((string) file_get_contents($sitePackage->path.'/'.$path)))) {
+                throw $this->refused($sitePackage, __(':file is not what the site’s lock.json says', ['file' => $path]));
             }
         }
 
         if (($missing = array_diff_key($named, $out['vendor'])) !== []) {
-            throw $this->refused($kit, __('its lock.json names :file, which is not in it', ['file' => 'content/design/vendor/'.array_key_first($missing)]));
+            throw $this->refused($sitePackage, __('its lock.json names :file, which is not in it', ['file' => 'content/design/vendor/'.array_key_first($missing)]));
         }
     }
 
-    private function refused(Kit $kit, string $why): AbilityException
+    private function refused(Site $sitePackage, string $why): AbilityException
     {
-        return AbilityException::invalid(__('The kit “:name” can’t be used: :why.', ['name' => $kit->handle, 'why' => $why]));
+        return AbilityException::invalid(__('The site “:name” can’t be used: :why.', ['name' => $sitePackage->handle, 'why' => $why]));
     }
 }

@@ -25,13 +25,13 @@ const plugin = (name, label) => ({ name: `letterncms/${name}`, type: 'plugin', t
 const packages = [['forms', 'Forms'], ['seo', 'SEO'], ['newsletter', 'Newsletter'], ['assistant', 'Assistant'], ['analytics', 'Analytics'], ['brevo', 'Brevo'], ['sync', 'Sync'], ['search', 'Search'], ['redirects', 'Redirects'], ['bookings', 'Bookings']].map(([name, label]) => plugin(name, label))
 const storeItems = [
   { package: 'letterncms/forms', type: 'plugin', title: 'Forms', installed: '0.1.0', action: 'installed' },
-  { package: 'letterncms/minimal', type: 'kit', title: 'Minimal', installed: '0.1.0', action: 'installed' },
-  { package: 'letterncms/studio', type: 'kit', title: 'Studio', installed: null, action: 'install' },
+  { package: 'letterncms/minimal', type: 'site', title: 'Minimal', installed: '0.1.0', action: 'installed' },
+  { package: 'letterncms/studio', type: 'site', title: 'Studio', installed: null, action: 'install' },
 ].map((item) => ({ summary: '', categories: [], author: { name: 'Fixture Author', url: '' }, latest: '0.1.0', ...item }))
 const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true }
 // Records that happen on a day: the one kind of overview that offers a calendar.
 const eventsCollection = { ...collection, handle: 'events', title: 'Events', singular: 'Event', newLabel: 'New Event', icon: 'calendar', structure: 'dated' }
-const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['kits', 'Site Kits', '/kits', 'box'], ['built-in', 'Built In', '/built-in', 'box'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
+const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['sites', 'Sites', '/sites', 'box'], ['built-in', 'Built In', '/built-in', 'box'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const manifest = {
   views: mounted,
@@ -110,23 +110,23 @@ try {
     await open('/globals', 'Contact details')
     assert(rows().length === 2 && !cards().length, 'globals are not a plain table')
   })
-  await test('Plugins list only plugins and Site Kits opens the kit store', async () => {
+  await test('Plugins list only plugins and Sites opens the site store', async () => {
     const listing = () => [...(main()?.querySelectorAll('[role="listitem"] a') ?? [])].map((link) => link.textContent.trim())
     await open('/plugins', 'Forms')
-    assert(listing().includes('Forms') && !listing().includes('Minimal') && !listing().includes('Studio'), 'Plugins includes a kit')
+    assert(listing().includes('Forms') && !listing().includes('Minimal') && !listing().includes('Studio'), 'Plugins includes a site')
     await open('/plugins?show=installed', 'Forms')
-    assert(listing().length === 10, 'Installed includes a kit or misses a plugin')
-    await open('/kits', 'Minimal')
-    await wait(() => anyButton('Browse Store'), 'Site Kits is missing Browse Store')
+    assert(listing().length === 10, 'Installed includes a site or misses a plugin')
+    await open('/sites', 'Minimal')
+    await wait(() => anyButton('Browse Store'), 'Sites is missing Browse Store')
     anyButton('Browse Store').click()
-    await wait(() => listing().includes('Studio'), 'kit store did not open')
-    assert(listing().join() === 'Minimal,Studio', 'kit store includes a plugin or misses a kit')
-    main().querySelector('a[href="/admin/kits/store/letterncms/studio"]').click()
-    await wait(() => main()?.querySelector('h1')?.textContent === 'Studio' && button('Install') && location.pathname === '/admin/kits/store/letterncms/studio', 'kit details lack the install action')
-    navigate('/plugins/store/letterncms/minimal')
-    await wait(() => main()?.querySelector('h1')?.textContent === 'Minimal' && button('Open') && location.pathname === '/admin/kits/store/letterncms/minimal', 'old kit link did not reach kit details')
+    await wait(() => listing().includes('Studio'), 'site store did not open')
+    assert(listing().join() === 'Minimal,Studio', 'site store includes a plugin or misses a site')
+    main().querySelector('a[href="/admin/sites/store/letterncms/studio"]').click()
+    await wait(() => main()?.querySelector('h1')?.textContent === 'Studio' && button('Install') && location.pathname === '/admin/sites/store/letterncms/studio', 'site details lack the install action')
+    navigate('/sites/store/letterncms/minimal')
+    await wait(() => main()?.querySelector('h1')?.textContent === 'Minimal' && button('Open') && location.pathname === '/admin/sites/store/letterncms/minimal', 'site listing did not open')
     button('Open').click()
-    await wait(() => location.pathname === '/admin/kits' && text().includes('Minimal'), 'installed kit did not open Site Kits')
+    await wait(() => location.pathname === '/admin/sites' && text().includes('Minimal'), 'installed site did not open Sites')
   })
   await test('Long lists get search and display; Grid only with pictures, Calendar only with days', async () => {
     await open('/built-in', 'Bookings')
@@ -502,7 +502,7 @@ serve('Overview', async (req, res, url) => {
     else if (ability === 'packages/list') data = { items: (input.type === 'module' ? packages.map((p) => ({ ...p, core: true })) : [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type !== 'plugin' || !p.core)).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
     else if (ability === 'packages/catalog') data = { items: storeItems, freshness: 'ok', problem: null, error: null }
     else if (ability === 'packages/item') data = { ...storeItems.find((item) => item.package === input.package), capabilities: [], gallery: [], requirements: [], releases: [], requires: {} }
-    else if (ability === 'kits/list') data = { kits: [{ handle: 'minimal', name: 'Minimal', description: '', version: '0.1.0', source: 'site', previews: [], suits: true, missingPlugins: [], active: true, edited: false }], problems: [] }
+    else if (ability === 'sites/list') data = { sites: [{ handle: 'minimal', name: 'Minimal', description: '', version: '0.1.0', source: 'site', previews: [], suits: true, missingPlugins: [], active: true, edited: false }], problems: [] }
     else throw new Error('Unexpected ability: ' + ability)
     return json(res, 200, { data })
   }

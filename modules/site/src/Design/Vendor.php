@@ -76,7 +76,7 @@ final class Vendor
     }
 
     /**
-     * What a lock.json holds, of this site or of a kit, with only what it may hold: nothing in it is trusted to be a path.
+     * What a lock.json holds, of this site or of a site, with only what it may hold: nothing in it is trusted to be a path.
      *
      * @return array<string, array{package: string, version: string, file: ?string, source: string, path: string, files: array<string, string>, requires: list<string>}>
      */
@@ -217,7 +217,7 @@ final class Vendor
     }
 
     /**
-     * Take in libraries another lock names (a kit's), from the folder that holds their files: each file is
+     * Take in libraries another lock names (a site's), from the folder that holds their files: each file is
      * checked against its hash before it is kept, and the lock gets the entries. An import this site already
      * has is replaced by the one given.
      *

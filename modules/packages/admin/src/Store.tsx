@@ -33,19 +33,19 @@ async function uploadZip(file: File, allowUnsigned: boolean): Promise<Job> {
 
 
 export function Store() {
-  return <StoreList kits={false} />
+  return <StoreList sites={false} />
 }
 
-export function KitStore() {
+export function SiteStore() {
   return (
-    <Page crumbs={[{ label: t('Site Kits'), to: '/kits', icon: 'box' }, { label: t('Browse Store') }]}>
-      <StoreList kits />
+    <Page crumbs={[{ label: t('Sites'), to: '/sites', icon: 'box' }, { label: t('Browse Store') }]}>
+      <StoreList sites />
     </Page>
   )
 }
 
-/** The store's catalog for plugins or site kits. The plugin list also includes locally installed plugins. */
-function StoreList({ kits }: { kits: boolean }) {
+/** The store's catalog for plugins or sites. The plugin list also includes locally installed plugins. */
+function StoreList({ sites }: { sites: boolean }) {
   const catalog = useAbility<Catalog>('packages/catalog')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -62,10 +62,10 @@ function StoreList({ kits }: { kits: boolean }) {
   const setTurnOn = (change: (on: boolean) => boolean) => setTurnOnHere((on) => (installing.turnOn = change(on)))
   const file = useRef<HTMLInputElement>(null)
   const data = catalog.data
-  const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'plugin' }, { enabled: !kits })
-  const plugins = kits ? undefined : local.data?.items
-  const all = useMemo(() => (data?.items ?? []).filter((item) => (item.type === 'kit') === kits), [data, kits])
-  const label = kits ? t('Site Kits') : t('Plugins')
+  const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'plugin' }, { enabled: !sites })
+  const plugins = sites ? undefined : local.data?.items
+  const all = useMemo(() => (data?.items ?? []).filter((item) => (item.type === 'site') === sites), [data, sites])
+  const label = sites ? t('Sites') : t('Plugins')
 
   // Only what this store has: no empty categories, each with a count.
   const categories = useMemo(() => {
@@ -111,7 +111,7 @@ function StoreList({ kits }: { kits: boolean }) {
 
   const install = async (item: Item) => {
     setBusy(item.package)
-    if (await installItem(item, setStep)) await Promise.all([catalog.refetch(), kits ? undefined : local.refetch()])
+    if (await installItem(item, setStep)) await Promise.all([catalog.refetch(), sites ? undefined : local.refetch()])
     setBusy(null)
   }
 
@@ -165,7 +165,7 @@ function StoreList({ kits }: { kits: boolean }) {
 
   return (
     <div>
-      {!kits && <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />}
+      {!sites && <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />}
 
       {/* Find first: search and order, then what to narrow it to. */}
       <div className="mb-3 flex min-h-10 flex-wrap items-center gap-2">
@@ -177,9 +177,9 @@ function StoreList({ kits }: { kits: boolean }) {
           <Menu
             trigger={<IconButton icon="more" label={t('More')} />}
             items={[
-              !kits && { label: t('Upload Zip'), icon: 'upload', disabled: busy !== null, onSelect: () => file.current?.click() },
+              !sites && { label: t('Upload Zip'), icon: 'upload', disabled: busy !== null, onSelect: () => file.current?.click() },
               { label: t('Check Now'), icon: 'refresh', disabled: busy !== null, onSelect: () => void refresh() },
-              !kits && { label: t('Turn On After Install'), checked: turnOn, onSelect: () => setTurnOn((on) => !on) },
+              !sites && { label: t('Turn On After Install'), checked: turnOn, onSelect: () => setTurnOn((on) => !on) },
             ]}
           />
         </div>
@@ -194,8 +194,8 @@ function StoreList({ kits }: { kits: boolean }) {
         narrowed
           ? <NoMatches onClear={clear} />
           : show === 'installed'
-          ? <EmptyState icon={kits ? 'box' : 'plugin'} title={kits ? t('No site kits') : t('No plugins installed yet')} action={<Button onClick={() => setShow('all')}>{kits ? t('Browse Store') : t('Browse Plugins')}</Button>} />
-          : <EmptyState icon="download" title={t('Nothing in this store yet')} action={kits ? undefined : <Button onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>} />
+          ? <EmptyState icon={sites ? 'box' : 'plugin'} title={sites ? t('No sites') : t('No plugins installed yet')} action={<Button onClick={() => setShow('all')}>{sites ? t('Browse Store') : t('Browse Plugins')}</Button>} />
+          : <EmptyState icon="download" title={t('Nothing in this store yet')} action={sites ? undefined : <Button onClick={() => file.current?.click()}>{t('Upload Zip')}</Button>} />
       ) : (
         <>
           {narrowed && <h2 className="m-0 mb-3 text-sm font-medium text-ink">{plural(items.length, '{count} result', '{count} results')}</h2>}
@@ -207,7 +207,7 @@ function StoreList({ kits }: { kits: boolean }) {
   )
 }
 
-const isInstalled = ({ item, plugin }: Row) => !!plugin || (item?.type === 'kit' && !!item.installed)
+const isInstalled = ({ item, plugin }: Row) => !!plugin || (item?.type === 'site' && !!item.installed)
 
 const title = (row: Row) => row.item?.title ?? row.plugin!.label
 

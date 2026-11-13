@@ -39,8 +39,8 @@ export interface Installed {
 
 interface Plan { steps: { package: string; version: string; title: string; enable_only: boolean; action: string }[]; capabilities: string[] }
 
-/** A listing's page, as shown in Plugins or Site Kits. */
-export const itemPath = (item: Pick<Item, 'package'> & Partial<Pick<Item, 'type'>>) => `/${item.type === 'kit' ? 'kits' : 'plugins'}/store/${item.package}`
+/** A listing's page, as shown in Plugins or Sites. */
+export const itemPath = (item: Pick<Item, 'package'> & Partial<Pick<Item, 'type'>>) => `/${item.type === 'site' ? 'sites' : 'plugins'}/store/${item.package}`
 
 /** Turn On After Install, as the store's menu last set it in this visit: the list and a plugin's page install alike. */
 export const installing = { turnOn: true }
@@ -65,7 +65,7 @@ export async function installItem(item: Item, onStep: (step: string | null) => v
       const job = await run<Job>('packages/install', { package: s.package, version: s.version, turnOn: installing.turnOn })
       await driveJob(job)
     }
-    invalidate('packages/', ...(item.type === 'kit' ? ['kits/'] : []))
+    invalidate('packages/', ...(item.type === 'site' ? ['sites/'] : []))
     toast.success(item.installed ? t('{name} updated', { name: item.title }) : t('{name} installed', { name: item.title }))
     return true
   } catch (e) {
@@ -90,8 +90,8 @@ export function Action({ item, busy, locked, onInstall, size = 'sm' }: { item: I
     case 'update':
       return <Button size={size} variant="primary" loading={busy} disabled={locked} onClick={(e) => { e.stopPropagation(); onInstall() }}>{item.action === 'update' ? t('Update') : t('Install')}</Button>
     case 'installed':
-      // An installed plugin has its switch and menu instead (PluginControls); a kit is used where kits are.
-      return item.type === 'kit' ? <Button size={size} variant="ghost" onClick={(e) => { e.stopPropagation(); navigate('/kits') }}>{t('Open')}</Button> : null
+      // An installed plugin has its switch and menu instead (PluginControls); a site is used where sites are.
+      return item.type === 'site' ? <Button size={size} variant="ghost" onClick={(e) => { e.stopPropagation(); navigate('/sites') }}>{t('Open')}</Button> : null
     case 'blocked':
       return <Badge tone="danger">{t('Blocked')}</Badge>
     default:

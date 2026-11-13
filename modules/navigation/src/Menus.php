@@ -89,7 +89,7 @@ final class Menus
 
     /**
      * What save() checks of a menu, without writing it and without asking whether the entries it links to
-     * exist: for a menu whose entries are made in the same go (a site kit's).
+     * exist: for a menu whose entries are made in the same go (a site's).
      */
     public function check(array $menu): void
     {

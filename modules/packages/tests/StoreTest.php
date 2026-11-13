@@ -179,33 +179,33 @@ final class StoreTest extends TestCase
         $this->assertSame([], $this->remote->callsTo('/download/acme/forms/1.0.0')[0]['headers']);
     }
 
-    public function test_a_site_kit_from_the_store_lands_in_kits_and_never_runs(): void
+    public function test_a_site_site_from_the_store_lands_in_sites_and_never_runs(): void
     {
-        $kit = ['kit.json' => json_encode(['handle' => 'studio', 'name' => 'Studio', 'version' => '1.2.0']), 'content/design/tokens.json' => '{"tokens":{}}'];
-        $this->list('letterncms/studio', '1.2.0', [], ['type' => 'kit', 'first_party' => true], $kit, ['type' => 'cms-kit']);
-        $this->assertSame('kit', $this->itemIn($this->client->catalog(), 'letterncms/studio')['type']);
+        $sitePackage = ['site.json' => json_encode(['handle' => 'studio', 'name' => 'Studio', 'version' => '1.2.0']), 'content/design/tokens.json' => '{"tokens":{}}'];
+        $this->list('letterncms/studio', '1.2.0', [], ['type' => 'site', 'first_party' => true], $sitePackage, ['type' => 'cms-site']);
+        $this->assertSame('site', $this->itemIn($this->client->catalog(), 'letterncms/studio')['type']);
 
         $job = $this->install('letterncms/studio');
 
         $this->assertSame('done', $job['state'], (string) ($job['error'] ?? ''));
-        $this->assertFileExists($this->site.'/kits/studio/kit.json');
+        $this->assertFileExists($this->site.'/sites/studio/site.json');
         // Marked as Composer marks the same tree, so composer update may take it over.
-        $this->assertFileExists($this->site.'/kits/studio/.composer-kit');
+        $this->assertFileExists($this->site.'/sites/studio/.composer-site');
         $this->assertDirectoryDoesNotExist($this->site.'/plugins/studio');
-        $this->assertFalse($this->cms()->packages()->isEnabled('letterncms/studio'), 'a kit is not a plugin to switch on');
+        $this->assertFalse($this->cms()->packages()->isEnabled('letterncms/studio'), 'a site is not a plugin to switch on');
         $this->assertSame('installed', $this->itemIn($this->client->catalog(), 'letterncms/studio')['action']);
         // Its demo is the store's own page; one elsewhere is not shown.
-        $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => self::STORE.'/kits/studio/']);
-        $this->assertSame(self::STORE.'/kits/studio/', $this->client->item('letterncms/studio')['demo_url']);
-        $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => 'https://evil.example/kits/studio/']);
+        $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => self::STORE.'/sites/studio/']);
+        $this->assertSame(self::STORE.'/sites/studio/', $this->client->item('letterncms/studio')['demo_url']);
+        $this->remote->routes[self::STORE.'/api/store/v1/items/letterncms/studio.json'] = (string) json_encode(['demo_url' => 'https://evil.example/sites/studio/']);
         $this->assertNull($this->client->item('letterncms/studio')['demo_url']);
 
-        // A kit that carries something a server would run is refused before it is unpacked.
-        $this->list('letterncms/sneaky', '1.0.0', [], ['type' => 'kit', 'first_party' => true], [...$kit, 'public/media/x.php' => '<?php'], ['type' => 'cms-kit']);
+        // A site that carries something a server would run is refused before it is unpacked.
+        $this->list('letterncms/sneaky', '1.0.0', [], ['type' => 'site', 'first_party' => true], [...$sitePackage, 'public/media/x.php' => '<?php'], ['type' => 'cms-site']);
         $job = $this->install('letterncms/sneaky');
         $this->assertSame('failed', $job['state']);
         $this->assertStringContainsString('x.php', (string) $job['error']);
-        $this->assertDirectoryDoesNotExist($this->site.'/kits/sneaky');
+        $this->assertDirectoryDoesNotExist($this->site.'/sites/sneaky');
     }
 
     public function test_the_store_tab_is_there_with_no_store_plugin_in_sight(): void

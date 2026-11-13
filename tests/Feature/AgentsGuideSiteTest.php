@@ -55,10 +55,10 @@ final class AgentsGuideSiteTest extends TestCase
         $this->assertStringContainsString('## MCP', $guide);
     }
 
-    public function test_a_site_kit_that_fails_does_not_cost_the_site_its_guide(): void
+    public function test_a_site_site_that_fails_does_not_cost_the_site_its_guide(): void
     {
         $this->cms()->hooks()->on('cms.installed', static function (): never {
-            throw new \RuntimeException('The site kit broke.');
+            throw new \RuntimeException('The site broke.');
         });
 
         $this->app->make(\Cms\Install\Installer::class)->finish($this->admin());

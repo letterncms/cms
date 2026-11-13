@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cms\Modules\Site\Kits;
+namespace Cms\Modules\Site\Sites;
 
 use Carbon\CarbonImmutable;
 use Cms\Abilities\AbilityContext;
@@ -29,18 +29,18 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Copies a kit into this site, once. `design` brings what a site looks like: tokens, fonts, templates,
+ * Copies a site into this site, once. `design` brings what a site looks like: tokens, fonts, templates,
  * components, scripts, styles and libraries. `full` adds what it holds: collections, entries, globals,
- * menus, media, languages and the settings a kit may carry.
+ * menus, media, languages and the settings a site may carry.
  *
  * Nothing the site has is changed without being asked for. plan() names every step, and what already
  * exists under the same name is a clash: the apply refuses while there is one, unless it is told to
- * `skip` (the site's stays), `replace` (the kit's takes its place, after a snapshot) or `rename` (the
- * kit's entry comes in beside it under a new slug; what has no second name stays the site's).
+ * `skip` (the site's stays), `replace` (the site's takes its place, after a snapshot) or `rename` (the
+ * site's entry comes in beside it under a new slug; what has no second name stays the site's).
  * Entries go through the entry service like any others, under new ids, and everything that names one
  * (a relation, a parent, a translation, a menu item, a link) follows.
  */
-final class KitApplier
+final class SiteApplier
 {
     public const array MODES = ['design', 'full'];
 
@@ -54,56 +54,56 @@ final class KitApplier
 
     public function __construct(
         private readonly Cms $cms,
-        private readonly KitFiles $files,
+        private readonly SiteFiles $files,
         private readonly FileDriver $driver,
         private readonly Design $design,
         private readonly Code $code,
         private readonly Vendor $vendor,
-        private readonly Kits $kits,
-        private readonly KitExporter $exporter,
-        private readonly KitClearer $clearer,
+        private readonly Sites $sites,
+        private readonly SiteExporter $exporter,
+        private readonly SiteClearer $clearer,
     ) {}
 
     /**
-     * Make this site another kit, in one step: the site you leave is saved (a kit's own copy, in storage/kits,
-     * drafts and all), what a kit carries is cleared, and the kit comes in whole. Switching back brings the
-     * saved copy, so nothing is lost by trying a kit; `$fresh` brings the kit as it came instead, and lets go
+     * Make this site another site, in one step: the site you leave is saved (a site's own copy, in storage/sites,
+     * drafts and all), what a site carries is cleared, and the site comes in whole. Switching back brings the
+     * saved copy, so nothing is lost by trying a site; `$fresh` brings the site as it came instead, and lets go
      * of the copy that was kept. A failure puts the site back as it was.
      *
-     * @return array{switched: bool, kit: string, saved: ?array{handle: string, name: string}, steps: list<array>, backup: ?string}
+     * @return array{switched: bool, site: string, saved: ?array{handle: string, name: string}, steps: list<array>, backup: ?string}
      */
     public function switchTo(string $handle, bool $fresh = false, ?User $user = null): array
     {
-        $active = $this->kits->active();
+        $active = $this->sites->active();
 
         if ($handle === $active && ! $fresh) {
-            return ['switched' => false, 'kit' => $handle, 'saved' => null, 'steps' => [], 'backup' => null];
+            return ['switched' => false, 'site' => $handle, 'saved' => null, 'steps' => [], 'backup' => null];
         }
 
-        $pristine = $this->kits->find($handle);
-        $kept = $this->kits->saved()[$handle] ?? null;
-        $target = $fresh ? ($pristine ?? throw AbilityException::invalid(__('“:handle” has no original to start over from.', ['handle' => $handle]))) : ($kept ?? $this->kits->findOrFail($handle));
+        $pristine = $this->sites->find($handle);
+        $kept = $this->sites->saved()[$handle] ?? null;
+        $target = $fresh ? ($pristine ?? throw AbilityException::invalid(__('“:handle” has no original to start over from.', ['handle' => $handle]))) : ($kept ?? $this->sites->findOrFail($handle));
 
         if (! $target->suits(Cms::VERSION)) {
-            throw AbilityException::invalid(__('The kit “:name” needs :brand :versions, and this is :version.', ['name' => $target->handle, 'versions' => (string) $target->cms(), 'version' => Cms::VERSION]));
+            throw AbilityException::invalid(__('The site “:name” needs :brand :versions, and this is :version.', ['name' => $target->handle, 'versions' => (string) $target->cms(), 'version' => Cms::VERSION]));
         }
 
-        // What the kit as it comes needs; a kept copy was made on this site, with what it ran then.
+        // What the site as it comes needs; a kept copy was made on this site, with what it ran then.
         $missing = $pristine !== null ? $this->missingPlugins($pristine) : [];
 
         if ($missing !== []) {
-            throw new AbilityException(__('The kit “:name” needs plugins this site doesn’t run: :plugins. Add them first.', ['name' => $target->handle, 'plugins' => implode(', ', $missing)]), 'conflict', ['plugins' => $missing]);
+            throw new AbilityException(__('The site “:name” needs plugins this site doesn’t run: :plugins. Add them first.', ['name' => $target->handle, 'plugins' => implode(', ', $missing)]), 'conflict', ['plugins' => $missing]);
         }
 
-        // Read before anything is touched: a kit that can't be used is refused with the site as it is.
+        // Read before anything is touched: a site that can't be used is refused with the site as it is.
         $this->files->read($target);
-        // A site with no kit of its own is kept as `site`: when that is the kit asked for, it is read from a copy.
+        // A site with no site of its own is kept as `site`: when that is the site asked for, it is read from a copy.
         $staged = null;
 
         if ($target->source === 'saved' && $target->handle === ($active ?? 'site')) {
-            $staged = storage_path('framework/kit-switch-'.bin2hex(random_bytes(4)));
+            $staged = storage_path('framework/site-switch-'.bin2hex(random_bytes(4)));
             Files::copyDirectory($target->path, $staged.'/'.$target->handle);
-            $target = Kit::load($staged.'/'.$target->handle, 'saved');
+            $target = Site::load($staged.'/'.$target->handle, 'saved');
         }
 
         $leaving = $this->keep($active);
@@ -128,27 +128,27 @@ final class KitApplier
             $staged !== null && Files::deleteDirectory($staged);
         }
 
-        $fresh && Files::deleteDirectory($this->kits->savedPath($handle));
-        $this->kits->activate($handle);
-        $this->kits->flush();
+        $fresh && Files::deleteDirectory($this->sites->savedPath($handle));
+        $this->sites->activate($handle);
+        $this->sites->flush();
         app(\Cms\Content\Schemas\SchemaFiles::class)->refresh();
 
-        return ['switched' => true, 'kit' => $handle, 'saved' => $leaving !== null && $leaving->handle !== $handle ? ['handle' => $leaving->handle, 'name' => $leaving->name()] : null, 'steps' => self::report($applied['steps']), 'backup' => $backup];
+        return ['switched' => true, 'site' => $handle, 'saved' => $leaving !== null && $leaving->handle !== $handle ? ['handle' => $leaving->handle, 'name' => $leaving->name()] : null, 'steps' => self::report($applied['steps']), 'backup' => $backup];
     }
 
-    /** The site as it is, kept aside under the handle of the kit it is (or `site`), unless there is nothing in it yet. */
-    private function keep(?string $active): ?Kit
+    /** The site as it is, kept aside under the handle of the site it is (or `site`), unless there is nothing in it yet. */
+    private function keep(?string $active): ?Site
     {
         if (! glob(content_path('collections').'/*.yaml') && ! glob(content_path('globals').'/*.yaml')) {
             return null;
         }
 
         $handle = $active ?? 'site';
-        $known = $this->kits->find($handle) ?? $this->kits->saved()[$handle] ?? null;
+        $known = $this->sites->find($handle) ?? $this->sites->saved()[$handle] ?? null;
         $name = $known?->name() ?? trim((string) config('app.name')) ?: $handle;
         $about = ['handle' => $handle, 'name' => mb_substr($name, 0, 80)];
 
-        // What the kit says of itself stays as it was edited, thumbnail included.
+        // What the site says of itself stays as it was edited, thumbnail included.
         if ($known !== null) {
             $known->description() !== '' && $about['description'] = $known->description();
             $picture = $known->previews()[0] ?? null;
@@ -159,43 +159,43 @@ final class KitApplier
             }
         }
 
-        return $this->exporter->export($this->kits->savedPath($handle), $about, replace: true, drafts: true)['kit'];
+        return $this->exporter->export($this->sites->savedPath($handle), $about, replace: true, drafts: true)['site'];
     }
 
-    /** @return list<string> the plugins a kit needs that are not running here */
-    public function missingPlugins(Kit $kit): array
+    /** @return list<string> the plugins a site needs that are not running here */
+    public function missingPlugins(Site $sitePackage): array
     {
-        return array_values(array_diff($kit->plugins(), array_keys($this->cms->packages()->active())));
+        return array_values(array_diff($sitePackage->plugins(), array_keys($this->cms->packages()->active())));
     }
 
-    /** Whether the kit brings scripts, styles or libraries: who applies it then needs site.code. */
-    public function carriesCode(Kit $kit): bool
+    /** Whether the site brings scripts, styles or libraries: who applies it then needs site.code. */
+    public function carriesCode(Site $sitePackage): bool
     {
         try {
-            return $this->files->read($kit)['code'];
+            return $this->files->read($sitePackage)['code'];
         } catch (AbilityException) {
             return false;
         }
     }
 
     /**
-     * Every step applying the kit would take, in the order it takes them: what would be created, replaced,
+     * Every step applying the site would take, in the order it takes them: what would be created, replaced,
      * renamed or left alone, and what stands in the way (`clash`).
      *
-     * @return array{kit: Kit, mode: string, clash: string, steps: list<array>, code: bool, plugins: list<string>}
+     * @return array{site: Site, mode: string, clash: string, steps: list<array>, code: bool, plugins: list<string>}
      */
-    public function plan(Kit $kit, string $mode = 'full', string $clash = 'refuse'): array
+    public function plan(Site $sitePackage, string $mode = 'full', string $clash = 'refuse'): array
     {
         if (! in_array($mode, self::MODES, true) || ! in_array($clash, self::CLASHES, true)) {
-            throw AbilityException::invalid(__('A kit is applied in the mode design or full, and a clash is met with refuse, skip, replace or rename.'));
+            throw AbilityException::invalid(__('A site is applied in the mode design or full, and a clash is met with refuse, skip, replace or rename.'));
         }
 
-        if (! $kit->suits(Cms::VERSION)) {
-            throw AbilityException::invalid(__('The kit “:name” needs :brand :versions, and this is :version.', ['name' => $kit->handle, 'versions' => (string) $kit->cms(), 'version' => Cms::VERSION]));
+        if (! $sitePackage->suits(Cms::VERSION)) {
+            throw AbilityException::invalid(__('The site “:name” needs :brand :versions, and this is :version.', ['name' => $sitePackage->handle, 'versions' => (string) $sitePackage->cms(), 'version' => Cms::VERSION]));
         }
 
-        $contents = $this->files->read($kit);
-        $run = ['kit' => $kit, 'mode' => $mode, 'clash' => $clash, 'full' => $mode === 'full', 'contents' => $contents, 'steps' => [], 'ids' => [], 'renamed' => ['templates' => [], 'components' => []], 'collections' => [], 'locales' => $this->cms->locales()];
+        $contents = $this->files->read($sitePackage);
+        $run = ['site' => $sitePackage, 'mode' => $mode, 'clash' => $clash, 'full' => $mode === 'full', 'contents' => $contents, 'steps' => [], 'ids' => [], 'renamed' => ['templates' => [], 'components' => []], 'collections' => [], 'locales' => $this->cms->locales()];
 
         $run['full'] && $this->planLanguages($run);
         $this->planMedia($run);
@@ -210,7 +210,7 @@ final class KitApplier
             $this->planOther($run);
         }
 
-        return ['kit' => $kit, 'mode' => $mode, 'clash' => $clash, 'steps' => $run['steps'], 'code' => $this->bringsCode($run['steps']), 'plugins' => $this->missingPlugins($kit), 'run' => $run];
+        return ['site' => $sitePackage, 'mode' => $mode, 'clash' => $clash, 'steps' => $run['steps'], 'code' => $this->bringsCode($run['steps']), 'plugins' => $this->missingPlugins($sitePackage), 'run' => $run];
     }
 
     /** The steps as an ability or a command reports them: without what only the apply needs, with what a person knows each by (`title`, an entry's `collection`). */
@@ -222,27 +222,27 @@ final class KitApplier
     }
 
     /**
-     * Apply the kit, or with `$dry` do everything short of writing: the same refusals, the entries through the
+     * Apply the site, or with `$dry` do everything short of writing: the same refusals, the entries through the
      * entry service's own dry run, and the steps it would take.
      *
      * @param  bool  $check  run that dry run before the real one too, so an entry the site refuses leaves every file as it was
-     * @return array{kit: string, mode: string, steps: list<array>, backup: ?string}
+     * @return array{site: string, mode: string, steps: list<array>, backup: ?string}
      */
-    public function apply(Kit $kit, string $mode = 'full', string $clash = 'refuse', ?User $user = null, bool $dry = false, bool $withoutPlugins = false, bool $check = true): array
+    public function apply(Site $sitePackage, string $mode = 'full', string $clash = 'refuse', ?User $user = null, bool $dry = false, bool $withoutPlugins = false, bool $check = true): array
     {
-        // What the kit writes, it writes as whoever applies it: the abilities behind each kind of thing ask for theirs.
-        $context = $user !== null ? AbilityContext::forUser($user, 'kit') : AbilityContext::system('kit');
-        $plan = $this->plan($kit, $mode, $clash);
+        // What the site writes, it writes as whoever applies it: the abilities behind each kind of thing ask for theirs.
+        $context = $user !== null ? AbilityContext::forUser($user, 'site') : AbilityContext::system('site');
+        $plan = $this->plan($sitePackage, $mode, $clash);
         $this->mayWrite($plan['steps'], $context);
         $clashes = array_values(array_filter($plan['steps'], static fn (array $step) => $step['action'] === 'clash'));
 
         if ($plan['plugins'] !== [] && ! $withoutPlugins) {
-            throw new AbilityException(__('The kit “:name” needs plugins this site doesn’t run: :plugins. Add them first, or apply it without them.', ['name' => $kit->handle, 'plugins' => implode(', ', $plan['plugins'])]), 'conflict', ['plugins' => $plan['plugins']]);
+            throw new AbilityException(__('The site “:name” needs plugins this site doesn’t run: :plugins. Add them first, or apply it without them.', ['name' => $sitePackage->handle, 'plugins' => implode(', ', $plan['plugins'])]), 'conflict', ['plugins' => $plan['plugins']]);
         }
 
         if ($clashes !== []) {
             throw new AbilityException(
-                trans_choice('{1}The site already has :count thing this kit brings. Choose what happens to it: skip, replace or rename.|[2,*]The site already has :count things this kit brings. Choose what happens to them: skip, replace or rename.', count($clashes), ['count' => count($clashes)]),
+                trans_choice('{1}The site already has :count thing this site brings. Choose what happens to it: skip, replace or rename.|[2,*]The site already has :count things this site brings. Choose what happens to them: skip, replace or rename.', count($clashes), ['count' => count($clashes)]),
                 'conflict',
                 ['clashes' => array_map(static fn (array $step) => $step['type'].' '.$step['name'], $clashes)],
             );
@@ -254,16 +254,16 @@ final class KitApplier
 
         // Collections the apply would make are there for the entries to be checked against, in memory only. The
         // real apply runs this first too: an entry the site would refuse stops it before a single file is copied.
-        // A new site's first kit leaves it out (`check`): there is nothing of the site's to keep whole yet.
+        // A new site's first site leaves it out (`check`): there is nothing of the site's to keep whole yet.
         // The languages it would add count as the site's for that check, so their entries aren't refused for being in one.
         ($dry || $check) && $this->cms->settingsRegistry()->staged('site', ['locales' => $run['locales']], fn () => $this->cms->collections()->staged($staged, fn () => $entries->dry(fn () => $this->writeEntries($run, $user))));
 
         if ($dry) {
-            return ['kit' => $kit->handle, 'mode' => $mode, 'steps' => self::report($plan['steps']), 'backup' => null];
+            return ['site' => $sitePackage->handle, 'mode' => $mode, 'steps' => self::report($plan['steps']), 'backup' => null];
         }
 
-        $backup = array_filter($plan['steps'], static fn (array $step) => $step['action'] === 'replace') !== [] ? $this->snapshot($kit) : null;
-        // Everything a kit writes outside the database, as it was: put back whole if anything fails on the way.
+        $backup = array_filter($plan['steps'], static fn (array $step) => $step['action'] === 'replace') !== [] ? $this->snapshot($sitePackage) : null;
+        // Everything a site writes outside the database, as it was: put back whole if anything fails on the way.
         $journal = $this->journal($run);
 
         try {
@@ -291,16 +291,16 @@ final class KitApplier
         $this->cms->entries()->flush();
         $this->code->flush();
         $this->design->saved();
-        $this->cms->hooks()->dispatch('kit.applied', $kit, $mode, $user);
+        $this->cms->hooks()->dispatch('site.applied', $sitePackage, $mode, $user);
 
-        return ['kit' => $kit->handle, 'mode' => $mode, 'steps' => self::report($plan['steps']), 'backup' => $backup];
+        return ['site' => $sitePackage->handle, 'mode' => $mode, 'steps' => self::report($plan['steps']), 'backup' => $backup];
     }
 
-    // Planning: one step per thing the kit carries.
+    // Planning: one step per thing the site carries.
 
     private function planLanguages(array &$run): void
     {
-        foreach ($run['kit']->languages() as $code) {
+        foreach ($run['site']->languages() as $code) {
             if (in_array($code, $run['locales'], true)) {
                 continue;
             }
@@ -316,23 +316,23 @@ final class KitApplier
 
     private function planMedia(array &$run): void
     {
-        $kit = $run['kit'];
+        $sitePackage = $run['site'];
         $records = [];
 
         foreach ($run['contents']['media'] as $id => $path) {
-            $records[$id] = $this->files->yaml($kit, $path);
+            $records[$id] = $this->files->yaml($sitePackage, $path);
         }
 
         if (! $run['full']) {
             // The design's own pictures come with it: what its templates, components, tokens and styles name.
-            $used = $this->mediaNamedBy($kit, $run['contents'], array_keys($records), array_column($records, 'path', 'id'));
+            $used = $this->mediaNamedBy($sitePackage, $run['contents'], array_keys($records), array_column($records, 'path', 'id'));
             $records = array_intersect_key($records, array_flip($used));
         }
 
         foreach ($records as $id => $record) {
             $item = MediaItem::query()->find($id);
             $file = public_path((string) $record['path']);
-            $hash = (string) hash_file('sha256', $kit->path.'/public/'.$record['path']);
+            $hash = (string) hash_file('sha256', $sitePackage->path.'/public/'.$record['path']);
             $same = $item !== null && $item->hash === $hash && $item->path === $record['path'];
             // The same id with another file, or another file already at that path.
             $taken = $item !== null || (is_file($file) && hash_file('sha256', $file) !== $hash);
@@ -342,16 +342,16 @@ final class KitApplier
 
     private function planDesign(array &$run): void
     {
-        $kit = $run['kit'];
+        $sitePackage = $run['site'];
         $contents = $run['contents'];
-        $differs = static fn (string $site, string $path) => is_file($site) && trim((string) file_get_contents($site)) !== '' ? hash_file('sha256', $site) !== hash_file('sha256', $kit->path.'/'.$path) : null;
+        $differs = static fn (string $site, string $path) => is_file($site) && trim((string) file_get_contents($site)) !== '' ? hash_file('sha256', $site) !== hash_file('sha256', $sitePackage->path.'/'.$path) : null;
         $file = function (string $type, string $name, string $path, string $site) use (&$run, $differs): void {
             $state = $differs($site, $path);
             $run['steps'][] = $this->step($run, $type, $name, $path, $state !== null, $state === false, ['target' => $site]);
         };
 
         if ($contents['tokens'] !== null) {
-            DesignJson::fromArray($this->files->json($kit, $contents['tokens']));
+            DesignJson::fromArray($this->files->json($sitePackage, $contents['tokens']));
             $file('tokens', 'tokens.json', $contents['tokens'], $this->design->path('tokens.json'));
         }
 
@@ -371,12 +371,12 @@ final class KitApplier
 
         $mine = $this->vendor->all();
 
-        foreach ($contents['lock'] !== null ? Vendor::locked($this->files->json($kit, $contents['lock'])) : [] as $specifier => $entry) {
+        foreach ($contents['lock'] !== null ? Vendor::locked($this->files->json($sitePackage, $contents['lock'])) : [] as $specifier => $entry) {
             $has = $mine[$specifier] ?? null;
             $run['steps'][] = $this->step($run, 'library', $specifier.'@'.$entry['version'], $contents['lock'], $has !== null, $has !== null && $has['files'] == $entry['files'], ['specifier' => $specifier, 'entry' => $entry]);
         }
 
-        // Where code loads is a list: the kit's names are added to the site's, and nothing is taken away.
+        // Where code loads is a list: the site's names are added to the site's, and nothing is taken away.
         if ($contents['load'] !== null) {
             $run['steps'][] = ['action' => is_file($this->design->path('code.json')) ? 'merge' : 'create', 'type' => 'load', 'name' => 'code.json', 'path' => $contents['load']];
         }
@@ -388,19 +388,19 @@ final class KitApplier
         $definitions = [];
 
         foreach ($run['contents']['collections'] as $handle => $path) {
-            $definition = $this->files->yaml($run['kit'], $path);
+            $definition = $this->files->yaml($run['site'], $path);
             $theirs = $this->cms->collections()->find($handle);
 
-            // A plugin's own collection (templates, components, a form's pages) is the plugin's: a kit brings its entries, never its definition.
+            // A plugin's own collection (templates, components, a form's pages) is the plugin's: a site brings its entries, never its definition.
             if (! empty($definition['system']) || ($theirs?->system ?? false) || ! in_array($definition['driver'] ?? 'files', ['files', 'database'], true)) {
-                throw AbilityException::invalid(__('The kit’s collection “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => __('a kit brings no definition of a plugin’s collection, and keeps its entries in files or the database')]));
+                throw AbilityException::invalid(__('The site’s collection “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => __('a site brings no definition of a plugin’s collection, and keeps its entries in files or the database')]));
             }
 
             $definitions[$handle] = array_diff_key($definition, $stamps);
         }
 
         // What happens to each is decided first: only what the site takes (create, replace) is checked, and checked
-        // beside the others it takes, so a collection may file its entries under a taxonomy of the kit
+        // beside the others it takes, so a collection may file its entries under a taxonomy of the site
         // (journal → topics), whatever order their files come in, and never under one the site keeps its own of.
         $steps = [];
         $beside = [];
@@ -437,7 +437,7 @@ final class KitApplier
                         $collection->blueprint($name)->schema();
                     }
                 } catch (Throwable $e) {
-                    throw AbilityException::invalid(__('The kit’s collection “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
+                    throw AbilityException::invalid(__('The site’s collection “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
                 }
 
                 $out[$handle] = $collection;
@@ -456,9 +456,9 @@ final class KitApplier
 
     private function planEntries(array &$run): void
     {
-        $kit = $run['kit'];
-        $languages = $kit->languages();
-        $shift = $kit->exported() !== null ? (int) $kit->exported()->diffInSeconds(CarbonImmutable::now(), false) : 0;
+        $sitePackage = $run['site'];
+        $languages = $sitePackage->languages();
+        $shift = $sitePackage->exported() !== null ? (int) $sitePackage->exported()->diffInSeconds(CarbonImmutable::now(), false) : 0;
         $planned = [];
 
         foreach ($run['contents']['entries'] as $handle => $paths) {
@@ -469,14 +469,14 @@ final class KitApplier
             $collection = $run['collections'][$handle]['collection'] ?? $this->cms->collections()->find($handle);
 
             if ($collection === null) {
-                $run['steps'][] = ['action' => 'skip', 'type' => 'entry', 'name' => $handle.'/*', 'path' => 'content/collections/'.$handle, 'note' => __('The site has no collection “:handle”, and the kit brings none.', ['handle' => $handle])];
+                $run['steps'][] = ['action' => 'skip', 'type' => 'entry', 'name' => $handle.'/*', 'path' => 'content/collections/'.$handle, 'note' => __('The site has no collection “:handle”, and the site brings none.', ['handle' => $handle])];
 
                 continue;
             }
 
             $existing = $this->existing($collection);
-            $entries = $this->driver->read($collection, $kit->path.'/content/collections/'.$handle, $languages);
-            // Parents before their children, and in the order the kit keeps them: by position, then in the
+            $entries = $this->driver->read($collection, $sitePackage->path.'/content/collections/'.$handle, $languages);
+            // Parents before their children, and in the order the site keeps them: by position, then in the
             // order they were made (an id is a ULID, made in time order), so entries alike in everything else
             // (posts of one moment) stand here as they stood there.
             uksort($entries, static fn (int|string $a, int|string $b) => [substr_count((string) $a, '/'), $entries[$a]->position, $entries[$a]->id] <=> [substr_count((string) $b, '/'), $entries[$b]->position, $entries[$b]->id]);
@@ -513,7 +513,7 @@ final class KitApplier
                     in_array($handle, self::DESIGN, true) && $run['renamed'][$handle][$entry->slug] = $step['slug'];
                 }
 
-                // What the site keeps stands in for the kit's wherever the kit's is named.
+                // What the site keeps stands in for the site's wherever the site's is named.
                 $step['id'] = in_array($step['action'], ['create', 'rename'], true) ? strtolower((string) Str::ulid()) : $found?->id;
                 $step['existing'] = $found;
                 [$step['status'], $step['at'], $step['expiresAt'], $late] = $this->dates($entry, $shift);
@@ -529,14 +529,14 @@ final class KitApplier
     private function planGlobals(array &$run): void
     {
         foreach ($run['contents']['globals'] as $handle => $path) {
-            $raw = $this->files->yaml($run['kit'], $path);
+            $raw = $this->files->yaml($run['site'], $path);
             $mine = $this->cms->globals()->find($handle);
             $same = $mine !== null && [$mine->title, $mine->icon, $mine->fields, $mine->data, $mine->locales] == [(string) ($raw['title'] ?? ucfirst($handle)), (string) ($raw['icon'] ?? 'globe'), array_values((array) ($raw['fields'] ?? [])), (array) ($raw['data'] ?? []), (array) ($raw['locales'] ?? [])];
 
             try {
                 GlobalContent::fromArray($handle, $raw)->blueprint()->schema();
             } catch (Throwable $e) {
-                throw AbilityException::invalid(__('The kit’s global “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
+                throw AbilityException::invalid(__('The site’s global “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
             }
 
             $run['steps'][] = $this->step($run, 'global', $handle, $path, $mine !== null, $same, ['raw' => $raw, 'title' => (string) ($raw['title'] ?? ucfirst($handle))]);
@@ -546,13 +546,13 @@ final class KitApplier
     private function planMenus(array &$run): void
     {
         foreach ($run['contents']['menus'] as $handle => $path) {
-            $raw = $this->files->yaml($run['kit'], $path);
+            $raw = $this->files->yaml($run['site'], $path);
 
             try {
-                // What saving the menu checks, but whether its entries exist yet: they are the kit's, made as it applies.
+                // What saving the menu checks, but whether its entries exist yet: they are the site's, made as it applies.
                 app(Menus::class)->check(['title' => (string) ($raw['title'] ?? ''), 'maxDepth' => (int) ($raw['max_depth'] ?? 3), 'items' => (array) ($raw['items'] ?? [])]);
             } catch (Throwable $e) {
-                throw AbilityException::invalid(__('The kit’s menu “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
+                throw AbilityException::invalid(__('The site’s menu “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
             }
 
             $run['steps'][] = $this->step($run, 'menu', $handle, $path, is_file(content_path("navigation/{$handle}.yaml")), false, ['raw' => $raw, 'title' => (string) ($raw['title'] ?? ucfirst($handle))]);
@@ -561,16 +561,16 @@ final class KitApplier
 
     private function planSettings(array &$run): void
     {
-        $carried = KitExporter::carried($this->cms);
+        $carried = SiteExporter::carried($this->cms);
 
         foreach ($run['contents']['config'] as $namespace => $path) {
             $stored = Yaml::read(site_path("config/{$namespace}.yaml"));
 
-            foreach ($this->files->yaml($run['kit'], $path) as $key => $value) {
+            foreach ($this->files->yaml($run['site'], $path) as $key => $value) {
                 $name = $namespace.'.'.$key;
 
                 if (! in_array($key, $carried[$namespace] ?? [], true)) {
-                    $run['steps'][] = ['action' => 'skip', 'type' => 'setting', 'name' => $name, 'path' => $path, 'note' => __('Not a setting a kit carries.')];
+                    $run['steps'][] = ['action' => 'skip', 'type' => 'setting', 'name' => $name, 'path' => $path, 'note' => __('Not a setting a site carries.')];
 
                     continue;
                 }
@@ -591,7 +591,7 @@ final class KitApplier
             try {
                 $this->cms->settingsRegistry()->prepare($namespace, $set);
             } catch (Throwable $e) {
-                throw AbilityException::invalid(__('The kit’s settings of “:namespace” can’t be used: :problem', ['namespace' => $namespace, 'problem' => $e->getMessage()]));
+                throw AbilityException::invalid(__('The site’s settings of “:namespace” can’t be used: :problem', ['namespace' => $namespace, 'problem' => $e->getMessage()]));
             }
         }
     }
@@ -599,7 +599,7 @@ final class KitApplier
     private function planOther(array &$run): void
     {
         // Folders beside the content that a plugin keeps (forms, redirects): the plugin says so with this filter.
-        $folders = (array) $this->cms->hooks()->filter('kits.content', []);
+        $folders = (array) $this->cms->hooks()->filter('sites.content', []);
 
         foreach ($run['contents']['other'] as $folder => $paths) {
             foreach ($paths as $path) {
@@ -612,7 +612,7 @@ final class KitApplier
                 }
 
                 $site = content_path($name);
-                $run['steps'][] = $this->step($run, 'file', $name, $path, is_file($site), is_file($site) && hash_file('sha256', $site) === hash_file('sha256', $run['kit']->path.'/'.$path), ['target' => $site]);
+                $run['steps'][] = $this->step($run, 'file', $name, $path, is_file($site), is_file($site) && hash_file('sha256', $site) === hash_file('sha256', $run['site']->path.'/'.$path), ['target' => $site]);
             }
         }
     }
@@ -657,7 +657,7 @@ final class KitApplier
     }
 
     /**
-     * When an entry is published and until when, here and now. A date after the kit was exported was in the
+     * When an entry is published and until when, here and now. A date after the site was exported was in the
      * future then, and is as far in the future now; an end date that had passed makes a draft.
      *
      * @return array{0: string, 1: ?string, 2: ?string, 3: bool} status, publication date, end date, whether it ran out
@@ -680,22 +680,22 @@ final class KitApplier
         return ['published', $at?->toIso8601String(), $expires?->toIso8601String(), false];
     }
 
-    /** @return list<string> ids of the kit's media that its design names, by id or by path */
-    private function mediaNamedBy(Kit $kit, array $contents, array $ids, array $paths): array
+    /** @return list<string> ids of the site's media that its design names, by id or by path */
+    private function mediaNamedBy(Site $sitePackage, array $contents, array $ids, array $paths): array
     {
         $text = '';
 
         foreach (['tokens', 'load'] as $one) {
-            $contents[$one] !== null && $text .= file_get_contents($kit->path.'/'.$contents[$one]);
+            $contents[$one] !== null && $text .= file_get_contents($sitePackage->path.'/'.$contents[$one]);
         }
 
         foreach ([...$contents['custom'], ...$contents['styles'], ...$contents['scripts']] as $path) {
-            $text .= file_get_contents($kit->path.'/'.$path);
+            $text .= file_get_contents($sitePackage->path.'/'.$path);
         }
 
         foreach (self::DESIGN as $handle) {
             foreach ($contents['entries'][$handle] ?? [] as $path) {
-                $text .= file_get_contents($kit->path.'/content/collections/'.$handle.'/'.$path);
+                $text .= file_get_contents($sitePackage->path.'/content/collections/'.$handle.'/'.$path);
             }
         }
 
@@ -734,8 +734,8 @@ final class KitApplier
         $manifest->locked(function () use ($steps, $run, $manifest): void {
             foreach ($steps as $step) {
                 $record = $step['record'];
-                Files::put(Files::within(public_path(), (string) $record['path']), (string) file_get_contents($run['kit']->path.'/public/'.$record['path']));
-                // The record as the kit has it, without the dates of the site it came from.
+                Files::put(Files::within(public_path(), (string) $record['path']), (string) file_get_contents($run['site']->path.'/public/'.$record['path']));
+                // The record as the site has it, without the dates of the site it came from.
                 Yaml::write($manifest->dir().'/'.$step['id'].'.yaml', array_diff_key($record, ['created_at' => 1, 'updated_at' => 1]));
             }
         });
@@ -745,10 +745,10 @@ final class KitApplier
 
     private function writeDesign(array $run): void
     {
-        $kit = $run['kit'];
+        $sitePackage = $run['site'];
 
         foreach ($this->doing($run, 'tokens', 'font', 'custom', 'script', 'style') as $step) {
-            Files::put($step['target'], (string) file_get_contents($kit->path.'/'.$step['path']));
+            Files::put($step['target'], (string) file_get_contents($sitePackage->path.'/'.$step['path']));
         }
 
         $libraries = [];
@@ -757,10 +757,10 @@ final class KitApplier
             $libraries[$step['specifier']] = $step['entry'];
         }
 
-        $libraries !== [] && $this->vendor->adopt($libraries, $kit->path.'/content/design/vendor');
+        $libraries !== [] && $this->vendor->adopt($libraries, $sitePackage->path.'/content/design/vendor');
 
         foreach ($this->doing($run, 'load') as $step) {
-            $theirs = $this->files->json($kit, $step['path']);
+            $theirs = $this->files->json($sitePackage, $step['path']);
             $mine = $this->code->config();
             $join = static fn (array $a, array $b): array => ['scripts' => array_values(array_unique([...($a['scripts'] ?? []), ...($b['scripts'] ?? [])])), 'styles' => array_values(array_unique([...($a['styles'] ?? []), ...($b['styles'] ?? [])]))];
             $merged = $join($mine, $theirs);
@@ -790,7 +790,7 @@ final class KitApplier
                 $definition['template'] = $run['renamed']['templates'][$definition['template']];
             }
 
-            // As collections/save takes any other: its checks, and the permission of whoever applies the kit.
+            // As collections/save takes any other: its checks, and the permission of whoever applies the site.
             $this->cms->abilities()->execute('collections/save', ['handle' => $step['name'], 'definition' => $definition], $context);
         }
 
@@ -800,7 +800,7 @@ final class KitApplier
 
     /**
      * Collections in an order each one's fields can be saved in: one that another names (its taxonomy, the
-     * collections an entries field picks from) comes before it. Names that aren't the kit's are left to the site.
+     * collections an entries field picks from) comes before it. Names that aren't the site's are left to the site.
      *
      * @param  list<array>  $steps
      * @return list<array>
@@ -870,7 +870,7 @@ final class KitApplier
                 if ($step['action'] === 'replace') {
                     /** @var Entry $mine */
                     $mine = $step['existing'];
-                    // What the site's entry holds and the kit's doesn't goes: the kit's takes its place whole.
+                    // What the site's entry holds and the site's doesn't goes: the site's takes its place whole.
                     $data = [...array_fill_keys(array_keys($mine->working()['data']), null), ...$data];
                     $service->update($mine->id, ['title' => $entry->title, 'data' => $data, ...($published && $step['expiresAt'] !== null ? ['expiresAt' => $step['expiresAt']] : [])], $user, publish: $published);
 
@@ -891,7 +891,7 @@ final class KitApplier
                     'expiresAt' => $step['expiresAt'],
                 ], static fn ($v) => $v !== null), $user);
             } catch (AbilityException $e) {
-                throw new AbilityException(__(':file of the kit can’t be brought in: :problem', ['file' => $step['path'], 'problem' => __($e->getMessage())]), $e->type, $e->details, $e);
+                throw new AbilityException(__(':file of the site can’t be brought in: :problem', ['file' => $step['path'], 'problem' => __($e->getMessage())]), $e->type, $e->details, $e);
             }
         }
     }
@@ -949,12 +949,12 @@ final class KitApplier
     private function writeOther(array $run): void
     {
         foreach ($this->doing($run, 'file') as $step) {
-            Files::put($step['target'], (string) file_get_contents($run['kit']->path.'/'.$step['path']));
+            Files::put($step['target'], (string) file_get_contents($run['site']->path.'/'.$step['path']));
         }
     }
 
     /**
-     * Data as it is on this site: every id of a kit's entry, wherever it stands (a relation, a link, a block's
+     * Data as it is on this site: every id of a site's entry, wherever it stands (a relation, a link, a block's
      * prop, a menu item), is the id that entry has here, and a block that shows a component, or an entry that
      * names a template, follows one that came in under a new name.
      */
@@ -991,7 +991,7 @@ final class KitApplier
     }
 
     /**
-     * Whoever applies a kit may do what it does: each kind of thing it writes asks for the permission the
+     * Whoever applies a site may do what it does: each kind of thing it writes asks for the permission the
      * ability that writes it asks for (collections/save, entries of each collection, globals, menus, media,
      * languages). Refused before anything is written, naming what is missing.
      */
@@ -1014,7 +1014,7 @@ final class KitApplier
         }
 
         if ($missing !== []) {
-            throw AbilityException::forbidden(__('Applying this kit needs permissions you don’t have: :permissions.', ['permissions' => implode(', ', array_keys($missing))]));
+            throw AbilityException::forbidden(__('Applying this site needs permissions you don’t have: :permissions.', ['permissions' => implode(', ', array_keys($missing))]));
         }
     }
 
@@ -1026,7 +1026,7 @@ final class KitApplier
      */
     private function journal(array $run): array
     {
-        $dir = storage_path('framework/kit-apply-'.bin2hex(random_bytes(6)));
+        $dir = storage_path('framework/site-apply-'.bin2hex(random_bytes(6)));
         is_dir(content_path()) && Files::copyDirectory(content_path(), $dir.'/content');
         is_dir(site_path('config')) && Files::copyDirectory(site_path('config'), $dir.'/config');
         $media = [];
@@ -1065,10 +1065,12 @@ final class KitApplier
     }
 
     /** What the site held before something of it was replaced: content, settings, media files and the rows of entries and media, in storage/backups. */
-    private function snapshot(Kit $kit): string
+    private function snapshot(Site $sitePackage): string
     {
-        $backup = storage_path('backups/kit-'.$kit->handle.'-'.gmdate('Ymd-His').'-'.bin2hex(random_bytes(3)));
-        Files::copyDirectory(content_path(), $backup.'/content');
+        $backup = storage_path('backups/site-'.$sitePackage->handle.'-'.gmdate('Ymd-His').'-'.bin2hex(random_bytes(3)));
+        if (is_dir(content_path())) {
+            Files::copyDirectory(content_path(), $backup.'/content');
+        }
         Files::copyDirectory(site_path('config'), $backup.'/config');
         is_dir(public_path('media')) && Files::copyDirectory(public_path('media'), $backup.'/public/media');
         $database = [];

@@ -183,7 +183,7 @@ final class CollectionAbilities
 
     /**
      * What saving a collection definition checks before anything is written: its fields and their handles, its
-     * blueprints and its term archives. The same for collections/save and for a site kit's collections.
+     * blueprints and its term archives. The same for collections/save and for a site's collections.
      */
     public static function check(string $handle, array $definition): Collection
     {

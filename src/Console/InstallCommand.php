@@ -8,7 +8,7 @@ use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 use Cms\Abilities\AbilityException;
 use Cms\Install\Installer;
-use Cms\Modules\Site\Kits\Kits;
+use Cms\Modules\Site\Sites\Sites;
 use Cms\Modules\Packages\StoreClient;
 use Cms\Packages\Install\PackageJobs;
 use Cms\Packages\PackageManager;
@@ -26,7 +26,7 @@ final class InstallCommand extends Command
         {--db=} {--db-host=127.0.0.1} {--db-port=} {--db-database=} {--db-username=} {--db-password=} {--db-prefix=}
         {--name=} {--email=} {--password=}
         {--plugins= : Comma-separated plugin names to add, "recommended" (the default) or "none"}
-        {--kit= : The site kit to start from: minimal (the default), one in kits/, a kit package to fetch (letterncms/<name>), or none}';
+        {--site= : The site to start from: minimal (the default), one in sites/, a site package to fetch (letterncms/<name>), or none}';
 
     protected $description = 'Install the CMS (database, first admin)';
 
@@ -52,8 +52,8 @@ final class InstallCommand extends Command
             'password' => $this->option('password') ?: password('Password (10+ characters, letters and numbers)', required: true),
         ];
 
-        [$input['kit'], $kitPackage] = $this->kit();
-        $input['kit_from_store'] = $kitPackage !== null;
+        [$input['site'], $sitePackage] = $this->site();
+        $input['site_from_store'] = $sitePackage !== null;
 
         if ($db !== 'sqlite') {
             $input += [
@@ -73,7 +73,7 @@ final class InstallCommand extends Command
         }
 
         $packages = app(PackageManager::class);
-        $wanted = [...$this->wanted(), ...($kitPackage !== null ? [$kitPackage] : [])];
+        $wanted = [...$this->wanted(), ...($sitePackage !== null ? [$sitePackage] : [])];
         $missing = array_values(array_filter($wanted, static fn (string $name) => ! $packages->repository()->find($name)));
 
         if ($missing !== [] && ! $this->pull($missing)) {
@@ -92,23 +92,23 @@ final class InstallCommand extends Command
     }
 
     /**
-     * The kit to start from, and the package to fetch it from when it isn't here: a name alone is one of
-     * ours, as Composer and the store name it (letterncms/<name> lands in kits/<name>).
+     * The site to start from, and the package to fetch it from when it isn't here: a name alone is one of
+     * ours, as Composer and the store name it (letterncms/<name> lands in sites/<name>).
      *
      * @return array{0: string, 1: ?string}
      */
-    private function kit(): array
+    private function site(): array
     {
-        $kit = trim((string) ($this->option('kit') ?? '')) ?: Kits::DEFAULT;
+        $sitePackage = trim((string) ($this->option('site') ?? '')) ?: Sites::DEFAULT;
 
-        if ($kit === Installer::NO_KIT) {
-            return [$kit, null];
+        if ($sitePackage === Installer::NO_SITE) {
+            return [$sitePackage, null];
         }
 
-        [$vendor, $name] = str_contains($kit, '/') ? explode('/', strtolower($kit), 2) : [PackageManifest::VENDOR, $kit];
+        [$vendor, $name] = str_contains($sitePackage, '/') ? explode('/', strtolower($sitePackage), 2) : [PackageManifest::VENDOR, $sitePackage];
         $handle = $vendor === PackageManifest::VENDOR ? $name : "{$vendor}-{$name}";
 
-        return [$handle, app(Kits::class)->find($handle) !== null ? null : "{$vendor}/{$name}"];
+        return [$handle, app(Sites::class)->find($handle) !== null ? null : "{$vendor}/{$name}"];
     }
 
     /** @return list<string> */

@@ -41,7 +41,7 @@ final class VendorTest extends TestCase
             'https://cdn.jsdelivr.net/npm/three@0.160.0/+esm' => "export class Vector3{}\n",
             'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js/+esm' => 'import{Vector3 as u}from"/npm/three@0.160.0/+esm";import{h}from"/npm/three@0.160.0/examples/jsm/helper.js/+esm";export class OrbitControls{}'."\n",
             'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/helper.js/+esm' => "export const h=1\n",
-            'https://cdn.jsdelivr.net/npm/@scope/kit@1.0.0/+esm' => "export default 1\n",
+            'https://cdn.jsdelivr.net/npm/@scope/site@1.0.0/+esm' => "export default 1\n",
             'https://cdn.jsdelivr.net/npm/evil@1.0.0/+esm' => 'import x from"https://evil.example/x.js";export default x'."\n",
             'https://cdn.jsdelivr.net/npm/html@1.0.0/+esm' => '<!doctype html><title>Not found</title>',
             'https://cdn.jsdelivr.net/npm/gh@1.0.0/+esm' => 'import x from"/gh/someone/repo@1.0.0/x.js";export default x'."\n",
@@ -199,7 +199,7 @@ final class VendorTest extends TestCase
     public function test_pages_with_a_module_get_an_import_map_with_the_library_and_its_hash_and_nothing_remote(): void
     {
         $this->vendor()->add('gsap@3.12.5');
-        $this->vendor()->add('@scope/kit@1.0.0');
+        $this->vendor()->add('@scope/site@1.0.0');
         Files::put(content_path('design/scripts/hero.js'), "import gsap from 'gsap'\n");
         $this->app->make(Code::class)->flush();
         $render = fn (array $blocks, string $title) => $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]])->id))['html'];
@@ -210,7 +210,7 @@ final class VendorTest extends TestCase
         $this->assertSame(1, preg_match('#<script type="importmap">(.+?)</script>#', $html, $m));
         $map = json_decode($m[1], true);
         $this->assertSame('/_cms/site/vendor/gsap@3.12.5/index.js', $map['imports']['gsap']);
-        $this->assertSame('/_cms/site/vendor/@scope/kit@1.0.0/index.js', $map['imports']['@scope/kit']);
+        $this->assertSame('/_cms/site/vendor/@scope/site@1.0.0/index.js', $map['imports']['@scope/site']);
         $this->assertSame($this->lock()['gsap']['files']['gsap@3.12.5/index.js'], $map['integrity']['/_cms/site/vendor/gsap@3.12.5/index.js']);
         $this->assertFileEquals(content_path('design/vendor/gsap@3.12.5/index.js'), public_path('_cms/site/vendor/gsap@3.12.5/index.js'));
         $this->assertStringNotContainsString('jsdelivr', $html);

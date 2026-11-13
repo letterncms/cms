@@ -50,7 +50,7 @@ final class SiteModule extends Plugin
         }
 
         $this->app->singleton(SiteBuilderContract::class, SiteBuilder::class);
-        $this->app->singleton(Kits\Kits::class);
+        $this->app->singleton(Sites\Sites::class);
         $this->app->bind(VendorFetcher::class, HttpVendorFetcher::class);
     }
 
@@ -78,11 +78,11 @@ final class SiteModule extends Plugin
         $this->adminUi();
         $this->agentContext();
 
-        $this->kits();
+        $this->sites();
         $this->policy();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([Console\BuildCommand::class, Console\CheckLinksCommand::class, Console\KitApplyCommand::class, Console\KitExportCommand::class, Console\KitListCommand::class, Console\KitSwitchCommand::class, Console\VendorCommand::class]);
+            $this->commands([Console\BuildCommand::class, Console\CheckLinksCommand::class, Console\SiteApplyCommand::class, Console\SiteExportCommand::class, Console\SiteListCommand::class, Console\SiteSwitchCommand::class, Console\VendorCommand::class]);
         }
     }
 
@@ -118,51 +118,51 @@ final class SiteModule extends Plugin
     }
 
     /**
-     * Site kits: a new site starts from the one its setup chose (minimal, a kit of the store, unless someone chose another), when it
+     * Sites: a new site starts from the one its setup chose (minimal, a site of the store, unless someone chose another), when it
      * has no collections of its own yet, and any site can take one in later or be made into one.
      */
-    private function kits(): void
+    private function sites(): void
     {
-        $kits = fn () => $this->app->make(Kits\Kits::class);
-        Kits\KitAbilities::register($this->cms(), $kits, fn () => $this->app->make(Kits\KitApplier::class), fn () => $this->app->make(Kits\KitExporter::class), fn () => $this->app->make(Kits\KitImporter::class), fn () => $this->app->make(Kits\KitEditor::class));
+        $sites = fn () => $this->app->make(Sites\Sites::class);
+        Sites\SiteAbilities::register($this->cms(), $sites, fn () => $this->app->make(Sites\SiteApplier::class), fn () => $this->app->make(Sites\SiteExporter::class), fn () => $this->app->make(Sites\SiteImporter::class), fn () => $this->app->make(Sites\SiteEditor::class));
 
-        $this->cms()->hooks()->on('cms.installed', function (User $user) use ($kits): void {
-            $chosen = \Cms\Install\Installer::kit();
+        $this->cms()->hooks()->on('cms.installed', function (User $user) use ($sites): void {
+            $chosen = \Cms\Install\Installer::site();
 
             if ($chosen !== null && ! glob(content_path('collections').'/*.yaml')) {
-                // A kit that could not be fetched leaves the site empty, and no kit's: it is not claimed to be one that isn't there.
-                if (($kit = $kits()->find($chosen)) === null) {
-                    $kits()->activate(\Cms\Install\Installer::NO_KIT);
+                // A site that could not be fetched leaves the site empty, and no site's: it is not claimed to be one that isn't there.
+                if (($sitePackage = $sites()->find($chosen)) === null) {
+                    $sites()->activate(\Cms\Install\Installer::NO_SITE);
 
                     return;
                 }
 
-                $this->app->make(Kits\KitApplier::class)->apply($kit, 'full', 'skip', $user, withoutPlugins: true, check: false);
+                $this->app->make(Sites\SiteApplier::class)->apply($sitePackage, 'full', 'skip', $user, withoutPlugins: true, check: false);
             }
         });
 
-        // The site's own mark and the kits it can be, for the admin's header: its favicon when it has one, and the switcher for whoever may switch.
+        // The site's own mark and the sites it can be, for the admin's header: its favicon when it has one, and the switcher for whoever may switch.
         $this->cms()->hooks()->addFilter('admin.manifest', static fn (array $manifest, User $user) => [
             ...$manifest,
             'site' => [
                 ...$manifest['site'],
                 'favicon' => \Cms\Modules\Blocks\Media::url(cms()->setting('site', 'favicon')),
                 'description' => (string) cms()->setting('site', 'description'),
-                'kits' => $user->hasPermission('settings.manage') ? $kits()->switcher() : [],
+                'sites' => $user->hasPermission('settings.manage') ? $sites()->switcher() : [],
             ],
         ]);
 
-        // A kit the store fetched is checked as any kit is, while it is still being unpacked (PackageJobs).
-        $this->cms()->hooks()->on('packages.kit.staged', fn (string $dir, string $handle) => $this->app->make(Kits\KitFiles::class)->read(Kits\Kit::load($dir, 'site', $handle)));
+        // A site the store fetched is checked as any site is, while it is still being unpacked (PackageJobs).
+        $this->cms()->hooks()->on('packages.site.staged', fn (string $dir, string $handle) => $this->app->make(Sites\SiteFiles::class)->read(Sites\Site::load($dir, 'site', $handle)));
 
-        // A kit's pictures, for the setup and the admin: only what its kit.json names.
-        Route::get('/_cms/kits/{handle}/{file}', function (string $handle, string $file) use ($kits) {
-            $kit = $kits()->find($handle);
+        // A site's pictures, for the setup and the admin: only what its site.json names.
+        Route::get('/_cms/sites/{handle}/{file}', function (string $handle, string $file) use ($sites) {
+            $sitePackage = $sites()->find($handle);
             $path = 'previews/'.$file;
 
-            abort_unless($kit !== null && in_array($path, $kit->previews(), true) && is_file($kit->path.'/'.$path) && ! is_link($kit->path.'/'.$path), 404);
+            abort_unless($sitePackage !== null && in_array($path, $sitePackage->previews(), true) && is_file($sitePackage->path.'/'.$path) && ! is_link($sitePackage->path.'/'.$path), 404);
 
-            return response()->file($kit->path.'/'.$path, ['Cache-Control' => 'public, max-age=3600', 'X-Content-Type-Options' => 'nosniff']);
+            return response()->file($sitePackage->path.'/'.$path, ['Cache-Control' => 'public, max-age=3600', 'X-Content-Type-Options' => 'nosniff']);
         })->where(['handle' => '[a-z0-9][a-z0-9_-]{0,63}', 'file' => '[a-z0-9][a-z0-9_-]{0,60}\.(png|jpg|webp)']);
     }
 
@@ -781,7 +781,7 @@ final class SiteModule extends Plugin
 
         $this->cms()->permissions()->register('site.build', 'Publish the Site', 'Site', roles: ['editor']);
         // Trusted: a design's scripts run as whoever opens the site, the builder (behaviors that draw there) or a
-        // preview, administrators included. Only administrators hold it by default, and a kit with code needs it.
+        // preview, administrators included. Only administrators hold it by default, and a site with code needs it.
         $this->cms()->permissions()->register('site.code', 'Edit Custom CSS and JavaScript', 'Design', 'Its scripts run in the browser of everyone who opens the site, the builder or a preview, administrators too.', trusted: true);
 
         // Collections and entries choose from the site's templates.
@@ -979,9 +979,9 @@ final class SiteModule extends Plugin
     {
         $admin = $this->cms()->admin();
         $admin->nav('design', ['label' => 'Design', 'path' => '/design', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
-        // A kit is mostly a design: it sits with the design, after what it brings (templates, components).
-        $admin->nav('kits', ['label' => 'Site Kits', 'path' => '/kits', 'icon' => 'box', 'section' => 'design', 'order' => 90, 'permission' => 'settings.manage']);
-        $admin->command('kits', ['label' => 'Site Kits', 'icon' => 'box', 'path' => '/kits', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);
+        // A site is mostly a design: it sits with the design, after what it brings (templates, components).
+        $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'design', 'order' => 90, 'permission' => 'settings.manage']);
+        $admin->command('sites', ['label' => 'Sites', 'icon' => 'box', 'path' => '/sites', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);
         $admin->widget('site-status', ['label' => 'Site', 'description' => 'Whether the live site is up to date, with a button to publish it.', 'icon' => 'rocket', 'column' => 'side', 'enabled' => true, 'order' => 10]);
         $admin->command('publish-site', ['label' => 'Publish Site', 'icon' => 'rocket', 'ability' => 'site/build', 'permission' => 'site.build', 'keywords' => ['build', 'deploy', 'static']]);
 
@@ -1004,7 +1004,7 @@ final class SiteModule extends Plugin
         - A scroll animation with progress: true (or with scrub) tells its element how far along it is (--cms-progress, and a cms:progress event), so a number that counts with the scroll needs a few lines in a behaviour and no library.
         - design/update changes the page transition one setting at a time ({"transition": {"navigation": "client"}} keeps its type and duration); the other sections it takes are replaced whole.
         - design/fonts-import brings a Google Fonts family as it is (style: normal, italic or both) and fills in each face's fallback (Arial, Times New Roman or Courier New, with sizeAdjust and the ascent, descent and line gap overrides) from the font's own tables, so text doesn’t move when it arrives: nothing to type. Change one through design/update `fonts` only to correct it; a value you set stays when the family is imported again.
-        - A site kit is a whole site to start from, copied in once: kits/list has the ones here; kits/get with `mode` (design or full) is the plan, step by step; kits/apply takes it in (dryRun first: it refuses while the site has something of a name the kit brings, until `clash` is skip, replace or rename); kits/export makes this site into one in kits/<handle>.
+        - A site is a whole site to start from, copied in once: sites/list has the ones here; sites/get with `mode` (design or full) is the plan, step by step; sites/apply takes it in (dryRun first: it refuses while the site has something of a name the site brings, until `clash` is skip, replace or rename); sites/export makes this site into one in sites/<handle>.
         - Element styles reach a tag inside a tag ("h1 em", "nav a:hover") and a class a block carries (".note", "span.note em", ".card.is-open"): give the block that `class` and style it in the design’s `styles`, not in custom CSS. What needs an id, an attribute or a longer selector is a stylesheet beside the design.
         TXT);
     }
