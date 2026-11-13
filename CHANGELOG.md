@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- Embeds and plugins' players, like a Spotify playlist or a map, show in the editor as they do on the site, instead of as blocked content. The editor lets in the same frames as the site's pages.
+- A block holding an embedded player is selected with one click on the canvas, like any other block, instead of the click going into the player.
+
 ## 0.36.0 (2026-11-13)
 
 ### Added

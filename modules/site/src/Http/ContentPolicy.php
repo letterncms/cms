@@ -222,6 +222,17 @@ final class ContentPolicy
         return $state;
     }
 
+    /**
+     * Where frames on the site's pages may come from: the embeds the core knows, the hosts the site lists and what
+     * plugins add to `site.policy`. The admin's own policy takes these too, so the canvas shows what the site shows.
+     *
+     * @return list<string>
+     */
+    public function frames(): array
+    {
+        return $this->sources($this->directives($this->stored())['frame-src'] ?? []);
+    }
+
     /** @return list<string> the hosts the site lists, as a policy names them */
     public function listed(): array
     {
@@ -230,6 +241,28 @@ final class ContentPolicy
 
     /** The policy: one line, nothing in it that a header or an .htaccess string could not hold. */
     private function value(array $state): string
+    {
+        $lines = [];
+
+        foreach ($this->directives($state) as $directive => $sources) {
+            $sources = $this->sources($sources);
+
+            if (preg_match('/^[a-z-]+$/D', (string) $directive) && $sources !== []) {
+                $lines[] = $directive.' '.implode(' ', $sources);
+            }
+        }
+
+        return implode('; ', $lines);
+    }
+
+    /** @return list<string> the sources a header can hold, each once */
+    private function sources(mixed $sources): array
+    {
+        return array_values(array_unique(array_filter((array) $sources, static fn ($source) => is_string($source) && preg_match('#^[A-Za-z0-9\'*:/.+=_-]+$#D', $source))));
+    }
+
+    /** @return array<string, mixed> the policy by directive, with what plugins add (`site.policy`) */
+    private function directives(array $state): array
     {
         $listed = $this->listed();
         $frames = array_filter(array_map(self::host(...), Embeds::HOSTS));
@@ -250,17 +283,7 @@ final class ContentPolicy
             'form-action' => ["'self'", ...$listed],
         ]);
 
-        $lines = [];
-
-        foreach ($policy as $directive => $sources) {
-            $sources = array_values(array_unique(array_filter((array) $sources, static fn ($source) => is_string($source) && preg_match('#^[A-Za-z0-9\'*:/.+=_-]+$#D', $source))));
-
-            if (preg_match('/^[a-z-]+$/D', (string) $directive) && $sources !== []) {
-                $lines[] = $directive.' '.implode(' ', $sources);
-            }
-        }
-
-        return implode('; ', $lines);
+        return $policy;
     }
 
     /**

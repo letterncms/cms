@@ -53,6 +53,7 @@ html{scrollbar-width:thin;scrollbar-color:rgb(127 127 127/.35) transparent}
 [data-cms-prop]{cursor:text}
 .cms-block-text::selection,.cms-block-text ::selection{background:rgb(0 122 255/.2)}
 img,a{-webkit-user-drag:none}
+iframe{pointer-events:none}
 [data-cms-conditional=hidden]:not([data-cms-reveal]){display:none!important}
 [data-cms-editor-empty-root]{visibility:hidden}
 .cms-js [data-cms-appear]{visibility:visible!important}
