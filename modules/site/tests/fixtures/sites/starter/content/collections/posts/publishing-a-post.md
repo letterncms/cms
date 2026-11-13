@@ -1,5 +1,5 @@
 ---
-id: 01kitminimal00000000000006
+id: 01kitstarter00000000000006
 title: 'Publish when the work is ready'
 status: published
 tags:

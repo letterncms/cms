@@ -25,7 +25,7 @@ const plugin = (name, label) => ({ name: `letterncms/${name}`, type: 'plugin', t
 const packages = [['forms', 'Forms'], ['seo', 'SEO'], ['newsletter', 'Newsletter'], ['assistant', 'Assistant'], ['analytics', 'Analytics'], ['brevo', 'Brevo'], ['sync', 'Sync'], ['search', 'Search'], ['redirects', 'Redirects'], ['bookings', 'Bookings']].map(([name, label]) => plugin(name, label))
 const storeItems = [
   { package: 'letterncms/forms', type: 'plugin', title: 'Forms', installed: '0.1.0', action: 'installed' },
-  { package: 'letterncms/minimal', type: 'site', title: 'Minimal', installed: '0.1.0', action: 'installed' },
+  { package: 'letterncms/starter', type: 'site', title: 'Starter', installed: '0.1.0', action: 'installed' },
   { package: 'letterncms/studio', type: 'site', title: 'Studio', installed: null, action: 'install' },
 ].map((item) => ({ summary: '', categories: [], author: { name: 'Fixture Author', url: '' }, latest: '0.1.0', ...item }))
 const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true }
@@ -113,20 +113,20 @@ try {
   await test('Plugins list only plugins and Sites opens the site store', async () => {
     const listing = () => [...(main()?.querySelectorAll('[role="listitem"] a') ?? [])].map((link) => link.textContent.trim())
     await open('/plugins', 'Forms')
-    assert(listing().includes('Forms') && !listing().includes('Minimal') && !listing().includes('Studio'), 'Plugins includes a site')
+    assert(listing().includes('Forms') && !listing().includes('Starter') && !listing().includes('Studio'), 'Plugins includes a site')
     await open('/plugins?show=installed', 'Forms')
     assert(listing().length === 10, 'Installed includes a site or misses a plugin')
-    await open('/sites', 'Minimal')
+    await open('/sites', 'Starter')
     await wait(() => anyButton('Browse Store'), 'Sites is missing Browse Store')
     anyButton('Browse Store').click()
     await wait(() => listing().includes('Studio'), 'site store did not open')
-    assert(listing().join() === 'Minimal,Studio', 'site store includes a plugin or misses a site')
+    assert(listing().join() === 'Starter,Studio', 'site store includes a plugin or misses a site')
     main().querySelector('a[href="/admin/sites/store/letterncms/studio"]').click()
     await wait(() => main()?.querySelector('h1')?.textContent === 'Studio' && button('Install') && location.pathname === '/admin/sites/store/letterncms/studio', 'site details lack the install action')
-    navigate('/sites/store/letterncms/minimal')
-    await wait(() => main()?.querySelector('h1')?.textContent === 'Minimal' && button('Open') && location.pathname === '/admin/sites/store/letterncms/minimal', 'site listing did not open')
+    navigate('/sites/store/letterncms/starter')
+    await wait(() => main()?.querySelector('h1')?.textContent === 'Starter' && button('Open') && location.pathname === '/admin/sites/store/letterncms/starter', 'site listing did not open')
     button('Open').click()
-    await wait(() => location.pathname === '/admin/sites' && text().includes('Minimal'), 'installed site did not open Sites')
+    await wait(() => location.pathname === '/admin/sites' && text().includes('Starter'), 'installed site did not open Sites')
   })
   await test('Long lists get search and display; Grid only with pictures, Calendar only with days', async () => {
     await open('/built-in', 'Bookings')
@@ -502,7 +502,7 @@ serve('Overview', async (req, res, url) => {
     else if (ability === 'packages/list') data = { items: (input.type === 'module' ? packages.map((p) => ({ ...p, core: true })) : [...packages, { ...plugin('admin', 'Admin'), core: true }].filter((p) => input.type !== 'plugin' || !p.core)).map((p) => ({ ...p, note: p.description, to: '/plugins', settingsTo: null })).sort((a, b) => a.label.localeCompare(b.label)), errors: [] }
     else if (ability === 'packages/catalog') data = { items: storeItems, freshness: 'ok', problem: null, error: null }
     else if (ability === 'packages/item') data = { ...storeItems.find((item) => item.package === input.package), capabilities: [], gallery: [], requirements: [], releases: [], requires: {} }
-    else if (ability === 'sites/list') data = { sites: [{ handle: 'minimal', name: 'Minimal', description: '', version: '0.1.0', source: 'site', previews: [], suits: true, missingPlugins: [], active: true, edited: false }], problems: [] }
+    else if (ability === 'sites/list') data = { sites: [{ handle: 'starter', name: 'Starter', description: '', version: '0.1.0', source: 'site', previews: [], suits: true, missingPlugins: [], active: true, edited: false }], problems: [] }
     else throw new Error('Unexpected ability: ' + ability)
     return json(res, 200, { data })
   }

@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Artisan;
 
 final class SitesTest extends TestCase
 {
-    use InstallsMinimalSite;
+    use InstallsStarterSite;
 
     protected function plugins(): array
     {
@@ -36,7 +36,7 @@ final class SitesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->installMinimalSite();
+        $this->installStarterSite();
         $this->sites()->activate(Sites::DEFAULT);
     }
 
@@ -106,10 +106,10 @@ final class SitesTest extends TestCase
         $this->assertNotContains('sites', array_merge(...array_column($navigation['sidebar']['sections'], 'items')));
     }
 
-    public function test_a_new_site_starts_from_minimal_a_working_block_blog(): void
+    public function test_a_new_site_starts_from_starter_a_working_block_blog(): void
     {
         $admin = $this->admin();
-        $this->assertSame('minimal', Installer::site(), 'minimal unless the setup chose another');
+        $this->assertSame('starter', Installer::site(), 'starter unless the setup chose another');
         $this->cms()->hooks()->dispatch('cms.installed', $admin);
 
         $posts = $this->cms()->collections()->findOrFail('posts');
@@ -124,7 +124,7 @@ final class SitesTest extends TestCase
             $this->assertSame($admin->id, $entry->authorId);
             $this->assertSame('published', $entry->status);
             $this->assertNotEmpty(app(Document::class)->text($entry->data['content']));
-            $this->assertStringStartsNotWith('01kitminimal', $entry->id, 'every entry gets an id of its own');
+            $this->assertStringStartsNotWith('01kitstarter', $entry->id, 'every entry gets an id of its own');
         }
 
         $article = $this->cms()->entries()->query()->collection('templates')->where('slug', 'post')->first();
@@ -152,7 +152,7 @@ final class SitesTest extends TestCase
     {
         $admin = $this->admin();
         $this->cms()->hooks()->dispatch('cms.installed', $admin);
-        $this->assertSame('minimal', $this->sites()->active());
+        $this->assertSame('starter', $this->sites()->active());
 
         $this->site('studio', [
             'content/collections/pages.yaml' => "title: Pages\nsingular: Page\ndriver: database\nroute: '/{slug}'\nsort: position\nfields:\n  -\n    handle: content\n    type: blocks\n    label: Content\n",
@@ -166,35 +166,35 @@ final class SitesTest extends TestCase
 
         $result = $this->ability('sites/switch', ['handle' => 'studio']);
         $this->assertTrue($result['switched']);
-        $this->assertSame(['handle' => 'minimal', 'name' => 'Minimal'], $result['saved']);
+        $this->assertSame(['handle' => 'starter', 'name' => 'Starter'], $result['saved']);
         $this->assertSame('studio', $this->sites()->active());
         $this->assertSame(['Studio Home'], array_map(static fn ($e) => $e->title, $this->cms()->entries()->query()->collection('pages')->get()));
         $this->assertNull($this->cms()->collections()->find('posts'), 'what the other site brought is gone');
         $this->assertFileDoesNotExist(content_path('navigation/main.yaml'));
 
         // Back: the site as it was left, drafts included, not the site as it came.
-        $this->assertSame('studio', $this->ability('sites/switch', ['handle' => 'minimal'])['saved']['handle']);
-        $this->assertSame('minimal', $this->sites()->active());
+        $this->assertSame('studio', $this->ability('sites/switch', ['handle' => 'starter'])['saved']['handle']);
+        $this->assertSame('starter', $this->sites()->active());
         $this->assertNotNull($this->cms()->entries()->query()->collection('pages')->where('title', 'Our Home')->first());
         $this->assertCount(4, $this->cms()->entries()->query()->collection('posts')->get());
 
         // Nothing to do when it already is.
-        $this->assertFalse($this->ability('sites/switch', ['handle' => 'minimal'])['switched']);
+        $this->assertFalse($this->ability('sites/switch', ['handle' => 'starter'])['switched']);
 
         // Start over: the site as it came, and the copy let go of.
-        $this->ability('sites/switch', ['handle' => 'minimal', 'fresh' => true]);
+        $this->ability('sites/switch', ['handle' => 'starter', 'fresh' => true]);
         $this->assertNull($this->cms()->entries()->query()->collection('pages')->where('title', 'Our Home')->first());
         $this->assertCount(3, $this->cms()->entries()->query()->collection('posts')->get());
-        $this->assertArrayNotHasKey('minimal', $this->sites()->saved());
+        $this->assertArrayNotHasKey('starter', $this->sites()->saved());
 
         $sites = array_column($this->ability('sites/list')['sites'], null, 'handle');
-        $this->assertTrue($sites['minimal']['active']);
+        $this->assertTrue($sites['starter']['active']);
         $this->assertTrue($sites['studio']['edited']);
     }
 
     public function test_a_site_zip_is_imported_and_a_bad_one_refused(): void
     {
-        $this->apply('minimal');
+        $this->apply('starter');
         $made = $this->ability('sites/export', ['handle' => 'copy', 'name' => 'Copy', 'zip' => true]);
         $imported = $this->ability('sites/import', ['content' => $made['content'], 'encoding' => 'base64']);
         $this->assertSame('copy', $imported['site']['handle']);
@@ -229,7 +229,7 @@ final class SitesTest extends TestCase
 
     public function test_an_export_takes_a_thumbnail_and_the_sites_description_when_none_is_given(): void
     {
-        $this->apply('minimal');
+        $this->apply('starter');
         $this->cms()->settingsRegistry()->save('site', ['description' => 'Our studio in Ghent']);
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
         $made = $this->ability('sites/export', ['handle' => 'shown', 'name' => 'Shown', 'preview' => base64_encode($png), 'previewType' => 'png']);
@@ -259,7 +259,7 @@ final class SitesTest extends TestCase
         // What was edited survives the site leaving that site.
         $this->ability('sites/switch', ['handle' => 'studio']);
         $this->ability('sites/update', ['handle' => 'studio', 'description' => 'Edited']);
-        $this->ability('sites/switch', ['handle' => 'minimal']);
+        $this->ability('sites/switch', ['handle' => 'starter']);
         $this->assertSame('Edited', $this->sites()->find('studio')->description());
         $this->assertSame('Studio Two', $this->sites()->saved()['studio']->name());
     }
@@ -269,10 +269,10 @@ final class SitesTest extends TestCase
         $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
         $this->site('studio', ['content/collections/pages.yaml' => "title: Pages\nsingular: Page\ndriver: database\nroute: '/{slug}'\nsort: position\nfields:\n  -\n    handle: content\n    type: blocks\n    label: Content\n"]);
         $this->ability('sites/switch', ['handle' => 'studio']);
-        $this->ability('sites/switch', ['handle' => 'minimal']);
+        $this->ability('sites/switch', ['handle' => 'starter']);
         $this->assertArrayHasKey('studio', $this->sites()->saved());
 
-        foreach (['minimal', 'nothing'] as $handle) {
+        foreach (['starter', 'nothing'] as $handle) {
             try {
                 $this->ability('sites/delete', ['handle' => $handle]);
                 $this->fail("{$handle} is not deleted");
@@ -290,7 +290,7 @@ final class SitesTest extends TestCase
             $this->assertSame('conflict', $e->type);
         }
 
-        $this->ability('sites/switch', ['handle' => 'minimal']);
+        $this->ability('sites/switch', ['handle' => 'starter']);
         $this->ability('sites/delete', ['handle' => 'studio']);
         $this->assertNull($this->sites()->find('studio'));
         $this->assertArrayNotHasKey('studio', $this->sites()->saved());
@@ -314,14 +314,14 @@ final class SitesTest extends TestCase
     public function test_the_site_a_new_site_starts_from_is_deleted_like_any_other_once_the_site_is_another(): void
     {
         $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
-        $this->assertSame('minimal', $this->sites()->active());
+        $this->assertSame('starter', $this->sites()->active());
         $this->site('studio', ['content/collections/pages.yaml' => "title: Pages\nsingular: Page\ndriver: database\nroute: '/{slug}'\nsort: position\nfields:\n  -\n    handle: content\n    type: blocks\n    label: Content\n"]);
         $this->ability('sites/switch', ['handle' => 'studio']);
 
-        $this->ability('sites/delete', ['handle' => 'minimal']);
-        $this->assertNull($this->sites()->find('minimal'));
-        $this->assertArrayNotHasKey('minimal', $this->sites()->saved());
-        $this->assertDirectoryDoesNotExist(site_path('sites/minimal'));
+        $this->ability('sites/delete', ['handle' => 'starter']);
+        $this->assertNull($this->sites()->find('starter'));
+        $this->assertArrayNotHasKey('starter', $this->sites()->saved());
+        $this->assertDirectoryDoesNotExist(site_path('sites/starter'));
 
         try {
             $this->ability('sites/delete', ['handle' => 'studio']);
@@ -332,7 +332,7 @@ final class SitesTest extends TestCase
 
         if (! \Cms\Install\Installer::installed()) {
             // Its card is on the setup before the store has answered.
-            $this->assertSame(1, substr_count((string) $this->get('/install')->getContent(), 'value="minimal"'));
+            $this->assertSame(1, substr_count((string) $this->get('/install')->getContent(), 'value="starter"'));
         }
     }
 
@@ -342,7 +342,7 @@ final class SitesTest extends TestCase
         \Carbon\Carbon::setTestNow('2026-11-01 12:00:00');
         \Carbon\CarbonImmutable::setTestNow('2026-11-01 12:00:00');
         $admin = $this->admin();
-        $this->apply('minimal');
+        $this->apply('starter');
         $this->cms()->collections()->save(Collection::fromArray('people', ['title' => 'People', 'route' => '/people/{slug}', 'template' => 'page', 'fields' => [
             ['handle' => 'portrait', 'type' => 'media', 'max' => 1],
             ['handle' => 'posts', 'type' => 'entries', 'collections' => ['posts']],
@@ -413,12 +413,12 @@ final class SitesTest extends TestCase
     public function test_a_dry_run_names_every_clash_and_the_apply_refuses_until_told(): void
     {
         $admin = $this->admin();
-        $this->apply('minimal');
+        $this->apply('starter');
         $home = $this->cms()->entries()->query()->collection('pages')->where('slug', 'home')->first();
         $this->cms()->entryService()->update($home->id, ['title' => 'Our Home'], $admin, publish: true);
         Files::put(content_path('design/styles/spotlight.css'), '.spotlight { color: red }');
 
-        $plan = $this->ability('sites/get', ['handle' => 'minimal', 'mode' => 'full']);
+        $plan = $this->ability('sites/get', ['handle' => 'starter', 'mode' => 'full']);
         $clashes = array_values(array_filter($plan['plan']['steps'], static fn ($s) => $s['action'] === 'clash'));
         $names = array_map(static fn ($s) => $s['type'].' '.$s['name'], $clashes);
         $this->assertContains('entry pages/home', $names);
@@ -431,7 +431,7 @@ final class SitesTest extends TestCase
         $this->assertSame('Main', array_values(array_filter($clashes, static fn ($s) => $s['name'] === 'main'))[0]['title'] ?? null);
 
         try {
-            $this->ability('sites/apply', ['handle' => 'minimal', 'dryRun' => true]);
+            $this->ability('sites/apply', ['handle' => 'starter', 'dryRun' => true]);
             $this->fail('a dry run refuses where the apply would');
         } catch (AbilityException $e) {
             $this->assertSame('conflict', $e->type);
@@ -439,7 +439,7 @@ final class SitesTest extends TestCase
         }
 
         try {
-            $this->ability('sites/apply', ['handle' => 'minimal']);
+            $this->ability('sites/apply', ['handle' => 'starter']);
             $this->fail('the apply refuses while there is a clash');
         } catch (AbilityException $e) {
             $this->assertSame('conflict', $e->type);
@@ -447,36 +447,36 @@ final class SitesTest extends TestCase
 
         $this->assertSame('Our Home', $this->cms()->entries()->find($home->id)->title, 'nothing was written');
 
-        $dry = $this->ability('sites/apply', ['handle' => 'minimal', 'clash' => 'rename', 'dryRun' => true]);
+        $dry = $this->ability('sites/apply', ['handle' => 'starter', 'clash' => 'rename', 'dryRun' => true]);
         $this->assertSame('full', $dry['checked']);
         $renamed = array_values(array_filter($dry['changes'], static fn ($s) => $s['name'] === 'pages/home'))[0];
         $this->assertSame(['rename', 'home-2'], [$renamed['action'], $renamed['as']]);
         $this->assertSame(3, $this->cms()->entries()->query()->collection('pages')->count(), 'a dry run writes nothing');
 
-        $result = $this->ability('sites/apply', ['handle' => 'minimal', 'clash' => 'rename']);
+        $result = $this->ability('sites/apply', ['handle' => 'starter', 'clash' => 'rename']);
         $this->assertNull($result['backup']);
         $this->assertNotNull($this->cms()->entries()->query()->collection('pages')->where('slug', 'home-2')->first());
         $this->assertSame('.spotlight { color: red }', file_get_contents(content_path('design/styles/spotlight.css')), 'a file has no second name: the site keeps its own');
 
-        $result = $this->ability('sites/apply', ['handle' => 'minimal', 'clash' => 'replace']);
+        $result = $this->ability('sites/apply', ['handle' => 'starter', 'clash' => 'replace']);
         $this->assertDirectoryExists($result['backup'].'/content');
         $this->assertSame('Home', $this->cms()->entries()->find($home->id)->title, 'the site’s takes the place of the site’s, under the site’s id');
         $this->assertStringContainsString('spotlight', (string) file_get_contents(content_path('design/styles/spotlight.css')));
         $this->assertStringNotContainsString('red', (string) file_get_contents(content_path('design/styles/spotlight.css')));
 
-        $skipped = $this->ability('sites/apply', ['handle' => 'minimal', 'clash' => 'skip']);
+        $skipped = $this->ability('sites/apply', ['handle' => 'starter', 'clash' => 'skip']);
         $this->assertSame([], array_values(array_filter($skipped['steps'], static fn ($s) => ! in_array($s['action'], ['skip', 'merge'], true) && $s['type'] !== 'entry')));
     }
 
     public function test_design_mode_brings_how_it_looks_and_no_content(): void
     {
-        $plan = $this->ability('sites/get', ['handle' => 'minimal', 'mode' => 'design'])['plan']['steps'];
+        $plan = $this->ability('sites/get', ['handle' => 'starter', 'mode' => 'design'])['plan']['steps'];
         $types = array_values(array_unique(array_column($plan, 'type')));
         sort($types);
         $this->assertSame(['entry', 'font', 'script', 'style', 'tokens'], $types);
         $this->assertSame([], array_filter($plan, static fn ($s) => $s['type'] === 'entry' && ! str_starts_with($s['name'], 'templates/') && ! str_starts_with($s['name'], 'components/')));
 
-        $this->ability('sites/apply', ['handle' => 'minimal', 'mode' => 'design']);
+        $this->ability('sites/apply', ['handle' => 'starter', 'mode' => 'design']);
         $this->assertNull($this->cms()->collections()->find('posts'));
         $this->assertFileExists(content_path('design/tokens.json'));
         $this->assertSame(4, $this->cms()->entries()->query()->collection('templates')->count());
@@ -619,7 +619,7 @@ final class SitesTest extends TestCase
 
     public function test_dates_ahead_of_the_export_stay_as_far_ahead(): void
     {
-        $posts = (string) file_get_contents(__DIR__.'/fixtures/sites/minimal/content/collections/posts.yaml');
+        $posts = (string) file_get_contents(__DIR__.'/fixtures/sites/starter/content/collections/posts.yaml');
         $this->site('dated', [
             'content/collections/posts.yaml' => $posts,
             'content/collections/posts/past.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaaa1\ntitle: Past\nstatus: published\npublished_at: '2025-12-01T09:00:00+00:00'\n---\n\nWritten before.\n",
@@ -641,7 +641,7 @@ final class SitesTest extends TestCase
     {
         $template = "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Survey\nstatus: published\ncollections:\n  - surveys\n  - pages\n---\n\n::: section\n:::\n";
         $this->site('studio', ['content/design/tokens.json' => '{"tokens":{}}', 'content/collections/templates/survey.md' => $template]);
-        $this->apply('minimal');
+        $this->apply('starter');
         $this->apply('studio', 'design', 'skip');
         $survey = $this->cms()->entries()->query()->collection('templates')->where('slug', 'survey')->first();
         $this->assertSame(['pages'], $survey->data['collections']);
@@ -727,7 +727,7 @@ final class SitesTest extends TestCase
         $designer = User::query()->create(['name' => 'D', 'email' => 'd@example.com', 'password' => 'secret-pass-1', 'roles' => ['designer']]);
 
         try {
-            $this->ability('sites/apply', ['handle' => 'minimal'], $designer);
+            $this->ability('sites/apply', ['handle' => 'starter'], $designer);
             $this->fail('collections came in without collections.manage');
         } catch (AbilityException $e) {
             $this->assertSame('forbidden', $e->type);
@@ -756,10 +756,10 @@ final class SitesTest extends TestCase
         Yaml::write(site_path('config/roles.yaml'), ['roles' => [...$this->cms()->roles()->defaults(), 'designer' => ['label' => 'Designer', 'description' => 'Design.', 'permissions' => ['admin.access', 'settings.manage']]]]);
         $this->cms()->settingsRegistry()->forget('roles');
         $designer = User::query()->create(['name' => 'D', 'email' => 'd@example.com', 'password' => 'secret-pass-1', 'roles' => ['designer']]);
-        $this->assertTrue($this->ability('sites/get', ['handle' => 'minimal'], $designer)['code']);
+        $this->assertTrue($this->ability('sites/get', ['handle' => 'starter'], $designer)['code']);
 
         try {
-            $this->ability('sites/apply', ['handle' => 'minimal', 'mode' => 'design', 'dryRun' => true], $designer->fresh());
+            $this->ability('sites/apply', ['handle' => 'starter', 'mode' => 'design', 'dryRun' => true], $designer->fresh());
             $this->fail('scripts come with site.code only');
         } catch (AbilityException $e) {
             $this->assertSame('forbidden', $e->type);
@@ -818,7 +818,7 @@ final class SitesTest extends TestCase
         $listed = $this->ability('sites/list');
         $this->assertContains('sites/nope', array_column($listed['problems'], 'folder'));
         $this->assertContains('sites/Bad.Name', array_column($listed['problems'], 'folder'), 'a folder that is no site is named, not passed over');
-        $this->assertSame('minimal', $listed['sites'][0]['handle'], 'minimal first');
+        $this->assertSame('starter', $listed['sites'][0]['handle'], 'starter first');
     }
 
     public function test_the_installer_offers_each_site_once_the_one_here_first(): void
@@ -826,7 +826,7 @@ final class SitesTest extends TestCase
         $this->site('atelier', ['content/design/tokens.json' => '{"tokens":{}}']);
         $item = static fn (string $package, string $type = 'site') => ['package' => $package, 'type' => $type, 'action' => 'install', 'access' => ['allowed' => true], 'title' => ucfirst(explode('/', $package)[1]), 'preview' => null, 'icon' => null];
         $offered = \Cms\Http\Controllers\InstallController::storeSites(
-            [$item('letterncms/atelier'), $item('acme/studio'), $item('acme/studio'), $item('letterncms/minimal'), $item('letterncms/forms', 'plugin')],
+            [$item('letterncms/atelier'), $item('acme/studio'), $item('acme/studio'), $item('letterncms/starter'), $item('letterncms/forms', 'plugin')],
             array_keys($this->sites()->all()),
         );
         $this->assertSame(['acme-studio'], array_column($offered, 'handle'), 'what this site has is offered as it is here, and a store site once');
@@ -834,7 +834,7 @@ final class SitesTest extends TestCase
         if (! \Cms\Install\Installer::installed()) {
             $page = (string) $this->get('/install')->getContent();
             $this->assertSame(1, substr_count($page, 'value="atelier"'));
-            $this->assertSame(1, substr_count($page, 'value="minimal"'));
+            $this->assertSame(1, substr_count($page, 'value="starter"'));
         }
     }
 
@@ -868,7 +868,7 @@ final class SitesTest extends TestCase
 
     public function test_export_as_an_ability_and_on_the_command_line(): void
     {
-        $this->apply('minimal');
+        $this->apply('starter');
         $dry = $this->ability('sites/export', ['handle' => 'mine', 'name' => 'Mine', 'dryRun' => true]);
         $this->assertSame('full', $dry['checked']);
         $this->assertContains('sites/mine/site.json', array_column($dry['changes'], 'path'));
@@ -897,7 +897,7 @@ final class SitesTest extends TestCase
         $this->assertSame([], glob(storage_path('app/site-export-*')) ?: []);
 
         try {
-            $this->ability('sites/export', ['handle' => 'minimal', 'name' => 'Mine']);
+            $this->ability('sites/export', ['handle' => 'starter', 'name' => 'Mine']);
             $this->fail('a built-in site is not overwritten');
         } catch (AbilityException $e) {
             $this->assertSame('conflict', $e->type);
@@ -908,8 +908,8 @@ final class SitesTest extends TestCase
         $this->assertSame('Elsewhere', json_decode((string) file_get_contents($out.'/site.json'), true)['name']);
         Files::deleteDirectory(dirname($out));
 
-        $this->assertSame(0, Artisan::call('site:apply', ['handle' => 'minimal', '--dry-run' => true, '--clash' => 'skip']));
-        $this->assertSame(1, Artisan::call('site:apply', ['handle' => 'minimal', '--json' => true]));
+        $this->assertSame(0, Artisan::call('site:apply', ['handle' => 'starter', '--dry-run' => true, '--clash' => 'skip']));
+        $this->assertSame(1, Artisan::call('site:apply', ['handle' => 'starter', '--json' => true]));
         $this->assertStringContainsString('"type": "conflict"', Artisan::output());
         $this->assertSame(0, Artisan::call('site:list', ['--json' => true]));
         $this->assertStringContainsString('"handle": "mine"', Artisan::output());

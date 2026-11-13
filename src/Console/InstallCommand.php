@@ -26,7 +26,7 @@ final class InstallCommand extends Command
         {--db=} {--db-host=127.0.0.1} {--db-port=} {--db-database=} {--db-username=} {--db-password=} {--db-prefix=}
         {--name=} {--email=} {--password=}
         {--plugins= : Comma-separated plugin names to add, "recommended" (the default) or "none"}
-        {--start-from= : The site to start from: minimal (the default), one in sites/, a site package to fetch (letterncms/<name>), or none}';
+        {--start-from= : The site to start from: starter (the default), one in sites/, a site package to fetch (letterncms/<name>), or none}';
 
     protected $description = 'Install the CMS (database, first admin)';
 

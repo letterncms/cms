@@ -12,7 +12,7 @@ use Throwable;
 /**
  * The sites this site can start from or take in: every folder in the site's `sites/`. Composer puts a package of
  * type `cms-site` there, the store's installs do, and so can anyone by hand. None is part of the CMS, the one a
- * new site starts from (`minimal`) included. A folder that is not a site is passed over, and named by problems().
+ * new site starts from (`starter`) included. A folder that is not a site is passed over, and named by problems().
  *
  * Switching sites (SiteApplier::switchTo) keeps what the site was: the site you leave is saved in `storage/sites/<handle>`
  * and comes back, edits and all, when you switch to that site again. Those are the sites' saved copies: `saved()`.
@@ -21,7 +21,7 @@ use Throwable;
 final class Sites
 {
     /** The site a new site starts from unless someone chooses otherwise: a package of the store like any other, fetched when it isn't in sites/. */
-    public const string DEFAULT = 'minimal';
+    public const string DEFAULT = 'starter';
 
     /** @var ?array<string, Site> */
     private ?array $sites = null;

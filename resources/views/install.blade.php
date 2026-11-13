@@ -115,7 +115,7 @@
     <p class="notice danger" id="pick-error" role="alert"></p>
     <button type="button" id="add" class="primary block">{{ $text['addButton'] }}</button>
     <button type="button" id="skip" class="block">{{ $text['skip'] }}</button>
-    <button type="button" id="minimal" class="block hidden">{{ $text['useMinimal'] }}</button>
+    <button type="button" id="empty" class="block hidden">{{ $text['useEmpty'] }}</button>
   </div>
 
   <div id="working" class="hidden">
@@ -287,7 +287,7 @@
 
   document.getElementById('skip').addEventListener('click', () => finish());
   // The site chosen could not be fetched: the site starts without one, because the person said so.
-  document.getElementById('minimal').addEventListener('click', () => { session.sitePackage = null; finish(); });
+  document.getElementById('empty').addEventListener('click', () => { session.sitePackage = null; finish(); });
   document.getElementById('add').addEventListener('click', async () => {
     const chosen = [...document.querySelectorAll('#packages input:checked')].map((box) => box.value);
     pickError.textContent = '';
@@ -335,7 +335,7 @@
         // Said where it can be acted on: try again, or start without a site.
         show('pick');
         pickError.textContent = text.siteFailed + ' ' + (e.message || '');
-        document.getElementById('minimal').classList.remove('hidden');
+        document.getElementById('empty').classList.remove('hidden');
         return;
       }
     }

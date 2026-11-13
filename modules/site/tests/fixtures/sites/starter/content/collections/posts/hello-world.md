@@ -1,5 +1,5 @@
 ---
-id: 01kitminimal00000000000004
+id: 01kitstarter00000000000004
 title: 'Welcome to your blog'
 status: published
 tags:

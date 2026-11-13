@@ -9,13 +9,13 @@ use Cms\Support\Files;
 
 /**
  * The site a new site starts from is the store's, not the CMS's. A test that needs a whole site puts a copy of
- * it in the site's sites/, as Composer or the store would (the real one is letterncms/minimal in sites-public).
+ * it in the site's sites/, as Composer or the store would (the real one is letterncms/starter in sites-public).
  */
-trait InstallsMinimalSite
+trait InstallsStarterSite
 {
-    private function installMinimalSite(): void
+    private function installStarterSite(): void
     {
-        Files::copyDirectory(__DIR__.'/fixtures/sites/minimal', site_path('sites/minimal'));
+        Files::copyDirectory(__DIR__.'/fixtures/sites/starter', site_path('sites/starter'));
         $this->app->make(Sites::class)->flush();
     }
 }

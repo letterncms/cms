@@ -118,7 +118,7 @@ final class SiteModule extends Plugin
     }
 
     /**
-     * Sites: a new site starts from the one its setup chose (minimal, a site of the store, unless someone chose another), when it
+     * Sites: a new site starts from the one its setup chose (starter, a site of the store, unless someone chose another), when it
      * has no collections of its own yet, and any site can take one in later or be made into one.
      */
     private function sites(): void

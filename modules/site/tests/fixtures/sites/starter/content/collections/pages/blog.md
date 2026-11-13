@@ -1,5 +1,5 @@
 ---
-id: 01kitminimal00000000000003
+id: 01kitstarter00000000000003
 title: Blog
 status: published
 position: 2
