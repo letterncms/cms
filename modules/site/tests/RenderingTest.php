@@ -20,6 +20,7 @@ final class RenderingTest extends TestCase
         return [
             'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
             'posts' => ['title' => 'Posts', 'structure' => 'dated', 'route' => '/blog/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'excerpt', 'type' => 'textarea']]],
+            'trips' => ['title' => 'Trips', 'route' => '/trips/{slug}', 'template' => 'trip', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'cover', 'type' => 'media', 'max' => 1, 'accept' => 'image/*'], ['handle' => 'photos', 'type' => 'media', 'accept' => 'image/*']]],
         ];
     }
 
@@ -145,6 +146,38 @@ final class RenderingTest extends TestCase
         $this->assertContains('collection:templates', $deps, 'any template change rebuilds the page');
         $this->assertContains('collection:posts', $deps);
         $this->assertNotEmpty(array_filter($deps, static fn ($d) => str_starts_with($d, 'entry:')), 'the component it uses is a dependency');
+    }
+
+    public function test_media_blocks_bound_to_an_entrys_media_fields_show_its_files(): void
+    {
+        $jpeg = function (string $name, int $shade): string {
+            $im = imagecreatetruecolor(1200, 800);
+            imagefill($im, 0, 0, imagecolorallocate($im, $shade, 90, 200));
+            ob_start();
+            imagejpeg($im, null, 80);
+            $file = tempnam(sys_get_temp_dir(), 'cms');
+            file_put_contents($file, (string) ob_get_clean());
+
+            return $this->app->make(\Cms\Modules\Media\MediaStore::class)->store($file, $name)->id;
+        };
+        [$cover, $one, $two] = [$jpeg('cover.jpg', 10), $jpeg('one.jpg', 120), $jpeg('two.jpg', 240)];
+        $content = $this->cms()->entryService();
+        $content->create('components', ['title' => 'Hero', 'slug' => 'hero', 'status' => 'published', 'data' => ['synced' => true, 'props' => [['handle' => 'image', 'type' => 'media', 'max' => 1]], 'blocks' => [
+            ['type' => 'image', 'props' => ['alt' => 'Hero'], 'bind' => ['image' => 'props.image']],
+        ]]]);
+        $content->create('templates', ['title' => 'Trip', 'slug' => 'trip', 'status' => 'published', 'data' => ['blocks' => [
+            ['type' => 'image', 'props' => ['alt' => 'Cover'], 'bind' => ['image' => 'entry.cover']],
+            ['type' => 'component', 'props' => ['ref' => 'hero'], 'bind' => ['values.image' => 'entry.cover']],
+            ['type' => 'gallery', 'bind' => ['images' => 'entry.photos']],
+        ]]]);
+        $trip = $content->create('trips', ['title' => 'Coast', 'slug' => 'coast', 'status' => 'published', 'data' => ['cover' => [$cover], 'photos' => [$one, $two]]]);
+
+        $html = $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($trip->id))['html'];
+
+        $this->assertMatchesRegularExpression('#<figure class="cms-image"><picture>(<source[^>]*>)*<img src="/_cms/img/'.$cover.'/[^>]+ alt="Cover"#', $html, 'an image bound to the entry’s media field');
+        $this->assertMatchesRegularExpression('#<figure class="cms-image"><picture>(<source[^>]*>)*<img src="/_cms/img/'.$cover.'/[^>]+ alt="Hero"#', $html, 'and through a component’s value');
+        $this->assertSame(2, substr_count($html, '<li class="cms-gallery__item">'), 'a gallery bound to a list of them shows every one');
+        $this->assertStringContainsString('/_cms/img/'.$two.'/', $html);
     }
 
     public function test_search_and_twins_read_the_text_of_components_and_repeats(): void

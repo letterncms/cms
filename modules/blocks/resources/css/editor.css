@@ -67,3 +67,14 @@ span[data-cms-media] {
   min-height: 32px;
   text-align: center;
 }
+
+/* A block of a type the site doesn't have now (its plugin is off): kept, and named, so it can be found, moved or deleted. */
+[data-cms-missing], [data-cms-failed] {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 6px;
+  text-align: center;
+}

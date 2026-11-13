@@ -26,6 +26,7 @@ final class BlockType
      * @param  list<string>  $inline  Props edited inline as rich text (inline HTML)
      * @param  list<array>  $template  Initial children when inserted
      * @param  array<string, string>  $placeholders  What empty text props show on the canvas (prop => text); inline props default to their label
+     * @param  list<string>  $uses  Runtime features (BlockRegistry::feature) every page that shows this block needs
      */
     public function __construct(
         public readonly string $name,
@@ -50,6 +51,7 @@ final class BlockType
         public readonly ?Closure $derive = null,
         public readonly string $html = 'div',
         public readonly array $placeholders = [],
+        public readonly array $uses = [],
     ) {
         if (! preg_match('#^([a-z0-9-]+/)?[a-z0-9-]+$#', $name)) {
             throw new InvalidArgumentException("Invalid block name {$name}.");
@@ -81,6 +83,7 @@ final class BlockType
             derive: ($d['derive'] ?? null) instanceof Closure ? $d['derive'] : null,
             html: (string) ($d['html'] ?? 'div'),
             placeholders: array_map('strval', (array) ($d['placeholders'] ?? [])),
+            uses: array_values(array_map('strval', (array) ($d['uses'] ?? []))),
         );
     }
 

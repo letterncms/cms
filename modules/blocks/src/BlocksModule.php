@@ -38,6 +38,11 @@ final class BlocksModule extends Plugin
             $registry->category($category['name'], $category['label']);
         }
 
+        // Added as a plugin adds blocks: the registry, and features whose files come from this module's dist/ folder.
+        MediaBlocks::register($registry, fn (string $file) => is_file($path = $this->path('dist/media/'.$file))
+            ? $this->asset('media/'.$file).'?v='.substr((string) hash_file('xxh3', $path), 0, 10)
+            : null);
+
         $permissions = $this->cms()->permissions();
         $permissions->register('blocks.html', 'Add Custom HTML Blocks', 'Content', trusted: true);
 
@@ -47,6 +52,14 @@ final class BlocksModule extends Plugin
         $this->guardBlockCode();
         $this->cms()->hooks()->addFilter('blocks.data-sources', fn (array $sources) => [...$sources, ...$this->app->make(CmsSources::class)->sources()]);
         $this->frontend();
+        // Uninstalling a plugin leaves its blocks in the content: the confirmation says where.
+        $this->cms()->hooks()->addFilter('packages.uninstall.keeps', function (array $keeps, string $package) {
+            $count = $this->app->make(Uses::class)->package($package);
+
+            return $count === 0 ? $keeps : [...$keeps, $count === 1
+                ? __('1 entry uses its blocks. They stay in it, show nothing meanwhile, and come back if you install the plugin again.')
+                : __(':count entries use its blocks. They stay in them, show nothing meanwhile, and come back if you install the plugin again.', ['count' => $count])];
+        });
         $this->abilities();
         $this->agentContext();
 
@@ -133,7 +146,7 @@ final class BlocksModule extends Plugin
         $hooks->on('render.begin', fn () => $renderer()->begin());
 
         // Built pages name the runtime by its hashed file; a new one rebuilds them all.
-        $hooks->addFilter('site.build.signature', fn (array $parts) => [...$parts, (string) $this->runtime()['entry'], (string) @filemtime($this->path('resources/css/blocks.css'))]);
+        $hooks->addFilter('site.build.signature', fn (array $parts) => [...$parts, (string) $this->runtime()['entry'], (string) @filemtime($this->path('resources/css/blocks.css')), (string) json_encode($this->app->make(BlockRegistry::class)->features())]);
 
         $hooks->addFilter('site.head', function (array $head) use ($renderer) {
             $css = (string) file_get_contents($this->path('resources/css/blocks.css'));
@@ -152,6 +165,13 @@ final class BlocksModule extends Plugin
             $head[] = '<link rel="stylesheet" href="/_cms/blocks/blocks-'.$hash.'.css">';
 
             $features = $renderer()->features;
+
+            // The stylesheets of packages' features: on a page that uses them, and always in the block workspace, where any block may arrive.
+            foreach ($this->app->make(BlockRegistry::class)->features() as $name => $feature) {
+                if ($feature['style'] !== null && ($renderer()->editor || ! empty($features[$name]))) {
+                    $head[] = '<link rel="stylesheet" href="'.e($feature['style']).'">';
+                }
+            }
 
             if (! empty($features['account']) && ! $renderer()->editor) {
                 $head[] = \Cms\Users\AccountInBrowser::script();
@@ -174,6 +194,10 @@ final class BlocksModule extends Plugin
             }
 
             $features = array_values(array_diff($features, ['forever', 'motion-toggle', 'account']));
+            // A package's feature with a script is loaded by the runtime from where the package keeps it; one with only a stylesheet is in the head.
+            $packaged = $this->app->make(BlockRegistry::class)->features();
+            $features = array_values(array_filter($features, static fn (string $name) => ! isset($packaged[$name]) || $packaged[$name]['script'] !== null));
+            $modules = array_filter(array_map(static fn (string $name) => $packaged[$name]['script'] ?? null, $features === [] ? [] : array_combine($features, $features)));
 
             if ($features === [] || $renderer()->editor) {
                 return $foot;
@@ -182,7 +206,8 @@ final class BlocksModule extends Plugin
             $runtime = $this->runtime();
 
             if ($runtime['entry'] !== null) {
-                $foot[] = '<script type="module" src="'.e($runtime['entry']).'" data-features="'.e(implode(' ', $features)).'"></script>';
+                $foot[] = '<script type="module" src="'.e($runtime['entry']).'" data-features="'.e(implode(' ', $features)).'"'
+                    .($modules !== [] ? ' data-modules="'.e((string) json_encode($modules, JSON_UNESCAPED_SLASHES)).'"' : '').'></script>';
             }
 
             return $foot;

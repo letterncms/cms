@@ -287,17 +287,22 @@ final class CoreBlocks
             ],
             [
                 'name' => 'video', 'title' => 'Video', 'icon' => 'video', 'category' => 'media',
-                'description' => 'YouTube, Vimeo or a video file.', 'keywords' => ['youtube', 'vimeo', 'mp4', 'background'],
+                'description' => 'A video file, or one from YouTube or Vimeo.', 'keywords' => ['youtube', 'vimeo', 'mp4', 'webm', 'background', 'hero', 'loop', 'film'],
                 'inline' => ['caption'], 'html' => 'figure',
                 'fields' => [
-                    ['handle' => 'url', 'type' => 'url', 'label' => 'Video URL', 'required' => true, 'placeholder' => 'YouTube, Vimeo or a video file'],
+                    ['handle' => 'file', 'type' => 'media', 'label' => 'Video File', 'max' => 1, 'accept' => 'video/*'],
+                    ['handle' => 'url', 'type' => 'url', 'label' => 'Video URL', 'placeholder' => 'YouTube, Vimeo or a video file', 'about' => 'Used when no file is chosen.'],
                     ['handle' => 'caption', 'type' => 'richtext', 'label' => 'Caption', 'inline' => true],
-                    ['handle' => 'poster', 'type' => 'media', 'label' => 'Poster Image', 'max' => 1],
-                    ['handle' => 'autoplay', 'type' => 'toggle', 'label' => 'Autoplay Muted'],
-                    ['handle' => 'controls', 'type' => 'toggle', 'label' => 'Show Controls', 'default' => true],
-                    ['handle' => 'loop', 'type' => 'toggle', 'label' => 'Loop'],
+                    ['handle' => 'poster', 'type' => 'media', 'label' => 'Poster Image', 'max' => 1, 'accept' => 'image/*'],
+                    ['handle' => 'aspect', 'type' => 'select', 'label' => 'Aspect Ratio', 'options' => ['auto' => 'Original', '16/9' => '16:9', '4/3' => '4:3', '1/1' => 'Square', '21/9' => 'Cinema', '9/16' => 'Vertical', '4/5' => '4:5'], 'default' => 'auto'],
+                    ['handle' => 'fit', 'type' => 'select', 'label' => 'Fit', 'options' => ['cover' => 'Cover', 'contain' => 'Contain'], 'default' => 'cover', 'display' => 'segmented', 'about' => 'How a video file fills a box of another shape.'],
+                    ['handle' => 'autoplay', 'type' => 'toggle', 'label' => 'Autoplay Muted', 'about' => 'Plays without sound, over and over. Not for visitors who ask for less motion.'],
+                    // Autoplay is always muted and looping, without controls: these are for a video that waits to be played.
+                    ['handle' => 'controls', 'type' => 'toggle', 'label' => 'Show Controls', 'default' => true, 'if' => ['autoplay' => [false, null]]],
+                    ['handle' => 'loop', 'type' => 'toggle', 'label' => 'Loop', 'if' => ['autoplay' => [false, null]]],
                 ],
                 'render' => Elements::video(...),
+                'example' => ['file' => ['/media/harbour-loop.mp4'], 'autoplay' => true, 'aspect' => '21/9', 'fit' => 'cover'],
             ],
             [
                 'name' => 'icon', 'title' => 'Icon', 'icon' => 'star', 'category' => 'media',

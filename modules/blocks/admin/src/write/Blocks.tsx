@@ -174,22 +174,55 @@ function Caption({ node }: { node: BlockNode }) {
   )
 }
 
-/** Video and embeds: a quiet card with where it comes from; the link is set in its settings. */
+/** The library's records for media ids (a URL is its own), for what write mode shows of a media block. */
+export function useMediaItems(value: unknown): { id: string; url: string; thumb?: string | null; name?: string; filename?: string }[] {
+  const values = (Array.isArray(value) ? value : value ? [value] : []).filter((v): v is string => typeof v === 'string' && v !== '')
+  const ids = values.filter((v) => !/^(https?:|\/)/.test(v))
+  const media = useAbility<{ items: { id: string; url: string; thumb?: string | null; name?: string; filename?: string }[] }>('media/get-many', { ids }, { enabled: ids.length > 0, staleTime: 300_000, retry: false })
+  const found = new Map((media.data?.items ?? []).map((item) => [item.id, item]))
+  return values.flatMap((v) => (/^(https?:|\/)/.test(v) ? [{ id: v, url: v, thumb: v, filename: v.split(/[/?#]/).filter(Boolean).pop() }] : found.has(v) ? [found.get(v)!] : []))
+}
+
+/** Video, audio, files and embeds: a quiet card with what it plays or where it comes from; the rest is in its settings. */
 export function MediaCard({ node, type }: { node: BlockNode; type?: BlockTypeDef }) {
   const { settings } = useWrite()
+  const [file] = useMediaItems(node.props.file)
   const url = String(node.props.url ?? '')
   const host = url ? url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0] : ''
+  const empty = ({ video: t('Add a video'), audio: t('Add audio'), file: t('Add a file') } as Record<string, string>)[node.type] ?? t('Add a link to embed')
+  const name = file ? file.name || file.filename : ''
+  const title = node.props.title || node.props.label || name || host || empty
+  const detail = (node.props.title || node.props.label) && (name || host)
   return (
     <figure className="cms-block-figure m-0 py-1">
       <Pressable onClick={() => settings(node.id)} className="flex h-14 w-full items-center gap-3 rounded-md bg-surface px-4 text-left hover:bg-hover">
         <Icon name={type?.icon ?? 'embed'} size={18} className="text-muted" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm text-text">{node.props.title || host || (node.type === 'video' ? t('Add a video link') : t('Add a link to embed'))}</span>
-          {host && node.props.title && <span className="block truncate text-xs text-faint">{host}</span>}
+          <span className="block truncate text-sm text-text">{title}</span>
+          {detail && <span className="block truncate text-xs text-faint">{detail}</span>}
         </span>
       </Pressable>
       {type?.inline?.includes('caption') && <Caption node={node} />}
     </figure>
+  )
+}
+
+/** A gallery: its pictures as small tiles, chosen in its settings. */
+export function GalleryCard({ node, type }: { node: BlockNode; type?: BlockTypeDef }) {
+  const { settings } = useWrite()
+  const items = useMediaItems(node.props.images)
+  return (
+    <div className="py-1">
+      <Pressable onClick={() => settings(node.id)} className="block w-full rounded-md bg-surface p-2 text-left hover:bg-hover">
+        {items.length ? (
+          <span className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+            {items.slice(0, 12).map((item) => item.thumb ? <img key={item.id} src={item.thumb} alt="" className="aspect-square w-full rounded-xs object-cover" /> : <span key={item.id} className="aspect-square rounded-xs bg-sunken" />)}
+          </span>
+        ) : (
+          <span className="flex h-10 items-center gap-3 px-2 text-sm text-faint"><Icon name={type?.icon ?? 'media'} size={18} />{t('Add images')}</span>
+        )}
+      </Pressable>
+    </div>
   )
 }
 

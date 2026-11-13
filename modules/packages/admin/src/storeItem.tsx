@@ -113,7 +113,11 @@ export async function switchPlugin(plugin: Installed, on: boolean): Promise<void
 
 /** Asks, then removes a plugin with its data and files. True once it is gone. */
 export async function uninstallPlugin(plugin: Installed): Promise<boolean> {
-  if (!await confirm({ title: t('Uninstall {name}?', { name: plugin.label }), description: t('Its database tables, settings and files are removed.'), confirm: t('Uninstall'), danger: true })) return false
+  // What stays: content that holds its blocks (the dry run asks the modules that know).
+  const keeps = await run<{ changes?: { keeps?: string[] }[] | null }>('packages/uninstall', { name: plugin.name, deleteFiles: true, dryRun: true })
+    .then((report) => report.changes?.[0]?.keeps ?? [])
+    .catch(() => [])
+  if (!await confirm({ title: t('Uninstall {name}?', { name: plugin.label }), description: [t('Its database tables, settings and files are removed.'), ...keeps].join(' '), confirm: t('Uninstall'), danger: true })) return false
   try {
     const done = await run<{ message: string }>('packages/uninstall', { name: plugin.name, deleteFiles: true })
     toast.success(done.message)

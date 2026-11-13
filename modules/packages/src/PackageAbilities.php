@@ -193,7 +193,10 @@ final class PackageAbilities
 
                 return [['action' => 'uninstall', 'type' => 'package', 'name' => $package->name, 'label' => $package->label, 'removes' => [
                     'data' => true, 'tables' => is_dir($package->path('database/migrations')), 'files' => $in['deleteFiles'], 'disablesFirst' => $this->cms->packages()->isEnabled($package->name),
-                ]]];
+                ],
+                    // What stays behind, in words for the person who confirms: content that uses it (the Blocks module says how much of it holds its blocks).
+                    'keeps' => array_values(array_filter((array) $this->cms->hooks()->filter('packages.uninstall.keeps', [], $package->name), 'is_string')),
+                ]];
             }),
             'handler' => fn (array $in) => $guard(function () use ($in, $removable) {
                 $removable($in);
