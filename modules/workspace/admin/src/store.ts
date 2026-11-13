@@ -305,20 +305,20 @@ export const panel = {
   },
 }
 
-/** The site kit the site is: a chat is of the kit it was had with, and lists only while the site is that kit. */
-const activeKit = (m: { site: { kits?: { handle: string; active: boolean }[] } }) => m.site.kits?.find((kit) => kit.active)?.handle ?? null
-let kit: string | null | undefined
-try { kit = activeKit(getManifest()) } catch { /* Read when it comes. */ }
+/** The site the site is: a chat is of the site it was had with, and lists only while the site is that site. */
+const activeSite = (m: { site: { sites?: { handle: string; active: boolean }[] } }) => m.site.sites?.find((site) => site.active)?.handle ?? null
+let site: string | null | undefined
+try { site = activeSite(getManifest()) } catch { /* Read when it comes. */ }
 
-// Another kit is another site: the thread on view and what was waiting to be sent in it were of the one left.
+// Another site is another site: the thread on view and what was waiting to be sent in it were of the one left.
 onManifest((m) => {
-  const now = activeKit(m)
-  if (kit !== undefined && now !== kit) {
+  const now = activeSite(m)
+  if (site !== undefined && now !== site) {
     letGo(false)
     panel.set({ thread: null, history: false, prompt: null, drafts: {}, options: {}, commands: {}, attached: {}, skills: {}, fresh: state.fresh + 1 })
     if (threadAt(here()) !== undefined) visit(null, true)
   }
-  kit = now
+  site = now
 })
 
 export function usePanel(): State {

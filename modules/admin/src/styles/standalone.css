@@ -161,14 +161,14 @@ button.primary:disabled:not([aria-busy]) { opacity: 1; background: var(--cms-fil
 .options small { display: block; color: var(--cms-muted); font-size: var(--text-xs); line-height: var(--text-xs--line-height); }
 .badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: var(--radius-xs); background: var(--cms-active); color: var(--cms-muted); font-size: var(--text-2xs); font-weight: 500; vertical-align: 1px; }
 
-/* What a site starts from: one column of kits, each its picture over its name, the chosen one edged in ink. */
-.kits { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.kits label { display: block; margin: 0; overflow: hidden; border: 1px solid var(--cms-border-strong); border-radius: var(--radius-lg); background: var(--cms-bg); font-weight: 400; cursor: pointer; transition: border-color var(--cms-duration-base) ease-out, box-shadow var(--cms-duration-base) ease-out; }
-.kits label:hover { border-color: var(--cms-border-hover); }
-.kits label:has(:checked) { border-color: var(--cms-ink); box-shadow: 0 0 0 1px var(--cms-ink); }
-.kits img, .kits .blank { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-bottom: 1px solid var(--cms-border); background: var(--cms-sunken); }
-.kits .name { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 12px; color: var(--cms-ink); font-weight: 500; }
-.kits .name input { margin: 0; }
+/* What a site starts from: one column of sites, each its picture over its name, the chosen one edged in ink. */
+.sites { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.sites label { display: block; margin: 0; overflow: hidden; border: 1px solid var(--cms-border-strong); border-radius: var(--radius-lg); background: var(--cms-bg); font-weight: 400; cursor: pointer; transition: border-color var(--cms-duration-base) ease-out, box-shadow var(--cms-duration-base) ease-out; }
+.sites label:hover { border-color: var(--cms-border-hover); }
+.sites label:has(:checked) { border-color: var(--cms-ink); box-shadow: 0 0 0 1px var(--cms-ink); }
+.sites img, .sites .blank { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-bottom: 1px solid var(--cms-border); background: var(--cms-sunken); }
+.sites .name { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 12px; color: var(--cms-ink); font-weight: 500; }
+.sites .name input { margin: 0; }
 
 /* Something under way, as the kit's `Meter` draws it: ink on a pressed track. (The accent is for going live.) */
 .track { height: 6px; border-radius: 999px; background: var(--cms-active); overflow: hidden; }

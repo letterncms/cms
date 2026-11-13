@@ -45,7 +45,7 @@ final class ZipInspector
             }
 
             $this->manifest($composer, $expected, $coreVersion);
-            ($composer['type'] ?? null) === PackageManifest::KIT ? $this->kitFiles($zip, $top) : $this->parseAll($zip);
+            ($composer['type'] ?? null) === PackageManifest::SITE ? $this->siteFiles($zip, $top) : $this->parseAll($zip);
         } finally {
             $zip->close();
         }
@@ -123,7 +123,7 @@ final class ZipInspector
             throw new RuntimeException(__('This zip holds :found, not :expected.', ['found' => $name ?: '?', 'expected' => $expected]));
         }
 
-        if (! in_array($composer['type'] ?? null, [PackageManifest::PLUGIN, PackageManifest::KIT], true)) {
+        if (! in_array($composer['type'] ?? null, [PackageManifest::PLUGIN, PackageManifest::SITE], true)) {
             throw new RuntimeException(__('This zip is not a plugin for this CMS.'));
         }
 
@@ -144,18 +144,18 @@ final class ZipInspector
         }
     }
 
-    /** A kit is data: nothing in it may be a file a server runs, and it says what it is in kit.json. */
-    private function kitFiles(ZipArchive $zip, string $top): void
+    /** A site is data: nothing in it may be a file a server runs, and it says what it is in site.json. */
+    private function siteFiles(ZipArchive $zip, string $top): void
     {
-        if ($zip->locateName($top.'/kit.json') === false) {
-            throw new RuntimeException(__('This zip is a kit without a kit.json.'));
+        if ($zip->locateName($top.'/site.json') === false) {
+            throw new RuntimeException(__('This zip is a site without a site.json.'));
         }
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = (string) $zip->getNameIndex($i);
 
             if (preg_match('/\.(php\d?|phtml|phar|pl|py|cgi|sh|asp|aspx|jsp|htaccess)(\.|\/|$)/i', $name)) {
-                throw new RuntimeException(__('A kit holds no code a server runs: :name', ['name' => $name]));
+                throw new RuntimeException(__('A site holds no code a server runs: :name', ['name' => $name]));
             }
         }
     }

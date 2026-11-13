@@ -36,8 +36,8 @@ class PackageJobs
 
     private const int KEEP_BACKUPS = 7 * 86_400;
 
-    /** What letterncms/composer-plugin leaves in a kit's folder it installed (Installer::MARKER). */
-    private const string COMPOSER_KIT = '.composer-kit';
+    /** What letterncms/composer-plugin leaves in a site's folder it installed (Installer::MARKER). */
+    private const string COMPOSER_SITE = '.composer-site';
 
     /** @var array<string, callable(array<string, mixed>): void> Verifiers by name, registered by whoever starts jobs */
     private array $verifiers = [];
@@ -195,7 +195,7 @@ class PackageJobs
 
     /**
      * Where a package goes on this site: the same folder Composer puts it in (see letterncms/composer-plugin),
-     * plugins/ for a plugin and kits/ for a site kit.
+     * plugins/ for a plugin and sites/ for a site.
      */
     public function targetFor(string $name, string $type = PackageManifest::PLUGIN): string
     {
@@ -207,7 +207,7 @@ class PackageJobs
 
         [$vendor, $short] = explode('/', $name, 2);
 
-        return ($type === PackageManifest::KIT ? $this->app->sitePath('kits') : $this->packagesDir()).'/'.($vendor === PackageManifest::VENDOR ? $short : "{$vendor}-{$short}");
+        return ($type === PackageManifest::SITE ? $this->app->sitePath('sites') : $this->packagesDir()).'/'.($vendor === PackageManifest::VENDOR ? $short : "{$vendor}-{$short}");
     }
 
     private function packagesDir(): string
@@ -298,18 +298,18 @@ class PackageJobs
 
         $zip->close();
 
-        // A kit is read as the CMS reads any kit before it is kept: every file one its layout names, of a kind
+        // A site is read as the CMS reads any site before it is kept: every file one its layout names, of a kind
         // and a size a site takes. One that isn't stays in the stage, which goes.
-        if (($job['type'] ?? null) === PackageManifest::KIT) {
+        if (($job['type'] ?? null) === PackageManifest::SITE) {
             try {
-                $this->cms->hooks()->dispatch('packages.kit.staged', $stage.'/'.$job['top'], basename($target));
+                $this->cms->hooks()->dispatch('packages.site.staged', $stage.'/'.$job['top'], basename($target));
             } catch (Throwable $e) {
                 Files::deleteDirectory($stage);
                 throw new RuntimeException($e->getMessage(), 0, $e);
             }
 
-            // The tree Composer installs, so Composer may take it over: letterncms/composer-plugin only replaces a kit marked as its own.
-            Files::put($stage.'/'.$job['top'].'/'.self::COMPOSER_KIT, "Composer put this kit here. composer remove takes it away.\n");
+            // The tree Composer installs, so Composer may take it over: letterncms/composer-plugin only replaces a site marked as its own.
+            Files::put($stage.'/'.$job['top'].'/'.self::COMPOSER_SITE, "Composer put this site here. composer remove takes it away.\n");
         }
 
         // Hosts running PHP as the user refuse group-writable scripts.
@@ -382,8 +382,8 @@ class PackageJobs
 
     private function runMigrate(array $job): string
     {
-        // A kit is files to copy from, later: nothing to switch on or migrate.
-        if (($job['type'] ?? null) === PackageManifest::KIT) {
+        // A site is files to copy from, later: nothing to switch on or migrate.
+        if (($job['type'] ?? null) === PackageManifest::SITE) {
             return 'health';
         }
 
@@ -408,7 +408,7 @@ class PackageJobs
 
     private function runHealth(array $job): string
     {
-        if (($job['type'] ?? null) === PackageManifest::KIT) {
+        if (($job['type'] ?? null) === PackageManifest::SITE) {
             return 'done';
         }
 

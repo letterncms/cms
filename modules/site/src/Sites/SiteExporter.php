@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cms\Modules\Site\Kits;
+namespace Cms\Modules\Site\Sites;
 
 use Carbon\CarbonImmutable;
 use Cms\Abilities\AbilityException;
@@ -17,27 +17,27 @@ use Cms\Support\Yaml;
 use Throwable;
 
 /**
- * Turns this site into a kit: what it holds and how it looks, in the layout a kit has (Kit). Only content and
+ * Turns this site into a site: what it holds and how it looks, in the layout a site has (Site). Only content and
  * design travel: the collections and their published entries (in the file layout, whatever driver they use;
  * drafts only when asked for), the templates and components, but no other collection a plugin owns, the
  * globals, the menus, the design folder, the media something names, what plugins keep beside the
- * content (`kits.content`: a folder, or a `<name>.yaml` file), and the settings a kit may carry (`kits.settings`). Never accounts, tokens,
+ * content (`sites.content`: a folder, or a `<name>.yaml` file), and the settings a site may carry (`sites.settings`). Never accounts, tokens,
  * secrets, submissions, analytics, the audit log, licences or the rest of config/.
  */
-final class KitExporter
+final class SiteExporter
 {
-    /** What a record stamps on itself when it is saved: the kit's copy is the site's, not a moment of it. */
+    /** What a record stamps on itself when it is saved: the site's copy is the site's, not a moment of it. */
     private const array STAMPS = ['published_at' => 1, 'updated_at' => 1, 'created_at' => 1];
 
     public function __construct(
         private readonly Cms $cms,
         private readonly FileDriver $driver,
         private readonly Design $design,
-        private readonly KitFiles $files,
+        private readonly SiteFiles $files,
     ) {}
 
     /**
-     * Every file the kit would hold, by its path inside it, without writing one.
+     * Every file the site would hold, by its path inside it, without writing one.
      *
      * @param  array{handle: string, name: string, description?: ?string, version?: ?string, license?: ?string}  $about
      * @return array<string, string> path => contents
@@ -70,7 +70,7 @@ final class KitExporter
             $out["content/design/{$relative}"] = (string) file_get_contents($this->design->path($relative));
         }
 
-        foreach ((array) $this->cms->hooks()->filter('kits.content', []) as $folder) {
+        foreach ((array) $this->cms->hooks()->filter('sites.content', []) as $folder) {
             if (is_string($folder) && Files::isHandle($folder)) {
                 foreach ($this->tree(content_path($folder)) as $relative) {
                     preg_match('/\.(yaml|json|md)$/', $relative) && $out["content/{$folder}/{$relative}"] = (string) file_get_contents(content_path("{$folder}/{$relative}"));
@@ -103,29 +103,29 @@ final class KitExporter
             $out["public/{$path}"] = (string) file_get_contents(public_path($path));
         }
 
-        // A picture to choose the kit by: the one given, as previews/home.<type>.
+        // A picture to choose the site by: the one given, as previews/home.<type>.
         if (($preview = $this->preview($about)) !== null) {
             $out['previews/home.'.$preview[0]] = $preview[1];
         }
 
         ksort($out);
 
-        return ['kit.json' => json_encode($this->manifest($about, $preview !== null ? 'previews/home.'.$preview[0] : null), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n", ...$out];
+        return ['site.json' => json_encode($this->manifest($about, $preview !== null ? 'previews/home.'.$preview[0] : null), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n", ...$out];
     }
 
     /**
-     * Write the kit into a folder that is empty or not there yet, then read it back as a kit would be read
-     * from anywhere else: what this site holds that a kit may not carry refuses the export.
+     * Write the site into a folder that is empty or not there yet, then read it back as a site would be read
+     * from anywhere else: what this site holds that a site may not carry refuses the export.
      *
      * @param  array{handle: string, name: string, description?: ?string, version?: ?string, license?: ?string}  $about
-     * @return array{kit: Kit, files: int, bytes: int}
+     * @return array{site: Site, files: int, bytes: int}
      */
     public function export(string $folder, array $about, bool $replace = false, bool $drafts = false): array
     {
         $folder = rtrim($folder, '/');
 
         if (basename($folder) !== $about['handle']) {
-            throw AbilityException::invalid(__('A kit’s folder is named after its handle: :handle.', ['handle' => $about['handle']]));
+            throw AbilityException::invalid(__('A site’s folder is named after its handle: :handle.', ['handle' => $about['handle']]));
         }
 
         if (is_link($folder) || (is_dir($folder) && ! $replace && array_diff(scandir($folder) ?: [], ['.', '..']) !== [])) {
@@ -140,18 +140,18 @@ final class KitExporter
                 Files::put(Files::within($stage, $path), $contents);
             }
 
-            $this->files->read(Kit::load($stage, 'site', $about['handle']));
+            $this->files->read(Site::load($stage, 'site', $about['handle']));
             is_dir($folder) && Files::deleteDirectory($folder);
             Files::ensureDir(dirname($folder));
 
             if (! @rename($stage, $folder)) {
-                throw new \RuntimeException(__('Could not put the kit in :folder.', ['folder' => $folder]));
+                throw new \RuntimeException(__('Could not put the site in :folder.', ['folder' => $folder]));
             }
         } finally {
             is_dir($stage) && Files::deleteDirectory($stage);
         }
 
-        return ['kit' => Kit::load($folder, 'site'), 'files' => count($files), 'bytes' => array_sum(array_map('strlen', $files))];
+        return ['site' => Site::load($folder, 'site'), 'files' => count($files), 'bytes' => array_sum(array_map('strlen', $files))];
     }
 
     /** @return array<string, Collection> the collections whose definitions or entries travel */
@@ -205,7 +205,7 @@ final class KitExporter
         return $out;
     }
 
-    /** @return array<string, array<string, mixed>> namespace => the values of the settings a kit carries */
+    /** @return array<string, array<string, mixed>> namespace => the values of the settings a site carries */
     private function settings(): array
     {
         $out = [];
@@ -221,15 +221,15 @@ final class KitExporter
     }
 
     /**
-     * The settings a kit may carry, by namespace: what belongs to how a site looks and reads, never what is
-     * about the place it runs (its name, address, mail, keys). A plugin adds its own with `kits.settings`;
+     * The settings a site may carry, by namespace: what belongs to how a site looks and reads, never what is
+     * about the place it runs (its name, address, mail, keys). A plugin adds its own with `sites.settings`;
      * a field that holds a secret is never one of them, whatever a filter says.
      *
      * @return array<string, list<string>>
      */
     public static function carried(Cms $cms): array
     {
-        $carried = (array) $cms->hooks()->filter('kits.settings', ['site' => ['description', 'favicon', 'search_index']]);
+        $carried = (array) $cms->hooks()->filter('sites.settings', ['site' => ['description', 'favicon', 'search_index']]);
         $out = [];
 
         foreach ($carried as $namespace => $keys) {
@@ -280,20 +280,20 @@ final class KitExporter
         $manifest = array_filter([
             'handle' => $about['handle'],
             'name' => $about['name'],
-            // Left out, the kit says what the site says of itself.
+            // Left out, the site says what the site says of itself.
             'description' => trim((string) ($about['description'] ?? '')) !== '' ? $about['description'] : (mb_substr(trim((string) $this->cms->setting('site', 'description')), 0, 400) ?: null),
             'previews' => $preview !== null ? [$preview] : null,
             'version' => $about['version'] ?? '1.0.0',
             'license' => $about['license'] ?? null,
-            // What it was made on, and every later release of that line: a kit is content, and content keeps.
+            // What it was made on, and every later release of that line: a site is content, and content keeps.
             'cms' => '>='.$major.'.'.$minor,
             'plugins' => $plugins,
             'languages' => $this->cms->locales(),
             'exported' => CarbonImmutable::now()->toIso8601String(),
         ], static fn ($v) => $v !== null && $v !== []);
 
-        if (($problem = Kit::problem($about['handle'], $manifest)) !== null) {
-            throw AbilityException::invalid(__('The kit can’t be described that way: :problem.', ['problem' => $problem]));
+        if (($problem = Site::problem($about['handle'], $manifest)) !== null) {
+            throw AbilityException::invalid(__('The site can’t be described that way: :problem.', ['problem' => $problem]));
         }
 
         return $manifest;

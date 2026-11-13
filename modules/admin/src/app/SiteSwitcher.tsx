@@ -1,6 +1,6 @@
 import { navigate, t, useManifest } from '@letterncms/sdk'
 import { useState } from 'react'
-import { Icon, Menu, Pressable, Spinner, Tooltip, cn, switchKit } from '../ui'
+import { Icon, Menu, Pressable, Spinner, Tooltip, cn, switchSite } from '../ui'
 import { BrandMark } from './Brand'
 
 /** The site's own mark: its favicon, and the product's until it has one (or the one it has doesn't load). */
@@ -15,16 +15,16 @@ function SiteMark({ size = 22 }: { size?: number }) {
 
 /**
  * The site at the top of the sidebar: its name opens the site, the arrow beside it opens the way around: the dashboard, the
- * site's kits to switch between (each keeps what you did to it), and the screen that manages them.
+ * site's sites to switch between (each keeps what you did to it), and the screen that manages them.
  */
 export function SiteSwitcher() {
   const { site } = useManifest()
-  const kits = site.kits ?? []
+  const sites = site.sites ?? []
   const [busy, setBusy] = useState(false)
 
-  const choose = async (kit: { handle: string; name: string }) => {
+  const choose = async (site: { handle: string; name: string }) => {
     setBusy(true)
-    await switchKit(kit)
+    await switchSite(site)
     setBusy(false)
   }
 
@@ -48,11 +48,11 @@ export function SiteSwitcher() {
         items={[
           { label: t('Dashboard'), icon: 'home', onSelect: () => navigate('/') },
           { label: t('Open Site'), icon: 'external', onSelect: () => window.open(site.url || '/', '_blank', 'noopener') },
-          kits.length > 0 && { separator: true, label: '' },
-          kits.length > 0 && { label: t('Site Kits'), heading: true },
-          ...kits.map((kit) => ({ label: kit.name, checked: kit.active, onSelect: () => (kit.active ? undefined : void choose(kit)) })),
-          kits.length > 0 && { separator: true, label: '' },
-          kits.length > 0 && { label: t('Manage Kits'), icon: 'box', onSelect: () => navigate('/kits') },
+          sites.length > 0 && { separator: true, label: '' },
+          sites.length > 0 && { label: t('Sites'), heading: true },
+          ...sites.map((site) => ({ label: site.name, checked: site.active, onSelect: () => (site.active ? undefined : void choose(site)) })),
+          sites.length > 0 && { separator: true, label: '' },
+          sites.length > 0 && { label: t('Manage Sites'), icon: 'box', onSelect: () => navigate('/sites') },
         ]}
       />
     </div>

@@ -343,14 +343,14 @@ final class WorkspaceTest extends TestCase
         $this->assertSame(2, Thread::query()->count());
     }
 
-    public function test_chats_are_of_the_kit_the_site_was(): void
+    public function test_chats_are_of_the_site_the_site_was(): void
     {
         $owner = $this->admin();
         $this->actingAs($owner);
         $here = Thread::query()->create(['user_id' => $owner->id, 'title' => 'Here']);
-        $there = Thread::query()->create(['user_id' => $owner->id, 'title' => 'There', 'kit' => 'elsewhere']);
+        $there = Thread::query()->create(['user_id' => $owner->id, 'title' => 'There', 'site' => 'elsewhere']);
 
-        $this->assertSame(Installer::kit(), $here->kit);
+        $this->assertSame(Installer::site(), $here->site);
         $this->assertSame([$here->id], array_column($this->postJson('/api/admin/abilities/threads/list')->json('data'), 'id'));
         $this->postJson('/api/admin/abilities/threads/get', ['id' => $there->id])->assertNotFound();
         $this->postJson('/api/admin/workspace/turn', ['thread' => $there->id, 'search' => 'menu'])->assertNotFound();

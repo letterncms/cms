@@ -19,7 +19,7 @@ return new class extends Migration
         });
 
         // The chats so far were had with the site as it is now.
-        DB::table('workspace_threads')->update(['kit' => Installer::kit()]);
+        DB::table('workspace_threads')->update(['kit' => Installer::site()]);
     }
 
     public function down(): void

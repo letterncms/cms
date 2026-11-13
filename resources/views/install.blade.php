@@ -42,24 +42,24 @@
       <div class="field"><label for="site_url">{{ $text['siteUrl'] }}</label><input id="site_url" name="site_url" type="url" required value="{{ $url }}"></div>
     </section>
 
-    {{-- What the site starts as: a picture and a name per kit, the one a new site starts from chosen (it is the store's: its card is here before the store answers). --}}
+    {{-- What the site starts as: a picture and a name per site, the one a new site starts from chosen (it is the store's: its card is here before the store answers). --}}
     <section>
-      <h2 id="kits-heading">{{ $text['kits'] }}</h2>
-      <div role="radiogroup" aria-labelledby="kits-heading"><ul class="kits" id="kits">
-        @foreach ($kits as $kit)
+      <h2 id="sites-heading">{{ $text['sites'] }}</h2>
+      <div role="radiogroup" aria-labelledby="sites-heading"><ul class="sites" id="sites">
+        @foreach ($sites as $sitePackage)
           <li><label>
-            @if ($kit['preview'])<img src="{{ $kit['preview'] }}" alt="" width="480" height="300" loading="lazy">@else<span class="blank" aria-hidden="true"></span>@endif
-            <span class="name"><input type="radio" name="kit" value="{{ $kit['handle'] }}" @checked($kit['handle'] === $defaultKit)>{{ $kit['name'] }}</span>
+            @if ($sitePackage['preview'])<img src="{{ $sitePackage['preview'] }}" alt="" width="480" height="300" loading="lazy">@else<span class="blank" aria-hidden="true"></span>@endif
+            <span class="name"><input type="radio" name="site" value="{{ $sitePackage['handle'] }}" @checked($sitePackage['handle'] === $defaultSite)>{{ $sitePackage['name'] }}</span>
           </label></li>
         @endforeach
-        @unless (collect($kits)->contains('handle', $defaultKit))
+        @unless (collect($sites)->contains('handle', $defaultSite))
           <li><label>
             <span class="blank" aria-hidden="true"></span>
-            <span class="name"><input type="radio" name="kit" value="{{ $defaultKit }}" checked>{{ $defaultName }}</span>
+            <span class="name"><input type="radio" name="site" value="{{ $defaultSite }}" checked>{{ $defaultName }}</span>
           </label></li>
         @endunless
       </ul></div>
-      <input type="hidden" name="kit_from_store" id="kit_from_store" value="0">
+      <input type="hidden" name="site_from_store" id="site_from_store" value="0">
     </section>
 
     <section>
@@ -139,33 +139,33 @@
   };
   driver.addEventListener('change', sync); sync();
 
-  // The store's kits join the list when the store answers; a slow or absent store leaves the ones here.
-  const kitList = document.getElementById('kits');
-  const fromStore = document.getElementById('kit_from_store');
-  const packages = { @json($defaultKit): @json($defaultPackage) };
-  fetch('/install/kits', { headers: { 'Accept': 'application/json' } }).then((res) => res.ok ? res.json() : { kits: [] }).then(({ kits = [] }) => {
-    for (const kit of kits) {
-      // One card per kit: the one this site has already stands for any other copy.
-      const here = [...kitList.querySelectorAll('input[name=kit]')].find((input) => input.value === kit.handle);
+  // The store's sites join the list when the store answers; a slow or absent store leaves the ones here.
+  const siteList = document.getElementById('sites');
+  const fromStore = document.getElementById('site_from_store');
+  const packages = { @json($defaultSite): @json($defaultPackage) };
+  fetch('/install/sites', { headers: { 'Accept': 'application/json' } }).then((res) => res.ok ? res.json() : { sites: [] }).then(({ sites = [] }) => {
+    for (const site of sites) {
+      // One card per site: the one this site has already stands for any other copy.
+      const here = [...siteList.querySelectorAll('input[name=site]')].find((input) => input.value === site.handle);
       if (here) {
         // Its card was drawn without a picture, before the store answered.
         const card = here.closest('label');
         const blank = card.querySelector('.blank');
-        if (blank && kit.preview) blank.replaceWith(Object.assign(document.createElement('img'), { src: kit.preview, alt: '', width: 480, height: 300, loading: 'lazy' }));
+        if (blank && site.preview) blank.replaceWith(Object.assign(document.createElement('img'), { src: site.preview, alt: '', width: 480, height: 300, loading: 'lazy' }));
         continue;
       }
-      packages[kit.handle] = kit.package;
+      packages[site.handle] = site.package;
       const row = document.createElement('li');
       const label = document.createElement('label');
-      const picture = kit.preview ? Object.assign(document.createElement('img'), { src: kit.preview, alt: '', width: 480, height: 300, loading: 'lazy' }) : Object.assign(document.createElement('span'), { className: 'blank' });
+      const picture = site.preview ? Object.assign(document.createElement('img'), { src: site.preview, alt: '', width: 480, height: 300, loading: 'lazy' }) : Object.assign(document.createElement('span'), { className: 'blank' });
       const name = Object.assign(document.createElement('span'), { className: 'name' });
-      name.append(Object.assign(document.createElement('input'), { type: 'radio', name: 'kit', value: kit.handle }), kit.title || kit.name);
+      name.append(Object.assign(document.createElement('input'), { type: 'radio', name: 'site', value: site.handle }), site.title || site.name);
       label.append(picture, name);
       row.append(label);
-      kitList.append(row);
+      siteList.append(row);
     }
   }).catch(() => {});
-  kitList.addEventListener('change', (event) => { fromStore.value = packages[event.target.value] ? '1' : '0'; });
+  siteList.addEventListener('change', (event) => { fromStore.value = packages[event.target.value] ? '1' : '0'; });
 
   // A password can be looked at while it is typed: it is asked for once.
   for (const button of document.querySelectorAll('[data-reveal]')) {
@@ -220,7 +220,7 @@
         submit.disabled = false; submit.removeAttribute('aria-busy'); submit.textContent = text.install;
         return;
       }
-      session.kitPackage = packages[body.kit] || null;
+      session.sitePackage = packages[body.site] || null;
       await choose(json);
     } catch (e) {
       error.textContent = e.message || text.failed;
@@ -255,7 +255,7 @@
   const pickNote = document.getElementById('pick-note');
 
   async function choose(json) {
-    session = { ...json, kitPackage: session.kitPackage };
+    session = { ...json, sitePackage: session.sitePackage };
     show('pick');
     const list = document.getElementById('packages');
     // Nothing to choose: the one button left is the way on, and says where it leads.
@@ -268,7 +268,7 @@
     };
     if (session.composer) return onward(text.composerSite);
     const catalog = await ability('packages/catalog', { refresh: true }).catch(() => ({ items: [] }));
-    const items = (catalog.items || []).filter((item) => !item.installed && item.type !== 'kit');
+    const items = (catalog.items || []).filter((item) => !item.installed && item.type !== 'site');
     if (!items.length) return onward(text.noStore);
     const rank = (item) => (session.recommended.includes(item.package) ? 0 : 1);
     items.sort((a, b) => rank(a) - rank(b) || session.recommended.indexOf(a.package) - session.recommended.indexOf(b.package) || a.title.localeCompare(b.title));
@@ -286,8 +286,8 @@
   }
 
   document.getElementById('skip').addEventListener('click', () => finish());
-  // The kit chosen could not be fetched: the site starts without one, because the person said so.
-  document.getElementById('minimal').addEventListener('click', () => { session.kitPackage = null; finish(); });
+  // The site chosen could not be fetched: the site starts without one, because the person said so.
+  document.getElementById('minimal').addEventListener('click', () => { session.sitePackage = null; finish(); });
   document.getElementById('add').addEventListener('click', async () => {
     const chosen = [...document.querySelectorAll('#packages input:checked')].map((box) => box.value);
     pickError.textContent = '';
@@ -316,7 +316,7 @@
     }
   });
 
-  // A kit from the store comes the way a plugin does, then the last step starts the site from it.
+  // A site from the store comes the way a plugin does, then the last step starts the site from it.
   async function install(step) {
     let job = await ability('packages/install', { package: step.package, version: step.version });
     while (job.state === 'running') job = await ability('packages/job-step', { id: job.id });
@@ -325,16 +325,16 @@
 
   async function finish() {
     show('working');
-    if (session.kitPackage) {
+    if (session.sitePackage) {
       try {
-        const [step] = (await ability('packages/plan-install', { package: session.kitPackage })).steps.slice(-1);
-        status.textContent = text.addingKit.replace(':name', step.title);
+        const [step] = (await ability('packages/plan-install', { package: session.sitePackage })).steps.slice(-1);
+        status.textContent = text.addingSite.replace(':name', step.title);
         bar.style.width = '90%';
         await install(step);
       } catch (e) {
-        // Said where it can be acted on: try again, or start without a kit.
+        // Said where it can be acted on: try again, or start without a site.
         show('pick');
-        pickError.textContent = text.kitFailed + ' ' + (e.message || '');
+        pickError.textContent = text.siteFailed + ' ' + (e.message || '');
         document.getElementById('minimal').classList.remove('hidden');
         return;
       }

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking.** Site Kits are now Sites. Use the Sites screen, the `site:*` commands and the `sites/*` abilities. Site packages now use `cms-site` and `site.json` in `sites/`.
+
 ## 0.34.0 (2026-11-13)
 
 ### Removed

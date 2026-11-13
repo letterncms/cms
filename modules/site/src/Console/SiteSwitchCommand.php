@@ -10,15 +10,15 @@ use Cms\Cms;
 use Cms\Console\Command;
 use Cms\Users\User;
 
-/** Make this site another kit, keeping what it was. kits/switch for whoever is at the server. */
-final class KitSwitchCommand extends Command
+/** Make this site another site, keeping what it was. sites/switch for whoever is at the server. */
+final class SiteSwitchCommand extends Command
 {
-    protected $signature = 'kit:switch
-        {handle : The kit: kit:list has them}
-        {--fresh : The kit as it came, not as this site left it}
+    protected $signature = 'site:switch
+        {handle : The site: site:list has them}
+        {--fresh : The site as it came, not as this site left it}
         {--as= : The super administrator it happens as (the first one when left out)}';
 
-    protected $description = 'Switch this site to another site kit, saving what it is now';
+    protected $description = 'Switch this site to another site, saving what it is now';
 
     public function handle(Cms $cms): int
     {
@@ -31,14 +31,14 @@ final class KitSwitchCommand extends Command
         }
 
         try {
-            $result = $cms->abilities()->execute('kits/switch', array_filter(['handle' => (string) $this->argument('handle'), 'fresh' => (bool) $this->option('fresh') ?: null]), $user !== null ? AbilityContext::forUser($user, 'cli') : AbilityContext::system('cli'));
+            $result = $cms->abilities()->execute('sites/switch', array_filter(['handle' => (string) $this->argument('handle'), 'fresh' => (bool) $this->option('fresh') ?: null]), $user !== null ? AbilityContext::forUser($user, 'cli') : AbilityContext::system('cli'));
         } catch (AbilityException $e) {
             return $this->failure($e);
         }
 
         $this->components->info($result['switched']
-            ? __('This site is :kit now.', ['kit' => $result['kit']['name']]).(isset($result['saved']) ? ' '.__(':name is saved as it was.', ['name' => $result['saved']['name']]) : '')
-            : __('This site is :kit already.', ['kit' => $result['kit']['name']]));
+            ? __('This site is :site now.', ['site' => $result['site']['name']]).(isset($result['saved']) ? ' '.__(':name is saved as it was.', ['name' => $result['saved']['name']]) : '')
+            : __('This site is :site already.', ['site' => $result['site']['name']]));
 
         return $this->done($result);
     }

@@ -92,7 +92,7 @@ final class PackagesTest extends TestCase
 
     public function test_a_plugin_that_arrives_on_is_installed_without_waiting_for_an_admin(): void
     {
-        // As Composer or a kit leaves it on a site that runs every plugin in plugins/: on, never installed.
+        // As Composer or a site leaves it on a site that runs every plugin in plugins/: on, never installed.
         \Illuminate\Support\Facades\DB::table('packages')->where('name', 'acme/base')->delete();
         \Illuminate\Support\Facades\DB::table('migrations')->where('migration', 'like', '%acme_things')->delete();
         Schema::drop('acme_things');

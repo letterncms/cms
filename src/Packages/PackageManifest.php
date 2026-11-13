@@ -13,8 +13,8 @@ final readonly class PackageManifest
 {
     public const string PLUGIN = 'cms-plugin';
 
-    /** A site kit: a complete site to start from, copied into a site when it is applied. It never runs. */
-    public const string KIT = 'cms-kit';
+    /** A site: a complete site to start from, copied into a site when it is applied. It never runs. */
+    public const string SITE = 'cms-site';
 
     /** The Composer vendor of everything first-party. */
     public const string VENDOR = 'letterncms';

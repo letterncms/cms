@@ -13,8 +13,8 @@ use Cms\Http\Csp;
 use Cms\Http\Middleware\SiteCookies;
 use Cms\Install\Installer;
 use Cms\Modules\Packages\StoreClient;
-use Cms\Modules\Site\Kits\Kit;
-use Cms\Modules\Site\Kits\Kits;
+use Cms\Modules\Site\Sites\Site;
+use Cms\Modules\Site\Sites\Sites;
 use Cms\Support\Files;
 use Cms\Update\Layout;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,10 +36,10 @@ final class InstallController
         return response()->view('cms::install', [
             'locale' => $locale,
             'text' => self::text(),
-            'kits' => array_values(array_map(static fn (Kit $kit) => ['handle' => $kit->handle, 'name' => $kit->name(), 'preview' => $kit->toArray()['previews'][0] ?? null], app(Kits::class)->all())),
-            'defaultKit' => Kits::DEFAULT,
+            'sites' => array_values(array_map(static fn (Site $sitePackage) => ['handle' => $sitePackage->handle, 'name' => $sitePackage->name(), 'preview' => $sitePackage->toArray()['previews'][0] ?? null], app(Sites::class)->all())),
+            'defaultSite' => Sites::DEFAULT,
             'defaultName' => __('Minimal'),
-            'defaultPackage' => \Cms\Packages\PackageManifest::VENDOR.'/'.Kits::DEFAULT,
+            'defaultPackage' => \Cms\Packages\PackageManifest::VENDOR.'/'.Sites::DEFAULT,
             'requirements' => $installer->requirements(),
             'nonce' => $nonce,
             'drivers' => \PDO::getAvailableDrivers(),
@@ -79,53 +79,53 @@ final class InstallController
             'xsrfCookie' => SiteCookies::xsrf($request),
             'composer' => app(Layout::class)->managed() === 'composer',
             'recommended' => Installer::RECOMMENDED,
-            'kit' => $input['kit'] ?? Kits::DEFAULT,
+            'site' => $input['site'] ?? Sites::DEFAULT,
         ]);
     }
 
     /**
-     * The site kits the store has, for a setup that can fetch them (not a site Composer manages: it says
-     * `composer require` for a kit, as for a plugin). Free ones only, with their first picture. Asked by the
+     * The sites the store has, for a setup that can fetch them (not a site Composer manages: it says
+     * `composer require` for a site, as for a plugin). Free ones only, with their first picture. Asked by the
      * page once it is open, so a store that is slow or down never holds up the installer.
      */
-    public function kits(): JsonResponse
+    public function sites(): JsonResponse
     {
         if (Installer::installed() || app(Layout::class)->managed() === 'composer') {
-            return response()->json(['kits' => []]);
+            return response()->json(['sites' => []]);
         }
 
         try {
             $catalog = app(StoreClient::class)->catalog(refresh: true);
         } catch (\Throwable) {
-            return response()->json(['kits' => []]);
+            return response()->json(['sites' => []]);
         }
 
-        return response()->json(['kits' => self::storeKits($catalog['items'], array_keys(app(Kits::class)->all()))]);
+        return response()->json(['sites' => self::storeSites($catalog['items'], array_keys(app(Sites::class)->all()))]);
     }
 
     /**
-     * The store's free kits a setup may fetch, once each: a kit this site already has (put in kits/ by
+     * The store's free sites a setup may fetch, once each: a site this site already has (put in sites/ by
      * Composer or by hand) is the one offered, and the store's copy of it is left out.
      *
      * @param  list<array<string, mixed>>  $items  the catalog as StoreClient describes it
-     * @param  list<string>  $here  the handles of the kits this site has
+     * @param  list<string>  $here  the handles of the sites this site has
      * @return list<array{handle: string, name: string, package: string, preview: ?string}>
      */
-    public static function storeKits(array $items, array $here): array
+    public static function storeSites(array $items, array $here): array
     {
-        $kits = [];
+        $sites = [];
 
         foreach ($items as $item) {
             [$vendor, $name] = explode('/', (string) ($item['package'] ?? ''), 2) + [1 => ''];
             $handle = $vendor === \Cms\Packages\PackageManifest::VENDOR ? $name : "{$vendor}-{$name}";
 
-            if (($item['type'] ?? null) === 'kit' && ($item['action'] ?? null) === 'install'
-                && Files::isHandle($handle) && ! in_array($handle, $here, true) && ! isset($kits[$handle])) {
-                $kits[$handle] = ['handle' => $handle, 'name' => (string) $item['title'], 'package' => (string) $item['package'], 'preview' => $item['preview'] ?? $item['icon'] ?? null];
+            if (($item['type'] ?? null) === 'site' && ($item['action'] ?? null) === 'install'
+                && Files::isHandle($handle) && ! in_array($handle, $here, true) && ! isset($sites[$handle])) {
+                $sites[$handle] = ['handle' => $handle, 'name' => (string) $item['title'], 'package' => (string) $item['package'], 'preview' => $item['preview'] ?? $item['icon'] ?? null];
             }
         }
 
-        return array_values($kits);
+        return array_values($sites);
     }
 
     private static function origin(string $url): ?string
@@ -196,10 +196,10 @@ final class InstallController
             'addButton' => __('Install Plugins'),
             'skip' => __('Continue Without Plugins'),
             'continue' => __('Go to Dashboard'),
-            'kits' => __('Start From'),
-            'addingKit' => __('Adding the kit :name…'),
-            'kitFailed' => __('The kit you chose couldn’t be fetched.'),
-            'useMinimal' => __('Start Without a Kit'),
+            'sites' => __('Start From'),
+            'addingSite' => __('Adding :name…'),
+            'siteFailed' => __('The selected site couldn’t be downloaded.'),
+            'useMinimal' => __('Start With an Empty Site'),
             'adding' => __('Finishing Your Site'),
             'addingOne' => __('Adding :package…'),
             'finishing' => __('Putting your site together…'),

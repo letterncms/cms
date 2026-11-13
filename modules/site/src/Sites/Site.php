@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cms\Modules\Site\Kits;
+namespace Cms\Modules\Site\Sites;
 
 use Carbon\CarbonImmutable;
 use Cms\Abilities\AbilityException;
@@ -11,31 +11,31 @@ use Composer\Semver\Semver;
 use Throwable;
 
 /**
- * A site kit: a complete site to start from. A folder laid out like a site's own `content/` and `config/`,
- * with the files its pictures show under `public/media/`, and `kit.json` saying what it is:
+ * A portable site laid out with `content/` and `config/`,
+ * with the files its pictures show under `public/media/`, and `site.json` saying what it is:
  *
- *   kit.json                      handle, name, description, version, license, cms, plugins, languages, previews, demo, exported
- *   previews/<name>.png|jpg|webp  the pictures kit.json names
+ *   site.json                      handle, name, description, version, license, cms, plugins, languages, previews, demo, exported
+ *   previews/<name>.png|jpg|webp  the pictures site.json names
  *   content/collections/<handle>.yaml and <handle>/[<locale>/][<parent>/]<slug>.md
  *   content/globals/<handle>.yaml, content/navigation/<handle>.yaml
  *   content/design/tokens.json, custom.css, custom.js, code.json, fonts/, scripts/, styles/, vendor/ (with lock.json)
  *   content/media/<id>.yaml and public/media/<path>
- *   config/<settings>.yaml        only the settings a kit may carry
+ *   config/<settings>.yaml        only the settings a site may carry
  *
- * A kit is copied into a site once. After that the site owns every file, and nothing links back to the kit.
+ * Applying a site copies its files into the installation.
  */
-final class Kit
+final class Site
 {
-    public const string FILE = 'kit.json';
+    public const string FILE = 'site.json';
 
-    /** What kit.json may say, and nothing else. */
+    /** What site.json may say, and nothing else. */
     private const array KEYS = ['handle', 'name', 'description', 'version', 'license', 'cms', 'plugins', 'languages', 'previews', 'demo', 'exported'];
 
     private const string PACKAGE = '/^[a-z0-9]([a-z0-9._-]{0,60})\/[a-z0-9]([a-z0-9._-]{0,60})$/D';
 
     private const string PREVIEW = '/^previews\/[a-z0-9][a-z0-9_-]{0,60}\.(png|jpg|webp)$/D';
 
-    /** @param  'site'|'saved'  $source  where it was found: in the site's kits/ folder, or kept aside by a switch (Kits::saved) */
+    /** @param  'site'|'saved'  $source  where it was found: in the site's sites/ folder, or kept aside by a switch (Sites::saved) */
     private function __construct(
         public readonly string $handle,
         public readonly string $path,
@@ -43,43 +43,43 @@ final class Kit
         private readonly array $manifest,
     ) {}
 
-    /** The kit a folder holds, or the reason it is not one. */
+    /** The site a folder holds, or the reason it is not one. */
     public static function load(string $path, string $source, ?string $handle = null): self
     {
-        // A kit being written is read from a folder of another name before it takes its own.
+        // A site being written is read from a folder of another name before it takes its own.
         $path = rtrim($path, '/');
         $handle ??= basename($path);
         $file = $path.'/'.self::FILE;
 
-        // The folder may be a link (Composer links a kit it installs from a path); nothing inside it may be.
+        // The folder may be a link (Composer links a site it installs from a path); nothing inside it may be.
         if (! Files::isHandle($handle) || ! is_dir($path) || ! is_file($file) || is_link($file) || filesize($file) > 64_000) {
-            throw AbilityException::invalid(__('“:handle” is not a kit: a kit is a folder with a kit.json.', ['handle' => $handle]));
+            throw AbilityException::invalid(__('“:handle” is not a site: a site is a folder with a site.json.', ['handle' => $handle]));
         }
 
         $manifest = json_decode((string) file_get_contents($file), true);
         $problem = is_array($manifest) ? self::problem($handle, $manifest) : __('it is not JSON');
 
         if ($problem !== null) {
-            throw AbilityException::invalid(__('The kit.json of “:handle” can’t be read: :problem.', ['handle' => $handle, 'problem' => $problem]));
+            throw AbilityException::invalid(__('The site.json of “:handle” can’t be read: :problem.', ['handle' => $handle, 'problem' => $problem]));
         }
 
         foreach ((array) ($manifest['previews'] ?? []) as $preview) {
             if (! is_file($path.'/'.$preview) || is_link($path.'/'.$preview)) {
-                throw AbilityException::invalid(__('The kit.json of “:handle” can’t be read: :problem.', ['handle' => $handle, 'problem' => __('it names :file, which is not in it', ['file' => $preview])]));
+                throw AbilityException::invalid(__('The site.json of “:handle” can’t be read: :problem.', ['handle' => $handle, 'problem' => __('it names :file, which is not in it', ['file' => $preview])]));
             }
         }
 
         return new self($handle, $path, $source, $manifest);
     }
 
-    /** What is wrong with a kit.json, in a few words, or null. */
+    /** What is wrong with a site.json, in a few words, or null. */
     public static function problem(string $handle, array $manifest): ?string
     {
         $text = static fn (mixed $value, int $max) => is_string($value) && trim($value) !== '' && mb_strlen($value) <= $max;
         $list = static fn (mixed $value, callable $each) => is_array($value) && array_is_list($value) && count($value) <= 40 && array_filter($value, $each) === $value;
 
         return match (true) {
-            array_diff(array_keys($manifest), self::KEYS) !== [] => __('it has “:key”, which a kit.json does not say', ['key' => (string) current(array_diff(array_keys($manifest), self::KEYS))]),
+            array_diff(array_keys($manifest), self::KEYS) !== [] => __('it has “:key”, which a site.json does not say', ['key' => (string) current(array_diff(array_keys($manifest), self::KEYS))]),
             ($manifest['handle'] ?? null) !== $handle => __('its handle is not the name of its folder'),
             ! $text($manifest['name'] ?? null, 80) => __('it has no name'),
             isset($manifest['description']) && ! $text($manifest['description'], 400) => __('its description is not a short text'),
@@ -133,7 +133,7 @@ final class Kit
         return array_values((array) ($this->manifest['languages'] ?? [(string) config('app.locale', 'en')]));
     }
 
-    /** @return list<string> paths inside the kit */
+    /** @return list<string> paths inside the site */
     public function previews(): array
     {
         return array_values((array) ($this->manifest['previews'] ?? []));
@@ -156,7 +156,7 @@ final class Kit
         return $this->cms() === null || Semver::satisfies((string) preg_replace('/[-+].*$/', '', $version), $this->cms());
     }
 
-    /** @return array<string, mixed> what a list of kits says of one */
+    /** @return array<string, mixed> what a list of sites says of one */
     public function toArray(): array
     {
         return [
@@ -169,7 +169,7 @@ final class Kit
             'cms' => $this->cms(),
             'plugins' => $this->plugins(),
             'languages' => $this->languages(),
-            'previews' => array_map(fn (string $file) => '/_cms/kits/'.$this->handle.'/'.basename($file), $this->previews()),
+            'previews' => array_map(fn (string $file) => '/_cms/sites/'.$this->handle.'/'.basename($file), $this->previews()),
             'demo' => $this->demo(),
         ];
     }

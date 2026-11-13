@@ -155,7 +155,7 @@ final class PackageManager
     }
 
     /**
-     * Install the plugins that are on but were never installed: put in plugins/ by Composer, a kit or by hand
+     * Install the plugins that are on but were never installed: put in plugins/ by Composer, a site or by hand
      * on a site that runs every plugin there. Their own code reads tables that don't exist yet, so this can't
      * wait for an admin. An install only adds what the plugin brings; upgrades still wait (see pending()).
      *

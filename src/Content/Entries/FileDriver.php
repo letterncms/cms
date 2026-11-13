@@ -189,7 +189,7 @@ final class FileDriver implements EntryDriver
 
     /**
      * The entries a folder holds in this layout, wherever it is: `<root>/[<locale>/][<parent>/]<slug>.md`.
-     * What a site kit carries for a collection, whatever driver the collection it lands in uses. Parents come
+     * What a site carries for a collection, whatever driver the collection it lands in uses. Parents come
      * from the folders, as in a site; there are no working copies and no URLs, and `$locales` says which
      * first folders are languages (the first of them is the one entries without a folder are in).
      *
@@ -238,7 +238,7 @@ final class FileDriver implements EntryDriver
             $data[$field->handle] = $type->serializesToMarkdown() ? $type->fromMarkdown($body, $field) : ($data[$field->handle] ?? null);
         }
 
-        // A file written by hand for a kit may leave its id out: nothing can name it, and it gets a new one anyway.
+        // A file written by hand for a site may leave its id out: nothing can name it, and it gets a new one anyway.
         $id = strtolower((string) ($meta['id'] ?? ($locales !== null ? \Illuminate\Support\Str::ulid() : throw new RuntimeException("Entry {$relative} in {$collection->handle} has no id."))));
         $draft = $locales === null && is_file($this->draftFile($id)) ? json_decode((string) file_get_contents($this->draftFile($id)), true) : null;
 

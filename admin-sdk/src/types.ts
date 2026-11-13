@@ -244,7 +244,7 @@ export interface WidgetInfo {
 export interface Manifest {
   cms: { version: string; debug: boolean }
   brand: BrandInfo
-  site: { name: string; url: string; /** What the site says of itself. */ description?: string; /** The site's favicon, or null. */ favicon?: string | null; /** The site kits this site can be, for whoever may switch (the site module). */ kits?: { handle: string; name: string; active: boolean; preview: string | null }[]; locales: string[]; defaultLocale: string; timezone: string; /** The admin's accent for everyone, `#rrggbb`, or null for the brand's own: Settings → General. */ accent?: string | null }
+  site: { name: string; url: string; /** What the site says of itself. */ description?: string; /** The site's favicon, or null. */ favicon?: string | null; /** The sites this site can be, for whoever may switch (the site module). */ sites?: { handle: string; name: string; active: boolean; preview: string | null }[]; locales: string[]; defaultLocale: string; timezone: string; /** The admin's accent for everyone, `#rrggbb`, or null for the brand's own: Settings → General. */ accent?: string | null }
   user: User & { grants: string[]; preferences: Record<string, unknown> }
   collections: CollectionSummary[]
   globals: ({ handle: string; title: string; icon: string } & RecordTimestamps)[]

@@ -140,7 +140,7 @@ final class StoreClient
             'gallery' => array_values(array_filter(array_map(static fn ($s) => is_array($s) ? ['url' => (string) ($s['url'] ?? ''), 'alt' => mb_substr((string) ($s['alt'] ?? ''), 0, 300)] : ['url' => (string) $s, 'alt' => ''], (array) ($detail['gallery'] ?? $detail['screenshots'] ?? [])), static fn (array $s) => self::origin($s['url']) === $origin)),
             'requirements' => array_values(array_map(static fn ($r) => mb_substr((string) $r, 0, 200), array_slice((array) ($detail['requirements'] ?? []), 0, 20))),
             'docs_url' => self::link($detail['docs_url'] ?? null),
-            // A site kit's live demo, on the store's own origin.
+            // A site's live demo, on the store's own origin.
             'demo_url' => self::origin((string) ($detail['demo_url'] ?? '')) === $origin ? self::link($detail['demo_url']) : null,
             'repository_url' => self::link($detail['repository_url'] ?? null),
             'releases' => array_values(array_map(static fn ($r) => ['version' => mb_substr((string) ($r['version'] ?? ''), 0, 40), 'released_at' => mb_substr((string) ($r['released_at'] ?? ''), 0, 32), 'notes' => mb_substr((string) ($r['notes'] ?? ''), 0, 4000), 'security' => (bool) ($r['security'] ?? false)], array_filter(array_slice((array) ($detail['releases'] ?? []), 0, 20), 'is_array'))),
@@ -432,7 +432,7 @@ final class StoreClient
             'title' => mb_substr($own['label'] ?? (string) ($item['title'] ?? $item['package']), 0, 120),
             'summary' => mb_substr($own['description'] ?? (string) ($item['summary'] ?? ''), 0, 300),
             'icon' => self::origin($icon) === $origin ? $icon : null,
-            // A site kit's picture of itself, from the store's own origin like the icon.
+            // A site's picture of itself, from the store's own origin like the icon.
             'preview' => is_string($item['preview'] ?? null) && self::origin($item['preview']) === $origin ? $item['preview'] : null,
             // A name from the icon set the admin draws, not a picture: nothing to fetch.
             'glyph' => preg_match('/^[a-z0-9-]{1,60}$/', (string) ($item['glyph'] ?? '')) === 1 ? (string) $item['glyph'] : null,
@@ -448,18 +448,18 @@ final class StoreClient
         ];
     }
 
-    /** The version of a listed package this site has: a plugin's, or a site kit's in kits/ (the store lists both). */
+    /** The version of a listed package this site has: a plugin's, or a site's in sites/ (the store lists both). */
     private function installedVersion(array $item): ?string
     {
         $package = (string) ($item['package'] ?? '');
 
-        if (($item['type'] ?? 'plugin') !== 'kit') {
+        if (($item['type'] ?? 'plugin') !== 'site') {
             return $this->cms->packages()->repository()->find($package)?->version;
         }
 
-        $kit = Files::readJson($this->jobs->targetFor($package, PackageManifest::KIT).'/kit.json');
+        $sitePackage = Files::readJson($this->jobs->targetFor($package, PackageManifest::SITE).'/site.json');
 
-        return is_string($kit['version'] ?? null) ? $kit['version'] : null;
+        return is_string($sitePackage['version'] ?? null) ? $sitePackage['version'] : null;
     }
 
     /** @param  array<string, array<string, mixed>>  $steps  @param  list<string>  $path */
@@ -680,7 +680,7 @@ final class StoreClient
 
         if (isset($payload['items'])) {
             // Catalogs cached before the store became free-only may still include paid listings.
-            $payload['items'] = array_values(array_filter((array) $payload['items'], static fn ($item) => is_array($item) && ($item['pricing'] ?? 'free') === 'free'));
+            $payload['items'] = array_values(array_filter((array) $payload['items'], static fn ($item) => is_array($item) && ($item['pricing'] ?? 'free') === 'free' && in_array($item['type'] ?? 'plugin', ['plugin', 'site'], true)));
         }
 
         return $payload;
