@@ -19,7 +19,7 @@ export default function PatternsScreen() {
   const groups = useMemo(() => byCategory((list.data ?? []).filter((pattern) => patternMatches(pattern, q))), [list.data, q])
 
   if (list.error) return <QueryError message={t('Patterns could not be loaded')} onRetry={() => void list.refetch()} retrying={list.isFetching} />
-  if (list.isLoading) return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-48 rounded-md" />)}</div>
+  if (list.isLoading) return <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(max(16rem,calc((100%-2rem)/3)),1fr))]">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-video rounded-md" />)}</div>
   if (!list.data?.length) {
     return <EmptyState icon="section-copy" title={t('No patterns yet')} action={can('entries.patterns.create') ? <Button variant="primary" icon="plus" onClick={() => navigate('/content/patterns/new')}>{t('New Pattern')}</Button> : undefined} />
   }
@@ -32,11 +32,11 @@ export default function PatternsScreen() {
       {groups.length === 0 && <NoMatches onClear={() => setQuery('')} />}
       {groups.map(([category, patterns]) => (
         <Section key={category} title={category}>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(max(16rem,calc((100%-2rem)/3)),1fr))]">
             {patterns.map((pattern) => {
               const card = (
                 <>
-                  <PatternPreview handle={pattern.handle} maxHeight={240} />
+                  <PatternPreview handle={pattern.handle} aspect="16 / 9" />
                   <span className="mt-2 flex min-w-0 items-center gap-2">
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-text">{pattern.title}</span>
                     {!pattern.editable && <Badge>{t('From a Plugin')}</Badge>}

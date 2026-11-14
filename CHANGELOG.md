@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- **Design → Patterns** shows three patterns to a row, each in a 16:9 picture of its top, as a desktop window shows it.
+- An **Accordion** opens with an arrow that turns about its own centre, instead of a plus sign.
+
 ## 0.36.2 (2026-11-13)
 
 ### Fixed
