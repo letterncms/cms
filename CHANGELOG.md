@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.37.0 (2026-11-14)
+
 ### Added
 
 - **Styling is Tailwind CSS.** A site is styled with the real Tailwind CSS 4: blocks carry Tailwind classes, and the site has one Tailwind stylesheet, `content/styling/theme.css`, with its theme (`@theme`), its own classes (`@utility`) and its element styles. The CSS a site ships holds only the classes it uses, as with any Tailwind build. Tailwind runs in the admin's browser, so a server needs no Node; where the server or the command line has Node 20 or newer, `cms build` compiles too.
