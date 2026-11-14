@@ -199,7 +199,7 @@ export function ContentPanel({ node }: { node: BlockNode }) {
               component: 'blocks-pairs',
               className: 'items-start',
               label: t('States from Data'),
-              key: { prefix: 'is-', lower: true, strip: '[^a-z0-9-]', className: '!w-[30%] !flex-none' },
+              key: { prefix: 'data-', lower: true, strip: '[^a-z0-9-]', className: '!w-[34%] !flex-none' },
               item: { handle: 'path', type: 'text', component: 'blocks-bind', label: t('Data'), paths },
             },
           ]}

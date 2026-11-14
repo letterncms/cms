@@ -11,7 +11,7 @@ use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Content\Entries\FileDriver;
 use Cms\Modules\Media\MediaManifest;
-use Cms\Modules\Site\Design\Design;
+use Cms\Modules\Site\Styling\Styling;
 use Cms\Support\Files;
 use Cms\Support\Yaml;
 use Throwable;
@@ -20,7 +20,7 @@ use Throwable;
  * Turns this site into a site: what it holds and how it looks, in the layout a site has (Site). Only content and
  * design travel: the collections and their published entries (in the file layout, whatever driver they use;
  * drafts only when asked for), the templates, components and patterns, but no other collection a plugin owns, the
- * globals, the menus, the design folder, the media something names, what plugins keep beside the
+ * globals, the menus, the styling folder, the media something names, what plugins keep beside the
  * content (`sites.content`: a folder, or a `<name>.yaml` file), and the settings a site may carry (`sites.settings`). Never accounts, tokens,
  * secrets, submissions, analytics, the audit log, licences or the rest of config/.
  */
@@ -32,7 +32,7 @@ final class SiteExporter
     public function __construct(
         private readonly Cms $cms,
         private readonly FileDriver $driver,
-        private readonly Design $design,
+        private readonly Styling $styling,
         private readonly SiteFiles $files,
     ) {}
 
@@ -65,9 +65,9 @@ final class SiteExporter
             }
         }
 
-        foreach ($this->tree($this->design->path()) as $relative) {
-            // The design's own build (the compiled stylesheet) is made again from these.
-            $out["content/design/{$relative}"] = (string) file_get_contents($this->design->path($relative));
+        foreach ($this->tree($this->styling->path()) as $relative) {
+            // compiled.css goes too: a site that takes this one in has its CSS without compiling anything.
+            $out["content/styling/{$relative}"] = (string) file_get_contents($this->styling->path($relative));
         }
 
         foreach ((array) $this->cms->hooks()->filter('sites.content', []) as $folder) {

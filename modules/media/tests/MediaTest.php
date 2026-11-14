@@ -373,16 +373,16 @@ final class MediaTest extends TestCase
 
         $this->assertSame([$item->id, []], [$get()['id'], $get()['usedBy']]);
 
-        // Twice in one global, once in the design, once in an entry: three things use it.
+        // Twice in one global, once in the stylesheet, once in an entry: three things use it.
         \Cms\Support\Yaml::write(content_path('globals/brand.yaml'), ['logo' => ['image' => $item->id], 'note' => "media:{$item->id}"]);
-        Files::put(content_path('design/tokens.json'), (string) json_encode(['color' => ['hero' => "media:{$item->id}"]]));
+        Files::put(content_path('styling/theme.css'), "@import \"tailwindcss\";\n@utility hero { background-image: url(\"/{$item->path}\"); }\n");
         $collection = array_key_first($this->cms()->collections()->all());
         $entry = $this->cms()->entryService()->create($collection, ['title' => 'Uses it', 'data' => ['image' => $item->id]]);
 
         $this->assertEqualsCanonicalizing([
             ['kind' => 'entry', 'id' => $entry->id, 'title' => 'Uses it', 'collection' => $collection, 'locale' => $entry->locale],
             ['kind' => 'global', 'id' => 'brand', 'title' => 'brand', 'collection' => null, 'locale' => null],
-            ['kind' => 'design', 'id' => 'tokens', 'title' => 'Design tokens', 'collection' => null, 'locale' => null],
+            ['kind' => 'styling', 'id' => 'theme', 'title' => 'Stylesheet', 'collection' => null, 'locale' => null],
         ], $get()['usedBy']);
 
         $this->expectException(AbilityException::class);

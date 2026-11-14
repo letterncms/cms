@@ -1,19 +1,69 @@
-import { t } from '@letterncms/sdk'
-import { Fields, cn } from '@letterncms/ui'
-import { inputClass } from '../controls'
+import { run, t } from '@letterncms/sdk'
+import { Fields, toast } from '@letterncms/ui'
+import { useState } from 'react'
+import { useThemeTokens } from '../../core/styling'
+import { PanelFields } from '../controls'
 import { parseGradient } from '../fields/style'
+import { GRADIENT_MARKERS, colorGroups, gradientOf, gradientUtilities } from '../styleApi'
 import type { StyleApi } from '../useStyle'
 import { StyleSection } from './more'
 import { StyleFields } from './StyleFields'
 
-const CLEAR = { backgroundImage: null, backgroundSize: null, backgroundPosition: null, backgroundRepeat: null }
+const IMAGE = ['backgroundSize', 'backgroundPosition', 'backgroundRepeat', 'backgroundAttachment']
+
+/** An image's address inside url(): quotes and spaces could not stand in a class. */
+const address = (image: string | undefined) => image?.match(/^url\(["']?([^"')]*)["']?\)$/)?.[1]
+
+/** An address as a class can hold it: encoded once, whether or not it came encoded. */
+function encoded(url: string): string {
+  try {
+    return encodeURI(decodeURI(url))
+  } catch {
+    return encodeURI(url)
+  }
+}
 
 /** Background color, gradient or image, and text clipping (gradient text). */
 export function Fill({ s }: { s: StyleApi }) {
+  const tokens = useThemeTokens()
   const image = s.value('backgroundImage')
-  const kind = !image ? 'none' : parseGradient(image) ? 'gradient' : 'image'
-  const mediaId = image?.match(/^media:([0-9a-z]{26})$/i)?.[1]
-  const any = s.value('backgroundColor') || image
+  // A gradient is classes of its own where Tailwind has them (bg-linear-to-r from-… to-…), else one background image.
+  const gradient = gradientOf(s.value) ?? (parseGradient(image) ? image : undefined)
+  const kind = gradient ? 'gradient' : image ? 'image' : 'none'
+  const url = address(image)
+  // The file picked here, for as long as the panel shows this block: a class holds only its address.
+  const [picked, setPicked] = useState<{ id: string; url: string } | null>(null)
+  const any = s.value('backgroundColor') || image || gradient
+  const clear = () => s.edit((draft) => {
+    draft.swap(GRADIENT_MARKERS, null)
+    draft.write(Object.fromEntries(IMAGE.map((key) => [key, null])))
+  }, 'fill')
+
+  const setGradient = (css: string | null) => {
+    const parsed = parseGradient(css)
+    if (!s.engine || !parsed) return clear()
+    s.swap(GRADIENT_MARKERS, gradientUtilities(s.engine, parsed), 'gradient')
+  }
+
+  const setImage = (next: string | null) => {
+    const written = next && s.engine ? s.engine.make('bg', `url(${encoded(next)})`) : null
+    s.swap(GRADIENT_MARKERS, written ?? 'bg-none', 'image')
+  }
+
+  const choose = async (id: string | undefined) => {
+    if (!id) {
+      setPicked(null)
+      return setImage(null)
+    }
+    try {
+      const { items } = await run<{ items: { id: string; url: string }[] }>('media/get-many', { ids: [id] })
+      if (!items[0]?.url) return
+      setPicked({ id, url: items[0].url })
+      setImage(items[0].url)
+    } catch (error) {
+      toast.error(error)
+    }
+  }
 
   return (
     <StyleSection s={s} group="fill" title={t('Fill')} empty={!any}>
@@ -29,21 +79,28 @@ export function Fill({ s }: { s: StyleApi }) {
             size: 'sm',
             label: t('Image'),
             options: [{ value: 'none', label: t('None') }, { value: 'gradient', icon: 'gradient', title: t('Gradient') }, { value: 'image', icon: 'image', title: t('Image') }],
-            keys: ['backgroundImage'],
-            reset: () => s.write(CLEAR),
+            keys: ['backgroundImage', '--tw-gradient-from', '--tw-gradient-to'],
+            reset: clear,
             get: () => kind,
             set: (v) => {
-              if (v === 'gradient') s.set('backgroundImage', 'linear-gradient(180deg, token:color.primary, token:color.background)')
-              else if (v === 'image') s.write({ backgroundImage: 'none', backgroundSize: 'cover', backgroundPosition: 'center' })
-              else s.write(CLEAR)
+              // A gradient starts from a colour the site names, fading out.
+              const first = colorGroups(tokens.of('color')).own[0]?.ref ?? 'currentColor'
+              if (v === 'gradient') setGradient(`linear-gradient(180deg, ${first}, transparent)`)
+              else if (v === 'image') s.edit((draft) => {
+                draft.swap(GRADIENT_MARKERS, 'bg-none')
+                draft.write({ backgroundSize: 'cover', backgroundPosition: 'center' })
+              }, 'fill')
+              else clear()
             },
           },
         ]}
       />
-      {kind === 'gradient' && <StyleFields s={s} bare fields={[{ handle: 'backgroundImage', type: 'text', component: 'blocks-gradient', className: 'items-start', label: t('Gradient') }]} />}
+      {kind === 'gradient' && <StyleFields s={s} bare fields={[{ handle: 'gradient', type: 'text', component: 'blocks-gradient', className: 'items-start', label: t('Gradient'), get: () => gradient, set: setGradient }]} />}
       {kind === 'image' && (
-        <div className="rounded-md bg-active/60 p-1.5 text-xs">
-          <Fields bare fields={[{ handle: 'bg', type: 'media', label: t('Image'), max: 1, accept: 'image/*' }]} values={{ bg: mediaId ? [mediaId] : [] }} onChange={(_, v: string[]) => s.set('backgroundImage', v?.[0] ? `media:${v[0]}` : 'none')} />
+        <div className="space-y-1 rounded-md bg-active/60 p-1.5 text-xs">
+          <Fields bare disabled={!s.engine} fields={[{ handle: 'bg', type: 'media', label: t('Image'), max: 1, accept: 'image/*' }]} values={{ bg: picked && picked.url === url ? [picked.id] : [] }} onChange={(_, v: string[]) => void choose(v?.[0])} />
+          {/* Any address works, also one that is not in the media library. */}
+          <PanelFields bare disabled={!s.engine} fields={[{ handle: 'url', type: 'text', size: 'sm', commit: 'blur', mono: true, label: t('Image Address'), placeholder: '/media/…' }]} values={{ url: url ?? '' }} onChange={(_, v: string) => setImage(v.trim() || null)} />
         </div>
       )}
       <StyleFields
@@ -56,7 +113,6 @@ export function Fill({ s }: { s: StyleApi }) {
           kind !== 'none' && { handle: 'backgroundClip', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Clip'), options: [{ value: 'border-box', label: t('Box') }, { value: 'text', label: t('Text') }], get: () => s.value('backgroundClip') ?? 'border-box', set: (v) => s.write({ backgroundClip: v === 'text' ? 'text' : null, color: v === 'text' ? 'transparent' : null }) },
         ]}
       />
-      {image && kind === 'image' && !mediaId && image !== 'none' && <p className={cn(inputClass, 'h-auto py-1 font-mono')}>{image}</p>}
     </StyleSection>
   )
 }

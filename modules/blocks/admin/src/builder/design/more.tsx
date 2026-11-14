@@ -1,7 +1,7 @@
-import { t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Button, Fields, Icon, IconButton, Menu, Popover, type MenuItemDef } from '@letterncms/ui'
-import { AddRow } from '../controls'
+import { t, type FieldDef } from '@letterncms/sdk'
+import { Button, Icon, IconButton, Popover } from '@letterncms/ui'
 import { useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
+import { parseClass } from '../../../../tailwind/engine'
 import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
 import { StyleFields, type StyleField } from './StyleFields'
@@ -27,7 +27,7 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
       alignContent: choice(t('Align Content'), ['normal', 'start', 'center', 'end', 'space-between', 'space-around', 'space-evenly', 'stretch']),
       placeItems: value(t('Place Items'), 'center'),
       placeContent: value(t('Place Content'), 'center'),
-      gridTemplateAreas: value(t('Grid Areas'), '"a b" "c c"'),
+      gridTemplateAreas: value(t('Grid Areas'), "'a b' 'c c'"),
       gridAutoColumns: value(t('Auto Columns'), 'auto'),
       gridAutoRows: value(t('Auto Rows'), 'auto'),
       columns: number(t('Columns'), { placeholder: t('Auto'), min: 1 }),
@@ -69,9 +69,9 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
       textIndent: length(t('Indent'), { unit: 'em', units: ['em', 'px', 'rem'] }),
       textOverflow: choice(t('Text Overflow'), ['clip', 'ellipsis']),
       fontVariantNumeric: choice(t('Numbers'), ['normal', 'tabular-nums', 'proportional-nums', 'lining-nums', 'oldstyle-nums', 'slashed-zero']),
-      fontFeatureSettings: value(t('Font Features'), '"ss01"'),
-      fontVariationSettings: value(t('Font Variations'), '"wght" 500'),
-      listStyle: choice(t('List Style'), ['none', 'disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-alpha', 'upper-alpha', 'lower-roman', 'upper-roman']),
+      fontFeatureSettings: value(t('Font Features'), "'ss01'"),
+      fontVariationSettings: value(t('Font Variations'), "'wght' 500"),
+      listStyleType: choice(t('List Style'), ['none', 'disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-alpha', 'upper-alpha', 'lower-roman', 'upper-roman']),
       verticalAlign: choice(t('Vertical Align'), ['baseline', 'top', 'middle', 'bottom', 'text-top', 'text-bottom', 'sub', 'super']),
     }),
     ...of('fill', {
@@ -86,7 +86,7 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
       fill: color(t('Fill')),
       stroke: color(t('Stroke')),
       strokeWidth: length(t('Stroke Width')),
-      content: value(t('Content'), '""'),
+      content: value(t('Content'), "''"),
     }),
     ...of('transform', {
       perspectiveOrigin: value(t('Vanishing Point'), 'center'),
@@ -94,57 +94,33 @@ export function moreStyles(): Record<string, { group: string; field: Partial<Fie
       backfaceVisibility: choice(t('Backface'), ['visible', 'hidden']),
     }),
     ...of('transition', {
-      transitionProperty: value(t('Property'), 'all'),
-      transitionDuration: value(t('Duration'), '200ms'),
-      transitionTimingFunction: value(t('Easing'), 'ease'),
-      transitionDelay: value(t('Delay'), '0ms'),
       willChange: value(t('Will Change'), 'auto'),
     }),
-  }
-}
-
-/** Properties the inspector has rows for, as the Design offers them for an element's or a button's style. */
-function designStyles(): Record<string, Partial<FieldDef>> {
-  return {
-    display: choice(t('Display'), ['block', 'inline', 'inline-block', 'flex', 'grid', 'none']),
-    width: length(t('Width'), { unit: 'rem', units: ['rem', 'px', '%', 'ch'], placeholder: t('Auto') }),
-    maxWidth: length(t('Max Width'), { unit: 'rem', units: ['rem', 'px', '%', 'ch'], placeholder: t('None') }),
-    textAlign: choice(t('Align'), ['left', 'center', 'right', 'justify']),
-    fontStyle: choice(t('Style'), ['normal', 'italic']),
-    textTransform: choice(t('Case'), ['none', 'uppercase', 'lowercase', 'capitalize']),
-    textDecoration: choice(t('Decoration'), ['none', 'underline', 'line-through', 'overline']),
-    textWrap: choice(t('Wrap'), ['wrap', 'balance', 'pretty', 'nowrap']),
-    textShadow: value(t('Text Shadow'), '0 1px 2px rgb(0 0 0 / 0.2)'),
-    boxShadow: value(t('Shadow'), '0 4px 16px rgb(0 0 0 / 0.1)'),
-    opacity: number(t('Opacity'), { percent: true, step: 0.05, min: 0, max: 1, placeholder: '100' }),
-    borderStyle: choice(t('Border Style'), ['solid', 'dashed', 'dotted', 'double', 'none']),
-    borderTop: value(t('Border Top'), '1px solid'),
-    borderRight: value(t('Border Right'), '1px solid'),
-    borderBottom: value(t('Border Bottom'), '1px solid'),
-    borderLeft: value(t('Border Left'), '1px solid'),
-    paddingTop: length(t('Padding Top'), { unit: 'rem' }),
-    paddingRight: length(t('Padding Right'), { unit: 'rem' }),
-    paddingBottom: length(t('Padding Bottom'), { unit: 'rem' }),
-    paddingLeft: length(t('Padding Left'), { unit: 'rem' }),
-    marginBlock: length(t('Margin Block'), { unit: 'rem' }),
-    marginInline: length(t('Margin Inline'), { unit: 'rem' }),
   }
 }
 
 /** A property's control: its own, or a plain value for one stored that has none. */
 function fieldOf(property: string, more = moreStyles()): FieldDef {
   const words = property.replace(/([A-Z])/g, ' $1')
-  return { handle: property, type: 'text', size: 'sm', commit: 'blur', mono: true, label: words.charAt(0).toUpperCase() + words.slice(1), ...(more[property]?.field ?? designStyles()[property]) } as FieldDef
+  return { handle: property, type: 'text', size: 'sm', commit: 'blur', mono: true, label: words.charAt(0).toUpperCase() + words.slice(1), ...more[property]?.field } as FieldDef
 }
 
-/** The + that adds one of `properties` (by its name, or its label in `labels`), in their order, searched as you type. */
-export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Property'), children }: { properties: string[]; labels?: Record<string, string>; onPick: (property: string) => void; label?: string; children?: ReactNode }) {
+/** Whether CSS has a property of this name. A variable (`--gap`) is one of the site's own. */
+const isProperty = (name: string) => /^--[\w-]+$/.test(name) || (/^-?[a-z]+(-[a-z]+)*$/.test(name) && typeof CSS !== 'undefined' && CSS.supports(name, 'inherit'))
+
+/**
+ * The + that adds one of `properties` (by its name, or its label in `labels`), in their order, searched as you type.
+ * With `custom`, a CSS property typed in full that the list lacks is offered too, by its own name.
+ */
+export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Property'), custom, children }: { properties: string[]; labels?: Record<string, string>; onPick: (property: string) => void; label?: string; custom?: boolean; children?: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const more = moreStyles()
   const q = query.trim().toLowerCase()
-  const options = properties.map((property) => ({ property, label: labels[property] ?? String(fieldOf(property, more).label) })).filter((o) => !q || o.label.toLowerCase().includes(q) || o.property.toLowerCase().includes(q.replace(/[\s-]/g, '')))
+  const listed = properties.map((property) => ({ property, label: labels[property] ?? String(fieldOf(property, more).label) })).filter((o) => !q || o.label.toLowerCase().includes(q) || o.property.toLowerCase().includes(q.replace(/[\s-]/g, '')))
+  const typed = q.replace(/\s+/g, '-')
+  const options = custom && isProperty(typed) && !listed.some((o) => o.property.toLowerCase() === typed.replace(/-/g, '')) ? [...listed, { property: typed, label: typed }] : listed
   const pick = (property: string | undefined) => {
     if (!property) return
     setOpen(false)
@@ -160,7 +136,7 @@ export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Pro
       pick(options[active]?.property)
     }
   }
-  if (properties.length === 0) return null
+  if (properties.length === 0 && !custom) return null
   return (
     <Popover
       open={open}
@@ -213,90 +189,23 @@ export function StyleSection({ s, group, title, open, empty, children }: { s: St
   )
 }
 
-/**
- * One row of a style in the Design: its field, inline, and a ⋯ menu at the end
- * (shown on hover) with what can be done to it. Every row keeps the menu's place, so
- * controls line up whether or not a row has one.
- */
-export function StyleRow({ field, value, onChange, actions, disabled, bare }: { field: FieldDef; value: unknown; onChange: (value: unknown) => void; actions: MenuItemDef[]; disabled?: boolean; bare?: boolean }) {
-  // A shadow list (`bare`) brings its own label and add button.
-  return (
-    <div className="group/row flex items-start gap-1">
-      {/* The Design's label column, as its other rows (Page Transition, Prose spacing) have it. */}
-      <Fields bare={bare} layout={bare ? undefined : 'inline'} labelWidth={120} className="min-w-0 flex-1" disabled={disabled} fields={[field]} values={{ [field.handle]: value ?? null }} onChange={(_, v) => onChange(v)} />
-      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center">
-        {actions.length > 0 && !disabled && (
-          <Menu
-            trigger={<IconButton icon="more" label={t('Property Actions')} size="xs" className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100" />}
-            items={actions}
-          />
-        )}
-      </span>
-    </div>
-  )
-}
+const kebab = (key: string) => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
 
 /**
- * `blocks-more` — a style of the Design: only what it sets, row by row, each with
- * its control and a ⋯ menu to remove it, and a + that adds a property, its `controls`
- * (Font, Size, Margin…) first and then every other one. A new style starts empty.
- * `hidden` are properties drawn elsewhere. The value is the declarations.
+ * Any other CSS property: what the element's classes set that no panel has a row for (written as Tailwind
+ * writes a property it has no utility for: `[anchor-name:--menu]`), each as its value, and a + that takes any
+ * property by its name.
  */
-export function MoreStylesField({ field, value, onChange, disabled }: FieldProps<Record<string, string | number> | null>) {
-  const decl = value ?? {}
+export function OtherStyles({ s }: { s: StyleApi }) {
   const [adding, setAdding] = useState<string | null>(null)
-  const controls = (field.controls as FieldDef[] | undefined) ?? []
-  const keysOf = (f: FieldDef) => ((f.fields as FieldDef[] | undefined) ?? [f]).map((sub) => sub.handle)
-  const hidden = new Set([...((field.hidden as string[] | undefined) ?? []), ...controls.flatMap(keysOf)])
   const more = moreStyles()
-  const write = (patch: Record<string, unknown>) => {
-    const next: Record<string, string | number> = { ...decl }
-    for (const [key, v] of Object.entries(patch)) {
-      if (v === null || v === undefined || v === '') delete next[key]
-      else next[key] = v as string | number
-    }
-    onChange(next)
-  }
-  // A control is a row while it sets something, or since it was just added.
-  const setControls = controls.filter((control) => keysOf(control).some((key) => key in decl) || control.handle === adding)
-  const extras = [...Object.keys(decl).filter((key) => !hidden.has(key)), ...(adding && !(adding in decl) && !controls.some((c) => c.handle === adding) ? [adding] : [])]
-  // A style of the Design can take what has no control there: the panels' extra properties, and these the inspector has rows for.
-  const others = [...Object.keys(more).filter((key) => more[key].group !== 'item' && more[key].group !== 'layout'), ...Object.keys(designStyles())].filter((key) => !hidden.has(key) && !extras.includes(key))
-  const offered = [...controls.filter((control) => !setControls.includes(control)).map((control) => control.handle), ...byLabel(others, more)]
-  const labels = Object.fromEntries(controls.map((control) => [control.handle, String(control.label)]))
-  const removeAction = (keys: string[], handle: string): MenuItemDef[] => [{ label: t('Remove'), icon: 'trash', danger: true, onSelect: () => { if (handle === adding) setAdding(null); write(Object.fromEntries(keys.map((key) => [key, null]))) } }]
+  // Clip Path and Text Stroke are such properties with rows of their own.
+  const drawn = new Set([...Object.keys(more).map(kebab), 'clip-path', '-webkit-text-stroke'])
+  const set = [...new Set(s.classes.flatMap((raw) => parseClass(raw).utility.match(/^!?\[([\w-]+):/)?.[1] ?? []))].filter((property) => !drawn.has(property) && s.value(property) !== undefined)
+  const shown = adding && !set.includes(adding) ? [...set, adding] : set
   return (
-    <div className="space-y-1">
-      {setControls.map((control) => {
-        const keys = keysOf(control)
-        const current = control.fields ? Object.fromEntries(keys.map((key) => [key, decl[key] ?? null])) : decl[control.handle]
-        const change = (v: unknown) => {
-          if (control.handle === adding) setAdding(null)
-          write(control.fields ? Object.fromEntries(keys.map((key) => [key, (v as Record<string, unknown> | null)?.[key] ?? null])) : { [control.handle]: v })
-        }
-        const set = keys.some((key) => key in decl)
-        return <StyleRow key={control.handle} field={{ ...control, status: set ? 'own' : undefined, reset: () => write(Object.fromEntries(keys.map((key) => [key, null]))) } as FieldDef} value={current} disabled={disabled} actions={removeAction(keys, control.handle)} bare={control.component === 'blocks-shadows'} onChange={change} />
-      })}
-      {extras.map((key) => (
-        <StyleRow
-          key={key}
-          field={{ ...fieldOf(key, more), status: key in decl ? 'own' : undefined, reset: () => write({ [key]: null }) } as FieldDef}
-          value={decl[key]}
-          disabled={disabled}
-          actions={removeAction([key], key)}
-          onChange={(v) => {
-            if (key === adding) setAdding(null)
-            write({ [key]: v })
-          }}
-        />
-      ))}
-      {!disabled && offered.length > 0 && (
-        <div className="flex h-8 items-center">
-          <AddStyle properties={offered} labels={labels} onPick={setAdding}>
-            <AddRow className="-ml-1.5 !w-auto">{t('Add a Property')}</AddRow>
-          </AddStyle>
-        </div>
-      )}
-    </div>
+    <Section title={t('Other Properties')} open={shown.length > 0} empty={shown.length === 0} actions={<AddStyle properties={[]} custom onPick={setAdding} />}>
+      <StyleFields s={s} fields={shown.map((property) => ({ handle: property, type: 'text', size: 'sm', commit: 'blur', mono: true, label: property, set: (v: unknown) => { if (property === adding) setAdding(null); s.set(property, v as string) } }) as StyleField)} />
+    </Section>
   )
 }

@@ -10,7 +10,7 @@ use Cms\Support\Schema\SchemaException;
 
 /**
  * Normalizes a block tree: ids, known types, sanitized inline text,
- * validated props, safe styles, size limits.
+ * validated props, safe classes and attributes, size limits.
  */
 final class Document
 {
@@ -20,10 +20,7 @@ final class Document
 
     private int $count = 0;
 
-    public function __construct(
-        private readonly BlockRegistry $registry,
-        private readonly StyleCompiler $styles,
-    ) {}
+    public function __construct(private readonly BlockRegistry $registry) {}
 
     public static function id(): string
     {
@@ -95,11 +92,11 @@ final class Document
 
             $clean = ['id' => $id, 'type' => $type->name, 'props' => $props];
 
-            if (($style = $this->styles->sanitize($node['style'] ?? null)) !== []) {
-                $clean['style'] = $style;
+            if (($class = self::classes($node['class'] ?? null)) !== '') {
+                $clean['class'] = $class;
             }
 
-            foreach (['anchor', 'class', 'label'] as $key) {
+            foreach (['anchor', 'label'] as $key) {
                 if (isset($node[$key]) && is_string($node[$key]) && $node[$key] !== '') {
                     $clean[$key] = mb_substr(strip_tags($node[$key]), 0, 80);
                 }
@@ -148,6 +145,21 @@ final class Document
         }
 
         return $out;
+    }
+
+    /** One class: Tailwind's, with its variants and arbitrary values ("md:grid-cols-[1fr_2fr]", "hover:bg-primary/50"), or the site's own. */
+    public const string CLASS_NAME = '/^[^\s"<>`\x00-\x1F\x7F]{1,200}$/Du';
+
+    /** A block's classes as it keeps them: each one once, in the order written, and none that could leave the attribute. */
+    public static function classes(mixed $class): string
+    {
+        if (! is_string($class)) {
+            return '';
+        }
+
+        $names = array_filter(preg_split('/\s+/', $class) ?: [], static fn (string $name) => preg_match(self::CLASS_NAME, $name) === 1);
+
+        return implode(' ', array_slice(array_values(array_unique($names)), 0, 200));
     }
 
     /** A script or stylesheet beside the design, by its path without the extension: "hero", "lib/ease". */
@@ -291,10 +303,10 @@ final class Document
             }
 
             $ok = in_array($key, ['visible', 'hidden', 'text', ...$props], true)
-                || preg_match('/^state:[a-z][a-z0-9-]{0,30}$/', $key)
+                || (str_starts_with($key, 'state:') && preg_match(Logic::STATE, substr($key, 6)))
                 || ($type?->name === 'component' && preg_match('/^values\.[a-z_][a-z0-9_]{0,40}$/', $key))
                 || (str_starts_with($key, 'attr:') && (preg_match(self::ATTRIBUTE, substr($key, 5)) || in_array(substr($key, 5), ['href', 'src', 'alt', 'id'], true)))
-                || (str_starts_with($key, 'style:') && StyleCompiler::group(substr($key, 6)) !== null);
+                || (str_starts_with($key, 'style:') && isset(Css::INLINE[substr($key, 6)]));
 
             if ($ok) {
                 $out[$key] = $path;
@@ -359,7 +371,7 @@ final class Document
 
                     $value = is_array($value) ? $value : [$value];
                     array_walk_recursive($value, static function ($v) use (&$parts): void {
-                        if (is_string($v) && ! preg_match('~^(token:|https?://|/|#|var\()~', $v)) {
+                        if (is_string($v) && ! preg_match('~^(https?://|/|#|var\()~', $v)) {
                             $parts[] = Sanitizer::text($v);
                         }
                     });

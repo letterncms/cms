@@ -20,7 +20,7 @@ namespace Cms\Modules\Blocks;
  *       mask: false,                                                             words, lines, chars: clip each word, so it rises from behind a line
  *       from: { opacity: 0, y: 32 }, to: {},                                     empty side = the element's own styles
  *       duration: 0.8, delay: 0, ease: "expo.out", stagger: 0.05, at: null,      ease: a name below, cubic-bezier(), linear(), steps(), or a curve of
- *                                                                                the design: "token:ease.brand"
+ *                                                                                the theme: "var(--ease-brand)"
  *     }],
  *     repeat: 0, yoyo: false,                                                    repeat -1 = forever
  *     hold: 2,                                                                   with appear and repeat -1: the steps play as one timeline that loops, resting this long
@@ -102,13 +102,17 @@ final class Motion
     /** How far a pinned element is scrolled past while it stays. */
     private const string PIN = '/^\d{1,5}(\.\d{1,2})?(px|rem|vh|svh|lvh|dvh)$/';
 
-    private const string TOKEN_EASE = '/^token:ease\.([a-z0-9][a-z0-9-]{0,40})$/';
+    /** A curve the theme names: `--ease-brand` in its @theme. */
+    private const string THEME_EASE = '/^var\(--ease-([a-z0-9][a-z0-9-]{0,40})\)$/D';
 
     /** A timing function as CSS and element.animate() both take it. */
     private const string TIMING = '/^(ease|ease-in|ease-out|ease-in-out|linear|cubic-bezier\(\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*-?[\d.]+\s*\)|linear\([\d.,% -]{1,800}\)|steps\(\s*\d{1,3}\s*(,\s*(start|end|jump-[a-z]+)\s*)?\))$/';
 
-    /** @var array<string, string> the design's own curves while compiling: name => timing function */
+    /** @var array<string, string> the theme's curves while compiling: name => timing function */
     private static array $curves = [];
+
+    /** The site's breakpoints when nobody says otherwise (the `blocks.breakpoints` filter): Tailwind's. */
+    public const array BREAKPOINTS = ['sm' => '40rem', 'md' => '48rem', 'lg' => '64rem', 'xl' => '80rem', '2xl' => '96rem'];
 
     public static function sanitize(mixed $motion): array
     {
@@ -213,8 +217,8 @@ final class Motion
     /**
      * What a node's animations come to.
      *
-     * @param  array<string, string>  $breakpoints  name => min-width (see StyleCompiler)
-     * @param  array<string, string>  $curves  the design's ease tokens: name => timing function
+     * @param  array<string, string>  $breakpoints  name => min-width (BREAKPOINTS, or the site's)
+     * @param  array<string, string>  $curves  the theme's curves (the `blocks.eases` filter): name => timing function, `brand` for --ease-brand
      * @param  string  $id  the node's id, which a pinned element's wrapper is known by
      * @return array{classes: list<string>, rules: array<string, string>, runtime: list<array>, scroll: list<array>, split: ?array{mask: bool, chars: bool}, lines: bool, pin: bool, timelines: list<string>, forever: bool}
      */
@@ -542,7 +546,7 @@ final class Motion
             return null;
         }
 
-        [$md, $lg] = [$breakpoints['md'] ?? '768px', $breakpoints['lg'] ?? '1024px'];
+        [$md, $lg] = [$breakpoints['md'] ?? self::BREAKPOINTS['md'], $breakpoints['lg'] ?? self::BREAKPOINTS['lg']];
         $queries = [
             'mobile' => '(max-width:'.self::below($md).')',
             'tablet' => '(min-width:'.$md.') and (max-width:'.self::below($lg).')',
@@ -664,8 +668,8 @@ final class Motion
     {
         $ease = (string) ($step['ease'] ?? 'power3.out');
 
-        // A curve of the design, as the value it has now: element.animate() takes no var().
-        if (preg_match(self::TOKEN_EASE, $ease, $m)) {
+        // A curve of the theme, as the value it has now: element.animate() takes no var().
+        if (preg_match(self::THEME_EASE, $ease, $m)) {
             return trim(self::$curves[$m[1]] ?? self::EASES['power3.out']);
         }
 
@@ -725,7 +729,7 @@ final class Motion
         };
     }
 
-    /** Names from EASES ("expo.out", "back.out(1.7)"), a curve of the design ("token:ease.brand"), or cubic-bezier(), linear() and steps() as written. */
+    /** Names from EASES ("expo.out", "back.out(1.7)"), a curve of the theme ("var(--ease-brand)"), or cubic-bezier(), linear() and steps() as written. */
     private static function ease(mixed $value): ?string
     {
         if (! is_string($value)) {
@@ -734,7 +738,7 @@ final class Motion
 
         $value = trim($value);
 
-        if (preg_match(self::TOKEN_EASE, $value)) {
+        if (preg_match(self::THEME_EASE, $value)) {
             return $value;
         }
 

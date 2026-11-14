@@ -13,7 +13,9 @@ use Cms\Extend\Hooks;
 use Cms\Cms;
 use Cms\Modules\Media\MediaManifest;
 use Cms\Modules\Site\Http\ContentPolicy;
-use Cms\Modules\Site\Design\Code;
+use Cms\Modules\Site\Styling\Code;
+use Cms\Modules\Site\Styling\Styling;
+use Cms\Modules\Site\Styling\StylingException;
 use Cms\Modules\Site\Rendering\PageContext;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Support\Files;
@@ -148,7 +150,7 @@ final class SiteBuilder implements SiteBuilderContract
     }
 
     /**
-     * Scripts and styles beside the design change on disk (an editor, git, an agent) with nobody
+     * Scripts and styles in content/styling change on disk (an editor, git, an agent) with nobody
      * telling the CMS. Pages say which they load, so only those are built again: a stylesheet's
      * pages, and for a script every page with an import map, since any script may import it.
      */
@@ -172,21 +174,21 @@ final class SiteBuilder implements SiteBuilderContract
         $changed = array_keys(array_diff_assoc($files, $before) + array_diff_key($before, $files));
 
         if (in_array('code.json', $changed, true)) {
-            $this->queue(null, __('Design code changed'));
+            $this->queue(null, __('Scripts or styles changed'));
 
             return true;
         }
 
-        $dependencies = array_map(static fn (string $file) => 'design:'.$file, $changed);
-        array_filter($changed, static fn (string $file) => str_starts_with($file, 'scripts/')) !== [] && $dependencies[] = 'design:importmap';
+        $dependencies = array_map(static fn (string $file) => 'styling:'.$file, $changed);
+        array_filter($changed, static fn (string $file) => str_starts_with($file, 'scripts/')) !== [] && $dependencies[] = 'styling:importmap';
         $pages = $this->readManifest()['pages'];
         $uris = array_keys(array_filter($pages, static fn (array $page) => array_intersect($dependencies, $page['deps'] ?? []) !== []));
-        $uris !== [] && $this->queue(array_map('strval', $uris), __('Design code changed'));
+        $uris !== [] && $this->queue(array_map('strval', $uris), __('Scripts or styles changed'));
 
         return $uris !== [];
     }
 
-    /** @return array<string, string> what each file beside the design holds now */
+    /** @return array<string, string> what each script and stylesheet holds now */
     private function rememberCode(Code $code, ?string $stamp = null): array
     {
         Files::putJson(storage_path('build/code.json'), ['stamp' => $stamp ?? $code->stamp(), 'files' => $files = $code->fingerprints()]);
@@ -221,6 +223,7 @@ final class SiteBuilder implements SiteBuilderContract
 
         if (! empty($queue['all']) || (! empty($queue['full']) && ! isset($queue['generation']))) {
             $queue = $this->expandFull($queue, $manifest);
+            $queue = $this->compileStyles($queue);
             $this->rememberCode($this->cms->app()->make(Code::class));
             Files::put(storage_path('build/signature'), $this->signature());
         }
@@ -256,6 +259,10 @@ final class SiteBuilder implements SiteBuilderContract
         if ($queue['items'] === []) {
             if (! empty($queue['full'])) {
                 $this->removeStale($manifest, $queue['generation']);
+                // Every page now names the current stylesheet.
+                $styling = $this->cms->app()->make(Styling::class);
+                $styling->stylesheet();
+                $styling->sweep();
             }
 
             $manifest['builtAt'] = now()->toIso8601String();
@@ -267,6 +274,26 @@ final class SiteBuilder implements SiteBuilderContract
 
         $this->writeManifest($manifest);
         $this->writeQueue($queue);
+    }
+
+    /**
+     * Every page links one stylesheet: before a full build it is compiled for the classes the content uses now,
+     * where the server has Node. Where it has none the admin compiles, so a build can only say the CSS is behind.
+     */
+    private function compileStyles(array $queue): array
+    {
+        $styling = $this->cms->app()->make(Styling::class);
+        // The content may have come in with git or FTP: nothing told the CMS which classes it uses.
+        $styling->changed();
+
+        try {
+            $styling->refresh() || $queue['warnings'][] = ['uri' => null, 'message' => (string) __('The site’s CSS is older than its content or its stylesheet. Open the admin once to compile it, or give the server Node 20 or newer.')];
+        } catch (StylingException $e) {
+            report($e);
+            $queue['errors'][] = __('The stylesheet does not compile: :message', ['message' => $e->getMessage()]);
+        }
+
+        return $queue;
     }
 
     /** Build everything now (CLI). */

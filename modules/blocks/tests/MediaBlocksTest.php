@@ -211,7 +211,7 @@ final class MediaBlocksTest extends TestCase
         $b = $this->jpeg('Dunes.jpg', 1000, 1500);
         $html = $this->render([['type' => 'gallery', 'props' => ['images' => [$a, $b, '/missing-but-given.jpg'], 'columns' => 4, 'aspect' => '1/1']]]);
 
-        $this->assertMatchesRegularExpression('#^<ul class="cms-gallery( s\w+)+" role="list"><li class="cms-gallery__item"><figure><picture>#', $html);
+        $this->assertStringStartsWith('<ul class="cms-gallery" style="--cms-columns:4;--cms-columns-tablet:3;--cms-columns-phone:2;--cms-gap:calc(var(--spacing) * 4)" role="list"><li class="cms-gallery__item"><figure><picture>', $html);
         $this->assertSame(3, substr_count($html, '<li class="cms-gallery__item">'), 'an address is shown as it is');
         $this->assertStringContainsString('alt="Boats at dawn"', $html);
         $this->assertStringContainsString('<figcaption>The harbour &lt;at&gt; six</figcaption>', $html);
@@ -222,14 +222,13 @@ final class MediaBlocksTest extends TestCase
         $this->assertArrayNotHasKey('lightbox', $this->features(), 'its script only comes with the lightbox');
         $this->assertTrue($this->features()['gallery']);
 
-        $css = '';
-        $this->cms()->hooks()->on('render.style', function ($key, $rule) use (&$css) {
-            $css .= $rule;
-        });
-        $this->render([['type' => 'gallery', 'props' => ['images' => [$a], 'columns' => 5]]]);
-        $this->assertStringContainsString('grid-template-columns:repeat(5,minmax(0,1fr))', $css);
-        $this->assertStringContainsString('grid-template-columns:repeat(3,minmax(0,1fr))', $css, 'three on a tablet');
-        $this->assertStringContainsString('grid-template-columns:repeat(2,minmax(0,1fr))', $css, 'two on a phone');
+        // gallery.css lays the grid out from those: as many columns as chosen, three at most on a tablet, two on a phone.
+        $this->assertStringStartsWith('<ul class="cms-gallery columns-2" style="--cms-columns:5;--cms-columns-tablet:3;--cms-columns-phone:2;--cms-gap:calc(var(--spacing) * 8)"', $this->render([['type' => 'gallery', 'class' => 'columns-2', 'props' => ['images' => [$a], 'columns' => 5, 'gap' => '8']]]));
+        $this->assertStringContainsString('--cms-columns:2;--cms-columns-tablet:2;--cms-columns-phone:1;', $this->render([['type' => 'gallery', 'props' => ['images' => [$a], 'columns' => 2]]]));
+        $css = (string) file_get_contents(dirname(__DIR__).'/media/styles/gallery.css');
+        $this->assertStringContainsString('.cms-gallery { display: grid; grid-template-columns: repeat(var(--cms-columns, 3), minmax(0, 1fr));', $css);
+        $this->assertStringContainsString('@media (width < 64rem) { .cms-gallery { grid-template-columns: repeat(var(--cms-columns-tablet, 3), minmax(0, 1fr)); } }', $css);
+        $this->assertStringContainsString('@media (width < 48rem) { .cms-gallery { grid-template-columns: repeat(var(--cms-columns-phone, 2), minmax(0, 1fr)); } }', $css);
 
         $plain = $this->render([['type' => 'gallery', 'props' => ['images' => [$a], 'captions' => false]]]);
         $this->assertStringNotContainsString('figcaption', $plain);
@@ -275,9 +274,9 @@ final class MediaBlocksTest extends TestCase
             ['type' => 'paragraph', 'props' => ['text' => '']],
             ['type' => 'quote', 'props' => ['text' => 'Hidden'], 'hidden' => true],
         ];
-        $html = $this->render([['type' => 'carousel', 'props' => ['per_view' => '3', 'gap' => 'token:space.6', 'label' => 'What <people> say'], 'children' => $slides]]);
+        $html = $this->render([['type' => 'carousel', 'props' => ['per_view' => '3', 'gap' => '6', 'label' => 'What <people> say'], 'children' => $slides]]);
 
-        $this->assertMatchesRegularExpression('#^<section class="cms-carousel" x-cms-carousel="\{\}" aria-roledescription="carousel" aria-label="What &lt;people&gt; say" data-per-view="3"><div class="cms-carousel__track" id="cms-carousel\d+" style="--cms-gap:var\(--space-6\)" tabindex="0">#', $html);
+        $this->assertMatchesRegularExpression('#^<section class="cms-carousel" x-cms-carousel="\{\}" aria-roledescription="carousel" aria-label="What &lt;people&gt; say" data-per-view="3"><div class="cms-carousel__track" id="cms-carousel\d+" style="--cms-gap:calc\(var\(--spacing\) \* 6\)" tabindex="0">#', $html);
         $this->assertSame(2, substr_count($html, 'class="cms-carousel__slide"'), 'empty and hidden blocks are no slides');
         $this->assertStringContainsString('<div class="cms-carousel__slide" role="group" aria-roledescription="slide" aria-label="2 of 2"><figure class="cms-quote">', $html);
         $this->assertMatchesRegularExpression('#<div class="cms-carousel__nav"><button type="button" class="cms-carousel__button" aria-label="Previous Slide" aria-controls="cms-carousel\d+"><svg[^>]*>.*</svg></button><button type="button" class="cms-carousel__button" aria-label="Next Slide"#', $html);

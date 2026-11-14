@@ -91,9 +91,10 @@ function kindOf(node: BlockNode, title: string): string {
   const tags: Record<string, string> = { section: t('Section'), header: t('Header'), footer: t('Footer'), nav: t('Navigation'), main: t('Main Content'), aside: t('Aside'), article: t('Article'), ul: t('List'), ol: t('List'), li: t('List Item'), a: t('Link'), button: t('Button'), form: t('Form'), figure: t('Figure') }
   const tag = String(node.props?.tag ?? '')
   if (tags[tag]) return tags[tag]
-  const base = (node.style?.base ?? {}) as Record<string, unknown>
-  if (base.display === 'grid') return t('Grid')
-  if (base.display === 'flex' || base.display === 'inline-flex') return /column/.test(String(base.flexDirection ?? '')) ? t('Stack') : t('Row||layout')
+  // Its classes on every screen and in no state say what it is: the outline needs no theme to read these.
+  const base = new Set((node.class ?? '').split(/\s+/).filter((name) => !name.includes(':')))
+  if (base.has('grid') || base.has('inline-grid')) return t('Grid')
+  if (base.has('flex') || base.has('inline-flex')) return base.has('flex-col') || base.has('flex-col-reverse') ? t('Stack') : t('Row||layout')
   return title
 }
 

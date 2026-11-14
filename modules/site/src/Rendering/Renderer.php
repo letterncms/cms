@@ -15,22 +15,23 @@ use Cms\Modules\Blocks\Templates;
 use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
 use Cms\Cms;
-use Cms\Modules\Site\Design\Code;
+use Cms\Modules\Site\Styling\Candidates;
+use Cms\Modules\Site\Styling\Code;
 use Cms\Modules\Site\Http\ContentPolicy;
-use Cms\Modules\Site\Design\Design;
+use Cms\Modules\Site\Styling\Styling;
 
 /**
  * Builds pages. There are no theme files: the HTML document is assembled here,
  * its body is the entry's template (a block document from content/templates)
  * with the entry's own blocks in the template's Page content block.
  *
- *   <html lang dir> head (design CSS, block CSS, plugin head tags) <body> template… </body>
+ *   <html lang dir> head (the site's stylesheet, what blocks add, plugin head tags) <body> template… </body>
  */
 final class Renderer
 {
     public function __construct(
         private readonly Cms $cms,
-        private readonly Design $design,
+        private readonly Styling $styling,
         private readonly Templates $templates,
         private readonly BlockRenderer $blocks,
         private readonly Hooks $hooks,
@@ -108,10 +109,10 @@ final class Renderer
         return [['id' => 'arch', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => [
             ['id' => 'archh', 'type' => 'heading', 'props' => ['level' => '1'], 'bind' => ['text' => 'entry.title']],
             ['id' => 'archr', 'type' => 'repeat', 'props' => ['source' => 'archive', 'paginate' => true], 'children' => [
-                ['id' => 'archl', 'type' => 'link', 'bind' => array_combine(['label', 'url'], ['item.title', 'item.url']), 'style' => ['base' => ['display' => 'block']]],
+                ['id' => 'archl', 'type' => 'link', 'bind' => array_combine(['label', 'url'], ['item.title', 'item.url']), 'class' => 'block'],
             ]],
-            ['id' => 'archp', 'type' => 'link', 'props' => ['label' => (string) __('Previous')], 'bind' => ['url' => 'pagination.prev', 'visible' => 'pagination.prev'], 'style' => ['base' => ['display' => 'inline-block', 'marginTop' => '1rem', 'marginRight' => '1rem']]],
-            ['id' => 'archn', 'type' => 'link', 'props' => ['label' => (string) __('Next')], 'bind' => ['url' => 'pagination.next', 'visible' => 'pagination.next'], 'style' => ['base' => ['display' => 'inline-block', 'marginTop' => '1rem']]],
+            ['id' => 'archp', 'type' => 'link', 'props' => ['label' => (string) __('Previous')], 'bind' => ['url' => 'pagination.prev', 'visible' => 'pagination.prev'], 'class' => 'mt-4 mr-4 inline-block'],
+            ['id' => 'archn', 'type' => 'link', 'props' => ['label' => (string) __('Next')], 'bind' => ['url' => 'pagination.next', 'visible' => 'pagination.next'], 'class' => 'mt-4 inline-block'],
         ]]];
     }
 
@@ -139,11 +140,7 @@ final class Renderer
         $context = new PageContext(null, 1, false, false, $uri, is_string($locale) ? $locale : null);
         $template = $this->templates->resolve(['error', 'default'], false) ?? self::fallback();
         $context->addCode($this->code->for('templates', (string) ($template['handle'] ?? '')));
-        $nodes = [['id' => 'msg', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => [
-            ['id' => 'msgt', 'type' => 'heading', 'props' => ['text' => $title, 'level' => '1']],
-            ['id' => 'msgp', 'type' => 'paragraph', 'props' => ['text' => $text]],
-            ['id' => 'msgb', 'type' => 'link', 'props' => ['label' => $backLabel ?? __('Go back'), 'url' => $back], 'style' => ['base' => ['display' => 'inline-block', 'marginTop' => '1rem', 'textDecoration' => 'underline']]],
-        ]]];
+        $nodes = self::messageNodes($title, $text, $back, $backLabel ?? (string) __('Go back'));
         $html = $this->document($context, $template['blocks'], fn () => $this->blocks->render($nodes), $title);
 
         return ['html' => $html, 'status' => $status, 'context' => $context];
@@ -158,21 +155,6 @@ final class Renderer
         $context = new PageContext($entry, 1, true, $editor, $entry?->uri ?? '/');
 
         return $this->document($context, $nodes, fn () => $entry ? $this->body($entry) : '', $title ?: ($entry?->title ?? ''), templateDocument: $editorDocument);
-    }
-
-    /** The design's specimen of fields or buttons, as a page of this site: its stylesheets, fonts and scripts. */
-    public function specimen(\Closure $html, string $title): string
-    {
-        $context = new PageContext(null, 1, true, false, '/__specimen');
-
-        // Its words are the admin's, like the canvas's: the Design is part of the admin.
-        return $this->document($context, [['id' => 'specimen', 'type' => 'outlet', 'props' => []]], function () use ($html) {
-            $this->blocks->uses('fields');
-            $translations = $this->cms->app()->make(Translations::class);
-            $translations->apply($this->adminLanguage($translations));
-
-            return $html();
-        }, $title);
     }
 
     /** An entry's blocks as plain text-bearing blocks (components, Repeats and bindings resolved). */
@@ -309,7 +291,6 @@ final class Renderer
         $locale = $context->locale();
         $dir = Languages::direction($locale);
         $name = (string) config('app.name');
-        $design = $this->design->json();
 
         $head = [
             '<meta charset="utf-8">',
@@ -317,12 +298,12 @@ final class Renderer
             '<title>'.e($title !== '' && $entry?->uri !== '/' ? "{$title} · {$name}" : $name).'</title>',
         ];
 
-        if ($design->hasDark()) {
+        if ($this->styling->dark()) {
             // A saved light/dark choice applies before the first paint.
             $head[] = '<script>try{var t=localStorage.getItem("cms-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>';
         }
 
-        foreach ($this->design->preloads() as $href) {
+        foreach ($this->styling->preloads() as $href) {
             $head[] = '<link rel="preload" href="'.e($href).'" as="font" type="font/woff2" crossorigin>';
         }
 
@@ -333,7 +314,7 @@ final class Renderer
             $head[] = '<link rel="icon" href="data:,">';
         }
 
-        $head[] = '<link rel="stylesheet" href="'.e($this->design->stylesheet()).'">';
+        $head[] = '<link rel="stylesheet" href="'.e($this->styling->stylesheet()).'">';
 
         if ($context->preview) {
             $head[] = '<meta name="robots" content="noindex, nofollow">';
@@ -342,7 +323,7 @@ final class Renderer
         $head = [...$head, ...array_values($context->head)];
         $head = $this->hooks->filter('site.head', $head, $context);
 
-        // Stylesheets beside the design: the site's, then the template's, the components' and the blocks', in that order.
+        // The site's other stylesheets: those for every page, then the template's, the components' and the blocks', in that order.
         foreach ($this->codeUrls($context, 'styles') as $href) {
             $head[] = '<link rel="stylesheet" href="'.e($href).'">';
         }
@@ -354,7 +335,7 @@ final class Renderer
         $foot = array_values($context->foot);
         $modules = $context->editor ? [] : $this->codeUrls($context, 'scripts');
 
-        if (! $context->editor && ($script = $this->design->script())) {
+        if (! $context->editor && ($script = $this->styling->script())) {
             $modules[] = $script;
         }
 
@@ -364,14 +345,14 @@ final class Renderer
 
         // Pages swapped without a page load: every public page brings the script that does it, and the same import map,
         // since a page can't take another's place when its modules would resolve differently.
-        $client = $context->mode !== PageContext::EDITOR && $context->mode !== PageContext::PREVIEW && $design->transition()['navigation'] === 'client';
+        $client = $context->mode !== PageContext::EDITOR && $context->mode !== PageContext::PREVIEW && $this->styling->settings()['transition']['navigation'] === 'client';
         $client && $this->blocks->uses('navigate');
 
         $foot = $this->hooks->filter('site.foot', $foot, $context);
 
-        // An import map counts from the first module on: it goes in the head, on pages that load one of the design's.
+        // An import map counts from the first module on: it goes in the head, on pages that load one of the site's.
         if ((bool) $this->hooks->filter('site.modules', $modules !== [] || $context->modules || $client, $context) && ($map = $this->code->importMapTag()) !== '') {
-            $context->dependencies['design:importmap'] = true;
+            $context->dependencies['styling:importmap'] = true;
             $head[] = $map;
         }
         // What the head and the foot run is what the site's security policy lets a public page run.
@@ -403,12 +384,33 @@ final class Renderer
         $urls = [];
 
         foreach (Code::limit([...$this->code->for('global')[$kind], ...$context->code[$kind]]) as $name) {
-            $context->dependencies["design:{$kind}/{$name}"] = true;
+            $context->dependencies["styling:{$kind}/{$name}"] = true;
             $url = $this->code->url($kind, $name);
-            $url !== null ? $urls[] = $url : $this->hooks->dispatch('render.warning', __('This page names :file, which is not in content/design.', ['file' => "{$kind}/{$name}.".Code::KINDS[$kind]]));
+            $url !== null ? $urls[] = $url : $this->hooks->dispatch('render.warning', __('This page names :file, which is not in content/styling.', ['file' => "{$kind}/{$name}.".Code::KINDS[$kind]]));
         }
 
         return $urls;
+    }
+
+    /** A message's blocks: what it is, what to do, and the way back. */
+    private static function messageNodes(string $title, string $text, string $back, string $backLabel): array
+    {
+        return [['id' => 'msg', 'type' => 'section', 'props' => ['width' => 'prose'], 'children' => [
+            ['id' => 'msgt', 'type' => 'heading', 'props' => ['text' => $title, 'level' => '1']],
+            ['id' => 'msgp', 'type' => 'paragraph', 'props' => ['text' => $text]],
+            ['id' => 'msgb', 'type' => 'link', 'props' => ['label' => $backLabel, 'url' => $back], 'class' => 'mt-4 inline-block underline'],
+        ]]];
+    }
+
+    /**
+     * The classes the pages built here carry (an archive's list, a message, the 404): no content names them, so
+     * Tailwind is told (`styling.candidates`).
+     *
+     * @return list<string>
+     */
+    public static function classes(): array
+    {
+        return array_values(array_unique(Candidates::in((string) json_encode([self::archiveList(), self::messageNodes('', '', '/', ''), self::fallback404()]))));
     }
 
     /** Used until a site has a `default` template: the content, nothing else. */
@@ -422,8 +424,8 @@ final class Renderer
     public static function fallback404(): array
     {
         return ['handle' => '404', 'title' => 'Not Found', 'blocks' => [
-            ['id' => 't404', 'type' => 'section', 'props' => ['width' => 'prose'], 'anchor' => 'main', 'style' => ['base' => ['textAlign' => 'center']], 'children' => [
-                ['id' => 't404c', 'type' => 'paragraph', 'props' => ['text' => '404'], 'style' => ['base' => ['color' => 'token:color.muted']]],
+            ['id' => 't404', 'type' => 'section', 'props' => ['width' => 'prose'], 'anchor' => 'main', 'class' => 'text-center', 'children' => [
+                ['id' => 't404c', 'type' => 'paragraph', 'props' => ['text' => '404'], 'class' => 'text-muted'],
                 ['id' => 't404h', 'type' => 'heading', 'props' => ['text' => 'This page does not exist', 'level' => '1']],
                 ['id' => 't404l', 'type' => 'link', 'props' => ['label' => 'Go to the Home Page', 'url' => '/']],
             ]],

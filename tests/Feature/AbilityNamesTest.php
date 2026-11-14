@@ -18,9 +18,9 @@ final class AbilityNamesTest extends TestCase
     /**
      * `save` creates or replaces a definition by its handle, and only these things are definitions: what a
      * collection, a fieldset, a global, a component or the user profile is made of, and a
-     * script or stylesheet beside the design, whose handle is its path.
+     * script or stylesheet of the site, whose handle is its path.
      */
-    private const array SAVED = ['collections', 'fieldsets', 'components', 'patterns', 'globals', 'user-fields', 'design-code'];
+    private const array SAVED = ['collections', 'fieldsets', 'components', 'patterns', 'globals', 'user-fields', 'styling-code'];
 
     /** Acts that are none of the standard ones: each says what it does to its thing. */
     private const array DOMAIN = [
@@ -43,8 +43,8 @@ final class AbilityNamesTest extends TestCase
         // Packages, their installs and the core update.
         'enable', 'disable', 'switch', 'install', 'uninstall', 'migrate', 'rollback', 'plan-install', 'job-step',
         'update-check', 'update-start', 'update-step', 'update-switch', 'update-rollback', 'update-postpone', 'update-auto', 'update-tick',
-        // The site, its design, and email.
-        'build', 'preview', 'test', 'refresh',
+        // The site, its styling, and email. `compiled` hands the site the CSS a browser compiled for it.
+        'build', 'preview', 'test', 'refresh', 'compiled',
         // The Sync module: the only place "sync" is said.
         'connect', 'disconnect', 'allow', 'renew-key', 'start', 'step', 'resume', 'cancel', 'undo',
         // A site taken into the site.
@@ -58,6 +58,8 @@ final class AbilityNamesTest extends TestCase
         'info', 'status', 'recent', 'overview', 'editable', 'options', 'schema', 'types', 'icons', 'tree', 'builtin', 'coverage',
         'people', 'inbox', 'log', 'report', 'agents', 'catalog', 'item', 'job-status', 'updates', 'build-status', 'preview-url',
         'arrangement', 'access', 'history', 'skills', 'commands', 'presence', 'usage',
+        // What the site's CSS is compiled from.
+        'source',
     ];
 
     /** Domain verbs that do something and leave the site as it was: they are read-only. */

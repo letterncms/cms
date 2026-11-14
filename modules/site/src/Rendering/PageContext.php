@@ -41,10 +41,10 @@ final class PageContext
     /** @var array<string, array{0: int, 1: string}> rule key => [order, CSS] */
     public array $styles = [];
 
-    /** @var array{scripts: list<string>, styles: list<string>} files beside the design this page loads, by name (Design\Code) */
+    /** @var array{scripts: list<string>, styles: list<string>} the site's scripts and styles this page loads, by name (Styling\Code) */
     public array $code = ['scripts' => [], 'styles' => []];
 
-    /** A block on this page loads a script of the design by itself (a behaviour), so the page needs the import map. */
+    /** A block on this page loads a script of the site by itself (a behaviour), so the page needs the import map. */
     public bool $modules = false;
 
     public int $pages = 1;

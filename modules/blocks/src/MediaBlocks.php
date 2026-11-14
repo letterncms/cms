@@ -42,9 +42,7 @@ final class MediaBlocks
     /** @return list<array> */
     public static function all(): array
     {
-        $space = static fn (string $default) => ['type' => 'select', 'options' => [
-            'token:space.0' => 'None', 'token:space.2' => 'XS', 'token:space.4' => 'S', 'token:space.6' => 'M', 'token:space.8' => 'L', 'token:space.12' => 'XL', 'token:space.16' => '2XL',
-        ], 'default' => $default];
+        $space = Elements::spaceField(...);
 
         return [
             [
@@ -69,19 +67,10 @@ final class MediaBlocks
                     ['handle' => 'images', 'type' => 'media', 'label' => 'Images', 'accept' => 'image/*'],
                     ['handle' => 'columns', 'type' => 'number', 'label' => 'Columns', 'min' => 1, 'max' => 6, 'default' => 3],
                     ['handle' => 'aspect', 'type' => 'select', 'label' => 'Crop', 'options' => self::ASPECTS, 'default' => '3/2'],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.4')],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('4')],
                     ['handle' => 'captions', 'type' => 'toggle', 'label' => 'Show Captions', 'default' => true],
                     ['handle' => 'lightbox', 'type' => 'toggle', 'label' => 'Open Large on Click'],
                 ],
-                'derive' => static function (array $p): array {
-                    $n = self::columns($p);
-
-                    return [
-                        'base' => ['display' => 'grid', 'gap' => $p['gap'] ?? 'token:space.4', 'gridTemplateColumns' => "repeat({$n},minmax(0,1fr))", 'alignItems' => 'start'],
-                        'tablet' => ['gridTemplateColumns' => 'repeat('.min($n, 3).',minmax(0,1fr))'],
-                        'mobile' => ['gridTemplateColumns' => 'repeat('.($n >= 3 ? 2 : 1).',minmax(0,1fr))'],
-                    ];
-                },
                 'render' => self::gallery(...),
                 'example' => ['images' => ['/media/harbour.jpg', '/media/market.jpg', '/media/dunes.jpg'], 'columns' => 3, 'aspect' => '3/2', 'lightbox' => true],
             ],
@@ -91,7 +80,7 @@ final class MediaBlocks
                 'children' => true, 'defer' => true, 'html' => 'section', 'uses' => ['carousel'],
                 'fields' => [
                     ['handle' => 'per_view', 'type' => 'select', 'label' => 'Slides Per View', 'options' => ['1' => '1', '2' => '2', '3' => '3', '4' => '4', 'auto' => 'Auto'], 'default' => '1', 'display' => 'segmented', 'about' => 'Auto: each slide keeps its own width.'],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.4')],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('4')],
                     ['handle' => 'label', 'type' => 'text', 'label' => 'Name for Screen Readers', 'default' => 'Carousel'],
                 ],
                 'template' => [
@@ -100,7 +89,7 @@ final class MediaBlocks
                     ['type' => 'image', 'props' => ['aspect' => '3/2']],
                 ],
                 'render' => self::carousel(...),
-                'example' => ['per_view' => '3', 'gap' => 'token:space.6'],
+                'example' => ['per_view' => '3', 'gap' => '6'],
             ],
             [
                 'name' => 'file', 'title' => 'File', 'icon' => 'file', 'category' => 'media',
@@ -188,7 +177,10 @@ final class MediaBlocks
             $html .= self::lightbox();
         }
 
-        return '<ul '.$d['attrs'].' role="list"'.($lightbox ? ' data-cms-lightbox' : '').'>'.$html.'</ul>';
+        // The grid is blocks.css's, from these: the columns as chosen, and as many of them as fit a tablet and a phone.
+        $attrs = Elements::style((string) $d['attrs'], "--cms-columns:{$n};--cms-columns-tablet:".min($n, 3).';--cms-columns-phone:'.($n >= 3 ? 2 : 1).';--cms-gap:'.Elements::space($b['gap'] ?? null, '4'));
+
+        return '<ul '.$attrs.' role="list"'.($lightbox ? ' data-cms-lightbox' : '').'>'.$html.'</ul>';
     }
 
     /** The dialog a gallery's pictures open in, ready for the lightbox script to copy: in the site's language and its icons. */
@@ -228,7 +220,7 @@ final class MediaBlocks
         $renderer = $d['renderer'];
         $children = array_values(array_filter((array) ($d['node']['children'] ?? []), static fn ($c) => is_array($c) && empty($c['hidden'])));
         $perView = in_array((string) ($b['per_view'] ?? '1'), ['1', '2', '3', '4', 'auto'], true) ? (string) ($b['per_view'] ?? '1') : '1';
-        $gap = Css::value($b['gap'] ?? 'token:space.4') ?? 'var(--space-4)';
+        $gap = Elements::space($b['gap'] ?? null, '4');
         $id = $renderer->nextId('carousel');
         $label = trim((string) ($b['label'] ?? '')) ?: __('Carousel');
 

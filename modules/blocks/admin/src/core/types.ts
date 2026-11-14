@@ -1,8 +1,5 @@
 import type { FieldDef } from '@letterncms/sdk'
 
-/** Variant ("base", "tablet", "hover", "mobile:hover", "is-open"…) → CSS properties in camelCase. */
-export type StyleMap = Record<string, Record<string, string | number>>
-
 export interface LogicAction {
   do: string
   [key: string]: any
@@ -54,9 +51,9 @@ export interface BlockNode {
   id: string
   type: string
   props: Record<string, any>
-  style?: StyleMap
   children?: BlockNode[]
   anchor?: string
+  /** Its Tailwind classes: "flex gap-4 md:grid-cols-3 hover:bg-primary/50". */
   class?: string
   label?: string
   hidden?: boolean
@@ -64,9 +61,9 @@ export interface BlockNode {
   bind?: Record<string, string>
   logic?: LogicMap
   motion?: MotionDef[]
-  /** A script of the design mounted on the element: { module: "tilt", props: { max: 8 }, when: "visible" }. */
+  /** A script of the site mounted on the element: { module: "tilt", props: { max: 8 }, when: "visible" }. */
   behavior?: { module: string; props?: Record<string, unknown>; when?: 'load' | 'visible' | 'idle' }
-  /** Scripts and styles of the design the block brings to its page. */
+  /** Scripts and styles of the site the block brings to its page. */
   code?: { scripts?: string[]; styles?: string[] }
   /** The name the element is kept by across pages when navigation swaps them. */
   persist?: string
@@ -104,9 +101,6 @@ export interface Catalog {
   blocks: BlockTypeDef[]
   /** The inserter's groups, in order and in the user's language. */
   categories?: { name: string; label: string }[]
-  styles: Record<string, { property: string; group: string }>
-  states: string[]
-  breakpoints: Record<string, string>
   sources: DataSourceDef[]
   motion: { triggers: string[]; properties: Record<string, 'number' | 'length' | 'css'> }
   logic: { events: string[]; mods: string[]; actions: string[]; transitions: string[]; merges: string[] }

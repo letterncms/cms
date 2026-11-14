@@ -15,7 +15,7 @@ final class AgentsGuideSiteTest extends TestCase
         return ['letterncms/blocks', 'letterncms/site', 'letterncms/mcp'];
     }
 
-    public function test_the_guide_covers_the_build_the_design_and_mcp(): void
+    public function test_the_guide_covers_the_build_the_styling_and_mcp(): void
     {
         $guide = $this->app->make(AgentsGuide::class)->render();
 
@@ -24,9 +24,13 @@ final class AgentsGuideSiteTest extends TestCase
         $this->assertStringContainsString('builds its pages as static files into `public/`', $guide);
         $this->assertStringContainsString('at `http://localhost/mcp`', $guide);
         $this->assertStringContainsString('Block Markdown ('.cms_brand('docs_url').'/reference/block-markdown)', $guide);
-        $this->assertStringContainsString('`content/design/tokens.json`', $guide);
-        $this->assertStringContainsString('`content/design/scripts`', $guide);
-        $this->assertStringContainsString('`design-code/save`', $guide);
+        $this->assertStringContainsString('`content/styling/theme.css`', $guide);
+        // The styling is taught as it is written: the stylesheet's parts, classes on blocks, states as attributes, and how the CSS is compiled.
+        foreach (['## Styling', '@import "tailwindcss";', '@theme {', '@layer base {', '@utility card {', 'light-dark(', '`data-open:rotate-45`', '`in-data-open:hidden`', '`content/styling/compiled.css`', 'Node 20', '`php cms build` compiles it first'] as $taught) {
+            $this->assertStringContainsString($taught, $guide);
+        }
+        $this->assertStringContainsString('`content/styling/scripts`', $guide);
+        $this->assertStringContainsString('`styling-code/save`', $guide);
 
         $this->assertStringContainsString('never edit `public/`, `vendor/`, `storage/` or a plugin Composer or the store installed', $guide);
 
@@ -35,7 +39,7 @@ final class AgentsGuideSiteTest extends TestCase
         preg_match_all('/php cms ([a-z:]+)/', $guide, $named);
         $this->assertSame([], array_values(array_diff(array_unique($named[1]), $commands)));
 
-        foreach (['abilities/list', 'collections/schema', 'entries/create', 'blocks/types', 'design/get', 'design/update', 'design-code/list', 'design-code/get', 'design-code/save'] as $name) {
+        foreach (['abilities/list', 'collections/schema', 'entries/create', 'blocks/types', 'styling/get', 'styling/update', 'styling/fonts-import', 'styling-code/list', 'styling-code/get', 'styling-code/save'] as $name) {
             $this->assertStringContainsString($name, $guide);
             $this->assertTrue($this->cms()->abilities()->has($name), $name);
         }

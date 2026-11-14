@@ -13,8 +13,8 @@
 // treats them as markup, code or an address to load.
 
 export interface BehaviorContext {
-  /** A design token's value where the element is: token('color.primary'), token('duration.fast'). '' when there is none. */
-  token: (path: string) => string
+  /** A theme variable's value where the element is, by its CSS name: token('--color-primary'), token('--ease-out'). A colour is the one in effect, light or dark. '' when there is none. */
+  token: (name: string) => string
   /**
    * The visitor asked for less motion: in their system's settings, or with the page's Motion Toggle.
    * When that changes, the behaviour is unmounted and mounted again.
@@ -62,13 +62,17 @@ function calm(): boolean {
   }
 }
 
-/** Token groups whose CSS variable isn't named after them (DesignJson::GROUPS). */
-const PREFIX: Record<string, string> = { weight: 'font-weight' }
-
-function token(el: HTMLElement, path: string): string {
-  const at = path.indexOf('.')
-  const group = path.slice(0, at)
-  return getComputedStyle(el).getPropertyValue(`--${PREFIX[group] ?? group}-${path.slice(at + 1)}`).trim()
+function token(el: HTMLElement, name: string): string {
+  const view = el.ownerDocument.defaultView ?? window
+  const value = view.getComputedStyle(el).getPropertyValue(name).trim()
+  if (!value.includes('light-dark(')) return value
+  // A colour with a value for dark mode: the one in effect where the element is, as a script can use it.
+  const probe = el.ownerDocument.createElement('span')
+  probe.style.cssText = `display:none;color:${value}`
+  el.append(probe)
+  const color = view.getComputedStyle(probe).color
+  probe.remove()
+  return color
 }
 
 /** What an element asks for: one behaviour in three attributes, or a list in one. */
@@ -90,7 +94,7 @@ async function run(el: HTMLElement, entry: Mounted, spec: Spec) {
     const module: Behavior = await import(/* @vite-ignore */ spec.src)
     if (entry.abort.signal.aborted) return
     entry.module = module
-    const cleanup = await (module.mount ?? module.default)?.(el, spec.props ?? {}, { token: (path) => token(el, path), reducedMotion: calm(), signal: entry.abort.signal })
+    const cleanup = await (module.mount ?? module.default)?.(el, spec.props ?? {}, { token: (name) => token(el, name), reducedMotion: calm(), signal: entry.abort.signal })
     if (typeof cleanup !== 'function') return
     // It left while its mount was still at work: undo what that did.
     if (entry.abort.signal.aborted) cleanup()

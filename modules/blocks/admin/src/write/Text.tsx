@@ -154,10 +154,10 @@ export function EditableText({ node, prop, tag = 'div', className, placeholder, 
         store.focus(node.id, 'start')
         return
       }
-      // A paragraph continues as its sibling would (same tag and design); anything else continues as text.
+      // A paragraph continues as its sibling would (same tag and classes); anything else continues as text.
       const next: BlockNode =
         node.type === 'paragraph'
-          ? { id: newId(), type: 'paragraph', props: { ...node.props, text: after }, ...(node.style ? { style: structuredClone(node.style) } : {}), ...(node.class ? { class: node.class } : {}) }
+          ? { id: newId(), type: 'paragraph', props: { ...node.props, text: after }, ...(node.class ? { class: node.class } : {}) }
           : paragraph(after)
       const loc = insertionPoint(nodes, node.id, 'paragraph', types, allowed)
       if (!loc) return

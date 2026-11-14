@@ -34,7 +34,7 @@ final class BuildCommand extends Command
         }
 
         foreach ($status['warnings'] as $warning) {
-            $this->components->warn($warning['uri'].': '.$warning['message']);
+            $this->components->warn(($warning['uri'] !== null ? $warning['uri'].': ' : '').$warning['message']);
         }
 
         $this->components->info(sprintf('%d pages in public/ (%.1fs).', $status['pages'], microtime(true) - $started));

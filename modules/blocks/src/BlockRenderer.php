@@ -16,8 +16,8 @@ use Throwable;
 /**
  * Renders block documents to HTML.
  *
- * For each node: bindings are resolved against the current Scope, styles become
- * atomic classes, `logic` becomes Alpine attributes and `motion` CSS or, for what
+ * For each node: bindings are resolved against the current Scope, its `class` goes on
+ * the element after the block's own (`cms-<type>`), `logic` becomes Alpine attributes and `motion` CSS or, for what
  * waits on the visitor, a description for the runtime. Blocks render through their `render` closure (core blocks) or a
  * view (plugins that prefer Blade). Render closures receive:
  *   block (props, bindings applied) · node · type · content (children HTML) ·
@@ -273,17 +273,15 @@ final class BlockRenderer
 
     public function __construct(
         private readonly BlockRegistry $registry,
-        private readonly StyleCompiler $styles,
         private readonly Factory $views,
         private readonly Hooks $hooks,
         private readonly Components $components,
         private readonly DataSources $sources,
     ) {}
 
-    /** A fresh page: forget the styles, features and references collected for the previous one. */
+    /** A fresh page: forget the features and references collected for the previous one. */
     public function begin(): void
     {
-        $this->styles->reset();
         $this->features = [];
         $this->referenced = [];
         $this->domIds = [];
@@ -430,23 +428,17 @@ final class BlockRenderer
                 $props['anchor'] = ($this->anchors ??= new Anchors)->for(['props' => $props] + $node);
             }
 
-            $style = (array) ($node['style'] ?? []);
-
-            if ($type->derive) {
-                $style = self::merge(($type->derive)($props), $style);
-            }
-
             $motion = $this->editor ? null : $this->motion($node);
             // The scripts and styles this block names come with it to whichever page shows it.
             ! empty($node['code']) && $this->hooks->dispatch('render.code', Document::code($node['code']));
 
             $classes = trim(implode(' ', array_filter([
                 'cms-'.str_replace('/', '-', $type->name),
-                $this->styles->classes($style),
-                $this->sanitizeClass((string) ($node['class'] ?? '')),
                 // Long-form text: the design's Prose styles and spacing, for every block inside.
                 ! empty($props['prose']) ? 'cms-prose' : '',
-                $extra['class'],
+                // The block's own classes come after the kernel's, as they are written.
+                Document::classes($node['class'] ?? null),
+                Logic::classes((array) ($node['logic'] ?? [])),
                 implode(' ', $motion['classes'] ?? []),
             ])));
 
@@ -505,7 +497,7 @@ final class BlockRenderer
             return null;
         }
 
-        $compiled = Motion::compile((array) $node['motion'], $this->styles->breakpoints(), (array) $this->hooks->filter('blocks.eases', []), (string) ($node['id'] ?? ''));
+        $compiled = Motion::compile((array) $node['motion'], (array) $this->hooks->filter('blocks.breakpoints', Motion::BREAKPOINTS), (array) $this->hooks->filter('blocks.eases', []), (string) ($node['id'] ?? ''));
 
         foreach ($compiled['rules'] as $key => $css) {
             $this->hooks->dispatch('render.style', $key, '@layer utilities{'.$css.'}', 5000);
@@ -681,13 +673,13 @@ final class BlockRenderer
 
     /**
      * Apply bindings: props get values from the scope; visible/hidden were handled
-     * already; state:, attr: and style: bindings become classes and attributes.
+     * already; state:, attr: and style: bindings become attributes (a state `open` is data-open).
      *
-     * @return array{0: array, 1: array{class: string, attrs: array<string, string>, style: list<string>}}
+     * @return array{0: array, 1: array{attrs: array<string, string>, style: list<string>}}
      */
     private function bindings(BlockType $type, array $props, array $bind, Scope $scope): array
     {
-        $extra = ['class' => '', 'attrs' => [], 'style' => []];
+        $extra = ['attrs' => [], 'style' => []];
 
         foreach ($bind as $key => $path) {
             if ($key === 'visible' || $key === 'hidden') {
@@ -698,7 +690,7 @@ final class BlockRenderer
             $value = $scope->resolve($path);
 
             if (str_starts_with($key, 'state:')) {
-                Scope::truthy($value) && $extra['class'] .= ' is-'.substr($key, 6);
+                Scope::truthy($value) && $extra['attrs']['data-'.substr($key, 6)] = '';
             } elseif (str_starts_with($key, 'attr:')) {
                 $name = substr($key, 5);
                 $text = is_object($value) && isset($value->url) && in_array($name, ['href', 'src'], true) ? (string) $value->url : ($value === true && str_starts_with($name, 'aria-') ? 'true' : Scope::text($value));
@@ -706,10 +698,8 @@ final class BlockRenderer
                 in_array($name, ['href', 'src'], true) && $text = Elements::url($text) ?? '';
                 $text !== '' && $extra['attrs'][$name] = $text;
             } elseif (str_starts_with($key, 'style:')) {
-                $property = substr($key, 6);
-                // A binding stored before a property was renamed or removed names nothing: it does nothing.
-                $css = isset(StyleCompiler::PROPERTIES[$property]) ? $this->styleValue($property, $value) : null;
-                $css !== null && $extra['style'][] = StyleCompiler::PROPERTIES[$property][0].':'.$css;
+                // A binding to a property that can't be set from data (Css::INLINE) does nothing.
+                ($css = $this->inlineStyle(substr($key, 6), $value)) !== null && $extra['style'][] = $css;
             } else {
                 $field = $type->blueprint()->field($key);
                 $props[$key] = $this->propValue($field?->type ?? 'text', $value, $raw, in_array($key, $type->inline, true));
@@ -801,16 +791,17 @@ final class BlockRenderer
         return $inline || $fieldType === 'richtext' ? nl2br(e($text), false) : $text;
     }
 
-    private function styleValue(string $property, mixed $value): ?string
+    /** One declaration of a `style:<property>` binding: a picture from the data is its address, anything else a CSS value. */
+    private function inlineStyle(string $property, mixed $value): ?string
     {
         if (in_array($property, ['backgroundImage', 'maskImage'], true)) {
             $one = is_array($value) ? ($value[0] ?? null) : $value;
             $url = is_object($one) && isset($one->url) ? (string) $one->url : (is_string($one) ? Media::url($one) : null);
 
-            return $url ? 'url("'.str_replace(['"', '\\', "\n"], '', $url).'")' : null;
+            return $url ? Css::INLINE[$property].':url("'.str_replace(['"', '\\', "\n"], '', $url).'")' : null;
         }
 
-        return $this->styles->value($property, is_scalar($value) ? $value : Scope::text($value));
+        return Css::inline($property, is_scalar($value) ? $value : Scope::text($value));
     }
 
     private function attributes(array $node, BlockType $type, string $classes, array $extra, bool $conditional, ?array $compiled): string
@@ -832,8 +823,9 @@ final class BlockRenderer
             $attrs[$name] = $value;
         }
 
+        // After the variables the block itself sets (attrs.style), so data wins.
         if ($extra['style'] !== []) {
-            $attrs['style'] = implode(';', $extra['style']);
+            $attrs['style'] = implode(';', array_filter([rtrim((string) ($attrs['style'] ?? ''), '; '), ...$extra['style']]));
         }
 
         $logic = (array) ($node['logic'] ?? []);
@@ -1161,20 +1153,5 @@ final class BlockRenderer
         }
 
         return 'data-cms-document="'.e($this->editorDocument).'" data-cms-node="'.e((string) $node['id']).'" data-cms-type="'.e($type).'"';
-    }
-
-    private function sanitizeClass(string $class): string
-    {
-        return implode(' ', array_filter(preg_split('/\s+/', $class) ?: [], static fn ($c) => preg_match('/^[a-zA-Z_][\w-]{0,40}$/', $c)));
-    }
-
-    /** Merge style maps variant by variant (later wins). */
-    public static function merge(array $a, array $b): array
-    {
-        foreach ($b as $variant => $declarations) {
-            $a[$variant] = [...(array) ($a[$variant] ?? []), ...(array) $declarations];
-        }
-
-        return $a;
     }
 }

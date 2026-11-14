@@ -58,7 +58,7 @@ final class DashboardModule extends Plugin
 
         $cms->abilities()->register('dashboard-start/get', [
             'label' => 'Guided Start',
-            'description' => 'The first steps of a new site as the Dashboard shows them (name the site, choose its design, create a page, connect an agent): each with the admin path it leads to and whether it is done. `open` is false once every step is done or the guide was hidden, and on a site that was installed before the guide existed.',
+            'description' => 'The first steps of a new site as the Dashboard shows them (name the site, choose its colors and fonts, create a page, connect an agent): each with the admin path it leads to and whether it is done. `open` is false once every step is done or the guide was hidden, and on a site that was installed before the guide existed.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => (object) []],
@@ -79,7 +79,7 @@ final class DashboardModule extends Plugin
             },
         ]);
 
-        // A new site starts the guide when it is ready, after the starter brought its pages and its design. A site that
+        // A new site starts the guide when it is ready, after the starter brought its pages and its styling. A site that
         // was there before never gets the file, so an update shows it nothing.
         $cms->hooks()->on('cms.installed', static fn () => $start()->begin(), 100);
     }

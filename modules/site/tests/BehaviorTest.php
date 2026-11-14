@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Cms\Modules\Site\Tests;
 
 use Cms\Modules\Blocks\Document;
-use Cms\Modules\Site\Design\Code;
+use Cms\Modules\Site\Styling\Code;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Support\Files;
 use Cms\Tests\TestCase;
 
-/** A block names a script of the design; the runtime mounts it on the element. */
+/** A block names a script of the site; the runtime mounts it on the element. */
 final class BehaviorTest extends TestCase
 {
     protected function plugins(): array
@@ -32,7 +32,7 @@ final class BehaviorTest extends TestCase
 
     public function test_a_behaviour_becomes_the_attributes_the_runtime_reads(): void
     {
-        Files::put(content_path('design/scripts/tilt.js'), "export function mount() {}\n");
+        Files::put(content_path('styling/scripts/tilt.js'), "export function mount() {}\n");
         $this->app->make(Code::class)->flush();
 
         $html = $this->page('Tilted', [['type' => 'box', 'behavior' => ['module' => 'tilt', 'props' => ['max' => 8, 'label' => 'On {entry.title}', 'nested' => ['a' => [1, 2]]], 'when' => 'visible'], 'children' => []]]);
@@ -45,8 +45,8 @@ final class BehaviorTest extends TestCase
 
     public function test_a_block_can_carry_several_behaviours(): void
     {
-        Files::put(content_path('design/scripts/tilt.js'), "export function mount() {}\n");
-        Files::put(content_path('design/scripts/cue.js'), "export function mount() {}\n");
+        Files::put(content_path('styling/scripts/tilt.js'), "export function mount() {}\n");
+        Files::put(content_path('styling/scripts/cue.js'), "export function mount() {}\n");
         $this->app->make(Code::class)->flush();
 
         $html = $this->page('Both', [['type' => 'box', 'behavior' => [
@@ -72,7 +72,7 @@ final class BehaviorTest extends TestCase
 
     public function test_a_component_hands_its_properties_to_its_behaviour(): void
     {
-        Files::put(content_path('design/scripts/counter.js'), "export function mount() {}\n");
+        Files::put(content_path('styling/scripts/counter.js'), "export function mount() {}\n");
         $this->app->make(Code::class)->flush();
         $this->cms()->entryService()->create('components', ['title' => 'Counter', 'slug' => 'counter', 'status' => 'published', 'data' => ['props' => [['handle' => 'to', 'type' => 'text', 'label' => 'To']], 'blocks' => [
             ['type' => 'paragraph', 'props' => ['text' => '0'], 'behavior' => ['module' => 'counter', 'props' => ['to' => '{props.to}']]],
@@ -86,7 +86,7 @@ final class BehaviorTest extends TestCase
 
     public function test_the_canvas_runs_no_behaviour_and_a_missing_script_is_a_warning(): void
     {
-        Files::put(content_path('design/scripts/tilt.js'), "export function mount() {}\n");
+        Files::put(content_path('styling/scripts/tilt.js'), "export function mount() {}\n");
         $this->app->make(Code::class)->flush();
         $canvas = $this->app->make(Renderer::class)->blocks([['id' => 'b1', 'type' => 'box', 'behavior' => [['module' => 'tilt'], ['module' => 'cue']], 'children' => []], ['id' => 'b2', 'type' => 'box', 'children' => []]]);
         $this->assertStringNotContainsString('data-cms-behavior=', $canvas);
@@ -108,8 +108,8 @@ final class BehaviorTest extends TestCase
 
     public function test_a_behaviour_that_says_so_is_handed_to_the_canvas(): void
     {
-        Files::put(content_path('design/scripts/field.js'), "// Draws in the builder too.\nexport const canvas = true\nexport function mount() {}\n");
-        Files::put(content_path('design/scripts/tilt.js'), "export function mount() {}\n// export const canvas = true, one day\n");
+        Files::put(content_path('styling/scripts/field.js'), "// Draws in the builder too.\nexport const canvas = true\nexport function mount() {}\n");
+        Files::put(content_path('styling/scripts/tilt.js'), "export function mount() {}\n// export const canvas = true, one day\n");
         $this->app->make(Code::class)->flush();
 
         $canvas = $this->app->make(Renderer::class)->blocks([

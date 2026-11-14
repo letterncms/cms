@@ -38,7 +38,7 @@ final class AgentsGuideTest extends TestCase
         $this->assertStringNotContainsString('php cms build', $guide);
         $this->assertStringNotContainsString('## MCP', $guide);
         $this->assertStringNotContainsString('Block Markdown', $guide);
-        $this->assertStringNotContainsString('content/design', $guide);
+        $this->assertStringNotContainsString('content/styling', $guide);
     }
 
     public function test_the_guide_belongs_to_the_site_once_it_is_there(): void

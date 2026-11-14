@@ -169,7 +169,7 @@ final class DryRunTest extends TestCase
 
         foreach (['entries/delete', 'entries/discard-draft', 'collections/delete', 'globals/delete', 'navigation/delete', 'media/delete', 'users/delete', 'users/revoke', 'tokens/delete', 'comments/delete', 'threads/delete',
             'languages/delete', 'packages/enable', 'packages/disable', 'packages/switch', 'packages/uninstall', 'sync/start', 'sync/undo', 'sync/disconnect', 'sync/renew-key',
-            'design-code/delete', 'design-vendor/delete'] as $name) {
+            'styling-code/delete', 'styling-vendor/delete'] as $name) {
             $this->assertArrayHasKey($name, $asking, "{$name} asks first");
         }
     }
@@ -425,42 +425,42 @@ final class DryRunTest extends TestCase
         $this->assertSame($key, $this->run_('sync/overview', [])['site']['key']);
     }
 
-    public function test_a_design_file_and_a_library_are_named_and_refused_as_the_real_run_refuses(): void
+    public function test_a_script_and_a_library_are_named_and_refused_as_the_real_run_refuses(): void
     {
         $author = $this->userWithRole('author');
-        $this->run_('design-code/save', ['path' => 'scripts/hero.js', 'contents' => 'export function mount() {}']);
+        $this->run_('styling-code/save', ['path' => 'scripts/hero.js', 'contents' => 'export function mount() {}']);
 
-        $this->assertBothRefuse('invalid_input', 'design-code/delete', ['path' => 'scripts/../hero.js']);
-        $this->assertBothRefuse('forbidden', 'design-code/delete', ['path' => 'scripts/hero.js'], $author);
+        $this->assertBothRefuse('invalid_input', 'styling-code/delete', ['path' => 'scripts/../hero.js']);
+        $this->assertBothRefuse('forbidden', 'styling-code/delete', ['path' => 'scripts/hero.js'], $author);
         // A file that is not there is nothing to remove, as the real run removes nothing.
-        $this->assertSame([], $this->dry('design-code/delete', ['path' => 'scripts/none.js'])['changes']);
-        [$report] = $this->assertBothPass('design-code/delete', ['path' => 'scripts/hero.js']);
-        $this->assertSame([['action' => 'delete', 'type' => 'design-code', 'path' => 'scripts/hero.js', 'removes' => ['file' => true, 'published' => true]]], $report['changes']);
-        $this->assertSame([], $this->run_('design-code/list', [])['scripts']);
+        $this->assertSame([], $this->dry('styling-code/delete', ['path' => 'scripts/none.js'])['changes']);
+        [$report] = $this->assertBothPass('styling-code/delete', ['path' => 'scripts/hero.js']);
+        $this->assertSame([['action' => 'delete', 'type' => 'styling-code', 'path' => 'scripts/hero.js', 'removes' => ['file' => true, 'published' => true]]], $report['changes']);
+        $this->assertSame([], $this->run_('styling-code/list', [])['scripts']);
 
-        $this->app->instance(\Cms\Modules\Site\Design\VendorFetcher::class, new \Cms\Modules\Site\Tests\FakeVendorFetcher([
+        $this->app->instance(\Cms\Modules\Site\Styling\VendorFetcher::class, new \Cms\Modules\Site\Tests\FakeVendorFetcher([
             'https://cdn.jsdelivr.net/npm/three@0.160.0/+esm' => "export class Vector3{}\n",
             'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js/+esm' => 'import{Vector3 as u}from"/npm/three@0.160.0/+esm";export class OrbitControls{}'."\n",
         ]));
-        $this->app->forgetInstance(\Cms\Modules\Site\Design\Vendor::class);
-        $this->app->forgetInstance(\Cms\Modules\Site\Design\Code::class);
-        $this->run_('design-vendor/create', ['package' => 'three@0.160.0', 'file' => 'examples/jsm/controls/OrbitControls.js', 'as' => 'three/addons/controls/OrbitControls.js']);
+        $this->app->forgetInstance(\Cms\Modules\Site\Styling\Vendor::class);
+        $this->app->forgetInstance(\Cms\Modules\Site\Styling\Code::class);
+        $this->run_('styling-vendor/create', ['package' => 'three@0.160.0', 'file' => 'examples/jsm/controls/OrbitControls.js', 'as' => 'three/addons/controls/OrbitControls.js']);
 
         // Nothing by that name, and a library another import still needs.
-        $this->assertBothRefuse('invalid_input', 'design-vendor/delete', ['import' => 'gsap']);
-        $this->assertBothRefuse('invalid_input', 'design-vendor/delete', ['import' => 'three']);
-        $this->assertBothRefuse('forbidden', 'design-vendor/delete', ['import' => 'three/addons/controls/OrbitControls.js'], $author);
+        $this->assertBothRefuse('invalid_input', 'styling-vendor/delete', ['import' => 'gsap']);
+        $this->assertBothRefuse('invalid_input', 'styling-vendor/delete', ['import' => 'three']);
+        $this->assertBothRefuse('forbidden', 'styling-vendor/delete', ['import' => 'three/addons/controls/OrbitControls.js'], $author);
 
-        [$report, $removed] = $this->assertBothPass('design-vendor/delete', ['import' => 'three/addons/controls/OrbitControls.js']);
-        $this->assertSame(['action' => 'delete', 'type' => 'design-vendor', 'import' => 'three/addons/controls/OrbitControls.js', 'package' => 'three', 'version' => '0.160.0'], array_diff_key($report['changes'][0], ['removes' => 1]));
+        [$report, $removed] = $this->assertBothPass('styling-vendor/delete', ['import' => 'three/addons/controls/OrbitControls.js']);
+        $this->assertSame(['action' => 'delete', 'type' => 'styling-vendor', 'import' => 'three/addons/controls/OrbitControls.js', 'package' => 'three', 'version' => '0.160.0'], array_diff_key($report['changes'][0], ['removes' => 1]));
         $this->assertCount(1, $report['changes'][0]['removes']['files']);
         $this->assertStringContainsString('OrbitControls', $report['changes'][0]['removes']['files'][0]);
         $this->assertSame(['three'], array_column($removed['imports'], 'import'));
 
         // The last import takes its files and the lock with it.
-        [$report] = $this->assertBothPass('design-vendor/delete', ['import' => 'three']);
+        [$report] = $this->assertBothPass('styling-vendor/delete', ['import' => 'three']);
         $this->assertCount(1, $report['changes'][0]['removes']['files']);
-        $this->assertFileDoesNotExist(content_path('design/vendor/lock.json'));
+        $this->assertFileDoesNotExist(content_path('styling/vendor/lock.json'));
     }
 
     public function test_a_file_is_not_deleted_while_it_is_used(): void

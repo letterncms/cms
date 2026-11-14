@@ -237,7 +237,7 @@ return new class extends Migration
         foreach ($this->files($root, ['yaml', 'yml', 'json']) as $file) {
             $relative = substr($file, strlen($root) + 1);
 
-            if (str_starts_with($relative, 'media/') || str_starts_with($relative, 'design/vendor/')) {
+            if (str_starts_with($relative, 'media/') || str_starts_with($relative, 'styling/vendor/')) {
                 continue;
             }
 

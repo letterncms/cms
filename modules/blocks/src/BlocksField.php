@@ -26,14 +26,14 @@ final class BlocksField extends FieldType
     {
         return [
             'type' => 'array',
-            'description' => $field->description().'. A list of blocks: {type, props, style?, children?}. See blocks/types for the catalog and cms://blocks for examples.',
+            'description' => $field->description().'. A list of blocks: {type, props, class?, children?}. See blocks/types for the catalog and cms://blocks for examples.',
             'items' => [
                 'type' => 'object',
                 'properties' => [
                     'id' => ['type' => 'string'],
                     'type' => ['type' => 'string'],
                     'props' => ['type' => 'object'],
-                    'style' => ['type' => 'object'],
+                    'class' => ['type' => 'string'],
                     'children' => ['type' => 'array'],
                 ],
                 'required' => ['type'],

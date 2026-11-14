@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Added
+
+- **Styling is Tailwind CSS.** A site is styled with the real Tailwind CSS 4: blocks carry Tailwind classes, and the site has one Tailwind stylesheet, `content/styling/theme.css`, with its theme (`@theme`), its own classes (`@utility`) and its element styles. The CSS a site ships holds only the classes it uses, as with any Tailwind build. Tailwind runs in the admin's browser, so a server needs no Node; where the server or the command line has Node 20 or newer, `cms build` compiles too.
+- **Design → Styling** replaces the Design page: Colors (each with a value for dark mode), Typography, Layout, Shape, Motion, Classes, Elements and Code, beside a live preview of the site.
+- **Classes.** Make a class of your own under **Styling → Classes**, or from a block's styles with **Create Class from Styles**, and use it on any block. A class takes every variant Tailwind has: `md:`, `hover:`, `dark:`.
+- The builder's **Design** tab shows a block's classes: add one by name with completion, or edit the whole list as text. Its controls write Tailwind classes: a padding of 16 becomes `p-4`, a color of the theme `bg-primary`, and any other value an arbitrary one.
+- **Screens and states** in the Design tab are Tailwind's: style a block for every screen or from `sm`, `md`, `lg`, `xl` or `2xl` up, and for hover, focus, dark mode, the current page or any other variant.
+- For agents and plugins: the abilities `styling/get`, `styling/update`, `styling/source` and `styling/compiled`, the filters `styling.kernel` (CSS a plugin adds to every site) and `styling.candidates` (classes a plugin renders with), and the action `styling.saved`.
+
+### Changed
+
+- **Breaking.** The design system of earlier versions is gone, and nothing converts a site: `content/design` with `tokens.json` and `custom.css`, the `style` of a block, and `token:` references are no longer read. A site made with an earlier version shows without its styles until it is rebuilt with Tailwind classes.
+- **Breaking.** A state is an attribute instead of a class: a state named `open` puts `data-open` on its block, styled with `data-open:` and, inside it, `in-data-open:`. A hover group is Tailwind's `group`.
+- **Breaking.** A button's look is a class of the site, `btn-primary` or any other `btn-…`, and form fields take theirs from the `--field-…` properties in the stylesheet.
+- **Breaking.** The abilities `design/…`, `design-code/…` and `design-vendor/…` are now `styling/…`, `styling-code/…` and `styling-vendor/…`; the action `design.saved` is `styling.saved`; a block type no longer has `derive`; and the block catalog no longer lists style properties, states and breakpoints.
+
 ## 0.36.3 (2026-11-14)
 
 ### Changed

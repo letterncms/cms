@@ -218,17 +218,20 @@ final class MotionTest extends TestCase
         $canvas->editor = false;
     }
 
-    public function test_an_ease_can_be_a_curve_of_the_design(): void
+    public function test_an_ease_can_be_a_curve_of_the_theme(): void
     {
         $this->cms()->hooks()->addFilter('blocks.eases', fn (array $eases) => [...$eases, 'brand' => 'cubic-bezier(0.2, 0.8, 0.2, 1)', 'bad' => 'url(x)']);
-        $motion = Motion::sanitize([['trigger' => ['type' => 'appear'], 'steps' => [['ease' => 'token:ease.brand', 'from' => ['y' => 1]], ['ease' => 'token:ease.bad', 'from' => ['y' => 1]], ['ease' => 'token:color.x', 'from' => ['y' => 1]]]]]);
+        $motion = Motion::sanitize([['trigger' => ['type' => 'appear'], 'steps' => [['ease' => 'var(--ease-brand)', 'from' => ['y' => 1]], ['ease' => 'var(--ease-bad)', 'from' => ['y' => 1]], ['ease' => 'var(--color-primary)', 'from' => ['y' => 1]], ['ease' => 'var(--ease-x);color:red', 'from' => ['y' => 1]], ['ease' => 'token:ease.brand', 'from' => ['y' => 1]]]]]);
 
-        $this->assertSame('token:ease.brand', $motion[0]['steps'][0]['ease']);
-        $this->assertArrayNotHasKey('ease', $motion[0]['steps'][2]);
+        $this->assertSame('var(--ease-brand)', $motion[0]['steps'][0]['ease']);
+        $this->assertArrayNotHasKey('ease', $motion[0]['steps'][2], 'only a curve: an --ease-* variable');
+        $this->assertArrayNotHasKey('ease', $motion[0]['steps'][3]);
+        $this->assertArrayNotHasKey('ease', $motion[0]['steps'][4]);
 
-        $page = $this->render([['id' => 'n', 'type' => 'box', 'motion' => $motion], $this->animated('load', ['ease' => 'token:ease.brand'])]);
+        $page = $this->render([['id' => 'n', 'type' => 'box', 'motion' => $motion], $this->animated('load', ['ease' => 'var(--ease-brand)'])]);
         $this->assertStringContainsString('&quot;e&quot;:&quot;cubic-bezier(0.2, 0.8, 0.2, 1)&quot;', $page['html'], 'the runtime gets the curve itself');
-        $this->assertStringNotContainsString('url(x)', $page['html'], 'a token that is no curve falls back');
+        $this->assertStringNotContainsString('url(x)', $page['html'], 'a variable that is no curve falls back');
+        $this->assertStringNotContainsString('var(--ease', $page['html']);
         $this->assertStringContainsString('900ms cubic-bezier(0.2, 0.8, 0.2, 1)', $page['css']);
     }
 
@@ -294,10 +297,10 @@ final class MotionTest extends TestCase
     public function test_plays_on_limits_css_and_the_runtime_to_those_screens(): void
     {
         $page = $this->render([$this->animated('load', extra: ['on' => ['desktop']])]);
-        $this->assertStringContainsString('@media (min-width:1024px){', $page['css']);
+        $this->assertStringContainsString('@media (min-width:64rem){', $page['css']);
 
         $phone = Motion::compile(Motion::sanitize([['trigger' => ['type' => 'appear'], 'on' => ['mobile', 'tablet'], 'steps' => [['from' => ['y' => 1]]]]]));
-        $this->assertSame('(min-width:768px) and (max-width:1023.98px),(max-width:767.98px)', $phone['runtime'][0]['media']);
+        $this->assertSame('(min-width:48rem) and (max-width:63.999rem),(max-width:47.999rem)', $phone['runtime'][0]['media']);
 
         $this->assertArrayNotHasKey('on', Motion::sanitize([['on' => ['desktop', 'tablet', 'mobile', 'watch'], 'steps' => [['from' => ['y' => 1]]]]])[0]);
     }

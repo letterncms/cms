@@ -2,6 +2,8 @@ import { useRef, useSyncExternalStore } from 'react'
 import * as tree from './tree'
 import type { BlockNode, FocusRequest } from './types'
 
+export type Device = 'desktop' | 'tablet' | 'phone'
+
 export interface State {
   nodes: BlockNode[]
   /** Selected block (inspector + document outline). */
@@ -11,9 +13,12 @@ export interface State {
   /** Block-selection mode (Esc): keyboard acts on blocks, not text. */
   blockMode: boolean
   focus: FocusRequest | null
-  breakpoint: 'base' | 'tablet' | 'mobile'
-  /** Style state being edited in the Design panel: '' (default), hover, focus-visible, active, is-open… */
-  state: string
+  /** The width the canvas previews the page at. It does not decide which styles are edited. */
+  device: Device
+  /** The screen size the Design tab edits: '' for every screen, or a breakpoint of the theme ("md": from there up). */
+  breakpoint: string
+  /** The other variants of the layer being edited, as Tailwind writes them: ['hover'], ['data-open'], ['dark'], ['max-md']. */
+  state: string[]
   hovered: string | null
 }
 
@@ -36,7 +41,7 @@ export class EditorStore {
   constructor(nodes: BlockNode[], onChange: (nodes: BlockNode[]) => void, readOnly = false) {
     this.onChange = onChange
     this.readOnly = readOnly
-    this.state = { nodes, selected: null, head: null, blockMode: false, focus: null, breakpoint: 'base', state: '', hovered: null }
+    this.state = { nodes, selected: null, head: null, blockMode: false, focus: null, device: 'desktop', breakpoint: '', state: [], hovered: null }
   }
 
   setReadOnly(readOnly: boolean) { this.readOnly = readOnly }
@@ -141,11 +146,9 @@ export class EditorStore {
     this.set({ selected: replacement[0]?.id ?? null, head: null })
   }
   hover = (id: string | null) => this.state.hovered !== id && this.set({ hovered: id })
-  setBreakpoint = (breakpoint: State['breakpoint']) => this.set({ breakpoint })
-  setStyleState = (state: string) => this.set({ state })
-
-  /** The style variant key the Design panel writes to: "base", "tablet", "hover", "mobile:hover"… */
-  variant = (): string => variantKey(this.state.breakpoint, this.state.state)
+  setDevice = (device: Device) => this.set({ device })
+  setBreakpoint = (breakpoint: string) => this.set({ breakpoint })
+  setStyleState = (state: string[]) => this.set({ state })
 
   focus(id: string, at: FocusRequest['at'] = 'end', prop?: string, index?: number) {
     this.set({ focus: { id, at, prop, index, nonce: Math.random() }, selected: id, blockMode: false })
@@ -258,20 +261,6 @@ export class EditorStore {
     if (!node || !loc || !node.children) return
     this.commit(tree.insert(tree.remove(this.state.nodes, id), loc.parentId, loc.index, node.children))
   }
-}
-
-export function variantKey(breakpoint: string, state: string): string {
-  if (breakpoint === 'base') return state || 'base'
-  return state ? `${breakpoint}:${state}` : breakpoint
-}
-
-/** Variants a value is inherited through, most specific first (desktop-first breakpoints). */
-export function variantChain(breakpoint: string, state: string): string[] {
-  const bps = breakpoint === 'mobile' ? ['mobile', 'tablet', 'base'] : breakpoint === 'tablet' ? ['tablet', 'base'] : ['base']
-  const chain: string[] = []
-  if (state) for (const bp of bps) chain.push(variantKey(bp, state))
-  chain.push(...bps)
-  return chain
 }
 
 /** The selected run of siblings, in document order. */

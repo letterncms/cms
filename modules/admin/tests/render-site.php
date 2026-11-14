@@ -75,7 +75,8 @@ try {
             'collection' => $collection->toArray(),
             'entry' => $entry?->toArray(),
             'catalog' => $catalog('blocks/types'),
-            'design' => $catalog('design/get'),
+            'styling' => $catalog('styling/get'),
+            'source' => $catalog('styling/source'),
             'components' => $catalog('components/list', ['working' => true]),
             'site' => [
                 'name' => config('app.name'), 'url' => $cms->url(),

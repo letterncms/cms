@@ -6,11 +6,11 @@ namespace Cms\Modules\Site\Tests;
 
 use Cms\Abilities\AbilityContext;
 use Cms\Modules\Blocks\Document;
-use Cms\Modules\Site\Design\Design;
+use Cms\Modules\Site\Styling\Styling;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Tests\TestCase;
 
-/** Client-side navigation is a choice of the design; pages stay complete HTML either way. */
+/** Client-side navigation is a setting of the styling; pages stay complete HTML either way. */
 final class NavigationTest extends TestCase
 {
     protected function plugins(): array
@@ -30,9 +30,9 @@ final class NavigationTest extends TestCase
         return $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($entry->id))['html'];
     }
 
-    public function test_pages_load_no_navigation_script_unless_the_design_asks(): void
+    public function test_pages_load_no_navigation_script_unless_the_site_asks(): void
     {
-        $this->assertSame('document', $this->app->make(Design::class)->json()->transition()['navigation']);
+        $this->assertSame('document', $this->app->make(Styling::class)->settings()['transition']['navigation']);
         $html = $this->page([['type' => 'paragraph', 'props' => ['text' => 'Hello'], 'persist' => 'note']]);
 
         $this->assertStringNotContainsString('data-features', $html);
@@ -41,8 +41,8 @@ final class NavigationTest extends TestCase
 
     public function test_with_client_navigation_every_page_brings_the_script_and_keeps_its_links(): void
     {
-        $this->cms()->abilities()->execute('design/update', ['transition' => ['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client']], AbilityContext::system('test'));
-        $this->assertSame(['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client'], $this->cms()->abilities()->execute('design/get', [], AbilityContext::system('test'))['transition']);
+        $this->cms()->abilities()->execute('styling/update', ['transition' => ['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client']], AbilityContext::system('test'));
+        $this->assertSame(['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client'], $this->cms()->abilities()->execute('styling/get', [], AbilityContext::system('test'))['transition']);
 
         $html = $this->page([
             ['type' => 'link', 'props' => ['label' => 'About', 'url' => '/about']],
@@ -66,23 +66,24 @@ final class NavigationTest extends TestCase
     {
         $abilities = $this->cms()->abilities();
         $context = AbilityContext::system('test');
-        $transition = fn () => $abilities->execute('design/get', [], $context)['transition'];
+        $transition = fn () => $abilities->execute('styling/get', [], $context)['transition'];
 
-        $abilities->execute('design/update', ['transition' => ['type' => 'slide', 'duration' => 0.6]], $context);
-        $abilities->execute('design/update', ['transition' => ['navigation' => 'client']], $context);
+        $abilities->execute('styling/update', ['transition' => ['type' => 'slide', 'duration' => 0.6]], $context);
+        $abilities->execute('styling/update', ['transition' => ['navigation' => 'client']], $context);
         $this->assertSame(['type' => 'slide', 'duration' => 0.6, 'navigation' => 'client'], $transition());
 
-        $abilities->execute('design/update', ['transition' => ['type' => 'fade']], $context);
+        $abilities->execute('styling/update', ['transition' => ['type' => 'fade']], $context);
         $this->assertSame(['type' => 'fade', 'duration' => 0.6, 'navigation' => 'client'], $transition());
 
-        $abilities->execute('design/update', ['transition' => ['navigation' => null, 'duration' => null]], $context);
+        $abilities->execute('styling/update', ['transition' => ['navigation' => null, 'duration' => null]], $context);
         $this->assertSame(['type' => 'fade', 'duration' => 0.3, 'navigation' => 'document'], $transition(), 'null takes a setting back to its default');
-        $this->assertSame(['type' => 'fade'], json_decode((string) file_get_contents(content_path('design/tokens.json')), true)['transition']);
-        $abilities->execute('design/update', ['transition' => ['duration' => 0.6, 'navigation' => 'client']], $context);
+        $this->assertSame(['type' => 'fade'], json_decode((string) file_get_contents(content_path('styling/settings.json')), true)['transition']);
+        $abilities->execute('styling/update', ['transition' => ['duration' => 0.6, 'navigation' => 'client']], $context);
 
-        $preview = $abilities->execute('design/preview', ['transition' => ['duration' => 1.2]], $context)['css'];
-        $this->assertStringContainsString('animation-duration:1.2s', $preview, 'a preview merges the same way');
-        $this->assertStringContainsString('@view-transition', $preview);
+        // The transition is in the CSS that stands before Tailwind's: what the admin puts before its own for a preview.
+        $faces = $abilities->execute('styling/source', [], $context)['faces'];
+        $this->assertStringContainsString('animation-duration:0.6s', $faces);
+        $this->assertStringContainsString('@view-transition', $faces);
     }
 
     public function test_a_persist_name_is_a_plain_name(): void

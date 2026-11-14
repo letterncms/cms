@@ -1,5 +1,5 @@
-// Behaviors: ready-made interactions that set custom states (is-scrolled, is-current…)
-// which the Design panel styles. Each reads its options from the directive's JSON.
+// Behaviors: ready-made interactions that set states as attributes (data-scrolled, data-current…),
+// which classes style: data-scrolled:shadow-md, in-data-current:font-medium. Each reads its options from the directive's JSON.
 import type { DirectiveCallback } from 'alpinejs'
 
 const options = (expression: string) => {
@@ -10,7 +10,7 @@ const options = (expression: string) => {
   }
 }
 
-/** is-scrolled once the page scrolled past a threshold; is-hidden while scrolling down (optional). */
+/** data-scrolled once the page scrolled past a threshold; data-hidden while scrolling down (optional), unless the element is data-open. */
 export const scroll: DirectiveCallback = (el, { expression }, { cleanup }) => {
   const { threshold = 20, hide = false } = options(expression)
   let last = window.scrollY
@@ -18,8 +18,8 @@ export const scroll: DirectiveCallback = (el, { expression }, { cleanup }) => {
   const update = () => {
     frame = 0
     const y = window.scrollY
-    el.classList.toggle('is-scrolled', y > threshold)
-    if (hide) el.classList.toggle('is-hidden', y > last && y > threshold + el.offsetHeight && !el.classList.contains('is-open'))
+    el.toggleAttribute('data-scrolled', y > threshold)
+    if (hide) el.toggleAttribute('data-hidden', y > last && y > threshold + el.offsetHeight && !el.hasAttribute('data-open'))
     last = y
   }
   const onScroll = () => (frame ||= requestAnimationFrame(update))
@@ -28,7 +28,7 @@ export const scroll: DirectiveCallback = (el, { expression }, { cleanup }) => {
   cleanup(() => window.removeEventListener('scroll', onScroll))
 }
 
-/** In-page links get is-current (and aria-current) while their section is in view. */
+/** In-page links get data-current (and aria-current) while their section is in view. */
 export const spy: DirectiveCallback = (el, { expression }, { cleanup }) => {
   const { offset = 96 } = options(expression)
   const links = [...el.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')]
@@ -39,7 +39,7 @@ export const spy: DirectiveCallback = (el, { expression }, { cleanup }) => {
     const current = targets.find((t) => visible.has(t)) ?? null
     links.forEach((a) => {
       const on = !!current && a.hash.slice(1) === current.id
-      a.classList.toggle('is-current', on)
+      a.toggleAttribute('data-current', on)
       on ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current')
     })
   }

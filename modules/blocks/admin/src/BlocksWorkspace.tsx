@@ -44,25 +44,25 @@ export function BlocksWorkspace(props: EntryEditorProps) {
 /** On a phone the panel is the kit's sheet, risen from the bottom edge with its grip: the block it is about stays in view above it, undimmed (styles.css). */
 const sheet = 'cms-block-sheet'
 
-/** The screens a page is previewed and styled for: one vocabulary everywhere (Desktop, Tablet, Phone). */
-export const screens = () => [
-  { value: 'base', label: t('Desktop'), icon: 'monitor' },
+/** The widths a page is previewed at: one vocabulary everywhere (Desktop, Tablet, Phone). */
+const devices = () => [
+  { value: 'desktop', label: t('Desktop'), icon: 'monitor' },
   { value: 'tablet', label: t('Tablet'), icon: 'tablet' },
-  { value: 'mobile', label: t('Phone'), icon: 'phone' },
+  { value: 'phone', label: t('Phone'), icon: 'phone' },
 ] as const
 
 /**
- * Which screen the canvas shows and the Design tab styles, in the top bar: there with or
- * without a selected block. One button that shows the screen, its menu the others — the
- * bar's middle belongs to the title. A phone-sized window has no room for it: it edits the
- * phone layout, and the Design tab offers the way back to desktop.
+ * The width the canvas previews the page at, in the top bar: there with or without a selected
+ * block. One button that shows the device, its menu the others — the bar's middle belongs to
+ * the title. Which screen size the Design tab styles is chosen there, not here. A phone-sized
+ * window has no room for it: it shows the page as phones do.
  */
 function Devices() {
   const { store } = useEditorContext()
-  const breakpoint = useEditor(store, (state) => state.breakpoint)
-  const all = screens()
-  const current = all.find((item) => item.value === breakpoint) ?? all[0]
-  return <Menu align="start" trigger={<IconButton icon={current.icon} label={`${t('Screen')}: ${current.label}`} active={breakpoint !== 'base'} className="max-sm:hidden" />} items={all.map((item) => ({ label: item.label, icon: item.icon, checked: item.value === breakpoint, onSelect: () => store.setBreakpoint(item.value) }))} />
+  const device = useEditor(store, (state) => state.device)
+  const all = devices()
+  const current = all.find((item) => item.value === device) ?? all[0]
+  return <Menu align="start" trigger={<IconButton icon={current.icon} label={`${t('Preview')}: ${current.label}`} active={device !== 'desktop'} className="max-sm:hidden" />} items={all.map((item) => ({ label: item.label, icon: item.icon, checked: item.value === device, onSelect: () => store.setDevice(item.value) }))} />
 }
 
 function Workspace({ props }: { props: EntryEditorProps }) {
@@ -79,8 +79,8 @@ function Workspace({ props }: { props: EntryEditorProps }) {
   const wide = useWideInspector()
   const [phone] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const selection = useEditor(store, selectionOf)
-  // A phone-sized window edits the page as phones show it: a desktop page would be too small to write in.
-  useEffect(() => { if (window.matchMedia('(max-width: 639px)').matches) store.setBreakpoint('mobile') }, [store])
+  // A phone-sized window shows the page as phones do: a desktop page would be too small to write in.
+  useEffect(() => { if (window.matchMedia('(max-width: 639px)').matches) store.setDevice('phone') }, [store])
   useScreenContext({
     items: selection.flatMap((id) => {
       const node = tree.find(store.get().nodes, id)

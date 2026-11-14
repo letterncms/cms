@@ -7,8 +7,8 @@ namespace Cms\Modules\Site\Sites;
 use Cms\Abilities\AbilityException;
 use Cms\Modules\Media\MediaManifest;
 use Cms\Modules\Media\MediaStore;
-use Cms\Modules\Site\Design\Code;
-use Cms\Modules\Site\Design\Vendor;
+use Cms\Modules\Site\Styling\Code;
+use Cms\Modules\Site\Styling\Vendor;
 use Cms\Support\Files;
 use Cms\Support\Yaml;
 use Throwable;
@@ -50,7 +50,7 @@ final class SiteFiles
      *
      * @return array{
      *   collections: array<string, string>, entries: array<string, list<string>>, globals: array<string, string>, menus: array<string, string>,
-     *   tokens: ?string, custom: array<string, string>, load: ?string, fonts: array<string, string>, scripts: array<string, string>, styles: array<string, string>,
+     *   theme: ?string, settings: ?string, compiled: ?string, custom: array<string, string>, load: ?string, fonts: array<string, string>, scripts: array<string, string>, styles: array<string, string>,
      *   lock: ?string, vendor: array<string, string>, media: array<string, string>, mediaFiles: array<string, string>,
      *   config: array<string, string>, other: array<string, list<string>>, previews: list<string>, code: bool, bytes: int
      * }
@@ -58,7 +58,7 @@ final class SiteFiles
     public function read(Site $sitePackage): array
     {
         $out = [
-            'collections' => [], 'entries' => [], 'globals' => [], 'menus' => [], 'tokens' => null, 'custom' => [], 'load' => null, 'fonts' => [],
+            'collections' => [], 'entries' => [], 'globals' => [], 'menus' => [], 'theme' => null, 'settings' => null, 'compiled' => null, 'custom' => [], 'load' => null, 'fonts' => [],
             'scripts' => [], 'styles' => [], 'lock' => null, 'vendor' => [], 'media' => [], 'mediaFiles' => [], 'config' => [], 'other' => [],
             'previews' => [], 'code' => false, 'bytes' => 0,
         ];
@@ -186,22 +186,33 @@ final class SiteFiles
                 $out['menus'][$m[1]] = $path;
 
                 return;
-            case $path === 'content/design/tokens.json':
-                $limit('text');
-                $out['tokens'] = $path;
+            case $path === 'content/styling/theme.css':
+                $limit('code');
+                $out['theme'] = $path;
 
                 return;
-            case $path === 'content/design/code.json':
+            case $path === 'content/styling/settings.json':
+                $limit('text');
+                $out['settings'] = $path;
+
+                return;
+            // What Tailwind made of the stylesheet for the site's content: it comes along, so a site without Node has its CSS at once.
+            case $path === 'content/styling/compiled.css':
+                $limit('text');
+                $out['compiled'] = $path;
+
+                return;
+            case $path === 'content/styling/code.json':
                 $limit('text');
                 $out['load'] = $path;
 
                 return;
-            case $path === 'content/design/custom.css' || $path === 'content/design/custom.js':
+            case $path === 'content/styling/custom.js':
                 $limit('code');
                 $out['custom'][pathinfo($path, PATHINFO_EXTENSION)] = $path;
 
                 return;
-            case preg_match('#^content/design/fonts/([\w.-]+\.woff2)$#D', $path, $m) === 1:
+            case preg_match('#^content/styling/fonts/([\w.-]+\.woff2)$#D', $path, $m) === 1:
                 $limit('font');
 
                 if (file_get_contents($sitePackage->path.'/'.$path, false, null, 0, 4) !== 'wOF2') {
@@ -211,7 +222,7 @@ final class SiteFiles
                 $out['fonts'][$m[1]] = $path;
 
                 return;
-            case preg_match('#^content/design/((?:scripts|styles)/.+)$#D', $path, $m) === 1:
+            case preg_match('#^content/styling/((?:scripts|styles)/.+)$#D', $path, $m) === 1:
                 $limit('code');
 
                 try {
@@ -223,12 +234,12 @@ final class SiteFiles
                 $out[$kind][$name] = $path;
 
                 return;
-            case $path === 'content/design/vendor/lock.json':
+            case $path === 'content/styling/vendor/lock.json':
                 $limit('text');
                 $out['lock'] = $path;
 
                 return;
-            case preg_match('#^content/design/vendor/(.+\.js)$#D', $path, $m) === 1:
+            case preg_match('#^content/styling/vendor/(.+\.js)$#D', $path, $m) === 1:
                 if ($size > Vendor::MAX_BYTES) {
                     throw $this->refused($sitePackage, __(':file is larger than :size MB', ['file' => $path, 'size' => round(Vendor::MAX_BYTES / 1_000_000, 1)]));
                 }
@@ -265,7 +276,7 @@ final class SiteFiles
 
                 return;
             // What a plugin keeps beside the content (forms, redirects…): plain data, taken when something here asks for it.
-            case preg_match('#^content/([a-z0-9][a-z0-9_-]{0,63})(?:/.+)?\.(yaml|json|md)$#D', $path, $m) === 1 && ! in_array($m[1], ['collections', 'globals', 'navigation', 'design', 'media'], true):
+            case preg_match('#^content/([a-z0-9][a-z0-9_-]{0,63})(?:/.+)?\.(yaml|json|md)$#D', $path, $m) === 1 && ! in_array($m[1], ['collections', 'globals', 'navigation', 'styling', 'media'], true):
                 $limit('text');
                 $out['other'][$m[1]][] = $path;
 
@@ -309,7 +320,7 @@ final class SiteFiles
         }
 
         if (($missing = array_diff_key($named, $out['vendor'])) !== []) {
-            throw $this->refused($sitePackage, __('its lock.json names :file, which is not in it', ['file' => 'content/design/vendor/'.array_key_first($missing)]));
+            throw $this->refused($sitePackage, __('its lock.json names :file, which is not in it', ['file' => 'content/styling/vendor/'.array_key_first($missing)]));
         }
     }
 

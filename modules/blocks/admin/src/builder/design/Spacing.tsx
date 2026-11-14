@@ -49,8 +49,11 @@ export function Spacing({ s }: { s: StyleApi }) {
   const write = (box: Box, v: (string | undefined)[]) => {
     const patch: Record<string, string | null> = { [box]: null, [`${box}Block`]: null, [`${box}Inline`]: null }
     const same = v.every((x) => x !== undefined && x === v[0])
+    // Two pairs are the two classes people write (px-6 py-4), unless every side is the same (p-4).
+    const pairs = !same && v.every((x) => x !== undefined) && v[0] === v[2] && v[1] === v[3]
     if (same) patch[box] = v[0]!
-    SIDES.forEach((name, j) => (patch[`${box}${name}`] = same ? null : v[j] ?? null))
+    if (pairs) Object.assign(patch, { [`${box}Block`]: v[0]!, [`${box}Inline`]: v[1]! })
+    SIDES.forEach((name, j) => (patch[`${box}${name}`] = same || pairs ? null : v[j] ?? null))
     s.write(patch)
   }
 

@@ -84,7 +84,7 @@ export function GradientField({ value, onChange, context }: FieldProps<string | 
           {gradient.stops.length > 2 && <RemoveButton onClick={() => set({ ...gradient, stops: gradient.stops.filter((_, j) => j !== i) })} />}
         </div>
       ))}
-      <Pressable compact onClick={() => set({ ...gradient, stops: [...gradient.stops, { color: 'token:color.foreground', at: '' }] })} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
+      <Pressable compact onClick={() => set({ ...gradient, stops: [...gradient.stops, { color: gradient.stops.at(-1)?.color ?? 'transparent', at: '' }] })} className="flex h-7 w-full items-center justify-center gap-1.5 rounded-sm text-xs text-muted hover:bg-hover hover:text-ink">
         <Icon name="plus" size={14} /> {t('Add Stop')}
       </Pressable>
     </div>

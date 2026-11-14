@@ -177,7 +177,7 @@ final class LanguagesTest extends TestCase
             'title' => 'Welcome',
             'data' => [
                 'body' => [
-                    ['id' => 'b1abcdefgh', 'type' => 'heading', 'props' => ['text' => 'Hello there', 'level' => 'h2'], 'style' => ['base' => ['color' => 'token:color.primary']]],
+                    ['id' => 'b1abcdefgh', 'type' => 'heading', 'props' => ['text' => 'Hello there', 'level' => 'h2'], 'class' => 'text-primary'],
                     ['id' => 'b2abcdefgh', 'type' => 'button', 'props' => ['label' => 'Start now', 'url' => '/start', 'variant' => 'primary']],
                     ['id' => 'b3abcdefgh', 'type' => 'image', 'props' => ['media' => '01m5wc4sa5w0p6y3r10qssztdb', 'alt' => 'A sunset']],
                 ],
@@ -193,7 +193,7 @@ final class LanguagesTest extends TestCase
         $this->assertSame('Hallo', $out['data']['body'][0]['props']['text']);
         $this->assertSame('h2', $out['data']['body'][0]['props']['level']);
         $this->assertSame('/start', $out['data']['body'][1]['props']['url']);
-        $this->assertSame('token:color.primary', $out['data']['body'][0]['style']['base']['color']);
+        $this->assertSame('text-primary', $out['data']['body'][0]['class']);
         $this->assertSame('01m5wc4sa5w0p6y3r10qssztdb', $out['data']['body'][2]['props']['media']);
     }
 

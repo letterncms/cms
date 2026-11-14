@@ -80,11 +80,11 @@ final class TreeNavigationTest extends TestCase
             ]],
         ]);
 
-        $this->assertMatchesRegularExpression('/<li class="[^"]*is-active[^"]*" data-title="Design"/', $html);
-        $this->assertDoesNotMatchRegularExpression('/<li class="[^"]*is-here[^"]*" data-title="Design"/', $html);
-        $this->assertMatchesRegularExpression('/<li class="[^"]*is-active[^"]*is-here[^"]*" data-title="Styles"/', $html);
-        $this->assertDoesNotMatchRegularExpression('/<li class="[^"]*is-active[^"]*" data-title="Other"/', $html);
-        $this->assertDoesNotMatchRegularExpression('/<li class="[^"]*is-active[^"]*" data-title="Templates"/', $html);
+        // A state is an attribute on the element, for Tailwind's data variants (data-active:font-semibold).
+        $this->assertStringContainsString('<li class="cms-box" data-title="Design" data-active>', $html);
+        $this->assertStringContainsString('<li class="cms-box" data-title="Styles" data-active data-here>', $html);
+        $this->assertStringContainsString('<li class="cms-box" data-title="Other">', $html);
+        $this->assertStringContainsString('<li class="cms-box" data-title="Templates">', $html);
     }
 
     public function test_search_records_say_which_section_a_page_is_in(): void

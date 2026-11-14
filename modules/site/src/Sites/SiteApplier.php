@@ -16,10 +16,10 @@ use Cms\Modules\Media\MediaItem;
 use Cms\Modules\Collections\CollectionAbilities;
 use Cms\Modules\Media\MediaManifest;
 use Cms\Modules\Navigation\Menus;
-use Cms\Modules\Site\Design\Code;
-use Cms\Modules\Site\Design\Design;
-use Cms\Modules\Site\Design\DesignJson;
-use Cms\Modules\Site\Design\Vendor;
+use Cms\Modules\Site\Styling\Code;
+use Cms\Modules\Site\Styling\Styling;
+use Cms\Modules\Site\Styling\StylingException;
+use Cms\Modules\Site\Styling\Vendor;
 use Cms\Support\Files;
 use Cms\Support\Yaml;
 use Cms\Users\User;
@@ -29,7 +29,7 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Copies a site into this site, once. `design` brings what a site looks like: tokens, fonts, templates,
+ * Copies a site into this site, once. `design` brings what a site looks like: the stylesheet, fonts, templates,
  * components, patterns, scripts, styles and libraries. `full` adds what it holds: collections, entries, globals,
  * menus, media, languages and the settings a site may carry.
  *
@@ -56,7 +56,7 @@ final class SiteApplier
         private readonly Cms $cms,
         private readonly SiteFiles $files,
         private readonly FileDriver $driver,
-        private readonly Design $design,
+        private readonly Styling $styling,
         private readonly Code $code,
         private readonly Vendor $vendor,
         private readonly Sites $sites,
@@ -290,7 +290,14 @@ final class SiteApplier
         $this->cms->collections()->flush();
         $this->cms->entries()->flush();
         $this->code->flush();
-        $this->design->saved();
+
+        try {
+            // The content and the stylesheet are other ones now: compiled where the server can.
+            $this->styling->saved();
+        } catch (StylingException $e) {
+            report($e);
+        }
+
         $this->cms->hooks()->dispatch('site.applied', $sitePackage, $mode, $user);
 
         return ['site' => $sitePackage->handle, 'mode' => $mode, 'steps' => self::report($plan['steps']), 'backup' => $backup];
@@ -324,7 +331,7 @@ final class SiteApplier
         }
 
         if (! $run['full']) {
-            // The design's own pictures come with it: what its templates, components, patterns, tokens and styles name.
+            // The design's own pictures come with it: what its templates, components, patterns, stylesheet and styles name.
             $used = $this->mediaNamedBy($sitePackage, $run['contents'], array_keys($records), array_column($records, 'path', 'id'));
             $records = array_intersect_key($records, array_flip($used));
         }
@@ -350,22 +357,26 @@ final class SiteApplier
             $run['steps'][] = $this->step($run, $type, $name, $path, $state !== null, $state === false, ['target' => $site]);
         };
 
-        if ($contents['tokens'] !== null) {
-            DesignJson::fromArray($this->files->json($sitePackage, $contents['tokens']));
-            $file('tokens', 'tokens.json', $contents['tokens'], $this->design->path('tokens.json'));
+        if ($contents['theme'] !== null) {
+            $file('theme', 'theme.css', $contents['theme'], $this->styling->path('theme.css'));
+        }
+
+        if ($contents['settings'] !== null) {
+            $this->files->json($sitePackage, $contents['settings']);
+            $file('settings', 'settings.json', $contents['settings'], $this->styling->path('settings.json'));
         }
 
         foreach ($contents['fonts'] as $name => $path) {
-            $file('font', $name, $path, $this->design->path('fonts/'.$name));
+            $file('font', $name, $path, $this->styling->path('fonts/'.$name));
         }
 
         foreach ($contents['custom'] as $kind => $path) {
-            $file('custom', 'custom.'.$kind, $path, $this->design->path('custom.'.$kind));
+            $file('custom', 'custom.'.$kind, $path, $this->styling->path('custom.'.$kind));
         }
 
         foreach (Code::KINDS as $kind => $ext) {
             foreach ($contents[$kind] as $name => $path) {
-                $file(rtrim($kind, 's'), $kind.'/'.$name, $path, $this->design->path($kind.'/'.$name.'.'.$ext));
+                $file(rtrim($kind, 's'), $kind.'/'.$name, $path, $this->styling->path($kind.'/'.$name.'.'.$ext));
             }
         }
 
@@ -378,7 +389,7 @@ final class SiteApplier
 
         // Where code loads is a list: the site's names are added to the site's, and nothing is taken away.
         if ($contents['load'] !== null) {
-            $run['steps'][] = ['action' => is_file($this->design->path('code.json')) ? 'merge' : 'create', 'type' => 'load', 'name' => 'code.json', 'path' => $contents['load']];
+            $run['steps'][] = ['action' => is_file($this->styling->path('code.json')) ? 'merge' : 'create', 'type' => 'load', 'name' => 'code.json', 'path' => $contents['load']];
         }
     }
 
@@ -685,7 +696,7 @@ final class SiteApplier
     {
         $text = '';
 
-        foreach (['tokens', 'load'] as $one) {
+        foreach (['theme', 'settings', 'load'] as $one) {
             $contents[$one] !== null && $text .= file_get_contents($sitePackage->path.'/'.$contents[$one]);
         }
 
@@ -747,8 +758,13 @@ final class SiteApplier
     {
         $sitePackage = $run['site'];
 
-        foreach ($this->doing($run, 'tokens', 'font', 'custom', 'script', 'style') as $step) {
+        foreach ($this->doing($run, 'theme', 'settings', 'font', 'custom', 'script', 'style') as $step) {
             Files::put($step['target'], (string) file_get_contents($sitePackage->path.'/'.$step['path']));
+
+            // With the stylesheet comes what Tailwind made of it, so the site has its CSS before anything compiles here.
+            if ($step['type'] === 'theme' && $run['contents']['compiled'] !== null) {
+                Files::put($this->styling->path('compiled.css'), (string) file_get_contents($sitePackage->path.'/'.$run['contents']['compiled']));
+            }
         }
 
         $libraries = [];
@@ -757,7 +773,7 @@ final class SiteApplier
             $libraries[$step['specifier']] = $step['entry'];
         }
 
-        $libraries !== [] && $this->vendor->adopt($libraries, $sitePackage->path.'/content/design/vendor');
+        $libraries !== [] && $this->vendor->adopt($libraries, $sitePackage->path.'/content/styling/vendor');
 
         foreach ($this->doing($run, 'load') as $step) {
             $theirs = $this->files->json($sitePackage, $step['path']);

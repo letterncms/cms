@@ -8,7 +8,7 @@ use Cms\Abilities\AbilityContext;
 use Cms\Modules\Media\MediaItem;
 use Cms\Tests\TestCase;
 
-/** Blocks, design, media, navigation and site abilities answer with what their output schemas say (checked on every execute). */
+/** Blocks, styling, media, navigation and site abilities answer with what their output schemas say (checked on every execute). */
 final class OutputSiteTest extends TestCase
 {
     protected function plugins(): array
@@ -81,9 +81,9 @@ final class OutputSiteTest extends TestCase
         $this->assertSame($card['id'], $again['id']);
         $this->assertSame(['card'], array_column($this->ability('components/list'), 'handle'));
 
-        // Everything a node can carry: styles, attributes, bindings, a script, an animation, children, a type nobody registered.
+        // Everything a node can carry: classes, attributes, bindings, a script, an animation, children, a type nobody registered.
         $hero = $this->ability('components/save', ['handle' => 'hero', 'title' => 'Hero', 'blocks' => self::richBlocks()])['blocks'][0];
-        $this->assertEqualsCanonicalizing(['id', 'type', 'props', 'style', 'anchor', 'class', 'label', 'attrs', 'bind', 'logic', 'motion', 'hidden', 'code', 'behavior', 'persist', 'children'], array_keys($hero));
+        $this->assertEqualsCanonicalizing(['id', 'type', 'props', 'anchor', 'class', 'label', 'attrs', 'bind', 'logic', 'motion', 'hidden', 'code', 'behavior', 'persist', 'children'], array_keys($hero));
         $this->assertSame(['module' => 'tilt', 'props' => ['max' => 8, 'nested' => ['a' => [1, 2]]], 'when' => 'visible'], $hero['behavior']);
         $this->assertSame(['type' => 'scroll', 'start' => 'top 85%', 'end' => 'bottom top', 'once' => true, 'pin' => '150vh', 'scrub' => 0.6], $hero['motion'][0]['trigger']);
         $this->assertSame(['scroll', 'spy', 'group', 'menu', 'carousel', 'marquee'], array_keys($hero['logic']['behaviors']));
@@ -106,8 +106,7 @@ final class OutputSiteTest extends TestCase
     private static function richBlocks(): array
     {
         return [[
-            'type' => 'section', 'label' => 'Hero', 'anchor' => 'hero', 'class' => 'wide', 'hidden' => true,
-            'style' => ['base' => ['paddingTop' => '2rem', 'opacity' => 0.5], 'md:hover' => ['color' => 'token:color.primary']],
+            'type' => 'section', 'label' => 'Hero', 'anchor' => 'hero', 'class' => 'wide pt-8 opacity-50 md:hover:text-primary', 'hidden' => true,
             'attrs' => ['data-test' => 'x', 'role' => 'region'],
             'bind' => ['visible' => 'entry.title'],
             'code' => ['scripts' => ['hero', 'lib/ease'], 'styles' => ['hero']],
@@ -166,19 +165,19 @@ final class OutputSiteTest extends TestCase
         $this->assertFalse($this->ability('navigation/delete', ['handle' => 'old'])['deleted']);
     }
 
-    public function test_design_abilities_answer_as_described(): void
+    public function test_styling_abilities_answer_as_described(): void
     {
-        $this->assertSame([], $this->ability('design-code/set-custom')['saved']);
-        $this->assertSame(['css', 'js'], $this->ability('design-code/set-custom', ['css' => 'body { color: red }', 'js' => 'console.log(1)'])['saved']);
+        $this->assertSame([], $this->ability('styling-code/set-custom', [], 'invalid_input'));
+        $this->assertSame(['js'], $this->ability('styling-code/set-custom', ['js' => 'console.log(1)'])['saved']);
 
-        $font = $this->ability('design/fonts-upload', ['family' => 'Test Sans', 'data' => base64_encode('wOF2'.str_repeat("\0", 40))]);
+        $font = $this->ability('styling/fonts-upload', ['family' => 'Test Sans', 'data' => base64_encode('wOF2'.str_repeat("\0", 40))]);
         $this->assertSame('fonts/test-sans-400.woff2', $font['src']);
-        $italic = $this->ability('design/fonts-upload', ['family' => 'Test Sans', 'name' => 'Test Sans Italic', 'data' => 'data:font/woff2;base64,'.base64_encode('wOF2'.str_repeat("\0", 40)), 'weight' => '100 900', 'style' => 'italic']);
+        $italic = $this->ability('styling/fonts-upload', ['family' => 'Test Sans', 'name' => 'Test Sans Italic', 'data' => 'data:font/woff2;base64,'.base64_encode('wOF2'.str_repeat("\0", 40)), 'weight' => '100 900', 'style' => 'italic']);
         $this->assertSame('italic', $italic['style']);
 
         // Importing asks Google Fonts; here the files it would bring are given, as Fonts::import() answers.
-        $this->assertSame([], $this->ability('design/fonts-import', ['family' => '!!'], 'invalid_input'));
-        $this->app->bind(\Cms\Modules\Site\Design\Fonts::class, static fn () => new class
+        $this->assertSame([], $this->ability('styling/fonts-import', ['family' => '!!'], 'invalid_input'));
+        $this->app->bind(\Cms\Modules\Site\Styling\Fonts::class, static fn () => new class
         {
             public function import(string $family, string $style = 'normal', array $weights = []): array
             {
@@ -190,71 +189,82 @@ final class OutputSiteTest extends TestCase
                 ];
             }
         });
-        $this->assertCount(2, $this->ability('design/fonts-import', ['family' => 'Inter', 'italic' => true])['fonts']);
-        $this->app->offsetUnset(\Cms\Modules\Site\Design\Fonts::class);
+        $this->assertCount(2, $this->ability('styling/fonts-import', ['family' => 'Inter', 'italic' => true])['fonts']);
+        $this->app->offsetUnset(\Cms\Modules\Site\Styling\Fonts::class);
 
-        $this->ability('design/update', ['tokens' => ['color.primary' => '#0f766e', 'text.xl' => ['min' => '1.25rem', 'max' => '1.5rem']], 'dark' => ['color.primary' => '#5eead4'],
-            'styles' => ['body' => ['color' => 'token:color.primary', 'lineHeight' => 1.5], 'a:hover' => ['textDecoration' => 'underline']],
-            'prose' => ['spacing' => ['blocks' => '1em', 'items' => 0.5], 'h2' => ['fontSize' => '2rem']], 'buttons' => ['primary' => ['surface' => 'token:color.primary', 'base' => ['color' => '#fff'], 'hover' => ['opacity' => 0.9]]], 'fields' => ['field' => ['radius' => '0.25rem', 'borderWidth' => 2], 'spacing' => ['size' => 'lg']],
-            'transition' => ['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client']]);
-        $this->assertNotEmpty($this->ability('design/preview', ['tokens' => ['color.primary' => '#000'], 'css' => 'a { color: blue }'])['css']);
-        $design = $this->ability('design/get');
-        $this->assertCount(2, $design['fonts']);
-        $this->assertCount(2, $design['fontFiles']);
-        $this->assertStringContainsString('color: red', $design['css']);
-        $this->assertSame(['min' => '1.25rem', 'max' => '1.5rem'], array_column($design['tokens'], 'value', 'path')['text.xl']);
-        $this->assertSame('#5eead4', array_column($design['tokens'], 'dark', 'path')['color.primary']);
-        $this->assertSame(['h2', 'spacing'], array_keys((array) $design['prose']));
-        $this->assertSame(['field' => ['radius' => '0.25rem', 'borderWidth' => 2], 'spacing' => ['size' => 'lg']], (array) $design['fields']);
-        $this->assertSame(1.5, ((array) $design['styles'])['body']['lineHeight']);
-        $this->assertSame(['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client'], $design['transition']);
+        $css = "@import \"tailwindcss\";\n@import \"cms\";\n@theme {\n  --color-primary: light-dark(#0f766e, #5eead4);\n}\n@utility card {\n  @apply rounded-xl p-6;\n}\n@utility btn-brand {\n  @apply bg-primary;\n}\n";
+        $saved = $this->ability('styling/update', ['css' => $css, 'transition' => ['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client']]);
+        $this->assertTrue($saved['saved']);
+        $this->assertFalse($saved['current'], 'nothing compiles without Node');
+        $this->assertSame([], $this->ability('styling/update', ['css' => 'body { color: red }'], 'invalid_input'), 'not a Tailwind stylesheet');
+
+        $styling = $this->ability('styling/get');
+        $this->assertCount(2, $styling['fonts']);
+        $this->assertCount(2, $styling['fontFiles']);
+        $this->assertSame($css, $styling['css']);
+        $this->assertSame(['card', 'btn-brand'], $styling['classes']);
+        $this->assertSame('console.log(1)'."\n", $styling['js']);
+        $this->assertFalse($styling['current']);
+        $this->assertSame(['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client'], $styling['transition']);
+
+        // Whoever compiles reads the source, and hands back what Tailwind made of exactly that.
+        $source = $this->ability('styling/source');
+        $this->assertSame($css, $source['css']);
+        $this->assertSame(['cms'], array_keys($source['files']));
+        $this->assertStringContainsString('@font-face', $source['faces']);
+        $this->assertNotSame($source['signature'], $this->ability('styling/source', ['css' => $css.'/* draft */'])['signature']);
+        $this->assertFalse($this->ability('styling/compiled', ['signature' => str_repeat('0', 32), 'css' => '.card{padding:1.5rem}'])['stored']);
+        $stored = $this->ability('styling/compiled', ['signature' => $source['signature'], 'css' => '.card{padding:1.5rem}']);
+        $this->assertTrue($stored['stored']);
+        $this->assertStringContainsString('.card{padding:1.5rem}', (string) file_get_contents(public_path(ltrim($stored['stylesheet'], '/'))));
+        $this->assertTrue($this->ability('styling/get')['current']);
     }
 
-    public function test_design_code_abilities_answer_as_described(): void
+    public function test_styling_code_abilities_answer_as_described(): void
     {
         // Nothing yet: `templates` and `components` are maps also when empty.
-        $this->assertSame(['scripts' => [], 'styles' => [], 'load' => ['scripts' => [], 'styles' => [], 'templates' => [], 'components' => []]], $this->ability('design-code/list'));
+        $this->assertSame(['scripts' => [], 'styles' => [], 'load' => ['scripts' => [], 'styles' => [], 'templates' => [], 'components' => []]], $this->ability('styling-code/list'));
 
-        $this->assertSame(['saved' => 'scripts/lib/ease.js'], $this->ability('design-code/save', ['path' => 'scripts/lib/ease.js', 'contents' => 'export const ease = 1']));
-        $this->assertSame(['saved' => 'styles/hero.css'], $this->ability('design-code/save', ['path' => 'styles/hero.css', 'contents' => '.hero{color:red}']));
-        $this->assertSame([], $this->ability('design-code/save', ['path' => 'scripts/../x.js', 'contents' => 'x'], 'invalid_input'));
-        $this->assertSame('scripts/lib/ease.js', $this->ability('design-code/get', ['path' => 'scripts/lib/ease.js'])['path']);
-        $this->assertSame([], $this->ability('design-code/get', ['path' => 'scripts/none.js'], 'not_found'));
+        $this->assertSame(['saved' => 'scripts/lib/ease.js'], $this->ability('styling-code/save', ['path' => 'scripts/lib/ease.js', 'contents' => 'export const ease = 1']));
+        $this->assertSame(['saved' => 'styles/hero.css'], $this->ability('styling-code/save', ['path' => 'styles/hero.css', 'contents' => '.hero{color:red}']));
+        $this->assertSame([], $this->ability('styling-code/save', ['path' => 'scripts/../x.js', 'contents' => 'x'], 'invalid_input'));
+        $this->assertSame('scripts/lib/ease.js', $this->ability('styling-code/get', ['path' => 'scripts/lib/ease.js'])['path']);
+        $this->assertSame([], $this->ability('styling-code/get', ['path' => 'scripts/none.js'], 'not_found'));
 
-        $loaded = $this->ability('design-code/set-load', ['scripts' => ['lib/ease'], 'templates' => ['post' => ['styles' => ['hero']]], 'components' => ['header' => ['scripts' => ['lib/ease'], 'styles' => ['hero']]]]);
+        $loaded = $this->ability('styling-code/set-load', ['scripts' => ['lib/ease'], 'templates' => ['post' => ['styles' => ['hero']]], 'components' => ['header' => ['scripts' => ['lib/ease'], 'styles' => ['hero']]]]);
         $this->assertSame(['lib/ease'], $loaded['scripts']);
         $this->assertSame(['scripts' => [], 'styles' => ['hero']], $loaded['load']['templates']['post']);
-        $this->assertSame($loaded, $this->ability('design-code/list'));
+        $this->assertSame($loaded, $this->ability('styling-code/list'));
 
-        $this->assertSame(['deleted' => 'styles/hero.css'], $this->ability('design-code/delete', ['path' => 'styles/hero.css']));
-        $this->assertSame([], $this->ability('design-code/list')['styles']);
+        $this->assertSame(['deleted' => 'styles/hero.css'], $this->ability('styling-code/delete', ['path' => 'styles/hero.css']));
+        $this->assertSame([], $this->ability('styling-code/list')['styles']);
     }
 
-    public function test_design_vendor_abilities_answer_as_described(): void
+    public function test_styling_vendor_abilities_answer_as_described(): void
     {
-        $this->app->instance(\Cms\Modules\Site\Design\VendorFetcher::class, new \Cms\Modules\Site\Tests\FakeVendorFetcher([
+        $this->app->instance(\Cms\Modules\Site\Styling\VendorFetcher::class, new \Cms\Modules\Site\Tests\FakeVendorFetcher([
             'https://cdn.jsdelivr.net/npm/gsap@3.12.5/+esm' => "const gsap={to(){}};export{gsap as default};\n",
             'https://cdn.jsdelivr.net/npm/gsap@3.13.0/+esm' => "const gsap={to(){},v:2};export{gsap as default};\n",
             'https://registry.npmjs.org/gsap/latest' => '{"name":"gsap","version":"3.13.0"}',
             'https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs/+esm' => "export default class Lenis{}\n",
         ]));
-        $this->app->forgetInstance(\Cms\Modules\Site\Design\Vendor::class);
-        $this->app->forgetInstance(\Cms\Modules\Site\Design\Code::class);
+        $this->app->forgetInstance(\Cms\Modules\Site\Styling\Vendor::class);
+        $this->app->forgetInstance(\Cms\Modules\Site\Styling\Code::class);
 
-        $this->assertSame(['imports' => []], $this->ability('design-vendor/list'));
+        $this->assertSame(['imports' => []], $this->ability('styling-vendor/list'));
 
-        $added = $this->ability('design-vendor/create', ['package' => 'gsap@3.12.5']);
+        $added = $this->ability('styling-vendor/create', ['package' => 'gsap@3.12.5']);
         $this->assertSame(['gsap'], $added['added']);
         $this->assertNull($added['imports'][0]['file']);
         $this->assertSame('/_cms/site/vendor/gsap@3.12.5/index.js', $added['imports'][0]['url']);
-        $this->assertSame('dist/lenis.mjs', $this->ability('design-vendor/create', ['package' => 'lenis@1.1.13', 'file' => 'dist/lenis.mjs', 'as' => 'lenis'])['imports'][1]['file']);
-        $this->assertSame([], $this->ability('design-vendor/create', ['package' => 'gsap@^3'], 'invalid_input'));
+        $this->assertSame('dist/lenis.mjs', $this->ability('styling-vendor/create', ['package' => 'lenis@1.1.13', 'file' => 'dist/lenis.mjs', 'as' => 'lenis'])['imports'][1]['file']);
+        $this->assertSame([], $this->ability('styling-vendor/create', ['package' => 'gsap@^3'], 'invalid_input'));
 
-        $this->assertSame('3.13.0', $this->ability('design-vendor/update', ['import' => 'gsap'])['version']);
-        $this->assertSame([], $this->ability('design-vendor/update', ['import' => 'none'], 'invalid_input'));
-        $this->assertCount(2, $this->ability('design-vendor/list')['imports']);
+        $this->assertSame('3.13.0', $this->ability('styling-vendor/update', ['import' => 'gsap'])['version']);
+        $this->assertSame([], $this->ability('styling-vendor/update', ['import' => 'none'], 'invalid_input'));
+        $this->assertCount(2, $this->ability('styling-vendor/list')['imports']);
 
-        $removed = $this->ability('design-vendor/delete', ['import' => 'lenis']);
+        $removed = $this->ability('styling-vendor/delete', ['import' => 'lenis']);
         $this->assertSame('lenis', $removed['removed']);
         $this->assertSame(['gsap'], array_column($removed['imports'], 'import'));
     }

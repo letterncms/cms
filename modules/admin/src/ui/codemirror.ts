@@ -19,6 +19,8 @@ import { t } from '@letterncms/sdk'
 
 const languages: Record<string, () => Extension> = {
   css: () => css(),
+  // A Tailwind stylesheet is CSS with directives of its own (@theme, @utility, @apply, --text-*: initial).
+  tailwind: () => css(),
   html: () => html(),
   javascript: () => javascript(),
   js: () => javascript(),
@@ -145,7 +147,8 @@ export function createEditor(options: EditorOptions): Editor {
         EditorState.tabSize.of(2),
         syntaxHighlighting(highlight),
         theme,
-        languages[options.language ?? ''] ? [languages[options.language ?? '']!(), mistakes] : [],
+        // What a CSS parser calls a mistake in a Tailwind stylesheet is Tailwind's own syntax: Tailwind says what it can't read.
+        languages[options.language ?? ''] ? [languages[options.language ?? '']!(), options.language === 'tailwind' ? [] : mistakes] : [],
         options.placeholder ? placeholderText(options.placeholder) : [],
         EditorView.contentAttributes.of(attributes),
         editable.of(lock(!!options.disabled)),

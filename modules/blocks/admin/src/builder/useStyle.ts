@@ -1,54 +1,29 @@
+import { useMemo } from 'react'
+import { splitClasses } from '../../../tailwind/engine'
 import { useEditorContext } from '../core/context'
-import { useEditor, variantChain, variantKey } from '../core/store'
-import type { BlockNode, StyleMap } from '../core/types'
+import { useEditor } from '../core/store'
+import { useStyling } from '../core/styling'
+import type { BlockNode } from '../core/types'
+import { styleApi, type StyleApi } from './styleApi'
 
-export type ValueStatus = 'own' | 'inherited' | 'none'
+export { styleApi }
+export type { StyleApi, ValueStatus } from './styleApi'
 
 /**
- * Read and write one node's styles at the variant being edited (breakpoint ×
- * state). Values cascade like CSS: a phone hover value falls back to hover,
- * then phone, tablet and all screens.
+ * A block's classes at the layer being edited (a screen size and a state), as the Design tab's controls
+ * read and write them. Values cascade as Tailwind's do: a state falls back to the same sizes without it,
+ * a size to the sizes below it and to every screen.
  */
-export function useStyle(node: BlockNode) {
+export function useStyle(node: BlockNode): StyleApi {
   const { store } = useEditorContext()
+  const { engine, breakpoints } = useStyling()
   const breakpoint = useEditor(store, (s) => s.breakpoint)
   const state = useEditor(store, (s) => s.state)
-  const variant = variantKey(breakpoint, state)
-  const chain = variantChain(breakpoint, state)
-  const style: StyleMap = node.style ?? {}
-
-  const lookup = (key: string): { value: string | undefined; from: string | null } => {
-    for (const v of chain) {
-      const layer = style[v]
-      if (!layer) continue
-      if (layer[key] !== undefined) return { value: String(layer[key]), from: v }
-    }
-    return { value: undefined, from: null }
-  }
-
-  const value = (key: string) => lookup(key).value
-  const status = (key: string): ValueStatus => {
-    const { from } = lookup(key)
-    return from === variant ? 'own' : from ? 'inherited' : 'none'
-  }
-
-  const write = (patch: Record<string, string | number | null | undefined>, group?: string) => {
-    const layer: Record<string, string | number> = { ...(style[variant] ?? {}) }
-    for (const [key, v] of Object.entries(patch)) {
-      if (v === null || v === undefined || v === '') delete layer[key]
-      else layer[key] = v
-    }
-    const next: StyleMap = { ...style, [variant]: layer }
-    if (Object.keys(layer).length === 0) delete next[variant]
-    store.updateNode(node.id, { style: Object.keys(next).length ? next : undefined }, group ?? `style:${node.id}:${Object.keys(patch).join(',')}`)
-  }
-
-  const set = (key: string, v: string | number | null | undefined) => write({ [key]: v })
-
-  /** Keys set at this variant (for the CSS section and "clear all"). */
-  const own = () => Object.keys(style[variant] ?? {})
-
-  return { variant, breakpoint, state, style, value, status, set, write, own }
+  const names = useMemo(() => breakpoints.map((size) => size.name), [breakpoints])
+  // A size the theme no longer has (the stylesheet changed) is no layer to write to.
+  const size = names.includes(breakpoint) ? breakpoint : ''
+  return useMemo(
+    () => styleApi(engine, splitClasses(node.class), names, size, state, (classes, group) => store.updateNode(node.id, { class: classes.join(' ') || undefined }, `style:${node.id}:${group ?? ''}`)),
+    [engine, node.class, node.id, names, size, state, store],
+  )
 }
-
-export type StyleApi = ReturnType<typeof useStyle>

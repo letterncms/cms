@@ -53,7 +53,7 @@ final class PluginBlocksTest extends TestCase
     {
         return [
             ['id' => 'p1', 'type' => 'paragraph', 'props' => ['text' => 'Before']],
-            ['id' => 'yt', 'type' => 'acme-video/player', 'props' => ['video' => 'dQw4w9WgXcQ', 'start' => 30], 'style' => ['base' => ['marginTop' => 'token:space.8']], 'children' => [
+            ['id' => 'yt', 'type' => 'acme-video/player', 'props' => ['video' => 'dQw4w9WgXcQ', 'start' => 30], 'class' => 'mt-8 md:mt-12', 'children' => [
                 ['id' => 'c1', 'type' => 'paragraph', 'props' => ['text' => 'Inside']],
             ]],
             ['id' => 'p2', 'type' => 'paragraph', 'props' => ['text' => 'After']],
@@ -99,7 +99,7 @@ final class PluginBlocksTest extends TestCase
             'render' => static fn (array $d) => '<div '.$d['attrs'].' data-video="'.e((string) $d['block']['video']).'" data-start="'.(int) $d['block']['start'].'">'.$d['content'].'</div>']);
 
         $html = $this->render($nodes);
-        $this->assertMatchesRegularExpression('#<div class="cms-acme-video-player s\w+" data-video="dQw4w9WgXcQ" data-start="30"><p class="cms-paragraph">Inside</p></div>#', $html);
+        $this->assertMatchesRegularExpression('#<div class="cms-acme-video-player mt-8 md:mt-12" data-video="dQw4w9WgXcQ" data-start="30"><p class="cms-paragraph">Inside</p></div>#', $html);
     }
 
     public function test_uninstalling_a_plugin_says_how_much_content_holds_its_blocks_and_deletes_none(): void

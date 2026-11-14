@@ -2,7 +2,9 @@ import { can, getManifest, plural, requestText, t, type EntryContent } from '@le
 import { QueryError, Spinner, deviceWidths, useShortcutLabel } from '@letterncms/ui'
 import { createPortal, flushSync } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { blockName, useComponentTitles, useEditorContext, useTokens } from './core/context'
+import { splitClasses } from '../../tailwind/engine'
+import { blockName, useComponentTitles, useEditorContext } from './core/context'
+import { loadCompiler, useStyling } from './core/styling'
 import { caretRect } from './core/caret'
 import { FormatToolbar } from './core/FormatToolbar'
 import { InlineEditable } from './core/InlineEditable'
@@ -75,11 +77,8 @@ function contentAt(d: Document, x: number, y: number): boolean {
   })
 }
 
-/** A breakpoint's width in CSS pixels (rem and em at 16px). */
-function pixels(value: string | undefined): number {
-  const n = parseFloat(value ?? '')
-  return Number.isNaN(n) ? 0 : /r?em$/.test(value ?? '') ? n * 16 : n
-}
+/** The least width the Desktop preview draws at: with less room the page is scaled down, not reflowed into a tablet's layout. */
+const DESKTOP = 1024
 
 /** The site's renderer is the editor. React owns only explicit inline text slots. */
 export function LiveEditor({ collection, blueprint, entryId, content, onInspect, standalone, onTitleChange }: Props) {
@@ -91,6 +90,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   const blockMode = useEditor(store, (state) => state.blockMode)
   const hovered = useEditor(store, (state) => state.hovered)
   const breakpoint = useEditor(store, (state) => state.breakpoint)
+  const device = useEditor(store, (state) => state.device)
   // The canvas's own keys, handled in its document (blockKeys, below): named in the overlay `?` opens, for as long as they work.
   const canvasKeys = t('Page Builder')
   const blockKeysWork = !readOnly && !!selected && blockMode
@@ -108,9 +108,9 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   useShortcutLabel('mod+alt+y', t('Insert After'), canvasKeys, !readOnly && !!selected)
   useShortcutLabel('mod+z', t('Undo'), canvasKeys, !readOnly)
   useShortcutLabel('mod+shift+z', t('Redo'), canvasKeys, !readOnly)
-  const { breakpoints } = useTokens()
-  // Desktop styles apply from the site's large breakpoint up (tablet styles below it).
-  const desktopWidth = pixels(breakpoints.lg) || 1024
+  const styling = useStyling()
+  // Editing a screen size shows it: the canvas is at least as wide as where that size starts.
+  const sizeWidth = styling.breakpoints.find((size) => size.name === breakpoint)?.width ?? 0
   const viewport = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLIFrameElement>(null)
   const [doc, setDoc] = useState<Document | null>(null)
@@ -161,6 +161,38 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   // Behaviours that draw in the canvas too (core/canvas.ts): undone before every render of it, mounted after.
   const drawn = useRef(canvasBehaviors())
   useEffect(() => () => drawn.current.unmount(), [])
+  // Tailwind in the canvas. The server's stylesheet only has the classes that were saved; a class set here a
+  // moment ago is compiled here, from the same stylesheet, into a style of the bridge's own (a morph leaves it).
+  const tailwind = useRef<{ build: (candidates: string[]) => string; faces: string } | null>(null)
+  const paint = (d: Document) => {
+    const compiler = tailwind.current
+    if (!compiler || !d.head) return
+    const names = new Set<string>()
+    for (const el of d.querySelectorAll('[class]')) for (const name of el.classList) names.add(name)
+    let css: string
+    try { css = compiler.faces + compiler.build([...names]) } catch { return }
+    let style = d.head.querySelector<HTMLStyleElement>('style[data-cms-bridge="tailwind"]')
+    if (!style) { style = d.createElement('style'); style.dataset.cmsBridge = 'tailwind' }
+    if (style.textContent !== css) style.textContent = css
+    // Last in the head: the same rules as the site's stylesheet, plus the ones it doesn't have yet.
+    if (d.head.lastElementChild !== style) d.head.appendChild(style)
+  }
+  /** The classes each block's elements carry in the frame: what the server rendered, then what was set here since. */
+  const applied = useRef(new Map<string, string>())
+  /** A class change shows at once, before the server answers: dragging a value moves the page with it. */
+  const applyClasses = (d: Document) => {
+    let changed = false
+    for (const { node } of indexed.current) {
+      const next = node.class ?? '', before = applied.current.get(node.id)
+      applied.current.set(node.id, next)
+      if (before === undefined || before === next) continue
+      const now = splitClasses(next), gone = splitClasses(before).filter((name) => !now.includes(name))
+      for (const el of d.querySelectorAll(`[data-cms-document="${token.current}"][data-cms-node="${CSS.escape(node.id)}"],[data-cms-proto-document="${token.current}"][data-cms-proto="${CSS.escape(node.id)}"]`)) {
+        el.classList.remove(...gone); el.classList.add(...now); changed = true
+      }
+    }
+    return changed
+  }
   const latest = useRef({ content, onInspect, readOnly, layout, onTitleChange })
   latest.current = { content, onInspect, readOnly, layout, onTitleChange }
   // A block inside a Repeat is drawn once per item, marked as a prototype: its first item stands for it.
@@ -326,6 +358,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     // The empty-page label must not stay beside new content: the authoritative render would morph it into the first block and drop its caret.
     if (store.get().nodes.length) root.querySelector(':scope > [data-cms-editor-empty-root]')?.remove()
     sync(store.get().nodes, root)
+    applyClasses(d); paint(d)
     collectSlots(d)
   }
   const api = useMemo<WriteApi>(() => ({
@@ -338,25 +371,25 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     if (!viewport.current) return
     const fit = () => {
       const el = viewport.current!
-      // Each screen draws at a width where the site shows that screen's styles. Desktop takes the room
-      // there is, but never less than the site's desktop width: with less room, it is scaled down rather
-      // than reflowed (a narrow canvas would show the tablet or phone layout while desktop is styled).
-      // A phone draws at the room there is, up to a phone's width.
-      const desktop = Math.max(el.clientWidth, desktopWidth)
-      const width = breakpoint === 'tablet' ? deviceWidths.tablet : breakpoint === 'mobile' ? Math.min(deviceWidths.phone, el.clientWidth) : desktop
+      // The device is a width to preview at: Desktop takes the room there is, but never less than a desktop's
+      // (with less room the page is scaled down rather than reflowed), a phone the room there is up to a
+      // phone's width. The screen size being edited only widens it, so what is being styled is in sight.
+      const preview = device === 'tablet' ? deviceWidths.tablet : device === 'phone' ? Math.min(deviceWidths.phone, el.clientWidth) : Math.max(el.clientWidth, DESKTOP)
+      const width = Math.max(preview, sizeWidth)
       const scale = Math.min(1, el.clientWidth / width)
       geometry.current = null
       setLayout({ width, scale, height: el.clientHeight / scale, left: Math.max(0, (el.clientWidth - width * scale) / 2) })
     }
     fit(); const observer = new ResizeObserver(fit); observer.observe(viewport.current)
     return () => observer.disconnect()
-  }, [breakpoint, desktopWidth])
+  }, [device, sizeWidth])
   useEffect(() => { requestAnimationFrame(measure) }, [selected, selectedIds, hovered, layout, doc])
   runRender.current = async () => {
       const state = rendering.current
       state.queued = false; state.busy = true
       const sequence = request.current
       const capturedStructure = structure()
+      const sent = new Map(indexed.current.map(({ node }) => [node.id, node.class ?? '']))
       const controller = new AbortController(); abort.current = controller
       try {
         const { text: html, headers } = await requestText('POST', entryId ? `/__preview/${entryId}` : '/__preview', { ...content, collection, ...(entryId ? {} : { blueprint }), field: fieldHandle, standalone, data: { ...content.data, [fieldHandle]: store.get().nodes }, play: false }, { signal: controller.signal })
@@ -371,9 +404,11 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
         if (d?.documentElement?.hasAttribute('data-cms-bridge-ready')) {
           drawn.current.unmount()
           morphDocument(d, next); d.documentElement.setAttribute('data-cms-bridge-ready', '')
+          // The frame now carries the classes that were sent: whatever changed since is put on again.
+          applied.current = sent; applyClasses(d); paint(d)
           collectSlots(d)
           drawn.current.mount(d)
-        } else if (frame.current) frame.current.srcdoc = next.documentElement.outerHTML
+        } else if (frame.current) { applied.current = sent; frame.current.srcdoc = next.documentElement.outerHTML }
         if (sequence === request.current) setError(null)
       } catch (failure) { if (!controller.signal.aborted && sequence === request.current) { setError(failure instanceof Error ? failure.message : String(failure)); setLoading(false) } }
       finally { state.busy = false; if (state.queued) scheduleRender() }
@@ -444,6 +479,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     if (!d.querySelector('[data-cms-editor-root]')) { setLoading(false); setError(t('This template has no content outlet. Choose a template that includes the content field.')); return }
     d.documentElement.setAttribute('data-cms-bridge-ready', '')
     const style = d.createElement('style'); style.dataset.cmsBridge = ''; style.textContent = bridgeCss; d.head.appendChild(style)
+    applyClasses(d); paint(d)
     setDoc(d); collectSlots(d); setLoading(false)
     drawn.current.unmount(); drawn.current.mount(d)
     d.addEventListener('submit', (event) => event.preventDefault(), true)
@@ -546,6 +582,19 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     d.querySelectorAll('img,link[rel="stylesheet"]').forEach((el) => el.addEventListener('load', () => { geometry.current = null; requestAnimationFrame(measure) }, { once: true }))
     d.fonts.ready.then(() => { geometry.current = null; measure() })
   }
+  // One compiler per stylesheet: it only ever adds classes. A stylesheet Tailwind can't compile leaves the canvas to the server's CSS.
+  useEffect(() => {
+    const source = styling.source
+    if (!source) return
+    let alive = true
+    loadCompiler(source).then((compiler) => {
+      if (!alive) return
+      tailwind.current = { build: compiler.build, faces: source.faces }
+      const d = frame.current?.contentDocument
+      if (d?.documentElement?.hasAttribute('data-cms-bridge-ready')) { paint(d); geometry.current = null; requestAnimationFrame(measure) }
+    }).catch(() => { if (alive) tailwind.current = null })
+    return () => { alive = false }
+  }, [styling.source])
   useEffect(() => bus.on('scroll-to', ({ node, top }) => {
     const d = frame.current?.contentDocument, target = d && source(d, node)
     if (target && top) d.defaultView?.scrollTo({ top: Math.max(0, target.getBoundingClientRect().top + d.defaultView.scrollY - 72), behavior: 'smooth' })

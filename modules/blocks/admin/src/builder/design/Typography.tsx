@@ -1,37 +1,41 @@
 import { t } from '@letterncms/sdk'
-import { useTokens } from '../../core/context'
+import { useThemeTokens } from '../../core/styling'
 import { splitValue } from '../css'
 import type { StyleApi } from '../useStyle'
 import { PanelFields } from '../controls'
 import { StyleSection } from './more'
 import { StyleFields, changed } from './StyleFields'
 
-const WEIGHTS = () => [
-  { value: '100', label: t('Thin 100') }, { value: '200', label: t('Extra Light 200') }, { value: '300', label: t('Light 300') }, { value: '400', label: t('Regular 400') },
-  { value: '500', label: t('Medium 500') }, { value: '600', label: t('Semibold 600') }, { value: '700', label: t('Bold 700') }, { value: '800', label: t('Extra Bold 800') }, { value: '900', label: t('Black 900') },
-]
+/** What a weight is called, by its number. A theme's own weight goes by its name. */
+const WEIGHTS = (): Record<string, string> => ({
+  100: t('Thin 100'), 200: t('Extra Light 200'), 300: t('Light 300'), 400: t('Regular 400'), 500: t('Medium 500'),
+  600: t('Semibold 600'), 700: t('Bold 700'), 800: t('Extra Bold 800'), 900: t('Black 900'),
+})
+
+const STROKE = '-webkit-text-stroke'
 
 /** Font, size, weight, leading, tracking, color, alignment and the finer points of text. */
 export function Typography({ s, prose }: { s: StyleApi; prose?: { on: boolean; onChange: (on: boolean) => void } }) {
-  const { byGroup } = useTokens()
-  const fonts = byGroup.get('font') ?? []
-  const weights = byGroup.get('weight') ?? []
-  const keys = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'color', 'textAlign', 'textTransform', 'textDecoration', 'fontStyle', 'textWrap', 'lineClamp', 'textShadow', 'textStroke']
+  const tokens = useThemeTokens()
+  const names = WEIGHTS()
+  const keys = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'color', 'textAlign', 'textTransform', 'textDecorationLine', 'fontStyle', 'textWrap', 'textOverflow', '-webkit-line-clamp', 'textShadow', STROKE]
   const any = keys.some((k) => s.value(k))
 
   // Outlined text: "1px currentColor" as a width and a color.
-  const strokeParts = splitValue(s.value('textStroke') ?? '')
+  const strokeParts = splitValue(s.value(STROKE) ?? '')
   const stroke = { width: strokeParts.find((p) => /^-?[\d.]/.test(p)), color: strokeParts.find((p) => !/^-?[\d.]/.test(p)) }
+  // `truncate` is three declarations in one class: one line, cut with an ellipsis.
+  const truncated = s.value('textOverflow') === 'ellipsis' && s.value('whiteSpace') === 'nowrap'
 
   return (
     <StyleSection s={s} group="typography" title={t('Typography')} empty={!any && !prose?.on}>
-      {/* Long-form text: the design's Prose spacing and styles reach every block inside. */}
+      {/* Long-form text: the site's Prose spacing and styles reach every block inside. */}
       {prose && <PanelFields fields={[{ handle: 'prose', type: 'toggle', label: t('Prose') }]} values={{ prose: prose.on }} onChange={(_, v) => prose.onChange(!!v)} />}
       <StyleFields
         s={s}
         fields={[
-          { handle: 'fontFamily', type: 'select', size: 'sm', label: t('Font'), placeholder: t('Inherit'), options: fonts.map((token) => ({ value: `token:${token.path}`, label: `${token.path} · ${Array.isArray(token.value) ? token.value[0] : token.value}` })) },
-          { handle: 'fontWeight', type: 'select', size: 'sm', label: t('Weight'), placeholder: t('Inherit'), options: [...weights.map((token) => ({ value: `token:${token.path}`, label: `${token.path} · ${token.value}` })), ...WEIGHTS()] },
+          { handle: 'fontFamily', type: 'select', size: 'sm', label: t('Font'), placeholder: t('Inherit'), options: tokens.of('font').map((token) => ({ value: token.ref, label: `${token.name} · ${token.value.split(',')[0].replace(/["']/g, '')}` })) },
+          { handle: 'fontWeight', type: 'select', size: 'sm', label: t('Weight'), placeholder: t('Inherit'), options: tokens.of('weight').map((token) => ({ value: token.ref, label: names[token.value] ?? `${token.name} · ${token.value}` })) },
           { handle: 'fontSize', type: 'text', component: 'blocks-value', label: t('Size'), group: 'text', prefixIcon: 'richtext', placeholder: t('Inherit'), units: ['px', 'rem', 'em', '%', 'vw'] },
           { handle: 'lineHeight', type: 'text', component: 'blocks-value', label: t('Line Height'), group: 'leading', prefixIcon: 'height', unit: '', step: 0.05, placeholder: t('Inherit'), title: t('Line Height (1.2 = 120%)') },
           { handle: 'letterSpacing', type: 'text', component: 'blocks-value', label: t('Letter Spacing'), group: 'tracking', prefixIcon: 'spacing', unit: 'em', units: ['em', 'px'], step: 0.005, placeholder: '0' },
@@ -39,10 +43,31 @@ export function Typography({ s, prose }: { s: StyleApi; prose?: { on: boolean; o
           { handle: 'textAlign', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Align'), placeholder: 'left', options: [{ value: 'left', icon: 'align-left', title: t('Left') }, { value: 'center', icon: 'align-center', title: t('Center') }, { value: 'right', icon: 'align-right', title: t('Right') }, { value: 'justify', icon: 'align-justify', title: t('Justify||text') }] },
           // Two rows, each with its own label: side by side they no longer fit the panel.
           { handle: 'fontStyle', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Style'), placeholder: 'normal', options: [{ value: 'normal', icon: 'text', title: t('Upright') }, { value: 'italic', icon: 'italic', title: t('Italic') }] },
-          { handle: 'textDecoration', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Decoration'), placeholder: 'none', options: [{ value: 'none', icon: 'close', title: t('No Decoration') }, { value: 'underline', icon: 'underline', title: t('Underline') }, { value: 'line-through', icon: 'strike', title: t('Strike Through') }] },
+          { handle: 'textDecorationLine', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Decoration'), placeholder: 'none', options: [{ value: 'none', icon: 'close', title: t('No Decoration') }, { value: 'underline', icon: 'underline', title: t('Underline') }, { value: 'line-through', icon: 'strike', title: t('Strike Through') }] },
           { handle: 'textTransform', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Case'), placeholder: 'none', options: [{ value: 'none', icon: 'close', title: t('As Typed') }, { value: 'uppercase', label: 'AA', title: t('Uppercase') }, { value: 'capitalize', label: 'Aa', title: t('Capitalize') }, { value: 'lowercase', label: 'aa', title: t('Lowercase') }] },
           { handle: 'textWrap', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Wrap'), options: [{ value: 'balance', label: t('Balance') }, { value: 'pretty', label: t('Pretty') }, { value: 'nowrap', label: t('None') }] },
-          { handle: 'lineClamp', type: 'text', component: 'blocks-value', label: t('Max Lines'), unit: '', min: 1, placeholder: t('All'), prefixIcon: 'list-tree' },
+          {
+            handle: 'lineClamp',
+            type: 'text',
+            component: 'blocks-value',
+            label: t('Max Lines'),
+            unit: '',
+            min: 1,
+            placeholder: t('All'),
+            prefixIcon: 'list-tree',
+            markers: ['-webkit-line-clamp'],
+            get: () => s.value('-webkit-line-clamp'),
+            set: (v) => s.swap(['-webkit-line-clamp', 'text-overflow'], v && s.engine?.valid(`line-clamp-${v}`) ? `line-clamp-${v}` : null),
+          },
+          {
+            handle: 'truncate',
+            type: 'toggle',
+            size: 'sm',
+            label: t('Truncate'),
+            get: () => truncated,
+            // One line or a number of lines: the two cut text in different ways and don't go together.
+            set: (on) => s.swap(['text-overflow', '-webkit-line-clamp'], on ? 'truncate' : null),
+          },
         ]}
       />
       <StyleFields s={s} bare fields={[{ handle: 'textShadow', type: 'text', component: 'blocks-shadows', kind: 'text', label: t('Text Shadow') }]} />
@@ -54,11 +79,11 @@ export function Typography({ s, prose }: { s: StyleApi; prose?: { on: boolean; o
             type: 'group',
             component: 'blocks-group',
             label: t('Text Stroke'),
-            keys: ['textStroke'],
+            keys: [STROKE],
             get: () => stroke,
             set: (v) => {
               const next = { ...stroke, ...changed(stroke, v) }
-              s.set('textStroke', next.width ? `${next.width} ${next.color ?? 'currentColor'}` : null)
+              s.set(STROKE, next.width ? `${next.width} ${next.color ?? 'currentColor'}` : null)
             },
             fields: [
               { handle: 'width', type: 'text', component: 'blocks-value', label: t('Width'), prefixIcon: 'edit', placeholder: '0', min: 0, step: 0.5, className: '!flex-none w-[72px]' },

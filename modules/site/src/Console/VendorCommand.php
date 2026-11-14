@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Cms\Modules\Site\Console;
 
 use Cms\Console\Command;
-use Cms\Modules\Site\Design\Code;
-use Cms\Modules\Site\Design\Vendor;
+use Cms\Modules\Site\Styling\Code;
+use Cms\Modules\Site\Styling\Vendor;
 use InvalidArgumentException;
 use Throwable;
 
@@ -19,7 +19,7 @@ final class VendorCommand extends Command
         {--file= : add: one file inside the package instead of its main entry}
         {--as= : add: the name scripts import it by}';
 
-    protected $description = 'Keep the libraries the site’s scripts import in content/design/vendor';
+    protected $description = 'Keep the libraries the site’s scripts import in content/styling/vendor';
 
     public function handle(Vendor $vendor, Code $code): int
     {

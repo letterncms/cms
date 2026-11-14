@@ -51,7 +51,7 @@ final class ContentPolicyTest extends TestCase
             '<script type="application/ld+json">{"@type":"Thing"}</script><script type="text/plain" data-cms-consent="marketing">later()</script>',
             '<script data-type="text/plain" data-src="https://not.example.com/x.js">inline()</script><script type="text/template">tpl()</script>',
             '<script src="https://js.example.com/api.js?x=1" async defer></script><script type="module" src="/_cms/code/scripts/a.js"></script>',
-            '<link rel="stylesheet" href="https://fonts.example.com/css"><link rel="stylesheet" href="/_cms/design.css"><link rel="preload" href="https://other.example.com/x">',
+            '<link rel="stylesheet" href="https://fonts.example.com/css"><link rel="stylesheet" href="/_cms/styles.css"><link rel="preload" href="https://other.example.com/x">',
         ]);
 
         // A script waiting for consent runs as itself once given; `data-type` and `data-src` are other attributes.
@@ -91,7 +91,7 @@ final class ContentPolicyTest extends TestCase
     {
         $context = \Cms\Abilities\AbilityContext::system('test');
         // A dark mode puts the saved theme's script in every head; a plugin's snippet goes in a foot.
-        $this->cms()->abilities()->execute('design/update', ['dark' => ['color.background' => '#111111']], $context);
+        $this->cms()->abilities()->execute('styling/update', ['css' => "@import \"tailwindcss\";\n@import \"cms\";\n@theme { --color-background: light-dark(#ffffff, #111111); }\n@layer base { :root { color-scheme: light dark; } }\n"], $context);
         $snippet = true;
         $this->cms()->hooks()->addFilter('site.foot', static function (array $foot) use (&$snippet) {
             return $snippet ? [...$foot, '<script>snippet()</script>', '<script src="https://js.example.com/api.js"></script>'] : $foot;
@@ -141,7 +141,6 @@ final class ContentPolicyTest extends TestCase
         $this->assertMatchesRegularExpression("/frame-src 'self' [^;]*open\\.spotify\\.com[^;]*player\\.plugin\\.example/", $admin);
         $this->assertStringContainsString('www.google.com', $admin);
         $this->assertFalse($this->get('/__preview/'.strtolower($entry->id))->assertOk()->headers->has('Content-Security-Policy'));
-        $this->assertFalse($this->get('/__specimen/buttons')->assertOk()->headers->has('Content-Security-Policy'));
 
         // A script no page carries any more leaves the policy with the next full build.
         $snippet = false;

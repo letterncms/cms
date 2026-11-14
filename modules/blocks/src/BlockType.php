@@ -14,7 +14,7 @@ use Cms\Content\Fields\Blueprint;
  */
 final class BlockType
 {
-    /** Inspector sections a block offers (see StyleCompiler::PROPERTIES for the properties in each). */
+    /** The groups of controls the inspector's Design tab can show for a block. */
     public const array STYLE_GROUPS = ['layout', 'position', 'size', 'spacing', 'typography', 'fill', 'border', 'effects', 'transform', 'transition'];
 
     private ?Blueprint $blueprint = null;
@@ -22,7 +22,7 @@ final class BlockType
     /**
      * @param  list<array>  $fields  Prop fields (blueprint format)
      * @param  bool|list<string>  $children  Accepts child blocks (true = any, list = allowed types)
-     * @param  list<string>  $styles  Style sections shown in the inspector (empty = all)
+     * @param  list<string>  $styles  Groups of design controls shown in the inspector (empty = all)
      * @param  list<string>  $inline  Props edited inline as rich text (inline HTML)
      * @param  list<array>  $template  Initial children when inserted
      * @param  array<string, string>  $placeholders  What empty text props show on the canvas (prop => text); inline props default to their label
@@ -48,7 +48,6 @@ final class BlockType
         public readonly array $variants = [],
         public readonly array $example = [],
         public readonly bool $defer = false,
-        public readonly ?Closure $derive = null,
         public readonly string $html = 'div',
         public readonly array $placeholders = [],
         public readonly array $uses = [],
@@ -80,7 +79,6 @@ final class BlockType
             variants: (array) ($d['variants'] ?? []),
             example: (array) ($d['example'] ?? []),
             defer: (bool) ($d['defer'] ?? false),
-            derive: ($d['derive'] ?? null) instanceof Closure ? $d['derive'] : null,
             html: (string) ($d['html'] ?? 'div'),
             placeholders: array_map('strval', (array) ($d['placeholders'] ?? [])),
             uses: array_values(array_map('strval', (array) ($d['uses'] ?? []))),

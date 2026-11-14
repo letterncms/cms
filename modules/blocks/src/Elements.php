@@ -16,6 +16,82 @@ final class Elements
 
     public const array TEXT_TAGS = ['p', 'span', 'div', 'small', 'strong', 'em', 'label', 'li', 'figcaption', 'blockquote', 'cite', 'time', 'address', 'dt', 'dd', 'legend', 'kbd', 'code'];
 
+    /** The steps of Tailwind's spacing scale a gap or a size can be picked from: `4` is what gap-4 is. */
+    public const array SPACE = ['0', '1', '2', '3', '4', '6', '8', '12', '16', '24'];
+
+    /** A select of those steps, as a block's field. */
+    public static function spaceField(string $default): array
+    {
+        return ['type' => 'select', 'options' => ['0' => 'None'] + array_combine(array_slice(self::SPACE, 1), array_slice(self::SPACE, 1)), 'default' => $default];
+    }
+
+    /** A step as a CSS length on the theme's spacing scale. Anything that isn't a step is the default. */
+    public static function space(mixed $step, string $default): string
+    {
+        $step = is_scalar($step) && in_array((string) $step, self::SPACE, true) ? (string) $step : $default;
+
+        return "calc(var(--spacing) * {$step})";
+    }
+
+    /**
+     * A block's root attributes with CSS variables of its own added (`--cms-gap:…`), which blocks.css lays it out
+     * from. They come first in the element's style, so a variable somebody set on the block wins.
+     */
+    public static function style(string $attrs, string $css): string
+    {
+        if ($css === '') {
+            return $attrs;
+        }
+
+        return preg_match('/(?:^| )style="/', $attrs)
+            ? (string) preg_replace('/((?:^| )style=")/', '$1'.e($css).';', $attrs, 1)
+            : $attrs.' style="'.e($css).'"';
+    }
+
+    /** Blocks in a row or a column: its direction and alignment are attributes, its gap a variable (blocks.css). */
+    public static function stack(array $d): string
+    {
+        $b = $d['block'];
+        $horizontal = ($b['direction'] ?? 'vertical') === 'horizontal';
+        $d['attrs'] = self::style((string) $d['attrs'], '--cms-gap:'.self::space($b['gap'] ?? null, '4'))
+            .($horizontal ? ' data-direction="horizontal"' : '')
+            .(in_array($b['align'] ?? '', ['start', 'center', 'end'], true) ? ' data-align="'.$b['align'].'"' : '')
+            .(in_array($b['justify'] ?? '', ['center', 'end', 'between'], true) ? ' data-justify="'.$b['justify'].'"' : '')
+            .(! empty($b['wrap']) ? ' data-wrap' : '');
+
+        return self::box($d);
+    }
+
+    /** Side-by-side columns: their widths and gap are variables, when they stack an attribute (blocks.css). */
+    public static function columns(array $d): string
+    {
+        $b = $d['block'];
+        $layout = preg_match('/^\d(-\d){1,3}$/D', (string) ($b['layout'] ?? '')) ? (string) $b['layout'] : '1-1';
+        $widths = implode(' ', array_map(static fn (string $n) => "minmax(0,{$n}fr)", explode('-', $layout)));
+        $stack = in_array($b['stack'] ?? 'md', ['md', 'lg', 'never'], true) ? ($b['stack'] ?? 'md') : 'md';
+        $attrs = self::style((string) $d['attrs'], "--cms-columns:{$widths};--cms-gap:".self::space($b['gap'] ?? null, '8'))
+            .' data-stack="'.$stack.'"'
+            .(in_array($b['align'] ?? 'start', ['center', 'end', 'stretch'], true) ? ' data-align="'.$b['align'].'"' : '')
+            .(! empty($b['reverse']) ? ' data-reverse' : '');
+
+        return '<div '.$attrs.'>'.$d['content'].'</div>';
+    }
+
+    /** Items in a grid: how many columns, how narrow an item may get and the gap are variables (blocks.css). */
+    public static function grid(array $d): string
+    {
+        $b = $d['block'];
+        $n = max(1, min(12, (int) ($b['columns'] ?? 3)));
+        $min = in_array($b['min'] ?? '16rem', ['10rem', '12rem', '16rem', '20rem', '24rem'], true) ? ($b['min'] ?? '16rem') : '16rem';
+
+        return '<div '.self::style((string) $d['attrs'], "--cms-columns:{$n};--cms-min:{$min};--cms-gap:".self::space($b['gap'] ?? null, '6')).'>'.$d['content'].'</div>';
+    }
+
+    public static function spacer(array $d): string
+    {
+        return '<div '.self::style((string) $d['attrs'], '--cms-size:'.self::space($d['block']['size'] ?? null, '12')).' aria-hidden="true"></div>';
+    }
+
     public static function box(array $d): string
     {
         $b = $d['block'];
@@ -119,7 +195,10 @@ final class Elements
         $icon = ! empty($b['icon']) ? Icons::svg((string) $b['icon'], 'cms-button__icon') : '';
         // An icon without words is a square (or, round, a circle) button, named for screen readers.
         $alone = $icon !== '' && trim(strip_tags((string) ($b['label'] ?? ''))) === '' && empty($d['node']['children']);
-        $meta = ' data-variant="'.e((string) ($b['variant'] ?? 'primary')).'" data-size="'.e((string) ($b['size'] ?? 'md')).'"'
+        // Its look is a class of the site's theme: btn-primary, btn-secondary… (a utility, so the block's own classes can go on top).
+        $variant = (string) ($b['variant'] ?? 'primary');
+        $d['attrs'] = preg_match('/^[a-z0-9][a-z0-9-]{0,40}$/', $variant) ? preg_replace('/\bclass="cms-button\b/', 'class="cms-button btn-'.$variant, (string) $d['attrs'], 1) : $d['attrs'];
+        $meta = ' data-size="'.e((string) ($b['size'] ?? 'md')).'"'
             .(($b['shape'] ?? 'default') === 'round' ? ' data-shape="round"' : '')
             .($alone ? ' data-icon-only aria-label="'.e((string) ($b['accessible_label'] ?? '')).'"' : '');
         $label = '<span'.self::editable($d, 'label').self::placeholder($d, 'label').'>'.($b['label'] ?? '').'</span>';
@@ -297,7 +376,7 @@ final class Elements
 
         // Prose sees through it: its blocks keep the flow of the prose around them (data-cms-contents).
         if (! ($d['block']['wrap'] ?? false)) {
-            $attrs = (str_contains($attrs, ' style="') ? str_replace(' style="', ' style="display:contents;', $attrs) : $attrs.' style="display:contents"').' data-cms-contents';
+            $attrs = self::style($attrs, 'display:contents').' data-cms-contents';
         }
 
         return '<div '.$attrs.'>'.$html.'</div>';
@@ -369,9 +448,9 @@ final class Elements
         $b = $d['block'];
         $tag = in_array($b['tag'] ?? 'section', ['section', 'header', 'footer', 'aside', 'div', 'main', 'nav', 'article'], true) ? ($b['tag'] ?? 'section') : 'section';
         $bg = Media::url($b['background_image'] ?? null);
-        $style = $bg ? ' data-overlay="'.e((string) ($b['overlay'] ?? 'none')).'" style="background-image:url(\''.e($bg).'\')"' : '';
+        $attrs = $bg ? self::style((string) $d['attrs'], "background-image:url('{$bg}')").' data-overlay="'.e((string) ($b['overlay'] ?? 'none')).'"' : $d['attrs'];
 
-        return "<{$tag} {$d['attrs']} data-width=\"".e((string) ($b['width'] ?? 'content'))."\"{$style}><div class=\"cms-section__inner\">{$d['content']}</div></{$tag}>";
+        return "<{$tag} {$attrs} data-width=\"".e((string) ($b['width'] ?? 'content'))."\"><div class=\"cms-section__inner\">{$d['content']}</div></{$tag}>";
     }
 
     public static function container(string $tag): \Closure

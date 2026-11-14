@@ -5,7 +5,7 @@ status: published
 position: 0
 ---
 
-::: section {"label":"Hero","class":"spotlight","props":{"width":"content"},"style":{"base":{"textAlign":"center"}},"code":{"styles":["spotlight"]},"behavior":{"module":"spotlight","props":{"ease":0.12},"when":"idle"}}
+::: section {"label":"Hero","class":"spotlight text-center","props":{"width":"content"},"code":{"styles":["spotlight"]},"behavior":{"module":"spotlight","props":{"ease":0.12},"when":"idle"}}
 # A new site, ready for your words
 
 Everything on this page is made of blocks. Open it in the admin, press / to add more, and use the same block settings to adjust content, layout and motion.
@@ -25,7 +25,7 @@ Everything on this page is made of blocks. Open it in the admin, press / to add 
 ::::: column
 ### Shape the design
 
-Open Design in the admin’s sidebar to change colors, fonts and spacing. Every page follows.
+Open Styling in the admin’s sidebar to change colors, fonts and spacing in the site’s Tailwind theme. Every page follows.
 :::::
 ::::: column
 ### Model your content

@@ -17,7 +17,7 @@
   "{count} entry": "{count} item",
   "/blog/{slug}": "/blog/{slug}",
   "A calendar date, optionally with a time.": "Een datum, eventueel met tijd.",
-  "A color: a design token, hex value or CSS color function.": "Een kleur: een designtoken, hexwaarde of CSS-kleurfunctie.",
+  "A color: a theme color, hex value or CSS color function.": "Een kleur: een themakleur, hexwaarde of CSS-kleurfunctie.",
   "A field needs a handle.": "Een veld heeft een sleutel nodig.",
   "A field of a row type cannot be called “type”: that is the row’s type (:field).": "Een veld van een rijtype kan niet “type” heten: dat is het type van de rij (:field).",
   "A file in the package does not parse: :name, line :line": "Een bestand in het pakket bevat een fout: :name, regel :line",
