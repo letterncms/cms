@@ -7,9 +7,10 @@ const PAGE = 1280
 /**
  * A pattern as the site draws it, scaled to the width it is given: the site's own page of it
  * (`/__pattern/<handle>`), in its design, loaded once it is near the screen. A picture only: it takes no
- * pointer or focus, and whatever holds it says what it is.
+ * pointer or focus, and whatever holds it says what it is. With `aspect`, a frame of that shape showing the
+ * pattern's top, as a desktop window would; without, as tall as the pattern up to `maxHeight`.
  */
-export function PatternPreview({ handle, maxHeight = 360, className }: { handle: string; maxHeight?: number; className?: string }) {
+export function PatternPreview({ handle, maxHeight = 360, aspect, className }: { handle: string; maxHeight?: number; aspect?: string; className?: string }) {
   const box = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.2)
   const [height, setHeight] = useState(720)
@@ -34,7 +35,7 @@ export function PatternPreview({ handle, maxHeight = 360, className }: { handle:
   }
 
   return (
-    <div ref={box} aria-hidden="true" className={cn('relative w-full overflow-hidden rounded-md border border-border bg-surface', className)} style={{ height: Math.min(maxHeight, height * scale) }}>
+    <div ref={box} aria-hidden="true" className={cn('relative w-full overflow-hidden rounded-md border border-border bg-surface', className)} style={aspect ? { aspectRatio: aspect } : { height: Math.min(maxHeight, height * scale) }}>
       <iframe
         src={`/__pattern/${encodeURIComponent(handle)}`}
         title=""
