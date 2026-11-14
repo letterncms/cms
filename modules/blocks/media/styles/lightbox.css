@@ -19,7 +19,7 @@
   .cms-lightbox__previous, .cms-lightbox__next { position: absolute; top: 50%; translate: 0 -50%; }
   .cms-lightbox__previous { left: 1rem; }
   .cms-lightbox__next { right: 1rem; }
-  @media (max-width: 767.98px) {
+  @media (width < 48rem) {
     .cms-lightbox__stage { padding: 0 0.75rem 5rem; }
     .cms-lightbox__image { max-height: calc(100dvh - 11rem); }
     .cms-lightbox__previous, .cms-lightbox__next { top: auto; bottom: 1rem; translate: none; }

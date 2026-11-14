@@ -1,0 +1,46 @@
+/* What every site has before it says anything of its own: the names blocks, fields and buttons read
+   their colours and sizes from. A site's theme.css names its own values in its @theme. */
+@theme default {
+  --color-background: #ffffff;
+  --color-surface: #f6f6f4;
+  --color-raised: #ffffff;
+  --color-foreground: #161614;
+  --color-muted: #6b6b66;
+  --color-border: #e6e6e2;
+  --color-primary: #161614;
+  --color-primary-foreground: #ffffff;
+  --color-danger: #d92d20;
+
+  --container-prose: 42rem;
+  --container-content: 72rem;
+  --container-wide: 84rem;
+
+  --spacing-gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --spacing-section: clamp(4rem, 8vw, 8rem);
+
+  /* The sizes buttons and fields share: S, M and L. */
+  --control-sm-height: 2.25rem;
+  --control-sm-padding: 0.75rem;
+  --control-sm-text: var(--text-sm);
+  --control-md-height: 2.75rem;
+  --control-md-padding: 1rem;
+  --control-md-text: var(--text-base);
+  --control-lg-height: 3.25rem;
+  --control-lg-padding: 1.25rem;
+  --control-lg-text: var(--text-lg);
+}
+
+/* dark: follows the visitor's system, and a data-theme on the page or on a section of it. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme="light"], [data-theme="light"] *)) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+}
+
+/* current: the link to the page being shown. */
+@custom-variant current (&[aria-current]);

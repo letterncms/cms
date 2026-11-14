@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  * before the guide existed, or is long past it, and never sees it.
  *
  * Whether a step is done is read from the site, not remembered: its name is
- * set, the design was saved since, an entry was created since, an agent holds
+ * set, the stylesheet was saved since, an entry was created since, an agent holds
  * a token. The file keeps only `since` and whether the guide was hidden: it is
  * about this installation, not content to deploy.
  *
@@ -47,8 +47,8 @@ final class Start
             $steps[] = ['id' => 'name', 'label' => __('Name the Site'), 'to' => '/settings/site', 'done' => $name !== '' && $name !== cms_brand()];
 
             if ($this->cms->isActive('letterncms/site')) {
-                $tokens = content_path('design/tokens.json');
-                $steps[] = ['id' => 'design', 'label' => __('Choose Colors and Fonts'), 'to' => '/design', 'done' => $since !== null && is_file($tokens) && filemtime($tokens) > $since];
+                $theme = content_path('styling/theme.css');
+                $steps[] = ['id' => 'styling', 'label' => __('Choose Colors and Fonts'), 'to' => '/styling', 'done' => $since !== null && is_file($theme) && filemtime($theme) > $since];
             }
         }
 

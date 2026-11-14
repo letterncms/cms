@@ -1,0 +1,15 @@
+{
+    "fonts": [
+        {
+            "family": "Inter",
+            "src": "fonts/InterVariable.woff2",
+            "weight": "100 900",
+            "style": "normal",
+            "preload": true
+        }
+    ],
+    "transition": {
+        "type": "fade",
+        "duration": 0.25
+    }
+}

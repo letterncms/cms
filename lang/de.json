@@ -17,7 +17,7 @@
   "{count} entry": "{count} Eintrag",
   "/blog/{slug}": "/blog/{slug}",
   "A calendar date, optionally with a time.": "Ein Datum, optional mit Uhrzeit.",
-  "A color: a design token, hex value or CSS color function.": "Eine Farbe: ein Design-Token, ein Hex-Wert oder eine CSS-Farbfunktion.",
+  "A color: a theme color, hex value or CSS color function.": "Eine Farbe: eine Farbe des Themes, ein Hex-Wert oder eine CSS-Farbfunktion.",
   "A field needs a handle.": "Ein Feld braucht einen Handle.",
   "A field of a row type cannot be called “type”: that is the row’s type (:field).": "Ein Feld eines Zeilentyps kann nicht „type“ heißen: Das ist der Typ der Zeile (:field).",
   "A file in the package does not parse: :name, line :line": "Eine Datei im Paket lässt sich nicht lesen: :name, Zeile :line",

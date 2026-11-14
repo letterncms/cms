@@ -9,7 +9,8 @@ use Cms\Abilities\AbilityException;
 use Cms\Modules\Blocks\BlockRenderer;
 use Cms\Modules\Blocks\Document;
 use Cms\Modules\Blocks\MarkdownCodec;
-use Cms\Modules\Blocks\StyleCompiler;
+use Cms\Modules\Blocks\Css;
+use Cms\Modules\Blocks\Elements;
 use Cms\Tests\TestCase;
 
 final class BlocksTest extends TestCase
@@ -68,14 +69,14 @@ final class BlocksTest extends TestCase
     public function test_markdown_round_trip_keeps_structure(): void
     {
         $codec = app(MarkdownCodec::class);
-        $markdown = "## Hello\n\nSome **bold** and [a link](/x).\n\n- One\n- Two\n\n::: section {\"props\":{\"width\":\"wide\"},\"style\":{\"base\":{\"paddingBlock\":\"token:space.16\"}}}\n### Inside\n\n:::: buttons\n::::: button {\"props\":{\"label\":\"Go\",\"url\":\"/go\"}}\n:::::\n::::\n:::\n\n```php\necho 1;\n```";
+        $markdown = "## Hello\n\nSome **bold** and [a link](/x).\n\n- One\n- Two\n\n::: section {\"props\":{\"width\":\"wide\"},\"class\":\"py-16 md:py-24\"}\n### Inside\n\n:::: buttons\n::::: button {\"props\":{\"label\":\"Go\",\"url\":\"/go\"}}\n:::::\n::::\n:::\n\n```php\necho 1;\n```";
 
         $nodes = app(Document::class)->normalize($codec->decode($markdown));
 
         $this->assertSame(['heading', 'paragraph', 'list', 'section', 'code'], array_column($nodes, 'type'));
         $this->assertSame('Some <strong>bold</strong> and <a href="/x">a link</a>.', $nodes[1]['props']['text']);
         $this->assertSame('wide', $nodes[3]['props']['width']);
-        $this->assertSame('token:space.16', $nodes[3]['style']['base']['paddingBlock']);
+        $this->assertSame('py-16 md:py-24', $nodes[3]['class']);
         $this->assertSame('button', $nodes[3]['children'][1]['children'][0]['type']);
         $this->assertSame('php', $nodes[4]['props']['language']);
 
@@ -207,40 +208,123 @@ final class BlocksTest extends TestCase
         $this->assertStringContainsString('<svg', $render(['icon' => 'arrow-up-right', 'svg' => 'not an svg']), 'what is no SVG leaves the named icon');
     }
 
-    public function test_document_sanitizes_text_and_styles(): void
+    public function test_document_sanitizes_text_and_classes(): void
     {
         $nodes = app(Document::class)->normalize([
             ['type' => 'paragraph', 'props' => ['text' => 'Hi <script>alert(1)</script><em>there</em><img src=x onerror=alert(1)>']],
-            ['type' => 'section', 'style' => ['base' => ['paddingBlock' => 'token:space.8', 'paddingY' => 'token:space.8', 'bg' => 'red', 'color' => 'red;}body{display:none', 'nonsense' => '1px'], 'evil' => ['color' => 'red']], 'children' => [
+            ['type' => 'section', 'class' => 'py-16 md:py-24', 'style' => ['base' => ['paddingBlock' => '4rem']], 'children' => [
                 ['type' => 'columns', 'children' => [['type' => 'paragraph', 'props' => ['text' => 'not a column']], ['type' => 'column']]],
             ]],
             ['type' => 'from-a-removed-plugin', 'props' => ['keep' => 'me']],
         ]);
 
         $this->assertSame('Hi <em>there</em>', $nodes[0]['props']['text']);
-        $this->assertSame(['base' => ['paddingBlock' => 'token:space.8']], $nodes[1]['style'], 'a style key is a CSS property by its own name');
+        $this->assertSame('py-16 md:py-24', $nodes[1]['class']);
+        $this->assertArrayNotHasKey('style', $nodes[1], 'a block has classes, and no style map');
         $this->assertSame(['column'], array_column($nodes[1]['children'][0]['children'], 'type'));
         $this->assertSame('me', $nodes[2]['props']['keep']);
         $this->assertMatchesRegularExpression('/^b[a-z0-9]{10}$/', $nodes[0]['id']);
     }
 
-    public function test_styles_compile_to_atomic_responsive_css(): void
+    public function test_a_class_is_anything_tailwind_writes_that_stays_in_its_attribute(): void
     {
-        $css = [];
-        $this->cms()->hooks()->on('render.style', function ($class, $rule) use (&$css) {
-            $css[$class] = $rule;
-        });
+        $tailwind = 'flex gap-4 md:grid-cols-[1fr_2fr] hover:bg-primary/50 data-open:rotate-45 group-data-open/menu:block [&_em]:text-primary -mt-px !p-0 w-1/2 before:content-[\'→\'] @md:flex supports-[display:grid]:grid';
+        $this->assertSame($tailwind, Document::classes($tailwind));
 
-        $compiler = app(StyleCompiler::class);
-        $a = $compiler->classes(['base' => ['paddingTop' => 'token:space.8'], 'mobile' => ['paddingTop' => 'token:space.4'], 'hover' => ['color' => 'token:color.primary/50']]);
-        $b = $compiler->classes(['base' => ['paddingTop' => 'token:space.8']]);
+        $this->assertSame('a b', Document::classes("  a \n b\ta "), 'each once, a space between');
+        $this->assertSame('ok', Document::classes('ok x"onclick=alert(1) <b> a>b `tick` '.str_repeat('x', 201)."\x07bell"), 'nothing that could leave the attribute, and no class longer than 200');
+        $this->assertSame(str_repeat('x', 200), Document::classes(str_repeat('x', 200)));
+        $this->assertSame('', Document::classes(['flex']));
+        $this->assertSame('', Document::classes(null));
 
-        $this->assertCount(3, explode(' ', $a));
-        $this->assertSame(explode(' ', $a)[0], $b, 'identical declarations share a class');
-        $all = implode('', $css);
-        $this->assertStringContainsString('padding-top:var(--space-8)', $all);
-        $this->assertStringContainsString('@media (max-width:767.98px)', $all);
-        $this->assertStringContainsString(':hover{color:color-mix(in srgb, var(--color-primary) 50%, transparent)}', $all);
+        $nodes = app(Document::class)->normalize([['type' => 'box', 'class' => 'flex "><script> gap-4'], ['type' => 'box', 'class' => '"']]);
+        $this->assertSame('flex gap-4', $nodes[0]['class']);
+        $this->assertArrayNotHasKey('class', $nodes[1]);
+    }
+
+    public function test_a_blocks_classes_follow_its_own_on_the_element(): void
+    {
+        $html = app(BlockRenderer::class)->render(app(Document::class)->normalize([
+            ['type' => 'box', 'class' => 'flex gap-4 md:grid-cols-[1fr_2fr] hover:bg-primary/50 [&_em]:text-primary'],
+            ['type' => 'box', 'props' => ['prose' => true], 'class' => 'max-w-prose'],
+        ]));
+
+        $this->assertStringContainsString('<div class="cms-box flex gap-4 md:grid-cols-[1fr_2fr] hover:bg-primary/50 [&amp;_em]:text-primary"></div>', $html);
+        $this->assertStringContainsString('<div class="cms-box cms-prose max-w-prose"></div>', $html);
+    }
+
+    public function test_layout_blocks_say_what_was_chosen_in_attributes_and_variables(): void
+    {
+        $render = fn (array $node) => app(BlockRenderer::class)->render(app(Document::class)->normalize([$node]));
+
+        $this->assertSame('<div class="cms-stack" style="--cms-gap:calc(var(--spacing) * 4)"></div>', $render(['type' => 'stack']));
+        $this->assertSame(
+            '<div class="cms-stack items-baseline" style="--cms-gap:calc(var(--spacing) * 8)" data-direction="horizontal" data-align="end" data-justify="between" data-wrap></div>',
+            $render(['type' => 'stack', 'class' => 'items-baseline', 'props' => ['direction' => 'horizontal', 'gap' => '8', 'align' => 'end', 'justify' => 'between', 'wrap' => true]]),
+        );
+
+        $columns = ['type' => 'columns', 'props' => ['layout' => '2-1', 'gap' => '12', 'align' => 'center', 'stack' => 'lg', 'reverse' => true], 'children' => [['type' => 'column'], ['type' => 'column']]];
+        $this->assertStringStartsWith('<div class="cms-columns" style="--cms-columns:minmax(0,2fr) minmax(0,1fr);--cms-gap:calc(var(--spacing) * 12)" data-stack="lg" data-align="center" data-reverse>', $render($columns));
+        $this->assertStringStartsWith('<div class="cms-columns" style="--cms-columns:minmax(0,1fr) minmax(0,1fr);--cms-gap:calc(var(--spacing) * 8)" data-stack="never">', $render(['type' => 'columns', 'props' => ['stack' => 'never'], 'children' => [['type' => 'column']]]));
+
+        $this->assertSame('<div class="cms-grid" style="--cms-columns:4;--cms-min:20rem;--cms-gap:calc(var(--spacing) * 6)"></div>', $render(['type' => 'grid', 'props' => ['columns' => 4, 'min' => '20rem']]));
+        $this->assertSame('<div class="cms-spacer" style="--cms-size:calc(var(--spacing) * 24)" aria-hidden="true"></div>', $render(['type' => 'spacer', 'props' => ['size' => '24']]));
+        $this->assertSame('<div class="cms-spacer" style="--cms-size:calc(var(--spacing) * 12)" aria-hidden="true"></div>', $render(['type' => 'spacer']));
+
+        // What somebody set on the block comes after the block's own, so it wins.
+        $this->assertSame('<div class="cms-grid" style="--cms-columns:3;--cms-min:16rem;--cms-gap:calc(var(--spacing) * 6);--cms-gap:2vw"></div>', $render(['type' => 'grid', 'attrs' => ['style' => '--cms-gap:2vw']]));
+
+        $this->assertSame('calc(var(--spacing) * 6)', Elements::space('6', '4'));
+        $this->assertSame('calc(var(--spacing) * 4)', Elements::space('5', '4'), 'a step that is not on the list is the default');
+        $this->assertSame('calc(var(--spacing) * 4)', Elements::space('4);color:red', '4'));
+
+        // blocks.css lays them out from those, in the components layer, where a class on the block wins.
+        $css = (string) file_get_contents(dirname(__DIR__).'/resources/css/blocks.css');
+        $this->assertStringContainsString('.cms-stack { display: flex; flex-direction: column; gap: var(--cms-gap, calc(var(--spacing) * 4)); }', $css);
+        $this->assertStringContainsString('.cms-columns[data-stack="md"] { grid-template-columns: minmax(0, 1fr); }', $css);
+        $this->assertStringContainsString('.cms-grid { display: grid; grid-template-columns: repeat(var(--cms-columns, 3), minmax(0, 1fr));', $css);
+        $this->assertStringContainsString('.cms-spacer { height: var(--cms-size,', $css);
+    }
+
+    public function test_blocks_css_is_part_of_the_kernel_stylesheet_and_reads_only_what_every_theme_has(): void
+    {
+        $kernel = (array) $this->cms()->hooks()->filter('styling.kernel', []);
+        $blocks = (string) file_get_contents(dirname(__DIR__).'/resources/css/blocks.css');
+        $this->assertContains($blocks, $kernel);
+
+        $styles = $blocks.implode('', array_map(static fn (string $file) => (string) file_get_contents($file), glob(dirname(__DIR__).'/media/styles/*.css') ?: []));
+        preg_match_all('/var\((--[a-z0-9-]+)/', $styles, $m);
+        $theme = '/^--(cms-[a-z-]+|code-[a-z]+|x|y|i|spacing|spacing-(gutter|section)|color-(background|surface|raised|foreground|muted|border|primary|primary-foreground|danger)|container-(prose|content|wide)|text-(xs|sm|lg|xl)|radius-(sm|md|lg)|shadow-(md|lg)|font-weight-(medium|semibold)|font-(sans|mono)|leading-snug)$/';
+
+        foreach (array_unique($m[1]) as $variable) {
+            $this->assertMatchesRegularExpression($theme, $variable, "{$variable} is not a variable of Tailwind's theme or the kernel's");
+        }
+
+    }
+
+    public function test_css_values_stay_inside_their_declaration(): void
+    {
+        $this->assertSame('var(--color-primary)', Css::value(' var(--color-primary) '));
+        $this->assertSame('color-mix(in oklab, var(--color-primary) 40%, transparent)', Css::value('color-mix(in oklab, var(--color-primary) 40%, transparent)'));
+        $this->assertSame('linear-gradient(90deg, #000, #fff 50%)', Css::value('linear-gradient(90deg, #000, #fff 50%)'));
+        $this->assertSame('12', Css::value(12));
+        $this->assertSame('0.5', Css::value(0.5));
+
+        foreach (['', 'red;}body{display:none', 'red}', 'url(javascript:alert(1))', 'URL (x)', 'expression(alert(1))', '@import "x"', 'red /* x */', 'a\\62', '<b>', 'javascript:x', str_repeat('a', 601)] as $bad) {
+            $this->assertNull(Css::value($bad), $bad);
+        }
+
+        $this->assertNull(Css::value(['red']));
+        $this->assertNull(Css::value(null));
+        $this->assertSame('none', Css::value('media:01j00000000000000000000000'), 'a file that is not in the library');
+
+        $this->assertSame('color:var(--color-primary)', Css::inline('color', 'var(--color-primary)'));
+        $this->assertSame('width:120px', Css::inline('width', 120));
+        $this->assertSame('opacity:0.5', Css::inline('opacity', '0.5'));
+        $this->assertSame('aspect-ratio:16/9', Css::inline('aspectRatio', '16/9'));
+        $this->assertNull(Css::inline('color', 'red;background:blue'));
+        $this->assertNull(Css::inline('position', 'fixed'), 'only what comes per item is set from data');
+        $this->assertNull(Css::inline('behavior', 'x'));
     }
 
     public function test_renders_blocks_with_theme_independent_markup(): void
@@ -256,8 +340,8 @@ final class BlocksTest extends TestCase
         ]));
 
         $this->assertStringContainsString('<h1 class="cms-heading" id="title">Title</h1>', $html);
-        $this->assertMatchesRegularExpression('/<div class="cms-columns( s\w+)+" data-stack="md">/', $html, 'layout props become atomic styles');
-        $this->assertStringContainsString('<a class="cms-button" data-variant="primary" data-size="md" href="/go"><span>Go</span></a>', $html);
+        $this->assertStringContainsString('<div class="cms-columns" style="--cms-columns:minmax(0,1fr) minmax(0,2fr);--cms-gap:calc(var(--spacing) * 8)" data-stack="md">', $html, 'layout props become variables blocks.css reads');
+        $this->assertStringContainsString('<a class="cms-button btn-primary" data-size="md" href="/go"><span>Go</span></a>', $html);
         $this->assertStringContainsString('youtube-nocookie.com/embed/dQw4w9WgXcQ', $html);
         $this->assertStringNotContainsString('evil.example.com', $html);
     }
@@ -422,11 +506,11 @@ final class BlocksTest extends TestCase
         $this->assertStringStartsWith('::: paragraph {"id":"'.$nodes[0]['id'].'"', $codec->encode($nodes));
     }
 
-    public function test_saving_drops_empty_breakpoints_instead_of_turning_them_into_lists(): void
+    public function test_saving_keeps_classes_and_drops_a_style_map(): void
     {
-        $saved = $this->save('::: box {"id":"x","style":{"base":{},"tablet":{"color":"token:color.ink"}}}'."\n:::");
+        $saved = $this->save('::: box {"id":"x","class":"grid gap-6 md:grid-cols-3","style":{"base":{"color":"red"}}}'."\n:::");
 
-        $this->assertSame('::: box {"id":"x","style":{"tablet":{"color":"token:color.ink"}}}'."\n:::", $saved);
+        $this->assertSame('::: box {"id":"x","class":"grid gap-6 md:grid-cols-3"}'."\n:::", $saved);
     }
 
     public function test_saving_keeps_heading_boxes_calc_motion_and_colour_variables(): void
@@ -434,13 +518,13 @@ final class BlocksTest extends TestCase
         $saved = $this->save(implode("\n\n", [
             '::: box {"id":"h","props":{"tag":"h2"}}'."\n:::",
             '::: box {"id":"m","motion":[{"id":"a","trigger":{"type":"appear"},"steps":[{"target":"self","at":0,"duration":0.5,"from":{"y":"calc(-1 * 8.25rem)"},"to":{"y":0}}]}]}'."\n:::",
-            '::: box {"id":"v","attrs":{"style":"--color-primary:#d9432a;--color-panel:#f3e4cf"}}'."\n:::",
+            '::: box {"id":"v","attrs":{"style":"--color-primary:#d9432a;--color-surface:#f3e4cf"}}'."\n:::",
         ]));
         $nodes = app(MarkdownCodec::class)->decode($saved);
 
         $this->assertSame('h2', $nodes[0]['props']['tag']);
         $this->assertSame('calc(-1 * 8.25rem)', $nodes[1]['motion'][0]['steps'][0]['from']['y']);
-        $this->assertSame('--color-primary:#d9432a;--color-panel:#f3e4cf', $nodes[2]['attrs']['style']);
+        $this->assertSame('--color-primary:#d9432a;--color-surface:#f3e4cf', $nodes[2]['attrs']['style']);
         $this->assertSame([], Document::attrs(['style' => 'color:red;--x:url(javascript:alert(1))']), 'a style attribute only sets variables');
     }
 }

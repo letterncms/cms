@@ -1,45 +1,9 @@
-import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Button, fieldControlId, Fields, Icon, IconButton, Input, Popover, Tooltip, cn } from '@letterncms/ui'
+import { t, type FieldProps } from '@letterncms/sdk'
+import { Button, fieldControlId, Fields, Icon, IconButton, Popover, cn } from '@letterncms/ui'
 import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
-/* Field components of the design editor — the controls core fields can't
-   express: fluid sizes, font stacks, CSS declarations, easing curves, shadows and
-   font files. Compact (xs) like the canvas inspector, whose value control (a number
-   with its unit, scrubbed or typed) they use when Blocks has drawn it. */
-
-/** The canvas inspector's value control (`blocks-value`), or a plain input without it. */
-export function ValueInput({ field, value, onChange, disabled }: { field: FieldDef; value: string | number | null; onChange: (value: string | null) => void; disabled?: boolean }) {
-  const Value = registry.fields.get('blocks-value')
-  if (Value) return <Value field={{ ...field, component: 'blocks-value' }} value={value} onChange={(v: string | number | null) => onChange(v === null || v === undefined ? null : String(v))} disabled={disabled} context={{}} />
-  return <Input id={fieldControlId(field)} size="sm" className="min-w-0 flex-1 font-mono" aria-label={field.label} placeholder={field.placeholder as string | undefined} value={String(value ?? '')} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
-}
-
-type Size = string | { min: string; max: string }
-
-/** A size token: one value, or fluid `{min, max}` between phone and desktop. */
-export function SizeField({ field, value, onChange, disabled }: FieldProps<Size | null>) {
-  const fluid = !!value && typeof value === 'object' && 'min' in value
-  const unitOf = (v: string) => v.match(/[a-z%]+$/i)?.[0] ?? ''
-  // Phone and desktop in one unit name it once, after the second: the numbers get the room.
-  const shared = fluid && unitOf(String(value.min)) === unitOf(String(value.max))
-  const sub = (handle: string, label: string): FieldDef => ({ ...field, handle: `${field.handle}-${handle}`, label, unit: 'rem', units: handle === 'min' && shared ? [] : ['rem', 'px', 'em', '%', 'vw'], step: 0.125 })
-  return (
-    <div className="flex min-w-0 flex-1 items-center gap-1">
-      {fluid ? (
-        <>
-          <div className="min-w-0 flex-1" title={t('Phone')}><ValueInput field={sub('min', t('Phone'))} value={value.min} disabled={disabled} onChange={(v) => onChange({ ...value, min: v ?? '0' })} /></div>
-          <Icon name="arrow-right" size={10} className="shrink-0 text-faint" />
-          <div className="min-w-0 flex-1" title={t('Desktop')}><ValueInput field={sub('max', t('Desktop'))} value={value.max} disabled={disabled} onChange={(v) => onChange({ ...value, max: v ?? '0' })} /></div>
-        </>
-      ) : (
-        <div className="min-w-0 flex-1"><ValueInput field={{ ...field, unit: 'rem', units: ['rem', 'px', 'em', '%', 'vw'], step: 0.125 }} value={value ?? null} disabled={disabled} onChange={(v) => onChange(v ?? '0')} /></div>
-      )}
-      <Tooltip content={fluid ? t('Use One Size') : t('Scale from Phone to Desktop')}>
-        <IconButton icon="width" label={t('Fluid')} size="sm" active={fluid} disabled={disabled} onClick={() => onChange(fluid ? value.max : { min: String(value ?? ''), max: String(value ?? '') })} />
-      </Tooltip>
-    </div>
-  )
-}
+/* Field components of the Styling page: the controls core fields can't express, a font stack and a
+   shadow. Compact like the canvas inspector, whose shadow editor the second one opens. */
 
 /** What a font family falls back to: the system's own fonts of its kind. */
 export const FALLBACKS = { sans: ['ui-sans-serif', 'system-ui', 'sans-serif'], serif: ['ui-serif', 'Georgia', 'serif'], mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'] } as const
@@ -51,50 +15,63 @@ export function fallbackOf(stack: string[]): Fallback {
   return stack.includes('serif') ? 'serif' : 'sans'
 }
 
-/** A font token's value as a list: `["Inter", "ui-sans-serif", …]`, from an array or a CSS font stack. */
+/** A font stack as a list: `Inter, "Inter Fallback", sans-serif` → ["Inter", "Inter Fallback", "sans-serif"]. */
 export function fontStack(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(String) : String(value ?? '').split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+  return String(value ?? '').split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
 }
 
-/** A font token with another fallback kind (sans, serif, mono), keeping its font. */
-export function withFallback(value: unknown, kind: Fallback): string[] {
-  const stack = fontStack(value)
-  return [...(stack[0] && !SYSTEM_FONTS.has(stack[0]) ? [stack[0]] : []), ...FALLBACKS[kind]]
+/** A list of families as CSS writes it: a name that is not one plain word stands in quotes. */
+export function stackCss(stack: string[]): string {
+  return stack.map((name) => (/^[a-zA-Z][\w-]*$/.test(name) ? name : `"${name.replace(/"/g, '')}"`)).join(', ')
 }
 
-/** A font the site serves, as the picker lists it: its weights (400–600 · Italic) and whether a font token uses it. */
+/** The font a stack uses, when it is one the site serves or names: not a system font, not a fallback face. */
+export function familyOf(stack: string[]): string {
+  return stack[0] && !SYSTEM_FONTS.has(stack[0]) && !stack[0].endsWith(' Fallback') ? stack[0] : ''
+}
+
+/**
+ * A stack for a family and a kind of fallback. A family with a fallback face (the local font drawn at its
+ * size until it arrives) names it right after itself, as "<Family> Fallback".
+ */
+export function stackFor(family: string, kind: Fallback, fallbackFace: boolean): string {
+  return stackCss([...(family ? [family, ...(fallbackFace ? [`${family} Fallback`] : [])] : []), ...FALLBACKS[kind]])
+}
+
+/** A font the site serves, as the picker lists it: its weights (400–600 · Italic), whether it has a fallback face and whether a font of the theme uses it. */
 export interface SiteFont {
   family: string
   styles: string
+  fallback: boolean
   used: boolean
 }
 
 /**
- * A font token (`["Inter", "ui-sans-serif", "system-ui", "sans-serif"]`): the font it uses, picked
- * from the fonts on the site (each shown in itself) or the system's, or added right here from
- * Google Fonts or a .woff2 file. Its fallback stays as it is (the row's menu changes it).
- * `fonts` are the site's fonts; `onAdd(kind)` adds one and resolves to its family name;
- * `onRemove(family)` deletes a font no token uses.
+ * A font of the theme (`Inter, "Inter Fallback", ui-sans-serif, system-ui, sans-serif`): the font it uses,
+ * picked from the fonts on the site (each shown in itself) or the system's, or added right here from
+ * Google Fonts or a .woff2 file. Its kind of fallback stays as it is (the row's menu changes it).
+ * `fonts` are the site's fonts; `onAdd(kind)` adds one and resolves to it; `onRemove(family)` deletes a
+ * font no font of the theme uses.
  */
-export function FontStackField({ field, value, onChange, disabled }: FieldProps<string[] | string | null>) {
+export function FontStackField({ field, value, onChange, disabled }: FieldProps<string | null>) {
   const [open, setOpen] = useState(false)
   const stack = fontStack(value)
-  const first = stack[0] && !SYSTEM_FONTS.has(stack[0]) ? stack[0] : ''
+  const first = familyOf(stack)
   const fallback = fallbackOf(stack)
   const fonts = (field.fonts as SiteFont[] | undefined) ?? []
-  const use = (family: string) => onChange([...(family ? [family] : []), ...FALLBACKS[fallback]])
+  const use = (family: string, fallbackFace: boolean) => onChange(stackFor(family, fallback, fallbackFace))
   const add = async (kind: 'google' | 'upload') => {
     setOpen(false)
-    const family = await (field.onAdd as ((kind: string) => Promise<string | null>) | undefined)?.(kind)
-    if (family) use(family)
+    const font = await (field.onAdd as ((kind: string) => Promise<{ family: string; fallback: boolean } | null>) | undefined)?.(kind)
+    if (font) use(font.family, font.fallback)
   }
-  const option = (family: string, label: string, aside: string, extra?: ReactNode) => (
-    <div key={family || 'system'} className="group/font flex items-center gap-1 rounded-sm pr-1 hover:bg-hover">
-      <Button variant="ghost" onClick={() => { use(family); setOpen(false) }} className="!h-9 min-w-0 flex-1 shrink !justify-start !gap-2 !bg-transparent !pl-2 !pr-0 text-left !font-normal">
+  const option = (family: string, label: string, aside: string, fallbackFace: boolean, extra?: ReactNode) => (
+    <div key={family || 'system'} className="cms-reveal-row flex items-center gap-1 rounded-sm pr-1 hover:bg-hover">
+      <Button variant="ghost" onClick={() => { use(family, fallbackFace); setOpen(false) }} className="!h-9 min-w-0 flex-1 shrink !justify-start !gap-2 !bg-transparent !pl-2 !pr-0 text-left !font-normal">
         <span className="min-w-0 flex-1 truncate text-base leading-tight text-ink" style={family ? { fontFamily: `"${family}"` } : undefined}>{label}</span>
         {aside && <span className="shrink-0 text-2xs tabular-nums text-faint">{aside}</span>}
       </Button>
-      <span className="grid w-5 shrink-0 place-items-center">{family === first ? <Icon name="check" size={14} className="text-ink" /> : extra}</span>
+      <span className="grid w-6 shrink-0 place-items-center">{family === first ? <Icon name="check" size={14} className="text-ink" /> : extra}</span>
     </div>
   )
   const action = (icon: string, label: string, onClick: () => void) => (
@@ -117,33 +94,20 @@ export function FontStackField({ field, value, onChange, disabled }: FieldProps<
       }
     >
       <div className="max-h-72 overflow-y-auto">
-        {option('', t('System Font'), '')}
-        {fonts.map((font) => option(font.family, font.family, font.styles, !font.used && (
-          <IconButton icon="trash" label={t('Remove {family}', { family: font.family })} size="xs" className="opacity-0 focus-visible:opacity-100 group-hover/font:opacity-100" onClick={() => (field.onRemove as ((family: string) => void) | undefined)?.(font.family)} />
-        )))}
+        {option('', t('System Font'), '', false)}
+        {/* A font the theme names without serving it (a font of the visitor's own) is still what is chosen. */}
+        {first && !fonts.some((font) => font.family === first) && option(first, first, '', stack.includes(`${first} Fallback`))}
+        {fonts.map((font) => option(font.family, font.family, font.styles, font.fallback, !font.used && field.onRemove ? (
+          <IconButton icon="trash" label={t('Remove {family}', { family: font.family })} size="xs" className="cms-reveal" onClick={() => (field.onRemove as (family: string) => void)(font.family)} />
+        ) : undefined))}
       </div>
-      <div className="mt-1 border-t border-border pt-1">
-        {action('search', t('Add a Google Font…'), () => void add('google'))}
-        {action('upload', t('Upload a .woff2 File…'), () => void add('upload'))}
-      </div>
+      {!!field.onAdd && (
+        <div className="mt-1 border-t border-border pt-1">
+          {action('search', t('Add a Google Font…'), () => void add('google'))}
+          {action('upload', t('Upload a .woff2 File…'), () => void add('upload'))}
+        </div>
+      )}
     </Popover>
-  )
-}
-
-/** Picks a local file (`accept`, `placeholder`) and hands it to onChange; nothing is stored. Files can be dropped on it. */
-export function FileField({ field, onChange, disabled }: FieldProps<File | null>) {
-  const [over, setOver] = useState(false)
-  return (
-    <label
-      onDragOver={(e) => { e.preventDefault(); setOver(true) }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => { e.preventDefault(); setOver(false); const file = e.dataTransfer.files?.[0]; if (file && !disabled) onChange(file) }}
-      className={cn('flex h-14 cursor-pointer items-center justify-center gap-2 rounded-sm border border-dashed text-xs text-muted transition-colors hover:bg-hover hover:text-text', over ? 'border-focus bg-hover' : 'border-border-strong')}
-    >
-      <Icon name="upload" size={14} />
-      {(field.placeholder as string | undefined) ?? t('Choose a File')}
-      <input id={fieldControlId(field)} type="file" accept={field.accept as string | undefined} disabled={disabled} className="hidden" onChange={(e) => { if (e.target.files?.[0]) onChange(e.target.files[0]); e.target.value = '' }} />
-    </label>
   )
 }
 

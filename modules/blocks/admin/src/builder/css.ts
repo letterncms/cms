@@ -1,4 +1,4 @@
-/** Split a CSS value on top-level spaces (not inside parentheses): "0 token:space.4 calc(1px + 2px)". */
+/** Split a CSS value on top-level spaces (not inside parentheses): "0 var(--spacing-gutter) calc(1px + 2px)". */
 export function splitValue(value: string): string[] {
   const out: string[] = []
   let depth = 0

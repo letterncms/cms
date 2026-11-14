@@ -51,6 +51,10 @@ abstract class TestCase extends BaseTestCase
             file_put_contents($manifest, '{"entry":"main.js","css":[],"fonts":[],"imports":{},"preload":[]}');
         }
 
+        // The site's CSS is compiled by Node where there is one: the tests are told there is none, so they
+        // run the same with or without it, and no test waits for Tailwind.
+        putenv('CMS_NODE=no-node');
+
         $this->site = sys_get_temp_dir().'/cms-test-'.bin2hex(random_bytes(6));
 
         Yaml::write($this->site.'/config/site.yaml', ['name' => 'Test site', 'url' => 'http://localhost', 'locale' => 'en', 'locales' => ['en', 'de']]);

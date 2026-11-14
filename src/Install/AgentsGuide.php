@@ -60,7 +60,7 @@ final class AgentsGuide
             '|---|---|',
         ];
 
-        foreach ($this->places($has('design/get'), $has('blocks/types')) as $path => $holds) {
+        foreach ($this->places($has('styling/get'), $has('blocks/types')) as $path => $holds) {
             $lines[] = "| `{$path}` | {$holds} |";
         }
 
@@ -124,21 +124,25 @@ final class AgentsGuide
                 '',
                 '## MCP',
                 '',
-                'The same abilities are tools over MCP at `'.($url !== '' ? $url : 'https://<this site>').'/mcp` (streamable HTTP, signed in through OAuth as a user of the site, with that user\'s permissions). `entries/create` is the tool `entries.create`. Resources such as `cms://collections`'.($has('blocks/types') ? ', `cms://blocks`' : '').($has('design/get') ? ' and `cms://site/design`' : '').' describe the site before you change it.',
+                'The same abilities are tools over MCP at `'.($url !== '' ? $url : 'https://<this site>').'/mcp` (streamable HTTP, signed in through OAuth as a user of the site, with that user\'s permissions). `entries/create` is the tool `entries.create`. Resources such as `cms://collections`'.($has('blocks/types') ? ', `cms://blocks`' : '').($has('styling/get') ? ' and `cms://site/styling`' : '').' describe the site before you change it.',
             );
+        }
+
+        if ($has('styling/get')) {
+            array_push($lines, ...$this->styling($builds));
         }
 
         array_push($lines, '', '## Rules', '');
         $lines[] = '- Change content, settings, users and design through abilities. Never write to the database, and never edit `public/`, `vendor/`, `storage/` or a plugin Composer or the store installed.';
-        $lines[] = '- Read before you write: the collection\'s schema (`content/schemas/collections/<handle>.json`, or `collections/schema`)'.($has('blocks/types') ? ', `blocks/types` for the blocks' : '').($has('design/get') ? ', `design/get` for the tokens' : '').'. Reuse what the site has before adding something new.';
+        $lines[] = '- Read before you write: the collection\'s schema (`content/schemas/collections/<handle>.json`, or `collections/schema`)'.($has('blocks/types') ? ', `blocks/types` for the blocks' : '').($has('styling/get') ? ', `styling/get` for the stylesheet' : '').'. Reuse what the site has before adding something new.';
 
         if ($has('blocks/types')) {
             $lines[] = '- Entries kept as files are Markdown with YAML front matter; a field of blocks is written as Block Markdown ('.cms_brand('docs_url').'/reference/block-markdown), not as HTML. After editing a file, build.';
         }
 
-        if ($has('design/get')) {
-            $lines[] = '- Style with the design tokens (`content/design/tokens.json`, through `design/get` and `design/update`), not with fixed colours and sizes in a block.'
-                .($has('design-code/save') ? ' JavaScript and CSS of the site\'s own live in `content/design/scripts` and `content/design/styles`: read and write them with `design-code/list`, `design-code/get` and `design-code/save`.' : '');
+        if ($has('styling/get')) {
+            $lines[] = '- Style with Tailwind classes built from the theme (see Styling above), not with arbitrary values such as `bg-[#123456]` in a block.'
+                .($has('styling-code/save') ? ' JavaScript and plain CSS of the site\'s own live in `content/styling/scripts` and `content/styling/styles`: read and write them with `styling-code/list`, `styling-code/get` and `styling-code/save`.' : '');
         }
 
         if ($has('sites/apply')) {
@@ -168,12 +172,54 @@ final class AgentsGuide
         return implode("\n", $lines)."\n";
     }
 
+    /**
+     * How the site is styled, for whoever edits its files: Tailwind CSS in one stylesheet and on the blocks.
+     *
+     * @return list<string>
+     */
+    private function styling(bool $builds): array
+    {
+        return [
+            '',
+            '## Styling',
+            '',
+            'The site is styled with Tailwind CSS v4. There is one stylesheet, `content/styling/theme.css`, and every block carries Tailwind classes in its `class`.',
+            '',
+            '```css',
+            '@import "tailwindcss";',
+            '@import "cms";                        /* what blocks, buttons and form fields are built from */',
+            '',
+            '@theme {                              /* every variable is a set of classes */',
+            '  --color-primary: light-dark(#1d4ed8, #93c5fd);   /* bg-primary, text-primary, border-primary/40 */',
+            '  --font-display: "Fraunces", "Fraunces Fallback", serif;   /* font-display */',
+            '  --container-content: 72rem;         /* max-w-content */',
+            '}',
+            '',
+            '@layer base {                         /* elements, before a block says otherwise */',
+            '  :root { color-scheme: light dark; } /* turns the dark side of light-dark() on */',
+            '  h1 { @apply font-display text-5xl font-semibold tracking-tight text-balance; }',
+            '}',
+            '',
+            '@utility card {                       /* a class of the site\'s own: takes hover:, md: and the rest */',
+            '  @apply rounded-xl border border-border bg-raised p-6;',
+            '}',
+            '```',
+            '',
+            '- **Theme.** Colours, fonts and sizes are `@theme` variables in Tailwind\'s namespaces: `--color-*`, `--font-*`, `--text-*`, `--spacing-*`, `--radius-*`, `--shadow-*`, `--container-*`, `--breakpoint-*`, `--ease-*`. A dark value is the second argument of `light-dark()`. To change how the whole site looks, change these, not the blocks.',
+            '- **Classes on blocks.** A block\'s `class` is a string of Tailwind classes: `"grid gap-6 md:grid-cols-3"`, `"bg-primary text-primary-foreground hover:opacity-90"`. Use the theme\'s names. When several blocks share a look, give it a name with `@utility` and use that. A button\'s looks are the `btn-<name>` classes (`btn-primary`).',
+            '- **States.** A state is an attribute on the element (`data-open`, `data-scrolled`, `data-hidden`, `data-current`), styled with Tailwind\'s data variants: `data-open:rotate-45` on the element itself, `in-data-open:hidden` on something inside it, `group-data-open:opacity-100` under an element with the class `group`. `current:` styles the link to the page being shown, `dark:` the dark side, `group-hover:` what is under a hovered `group`.',
+            '- **Fonts.** `settings.json` lists the font faces (`.woff2` files in `content/styling/fonts/`); `styling/fonts-import family="Inter"` downloads a Google Fonts family and adds its faces. Name the family in the theme: `--font-sans: "Inter", "Inter Fallback", sans-serif`.',
+            '- **Compiled CSS.** Pages link `content/styling/compiled.css`, which Tailwind makes from `theme.css` for exactly the classes the content uses. Never edit it. It is made again by itself whenever the stylesheet or the content changes through an ability. After you edit files by hand, '.($builds ? '`php cms build` compiles it first' : 'the next ability that saves content compiles it').', when the machine has Node 20 or newer (`CMS_NODE` names the binary when it is not `node`). Without Node nothing is lost: the admin compiles it in the browser the next time someone opens it'.($builds ? ', and until then the build warns that the CSS is older than the content' : '').'. `php cms run styling/get` says whether it is `current`.',
+            '- **Changing it.** Edit `theme.css` as a file, or send the whole stylesheet with `php cms run styling/update --input=\'{"css": "…"}\'`, which refuses a stylesheet Tailwind cannot compile and says why. Commit `compiled.css` with the rest: a site deployed from git has its CSS without compiling anything.',
+        ];
+    }
+
     /** @return array<string, string> The folders of this site that exist or will, and what each holds. */
-    private function places(bool $design, bool $blocks): array
+    private function places(bool $styling, bool $blocks): array
     {
         $places = [
             'content/collections/' => 'Each collection\'s definition (`<handle>.yaml`: fields, route, driver) and, for collections kept in files, its entries (`<handle>/*.md`)',
-            'content/design/' => 'The design: `tokens.json`, `fonts/`, and the site\'s own `scripts/` and `styles/`',
+            'content/styling/' => 'The styling: `theme.css` (the Tailwind stylesheet), `settings.json` (fonts, page transition), `compiled.css` (generated), `fonts/`, and the site\'s own `scripts/` and `styles/`',
             'content/globals/' => 'Site-wide values such as the footer\'s, one file per set',
             'content/navigation/' => 'Menus',
             'content/schemas/' => 'The content model as JSON Schema, one file per collection, blueprint and global'.($blocks ? ', and `blocks.json` for what a blocks field holds' : '').'. The site writes them whenever a definition changes: read them, never edit them',
@@ -186,12 +232,12 @@ final class AgentsGuide
             'vendor/' => cms_brand().' and its libraries',
         ];
 
-        if (! $design) {
-            unset($places['content/design/']);
+        if (! $styling) {
+            unset($places['content/styling/']);
         }
 
         // A folder a site doesn't have yet is still where that thing goes; the ones named here always matter.
-        $always = ['content/collections/', 'content/schemas/', 'content/design/', 'config/', 'plugins/', 'public/', 'storage/', 'vendor/'];
+        $always = ['content/collections/', 'content/schemas/', 'content/styling/', 'config/', 'plugins/', 'public/', 'storage/', 'vendor/'];
 
         return array_filter($places, fn (string $holds, string $path) => in_array($path, $always, true) || file_exists($this->app->sitePath(rtrim($path, '/'))), ARRAY_FILTER_USE_BOTH);
     }

@@ -1,0 +1,19 @@
+/* Beside Tailwind's own base styles (Preflight): what a page of the site needs whatever its design. */
+@layer base {
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  [data-theme="light"] { color-scheme: light; }
+  [data-theme="dark"] { color-scheme: dark; }
+  body { min-height: 100dvh; background-color: var(--color-background); color: var(--color-foreground); }
+  h1, h2, h3, h4, h5, h6, p { overflow-wrap: break-word; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  [x-cloak] { display: none !important; }
+  .cms-skip { position: absolute; left: 1rem; top: -4rem; z-index: 100; padding: .6rem 1rem; border-radius: .5rem; background: var(--color-background); color: var(--color-foreground); box-shadow: 0 4px 16px rgb(0 0 0 / .15); }
+  .cms-skip:focus { top: 1rem; }
+
+  /* The size in effect for buttons and fields, by data-size (M by default). */
+  :root, [data-size="md"] { --control-height: var(--control-md-height); --control-padding: var(--control-md-padding); --control-text: var(--control-md-text); }
+  [data-size="sm"] { --control-height: var(--control-sm-height); --control-padding: var(--control-sm-padding); --control-text: var(--control-sm-text); }
+  [data-size="lg"] { --control-height: var(--control-lg-height); --control-padding: var(--control-lg-padding); --control-text: var(--control-lg-text); }
+}

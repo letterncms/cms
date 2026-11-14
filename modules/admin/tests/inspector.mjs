@@ -22,12 +22,13 @@ const results = []
 const output = document.querySelector('#results')
 const preview = document.querySelector('#preview')
 const mount = createRoot(preview)
-const catalog = { blocks: [], styles: {}, aliases: {}, states: [], breakpoints: {}, sources: [], motion: { triggers: [], properties: {} }, logic: { events: [], mods: [], actions: [], transitions: [], merges: [] } }
+const catalog = { blocks: [], sources: [], motion: { triggers: [], properties: {} }, logic: { events: [], mods: [], actions: [], transitions: [], merges: [] } }
 const type = { name: 'button', title: 'Button', icon: 'square', category: 'basic', fields: [] }
 const themeAction = { do: 'theme', mode: 'toggle' }
 const node = { id: 'example', type: 'button', props: {}, logic: { on: [{ event: 'click', actions: [themeAction, { do: 'play', node: 'example' }, { do: 'if', test: 'open', then: [{ do: 'if', test: 'ready', then: [themeAction] }], else: [themeAction] }] }] } }
 const store = new EditorStore([node], () => {})
-queryClient.setQueryData(abilityKey('design/get', {}), { tokens: [], breakpoints: {}, templates: {} })
+// The site's stylesheet, as the Design tab reads it: Tailwind alone is enough to ask what a class does.
+queryClient.setQueryData(abilityKey('styling/source', {}), { signature: 'fixture', css: '@import "tailwindcss";', files: {}, candidates: [], faces: '' })
 sessionStorage.setItem('cms.block.tab', 'interact')
 
 function Example() {
@@ -89,6 +90,15 @@ try {
   first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
   assert(document.activeElement === preview.querySelectorAll('[role="radio"]')[1], 'Arrow key did not move focus')
   check('Empty fields support keyboard entry and arrow navigation')
+  // The Design tab's controls write Tailwind classes on the block: Italic is the class "italic", and no style map.
+  sessionStorage.setItem('cms.block.tab', 'design')
+  render(h(Example, { key: 'design' }))
+  await until(() => preview.querySelector('[role="radio"][aria-label="Italic"]'), 'The Design tab has no Style control')
+  // The control writes once Tailwind's design system has loaded: pressed until it has.
+  await until(() => { preview.querySelector('[role="radio"][aria-label="Italic"]')?.click(); return /(^| )italic( |$)/.test(store.get().nodes[0].class ?? '') }, 'The Style control did not write the class italic')
+  assert(!('style' in store.get().nodes[0]), 'A style map was written beside the class')
+  check('Design controls write Tailwind classes')
+  sessionStorage.setItem('cms.block.tab', 'interact')
   preview.style.width = '300px'
   document.documentElement.dataset.theme = 'dark'
   render()

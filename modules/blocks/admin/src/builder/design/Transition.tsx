@@ -1,58 +1,54 @@
 import { t } from '@letterncms/sdk'
 import { Button } from '@letterncms/ui'
-import { useTokens } from '../../core/context'
-import { splitValue } from '../css'
+import { useThemeTokens } from '../../core/styling'
+import { partUtility } from '../styleApi'
 import type { StyleApi } from '../useStyle'
 import { StyleSection } from './more'
 import { StyleFields } from './StyleFields'
 
+/** What animates, as the class that names it. */
 const PROPERTIES = () => [
-  { value: 'all', label: t('Everything') },
-  { value: 'color, background-color, border-color, text-decoration-color, fill, stroke', label: t('Colors') },
-  { value: 'transform, translate, rotate, scale', label: t('Transform') },
-  { value: 'opacity', label: t('Opacity') },
-  { value: 'opacity, transform, translate, scale', label: t('Opacity and Transform') },
-  { value: 'box-shadow', label: t('Shadow') },
+  { value: 'transition', label: t('Colors, Opacity, Shadow and Transform') },
+  { value: 'transition-all', label: t('Everything') },
+  { value: 'transition-colors', label: t('Colors') },
+  { value: 'transition-transform', label: t('Transform') },
+  { value: 'transition-opacity', label: t('Opacity') },
+  { value: 'transition-shadow', label: t('Shadow') },
 ]
 
-function parse(value: string | undefined) {
-  if (!value) return null
-  const bits = splitValue(value.replace(/,\s*(?![^(]*\))/g, ', '))
-  const times = bits.filter((b) => /^[\d.]+m?s$/.test(b) || b.startsWith('token:duration'))
-  const ease = bits.find((b) => /^(ease|linear|cubic-bezier|steps|token:ease)/.test(b))
-  const props = value.split(/\s+\d/)[0].replace(/\s+(ease|linear|cubic-bezier).*$/, '').trim()
-  return { property: props || 'all', duration: times[0] ?? '200ms', ease: ease ?? 'ease', delay: times[1] }
-}
+const MARKERS = ['transition-property', '--tw-duration', '--tw-ease', 'transition-delay']
 
-/** How state changes (hover, is-open…) animate: what, how long, which curve. */
+/**
+ * How state changes (hover, open…) animate: what, how long, which curve. Four classes, as people write a
+ * transition: transition-colors duration-200 ease-out delay-100.
+ */
 export function Transition({ s }: { s: StyleApi }) {
-  const { byGroup } = useTokens()
-  const tr = parse(s.value('transition'))
-  const set = (patch: Partial<NonNullable<typeof tr>>) => {
-    const next = { property: 'all', duration: '200ms', ease: 'cubic-bezier(0.2, 0.8, 0.2, 1)', ...tr, ...patch }
-    const props = next.property.split(',').map((p) => p.trim())
-    s.set('transition', props.map((p) => `${p} ${next.duration} ${next.ease}${next.delay ? ` ${next.delay}` : ''}`).join(', '))
-  }
+  const tokens = useThemeTokens()
+  const animated = s.value('transitionProperty')
+  const options = PROPERTIES()
+  const property = animated === undefined ? undefined : options.find((option) => s.engine?.value(option.value, 'transition-property') === animated)?.value
+  const time = (marker: string, root: string, v: string | null | undefined) => s.swap(marker, v && s.engine ? partUtility(s.engine, root, v, 'ms') : null)
 
   return (
-    <StyleSection s={s} group="transition" title={t('Transition')} open={!!tr} empty={!tr}>
-      {!tr ? (
-        <Button variant="ghost" icon="plus" onClick={() => set({})} className="w-full !text-xs !font-normal !text-muted hover:!text-ink">{t('Animate State Changes')}</Button>
+    <StyleSection s={s} group="transition" title={t('Transition')} open={!!animated} empty={!animated}>
+      {!animated ? (
+        <Button variant="ghost" icon="plus" disabled={!s.engine} onClick={() => s.swap('transition-property', 'transition')} className="w-full !text-xs !font-normal !text-muted hover:!text-ink">{t('Animate State Changes')}</Button>
       ) : (
         <StyleFields
           s={s}
           fields={[
-            { handle: 'property', type: 'select', size: 'sm', label: t('Animate'), placeholder: t('Everything'), options: PROPERTIES(), keys: ['transition'], get: () => PROPERTIES().find((p) => p.value.split(',')[0].trim() === tr.property.split(',')[0].trim())?.value, set: (v) => set({ property: v ?? 'all' }) },
+            // Clearing what animates takes the whole transition off: its duration and curve mean nothing without it.
+            { handle: 'property', type: 'select', size: 'sm', label: t('Animate'), options, markers: ['transition-property'], reset: () => s.swap(MARKERS, null), get: () => property, set: (v) => s.swap(v ? 'transition-property' : MARKERS, v || null) },
             {
               handle: 'timing',
               type: 'group',
               component: 'blocks-group',
               label: t('Duration'),
-              keys: ['transition'],
-              get: () => ({ duration: tr.duration, delay: tr.delay }),
-              set: (v) => set(v.duration !== tr.duration ? { duration: v.duration ?? '200ms' } : { delay: v.delay ?? undefined }),
+              markers: ['--tw-duration', 'transition-delay'],
+              get: () => ({ duration: s.value('--tw-duration'), delay: s.value('transitionDelay') }),
+              set: (v) => (v.duration !== s.value('--tw-duration') ? time('--tw-duration', 'duration', v.duration) : time('transition-delay', 'delay', v.delay)),
               fields: [
-                { handle: 'duration', type: 'text', component: 'blocks-value', label: t('Duration'), unit: 'ms', step: 10, min: 0, group: 'duration', prefixIcon: 'timer' },
+                { handle: 'duration', type: 'text', component: 'blocks-value', label: t('Duration'), unit: 'ms', step: 10, min: 0, prefixIcon: 'timer', placeholder: '150' },
                 { handle: 'delay', type: 'text', component: 'blocks-value', label: t('Delay'), unit: 'ms', step: 10, min: 0, prefixIcon: 'pause', placeholder: t('Delay') },
               ],
             },
@@ -61,10 +57,10 @@ export function Transition({ s }: { s: StyleApi }) {
               type: 'text',
               component: 'ease',
               label: t('Curve'),
-              keys: ['transition'],
-              get: () => tr.ease,
-              set: (v) => set({ ease: v ?? 'ease' }),
-              options: [...(byGroup.get('ease') ?? []).map((e) => ({ value: `token:${e.path}`, label: e.name, curve: String(e.value) })), { value: 'ease', label: t('Ease||curve') }, { value: 'ease-in-out', label: t('Ease In-Out') }, { value: 'linear', label: t('Linear') }, { value: 'cubic-bezier(0.2, 0.8, 0.2, 1)', label: t('Smooth Out') }, { value: 'cubic-bezier(0.65, 0, 0.35, 1)', label: t('Smooth In-Out') }, { value: 'cubic-bezier(0.34, 1.56, 0.64, 1)', label: t('Overshoot') }],
+              markers: ['--tw-ease'],
+              get: () => s.value('--tw-ease'),
+              set: (v) => s.swap('--tw-ease', v && s.engine ? partUtility(s.engine, 'ease', v, 'number') : null),
+              options: [...tokens.of('ease').map((ease) => ({ value: ease.ref, label: ease.name, curve: ease.value })), { value: 'linear', label: t('Linear') }, { value: 'cubic-bezier(0.2, 0.8, 0.2, 1)', label: t('Smooth Out') }, { value: 'cubic-bezier(0.65, 0, 0.35, 1)', label: t('Smooth In-Out') }, { value: 'cubic-bezier(0.34, 1.56, 0.64, 1)', label: t('Overshoot') }],
             },
           ]}
         />

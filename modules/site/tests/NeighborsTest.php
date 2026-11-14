@@ -151,7 +151,7 @@ final class NeighborsTest extends TestCase
         }
 
         $read = function (string $title) use ($ids): array {
-            preg_match_all('#<p class="cms-box( is-next)?" data-side="(previous|next)">(.*?)</p>#', $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($ids[$title]))['html'], $m, PREG_SET_ORDER);
+            preg_match_all('#<p class="cms-box"( data-next)? data-side="(previous|next)">(.*?)</p>#', $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($ids[$title]))['html'], $m, PREG_SET_ORDER);
 
             return array_map(static fn (array $row) => [$row[2], $row[1] !== '', trim(strip_tags(str_replace('</span>', ' ', $row[3])))], $m);
         };

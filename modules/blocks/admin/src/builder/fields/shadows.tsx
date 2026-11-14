@@ -8,7 +8,7 @@ import { RowLabel } from './controls'
 import { TokenButton, TokenChip, useTokenOf } from './tokens'
 
 /* `blocks-shadows` — box-shadow and text-shadow as a list of layers, like Webflow and Figma:
-   each layer a row (preview, offsets, color) that opens its editor; tokens stand for the whole list. */
+   each layer a row (preview, offsets, color) that opens its editor; a shadow of the theme stands for the whole list. */
 
 export interface Shadow {
   inset: boolean
@@ -21,10 +21,10 @@ export interface Shadow {
 
 const LENGTH = /^-?[\d.]+(px|rem|em)?$/
 
-/** Layers of a shadow value; null for a token. */
+/** Layers of a shadow value; null for a shadow of the theme. */
 export function parseShadows(value: string | undefined | null): Shadow[] | null {
   if (!value || value === 'none') return []
-  if (value.startsWith('token:')) return null
+  if (/^var\(--[\w-]+\)$/.test(value.trim())) return null
   return splitList(value).map((part) => {
     const bits = splitValue(part)
     const inset = bits.includes('inset')
@@ -61,7 +61,7 @@ export function ShadowsField({ field, value, onChange, context }: FieldProps<str
 
   return (
     <div className="min-w-0 flex-1">
-      {/* Like a value's: the token button shows while the row is pointed at, or when a token is chosen. */}
+      {/* Like a value's: the theme's button shows while the row is pointed at, or when one of its shadows is chosen. */}
       <div className="group/value flex h-7 items-center gap-2">
         <RowLabel field={field} />
         <span className="min-w-0 flex-1 truncate text-xs text-faint">{!chosen && !layers.length ? (typeof field.placeholder === 'string' && field.placeholder ? field.placeholder : t('None')) : ''}</span>
@@ -70,7 +70,7 @@ export function ShadowsField({ field, value, onChange, context }: FieldProps<str
       </div>
       {chosen && (
         <div className="flex h-7 items-center gap-2 pl-[88px]">
-          <span className="size-4 shrink-0 rounded-xs border border-border bg-bg" style={{ boxShadow: preview(String(chosen.token.value)) }} />
+          <span className="size-4 shrink-0 rounded-xs border border-border bg-bg" style={{ boxShadow: preview(chosen.token.value) }} />
           <TokenChip token={chosen.token} className="text-xs" />
           <span className="flex-1" />
           <RemoveButton label={t('Remove Shadow')} onClick={() => onChange(null)} />

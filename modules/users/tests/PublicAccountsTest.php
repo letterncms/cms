@@ -497,11 +497,11 @@ final class PublicAccountsTest extends TestCase
         $this->from('/sign-in')->post('/_cms/account/sign-in', ['email' => 'a@example.com', 'password' => 'x', '_token' => 'old'])->assertStatus(303)->assertRedirect('/sign-in');
     }
 
-    public function test_pages_wear_the_design_and_a_designer_can_replace_them(): void
+    public function test_pages_wear_the_sites_styling_and_a_designer_can_replace_them(): void
     {
         $page = $this->get('/sign-in')->assertOk();
         $html = (string) $page->getContent();
-        $this->assertStringContainsString('/_cms/site/design-', $html);
+        $this->assertStringContainsString('/_cms/site/styles-', $html);
         $this->assertStringContainsString('class="cms-form"', $html);
         $this->assertStringContainsString('cms-button', $html);
         $this->assertStringContainsString('noindex', $html);

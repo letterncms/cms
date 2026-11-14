@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Site\Tests;
 
-use Cms\Modules\Site\Design\VendorFetcher;
+use Cms\Modules\Site\Styling\VendorFetcher;
 use RuntimeException;
 
 /** A CDN and a registry that are an array: tests never reach the network. */

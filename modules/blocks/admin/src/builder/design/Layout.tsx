@@ -11,6 +11,17 @@ const DISPLAY = () => [
   { value: 'none', icon: 'eye-off', title: t('Hidden') },
 ]
 
+/** A grid template as its control shows it: three equal columns are "3". */
+const tracks = (value: string | undefined) => value?.match(/^repeat\((\d+), minmax\(0, 1fr\)\)$/)?.[1] ?? value
+/** A grid item's span as its control shows it: "span 2 / span 2" is "2". */
+const span = (value: string | undefined) => value?.match(/^span (\d+) \/ span \1$/)?.[1] ?? value
+
+/** A count of equal tracks is the class people write (grid-cols-3, col-span-2); anything else is the template or line itself. */
+function setTracks(s: StyleApi, key: string, root: string, v: string | null) {
+  if (v && /^\d+$/.test(v.trim()) && s.engine?.valid(`${root}-${v.trim()}`)) s.swap(key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`), `${root}-${v.trim()}`)
+  else s.set(key, v)
+}
+
 /** Display, stack (flex) and grid. A 3×3 matrix sets both axes at once, like Framer. */
 export function Layout({ s }: { s: StyleApi }) {
   const display = s.value('display')
@@ -40,10 +51,10 @@ export function Layout({ s }: { s: StyleApi }) {
             ],
           },
           flex && { handle: 'align', type: 'json', component: 'blocks-align', label: t('Align'), row, keys: ['alignItems', 'justifyContent'], get: () => ({ justifyContent: s.value('justifyContent'), alignItems: s.value('alignItems') }) },
-          flex && { handle: 'gap', type: 'text', component: 'blocks-value', label: t('Gap'), group: 'space', prefixIcon: row ? 'split' : 'split-vertical', placeholder: '0', min: 0 },
+          flex && { handle: 'gap', type: 'text', component: 'blocks-value', label: t('Gap'), group: 'spacing', prefixIcon: row ? 'split' : 'split-vertical', placeholder: '0', min: 0 },
           flex && { handle: 'flexWrap', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Wrap'), options: [{ value: 'nowrap', label: t('One Line') }, { value: 'wrap', label: t('Wrap') }], get: () => s.value('flexWrap') ?? 'nowrap', set: (v) => s.set('flexWrap', v === 'wrap' ? 'wrap' : null) },
-          grid && { handle: 'gridTemplateColumns', type: 'text', component: 'blocks-value', label: t('Columns'), placeholder: t('3 or 1fr 2fr'), unit: '', min: 1, title: t('A number of equal columns, or any grid template (1fr 2fr, repeat(auto-fill, minmax(16rem, 1fr)))') },
-          grid && { handle: 'gridTemplateRows', type: 'text', component: 'blocks-value', label: t('Rows'), placeholder: 'auto', unit: '' },
+          grid && { handle: 'gridTemplateColumns', type: 'text', component: 'blocks-value', label: t('Columns'), placeholder: t('3 or 1fr 2fr'), unit: '', min: 1, title: t('A number of equal columns, or any grid template (1fr 2fr, repeat(auto-fill, minmax(16rem, 1fr)))'), get: () => tracks(s.value('gridTemplateColumns')), set: (v) => setTracks(s, 'gridTemplateColumns', 'grid-cols', v) },
+          grid && { handle: 'gridTemplateRows', type: 'text', component: 'blocks-value', label: t('Rows'), placeholder: 'auto', unit: '', get: () => tracks(s.value('gridTemplateRows')), set: (v) => setTracks(s, 'gridTemplateRows', 'grid-rows', v) },
           grid && {
             handle: 'gaps',
             type: 'group',
@@ -51,10 +62,11 @@ export function Layout({ s }: { s: StyleApi }) {
             label: t('Gap'),
             keys: ['gap', 'rowGap', 'columnGap'],
             get: () => ({ columnGap: s.value('columnGap') ?? s.value('gap'), rowGap: s.value('rowGap') ?? s.value('gap') }),
-            set: (v) => s.write({ gap: null, columnGap: v.columnGap ?? null, rowGap: v.rowGap ?? null }),
+            // One gap for both is one class (gap-4); two are gap-x and gap-y.
+            set: (v) => s.write(v.columnGap && v.columnGap === v.rowGap ? { columnGap: null, rowGap: null, gap: v.columnGap } : { gap: null, columnGap: v.columnGap ?? null, rowGap: v.rowGap ?? null }),
             fields: [
-              { handle: 'columnGap', type: 'text', component: 'blocks-value', label: t('Columns'), group: 'space', prefixIcon: 'split', placeholder: '0', min: 0 },
-              { handle: 'rowGap', type: 'text', component: 'blocks-value', label: t('Rows'), group: 'space', prefixIcon: 'split-vertical', placeholder: '0', min: 0 },
+              { handle: 'columnGap', type: 'text', component: 'blocks-value', label: t('Columns'), group: 'spacing', prefixIcon: 'split', placeholder: '0', min: 0 },
+              { handle: 'rowGap', type: 'text', component: 'blocks-value', label: t('Rows'), group: 'spacing', prefixIcon: 'split-vertical', placeholder: '0', min: 0 },
             ],
           },
           grid && {
@@ -66,7 +78,7 @@ export function Layout({ s }: { s: StyleApi }) {
             label: t('Align'),
             keys: ['alignItems', 'justifyItems'],
             get: () => s.value('alignItems'),
-            options: [{ value: 'start', icon: 'align-top', title: t('Top') }, { value: 'center', icon: 'align-middle', title: t('Middle') }, { value: 'end', icon: 'align-bottom', title: t('Bottom') }, { value: 'stretch', icon: 'arrows-out-line-vertical', title: t('Stretch') }],
+            options: [{ value: 'flex-start', icon: 'align-top', title: t('Top') }, { value: 'center', icon: 'align-middle', title: t('Middle') }, { value: 'flex-end', icon: 'align-bottom', title: t('Bottom') }, { value: 'stretch', icon: 'arrows-out-line-vertical', title: t('Stretch') }],
           },
           grid && { handle: 'gridAutoFlow', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Flow'), options: [{ value: 'row', icon: 'arrow-right', title: t('Rows First') }, { value: 'column', icon: 'arrow-down', title: t('Columns First') }, { value: 'row dense', icon: 'group', title: t('Fill Gaps (Dense)') }] },
         ]}
@@ -84,9 +96,10 @@ export function InParent({ s, parentDisplay }: { s: StyleApi; parentDisplay?: st
       <StyleFields
         s={s}
         fields={[
-          grid && { handle: 'gridColumn', type: 'text', component: 'blocks-value', label: t('Column'), placeholder: 'auto', unit: '', title: t('Span a number of columns (2), or a range (1 / -1 for full width)') },
-          grid && { handle: 'gridRow', type: 'text', component: 'blocks-value', label: t('Row'), placeholder: 'auto', unit: '' },
-          !grid && { handle: 'flex', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Grow'), options: [{ value: '1 1 0%', label: t('Fill||size') }, { value: '0 0 auto', label: t('Fixed') }, { value: '0 1 auto', label: t('Shrink') }] },
+          grid && { handle: 'gridColumn', type: 'text', component: 'blocks-value', label: t('Column'), placeholder: 'auto', unit: '', title: t('Span a number of columns (2), or a range (1 / -1 for full width)'), get: () => span(s.value('gridColumn')), set: (v) => setTracks(s, 'gridColumn', 'col-span', v) },
+          grid && { handle: 'gridRow', type: 'text', component: 'blocks-value', label: t('Row'), placeholder: 'auto', unit: '', get: () => span(s.value('gridRow')), set: (v) => setTracks(s, 'gridRow', 'row-span', v) },
+          // The values of flex-1, flex-none and flex-initial.
+          !grid && { handle: 'flex', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Grow'), options: [{ value: '1', label: t('Fill||size') }, { value: 'none', label: t('Fixed') }, { value: '0 1 auto', label: t('Shrink') }] },
           { handle: 'alignSelf', type: 'select', display: 'segmented', block: true, size: 'sm', label: t('Align Self'), options: [{ value: 'flex-start', icon: 'align-top', title: t('Start') }, { value: 'center', icon: 'align-middle', title: t('Center') }, { value: 'flex-end', icon: 'align-bottom', title: t('End') }, { value: 'stretch', icon: 'arrows-out-line-vertical', title: t('Stretch') }] },
           { handle: 'order', type: 'text', component: 'blocks-value', label: t('Display Order'), unit: '', placeholder: '0', prefixIcon: 'list-ordered' },
         ]}

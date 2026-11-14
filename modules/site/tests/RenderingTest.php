@@ -135,7 +135,7 @@ final class RenderingTest extends TestCase
         $html = $result['html'];
 
         $this->assertStringStartsWith('<!doctype html><html lang="en" dir="ltr">', $html);
-        $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/design-\w+\.css">#', $html);
+        $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/styles-\w+\.css">#', $html);
         $this->assertStringContainsString('<a class="cms-skip" href="#main">', $html);
         $this->assertMatchesRegularExpression('#<header class="cms-box"><a class="cms-link" href="/"[^>]*>#', $html);
         $this->assertStringContainsString('About us</h1>', $html);
@@ -180,12 +180,12 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('/_cms/img/'.$two.'/', $html);
     }
 
-    public function test_a_pattern_is_drawn_alone_in_the_sites_design_for_its_picture(): void
+    public function test_a_pattern_is_drawn_alone_with_the_sites_styling_for_its_picture(): void
     {
         $saved = $this->cms()->abilities()->execute('patterns/save', ['handle' => 'hero', 'title' => 'Hero', 'category' => 'Heroes', 'publish' => false, 'blocks' => "## A pattern’s title\n\nIts words."], \Cms\Abilities\AbilityContext::system('test'));
 
         $html = (string) $this->actingAs($this->admin())->get('/__pattern/hero')->assertOk()->assertHeader('Cache-Control', 'no-store, private')->getContent();
-        $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/design-\w+\.css">#', $html, 'in the site’s design');
+        $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/styles-\w+\.css">#', $html, 'with the site’s stylesheet');
         $this->assertStringContainsString('A pattern’s title</h2>', $html, 'a draft too: it is drawn to be chosen');
         $this->assertStringNotContainsString('data-cms-node', $html, 'a picture, not the canvas');
 
@@ -242,38 +242,6 @@ final class RenderingTest extends TestCase
         $this->assertSame(404, $this->app->make(Renderer::class)->notFound('/nope')['status']);
     }
 
-    public function test_buttons_from_the_design_system_are_valid_block_variants(): void
-    {
-        $this->cms()->abilities()->execute('design/update', ['buttons' => ['on-brand' => ['base' => ['color' => '#000']]]], \Cms\Abilities\AbilityContext::system());
-
-        $field = app(\Cms\Modules\Blocks\BlockRegistry::class)->get('button')->blueprint()->field('variant');
-
-        $this->assertSame('On brand', $field->get('options')['on-brand']);
-        $this->assertSame('Primary', $field->get('options')['primary']);
-    }
-
-    public function test_the_design_system_compiles_tokens_fonts_elements_and_buttons(): void
-    {
-        $this->cms()->abilities()->execute('design/update', [
-            'tokens' => ['color.primary' => '#0f766e'],
-            'dark' => ['color.primary' => '#5eead4'],
-            'styles' => ['h1' => ['fontSize' => 'token:text.5xl', 'letterSpacing' => '-0.04em']],
-            'buttons' => ['primary' => ['base' => ['backgroundColor' => 'token:color.primary'], 'hover' => ['opacity' => 0.9]]],
-            'transition' => ['type' => 'slide', 'duration' => 0.4],
-        ], \Cms\Abilities\AbilityContext::system('test'));
-
-        $design = $this->app->make(\Cms\Modules\Site\Design\Design::class);
-        $design->saved();
-        $css = (string) file_get_contents(public_path(ltrim($design->stylesheet(), '/')));
-
-        $this->assertFileExists(content_path('design/tokens.json'));
-        $this->assertStringContainsString('--color-primary:#0f766e', $css);
-        $this->assertStringContainsString('[data-theme=dark]{', $css);
-        $this->assertStringContainsString('h1{font-size:var(--text-5xl);letter-spacing:-0.04em}', $css);
-        $this->assertStringContainsString('.cms-button[data-variant="primary"]{background-color:var(--color-primary)}', $css);
-        $this->assertStringContainsString('@view-transition{navigation:auto}', $css);
-    }
-
     public function test_page_content_is_one_element_and_prose_is_a_toggle(): void
     {
         $content = $this->cms()->entryService();
@@ -285,26 +253,6 @@ final class RenderingTest extends TestCase
 
         // Unwrapped, Page Content lends its blocks to the prose box around it, on the site as in the editor.
         $this->assertStringContainsString('<div class="cms-box cms-prose"><div class="cms-outlet" style="display:contents" data-cms-contents><p class="cms-paragraph">One</p></div></div>', $html);
-    }
-
-    public function test_prose_spacing_is_the_flow_between_its_blocks(): void
-    {
-        $this->cms()->abilities()->execute('design/update', [
-            'prose' => ['spacing' => ['blocks' => '1.25em', 'headings' => 'token:space.12'], 'h2' => ['fontSize' => '2rem', 'marginTop' => '3rem'], 'a:hover' => ['color' => 'red'], 'li' => ['color' => 'blue'], '::selection' => ['color' => 'green']],
-        ], \Cms\Abilities\AbilityContext::system('test'));
-
-        $design = $this->app->make(\Cms\Modules\Site\Design\Design::class);
-        $design->saved();
-        $css = (string) file_get_contents(public_path(ltrim($design->stylesheet(), '/')));
-
-        $this->assertStringContainsString('.cms-prose{--prose-blocks:1.25em;--prose-headings:var(--space-12)}', $css);
-        $this->assertStringContainsString('.cms-prose h2:where(:not(.cms-box, .cms-repeat)){font-size:2rem}', $css);
-        $this->assertStringContainsString('.cms-prose > * + h2:where(:not(.cms-box, .cms-repeat)),.cms-prose > [data-cms-contents] > * + h2:where(:not(.cms-box, .cms-repeat)),.cms-prose > * + [data-cms-contents] > h2:where(:not(.cms-box, .cms-repeat)):first-child{margin-top:3rem}', $css);
-        // Prose styles text: a Box or Repeat drawn as a link or a list is layout, and so are the items of such a list.
-        $this->assertStringContainsString('.cms-prose a:where(:not(.cms-box, .cms-repeat)):hover{color:red}', $css);
-        $this->assertStringContainsString('.cms-prose :where(ul:not(.cms-box, .cms-repeat), ol:not(.cms-box, .cms-repeat)) > li{color:blue}', $css);
-        $this->assertStringContainsString('.cms-prose ::selection{color:green}', $css);
-        $this->assertArrayHasKey('spacing', (array) $this->cms()->abilities()->execute('design/get', [], \Cms\Abilities\AbilityContext::system('test'))['prose']);
     }
 
     public function test_blocks_name_each_other_across_the_template_a_component_and_the_page(): void
@@ -332,167 +280,6 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('aria-details="cms-frame-title"', $html, 'the page names a block of the template');
         $this->assertStringContainsString('aria-labelledby="cms-frame-title" aria-describedby="cms-lede"', $html, 'a component names both');
         $this->assertStringNotContainsString("\x1B", $html);
-    }
-
-    public function test_element_styles_take_a_small_grammar_of_selectors_and_nothing_else(): void
-    {
-        $compiler = \Cms\Modules\Site\Design\DesignCompiler::class;
-
-        foreach (['h1 em', 'h2 > strong', 'nav a:hover', 'li::marker', 'figure figcaption', 'ul li > a:focus-visible', 'a:hover', '::selection', 'body'] as $selector) {
-            $this->assertTrue($compiler::selectable($selector), $selector);
-        }
-
-        foreach (['.hero em', '#main p', 'h1[title]', 'h1, body', 'h1{color:red}body', 'h1 em strong a', 'body em', 'a:has(img)', 'h1 em:hover:active', 'p}', 'script', '*', '', 'h1  em', ['h1']] as $selector) {
-            $this->assertFalse($compiler::selectable($selector), json_encode($selector));
-        }
-
-        // A class a block carries, for element styles only: alone or on a tag, never the runtime's own, never an id.
-        foreach (['.water', '.water em', 'span.water', '.card.is-open', 'nav.main > a:hover', '.a .b .c', 'h1 .water::after'] as $selector) {
-            $this->assertTrue($compiler::selectable($selector, true), $selector);
-            $this->assertFalse($compiler::selectable($selector), $selector.' in prose');
-        }
-
-        foreach (['.cms-box', 'p.cms-prose em', '.Water', '.water_', '.-x', '.a.b.c', '. water', '.water,.x', '.water{}', '#a.water', '.water[x]', '.a .b .c .d', 'body.water', '.water:hover em', '.'] as $selector) {
-            $this->assertFalse($compiler::selectable($selector, true), $selector);
-        }
-
-        $context = \Cms\Abilities\AbilityContext::system('test');
-        $css = $this->cms()->abilities()->execute('design/preview', [
-            'styles' => ['h1 em' => ['fontStyle' => 'italic', 'color' => 'rgb(7, 8, 9)'], 'nav a:hover' => ['color' => 'red'], '.water em' => ['fontFamily' => 'token:font.serif', 'fontStyle' => 'italic', 'fontWeight' => '400', 'letterSpacing' => '-0.03em', 'fontSize' => '1.07em'], 'span.water' => ['fontStyle' => 'italic']],
-            'prose' => ['spacing' => ['blocks' => '1em'], 'li::marker' => ['color' => 'green'], 'blockquote p' => ['color' => 'teal']],
-        ], $context)['css'];
-
-        // What can't be styled is refused by name when it is saved, not kept and dropped in silence.
-        foreach ([['styles', '#x'], ['styles', '.cms-box'], ['styles', 'h1}body{display:none'], ['prose', '#lead p'], ['prose', '.lead']] as [$section, $selector]) {
-            foreach (['design/update', 'design/preview'] as $ability) {
-                try {
-                    $this->cms()->abilities()->execute($ability, [$section => [$selector => ['color' => 'blue']]], $context);
-                    $this->fail("{$ability} took {$selector}");
-                } catch (\Cms\Abilities\AbilityException $e) {
-                    $this->assertStringContainsString($selector, $e->getMessage());
-                }
-            }
-        }
-
-        // A file written by hand can still hold one: it compiles to nothing.
-        \Cms\Support\Files::putJson(content_path('design/tokens.json'), ['styles' => ['#x' => ['color' => 'blue'], '.cms-box' => ['color' => 'blue'], 'p' => ['color' => 'teal']]]);
-        $this->app->make(\Cms\Modules\Site\Design\Design::class)->saved();
-        $stored = (string) file_get_contents(public_path(ltrim($this->app->make(\Cms\Modules\Site\Design\Design::class)->stylesheet(), '/')));
-        $this->assertStringNotContainsString('blue', $stored);
-        $this->assertStringContainsString('p{color:teal}', $stored);
-
-        $this->assertStringContainsString('h1 em{font-style:italic;color:rgb(7, 8, 9)}', $css);
-        $this->assertStringContainsString('nav a:hover{color:red}', $css);
-        $this->assertStringNotContainsString('blue', $css);
-        // What the showcase wrote custom CSS for: a class on a block, styled by the design.
-        $this->assertStringContainsString('.water em{font-family:var(--font-serif);font-style:italic;font-weight:400;letter-spacing:-0.03em;font-size:1.07em}', $css);
-        $this->assertStringContainsString('span.water{font-style:italic}', $css);
-        $this->assertMatchesRegularExpression('/@layer elements\{[^@]*\.water em\{/', $css, 'with the element styles, under a block\'s own');
-        $this->assertStringContainsString('.cms-prose li:where(:not(.cms-box, .cms-repeat))::marker{color:green}', $css);
-        $this->assertStringContainsString('.cms-prose blockquote p:where(:not(.cms-box, .cms-repeat)){color:teal}', $css);
-
-        // Inside prose a class still holds: at the same weight as `.cms-prose em`, it comes after it.
-        $css = $this->cms()->abilities()->execute('design/preview', ['styles' => ['.note em' => ['color' => 'rgb(1, 2, 3)'], 'h1' => ['color' => 'rgb(4, 5, 6)']], 'prose' => ['em' => ['color' => 'rgb(9, 9, 9)']]], $context)['css'];
-        $prose = strpos($css, '.cms-prose em');
-        $this->assertNotFalse($prose);
-        $this->assertGreaterThan($prose, strpos($css, '.note em{color:rgb(1, 2, 3)}'), 'a class comes after the prose rules');
-        $this->assertLessThan($prose, strpos($css, 'h1{color:rgb(4, 5, 6)}'), 'a tag stays under them, as it was');
-    }
-
-    public function test_form_fields_are_styled_once_from_the_design_system(): void
-    {
-        $context = \Cms\Abilities\AbilityContext::system('test');
-        $compile = fn (array $fields) => $this->cms()->abilities()->execute('design/preview', ['fields' => $fields], $context)['css'];
-
-        // With nothing set, every field still looks finished, from the site's tokens.
-        $css = $compile([]);
-        $this->assertStringContainsString(':root,[data-theme]{--field-background:', $css);
-        $this->assertStringContainsString('--field-background:var(--color-raised, var(--color-background, transparent))', $css);
-        $this->assertStringContainsString('--field-radius:var(--radius-md, 0.5rem)', $css);
-        $this->assertStringContainsString('--field-checkbox-background:var(--field-background)', $css);
-        $this->assertStringContainsString('.cms-check:is(:checked', $css);
-
-        $css = $compile([
-            'field' => ['height' => '3rem', 'radius' => 'token:radius.lg', 'borderWidth' => 2],
-            'spacing' => ['size' => 'lg'],
-            'checkbox' => ['checked' => 'token:color.accent', 'mark' => 'dot', 'size' => 'field:switch.height'],
-            'radio' => ['style' => 'ring'],
-            'switch' => ['on' => 'url(https://example.com/x)', 'width' => ''],
-            'nothing' => ['height' => '1px'],
-        ]);
-
-        // One value reaches every kind of field; a part follows another with field:part.key.
-        // Size is the control scale's, not the look's: forms take the size the site picks.
-        $this->assertStringNotContainsString('--field-height', $css);
-        $this->assertStringContainsString('.cms-form:not([data-size]){--control-height:var(--control-lg-height);', $css);
-        $this->assertStringContainsString('--field-radius:var(--radius-lg);', $css);
-        $this->assertStringContainsString('--field-border-width:2px;', $css);
-        $this->assertStringContainsString('--field-checkbox-checked:var(--color-accent);', $css);
-        $this->assertStringContainsString('--field-checkbox-size:var(--field-switch-height);', $css);
-        $this->assertStringContainsString("%3Ccircle%20cx%3D%278%27", $css);
-        $this->assertStringContainsString('--field-radio-on-background:var(--field-checkbox-background);--field-radio-on-dot:var(--field-radio-checked)', $css);
-        // What CSS can't take, a part that isn't there and an empty value keep the defaults.
-        $this->assertStringNotContainsString('example.com', $css);
-        $this->assertStringContainsString('--field-switch-width:2.25rem;', $css);
-    }
-
-    public function test_the_specimen_shows_every_field_and_button_to_the_admin_only(): void
-    {
-        $this->get('/__specimen/fields')->assertRedirect();
-
-        $this->actingAs($this->admin());
-        $html = $this->get('/__specimen/fields')->assertOk()->getContent();
-
-        foreach (['cms-input', 'cms-tags', 'cms-check', 'cms-radio', 'cms-switch', 'cms-range', 'cms-chip', 'type="file"', 'data-part="checkbox"', 'data-cms-state="focus"'] as $needle) {
-            $this->assertStringContainsString($needle, $html);
-        }
-
-        $this->assertStringContainsString('data-part="primary"', $this->get('/__specimen/buttons')->assertOk()->getContent());
-        $this->assertStringContainsString('data-size="lg"', $this->get('/__specimen/sizes')->assertOk()->getContent());
-        $this->get('/__specimen/nothing')->assertNotFound();
-    }
-
-    public function test_buttons_and_fields_share_one_size_scale_and_variants_are_looks(): void
-    {
-        $context = \Cms\Abilities\AbilityContext::system('test');
-        $css = $this->cms()->abilities()->execute('design/preview', [
-            'tokens' => ['control.md-height' => '2.5rem'],
-            'buttons' => ['primary' => ['base' => ['backgroundColor' => 'token:color.primary', 'height' => '13.37rem', 'paddingInline' => '7.77rem', 'fontSize' => '9.99rem']]],
-        ], $context)['css'];
-
-        // The site's own size, the defaults for the rest, and the size in effect by data-size.
-        $this->assertStringContainsString('--control-md-height:2.5rem', $css);
-        $this->assertStringContainsString('--control-sm-height:2.25rem', $css);
-        $this->assertStringContainsString('--control-lg-text:var(--text-lg)', $css);
-        $this->assertStringContainsString('[data-size=sm]{--control-height:var(--control-sm-height);', $css);
-        $this->assertStringContainsString('.cms-button {', $css);
-        $this->assertStringContainsString('height: var(--control-height)', $css);
-        // A variant keeps its look and loses what would size it.
-        $this->assertStringContainsString('@layer components{@layer button-variants{.cms-button[data-variant="primary"]{background-color:var(--color-primary)}', $css);
-        $this->assertStringNotContainsString('13.37rem', $css);
-
-        $html = app(\Cms\Modules\Blocks\BlockRenderer::class)->render([['id' => 'b', 'type' => 'button', 'props' => ['label' => '', 'icon' => 'plus', 'shape' => 'round', 'accessible_label' => 'Add', 'size' => 'lg']]]);
-        $this->assertStringContainsString('data-size="lg" data-shape="round" data-icon-only aria-label="Add"', $html);
-    }
-
-    public function test_tokens_rename_with_their_references_and_dark_values_clear(): void
-    {
-        $abilities = $this->cms()->abilities();
-        $context = \Cms\Abilities\AbilityContext::system('test');
-        $abilities->execute('design/update', ['buttons' => ['primary' => ['base' => ['backgroundColor' => 'token:color.primary']]], 'dark' => ['color.primary' => '#5eead4']], $context);
-        $before = array_keys(array_filter((array) json_decode((string) file_get_contents(content_path('design/tokens.json')), true)['tokens']['color'], fn ($k) => $k[0] !== '$', ARRAY_FILTER_USE_KEY));
-
-        $preview = $abilities->execute('design/preview', ['tokens' => ['color.primary' => '#123456'], 'css' => '.x{color:red}'], $context);
-        $this->assertStringContainsString('--color-primary:#123456', $preview['css']);
-        $this->assertStringContainsString('.x{color:red}', $preview['css']);
-
-        $abilities->execute('design/update', ['rename' => ['color.primary' => 'color.brand'], 'dark' => ['color.brand' => null]], $context);
-
-        $json = json_decode((string) file_get_contents(content_path('design/tokens.json')), true);
-        $after = array_keys(array_filter($json['tokens']['color'], fn ($k) => $k[0] !== '$', ARRAY_FILTER_USE_KEY));
-        $this->assertSame(array_search('primary', $before, true), array_search('brand', $after, true));
-        $this->assertArrayNotHasKey('$extensions', $json['tokens']['color']['brand']);
-        $this->assertSame('token:color.brand', $json['buttons']['primary']['base']['backgroundColor']);
     }
 
     public function test_rendered_preview_uses_the_unsaved_editorial_snapshot_without_persisting_it(): void

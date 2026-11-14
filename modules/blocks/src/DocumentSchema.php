@@ -17,7 +17,7 @@ final class DocumentSchema
     /** Said to agents, like the descriptions of abilities: English, not translated. */
     private const string ID = 'Stable within the document. Given when left out.';
 
-    private const string STYLE = 'Styles by property, as design tokens (token:space.8): blocks/types lists the properties of each section.';
+    private const string CLASSES = 'Tailwind classes, with their variants: "flex gap-4 md:grid-cols-3 hover:bg-primary/50". The theme (content/styling/theme.css) names the colours, sizes and the site\'s own classes.';
 
     public function __construct(private readonly BlockRegistry $blocks) {}
 
@@ -37,7 +37,7 @@ final class DocumentSchema
                     'type' => ['const' => $type->name],
                     'id' => ['type' => 'string', 'description' => self::ID],
                     'props' => $props,
-                    'style' => ['type' => 'object', 'description' => self::STYLE],
+                    'class' => ['type' => 'string', 'description' => self::CLASSES],
                     // A type that takes no children has none; one that takes some names them.
                     ...match (true) {
                         $type->children === false => [],
@@ -53,7 +53,7 @@ final class DocumentSchema
 
         return SchemaFiles::document(
             'A block document',
-            'The value of a blocks field: a list of blocks. Each block is of one of this site\'s block types (`type`), with the props that type takes, its styles and, where the type accepts them, child blocks. A blocks field also takes Block Markdown as a string, which is read into this.',
+            'The value of a blocks field: a list of blocks. Each block is of one of this site\'s block types (`type`), with the props that type takes, its classes and, where the type accepts them, child blocks. A blocks field also takes Block Markdown as a string, which is read into this.',
             [
                 'type' => 'array',
                 'items' => ['$ref' => '#/$defs/block'],

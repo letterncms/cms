@@ -104,15 +104,15 @@ final class GuidedStartTest extends TestCase
             $this->assertTrue($done()['agent']);
         }
 
-        // The design counts once it was saved after the site was ready.
-        if (array_key_exists('design', $done())) {
-            \Cms\Support\Files::put(content_path('design/tokens.json'), '{}');
-            touch(content_path('design/tokens.json'), time() - 3600);
+        // The styling counts once the stylesheet was saved after the site was ready.
+        if (array_key_exists('styling', $done())) {
+            \Cms\Support\Files::put(content_path('styling/theme.css'), "@import \"tailwindcss\";\n");
+            touch(content_path('styling/theme.css'), time() - 3600);
             clearstatcache();
-            $this->assertFalse($done()['design']);
-            touch(content_path('design/tokens.json'), time());
+            $this->assertFalse($done()['styling']);
+            touch(content_path('styling/theme.css'), time());
             clearstatcache();
-            $this->assertTrue($done()['design']);
+            $this->assertTrue($done()['styling']);
         }
     }
 

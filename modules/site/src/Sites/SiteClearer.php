@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Cms\Modules\Site\Sites;
 
 use Cms\Cms;
-use Cms\Modules\Site\Design\Code;
-use Cms\Modules\Site\Design\Design;
+use Cms\Modules\Site\Styling\Code;
+use Cms\Modules\Site\Styling\Styling;
 use Cms\Support\Files;
 use Cms\Support\Yaml;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +24,7 @@ final class SiteClearer
     public function __construct(
         private readonly Cms $cms,
         private readonly SiteExporter $exporter,
-        private readonly Design $design,
+        private readonly Styling $styling,
         private readonly Code $code,
     ) {}
 
@@ -50,8 +50,8 @@ final class SiteClearer
             }
         }
 
-        foreach ($this->exporter->tree($this->design->path()) as $relative) {
-            @unlink($this->design->path($relative));
+        foreach ($this->exporter->tree($this->styling->path()) as $relative) {
+            @unlink($this->styling->path($relative));
         }
 
         foreach ((array) $this->cms->hooks()->filter('sites.content', []) as $folder) {

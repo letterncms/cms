@@ -1,7 +1,8 @@
 import { t, type FieldDef } from '@letterncms/sdk'
 import { Button, Icon, IconButton, Menu, Tooltip, cn } from '@letterncms/ui'
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { useEditorContext, useTokens } from '../../core/context'
+import { useEditorContext } from '../../core/context'
+import { useThemeTokens } from '../../core/styling'
 import type { BlockNode, MotionDef, MotionStep } from '../../core/types'
 import { bus } from '../bus'
 import { AddRow, RemoveButton, RowLabel, Section, PanelFields } from '../controls'
@@ -303,7 +304,9 @@ function Timeline({ steps, active, onSelect, onChange, onAdd }: { steps: MotionS
 
 function StepEditor({ node, step, index, count, onChange, onRemove }: { node: BlockNode; step: MotionStep; index: number; count: number; onChange: (patch: Partial<MotionStep>) => void; onRemove: () => void }) {
   const { catalog } = useEditorContext()
-  const { byGroup } = useTokens()
+  const tokens = useThemeTokens()
+  // A colour property starts on a colour of the site: the first it names.
+  const color = tokens.of('color').find((token) => !/-\d+$/.test(token.name) && token.name !== 'black' && token.name !== 'white')?.ref ?? 'currentColor'
   const target = step.target ?? 'self'
   const labels = propertyLabels()
   const props = Object.keys(catalog.motion?.properties ?? labels)
@@ -319,7 +322,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
           <Menu
             align="end"
             trigger={<IconButton icon="plus" label={side === 'from' ? t('Add a Start Property') : t('Add an End Property')} size="xs" />}
-            items={props.filter((p) => !(p in values)).map((p) => ({ label: labels[p] ?? p, onSelect: () => add(p, catalog.motion.properties[p] === 'css' ? (p === 'clipPath' ? 'inset(0% 0% 0% 0%)' : 'token:color.primary') : p === 'opacity' || p.startsWith('scale') ? '1' : '0') }))}
+            items={props.filter((p) => !(p in values)).map((p) => ({ label: labels[p] ?? p, onSelect: () => add(p, catalog.motion.properties[p] === 'css' ? (p === 'clipPath' ? 'inset(0% 0% 0% 0%)' : color) : p === 'opacity' || p.startsWith('scale') ? '1' : '0') }))}
           />
         </div>
         {Object.keys(values).length === 0 && <p className="m-0 text-2xs text-faint">{side === 'from' ? t('As it looks now') : t('As Designed')}</p>}
@@ -379,7 +382,7 @@ function StepEditor({ node, step, index, count, onChange, onRemove }: { node: Bl
           time('delay', t('Delay')),
           ...when(target !== 'self', time('stagger', t('Stagger'), { step: 0.01 })),
           ...when(count > 1, time('at', t('Starts At||time'), { placeholder: t('After') })),
-          { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: [...(byGroup.get('ease') ?? []).map((ease) => ({ value: `token:${ease.path}`, label: ease.name, curve: String(ease.value) })), ...eases()] },
+          { handle: 'ease', type: 'text', component: 'ease', label: t('Ease'), placeholder: t('Smooth Out'), options: [...tokens.of('ease').map((ease) => ({ value: ease.ref, label: ease.name, curve: ease.value })), ...eases()] },
         ]}
         values={{ duration: `${step.duration ?? 0.6}s`, delay: step.delay !== undefined ? `${step.delay}s` : undefined, stagger: step.stagger !== undefined ? `${step.stagger}s` : undefined, at: step.at !== undefined ? `${step.at}s` : undefined, ease: step.ease }}
         onChange={(h, v) => {

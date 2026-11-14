@@ -229,13 +229,13 @@ final class ComponentBlockMigrationTest extends TestCase
         Files::put($content.'/blocks/teaser/block.json', '{"name":"teaser","title":"Teaser","defaults":{},"fields":[{"handle":"card","type":"select","dynamic":"patterns"}],"template":[{"type":"pattern","props":{"ref":"card"}}],"keywords":["pattern"]}');
         Files::put($content.'/blocks/slot/block.json', '{"name":"slot","title":"Slot","parent":"pattern","children":["heading","pattern"]}');
         Files::put($content.'/blocks/strip/block.json', '{"name":"strip","title":"Strip","children":true}');
-        Files::put($content.'/design/tokens.json', $tokens = '{"color":{"pattern":"#fff"},"type":"pattern"}');
+        Files::put($content.'/styling/settings.json', $settings = '{"fonts":[{"family":"pattern"}],"type":"pattern"}');
         Files::put($content.'/media/01abc.yaml', $media = "type: pattern\nprops:\n  ref: card\n");
         $this->cms()->collections()->flush();
 
         $this->migrate();
 
-        $check = function () use ($content, $template, $note, $tokens, $media, $fence): void {
+        $check = function () use ($content, $template, $note, $settings, $media, $fence): void {
             $this->assertSame(['name' => 'slot', 'title' => 'Slot', 'parent' => 'component', 'children' => ['heading', 'component']], Files::readJson($content.'/blocks/slot/block.json'), 'A block of the site\'s own keeps taking components as children.');
             $this->assertSame('{"name":"strip","title":"Strip","children":true}', file_get_contents($content.'/blocks/strip/block.json'));
 
@@ -274,8 +274,8 @@ final class ComponentBlockMigrationTest extends TestCase
             $this->assertSame(['name' => 'teaser', 'title' => 'Teaser', 'defaults' => [], 'fields' => [['handle' => 'card', 'type' => 'select', 'dynamic' => 'components']], 'template' => [['type' => 'component', 'props' => ['ref' => 'card']]], 'keywords' => ['pattern']], json_decode($block, true));
             $this->assertStringContainsString('"defaults": {}', $block);
 
-            // Not blocks: the design's tokens, and a record of the media library.
-            $this->assertSame($tokens, file_get_contents($content.'/design/tokens.json'));
+            // Not blocks: the styling's settings, and a record of the media library.
+            $this->assertSame($settings, file_get_contents($content.'/styling/settings.json'));
             $this->assertSame($media, file_get_contents($content.'/media/01abc.yaml'));
 
             // What the code reads now: the template with its components, also in its working copy.

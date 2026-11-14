@@ -14,8 +14,8 @@ final class StringMap
 {
     /** Keys whose string values are never prose. */
     private const array SKIP_KEYS = [
-        'id', 'type', 'url', 'href', 'src', 'slug', 'uri', 'handle', 'class', 'anchor', 'style', 'base', 'tablet', 'mobile',
-        'sm', 'md', 'lg', 'xl', 'hover', 'focus', 'variant', 'size', 'align', 'justify', 'width', 'height', 'icon', 'color',
+        'id', 'type', 'url', 'href', 'src', 'slug', 'uri', 'handle', 'class', 'anchor', 'style',
+        'variant', 'size', 'align', 'justify', 'width', 'height', 'icon', 'color',
         'media', 'image', 'video', 'file', 'entry', 'entries', 'form', 'pattern', 'name', 'autocomplete', 'target', 'rel',
         'locale', 'collection', 'blueprint', 'language', 'format', 'layout', 'position', 'status', 'code', 'html', 'svg', 'embed',
         'tag', 'level', 'as', 'element', 'direction', 'fit', 'ratio', 'span', 'gap', 'order', 'display', 'method', 'action', 'mode', 'lang', 'dir',
@@ -99,6 +99,6 @@ final class StringMap
             return false;
         }
 
-        return ! preg_match('~^(https?://|mailto:|tel:|/|#|token:|var\(|\{brand\.[a-z_]*url\}|[0-9a-z]{26}$|(?i:[^\s@]+@[^\s@]+\.[a-z]{2,})$|[a-z0-9]+(?:[-_/][a-z0-9]+)+$|[a-z]+(?:\.[a-z0-9_-]+)+$)~', $value);
+        return ! preg_match('~^(https?://|mailto:|tel:|/|#|var\(|\{brand\.[a-z_]*url\}|[0-9a-z]{26}$|(?i:[^\s@]+@[^\s@]+\.[a-z]{2,})$|[a-z0-9]+(?:[-_/][a-z0-9]+)+$|[a-z]+(?:\.[a-z0-9_-]+)+$)~', $value);
     }
 }

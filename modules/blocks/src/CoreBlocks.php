@@ -38,9 +38,8 @@ final class CoreBlocks
     /** @return list<array> */
     public static function all(): array
     {
-        $space = static fn (string $default) => ['type' => 'select', 'options' => [
-            'token:space.0' => 'None', 'token:space.2' => 'XS', 'token:space.4' => 'S', 'token:space.6' => 'M', 'token:space.8' => 'L', 'token:space.12' => 'XL', 'token:space.16' => '2XL',
-        ], 'default' => $default];
+        // Gaps and sizes are steps of the theme's spacing scale: 4 is what gap-4 is.
+        $space = Elements::spaceField(...);
         // Technical settings sit under Advanced in the Content tab ('advanced'); how text looks, in the Design tab's Typography ('design').
         $tags = static fn (array $tags, string $default) => ['handle' => 'tag', 'type' => 'select', 'label' => 'HTML Tag', 'options' => array_combine($tags, $tags), 'default' => $default, 'advanced' => true];
         // Links pick a page (stored as entry:<id>, so they follow it), an anchor, a URL, an email or a phone number.
@@ -81,21 +80,13 @@ final class CoreBlocks
                 'children' => true,
                 'fields' => [
                     ['handle' => 'direction', 'type' => 'select', 'label' => 'Direction', 'options' => ['vertical' => 'Vertical', 'horizontal' => 'Horizontal'], 'default' => 'vertical', 'display' => 'segmented'],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.4')],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('4')],
                     ['handle' => 'align', 'type' => 'select', 'label' => 'Align', 'options' => ['stretch' => 'Stretch', 'start' => 'Start', 'center' => 'Center', 'end' => 'End'], 'default' => 'stretch'],
                     ['handle' => 'justify', 'type' => 'select', 'label' => 'Justify', 'options' => ['start' => 'Start', 'center' => 'Center', 'end' => 'End', 'between' => 'Space Between'], 'default' => 'start'],
                     ['handle' => 'wrap', 'type' => 'toggle', 'label' => 'Wrap'],
                     ...$link,
                 ],
-                'derive' => static fn (array $p) => ['base' => array_filter([
-                    'display' => 'flex',
-                    'flexDirection' => ($p['direction'] ?? 'vertical') === 'horizontal' ? 'row' : 'column',
-                    'gap' => $p['gap'] ?? 'token:space.4',
-                    'alignItems' => ['start' => 'flex-start', 'center' => 'center', 'end' => 'flex-end'][$p['align'] ?? ''] ?? (($p['direction'] ?? '') === 'horizontal' ? 'center' : null),
-                    'justifyContent' => ['center' => 'center', 'end' => 'flex-end', 'between' => 'space-between'][$p['justify'] ?? ''] ?? null,
-                    'flexWrap' => ! empty($p['wrap']) ? 'wrap' : null,
-                ])],
-                'render' => Elements::box(...),
+                'render' => Elements::stack(...),
             ],
             [
                 'name' => 'columns', 'title' => 'Columns', 'icon' => 'columns', 'category' => 'layout',
@@ -103,28 +94,16 @@ final class CoreBlocks
                 'children' => ['column'],
                 'fields' => [
                     ['handle' => 'layout', 'type' => 'select', 'label' => 'Layout', 'options' => ['1-1' => '½ ½', '1-2' => '⅓ ⅔', '2-1' => '⅔ ⅓', '1-1-1' => '⅓ ⅓ ⅓', '1-1-1-1' => '¼ ¼ ¼ ¼', '3-2' => '⅗ ⅖', '2-3' => '⅖ ⅗'], 'default' => '1-1'],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.8')],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('8')],
                     ['handle' => 'align', 'type' => 'select', 'label' => 'Vertical Align', 'options' => ['stretch' => 'Stretch', 'start' => 'Top', 'center' => 'Middle', 'end' => 'Bottom'], 'default' => 'start'],
                     ['handle' => 'stack', 'type' => 'select', 'label' => 'Stack On', 'options' => ['md' => 'Phone', 'lg' => 'Tablet and Phone', 'never' => 'Never'], 'default' => 'md'],
                     ['handle' => 'reverse', 'type' => 'toggle', 'label' => 'Reverse Order When Stacked'],
                 ],
-                'derive' => static function (array $p): array {
-                    $layout = preg_match('/^\d(-\d){1,3}$/', (string) ($p['layout'] ?? '')) ? (string) $p['layout'] : '1-1';
-                    $cols = implode(' ', array_map(static fn ($n) => "minmax(0,{$n}fr)", explode('-', $layout)));
-                    $stack = $p['stack'] ?? 'md';
-                    $style = ['base' => ['display' => 'grid', 'gap' => $p['gap'] ?? 'token:space.8', 'alignItems' => ['start' => 'start', 'center' => 'center', 'end' => 'end', 'stretch' => 'stretch'][$p['align'] ?? 'start'] ?? 'start', 'gridTemplateColumns' => $cols]];
-
-                    if ($stack !== 'never') {
-                        $style[$stack === 'lg' ? 'tablet' : 'mobile'] = ['gridTemplateColumns' => 'minmax(0,1fr)'];
-                    }
-
-                    return $style;
-                },
                 'template' => [
                     ['type' => 'column', 'children' => [['type' => 'paragraph', 'props' => ['text' => '']]]],
                     ['type' => 'column', 'children' => [['type' => 'paragraph', 'props' => ['text' => '']]]],
                 ],
-                'render' => static fn (array $d) => '<div '.$d['attrs'].(! empty($d['block']['reverse']) ? ' data-reverse' : '').' data-stack="'.e((string) ($d['block']['stack'] ?? 'md')).'">'.$d['content'].'</div>',
+                'render' => Elements::columns(...),
             ],
             ['name' => 'column', 'title' => 'Column', 'icon' => 'square', 'category' => 'layout', 'parent' => 'columns', 'children' => true, 'description' => 'One column.', 'render' => Elements::container('div')],
             [
@@ -134,23 +113,14 @@ final class CoreBlocks
                 'fields' => [
                     ['handle' => 'columns', 'type' => 'number', 'label' => 'Columns', 'min' => 1, 'max' => 12, 'default' => 3],
                     ['handle' => 'min', 'type' => 'select', 'label' => 'Minimum Item Width', 'options' => ['10rem' => 'XS', '12rem' => 'S', '16rem' => 'M', '20rem' => 'L', '24rem' => 'XL'], 'default' => '16rem'],
-                    ['handle' => 'gap', 'label' => 'Gap', ...$space('token:space.6')],
+                    ['handle' => 'gap', 'label' => 'Gap', ...$space('6')],
                 ],
-                'derive' => static function (array $p): array {
-                    $n = max(1, min(12, (int) ($p['columns'] ?? 3)));
-                    $min = in_array($p['min'] ?? '16rem', ['10rem', '12rem', '16rem', '20rem', '24rem'], true) ? ($p['min'] ?? '16rem') : '16rem';
-
-                    return [
-                        'base' => ['display' => 'grid', 'gap' => $p['gap'] ?? 'token:space.6', 'gridTemplateColumns' => "repeat({$n},minmax(0,1fr))"],
-                        'tablet' => ['gridTemplateColumns' => "repeat(auto-fill,minmax(min(100%,{$min}),1fr))"],
-                    ];
-                },
                 'template' => [
                     ['type' => 'card', 'children' => [['type' => 'heading', 'props' => ['text' => 'Feature', 'level' => '3']], ['type' => 'paragraph', 'props' => ['text' => '']]]],
                     ['type' => 'card', 'children' => [['type' => 'heading', 'props' => ['text' => 'Feature', 'level' => '3']], ['type' => 'paragraph', 'props' => ['text' => '']]]],
                     ['type' => 'card', 'children' => [['type' => 'heading', 'props' => ['text' => 'Feature', 'level' => '3']], ['type' => 'paragraph', 'props' => ['text' => '']]]],
                 ],
-                'render' => Elements::container('div'),
+                'render' => Elements::grid(...),
             ],
             [
                 'name' => 'card', 'title' => 'Card', 'icon' => 'cards', 'category' => 'layout',
@@ -170,9 +140,8 @@ final class CoreBlocks
             ['name' => 'divider', 'title' => 'Divider', 'icon' => 'divider', 'category' => 'layout', 'description' => 'A horizontal line.', 'keywords' => ['hr', 'line', 'separator'], 'render' => static fn (array $d) => '<hr '.$d['attrs'].'>'],
             [
                 'name' => 'spacer', 'title' => 'Spacer', 'icon' => 'height', 'category' => 'layout', 'description' => 'Empty vertical space.', 'keywords' => ['gap', 'space'],
-                'fields' => [['handle' => 'size', 'label' => 'Size', ...$space('token:space.12')]],
-                'derive' => static fn (array $p) => ['base' => ['height' => $p['size'] ?? 'token:space.12']],
-                'render' => static fn (array $d) => '<div '.$d['attrs'].' aria-hidden="true"></div>',
+                'fields' => [['handle' => 'size', 'label' => 'Size', ...$space('12')]],
+                'render' => Elements::spacer(...),
             ],
 
             // ── Text ───────────────────────────────────────────────

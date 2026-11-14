@@ -1,75 +1,82 @@
 import { t } from '@letterncms/sdk'
 import { Icon, Popover, cn, Pressable } from '@letterncms/ui'
 import { useState, type ReactElement } from 'react'
-import { useTokens, type ThemeToken } from '../../core/context'
-import { Swatch, display } from '../controls'
+import type { ThemeToken, TokenGroup } from '../../../../tailwind/engine'
+import { useStyling, useThemeTokens } from '../../core/styling'
+import { spacingChoices } from '../styleApi'
 
-/* Design tokens in the inspector: every value that has tokens (color, space, radius, type,
-   shadow, duration, ease) offers them in the same list and shows a chosen one as a chip. */
+/* The theme's values in the inspector: every control whose property has them (colour, spacing, radius, type,
+   shadow, width, curve) offers them in the same list and shows a chosen one as a chip with its name. A control
+   holds a theme value as the variable itself, `var(--color-primary)`: the class it becomes is `bg-primary`. */
 
-/** The token a value refers to (`token:space.4`, `token:color.primary/60`), if any. */
+/** The token a value is (`var(--radius-lg)`, or a colour mixed with an opacity), if any. */
 export function useTokenOf() {
-  const { byPath } = useTokens()
-  return (value: unknown): { token: ThemeToken; alpha?: string } | null => {
-    if (typeof value !== 'string' || !value.startsWith('token:')) return null
-    const [path, alpha] = value.slice(6).split('/')
-    const token = byPath.get(path)
-    return token ? { token, alpha } : null
-  }
+  return useThemeTokens().find
 }
 
-/** A raw value typed as a token path ("space.4" or "$space.4") becomes a token reference. */
+/** A name typed where a group's tokens go ("lg" in a radius, "gutter" in a padding) becomes that token. A number is a number. */
 export function useTypedToken(group?: string) {
-  const { byPath } = useTokens()
+  const tokens = useThemeTokens()
   return (typed: string): string | null => {
-    const path = typed.trim().replace(/^\$/, '').replace(/^token:/, '')
-    if (byPath.has(path)) return `token:${path}`
-    if (group && byPath.has(`${group}.${path}`) && /^[a-z0-9-]+$/i.test(path) && !/^-?\d*\.?\d+$/.test(path)) return `token:${group}.${path}`
-    return null
+    const name = typed.trim()
+    if (!group || !/^[a-z][a-z0-9-]*$/i.test(name)) return null
+    return tokens.of(group as TokenGroup).find((token) => token.name === name)?.ref ?? null
   }
 }
 
-/** A token's value as one line of text (fluid sizes as min–max). */
-export const tokenValue = (token: ThemeToken) => display(token.value)
-
-/** The chip a token value shows as: `space.4`, or a color's name with its swatch. */
+/** The chip a theme value shows as: the token's name, as its class ends ("primary", "lg"), and an opacity. */
 export function TokenChip({ token, alpha, className }: { token: ThemeToken; alpha?: string; className?: string }) {
   return (
-    <span className={cn('inline-flex min-w-0 items-center gap-1 truncate rounded-xs bg-active px-1.5 leading-5 text-ink', className)} title={`${token.path} · ${tokenValue(token)}`}>
-      <span className="truncate">{token.group === 'color' ? token.name : token.path}</span>
+    <span className={cn('inline-flex min-w-0 items-center gap-1 truncate rounded-xs bg-active px-1.5 leading-5 text-ink', className)} title={`${token.variable} · ${token.value}`}>
+      <span className="truncate">{token.name}</span>
       {alpha && <span className="text-muted">/{alpha}</span>}
     </span>
   )
 }
 
-/** The list of a group's tokens; picking one calls `onPick('token:path')`, Detach calls `onPick(null)`. */
-export function TokenList({ group, value, onPick, detach }: { group: string; value?: string | null; onPick: (v: string) => void; detach?: () => void }) {
-  const { byGroup } = useTokens()
-  const tokens = byGroup.get(group) ?? []
-  const current = typeof value === 'string' && value.startsWith('token:') ? value.slice(6).split('/')[0] : null
-  if (!tokens.length) return <p className="m-0 px-2 py-2 text-2xs text-faint">{t('No {group} tokens in the design.', { group })}</p>
+const chip = (on: boolean) => cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', on ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')
+
+/** The spacing scale as chips: a step is picked by its number, a named space by its name. */
+export function SpacingChips({ value, onPick, auto }: { value?: string | null; onPick: (value: string) => void; auto?: boolean }) {
+  const { engine } = useStyling()
+  const choices = spacingChoices(engine, useThemeTokens().of('spacing'))
+  const same = (a: string) => a === value || (a === '0px' && value === '0')
+  return (
+    <div className="flex flex-wrap gap-1">
+      {choices.map((choice) => (
+        <Pressable compact key={choice.value} title={choice.title} onClick={() => onPick(choice.value)} className={chip(same(choice.value))}>{choice.label}</Pressable>
+      ))}
+      {auto && <Pressable compact onClick={() => onPick('auto')} className={chip(value === 'auto')}>{t('Auto')}</Pressable>}
+    </div>
+  )
+}
+
+/** The list of a group's tokens; picking one calls `onPick` with its variable. `detach` puts the token's own value in its place. */
+export function TokenList({ group, value, onPick, detach }: { group: TokenGroup; value?: string | null; onPick: (v: string) => void; detach?: () => void }) {
+  const tokens = useThemeTokens()
+  const list = tokens.of(group)
+  const current = tokens.find(value)?.token.variable ?? null
+  if (group === 'spacing') return <div className="p-1"><SpacingChips value={value} onPick={onPick} /></div>
   return (
     <div>
-      <p className="cms-label m-0 px-2 pb-1 pt-1.5 !text-2xs">{t('Tokens')}</p>
       <div className="max-h-60 overflow-y-auto">
-        {tokens.map((token) => (
-          <Pressable compact key={token.path}
-            onClick={() => onPick(`token:${token.path}`)}
-            className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-xs hover:bg-hover', current === token.path && 'bg-active')}
+        {list.map((token) => (
+          <Pressable compact key={token.variable}
+            onClick={() => onPick(token.ref)}
+            className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-xs hover:bg-hover', current === token.variable && 'bg-active')}
           >
-            {group === 'color' && <Swatch color={String(token.value)} dark={token.dark ? String(token.dark) : undefined} />}
-            {group === 'shadow' && <span className="size-3.5 shrink-0 rounded-xs bg-bg" style={{ boxShadow: String(token.value) }} />}
-            {group === 'radius' && <span className="size-3.5 shrink-0 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: String(token.value) }} />}
-            <span className="min-w-0 truncate font-mono text-2xs">{token.path}</span>
-            <span className="ml-auto max-w-[45%] shrink-0 truncate font-mono text-2xs text-faint">{tokenValue(token)}</span>
-            {current === token.path && <Icon name="check" size={12} className="shrink-0 text-focus" />}
+            {group === 'shadow' && <span className="size-3.5 shrink-0 rounded-xs bg-bg" style={{ boxShadow: token.value }} />}
+            {group === 'radius' && <span className="size-3.5 shrink-0 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: token.value }} />}
+            <span className="min-w-0 truncate text-text">{token.name}</span>
+            <span className="ml-auto max-w-[45%] shrink-0 truncate font-mono text-2xs text-faint">{token.value}</span>
+            {current === token.variable && <Icon name="check" size={12} className="shrink-0 text-focus" />}
           </Pressable>
         ))}
       </div>
       {current && detach && (
         <Pressable compact onClick={detach} className="mt-1 flex h-7 w-full items-center gap-2 rounded-xs border-t border-border px-2 text-xs text-muted hover:bg-hover hover:text-text">
           <Icon name="unlink" size={12} />
-          {t('Detach Token')}
+          {t('Detach')}
         </Pressable>
       )}
     </div>
@@ -82,16 +89,16 @@ export function TokenList({ group, value, onPick, detach }: { group: string; val
  */
 export function TokenButton({ group, value, onPick, active, className, trigger }: { group: string; value?: string | null; onPick: (v: string | null) => void; active?: boolean; className?: string; trigger?: ReactElement }) {
   const [open, setOpen] = useState(false)
-  const { byGroup, byPath } = useTokens()
-  if (!(byGroup.get(group) ?? []).length) return null
+  const tokens = useThemeTokens()
+  const { engine } = useStyling()
+  const kind = group as TokenGroup
+  // The spacing scale is there with any theme; another group only when the theme names values of it.
+  if (!engine || (kind !== 'spacing' && !tokens.of(kind).length)) return null
   const pick = (v: string | null) => {
     onPick(v)
     setOpen(false)
   }
-  const detach = () => {
-    const token = typeof value === 'string' ? byPath.get(value.slice(6).split('/')[0]) : undefined
-    pick(token && typeof token.value === 'string' ? token.value : null)
-  }
+  const detach = () => pick(tokens.find(value)?.token.value ?? null)
   return (
     <Popover
       open={open}
@@ -101,15 +108,15 @@ export function TokenButton({ group, value, onPick, active, className, trigger }
       trigger={
         trigger ?? (
           <Pressable compact className={cn('grid size-5 shrink-0 place-items-center rounded-xs text-faint transition-opacity hover:bg-hover hover:text-ink', !active && !open && 'opacity-0 group-hover/value:opacity-100 group-focus-within/value:opacity-100', (active || open) && 'text-ink', className)}
-            aria-label={t('Design Tokens')}
-            title={t('Design Tokens')}
+            aria-label={t('Theme Values')}
+            title={t('Theme Values')}
           >
             <Icon name="symbol" size={10} />
           </Pressable>
         )
       }
     >
-      <TokenList group={group} value={value} onPick={pick} detach={detach} />
+      <TokenList group={kind} value={value} onPick={pick} detach={detach} />
     </Popover>
   )
 }

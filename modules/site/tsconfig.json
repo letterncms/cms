@@ -4,6 +4,9 @@
     "paths": {
       "@letterncms/ui": [
         "../admin/src/ui/index.ts"
+      ],
+      "@letterncms/blocks": [
+        "../blocks/admin/src/index.tsx"
       ]
     },
     "types": [

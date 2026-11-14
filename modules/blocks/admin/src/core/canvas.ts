@@ -15,7 +15,8 @@
 // WebGL keeps its drawing buffer for that while a behaviour mounts here (`preserveDrawingBuffer`).
 
 export interface CanvasContext {
-  token: (path: string) => string
+  /** A theme variable's value where the element is, by its CSS name: token('--color-primary'). '' when there is none. */
+  token: (name: string) => string
   reducedMotion: boolean
   signal: AbortSignal
   /** Always true here: the script is in the builder's canvas, not on the site. */
@@ -110,12 +111,10 @@ function picture(el: HTMLElement, win: Window & typeof globalThis): () => void {
   }
 }
 
-const PREFIX: Record<string, string> = { weight: 'font-weight' }
-
-/** Where the design's scripts and libraries are published: the only files a canvas behaviour is loaded from. */
+/** Where the site's scripts and libraries are published: the only files a canvas behaviour is loaded from. */
 const PUBLISHED = '/_cms/site/'
 
-/** A same-origin path under the published design, or null: never another host (`//host/x.js`) or scheme. */
+/** A same-origin path under the site's published files, or null: never another host (`//host/x.js`) or scheme. */
 function published(path: string, base = location.href): string | null {
   try {
     const url = new URL(path, base)
@@ -217,12 +216,17 @@ export function canvasBehaviors() {
       // A script that has not said it draws in the canvas is not run there.
       if (entry.abort.signal.aborted || module.canvas !== true) return
       entry.module = module
-      const style = () => win.getComputedStyle(entry.el)
       const context: CanvasContext = {
-        token: (path) => {
-          const at = path.indexOf('.')
-          const group = path.slice(0, at)
-          return style().getPropertyValue(`--${PREFIX[group] ?? group}-${path.slice(at + 1)}`).trim()
+        token: (name) => {
+          const value = win.getComputedStyle(entry.el).getPropertyValue(name).trim()
+          if (!value.includes('light-dark(')) return value
+          // A colour with a value for dark mode: the one in effect where the element is, as on the site.
+          const probe = entry.el.ownerDocument.createElement('span')
+          probe.style.cssText = `display:none;color:${value}`
+          entry.el.append(probe)
+          const color = win.getComputedStyle(probe).color
+          probe.remove()
+          return color
         },
         reducedMotion: win.matchMedia('(prefers-reduced-motion: reduce)').matches,
         signal: entry.abort.signal,

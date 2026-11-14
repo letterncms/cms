@@ -43,7 +43,7 @@ use League\CommonMark\Renderer\HtmlRenderer;
 final class MarkdownCodec
 {
     /** Node keys besides type, props and children that a directive carries. */
-    private const array META = ['id', 'label', 'style', 'attrs', 'bind', 'logic', 'motion', 'code', 'behavior', 'persist', 'anchor', 'class', 'hidden'];
+    private const array META = ['id', 'label', 'attrs', 'bind', 'logic', 'motion', 'code', 'behavior', 'persist', 'anchor', 'class', 'hidden'];
 
     /** The ids reading gives blocks that have none in the file (see `stableIds`). */
     private const string READ_ID = '/^m[0-9a-f]{10}$/';
@@ -215,7 +215,6 @@ final class MarkdownCodec
             $meta[$key] ??= $key === 'id' ? null : ($node[$key] ?? null);
         }
 
-        $meta['style'] = self::style($meta['style']);
         $meta = array_filter($meta, static fn ($v) => $v !== null && $v !== []);
 
         $open = $fence.' '.($node['type'] ?? '').($meta ? ' '.json_encode($meta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '');
@@ -230,12 +229,6 @@ final class MarkdownCodec
         $id = $node['id'] ?? null;
 
         return is_string($id) && $id !== '' && (preg_match(self::READ_ID, $id) !== 1 || substr_count($this->document, $id) > 1);
-    }
-
-    /** A style without its empty breakpoints, which JSON can't tell from lists. */
-    private static function style(mixed $style): ?array
-    {
-        return is_array($style) ? array_filter($style, static fn ($declarations) => $declarations !== [] && $declarations !== null) : null;
     }
 
     private function table(array $props): ?string
@@ -314,8 +307,6 @@ final class MarkdownCodec
 
                 $meta = isset($m[3]) ? (json_decode($m[3], true) ?: []) : [];
                 $node = ['type' => $m[2], 'props' => (array) ($meta['props'] ?? [])];
-
-                $meta['style'] = self::style($meta['style'] ?? null);
 
                 foreach (self::META as $key) {
                     if (isset($meta[$key]) && $meta[$key] !== []) {

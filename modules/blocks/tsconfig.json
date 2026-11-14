@@ -12,6 +12,7 @@
   },
   "include": [
     "admin/src",
-    "media"
+    "media",
+    "tailwind"
   ]
 }

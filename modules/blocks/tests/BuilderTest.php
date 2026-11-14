@@ -10,7 +10,6 @@ use Cms\Modules\Blocks\Document;
 use Cms\Modules\Blocks\Expression;
 use Cms\Modules\Blocks\Components;
 use Cms\Modules\Blocks\Scope;
-use Cms\Modules\Blocks\StyleCompiler;
 use Cms\Modules\Blocks\Templates;
 use Cms\Support\Yaml;
 use Cms\Tests\TestCase;
@@ -79,58 +78,23 @@ final class BuilderTest extends TestCase
         return $renderer->withEditorDocument($renderer->editor ? 'test-source' : null, fn () => $renderer->render(app(Document::class)->normalize($nodes), new Scope($scope)));
     }
 
-    private function css(callable $render): string
-    {
-        $css = [];
-        $this->cms()->hooks()->on('render.style', function ($class, $rule) use (&$css) {
-            $css[$class] = $rule;
-        });
-        $render();
-
-        return implode('', $css);
-    }
-
-    public function test_styles_take_any_css_property_with_variants_and_custom_states(): void
-    {
-        $style = app(StyleCompiler::class)->sanitize([
-            'base' => ['gridTemplateColumns' => 'repeat(3, 1fr)', 'backdropFilter' => 'blur(12px)', 'boxShadow' => '0 8px 24px token:color.primary/20', 'nope' => 'x', 'color' => 'red;}body{'],
-            'mobile:hover' => ['opacity' => 0.8],
-            'is-open' => ['rotate' => '45deg'],
-            'in-open' => ['opacity' => 1],
-            'before' => ['position' => 'absolute'],
-            'evil:hover' => ['color' => 'red'],
-        ]);
-
-        $this->assertSame(['gridTemplateColumns', 'backdropFilter', 'boxShadow'], array_keys($style['base']));
-        $this->assertArrayNotHasKey('evil:hover', $style);
-
-        $css = $this->css(fn () => app(StyleCompiler::class)->classes($style));
-        $this->assertStringContainsString('grid-template-columns:repeat(3, 1fr)', $css);
-        $this->assertStringContainsString('-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)', $css);
-        $this->assertStringContainsString('box-shadow:0 8px 24px color-mix(in srgb, var(--color-primary) 20%, transparent)', $css);
-        $this->assertMatchesRegularExpression('/@media \(max-width:767\.98px\)\{@media \(hover:hover\)\{\.s\w+:hover\{opacity:0\.8\}\}\}/', $css);
-        $this->assertMatchesRegularExpression('/\.s\w+\.is-open\{rotate:45deg\}/', $css);
-        $this->assertMatchesRegularExpression('/\.is-open \.s\w+\{opacity:1\}/', $css);
-        $this->assertMatchesRegularExpression('/\.p\w+::before\{content:""\}/', $css, 'pseudo-elements get content');
-    }
-
     public function test_bindings_fill_props_states_attributes_and_visibility_from_the_scope(): void
     {
         $html = $this->render([
             ['type' => 'heading', 'props' => ['level' => '1'], 'bind' => ['text' => 'entry.title|upper']],
             ['type' => 'paragraph', 'bind' => ['text' => '© {site.year} {site.name}']],
-            ['type' => 'link', 'bind' => ['label' => 'item.label', 'url' => 'item.url', 'state:active' => 'item.active', 'attr:title' => 'item.label']],
+            ['type' => 'link', 'class' => 'text-muted data-active:text-foreground', 'bind' => ['label' => 'item.label', 'url' => 'item.url', 'state:active' => 'item.active', 'state:featured' => 'item.featured', 'attr:title' => 'item.label', 'style:color' => 'item.color', 'style:width' => 'item.width', 'style:position' => 'item.color']],
             ['type' => 'paragraph', 'props' => ['text' => 'Hidden'], 'bind' => ['visible' => 'entry.missing']],
             ['type' => 'paragraph', 'bind' => ['text' => 'entry.title']],
         ], [
             'entry' => ['title' => 'Hello <b>world</b>'],
             'site' => ['year' => '2026', 'name' => 'Acme'],
-            'item' => ['label' => 'About', 'url' => '/about', 'active' => true],
+            'item' => ['label' => 'About', 'url' => '/about', 'active' => true, 'featured' => false, 'color' => 'var(--color-primary)', 'width' => 120],
         ]);
 
         $this->assertStringContainsString('HELLO &lt;B&gt;WORLD&lt;/B&gt;', $html, 'bound text is escaped');
         $this->assertStringContainsString('>© 2026 Acme</p>', $html);
-        $this->assertMatchesRegularExpression('/<a class="cms-link[^"]* is-active" title="About" href="\/about">About<\/a>/', $html);
+        $this->assertStringContainsString('<a class="cms-link text-muted data-active:text-foreground" data-active title="About" style="color:var(--color-primary);width:120px" href="/about">About</a>', $html, 'a state that holds is an attribute, one that does not is absent, and style: sets what comes per item');
         $this->assertStringNotContainsString('Hidden', $html);
     }
 
@@ -169,7 +133,8 @@ final class BuilderTest extends TestCase
         ]);
 
         $this->assertStringContainsString('x-data="{&quot;open&quot;:false}"', $html);
-        $this->assertStringContainsString('x-bind:class="{ &#039;is-open&#039;: (open) }"', $html);
+        $this->assertStringContainsString('x-bind:data-open="!!(open)"', $html, 'a state is the attribute data-<name> while its expression holds');
+        $this->assertStringNotContainsString('x-bind:class', $html);
         $this->assertStringContainsString('x-cms-scroll=', $html);
         $this->assertStringContainsString('x-on:click.outside="$cms.run($el, $event, &#039;0&#039;)"', $html);
         $this->assertStringContainsString('x-bind:aria-expanded="open"', $html);
@@ -279,6 +244,29 @@ final class BuilderTest extends TestCase
         $template = $this->cms()->entryService()->create('templates', ['title' => 'Account', 'slug' => 'account', 'status' => 'published', 'data' => ['collections' => ['screens'], 'blocks' => [['type' => 'outlet']]]]);
         $this->assertSame(['screens'], $template->data['collections']);
         $this->assertSame(['account' => 'Account'], array_intersect_key(app(Templates::class)->options('screens'), ['account' => true]));
+    }
+
+    public function test_states_are_named_like_attributes_of_their_own(): void
+    {
+        $nodes = app(Document::class)->normalize([[
+            'type' => 'box',
+            'logic' => ['data' => ['on' => true], 'states' => ['open' => 'on', 'half-open' => 'on', 'Open' => 'on', 'cms' => 'on', 'cms-node' => 'on', 'a b' => 'on']],
+            'bind' => ['state:active' => 'item.active', 'state:cms-node' => 'item.active', 'state:Bad' => 'item.active', 'state:' => 'item.active'],
+        ]]);
+
+        $this->assertSame(['open' => 'on', 'half-open' => 'on'], $nodes[0]['logic']['states'], 'not the renderer\'s own data-cms attributes');
+        $this->assertSame(['state:active' => 'item.active'], $nodes[0]['bind']);
+    }
+
+    public function test_a_hover_group_is_the_class_group(): void
+    {
+        $html = $this->render([
+            ['type' => 'box', 'class' => 'relative', 'logic' => ['behaviors' => ['group' => true]], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'More'], 'class' => 'opacity-0 group-hover:opacity-100']]],
+        ]);
+
+        $this->assertMatchesRegularExpression('/<div class="cms-box relative group" data-cms="[a-z0-9]+">/', $html);
+        $this->assertStringNotContainsString('x-cms-group', $html);
+        $this->assertArrayNotHasKey('logic', app(BlockRenderer::class)->features, 'a group needs no script');
     }
 
     public function test_agents_cannot_smuggle_scripts_through_attributes_or_bindings(): void

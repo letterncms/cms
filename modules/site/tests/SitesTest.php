@@ -98,6 +98,54 @@ final class SitesTest extends TestCase
         return $dir;
     }
 
+    public function test_the_styling_travels_with_a_site_compiled_css_and_all(): void
+    {
+        $theme = "@import \"tailwindcss\";\n@import \"cms\";\n@theme {\n  --color-primary: #0f766e;\n}\n@utility card {\n  @apply rounded-xl p-6;\n}\n";
+        $settings = (string) json_encode(['fonts' => [['family' => 'Studio Sans', 'src' => 'fonts/studio.woff2']], 'transition' => ['type' => 'fade']]);
+        $this->site('studio', [
+            'content/styling/theme.css' => $theme,
+            'content/styling/settings.json' => $settings,
+            'content/styling/compiled.css' => "/* 00000000000000000000000000000000 */\n.card{padding:1.5rem}\n",
+            'content/styling/custom.js' => "console.log('studio')\n",
+            'content/styling/fonts/studio.woff2' => 'wOF2'.str_repeat("\0", 40),
+            'content/styling/scripts/hero.js' => "export function mount() {}\n",
+            'content/styling/styles/hero.css' => ".hero{color:red}\n",
+            'content/styling/code.json' => '{"styles":["hero"]}',
+        ]);
+
+        $plan = $this->ability('sites/get', ['handle' => 'studio', 'mode' => 'design'])['plan']['steps'];
+        $this->assertEqualsCanonicalizing(['theme theme.css', 'settings settings.json', 'font studio.woff2', 'custom custom.js', 'script scripts/hero', 'style styles/hero', 'load code.json'], array_map(static fn (array $step) => $step['type'].' '.$step['name'], $plan));
+        $this->assertNotContains('compiled.css', array_column($plan, 'name'), 'what Tailwind made comes with the stylesheet, not as a step of its own');
+
+        $saved = 0;
+        $this->cms()->hooks()->on('styling.saved', static function () use (&$saved): void {
+            $saved++;
+        });
+        $this->apply('studio', 'design');
+        $styling = $this->app->make(\Cms\Modules\Site\Styling\Styling::class);
+
+        $this->assertSame($theme, (string) file_get_contents(content_path('styling/theme.css')));
+        $this->assertSame(['card'], $styling->classes());
+        $this->assertSame('Studio Sans', $styling->fonts()[0]['family']);
+        $this->assertSame('fade', $styling->settings()['transition']['type']);
+        $this->assertSame("console.log('studio')\n", $styling->customJs());
+        $this->assertFileExists(content_path('styling/fonts/studio.woff2'));
+        $this->assertFileExists(content_path('styling/scripts/hero.js'));
+        $this->assertSame(1, $saved);
+        // The site has its CSS at once, with nothing here to compile it: older than its content until the admin compiles.
+        $this->assertStringContainsString('.card{padding:1.5rem}', $styling->css());
+        $this->assertFalse($styling->current());
+        $this->assertStringContainsString('.card{padding:1.5rem}', (string) file_get_contents(public_path(ltrim($styling->stylesheet(), '/'))));
+
+        // Made into a site again, everything under content/styling goes along, the compiled CSS too.
+        $this->assertTrue($styling->store($styling->signature(), '.card{padding:2rem}'));
+        $folder = $this->app->make(SiteExporter::class)->export(site_path('sites/again'), ['handle' => 'again', 'name' => 'Again'])['site']->path;
+
+        foreach (['theme.css', 'settings.json', 'compiled.css', 'custom.js', 'code.json', 'fonts/studio.woff2', 'scripts/hero.js', 'styles/hero.css'] as $file) {
+            $this->assertFileEquals(content_path('styling/'.$file), $folder.'/content/styling/'.$file);
+        }
+    }
+
     public function test_sites_appears_in_settings(): void
     {
         $navigation = $this->cms()->adminNav()->forUser($this->admin());
@@ -128,7 +176,7 @@ final class SitesTest extends TestCase
         }
 
         $article = $this->cms()->entries()->query()->collection('templates')->where('slug', 'post')->first();
-        $this->assertSame('token:container.prose', collect($article->data['blocks'])->firstWhere('id', 'p-main')['style']['base']['maxWidth']);
+        $this->assertStringContainsString('max-w-(--container-prose)', collect($article->data['blocks'])->firstWhere('id', 'p-main')['class']);
         $pages = $this->pages();
         $this->assertStringContainsString('Welcome to your blog', $pages['blog/index.html']);
         $this->assertStringContainsString('same blocks as pages', $pages['blog/hello-world/index.html']);
@@ -390,7 +438,7 @@ final class SitesTest extends TestCase
             $this->cms()->entryService()->delete($entry->id, $admin);
         }
 
-        foreach (['collections', 'globals', 'navigation', 'design', 'media'] as $folderName) {
+        foreach (['collections', 'globals', 'navigation', 'styling', 'media'] as $folderName) {
             Files::deleteDirectory(content_path($folderName));
         }
 
@@ -417,7 +465,7 @@ final class SitesTest extends TestCase
         $this->apply('starter');
         $home = $this->cms()->entries()->query()->collection('pages')->where('slug', 'home')->first();
         $this->cms()->entryService()->update($home->id, ['title' => 'Our Home'], $admin, publish: true);
-        Files::put(content_path('design/styles/spotlight.css'), '.spotlight { color: red }');
+        Files::put(content_path('styling/styles/spotlight.css'), '.spotlight { color: red }');
 
         $plan = $this->ability('sites/get', ['handle' => 'starter', 'mode' => 'full']);
         $clashes = array_values(array_filter($plan['plan']['steps'], static fn ($s) => $s['action'] === 'clash'));
@@ -425,7 +473,7 @@ final class SitesTest extends TestCase
         $this->assertContains('entry pages/home', $names);
         $this->assertContains('style styles/spotlight', $names);
         $this->assertContains('menu main', $names);
-        $this->assertNotContains('tokens tokens.json', $names, 'what the site has the same of is left alone, not a clash');
+        $this->assertNotContains('theme theme.css', $names, 'what the site has the same of is left alone, not a clash');
         // Each is named as a person knows it: the site's title, and an entry's collection to say what kind it is.
         $homeStep = array_values(array_filter($clashes, static fn ($s) => $s['name'] === 'pages/home'))[0];
         $this->assertSame(['pages', 'Home'], [$homeStep['collection'], $homeStep['title']]);
@@ -457,13 +505,13 @@ final class SitesTest extends TestCase
         $result = $this->ability('sites/apply', ['handle' => 'starter', 'clash' => 'rename']);
         $this->assertNull($result['backup']);
         $this->assertNotNull($this->cms()->entries()->query()->collection('pages')->where('slug', 'home-2')->first());
-        $this->assertSame('.spotlight { color: red }', file_get_contents(content_path('design/styles/spotlight.css')), 'a file has no second name: the site keeps its own');
+        $this->assertSame('.spotlight { color: red }', file_get_contents(content_path('styling/styles/spotlight.css')), 'a file has no second name: the site keeps its own');
 
         $result = $this->ability('sites/apply', ['handle' => 'starter', 'clash' => 'replace']);
         $this->assertDirectoryExists($result['backup'].'/content');
         $this->assertSame('Home', $this->cms()->entries()->find($home->id)->title, 'the site’s takes the place of the site’s, under the site’s id');
-        $this->assertStringContainsString('spotlight', (string) file_get_contents(content_path('design/styles/spotlight.css')));
-        $this->assertStringNotContainsString('red', (string) file_get_contents(content_path('design/styles/spotlight.css')));
+        $this->assertStringContainsString('spotlight', (string) file_get_contents(content_path('styling/styles/spotlight.css')));
+        $this->assertStringNotContainsString('red', (string) file_get_contents(content_path('styling/styles/spotlight.css')));
 
         $skipped = $this->ability('sites/apply', ['handle' => 'starter', 'clash' => 'skip']);
         $this->assertSame([], array_values(array_filter($skipped['steps'], static fn ($s) => ! in_array($s['action'], ['skip', 'merge'], true) && $s['type'] !== 'entry')));
@@ -474,13 +522,13 @@ final class SitesTest extends TestCase
         $plan = $this->ability('sites/get', ['handle' => 'starter', 'mode' => 'design'])['plan']['steps'];
         $types = array_values(array_unique(array_column($plan, 'type')));
         sort($types);
-        $this->assertSame(['entry', 'font', 'script', 'style', 'tokens'], $types);
+        $this->assertSame(['entry', 'font', 'script', 'settings', 'style', 'theme'], $types);
         $this->assertSame([], array_filter($plan, static fn ($s) => $s['type'] === 'entry' && ! preg_match('#^(templates|components|patterns)/#', $s['name'])));
         $this->assertContains('patterns/hero-with-text', array_column($plan, 'name'), 'patterns are part of how a site looks');
 
         $this->ability('sites/apply', ['handle' => 'starter', 'mode' => 'design']);
         $this->assertNull($this->cms()->collections()->find('posts'));
-        $this->assertFileExists(content_path('design/tokens.json'));
+        $this->assertFileExists(content_path('styling/theme.css'));
         $this->assertSame(4, $this->cms()->entries()->query()->collection('templates')->count());
         $pattern = $this->ability('patterns/list')[0];
         $this->assertSame(['hero-with-text', 'Hero With Text', 'Heroes', ['intro', 'headline'], 'section'], [$pattern['handle'], $pattern['title'], $pattern['category'], $pattern['keywords'], $pattern['blocks'][0]['type']]);
@@ -647,13 +695,13 @@ final class SitesTest extends TestCase
     public function test_design_mode_offers_a_template_only_for_collections_the_site_has_and_a_refusal_copies_nothing(): void
     {
         $template = "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Survey\nstatus: published\ncollections:\n  - surveys\n  - pages\n---\n\n::: section\n:::\n";
-        $this->site('studio', ['content/design/tokens.json' => '{"tokens":{}}', 'content/collections/templates/survey.md' => $template]);
+        $this->site('studio', ['content/styling/theme.css' => "@import \"tailwindcss\";\n", 'content/collections/templates/survey.md' => $template]);
         $this->apply('starter');
         $this->apply('studio', 'design', 'skip');
         $survey = $this->cms()->entries()->query()->collection('templates')->where('slug', 'survey')->first();
         $this->assertSame(['pages'], $survey->data['collections']);
 
-        $this->site('broken', ['content/design/styles/new.css' => '.x{}', 'content/collections/templates/bad.md' => "---\ntitle: ''\nstatus: published\n---\n"]);
+        $this->site('broken', ['content/styling/styles/new.css' => '.x{}', 'content/collections/templates/bad.md' => "---\ntitle: ''\nstatus: published\n---\n"]);
 
         try {
             $this->apply('broken', 'design');
@@ -662,7 +710,7 @@ final class SitesTest extends TestCase
             $this->assertStringContainsString('bad.md', $e->getMessage());
         }
 
-        $this->assertFileDoesNotExist(content_path('design/styles/new.css'), 'nothing was copied before the refusal');
+        $this->assertFileDoesNotExist(content_path('styling/styles/new.css'), 'nothing was copied before the refusal');
     }
 
     public function test_a_site_that_fails_on_the_way_leaves_the_site_as_it_was(): void
@@ -674,13 +722,13 @@ final class SitesTest extends TestCase
             return (string) ob_get_clean();
         })();
         $this->site('broken', [
-            'content/design/tokens.json' => '{"tokens":{}}',
-            'content/design/styles/site.css' => '.site{}',
+            'content/styling/theme.css' => "@import \"tailwindcss\";\n",
+            'content/styling/styles/site.css' => '.site{}',
             'content/media/01bbbbbbbbbbbbbbbbbbbbbbbb.yaml' => "id: 01bbbbbbbbbbbbbbbbbbbbbbbb\npath: media/site/dot.png\nalt: A dot\n",
             'public/media/site/dot.png' => $png,
             'content/collections/notes.yaml' => "title: Notes\nfields: []\n",
         ]);
-        Files::put(content_path('design/styles/mine.css'), '.mine{}');
+        Files::put(content_path('styling/styles/mine.css'), '.mine{}');
         $this->cms()->hooks()->on('collection.saved', static fn () => throw new \RuntimeException('The disk is full.'));
 
         try {
@@ -691,9 +739,9 @@ final class SitesTest extends TestCase
             $this->assertInstanceOf(\RuntimeException::class, $e->getPrevious() ?? $e);
         }
 
-        $this->assertFileDoesNotExist(content_path('design/tokens.json'));
-        $this->assertFileDoesNotExist(content_path('design/styles/site.css'));
-        $this->assertSame('.mine{}', file_get_contents(content_path('design/styles/mine.css')));
+        $this->assertFileDoesNotExist(content_path('styling/theme.css'));
+        $this->assertFileDoesNotExist(content_path('styling/styles/site.css'));
+        $this->assertSame('.mine{}', file_get_contents(content_path('styling/styles/mine.css')));
         $this->assertFileDoesNotExist(content_path('media/01bbbbbbbbbbbbbbbbbbbbbbbb.yaml'));
         $this->assertFileDoesNotExist(public_path('media/site/dot.png'));
         $this->assertFileDoesNotExist(content_path('collections/notes.yaml'));
@@ -710,20 +758,20 @@ final class SitesTest extends TestCase
                 $this->assertStringContainsString($why, $e->getMessage());
             }
 
-            $this->assertFileDoesNotExist(content_path('design/tokens.json'));
+            $this->assertFileDoesNotExist(content_path('styling/theme.css'));
         };
-        $tokens = ['content/design/tokens.json' => '{"tokens":{}}'];
+        $theme = ['content/styling/theme.css' => "@import \"tailwindcss\";\n"];
 
-        $this->site('linking', [...$tokens, 'content/navigation/main.yaml' => "title: Main\nitems:\n  - { url: 'javascript:alert(1)', label: Go }\n"]);
+        $this->site('linking', [...$theme, 'content/navigation/main.yaml' => "title: Main\nitems:\n  - { url: 'javascript:alert(1)', label: Go }\n"]);
         $refused('linking', 'menu “main”');
 
-        $this->site('setting', [...$tokens, 'config/site.yaml' => "description: [not, a, text]\n"]);
+        $this->site('setting', [...$theme, 'config/site.yaml' => "description: [not, a, text]\n"]);
         $refused('setting', 'settings of “site”');
 
-        $this->site('owning', [...$tokens, 'content/collections/templates.yaml' => "title: Mine\nsystem: true\nfields: []\n"]);
+        $this->site('owning', [...$theme, 'content/collections/templates.yaml' => "title: Mine\nsystem: true\nfields: []\n"]);
         $refused('owning', 'collection “templates”');
 
-        $this->site('reserved', [...$tokens, 'content/collections/notes.yaml' => "title: Notes\nfields:\n  - { handle: slug, type: text }\n"]);
+        $this->site('reserved', [...$theme, 'content/collections/notes.yaml' => "title: Notes\nfields:\n  - { handle: slug, type: text }\n"]);
         $refused('reserved', 'slug');
     }
 
@@ -775,7 +823,7 @@ final class SitesTest extends TestCase
 
     public function test_a_site_that_is_not_safe_is_refused_before_anything_is_copied(): void
     {
-        $tokens = ['content/design/tokens.json' => '{"tokens":{}}'];
+        $theme = ['content/styling/theme.css' => "@import \"tailwindcss\";\n"];
         $refused = function (string $handle, string $why) {
             try {
                 $this->apply($handle);
@@ -784,36 +832,36 @@ final class SitesTest extends TestCase
                 $this->assertStringContainsString($why, $e->getMessage());
             }
 
-            $this->assertFileDoesNotExist(content_path('design/tokens.json'));
+            $this->assertFileDoesNotExist(content_path('styling/theme.css'));
         };
 
-        $this->site('runs', [...$tokens, 'public/media/shell.php' => '<?php echo 1;']);
+        $this->site('runs', [...$theme, 'public/media/shell.php' => '<?php echo 1;']);
         $refused('runs', 'shell.php');
 
-        $this->site('hidden', [...$tokens, 'content/.env' => 'APP_KEY=x']);
+        $this->site('hidden', [...$theme, 'content/.env' => 'APP_KEY=x']);
         $refused('hidden', '.env');
 
-        $this->site('stray', [...$tokens, 'storage/database/cms.sqlite' => 'x']);
+        $this->site('stray', [...$theme, 'storage/database/cms.sqlite' => 'x']);
         // storage/ is not a folder a site has: it is never read, and never copied.
         $this->apply('stray');
         $this->assertFileDoesNotExist(storage_path('database/cms.sqlite.site'));
-        Files::deleteDirectory(content_path('design'));
+        Files::deleteDirectory(content_path('styling'));
 
-        $dir = $this->site('linked', $tokens);
-        symlink('/etc', $dir.'/content/design/fonts');
+        $dir = $this->site('linked', $theme);
+        symlink('/etc', $dir.'/content/styling/fonts');
         $refused('linked', 'is a link');
 
-        $this->site('locked', [...$tokens, 'content/design/vendor/lock.json' => json_encode(['imports' => ['gsap' => ['package' => 'gsap', 'version' => '3.12.5', 'file' => null, 'source' => 'npm', 'path' => 'gsap@3.12.5/index.js', 'files' => ['gsap@3.12.5/index.js' => 'sha384-AAAA']]]]), 'content/design/vendor/gsap@3.12.5/index.js' => 'export default 1']);
+        $this->site('locked', [...$theme, 'content/styling/vendor/lock.json' => json_encode(['imports' => ['gsap' => ['package' => 'gsap', 'version' => '3.12.5', 'file' => null, 'source' => 'npm', 'path' => 'gsap@3.12.5/index.js', 'files' => ['gsap@3.12.5/index.js' => 'sha384-AAAA']]]]), 'content/styling/vendor/gsap@3.12.5/index.js' => 'export default 1']);
         $refused('locked', 'lock.json');
 
-        $this->site('fonty', [...$tokens, 'content/design/fonts/x.woff2' => 'not a font']);
+        $this->site('fonty', [...$theme, 'content/styling/fonts/x.woff2' => 'not a font']);
         $refused('fonty', 'woff2');
 
-        $this->site('media', [...$tokens, 'content/media/01aaaaaaaaaaaaaaaaaaaaaaaa.yaml' => "id: 01aaaaaaaaaaaaaaaaaaaaaaaa\npath: media/../../index.php\n"]);
+        $this->site('media', [...$theme, 'content/media/01aaaaaaaaaaaaaaaaaaaaaaaa.yaml' => "id: 01aaaaaaaaaaaaaaaaaaaaaaaa\npath: media/../../index.php\n"]);
         $refused('media', 'content/media/01aaaaaaaaaaaaaaaaaaaaaaaa.yaml');
 
         // A site Composer links from a path is a site; only what is inside it may not be a link.
-        $elsewhere = $this->site('elsewhere', ['content/design/tokens.json' => '{"tokens":{}}']);
+        $elsewhere = $this->site('elsewhere', ['content/styling/theme.css' => "@import \"tailwindcss\";\n"]);
         rename($elsewhere, $elsewhere.'-real');
         symlink($elsewhere.'-real', $elsewhere);
         $this->sites()->flush();
@@ -830,7 +878,7 @@ final class SitesTest extends TestCase
 
     public function test_the_installer_offers_each_site_once_the_one_here_first(): void
     {
-        $this->site('atelier', ['content/design/tokens.json' => '{"tokens":{}}']);
+        $this->site('atelier', ['content/styling/theme.css' => "@import \"tailwindcss\";\n"]);
         $item = static fn (string $package, string $type = 'site') => ['package' => $package, 'type' => $type, 'action' => 'install', 'access' => ['allowed' => true], 'title' => ucfirst(explode('/', $package)[1]), 'preview' => null, 'icon' => null];
         $offered = \Cms\Http\Controllers\InstallController::storeSites(
             [$item('letterncms/atelier'), $item('acme/studio'), $item('acme/studio'), $item('letterncms/starter'), $item('letterncms/forms', 'plugin')],
@@ -847,7 +895,7 @@ final class SitesTest extends TestCase
 
     public function test_a_site_says_what_it_is_and_what_it_needs(): void
     {
-        $this->site('studio', ['content/design/tokens.json' => '{"tokens":{}}'], ['plugins' => ['letterncms/forms'], 'cms' => '>=0.1', 'previews' => ['previews/home.png']]);
+        $this->site('studio', ['content/styling/theme.css' => "@import \"tailwindcss\";\n"], ['plugins' => ['letterncms/forms'], 'cms' => '>=0.1', 'previews' => ['previews/home.png']]);
         $this->assertArrayHasKey('studio', $this->sites()->problems(), 'a picture site.json names has to be there');
         $this->assertStringContainsString('previews/home.png', $this->sites()->problems()['studio']);
 

@@ -84,7 +84,7 @@ final class Forms
         $variant = in_array($form, ['delete', 'sign-out', 'export'], true) ? 'secondary' : 'primary';
         $danger = $form === 'delete' ? ' data-danger' : '';
 
-        return $html.'<button type="submit" class="cms-button cms-form__submit" data-variant="'.$variant.'"'.$danger.'>'.e((string) ($d['block']['submit'] ?? '') ?: $submit).'</button></form>'.$footer;
+        return $html.'<button type="submit" class="cms-button btn-'.$variant.' cms-form__submit"'.$danger.'>'.e((string) ($d['block']['submit'] ?? '') ?: $submit).'</button></form>'.$footer;
     }
 
     /** @return array{0: list<array>, 1: string, 2: string, 3: ?string} fields, submit label, what follows the form, why there is no form */
@@ -261,7 +261,7 @@ final class Forms
         $next = '/'.ltrim(request()->path(), '/');
         $html = $user
             ? '<p>'.e(__('Your account doesn’t include the rest of this page.')).'</p>'
-            : '<p>'.e(__('Sign in to read the rest of this page.')).'</p><p><a class="cms-button" data-variant="primary" data-size="md" href="'.e((string) $accounts->signInUrl($next, $locale)).'">'.e(__('Sign in')).'</a></p>';
+            : '<p>'.e(__('Sign in to read the rest of this page.')).'</p><p><a class="cms-button btn-primary" data-size="md" href="'.e((string) $accounts->signInUrl($next, $locale)).'">'.e(__('Sign in')).'</a></p>';
 
         return (string) $this->cms->hooks()->filter('account.gate-notice', $html, $user, request()->path());
     }

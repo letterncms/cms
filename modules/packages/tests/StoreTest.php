@@ -181,7 +181,7 @@ final class StoreTest extends TestCase
 
     public function test_a_site_site_from_the_store_lands_in_sites_and_never_runs(): void
     {
-        $sitePackage = ['site.json' => json_encode(['handle' => 'studio', 'name' => 'Studio', 'version' => '1.2.0']), 'content/design/tokens.json' => '{"tokens":{}}'];
+        $sitePackage = ['site.json' => json_encode(['handle' => 'studio', 'name' => 'Studio', 'version' => '1.2.0']), 'content/styling/theme.css' => "@import \"tailwindcss\";\n"];
         $this->list('letterncms/studio', '1.2.0', [], ['type' => 'site', 'first_party' => true], $sitePackage, ['type' => 'cms-site']);
         $this->assertSame('site', $this->itemIn($this->client->catalog(), 'letterncms/studio')['type']);
 

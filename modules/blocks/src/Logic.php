@@ -16,7 +16,7 @@ namespace Cms\Modules\Blocks;
  *     on:     [{ event: "click", mods: ["outside"], actions: [{ do: "set", var: "open", value: "false" }] }],
  *     init:   [actions],                                         when the element starts
  *     show:   "open",  transition: "fade",                       show only while true
- *     states: { open: "open" },                                  adds class is-open while true (style it with the is-open state)
+ *     states: { open: "open" },                                  sets data-open while true (classes style it: data-open:rotate-45, in-data-open:hidden)
  *     text:   "count", attrs: { "aria-expanded": "open" }, model: "query",
  *     target: ["b1…"], push: true,  merge: "append",             links and forms load into these blocks (alpine-ajax)
  *     behaviors: { scroll: { threshold: 40, hide: true }, spy: {}, group: true, menu: true },
@@ -36,6 +36,9 @@ final class Logic
     public const array TRANSITIONS = ['none', 'fade', 'scale', 'collapse'];
 
     public const array MERGES = ['replace', 'update', 'append', 'prepend', 'before', 'after', 'morph'];
+
+    /** A state's name: `open` is the attribute data-open. Not one of the renderer's own (data-cms…). */
+    public const string STATE = '/^(?!cms(?:-|$))[a-z][a-z0-9-]{0,30}$/D';
 
     private const string NAME = '/^[a-zA-Z_$][a-zA-Z0-9_$]{0,40}$/';
 
@@ -103,7 +106,7 @@ final class Logic
             $out['transition'] = $logic['transition'];
         }
 
-        foreach (['states' => '/^[a-z][a-z0-9-]{0,30}$/', 'attrs' => '/^(aria-[a-z-]+|data-(?!cms(?:-|$))[a-z0-9-]+|href|src|alt|title|value|placeholder|disabled|hidden|tabindex|role|inert|open|checked|selected)$/'] as $key => $pattern) {
+        foreach (['states' => self::STATE, 'attrs' => '/^(aria-[a-z-]+|data-(?!cms(?:-|$))[a-z0-9-]+|href|src|alt|title|value|placeholder|disabled|hidden|tabindex|role|inert|open|checked|selected)$/'] as $key => $pattern) {
             foreach ((array) ($logic[$key] ?? []) as $name => $expr) {
                 if (is_string($name) && preg_match($pattern, $name) && ($expr = self::expression($expr)) !== null) {
                     $out[$key][$name] = $expr;
@@ -221,14 +224,9 @@ final class Logic
             $attrs['x-text'] = $logic['text'];
         }
 
-        if (isset($logic['states'])) {
-            $pairs = [];
-
-            foreach ($logic['states'] as $name => $expr) {
-                $pairs[] = "'is-{$name}': ({$expr})";
-            }
-
-            $attrs['x-bind:class'] = '{ '.implode(', ', $pairs).' }';
+        // A state is an attribute that is there or not: `data-open:` and `in-data-open:` classes read it.
+        foreach ($logic['states'] ?? [] as $name => $expr) {
+            $attrs['x-bind:data-'.$name] = "!!({$expr})";
         }
 
         foreach ($logic['attrs'] ?? [] as $name => $expr) {
@@ -254,14 +252,19 @@ final class Logic
         }
 
         foreach ($logic['behaviors'] ?? [] as $name => $options) {
-            if ($name === 'group') {
-                $attrs['data-cms-group'] = '';
-            } else {
+            // A group is a class (see classes()), not an attribute.
+            if ($name !== 'group') {
                 $attrs['x-cms-'.$name] = (string) json_encode((object) $options);
             }
         }
 
         return $attrs;
+    }
+
+    /** Classes a logic map puts on its element: `group`, which `group-hover:` classes inside it answer to. */
+    public static function classes(array $logic): string
+    {
+        return ! empty($logic['behaviors']['group']) ? 'group' : '';
     }
 
     /** Node ids a logic map points at (play, focus, scroll, fetch targets). */

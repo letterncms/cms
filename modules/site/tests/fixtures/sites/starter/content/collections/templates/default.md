@@ -9,7 +9,7 @@ description: 'Used for anything without its own template.'
 ::: component {"id":"t-header","props":{"ref":"header"}}
 :::
 
-::: box {"id":"t-main","props":{"tag":"main"},"label":"Main","style":{"base":{"minHeight":"60vh"}},"anchor":"main"}
+::: box {"id":"t-main","props":{"tag":"main"},"label":"Main","class":"min-h-[60vh]","anchor":"main"}
 :::: outlet {"id":"t-outlet"}
 ::::
 :::

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Site\Tests;
 
-use Cms\Modules\Site\Design\FontMetrics;
+use Cms\Modules\Site\Styling\FontMetrics;
 use PHPUnit\Framework\TestCase;
 
 /** A font's metrics come from its own tables: the fixtures are real families under the Open Font License. */

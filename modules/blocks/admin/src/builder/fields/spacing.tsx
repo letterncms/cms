@@ -1,13 +1,12 @@
 import { t, type FieldProps } from '@letterncms/sdk'
 import { Popover, cn, Pressable } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
-import { useTokens } from '../../core/context'
 import { SubField } from './controls'
-import { useTokenOf } from './tokens'
+import { SpacingChips, useTokenOf } from './tokens'
 
 /* `blocks-spacing` — the box model, like Webflow: margin around padding around the content.
-   Each side shows its value (blue when set here, orange when inherited, a token as its name);
-   drag a side to scrub, click it to type or pick a token. Alt changes the opposite side too,
+   Each side shows its value in pixels (darker when set here; a named space of the theme as its name);
+   drag a side to scrub, click it to type or pick a step of the scale. Alt changes the opposite side too,
    Shift all four. */
 
 type Box = 'margin' | 'padding'
@@ -126,7 +125,7 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
         <Pressable compact onPointerDown={down}
           onClick={(e) => setSides(reach(index, e))}
           aria-label={title(box, [index])}
-          title={`${title(box, [index])}${chosen ? ` · ${chosen.token.path}` : ''}\n${t('Drag to change. Alt: opposite side too, Shift: all sides.')}`}
+          title={`${title(box, [index])}${chosen ? ` · ${chosen.token.variable}` : ''}\n${t('Drag to change. Alt: opposite side too, Shift: all sides.')}`}
           className={cn(
             'mx-auto flex h-full min-w-0 max-w-full items-center justify-center rounded-xs px-1 text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus',
             index % 2 ? 'cursor-ew-resize' : 'cursor-ns-resize',
@@ -143,12 +142,8 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
   )
 }
 
-const PRESETS = ['0', '4px', '8px', '12px', '16px', '24px', '32px', '48px', '64px', '96px']
-
-/** Type a value, pick a space token, or a common size. */
+/** Type a value, or pick a step of the spacing scale or one of the theme's named spaces. */
 function SideEditor({ box, sides, value, onChange, close, context }: { box: Box; sides: number[]; value?: string; onChange: (v: string | null) => void; close: () => void; context: FieldProps['context'] }) {
-  const { byGroup } = useTokens()
-  const tokens = byGroup.get('space') ?? []
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const input = ref.current?.querySelector('input')
@@ -180,35 +175,9 @@ function SideEditor({ box, sides, value, onChange, close, context }: { box: Box;
         onChange={(v) => onChange(v as string | null)}
         context={context}
       />
-      {tokens.length > 0 ? (
-        <>
-          <p className="cms-label m-0 mb-1 mt-2.5 !text-2xs">{t('Space Tokens')}</p>
-          <div className="flex flex-wrap gap-1">
-            {tokens.map((token) => (
-              <Pressable compact key={token.path}
-                title={`${token.path} · ${typeof token.value === 'object' && token.value ? Object.values(token.value).join('–') : String(token.value)}`}
-                onClick={() => pick(`token:${token.path}`)}
-                className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === `token:${token.path}` ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')}
-              >
-                {token.name}
-              </Pressable>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {PRESETS.map((p) => (
-            <Pressable compact key={p} onClick={() => pick(p)} className={cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', value === p ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')}>
-              {p.replace('px', '')}
-            </Pressable>
-          ))}
-        </div>
-      )}
-      {box === 'margin' && (
-        <Pressable compact onClick={() => pick('auto')} className={cn('mt-1 h-6 rounded-xs px-1.5 text-2xs', value === 'auto' ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')}>
-          {t('Auto')}
-        </Pressable>
-      )}
+      <div className="mt-2">
+        <SpacingChips value={value} onPick={pick} auto={box === 'margin'} />
+      </div>
     </div>
   )
 }

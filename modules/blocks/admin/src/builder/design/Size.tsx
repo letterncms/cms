@@ -52,7 +52,8 @@ export function Size({ s, media }: { s: StyleApi; media?: boolean }) {
               { handle: 'maxHeight', type: 'text', component: 'blocks-value', label: t('Max Height'), prefix: 'H', placeholder: t('Max'), title: t('Maximum Height'), min: 0, keywords: ['none'] },
             ],
           },
-          { handle: 'aspectRatio', type: 'select', size: 'sm', label: t('Aspect'), placeholder: t('Auto'), options: [{ value: '1/1', label: t('1:1 square') }, { value: '4/3', label: '4:3' }, { value: '3/2', label: '3:2' }, { value: '16/9', label: '16:9' }, { value: '21/9', label: '21:9' }, { value: '3/4', label: t('3:4 portrait') }, { value: '4/5', label: '4:5' }, { value: '9/16', label: t('9:16 story') }] },
+          // A ratio the theme names (aspect-video) reads as the ratio it is.
+          { handle: 'aspectRatio', type: 'select', size: 'sm', label: t('Aspect'), placeholder: t('Auto'), get: () => { const ratio = s.value('aspectRatio'); return ratio && s.engine ? s.engine.resolve(ratio).replace(/\s+/g, '') : ratio }, options: [{ value: '1/1', label: t('1:1 square') }, { value: '4/3', label: '4:3' }, { value: '3/2', label: '3:2' }, { value: '16/9', label: '16:9' }, { value: '21/9', label: '21:9' }, { value: '3/4', label: t('3:4 portrait') }, { value: '4/5', label: '4:5' }, { value: '9/16', label: t('9:16 story') }] },
           {
             handle: 'overflow',
             type: 'select',

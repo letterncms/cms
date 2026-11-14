@@ -59,31 +59,3 @@ export function useComponentTitles(): Map<string, string> {
 export function blockName(node: BlockNode, types: Map<string, BlockTypeDef>, components: Map<string, string>): string {
   return node.label || (node.type === 'component' ? components.get(String(node.props?.ref ?? '')) : undefined) || types.get(node.type)?.title || node.type
 }
-
-export interface ThemeToken {
-  path: string
-  group: string
-  name: string
-  value: unknown
-  dark?: unknown
-}
-
-export interface DesignInfo {
-  tokens: ThemeToken[]
-  breakpoints: Record<string, string>
-  templates: Record<string, string>
-  name: string
-  fonts: { family: string; src: string; weight?: string; style?: string }[]
-  stylesheet: string
-}
-
-/** The site's design (empty while Site is off). */
-export function useTokens() {
-  const q = useAbility<DesignInfo>('design/get', {}, { staleTime: 60_000, retry: false })
-  return useMemo(() => {
-    const byGroup = new Map<string, ThemeToken[]>()
-    for (const t of q.data?.tokens ?? []) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t])
-    const byPath = new Map((q.data?.tokens ?? []).map((t) => [t.path, t]))
-    return { tokens: q.data?.tokens ?? [], byGroup, byPath, breakpoints: q.data?.breakpoints ?? { md: '768px', lg: '1024px' }, templates: q.data?.templates ?? {}, available: !!q.data }
-  }, [q.data])
-}

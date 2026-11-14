@@ -5,7 +5,7 @@ import { inputClass } from '../controls'
 import { TokenButton, TokenChip, useTokenOf, useTypedToken } from './tokens'
 
 /* The inspector's own field components — only what core fields can't express: CSS values
-   with units, tokens and scrubbing. Text, selects, segmented controls and
+   with units, the theme's values and scrubbing. Text, selects, segmented controls and
    toggles are core types (size: 'sm'); a row's status and reset live on its inline label. */
 
 /** Conditional sub-fields (`if`), as in Fields. */
@@ -57,7 +57,7 @@ const round = (n: number) => Math.round(n * 1000) / 1000
 /**
  * `blocks-value` — a CSS value: type anything (12, 2rem, 50%, auto, clamp(…)), drag the field
  * (or its prefix) sideways to scrub (Shift ×10, Alt ×0.1), ↑/↓ to nudge, pick a unit from the
- * suffix, or a design token (`group`). Options: unit (px; '' for plain numbers), units, keywords
+ * suffix, or a value of the theme (`group`: spacing, radius, text…), held as its variable and shown as a chip. Options: unit (px; '' for plain numbers), units, keywords
  * (offered with the units, e.g. auto), step, min, max, prefix, prefixIcon, title, slider,
  * a `menu` of presets and an `action` button. `percent` shows a fraction (0–1) as a percentage.
  * A typed value CSS can't use isn't kept: it shows as invalid and goes back on blur. It is
@@ -113,8 +113,7 @@ const CHECKS: Record<string, string[]> = {
 /** Whether CSS can use a typed value: a property named by the field's handle, or one its unit belongs to. */
 export function validValue(value: string, handle: string, unit: string): boolean {
   if (typeof CSS === 'undefined') return true
-  // Token references compile to custom properties.
-  const css = value.replace(/token:[a-z]+\.[a-z0-9-]+(\/\d{1,3})?/g, 'var(--token)')
+  const css = value
   const property = handle.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
   if (/^-?[a-z]+(-[a-z]+)*$/.test(property) && CSS.supports(property, 'inherit')) return CSS.supports(property, css)
   return (CHECKS[unit] ?? CHECKS.length).some((p) => CSS.supports(p, css))
@@ -182,7 +181,7 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
     window.addEventListener('pointerup', up)
   }
 
-  /** What a draft commits as: null to clear, a token, a number with the shown unit, or CSS; undefined when CSS can't use it. */
+  /** What a draft commits as: null to clear, a theme value by its name, a number with the shown unit, or CSS; undefined when CSS can't use it. */
   const resolve = (v: string): string | null | undefined => {
     if (v === '') return null
     const token = typedToken(v)

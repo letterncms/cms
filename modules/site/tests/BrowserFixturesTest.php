@@ -17,6 +17,15 @@ final class BrowserFixturesTest extends TestCase
 {
     use InstallsStarterSite;
 
+    public function createApplication()
+    {
+        $app = parent::createApplication();
+        // The browser looks at real pages: for its fixtures the CSS is compiled, by the Node that runs the checks.
+        getenv('CMS_BROWSER_FIXTURES') && putenv('CMS_NODE');
+
+        return $app;
+    }
+
     protected function plugins(): array
     {
         return ['letterncms/blocks', 'letterncms/site'];
@@ -34,16 +43,16 @@ final class BrowserFixturesTest extends TestCase
 
     public function test_the_fixture_site_builds(): void
     {
-        // A library from a CDN that is an array: kept in content/design/vendor and imported by name.
-        $this->app->instance(\Cms\Modules\Site\Design\VendorFetcher::class, new FakeVendorFetcher([
+        // A library from a CDN that is an array: kept in content/styling/vendor and imported by name.
+        $this->app->instance(\Cms\Modules\Site\Styling\VendorFetcher::class, new FakeVendorFetcher([
             'https://cdn.jsdelivr.net/npm/tiny@1.0.0/+esm' => "export default { name: 'tiny' }\n",
         ]));
-        $this->app->forgetInstance(\Cms\Modules\Site\Design\Vendor::class);
-        $this->app->forgetInstance(\Cms\Modules\Site\Design\Code::class);
-        $this->app->make(\Cms\Modules\Site\Design\Vendor::class)->add('tiny@1.0.0');
+        $this->app->forgetInstance(\Cms\Modules\Site\Styling\Vendor::class);
+        $this->app->forgetInstance(\Cms\Modules\Site\Styling\Code::class);
+        $this->app->make(\Cms\Modules\Site\Styling\Vendor::class)->add('tiny@1.0.0');
 
         foreach ($this->files() as $path => $contents) {
-            Files::put(content_path('design/'.$path), $contents);
+            Files::put(content_path('styling/'.$path), $contents);
         }
 
         // The pages' security policy is on, as on a new site: every check runs under it.
@@ -74,8 +83,12 @@ final class BrowserFixturesTest extends TestCase
 
         $this->cms()->entryService()->create('posts', ['title' => 'Unfiled', 'status' => 'published']);
 
-        // The design styles emphasis inside a heading, which needs a selector two tags deep.
-        $this->cms()->abilities()->execute('design/update', ['styles' => [...$this->app->make(\Cms\Modules\Site\Design\Design::class)->json()->styles(), 'h2 em' => ['fontStyle' => 'normal', 'color' => 'rgb(7, 8, 9)']]], \Cms\Abilities\AbilityContext::system('test'));
+        // The stylesheet styles emphasis inside a heading: an element style of its own, in the base layer.
+        $styling = $this->app->make(\Cms\Modules\Site\Styling\Styling::class);
+        $this->cms()->abilities()->execute('styling/update', ['css' => $styling->theme()."\n@layer base {\n  h2 em { font-style: normal; color: rgb(7, 8, 9); }\n}\n"], \Cms\Abilities\AbilityContext::system('test'));
+        // Without Node nothing compiles: the CSS the site has is called current, so the build has nothing to say about it.
+        $current = static fn () => $styling->refresh() || $styling->store($styling->signature(), '');
+        $current();
 
         $status = $this->app->make(SiteBuilder::class)->buildAll();
         $this->assertSame([], $status['errors']);
@@ -97,7 +110,8 @@ final class BrowserFixturesTest extends TestCase
         }
 
         // The same site, navigating without page loads.
-        $this->cms()->abilities()->execute('design/update', ['transition' => ['type' => 'fade', 'duration' => 0.2, 'navigation' => 'client']], \Cms\Abilities\AbilityContext::system('test'));
+        $this->cms()->abilities()->execute('styling/update', ['transition' => ['type' => 'fade', 'duration' => 0.2, 'navigation' => 'client']], \Cms\Abilities\AbilityContext::system('test'));
+        $current();
         $status = $this->app->make(SiteBuilder::class)->buildAll();
         $this->assertSame([], $status['errors']);
         $this->assertStringContainsString('navigate', (string) file_get_contents(public_path('one/index.html')));
@@ -125,7 +139,7 @@ final class BrowserFixturesTest extends TestCase
         }
     }
 
-    /** @return array<string, string> path under content/design => contents */
+    /** @return array<string, string> path under content/styling => contents */
     private function files(): array
     {
         return [
@@ -134,7 +148,7 @@ final class BrowserFixturesTest extends TestCase
             // Says on the element what it was handed, and on the page what it undid.
             'scripts/probe.js' => <<<'JS'
                 export function mount(el, props, { token, reducedMotion, signal }) {
-                  el.dataset.mounted = JSON.stringify({ props, primary: token('color.primary'), reducedMotion, ready: document.readyState, fonts: document.fonts.status })
+                  el.dataset.mounted = JSON.stringify({ props, primary: token('--color-primary'), reducedMotion, ready: document.readyState, fonts: document.fonts.status })
                   window.__mounts = (window.__mounts ?? 0) + 1
                   signal.addEventListener('abort', () => (document.documentElement.dataset.aborted = props.name))
                   return () => (document.documentElement.dataset.cleaned = props.name)
@@ -157,11 +171,11 @@ final class BrowserFixturesTest extends TestCase
             'One' => [
                 ['type' => 'heading', 'props' => ['text' => 'Page one', 'level' => '1']],
                 ['type' => 'box', 'anchor' => 'leaving', 'class' => 'only-one', 'code' => ['styles' => ['one']], 'behavior' => ['module' => 'probe', 'props' => ['name' => 'leaving']], 'children' => []],
-                ['type' => 'box', 'style' => ['base' => ['height' => '300vh']], 'children' => []],
+                ['type' => 'box', 'class' => 'h-[300vh]', 'children' => []],
             ],
             'Two' => [
                 ['type' => 'heading', 'props' => ['text' => 'Page two', 'level' => '1']],
-                ['type' => 'box', 'style' => ['base' => ['height' => '150vh']], 'children' => []],
+                ['type' => 'box', 'class' => 'h-[150vh]', 'children' => []],
                 ['type' => 'paragraph', 'anchor' => 'deep', 'props' => ['text' => 'Deep in page two']],
                 // Alpine, on a page reached without a page load.
                 ['type' => 'box', 'logic' => ['data' => ['open' => false]], 'children' => [
@@ -170,43 +184,43 @@ final class BrowserFixturesTest extends TestCase
                 ]],
                 ['type' => 'link', 'anchor' => 'with-query', 'props' => ['label' => 'Sign out', 'url' => '/one?signout=1']],
                 ['type' => 'link', 'anchor' => 'same-query', 'props' => ['label' => 'Add', 'url' => '/two?add=5']],
-                ['type' => 'box', 'style' => ['base' => ['height' => '150vh']], 'children' => []],
+                ['type' => 'box', 'class' => 'h-[150vh]', 'children' => []],
             ],
             // The largest text of the page, with a page load animation from transparent.
             'Lcp' => [
-                ['type' => 'heading', 'props' => ['text' => 'The largest text on this page by a long way', 'level' => '1'], 'style' => ['base' => ['fontSize' => '4rem']], 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'self', 'from' => ['opacity' => 0, 'y' => 24], 'duration' => 1.2, 'delay' => 0.2]]]]],
+                ['type' => 'heading', 'props' => ['text' => 'The largest text on this page by a long way', 'level' => '1'], 'class' => 'text-[4rem]', 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'self', 'from' => ['opacity' => 0, 'y' => 24], 'duration' => 1.2, 'delay' => 0.2]]]]],
             ],
             'Motion' => [
-                ['type' => 'box', 'style' => ['base' => ['height' => '120vh']], 'children' => []],
+                ['type' => 'box', 'class' => 'h-[120vh]', 'children' => []],
                 // Followed with CSS where the browser can, by the runtime where it can't.
-                ['type' => 'box', 'anchor' => 'linked', 'style' => ['base' => ['height' => '200px']], 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'top top'], 'steps' => [['from' => ['opacity' => 0, 'y' => 60], 'to' => ['opacity' => 1, 'y' => 0], 'ease' => 'none']]]], 'children' => []],
+                ['type' => 'box', 'anchor' => 'linked', 'class' => 'h-50', 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'top top'], 'steps' => [['from' => ['opacity' => 0, 'y' => 60], 'to' => ['opacity' => 1, 'y' => 0], 'ease' => 'none']]]], 'children' => []],
                 // Trails the scroll: the runtime's in every browser.
-                ['type' => 'box', 'anchor' => 'trailing', 'style' => ['base' => ['height' => '200px']], 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'top top', 'scrub' => 0.3], 'steps' => [['from' => ['opacity' => 0, 'y' => 60], 'to' => ['opacity' => 1, 'y' => 0], 'ease' => 'none']]]], 'children' => []],
-                ['type' => 'box', 'anchor' => 'pinned', 'style' => ['base' => ['height' => '100vh']], 'motion' => [['trigger' => ['type' => 'scroll', 'pin' => '200vh', 'progress' => true], 'steps' => [['from' => ['opacity' => 0], 'to' => ['opacity' => 1], 'ease' => 'none']]]], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Pinned']]]],
+                ['type' => 'box', 'anchor' => 'trailing', 'class' => 'h-50', 'motion' => [['trigger' => ['type' => 'scroll', 'start' => 'top bottom', 'end' => 'top top', 'scrub' => 0.3], 'steps' => [['from' => ['opacity' => 0, 'y' => 60], 'to' => ['opacity' => 1, 'y' => 0], 'ease' => 'none']]]], 'children' => []],
+                ['type' => 'box', 'anchor' => 'pinned', 'class' => 'h-screen', 'motion' => [['trigger' => ['type' => 'scroll', 'pin' => '200vh', 'progress' => true], 'steps' => [['from' => ['opacity' => 0], 'to' => ['opacity' => 1], 'ease' => 'none']]]], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Pinned']]]],
                 // Lines that CSS animates (load): the runtime numbers them once the text is laid out.
-                ['type' => 'heading', 'anchor' => 'load-lines', 'props' => ['text' => 'One two three four five six seven eight nine ten eleven twelve', 'level' => '2'], 'style' => ['base' => ['width' => '260px']], 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 110], 'duration' => 0.4, 'stagger' => 0.1]]]]],
-                ['type' => 'heading', 'anchor' => 'lines', 'props' => ['text' => 'One two three four five six seven eight nine ten eleven twelve', 'level' => '2'], 'style' => ['base' => ['width' => '260px', 'marginTop' => '150vh']], 'motion' => [['trigger' => ['type' => 'appear'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 110], 'duration' => 0.4, 'stagger' => 0.1]]]]],
-                ['type' => 'box', 'style' => ['base' => ['height' => '120vh']], 'children' => []],
+                ['type' => 'heading', 'anchor' => 'load-lines', 'props' => ['text' => 'One two three four five six seven eight nine ten eleven twelve', 'level' => '2'], 'class' => 'w-65', 'motion' => [['trigger' => ['type' => 'load'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 110], 'duration' => 0.4, 'stagger' => 0.1]]]]],
+                ['type' => 'heading', 'anchor' => 'lines', 'props' => ['text' => 'One two three four five six seven eight nine ten eleven twelve', 'level' => '2'], 'class' => 'mt-[150vh] w-65', 'motion' => [['trigger' => ['type' => 'appear'], 'steps' => [['target' => 'lines', 'from' => ['yPercent' => 110], 'duration' => 0.4, 'stagger' => 0.1]]]]],
+                ['type' => 'box', 'class' => 'h-[120vh]', 'children' => []],
             ],
             // Styles for dark, on a site that follows the visitor's system.
             'Dark' => [
                 ['type' => 'heading', 'anchor' => 'water', 'props' => ['text' => 'Land and <em>water</em>', 'level' => '2']],
                 ['type' => 'paragraph', 'anchor' => 'prose-em', 'props' => ['text' => 'Plain <em>emphasis</em>']],
-                ['type' => 'box', 'anchor' => 'plain', 'style' => ['base' => ['backgroundColor' => 'rgb(250, 250, 250)', 'height' => '40px'], 'dark' => ['backgroundColor' => 'rgb(1, 2, 3)']], 'children' => []],
-                ['type' => 'box', 'anchor' => 'narrow', 'style' => ['base' => ['backgroundColor' => 'rgb(250, 250, 250)', 'height' => '40px'], 'mobile' => ['backgroundColor' => 'rgb(240, 240, 240)'], 'mobile:dark' => ['backgroundColor' => 'rgb(4, 5, 6)']], 'children' => []],
-                ['type' => 'box', 'anchor' => 'hovered', 'style' => ['base' => ['color' => 'rgb(10, 10, 10)'], 'hover' => ['color' => 'rgb(20, 20, 20)'], 'dark' => ['color' => 'rgb(200, 200, 200)']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Text']]]],
+                ['type' => 'box', 'anchor' => 'plain', 'class' => 'h-10 bg-[rgb(250,250,250)] dark:bg-[rgb(1,2,3)]', 'children' => []],
+                ['type' => 'box', 'anchor' => 'narrow', 'class' => 'h-10 bg-[rgb(250,250,250)] max-md:bg-[rgb(240,240,240)] max-md:dark:bg-[rgb(4,5,6)]', 'children' => []],
+                ['type' => 'box', 'anchor' => 'hovered', 'class' => 'text-[rgb(10,10,10)] hover:text-[rgb(20,20,20)] dark:text-[rgb(200,200,200)]', 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Text']]]],
             ],
             // A Motion Toggle, and a behaviour that should hear it.
             'Toggle' => [
                 ['type' => 'motion-toggle', 'anchor' => 'toggle'],
                 ['type' => 'box', 'anchor' => 'heard', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'heard']], 'children' => []],
-                ['type' => 'box', 'style' => ['base' => ['width' => '40px', 'height' => '40px']], 'motion' => [['trigger' => ['type' => 'loop'], 'steps' => [['from' => ['rotate' => 0], 'to' => ['rotate' => 360], 'duration' => 2, 'ease' => 'none']], 'repeat' => -1]], 'children' => []],
+                ['type' => 'box', 'class' => 'size-10', 'motion' => [['trigger' => ['type' => 'loop'], 'steps' => [['from' => ['rotate' => 0], 'to' => ['rotate' => 360], 'duration' => 2, 'ease' => 'none']], 'repeat' => -1]], 'children' => []],
             ],
             'Behavior' => [
                 ['type' => 'box', 'anchor' => 'first', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'first', 'title' => '{entry.title}']], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'First']]]],
                 ['type' => 'box', 'anchor' => 'both', 'behavior' => [['module' => 'probe', 'props' => ['name' => 'one-of-two']], ['module' => 'tag', 'props' => ['word' => 'tagged']]], 'children' => []],
                 ['type' => 'box', 'anchor' => 'settled', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'settled'], 'when' => 'loaded'], 'children' => []],
-                ['type' => 'box', 'style' => ['base' => ['height' => '400vh']], 'children' => []],
+                ['type' => 'box', 'class' => 'h-[400vh]', 'children' => []],
                 ['type' => 'box', 'anchor' => 'later', 'behavior' => ['module' => 'probe', 'props' => ['name' => 'later'], 'when' => 'visible'], 'children' => [['type' => 'paragraph', 'props' => ['text' => 'Later']]]],
             ],
         ];

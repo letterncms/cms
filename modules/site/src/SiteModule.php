@@ -15,18 +15,6 @@ use Cms\Contracts\SiteBuilder as SiteBuilderContract;
 use Cms\Packages\Plugin;
 use Cms\Support\Schema\Shape;
 use Cms\Modules\Site\Build\SiteBuilder;
-use Cms\Modules\Site\Design\Code;
-use Cms\Modules\Site\Design\CodeAbilities;
-use Cms\Modules\Site\Design\Design;
-use Cms\Modules\Site\Design\DesignCompiler;
-use Cms\Modules\Site\Design\DesignJson;
-use Cms\Modules\Site\Design\ControlSizes;
-use Cms\Modules\Site\Design\FieldStyles;
-use Cms\Modules\Site\Design\Fonts;
-use Cms\Modules\Site\Design\HttpVendorFetcher;
-use Cms\Modules\Site\Design\Vendor;
-use Cms\Modules\Site\Design\VendorAbilities;
-use Cms\Modules\Site\Design\VendorFetcher;
 use Cms\Modules\Site\Http\ContentPolicy;
 use Cms\Modules\Site\Http\PublicPage;
 use Cms\Modules\Site\Http\PublicPolicy;
@@ -37,6 +25,18 @@ use Cms\Modules\Site\Rendering\HtmlMinifier;
 use Cms\Modules\Site\Rendering\PageContext;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Modules\Site\Rendering\UrlGenerator;
+use Cms\Modules\Site\Styling\Candidates;
+use Cms\Modules\Site\Styling\Code;
+use Cms\Modules\Site\Styling\CodeAbilities;
+use Cms\Modules\Site\Styling\Compiler;
+use Cms\Modules\Site\Styling\FontFaces;
+use Cms\Modules\Site\Styling\Fonts;
+use Cms\Modules\Site\Styling\HttpVendorFetcher;
+use Cms\Modules\Site\Styling\Styling;
+use Cms\Modules\Site\Styling\StylingException;
+use Cms\Modules\Site\Styling\Vendor;
+use Cms\Modules\Site\Styling\VendorAbilities;
+use Cms\Modules\Site\Styling\VendorFetcher;
 use Cms\Users\User;
 
 final class SiteModule extends Plugin
@@ -45,7 +45,7 @@ final class SiteModule extends Plugin
     {
         require_once __DIR__.'/helpers.php';
 
-        foreach ([Design::class, Code::class, Vendor::class, DesignCompiler::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class, ContentPolicy::class] as $service) {
+        foreach ([Styling::class, Candidates::class, Compiler::class, FontFaces::class, Code::class, Vendor::class, Fonts::class, Renderer::class, HtmlMinifier::class, UrlGenerator::class, SiteBuilder::class, ContentPolicy::class] as $service) {
             $this->app->singleton($service);
         }
 
@@ -56,12 +56,12 @@ final class SiteModule extends Plugin
 
     public function boot(): void
     {
-        // An agent's way into the design: `/adjust-design` in the assistant's chat, a prompt for MCP clients.
-        $this->cms()->skills()->register('adjust-design', [
-            'label' => 'Adjust the Design',
-            'description' => 'Change the design so the site feels a certain way.',
+        // An agent's way into the styling: `/adjust-styling` in the assistant's chat, a prompt for MCP clients.
+        $this->cms()->skills()->register('adjust-styling', [
+            'label' => 'Adjust the Styling',
+            'description' => 'Change the styling so the site feels a certain way.',
             'icon' => 'palette',
-            'prompt' => 'Change the design so the site feels the way asked here: {feel}. Read cms://site/design first and change design tokens rather than individual blocks. Say what you changed and why.',
+            'prompt' => 'Change the styling so the site feels the way asked here: {feel}. Read cms://site/styling first and change the theme (the @theme variables, the element styles in @layer base and the site’s own @utility classes in the stylesheet, with styling/update) rather than the classes of individual blocks. Say what you changed and why.',
             'arguments' => [['name' => 'feel', 'description' => 'How the site should feel', 'required' => true]],
             'permission' => 'settings.manage',
         ]);
@@ -75,6 +75,7 @@ final class SiteModule extends Plugin
         CodeAbilities::register($this->cms(), fn () => $this->app->make(Code::class));
         VendorAbilities::register($this->cms(), fn () => $this->app->make(Vendor::class), fn () => $this->app->make(Code::class));
         $this->buildTriggers();
+        $this->stylingTriggers();
         $this->adminUi();
         $this->agentContext();
 
@@ -172,7 +173,7 @@ final class SiteModule extends Plugin
     private function renderHooks(): void
     {
         $hooks = $this->cms()->hooks();
-        $design = fn () => $this->app->make(Design::class);
+        $styling = fn () => $this->app->make(Styling::class);
 
         $hooks->on('render.style', static fn (string $key, string $css, int $order = 0) => PageContext::current()?->addStyle($key, $css, $order));
         $hooks->on('render.head', static fn (string $key, string $html) => PageContext::current()?->addHead($key, $html));
@@ -180,18 +181,18 @@ final class SiteModule extends Plugin
         $code = fn () => $this->app->make(Code::class);
         $hooks->on('render.code', static fn (array $names) => PageContext::current()?->addCode($names));
         $hooks->on('render.component', static fn (string $handle) => PageContext::current()?->addCode($code()->for('components', $handle)));
-        $hooks->on('design.saved', static fn () => $code()->flush());
+        $hooks->on('styling.saved', static fn () => $code()->flush());
         // A block's behaviour names a script: its published file, on a page that then depends on it.
         $hooks->addFilter('blocks.behavior', static function (?string $url, string $module) use ($code, $hooks) {
             $context = PageContext::current();
             $url = $code()->url('scripts', $module);
 
             if ($context !== null) {
-                $context->dependencies["design:scripts/{$module}"] = true;
+                $context->dependencies["styling:scripts/{$module}"] = true;
                 $context->modules = $context->modules || $url !== null;
             }
 
-            $url === null && $hooks->dispatch('render.warning', __('This page names :file, which is not in content/design.', ['file' => "scripts/{$module}.js"]));
+            $url === null && $hooks->dispatch('render.warning', __('This page names :file, which is not in content/styling.', ['file' => "scripts/{$module}.js"]));
 
             return $url;
         });
@@ -201,18 +202,21 @@ final class SiteModule extends Plugin
             $url = $code()->canvas($module) ? $code()->url('scripts', $module) : null;
 
             if ($url !== null && ($context = PageContext::current()) !== null) {
-                $context->dependencies["design:scripts/{$module}"] = true;
+                $context->dependencies["styling:scripts/{$module}"] = true;
                 $context->modules = true;
             }
 
             return $url;
         });
         $hooks->on('render.depend', static fn (string $key) => PageContext::depend($key));
-        // Mail wears the site's colours, from whichever tokens this design has.
-        $hooks->addFilter('email.colors', static function (array $colors) use ($design) {
-            $token = static fn (string $path, string $fallback) => is_string($value = $design()->json()->token($path)) && $value !== '' ? $value : $fallback;
+        // Mail wears the site's colours. Mail clients read plain colours only: a value that is none stays the default.
+        $hooks->addFilter('email.colors', static function (array $colors) use ($styling) {
+            foreach (['background' => 'background', 'card' => 'raised', 'text' => 'foreground', 'muted' => 'muted', 'line' => 'border', 'button' => 'primary', 'button_text' => 'primary-foreground'] as $key => $name) {
+                $value = $styling()->variable('--color-'.$name);
+                $value !== null && preg_match('/^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%\/]+\))$/iD', $value) && $colors[$key] = $value;
+            }
 
-            return [...$colors, 'background' => $token('color.background', $colors['background']), 'card' => $token('color.raised', $colors['card']), 'text' => $token('color.ink', $token('color.foreground', $colors['text'])), 'muted' => $token('color.muted', $colors['muted']), 'line' => $token('color.line', $colors['line']), 'button' => $token('color.primary', $colors['button']), 'button_text' => $token('color.primary-foreground', $colors['button_text'])];
+            return $colors;
         });
         $hooks->on('render.warning', fn (string $message) => $this->app->make(SiteBuilder::class)->warn($message));
 
@@ -221,22 +225,22 @@ final class SiteModule extends Plugin
             : $extras);
         // Every site has an llms.txt: a plugin makes it richer through `site.llms` (see Llms), it does not write another.
         $hooks->addFilter('site.build.extras', fn (array $extras) => [...$extras, 'llms' => ['path' => 'llms.txt', 'render' => fn () => $this->app->make(Llms::class)->render()]]);
-        // An animation's ease can be a curve of the design: token:ease.<name>.
-        $hooks->addFilter('blocks.eases', static function (array $eases) use ($design) {
-            foreach ($design()->json()->tokens() as $token) {
-                $token['group'] === 'ease' && is_string($token['value']) && $eases[$token['name']] = $token['value'];
-            }
-
-            return $eases;
-        });
-        $hooks->addFilter('blocks.breakpoints', static fn (array $bp) => $design()->json()->breakpoints() ?: $bp);
-        $hooks->addFilter('fields.options.button-variants', static function (array $options) use ($design) {
-            foreach (array_keys($design()->json()->buttons()) as $variant) {
-                $options[$variant] ??= ucfirst(str_replace(['-', '_'], ' ', (string) $variant));
+        // An animation's ease can be a curve of the theme by its name: --ease-out is "out".
+        $hooks->addFilter('blocks.eases', static fn (array $eases) => [...$eases, ...$styling()->eases()]);
+        // Where a block's motion and logic change with the screen: the widths the theme's sm:, md: and lg: start at.
+        $hooks->addFilter('blocks.breakpoints', static fn (array $breakpoints) => $styling()->breakpoints());
+        // A button's looks are the site's btn-<name> classes.
+        $hooks->addFilter('fields.options.button-variants', static function (array $options) use ($styling) {
+            foreach ($styling()->classes() as $class) {
+                if (preg_match('/^btn-([a-z0-9][a-z0-9-]*)$/', $class, $m)) {
+                    $options[$m[1]] ??= ucfirst(str_replace('-', ' ', $m[1]));
+                }
             }
 
             return $options;
         });
+        // The pages the Renderer makes of its own (an archive's list, a message, the 404) carry classes no content names.
+        $hooks->addFilter('styling.candidates', static fn (array $classes) => [...$classes, ...Renderer::classes()]);
 
         // Blocks rendered outside a page (Markdown twins, search) still see the site.
         $hooks->addFilter('blocks.scope', fn (array $scope) => $scope + ['site' => $this->app->make(Renderer::class)->site()]);
@@ -510,7 +514,6 @@ final class SiteModule extends Plugin
         Route::middleware(['web', 'auth:web', 'cms.admin'])->group(static function (): void {
             Route::get('/__preview/{id}', [SiteController::class, 'preview'])->where('id', '[0-9a-z]{26}');
             Route::get('/__pattern/{handle}', [SiteController::class, 'pattern'])->where('handle', '[a-z0-9][a-z0-9_-]{0,63}');
-            Route::get('/__specimen/{kind}', [SiteController::class, 'specimen'])->whereIn('kind', ['fields', 'buttons', 'sizes', 'prose']);
             Route::post('/__preview', [SiteController::class, 'render']);
             Route::post('/__preview/{id}', [SiteController::class, 'render'])->where('id', '[0-9a-z]{26}');
         });
@@ -575,7 +578,7 @@ final class SiteModule extends Plugin
     {
         $abilities = $this->cms()->abilities();
         $builder = fn () => $this->app->make(SiteBuilder::class);
-        $design = fn () => $this->app->make(Design::class);
+        $styling = fn () => $this->app->make(Styling::class);
 
         $abilities->register('site/build', [
             'label' => 'Publish Site',
@@ -598,144 +601,128 @@ final class SiteModule extends Plugin
             'handler' => fn () => $builder()->process(1500),
         ]);
 
-        $abilities->register('design/get', [
-            'label' => 'Design',
-            'description' => 'The site’s design (content/design): tokens (use as token:group.name in styles), fonts, element styles, prose styles, button variants, form fields, page transition, breakpoints, custom CSS and JS, and the templates entries can use.',
+        $fontShape = ['family?' => Shape::STRING, 'src?' => Shape::STRING, 'weight?' => Shape::either(Shape::STRING, Shape::INTEGER), 'style?' => Shape::STRING, 'preload?' => Shape::BOOLEAN, 'display?' => Shape::STRING, 'fallback?' => Shape::either(Shape::STRING, [Shape::STRING]), 'sizeAdjust?' => Shape::STRING, 'ascentOverride?' => Shape::STRING, 'descentOverride?' => Shape::STRING, 'lineGapOverride?' => Shape::STRING];
+        $transitionShape = ['type' => Shape::enum('none', 'fade', 'slide', 'scale'), 'duration' => Shape::NUMBER, 'navigation' => Shape::enum('document', 'client')];
+        // What the stylesheet or the fonts refuse is the caller's to correct: Tailwind's own message, not a server error.
+        $guard = static function (\Closure $work) {
+            try {
+                return $work();
+            } catch (StylingException|\InvalidArgumentException $e) {
+                throw \Cms\Abilities\AbilityException::invalid($e->getMessage());
+            }
+        };
+
+        $abilities->register('styling/get', [
+            'label' => 'Styling',
+            'description' => <<<'TXT'
+            The site’s styling. `css` is content/styling/theme.css, a Tailwind CSS v4 stylesheet, and blocks carry Tailwind classes in `class` ("grid gap-6 md:grid-cols-3"). The stylesheet has four parts:
+            - `@import "tailwindcss"; @import "cms";` first (Tailwind, then what blocks, buttons and fields are built from).
+            - `@theme { --color-primary: #1d4ed8; --font-display: "Fraunces", serif; --container-content: 72rem; }`: every variable is a set of classes (bg-primary, text-primary, font-display, max-w-content). Namespaces are Tailwind’s: --color-*, --font-*, --text-*, --spacing-*, --radius-*, --shadow-*, --container-*, --breakpoint-*, --ease-*. A value with a dark side is light-dark(#ffffff, #0b0b0c), with `:root { color-scheme: light dark; }` in @layer base.
+            - `@layer base { h1 { @apply font-display text-5xl font-semibold tracking-tight; } }`: what elements look like before a block says otherwise.
+            - `@utility card { @apply rounded-xl border border-border bg-raised p-6; }`: a class of the site’s own, used on blocks like any Tailwind class and with every variant (hover:card, md:card). `classes` lists them. A button’s looks are the btn-<name> classes (btn-primary, btn-secondary).
+            Anything else in it is plain CSS. Also here: `fonts` (the self-hosted font faces) and `fontFiles`, `transition` (the page transition), `templates` (handle => title), `js` (custom.js), `stylesheet` (the published CSS file) and `current`: whether that file was compiled from this stylesheet and the classes the content uses now.
+            TXT,
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'output' => Shape::of([
-                'name' => Shape::STRING,
-                'tokens' => [[
-                    'path' => Shape::STRING, 'group' => Shape::STRING, 'name' => Shape::STRING,
-                    'value' => Shape::any('The token\'s value as tokens.json has it: CSS, a number, a reference to another token (token:group.name), or {min, max} for a fluid size.'),
-                    'dark' => Shape::any('The value in dark mode, like `value`; null when the token has none.'),
-                    'type' => Shape::STRING_OR_NULL, 'description' => Shape::STRING_OR_NULL,
-                ]],
-                'fonts' => [['family?' => Shape::STRING, 'src?' => Shape::STRING, 'weight?' => Shape::either(Shape::STRING, Shape::INTEGER), 'style?' => Shape::STRING, 'preload?' => Shape::BOOLEAN, 'display?' => Shape::STRING, 'fallback?' => Shape::either(Shape::STRING, [Shape::STRING]), 'sizeAdjust?' => Shape::STRING, 'ascentOverride?' => Shape::STRING, 'descentOverride?' => Shape::STRING, 'lineGapOverride?' => Shape::STRING]],
+                'css' => Shape::STRING,
+                'classes' => [Shape::STRING],
+                'fonts' => [$fontShape],
                 'fontFiles' => [Shape::STRING],
-                'styles' => self::described(Shape::map(self::declarationsShape()), 'Declarations by element. `elements` lists the ones the Design offers; any tag works, alone or up to three deep with a space (inside) or " > " (directly inside), with one state or part at the end: "h1 em", "li > a", "nav a:hover", "li::marker". A class a block carries (its `class`, or the is-… of a state binding) works the same way, alone or on a tag: ".note", "span.note", ".note em", ".card.is-open > a:hover"; lowercase letters, digits and hyphens, never one that starts with cms-. No ids or attributes: those are custom.css.'),
-                'prose' => Shape::raw([
-                    ...Shape::of(['spacing?' => ['blocks?' => self::cssValue(), 'headings?' => self::cssValue(), 'afterHeadings?' => self::cssValue(), 'items?' => self::cssValue()]])->toSchema(),
-                    'additionalProperties' => self::declarationsShape()->toSchema(),
-                    'description' => 'Declarations by element of long-form text (`proseElements` lists them), and `spacing`: the flow between its blocks.',
-                ]),
-                'buttons' => self::described(
-                    Shape::map(Shape::open('A look by state (base, hover, active, focus-visible), each a map of camelCase CSS property to a CSS value or a token (token:group.name, from `tokens`); `surface` names the background the variant is made for.')),
-                    'Button variants by name (primary, secondary…), as tokens.json has them.',
-                ),
-                'fields' => self::described(Shape::map(Shape::map(self::cssValue())), 'What the site sets for its form fields: part => property => value. `fieldStyles` lists every part and property.'),
-                'fieldStyles' => self::described(
-                    Shape::map(Shape::map(['type' => Shape::STRING, 'variable' => Shape::STRING, 'default?' => Shape::either(Shape::STRING, [Shape::STRING]), 'inherits?' => Shape::STRING, 'hint?' => Shape::STRING, 'tokens?' => Shape::STRING, 'unit?' => Shape::STRING, 'options?' => [Shape::STRING]])),
-                    'Every property `fields` may set: part (field, hover, focus, checkbox…) => property => what it is.',
-                ),
-                'controlSizes' => Shape::map(['height' => Shape::STRING, 'padding' => Shape::STRING, 'text' => [Shape::STRING]]),
-                'transition' => ['type' => Shape::enum('none', 'fade', 'slide', 'scale'), 'duration' => Shape::NUMBER, 'navigation' => Shape::enum('document', 'client')],
-                'breakpoints' => Shape::map(Shape::STRING),
+                'transition' => $transitionShape,
                 'templates' => Shape::map(Shape::STRING),
-                'stylesheet' => Shape::STRING, 'css' => Shape::STRING, 'js' => Shape::STRING,
-                'elements' => [Shape::STRING], 'proseElements' => [Shape::STRING],
+                'stylesheet' => Shape::STRING, 'js' => Shape::STRING, 'current' => Shape::BOOLEAN,
             ]),
-            'handler' => function () use ($design) {
-                $json = $design()->json();
-
-                return [
-                    'name' => $json->name(),
-                    'tokens' => array_values(array_map(static fn ($k, $v) => ['path' => $k, ...$v], array_keys($json->tokens()), $json->tokens())),
-                    'fonts' => $json->fonts(),
-                    'fontFiles' => $design()->fontFiles(),
-                    'styles' => (object) $json->styles(),
-                    'prose' => (object) [...$json->prose(), ...($json->proseSpacing() !== [] ? ['spacing' => (object) $json->proseSpacing()] : [])],
-                    'buttons' => (object) $json->buttons(),
-                    'fields' => (object) $json->fields(),
-                    'fieldStyles' => FieldStyles::schema(),
-                    'controlSizes' => ControlSizes::DEFAULTS,
-                    'transition' => $json->transition(),
-                    'breakpoints' => $json->breakpoints(),
-                    'templates' => $this->app->make(Templates::class)->options(),
-                    'stylesheet' => $design()->stylesheet(),
-                    'css' => $design()->customCss(),
-                    'js' => $design()->customJs(),
-                    'elements' => DesignCompiler::ELEMENTS,
-                    'proseElements' => DesignCompiler::PROSE_ELEMENTS,
-                ];
-            },
+            'handler' => fn () => [
+                'css' => $styling()->theme(),
+                'classes' => $styling()->classes(),
+                'fonts' => $styling()->fonts(),
+                'fontFiles' => $styling()->fontFiles(),
+                'transition' => $styling()->settings()['transition'],
+                'templates' => $this->app->make(Templates::class)->options(),
+                'current' => $styling()->current(),
+                'stylesheet' => $styling()->stylesheet(),
+                'js' => $styling()->customJs(),
+            ],
         ]);
 
-        $abilities->register('design/update', [
-            'label' => 'Update Design',
-            'description' => 'Change tokens (e.g. {"color.primary": "#0f766e"}; values may be CSS or {"min","max"} for fluid sizes), dark-mode values (null clears), renames, element styles, prose styles, button variants, form fields, fonts or the page transition. Sections you pass replace the stored ones, except `transition`, whose settings you name are changed and the others kept (null removes one, back to its default). The site rebuilds.',
+        $abilities->register('styling/update', [
+            'label' => 'Update Styling',
+            'description' => <<<'TXT'
+            Change the site’s styling. `css` replaces the whole stylesheet (content/styling/theme.css): read it with styling/get, change it and send all of it back. It is Tailwind CSS v4 and starts `@import "tailwindcss"; @import "cms";`. Change a colour, font or size in `@theme` (--color-primary: #0f766e; a dark side as light-dark(#0f766e, #5eead4)), an element in `@layer base` (h2 { @apply text-3xl font-semibold; }), and add a class of the site’s own as `@utility name { @apply …; }`, which blocks then carry in `class` with any variant. For example, a new accent colour and a card:
+            @theme { --color-accent: #e11d48; }
+            @utility card { @apply rounded-xl border border-border bg-raised p-6 hover:border-accent; }
+            A stylesheet Tailwind cannot compile is refused with Tailwind’s message, and nothing is saved. `fonts` replaces the font faces (styling/fonts-import adds a family for you). `transition` is merged: name only what changes, null puts a setting back to its default. The site rebuilds. `current` false means the server has no Node to compile with: the CSS is compiled the next time the admin is open.
+            TXT,
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
-                'tokens' => ['type' => 'object', 'description' => 'path => value'],
-                'dark' => ['type' => 'object', 'description' => 'path => dark-mode value'],
-                'remove' => ['type' => 'array', 'items' => ['type' => 'string']],
-                'rename' => ['type' => 'object', 'description' => 'old path => new path, within a group; references follow'],
-                'styles' => ['type' => 'object', 'description' => 'Element styles: {"h1": {"fontSize": "token:text.5xl"}, "h1 em": {"fontStyle": "italic"}, "nav a:hover": {"color": "token:color.primary"}}. A key is a tag, or up to three tags with a space (inside) or " > " (directly inside), with one state or part at the end. A class a block carries works in the same places, alone or on a tag: {".note em": {"fontStyle": "italic"}, "span.note": {"fontFamily": "token:font.serif"}, ".card.is-open": {"borderColor": "token:color.primary"}}; lowercase, never one that starts with cms-. No ids or attributes. A key that does not fit is refused by name.'],
-                'prose' => ['type' => 'object', 'description' => 'Long-form text, in any block with the prose prop (Prose, under Typography): element styles, and `spacing`, the flow between its blocks, custom ones too: {"spacing": {"blocks": "1.1em", "headings": "1.8em", "afterHeadings": "0.6em", "items": "0.35em"}, "h2": {"fontSize": "token:text.2xl", "marginTop": "2.5rem"}}. An element\'s marginTop replaces the spacing before it.'],
-                'buttons' => ['type' => 'object', 'description' => 'Button variants, each a look by state: {"primary": {"base": {"backgroundColor": "token:color.primary", "borderRadius": "token:radius.md"}, "hover": {...}, "active": {...}, "focus-visible": {...}}}; `surface` names the background a variant is made for ("token:color.band"), where the Design shows it. Sizes are not set here: height, padding and text size come from the control tokens (control.sm-height, control.md-padding, control.lg-text…), which fields share.'],
-                'fields' => ['type' => 'object', 'description' => 'Every form field of the site, part by part, over the defaults (design/get fieldStyles has each part, property, type and default): {"field": {"height": "3rem", "background": "token:color.raised", "radius": "token:radius.md"}, "checkbox": {"checked": "token:color.primary", "mark": "check"}, "switch": {"on": "token:color.primary"}}. Parts: field (every boxed field), hover, focus, invalid, disabled, label, help, spacing (with size: the control size of fields in forms), select, textarea, checkbox, radio, switch, slider, tags, chips, file. A value is CSS, a token, or field:part.key to follow another property.'],
-                'fonts' => ['type' => 'array'],
+                'css' => ['type' => 'string', 'maxLength' => 500000, 'description' => 'The whole stylesheet.'],
+                'fonts' => ['type' => 'array', 'items' => ['type' => 'object'], 'description' => 'Every font face: {family, src: "fonts/<file>.woff2", weight: "400" or "100 900", style: normal|italic, preload?, display?, fallback?, sizeAdjust?, ascentOverride?, descentOverride?, lineGapOverride?}. Name the family in the theme: --font-sans: "Hanken Grotesk", "Hanken Grotesk Fallback", sans-serif.'],
                 'transition' => ['type' => 'object', 'description' => 'Merged into the stored transition: name only what changes. null removes a setting, which then has its default (type none, duration 0.3, navigation document).', 'properties' => ['type' => ['type' => ['string', 'null'], 'enum' => ['none', 'fade', 'slide', 'scale', null]], 'duration' => ['type' => ['number', 'null']], 'navigation' => ['type' => ['string', 'null'], 'enum' => ['document', 'client', null], 'description' => 'client: links to pages of the site swap the page without a page load, inside the transition, so blocks with `persist` live on across pages. document (default): the browser loads every page.']]],
             ]],
-            'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
-            'handler' => function (array $in) use ($design) {
-                $json = $design()->json();
-                $json->apply($in);
-                $json->save();
-                $design()->saved();
+            'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING, 'current' => Shape::BOOLEAN]),
+            'handler' => static fn (array $in) => $guard(static function () use ($in, $styling) {
+                // The stylesheet first: when it is refused, nothing of the change is saved.
+                isset($in['css']) && $styling()->saveTheme((string) $in['css']);
+                $settings = array_intersect_key($in, ['fonts' => 1, 'transition' => 1]);
+                $settings !== [] && $styling()->saveSettings($settings);
+                $styling()->saved();
 
-                return ['saved' => true, 'stylesheet' => $design()->stylesheet()];
-            },
+                return ['saved' => true, 'current' => $styling()->current(), 'stylesheet' => $styling()->stylesheet()];
+            }),
         ]);
 
-        $abilities->register('design/preview', [
-            'label' => 'Preview Design',
-            'description' => 'The stylesheet the site would get with these changes (the design/update input, plus css), without saving. For live previews.',
-            'permission' => 'settings.manage',
+        $abilities->register('styling/source', [
+            'label' => 'Styling Source',
+            'description' => 'What Tailwind compiles the site’s CSS from, for whoever compiles it (the admin, in the browser, where the server has no Node): `css` (the stylesheet, or the draft given as `css` for a preview), `files` (the stylesheets it imports by name: "cms"), `candidates` (every class the content uses) and `signature`, which names exactly this source. `faces` is the CSS that stands before Tailwind’s output on a page: the @font-face rules and the page transition. Hand the compiled CSS back with styling/compiled.',
+            'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['css' => ['type' => 'string', 'maxLength' => 500000, 'description' => 'A draft of the stylesheet; the signature is then the draft’s.']]],
+            'output' => Shape::of(['signature' => Shape::STRING, 'css' => Shape::STRING, 'files' => Shape::map(Shape::STRING), 'candidates' => [Shape::STRING], 'faces' => Shape::STRING]),
+            'handler' => static function (array $in) use ($styling) {
+                $source = $styling()->source(isset($in['css']) ? (string) $in['css'] : null);
+
+                return ['signature' => $styling()->signature($source), ...$source, 'faces' => $styling()->faces()];
+            },
+        ]);
+
+        $abilities->register('styling/compiled', [
+            'label' => 'Store Compiled CSS',
+            'description' => 'Keep the CSS Tailwind made of the source styling/source gave, with that source’s `signature`. `stored` is false when the stylesheet or the content changed meanwhile: read the source again and compile again.',
+            'permission' => 'admin.access',
             'input' => ['type' => 'object', 'properties' => [
-                'tokens' => ['type' => 'object'],
-                'dark' => ['type' => 'object'],
-                'remove' => ['type' => 'array', 'items' => ['type' => 'string']],
-                'rename' => ['type' => 'object'],
-                'styles' => ['type' => 'object'],
-                'prose' => ['type' => 'object'],
-                'buttons' => ['type' => 'object'],
-                'fields' => ['type' => 'object'],
-                'transition' => ['type' => 'object'],
-                'css' => ['type' => 'string', 'maxLength' => 200000],
-            ]],
-            'output' => Shape::of(['css' => Shape::STRING]),
-            'handler' => function (array $in) use ($design) {
-                $json = DesignJson::fromArray($design()->json()->toArray());
-                $json->apply($in);
+                'signature' => ['type' => 'string', 'pattern' => '^[0-9a-f]{32}$'],
+                'css' => ['type' => 'string', 'maxLength' => 2000000],
+            ], 'required' => ['signature', 'css']],
+            'output' => Shape::of(['stored' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
+            'handler' => function (array $in) use ($styling) {
+                $before = $styling()->stylesheet();
+                $stored = $styling()->store((string) $in['signature'], (string) $in['css']);
+                $stylesheet = $styling()->stylesheet();
+                // Pages built before it link a stylesheet without the classes they have since.
+                $stored && $stylesheet !== $before && $this->cms()->hooks()->dispatch('styling.compiled');
 
-                return ['css' => $design()->compile($json, isset($in['css']) ? (string) $in['css'] : $design()->customCss())];
+                return ['stored' => $stored, 'stylesheet' => $stylesheet];
             },
         ]);
 
-        $abilities->register('design-code/set-custom', [
-            'label' => 'Custom CSS and JavaScript',
-            'description' => 'Replace the site’s custom.css or custom.js (content/design). CSS is appended after everything else; JS loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component.',
+        $abilities->register('styling-code/set-custom', [
+            'label' => 'Custom JavaScript',
+            'description' => 'Replace the site’s custom.js (content/styling). It loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component. CSS is not here: it goes in the stylesheet (styling/update).',
             'permission' => 'site.code',
-            'input' => ['type' => 'object', 'properties' => ['css' => ['type' => 'string', 'maxLength' => 200000], 'js' => ['type' => 'string', 'maxLength' => 200000]]],
-            'output' => Shape::of(['saved' => [Shape::enum('css', 'js')]]),
-            'handler' => function (array $in) use ($design) {
-                foreach (['css', 'js'] as $kind) {
-                    if (isset($in[$kind])) {
-                        $design()->saveCode($kind, (string) $in[$kind]);
-                    }
-                }
+            'input' => ['type' => 'object', 'properties' => ['js' => ['type' => 'string', 'maxLength' => 200000]], 'required' => ['js']],
+            'output' => Shape::of(['saved' => [Shape::enum('js')]]),
+            'handler' => static fn (array $in) => $guard(static function () use ($in, $styling) {
+                $styling()->saveJs((string) $in['js']);
+                $styling()->saved();
 
-                $design()->saved();
-
-                return ['saved' => array_keys(array_intersect_key($in, ['css' => 1, 'js' => 1]))];
-            },
+                return ['saved' => ['js']];
+            }),
         ]);
 
-        $abilities->register('design/fonts-import', [
+        $abilities->register('styling/fonts-import', [
             'label' => 'Add a Google Font',
-            'description' => 'Download a Google Fonts family (latin) into content/design/fonts so it is self-hosted, and add it to the design: the weights its variable axis really spans as one file, or the static weights it has; upright, italic or both. Then use it in a font token. Text does not move when the font arrives: each face gets a fallback read from the font’s own tables, {"fallback": "Arial", "sizeAdjust": "103.63%", "ascentOverride": "88.48%", "descentOverride": "24.32%", "lineGapOverride": "0%"} (Arial for a sans, Times New Roman for a serif, Courier New for a monospace family), which draws that local font at the web font’s size first; the font tokens that name the family get it by themselves. Change those numbers with design/update `fonts`: importing the family again keeps what its faces say.',
+            'description' => 'Download a Google Fonts family (latin) into content/styling/fonts so it is self-hosted, and add its faces to the site’s fonts: the weights its variable axis really spans as one file, or the static weights it has; upright, italic or both. Then name it in the theme with styling/update: --font-display: "Fraunces", "Fraunces Fallback", serif. Text does not move when the font arrives: each face gets a fallback read from the font’s own tables, {"fallback": "Arial", "sizeAdjust": "103.63%", "ascentOverride": "88.48%", "descentOverride": "24.32%", "lineGapOverride": "0%"} (Arial for a sans, Times New Roman for a serif, Courier New for a monospace family), which draws that local font at the web font’s size first, as the family "<Family> Fallback". Change those numbers with styling/update `fonts`: importing the family again keeps what its faces say.',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 60],
@@ -744,17 +731,17 @@ final class SiteModule extends Plugin
                 'weights' => ['type' => 'array', 'items' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 1000], 'maxItems' => 9, 'description' => 'Static weights to take when the family has no weight axis; 400, 500, 600 and 700 of what it has when left out.'],
             ], 'required' => ['family']],
             'output' => Shape::of(['fonts' => [['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic'), 'preload' => Shape::BOOLEAN, 'fallback?' => Shape::STRING, 'sizeAdjust?' => Shape::STRING, 'ascentOverride?' => Shape::STRING, 'descentOverride?' => Shape::STRING, 'lineGapOverride?' => Shape::STRING]]]),
-            'handler' => function (array $in) use ($design) {
+            'handler' => fn (array $in) => $guard(function () use ($in, $styling) {
                 $fonts = $this->app->make(Fonts::class)->import((string) $in['family'], (string) ($in['style'] ?? (! empty($in['italic']) ? 'both' : 'normal')), array_map('intval', (array) ($in['weights'] ?? [])));
-                $design()->saved();
+                $styling()->saved();
 
                 return ['fonts' => $fonts];
-            },
+            }),
         ]);
 
-        $abilities->register('design/fonts-upload', [
+        $abilities->register('styling/fonts-upload', [
             'label' => 'Upload a Font',
-            'description' => 'Add a .woff2 file (base64) to content/design/fonts and the design.',
+            'description' => 'Add a .woff2 file (base64) to content/styling/fonts and the site’s fonts. Name its family in the theme with styling/update (--font-sans: "My Font", sans-serif).',
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'family' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 60],
@@ -764,12 +751,12 @@ final class SiteModule extends Plugin
                 'style' => ['type' => 'string', 'enum' => ['normal', 'italic'], 'default' => 'normal'],
             ], 'required' => ['family', 'data']],
             'output' => Shape::of(['family' => Shape::STRING, 'src' => Shape::STRING, 'weight' => Shape::STRING, 'style' => Shape::enum('normal', 'italic')]),
-            'handler' => function (array $in) use ($design) {
+            'handler' => fn (array $in) => $guard(function () use ($in, $styling) {
                 $font = $this->app->make(Fonts::class)->upload((string) $in['family'], (string) ($in['name'] ?? $in['family']), (string) $in['data'], (string) ($in['weight'] ?? '400'), (string) ($in['style'] ?? 'normal'));
-                $design()->saved();
+                $styling()->saved();
 
                 return $font;
-            },
+            }),
         ]);
 
         $abilities->register('site/preview-url', [
@@ -783,9 +770,9 @@ final class SiteModule extends Plugin
         ]);
 
         $this->cms()->permissions()->register('site.build', 'Publish the Site', 'Site', roles: ['editor']);
-        // Trusted: a design's scripts run as whoever opens the site, the builder (behaviors that draw there) or a
+        // Trusted: a site's scripts run as whoever opens the site, the builder (behaviors that draw there) or a
         // preview, administrators included. Only administrators hold it by default, and a site with code needs it.
-        $this->cms()->permissions()->register('site.code', 'Edit Custom CSS and JavaScript', 'Design', 'Its scripts run in the browser of everyone who opens the site, the builder or a preview, administrators too.', trusted: true);
+        $this->cms()->permissions()->register('site.code', 'Edit Scripts and Stylesheets', 'Design', 'Its scripts run in the browser of everyone who opens the site, the builder or a preview, administrators too.', trusted: true);
 
         // Collections and entries choose from the site's templates.
         $this->cms()->hooks()->addFilter('fields.options.templates', fn (array $options, ?string $collection = null) => array_replace($options, $this->app->make(Templates::class)->options($collection)));
@@ -807,24 +794,6 @@ final class SiteModule extends Plugin
                 ...$this->templatePicker($collection),
             ]];
         });
-    }
-
-    /** A shape with a sentence on what its keys are. */
-    private static function described(Shape $shape, string $about): Shape
-    {
-        return Shape::raw([...$shape->toSchema(), 'description' => $about]);
-    }
-
-    /** A value in tokens.json: CSS or a token as a string, or a bare number. */
-    private static function cssValue(): Shape
-    {
-        return Shape::either(Shape::STRING, Shape::NUMBER);
-    }
-
-    /** Declarations of one element, as tokens.json has them. */
-    private static function declarationsShape(): Shape
-    {
-        return Shape::open('CSS declarations by camelCase property (fontSize, backgroundColor…); a value is CSS or a token (token:group.name, from `tokens`).');
     }
 
     /** SiteBuilder::status(): how far the static build is. */
@@ -959,7 +928,7 @@ final class SiteModule extends Plugin
             $hooks->on($event, fn ($item) => $auto() && $builder()->queueForMedia((string) $item->id));
         }
 
-        foreach (['globals.saved', 'design.saved', 'collection.saved', 'collection.deleted', 'entries.reordered', 'navigation.saved'] as $event) {
+        foreach (['globals.saved', 'styling.saved', 'styling.compiled', 'collection.saved', 'collection.deleted', 'entries.reordered', 'navigation.saved'] as $event) {
             $hooks->on($event, fn () => $auto() && $builder()->queue(null, __('Site-Wide Change')));
         }
 
@@ -978,11 +947,28 @@ final class SiteModule extends Plugin
         });
     }
 
+    /**
+     * The site's CSS holds the classes its content uses. When content changes, the classes are looked for again
+     * and the CSS is compiled where the server can, once, when it is next asked for or the request ends.
+     */
+    private function stylingTriggers(): void
+    {
+        $hooks = $this->cms()->hooks();
+
+        foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted', 'globals.saved', 'global.saved', 'global.deleted', 'navigation.saved', 'collection.deleted', 'site.cleared'] as $event) {
+            $hooks->on($event, fn () => $this->app->make(Styling::class)->changed());
+        }
+
+        $this->app->terminating(fn () => $this->app->resolved(Styling::class) && $this->app->make(Styling::class)->settle());
+        // The admin handing in the CSS it compiled follows from a change somebody made, which the log already has.
+        $hooks->addFilter('audit.unrecorded', static fn (bool $unrecorded, string $ability) => $unrecorded || $ability === 'styling/compiled');
+    }
+
     private function adminUi(): void
     {
         $admin = $this->cms()->admin();
-        $admin->nav('design', ['label' => 'Design', 'path' => '/design', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
-        // A site is mostly a design: it sits with the design, after what it brings (templates, components).
+        $admin->nav('styling', ['label' => 'Styling', 'path' => '/styling', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
+        // A site is mostly a design: it sits with the styling, after what it brings (templates, components).
         $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'site', 'order' => 90, 'permission' => 'settings.manage']);
         $admin->command('sites', ['label' => 'Sites', 'icon' => 'box', 'path' => '/sites', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);
         $admin->widget('site-status', ['label' => 'Site', 'description' => 'Whether the live site is up to date, with a button to publish it.', 'icon' => 'rocket', 'column' => 'side', 'enabled' => true, 'order' => 10]);
@@ -994,21 +980,39 @@ final class SiteModule extends Plugin
     private function agentContext(): void
     {
         $this->cms()->context()->register(
-            'cms://site/design',
-            'Design',
-            'The site’s design tokens (use as token:group.name), fonts, element styles, button variants, page transition and breakpoints. Compose with these instead of raw values.',
-            fn () => $this->app->make(Design::class)->json()->toArray()
+            'cms://site/styling',
+            'Styling',
+            'The site’s Tailwind stylesheet (theme.css: the @theme variables, the element styles and the site’s own @utility classes), its fonts and page transition. Style blocks with classes built from these names instead of arbitrary values.',
+            function () {
+                $styling = $this->app->make(Styling::class);
+
+                return [
+                    'rules' => [
+                        'Blocks carry Tailwind CSS v4 classes in `class`: "grid gap-6 md:grid-cols-3", "bg-primary text-primary-foreground hover:opacity-90". Every class Tailwind has works, with its variants (sm: md: lg:, hover: focus-visible:, dark:, group-hover:).',
+                        'A variable of `@theme` is a set of classes: --color-primary gives bg-primary, text-primary and border-primary; --font-display gives font-display; --container-content gives max-w-content. Use these names, not arbitrary values (bg-[#123456]).',
+                        '`classes` are the site’s own (`@utility name { @apply …; }` in the stylesheet): use them like any class. A button’s looks are btn-<name>.',
+                        'A state is an attribute, styled with a data variant: `data-open:rotate-45` on the element itself, `in-data-open:hidden` inside it, `group-data-open:…` under a `group`. `current:` styles the link to the page being shown.',
+                        'Dark values are in the theme as light-dark(light, dark); `dark:` on a class works too.',
+                        'Change the stylesheet with styling/update (the whole of it as `css`).',
+                    ],
+                    'css' => $styling->theme(),
+                    'classes' => $styling->classes(),
+                    ...$styling->settings(),
+                ];
+            }
         );
 
         // Where the front end's own surface is described, for an agent that only read the general guide.
         $this->cms()->hooks()->addFilter('agent.guide', static fn (string $guide) => $guide."\n".<<<'TXT'
         Front end:
-        - Motion, scripts and page transitions are data on blocks and in the design, not theme files: read cms://blocks for `motion` (load, appear, scroll with pin, scrub and progress), `behavior` (a script of the design mounted on a block, one or several), `persist` and `code`, and cms://site/code for the scripts, styles and libraries beside the design (design-code/list, design-code/save, design-vendor/create).
+        - Styling is Tailwind CSS v4. A block’s look is its `class` ("flex items-center gap-4 md:gap-8"); the site’s colours, fonts and sizes are the `@theme` variables of one stylesheet, content/styling/theme.css (styling/get, styling/update), which also holds the element styles (`@layer base`) and the site’s own classes (`@utility card { @apply …; }`). What many blocks share becomes such a class; a value the theme lacks goes into the theme, not into an arbitrary value on a block.
+        - A state is an attribute (`data-open`, `data-scrolled`, `data-current`), styled with Tailwind’s data variants: `data-open:rotate-45`, `in-data-open:hidden`, `group-data-open:opacity-100`. `current:` is the link to the page being shown, `dark:` the dark side.
+        - The CSS a page links is compiled from the stylesheet for the classes the content uses, by itself: on the server where it has Node 20 or newer, else in the admin when it is next open (styling/get `current` says whether it is up to date).
+        - Motion, scripts and page transitions are data on blocks and in the styling, not theme files: read cms://blocks for `motion` (load, appear, scroll with pin, scrub and progress), `behavior` (a script of the site mounted on a block, one or several), `persist` and `code`, and cms://site/code for the scripts, stylesheets and libraries in content/styling (styling-code/list, styling-code/save, styling-vendor/create).
         - A scroll animation with progress: true (or with scrub) tells its element how far along it is (--cms-progress, and a cms:progress event), so a number that counts with the scroll needs a few lines in a behaviour and no library.
-        - design/update changes the page transition one setting at a time ({"transition": {"navigation": "client"}} keeps its type and duration); the other sections it takes are replaced whole.
-        - design/fonts-import brings a Google Fonts family as it is (style: normal, italic or both) and fills in each face's fallback (Arial, Times New Roman or Courier New, with sizeAdjust and the ascent, descent and line gap overrides) from the font's own tables, so text doesn’t move when it arrives: nothing to type. Change one through design/update `fonts` only to correct it; a value you set stays when the family is imported again.
+        - styling/update changes the page transition one setting at a time ({"transition": {"navigation": "client"}} keeps its type and duration); `css` and `fonts` are replaced whole.
+        - styling/fonts-import brings a Google Fonts family as it is (style: normal, italic or both) and fills in each face's fallback (Arial, Times New Roman or Courier New, with sizeAdjust and the ascent, descent and line gap overrides) from the font's own tables, so text doesn’t move when it arrives: nothing to type. Name the family and its fallback in the theme (--font-sans: "Inter", "Inter Fallback", sans-serif). Change a face through styling/update `fonts` only to correct it; a value you set stays when the family is imported again.
         - A site is a whole site to start from, copied in once: sites/list has the ones here; sites/get with `mode` (design or full) is the plan, step by step; sites/apply takes it in (dryRun first: it refuses while the site has something of a name the site brings, until `clash` is skip, replace or rename); sites/export makes this site into one in sites/<handle>.
-        - Element styles reach a tag inside a tag ("h1 em", "nav a:hover") and a class a block carries (".note", "span.note em", ".card.is-open"): give the block that `class` and style it in the design’s `styles`, not in custom CSS. What needs an id, an attribute or a longer selector is a stylesheet beside the design.
         TXT);
     }
 }

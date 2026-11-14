@@ -113,7 +113,7 @@ function fromTemplate(t: Partial<BlockNode>, catalog?: Map<string, BlockTypeDef>
   return {
     ...base,
     props: { ...base.props, ...(t.props ?? {}) },
-    style: t.style,
+    ...(t.class ? { class: t.class } : {}),
     children: t.children ? t.children.map((c) => fromTemplate(c, catalog)) : base.children,
   }
 }

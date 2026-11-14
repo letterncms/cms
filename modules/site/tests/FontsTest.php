@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Cms\Modules\Site\Tests;
 
 use Cms\Abilities\AbilityContext;
-use Cms\Modules\Site\Design\Design;
-use Cms\Modules\Site\Design\Fonts;
+use Cms\Modules\Site\Styling\FontFaces;
+use Cms\Modules\Site\Styling\Fonts;
+use Cms\Modules\Site\Styling\Styling;
+use Cms\Support\Files;
 use Cms\Tests\TestCase;
 use RuntimeException;
 
@@ -68,7 +70,7 @@ final class FontsTest extends TestCase
 
     private function files(): array
     {
-        $files = array_map('basename', glob(content_path('design/fonts/*.woff2')) ?: []);
+        $files = array_map('basename', glob(content_path('styling/fonts/*.woff2')) ?: []);
         sort($files);
 
         return $files;
@@ -91,7 +93,8 @@ final class FontsTest extends TestCase
 
         $this->assertCount(2, $fonts->import('EB Garamond', 'both'));
         $this->assertSame(['eb-garamond-400-800-italic.woff2', 'eb-garamond-400-800.woff2'], $this->files());
-        $this->assertCount(2, array_filter($this->app->make(Design::class)->json()->fonts(), static fn ($f) => $f['family'] === 'EB Garamond'));
+        $this->assertCount(2, array_filter($this->app->make(Styling::class)->fonts(), static fn ($f) => $f['family'] === 'EB Garamond'));
+        $this->assertCount(2, Files::readJson(content_path('styling/settings.json'))['fonts'], 'kept in settings.json');
     }
 
     public function test_a_static_family_takes_the_weights_it_has_and_no_file_twice(): void
@@ -118,14 +121,20 @@ final class FontsTest extends TestCase
         $fonts = $this->fonts(['Wide Axis' => ['axes' => [['tag' => 'wght', 'min' => 1, 'max' => 1000]], 'fonts' => ['400' => []]]]);
         $this->assertSame('1 1000', $fonts->import('Wide Axis')[0]['weight']);
 
-        $compile = fn (array $font) => $this->cms()->abilities()->execute('design/preview', ['fonts' => [['family' => 'Wide Axis', 'src' => 'fonts/wide-axis-1-1000.woff2', ...$font]]], AbilityContext::system('test'))['css'];
+        $styling = $this->app->make(Styling::class);
+        // The faces as the site's CSS has them, before what Tailwind compiled.
+        $compile = function (array $font) use ($styling): string {
+            $styling->saveSettings(['fonts' => [['family' => 'Wide Axis', 'src' => 'fonts/wide-axis-1-1000.woff2', ...$font]]]);
+
+            return $styling->faces();
+        };
         $this->assertStringContainsString('font-weight:1 1000;', $compile(['weight' => '1 1000']));
         $this->assertStringContainsString('font-weight:100 1000;', $compile(['weight' => '100 1000']), 'not 400, as three digits only gave');
         $this->assertStringContainsString('font-weight:50;', $compile(['weight' => '50']));
         $this->assertStringContainsString('font-weight:400;', $compile(['weight' => "700\n}body{display:none"]));
         $this->assertStringContainsString('font-weight:400;', $compile(['weight' => '0']));
 
-        $upload = fn (string $weight) => $this->cms()->abilities()->execute('design/fonts-upload', ['family' => 'Up', 'data' => 'data:font/woff2;base64,'.base64_encode('wOF2'.str_repeat("\0", 40)), 'weight' => $weight], AbilityContext::system('test'));
+        $upload = fn (string $weight) => $this->cms()->abilities()->execute('styling/fonts-upload', ['family' => 'Up', 'data' => 'data:font/woff2;base64,'.base64_encode('wOF2'.str_repeat("\0", 40)), 'weight' => $weight], AbilityContext::system('test'));
         $this->assertSame('100 1000', $upload('100 1000')['weight']);
 
         // A name with a line break in it is no name: nothing of it reaches the stylesheet.
@@ -135,21 +144,17 @@ final class FontsTest extends TestCase
         $this->assertStringNotContainsString('wide-axis', $css);
     }
 
-    public function test_a_face_names_what_stands_in_for_it_and_its_tokens_follow(): void
+    public function test_a_face_names_what_stands_in_for_it(): void
     {
-        $css = $this->cms()->abilities()->execute('design/preview', [
-            'fonts' => [
+        $css = (new FontFaces)->css([
                 ['family' => 'Hanken Grotesk', 'src' => 'fonts/missing.woff2', 'weight' => '100 900', 'fallback' => 'Arial, Helvetica Neue', 'sizeAdjust' => '102%', 'ascentOverride' => '98%', 'descentOverride' => '26%', 'lineGapOverride' => '0%'],
                 ['family' => 'Hanken Grotesk', 'src' => 'fonts/missing-i.woff2', 'style' => 'italic', 'fallback' => 'Arial'],
                 ['family' => 'Bad', 'fallback' => 'x");}body{display:none', 'sizeAdjust' => '1em'],
-            ],
-            'tokens' => ['font.sans' => ['Hanken Grotesk', 'system-ui', 'sans-serif'], 'font.mono' => 'ui-monospace, monospace'],
-        ], AbilityContext::system('test'))['css'];
+        ], static fn (string $src) => '/_cms/'.$src);
 
         $this->assertStringContainsString('@font-face{font-family:"Hanken Grotesk Fallback";src:local("Arial"),local("Helvetica Neue");font-style:normal;size-adjust:102%;ascent-override:98%;descent-override:26%;line-gap-override:0%}', $css);
         $this->assertStringContainsString('@font-face{font-family:"Hanken Grotesk Fallback";src:local("Arial");font-style:italic}', $css);
-        $this->assertStringContainsString('--font-sans:"Hanken Grotesk", "Hanken Grotesk Fallback", system-ui, sans-serif', $css, 'the token that names the family gets its stand-in');
-        $this->assertStringContainsString('--font-mono:ui-monospace, monospace', $css);
+        $this->assertStringContainsString('@font-face{font-family:"Hanken Grotesk";src:url("/_cms/fonts/missing.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:optional}', $css);
         $this->assertStringNotContainsString('display:none', $css);
         $this->assertStringNotContainsString('Bad Fallback', $css);
     }
@@ -165,23 +170,21 @@ final class FontsTest extends TestCase
         [$upright, $italic] = $fonts->import('Karla', 'both');
 
         // Karla is a little wider than Arial and sits lower in its line; its italic is narrower.
-        $this->assertSame(['fallback' => 'Arial', 'sizeAdjust' => '103.63%', 'ascentOverride' => '88.48%', 'descentOverride' => '24.32%', 'lineGapOverride' => '0%'], array_intersect_key($upright, array_flip(\Cms\Modules\Site\Design\DesignCompiler::FALLBACK)));
+        $this->assertSame(['fallback' => 'Arial', 'sizeAdjust' => '103.63%', 'ascentOverride' => '88.48%', 'descentOverride' => '24.32%', 'lineGapOverride' => '0%'], array_intersect_key($upright, array_flip(FontFaces::FALLBACK)));
         $this->assertSame(['Arial', '93.7%', '97.87%', '26.89%'], [$italic['fallback'], $italic['sizeAdjust'], $italic['ascentOverride'], $italic['descentOverride']]);
         $this->assertContains('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,400', $this->asked);
 
-        $css = $this->cms()->abilities()->execute('design/preview', ['tokens' => ['font.sans' => ['Karla', 'sans-serif']]], AbilityContext::system('test'))['css'];
+        $css = $this->app->make(Styling::class)->faces();
         $this->assertStringContainsString('@font-face{font-family:"Karla Fallback";src:local("Arial");font-style:normal;size-adjust:103.63%;ascent-override:88.48%;descent-override:24.32%;line-gap-override:0%}', $css);
         $this->assertStringContainsString('@font-face{font-family:"Karla Fallback";src:local("Arial");font-style:italic;size-adjust:93.7%;', $css);
-        $this->assertStringContainsString('--font-sans:Karla, "Karla Fallback", sans-serif', $css);
 
         // A monospace family stands on Courier New, whose letters are as wide.
         $mono = $fonts->import('IBM Plex Mono')[0];
         $this->assertSame(['Courier New', '99.98%', '102.52%', '27.5%', '0%'], [$mono['fallback'], $mono['sizeAdjust'], $mono['ascentOverride'], $mono['descentOverride'], $mono['lineGapOverride']]);
 
         // What a person changed stays when the family is imported again.
-        $design = $this->app->make(Design::class)->json();
-        $design->setFonts(array_map(static fn (array $font) => $font['family'] === 'Karla' && $font['style'] === 'normal' ? [...$font, 'fallback' => 'Helvetica Neue, Arial', 'sizeAdjust' => '101%'] : $font, $design->fonts()));
-        $design->save();
+        $styling = $this->app->make(Styling::class);
+        $this->cms()->abilities()->execute('styling/update', ['fonts' => array_map(static fn (array $font) => $font['family'] === 'Karla' && $font['style'] === 'normal' ? [...$font, 'fallback' => 'Helvetica Neue, Arial', 'sizeAdjust' => '101%'] : $font, $styling->fonts())], AbilityContext::system('test'));
 
         [$again, $slanted] = $fonts->import('Karla', 'both');
         $this->assertSame(['Helvetica Neue, Arial', '101%', '88.48%'], [$again['fallback'], $again['sizeAdjust'], $again['ascentOverride']]);
@@ -190,7 +193,7 @@ final class FontsTest extends TestCase
         // No TrueType to read: the family arrives as before, without a fallback.
         $this->assertArrayNotHasKey('fallback', $fonts->import('Quiet')[0]);
 
-        $out = $this->cms()->abilities()->execute('design/fonts-import', ['family' => 'IBM Plex Mono'], AbilityContext::system('test'));
+        $out = $this->cms()->abilities()->execute('styling/fonts-import', ['family' => 'IBM Plex Mono'], AbilityContext::system('test'));
         $this->assertSame('Courier New', $out['fonts'][0]['fallback']);
     }
 }

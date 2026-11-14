@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@import "cms";
+
+/* The theme: every value here is a class. --color-primary gives bg-primary, text-primary, border-primary… */
+@theme {
+  --color-background: #ffffff;
+  --color-surface: #f6f6f4;
+  --color-raised: #ffffff;
+  --color-foreground: #161614;
+  --color-muted: #6b6b66;
+  --color-border: #e6e6e2;
+  --color-primary: #1d4ed8;
+  --color-primary-foreground: #ffffff;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --container-prose: 42rem;
+  --container-content: 72rem;
+  --container-wide: 84rem;
+}
+
+/* Elements: what a heading, a link or the page looks like before a block says otherwise. */
+@layer base {
+  body {
+    @apply bg-background font-sans text-base leading-relaxed text-foreground;
+  }
+  h1 {
+    @apply font-display text-5xl leading-tight font-semibold tracking-tight text-balance;
+  }
+  h2 {
+    @apply font-display text-3xl leading-tight font-semibold tracking-tight text-balance;
+  }
+  h3 {
+    @apply text-xl leading-snug font-semibold;
+  }
+  code {
+    @apply font-mono text-[0.9em];
+  }
+  ::selection {
+    @apply bg-primary/20;
+  }
+}
+
+/* Classes: the site's own, used on blocks like any Tailwind class, with hover:, md: and the rest. */
+@utility btn-primary {
+  @apply bg-primary text-primary-foreground hover:opacity-90;
+}
+
+@utility btn-secondary {
+  @apply border-border text-foreground hover:bg-surface;
+}
+
+@utility btn-ghost {
+  @apply text-foreground hover:bg-surface;
+}
+
+@utility btn-link {
+  @apply h-auto border-0 p-0 text-primary underline underline-offset-4;
+}

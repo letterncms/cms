@@ -220,7 +220,7 @@ final class ContentModule extends Plugin
         ]);
         $skills->register('build-page', [
             'label' => 'Build a Page',
-            'description' => 'Design a complete page from a brief, with the design tokens, blocks and components.',
+            'description' => 'Design a complete page from a brief, with the site’s styling, blocks and components.',
             'icon' => 'blocks',
             'arguments' => [
                 ['name' => 'brief', 'description' => 'What the page is for and what it should say', 'required' => true],
@@ -229,9 +229,9 @@ final class ContentModule extends Plugin
             'prompt' => <<<'TXT'
             Build a page for this brief: {brief}
 
-            1. Read cms://site/design, cms://blocks and cms://collections. Check components/list for components, patterns/list for patterns to start from (a whole page of the category Pages, or sections to copy in), and templates/list for page templates.
+            1. Read cms://site/styling, cms://blocks and cms://collections. Check components/list for components, patterns/list for patterns to start from (a whole page of the category Pages, or sections to copy in), and templates/list for page templates.
             2. Plan the sections (hero, proof, features, FAQ, call to action…) before writing. Lead with the answer; keep paragraphs short.
-            3. Create the entry with entries.create in collection "{collection}" (pages if empty), body as blocks: top-level `section` blocks, styles only with tokens.
+            3. Create the entry with entries.create in collection "{collection}" (pages if empty), body as blocks: top-level `section` blocks, styled with Tailwind classes (`class`) that use the theme’s names (bg-primary, text-muted, max-w-content) and the site’s own classes, not arbitrary values.
             4. Give every image alt text; write an SEO description (seo.description) of 70–160 characters.
             5. Run seo.analyze on the new entry and fix warnings, then publish with entries.publish and report the URL.
             TXT,

@@ -124,13 +124,13 @@ const OPTION_KEY = { strip: '[^A-Za-z0-9_-]' }
 const optionKey = (key: string) => key.replace(/^[^A-Za-z_]+/, '').slice(0, 41)
 
 /**
- * A behaviour written for the site: the script of the design mounted on the block (`behavior`), when it runs and
+ * A behaviour written for the site: the script of the site mounted on the block (`behavior`), when it runs and
  * with which options, and the scripts and styles the block brings to its page (`code`). The files are the ones
- * Design › Code lists; putting them on a block needs the same permission as editing them.
+ * Styling › Code lists; putting them on a block needs the same permission as editing them.
  */
 function ScriptBehavior({ node }: { node: BlockNode }) {
   const { store } = useEditorContext()
-  const files = useAbility<{ scripts: string[]; styles: string[] }>('design-code/list', {}, { staleTime: 30_000 })
+  const files = useAbility<{ scripts: string[]; styles: string[] }>('styling-code/list', {}, { staleTime: 30_000 })
   const behavior = node.behavior
   const code = node.code ?? {}
   // What the block names stays choosable while the list loads, and when its file is gone.
@@ -264,7 +264,7 @@ export function LogicPanel({ node }: { node: BlockNode }) {
         <SubHeading title={t('States')} action={<AddButton label={t('Add State')} onClick={() => save({ states: { ...(logic.states ?? {}), [Object.keys(logic.states ?? {}).length ? `state${Object.keys(logic.states ?? {}).length + 1}` : 'open']: variables[0] ?? 'open' } })} />} />
         <PanelFields
           bare
-          fields={[{ handle: 'states', type: 'json', component: 'blocks-pairs', className: 'items-start', label: t('States'), key: { prefix: 'is-', lower: true, strip: '[^a-z0-9-]', className: '!w-[34%] !flex-none' }, join: t('when'), item: expr('expr', t('When||condition')) }]}
+          fields={[{ handle: 'states', type: 'json', component: 'blocks-pairs', className: 'items-start', label: t('States'), key: { prefix: 'data-', lower: true, strip: '[^a-z0-9-]', className: '!w-[38%] !flex-none' }, join: t('when'), item: expr('expr', t('When||condition')) }]}
           values={{ states: logic.states }}
           onChange={(_, states) => save({ states })}
         />
@@ -297,7 +297,7 @@ export function LogicPanel({ node }: { node: BlockNode }) {
           onToggle={(on) => save({ behaviors: { ...behaviors, scroll: on ? { threshold: 20 } : undefined } })}
           fields={[
             { handle: 'threshold', type: 'text', component: 'blocks-value', label: t('After||a distance'), unit: '', prefix: 'px' },
-            { handle: 'hide', type: 'toggle', size: 'sm', label: t('Add is-hidden While Scrolling Down') },
+            { handle: 'hide', type: 'toggle', size: 'sm', label: t('Add data-hidden While Scrolling Down') },
           ]}
           values={{ threshold: String(behaviors.scroll?.threshold ?? 20), hide: !!behaviors.scroll?.hide }}
           onChange={(h, v) => save({ behaviors: { ...behaviors, scroll: { ...behaviors.scroll, [h]: h === 'threshold' ? Number(v ?? 20) : v } } })}

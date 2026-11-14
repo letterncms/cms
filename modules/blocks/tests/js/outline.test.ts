@@ -14,7 +14,7 @@ const noCustom = () => false
 
 test('nested layouts retain selectable wrappers, original nodes and exact parent relationships', () => {
   const paragraph = node('words', 'paragraph', undefined, { props: { text: 'Editable words' } })
-  const box = node('box', 'box', [paragraph], { style: { base: { display: 'grid' } } })
+  const box = node('box', 'box', [paragraph], { class: 'grid' })
   const section = node('hero', 'section', [box], { label: 'Hero', attrs: { 'aria-label': 'Introduction' } })
   const original = structuredClone(section)
   const sections = outline([section], types, noCustom)

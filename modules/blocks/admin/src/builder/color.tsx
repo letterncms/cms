@@ -1,12 +1,15 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
-import { useEffect, useRef, useState } from 'react'
-import { useTokens } from '../core/context'
+import { Button, fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ThemeToken } from '../../../tailwind/engine'
+import { useThemeTokens } from '../core/styling'
 import { Swatch, inputClass } from './controls'
 import { Control, useInvalid } from './fields/controls'
 import { TokenChip, useTokenOf } from './fields/tokens'
+import { colorGroups, lightDark } from './styleApi'
 
-/* Color values: a token (token:color.primary, optionally /alpha), hex, rgb() or any CSS color. */
+/* Colour values: a colour of the theme (`var(--color-primary)`, or mixed with an opacity as Tailwind writes
+   bg-primary/50), hex, rgb() or any CSS colour. */
 
 interface Rgba {
   r: number
@@ -55,30 +58,27 @@ function fromHsv(h: number, s: number, v: number, a: number): Rgba {
   return { r: f(5), g: f(3), b: f(1), a }
 }
 
-/** Whether the browser can draw this color (tokens count: the design defines them). */
+/** A theme colour at an opacity, as Tailwind mixes it: what `bg-primary/50` declares. */
+export function withAlpha(variable: string, percent: number): string {
+  return percent >= 100 ? `var(${variable})` : `color-mix(in oklab, var(${variable}) ${Math.round(percent)}%, transparent)`
+}
+
+/** Whether the browser can draw this colour (a theme colour is one: the stylesheet defines it). */
 export function validColor(value: string): boolean {
-  if (/^token:[a-z]+\.[a-z0-9-]+(\/\d{1,3})?$/.test(value)) return true
   return typeof CSS !== 'undefined' && CSS.supports('color', value)
 }
 
-/** What a color value looks like (tokens resolved to their light value). */
+/** What a colour value looks like, the theme's variables worked out (the canvas has them, the admin doesn't). */
 export function useColorPreview() {
-  const { byPath } = useTokens()
-  return (value: string | undefined): string => {
-    if (!value) return 'transparent'
-    return value.replace(/token:([a-z]+\.[a-z0-9-]+)(?:\/(\d+))?/g, (_, path, alpha) => {
-      const token = byPath.get(path)
-      const base = token ? String(token.value) : 'transparent'
-      return alpha ? `color-mix(in srgb, ${base} ${alpha}%, transparent)` : base
-    })
-  }
+  const tokens = useThemeTokens()
+  return (value: string | undefined): string => (value ? tokens.resolve(value) : 'transparent')
 }
 
 /**
- * `blocks-color` — a color value with a picker (HSV, alpha) and the theme's color tokens.
- * Core color has neither tokens nor alpha. Empty, it shows `placeholder` beside a `swatch` (CSS) of what applies.
+ * `blocks-color` — a colour value with a picker (HSV, alpha) and the theme's colours.
+ * Core color has neither the theme nor alpha. Empty, it shows `placeholder` beside a `swatch` (CSS) of what applies.
  */
-export function ColorField({ field, value: raw, onChange }: FieldProps<string | null>) {
+export function ColorField({ field, value: raw, onChange, disabled }: FieldProps<string | null>) {
   const [open, setOpen] = useState(false)
   const preview = useColorPreview()
   const tokenOf = useTokenOf()
@@ -93,7 +93,7 @@ export function ColorField({ field, value: raw, onChange }: FieldProps<string | 
         align="end"
         className="w-64 !p-0"
         trigger={
-          <Pressable compact id={fieldControlId(field)} className={cn(inputClass, 'flex items-center gap-1.5 pl-1 text-left')}>
+          <Pressable compact id={fieldControlId(field)} disabled={disabled} className={cn(inputClass, 'flex items-center gap-1.5 pl-1 text-left')}>
             <Swatch color={value === undefined && typeof field.swatch === 'string' ? field.swatch : preview(value)} className="!size-4" />
             {chosen ? (
               <TokenChip token={chosen.token} alpha={chosen.alpha} />
@@ -109,20 +109,36 @@ export function ColorField({ field, value: raw, onChange }: FieldProps<string | 
   )
 }
 
+/** One colour of the theme in the list. */
+function ThemeColor({ token, current, onPick }: { token: ThemeToken; current: boolean; onPick: () => void }) {
+  const { light, dark } = lightDark(token.value)
+  return (
+    <Pressable compact role="option" aria-selected={current} title={`${token.variable} · ${token.value}`} onClick={onPick} className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-1.5 text-left text-xs hover:bg-hover', current && 'bg-active')}>
+      <Swatch color={light} dark={dark} className="!size-4" />
+      <span className="min-w-0 flex-1 truncate text-text">{token.name}</span>
+      {current ? <Icon name="check" size={12} className="shrink-0 text-focus" /> : <span className="w-3 shrink-0" />}
+    </Pressable>
+  )
+}
+
 /**
- * The theme's color tokens, listed by name, or a custom color (HSV area, hue, alpha, hex).
- * It opens on the tokens unless the value is a custom color.
+ * The theme's colours (the site's own by name, Tailwind's palette folded under them), or a custom colour
+ * (HSV area, hue, alpha, hex). It opens on the theme unless the value is a custom colour.
  */
 function ColorPicker({ label, value, onChange }: { label: string; value?: string; onChange: (v: string | null) => void }) {
-  const { byGroup } = useTokens()
-  const tokens = byGroup.get('color') ?? []
-  const preview = useColorPreview()
-  const current = value?.startsWith('token:') ? value.slice(6).split('/')[0] : null
-  const parsed = parseColor(value?.startsWith('token:') ? preview(value.split('/')[0]) : value) ?? { r: 0, g: 0, b: 0, a: 1 }
-  const [hsv, setHsv] = useState(() => ({ ...toHsv(parsed), a: value?.includes('/') && value.startsWith('token:') ? Number(value.split('/')[1]) / 100 : parsed.a }))
+  const tokens = useThemeTokens()
+  const colors = tokens.of('color')
+  const groups = useMemo(() => colorGroups(colors), [colors])
+  const chosen = tokens.find(value)
+  const current = chosen?.token.variable ?? null
+  const themeAlpha = chosen ? (chosen.alpha === undefined ? 1 : Number(chosen.alpha) / 100) : 1
+  const parsed = parseColor(chosen ? lightDark(tokens.resolve(chosen.token.ref)).light : value) ?? { r: 0, g: 0, b: 0, a: 1 }
+  const [hsv, setHsv] = useState(() => ({ ...toHsv(parsed), a: chosen ? themeAlpha : parsed.a }))
   const [text, setText] = useState(value ?? '')
   const invalid = useInvalid(text, (v) => !v.trim() || validColor(v.trim()))
-  const [tab, setTab] = useState<'tokens' | 'custom'>(() => (tokens.length > 0 && (!value || value.startsWith('token:')) ? 'tokens' : 'custom'))
+  const [tab, setTab] = useState<'theme' | 'custom'>(() => (colors.length > 0 && (!value || !!chosen) ? 'theme' : 'custom'))
+  // The palette is two hundred colours: folded until someone wants one, open on the one that is chosen.
+  const [palette, setPalette] = useState(() => !!chosen && groups.families.some((family) => family.shades.includes(chosen.token)))
   const area = useRef<HTMLDivElement>(null)
 
   useEffect(() => setText(value ?? ''), [value])
@@ -141,7 +157,8 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
       const y = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height))
       if (kind === 'area') emit(hsv.h, x, 1 - y, hsv.a)
       else if (kind === 'hue') emit(x * 360, hsv.s, hsv.v, hsv.a)
-      else if (value?.startsWith('token:')) onChange(`${value.split('/')[0]}${x < 0.995 ? `/${Math.round(x * 100)}` : ''}`)
+      // A theme colour keeps its name at an opacity: bg-primary/60.
+      else if (current) onChange(withAlpha(current, x < 0.995 ? Math.round(x * 100) : 100))
       else emit(hsv.h, hsv.s, hsv.v, Math.round(x * 100) / 100)
     }
     apply(e)
@@ -154,9 +171,8 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
     el.addEventListener('pointerup', up)
   }
 
-  // A token's opacity lives in its value (token:color.primary/60).
-  const alpha = current ? (value?.includes('/') ? Number(value.split('/')[1]) / 100 : 1) : hsv.a
-  const solid = current ? preview(`token:${current}`) : formatColor({ ...fromHsv(hsv.h, hsv.s, hsv.v, 1) })
+  const alpha = current ? themeAlpha : hsv.a
+  const solid = current ? lightDark(tokens.resolve(`var(${current})`)).light : formatColor({ ...fromHsv(hsv.h, hsv.s, hsv.v, 1) })
   const alphaBar = (
     <div onPointerDown={(e) => drag(e, 'alpha')} className="relative h-2.5 cursor-ew-resize rounded-full cms-checkerboard">
       <span className="absolute inset-0 rounded-full" style={{ background: `linear-gradient(to right, transparent, ${solid})` }} />
@@ -169,24 +185,27 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
     <div>
       <div className="flex h-9 items-center gap-2 border-b border-border pl-2.5 pr-1.5">
         <span className="min-w-0 flex-1 truncate text-xs font-medium text-text">{label}</span>
-        {tokens.length > 0 && <Segmented size="xs" value={tab} onChange={setTab} options={[{ value: 'tokens', label: t('Tokens') }, { value: 'custom', label: t('Custom') }]} />}
+        {colors.length > 0 && <Segmented size="xs" value={tab} onChange={setTab} options={[{ value: 'theme', label: t('Theme') }, { value: 'custom', label: t('Custom') }]} />}
       </div>
-      {tab === 'tokens' ? (
+      {tab === 'theme' ? (
         <div>
-          <div role="listbox" aria-label={t('Color Tokens')} className="max-h-60 overflow-y-auto p-1">
-            {tokens.map((token) => (
-              <Pressable compact key={token.path}
-                role="option"
-                aria-selected={current === token.path}
-                title={`${token.path} · ${String(token.value)}${token.dark ? ` / ${String(token.dark)}` : ''}`}
-                onClick={() => onChange(`token:${token.path}`)}
-                className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-1.5 text-left text-xs hover:bg-hover', current === token.path && 'bg-active')}
-              >
-                <Swatch color={String(token.value)} dark={token.dark ? String(token.dark) : undefined} className="!size-4" />
-                <span className="min-w-0 flex-1 truncate text-text">{token.name}</span>
-                <span className="max-w-[45%] shrink-0 truncate font-mono text-2xs text-faint">{String(token.value)}</span>
-                {current === token.path ? <Icon name="check" size={12} className="shrink-0 text-focus" /> : <span className="w-3 shrink-0" />}
-              </Pressable>
+          <div role="listbox" aria-label={t('Theme Colors')} className="max-h-72 overflow-y-auto p-1">
+            {groups.own.map((token) => <ThemeColor key={token.variable} token={token} current={current === token.variable} onPick={() => onChange(token.ref)} />)}
+            {groups.families.length > 0 && (
+              <Button variant="ghost" size="xs" aria-expanded={palette} onClick={() => setPalette(!palette)} className="mt-1 w-full !justify-start !gap-1 !px-1.5 !font-normal !text-muted hover:!text-ink">
+                <Icon name="chevron-down" size={10} className={cn('shrink-0 transition-[rotate] duration-fast', !palette && '-rotate-90')} />
+                {t('Palette')}
+              </Button>
+            )}
+            {palette && groups.families.map((family) => (
+              <div key={family.name} className="flex h-6 items-center gap-2 px-1.5">
+                <span className="w-14 shrink-0 truncate text-2xs text-muted">{family.name}</span>
+                <div className="flex min-w-0 flex-1 gap-px">
+                  {family.shades.map((token) => (
+                    <Pressable compact key={token.variable} role="option" aria-selected={current === token.variable} aria-label={token.name} title={token.name} onClick={() => onChange(token.ref)} className={cn('h-4 min-w-0 flex-1 first:rounded-l-xs last:rounded-r-xs', current === token.variable && 'ring-2 ring-focus ring-offset-1 ring-offset-float')} style={{ background: token.value }} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
           <div className="flex items-center gap-2 border-t border-border px-2.5 py-2">
@@ -228,7 +247,7 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
                 if (e.key === 'Escape') setText(value ?? '')
                 if (e.key !== 'Enter') return
                 if (text.trim() && !validColor(text.trim())) invalid.show()
-                else (e.target as HTMLInputElement).blur()
+                else (e.target as HTMLElement).blur()
               }}
               className={cn(inputClass, 'font-mono')}
               placeholder={NEW_COLOR}

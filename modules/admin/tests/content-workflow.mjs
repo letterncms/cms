@@ -86,7 +86,8 @@ const requests = []
 const failures = new Set()
 let delay = 0
 let sequence = 1
-const catalog = realSources[0]?.catalog ?? { blocks: [{ name: 'heading', title: 'Heading', icon: 'heading', category: 'text', fields: [{ handle: 'text', type: 'text', label: 'Text' }], styles: [] }, { name: 'paragraph', title: 'Paragraph', icon: 'text', category: 'text', fields: [{ handle: 'text', type: 'textarea', label: 'Text' }], styles: [] }, { name: 'box', title: 'Container', icon: 'square', category: 'layout', children: true, fields: [{ handle: 'tag', type: 'text', label: 'HTML tag' }], styles: [] }, { name: 'component', title: 'Component', icon: 'symbol', category: 'layout', fields: [], styles: [] }, { name: 'list', title: 'List', icon: 'list', category: 'text', fields: [], styles: [] }], styles: {}, aliases: {}, states: ['hover'], breakpoints: { tablet: '820px', mobile: '390px' }, sources: [], transforms: [], motion: { triggers: [], properties: {} }, logic: { events: [], mods: [], actions: [], transitions: [], merges: [] } }
+const catalog = realSources[0]?.catalog ?? { blocks: [{ name: 'heading', title: 'Heading', icon: 'heading', category: 'text', fields: [{ handle: 'text', type: 'text', label: 'Text' }], styles: [] }, { name: 'paragraph', title: 'Paragraph', icon: 'text', category: 'text', fields: [{ handle: 'text', type: 'textarea', label: 'Text' }], styles: [] }, { name: 'box', title: 'Container', icon: 'square', category: 'layout', children: true, fields: [{ handle: 'tag', type: 'text', label: 'HTML tag' }], styles: [] }, { name: 'component', title: 'Component', icon: 'symbol', category: 'layout', fields: [], styles: [] }, { name: 'list', title: 'List', icon: 'list', category: 'text', fields: [], styles: [] }], sources: [], motion: { triggers: [], properties: {} }, logic: { events: [], mods: [], actions: [], transitions: [], merges: [] } }
+const fixtureStylesheet = '@import "tailwindcss";\n'
 const runner = String.raw`
 import { navigate, queryClient } from '@letterncms/sdk'
 const output = document.querySelector('#results')
@@ -692,7 +693,7 @@ serve('Content workflow', async (req, res, url) => {
     return res.end(`<!doctype html><html><head><script type="importmap">{"imports":{"canvas-mark":"/_cms/site/scripts/canvas-mark.js","unused-lib":"/_cms/site/vendor/unused/index.js"}}</script><style>body{font:18px/1.65 system-ui;margin:0;padding:48px;color:#111;background:white}h1{font-size:40px;line-height:1.2}#fixture-entry-title{font-size:42px;line-height:1.2;max-width:680px;margin:0 auto 32px}.story{display:flow-root;max-width:680px;margin:0 auto;padding:24px 0 56px}.story section{padding:24px 0;margin:28px 0}.story p{margin:24px 0;min-height:1lh}.story h1,.story h2{margin:24px 0}.story h2{font-size:30px;line-height:1.3}.story li{min-height:1lh}</style></head><body><h1 id="fixture-entry-title">${escape(input.title ?? '')}</h1><main id="fixture-preview" class="story"${edit ? ` data-cms-editor-root="${editorToken}"` : ''}>${renderBlocks(input.data.body ?? [], edit)}</main>${edit ? prototypes() : ''}${drawn}<script>window.__fixturePreviewRan = true</script></body></html>`)
 
   }
-  // Scripts of the design the canvas mounts: one says it draws there, by a name the page's import map resolves; one does not.
+  // Scripts of the site the canvas mounts: one says it draws there, by a name the page's import map resolves; one does not.
   const script = (code) => { res.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' }); return res.end(code) }
   if (url.pathname === '/_cms/site/scripts/canvas-mark.js') return script(`export const mark = (el, ground) => { el.dataset.drawn = String(ground) }`)
   if (url.pathname === '/_cms/site/scripts/canvas.js') return script(`import { mark } from 'canvas-mark'
@@ -746,7 +747,10 @@ export function mount(el, props, context) {
     }
     else if (ability === 'blocks/types') data = catalog
     else if (ability === 'components/list') data = realSources[0]?.components ?? [fixtureComponent]
-    else if (ability === 'design/get') data = realSources[0]?.design ?? { tokens: [], breakpoints: { tablet: '820px', mobile: '390px' }, templates: {}, name: 'Fixture', fonts: [], stylesheet: '' }
+    // The site's styling: its Tailwind stylesheet, and what Tailwind compiles the canvas's CSS from. It says it is
+    // compiled (`current`), so the admin has nothing to compile for the server here.
+    else if (ability === 'styling/get') data = { ...(realSources[0]?.styling ?? { css: fixtureStylesheet, classes: [], fonts: [], fontFiles: [], transition: { type: 'none', duration: 0.3, navigation: 'document' }, templates: {}, stylesheet: '', js: '' }), current: true }
+    else if (ability === 'styling/source') data = realSources[0]?.source ?? { signature: '0'.repeat(32), css: fixtureStylesheet, files: {}, candidates: [], faces: '' }
     else if (ability === 'seo/analyze') data = { score: 100, checks: [{ id: 'title', status: 'pass', label: 'Title', message: 'Search title is available.' }], meta: { title: entries.get(input.id)?.title, description: 'A fixture description', canonical: '', image: null } }
     else if (ability === 'seo/markdown') data = { markdown: '# Fixture Markdown' }
     else if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); data = manifest.user }

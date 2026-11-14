@@ -9,13 +9,16 @@ use Cms\Support\Yaml;
 
 /**
  * Where media is used: entries (with their unpublished changes), templates, components,
- * globals, design tokens and settings. It answers what would break: ids and /media/ URLs
+ * globals, the site's stylesheet and settings. It answers what would break: ids and /media/ URLs
  * that point at nothing, records without a file, files without a record, and items
  * nothing uses.
  */
 final class MediaReferences
 {
     private const string TOKEN = '/media:([0-9a-z]{26})/i';
+
+    /** A file's address inside CSS: up to what ends a url() or a string. */
+    private const string ADDRESS = '#/media/[^\s"\'<>()]+#';
 
     /** @var array<string, true> field handles that hold media, at any depth */
     private array $handles = [];
@@ -50,10 +53,20 @@ final class MediaReferences
             $this->walk($data, ['kind' => 'global', 'id' => (string) $handle, 'title' => (string) $handle], '', $found);
         }
 
-        $tokens = content_path('design/tokens.json');
+        // The stylesheet is CSS, not data: a file is named there by its address (url("/media/2026/11/paper.jpg")) or as media:<id>.
+        if (is_file($theme = content_path('styling/theme.css'))) {
+            $css = (string) file_get_contents($theme);
+            $where = ['kind' => 'styling', 'id' => 'theme', 'title' => 'Stylesheet', 'path' => 'theme.css'];
+            preg_match_all(self::TOKEN, $css, $ids);
+            preg_match_all(self::ADDRESS, $css, $addresses);
 
-        if (is_file($tokens)) {
-            $this->walk((array) json_decode((string) file_get_contents($tokens), true), ['kind' => 'design', 'id' => 'tokens', 'title' => 'Design tokens'], '', $found, styles: true);
+            foreach ([...array_map('strtolower', $ids[1]), ...$addresses[0]] as $id) {
+                $found[] = ['id' => $id, 'where' => $where];
+            }
+        }
+
+        if (is_file($settings = content_path('styling/settings.json'))) {
+            $this->walk((array) json_decode((string) file_get_contents($settings), true), ['kind' => 'styling', 'id' => 'settings', 'title' => 'Fonts and page transition'], '', $found);
         }
 
         return $this->all = $found;
@@ -123,7 +136,7 @@ final class MediaReferences
     }
 
     /**
-     * What uses one item, each thing once: an entry with its collection (where it opens), a global, the design.
+     * What uses one item, each thing once: an entry with its collection (where it opens), a global, the stylesheet.
      *
      * @return list<array{kind: string, id: string, title: string, collection: ?string, locale: ?string}>
      */
@@ -180,7 +193,9 @@ final class MediaReferences
                 cms()->entries()->save($entry);
             } elseif ($change['type'] === 'global' && is_file($file = content_path("globals/{$change['id']}.yaml"))) {
                 Yaml::write($file, $swap(Yaml::read($file)));
-            } elseif ($change['type'] === 'design' && is_file($file = content_path('design/tokens.json'))) {
+            } elseif ($change['type'] === 'styling' && $change['id'] === 'theme' && is_file($file = content_path('styling/theme.css'))) {
+                file_put_contents($file, preg_replace_callback(self::ADDRESS, static fn (array $m) => $swap($m[0]), (string) file_get_contents($file)));
+            } elseif ($change['type'] === 'styling' && is_file($file = content_path('styling/settings.json'))) {
                 file_put_contents($file, json_encode($swap((array) json_decode((string) file_get_contents($file), true)), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n");
             }
         }
@@ -191,7 +206,7 @@ final class MediaReferences
         return array_values($changes);
     }
 
-    private function walk(mixed $value, array $where, string $path, array &$found, bool $styles = false): void
+    private function walk(mixed $value, array $where, string $path, array &$found): void
     {
         if (is_string($value)) {
             $key = (string) substr((string) strrchr('.'.$path, '.'), 1);
@@ -212,7 +227,7 @@ final class MediaReferences
 
         if (is_array($value)) {
             foreach ($value as $key => $child) {
-                $this->walk($child, $where, ltrim($path.'.'.$key, '.'), $found, $styles);
+                $this->walk($child, $where, ltrim($path.'.'.$key, '.'), $found);
             }
         }
     }

