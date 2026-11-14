@@ -1,0 +1,18 @@
+/* Gallery block (MediaBlocks::gallery). Its render says how many columns on a desktop, a tablet and a phone, and the gap, as variables. */
+@layer components {
+  /* Its margins are the flow's around it (the base reset and prose), as every block's are. */
+  .cms-gallery { display: grid; grid-template-columns: repeat(var(--cms-columns, 3), minmax(0, 1fr)); gap: var(--cms-gap, calc(var(--spacing) * 4)); align-items: start; list-style: none; padding: 0; }
+  @media (width < 64rem) { .cms-gallery { grid-template-columns: repeat(var(--cms-columns-tablet, 3), minmax(0, 1fr)); } }
+  @media (width < 48rem) { .cms-gallery { grid-template-columns: repeat(var(--cms-columns-phone, 2), minmax(0, 1fr)); } }
+  .cms-gallery__item { min-width: 0; margin: 0; padding: 0; }
+  /* The block workspace's stand-in for its pictures spans every column. */
+  .cms-gallery > .cms-media-placeholder { grid-column: 1 / -1; }
+  .cms-gallery__item figure { margin: 0; }
+  .cms-gallery__item img, .cms-gallery__item picture { display: block; width: 100%; height: auto; border-radius: var(--radius-md); }
+  .cms-gallery__item a { display: block; border-radius: var(--radius-md); cursor: zoom-in; }
+  .cms-gallery__item a img { transition: opacity 160ms ease; }
+  .cms-gallery__item a:hover img { opacity: 0.9; }
+  .cms-gallery__item a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .cms-gallery__item figcaption { margin-top: 0.5em; font-size: var(--text-sm); line-height: 1.45; color: var(--color-muted); }
+  @media (prefers-reduced-motion: reduce) { .cms-gallery__item a img { transition: none; } }
+}

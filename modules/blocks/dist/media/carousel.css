@@ -1,0 +1,25 @@
+/* Carousel block (MediaBlocks::carousel), on the Carousel behaviour: a row that snaps, and two buttons below it. */
+@layer components {
+  .cms-carousel { --cms-per-view: 1; position: relative; min-width: 0; }
+  .cms-carousel[data-per-view="2"] { --cms-per-view: 2; }
+  .cms-carousel[data-per-view="3"] { --cms-per-view: 3; }
+  .cms-carousel[data-per-view="4"] { --cms-per-view: 4; }
+  @media (width < 64rem) { .cms-carousel:is([data-per-view="3"], [data-per-view="4"]) { --cms-per-view: 2; } }
+  @media (width < 48rem) { .cms-carousel:is([data-per-view="2"], [data-per-view="3"], [data-per-view="4"]) { --cms-per-view: 1; } }
+  .cms-carousel__track { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--cms-per-view) - 1) * var(--cms-gap, calc(var(--spacing) * 4))) / var(--cms-per-view)); gap: var(--cms-gap, calc(var(--spacing) * 4)); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .cms-carousel__track::-webkit-scrollbar { display: none; }
+  .cms-carousel[data-per-view="auto"] .cms-carousel__track { grid-auto-columns: max-content; }
+  .cms-carousel__track > * { min-width: 0; scroll-snap-align: start; }
+  .cms-carousel__track:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+  .cms-carousel__nav { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: calc(var(--spacing) * 4); }
+  .cms-carousel__button { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-background); color: inherit; font: inherit; cursor: pointer; transition: background-color 140ms ease, opacity 140ms ease; }
+  .cms-carousel__button:hover:not(:disabled) { background: var(--color-surface); }
+  .cms-carousel__button:disabled { opacity: 0.35; cursor: default; }
+  .cms-carousel__button svg { width: 1.125rem; height: 1.125rem; }
+  /* Without scripts: a row that scrolls, with its scrollbar, and no buttons that would do nothing. */
+  @media (scripting: none) {
+    .cms-carousel__track { scrollbar-width: thin; }
+    .cms-carousel__nav { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .cms-carousel__button { transition: none; } }
+}
