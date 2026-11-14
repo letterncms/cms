@@ -1,0 +1,25 @@
+/* Carousel block (MediaBlocks::carousel), on the Carousel behaviour: a row that snaps, and two buttons below it. */
+@layer components {
+  .cms-carousel { --cms-per-view: 1; position: relative; min-width: 0; }
+  .cms-carousel[data-per-view="2"] { --cms-per-view: 2; }
+  .cms-carousel[data-per-view="3"] { --cms-per-view: 3; }
+  .cms-carousel[data-per-view="4"] { --cms-per-view: 4; }
+  @media (max-width: 1023.98px) { .cms-carousel:is([data-per-view="3"], [data-per-view="4"]) { --cms-per-view: 2; } }
+  @media (max-width: 767.98px) { .cms-carousel:is([data-per-view="2"], [data-per-view="3"], [data-per-view="4"]) { --cms-per-view: 1; } }
+  .cms-carousel__track { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--cms-per-view) - 1) * var(--cms-gap, 1rem)) / var(--cms-per-view)); gap: var(--cms-gap, 1rem); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .cms-carousel__track::-webkit-scrollbar { display: none; }
+  .cms-carousel[data-per-view="auto"] .cms-carousel__track { grid-auto-columns: max-content; }
+  .cms-carousel__track > * { min-width: 0; scroll-snap-align: start; }
+  .cms-carousel__track:focus-visible { outline: 2px solid var(--color-focus, currentColor); outline-offset: 4px; }
+  .cms-carousel__nav { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: var(--space-4, 1rem); }
+  .cms-carousel__button { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 1px solid var(--color-border, rgb(0 0 0 / 0.12)); border-radius: 999px; background: var(--color-background, transparent); color: inherit; font: inherit; cursor: pointer; transition: background-color 140ms ease, opacity 140ms ease; }
+  .cms-carousel__button:hover:not(:disabled) { background: var(--color-surface, rgb(0 0 0 / 0.05)); }
+  .cms-carousel__button:disabled { opacity: 0.35; cursor: default; }
+  .cms-carousel__button svg { width: 1.125rem; height: 1.125rem; }
+  /* Without scripts: a row that scrolls, with its scrollbar, and no buttons that would do nothing. */
+  @media (scripting: none) {
+    .cms-carousel__track { scrollbar-width: thin; }
+    .cms-carousel__nav { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .cms-carousel__button { transition: none; } }
+}
