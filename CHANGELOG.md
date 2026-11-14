@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.36.3 (2026-11-14)
+
 ### Changed
 
 - **Design → Patterns** shows three patterns to a row, each in a 16:9 picture of its top, as a desktop window shows it.
