@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { parseClass, screenVariant, withVariants, type Engine } from '../../../../tailwind/engine'
 import { Stylesheet } from '../../../../tailwind/stylesheet'
 import { loadCompiler, type StylingSource } from '../../core/styling'
-import { Specimen, styleSample, useSpecimenSheet } from '../specimen'
+import { Specimen, styleLabel, styleSample, useSpecimenSheet } from '../specimen'
 import { splitSiteClasses, usedVariants } from '../styleApi'
 import type { StyleApi } from '../useStyle'
 
@@ -149,8 +149,9 @@ export function StyleBar({ s, site, source, state, disabled }: StyleBarProps) {
   const sizes = s.screen.sizes
   const sized = (raw: string) => parseClass(raw).variants.some((variant) => !!screenVariant(variant, sizes))
   const moving = parts.utilities.filter((raw) => !sized(raw))
-  const styles = site.filter((name) => !name.startsWith('btn-'))
+  const schemes = site.filter((name) => name.startsWith('scheme-'))
   const buttons = site.filter((name) => name.startsWith('btn-'))
+  const styles = site.filter((name) => !schemes.includes(name) && !buttons.includes(name))
   // Each style is shown as the site draws it: the site's CSS, compiled here once the list is opened.
   const [compiler, setCompiler] = useState<{ build: (candidates: string[]) => string } | null>(null)
   useEffect(() => {
@@ -210,13 +211,13 @@ export function StyleBar({ s, site, source, state, disabled }: StyleBarProps) {
               align="start"
               trigger={
                 <Button variant="ghost" size="xs" disabled={disabled} className="max-w-full !gap-1 !rounded-sm !bg-active !px-1.5 !font-normal !text-ink">
-                  <Icon name="symbol" size={11} className="shrink-0 text-faint" />
-                  <span className="truncate">{raw}</span>
+                  <Icon name={name.startsWith('scheme-') ? 'palette' : 'symbol'} size={11} className="shrink-0 text-faint" />
+                  <span className="truncate">{raw === name ? styleLabel(name) : raw}</span>
                   <Icon name="chevron-down" size={10} className="shrink-0 text-faint" />
                 </Button>
               }
               items={[
-                manages && { label: t('Edit Style'), icon: 'edit', onSelect: () => navigate(`/styling?tab=${name.startsWith('btn-') ? 'buttons' : 'styles'}&style=${encodeURIComponent(name)}`) },
+                manages && { label: t('Edit Style'), icon: 'edit', onSelect: () => navigate(name.startsWith('scheme-') ? '/styling?tab=colors' : `/styling?tab=styles&style=${encodeURIComponent(name)}`) },
                 !!source && { label: t('Detach Style'), icon: 'unlink', onSelect: () => detach(raw) },
                 { label: t('Remove Style'), icon: 'trash', danger: true, onSelect: () => s.apply(s.classes.filter((other) => other !== raw), 'classes') },
               ]}
@@ -232,9 +233,12 @@ export function StyleBar({ s, site, source, state, disabled }: StyleBarProps) {
             trigger={<Button variant="ghost" size="xs" icon="plus" className="!px-1.5 !font-normal !text-muted hover:!text-ink">{t('Add Style')}</Button>}
           >
             <div role="listbox" aria-label={t('Add Style')} className="max-h-72 overflow-y-auto overscroll-contain p-1">
-              {available(styles).map(option)}
-              {available(buttons).length > 0 && <div className="cms-label flex h-7 items-center px-2">{t('Buttons')}</div>}
-              {available(buttons).map(option)}
+              {([[t('Styles'), styles], [t('Buttons'), buttons], [t('Schemes'), schemes]] as [string, string[]][]).filter(([, names]) => available(names).length > 0).map(([label, names]) => (
+                <div key={label}>
+                  <div className="cms-label flex h-7 items-center px-2">{label}</div>
+                  {available(names).map(option)}
+                </div>
+              ))}
             </div>
             {manages && (
               <div className="border-t border-border p-1">

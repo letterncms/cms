@@ -1,8 +1,8 @@
 import { t, type FieldDef } from '@letterncms/sdk'
 import { Icon, IconButton, NEW_COLOR, Popover, Pressable, Tooltip, cn, prompt, toast, type MenuItemDef } from '@letterncms/ui'
 import { ColorPicker, lightDark, parseClass, useStyling, withVariants, type Engine, type Stylesheet } from '@letterncms/blocks'
-import { useState, type CSSProperties, type ReactNode } from 'react'
-import { familyOf, fallbackOf, fontStack, stackFor, type Fallback, type SiteFont } from './fields'
+import { useState, type ReactNode } from 'react'
+import { AnimationSample, ShadowSample, familyOf, fallbackOf, fontStack, stackFor, type Fallback, type SiteFont } from './fields'
 import { Control, Group, Setting, TokenRow, type Editing } from './parts'
 
 /* The theme sections of the Styling page: every value of the theme, Tailwind's own and the site's, kind by kind.
@@ -189,6 +189,87 @@ function PaletteSwatch({ edit, row }: { edit: Editing; row: Row }) {
   )
 }
 
+/** A scheme: a class of the site that colours a section, by its background and its text colour. */
+interface Scheme {
+  name: string
+  key: string
+  background: string
+  text: string
+}
+
+const SCHEME = 'scheme-'
+
+function schemesOf(sheet: Stylesheet): Scheme[] {
+  return sheet.utilities().filter((rule) => rule.name.startsWith(SCHEME) && rule.classes.includes('scheme')).map((rule) => {
+    const properties = new Map(sheet.utilityProperties(rule.name).map((p) => [p.name, p.value]))
+    return { name: rule.name, key: rule.name.slice(SCHEME.length), background: properties.get('--scheme') ?? 'transparent', text: properties.get('--scheme-text') ?? 'currentColor' }
+  })
+}
+
+/** A colour one sees through: transparent, or with an alpha below 1. */
+const seeThrough = (color: string) => /^transparent$|\/\s*(0?\.\d+|\d{1,2}(\.\d+)?%)\s*\)$/.test(color.trim())
+
+/** A scheme written whole: its two colours, and the kernel's `scheme`, which makes everything inside follow them. */
+const writeScheme = (sheet: Stylesheet, name: string, background: string, text: string) => sheet.writeUtility(name, [{ name: '--scheme', value: background }, { name: '--scheme-text', value: text }], ['scheme'])
+
+/**
+ * Colour schemes: a section, a box or a card in colours of its own, its text, lines and buttons following. Each is a
+ * background and a text colour; a block takes one under Add Style.
+ */
+function Schemes({ edit }: { edit: Editing }) {
+  const { engine } = useStyling()
+  const schemes = schemesOf(edit.sheet)
+  const preview = (value: string) => (engine ? lightDark(engine.resolve(value))[edit.mode === 'dark' ? 'dark' : 'light'] ?? lightDark(engine.resolve(value)).light : value)
+  const add = async () => {
+    const asked = await prompt({ title: t('New Scheme'), fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, required: true, placeholder: 'ocean' }], confirm: t('Add Scheme') })
+    const key = clean(asked?.name)
+    if (!key) return
+    if (schemes.some((scheme) => scheme.key === key)) return void toast.error(t('“{name}” already exists', { name: key }))
+    edit.change((sheet) => writeScheme(sheet, `${SCHEME}${key}`, 'var(--color-foreground)', 'var(--color-background)'))
+  }
+  const rename = async (scheme: Scheme) => {
+    const asked = await prompt({ title: t('Rename'), fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, required: true }], values: { name: scheme.key }, confirm: t('Rename') })
+    const key = clean(asked?.name)
+    if (!key || key === scheme.key) return
+    if (schemes.some((other) => other.key === key)) return void toast.error(t('“{name}” already exists', { name: key }))
+    edit.change((sheet) => sheet.renameUtility(scheme.name, `${SCHEME}${key}`))
+  }
+  return (
+    <Group title={t('Schemes')} onAdd={edit.readOnly ? undefined : () => void add()} addLabel={t('Add Scheme')}>
+      {schemes.length > 0 && (
+        <div className="flex min-h-8 items-center gap-2 border-b border-border text-2xs text-faint max-sm:hidden">
+          <span className="min-w-0 flex-1" />
+          <span className={COLOR}>{t('Background')}</span>
+          <span className={COLOR}>{t('Text')}</span>
+          <span className="size-6 shrink-0" />
+        </div>
+      )}
+      {schemes.map((scheme) => (
+        <TokenRow
+          key={scheme.name}
+          name={scheme.key}
+          copy={scheme.name}
+          wide
+          sample={
+            // A see-through scheme (over a photograph) shows on a checkerboard, its letters lifted off it.
+            <span className={cn('grid size-6 overflow-hidden rounded-xs shadow-edge', seeThrough(preview(scheme.background)) && 'cms-checkerboard')}>
+              <span className="grid place-items-center text-xs font-semibold" style={{ background: preview(scheme.background), color: preview(scheme.text), textShadow: seeThrough(preview(scheme.background)) ? '0 0 3px rgb(0 0 0 / 0.7)' : undefined }}>Aa</span>
+            </span>
+          }
+          menu={edit.readOnly ? [] : [
+            { label: t('Rename…'), icon: 'edit', onSelect: () => void rename(scheme) },
+            { separator: true, label: '' },
+            { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => edit.change((sheet) => sheet.removeUtility(scheme.name)) },
+          ]}
+        >
+          <div className={COLOR}><Control handle={`${scheme.name}:background`} label={t('{name} Background', { name: scheme.key })} value={scheme.background} disabled={edit.readOnly} field={{ type: 'color', component: 'blocks-color' }} onChange={(value) => value && edit.change((sheet) => writeScheme(sheet, scheme.name, value, scheme.text))} /></div>
+          <div className={COLOR}><Control handle={`${scheme.name}:text`} label={t('{name} Text', { name: scheme.key })} value={scheme.text} disabled={edit.readOnly} field={{ type: 'color', component: 'blocks-color' }} onChange={(value) => value && edit.change((sheet) => writeScheme(sheet, scheme.name, scheme.background, value))} /></div>
+        </TokenRow>
+      ))}
+    </Group>
+  )
+}
+
 /**
  * The site's colours, each with a value for dark mode (written light-dark(light, dark): a site with one follows
  * the visitor's light or dark mode), then Tailwind's palette, shade by shade.
@@ -197,13 +278,14 @@ export function Colors({ edit }: { edit: Editing }) {
   const kind: Kind = { prefix: '--color-', title: t('Colors'), add: t('Add Color'), fresh: t('New Color'), start: NEW_COLOR, placeholder: 'brand' }
   const menu = useRowMenu(edit, kind)
   const all = rowsOf(edit, kind.prefix)
-  // Tailwind's palette and its black and white: what the CMS brings and the site's own come first.
+  // Tailwind's palette, shade by shade: what the CMS brings and the site's own come first. Black and white are what
+  // they say: nothing to change.
   const palette = (row: Row) => row.builtIn && edit.palette.has(row.name)
   const own = all.filter((row) => !palette(row))
   const families = new Map<string, Row[]>()
   for (const row of all.filter(palette)) {
-    const family = SHADE.exec(row.key)?.[1] ?? ''
-    families.set(family, [...(families.get(family) ?? []), row])
+    const family = SHADE.exec(row.key)?.[1]
+    if (family) families.set(family, [...(families.get(family) ?? []), row])
   }
   const add = async () => {
     const key = await askName(edit, kind.prefix, kind.fresh, kind.add, '', kind.placeholder)
@@ -234,6 +316,7 @@ export function Colors({ edit }: { edit: Editing }) {
           )
         })}
       </Group>
+      <Schemes edit={edit} />
       {families.size > 0 && (
         <Group title={t('Palette')}>
           <div className="space-y-1.5 py-2">
@@ -245,17 +328,6 @@ export function Colors({ edit }: { edit: Editing }) {
                 </div>
               </div>
             ))}
-            {/* Black and white stand on their own, each by its name. */}
-            {(families.get('') ?? []).length > 0 && (
-              <div className="flex items-center gap-4 pt-1">
-                {(families.get('') ?? []).map((row) => (
-                  <div key={row.name} className="flex w-24 items-center gap-2">
-                    <span className="flex size-6 shrink-0 overflow-hidden rounded-xs shadow-edge"><PaletteSwatch edit={edit} row={row} /></span>
-                    <span className="truncate font-mono text-xs text-text">{row.key}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </Group>
       )}
@@ -324,15 +396,6 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
       />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--font-weight-', title: t('Weights'), add: t('Add Weight'), fresh: t('New Weight'), start: '600', placeholder: 'strong' }}
-        row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="text-base text-ink" style={{ fontWeight: Number(row.value) || 400, fontFamily: display }}>Ag</span>}>
-            <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('', { step: 50, min: 1, max: 1000 })} onChange={set} />
-          </TokenRow>
-        )}
-      />
-      <Tokens
-        edit={edit}
         kind={{ prefix: '--leading-', title: t('Line Heights'), add: t('Add Line Height'), fresh: t('New Line Height'), start: '1.5', placeholder: 'airy' }}
         row={(row, set, menu) => (
           <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="flex w-4 flex-col" style={{ gap: `${Math.max(1, (Number(row.value) - 0.8) * 6)}px` }}>{[0, 1, 2].map((i) => <span key={i} className={cn('h-0.5 rounded-full bg-muted', i === 2 && 'w-2/3')} />)}</span>}>
@@ -360,7 +423,43 @@ const sizeRow = (edit: Editing, field: Partial<FieldDef> = SIZE) => (row: Row, s
   </TokenRow>
 )
 
-/** Spacing (one step of Tailwind's scale, and the spaces the site names), the widths of containers, the screen sizes and aspect ratios. */
+/** The three sizes buttons and fields share, each a height, the room inside it and the size of its text. */
+function ControlSizes({ edit }: { edit: Editing }) {
+  const sizes: [string, string][] = [['sm', t('Small')], ['md', t('Medium')], ['lg', t('Large')]]
+  const parts: [string, string][] = [['height', t('Height')], ['padding', t('Padding')], ['text', t('Text')]]
+  const value = (name: string) => edit.sheet.variable(name) ?? edit.defaults.get(name) ?? null
+  const cell = 'w-24 shrink-0 max-sm:min-w-0 max-sm:flex-1'
+  return (
+    <Group title={t('Buttons and Fields')}>
+      <div className="flex min-h-8 items-center gap-2 border-b border-border text-2xs text-faint">
+        <span className="min-w-0 flex-1" />
+        {parts.map(([part, label]) => <span key={part} className={cell}>{label}</span>)}
+        <span className="size-6 shrink-0" />
+      </div>
+      {sizes.map(([size, label]) => {
+        const names = parts.map(([part]) => `--control-${size}-${part}`)
+        const written = names.some((name) => edit.sheet.variable(name) !== undefined)
+        return (
+          <div key={size} className="cms-reveal-row flex min-h-9 items-center gap-2 border-b border-border py-1 last:border-b-0">
+            <span className="min-w-0 flex-1 truncate text-xs text-text">{label}</span>
+            {parts.map(([part, partLabel], i) => (
+              <div key={part} className={cell}>
+                <Control handle={names[i]} label={`${label} ${partLabel}`} value={value(names[i])} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px'], step: 0.125, min: 0 })} onChange={(next) => next !== null && edit.change((sheet) => sheet.setVariable(names[i], next))} />
+              </div>
+            ))}
+            {written && !edit.readOnly ? (
+              <Tooltip content={t('Reset')}>
+                <IconButton icon="undo" size="xs" label={t('Reset')} title={undefined} className="cms-reveal shrink-0" onClick={() => edit.change((sheet) => names.reduce((next, name) => next.setVariable(name, null), sheet))} />
+              </Tooltip>
+            ) : <span className="size-6 shrink-0" />}
+          </div>
+        )
+      })}
+    </Group>
+  )
+}
+
+/** Spacing (one step of Tailwind's scale, and the spaces the site names), the widths of containers, the screen sizes, and the sizes buttons and fields share. */
 export function Layout({ edit }: { edit: Editing }) {
   const spacing: Kind = { prefix: '--spacing-', title: t('Spacing'), add: t('Add Spacing'), fresh: t('New Spacing'), start: '2rem', placeholder: 'gutter' }
   const menu = useRowMenu(edit, spacing)
@@ -381,48 +480,33 @@ export function Layout({ edit }: { edit: Editing }) {
       </Group>
       <Tokens edit={edit} kind={{ prefix: '--container-', title: t('Containers'), add: t('Add Container'), fresh: t('New Container'), start: '72rem', placeholder: 'content' }} row={sizeRow(edit)} />
       <Tokens edit={edit} kind={{ prefix: '--breakpoint-', title: t('Breakpoints'), add: t('Add Breakpoint'), fresh: t('New Breakpoint'), start: '120rem', placeholder: '3xl' }} row={sizeRow(edit, LENGTH)} />
-      <Tokens
-        edit={edit}
-        kind={{ prefix: '--aspect-', title: t('Aspect Ratios'), add: t('Add Aspect Ratio'), fresh: t('New Aspect Ratio'), start: '4 / 3', placeholder: 'photo' }}
-        row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="block max-h-5 w-5 rounded-xs border border-border-strong" style={{ aspectRatio: row.value }} />}>
-            <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} onChange={set} />
-          </TokenRow>
-        )}
-      />
+      <ControlSizes edit={edit} />
     </>
   )
 }
 
-/** Corners. */
-export function Shape({ edit }: { edit: Editing }) {
-  return (
-    <Tokens
-      edit={edit}
-      kind={{ prefix: '--radius-', title: t('Radius'), add: t('Add Radius'), fresh: t('New Radius'), start: '0.5rem', placeholder: 'card' }}
-      row={(row, set, menu) => (
-        <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="size-5 translate-x-0.5 translate-y-0.5 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: `min(${row.value}, 20px)` }} />}>
-          <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px', '%'], step: 0.125, min: 0 })} onChange={set} />
-        </TokenRow>
-      )}
-    />
-  )
-}
-
-/** Shadows of every kind, blur and perspective. */
+/** Corners, shadows of every kind, blur and perspective. */
 export function Effects({ edit }: { edit: Editing }) {
-  const shadow = (kind: string, sample: (value: string) => ReactNode) => (row: Row, set: (value: string | null) => void, menu: (extra?: MenuItemDef[]) => MenuItemDef[]) => (
-    <TokenRow key={row.name} name={row.key} menu={menu()} sample={sample(row.value)}>
+  const shadow = (kind: string) => (row: Row, set: (value: string | null) => void, menu: (extra?: MenuItemDef[]) => MenuItemDef[]) => (
+    <TokenRow key={row.name} name={row.key} menu={menu()} sample={<ShadowSample value={row.value} kind={kind} />}>
       <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'site-shadow', kind }} onChange={set} />
     </TokenRow>
   )
-  const box = (style: (value: string) => CSSProperties) => (value: string) => <span className="size-5 shrink-0 rounded-xs border border-border bg-bg" style={style(value)} />
   return (
     <>
-      <Tokens edit={edit} kind={{ prefix: '--shadow-', title: t('Shadows'), add: t('Add Shadow'), fresh: t('New Shadow'), start: '0 4px 16px -4px rgb(0 0 0 / 0.12)', placeholder: 'card' }} row={shadow('box', box((value) => ({ boxShadow: value })))} />
-      <Tokens edit={edit} kind={{ prefix: '--inset-shadow-', title: t('Inset Shadows'), add: t('Add Inset Shadow'), fresh: t('New Inset Shadow'), start: 'inset 0 2px 4px rgb(0 0 0 / 0.08)', placeholder: 'well' }} row={shadow('box', box((value) => ({ boxShadow: value })))} />
-      <Tokens edit={edit} kind={{ prefix: '--drop-shadow-', title: t('Drop Shadows'), add: t('Add Drop Shadow'), fresh: t('New Drop Shadow'), start: '0 4px 8px rgb(0 0 0 / 0.12)', placeholder: 'lifted' }} row={shadow('text', box((value) => ({ filter: value.split(/,(?![^(]*\))/).map((part) => `drop-shadow(${part.trim()})`).join(' ') })))} />
-      <Tokens edit={edit} kind={{ prefix: '--text-shadow-', title: t('Text Shadows'), add: t('Add Text Shadow'), fresh: t('New Text Shadow'), start: '0 1px 2px rgb(0 0 0 / 0.2)', placeholder: 'glow' }} row={shadow('text', (value) => <span className="text-base font-semibold text-ink" style={{ textShadow: value }}>A</span>)} />
+      <Tokens
+        edit={edit}
+        kind={{ prefix: '--radius-', title: t('Corners'), add: t('Add Radius'), fresh: t('New Radius'), start: '0.5rem', placeholder: 'card' }}
+        row={(row, set, menu) => (
+          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="size-5 translate-x-0.5 translate-y-0.5 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: `min(${row.value}, 20px)` }} />}>
+            <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px', '%'], step: 0.125, min: 0 })} onChange={set} />
+          </TokenRow>
+        )}
+      />
+      <Tokens edit={edit} kind={{ prefix: '--shadow-', title: t('Shadows'), add: t('Add Shadow'), fresh: t('New Shadow'), start: '0 4px 16px -4px rgb(0 0 0 / 0.12)', placeholder: 'card' }} row={shadow('box')} />
+      <Tokens edit={edit} kind={{ prefix: '--inset-shadow-', title: t('Inset Shadows'), add: t('Add Inset Shadow'), fresh: t('New Inset Shadow'), start: 'inset 0 2px 4px rgb(0 0 0 / 0.08)', placeholder: 'well' }} row={shadow('box')} />
+      <Tokens edit={edit} kind={{ prefix: '--drop-shadow-', title: t('Drop Shadows'), add: t('Add Drop Shadow'), fresh: t('New Drop Shadow'), start: '0 4px 8px rgb(0 0 0 / 0.12)', placeholder: 'lifted' }} row={shadow('drop')} />
+      <Tokens edit={edit} kind={{ prefix: '--text-shadow-', title: t('Text Shadows'), add: t('Add Text Shadow'), fresh: t('New Text Shadow'), start: '0 1px 2px rgb(0 0 0 / 0.2)', placeholder: 'glow' }} row={shadow('text')} />
       <Tokens
         edit={edit}
         kind={{ prefix: '--blur-', title: t('Blur'), add: t('Add Blur'), fresh: t('New Blur'), start: '6px', placeholder: 'soft' }}
@@ -463,10 +547,19 @@ export function Motion({ edit, transition, onTransition }: { edit: Editing; tran
       />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--animate-', title: t('Animations'), add: t('Add Animation'), fresh: t('New Animation'), start: 'spin 2s linear infinite', placeholder: 'float' }}
+        kind={{ prefix: '--duration-', title: t('Durations'), add: t('Add Duration'), fresh: t('New Duration'), start: '300ms', placeholder: 'slow' }}
         row={(row, set, menu) => (
           <TokenRow key={row.name} name={row.key} menu={menu()}>
-            <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} onChange={set} />
+            <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('ms', { units: ['ms', 's'], step: 50, min: 0 })} onChange={set} />
+          </TokenRow>
+        )}
+      />
+      <Tokens
+        edit={edit}
+        kind={{ prefix: '--animate-', title: t('Animations'), add: t('Add Animation'), fresh: t('New Animation'), start: 'spin 2s linear infinite', placeholder: 'float' }}
+        row={(row, set, menu) => (
+          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<AnimationSample value={row.value} keyframes={edit.keyframes} />}>
+            <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'site-animation', keyframes: edit.keyframes }} onChange={set} />
           </TokenRow>
         )}
       />

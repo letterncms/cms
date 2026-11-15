@@ -133,8 +133,8 @@ test('the site’s own CSS is what no section of the Styling page shows, and it 
     @apply text-5xl;
   }
   /* A rule of the site's own. */
-  hr {
-    @apply border-border;
+  li::marker {
+    @apply text-muted;
   }
 }
 
@@ -151,7 +151,6 @@ test('the site’s own CSS is what no section of the Styling page shows, and it 
 .tide { color: red; }
 `)
   assert.equal(sheet.extra(), `@theme {
-  --color-*: initial;
   --text-lg--line-height: 1.4;
   --my-gap: 3px;
   @keyframes wiggle {
@@ -161,8 +160,8 @@ test('the site’s own CSS is what no section of the Styling page shows, and it 
 
 @layer base {
   /* A rule of the site's own. */
-  hr {
-    @apply border-border;
+  li::marker {
+    @apply text-muted;
   }
 }
 
@@ -180,6 +179,7 @@ test('the site’s own CSS is what no section of the Styling page shows, and it 
 
 @theme {
   --color-primary: #111;
+  --color-*: initial;
 }
 
 @layer base {
@@ -229,7 +229,8 @@ test('what stays of the site’s own CSS stays where it stands, and a cleared na
   @apply p-6;
 }
 `)
-  assert.equal(sheet.extra(), '@theme {\n  --text-*: initial;\n}\n\n.a { color: red; }')
+  // Clearing a kind is what the sections follow, not CSS of the site's own.
+  assert.equal(sheet.extra(), '.a { color: red; }')
   // One rule more: the clearing stays before the sizes it clears, and the rule before stays where it was.
   const more = sheet.setExtra(`${sheet.extra()}\n\n.b { color: blue; }`)
   assert.equal(more.css, `@import "tailwindcss";
@@ -247,7 +248,29 @@ test('what stays of the site’s own CSS stays where it stands, and a cleared na
 
 .b { color: blue; }
 `)
-  // Taken out and written again, a clearing goes back to the start of the theme.
-  const cleared = sheet.setExtra('.a { color: red; }').setExtra('@theme {\n  --text-*: initial;\n}\n\n.a { color: red; }')
+  // Written as the site's own, a clearing goes to the start of the theme, where it clears what follows.
+  const cleared = new Stylesheet('@import "tailwindcss";\n\n@theme {\n  --text-base: 1rem;\n}\n').setExtra('@theme {\n  --text-*: initial;\n}')
   assert.match(cleared.css, /@theme \{\n {2}--text-\*: initial;\n {2}--text-base: 1rem;\n\}/)
+})
+
+test('a class is written whole, with what it declares and what it applies', async () => {
+  const sheet = new Stylesheet('@import "tailwindcss";\n\n@utility scheme-tide {\n  --scheme: var(--color-tide);\n  @apply scheme;\n}\n')
+  assert.deepEqual(sheet.utilityProperties('scheme-tide'), [{ name: '--scheme', value: 'var(--color-tide)' }])
+  const next = sheet.writeUtility('scheme-tide', [{ name: '--scheme', value: 'var(--color-clay)' }, { name: '--scheme-text', value: '#fff' }], ['scheme'])
+  assert.equal(next.css, '@import "tailwindcss";\n\n@utility scheme-tide {\n  --scheme: var(--color-clay);\n  --scheme-text: #fff;\n  @apply scheme;\n}\n')
+  assert.match(next.writeUtility('scheme-sun', [{ name: '--scheme', value: 'gold' }], ['scheme']).css, /@utility scheme-sun \{\n {2}--scheme: gold;\n {2}@apply scheme;\n\}\n$/)
+  // What else the class holds stays where it stands: here what comes after the scheme it applies.
+  const own = new Stylesheet('@utility scheme-photo {\n  --scheme: transparent;\n  @apply scheme;\n  --color-primary-foreground: #111;\n}\n')
+  assert.equal(own.writeUtility('scheme-photo', [{ name: '--scheme', value: 'black' }], ['scheme']).css, '@utility scheme-photo {\n  --scheme: black;\n  @apply scheme;\n  --color-primary-foreground: #111;\n}\n')
+})
+
+test('long-form text is styled in the components layer, and the rest of that layer stays the site’s own CSS', () => {
+  const sheet = new Stylesheet('@import "tailwindcss";\n\n@layer components {\n  .cms-prose {\n    --prose-blocks: 1.25em;\n  }\n  .cms-prose h2:where(:not(.cms-box, .cms-repeat)) {\n    @apply text-4xl;\n  }\n  .on-photo {\n    @apply text-white;\n  }\n}\n')
+  assert.equal(sheet.property('.cms-prose', '--prose-blocks', 'components'), '1.25em')
+  assert.deepEqual(sheet.elements('components').map((rule) => rule.name), ['.cms-prose', '.cms-prose h2:where(:not(.cms-box, .cms-repeat))', '.on-photo'])
+  assert.equal(sheet.extra(), '@layer components {\n  .on-photo {\n    @apply text-white;\n  }\n}')
+  const next = sheet.setElement('.cms-prose p:where(:not(.cms-box, .cms-repeat))', ['text-lg'], 'components').setExtra('')
+  assert.match(next.css, /\.cms-prose p:where\(:not\(\.cms-box, \.cms-repeat\)\) \{\n {4}@apply text-lg;\n {2}\}/)
+  assert.doesNotMatch(next.css, /on-photo/)
+  assert.equal(next.property('.cms-prose', '--prose-blocks', 'components'), '1.25em')
 })

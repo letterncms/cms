@@ -8,8 +8,8 @@
   /* The block workspace's stand-in for its pictures spans every column. */
   .cms-gallery > .cms-media-placeholder { grid-column: 1 / -1; }
   .cms-gallery__item figure { margin: 0; }
-  .cms-gallery__item img, .cms-gallery__item picture { display: block; width: 100%; height: auto; border-radius: var(--radius-md); }
-  .cms-gallery__item a { display: block; border-radius: var(--radius-md); cursor: zoom-in; }
+  .cms-gallery__item img, .cms-gallery__item picture { display: block; width: 100%; height: auto; }
+  .cms-gallery__item a { display: block; cursor: zoom-in; }
   .cms-gallery__item a img { transition: opacity 160ms ease; }
   .cms-gallery__item a:hover img { opacity: 0.9; }
   .cms-gallery__item a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

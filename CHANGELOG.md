@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed
+
+- **One Styles page for how everything looks.** **Styling → Styles** lists the page, its text, its buttons, its forms, its long-form text and the looks you named, each drawn as your site draws it, and opens each on the same controls as a block's **Design** tab. It replaces **Text**, **Buttons** and **Saved Styles**.
+- **Forms** are styled under **Styles**: fields, labels and help, and checkboxes, radio buttons and switches, with a form drawn beside them.
+- **Articles** are styled under **Styles**: the space between blocks of long-form text, and its headings, paragraphs, list items, quotes, figures and links.
+- **Schemes.** Under **Colors**, a scheme gives a section, a box or a card a background and a text color of its own, and its text, lines and buttons follow. A block takes one under **Add Style**.
+- **Code has a page of its own**, under **Design** in the sidebar: the CSS no section shows, your scripts, stylesheets and libraries.
+- **Sizes that grow with the screen are clearer.** **Grow with the Screen** turns a size fluid; its editor names the size **On a Phone** and **On a Desktop** and the screens it grows between, and draws the line it follows.
+- **Shadows are drawn**, each layer with its offset, blur, spread and color, without presets. A shadow reads as its offset and blur, like *Y 6 · Blur 20*.
+- **Animations are visual**: pick the keyframes, duration, easing and repeat, with a preview.
+- **Motion** lists durations, and names Tailwind's own easing curves.
+- **Layout** sets the sizes buttons and fields share, under **Buttons and Fields**. Corners moved to **Effects**.
+- Black and white are no longer listed as colors to change, and **Weights** and **Aspect Ratios** are gone from Styling: Tailwind's own stay available as classes.
+- A Quote takes its look from the site's quotations, a picture fills a box of a height or shape of its own, and a Gallery's pictures have square corners until the site rounds them.
+
 ## 0.38.0 (2026-11-15)
 
 ### Changed

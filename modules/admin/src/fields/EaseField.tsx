@@ -31,7 +31,12 @@ function bezier(value: string | null | undefined): Bezier | null {
 
 const round = (n: number) => Math.round(n * 100) / 100
 const format = ([x1, y1, x2, y2]: Bezier) => `cubic-bezier(${round(x1)}, ${round(y1)}, ${round(x2)}, ${round(y2)})`
-const same = (a: string | null | undefined, b: string) => String(a ?? '').replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim()
+/** Two easings alike: the same curve however it is written (`cubic-bezier(.4,0,1,1)`), or the same word. */
+const same = (a: string | null | undefined, b: string) => {
+  const [x, y] = [String(a ?? ''), b].map((v) => (/^cubic-bezier\(/.test(v.trim()) ? bezier(v) : null))
+  if (x && y) return x.every((n, i) => Math.abs(n - y[i]) < 1e-6)
+  return String(a ?? '').replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim()
+}
 
 /** The curve of an easing value, drawn in a box `size` wide (overshoot stays visible). */
 function EaseCurve({ curve, size, className }: { curve: Bezier; size: number; className?: string }) {
@@ -51,6 +56,10 @@ const cssEases = (): { value: string; label: string }[] => [
   { value: 'cubic-bezier(0.55, 0, 1, 0.45)', label: t('Ease In') },
   { value: 'cubic-bezier(0.34, 1.56, 0.64, 1)', label: t('Overshoot') },
   { value: 'linear', label: t('Linear') },
+  // Tailwind's own: its ease-in, ease-out and ease-in-out, and what a transition takes by default.
+  { value: 'cubic-bezier(0, 0, 0.2, 1)', label: t('Gentle Out') },
+  { value: 'cubic-bezier(0.4, 0, 0.2, 1)', label: t('Gentle In-Out') },
+  { value: 'cubic-bezier(0.4, 0, 1, 1)', label: t('Gentle In') },
 ]
 
 /**

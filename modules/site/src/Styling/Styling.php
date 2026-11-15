@@ -367,7 +367,7 @@ final class Styling
     {
         $parts = [];
 
-        foreach (['theme', 'base', 'prose', 'buttons', 'fields'] as $name) {
+        foreach (['theme', 'base', 'prose', 'buttons', 'fields', 'schemes'] as $name) {
             $parts[] = (string) file_get_contents(dirname(__DIR__, 2)."/resources/css/{$name}.css");
         }
 
