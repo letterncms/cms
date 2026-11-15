@@ -16,6 +16,8 @@ export interface Editing {
   defaults: Map<string, string>
   /** The colours of Tailwind's palette, by variable. */
   palette: Set<string>
+  /** The @keyframes animations can run, Tailwind's and the site's, by name. */
+  keyframes: Record<string, string>
   /** Which side of light-dark() the preview shows. */
   mode: 'light' | 'dark'
 }

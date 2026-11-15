@@ -1,12 +1,12 @@
 import { CmsError, can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
-import { Button, Fields, IconButton, Notice, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useScreenSidebar, useTheme } from '@letterncms/ui'
-import { Stylesheet, StylingProvider, balanced, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
+import { Button, IconButton, Notice, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useScreenSidebar, useTheme } from '@letterncms/ui'
+import { Stylesheet, StylingProvider, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CodeFiles } from './code-files'
-import { Group, type Editing } from './parts'
+import { type Editing } from './parts'
 import { SitePreview, WIDTHS, useDraftCompile, type Viewport } from './preview'
-import { Buttons, SavedStyles, Text } from './rules'
-import { Colors, Effects, Layout, Motion, Shape, Typography, type Face, type FontTools, type Transition } from './theme'
+import { Styles } from './styles'
+import { keyframesOf } from './fields'
+import { Colors, Effects, Layout, Motion, Typography, type Face, type FontTools, type Transition } from './theme'
 
 /** What `styling/get` says: the stylesheet, the settings beside it and the published CSS. */
 interface Info {
@@ -19,43 +19,27 @@ interface Info {
 
 /**
  * What Save writes. One draft: the stylesheet's text, which every control rewrites where the value stands
- * (so comments and hand-written CSS stay), the page transition, custom.js and the scripts and styles typed here.
- * A part that was not changed is not in it.
+ * (so comments and hand-written CSS stay), and the page transition. A part that was not changed is not in it.
  */
 interface Draft {
   css?: string
   transition?: Transition
-  js?: string
-  files: Record<string, string>
 }
 
-const EMPTY: Draft = { files: {} }
+const EMPTY: Draft = {}
 
-const SECTIONS = ['colors', 'typography', 'layout', 'shape', 'effects', 'motion', 'text', 'buttons', 'styles', 'code'] as const
+const SECTIONS = ['colors', 'typography', 'layout', 'effects', 'motion', 'styles'] as const
 type SectionKey = (typeof SECTIONS)[number]
 
-function sections(): { group: string; items: { value: SectionKey; label: string; icon: string }[] }[] {
+/** The sections, in the order a design is made: its values, then the looks made of them. */
+function sections(): { value: SectionKey; label: string; icon: string }[] {
   return [
-    {
-      group: t('Theme'),
-      items: [
-        { value: 'colors', label: t('Colors'), icon: 'palette' },
-        { value: 'typography', label: t('Typography'), icon: 'typography' },
-        { value: 'layout', label: t('Layout'), icon: 'ruler' },
-        { value: 'shape', label: t('Shape'), icon: 'radius' },
-        { value: 'effects', label: t('Effects'), icon: 'shadow' },
-        { value: 'motion', label: t('Motion'), icon: 'speed' },
-      ],
-    },
-    {
-      group: t('Styles'),
-      items: [
-        { value: 'text', label: t('Text'), icon: 'paragraph' },
-        { value: 'buttons', label: t('Buttons'), icon: 'button' },
-        { value: 'styles', label: t('Saved Styles'), icon: 'symbol' },
-        { value: 'code', label: t('Custom Code'), icon: 'code' },
-      ],
-    },
+    { value: 'colors', label: t('Colors'), icon: 'palette' },
+    { value: 'typography', label: t('Typography'), icon: 'typography' },
+    { value: 'layout', label: t('Layout'), icon: 'ruler' },
+    { value: 'effects', label: t('Effects'), icon: 'shadow' },
+    { value: 'motion', label: t('Motion'), icon: 'speed' },
+    { value: 'styles', label: t('Styles'), icon: 'symbol' },
   ]
 }
 
@@ -72,9 +56,9 @@ export default function Styling() {
   const source = useAbility<StylingSource>('styling/source', {}, { refetchOnWindowFocus: false, retry: false, staleTime: 60_000 })
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const { query } = useLocation()
-  // A style named in the address opens where it is: a button's under Buttons, any other under Saved Styles.
-  const section: SectionKey = query.style ? (query.style.startsWith('btn-') ? 'buttons' : 'styles') : SECTIONS.includes(query.tab as SectionKey) ? (query.tab as SectionKey) : SECTIONS[0]
-  const setSection = (next: SectionKey) => setQuery({ tab: next === SECTIONS[0] ? null : next, style: null, element: null })
+  // A style named in the address opens under Styles, wherever the address says the page is.
+  const section: SectionKey = query.style ? 'styles' : SECTIONS.includes(query.tab as SectionKey) ? (query.tab as SectionKey) : SECTIONS[0]
+  const setSection = (next: SectionKey) => setQuery({ tab: next === SECTIONS[0] ? null : next, style: null })
   // The preview starts in the theme the admin is in: a dark admin opens on the site's dark colours, not on a white slab.
   const [mode, setMode] = useState<'light' | 'dark'>(useTheme() === 'dark' ? 'dark' : 'light')
   // A phone shows the list or the preview, never both: the bar's Preview button turns between them.
@@ -97,8 +81,7 @@ export default function Styling() {
   const base = info.data
   const css = draft.css ?? base?.css
   const transition = draft.transition ?? base?.transition
-  const js = draft.js ?? base?.js ?? ''
-  const dirty = !!base && ((draft.css !== undefined && draft.css !== base.css) || (draft.transition !== undefined && !same(draft.transition, base.transition)) || (draft.js !== undefined && draft.js !== base.js) || Object.keys(draft.files).length > 0)
+  const dirty = !!base && ((draft.css !== undefined && draft.css !== base.css) || (draft.transition !== undefined && !same(draft.transition, base.transition)))
   const readOnly = !can('settings.manage')
 
   const sheet = useMemo(() => new Stylesheet(css ?? ''), [css])
@@ -115,6 +98,7 @@ export default function Styling() {
     return out
   }, [tailwind, kernel])
   const palette = useMemo(() => new Set(themeDefaults(tailwind ?? '').filter((variable) => variable.name.startsWith('--color-')).map((variable) => variable.name)), [tailwind])
+  const keyframes = useMemo(() => keyframesOf(tailwind ?? '', css ?? ''), [tailwind, css])
 
   // The site's fonts, so samples here are drawn in them.
   useEffect(() => {
@@ -141,6 +125,7 @@ export default function Styling() {
     readOnly,
     defaults,
     palette,
+    keyframes,
     mode: dark ? mode : 'light',
   }
   const samples = { compiler: compile.compiler, device: previewing ? 'phone' as const : viewport }
@@ -159,11 +144,8 @@ export default function Styling() {
       if (draft.css !== undefined && draft.css !== base.css) input.css = draft.css
       if (draft.transition !== undefined && !same(draft.transition, base.transition)) input.transition = draft.transition
       if (Object.keys(input).length > 0) await run('styling/update', input)
-      if (draft.js !== undefined && draft.js !== base.js) await run('styling-code/set-custom', { js: draft.js })
-      for (const [path, contents] of Object.entries(draft.files)) await run('styling-code/save', { path, contents })
       // The stylesheet on screen is the saved one before the draft lets go of it, so nothing jumps back.
       await Promise.all([info.refetch(), source.refetch()])
-      invalidate('styling-code/')
       setDraft(EMPTY)
       frame.current?.contentWindow?.location.reload()
     } catch (e) {
@@ -241,30 +223,16 @@ export default function Styling() {
       {section === 'colors' && <Colors edit={edit} />}
       {section === 'typography' && <Typography edit={edit} fonts={fonts} />}
       {section === 'layout' && <Layout edit={edit} />}
-      {section === 'shape' && <Shape edit={edit} />}
       {section === 'effects' && <Effects edit={edit} />}
       {section === 'motion' && <Motion edit={edit} transition={transition} onTransition={(next) => !readOnly && setDraft((d) => ({ ...d, transition: next }))} />}
-      {section === 'text' && <Text edit={edit} samples={samples} />}
-      {section === 'buttons' && <Buttons edit={edit} samples={samples} />}
-      {section === 'styles' && <SavedStyles edit={edit} samples={samples} />}
-      {section === 'code' && (
-        <>
-          <CustomCss edit={edit} />
-          <CodeFiles
-            js={js}
-            onJs={(next) => setDraft((d) => ({ ...d, js: next }))}
-            edits={draft.files}
-            onEdit={(path, contents) => setDraft((d) => ({ ...d, files: contents === null ? Object.fromEntries(Object.entries(d.files).filter(([key]) => key !== path)) : { ...d.files, [path]: contents } }))}
-          />
-        </>
-      )}
+      {section === 'styles' && <Styles edit={edit} samples={samples} />}
     </>
   )
 
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        crumbs={[{ label: t('Styling'), icon: 'palette' }, { label: sections().flatMap((g) => g.items).find((item) => item.value === section)?.label ?? '' }]}
+        crumbs={[{ label: t('Styling'), icon: 'palette' }, { label: sections().find((item) => item.value === section)?.label ?? '' }]}
         actions={
           <>
             <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>
@@ -277,13 +245,8 @@ export default function Styling() {
       {/* The sections are rows under Styling in the sidebar: no column of their own, and the sidebar stays the one it was. */}
       <ScreenSidebar title={t('Styling')} backTo="/" backLabel={t('Dashboard')} nested>
         <nav aria-label={t('Styling')} className={sidebar.nested ? 'space-y-px' : 'px-2 pb-4'}>
-          {sections().map((group, index) => (
-            <div key={group.group} className={cn('space-y-px', index > 0 && (sidebar.nested ? 'mt-1' : 'mt-4'))}>
-              {!sidebar.nested && <div className="cms-label flex h-7 items-center px-2">{group.group}</div>}
-              {group.items.map((item) => (
-                <SidebarRow key={item.value} label={item.label} icon={sidebar.nested ? undefined : item.icon} active={section === item.value} onClick={() => setSection(item.value)} />
-              ))}
-            </div>
+          {sections().map((item) => (
+            <SidebarRow key={item.value} label={item.label} icon={sidebar.nested ? undefined : item.icon} active={section === item.value} onClick={() => setSection(item.value)} />
           ))}
         </nav>
       </ScreenSidebar>
@@ -310,43 +273,6 @@ export default function Styling() {
       </div>
       </StylingProvider>
     </div>
-  )
-}
-
-/**
- * The site's own CSS: what the stylesheet holds that no section shows (a variable of another kind, a rule of
- * another selector, a variant of its own, plain CSS). What is typed is the draft once its braces close.
- */
-function CustomCss({ edit }: { edit: Editing }) {
-  const written = useMemo(() => edit.sheet.extra(), [edit.sheet])
-  const [text, setText] = useState(written)
-  // Written elsewhere (a section, Discard, Save): the field follows, unless it holds what is being typed.
-  const typed = useRef(written)
-  useEffect(() => {
-    if (written !== typed.current) {
-      typed.current = written
-      setText(written)
-    }
-  }, [written])
-  return (
-    <Group title={t('CSS')}>
-      <div className="pt-2">
-        <Fields
-          bare
-          fields={[{ handle: 'css', type: 'code', label: t('CSS'), rows: 14, language: 'tailwind', placeholder: '.hero-title { text-wrap: balance; }' }]}
-          values={{ css: text }}
-          disabled={edit.readOnly}
-          onChange={(_, value) => {
-            const next = String(value ?? '')
-            setText(next)
-            if (!balanced(next)) return
-            // What the stylesheet will say it holds: the field keeps what was typed while they agree.
-            typed.current = edit.sheet.setExtra(next).extra()
-            edit.change((sheet) => sheet.setExtra(next))
-          }}
-        />
-      </div>
-    </Group>
   )
 }
 

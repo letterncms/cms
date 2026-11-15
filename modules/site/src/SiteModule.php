@@ -945,6 +945,8 @@ final class SiteModule extends Plugin
     {
         $admin = $this->cms()->admin();
         $admin->nav('styling', ['label' => 'Styling', 'path' => '/styling', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
+        // What a developer adds beside the design: its own CSS, scripts and libraries.
+        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'design', 'order' => 60, 'permission' => 'settings.manage']);
         // A site is mostly a design: it sits with the styling, after what it brings (templates, components).
         $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'site', 'order' => 90, 'permission' => 'settings.manage']);
         $admin->command('sites', ['label' => 'Sites', 'icon' => 'box', 'path' => '/sites', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);

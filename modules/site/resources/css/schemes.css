@@ -1,0 +1,18 @@
+/* Colour schemes: a section, a box or a card in colours of its own. A site names its schemes as classes that
+   set a background and a text colour and apply `scheme`, which makes everything inside follow: text, muted
+   text, lines, surfaces and buttons.
+
+     @utility scheme-tide { --scheme: var(--color-tide); --scheme-text: var(--color-tide-foreground); @apply scheme; }
+
+   Like any class it takes variants: `data-tide:scheme-tide` follows a state. */
+@utility scheme {
+  --color-foreground: var(--scheme-text);
+  --color-muted: color-mix(in srgb, var(--scheme-text) 72%, var(--scheme));
+  --color-border: color-mix(in srgb, var(--scheme-text) 22%, var(--scheme));
+  --color-surface: color-mix(in srgb, var(--scheme-text) 8%, var(--scheme));
+  --color-raised: color-mix(in srgb, var(--scheme-text) 10%, var(--scheme));
+  --color-primary: var(--scheme-text);
+  --color-primary-foreground: var(--scheme);
+  background-color: var(--scheme);
+  color: var(--scheme-text);
+}
