@@ -47,6 +47,12 @@ export function InlineEditable({ html, onChange, tag = 'div', placeholder, class
     if (focus && ref.current) place(ref.current, focus.at)
   }, [focus?.nonce])
 
+  // Chrome paints a word it flags as misspelled without the text stroke, so outlined text isn't spell-checked.
+  const checkSpelling = () => {
+    const el = ref.current
+    if (el) el.spellcheck = !parseFloat(el.ownerDocument.defaultView?.getComputedStyle(el).webkitTextStrokeWidth ?? '0')
+  }
+
   const emit = () => {
     const el = ref.current
     if (!el) return
@@ -71,11 +77,12 @@ export function InlineEditable({ html, onChange, tag = 'div', placeholder, class
     'data-cms-plain': plainText || undefined,
     spellCheck: true,
     onInput: (e: React.FormEvent<HTMLElement>) => {
+      checkSpelling()
       const input = e.nativeEvent as InputEvent
       if (!plainText && input.inputType === 'insertText' && input.data && /[*_~`]/.test(input.data)) inlineMarkdown(e.currentTarget.ownerDocument)
       emit()
     },
-    onFocus: () => onFocus?.(),
+    onFocus: () => { checkSpelling(); onFocus?.() },
     onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
       const doc = e.currentTarget.ownerDocument
       const mod = e.metaKey || e.ctrlKey
