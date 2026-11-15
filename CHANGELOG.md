@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.38.0 (2026-11-15)
+
 ### Changed
 
 - **The site's CSS follows every change, wherever it comes from.** The server compiles it with Tailwind itself, in PHP, whenever the stylesheet or the content changes: in the admin, from an agent over the API or MCP, or from a command. No Node and no open admin are needed.
