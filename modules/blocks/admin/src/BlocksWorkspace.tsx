@@ -1,5 +1,5 @@
 import { events, plural, t, useScreenContext, type EntryEditorProps } from '@letterncms/sdk'
-import { Button, Dialog, IconButton, InspectorPanel, Menu, PanelHeader, Popover, QueryError, ScreenSidebar, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
+import { Button, Dialog, IconButton, InspectorPanel, PanelHeader, Popover, QueryError, ScreenSidebar, Segmented, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorProvider, useCatalog, useEditorContext, type DocRef } from './core/context'
@@ -52,17 +52,14 @@ const devices = () => [
 ] as const
 
 /**
- * The width the canvas previews the page at, in the top bar: there with or without a selected
- * block. One button that shows the device, its menu the others — the bar's middle belongs to
- * the title. Which screen size the Design tab styles is chosen there, not here. A phone-sized
- * window has no room for it: it shows the page as phones do.
+ * The screen the page is seen and styled on, in the top bar, there with or without a selected block: the one
+ * control for both. On a desktop a style holds on every screen; on a tablet or a phone the Design tab writes
+ * what differs there. A phone-sized window has no room for it: it shows the page as phones do.
  */
 function Devices() {
   const { store } = useEditorContext()
   const device = useEditor(store, (state) => state.device)
-  const all = devices()
-  const current = all.find((item) => item.value === device) ?? all[0]
-  return <Menu align="start" trigger={<IconButton icon={current.icon} label={`${t('Preview')}: ${current.label}`} active={device !== 'desktop'} className="max-sm:hidden" />} items={all.map((item) => ({ label: item.label, icon: item.icon, checked: item.value === device, onSelect: () => store.setDevice(item.value) }))} />
+  return <Segmented aria-label={t('Screen')} value={device} onChange={store.setDevice} options={devices().map((item) => ({ value: item.value, icon: item.icon, title: item.label }))} className="max-sm:hidden" />
 }
 
 function Workspace({ props }: { props: EntryEditorProps }) {

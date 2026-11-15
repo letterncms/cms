@@ -18,7 +18,7 @@ use Throwable;
  *   previews/<name>.png|jpg|webp  the pictures site.json names
  *   content/collections/<handle>.yaml and <handle>/[<locale>/][<parent>/]<slug>.md
  *   content/globals/<handle>.yaml, content/navigation/<handle>.yaml
- *   content/styling/theme.css, settings.json, compiled.css, custom.js, code.json, fonts/, scripts/, styles/, vendor/ (with lock.json)
+ *   content/styling/theme.css, settings.json, custom.js, code.json, fonts/, scripts/, styles/, vendor/ (with lock.json)
  *   content/media/<id>.yaml and public/media/<path>
  *   config/<settings>.yaml        only the settings a site may carry
  *

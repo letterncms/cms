@@ -2,7 +2,9 @@ import { useRef, useSyncExternalStore } from 'react'
 import * as tree from './tree'
 import type { BlockNode, FocusRequest } from './types'
 
-export type Device = 'desktop' | 'tablet' | 'phone'
+import type { Device } from './styling'
+
+export type { Device }
 
 export interface State {
   nodes: BlockNode[]
@@ -13,11 +15,14 @@ export interface State {
   /** Block-selection mode (Esc): keyboard acts on blocks, not text. */
   blockMode: boolean
   focus: FocusRequest | null
-  /** The width the canvas previews the page at. It does not decide which styles are edited. */
+  /**
+   * The screen the page is seen and styled on: the canvas shows it at its width, and the Design tab writes
+   * for it (every screen on a desktop, below lg on a tablet, below md on a phone).
+   */
   device: Device
-  /** The screen size the Design tab edits: '' for every screen, or a breakpoint of the theme ("md": from there up). */
-  breakpoint: string
-  /** The other variants of the layer being edited, as Tailwind writes them: ['hover'], ['data-open'], ['dark'], ['max-md']. */
+  /** The width the canvas draws the page at, in CSS pixels. */
+  canvasWidth: number
+  /** The other variants of the layer being edited, as Tailwind writes them: ['hover'], ['data-open'], ['dark']. */
   state: string[]
   hovered: string | null
 }
@@ -41,7 +46,7 @@ export class EditorStore {
   constructor(nodes: BlockNode[], onChange: (nodes: BlockNode[]) => void, readOnly = false) {
     this.onChange = onChange
     this.readOnly = readOnly
-    this.state = { nodes, selected: null, head: null, blockMode: false, focus: null, device: 'desktop', breakpoint: '', state: [], hovered: null }
+    this.state = { nodes, selected: null, head: null, blockMode: false, focus: null, device: 'desktop', canvasWidth: 1280, state: [], hovered: null }
   }
 
   setReadOnly(readOnly: boolean) { this.readOnly = readOnly }
@@ -147,7 +152,7 @@ export class EditorStore {
   }
   hover = (id: string | null) => this.state.hovered !== id && this.set({ hovered: id })
   setDevice = (device: Device) => this.set({ device })
-  setBreakpoint = (breakpoint: string) => this.set({ breakpoint })
+  setCanvasWidth = (canvasWidth: number) => this.state.canvasWidth !== canvasWidth && this.set({ canvasWidth })
   setStyleState = (state: string[]) => this.set({ state })
 
   focus(id: string, at: FocusRequest['at'] = 'end', prop?: string, index?: number) {

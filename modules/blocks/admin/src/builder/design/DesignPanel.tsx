@@ -10,15 +10,15 @@ import type { BlockNode } from '../../core/types'
 import { dataStates } from '../styleApi'
 import { styleApi, useStyle, type StyleApi } from '../useStyle'
 import { Border } from './Border'
-import { ClassBar } from './ClassBar'
+import { ClassesSection } from './Classes'
 import { Effects } from './Effects'
 import { Fill } from './Fill'
 import { InParent, Layout } from './Layout'
-import { LayerBar } from './LayerBar'
 import { OtherStyles } from './more'
 import { Position } from './Position'
 import { Size } from './Size'
 import { Spacing } from './Spacing'
+import { StyleBar } from './StyleBar'
 import { Transform } from './Transform'
 import { Transition } from './Transition'
 import { Typography } from './Typography'
@@ -69,17 +69,15 @@ export function DesignPanel({ node }: { node: BlockNode }) {
   const styling = useStyling()
   const type = types.get(node.type)
   const s = useStyle(node)
-  const breakpoint = useEditor(store, (st) => st.breakpoint)
   const state = useEditor(store, (st) => st.state)
   const parent = useEditor(store, (st) => tree.parentOf(st.nodes, node.id))
   const ancestors = useEditor(store, (st) => tree.ancestors(st.nodes, node.id))
   // What the parent lays its children out as, on every screen: its own display, or what its type is before any class.
   const parentDisplay = useMemo(() => {
     if (!parent) return undefined
-    const own = styleApi(styling.engine, splitClasses(parent.class), [], '', [], () => {}).value('display')
+    const own = styleApi(styling.engine, splitClasses(parent.class), s.screen, [], () => {}).value('display')
     return own ?? (parent.type === 'stack' || parent.type === 'columns' || parent.type === 'grid' ? 'flex' : undefined)
-  }, [parent, styling.engine])
-  const names = useMemo(() => styling.breakpoints.map((size) => size.name), [styling.breakpoints])
+  }, [parent, styling.engine, s.screen])
   // Page Content without its own box lends its blocks to the layout around it: only what they inherit from it applies.
   const unwrapped = node.type === 'outlet' && !node.props?.wrap
   const groups = unwrapped ? ['typography'] : type?.styles?.length ? type.styles : STYLE_GROUPS
@@ -96,8 +94,7 @@ export function DesignPanel({ node }: { node: BlockNode }) {
           <Notice tone="warning" title={t('The site’s stylesheet could not be read')} action={<Link to="/styling" className="shrink-0 text-xs text-text">{t('Open Styling')}</Link>} />
         </div>
       )}
-      <ClassBar s={s} site={styling.classes} source={styling.source} breakpoints={names} disabled={readOnly} />
-      <LayerBar classes={s.classes} engine={styling.engine} breakpoints={styling.breakpoints} breakpoint={breakpoint} state={state} onBreakpoint={store.setBreakpoint} onState={store.setStyleState} states={dataStates(node, ancestors)} />
+      <StyleBar s={s} site={styling.classes} source={styling.source} disabled={readOnly} state={{ classes: s.classes, engine: styling.engine, state, onState: store.setStyleState, states: dataStates(node, ancestors) }} />
       <StylePanels
         s={s}
         groups={groups}
@@ -106,6 +103,7 @@ export function DesignPanel({ node }: { node: BlockNode }) {
         media={['image', 'video', 'embed'].includes(node.type)}
         prose={type?.fields?.some((f) => f.handle === 'prose') ? { on: !!node.props?.prose, onChange: (on) => store.updateProps(node.id, { prose: on || undefined }, `inspector:${node.id}:prose`) } : undefined}
       />
+      <ClassesSection s={s} site={styling.classes} disabled={readOnly} />
     </div>
   )
 }

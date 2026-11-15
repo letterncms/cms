@@ -83,10 +83,20 @@ final class Theme
         return array_values(array_unique($found[1]));
     }
 
-    /** The stylesheet has dark values: it says `color-scheme: light dark`, which is what light-dark() follows. */
+    /** The site has dark values: a variable of its theme is light-dark(light, dark), or it says `color-scheme: light dark` itself. */
     public function dark(): bool
     {
-        return preg_match('/color-scheme\s*:\s*light\s+dark\b/', $this->css) === 1;
+        if (preg_match('/color-scheme\s*:\s*light\s+dark\b/', $this->css) === 1) {
+            return true;
+        }
+
+        foreach ($this->variables() as $value) {
+            if (str_starts_with($value, 'light-dark(')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** What stands between the brace before $from and the one that closes it. */

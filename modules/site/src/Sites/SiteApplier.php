@@ -292,7 +292,7 @@ final class SiteApplier
         $this->code->flush();
 
         try {
-            // The content and the stylesheet are other ones now: compiled where the server can.
+            // The content and the stylesheet are other ones now: the site's CSS is compiled for them.
             $this->styling->saved();
         } catch (StylingException $e) {
             report($e);
@@ -760,11 +760,6 @@ final class SiteApplier
 
         foreach ($this->doing($run, 'theme', 'settings', 'font', 'custom', 'script', 'style') as $step) {
             Files::put($step['target'], (string) file_get_contents($sitePackage->path.'/'.$step['path']));
-
-            // With the stylesheet comes what Tailwind made of it, so the site has its CSS before anything compiles here.
-            if ($step['type'] === 'theme' && $run['contents']['compiled'] !== null) {
-                Files::put($this->styling->path('compiled.css'), (string) file_get_contents($sitePackage->path.'/'.$run['contents']['compiled']));
-            }
         }
 
         $libraries = [];

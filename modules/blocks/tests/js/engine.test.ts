@@ -90,21 +90,40 @@ test('a site class is a utility like any other', () => {
   assert.deepEqual(engine.sort(['p-4', 'unknown', 'flex']), ['unknown', 'flex', 'p-4'])
 })
 
-test('controls read and write properties on the layer being edited', () => {
-  const sizes = ['sm', 'md', 'lg']
-  const classes = ['flex', 'p-4', 'sm:p-6', 'hover:bg-primary', 'md:hover:p-8', 'max-md:hidden']
-  const base = new ClassStyle(engine, classes, sizes, '', [])
+test('controls read what wins at the screen being seen, and write where it takes effect', () => {
+  const sizes = { sm: 640, md: 768, lg: 1024 }
+  const desktop = { variant: '', width: 1280, sizes }
+  const tablet = { variant: 'max-lg', width: 820, sizes }
+  const phone = { variant: 'max-md', width: 390, sizes }
+  const classes = ['flex', 'p-4', 'max-lg:p-6', 'hover:bg-primary', 'max-md:hover:p-8', 'max-md:hidden']
+  const base = new ClassStyle(engine, classes, desktop, [])
   assert.deepEqual(base.find('padding'), { value: '16px', from: 'p-4', own: true })
   assert.equal(base.find('background-color'), undefined)
-  const md = new ClassStyle(engine, classes, sizes, 'md', [])
-  assert.deepEqual(md.find('padding'), { value: '24px', from: 'sm:p-6', own: false })
-  assert.deepEqual(md.find('display'), { value: 'flex', from: 'flex', own: false })
-  const hover = new ClassStyle(engine, classes, sizes, 'md', ['hover'])
-  assert.deepEqual(hover.find('padding'), { value: '32px', from: 'md:hover:p-8', own: true })
+  const onTablet = new ClassStyle(engine, classes, tablet, [])
+  assert.deepEqual(onTablet.find('padding'), { value: '24px', from: 'max-lg:p-6', own: true })
+  assert.deepEqual(onTablet.find('display'), { value: 'flex', from: 'flex', own: false })
+  const onPhone = new ClassStyle(engine, classes, phone, [])
+  assert.deepEqual(onPhone.find('padding'), { value: '24px', from: 'max-lg:p-6', own: false })
+  assert.deepEqual(onPhone.find('display'), { value: 'none', from: 'max-md:hidden', own: true })
+  const hover = new ClassStyle(engine, classes, phone, ['hover'])
+  assert.deepEqual(hover.find('padding'), { value: '32px', from: 'max-md:hover:p-8', own: true })
   assert.equal(hover.find('background-color')?.from, 'hover:bg-primary')
-  assert.deepEqual(md.set({ padding: '40px', display: 'grid' }), [...classes, 'md:p-10', 'md:grid'])
-  assert.deepEqual(base.set({ padding: null, 'max-width': '13rem' }), ['flex', 'sm:p-6', 'hover:bg-primary', 'md:hover:p-8', 'max-md:hidden', 'max-w-52'])
-  assert.deepEqual(new ClassStyle(engine, classes, sizes, '', ['max-md']).own(), ['display'])
-  assert.equal(new ClassStyle(engine, ['translate-x-4', 'translate-y-2'], sizes, '', []).get('translate-y-0'), 'translate-y-2')
-  assert.deepEqual(new ClassStyle(engine, ['translate-x-4', 'translate-y-2'], sizes, '', []).put('translate-x-0', '-translate-x-full'), ['translate-y-2', '-translate-x-full'])
+  assert.deepEqual(onTablet.set({ padding: '40px', display: 'grid' }), ['flex', 'p-4', 'hover:bg-primary', 'max-md:hover:p-8', 'max-md:hidden', 'max-lg:p-10', 'max-lg:grid'])
+  assert.deepEqual(base.set({ padding: null, 'max-width': '13rem' }), ['flex', 'max-lg:p-6', 'hover:bg-primary', 'max-md:hover:p-8', 'max-md:hidden', 'max-w-52'])
+  assert.deepEqual(onPhone.own(), ['display'])
+  assert.equal(new ClassStyle(engine, ['translate-x-4', 'translate-y-2'], desktop, []).get('translate-y-0'), 'translate-y-2')
+  assert.deepEqual(new ClassStyle(engine, ['translate-x-4', 'translate-y-2'], desktop, []).put('translate-x-0', '-translate-x-full'), ['translate-y-2', '-translate-x-full'])
+
+  // Classes written mobile-first, as agents often do: seen on a desktop, md: is what wins there, and what changes.
+  const mobile = ['grid', 'grid-cols-1', 'md:grid-cols-3']
+  const seen = new ClassStyle(engine, mobile, desktop, [])
+  assert.equal(seen.find('grid-template-columns')?.from, 'md:grid-cols-3')
+  assert.equal(seen.find('grid-template-columns')?.own, false)
+  assert.deepEqual(seen.set({ 'grid-template-columns': 'repeat(4, minmax(0, 1fr))' }), ['grid', 'grid-cols-1', 'md:grid-cols-4'])
+  // On a phone the class for every screen is what wins: the phone's own is written beside it.
+  assert.equal(new ClassStyle(engine, mobile, phone, []).find('grid-template-columns')?.from, 'grid-cols-1')
+  assert.deepEqual(new ClassStyle(engine, mobile, phone, []).set({ 'grid-template-columns': 'repeat(2, minmax(0, 1fr))' }), ['grid', 'grid-cols-1', 'md:grid-cols-3', 'max-md:grid-cols-2'])
+  // Arbitrary screens read too.
+  assert.equal(new ClassStyle(engine, ['p-2', 'min-[900px]:p-4'], tablet, []).find('padding')?.from, 'p-2')
+  assert.equal(new ClassStyle(engine, ['p-2', 'min-[900px]:p-4'], desktop, []).find('padding')?.from, 'min-[900px]:p-4')
 })

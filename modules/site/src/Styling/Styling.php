@@ -16,14 +16,13 @@ use InvalidArgumentException;
  *   content/styling/theme.css      the stylesheet: `@import "tailwindcss"`, the theme (@theme), the site's
  *                                  own classes (@utility), element styles (@layer base) and any other CSS
  *   content/styling/settings.json  fonts and the page transition
- *   content/styling/compiled.css   what Tailwind made of theme.css for the classes the content uses, and the site's own
  *   content/styling/custom.js      extra JavaScript (an ES module; people with site.code only)
  *   content/styling/fonts/         self-hosted .woff2 files
  *
- * Blocks carry Tailwind classes. Tailwind itself compiles (the npm package): Node on the server where
- * there is one (Compiler), and otherwise the admin in the browser, which hands the CSS back (`store`).
- * compiled.css says what it was compiled from, so it is known to be current or not, and it travels
- * with the content: a site deployed from git or from a zip has its CSS without compiling anything.
+ * Blocks carry Tailwind classes. The server compiles them with Tailwind (Compiler, in PHP) whenever the
+ * stylesheet or the content changes, whoever changed it: the admin, an agent, a command. It is a build
+ * file, not content (storage/styling/compiled.css), and says what it was compiled from, so it is compiled
+ * again only when that changed.
  *
  * Published as public/_cms/site/styles-<hash>.css (and custom-<hash>.js); fonts are copied to public/_cms/fonts/.
  */
@@ -40,6 +39,9 @@ final class Styling
 
     /** Content changed since the CSS was last looked at. */
     private bool $stale = false;
+
+    /** What this request last tried to compile: a stylesheet that does not compile is tried once. */
+    private ?string $tried = null;
 
     public function __construct(
         private readonly Hooks $hooks,
@@ -61,7 +63,7 @@ final class Styling
 
     /**
      * @throws InvalidArgumentException when it is no Tailwind stylesheet
-     * @throws StylingException when it does not compile (where the server compiles): the one that does stays
+     * @throws StylingException when it does not compile: the one that does stays
      */
     public function saveTheme(string $css): void
     {
@@ -76,7 +78,7 @@ final class Styling
         $this->read = null;
         $this->url = null;
         // It was compiled to be checked: that is the site's CSS now.
-        $compiled !== null && $this->store($this->signature($source), $compiled);
+        $this->store($this->signature($source), $compiled);
     }
 
     /** @return list<string> the site's own classes: the names of the stylesheet's `@utility` rules */
@@ -85,7 +87,7 @@ final class Styling
         return $this->read()->classes();
     }
 
-    /** The site has dark values: its stylesheet says `color-scheme: light dark`. */
+    /** The site has dark values: a colour of its theme is light-dark(…). */
     public function dark(): bool
     {
         return $this->read()->dark();
@@ -213,14 +215,19 @@ final class Styling
     public function source(?string $theme = null): array
     {
         $css = $theme ?? $this->theme();
+        $read = new Theme($css);
         // The stylesheet's own classes are always in its CSS: a block's setting can name one (a button's look is
         // btn-<name>) where no content spells it out.
-        $candidates = array_values(array_unique([...$this->candidates->all(), ...(new Theme($css))->classes()]));
+        $candidates = array_values(array_unique([...$this->candidates->all(), ...$read->classes()]));
         sort($candidates, SORT_STRING);
 
         return [
             'css' => $css,
-            'files' => [self::KERNEL => $this->kernel()],
+            // A theme with dark values follows the visitor's system: light-dark() reads color-scheme. Without any,
+            // the browser's own parts (fields, scroll bars) stay light with the page.
+            'files' => [self::KERNEL => $this->kernel().($read->dark() ? "
+@layer base { :where(:root) { color-scheme: light dark; } }
+" : '')],
             'candidates' => $candidates,
         ];
     }
@@ -234,42 +241,30 @@ final class Styling
     /** Is compiled.css what the stylesheet and the content's classes compile to now? */
     public function current(): bool
     {
-        $this->settle();
-
         return $this->compiledSignature() === $this->signature();
     }
 
     /**
-     * Compile where the server can and the CSS is not current. True when it is current afterwards.
+     * Compile when the CSS is not what the stylesheet and the content's classes make now.
      *
      * @throws StylingException when the stylesheet does not compile
      */
-    public function refresh(): bool
+    public function refresh(): void
     {
         $this->stale = false;
         $source = $this->source();
         $signature = $this->signature($source);
+        $this->tried = $signature;
 
-        if ($this->compiledSignature() === $signature) {
-            return true;
+        if ($this->compiledSignature() !== $signature) {
+            $this->store($signature, $this->compiler->compile($source));
         }
-
-        $css = $this->compiler->compile($source);
-
-        return $css !== null && $this->store($signature, $css);
     }
 
-    /** Keep CSS compiled from the source with this signature. False when that is no longer what the site has. */
-    public function store(string $signature, string $css): bool
+    private function store(string $signature, string $css): void
     {
-        if ($signature !== $this->signature()) {
-            return false;
-        }
-
-        Files::put($this->path('compiled.css'), "/* {$signature} */\n".$css."\n");
+        Files::put($this->compiledPath(), "/* {$signature} */\n".$css."\n");
         $this->url = null;
-
-        return true;
     }
 
     /**
@@ -285,7 +280,17 @@ final class Styling
     public function css(): string
     {
         $this->settle();
-        $compiled = is_file($file = $this->path('compiled.css')) ? (string) file_get_contents($file) : '';
+
+        // Never compiled here (a new server, an update, a site copied in), or made from something else: compiled now.
+        if (! $this->current() && $this->tried !== $this->signature()) {
+            try {
+                $this->refresh();
+            } catch (StylingException $e) {
+                report($e);
+            }
+        }
+
+        $compiled = is_file($file = $this->compiledPath()) ? (string) file_get_contents($file) : '';
 
         return $this->faces().$compiled;
     }
@@ -373,9 +378,15 @@ final class Styling
         return implode("\n", $parts);
     }
 
+    /** What Tailwind made of the stylesheet: built here, never carried with the content. */
+    public function compiledPath(): string
+    {
+        return storage_path('styling/compiled.css');
+    }
+
     private function compiledSignature(): ?string
     {
-        if (! is_file($file = $this->path('compiled.css')) || ($handle = fopen($file, 'r')) === false) {
+        if (! is_file($file = $this->compiledPath()) || ($handle = fopen($file, 'r')) === false) {
             return null;
         }
 

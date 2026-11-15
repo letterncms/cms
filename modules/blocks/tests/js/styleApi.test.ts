@@ -23,17 +23,18 @@ const css = `@import "tailwindcss";
 @theme { --color-primary: #111616; --spacing-gutter: clamp(1rem, 4vw, 2rem); }
 @utility btn-primary { @apply bg-primary px-4; }`
 const engine = new Engine(await __unstable__loadDesignSystem(css, { base: '/', loadStylesheet: async (id: string, base: string) => ({ path: id, base, content: index }) }))
-const sizes = ['sm', 'md', 'lg']
+const sizes = { sm: 640, md: 768, lg: 1024 }
+const screens = { desktop: { variant: '', width: 1280, sizes }, tablet: { variant: 'max-lg', width: 820, sizes }, phone: { variant: 'max-md', width: 390, sizes } }
 
 /** An api over a list that keeps what is written to it. */
-function edit(classes: string[], breakpoint = '', state: string[] = []) {
+function edit(classes: string[], screen: keyof typeof screens = 'desktop', state: string[] = []) {
   const box = { classes }
-  const api = () => styleApi(engine, box.classes, sizes, breakpoint, state, (next: string[]) => { box.classes = next })
+  const api = () => styleApi(engine, box.classes, screens[screen], state, (next: string[]) => { box.classes = next })
   return { box, api }
 }
 
-test('a control reads the nearest layer that sets a property', () => {
-  const { api } = edit(['p-4', 'sm:p-6', 'hover:bg-primary/50', 'text-xl', 'leading-tight', 'w-1/2', '-translate-x-full'], 'md')
+test('a control reads what wins at the screen being seen', () => {
+  const { api } = edit(['p-4', 'max-lg:p-6', 'hover:bg-primary/50', 'text-xl', 'leading-tight', 'w-1/2', '-translate-x-full'], 'phone')
   assert.equal(api().value('padding'), '24px')
   assert.equal(api().status('padding'), 'inherited')
   assert.equal(api().status('margin'), 'none')
@@ -42,7 +43,7 @@ test('a control reads the nearest layer that sets a property', () => {
   assert.equal(api().value('fontSize'), 'var(--text-xl)')
   // text-xl only reads the line height leading-tight sets.
   assert.equal(api().value('lineHeight'), 'var(--leading-tight)')
-  assert.equal(edit(['hover:bg-primary/50'], '', ['hover']).api().value('backgroundColor'), 'color-mix(in oklab, var(--color-primary) 50%, transparent)')
+  assert.equal(edit(['hover:bg-primary/50'], 'desktop', ['hover']).api().value('backgroundColor'), 'color-mix(in oklab, var(--color-primary) 50%, transparent)')
 })
 
 test('a control writes the class people would', () => {
@@ -53,15 +54,15 @@ test('a control writes the class people would', () => {
   assert.deepEqual(new Set(box.classes), new Set(['grid', 'h-10', 'w-full', 'p-4', 'text-primary']))
   api().set('padding', null)
   assert.ok(!box.classes.includes('p-4'))
-  const md = edit(['p-4'], 'md', ['hover'])
-  md.api().set('padding', '13px')
-  assert.deepEqual(md.box.classes, ['p-4', 'md:hover:p-[13px]'])
-  assert.equal(md.api().status('padding'), 'own')
+  const tablet = edit(['p-4'], 'tablet', ['hover'])
+  tablet.api().set('padding', '13px')
+  assert.deepEqual(tablet.box.classes, ['p-4', 'max-lg:hover:p-[13px]'])
+  assert.equal(tablet.api().status('padding'), 'own')
 })
 
 test('nothing is read or written without the stylesheet', () => {
   let written = false
-  const api = styleApi(null, ['p-4'], [], '', [], () => { written = true })
+  const api = styleApi(null, ['p-4'], screens.desktop, [], () => { written = true })
   assert.equal(api.value('padding'), undefined)
   assert.equal(api.status('padding'), 'none')
   api.set('padding', '8px')

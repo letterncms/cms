@@ -89,7 +89,6 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   const selectedIds = useEditor(store, selectionOf)
   const blockMode = useEditor(store, (state) => state.blockMode)
   const hovered = useEditor(store, (state) => state.hovered)
-  const breakpoint = useEditor(store, (state) => state.breakpoint)
   const device = useEditor(store, (state) => state.device)
   // The canvas's own keys, handled in its document (blockKeys, below): named in the overlay `?` opens, for as long as they work.
   const canvasKeys = t('Page Builder')
@@ -109,8 +108,6 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   useShortcutLabel('mod+z', t('Undo'), canvasKeys, !readOnly)
   useShortcutLabel('mod+shift+z', t('Redo'), canvasKeys, !readOnly)
   const styling = useStyling()
-  // Editing a screen size shows it: the canvas is at least as wide as where that size starts.
-  const sizeWidth = styling.breakpoints.find((size) => size.name === breakpoint)?.width ?? 0
   const viewport = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLIFrameElement>(null)
   const [doc, setDoc] = useState<Document | null>(null)
@@ -371,18 +368,18 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     if (!viewport.current) return
     const fit = () => {
       const el = viewport.current!
-      // The device is a width to preview at: Desktop takes the room there is, but never less than a desktop's
-      // (with less room the page is scaled down rather than reflowed), a phone the room there is up to a
-      // phone's width. The screen size being edited only widens it, so what is being styled is in sight.
-      const preview = device === 'tablet' ? deviceWidths.tablet : device === 'phone' ? Math.min(deviceWidths.phone, el.clientWidth) : Math.max(el.clientWidth, DESKTOP)
-      const width = Math.max(preview, sizeWidth)
+      // The device is a width to see and style the page at: Desktop takes the room there is, but never less than a
+      // desktop's (with less room the page is scaled down rather than reflowed), a phone the room there is up to a
+      // phone's width.
+      const width = device === 'tablet' ? deviceWidths.tablet : device === 'phone' ? Math.min(deviceWidths.phone, el.clientWidth) : Math.max(el.clientWidth, DESKTOP)
+      store.setCanvasWidth(width)
       const scale = Math.min(1, el.clientWidth / width)
       geometry.current = null
       setLayout({ width, scale, height: el.clientHeight / scale, left: Math.max(0, (el.clientWidth - width * scale) / 2) })
     }
     fit(); const observer = new ResizeObserver(fit); observer.observe(viewport.current)
     return () => observer.disconnect()
-  }, [device, sizeWidth])
+  }, [device, store])
   useEffect(() => { requestAnimationFrame(measure) }, [selected, selectedIds, hovered, layout, doc])
   runRender.current = async () => {
       const state = rendering.current

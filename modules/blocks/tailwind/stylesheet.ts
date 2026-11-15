@@ -71,6 +71,40 @@ export interface StyleRule {
 
 const indentOf = (css: string, at: number) => /[ \t]*$/.exec(css.slice(0, at))![0]
 
+/** The elements the Styling page styles, by their selectors: everything else in `@layer base` is the site's own CSS. */
+export const ELEMENTS = ['body', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'strong', 'small', 'blockquote', 'code', 'figcaption', '::selection'] as const
+
+/** The theme variables the Styling page shows, kind by kind: every other variable is the site's own CSS. */
+const SHOWN = /^--(?:(?:color|font|text|font-weight|tracking|leading|breakpoint|container|spacing|radius|shadow|inset-shadow|drop-shadow|text-shadow|blur|perspective|aspect|ease|animate)-(?!.*--)[a-z0-9][\w.-]*|spacing|default-transition-duration|default-transition-timing-function)$/
+
+/** Whether the Styling page shows a theme variable in one of its sections. */
+export const shownVariable = (name: string) => SHOWN.test(name)
+
+/** The variables of every @theme block of a stylesheet, the defaults among them: Tailwind's own theme, the kernel's. */
+export function themeDefaults(css: string): Variable[] {
+  const sheet = new Stylesheet(css)
+  return blocks(css).filter((block) => block.inner && /^@theme\b/.test(block.prelude)).flatMap((block) => sheet.declarationsOf(block))
+}
+
+/** Whether the braces, brackets and quotes of a text close: a stylesheet being typed is read only when they do. */
+export function balanced(css: string): boolean {
+  const open: string[] = []
+  const pairs: Record<string, string> = { '}': '{', ')': '(', ']': '[' }
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i]
+    if (c === '/' && css[i + 1] === '*') {
+      const end = css.indexOf('*/', i + 2)
+      if (end === -1) return false
+      i = end + 1
+    } else if (c === '"' || c === "'") {
+      for (i++; i < css.length && css[i] !== c; i++) if (css[i] === '\\') i++
+      if (i >= css.length) return false
+    } else if (c === '{' || c === '(' || c === '[') open.push(c)
+    else if (c in pairs && open.pop() !== pairs[c]) return false
+  }
+  return open.length === 0
+}
+
 export class Stylesheet {
   readonly css: string
 
@@ -177,6 +211,134 @@ export class Stylesheet {
     return this.insertLast(base, rule)
   }
 
+  /** An element's rule taken out, whatever it holds. */
+  removeElement(selector: string): Stylesheet {
+    for (const base of this.bases()) {
+      const block = blocks(this.css, ...base.inner!).find((b) => b.inner && b.prelude.replace(/\s+/g, ' ') === selector)
+      if (block) return this.remove(block)
+    }
+    return this
+  }
+
+  /**
+   * The site's own CSS: everything in the stylesheet the Styling page has no section for. Tailwind's imports,
+   * the theme's variables it shows, the elements it styles and the site's styles are not in it; a variable of
+   * another kind, a rule of another selector, a variant of the site's own (@custom-variant) and plain CSS are.
+   */
+  extra(): string {
+    const { theme, base, rest } = this.extraParts()
+    const out: string[] = []
+    if (theme.length) out.push(`@theme {\n${theme.map((part) => this.piece(part, '  ')).join('\n')}\n}`)
+    for (const part of rest) out.push(part === 'base' ? `@layer base {\n${base.map((rule) => this.piece(rule, '  ')).join('\n')}\n}` : this.piece(part, ''))
+    return out.join('\n\n')
+  }
+
+  /**
+   * The site's own CSS replaced. What is as it was stays where it stands (the order of CSS can matter: a
+   * `--text-*: initial` clears only what comes before it); what was taken out goes; what is new stands at the
+   * end, a namespace cleared at the start of the theme.
+   */
+  setExtra(text: string): Stylesheet {
+    const before = this.extraParts()
+    const after = new Stylesheet(text).pieces()
+    const same = (a: string, b: string) => a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim()
+    const kept = (list: string[], range: [number, number]) => {
+      const at = list.findIndex((piece) => same(piece, this.css.slice(...range)))
+      if (at === -1) return false
+      list.splice(at, 1)
+      return true
+    }
+    const gone = [
+      ...before.theme.filter((range) => !kept(after.theme, range)),
+      ...before.base.filter((range) => !kept(after.base, range)),
+      ...before.rest.filter((part): part is [number, number] => part !== 'base').filter((range) => !kept(after.rest, range)),
+    ].sort((a, b) => b[0] - a[0])
+    let next: Stylesheet = this
+    for (const [start, end] of gone) next = next.splice(next.lineStart(start), next.lineEnd(end), '')
+    // A theme or a layer left with nothing in it goes too.
+    for (const block of blocks(next.css).filter((b) => b.inner && (/^@theme(\s+(inline|static))*$/.test(b.prelude) || b.prelude === '@layer base')).reverse()) {
+      if (next.css.slice(...block.inner!).replace(/\/\*[\s\S]*?\*\//g, '').trim() === '') next = next.remove(block)
+    }
+    const indent = (piece: string) => piece.split('\n').map((line) => (line.trim() ? `  ${line}` : '')).join('\n')
+    // A namespace cleared clears what comes before it: it opens the theme.
+    const clears = after.theme.filter((piece) => /^--[\w-]*\*\s*:\s*initial\b/.test(piece.replace(/^\/\*[\s\S]*?\*\/\s*/, '')))
+    const values = after.theme.filter((piece) => !clears.includes(piece))
+    if (clears.length) {
+      const theme = blocks(next.css).find((b) => b.inner && /^@theme(\s+(inline|static))*$/.test(b.prelude))
+      next = theme ? next.splice(theme.inner![0], theme.inner![0], `\n${clears.map(indent).join('\n')}`) : next.append(`@theme {\n${clears.map(indent).join('\n')}\n}`, 'after-imports')
+    }
+    const added = [
+      ...(values.length ? [`@theme {\n${values.map(indent).join('\n')}\n}`] : []),
+      ...(after.base.length ? [`@layer base {\n${after.base.map(indent).join('\n')}\n}`] : []),
+      ...after.rest,
+    ]
+    const body = next.css.replace(/\s+$/, '')
+    return new Stylesheet(`${body}${added.length ? `\n\n${added.join('\n\n')}` : ''}\n`)
+  }
+
+  /** Every part of a stylesheet one by one, as it is written: what `setExtra` reads a text as. */
+  private pieces(): { theme: string[]; base: string[]; rest: string[] } {
+    const out = { theme: [] as string[], base: [] as string[], rest: [] as string[] }
+    const text = (start: number, end: number) => {
+      const own = indentOf(this.css, start)
+      return this.css.slice(start, end).split('\n').map((line, i) => (i === 0 ? line : line.startsWith(own) ? line.slice(own.length) : line.trimStart())).join('\n')
+    }
+    for (const block of blocks(this.css)) {
+      if (block.inner && /^@theme(\s+(inline|static))*$/.test(block.prelude)) out.theme.push(...blocks(this.css, ...block.inner).map((statement) => text(this.leading(statement.start), statement.end)))
+      else if (block.inner && block.prelude === '@layer base') out.base.push(...blocks(this.css, ...block.inner).map((rule) => text(this.leading(rule.start), rule.end)))
+      else out.rest.push(text(this.leading(block.start), block.end))
+    }
+    return out
+  }
+
+  /** Where the site's own CSS stands: theme declarations and rules of the base layer one by one, everything else whole. */
+  private extraParts(): { theme: [number, number][]; base: [number, number][]; rest: ([number, number] | 'base')[] } {
+    const theme: [number, number][] = []
+    const base: [number, number][] = []
+    const rest: ([number, number] | 'base')[] = []
+    const plainTheme = /^@theme(\s+(inline|static))*$/
+    for (const block of blocks(this.css)) {
+      if (!block.inner && /^@import\s/.test(block.prelude)) continue
+      if (block.inner && plainTheme.test(block.prelude)) {
+        for (const statement of blocks(this.css, ...block.inner)) {
+          const name = /^(--[\w.*-]+)\s*:/.exec(statement.prelude)?.[1]
+          if (!statement.inner && name && SHOWN.test(name)) continue
+          theme.push([this.leading(statement.start), statement.end])
+        }
+        continue
+      }
+      if (block.inner && block.prelude === '@layer base') {
+        for (const rule of blocks(this.css, ...block.inner)) {
+          if (rule.inner && (ELEMENTS as readonly string[]).includes(rule.prelude.replace(/\s+/g, ' '))) continue
+          if (!rest.includes('base')) rest.push('base')
+          base.push([this.leading(rule.start), rule.end])
+        }
+        continue
+      }
+      if (block.inner && /^@utility\s+[a-z][\w-]*$/.test(block.prelude)) continue
+      rest.push([this.leading(block.start), block.end])
+    }
+    return { theme, base, rest }
+  }
+
+  /** Where a statement starts with the comment on the lines right before it, which belongs to it. */
+  private leading(at: number): number {
+    let end = at
+    while (end > 0 && /\s/.test(this.css[end - 1])) end--
+    if (this.css.slice(end - 2, end) !== '*/') return at
+    const open = this.css.lastIndexOf('/*', end - 2)
+    if (open === -1) return at
+    const line = this.css.lastIndexOf('\n', open - 1) + 1
+    // A comment after a statement on its line is that statement's.
+    return /^[ \t]*$/.test(this.css.slice(line, open)) ? open : at
+  }
+
+  /** A part of the stylesheet as it stands, its lines moved so its first one is indented by `indent`. */
+  private piece([start, end]: [number, number], indent: string): string {
+    const own = indentOf(this.css, start)
+    return this.css.slice(start, end).split('\n').map((line, i) => (i === 0 ? indent + line : line.trim() === '' ? '' : indent + (line.startsWith(own) ? line.slice(own.length) : line.trimStart()))).join('\n')
+  }
+
   /** What a rule of `@layer base` declares for a property, written as CSS: the `color-scheme` of `:root`. */
   property(selector: string, property: string): string | undefined {
     for (const base of this.bases()) {
@@ -221,6 +383,11 @@ export class Stylesheet {
 
   private bases(): Block[] {
     return blocks(this.css).filter((block) => block.inner && block.prelude === '@layer base')
+  }
+
+  /** The variables a block declares, as they are written. */
+  declarationsOf(block: Block): Variable[] {
+    return this.declarations(block).map(({ name, value }) => ({ name, value }))
   }
 
   private declarations(block: Block): (Variable & { start: number; end: number })[] {

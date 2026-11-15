@@ -357,12 +357,14 @@ function topDeclarations(css: string): Declaration[] {
 }
 
 /* An element's classes as the Design tab's controls see them: CSS properties with values, on the layer
-   being edited. A layer is a screen size and a state, which in Tailwind are the variants of a class:
-   "md:hover:bg-primary" is the background on the layer md + hover.
+   being edited. A layer is a screen and a state, which in Tailwind are the variants of a class:
+   "max-lg:hover:bg-primary" is the background on tablets and phones, on hover.
 
-   Screen sizes are mobile-first, as Tailwind's are: a value on a layer holds from that size up, so on md a
-   control shows what sm or the base set until md says otherwise. States inherit from the same sizes without
-   the state. Classes on other variants (max-md:, dark:, data-open:) show when that variant is the state. */
+   A screen is the width the page is seen at and the variant its own classes take: every screen (no variant),
+   below lg (max-lg:) for a tablet, below md (max-md:) for a phone. What a control shows is what wins in CSS at
+   that width: of the classes whose screen variants hold there (md: from 768px up, max-lg: below 1024px), the one
+   Tailwind writes last. States fall back to the same classes without the state. */
+
 export interface Found {
   value: string
   /** The class it comes from, and whether that is on the layer being edited. */
@@ -370,34 +372,112 @@ export interface Found {
   own: boolean
 }
 
+/** A screen the Design tab styles for. */
+export interface Screen {
+  /** The variant its own classes take: '' on every screen, 'max-lg' below the lg size. */
+  variant: string
+  /** The width it is seen at, in CSS pixels. */
+  width: number
+  /** The theme's screen sizes in CSS pixels, by name: sm → 640. */
+  sizes: Record<string, number>
+}
+
+/** Every screen, seen at a desktop's width: what the Styling page and a reading without a canvas edit. */
+export function everyScreen(sizes: Record<string, number>, width = 1280): Screen {
+  return { variant: '', width, sizes }
+}
+
+/** A length of a variant in CSS pixels: "640px", "40rem". */
+function lengthPx(text: string): number | null {
+  const m = /^(-?\d*\.?\d+)(px|rem|em)?$/.exec(text.trim())
+  return m ? Number(m[1]) * (m[2] === 'rem' || m[2] === 'em' ? 16 : 1) : null
+}
+
+/** What a variant says about the screen: from a width up (md, min-md, min-[800px]), below one (max-md), or nothing. */
+export function screenVariant(variant: string, sizes: Record<string, number>): { from: number } | { below: number } | null {
+  if (variant in sizes) return { from: sizes[variant] }
+  const m = /^(min|max)-(?:\[(.+)\]|(.+))$/.exec(variant)
+  if (!m) return null
+  const width = m[2] !== undefined ? lengthPx(m[2]) : m[3] in sizes ? sizes[m[3]] : null
+  if (width === null) return null
+  return m[1] === 'min' ? { from: width } : { below: width }
+}
+
 export class ClassStyle {
   private readonly engine: Engine
   readonly classes: string[]
-  /** The variants of the layer being edited: ["md", "hover"]. */
+  /** The variants of the layer being edited: ["max-lg", "hover"]. */
   readonly variants: string[]
-  private readonly chain: string[]
+  private readonly screen: Screen
+  private readonly state: string[]
+  private order: Map<string, bigint | null> | null = null
 
-  /** @param breakpoints the theme's, smallest first; `breakpoint` is one of them or '' for every screen; `state` is the other variants. */
-  constructor(engine: Engine, classes: string[], breakpoints: string[], breakpoint: string, state: string[]) {
+  constructor(engine: Engine, classes: string[], screen: Screen, state: string[]) {
     this.engine = engine
     this.classes = classes
-    this.variants = [...(breakpoint ? [breakpoint] : []), ...state]
-    const sizes = breakpoint ? [...breakpoints.slice(0, breakpoints.indexOf(breakpoint) + 1).reverse(), ''] : ['']
-    const layers = [...(state.length ? sizes.map((size) => [...(size ? [size] : []), ...state]) : []), ...sizes.map((size) => (size ? [size] : []))]
-    this.chain = layers.map(layerOf)
+    this.screen = screen
+    this.state = state
+    this.variants = [...(screen.variant ? [screen.variant] : []), ...state]
   }
 
-  /** What a property is set to here, by the nearest layer that sets it; in a layer the last class wins. */
+  /** Whether a class's screen variants hold at the width being seen; its other variants, as a layer. */
+  private split(raw: string): { holds: boolean; rest: string; utility: string; variants: string[] } {
+    const { variants, utility } = parseClass(raw)
+    let holds = true
+    const rest: string[] = []
+    for (const variant of variants) {
+      const said = screenVariant(variant, this.screen.sizes)
+      if (!said) rest.push(variant)
+      else if ('from' in said ? this.screen.width < said.from : this.screen.width >= said.below) holds = false
+    }
+    return { holds, rest: layerOf(rest), utility: utility.replace(/^!|!$/g, ''), variants }
+  }
+
+  /** Where a class stands in Tailwind's CSS: a later one wins. */
+  private rank(raw: string): bigint | null {
+    this.order ??= new Map(this.engine.ds.getClassOrder(this.classes))
+    return this.order.get(raw) ?? null
+  }
+
+  /**
+   * What a property is set to at this screen: of the classes in this state whose screen holds, the one Tailwind
+   * writes last; without one, the same without the state. `own` when it comes from the layer being edited.
+   */
   find(property: string): Found | undefined {
-    for (const [depth, layer] of this.chain.entries()) {
-      for (let i = this.classes.length - 1; i >= 0; i--) {
-        const parsed = parseClass(this.classes[i])
-        if (layerOf(parsed.variants) !== layer) continue
+    const editing = layerOf(this.variants)
+    for (const state of this.state.length ? [layerOf(this.state), ''] : ['']) {
+      let best: { raw: string; value: string; rank: bigint | null; index: number } | null = null
+      this.classes.forEach((raw, index) => {
+        const parsed = this.split(raw)
+        if (!parsed.holds || parsed.rest !== state) return
         const value = this.engine.value(parsed.utility, property)
-        if (value !== undefined) return { value, from: this.classes[i], own: depth === 0 }
+        // A value that only reads a part another utility sets (the line height of text-xl, the style of `border`) is not what sets it.
+        if (value === undefined || isReference(value)) return
+        const rank = this.rank(raw)
+        const later = !best || (rank !== null && (best.rank === null || rank > best.rank || (rank === best.rank && index > best.index))) || (rank === null && best.rank === null && index > best.index)
+        if (later) best = { raw, value, rank, index }
+      })
+      if (best) {
+        const found = best as { raw: string; value: string }
+        return { value: found.value, from: found.raw, own: layerOf(parseClass(found.raw).variants) === editing }
       }
     }
     return undefined
+  }
+
+  /**
+   * The variants a property is written with here: the layer being edited, unless a class of another layer that
+   * holds at this width would still win over it there (md:grid-cols-3 seen on a desktop): then that class's.
+   */
+  target(property: string): string[] {
+    const found = this.find(property)
+    if (!found || found.own) return this.variants
+    const { variants, utility } = parseClass(found.from)
+    const rest = variants.filter((variant) => !screenVariant(variant, this.screen.sizes))
+    if (layerOf(rest) !== layerOf(this.state)) return this.variants
+    const mine = withVariants(this.variants, utility)
+    const [, last] = this.engine.sort([found.from, mine])
+    return last === found.from && mine !== found.from ? variants : this.variants
   }
 
   /** The classes with properties set on this layer; null or '' takes one off. */
@@ -405,15 +485,16 @@ export class ClassStyle {
     let next = this.classes
     for (const [property, raw] of Object.entries(patch)) {
       const value = raw === null || raw === undefined ? '' : String(raw).trim()
+      const variants = new ClassStyle(this.engine, next, this.screen, this.state).target(property)
       if (value === '') {
-        const layer = layerOf(this.variants)
+        const layer = layerOf(variants)
         next = next.filter((cls) => {
           const parsed = parseClass(cls)
           return !(layerOf(parsed.variants) === layer && this.engine.group(parsed.utility)?.split('|')[0] === property)
         })
       } else {
         const utility = this.engine.utilityFor(property, value)
-        next = this.engine.put(next, this.variants, this.engine.group(utility) ?? utility, utility)
+        next = this.engine.put(next, variants, this.engine.group(utility) ?? utility, utility)
       }
     }
     return next
@@ -443,4 +524,15 @@ export class ClassStyle {
     }
     return [...out]
   }
+}
+
+/** Whether a value is nothing but a part another utility sets: "var(--tw-leading, var(--text-xl--line-height))". */
+export function isReference(value: string): boolean {
+  if (!value.startsWith('var(--tw-')) return false
+  let depth = 0
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] === '(') depth++
+    else if (value[i] === ')' && --depth === 0) return i === value.length - 1
+  }
+  return false
 }

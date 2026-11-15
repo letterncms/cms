@@ -1,6 +1,7 @@
 import { useAbility } from '@letterncms/sdk'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Engine, themeReference, type ThemeToken, type TokenGroup } from '../../../tailwind/engine'
+import { deviceWidths } from '@letterncms/ui'
+import { Engine, themeReference, type Screen, type ThemeToken, type TokenGroup } from '../../../tailwind/engine'
 import { Stylesheet } from '../../../tailwind/stylesheet'
 
 /* The site's styling in the admin: its stylesheet, read once, and Tailwind's design system built from it, which
@@ -64,15 +65,32 @@ export function loadEngine(sheet: Sheet): Promise<Engine | null> {
     .then((engine) => keep(built, id, engine)))
 }
 
+/** Tailwind's own theme (theme.css): every value a site has before it names its own. */
+export function loadTailwindTheme(): Promise<string> {
+  return import('../../../tailwind/defaults').then((module) => module.default)
+}
+
 /** Tailwind's compiler for a stylesheet: `build` adds classes and returns the whole CSS. One per stylesheet, so a canvas only ever adds. */
 export function loadCompiler(sheet: Sheet): Promise<{ build: (candidates: string[]) => string }> {
   const id = key(sheet)
   return compilers.get(id) ?? keep(compilers, id, import('../../../tailwind/compile').then(({ compiler }) => compiler(sheet)))
 }
 
-/** The site's whole CSS for the classes in use, as the server would compile it: for a server without Node, which the admin compiles for. */
-export function compileStyling(source: Pick<StylingSource, 'css' | 'files' | 'candidates'>): Promise<string> {
-  return import('../../../tailwind/compile').then(({ build }) => build(source))
+/** The screens a page is seen and styled on: one vocabulary everywhere. */
+export type Device = 'desktop' | 'tablet' | 'phone'
+
+/**
+ * What a device styles: a desktop every screen, at the width it is seen; a tablet what is below the first size
+ * wider than it (max-lg); a phone what is below the size under that (max-md). Desktop first, as people design.
+ */
+export function screenFor(device: Device, width: number, breakpoints: Breakpoint[]): Screen {
+  const sizes = Object.fromEntries(breakpoints.map((size) => [size.name, size.width]))
+  if (device === 'desktop') return { variant: '', width, sizes }
+  const wider = breakpoints.findIndex((size) => size.width > deviceWidths.tablet)
+  const tablet = breakpoints[wider === -1 ? breakpoints.length - 1 : wider]
+  const phone = breakpoints[(wider === -1 ? breakpoints.length - 1 : wider) - 1]
+  const size = device === 'tablet' ? tablet : phone ?? tablet
+  return { variant: size ? `max-${size.name}` : '', width: deviceWidths[device], sizes }
 }
 
 /** A length of the theme in CSS pixels (rem and em at 16px). */

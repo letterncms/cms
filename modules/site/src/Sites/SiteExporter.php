@@ -66,8 +66,8 @@ final class SiteExporter
         }
 
         foreach ($this->tree($this->styling->path()) as $relative) {
-            // compiled.css goes too: a site that takes this one in has its CSS without compiling anything.
-            $out["content/styling/{$relative}"] = (string) file_get_contents($this->styling->path($relative));
+            // What Tailwind made is compiled again where the site is taken in: an older site's copy of it stays behind.
+            $relative === 'compiled.css' || $out["content/styling/{$relative}"] = (string) file_get_contents($this->styling->path($relative));
         }
 
         foreach ((array) $this->cms->hooks()->filter('sites.content', []) as $folder) {

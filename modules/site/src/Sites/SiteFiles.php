@@ -50,7 +50,7 @@ final class SiteFiles
      *
      * @return array{
      *   collections: array<string, string>, entries: array<string, list<string>>, globals: array<string, string>, menus: array<string, string>,
-     *   theme: ?string, settings: ?string, compiled: ?string, custom: array<string, string>, load: ?string, fonts: array<string, string>, scripts: array<string, string>, styles: array<string, string>,
+     *   theme: ?string, settings: ?string, custom: array<string, string>, load: ?string, fonts: array<string, string>, scripts: array<string, string>, styles: array<string, string>,
      *   lock: ?string, vendor: array<string, string>, media: array<string, string>, mediaFiles: array<string, string>,
      *   config: array<string, string>, other: array<string, list<string>>, previews: list<string>, code: bool, bytes: int
      * }
@@ -58,7 +58,7 @@ final class SiteFiles
     public function read(Site $sitePackage): array
     {
         $out = [
-            'collections' => [], 'entries' => [], 'globals' => [], 'menus' => [], 'theme' => null, 'settings' => null, 'compiled' => null, 'custom' => [], 'load' => null, 'fonts' => [],
+            'collections' => [], 'entries' => [], 'globals' => [], 'menus' => [], 'theme' => null, 'settings' => null, 'custom' => [], 'load' => null, 'fonts' => [],
             'scripts' => [], 'styles' => [], 'lock' => null, 'vendor' => [], 'media' => [], 'mediaFiles' => [], 'config' => [], 'other' => [],
             'previews' => [], 'code' => false, 'bytes' => 0,
         ];
@@ -196,11 +196,8 @@ final class SiteFiles
                 $out['settings'] = $path;
 
                 return;
-            // What Tailwind made of the stylesheet for the site's content: it comes along, so a site without Node has its CSS at once.
+            // What Tailwind made of the stylesheet, in a site made by an older version: compiled here instead, never taken in.
             case $path === 'content/styling/compiled.css':
-                $limit('text');
-                $out['compiled'] = $path;
-
                 return;
             case $path === 'content/styling/code.json':
                 $limit('text');

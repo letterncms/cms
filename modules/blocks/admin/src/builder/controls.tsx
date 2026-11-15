@@ -24,8 +24,8 @@ function collapsed(): Record<string, boolean> {
  * A titled group of rows. Every title works the same way: it folds and unfolds the
  * section (a folded one shows its caret), and `actions` sit at the right. Whether it
  * is open is remembered per title; `open` is the default. `empty` (nothing set) dims
- * the title; an empty section with an add action says so when opened, and adding opens it,
- * unless it has `fields` of its own to fill: then they show.
+ * the title; an empty section with an add action has nothing to unfold: it is its title
+ * and the way to add, and adding opens it. One with `fields` of its own to fill shows them.
  */
 export function Section({ title, children, open: initial = true, actions, empty, fields }: { title: string; children: ReactNode; open?: boolean; actions?: ReactNode; empty?: boolean; fields?: boolean }) {
   const [open, setOpenState] = useState(() => collapsed()[title] === undefined ? initial : !collapsed()[title])
@@ -37,18 +37,23 @@ export function Section({ title, children, open: initial = true, actions, empty,
       // Private mode: remember for this session only.
     }
   }
+  const bare = !!(empty && actions && !fields)
   return (
     <section data-section={title} className="min-w-0 border-b border-border last:border-b-0">
       <header className="group/section flex h-10 items-center gap-1 pl-4 pr-3">
-        <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open} className={cn('!h-full min-w-0 flex-1 shrink !justify-start !gap-1 !rounded-none !bg-transparent !px-0 text-left !text-xs !font-semibold focus-visible:!-outline-offset-2', empty ? '!text-muted' : '!text-ink')}>
-          <span className="min-w-0 truncate">{title}</span>
-          {/* Open sections show their caret on hover; a folded one keeps it, so it reads as one. */}
-          <Icon name="chevron-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-fast', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
-        </Button>
+        {bare ? (
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-muted">{title}</span>
+        ) : (
+          <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open} className={cn('!h-full min-w-0 flex-1 shrink !justify-start !gap-1 !rounded-none !bg-transparent !px-0 text-left !text-xs !font-semibold focus-visible:!-outline-offset-2', empty ? '!text-muted' : '!text-ink')}>
+            <span className="min-w-0 truncate">{title}</span>
+            {/* Open sections show their caret on hover; a folded one keeps it, so it reads as one. */}
+            <Icon name="chevron-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-fast', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
+          </Button>
+        )}
         {/* Adding something shows it: the section opens. */}
         {actions && <span className="contents" onClickCapture={() => !open && setOpen(true)}>{actions}</span>}
       </header>
-      {open && <div className="space-y-1 px-4 pb-3">{empty && actions && !fields ? <p className="m-0 flex h-7 items-center text-xs text-faint">{t('None')}</p> : children}</div>}
+      {open && !bare && <div className="space-y-1 px-4 pb-3">{children}</div>}
     </section>
   )
 }

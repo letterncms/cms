@@ -195,7 +195,7 @@ final class OutputSiteTest extends TestCase
         $css = "@import \"tailwindcss\";\n@import \"cms\";\n@theme {\n  --color-primary: light-dark(#0f766e, #5eead4);\n}\n@utility card {\n  @apply rounded-xl p-6;\n}\n@utility btn-brand {\n  @apply bg-primary;\n}\n";
         $saved = $this->ability('styling/update', ['css' => $css, 'transition' => ['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client']]);
         $this->assertTrue($saved['saved']);
-        $this->assertFalse($saved['current'], 'nothing compiles without Node');
+        $this->assertStringContainsString('.card{', (string) file_get_contents(public_path(ltrim($saved['stylesheet'], '/'))));
         $this->assertSame([], $this->ability('styling/update', ['css' => 'body { color: red }'], 'invalid_input'), 'not a Tailwind stylesheet');
 
         $styling = $this->ability('styling/get');
@@ -204,20 +204,14 @@ final class OutputSiteTest extends TestCase
         $this->assertSame($css, $styling['css']);
         $this->assertSame(['card', 'btn-brand'], $styling['classes']);
         $this->assertSame('console.log(1)'."\n", $styling['js']);
-        $this->assertFalse($styling['current']);
         $this->assertSame(['type' => 'fade', 'duration' => 0.4, 'navigation' => 'client'], $styling['transition']);
 
-        // Whoever compiles reads the source, and hands back what Tailwind made of exactly that.
+        // A preview compiles a draft from the source, in the browser.
         $source = $this->ability('styling/source');
         $this->assertSame($css, $source['css']);
         $this->assertSame(['cms'], array_keys($source['files']));
         $this->assertStringContainsString('@font-face', $source['faces']);
         $this->assertNotSame($source['signature'], $this->ability('styling/source', ['css' => $css.'/* draft */'])['signature']);
-        $this->assertFalse($this->ability('styling/compiled', ['signature' => str_repeat('0', 32), 'css' => '.card{padding:1.5rem}'])['stored']);
-        $stored = $this->ability('styling/compiled', ['signature' => $source['signature'], 'css' => '.card{padding:1.5rem}']);
-        $this->assertTrue($stored['stored']);
-        $this->assertStringContainsString('.card{padding:1.5rem}', (string) file_get_contents(public_path(ltrim($stored['stylesheet'], '/'))));
-        $this->assertTrue($this->ability('styling/get')['current']);
     }
 
     public function test_styling_code_abilities_answer_as_described(): void

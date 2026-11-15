@@ -86,10 +86,6 @@ final class BrowserFixturesTest extends TestCase
         // The stylesheet styles emphasis inside a heading: an element style of its own, in the base layer.
         $styling = $this->app->make(\Cms\Modules\Site\Styling\Styling::class);
         $this->cms()->abilities()->execute('styling/update', ['css' => $styling->theme()."\n@layer base {\n  h2 em { font-style: normal; color: rgb(7, 8, 9); }\n}\n"], \Cms\Abilities\AbilityContext::system('test'));
-        // Without Node nothing compiles: the CSS the site has is called current, so the build has nothing to say about it.
-        $current = static fn () => $styling->refresh() || $styling->store($styling->signature(), '');
-        $current();
-
         $status = $this->app->make(SiteBuilder::class)->buildAll();
         $this->assertSame([], $status['errors']);
         $this->assertSame([], $status['warnings']);
@@ -111,7 +107,6 @@ final class BrowserFixturesTest extends TestCase
 
         // The same site, navigating without page loads.
         $this->cms()->abilities()->execute('styling/update', ['transition' => ['type' => 'fade', 'duration' => 0.2, 'navigation' => 'client']], \Cms\Abilities\AbilityContext::system('test'));
-        $current();
         $status = $this->app->make(SiteBuilder::class)->buildAll();
         $this->assertSame([], $status['errors']);
         $this->assertStringContainsString('navigate', (string) file_get_contents(public_path('one/index.html')));

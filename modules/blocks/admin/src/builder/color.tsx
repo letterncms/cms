@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Button, fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
+import { fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ThemeToken } from '../../../tailwind/engine'
 import { useThemeTokens } from '../core/styling'
@@ -32,7 +32,21 @@ export function parseColor(input: string | undefined): Rgba | null {
   if (v === 'transparent') return { r: 0, g: 0, b: 0, a: 0 }
   if (v === 'white') return { r: 255, g: 255, b: 255, a: 1 }
   if (v === 'black') return { r: 0, g: 0, b: 0, a: 1 }
-  return null
+  return drawn(v)
+}
+
+let canvas: CanvasRenderingContext2D | null | undefined
+/** Any other colour the browser can draw (oklch(), a name, hsl()): drawn on one pixel and read back. */
+function drawn(value: string): Rgba | null {
+  if (typeof document === 'undefined' || typeof CSS === 'undefined' || !CSS.supports('color', value) || /var\(|light-dark\(/.test(value)) return null
+  canvas ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+  if (!canvas) return null
+  canvas.clearRect(0, 0, 1, 1)
+  canvas.fillStyle = 'black'
+  canvas.fillStyle = value
+  canvas.fillRect(0, 0, 1, 1)
+  const [r, g, b, a] = canvas.getImageData(0, 0, 1, 1).data
+  return { r, g, b, a: Math.round((a / 255) * 100) / 100 }
 }
 
 export function formatColor({ r, g, b, a }: Rgba): string {
@@ -109,23 +123,33 @@ export function ColorField({ field, value: raw, onChange, disabled }: FieldProps
   )
 }
 
-/** One colour of the theme in the list. */
-function ThemeColor({ token, current, onPick }: { token: ThemeToken; current: boolean; onPick: () => void }) {
-  const { light, dark } = lightDark(token.value)
+/** One colour of the theme as a swatch: a ring where the pointer is, a ring and a check where it is chosen. */
+function ThemeSwatch({ token, current, onPick, onPoint, className }: { token: ThemeToken; current: boolean; onPick: () => void; onPoint: (token: ThemeToken | null) => void; className?: string }) {
+  const { light } = lightDark(token.value)
   return (
-    <Pressable compact role="option" aria-selected={current} title={`${token.variable} · ${token.value}`} onClick={onPick} className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-1.5 text-left text-xs hover:bg-hover', current && 'bg-active')}>
-      <Swatch color={light} dark={dark} className="!size-4" />
-      <span className="min-w-0 flex-1 truncate text-text">{token.name}</span>
-      {current ? <Icon name="check" size={12} className="shrink-0 text-focus" /> : <span className="w-3 shrink-0" />}
+    <Pressable
+      compact
+      role="option"
+      aria-selected={current}
+      aria-label={token.name}
+      onClick={onPick}
+      onPointerEnter={() => onPoint(token)}
+      onPointerLeave={() => onPoint(null)}
+      onFocus={() => onPoint(token)}
+      onBlur={() => onPoint(null)}
+      className={cn('relative grid place-items-center outline-offset-1 transition-transform duration-fast hover:z-raised hover:scale-125 hover:shadow-pop hover:ring-2 hover:ring-float focus-visible:z-raised', current && 'z-raised ring-2 ring-focus ring-offset-1 ring-offset-float', className)}
+      style={{ background: light }}
+    >
+      {current && <Icon name="check" size={10} className="text-white mix-blend-difference" />}
     </Pressable>
   )
 }
 
 /**
- * The theme's colours (the site's own by name, Tailwind's palette folded under them), or a custom colour
+ * The theme's colours (the site's own, then Tailwind's palette, shade by shade), or a custom colour
  * (HSV area, hue, alpha, hex). It opens on the theme unless the value is a custom colour.
  */
-function ColorPicker({ label, value, onChange }: { label: string; value?: string; onChange: (v: string | null) => void }) {
+export function ColorPicker({ label, value, onChange }: { label: string; value?: string; onChange: (v: string | null) => void }) {
   const tokens = useThemeTokens()
   const colors = tokens.of('color')
   const groups = useMemo(() => colorGroups(colors), [colors])
@@ -137,8 +161,8 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
   const [text, setText] = useState(value ?? '')
   const invalid = useInvalid(text, (v) => !v.trim() || validColor(v.trim()))
   const [tab, setTab] = useState<'theme' | 'custom'>(() => (colors.length > 0 && (!value || !!chosen) ? 'theme' : 'custom'))
-  // The palette is two hundred colours: folded until someone wants one, open on the one that is chosen.
-  const [palette, setPalette] = useState(() => !!chosen && groups.families.some((family) => family.shades.includes(chosen.token)))
+  // The colour under the pointer, named under the grid: without it a grid of two hundred swatches says nothing.
+  const [pointed, setPointed] = useState<ThemeToken | null>(null)
   const area = useRef<HTMLDivElement>(null)
 
   useEffect(() => setText(value ?? ''), [value])
@@ -189,24 +213,30 @@ function ColorPicker({ label, value, onChange }: { label: string; value?: string
       </div>
       {tab === 'theme' ? (
         <div>
-          <div role="listbox" aria-label={t('Theme Colors')} className="max-h-72 overflow-y-auto p-1">
-            {groups.own.map((token) => <ThemeColor key={token.variable} token={token} current={current === token.variable} onPick={() => onChange(token.ref)} />)}
-            {groups.families.length > 0 && (
-              <Button variant="ghost" size="xs" aria-expanded={palette} onClick={() => setPalette(!palette)} className="mt-1 w-full !justify-start !gap-1 !px-1.5 !font-normal !text-muted hover:!text-ink">
-                <Icon name="chevron-down" size={10} className={cn('shrink-0 transition-[rotate] duration-fast', !palette && '-rotate-90')} />
-                {t('Palette')}
-              </Button>
-            )}
-            {palette && groups.families.map((family) => (
-              <div key={family.name} className="flex h-6 items-center gap-2 px-1.5">
-                <span className="w-14 shrink-0 truncate text-2xs text-muted">{family.name}</span>
-                <div className="flex min-w-0 flex-1 gap-px">
-                  {family.shades.map((token) => (
-                    <Pressable compact key={token.variable} role="option" aria-selected={current === token.variable} aria-label={token.name} title={token.name} onClick={() => onChange(token.ref)} className={cn('h-4 min-w-0 flex-1 first:rounded-l-xs last:rounded-r-xs', current === token.variable && 'ring-2 ring-focus ring-offset-1 ring-offset-float')} style={{ background: token.value }} />
-                  ))}
-                </div>
+          <div role="listbox" aria-label={t('Theme Colors')} className="max-h-80 space-y-3 overflow-y-auto overscroll-contain p-2.5">
+            {groups.own.length > 0 && (
+              <div className="grid grid-cols-8 gap-1.5">
+                {groups.own.map((token) => <ThemeSwatch key={token.variable} token={token} current={current === token.variable} onPick={() => onChange(token.ref)} onPoint={setPointed} className="aspect-square rounded-sm shadow-edge" />)}
               </div>
-            ))}
+            )}
+            {groups.families.length > 0 && (
+              <div className="grid grid-cols-11 gap-px overflow-hidden rounded-sm">
+                {groups.families.flatMap((family) => family.shades.map((token) => <ThemeSwatch key={token.variable} token={token} current={current === token.variable} onPick={() => onChange(token.ref)} onPoint={setPointed} className="h-4" />))}
+              </div>
+            )}
+          </div>
+          <div className="flex h-8 items-center gap-2 border-t border-border px-2.5 text-xs">
+            {(() => {
+              const named = pointed ?? chosen?.token ?? null
+              if (!named) return <span className="flex-1" />
+              return (
+                <>
+                  <Swatch color={lightDark(named.value).light} dark={lightDark(named.value).dark} className="!size-3.5" />
+                  <span className="min-w-0 flex-1 truncate text-ink">{named.name}</span>
+                  <span className="max-w-24 shrink-0 truncate font-mono text-2xs text-faint">{lightDark(tokens.resolve(named.ref)).light}</span>
+                </>
+              )
+            })()}
           </div>
           <div className="flex items-center gap-2 border-t border-border px-2.5 py-2">
             {current ? (
