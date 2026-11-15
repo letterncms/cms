@@ -16,8 +16,8 @@ use Cms\Support\Files;
 use Cms\Tests\TestCase;
 
 /**
- * The site's styling is a Tailwind stylesheet and the classes its content carries. Nothing here compiles:
- * the tests have no Node, as a server may have none, and CSS is handed in as the admin hands it in.
+ * The site's styling is a Tailwind stylesheet and the classes its content carries, compiled on the server
+ * (in PHP) whenever either changes.
  */
 final class StylingTest extends TestCase
 {
@@ -143,8 +143,9 @@ final class StylingTest extends TestCase
         $this->assertNull($theme->variable('--angle'), 'not from a block inside @theme');
         $this->assertSame(['out' => 'cubic-bezier(0.2, 0.8, 0.2, 1)', 'snap' => 'cubic-bezier(0.5, 0, 0, 1)'], $theme->group('--ease-'));
         $this->assertSame(['card', 'btn-primary', 'btn-on-brand'], $theme->classes(), 'a class that takes a value (tab-*) is a family, not one to pick');
-        $this->assertTrue($theme->dark());
-        $this->assertFalse((new Theme('@import "tailwindcss"; :root { color-scheme: light; }'))->dark());
+        $this->assertTrue($theme->dark(), 'a colour has a dark side');
+        $this->assertTrue((new Theme('@import "tailwindcss"; @theme { --color-primary: #000; } :root { color-scheme: light dark; }'))->dark(), 'a site that says so itself');
+        $this->assertFalse((new Theme('@import "tailwindcss"; @theme { --color-primary: #000; }'))->dark());
     }
 
     public function test_the_site_starts_with_a_stylesheet_and_answers_from_its_theme(): void
@@ -220,23 +221,23 @@ final class StylingTest extends TestCase
 
         // Fonts and the transition stand before Tailwind's output, and are no part of what it compiles.
         $signature = $styling->signature();
-        $this->assertTrue($styling->store($signature, '.compiled{color:red}'));
+        $styling->refresh();
+        $compiled = (string) file_get_contents(storage_path('styling/compiled.css'));
         $faces = $styling->faces();
         $this->assertStringStartsWith('@font-face{font-family:"Inter";src:url("/fonts/inter.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}', $faces);
         $this->assertStringContainsString('@view-transition{navigation:auto}', $faces);
         $this->assertStringContainsString('animation-duration:0.4s', $faces);
-        $this->assertSame($faces."/* {$signature} */\n.compiled{color:red}\n", $styling->css());
+        $this->assertStringStartsWith("/* {$signature} */\n", $compiled);
+        $this->assertSame($faces.$compiled, $styling->css());
 
         $styling->saveSettings(['fonts' => []]);
         $this->assertSame($signature, $styling->signature());
         $this->assertTrue($styling->current());
     }
 
-    public function test_compiled_css_says_what_it_was_made_from(): void
+    public function test_the_server_compiles_the_css_with_tailwind(): void
     {
         $styling = $this->styling();
-        $this->assertNull($this->app->make(Compiler::class)->node(), 'the tests have no Node');
-        $this->assertNull($this->app->make(Compiler::class)->compile($styling->source()));
 
         $source = $styling->source();
         $this->assertSame(['css', 'files', 'candidates'], array_keys($source));
@@ -244,63 +245,63 @@ final class StylingTest extends TestCase
         $this->assertSame([Styling::KERNEL], array_keys($source['files']));
         $this->assertStringContainsString('--control-md-height', $source['files'][Styling::KERNEL], 'the kernel’s own stylesheets');
         $this->assertStringContainsString('.cms-button', $source['files'][Styling::KERNEL]);
+        $this->assertStringNotContainsString('color-scheme: light dark', $source['files'][Styling::KERNEL], 'no dark values: the page stays light');
 
         $signature = $styling->signature();
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $signature);
         $this->assertSame($signature, $styling->signature($source));
         $this->assertNotSame($signature, $styling->signature($styling->source($styling->theme().'/* draft */')), 'a draft is another source');
 
-        // Nothing compiled yet, and nothing here to compile with.
         $this->assertFalse($styling->current());
-        $this->assertFalse($styling->refresh());
-        $this->assertFileDoesNotExist(content_path('styling/compiled.css'));
-        $empty = $styling->stylesheet();
-
-        // The admin hands in what the browser compiled, for the source it read.
-        $this->assertFalse($styling->store(str_repeat('0', 32), '.old{}'), 'CSS of another source is not the site’s');
-        $this->assertFileDoesNotExist(content_path('styling/compiled.css'));
-        $this->assertTrue($styling->store($signature, '.flex{display:flex}'));
-        $this->assertSame("/* {$signature} */\n.flex{display:flex}\n", (string) file_get_contents(content_path('styling/compiled.css')));
+        $styling->refresh();
         $this->assertTrue($styling->current());
-        $this->assertTrue($styling->refresh(), 'current: nothing to compile');
-        $this->assertNotSame($empty, $styling->stylesheet());
-        $this->assertStringContainsString('.flex{display:flex}', (string) file_get_contents(public_path(ltrim($styling->stylesheet(), '/'))));
+        $compiled = (string) file_get_contents(storage_path('styling/compiled.css'));
+        $this->assertStringStartsWith("/* {$signature} */\n", $compiled);
+        // Tailwind's own output: the theme's variables, Preflight, the kernel and the stylesheet's own classes, minified.
+        $this->assertStringContainsString('--color-primary:#1d4ed8', $compiled);
+        $this->assertStringContainsString('box-sizing:border-box', $compiled);
+        $this->assertStringContainsString('.btn-primary{', $compiled);
+        $this->assertStringContainsString('.cms-button', $compiled);
+        $this->assertStringNotContainsString("\n  ", $compiled);
+        $this->assertStringContainsString('.btn-primary{', (string) file_get_contents(public_path(ltrim($styling->stylesheet(), '/'))));
+
+        // Dark values: the page follows the visitor's light or dark mode.
+        $styling->saveTheme(self::THEME);
+        $this->assertStringContainsString(':where(:root) { color-scheme: light dark; }', $styling->source()['files'][Styling::KERNEL]);
+        $this->assertStringContainsString('color-scheme:light dark', (string) file_get_contents(storage_path('styling/compiled.css')));
 
         // What a plugin adds to the kernel's stylesheet is part of the source.
         $this->cms()->hooks()->addFilter('styling.kernel', static fn (array $css) => [...$css, '.plugin-thing{display:block}', 7]);
-        $this->assertStringEndsWith('.plugin-thing{display:block}', $styling->source()['files'][Styling::KERNEL]);
+        $this->assertStringEndsWith(".plugin-thing{display:block}\n@layer base { :where(:root) { color-scheme: light dark; } }\n", $styling->source()['files'][Styling::KERNEL]);
         $this->assertFalse($styling->current());
-        $this->assertStringContainsString('.flex{display:flex}', $styling->css(), 'the CSS it has is served until there is newer');
+        $styling->refresh();
+        $this->assertStringContainsString('.plugin-thing{display:block}', $styling->css());
     }
 
-    public function test_content_that_brings_a_class_makes_the_css_older_and_saving_never_fails_for_it(): void
+    public function test_content_that_brings_a_class_compiles_the_css_again_and_saving_never_fails_for_it(): void
     {
         $styling = $this->styling();
         $this->page('One', [['type' => 'box', 'class' => 'flex', 'children' => []]]);
-        $this->assertTrue($styling->store($styling->signature(), '.flex{display:flex}'));
+        $this->assertStringContainsString('.flex{display:flex}', $styling->css());
         $this->assertTrue($styling->current());
 
-        // The same classes again: still current.
+        // A new class, as an agent writes it over the API: the CSS has it the next time it is asked for.
         $two = $this->page('Two', [['type' => 'box', 'class' => 'flex', 'children' => []]]);
-        $this->assertTrue($styling->current());
-
-        // A new class: the candidates are looked for again, and the CSS is behind.
-        $this->cms()->entryService()->update($two->id, ['data' => ['content' => [['type' => 'box', 'class' => 'flex gap-8', 'children' => []]]]]);
+        $this->ability('entries/update', ['id' => $two->id, 'data' => ['content' => [['type' => 'box', 'class' => 'flex gap-8 md:columns-3', 'children' => []]]]]);
         $this->assertContains('gap-8', $styling->source()['candidates']);
-        $this->assertFalse($styling->current());
-        $this->assertFalse($this->ability('styling/get')['current']);
+        $css = $styling->css();
+        $this->assertStringContainsString('.gap-8{gap:calc(var(--spacing) * 8)}', $css);
+        $this->assertStringContainsString('md\:columns-3', $css);
 
-        $this->assertTrue($styling->store($styling->signature(), '.flex{display:flex}.gap-8{gap:2rem}'));
         $this->cms()->entryService()->delete($two->id, $this->admin());
-        $this->assertNotContains('gap-8', $styling->source()['candidates']);
-        $this->assertFalse($styling->current());
+        $this->assertStringNotContainsString('.gap-8{', $styling->css(), 'what no content uses goes');
 
         // A stylesheet that does not compile is reported, and content is saved all the same.
         $this->app->instance(Compiler::class, $broken = new class extends Compiler
         {
             public int $asked = 0;
 
-            public function compile(array $source): ?string
+            public function compile(array $source): string
             {
                 $this->asked++;
 
@@ -329,49 +330,76 @@ final class StylingTest extends TestCase
         $this->assertSame($before, $this->styling()->theme());
     }
 
-    public function test_a_server_with_node_compiles_when_the_stylesheet_is_saved_and_when_content_changes(): void
+    public function test_a_site_without_compiled_css_gets_it_when_a_page_asks(): void
     {
-        // Node, as far as Styling knows: it answers with the classes it was asked for.
-        $this->app->instance(Compiler::class, $node = new class extends Compiler
+        $styling = $this->styling();
+        $this->page('One', [['type' => 'box', 'class' => 'columns-5', 'children' => []]]);
+        $styling->settle();
+        // A server updated from a version that kept it elsewhere, a site copied in by hand: nothing to serve yet.
+        @unlink($styling->compiledPath());
+        $this->app->forgetInstance(Styling::class);
+
+        $fresh = $this->styling();
+        $this->assertStringContainsString('.columns-5{', $fresh->css());
+        $this->assertTrue($fresh->current());
+        $this->assertStringContainsString('.columns-5{', (string) file_get_contents(public_path(ltrim($fresh->stylesheet(), '/'))));
+    }
+
+    public function test_a_stylesheet_tailwind_refuses_is_not_saved(): void
+    {
+        $before = $this->styling()->theme();
+
+        try {
+            $this->ability('styling/update', ['css' => "@import \"tailwindcss\";\n@utility card { @apply no-such-class; }\n"]);
+            $this->fail('a stylesheet that does not compile was saved');
+        } catch (AbilityException $e) {
+            $this->assertSame('invalid_input', $e->type);
+            $this->assertStringContainsString('no-such-class', $e->getMessage());
+        }
+
+        $this->assertSame($before, $this->styling()->theme());
+    }
+
+    public function test_compiling_is_done_once_however_many_entries_were_saved(): void
+    {
+        $this->app->instance(Compiler::class, $counted = new class extends Compiler
         {
             public int $asked = 0;
 
-            public function compile(array $source): ?string
+            public function compile(array $source): string
             {
                 $this->asked++;
 
-                return '/* '.implode(' ', $source['candidates']).' */'.(str_contains($source['css'], '--color-primary: light-dark') ? '.themed{}' : '');
+                return parent::compile($source);
             }
         });
         $this->app->forgetInstance(Styling::class);
         $styling = $this->styling();
 
         $saved = $this->ability('styling/update', ['css' => self::THEME]);
-        $this->assertTrue($saved['current']);
-        $this->assertSame(1, $node->asked, 'compiled once: to check it, and that is the site’s CSS');
-        $this->assertStringContainsString('.themed{}', (string) file_get_contents(public_path(ltrim($saved['stylesheet'], '/'))));
+        $this->assertSame(1, $counted->asked, 'compiled once: to check it, and that is the site’s CSS');
+        $this->assertStringContainsString('.card{', (string) file_get_contents(public_path(ltrim($saved['stylesheet'], '/'))));
 
         $this->page('One', [['type' => 'box', 'class' => 'columns-3', 'children' => []]]);
         $this->page('Two', [['type' => 'box', 'class' => 'columns-4', 'children' => []]]);
-        $this->assertSame(1, $node->asked, 'not on every save');
-        $this->assertStringContainsString('columns-3', $styling->css());
-        $this->assertStringContainsString('columns-4', $styling->css());
-        $this->assertSame(2, $node->asked, 'once, when the CSS was asked for');
+        $this->assertSame(1, $counted->asked, 'not on every save');
+        $this->assertStringContainsString('.columns-3{', $styling->css());
+        $this->assertStringContainsString('.columns-4{', $styling->css());
+        $this->assertSame(2, $counted->asked, 'once, when the CSS was asked for');
         $this->assertTrue($styling->current());
     }
 
     public function test_abilities_read_change_and_store_the_styling(): void
     {
         $got = $this->ability('styling/get');
-        $this->assertSame(['css', 'classes', 'fonts', 'fontFiles', 'transition', 'templates', 'current', 'stylesheet', 'js'], array_keys($got));
+        $this->assertSame(['css', 'classes', 'fonts', 'fontFiles', 'transition', 'templates', 'stylesheet', 'js'], array_keys($got));
         $this->assertSame($this->styling()->theme(), $got['css']);
         $this->assertSame(['btn-primary', 'btn-secondary', 'btn-ghost', 'btn-link'], $got['classes']);
-        $this->assertFalse($got['current']);
 
         $updated = $this->ability('styling/update', ['css' => self::THEME, 'fonts' => [['family' => 'Inter', 'src' => '/fonts/inter.woff2']], 'transition' => ['type' => 'fade']]);
-        $this->assertSame(['saved', 'current', 'stylesheet'], array_keys($updated));
+        $this->assertSame(['saved', 'stylesheet'], array_keys($updated));
         $this->assertTrue($updated['saved']);
-        $this->assertFalse($updated['current']);
+        $this->assertStringContainsString('.card{', (string) file_get_contents(public_path(ltrim($updated['stylesheet'], '/'))));
         $this->assertFileExists(content_path('styling/theme.css'));
         $this->assertSame(['fonts' => [['family' => 'Inter', 'src' => '/fonts/inter.woff2']], 'transition' => ['type' => 'fade', 'duration' => 0.3, 'navigation' => 'document']], Files::readJson(content_path('styling/settings.json')));
         $this->assertSame(['card', 'btn-primary', 'btn-on-brand'], $this->ability('styling/get')['classes']);
@@ -388,19 +416,9 @@ final class StylingTest extends TestCase
         $this->assertSame(array_values(array_diff($source['candidates'], ['card', 'btn-primary', 'btn-on-brand'])), $draft['candidates']);
         $this->assertContains('btn-primary', $source['candidates']);
 
-        // The CSS of a draft, or of a source that has changed since, is not the site's.
-        $this->assertFalse($this->ability('styling/compiled', ['signature' => $draft['signature'], 'css' => '.draft{}'])['stored']);
-        $compiled = false;
-        $this->cms()->hooks()->on('styling.compiled', static function () use (&$compiled): void {
-            $compiled = true;
-        });
-        $stored = $this->ability('styling/compiled', ['signature' => $source['signature'], 'css' => '.card{padding:1.5rem}']);
-        $this->assertTrue($stored['stored']);
-        $this->assertTrue($compiled, 'pages built before it are built again');
-        $this->assertSame($stored['stylesheet'], $this->ability('styling/get')['stylesheet']);
-        $this->assertTrue($this->ability('styling/get')['current']);
+        $this->assertFalse($this->cms()->abilities()->has('styling/compiled'), 'the server compiles: nothing is handed in');
 
-        foreach ([['styling/compiled', ['signature' => 'nope', 'css' => '']], ['styling/update', ['css' => 'h1{}']], ['styling/update', ['transition' => ['type' => 'spin']]]] as [$name, $input]) {
+        foreach ([['styling/update', ['css' => 'h1{}']], ['styling/update', ['transition' => ['type' => 'spin']]]] as [$name, $input]) {
             try {
                 $this->ability($name, $input);
                 $this->fail("{$name} took ".json_encode($input));
@@ -463,7 +481,6 @@ final class StylingTest extends TestCase
     {
         $styling = $this->styling();
         $one = $this->page('One', [['type' => 'box', 'class' => 'flex', 'children' => []]]);
-        $styling->store($styling->signature(), '.flex{display:flex}');
         $builder = $this->app->make(SiteBuilder::class);
         $status = $builder->buildAll();
         $this->assertSame([], $status['errors']);
@@ -473,7 +490,7 @@ final class StylingTest extends TestCase
 
         // New CSS: pages not built again still find the one they name.
         $this->page('Two', [['type' => 'box', 'class' => 'grid', 'children' => []]]);
-        $styling->store($styling->signature(), '.flex{display:flex}.grid{display:grid}');
+        $styling->settle();
         $second = $styling->stylesheet();
         $this->assertNotSame($first, $second);
         $this->assertFileExists(public_path(ltrim($first, '/')));
@@ -485,31 +502,21 @@ final class StylingTest extends TestCase
         $this->assertFileDoesNotExist(public_path(ltrim($first, '/')));
         $this->assertFileExists(public_path(ltrim($second, '/')));
 
-        // Content that came in beside the CMS (git, FTP): the build looks, and without Node can only say so.
+        // Content that came in beside the CMS (git, FTP): the build looks and compiles.
         Files::put(content_path('collections/notes/hello.md'), "---\nid: 01aaaaaaaaaaaaaaaaaaaaaaa1\ntitle: Hello\nstatus: published\n---\n\n<div class=\"columns-2\">Hi</div>\n");
         $this->cms()->entries()->flush();
         $status = $builder->buildAll();
         $this->assertSame([], $status['errors']);
-        $this->assertCount(1, $status['warnings']);
-        $this->assertNull($status['warnings'][0]['uri']);
-        $this->assertStringContainsString('Node 20', $status['warnings'][0]['message']);
+        $this->assertSame([], $status['warnings']);
+        $this->assertStringContainsString('.columns-2{', $styling->css());
         $this->assertNotEmpty($one->id);
     }
 
-    public function test_css_the_admin_compiled_rebuilds_the_site_and_a_saved_stylesheet_does_too(): void
+    public function test_a_saved_stylesheet_rebuilds_the_site(): void
     {
         $this->page('One', [['type' => 'box', 'class' => 'flex', 'children' => []]]);
         $builder = $this->app->make(SiteBuilder::class);
         $builder->buildAll();
-        $this->assertFalse($builder->hasWork());
-
-        $source = $this->ability('styling/source');
-        $this->ability('styling/compiled', ['signature' => $source['signature'], 'css' => '.flex{display:flex}']);
-        $this->assertTrue($builder->hasWork(), 'pages built with the older CSS');
-        $builder->buildAll();
-
-        // The same CSS again changes nothing.
-        $this->ability('styling/compiled', ['signature' => $source['signature'], 'css' => '.flex{display:flex}']);
         $this->assertFalse($builder->hasWork());
 
         $this->ability('styling/update', ['transition' => ['type' => 'fade']]);

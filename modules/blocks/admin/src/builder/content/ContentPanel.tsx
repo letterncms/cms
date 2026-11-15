@@ -145,14 +145,15 @@ export function ContentPanel({ node }: { node: BlockNode }) {
         />
       </Section>
 
-      <Section title={t('Advanced')} open={false} empty={!node.anchor && !node.attrs && !node.class && !node.persist && !advanced.some((f) => node.props?.[f.handle] !== undefined && node.props?.[f.handle] !== f.default)}>
+      <Section title={t('Advanced')} open={false} empty={!node.anchor && !node.attrs && !(node.type === 'component' && node.class) && !node.persist && !advanced.some((f) => node.props?.[f.handle] !== undefined && node.props?.[f.handle] !== f.default)}>
         {repeat ? <RepeatAdvanced node={node} /> : advanced.map(prop)}
         <PanelFields
           fields={[
             { handle: 'label', type: 'text', size: 'sm', commit: 'blur', label: t('Layer Name'), placeholder: type?.title },
             // A block with an anchor of its own (a heading's, with its # link) has the one field for it.
             ...(advanced.some((f) => f.handle === 'anchor') && !node.anchor ? [] : [{ handle: 'anchor', type: 'text', size: 'sm', commit: 'blur', label: t('Anchor'), placeholder: t('None'), mono: true } as FieldDef]),
-            { handle: 'class', type: 'text', size: 'sm', commit: 'blur', label: t('Classes'), placeholder: t('None'), mono: true },
+            // A block's classes are the Design tab's; a component's own design is the component's, so this one has them here.
+            ...(node.type === 'component' ? [{ handle: 'class', type: 'text', size: 'sm', commit: 'blur', label: t('Classes'), mono: true } as FieldDef] : []),
             // The name pages share for an element that lives on when they swap; it carries what runs in it, so it needs the code permission.
             ...(can('site.code') ? [{ handle: 'persist', type: 'text', size: 'sm', commit: 'blur', label: t('Persist As'), placeholder: 'player', mono: true } as FieldDef] : []),
           ]}

@@ -43,8 +43,8 @@ final class AbilityNamesTest extends TestCase
         // Packages, their installs and the core update.
         'enable', 'disable', 'switch', 'install', 'uninstall', 'migrate', 'rollback', 'plan-install', 'job-step',
         'update-check', 'update-start', 'update-step', 'update-switch', 'update-rollback', 'update-postpone', 'update-auto', 'update-tick',
-        // The site, its styling, and email. `compiled` hands the site the CSS a browser compiled for it.
-        'build', 'preview', 'test', 'refresh', 'compiled',
+        // The site, its styling, and email.
+        'build', 'preview', 'test', 'refresh',
         // The Sync module: the only place "sync" is said.
         'connect', 'disconnect', 'allow', 'renew-key', 'start', 'step', 'resume', 'cancel', 'undo',
         // A site taken into the site.

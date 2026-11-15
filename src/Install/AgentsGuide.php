@@ -205,12 +205,12 @@ final class AgentsGuide
             '}',
             '```',
             '',
-            '- **Theme.** Colours, fonts and sizes are `@theme` variables in Tailwind\'s namespaces: `--color-*`, `--font-*`, `--text-*`, `--spacing-*`, `--radius-*`, `--shadow-*`, `--container-*`, `--breakpoint-*`, `--ease-*`. A dark value is the second argument of `light-dark()`. To change how the whole site looks, change these, not the blocks.',
+            '- **Theme.** Colours, fonts and sizes are `@theme` variables in Tailwind\'s namespaces: `--color-*`, `--font-*`, `--text-*`, `--spacing-*`, `--radius-*`, `--shadow-*`, `--container-*`, `--breakpoint-*`, `--ease-*`. A dark value is the second argument of `light-dark()`: a theme with one follows the visitor\'s light or dark mode. To change how the whole site looks, change these, not the blocks.',
             '- **Classes on blocks.** A block\'s `class` is a string of Tailwind classes: `"grid gap-6 md:grid-cols-3"`, `"bg-primary text-primary-foreground hover:opacity-90"`. Use the theme\'s names. When several blocks share a look, give it a name with `@utility` and use that. A button\'s looks are the `btn-<name>` classes (`btn-primary`).',
             '- **States.** A state is an attribute on the element (`data-open`, `data-scrolled`, `data-hidden`, `data-current`), styled with Tailwind\'s data variants: `data-open:rotate-45` on the element itself, `in-data-open:hidden` on something inside it, `group-data-open:opacity-100` under an element with the class `group`. `current:` styles the link to the page being shown, `dark:` the dark side, `group-hover:` what is under a hovered `group`.',
             '- **Fonts.** `settings.json` lists the font faces (`.woff2` files in `content/styling/fonts/`); `styling/fonts-import family="Inter"` downloads a Google Fonts family and adds its faces. Name the family in the theme: `--font-sans: "Inter", "Inter Fallback", sans-serif`.',
-            '- **Compiled CSS.** Pages link `content/styling/compiled.css`, which Tailwind makes from `theme.css` for exactly the classes the content uses. Never edit it. It is made again by itself whenever the stylesheet or the content changes through an ability. After you edit files by hand, '.($builds ? '`php cms build` compiles it first' : 'the next ability that saves content compiles it').', when the machine has Node 20 or newer (`CMS_NODE` names the binary when it is not `node`). Without Node nothing is lost: the admin compiles it in the browser the next time someone opens it'.($builds ? ', and until then the build warns that the CSS is older than the content' : '').'. `php cms run styling/get` says whether it is `current`.',
-            '- **Changing it.** Edit `theme.css` as a file, or send the whole stylesheet with `php cms run styling/update --input=\'{"css": "…"}\'`, which refuses a stylesheet Tailwind cannot compile and says why. Commit `compiled.css` with the rest: a site deployed from git has its CSS without compiling anything.',
+            '- **Compiled CSS.** Pages link one stylesheet, which Tailwind makes from `theme.css` for exactly the classes the content uses (`storage/styling/compiled.css`, a build file: never edit or commit it). The server makes it again by itself whenever the stylesheet or the content changes through an ability'.($builds ? ', and `php cms build` does after you edited files by hand' : '').'.',
+            '- **Changing it.** Edit `theme.css` as a file, or send the whole stylesheet with `php cms run styling/update --input=\'{"css": "…"}\'`, which refuses a stylesheet Tailwind cannot compile and says why.',
         ];
     }
 
@@ -219,7 +219,7 @@ final class AgentsGuide
     {
         $places = [
             'content/collections/' => 'Each collection\'s definition (`<handle>.yaml`: fields, route, driver) and, for collections kept in files, its entries (`<handle>/*.md`)',
-            'content/styling/' => 'The styling: `theme.css` (the Tailwind stylesheet), `settings.json` (fonts, page transition), `compiled.css` (generated), `fonts/`, and the site\'s own `scripts/` and `styles/`',
+            'content/styling/' => 'The styling: `theme.css` (the Tailwind stylesheet), `settings.json` (fonts, page transition), `fonts/`, and the site\'s own `scripts/` and `styles/`',
             'content/globals/' => 'Site-wide values such as the footer\'s, one file per set',
             'content/navigation/' => 'Menus',
             'content/schemas/' => 'The content model as JSON Schema, one file per collection, blueprint and global'.($blocks ? ', and `blocks.json` for what a blocks field holds' : '').'. The site writes them whenever a definition changes: read them, never edit them',

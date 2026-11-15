@@ -1,7 +1,7 @@
 // What the Design tab's controls read and write: CSS properties of one list of Tailwind classes, on the layer
 // being edited (a screen size and a state). Nothing here knows React or a block: a block's `class`, a site
 // class's `@apply` list and an element's style are all edited through the same thing.
-import { ClassStyle, layerOf, parseClass, themeReference, withVariants, type Engine, type ThemeToken } from '../../../tailwind/engine'
+import { ClassStyle, layerOf, parseClass, themeReference, withVariants, type Engine, type Screen, type ThemeToken } from '../../../tailwind/engine'
 import type { BlockNode } from '../core/types'
 
 export type ValueStatus = 'own' | 'inherited' | 'none'
@@ -12,11 +12,11 @@ export interface StyleApi {
   /** Null while the site's stylesheet loads, or when it doesn't compile: nothing reads as set and nothing is written. */
   engine: Engine | null
   classes: string[]
-  /** The variants of the layer being edited: ["md", "hover"]. */
+  /** The variants of the layer being edited: ["max-lg", "hover"]. */
   variants: string[]
-  breakpoint: string
+  screen: Screen
   state: string[]
-  /** What a CSS property (camelCase, or a variable a utility sets: "--tw-blur") is on this layer, by the nearest layer that sets it. */
+  /** What a CSS property (camelCase, or a variable a utility sets: "--tw-blur") is at this screen and state: what wins in CSS there. */
   value: (key: string) => string | undefined
   status: (key: string) => ValueStatus
   set: (key: string, value: string | number | null | undefined) => void
@@ -58,58 +58,33 @@ export function plain(value: string): string {
   return out
 }
 
-/** Whether a value is nothing but a part another utility sets: "var(--tw-leading, var(--text-xl--line-height))". */
-function reference(value: string): boolean {
-  if (!value.startsWith('var(--tw-')) return false
-  let depth = 0
-  for (let i = 0; i < value.length; i++) {
-    if (value[i] === '(') depth++
-    else if (value[i] === ')' && --depth === 0) return i === value.length - 1
-  }
-  return false
-}
-
 /** What stands inside a function: "blur(8px)" → "8px". */
 export const inner = (value: string | undefined) => value?.match(/^[a-zA-Z-]+\((.*)\)$/)?.[1]
 
-export function styleApi(engine: Engine | null, classes: string[], breakpoints: string[], breakpoint: string, state: string[], write: (classes: string[], group?: string) => void): StyleApi {
-  const variants = [...(breakpoint ? [breakpoint] : []), ...state]
+export function styleApi(engine: Engine | null, classes: string[], screen: Screen, state: string[], write: (classes: string[], group?: string) => void): StyleApi {
+  const variants = [...(screen.variant ? [screen.variant] : []), ...state]
   const own = layerOf(variants)
   const parsed = classes.map((raw) => {
     const { variants: on, utility } = parseClass(raw)
     return { raw, layer: layerOf(on), utility: bare(utility) }
   })
-  // Mobile-first, as Tailwind is: a size shows what the sizes below it set, a state what the same sizes set without it.
-  const at = breakpoints.indexOf(breakpoint)
-  const sizes = breakpoint ? [...(at === -1 ? [breakpoint] : breakpoints.slice(0, at + 1).reverse()), ''] : ['']
-  const chain = [...(state.length ? sizes.map((size) => [...(size ? [size] : []), ...state]) : []), ...sizes.map((size) => (size ? [size] : []))].map(layerOf)
-
+  const reading = engine ? new ClassStyle(engine, classes, screen, state) : null
   const lookup = (key: string): { value: string; own: boolean } | undefined => {
-    if (!engine) return undefined
-    const property = kebab(key)
-    for (const [depth, layer] of chain.entries()) {
-      for (let i = parsed.length - 1; i >= 0; i--) {
-        if (parsed[i].layer !== layer) continue
-        const value = engine.value(parsed[i].utility, property)
-        // A value that only reads a part another utility sets (the line height of text-xl, the style of `border`) is not what sets it.
-        if (value === undefined || reference(value)) continue
-        return { value: plain(value), own: depth === 0 }
-      }
-    }
-    return undefined
+    const found = reading?.find(kebab(key))
+    return found ? { value: plain(found.value), own: found.own } : undefined
   }
 
   const commit = (next: string[], group?: string) => {
     if (!engine || (next.length === classes.length && next.every((name, i) => name === classes[i]))) return
     write(engine.sort([...new Set(next)]), group)
   }
-  const style = (list: string[]) => new ClassStyle(engine!, list, breakpoints, breakpoint, state)
+  const style = (list: string[]) => new ClassStyle(engine!, list, screen, state)
 
   const api: StyleApi = {
     engine,
     classes,
     variants,
-    breakpoint,
+    screen,
     state,
     value: (key) => lookup(key)?.value,
     status: (key) => {
@@ -143,7 +118,7 @@ export function styleApi(engine: Engine | null, classes: string[], breakpoints: 
     edit: (change, group) => {
       if (!engine) return
       let current = classes
-      const step = () => styleApi(engine, current, breakpoints, breakpoint, state, (next) => { current = next })
+      const step = () => styleApi(engine, current, screen, state, (next) => { current = next })
       change({
         set: (key, value) => step().set(key, value),
         write: (patch) => step().write(patch),

@@ -277,8 +277,7 @@ final class SiteBuilder implements SiteBuilderContract
     }
 
     /**
-     * Every page links one stylesheet: before a full build it is compiled for the classes the content uses now,
-     * where the server has Node. Where it has none the admin compiles, so a build can only say the CSS is behind.
+     * Every page links one stylesheet: before a full build it is compiled for the classes the content uses now.
      */
     private function compileStyles(array $queue): array
     {
@@ -287,7 +286,7 @@ final class SiteBuilder implements SiteBuilderContract
         $styling->changed();
 
         try {
-            $styling->refresh() || $queue['warnings'][] = ['uri' => null, 'message' => (string) __('The site’s CSS is older than its content or its stylesheet. Open the admin once to compile it, or give the server Node 20 or newer.')];
+            $styling->refresh();
         } catch (StylingException $e) {
             report($e);
             $queue['errors'][] = __('The stylesheet does not compile: :message', ['message' => $e->getMessage()]);

@@ -43,7 +43,7 @@
   }
 }
 
-/* Classes: the site's own, used on blocks like any Tailwind class, with hover:, md: and the rest. */
+/* Styles: the site's own looks, used on blocks like any Tailwind class, with hover:, md: and the rest. Buttons are btn-<name>. */
 @utility btn-primary {
   @apply bg-primary text-primary-foreground hover:opacity-90;
 }

@@ -113,3 +113,141 @@ test('a property of a base rule is read, set where it stands, added and taken ou
   assert.ok(sheet.setProperty('a:hover', 'text-decoration-thickness', null).css.includes('  a:hover {\n    @apply underline;\n  }'))
   assert.equal(new Stylesheet('@import "tailwindcss";\n').setProperty(':root', 'color-scheme', 'light dark').css, '@import "tailwindcss";\n\n@layer base {\n  :root {\n    color-scheme: light dark;\n  }\n}\n')
 })
+
+test('the site’s own CSS is what no section of the Styling page shows, and it is replaced as a whole', () => {
+  const sheet = new Stylesheet(`@import "tailwindcss";
+@import "cms";
+
+@theme {
+  --color-primary: #111;
+  --color-*: initial;
+  --text-lg--line-height: 1.4;
+  --my-gap: 3px;
+  @keyframes wiggle {
+    50% { rotate: 3deg; }
+  }
+}
+
+@layer base {
+  h1 {
+    @apply text-5xl;
+  }
+  /* A rule of the site's own. */
+  hr {
+    @apply border-border;
+  }
+}
+
+@utility card {
+  @apply p-6;
+}
+
+@utility tab-* {
+  tab-size: --value(integer);
+}
+
+@custom-variant scrolled (&[data-scrolled]);
+
+.tide { color: red; }
+`)
+  assert.equal(sheet.extra(), `@theme {
+  --color-*: initial;
+  --text-lg--line-height: 1.4;
+  --my-gap: 3px;
+  @keyframes wiggle {
+    50% { rotate: 3deg; }
+  }
+}
+
+@layer base {
+  /* A rule of the site's own. */
+  hr {
+    @apply border-border;
+  }
+}
+
+@utility tab-* {
+  tab-size: --value(integer);
+}
+
+@custom-variant scrolled (&[data-scrolled]);
+
+.tide { color: red; }`)
+
+  const next = sheet.setExtra('.tide { color: blue; }')
+  assert.equal(next.css, `@import "tailwindcss";
+@import "cms";
+
+@theme {
+  --color-primary: #111;
+}
+
+@layer base {
+  h1 {
+    @apply text-5xl;
+  }
+}
+
+@utility card {
+  @apply p-6;
+}
+
+.tide { color: blue; }
+`)
+  assert.equal(next.extra(), '.tide { color: blue; }')
+  // What is written back is read back the same, again and again.
+  assert.equal(new Stylesheet(sheet.setExtra(sheet.extra()).css).extra(), sheet.extra())
+  assert.equal(sheet.setExtra(sheet.extra()).setExtra(sheet.extra()).css, sheet.setExtra(sheet.extra()).css)
+  // Nothing of its own: the stylesheet ends where the shown parts end.
+  assert.equal(next.setExtra('').extra(), '')
+})
+
+test('built-in theme values are read from any @theme block', async () => {
+  const { themeDefaults, balanced } = await import('../../tailwind/stylesheet.ts')
+  assert.deepEqual(themeDefaults('@theme default { --color-red-500: oklch(63.7% 0.237 25.331); --text-xs: 0.75rem; --text-xs--line-height: calc(1 / 0.75); }'), [
+    { name: '--color-red-500', value: 'oklch(63.7% 0.237 25.331)' },
+    { name: '--text-xs', value: '0.75rem' },
+    { name: '--text-xs--line-height', value: 'calc(1 / 0.75)' },
+  ])
+  assert.equal(balanced('.a { color: red; }'), true)
+  assert.equal(balanced('.a { color: red;'), false)
+  assert.equal(balanced('.a { content: "}"; }'), true)
+  assert.equal(balanced('/* { */ .a {}'), true)
+})
+
+test('what stays of the site’s own CSS stays where it stands, and a cleared namespace opens the theme', () => {
+  const sheet = new Stylesheet(`@import "tailwindcss";
+
+@theme {
+  --text-*: initial;
+  --text-base: 1rem;
+}
+
+.a { color: red; }
+
+@utility card {
+  @apply p-6;
+}
+`)
+  assert.equal(sheet.extra(), '@theme {\n  --text-*: initial;\n}\n\n.a { color: red; }')
+  // One rule more: the clearing stays before the sizes it clears, and the rule before stays where it was.
+  const more = sheet.setExtra(`${sheet.extra()}\n\n.b { color: blue; }`)
+  assert.equal(more.css, `@import "tailwindcss";
+
+@theme {
+  --text-*: initial;
+  --text-base: 1rem;
+}
+
+.a { color: red; }
+
+@utility card {
+  @apply p-6;
+}
+
+.b { color: blue; }
+`)
+  // Taken out and written again, a clearing goes back to the start of the theme.
+  const cleared = sheet.setExtra('.a { color: red; }').setExtra('@theme {\n  --text-*: initial;\n}\n\n.a { color: red; }')
+  assert.match(cleared.css, /@theme \{\n {2}--text-\*: initial;\n {2}--text-base: 1rem;\n\}/)
+})

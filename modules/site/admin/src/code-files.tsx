@@ -70,9 +70,9 @@ export function CodeFiles({ js, onJs, edits, onEdit }: { js: string; onJs: (js: 
 
   const addFile = async (kind: Kind) => {
     const asked = await prompt({
-      title: kind === 'scripts' ? t('New Script') : t('New Style'),
+      title: kind === 'scripts' ? t('New Script') : t('New Stylesheet'),
       fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, placeholder: 'hero' }],
-      confirm: kind === 'scripts' ? t('Create Script') : t('Create Style'),
+      confirm: kind === 'scripts' ? t('Create Script') : t('Create Stylesheet'),
     })
     const name = String(asked?.name ?? '').trim().toLowerCase().replace(/\.(js|css)$/, '').replace(/\s+/g, '-')
     if (!name) return
@@ -111,7 +111,7 @@ export function CodeFiles({ js, onJs, edits, onEdit }: { js: string; onJs: (js: 
         )}
         {files.isError ? <QueryError compact onRetry={() => void files.refetch()} retrying={files.isRefetching} />
           : !files.data ? <Loading />
-          : names.length === 0 && kind === 'styles' ? <EmptyState compact icon="code" title={t('No styles')} action={allowed ? <Button icon="plus" onClick={() => void addFile(kind)}>{add}</Button> : undefined} />
+          : names.length === 0 && kind === 'styles' ? <EmptyState compact icon="code" title={t('No stylesheets')} action={allowed ? <Button icon="plus" onClick={() => void addFile(kind)}>{add}</Button> : undefined} />
           : names.map((name) => {
             const path = `${kind}/${name}.${EXT[kind]}`
             return <File key={path} path={path} name={name} open={open === path} onToggle={() => setOpen(open === path ? null : path)} edited={edits[path]} onEdit={(contents) => onEdit(path, contents)} allowed={allowed} onDelete={() => void removeFile(path, name)} />
@@ -124,7 +124,7 @@ export function CodeFiles({ js, onJs, edits, onEdit }: { js: string; onJs: (js: 
     <>
       {!allowed && <Notice tone="neutral" className="mb-4" title={t('Editing code needs the “Edit Scripts and Stylesheets” permission.')} />}
       {list('scripts', t('Scripts'), t('New Script'))}
-      {list('styles', t('Styles'), t('New Style'))}
+      {list('styles', t('Stylesheets'), t('New Stylesheet'))}
       <Group title={t('Libraries')} onAdd={allowed && busy !== 'add' && libraries.data?.imports.length ? () => void addLibrary() : undefined} addLabel={t('Add Library')} action={busy === 'add' ? <span role="status" aria-label={t('Working…')} className="grid size-6 place-items-center text-faint"><Spinner size={14} /></span> : undefined}>
         {libraries.isError ? <QueryError compact onRetry={() => void libraries.refetch()} retrying={libraries.isRefetching} />
           : !libraries.data ? <Loading />

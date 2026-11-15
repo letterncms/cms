@@ -12,8 +12,11 @@ export interface Editing {
   change: (edit: (sheet: Stylesheet) => Stylesheet) => void
   /** Without `settings.manage` the page is read: nothing is added, changed or removed. */
   readOnly: boolean
-  /** Whether the stylesheet has dark values, and which side the preview shows. */
-  dark: boolean
+  /** Every value the theme has before the site names its own: Tailwind's, then the CMS's, by variable. */
+  defaults: Map<string, string>
+  /** The colours of Tailwind's palette, by variable. */
+  palette: Set<string>
+  /** Which side of light-dark() the preview shows. */
   mode: 'light' | 'dark'
 }
 
@@ -71,15 +74,15 @@ export function Control({ handle, label, value, onChange, field, disabled, class
  * its control, the same width in every group, and a menu. `below` adds a specimen line, `after` something
  * beside the control; `wide` gives the controls the row (colours, with a column for each side).
  */
-export function TokenRow({ name, sample, after, below, wide, menu, children }: { name: string; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; menu?: MenuItemDef[]; children: ReactNode }) {
-  const copy = () => void copyText(name, { copied: t('Copied {reference}', { reference: name }) })
+export function TokenRow({ name, copy: copied = name, sample, after, below, wide, menu, children }: { name: string; copy?: string; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; menu?: MenuItemDef[]; children: ReactNode }) {
+  const copy = () => void copyText(copied, { copied: t('Copied {reference}', { reference: copied }) })
   return (
     <div className="cms-reveal-row group border-b border-border last:border-b-0">
       {/* A phone gives a colour its name on one line and its two values, whole, on the next. */}
       <div className={cn('flex min-h-9 items-center gap-2 py-1', wide && 'max-sm:flex-wrap')}>
         {sample !== undefined && <span className="grid w-7 shrink-0 place-items-center">{sample}</span>}
         <Tooltip content={t('Copy Name')}>
-          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference: name })} className={cn('!justify-start !bg-transparent !px-0 text-left font-mono !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink max-sm:order-1 max-sm:basis-[calc(100%-2.5rem)]' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
+          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference: copied })} className={cn('!justify-start !bg-transparent !px-0 text-left font-mono !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink max-sm:order-1 max-sm:basis-[calc(100%-2.5rem)]' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
             <span className="truncate">{name}</span>
           </Button>
         </Tooltip>
@@ -94,13 +97,13 @@ export function TokenRow({ name, sample, after, below, wide, menu, children }: {
 }
 
 /** A row of a setting that has a label of its own instead of a name, in a value row's columns. */
-export function Setting({ label, children }: { label: string; children: ReactNode }) {
+export function Setting({ label, action, children }: { label: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex min-h-9 items-center gap-2 border-b border-border py-1 last:border-b-0">
+    <div className="cms-reveal-row flex min-h-9 items-center gap-2 border-b border-border py-1 last:border-b-0">
       <span className="w-[120px] shrink-0 truncate text-xs text-text max-sm:w-20">{label}</span>
       <div className="flex w-60 min-w-0 shrink items-center max-lg:w-52 max-sm:w-auto max-sm:flex-1">{children}</div>
       <span className="min-w-0 flex-1 max-sm:hidden" />
-      <NoAction />
+      {action ? <span className={rowAction}>{action}</span> : <NoAction />}
     </div>
   )
 }
@@ -122,27 +125,17 @@ export function Disclosure({ open, onToggle, label, aside, menu, children }: { o
   )
 }
 
-/** A row that leads to its own editor, which takes the list's place: a class, an element. */
+/** A row that leads to its own editor, which takes the list's place: a style, an element. */
 export function OpenRow({ onOpen, label, sample, summary, menu }: { onOpen: () => void; label: ReactNode; sample?: ReactNode; summary?: string; menu?: ReactNode }) {
   return (
-    <div className="cms-reveal-row group flex min-h-10 items-center gap-2 border-b border-border last:border-b-0">
+    <div className="cms-reveal-row group flex min-h-10 items-center gap-2 border-b border-border py-1.5 last:border-b-0">
       <Button variant="ghost" onClick={onOpen} className="!h-auto min-h-10 min-w-0 flex-1 shrink !justify-start !gap-2 !rounded-xs !bg-transparent !px-0 text-left !text-xs !font-normal focus-visible:!-outline-offset-2 hover:text-ink">
         {sample}
         <span className="shrink-0 text-ink">{label}</span>
-        <span className="min-w-0 flex-1 truncate text-muted">{summary}</span>
+        {summary !== undefined && <span className="min-w-0 flex-1 truncate text-muted">{summary}</span>}
         <Icon name="chevron-right" size={12} className="shrink-0 text-faint" />
       </Button>
       {menu ?? <NoAction />}
     </div>
   )
-}
-
-/** A length of the theme in CSS pixels (rem and em at 16px; a clamp() at its largest), for bars and samples. */
-export function px(value: string | undefined): number {
-  const text = String(value ?? '').trim()
-  const clamp = /^clamp\((.*)\)$/.exec(text)
-  const last = clamp ? clamp[1].split(',').pop()!.trim() : text
-  const n = parseFloat(last)
-  if (Number.isNaN(n)) return 0
-  return /r?em$/.test(last) ? n * 16 : n
 }

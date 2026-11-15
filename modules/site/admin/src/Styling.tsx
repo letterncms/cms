@@ -1,21 +1,19 @@
 import { CmsError, can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
 import { Button, Fields, IconButton, Notice, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useScreenSidebar, useTheme } from '@letterncms/ui'
-import { Stylesheet, StylingProvider, useStyling, type StylingSource } from '@letterncms/blocks'
+import { Stylesheet, StylingProvider, balanced, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CodeFiles } from './code-files'
-import { keepCompiled } from './compile'
 import { Group, type Editing } from './parts'
 import { SitePreview, WIDTHS, useDraftCompile, type Viewport } from './preview'
-import { Classes, Elements } from './rules'
-import { Colors, Layout, Motion, Shape, Typography, type Face, type FontTools, type Transition } from './theme'
+import { Buttons, SavedStyles, Text } from './rules'
+import { Colors, Effects, Layout, Motion, Shape, Typography, type Face, type FontTools, type Transition } from './theme'
 
-/** What `styling/get` says: the stylesheet, the settings beside it and whether the published CSS is up to date. */
+/** What `styling/get` says: the stylesheet, the settings beside it and the published CSS. */
 interface Info {
   css: string
   fonts: Face[]
   transition: Transition
   js: string
-  current: boolean
   stylesheet: string
 }
 
@@ -33,7 +31,7 @@ interface Draft {
 
 const EMPTY: Draft = { files: {} }
 
-const SECTIONS = ['colors', 'typography', 'layout', 'shape', 'motion', 'classes', 'elements', 'code'] as const
+const SECTIONS = ['colors', 'typography', 'layout', 'shape', 'effects', 'motion', 'text', 'buttons', 'styles', 'code'] as const
 type SectionKey = (typeof SECTIONS)[number]
 
 function sections(): { group: string; items: { value: SectionKey; label: string; icon: string }[] }[] {
@@ -45,15 +43,17 @@ function sections(): { group: string; items: { value: SectionKey; label: string;
         { value: 'typography', label: t('Typography'), icon: 'typography' },
         { value: 'layout', label: t('Layout'), icon: 'ruler' },
         { value: 'shape', label: t('Shape'), icon: 'radius' },
+        { value: 'effects', label: t('Effects'), icon: 'shadow' },
         { value: 'motion', label: t('Motion'), icon: 'speed' },
       ],
     },
     {
       group: t('Styles'),
       items: [
-        { value: 'classes', label: t('Classes'), icon: 'symbol' },
-        { value: 'elements', label: t('Elements'), icon: 'paragraph' },
-        { value: 'code', label: t('Code'), icon: 'code' },
+        { value: 'text', label: t('Text'), icon: 'paragraph' },
+        { value: 'buttons', label: t('Buttons'), icon: 'button' },
+        { value: 'styles', label: t('Saved Styles'), icon: 'symbol' },
+        { value: 'code', label: t('Custom Code'), icon: 'code' },
       ],
     },
   ]
@@ -62,18 +62,19 @@ function sections(): { group: string; items: { value: SectionKey; label: string;
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
 /**
- * The site's styling: its Tailwind stylesheet as colours, type, sizes, classes and elements, with the real
- * site beside it. Every edit rewrites the draft stylesheet and shows on the page at once (Tailwind compiles
- * the draft here); Save writes it to content/styling.
+ * The site's styling: its Tailwind stylesheet as its theme (every value of Tailwind's and the site's own), its
+ * text, its buttons and its other styles, with the real site beside it. Every edit rewrites the draft stylesheet
+ * and shows on the page at once (Tailwind compiles the draft here); Save writes it to content/styling, and the
+ * server compiles the site's CSS.
  */
 export default function Styling() {
   const info = useAbility<Info>('styling/get', {}, { refetchOnWindowFocus: false, retry: false })
   const source = useAbility<StylingSource>('styling/source', {}, { refetchOnWindowFocus: false, retry: false, staleTime: 60_000 })
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const { query } = useLocation()
-  // A class named in the address is opened in Classes, wherever the address says the page is.
-  const section: SectionKey = query.class ? 'classes' : SECTIONS.includes(query.tab as SectionKey) ? (query.tab as SectionKey) : SECTIONS[0]
-  const setSection = (next: SectionKey) => setQuery({ tab: next === SECTIONS[0] ? null : next, class: null })
+  // A style named in the address opens where it is: a button's under Buttons, any other under Saved Styles.
+  const section: SectionKey = query.style ? (query.style.startsWith('btn-') ? 'buttons' : 'styles') : SECTIONS.includes(query.tab as SectionKey) ? (query.tab as SectionKey) : SECTIONS[0]
+  const setSection = (next: SectionKey) => setQuery({ tab: next === SECTIONS[0] ? null : next, style: null, element: null })
   // The preview starts in the theme the admin is in: a dark admin opens on the site's dark colours, not on a white slab.
   const [mode, setMode] = useState<'light' | 'dark'>(useTheme() === 'dark' ? 'dark' : 'light')
   // A phone shows the list or the preview, never both: the bar's Preview button turns between them.
@@ -102,7 +103,18 @@ export default function Styling() {
 
   const sheet = useMemo(() => new Stylesheet(css ?? ''), [css])
   const compile = useDraftCompile(source.data, css)
-  const dark = /^light\s+dark\b/.test(sheet.property(':root', 'color-scheme') ?? '')
+  // A theme with a dark value follows the visitor's light or dark mode: the preview can show either.
+  const dark = useMemo(() => sheet.variables().some((variable) => variable.value.startsWith('light-dark(')) || /color-scheme\s*:\s*light\s+dark\b/.test(sheet.css), [sheet])
+  // Every value the theme has before the site names its own: Tailwind's, then the CMS's.
+  const [tailwind, setTailwind] = useState<string | null>(null)
+  useEffect(() => { void loadTailwindTheme().then(setTailwind) }, [])
+  const kernel = source.data?.files.cms
+  const defaults = useMemo(() => {
+    const out = new Map<string, string>()
+    for (const variable of [...themeDefaults(tailwind ?? ''), ...themeDefaults(kernel ?? '')]) out.set(variable.name, variable.value)
+    return out
+  }, [tailwind, kernel])
+  const palette = useMemo(() => new Set(themeDefaults(tailwind ?? '').filter((variable) => variable.name.startsWith('--color-')).map((variable) => variable.name)), [tailwind])
 
   // The site's fonts, so samples here are drawn in them.
   useEffect(() => {
@@ -112,7 +124,7 @@ export default function Styling() {
     return () => style.remove()
   }, [base?.fonts])
 
-  if (info.isLoading || source.isLoading) return <div className="grid h-full place-items-center text-faint"><Spinner /></div>
+  if (info.isLoading || source.isLoading || tailwind === null) return <div className="grid h-full place-items-center text-faint"><Spinner /></div>
   if (!base || !source.data || css === undefined || !transition) {
     return (
       <div className="flex h-full flex-col">
@@ -127,9 +139,11 @@ export default function Styling() {
     // From the newest draft, not the one this render saw: two changes in one go both count.
     change: (change) => !readOnly && setDraft((d) => ({ ...d, css: change(new Stylesheet(d.css ?? base.css)).css })),
     readOnly,
-    dark,
+    defaults,
+    palette,
     mode: dark ? mode : 'light',
   }
+  const samples = { compiler: compile.compiler, device: previewing ? 'phone' as const : viewport }
 
   const refresh = () => {
     invalidate('styling/')
@@ -152,8 +166,6 @@ export default function Styling() {
       invalidate('styling-code/')
       setDraft(EMPTY)
       frame.current?.contentWindow?.location.reload()
-      // Where the server has no Node the CSS is compiled here, now.
-      keepCompiled()
     } catch (e) {
       // What Tailwind refuses is the stylesheet's to correct: its own words, and the draft stays.
       setFailed({ message: e instanceof Error ? e.message : String(e), refused: e instanceof CmsError && e.type === 'invalid_input' })
@@ -230,17 +242,14 @@ export default function Styling() {
       {section === 'typography' && <Typography edit={edit} fonts={fonts} />}
       {section === 'layout' && <Layout edit={edit} />}
       {section === 'shape' && <Shape edit={edit} />}
+      {section === 'effects' && <Effects edit={edit} />}
       {section === 'motion' && <Motion edit={edit} transition={transition} onTransition={(next) => !readOnly && setDraft((d) => ({ ...d, transition: next }))} />}
-      {section === 'classes' && <Classes edit={edit} />}
-      {section === 'elements' && <Elements edit={edit} />}
+      {section === 'text' && <Text edit={edit} samples={samples} />}
+      {section === 'buttons' && <Buttons edit={edit} samples={samples} />}
+      {section === 'styles' && <SavedStyles edit={edit} samples={samples} />}
       {section === 'code' && (
         <>
-          {/* The same draft the other sections edit, as it is written. */}
-          <Group title={t('Stylesheet')}>
-            <div className="pt-2">
-              <Fields bare fields={[{ handle: 'css', type: 'code', label: t('Stylesheet'), rows: 24, language: 'tailwind' }]} values={{ css }} onChange={(_, value) => setDraft((d) => ({ ...d, css: value ?? '' }))} disabled={readOnly} />
-            </div>
-          </Group>
+          <CustomCss edit={edit} />
           <CodeFiles
             js={js}
             onJs={(next) => setDraft((d) => ({ ...d, js: next }))}
@@ -301,6 +310,43 @@ export default function Styling() {
       </div>
       </StylingProvider>
     </div>
+  )
+}
+
+/**
+ * The site's own CSS: what the stylesheet holds that no section shows (a variable of another kind, a rule of
+ * another selector, a variant of its own, plain CSS). What is typed is the draft once its braces close.
+ */
+function CustomCss({ edit }: { edit: Editing }) {
+  const written = useMemo(() => edit.sheet.extra(), [edit.sheet])
+  const [text, setText] = useState(written)
+  // Written elsewhere (a section, Discard, Save): the field follows, unless it holds what is being typed.
+  const typed = useRef(written)
+  useEffect(() => {
+    if (written !== typed.current) {
+      typed.current = written
+      setText(written)
+    }
+  }, [written])
+  return (
+    <Group title={t('CSS')}>
+      <div className="pt-2">
+        <Fields
+          bare
+          fields={[{ handle: 'css', type: 'code', label: t('CSS'), rows: 14, language: 'tailwind', placeholder: '.hero-title { text-wrap: balance; }' }]}
+          values={{ css: text }}
+          disabled={edit.readOnly}
+          onChange={(_, value) => {
+            const next = String(value ?? '')
+            setText(next)
+            if (!balanced(next)) return
+            // What the stylesheet will say it holds: the field keeps what was typed while they agree.
+            typed.current = edit.sheet.setExtra(next).extra()
+            edit.change((sheet) => sheet.setExtra(next))
+          }}
+        />
+      </div>
+    </Group>
   )
 }
 

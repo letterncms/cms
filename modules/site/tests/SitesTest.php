@@ -98,14 +98,14 @@ final class SitesTest extends TestCase
         return $dir;
     }
 
-    public function test_the_styling_travels_with_a_site_compiled_css_and_all(): void
+    public function test_the_styling_travels_with_a_site_and_is_compiled_where_it_lands(): void
     {
         $theme = "@import \"tailwindcss\";\n@import \"cms\";\n@theme {\n  --color-primary: #0f766e;\n}\n@utility card {\n  @apply rounded-xl p-6;\n}\n";
         $settings = (string) json_encode(['fonts' => [['family' => 'Studio Sans', 'src' => 'fonts/studio.woff2']], 'transition' => ['type' => 'fade']]);
         $this->site('studio', [
             'content/styling/theme.css' => $theme,
             'content/styling/settings.json' => $settings,
-            'content/styling/compiled.css' => "/* 00000000000000000000000000000000 */\n.card{padding:1.5rem}\n",
+            'content/styling/compiled.css' => "/* 00000000000000000000000000000000 */\n.stale-copy{color:red}\n",
             'content/styling/custom.js' => "console.log('studio')\n",
             'content/styling/fonts/studio.woff2' => 'wOF2'.str_repeat("\0", 40),
             'content/styling/scripts/hero.js' => "export function mount() {}\n",
@@ -115,7 +115,7 @@ final class SitesTest extends TestCase
 
         $plan = $this->ability('sites/get', ['handle' => 'studio', 'mode' => 'design'])['plan']['steps'];
         $this->assertEqualsCanonicalizing(['theme theme.css', 'settings settings.json', 'font studio.woff2', 'custom custom.js', 'script scripts/hero', 'style styles/hero', 'load code.json'], array_map(static fn (array $step) => $step['type'].' '.$step['name'], $plan));
-        $this->assertNotContains('compiled.css', array_column($plan, 'name'), 'what Tailwind made comes with the stylesheet, not as a step of its own');
+        $this->assertNotContains('compiled.css', array_column($plan, 'name'), 'what Tailwind made is compiled here, not taken in');
 
         $saved = 0;
         $this->cms()->hooks()->on('styling.saved', static function () use (&$saved): void {
@@ -132,16 +132,18 @@ final class SitesTest extends TestCase
         $this->assertFileExists(content_path('styling/fonts/studio.woff2'));
         $this->assertFileExists(content_path('styling/scripts/hero.js'));
         $this->assertSame(1, $saved);
-        // The site has its CSS at once, with nothing here to compile it: older than its content until the admin compiles.
-        $this->assertStringContainsString('.card{padding:1.5rem}', $styling->css());
-        $this->assertFalse($styling->current());
-        $this->assertStringContainsString('.card{padding:1.5rem}', (string) file_get_contents(public_path(ltrim($styling->stylesheet(), '/'))));
+        // The site's CSS is compiled at once, from its stylesheet and this site's content.
+        $this->assertTrue($styling->current());
+        $this->assertStringContainsString('.card{', $styling->css());
+        $this->assertStringContainsString('--color-primary:#0f766e', (string) file_get_contents(public_path(ltrim($styling->stylesheet(), '/'))));
 
-        // Made into a site again, everything under content/styling goes along, the compiled CSS too.
-        $this->assertTrue($styling->store($styling->signature(), '.card{padding:2rem}'));
+        $this->assertStringNotContainsString('.stale-copy', $styling->css(), 'the copy an older site carried is not used');
+
+        // Made into a site again, everything under content/styling goes along; the compiled CSS is a build file.
         $folder = $this->app->make(SiteExporter::class)->export(site_path('sites/again'), ['handle' => 'again', 'name' => 'Again'])['site']->path;
 
-        foreach (['theme.css', 'settings.json', 'compiled.css', 'custom.js', 'code.json', 'fonts/studio.woff2', 'scripts/hero.js', 'styles/hero.css'] as $file) {
+        $this->assertFileDoesNotExist($folder.'/content/styling/compiled.css');
+        foreach (['theme.css', 'settings.json', 'custom.js', 'code.json', 'fonts/studio.woff2', 'scripts/hero.js', 'styles/hero.css'] as $file) {
             $this->assertFileEquals(content_path('styling/'.$file), $folder.'/content/styling/'.$file);
         }
     }

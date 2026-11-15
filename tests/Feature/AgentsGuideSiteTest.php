@@ -26,7 +26,7 @@ final class AgentsGuideSiteTest extends TestCase
         $this->assertStringContainsString('Block Markdown ('.cms_brand('docs_url').'/reference/block-markdown)', $guide);
         $this->assertStringContainsString('`content/styling/theme.css`', $guide);
         // The styling is taught as it is written: the stylesheet's parts, classes on blocks, states as attributes, and how the CSS is compiled.
-        foreach (['## Styling', '@import "tailwindcss";', '@theme {', '@layer base {', '@utility card {', 'light-dark(', '`data-open:rotate-45`', '`in-data-open:hidden`', '`content/styling/compiled.css`', 'Node 20', '`php cms build` compiles it first'] as $taught) {
+        foreach (['## Styling', '@import "tailwindcss";', '@theme {', '@layer base {', '@utility card {', 'light-dark(', '`data-open:rotate-45`', '`in-data-open:hidden`', '`storage/styling/compiled.css`', 'The server makes it again by itself', '`php cms build` does after you edited files by hand'] as $taught) {
             $this->assertStringContainsString($taught, $guide);
         }
         $this->assertStringContainsString('`content/styling/scripts`', $guide);

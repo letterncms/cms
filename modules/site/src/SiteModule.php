@@ -617,10 +617,10 @@ final class SiteModule extends Plugin
             'description' => <<<'TXT'
             The site’s styling. `css` is content/styling/theme.css, a Tailwind CSS v4 stylesheet, and blocks carry Tailwind classes in `class` ("grid gap-6 md:grid-cols-3"). The stylesheet has four parts:
             - `@import "tailwindcss"; @import "cms";` first (Tailwind, then what blocks, buttons and fields are built from).
-            - `@theme { --color-primary: #1d4ed8; --font-display: "Fraunces", serif; --container-content: 72rem; }`: every variable is a set of classes (bg-primary, text-primary, font-display, max-w-content). Namespaces are Tailwind’s: --color-*, --font-*, --text-*, --spacing-*, --radius-*, --shadow-*, --container-*, --breakpoint-*, --ease-*. A value with a dark side is light-dark(#ffffff, #0b0b0c), with `:root { color-scheme: light dark; }` in @layer base.
+            - `@theme { --color-primary: #1d4ed8; --font-display: "Fraunces", serif; --container-content: 72rem; }`: every variable is a set of classes (bg-primary, text-primary, font-display, max-w-content). Namespaces are Tailwind’s: --color-*, --font-*, --text-*, --font-weight-*, --leading-*, --tracking-*, --spacing-*, --radius-*, --shadow-*, --inset-shadow-*, --drop-shadow-*, --text-shadow-*, --blur-*, --perspective-*, --aspect-*, --container-*, --breakpoint-*, --ease-*, --animate-*; Tailwind’s own values are there until a namespace is cleared (--text-*: initial). A value with a dark side is light-dark(#ffffff, #0b0b0c): a theme with one follows the visitor’s light or dark mode by itself.
             - `@layer base { h1 { @apply font-display text-5xl font-semibold tracking-tight; } }`: what elements look like before a block says otherwise.
             - `@utility card { @apply rounded-xl border border-border bg-raised p-6; }`: a class of the site’s own, used on blocks like any Tailwind class and with every variant (hover:card, md:card). `classes` lists them. A button’s looks are the btn-<name> classes (btn-primary, btn-secondary).
-            Anything else in it is plain CSS. Also here: `fonts` (the self-hosted font faces) and `fontFiles`, `transition` (the page transition), `templates` (handle => title), `js` (custom.js), `stylesheet` (the published CSS file) and `current`: whether that file was compiled from this stylesheet and the classes the content uses now.
+            Anything else in it is plain CSS. Also here: `fonts` (the self-hosted font faces) and `fontFiles`, `transition` (the page transition), `templates` (handle => title), `js` (custom.js) and `stylesheet` (the published CSS file, compiled on the server whenever the stylesheet or the content changes).
             TXT,
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
@@ -631,7 +631,7 @@ final class SiteModule extends Plugin
                 'fontFiles' => [Shape::STRING],
                 'transition' => $transitionShape,
                 'templates' => Shape::map(Shape::STRING),
-                'stylesheet' => Shape::STRING, 'js' => Shape::STRING, 'current' => Shape::BOOLEAN,
+                'stylesheet' => Shape::STRING, 'js' => Shape::STRING,
             ]),
             'handler' => fn () => [
                 'css' => $styling()->theme(),
@@ -640,7 +640,6 @@ final class SiteModule extends Plugin
                 'fontFiles' => $styling()->fontFiles(),
                 'transition' => $styling()->settings()['transition'],
                 'templates' => $this->app->make(Templates::class)->options(),
-                'current' => $styling()->current(),
                 'stylesheet' => $styling()->stylesheet(),
                 'js' => $styling()->customJs(),
             ],
@@ -652,7 +651,7 @@ final class SiteModule extends Plugin
             Change the site’s styling. `css` replaces the whole stylesheet (content/styling/theme.css): read it with styling/get, change it and send all of it back. It is Tailwind CSS v4 and starts `@import "tailwindcss"; @import "cms";`. Change a colour, font or size in `@theme` (--color-primary: #0f766e; a dark side as light-dark(#0f766e, #5eead4)), an element in `@layer base` (h2 { @apply text-3xl font-semibold; }), and add a class of the site’s own as `@utility name { @apply …; }`, which blocks then carry in `class` with any variant. For example, a new accent colour and a card:
             @theme { --color-accent: #e11d48; }
             @utility card { @apply rounded-xl border border-border bg-raised p-6 hover:border-accent; }
-            A stylesheet Tailwind cannot compile is refused with Tailwind’s message, and nothing is saved. `fonts` replaces the font faces (styling/fonts-import adds a family for you). `transition` is merged: name only what changes, null puts a setting back to its default. The site rebuilds. `current` false means the server has no Node to compile with: the CSS is compiled the next time the admin is open.
+            A stylesheet Tailwind cannot compile is refused with Tailwind’s message, and nothing is saved. `fonts` replaces the font faces (styling/fonts-import adds a family for you). `transition` is merged: name only what changes, null puts a setting back to its default. The CSS is compiled at once and the site rebuilds.
             TXT,
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
@@ -660,7 +659,7 @@ final class SiteModule extends Plugin
                 'fonts' => ['type' => 'array', 'items' => ['type' => 'object'], 'description' => 'Every font face: {family, src: "fonts/<file>.woff2", weight: "400" or "100 900", style: normal|italic, preload?, display?, fallback?, sizeAdjust?, ascentOverride?, descentOverride?, lineGapOverride?}. Name the family in the theme: --font-sans: "Hanken Grotesk", "Hanken Grotesk Fallback", sans-serif.'],
                 'transition' => ['type' => 'object', 'description' => 'Merged into the stored transition: name only what changes. null removes a setting, which then has its default (type none, duration 0.3, navigation document).', 'properties' => ['type' => ['type' => ['string', 'null'], 'enum' => ['none', 'fade', 'slide', 'scale', null]], 'duration' => ['type' => ['number', 'null']], 'navigation' => ['type' => ['string', 'null'], 'enum' => ['document', 'client', null], 'description' => 'client: links to pages of the site swap the page without a page load, inside the transition, so blocks with `persist` live on across pages. document (default): the browser loads every page.']]],
             ]],
-            'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING, 'current' => Shape::BOOLEAN]),
+            'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
             'handler' => static fn (array $in) => $guard(static function () use ($in, $styling) {
                 // The stylesheet first: when it is refused, nothing of the change is saved.
                 isset($in['css']) && $styling()->saveTheme((string) $in['css']);
@@ -668,13 +667,13 @@ final class SiteModule extends Plugin
                 $settings !== [] && $styling()->saveSettings($settings);
                 $styling()->saved();
 
-                return ['saved' => true, 'current' => $styling()->current(), 'stylesheet' => $styling()->stylesheet()];
+                return ['saved' => true, 'stylesheet' => $styling()->stylesheet()];
             }),
         ]);
 
         $abilities->register('styling/source', [
             'label' => 'Styling Source',
-            'description' => 'What Tailwind compiles the site’s CSS from, for whoever compiles it (the admin, in the browser, where the server has no Node): `css` (the stylesheet, or the draft given as `css` for a preview), `files` (the stylesheets it imports by name: "cms"), `candidates` (every class the content uses) and `signature`, which names exactly this source. `faces` is the CSS that stands before Tailwind’s output on a page: the @font-face rules and the page transition. Hand the compiled CSS back with styling/compiled.',
+            'description' => 'What Tailwind compiles the site’s CSS from, for a live preview of a draft: `css` (the stylesheet, or the draft given as `css`), `files` (the stylesheets it imports by name: "cms"), `candidates` (every class the content uses) and `signature`, which names exactly this source. `faces` is the CSS that stands before Tailwind’s output on a page: the @font-face rules and the page transition. The server compiles the saved stylesheet itself.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['css' => ['type' => 'string', 'maxLength' => 500000, 'description' => 'A draft of the stylesheet; the signature is then the draft’s.']]],
@@ -683,26 +682,6 @@ final class SiteModule extends Plugin
                 $source = $styling()->source(isset($in['css']) ? (string) $in['css'] : null);
 
                 return ['signature' => $styling()->signature($source), ...$source, 'faces' => $styling()->faces()];
-            },
-        ]);
-
-        $abilities->register('styling/compiled', [
-            'label' => 'Store Compiled CSS',
-            'description' => 'Keep the CSS Tailwind made of the source styling/source gave, with that source’s `signature`. `stored` is false when the stylesheet or the content changed meanwhile: read the source again and compile again.',
-            'permission' => 'admin.access',
-            'input' => ['type' => 'object', 'properties' => [
-                'signature' => ['type' => 'string', 'pattern' => '^[0-9a-f]{32}$'],
-                'css' => ['type' => 'string', 'maxLength' => 2000000],
-            ], 'required' => ['signature', 'css']],
-            'output' => Shape::of(['stored' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
-            'handler' => function (array $in) use ($styling) {
-                $before = $styling()->stylesheet();
-                $stored = $styling()->store((string) $in['signature'], (string) $in['css']);
-                $stylesheet = $styling()->stylesheet();
-                // Pages built before it link a stylesheet without the classes they have since.
-                $stored && $stylesheet !== $before && $this->cms()->hooks()->dispatch('styling.compiled');
-
-                return ['stored' => $stored, 'stylesheet' => $stylesheet];
             },
         ]);
 
@@ -928,7 +907,7 @@ final class SiteModule extends Plugin
             $hooks->on($event, fn ($item) => $auto() && $builder()->queueForMedia((string) $item->id));
         }
 
-        foreach (['globals.saved', 'styling.saved', 'styling.compiled', 'collection.saved', 'collection.deleted', 'entries.reordered', 'navigation.saved'] as $event) {
+        foreach (['globals.saved', 'styling.saved', 'collection.saved', 'collection.deleted', 'entries.reordered', 'navigation.saved'] as $event) {
             $hooks->on($event, fn () => $auto() && $builder()->queue(null, __('Site-Wide Change')));
         }
 
@@ -949,7 +928,7 @@ final class SiteModule extends Plugin
 
     /**
      * The site's CSS holds the classes its content uses. When content changes, the classes are looked for again
-     * and the CSS is compiled where the server can, once, when it is next asked for or the request ends.
+     * and the CSS is compiled again, once, when it is next asked for or the request ends.
      */
     private function stylingTriggers(): void
     {
@@ -960,8 +939,6 @@ final class SiteModule extends Plugin
         }
 
         $this->app->terminating(fn () => $this->app->resolved(Styling::class) && $this->app->make(Styling::class)->settle());
-        // The admin handing in the CSS it compiled follows from a change somebody made, which the log already has.
-        $hooks->addFilter('audit.unrecorded', static fn (bool $unrecorded, string $ability) => $unrecorded || $ability === 'styling/compiled');
     }
 
     private function adminUi(): void
@@ -1007,7 +984,7 @@ final class SiteModule extends Plugin
         Front end:
         - Styling is Tailwind CSS v4. A block’s look is its `class` ("flex items-center gap-4 md:gap-8"); the site’s colours, fonts and sizes are the `@theme` variables of one stylesheet, content/styling/theme.css (styling/get, styling/update), which also holds the element styles (`@layer base`) and the site’s own classes (`@utility card { @apply …; }`). What many blocks share becomes such a class; a value the theme lacks goes into the theme, not into an arbitrary value on a block.
         - A state is an attribute (`data-open`, `data-scrolled`, `data-current`), styled with Tailwind’s data variants: `data-open:rotate-45`, `in-data-open:hidden`, `group-data-open:opacity-100`. `current:` is the link to the page being shown, `dark:` the dark side.
-        - The CSS a page links is compiled from the stylesheet for the classes the content uses, by itself: on the server where it has Node 20 or newer, else in the admin when it is next open (styling/get `current` says whether it is up to date).
+        - The CSS a page links is compiled on the server from the stylesheet for the classes the content uses, by itself, whenever either changes: a class an agent writes on a block has its CSS at once.
         - Motion, scripts and page transitions are data on blocks and in the styling, not theme files: read cms://blocks for `motion` (load, appear, scroll with pin, scrub and progress), `behavior` (a script of the site mounted on a block, one or several), `persist` and `code`, and cms://site/code for the scripts, stylesheets and libraries in content/styling (styling-code/list, styling-code/save, styling-vendor/create).
         - A scroll animation with progress: true (or with scrub) tells its element how far along it is (--cms-progress, and a cms:progress event), so a number that counts with the scroll needs a few lines in a behaviour and no library.
         - styling/update changes the page transition one setting at a time ({"transition": {"navigation": "client"}} keeps its type and duration); `css` and `fonts` are replaced whole.

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Changed
+
+- **The site's CSS follows every change, wherever it comes from.** The server compiles it with Tailwind itself, in PHP, whenever the stylesheet or the content changes: in the admin, from an agent over the API or MCP, or from a command. No Node and no open admin are needed.
+- **Styling shows all of Tailwind.** **Colors**, **Typography**, **Layout**, **Shape**, **Effects** and **Motion** list every value of the theme, Tailwind's own beside your site's: the whole palette shade by shade, every text size, weight, line height and letter spacing, radius, shadow, inset, drop and text shadow, blur, perspective, container, screen size, aspect ratio, easing and animation, and how transitions run by default. Change any of them; **Reset** puts Tailwind's value back.
+- **Text, Buttons and Saved Styles** replace Classes and Elements under **Styling**. Each shows your text, your button looks and your own named styles drawn as your site draws them, and opens on the same controls as a block's **Design** tab. **Custom Code** holds only the CSS no section shows, beside your scripts.
+- **Dark mode needs no switch.** Give a color a **Dark** value and the site follows each visitor's light or dark mode.
+- **Fluid sizes are easy to set.** A text size, a space or a width can grow with the screen: press **Fluid Size**, then set its smallest and largest size and the screens it grows between.
+- **The Design tab starts with what matters.** At the top: the saved styles the block wears, **Add Style** with each style drawn as your site draws it, and one menu for the state you style, which stands out while you style hover or another state. The block's Tailwind classes are under **Classes** at the end, as chips with completion.
+- **One switch for screens.** **Desktop**, **Tablet** and **Phone** in the editor's top bar show the page at that width and are what the Design tab styles: Desktop every screen, Tablet and Phone what is different there.
+- **The color picker** shows your colors and Tailwind's whole palette as swatches, with the name and value of the one you point at.
+- Rows with nothing set, like **Shadows** or **Filters**, show only their name and **+**, without "None".
+
+### Removed
+
+- **Breaking.** The ability `styling/compiled`, the setting `CMS_NODE` and `current` in what `styling/get` and `styling/update` return: the server always compiles.
+- **Classes** under a block's **Content → Advanced**: a block's classes are under **Design → Classes**. A component keeps the field, as its design is the component's.
+
 ## 0.37.0 (2026-11-14)
 
 ### Added

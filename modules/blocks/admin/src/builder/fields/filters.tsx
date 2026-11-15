@@ -51,7 +51,7 @@ export function FiltersField({ field, value, onChange, context, disabled }: Fiel
     <div className="min-w-0 flex-1">
       <div className="flex h-7 items-center gap-2">
         <RowLabel field={field} className={parts.length ? '!w-auto' : undefined} />
-        <span className="min-w-0 flex-1 truncate text-xs text-faint">{parts.length ? '' : t('None')}</span>
+        <span className="min-w-0 flex-1" />
         {missing.length > 0 && (
           <Menu
             align="end"
