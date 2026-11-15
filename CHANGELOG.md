@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.0 (2026-11-15)
+
 ### Changed
 
 - **One Styles page for how everything looks.** **Styling → Styles** lists the page, its text, its buttons, its forms, its long-form text and the looks you named, each drawn as your site draws it, and opens each on the same controls as a block's **Design** tab. It replaces **Text**, **Buttons** and **Saved Styles**.
