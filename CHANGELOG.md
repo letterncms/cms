@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.45.0 (2026-11-16)
+
 ### Changed
 
 - **A calmer sidebar with three rooms.** It starts with the Dashboard and a row into each room: **Entries** (your pages, posts and other collections), **Design** and **Structure**. Under them, **Pinned** holds Pages, Media and Globals to begin with: pin any screen of a room from its row, unpin what you don't need, and find it again under **More**. **Customize Sidebar…** is in the menu beside your site's name.
