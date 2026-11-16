@@ -23,6 +23,25 @@ const applies = (field: FieldDef, props: Record<string, unknown>) =>
 
 export { useAnchors }
 
+/** The names a new attribute or state starts as, in turn: each is renamed where it stands. */
+const ATTRIBUTES = ['aria-label', 'title', 'role', 'lang', 'rel']
+const STATES = ['active', 'open', 'selected', 'current']
+
+/** The first of `names` not taken yet, then numbered ones: every Add adds a row of its own. */
+function freeName(names: string[], taken: Record<string, unknown>): string {
+  const free = names.find((name) => !(name in taken))
+  if (free) return free
+  let n = 2
+  while (`${names[0]}-${n}` in taken) n++
+  return `${names[0]}-${n}`
+}
+
+/** The name an element is kept across pages under: the block's id, as a name may be written (a letter first, 40 at most). */
+function persistName(id: string): string {
+  const name = id.toLowerCase().replace(/[^a-z0-9-]/g, '')
+  return (/^[a-z]/.test(name) ? name : `b${name}`).slice(0, 40)
+}
+
 /**
  * One row: the label, the control, and a way to connect it to data instead. The data button sits
  * at the end of the label and shows on hover (or when connected), so every control ends at the
@@ -59,8 +78,9 @@ function Prop({ field: given, value, bound, paths, onValue, onBind, extra }: { f
     </Tooltip>
   )
   const label = (
-    <span className={cn('flex h-7 min-w-0 shrink-0 items-center gap-0.5', !wide && labelColumn)}>
-      <label htmlFor={fieldControlId(field)} className={cn('min-w-0 flex-1 truncate text-xs', bound ? 'text-ink' : 'text-muted')} title={field.instructions}>
+    <span className={cn('flex min-h-7 min-w-0 shrink-0 items-center gap-0.5', !wide && labelColumn)}>
+      {/* A name longer than the column wraps in it, as the Design tab's do. */}
+      <label htmlFor={fieldControlId(field)} className={cn('min-w-0 flex-1 py-0.5 text-xs leading-[1.25] [overflow-wrap:anywhere]', bound ? 'text-ink' : 'text-muted')} title={field.instructions}>
         {field.label}
       </label>
       {connect}
@@ -99,6 +119,7 @@ export function ContentPanel({ node }: { node: BlockNode }) {
     store.updateNode(node.id, { bind: Object.keys(next).length ? next : undefined }, `bind:${node.id}:${key}`)
   }
   const setProp = (handle: string, v: unknown) => store.updateProps(node.id, { [handle]: v }, `inspector:${node.id}:${handle}`)
+  const states = Object.fromEntries(Object.entries(bind).filter(([k]) => k.startsWith('state:')).map(([k, path]) => [k.slice(6), path]))
 
   // A field marked `design` is drawn in the Design tab (Prose, in Typography).
   const all = (type?.fields ?? []).filter((f) => !f.design && !(f.type === 'json' && ['items', 'rows', 'values'].includes(f.handle)))
@@ -145,7 +166,8 @@ export function ContentPanel({ node }: { node: BlockNode }) {
         />
       </Section>
 
-      <Section title={t('Advanced')} open={false} empty={!node.anchor && !node.attrs && !(node.type === 'component' && node.class) && !node.persist && !advanced.some((f) => node.props?.[f.handle] !== undefined && node.props?.[f.handle] !== f.default)}>
+      {/* Folded every time a block is chosen: what it holds is technical, and wanted rarely. */}
+      <Section title={t('Advanced')} open={false} remember={false} empty={!node.anchor && !node.attrs && !(node.type === 'component' && node.class) && !node.persist && !Object.keys(bind).some((key) => key.startsWith('state:')) && !advanced.some((f) => node.props?.[f.handle] !== undefined && node.props?.[f.handle] !== f.default)}>
         {repeat ? <RepeatAdvanced node={node} /> : advanced.map(prop)}
         <PanelFields
           fields={[
@@ -154,64 +176,73 @@ export function ContentPanel({ node }: { node: BlockNode }) {
             ...(advanced.some((f) => f.handle === 'anchor') && !node.anchor ? [] : [{ handle: 'anchor', type: 'text', size: 'sm', commit: 'blur', label: t('Anchor'), placeholder: t('None'), mono: true } as FieldDef]),
             // A block's classes are the Design tab's; a component's own design is the component's, so this one has them here.
             ...(node.type === 'component' ? [{ handle: 'class', type: 'text', size: 'sm', commit: 'blur', label: t('Classes'), mono: true } as FieldDef] : []),
-            // The name pages share for an element that lives on when they swap; it carries what runs in it, so it needs the code permission.
-            ...(can('site.code') ? [{ handle: 'persist', type: 'text', size: 'sm', commit: 'blur', label: t('Persist As'), placeholder: 'player', mono: true } as FieldDef] : []),
+            // The same element on every page that has it (a player that keeps playing): it carries what runs in it, so it needs the code permission.
+            ...(can('site.code') ? [{ handle: 'persist', type: 'toggle', size: 'sm', label: t('Keep Across Pages') } as FieldDef] : []),
           ]}
-          values={{ label: node.label, anchor: node.anchor, class: node.class, persist: node.persist }}
-          onChange={(h, v: string) => store.updateNode(node.id, { [h]: (h === 'anchor' ? v.toLowerCase().replace(/[^a-z0-9-]/g, '') : h === 'persist' ? v.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^[^a-z]+/, '').slice(0, 40) : v) || undefined })}
-        />
-        <SubHeading title={t('Attributes')} action={<AddButton label={t('Add Attribute')} onClick={() => store.updateNode(node.id, { attrs: { ...(node.attrs ?? {}), 'aria-label': '' } })} />} />
-        <PanelFields
-          bare
-          fields={[
-            {
-              handle: 'attrs',
-              type: 'json',
-              component: 'blocks-pairs',
-              className: 'items-start',
-              label: t('Attributes'),
-              key: { lower: true },
-              item: { handle: 'value', type: 'text', size: 'sm', commit: 'blur', label: t('Value') },
-              items: Object.fromEntries(Object.keys(node.attrs ?? {}).filter((name) => bind[`attr:${name}`]).map((name) => [name, { handle: 'bind', type: 'text', component: 'blocks-bind', label: t('Data'), paths }])),
-            },
-          ]}
-          values={{ attrs: Object.fromEntries(Object.entries(node.attrs ?? {}).map(([name, v]) => [name, bind[`attr:${name}`] ?? v])) }}
-          onChange={(_, next) => {
-            const attrs = node.attrs ?? {}
-            const op = pairOp(Object.fromEntries(Object.entries(attrs).map(([name, v]) => [name, bind[`attr:${name}`] ?? v])), next)
-            if (op?.op === 'rename') store.updateNode(node.id, { attrs: Object.fromEntries(Object.entries(attrs).map(([k, v]) => (k === op.from ? [op.to, v] : [k, v]))) })
-            else if (op?.op === 'set' && bind[`attr:${op.key}`]) setBind(`attr:${op.key}`, (op.value as string | null) ?? null)
-            else if (op?.op === 'set') store.updateNode(node.id, { attrs: { ...attrs, [op.key]: (op.value as string) ?? '' } })
-            else if (op?.op === 'remove') {
-              const rest = { ...attrs }
-              delete rest[op.key]
-              store.updateNode(node.id, { attrs: Object.keys(rest).length ? rest : undefined })
-              setBind(`attr:${op.key}`, null)
-            }
+          values={{ label: node.label, anchor: node.anchor, class: node.class, persist: !!node.persist }}
+          onChange={(h, v: unknown) => {
+            // Kept across pages under the block's own id: a template's or a component's block has the same one on every page.
+            if (h === 'persist') return store.updateNode(node.id, { persist: v ? node.persist ?? persistName(node.id) : undefined })
+            const text = String(v ?? '')
+            store.updateNode(node.id, { [h]: (h === 'anchor' ? text.toLowerCase().replace(/[^a-z0-9-]/g, '') : text) || undefined })
           }}
         />
-        <SubHeading title={t('States from Data')} action={<AddButton label={t('Add State from Data')} onClick={() => setBind('state:active', paths[0]?.path ?? 'item.active')} />} />
-        <PanelFields
-          bare
-          fields={[
-            {
-              handle: 'states',
-              type: 'json',
-              component: 'blocks-pairs',
-              className: 'items-start',
-              label: t('States from Data'),
-              key: { prefix: 'data-', lower: true, strip: '[^a-z0-9-]', className: '!w-[34%] !flex-none' },
-              item: { handle: 'path', type: 'text', component: 'blocks-bind', label: t('Data'), paths },
-            },
-          ]}
-          values={{ states: Object.fromEntries(Object.entries(bind).filter(([k]) => k.startsWith('state:')).map(([k, path]) => [k.slice(6), path])) }}
-          onChange={(_, next: Record<string, string | null>) => {
-            const rest = Object.fromEntries(Object.entries(bind).filter(([k]) => !k.startsWith('state:')))
-            const states = Object.fromEntries(Object.entries(next).filter(([, path]) => path).map(([name, path]) => [`state:${name}`, path as string]))
-            const all = { ...rest, ...states }
-            store.updateNode(node.id, { bind: Object.keys(all).length ? all : undefined }, `bind:${node.id}:states`)
-          }}
-        />
+        <SubHeading title={t('Attributes')} action={<AddButton label={t('Add Attribute')} onClick={() => store.updateNode(node.id, { attrs: { ...(node.attrs ?? {}), [freeName(ATTRIBUTES, node.attrs ?? {})]: '' } })} />} />
+        {node.attrs && Object.keys(node.attrs).length > 0 && (
+          <PanelFields
+            bare
+            fields={[
+              {
+                handle: 'attrs',
+                type: 'json',
+                component: 'blocks-pairs',
+                className: 'items-start',
+                label: t('Attributes'),
+                key: { lower: true },
+                item: { handle: 'value', type: 'text', size: 'sm', commit: 'blur', label: t('Value') },
+                items: Object.fromEntries(Object.keys(node.attrs ?? {}).filter((name) => bind[`attr:${name}`]).map((name) => [name, { handle: 'bind', type: 'text', component: 'blocks-bind', label: t('Data'), paths }])),
+              },
+            ]}
+            values={{ attrs: Object.fromEntries(Object.entries(node.attrs ?? {}).map(([name, v]) => [name, bind[`attr:${name}`] ?? v])) }}
+            onChange={(_, next) => {
+              const attrs = node.attrs ?? {}
+              const op = pairOp(Object.fromEntries(Object.entries(attrs).map(([name, v]) => [name, bind[`attr:${name}`] ?? v])), next)
+              if (op?.op === 'rename') store.updateNode(node.id, { attrs: Object.fromEntries(Object.entries(attrs).map(([k, v]) => (k === op.from ? [op.to, v] : [k, v]))) })
+              else if (op?.op === 'set' && bind[`attr:${op.key}`]) setBind(`attr:${op.key}`, (op.value as string | null) ?? null)
+              else if (op?.op === 'set') store.updateNode(node.id, { attrs: { ...attrs, [op.key]: (op.value as string) ?? '' } })
+              else if (op?.op === 'remove') {
+                const rest = { ...attrs }
+                delete rest[op.key]
+                store.updateNode(node.id, { attrs: Object.keys(rest).length ? rest : undefined })
+                setBind(`attr:${op.key}`, null)
+              }
+            }}
+          />
+        )}
+        <SubHeading title={t('States from Data')} action={<AddButton label={t('Add State from Data')} onClick={() => setBind(`state:${freeName(STATES, states)}`, paths[0]?.path ?? 'item.active')} />} />
+        {Object.keys(states).length > 0 && (
+          <PanelFields
+            bare
+            fields={[
+              {
+                handle: 'states',
+                type: 'json',
+                component: 'blocks-pairs',
+                className: 'items-start',
+                label: t('States from Data'),
+                key: { prefix: 'data-', lower: true, strip: '[^a-z0-9-]', className: '!w-[34%] !flex-none' },
+                item: { handle: 'path', type: 'text', component: 'blocks-bind', label: t('Data'), paths },
+              },
+            ]}
+            values={{ states }}
+            onChange={(_, next: Record<string, string | null>) => {
+              const rest = Object.fromEntries(Object.entries(bind).filter(([k]) => !k.startsWith('state:')))
+              const kept = Object.fromEntries(Object.entries(next).filter(([, path]) => path).map(([name, path]) => [`state:${name}`, path as string]))
+              const all = { ...rest, ...kept }
+              store.updateNode(node.id, { bind: Object.keys(all).length ? all : undefined }, `bind:${node.id}:states`)
+            }}
+          />
+        )}
       </Section>
     </div>
   )

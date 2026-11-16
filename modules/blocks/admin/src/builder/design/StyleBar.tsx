@@ -1,16 +1,18 @@
 import { can, invalidate, navigate, run, t } from '@letterncms/sdk'
-import { Button, Icon, Menu, Popover, Pressable, cn, prompt, toast, type MenuItemDef } from '@letterncms/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { Button, Icon, IconButton, Menu, NoMatches, Popover, Pressable, Tooltip, cn, copyText, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
 import { parseClass, screenVariant, withVariants, type Engine } from '../../../../tailwind/engine'
 import { Stylesheet } from '../../../../tailwind/stylesheet'
 import { loadCompiler, type StylingSource } from '../../core/styling'
+import { SCHEME, SchemeTile, schemesOf, type Scheme } from '../palette'
 import { Specimen, styleLabel, styleSample, useSpecimenSheet } from '../specimen'
-import { splitSiteClasses, usedVariants } from '../styleApi'
+import { lightDark, splitSiteClasses, usedVariants } from '../styleApi'
 import type { StyleApi } from '../useStyle'
+import { ClassChips } from './Classes'
 
-/* The top of the Design tab: the styles of the site the element wears, by name, and the state being styled.
-   A style is a look the site keeps under a name (a class of its stylesheet): the same on every element that
-   wears it, and changed in one place, under Styling. */
+/* The top of the Design tab, one bar: the styles of the site the element wears, its classes as written, and the
+   state being styled. A style is a look the site keeps under a name (a class of its stylesheet): the same on
+   every element that wears it, and changed in one place, under Styling. */
 
 /** A utility without its important mark. */
 const bare = (utility: string) => utility.replace(/^!|!$/g, '')
@@ -128,6 +130,131 @@ export async function askStyleName(engine: Engine | null, taken: string[], title
   return name
 }
 
+/** What a scheme draws as: its two colours with the theme's variables worked out, on the light side. */
+function drawn(engine: Engine | null, scheme: Scheme) {
+  const side = (value: string) => lightDark(engine ? engine.resolve(value) : value).light
+  return { background: side(scheme.background), text: side(scheme.text) }
+}
+
+/** The mark before a style's name: a scheme's tile in its colours, the style symbol for any other. */
+function StyleMark({ name, schemes, engine }: { name: string; schemes: Map<string, Scheme>; engine: Engine | null }) {
+  const scheme = schemes.get(name)
+  if (scheme) return <SchemeTile size="mark" {...drawn(engine, scheme)} />
+  return <span className="grid h-4 w-5 shrink-0 place-items-center text-faint"><Icon name={name.startsWith('btn-') ? 'button' : 'symbol'} size={12} /></span>
+}
+
+/**
+ * The site's styles to wear, found by name: styles, buttons and schemes, each with its mark. The one pointed at
+ * (or reached with the arrow keys) is drawn below the list as the site draws it.
+ */
+function StylePicker({ site, worn, source, engine, schemes, onWear, footer, trigger }: { site: string[]; worn: string[]; source?: StylingSource; engine: Engine | null; schemes: Map<string, Scheme>; onWear: (name: string) => void; footer?: (close: () => void) => ReactNode; trigger: ReactElement }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [active, setActive] = useState(0)
+  const list = useRef<HTMLDivElement>(null)
+  const id = useId()
+  // Each style is drawn as the site draws it: the site's CSS, compiled here once the list is opened.
+  const [compiler, setCompiler] = useState<{ build: (candidates: string[]) => string } | null>(null)
+  useEffect(() => {
+    if (!open || !source || compiler) return
+    let alive = true
+    void loadCompiler(source).then((made) => alive && setCompiler(made), () => {})
+    return () => { alive = false }
+  }, [open, source, compiler])
+  const page = useMemo(() => (source ? new Stylesheet(source.css).elements().find((rule) => rule.name === 'body')?.classes.join(' ') ?? '' : ''), [source])
+  const sheet = useSpecimenSheet(open ? compiler : null, [...page.split(/\s+/).filter(Boolean), ...site])
+
+  const q = query.trim().toLowerCase()
+  const fits = (name: string) => !worn.includes(name) && (!q || name.includes(q) || styleLabel(name).toLowerCase().includes(q))
+  const groups = ([
+    [t('Styles'), site.filter((name) => !name.startsWith(SCHEME) && !name.startsWith('btn-'))],
+    [t('Buttons'), site.filter((name) => name.startsWith('btn-'))],
+    [t('Schemes'), site.filter((name) => name.startsWith(SCHEME))],
+  ] as [string, string[]][]).map(([label, names]) => [label, names.filter(fits)] as [string, string[]]).filter(([, names]) => names.length > 0)
+  const flat = groups.flatMap(([, names]) => names)
+  const pointed = flat[Math.min(active, flat.length - 1)]
+
+  const close = () => {
+    setOpen(false)
+    setQuery('')
+    setActive(0)
+  }
+  const wear = (name: string) => {
+    onWear(name)
+    close()
+  }
+  const move = (to: number) => {
+    setActive(to)
+    list.current?.querySelector(`[data-index="${to}"]`)?.scrollIntoView({ block: 'nearest' })
+  }
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && flat.length) {
+      e.preventDefault()
+      move((Math.min(active, flat.length - 1) + (e.key === 'ArrowDown' ? 1 : -1) + flat.length) % flat.length)
+    } else if (e.key === 'Enter' && pointed) {
+      e.preventDefault()
+      wear(pointed)
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} align="start" className="flex w-72 flex-col overflow-hidden !p-0" trigger={trigger}>
+      <div className="border-b border-border p-1.5">
+        <input
+          autoFocus
+          value={query}
+          role="combobox"
+          aria-label={t('Search Styles')}
+          aria-expanded
+          aria-controls={id}
+          placeholder={t('Search Styles')}
+          spellCheck={false}
+          onChange={(e) => { setQuery(e.target.value); setActive(0) }}
+          onKeyDown={onKey}
+          className="cms-input h-8 w-full rounded-sm px-2 text-sm placeholder:text-ghost"
+        />
+      </div>
+      <div ref={list} id={id} role="listbox" aria-label={t('Styles')} className="max-h-64 overflow-y-auto overscroll-contain p-1">
+        {flat.length === 0 && <NoMatches className="py-6" />}
+        {groups.map(([label, names]) => (
+          <div key={label} role="group" aria-label={label}>
+            <div className="cms-label flex h-7 items-center px-2">{label}</div>
+            {names.map((name) => {
+              const index = flat.indexOf(name)
+              return (
+                <Pressable compact key={name} role="option" data-index={index} aria-selected={name === pointed} onClick={() => wear(name)} onPointerMove={() => index !== active && setActive(index)} className={cn('flex h-8 w-full items-center gap-2.5 rounded-sm px-2 text-left', name === pointed && 'bg-hover')}>
+                  <StyleMark name={name} schemes={schemes} engine={engine} />
+                  <span className="min-w-0 flex-1 truncate text-xs text-ink">{styleLabel(name)}</span>
+                  <span className="max-w-24 shrink-0 truncate font-mono text-2xs text-faint">{name}</span>
+                </Pressable>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      {pointed && (
+        <div className="border-t border-border p-1.5">
+          <Specimen sheet={sheet} node={styleSample(pointed)} page={page} mode="light" align="center" className="h-16 rounded-sm" />
+        </div>
+      )}
+      {footer && <div className="border-t border-border p-1">{footer(close)}</div>}
+    </Popover>
+  )
+}
+
+const CLASSES = 'cms.inspector.classes'
+
+/** Whether the classes are shown under the bar: remembered, as the inspector's sections are. */
+function useClassesShown(): [boolean, (on: boolean) => void] {
+  const [shown, setShown] = useState(() => {
+    try { return localStorage.getItem(CLASSES) === '1' } catch { return false }
+  })
+  return [shown, (on) => {
+    setShown(on)
+    try { localStorage.setItem(CLASSES, on ? '1' : '0') } catch { /* Private mode: for this visit. */ }
+  }]
+}
+
 export interface StyleBarProps {
   s: StyleApi
   /** The site's styles: the names of its stylesheet's classes. */
@@ -136,41 +263,33 @@ export interface StyleBarProps {
   source?: StylingSource
   state: StateMenuProps
   disabled?: boolean
+  /** What stands where the styles worn are: a style of the site, edited under Styling, wears none of its own. */
+  lead?: ReactNode
+  /** What is done to what is edited, at the bar's end (a style's Rename and Delete). */
+  actions?: ReactNode
 }
 
-/** The bar at the top of the Design tab: the element's styles, Add Style, and the state being styled. */
-export function StyleBar({ s, site, source, state, disabled }: StyleBarProps) {
+/**
+ * The bar at the top of the Design tab: the styles the element wears (a field of chips that adds one), its classes
+ * as written (shown under it on demand), and the state being styled. The same bar for a block and for a style of
+ * the site under Styling.
+ */
+export function StyleBar({ s, site, source, state, disabled, lead, actions }: StyleBarProps) {
   const engine = s.engine
-  const [open, setOpen] = useState(false)
+  const [classes, setClasses] = useClassesShown()
   const parts = splitSiteClasses(engine, s.classes, site)
   const worn = parts.site.filter((raw) => site.includes(bare(parseClass(raw).utility)))
+  const wornNames = worn.map((raw) => bare(parseClass(raw).utility))
   const manages = can('settings.manage') && !!source && !!engine && !disabled
   // A style holds on every screen and in every state: what this element sets for a tablet or a phone stays its own.
   const sizes = s.screen.sizes
   const sized = (raw: string) => parseClass(raw).variants.some((variant) => !!screenVariant(variant, sizes))
   const moving = parts.utilities.filter((raw) => !sized(raw))
-  const schemes = site.filter((name) => name.startsWith('scheme-'))
-  const buttons = site.filter((name) => name.startsWith('btn-'))
-  const styles = site.filter((name) => !schemes.includes(name) && !buttons.includes(name))
-  // Each style is shown as the site draws it: the site's CSS, compiled here once the list is opened.
-  const [compiler, setCompiler] = useState<{ build: (candidates: string[]) => string } | null>(null)
-  useEffect(() => {
-    if (!open || !source) return
-    let alive = true
-    void loadCompiler(source).then((made) => alive && setCompiler(made), () => {})
-    return () => { alive = false }
-  }, [open, source])
-  const page = useMemo(() => (source ? new Stylesheet(source.css).elements().find((rule) => rule.name === 'body')?.classes.join(' ') ?? '' : ''), [source])
-  const sheet = useSpecimenSheet(open ? compiler : null, [...page.split(/\s+/).filter(Boolean), ...site])
+  const schemes = useMemo(() => new Map((source ? schemesOf(new Stylesheet(source.css)) : []).map((scheme) => [scheme.name, scheme])), [source])
 
-  const wear = (name: string) => {
-    if (!engine) return
-    s.apply(engine.sort([...s.classes.filter((raw) => raw !== name), name]), 'classes')
-    setOpen(false)
-  }
+  const wear = (name: string) => engine && s.apply(engine.sort([...s.classes.filter((raw) => raw !== name), name]), 'classes')
 
   const create = async () => {
-    setOpen(false)
     if (!engine || !source) return
     const name = await askStyleName(engine, site, t('Save as Style'), t('Save Style'))
     if (!name) return
@@ -193,62 +312,65 @@ export function StyleBar({ s, site, source, state, disabled }: StyleBarProps) {
     s.apply(engine.sort([...new Set([...s.classes.filter((name) => name !== raw), ...applied])]), 'classes')
   }
 
-  const option = (name: string) => (
-    <Pressable compact key={name} role="option" aria-selected={false} aria-label={name} onClick={() => wear(name)} className="flex h-11 w-full items-center rounded-xs p-1 text-left hover:bg-hover">
-      <Specimen sheet={sheet} node={styleSample(name)} page={page} mode="light" className="pointer-events-none h-full min-w-0 flex-1 rounded-xs" />
-    </Pressable>
+  const picks = !disabled && !!engine && (site.length > 0 || manages)
+  const picker = (trigger: ReactElement) => (
+    <StylePicker
+      site={site}
+      worn={wornNames}
+      source={source}
+      engine={engine}
+      schemes={schemes}
+      onWear={wear}
+      trigger={trigger}
+      footer={manages ? (close) => <Button variant="ghost" size="sm" icon="symbol" disabled={moving.length === 0} onClick={() => { close(); void create() }} className="w-full !justify-start !px-2 !font-normal">{t('Save as Style…')}</Button> : undefined}
+    />
   )
-  const available = (names: string[]) => names.filter((name) => !worn.some((raw) => bare(parseClass(raw).utility) === name))
 
   return (
-    <div className="flex min-h-11 items-center gap-1 border-b border-border px-4 py-1.5" data-style-bar>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-        {worn.map((raw) => {
-          const name = bare(parseClass(raw).utility)
-          return (
-            <Menu
-              key={raw}
-              align="start"
-              trigger={
-                <Button variant="ghost" size="xs" disabled={disabled} className="max-w-full !gap-1 !rounded-sm !bg-active !px-1.5 !font-normal !text-ink">
-                  <Icon name={name.startsWith('scheme-') ? 'palette' : 'symbol'} size={11} className="shrink-0 text-faint" />
-                  <span className="truncate">{raw === name ? styleLabel(name) : raw}</span>
-                  <Icon name="chevron-down" size={10} className="shrink-0 text-faint" />
-                </Button>
-              }
-              items={[
-                manages && { label: t('Edit Style'), icon: 'edit', onSelect: () => navigate(name.startsWith('scheme-') ? '/styling?tab=colors' : `/styling?tab=styles&style=${encodeURIComponent(name)}`) },
-                !!source && { label: t('Detach Style'), icon: 'unlink', onSelect: () => detach(raw) },
-                { label: t('Remove Style'), icon: 'trash', danger: true, onSelect: () => s.apply(s.classes.filter((other) => other !== raw), 'classes') },
-              ]}
-            />
-          )
-        })}
-        {!disabled && engine && (site.length > 0 || manages) && (
-          <Popover
-            open={open}
-            onOpenChange={setOpen}
-            align="start"
-            className="flex w-64 flex-col overflow-hidden !p-0"
-            trigger={<Button variant="ghost" size="xs" icon="plus" className="!px-1.5 !font-normal !text-muted hover:!text-ink">{t('Add Style')}</Button>}
-          >
-            <div role="listbox" aria-label={t('Add Style')} className="max-h-72 overflow-y-auto overscroll-contain p-1">
-              {([[t('Styles'), styles], [t('Buttons'), buttons], [t('Schemes'), schemes]] as [string, string[]][]).filter(([, names]) => available(names).length > 0).map(([label, names]) => (
-                <div key={label}>
-                  <div className="cms-label flex h-7 items-center px-2">{label}</div>
-                  {available(names).map(option)}
-                </div>
-              ))}
-            </div>
-            {manages && (
-              <div className="border-t border-border p-1">
-                <Button variant="ghost" size="sm" icon="symbol" disabled={moving.length === 0} onClick={() => void create()} className="w-full !justify-start !px-2 !font-normal">{t('Save as Style…')}</Button>
-              </div>
-            )}
-          </Popover>
-        )}
+    <div className="space-y-2 border-b border-border py-2 pl-4 pr-3" data-style-bar>
+      <div className="flex items-center gap-1">
+        {lead ?? (!picks && worn.length === 0 ? <span className="flex-1" /> : (
+          // The styles worn, as a field holds its values: a chip each, and the way to add one at its end.
+          <div className="flex min-h-8 min-w-0 flex-1 flex-wrap items-center gap-1 rounded-sm bg-bg p-1 shadow-edge">
+            {worn.map((raw) => {
+              const name = bare(parseClass(raw).utility)
+              return (
+                <Menu
+                  key={raw}
+                  align="start"
+                  trigger={
+                    <Button variant="ghost" size="xs" disabled={disabled} className="max-w-full !gap-1.5 !rounded-xs !bg-active !pl-1 !pr-1.5 !font-normal !text-ink">
+                      <StyleMark name={name} schemes={schemes} engine={engine} />
+                      <span className="truncate">{raw === name ? styleLabel(name) : raw}</span>
+                    </Button>
+                  }
+                  items={[
+                    manages && { label: t('Edit Style'), icon: 'edit', onSelect: () => navigate(name.startsWith(SCHEME) ? '/styling?tab=colors' : `/styling?tab=styles&style=${encodeURIComponent(name)}`) },
+                    !!source && { label: t('Detach Style'), icon: 'unlink', onSelect: () => detach(raw) },
+                    { label: t('Remove Style'), icon: 'trash', danger: true, onSelect: () => s.apply(s.classes.filter((other) => other !== raw), 'classes') },
+                  ]}
+                />
+              )
+            })}
+            {picks && (worn.length === 0
+              ? picker(<Pressable compact className="flex h-6 min-w-0 flex-1 items-center gap-1.5 rounded-xs px-1.5 text-left text-xs text-faint hover:text-ink"><Icon name="plus" size={12} />{t('Add Style')}</Pressable>)
+              : picker(<IconButton icon="plus" size="xs" label={t('Add Style')} className="ml-auto" />))}
+          </div>
+        ))}
+        <Tooltip content={t('Classes')}>
+          <IconButton icon="code" size="sm" label={t('Classes')} title={undefined} active={classes} onClick={() => setClasses(!classes)} className="shrink-0" />
+        </Tooltip>
+        <StateMenu {...state} />
+        {actions}
       </div>
-      <StateMenu {...state} />
+      {classes && (
+        <div className="flex items-start gap-1">
+          <div className="min-w-0 flex-1"><ClassChips s={s} site={site} disabled={disabled} /></div>
+          <Tooltip content={t('Copy Classes')}>
+            <IconButton icon="copy" size="sm" label={t('Copy Classes')} title={undefined} disabled={s.classes.length === 0} onClick={() => void copyText(s.classes.join(' '), { copied: t('Classes copied') })} className="shrink-0" />
+          </Tooltip>
+        </div>
+      )}
     </div>
   )
 }

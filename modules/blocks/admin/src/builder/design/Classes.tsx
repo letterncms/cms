@@ -1,14 +1,14 @@
 import { t } from '@letterncms/sdk'
-import { IconButton, Pressable, cn, copyText } from '@letterncms/ui'
+import { IconButton, Pressable, cn } from '@letterncms/ui'
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import { parseClass, splitClasses, type Engine } from '../../../../tailwind/engine'
-import { Section, Swatch } from '../controls'
+import { Swatch } from '../controls'
 import { broken, lightDark, onLayer, searchClasses, writable } from '../styleApi'
 import type { StyleApi } from '../useStyle'
 
 /* An element's classes as classes, for whoever writes Tailwind: one chip per class, a field that completes what
-   is typed, Backspace takes the last one off. The controls above write the same list, so it is always what
-   they did; a list pasted from anywhere just works. Folded until it is wanted. */
+   is typed, Backspace takes the last one off. The controls write the same list, so it is always what they did;
+   a list pasted from anywhere just works. The style bar shows it on demand. */
 
 /** A utility without its important mark. */
 const bare = (utility: string) => utility.replace(/^!|!$/g, '')
@@ -163,20 +163,5 @@ export function ClassChips({ s, site, disabled }: { s: StyleApi; site: string[];
       ))}
       {!disabled && <ClassField engine={engine} site={site} exclude={s.classes} label={t('Add Class')} onAdd={(names) => add(names)} onBackspace={() => s.classes.length && remove(s.classes[s.classes.length - 1])} />}
     </div>
-  )
-}
-
-/** The Classes section at the end of the Design tab: folded until it is wanted. */
-export function ClassesSection({ s, site, disabled }: { s: StyleApi; site: string[]; disabled?: boolean }) {
-  return (
-    <Section
-      title={t('Classes')}
-      open={false}
-      empty={s.classes.length === 0}
-      fields
-      actions={s.classes.length > 0 ? <IconButton icon="copy" size="xs" label={t('Copy Classes')} onClick={() => void copyText(s.classes.join(' '), { copied: t('Classes copied') })} /> : undefined}
-    >
-      <ClassChips s={s} site={site} disabled={disabled} />
-    </Section>
   )
 }

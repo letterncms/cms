@@ -1,10 +1,10 @@
 import { CmsError, can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
 import { Button, IconButton, Notice, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useScreenSidebar, useTheme } from '@letterncms/ui'
 import { Stylesheet, StylingProvider, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { type Editing } from './parts'
 import { SitePreview, WIDTHS, useDraftCompile, type Viewport } from './preview'
-import { Styles } from './styles'
+import { Styles, styleTitle } from './styles'
 import { keyframesOf } from './fields'
 import { Colors, Effects, Layout, Motion, Typography, type Face, type FontTools, type Transition } from './theme'
 
@@ -44,6 +44,9 @@ function sections(): { value: SectionKey; label: string; icon: string }[] {
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+
+/** Where each place of the page was scrolled, for this visit: it outlasts the page being drawn again. */
+const scrolled = new Map<string, number>()
 
 /**
  * The site's styling: its Tailwind stylesheet as its theme (every value of Tailwind's and the site's own), its
@@ -91,6 +94,19 @@ export default function Styling() {
   // Every value the theme has before the site names its own: Tailwind's, then the CMS's.
   const [tailwind, setTailwind] = useState<string | null>(null)
   useEffect(() => { void loadTailwindTheme().then(setTailwind) }, [])
+  // Each place of the page (a section, a style open in it) keeps where it was scrolled: back from a style, the list is where it was left.
+  const list = useRef<HTMLDivElement>(null)
+  const place = `${section}:${query.style ?? ''}`
+  const shown = useRef(place)
+  if (shown.current !== place) {
+    // Noted while the place being left is still on screen, whether or not its last scroll was heard.
+    if (list.current) scrolled.set(shown.current, list.current.scrollTop)
+    shown.current = place
+  }
+  const ready = !!info.data && !!source.data && tailwind !== null
+  useLayoutEffect(() => {
+    if (ready && list.current) list.current.scrollTop = scrolled.get(place) ?? 0
+  }, [place, ready])
   const kernel = source.data?.files.cms
   const defaults = useMemo(() => {
     const out = new Map<string, string>()
@@ -129,6 +145,8 @@ export default function Styling() {
     mode: dark ? mode : 'light',
   }
   const samples = { compiler: compile.compiler, device: previewing ? 'phone' as const : viewport }
+  // A style open under Styles is the last crumb: the one bar says where the page is.
+  const open = section === 'styles' && query.style ? styleTitle(sheet, query.style) : null
 
   const refresh = () => {
     invalidate('styling/')
@@ -232,7 +250,11 @@ export default function Styling() {
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        crumbs={[{ label: t('Styling'), icon: 'palette' }, { label: sections().find((item) => item.value === section)?.label ?? '' }]}
+        crumbs={[
+          { label: t('Styling'), icon: 'palette' },
+          { label: sections().find((item) => item.value === section)?.label ?? '', to: open ? `/styling?tab=${section}` : undefined },
+          ...(open ? [{ label: open }] : []),
+        ]}
         actions={
           <>
             <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>
@@ -255,7 +277,7 @@ export default function Styling() {
       <StylingProvider source={compile.source ?? source.data}>
       {/* On a phone the list takes the screen, and the preview does when asked for: the same draft, drawn by the site. */}
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:grid-cols-[minmax(380px,460px)_minmax(0,1fr)]">
-        <div key={section} className={cn('overflow-y-auto border-border px-4 pb-16 pt-2 md:border-r', previewing && 'max-md:hidden')}>
+        <div ref={list} onScroll={(e) => scrolled.set(place, e.currentTarget.scrollTop)} className={cn('overflow-y-auto border-border px-4 pb-16 pt-2 md:border-r', previewing && 'max-md:hidden')}>
           {failed?.refused && <Notice tone="danger" className="mb-3 mt-1" title={t('Tailwind refused the stylesheet')} onDismiss={() => setFailed(null)}>{failed.message}</Notice>}
           {body}
         </div>

@@ -115,7 +115,7 @@ export function FontStackField({ field, value, onChange, disabled }: FieldProps<
 /** A trigger that looks like the inspector's inputs: what is chosen, a chevron. (A popover's trigger: it takes the props and ref it is given.) */
 const PickerButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { label: string }>(function PickerButton({ label, children, className, ...props }, ref) {
   return (
-    <Button ref={ref} variant="ghost" aria-label={label} {...props} className={cn('cms-input w-full min-w-0 shrink !justify-start !gap-1.5 !pl-2 !pr-1.5 text-left !font-normal data-[popup-open]:border-focus', className)}>
+    <Button ref={ref} variant="ghost" aria-label={label} {...props} className={cn('cms-input w-full min-w-0 flex-1 !shrink !justify-start !gap-1.5 !pl-2 !pr-1.5 text-left !font-normal data-[popup-open]:border-focus', className)}>
       <span className="min-w-0 flex-1 truncate">{children}</span>
       <Icon name="chevrons-up-down" size={11} className="shrink-0 text-faint" />
     </Button>
@@ -286,8 +286,8 @@ export function SizeField({ field, value, onChange, disabled }: FieldProps<strin
   const units = (field.units as string[] | undefined) ?? ['rem', 'px', 'em', '%', 'vw']
   const length: FieldDef = { handle: field.handle, type: 'text', component: 'blocks-value', label: field.label, unit: 'rem', units, step: 0.125, size: 'sm' } as FieldDef
   const set = (next: Partial<Fluid>) => fluid && onChange(formatFluid({ ...fluid, ...next }))
-  // The same switch in both: fluid or not, the control keeps its width.
-  const toggle = !disabled && (fluid || fixedPx !== null) && (
+  // The same switch in both, or its room where there is none: fluid or not, every size control is one width.
+  const toggle = disabled || (!fluid && fixedPx === null) ? <span className="size-6 shrink-0" /> : (
     <Tooltip content={t('Grow with the Screen')}>
       <IconButton
         icon="width"

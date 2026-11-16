@@ -363,8 +363,11 @@ export function lightDark(value: string): { light: string; dark?: string } {
 }
 
 
-/** The steps of the spacing scale people reach for, then the theme's own named spaces. */
-const STEPS = [0, 1, 2, 3, 4, 6, 8, 12, 16, 24]
+/**
+ * The steps of Tailwind's spacing scale the controls offer. A step is a multiple of the theme's `--spacing`
+ * (Styling, Layout): p-4 is four of them. Any other number is typed.
+ */
+export const SPACING_STEPS = [0, 1, 2, 3, 4, 6, 8, 12, 16, 20, 24, 32]
 
 export interface SpacingChoice {
   label: string
@@ -373,12 +376,14 @@ export interface SpacingChoice {
   title: string
 }
 
-export function spacingChoices(engine: Engine | null, named: ThemeToken[]): SpacingChoice[] {
+/** The spacing scale in pixels, as the spacing control shows lengths, and the spaces the theme names. */
+export function spacingChoices(engine: Engine | null, named: ThemeToken[]): { scale: SpacingChoice[]; named: SpacingChoice[] } {
   const base = /^([\d.]+)rem$/.exec(engine?.ds.resolveThemeValue('--spacing') ?? '')
-  const steps = base ? STEPS.map((step) => {
-    const value = `${+(Number(base[1]) * step * 16).toFixed(3)}px`
-    return { label: String(step), value, title: value }
-  }) : []
-  return [...steps, ...named.map((token) => ({ label: token.name, value: token.ref, title: `${token.variable} · ${token.value}` }))]
+  return {
+    scale: base ? SPACING_STEPS.map((step) => {
+      const px = +(Number(base[1]) * step * 16).toFixed(3)
+      return { label: String(px), value: `${px}px`, title: `${step} · ${px}px` }
+    }) : [],
+    named: named.map((token) => ({ label: token.name, value: token.ref, title: `${token.variable} · ${token.value}` })),
+  }
 }
-
