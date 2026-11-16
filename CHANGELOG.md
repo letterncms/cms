@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.48.0 (2026-11-16)
+
 ### Added
 
 - **Categories and tags.** A collection now has a type: **Entries** (pages, posts, projects), **Categories** or **Tags**. Categories and tags are taxonomies: other entries are filed under them with a **Terms** field. Categories are curated and nest; tags are flat, and a word typed into a terms field that no tag has yet becomes a new tag when the entry is saved, offered with the existing tags of the entry's language as you type; a save that is refused makes none. Who may add entries to the taxonomy may add tags, as drafts when they may not publish there. Every term is an entry: rename, translate and give it fields and a page as any other.
