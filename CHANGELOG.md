@@ -5,6 +5,8 @@
 ### Changed
 
 - **One list of pages.** The pages features and plugins bring, like sign-in, the account pages and the store's page for each listing, are listed with your own pages instead of on tabs of their own, under the page whose address they share (the store's listing page under **Store**). They stay where their address puts them: open one to edit it as your own, and **Use Standard Version** in its ⋯ menu goes back to the one that comes with it. An address that stands for many pages, like `/store/{slug}`, shows quieter.
+- **Pickers open where your value is.** A colour's Theme and Palette lists, the fonts, a field's theme values and the icons scroll to the one you chose, so a scheme's colour shows its own row instead of the top of the list. An icon further down the set than the first page reaches is shown first.
+- **The arrow keys keep their place in sight** in the class field's suggestions and in **Add a Property**: the list scrolls with the highlighted row.
 
 ## 0.47.0 (2026-11-16)
 

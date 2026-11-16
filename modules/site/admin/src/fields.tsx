@@ -1,5 +1,5 @@
 import { t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { Button, fieldControlId, Fields, Icon, IconButton, Popover, Segmented, Tooltip, cn } from '@letterncms/ui'
+import { Button, fieldControlId, Fields, Icon, IconButton, Popover, Segmented, Tooltip, cn, revealSelected } from '@letterncms/ui'
 import { PanelFields, formatShadows, parseShadows, type Shadow } from '@letterncms/blocks'
 import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
@@ -67,7 +67,7 @@ export function FontStackField({ field, value, onChange, disabled }: FieldProps<
     if (font) use(font.family, font.fallback)
   }
   const option = (family: string, label: string, aside: string, fallbackFace: boolean, extra?: ReactNode) => (
-    <div key={family || 'system'} className="cms-reveal-row flex items-center gap-1 rounded-sm pr-1 hover:bg-hover">
+    <div key={family || 'system'} data-selected={family === first || undefined} className="cms-reveal-row flex items-center gap-1 rounded-sm pr-1 hover:bg-hover">
       <Button variant="ghost" onClick={() => { use(family, fallbackFace); setOpen(false) }} className="!h-9 min-w-0 flex-1 shrink !justify-start !gap-2 !bg-transparent !pl-2 !pr-0 text-left !font-normal">
         <span className="min-w-0 flex-1 truncate text-base leading-tight text-ink" style={family ? { fontFamily: `"${family}"` } : undefined}>{label}</span>
         {aside && <span className="shrink-0 text-2xs tabular-nums text-faint">{aside}</span>}
@@ -94,7 +94,7 @@ export function FontStackField({ field, value, onChange, disabled }: FieldProps<
         </Button>
       }
     >
-      <div className="max-h-72 overflow-y-auto">
+      <div ref={revealSelected} className="max-h-72 overflow-y-auto">
         {option('', t('System Font'), '', false)}
         {/* A font the theme names without serving it (a font of the visitor's own) is still what is chosen. */}
         {first && !fonts.some((font) => font.family === first) && option(first, first, '', stack.includes(`${first} Fallback`))}

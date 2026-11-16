@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, Popover, cn, Pressable, Tooltip } from '@letterncms/ui'
+import { Icon, Popover, cn, Pressable, Tooltip, revealSelected } from '@letterncms/ui'
 import { useState, type ReactElement } from 'react'
 import type { ThemeToken, TokenGroup } from '../../../../tailwind/engine'
 import { useStyling, useThemeTokens } from '../../core/styling'
@@ -73,9 +73,10 @@ export function TokenList({ group, value, onPick, detach }: { group: TokenGroup;
   if (group === 'spacing') return <div className="p-2"><SpacingChips value={value} onPick={onPick} /></div>
   return (
     <div>
-      <div className="max-h-60 overflow-y-auto">
+      <div ref={revealSelected} className="max-h-60 overflow-y-auto">
         {list.map((token) => (
           <Pressable compact key={token.variable}
+            data-selected={current === token.variable || undefined}
             onClick={() => onPick(token.ref)}
             className={cn('flex h-7 w-full items-center gap-2 rounded-xs px-2 text-left text-xs hover:bg-hover', current === token.variable && 'bg-active')}
           >
