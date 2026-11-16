@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.40.0 (2026-11-16)
+
 ### Changed
 
 - **One bar at the top of the Design tab.** The styles a block wears stand in one field there, beside the **Classes** button, which shows the block's Tailwind classes under the bar, and the state you style. It stays in sight while you scroll. Styles under **Styling → Styles** open on the same bar.
