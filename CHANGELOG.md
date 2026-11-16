@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.39.1 (2026-11-16)
+
 ### Fixed
 
 - Text with a **Text Stroke** keeps its outline on every word while you edit it: the browser's spell check drew a word it flagged without the stroke, so outlined text isn't spell-checked.
