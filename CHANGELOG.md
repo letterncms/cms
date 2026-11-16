@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- **A console under the Code editor.** It runs a page of your site with your saved code, again after each save, and lists what the page logs, its errors and what it failed to load; a message from one of your files opens it at its line. Type JavaScript to run it on the page, choose another page by its address or by following a link, and show the page beside it. `⌃` `` ` `` shows or hides it.
+
+### Changed
+
+- **Code is an editor like the ones you know.** Files open in tabs that keep their undo and their place, a dot marks unsaved changes, and the line under it says where the cursor is. Save (`⌘S`) formats every changed file with Prettier and saves them together; nothing saves by itself. **Format Document** (`⌥⇧F`) formats the open file.
+
 ## 0.46.0 (2026-11-16)
 
 ### Added

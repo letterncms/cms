@@ -456,6 +456,10 @@
   }
   .cms-resize-handle[data-grows="left"]::after { left: 0; }
   .cms-resize-handle[data-grows="right"]::after { right: 0; }
+  .cms-resize-handle:is([data-grows="up"], [data-grows="down"]) { inset-block: auto; inset-inline: 0; width: auto; height: 7px; cursor: row-resize; }
+  .cms-resize-handle:is([data-grows="up"], [data-grows="down"])::after { inset-block: auto; inset-inline: 0; width: auto; height: 2px; }
+  .cms-resize-handle[data-grows="up"]::after { top: 0; }
+  .cms-resize-handle[data-grows="down"]::after { bottom: 0; }
   .cms-resize-handle:hover::after, .cms-resize-handle:active::after, .cms-resize-handle:focus-visible::after { opacity: 1; }
   .cms-dock-handle { left: 0; }
   .cms-sidebar-handle { left: calc(var(--cms-sidebar-width) - 7px); }

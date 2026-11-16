@@ -21,6 +21,6 @@ registry.entryActions.set('site-preview', {
 })
 // Every section of the design is one screen, kept on view between them: a change not yet saved goes along.
 registry.routes.set('/design/*', { path: '/design/*', keep: true, component: lazy(() => import('./Design')), load: () => Promise.all([prefetchAbility('styling/get'), prefetchAbility('styling/source')]) })
-registry.routes.set('/code', { path: '/code', component: lazy(() => import('./Code')), load: () => prefetchAbility('styling/get') })
+registry.routes.set('/code', { path: '/code', component: lazy(() => import('./code/Code')), load: () => prefetchAbility('styling/get') })
 registry.routes.set('/sites', { path: '/sites', component: lazy(() => import('./Sites')), load: () => prefetchAbility('sites/list') })
 

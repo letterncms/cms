@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState, type CSSProperties, type Ref } from 'react'
 import { IconButton } from './Button'
 import { cn } from './cn'
 import { Dialog } from './Dialog'
@@ -25,6 +25,19 @@ export interface CodeEditorProps {
   full?: boolean
   /** The large editor as a screen's own: line numbers, no wrapping, the height of its container. */
   fill?: boolean
+  /** With `fill`: no field around it, flush with what holds it (an editor screen's own pane). */
+  bare?: boolean
+  /** Where the cursor is, from 1, each time it moves. */
+  onCursor?: (at: { line: number; column: number }) => void
+  /** How many mistakes the code has, each time that changes. A `bare` editor leaves saying so to its screen. */
+  onErrors?: (count: number) => void
+  /** What a screen does to the editor itself: put the cursor on a line, take the focus. */
+  ref?: Ref<CodeEditorHandle>
+}
+
+export interface CodeEditorHandle {
+  goTo: (line: number, column?: number) => void
+  focus: () => void
 }
 
 /** CodeMirror arrives with the first code field, not with the admin. */
@@ -39,12 +52,17 @@ const PADDING = 16
  * undo and Tab to indent (Escape, then Tab, leaves it). Mistakes are underlined and counted under it.
  * The button at its top right opens it large.
  */
-export function CodeEditor({ value, onChange, language, placeholder, disabled = false, invalid = false, rows = 8, id, label, describedBy, fixed = false, full = false, fill = false }: CodeEditorProps) {
+export function CodeEditor({ value, onChange, language, placeholder, disabled = false, invalid = false, rows = 8, id, label, describedBy, fixed = false, full = false, fill = false, bare = false, onCursor, onErrors, ref }: CodeEditorProps) {
   const large = full || fill
   const host = useRef<HTMLDivElement>(null)
   const editor = useRef<Editor | null>(null)
   const change = useRef(onChange)
   change.current = onChange
+  const cursor = useRef(onCursor)
+  cursor.current = onCursor
+  const mistakes = useRef(onErrors)
+  mistakes.current = onErrors
+  useImperativeHandle(ref, () => ({ goTo: (line, column) => editor.current?.goTo(line, column), focus: () => editor.current?.focus() }), [])
   const latest = useRef(value)
   latest.current = value
   const [focused, setFocused] = useState(false)
@@ -56,7 +74,7 @@ export function CodeEditor({ value, onChange, language, placeholder, disabled = 
     let gone = false
     void load().then(({ createEditor }) => {
       if (gone || !host.current) return
-      editor.current = createEditor({ parent: host.current, value: latest.current, language, placeholder, disabled, full: large, label, id, describedBy, onChange: (v) => change.current(v), onFocus: setFocused, onErrors: setErrors })
+      editor.current = createEditor({ parent: host.current, value: latest.current, language, placeholder, disabled, full: large, label, id, describedBy, onChange: (v) => change.current(v), onFocus: setFocused, onErrors: (count) => { setErrors(count); mistakes.current?.(count) }, onCursor: (at) => cursor.current?.(at) })
       setReady(true)
       if (full) editor.current.focus()
     })
@@ -78,14 +96,14 @@ export function CodeEditor({ value, onChange, language, placeholder, disabled = 
         aria-invalid={invalid || undefined}
         data-focus={focused || undefined}
         data-disabled={disabled || undefined}
-        className={cn('cms-input overflow-hidden rounded-md text-xs', fill ? 'min-h-0 flex-1' : full ? 'h-[60vh] max-sm:h-[70dvh]' : cn('[&_.cm-editor]:max-h-[480px] [&_.cm-scroller]:min-h-(--cms-code-rows)', !fixed && '[&_.cm-line:first-child]:pr-8'))}
+        className={cn(fill && bare ? 'overflow-hidden bg-bg text-xs' : 'cms-input overflow-hidden rounded-md text-xs', fill ? 'min-h-0 flex-1' : full ? 'h-[60vh] max-sm:h-[70dvh]' : cn('[&_.cm-editor]:max-h-[480px] [&_.cm-scroller]:min-h-(--cms-code-rows)', !fixed && '[&_.cm-line:first-child]:pr-8'))}
         style={large ? undefined : ({ '--cms-code-rows': `${rows * LINE + PADDING}px` } as CSSProperties)}
       >
         <div ref={host} className="h-full" />
         {/* Until it arrives, the code as it will stand, so nothing moves. */}
         {!ready && <pre aria-hidden className="m-0 min-h-(--cms-code-rows) whitespace-pre-wrap break-words px-2.5 py-[7px] font-mono leading-5 text-text">{value || <span className="text-ghost">{placeholder}</span>}</pre>}
       </div>
-      {errors > 0 && <p role="status" className="m-0 mt-1 text-2xs text-danger">{errors === 1 ? t('1 error') : t('{count} errors', { count: errors })}</p>}
+      {errors > 0 && !(fill && bare) && <p role="status" className="m-0 mt-1 text-2xs text-danger">{errors === 1 ? t('1 error') : t('{count} errors', { count: errors })}</p>}
       {!fixed && !large && (
         <>
           <IconButton icon="maximize" label={t('Expand')} size="xs" onClick={() => setExpanded(true)} className="cms-reveal !absolute right-1 top-1 bg-bg" />
