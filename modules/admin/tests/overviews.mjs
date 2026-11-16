@@ -418,7 +418,8 @@ try {
     const handle = (id) => row(id).querySelector('[aria-label="Drag to Reorder"]')
     assert(handle('child') && !handle('shop/item'), "a feature's page can be dragged, or the site's cannot")
     const box = (id) => [...row(id).querySelectorAll('[data-row-check] [role="checkbox"]')].find((b) => !b.closest('[aria-hidden]'))
-    assert(box('child') && !box('shop/item'), "a feature's page can be picked for what is done to many")
+    assert(box('child') && !box('shop/item') && !box('basket'), "a feature's page can be picked for what is done to many")
+    assert(!handle('basket'), "a feature's page made the site's own can be dragged")
     assert(!text().includes('Store Pages') && !main().querySelector('[role="tab"]'), 'pages still have tabs')
     ;[...row('shop/item').querySelectorAll('button')].find((b) => b.textContent.includes('Shop item')).click()
     await wait(() => location.pathname === '/admin/content/shop-pages/shop-item', "opening the standard version did not make it the site's own")
@@ -482,7 +483,9 @@ serve('Overview', async (req, res, url) => {
     else if (ability === 'collections/save') { collectionDef = { ...collectionDef, ...input.definition }; collection.defaultView = collectionDef.default_view; data = collectionDef }
     // A feature's page, under the page its address is inside: the standard version, not the site's own yet.
     else if (ability === 'entries/tree') data = [{ ...entry('parent', 'Parent page'), uri: '/parent', displayStatus: 'published', children: [{ ...entry('child', 'Child page with a substantially longer title'), uri: '/parent/child', displayStatus: 'published', children: [] },
-      { ...entry('shop/item', 'Shop item'), collection: 'shop-pages', slug: 'item', uri: null, pattern: '/parent/{slug}', status: 'published', displayStatus: 'published', version: '', group: 'shop', opens: true, restorable: false, parentId: 'parent', children: [] }] }]
+      { ...entry('shop/item', 'Shop item'), collection: 'shop-pages', slug: 'item', uri: null, pattern: '/parent/{slug}', status: 'published', displayStatus: 'published', version: '', group: 'shop', opens: true, restorable: false, parentId: 'parent', children: [] }] },
+      // One the site made its own: an entry, still a feature's page.
+      { ...entry('basket', 'Basket'), collection: 'shop-pages', slug: 'basket', uri: '/basket', status: 'published', displayStatus: 'published', group: 'shop', opens: true, restorable: true, children: [] }]
     else if (ability === 'pages/customize') data = { id: 'shop-item', collection: 'shop-pages' }
     else if (ability === 'entries/get' && input.id === 'shop-item') data = { ...entry('shop-item', 'Shop item'), collection: 'shop-pages' }
     else if (ability === 'blocks/types') data = { blocks: [], sources: [], transforms: [] }
