@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.45.1 (2026-11-16)
+
 ### Changed
 
 - The Dashboard's icon is a gauge, in the sidebar and in the menu beside your site's name; Motion in Design has its own.
