@@ -24,10 +24,11 @@ export default function WidgetRecent() {
             icon={c?.icon ?? 'file'}
             title={<span className="font-medium">{e.title || t('Untitled')}</span>}
             meta={
-              // Columns of fixed width, so every row's status and time line up; a narrow tile leaves the first ones out (a screen reader still hears them).
+              // Columns of fixed width, so every row's collection, status and time line up; a narrow tile leaves the first ones out (a screen reader still hears them).
+              // Only hidden below a width: shown, a column keeps its own width, never the width of its words.
               <span className="flex min-w-0 items-center gap-4">
-                <span className="sr-only w-24 truncate text-faint @lg:not-sr-only @lg:block">{c?.title}</span>
-                <StatusDot status={e.displayStatus} label={statusLabel(e.displayStatus)} className="sr-only w-20 @md:not-sr-only @md:inline-flex" />
+                <span className="w-24 shrink-0 truncate text-faint @max-lg:sr-only">{c?.title}</span>
+                <StatusDot status={e.displayStatus} label={statusLabel(e.displayStatus)} className="w-24 shrink-0 @max-md:sr-only" />
                 <time dateTime={when ?? undefined} className="w-24 text-right">{when ? timeAgo(when) : null}</time>
               </span>
             }

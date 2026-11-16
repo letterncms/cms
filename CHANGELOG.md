@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- The Dashboard's **Recently Edited** lines up its collection, status and time on every row, whatever the status says.
+
 ## 0.45.1 (2026-11-16)
 
 ### Changed
