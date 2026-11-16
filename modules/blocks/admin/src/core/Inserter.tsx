@@ -5,53 +5,48 @@ import { useCatalog } from './context'
 import { menuEnter, settleEnter } from './slashKeys'
 import type { BlockNode, BlockTypeDef } from './types'
 
+/**
+ * A component (components/list). A synced one is placed as a reference and changes everywhere; one that is
+ * not synced is placed as a copy of its blocks, to change freely there.
+ */
 export interface ComponentDef {
-  handle: string
-  title: string
-  description: string
-  category: string
-  blocks: BlockNode[]
-}
-
-/** Blocks to copy and then change freely: never synced, no properties (patterns/list). */
-export interface PatternDef {
   handle: string
   id: string | null
   title: string
   description: string
   category: string
   keywords: string[]
+  synced: boolean
   blocks: BlockNode[]
   editable: boolean
 }
 
-/** A pattern alone in the site's design, as it would be copied in: the page its picture is drawn from. */
-export const patternPage = (handle: string) => `/__pattern/${encodeURIComponent(handle)}`
+/** A component alone in the site's design, as a page would place it: the page its picture is drawn from. */
+export const componentPage = (handle: string) => `/__component/${encodeURIComponent(handle)}`
 
-export type InsertChoice = { kind: 'block'; type: BlockTypeDef } | { kind: 'component'; component: ComponentDef } | { kind: 'pattern'; pattern: PatternDef }
+export type InsertChoice = { kind: 'block'; type: BlockTypeDef } | { kind: 'component'; component: ComponentDef }
 
 /** A category no catalog names yet: its handle in title case. */
 const titled = (handle: string) => handle.replace(/[-_]+/g, ' ').replace(/(^|\s)\S/g, (c) => c.toUpperCase())
 
-export type InsertItem = { kind: 'block'; type: BlockTypeDef; group: string } | { kind: 'component'; component: ComponentDef; group: string } | { kind: 'pattern'; pattern: PatternDef; group: string }
+export type InsertItem = { kind: 'block'; type: BlockTypeDef; group: string } | { kind: 'component'; component: ComponentDef; group: string }
 
 /** What an item reads as and is drawn with in a list of them. */
-export const itemTitle = (item: InsertItem) => item.kind === 'block' ? item.type.title : item.kind === 'component' ? item.component.title : item.pattern.title
-export const itemIcon = (item: InsertItem) => item.kind === 'block' ? item.type.icon : item.kind === 'component' ? 'symbol' : 'section-copy'
-export const itemKey = (item: InsertItem) => item.kind === 'block' ? item.type.name : item.kind === 'component' ? `c-${item.component.handle}` : `p-${item.pattern.handle}`
+export const itemTitle = (item: InsertItem) => item.kind === 'block' ? item.type.title : item.component.title
+export const itemIcon = (item: InsertItem) => item.kind === 'block' ? item.type.icon : item.component.synced ? 'symbol' : 'section-copy'
+export const itemKey = (item: InsertItem) => item.kind === 'block' ? item.type.name : `c-${item.component.handle}`
 
-/** Whether every block of a pattern may go where it would be inserted. */
-export function patternFits(pattern: PatternDef, permits: (name: string) => boolean): boolean {
-  return pattern.blocks.length > 0 && pattern.blocks.every((node) => permits(node.type))
+/** Whether a component may go where it would be inserted: its reference, or every block of the copy. */
+export function componentPlaceable(component: ComponentDef, permits: (name: string) => boolean): boolean {
+  return component.synced ? permits('component') : component.blocks.length > 0 && component.blocks.every((node) => permits(node.type))
 }
 
-/** Does a pattern answer a search: its name, category, keywords or description. */
-export const patternMatches = (pattern: PatternDef, q: string) => !q || [pattern.title, pattern.category, pattern.description, ...(pattern.keywords ?? [])].some((s) => s.toLowerCase().includes(q))
+/** Does a component answer a search: its name, category, keywords or description. */
+export const componentMatches = (component: ComponentDef, q: string) => !q || [component.title, component.category, component.description, ...(component.keywords ?? [])].some((s) => s.toLowerCase().includes(q))
 
-/** Blocks, then components and patterns, that match `query` and fit where they would go. */
+/** Blocks, then components, that match `query` and fit where they would go. */
 export function useInsertItems(types: BlockTypeDef[], query: string, allowed?: (t: BlockTypeDef) => boolean, withComponents = true): { items: InsertItem[]; loading: boolean } {
   const components = useAbility<ComponentDef[]>('components/list', {}, { staleTime: 60_000 })
-  const patterns = useAbility<PatternDef[]>('patterns/list', {}, { staleTime: 60_000 })
   const { catalog } = useCatalog()
   const items = useMemo(() => {
     const categories = catalog?.categories ?? []
@@ -69,25 +64,23 @@ export function useInsertItems(types: BlockTypeDef[], query: string, allowed?: (
     const found = (q ? [...blocks].sort((a, b) => named(a) - named(b)) : blocks)
       .map((type) => ({ kind: 'block' as const, type, group: q ? t('Blocks') : label(type.category) }))
     const permits = (name: string) => { const type = types.find((item) => item.name === name); return !!type && (allowed ? allowed(type) : !type.parent) }
-    const reusable = (withComponents && permits('component') ? (components.data ?? []) : [])
-      .filter((p) => !q || match(p.title) || match(p.category) || match(p.description))
+    const reusable = (withComponents ? (components.data ?? []) : [])
+      .filter((component) => componentPlaceable(component, permits) && componentMatches(component, q))
       .map((component) => ({ kind: 'component' as const, component, group: t('Components') }))
-    const copies = (withComponents ? (patterns.data ?? []) : [])
-      .filter((pattern) => patternFits(pattern, permits) && patternMatches(pattern, q))
-      .map((pattern) => ({ kind: 'pattern' as const, pattern, group: t('Patterns') }))
-    return [...found, ...reusable, ...copies]
-  }, [types, query, components.data, patterns.data, allowed, withComponents, catalog])
-  return { items, loading: withComponents && (components.isLoading || patterns.isLoading) }
+    return [...found, ...reusable]
+  }, [types, query, components.data, allowed, withComponents, catalog])
+  return { items, loading: withComponents && components.isLoading }
 }
 
 /** Searchable block + component picker used by the slash menu, the + buttons and the workspace toolbar. */
 export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, showSearch = true, className, style, compact, chooseFirst, onNoMatch, components: withComponents = true, keyboardDocument }: { types: BlockTypeDef[]; query: string; onQuery?: (q: string) => void; onChoose: (c: InsertChoice) => void; onClose?: () => void; allowed?: (t: BlockTypeDef) => boolean; showSearch?: boolean; className?: string; style?: React.CSSProperties; compact?: boolean; chooseFirst?: boolean; onNoMatch?: () => void; components?: boolean; keyboardDocument?: Document }) {
   const { items: all, loading } = useInsertItems(types, query, allowed, withComponents)
-  // Patterns are best chosen by how they look: their own tab draws each one, by category.
-  const [tab, setTab] = useState<'blocks' | 'patterns'>('blocks')
-  const patterns = useMemo(() => all.filter((item) => item.kind === 'pattern'), [all])
-  const showTabs = withComponents && !compact && patterns.length > 0 && !query.trim()
-  const items = showTabs && tab === 'patterns' ? patterns : all
+  // Components are best chosen by how they look: their own tab draws each one, by category. A search finds both.
+  const [tab, setTab] = useState<'blocks' | 'components'>('blocks')
+  const components = useMemo(() => all.filter((item) => item.kind === 'component'), [all])
+  const showTabs = withComponents && !compact && components.length > 0 && !query.trim()
+  const drawn = showTabs && tab === 'components'
+  const items = useMemo(() => !showTabs ? all : drawn ? components : all.filter((item) => item.kind === 'block'), [all, components, showTabs, drawn])
   const [active, setActive] = useState(0)
   const list = useRef<HTMLDivElement>(null)
 
@@ -153,34 +146,37 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
       {showTabs && (
         <div className="border-b border-border p-1.5">
           <Segmented size="sm" block aria-label={t('Show')} value={tab} onChange={setTab}
-            options={[{ value: 'blocks', label: t('Blocks') }, { value: 'patterns', label: t('Patterns') }]} />
+            options={[{ value: 'blocks', label: t('Blocks') }, { value: 'components', label: t('Components') }]} />
         </div>
       )}
       <div ref={list} className="min-h-0 flex-1 overflow-y-auto p-1">
         {items.length === 0 && <div className="px-3 py-6 text-center text-xs text-faint">{t('No matching blocks')}</div>}
-        {showTabs && tab === 'patterns' && items.map((item, i) => {
-          if (item.kind !== 'pattern') return null
-          const heading = item.pattern.category !== lastGroup ? item.pattern.category : null
-          lastGroup = item.pattern.category
+        {drawn && items.map((item, i) => {
+          if (item.kind !== 'component') return null
+          const heading = item.component.category !== lastGroup ? item.component.category : null
+          lastGroup = item.component.category
           return (
             <div key={itemKey(item)}>
               {heading && <div className="cms-label px-2 pb-1 pt-2">{heading}</div>}
-              <Tooltip content={item.pattern.description} side="right">
+              <Tooltip content={item.component.description} side="right">
               <Button variant="ghost" size="md" data-index={i}
                 onMouseMove={() => i !== active && setActive(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => onChoose(item)} data-active={i === active || undefined}
                 className="!h-auto w-full !flex-col !items-stretch !gap-1.5 !rounded-sm !p-1.5 text-left">
-                <PagePreview src={patternPage(item.pattern.handle)} maxHeight={160} />
-                <span className="min-w-0 truncate px-0.5 text-sm">{item.pattern.title}</span>
+                <PagePreview src={componentPage(item.component.handle)} maxHeight={160} />
+                <span className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm">
+                  <Icon name={itemIcon(item)} size={13} className="shrink-0 text-faint" />
+                  <span className="min-w-0 truncate">{item.component.title}</span>
+                </span>
               </Button>
               </Tooltip>
             </div>
           )
         })}
-        {!(showTabs && tab === 'patterns') && items.map((item, i) => {
+        {!drawn && items.map((item, i) => {
           const heading = item.group !== lastGroup ? item.group : null
           lastGroup = item.group
           const title = itemTitle(item)
-          const description = item.kind === 'block' ? item.type.description : item.kind === 'component' ? item.component.description || t('Component') : item.pattern.description || item.pattern.category
+          const description = item.kind === 'block' ? item.type.description : item.component.description || item.component.category
           const icon = itemIcon(item)
           return (
             <div key={itemKey(item)}>

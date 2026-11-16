@@ -15,7 +15,6 @@ use Cms\Content\Entries\UriBuilder;
 use Illuminate\Support\Str;
 use Cms\Modules\Blocks\Document;
 use Cms\Modules\Blocks\Components;
-use Cms\Modules\Blocks\Patterns;
 use Cms\Modules\Blocks\Templates;
 use Cms\Modules\Account\Site\Screens;
 use Cms\Modules\Site\Rendering\Renderer;
@@ -89,13 +88,16 @@ final class SiteController
         return $this->rendered($html, $document);
     }
 
-    /** A pattern alone in the site's design, as it would be copied in: its picture in lists and the inserter. Drafts included. */
-    public function pattern(Request $request, string $handle): Response
+    /**
+     * A component alone in the site's design, as a page places it (its properties at their defaults; one that is not
+     * synced as the copy it would put there): its picture in the inserter, plugins' ones too. Drafts included.
+     */
+    public function component(Request $request, string $handle): Response
     {
-        $pattern = app(Patterns::class)->find($handle, working: true);
-        abort_if($pattern === null || ! $request->user()?->hasPermission('admin.access'), 404);
+        $component = app(Components::class)->find($handle, working: true);
+        abort_if($component === null || ! $request->user()?->hasPermission('admin.access'), 404);
 
-        return $this->rendered($this->renderer->blocks(app(Document::class)->normalize($pattern['blocks']), null, $pattern['title'], false, null), null);
+        return $this->rendered($this->renderer->blocks([['id' => 'preview', 'type' => 'component', 'props' => ['ref' => $handle]]], null, $component['title'], false, null), null);
     }
 
     /**
@@ -187,7 +189,7 @@ final class SiteController
 
     /**
      * A part of the design as it is seen on its own, null for any other entry: a template around an
-     * entry it frames (`sample`, else the newest live one it fits), a component or a pattern alone.
+     * entry it frames (`sample`, else the newest live one it fits), or a component alone.
      */
     private function part(Entry $working, User $user, bool $editor, ?string $document, string $sample = ''): ?string
     {
@@ -201,7 +203,6 @@ final class SiteController
             Components::COLLECTION => $editor
                 ? $this->renderer->blocks($blocks, null, $working->title, true, $document)
                 : $this->renderer->blocks([['id' => 'preview', 'type' => 'component', 'props' => ['ref' => $working->slug]]], null, $working->title, false, null),
-            Patterns::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
             default => null,
         };
     }

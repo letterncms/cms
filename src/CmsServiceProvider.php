@@ -324,7 +324,7 @@ final class CmsServiceProvider extends ServiceProvider
         // the collections' entries, grouped by their type: the entries (pages, posts), then the taxonomies they are
         // filed under (categories, tags); Design is how the site looks (the sites to switch between, its theme and
         // styles, drawn beside the site by the site's module); Structure is what its pages are made of (the
-        // collections' and taxonomies' definitions, the templates, components, patterns, menus and code).
+        // collections' and taxonomies' definitions, the templates, components, menus and code).
         $admin->section('main', '', 0);
         $admin->section(Navigation::PINNED, __('Pinned'), 10);
         $admin->room('content', __('Content'), 'file-text', section: 'main', order: 20);
@@ -336,7 +336,7 @@ final class CmsServiceProvider extends ServiceProvider
         $admin->section('design', __('Theme'), 10, room: 'design');
         $admin->room('structure', __('Structure'), 'layers', section: 'main', order: 35);
         // Structure in three groups: what content is made of (collections, taxonomies), the layout its pages are drawn
-        // with (templates, components, patterns), and what the whole site shares (menus, code).
+        // with (templates, components), and what the whole site shares (menus, code).
         $admin->section('structure', __('Content Types'), 0, room: 'structure');
         $admin->section('layout', __('Layout'), 10, room: 'structure');
         $admin->section('site-wide', __('Site'), 20, room: 'structure');

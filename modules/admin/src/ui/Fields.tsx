@@ -27,6 +27,11 @@ export interface FieldsProps {
 /** Field types that need a panel's full width: in a row of label and control, their label goes above them. */
 export const wideFieldTypes = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'file', 'repeater', 'matrix', 'table', 'geo', 'link', 'date-range', 'list', 'entries', 'terms', 'group', 'properties', 'fields', 'blocks']
 
+/** The values as their controls show them: one not set yet is its field's default. What conditions read. */
+export function settledValues(fields: FieldDef[], values: Record<string, any>): Record<string, any> {
+  return { ...Object.fromEntries(fields.filter((field) => field.default != null).map((field) => [field.handle, field.default])), ...Object.fromEntries(Object.entries(values).filter(([, v]) => v != null)) }
+}
+
 export function visible(field: FieldDef, values: Record<string, any>): boolean {
   return holds(field.if, values)
 }
@@ -53,7 +58,8 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
   const accessible = (field: FieldDef): FieldDef => ({ ...field, id: controlId(field), describedBy: fieldError(field) ? `${controlId(field)}-error` : field.instructions && !bare && layout !== 'inline' ? `${controlId(field)}-help` : undefined })
   // One field of a form can be closed while the others are open (`readOnly`): a value that is set elsewhere. In every layout.
   const closed = (field: FieldDef) => disabled || field.readOnly === true
-  const shown = fields.filter((field) => visible(field, values))
+  const settled = settledValues(fields, values)
+  const shown = fields.filter((field) => visible(field, settled))
   if (bare && layout === 'stacked' && shown.length === 1) {
     const field = shown[0]
     const type = manifest?.fieldTypes.find((ft) => ft.key === field.type)
@@ -70,7 +76,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
   if (layout === 'inline') {
     return (
       <div className={cn('min-w-0', className ?? 'space-y-1')}>
-        {fields.filter((field) => visible(field, values)).map((field) => {
+        {shown.map((field) => {
           const type = manifest?.fieldTypes.find((ft) => ft.key === field.type)
           const Component = registry.fields.get(field.component ?? type?.component ?? field.type) ?? registry.fields.get('json')
           if (!Component) return null
@@ -104,7 +110,7 @@ export function Fields({ fields, values, onChange, errors = {}, context = {}, di
     if (!Component) continue
     const stock = component === field.type
     const settingToggle = settings && field.type === 'toggle' && stock
-    const required = (field.required || (!!field.required_if && holds(field.required_if, values))) && !(field.type === 'select' && !field.multiple)
+    const required = (field.required || (!!field.required_if && holds(field.required_if, settled))) && !(field.type === 'select' && !field.multiple)
     const aside = typeof field.shared === 'string' ? <SharedMark from={field.shared} /> : undefined
     const control = (
       <Component

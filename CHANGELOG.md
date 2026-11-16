@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Changed
+
+- **Patterns are components that aren't synced.** A component has a **Synced** setting, on by default: a synced one is placed as itself and changes everywhere it is used; one that isn't is inserted as a copy of its blocks, to change freely. Properties belong to synced components. Components keep a category and keywords, and are listed by category with the usual ones first.
+- **The inserter's tabs are Blocks and Components.** Components shows every one as your site draws it, by category; search finds blocks and components together.
+- **Make a Component asks whether it is synced.** On, the blocks you selected become the component; off, a copy is saved to start from and the page keeps its blocks. A new, empty page offers **Start From a Component**: the whole pages among your components that aren't synced.
+
+### Removed
+
+- **Breaking.** Patterns, as a collection and a page of their own: their files go in `content/collections/components/` with `synced: false`.
+- **Breaking.** The abilities `patterns/list` and `patterns/save`: `components/list` returns `synced` and `keywords` and takes `category` and `synced`, and `components/save` takes `synced`, `keywords` and blocks as Block Markdown.
+- **Breaking.** The `blocks.pattern-sources` filter: `blocks.component-sources` reads `<handle>.md` (front matter and Block Markdown) as well as `<handle>.json`.
+- **Breaking.** The `/__pattern/<handle>` preview: `/__component/<handle>` draws a component alone.
+
 ## 0.48.0 (2026-11-16)
 
 ### Added

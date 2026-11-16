@@ -2,7 +2,7 @@ import { can, t } from '@letterncms/sdk'
 import { Button, IconButton, Menu, PanelHeader, Tabs, copyText, Tooltip } from '@letterncms/ui'
 import { Fragment, memo, useId, useLayoutEffect, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
-import { saveComponent, savePattern } from '../core/SaveComponent'
+import { saveComponent } from '../core/SaveComponent'
 import type { BlockNode } from '../core/types'
 import { componentFits } from '../core/insert'
 import { ContentPanel } from './content/ContentPanel'
@@ -69,7 +69,7 @@ export const Inspector = memo(function Inspector({ node, onBack, backLabel, onCl
     try { sessionStorage.setItem(tabKey, next) } catch { /* Optional preference. */ }
     setTab(next)
   }
-  const component = !readOnly && node.type !== 'component' && can('entries.components.create')
+  const makeComponent = !readOnly && can('entries.components.create')
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col" data-blocks-inspector>
@@ -81,20 +81,12 @@ export const Inspector = memo(function Inspector({ node, onBack, backLabel, onCl
           items={[
             { label: t('Rename'), icon: 'edit', disabled: readOnly, onSelect: () => setRenaming(true) },
             { label: t('Duplicate'), icon: 'copy', shortcut: 'mod+d', disabled: readOnly, onSelect: () => store.duplicate(node.id) },
-            component && componentFits(store, types, allowed) && {
+            makeComponent && {
               label: t('Make a Component'),
               icon: 'symbol',
               onSelect: () => {
                 if (!store.selection().includes(node.id)) store.select(node.id)
-                saveComponent(store)
-              },
-            },
-            !readOnly && can('entries.patterns.create') && {
-              label: t('Save as Pattern'),
-              icon: 'section-copy',
-              onSelect: () => {
-                if (!store.selection().includes(node.id)) store.select(node.id)
-                savePattern(store)
+                saveComponent(store, node.type !== 'component' && componentFits(store, types, allowed))
               },
             },
             // What scripts, animations and "Scroll To" know the block by.

@@ -1,5 +1,5 @@
 import { can, locale, t, useAbility, useManifest, type Entry, type EntryContent, type EntryPanelProps, type EntrySummary, type FieldDef } from '@letterncms/sdk'
-import { Button, Dialog, Fields, nativeName, PersonPicker, QueryError, SharedMark, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes, Tooltip } from '@letterncms/ui'
+import { Button, Dialog, Fields, fieldVisible, nativeName, PersonPicker, QueryError, SharedMark, StatusDot, cn, fieldControlId, settledValues, slugify, statusLabel, wideFieldTypes, Tooltip } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 
 /** The pages features bring (sign in, checkout), as `pages/builtin` gives them, by what brought them. */
@@ -50,9 +50,12 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
     timeZone: manifest.site.timezone,
   }).format(new Date(value))
   const sectionOf = (field: FieldDef) => field.section === 'sidebar' ? 'main' : field.section ?? 'main'
-  const main = fields.filter((field) => sectionOf(field) === 'main')
-  const groups = [...new Set(fields.map(sectionOf))].filter((group) => group !== 'main').map((group) => {
-    const inside = fields.filter((field) => sectionOf(field) === group)
+  // Each field is a row of its own: its condition reads the others, as their controls show them.
+  const values = settledValues(fields, working.data)
+  const shown = fields.filter((field) => fieldVisible(field, values))
+  const main = shown.filter((field) => sectionOf(field) === 'main')
+  const groups = [...new Set(shown.map(sectionOf))].filter((group) => group !== 'main').map((group) => {
+    const inside = shown.filter((field) => sectionOf(field) === group)
     const name = group.replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     // A section of one field named like it needs no heading of its own.
     return { group, inside, heading: inside.length === 1 && inside[0].label?.toLowerCase() === name.toLowerCase() ? null : name }
@@ -77,7 +80,7 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
       <Fields
         bare
         fields={[{ ...field, width: 'full', size: field.size ?? 'sm', rows: field.type === 'textarea' ? (field.rows ?? 3) : field.rows }]}
-        values={working.data}
+        values={values}
         onChange={props.setValue}
         errors={errors}
         disabled={!editable}

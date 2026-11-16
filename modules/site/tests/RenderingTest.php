@@ -180,22 +180,26 @@ final class RenderingTest extends TestCase
         $this->assertStringContainsString('/_cms/img/'.$two.'/', $html);
     }
 
-    public function test_a_pattern_is_drawn_alone_with_the_sites_styling_for_its_picture(): void
+    public function test_a_component_is_drawn_alone_with_the_sites_styling_for_its_picture(): void
     {
-        $saved = $this->cms()->abilities()->execute('patterns/save', ['handle' => 'hero', 'title' => 'Hero', 'category' => 'Heroes', 'publish' => false, 'blocks' => "## A pattern’s title\n\nIts words."], \Cms\Abilities\AbilityContext::system('test'));
+        $system = \Cms\Abilities\AbilityContext::system('test');
+        $saved = $this->cms()->abilities()->execute('components/save', ['handle' => 'hero', 'title' => 'Hero', 'synced' => false, 'category' => 'Heroes', 'publish' => false, 'blocks' => "## A hero’s title\n\nIts words."], $system);
+        $this->cms()->abilities()->execute('components/save', ['handle' => 'card', 'title' => 'Card', 'props' => [['handle' => 'title', 'type' => 'text', 'default' => 'A default title']], 'blocks' => [['type' => 'heading', 'bind' => ['text' => 'props.title']]]], $system);
 
-        $html = (string) $this->actingAs($this->admin())->get('/__pattern/hero')->assertOk()->assertHeader('Cache-Control', 'no-store, private')->getContent();
+        $html = (string) $this->actingAs($this->admin())->get('/__component/hero')->assertOk()->assertHeader('Cache-Control', 'no-store, private')->getContent();
         $this->assertMatchesRegularExpression('#<link rel="stylesheet" href="/_cms/site/styles-\w+\.css">#', $html, 'with the site’s stylesheet');
-        $this->assertStringContainsString('A pattern’s title</h2>', $html, 'a draft too: it is drawn to be chosen');
+        $this->assertStringContainsString('A hero’s title</h2>', $html, 'a draft too: it is drawn to be chosen');
         $this->assertStringNotContainsString('data-cms-node', $html, 'a picture, not the canvas');
+        $this->assertStringContainsString('A default title', (string) $this->get('/__component/card')->assertOk()->getContent(), 'a synced one as a page places it, its properties at their defaults');
 
-        // Saved and edited in the canvas like a component: alone, with no template around it.
+        // Edited in the canvas alone, with no template around it.
         $canvas = (string) $this->postJson('/__preview/'.$saved['id'])->assertOk()->getContent();
         $this->assertStringContainsString('data-cms-node', $canvas);
 
-        $this->get('/__pattern/nothing-here')->assertNotFound();
+        $this->get('/__component/nothing-here')->assertNotFound();
+        $this->get('/__pattern/hero')->assertNotFound();
         auth()->logout();
-        $this->assertNotSame(200, $this->get('/__pattern/hero')->getStatusCode(), 'for people who may open the admin');
+        $this->assertNotSame(200, $this->get('/__component/hero')->getStatusCode(), 'for people who may open the admin');
     }
 
     public function test_search_and_twins_read_the_text_of_components_and_repeats(): void

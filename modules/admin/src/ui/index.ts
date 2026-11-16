@@ -65,7 +65,7 @@ export { Widget, WidgetRow, WidgetSkeleton, Stat, Delta, Sparkline, Meter, BarRo
 export type { WidgetMeta, WidgetProps, WidgetEmpty } from './Widget'
 export { Toaster, copyText, toast } from './toast'
 export { switchSite, type SwitchableSite } from './switchSite'
-export { Fields, visible as fieldVisible, wideFieldTypes } from './Fields'
+export { Fields, settledValues, visible as fieldVisible, wideFieldTypes } from './Fields'
 export type { FieldsProps } from './Fields'
 export { SortableTree } from './SortableTree'
 export type { SortableTreeProps, TreeItem } from './SortableTree'

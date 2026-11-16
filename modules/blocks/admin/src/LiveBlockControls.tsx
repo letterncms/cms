@@ -33,11 +33,11 @@ export function ContainerAppender({ target, position, ...picker }: PickerProps &
 }
 
 /** An empty document: start writing, or pick a block. */
-export function DocumentAppender({ target, position, onWrite, onPattern, ...picker }: PickerProps & { target: InsertionTarget; position: (rect: Rect) => Rect; onWrite?: () => void; onPattern?: () => void }) {
+export function DocumentAppender({ target, position, onWrite, onStart, ...picker }: PickerProps & { target: InsertionTarget; position: (rect: Rect) => Rect; onWrite?: () => void; onStart?: () => void }) {
   const rect = position(target.hitRect)
   return <div data-cms-document-appender className="cms-block-chrome pointer-events-auto absolute z-raised flex h-10 whitespace-nowrap -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-md border border-dashed border-border-strong bg-bg/90 py-1 pl-3 pr-1 shadow-sm" style={{ left: rect.left + rect.width / 2, top: rect.top + Math.max(24, Math.min(rect.height / 2, 120)) }}>
     {onWrite && <Pressable compact onClick={onWrite} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Write, or press “/” for blocks')}</Pressable>}
-    {onPattern && <><span className="mx-1 h-4 border-l border-border" /><Pressable compact onClick={onPattern} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Start From a Pattern')}</Pressable></>}
+    {onStart && <><span className="mx-1 h-4 border-l border-border" /><Pressable compact onClick={onStart} className="cms-focus-ring h-8 rounded-xs px-1 text-sm text-muted hover:text-text">{t('Start From a Component')}</Pressable></>}
     <Picker {...picker} label={t('Insert Block')} className="size-8 rounded-xs text-muted hover:bg-hover hover:text-text" />
   </div>
 }
@@ -62,10 +62,8 @@ export interface BlockActions {
   onCopy: () => void
   onPaste: () => void
   onDuplicate: () => void
-  /** Make the selection a component, where the person may and a component may stand there. */
+  /** Make the selection a component, synced or a copy to start from, where the person may. */
   onMakeComponent?: () => void
-  /** Save a copy of the selection as a pattern, where the person may. */
-  onSavePattern?: () => void
   onDelete: () => void
 }
 
@@ -83,9 +81,7 @@ export function blockActionItems(a: BlockActions): MenuItemDef[] {
     { label: t('Move Up'), icon: 'chevron-up', shortcut: 'alt+up', disabled: !a.canMoveUp, onSelect: () => a.onMove(-1) },
     { label: t('Move Down'), icon: 'chevron-down', shortcut: 'alt+down', disabled: !a.canMoveDown, onSelect: () => a.onMove(1) },
     ...(a.parent ? [{ label: t('Select {block}', { block: a.parent.label }), icon: 'arrow-elbow-left-up', onSelect: a.onSelectParent }] : []),
-    ...(a.onMakeComponent || a.onSavePattern ? [{ separator: true, label: '' }] : []),
-    ...(a.onMakeComponent ? [{ label: t('Make a Component'), icon: 'symbol', onSelect: a.onMakeComponent }] : []),
-    ...(a.onSavePattern ? [{ label: t('Save as Pattern'), icon: 'section-copy', onSelect: a.onSavePattern }] : []),
+    ...(a.onMakeComponent ? [{ separator: true, label: '' }, { label: t('Make a Component'), icon: 'symbol', onSelect: a.onMakeComponent }] : []),
     { separator: true, label: '' },
     { label: t('Delete'), icon: 'trash', danger: true, shortcut: 'backspace', onSelect: a.onDelete },
   ]
