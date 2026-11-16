@@ -41,8 +41,8 @@ const wait = async (check, message) => {
   while (!check()) { if (Date.now() > end) throw new Error(message); await sleep(10) }
 }
 const test = async (name, fn) => { await fn(); results.push(name); output.textContent = results.map((s) => 'PASS ' + s).join('\\n') }
-// A screen's name is the last crumb of its top bar.
-const titleEl = () => document.querySelector('.cms-topbar [aria-current="page"]')
+// A screen's name is the one heading of its top bar.
+const titleEl = () => document.querySelector('.cms-topbar h1')
 const heading = () => titleEl()?.textContent
 const progress = () => document.querySelector('[role="progressbar"]')
 try {

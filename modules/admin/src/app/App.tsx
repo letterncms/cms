@@ -5,8 +5,8 @@ import { cn, confirm, IconButton, ResizeHandle, ShortcutsDialog, SHORTCUTS_KEY, 
 import './commands'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
-import { Sidebar, StateBack, type OwnSidebar } from './Sidebar'
-import { leaveRoom, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
+import { Sidebar, StateBack, useWayUp, type OwnSidebar } from './Sidebar'
+import { setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
 import { itemAt, noteLocation, roomAt } from '../ui/place'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/WorkspaceContext'
@@ -165,6 +165,7 @@ export function App() {
   const manifest = useManifest()
   const room = roomAt(manifest, location.path)
   const own = claim
+  const up = useWayUp({ own, room })
 
   // Every screen on view, so a way back returns to where someone came from (see `cameFrom`).
   const noted = useRef('')
@@ -234,11 +235,11 @@ export function App() {
   const pinned = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => !manifest.sidebar.hidden.includes(id))
   const first = manifest.nav.find((n) => n.id === pinned)?.path
 
-  // Esc leaves a room, unless something on top of the screen takes it (a dialog, a menu, a field), or someone is at work in the page itself.
+  // Esc is the way back, one level up, unless something on top of the screen takes it (a dialog, a menu, a field), or someone is at work in the page itself.
   useShortcut('escape', (e) => {
     if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable], [role="dialog"], [role="menu"], [role="listbox"], .cms-dock, [data-cms-screen]')) return
-    if (!document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) leaveRoom()
-  }, !!room && !own && !customizing && !(narrow && expanded))
+    if (up && !document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) navigate(up.to)
+  }, !!up && !own && !customizing && !(narrow && expanded), t('Back'))
   useEffect(() => {
     if (!route && location.path === '/' && first && first !== '/') navigate(first, { replace: true })
   }, [route, location.path, first])

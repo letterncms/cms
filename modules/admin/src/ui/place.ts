@@ -68,8 +68,8 @@ export function wayBack(manifest: Manifest, fallback: { to: string; label: strin
 }
 
 /**
- * The screen above the one on view (its parent crumb), for the one way back a phone's top bar has:
- * a screen says it, the shell's back button by the sidebar button leads there.
+ * The screen above the one on view (its `back`, else its parent crumb): a screen's top bar says it,
+ * and the admin's one way back, by the sidebar button, leads there.
  */
 export interface Way { to: string; label: string }
 const above = { way: null as Way | null, listeners: new Set<() => void>() }
