@@ -9,6 +9,7 @@ use Cms\Modules\Blocks\Anchors;
 use Cms\Modules\Blocks\BlocksDocument;
 use Cms\Modules\Blocks\Scope;
 use Cms\Modules\Blocks\Templates;
+use Cms\Abilities\AbilityContext;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Contracts\SiteBuilder as SiteBuilderContract;
@@ -34,6 +35,7 @@ use Cms\Modules\Site\Styling\Fonts;
 use Cms\Modules\Site\Styling\HttpVendorFetcher;
 use Cms\Modules\Site\Styling\Styling;
 use Cms\Modules\Site\Styling\StylingException;
+use Cms\Modules\Site\Styling\Versions;
 use Cms\Modules\Site\Styling\Vendor;
 use Cms\Modules\Site\Styling\VendorAbilities;
 use Cms\Modules\Site\Styling\VendorFetcher;
@@ -579,6 +581,7 @@ final class SiteModule extends Plugin
         $abilities = $this->cms()->abilities();
         $builder = fn () => $this->app->make(SiteBuilder::class);
         $styling = fn () => $this->app->make(Styling::class);
+        $versions = fn () => $this->app->make(Versions::class);
 
         $abilities->register('site/build', [
             'label' => 'Publish Site',
@@ -660,15 +663,36 @@ final class SiteModule extends Plugin
                 'transition' => ['type' => 'object', 'description' => 'Merged into the stored transition: name only what changes. null removes a setting, which then has its default (type none, duration 0.3, navigation document).', 'properties' => ['type' => ['type' => ['string', 'null'], 'enum' => ['none', 'fade', 'slide', 'scale', null]], 'duration' => ['type' => ['number', 'null']], 'navigation' => ['type' => ['string', 'null'], 'enum' => ['document', 'client', null], 'description' => 'client: links to pages of the site swap the page without a page load, inside the transition, so blocks with `persist` live on across pages. document (default): the browser loads every page.']]],
             ]],
             'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
-            'handler' => static fn (array $in) => $guard(static function () use ($in, $styling) {
+            'handler' => static fn (array $in, AbilityContext $ctx) => $guard(static function () use ($in, $ctx, $styling, $versions) {
+                $before = ['css' => $styling()->theme(), 'transition' => $styling()->settings()['transition']];
                 // The stylesheet first: when it is refused, nothing of the change is saved.
                 isset($in['css']) && $styling()->saveTheme((string) $in['css']);
                 $settings = array_intersect_key($in, ['fonts' => 1, 'transition' => 1]);
                 $settings !== [] && $styling()->saveSettings($settings);
                 $styling()->saved();
+                $versions()->record($ctx->user, $before);
 
                 return ['saved' => true, 'stylesheet' => $styling()->stylesheet()];
             }),
+        ]);
+
+        $abilities->register('styling-versions/list', [
+            'label' => 'Styling Versions',
+            'description' => 'The styling as it was saved, newest first: each save of the stylesheet or the page transition, who saved it and when. `current` is what the site has now. Read one with styling-versions/get; to go back to it, send its css and transition to styling/update.',
+            'permission' => 'settings.manage',
+            'annotations' => ['readOnly' => true],
+            'output' => Shape::of([['id' => Shape::STRING, 'at' => Shape::STRING, 'user' => Shape::STRING_OR_NULL, 'current' => Shape::BOOLEAN]]),
+            'handler' => static fn () => $versions()->list(),
+        ]);
+
+        $abilities->register('styling-versions/get', [
+            'label' => 'Styling Version',
+            'description' => 'One saved version of the styling (see styling-versions/list): its whole stylesheet and its page transition.',
+            'permission' => 'settings.manage',
+            'annotations' => ['readOnly' => true],
+            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
+            'output' => Shape::of(['css' => Shape::STRING, 'transition' => $transitionShape]),
+            'handler' => static fn (array $in) => $versions()->find((string) $in['id']) ?? throw \Cms\Abilities\AbilityException::invalid(__('No saved version of the styling has this id.')),
         ]);
 
         $abilities->register('styling/source', [

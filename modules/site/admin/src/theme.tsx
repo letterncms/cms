@@ -3,11 +3,11 @@ import { Button, Icon, IconButton, Menu, NEW_COLOR, Popover, Pressable, Tooltip,
 import { ColorPicker, PaletteGrid, SCHEME, SPACING_STEPS, SchemeTile, Swatch, lightDark, parseClass, schemesOf, useStyling, withVariants, type Engine, type Scheme, type Stylesheet } from '@letterncms/blocks'
 import { useState, type ReactNode } from 'react'
 import { AnimationSample, ShadowSample, familyOf, fallbackOf, fontStack, stackFor, type Fallback, type SiteFont } from './fields'
-import { Control, Group, NoAction, ROW, Setting, TokenRow, rowAction, type Editing } from './parts'
+import { Changed, Control, Group, NoAction, ROW, Setting, TokenRow, changed, revert, revertItem, rowAction, type Editing } from './parts'
 
 /* The theme sections of the Styling page: every value of the theme, Tailwind's own and the site's, kind by kind.
-   A value Tailwind or the CMS brings is always there: changed, it is written to the site's stylesheet, and Reset
-   takes it out again. A value the site added is renamed and deleted like any of its own. */
+   The site is the baseline: a change is marked until it is saved, and Revert takes it back to what the site has.
+   A value the site added is renamed and deleted like any of its own; one Tailwind or the CMS brings stays. */
 
 export interface Face {
   family: string
@@ -39,7 +39,7 @@ export interface Row {
   /** primary */
   key: string
   value: string
-  /** Tailwind or the CMS brings it: it can be changed and reset, not deleted. */
+  /** Tailwind or the CMS brings it: it can be changed, not renamed or deleted. */
   builtIn: boolean
   /** The site's stylesheet writes it. */
   written: boolean
@@ -121,13 +121,15 @@ interface Kind {
   skip?: (key: string) => boolean
 }
 
-/** What a row's menu offers: Reset for a value Tailwind brings, Rename and Delete for the site's own. */
+/** What a row's menu offers: Revert for a change not yet saved, Rename and Delete for the site's own values. */
 function useRowMenu(edit: Editing, kind: Kind) {
   const { engine } = useStyling()
   return (row: Row, extra: MenuItemDef[] = []): MenuItemDef[] => {
     if (edit.readOnly) return []
-    if (row.builtIn) return [...extra, ...(row.written ? [...(extra.length ? [{ separator: true, label: '' }] : []), { label: t('Reset'), icon: 'undo', onSelect: () => edit.change((sheet) => unset(sheet, row.name)) }] : [])]
+    const back = changed(edit, row.name) ? [revertItem(() => revert(edit, row.name))] : []
+    if (row.builtIn) return [...extra, ...(back.length && extra.length ? [{ separator: true, label: '' }] : []), ...back]
     return [
+      ...back,
       {
         label: t('Rename…'), icon: 'edit', onSelect: async () => {
           const key = await askName(edit, kind.prefix, t('Rename'), t('Rename'), row.key, kind.placeholder)
@@ -191,7 +193,7 @@ function ColorSwatch({ label, value, same, onChange, disabled, size = 'md' }: { 
   )
 }
 
-/** One shade of the palette, a swatch that opens its colour; a shade the site changed carries a dot. */
+/** One shade of the palette, a swatch that opens its colour; a shade changed and not yet saved carries a dot. */
 function PaletteSwatch({ edit, row }: { edit: Editing; row: Row }) {
   const [open, setOpen] = useState(false)
   return (
@@ -203,11 +205,11 @@ function PaletteSwatch({ edit, row }: { edit: Editing; row: Row }) {
       trigger={
         <Pressable compact aria-label={row.key} title={row.key} disabled={edit.readOnly} className="relative h-6 rounded-xs outline-offset-1 hover:z-raised hover:ring-2 hover:ring-float data-[popup-open]:z-raised data-[popup-open]:ring-2 data-[popup-open]:ring-focus" style={{ background: lightDark(row.value).light }}>
           <span className="cms-swatch-edge" />
-          {row.written && <span className="absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-edge" aria-hidden />}
+          {changed(edit, row.name) && <span className="absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-edge" aria-hidden />}
         </Pressable>
       }
     >
-      <ColorPicker label={row.key} value={row.value} onChange={(value) => edit.change((sheet) => (value === null ? unset(sheet, row.name) : sheet.setVariable(row.name, value)))} />
+      <ColorPicker label={row.key} value={row.value} onChange={(value) => (value === null ? revert(edit, row.name) : edit.change((sheet) => sheet.setVariable(row.name, value)))} />
     </Popover>
   )
 }
@@ -242,18 +244,19 @@ function Schemes({ edit }: { edit: Editing }) {
     edit.change((sheet) => sheet.renameUtility(scheme.name, `${SCHEME}${key}`))
   }
   return (
-    <Group title={t('Schemes')} onAdd={edit.readOnly ? undefined : () => void add()} addLabel={t('Add Scheme')}>
+    <Group plain title={t('Schemes')} onAdd={edit.readOnly ? undefined : () => void add()} addLabel={t('Add Scheme')}>
       {schemes.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 pt-3">
+        <div className="grid grid-cols-2 gap-3 pt-1">
           {schemes.map((scheme) => (
             <div key={scheme.name} className="cms-reveal-row group min-w-0">
               <SchemeTile size="card" background={drawn(scheme.background)} text={drawn(scheme.text)} />
               <div className="flex h-9 items-center gap-1.5">
                 <Tooltip content={t('Copy Name')}>
-                  <Button variant="ghost" size="xs" onClick={() => void copyText(scheme.name, { copied: t('Copied {reference}', { reference: scheme.name }) })} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !px-0 !font-normal hover:text-ink">
+                  <Button variant="ghost" size="xs" onClick={() => void copyText(scheme.name, { copied: t('Copied {reference}', { reference: scheme.name }) })} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !px-0 !text-sm !font-normal !text-text hover:!text-ink">
                     <span className="truncate">{scheme.key}</span>
                   </Button>
                 </Tooltip>
+                <Changed on={(edit.sheet.utilityProperties(scheme.name).map((p) => p.value).join() !== edit.saved.utilityProperties(scheme.name).map((p) => p.value).join())} />
                 <ColorSwatch size="sm" label={t('{name} Background', { name: scheme.key })} value={scheme.background} disabled={edit.readOnly} onChange={(value) => value && edit.change((sheet) => writeScheme(sheet, scheme.name, value, scheme.text))} />
                 <ColorSwatch size="sm" label={t('{name} Text', { name: scheme.key })} value={scheme.text} disabled={edit.readOnly} onChange={(value) => value && edit.change((sheet) => writeScheme(sheet, scheme.name, scheme.background, value))} />
                 {edit.readOnly ? <NoAction /> : (
@@ -280,7 +283,7 @@ function Schemes({ edit }: { edit: Editing }) {
  * one follows the visitor's light or dark mode), then its schemes, then Tailwind's palette, shade by shade.
  */
 export function Colors({ edit }: { edit: Editing }) {
-  const kind: Kind = { prefix: '--color-', title: t('Colors'), add: t('Add Color'), fresh: t('New Color'), start: NEW_COLOR, placeholder: 'brand' }
+  const kind: Kind = { prefix: '--color-', title: t('Site Colors'), add: t('Add Color'), fresh: t('New Color'), start: NEW_COLOR, placeholder: 'brand' }
   const menu = useRowMenu(edit, kind)
   const all = rowsOf(edit, kind.prefix)
   // Tailwind's palette, shade by shade: what the CMS brings and the site's own come first.
@@ -298,32 +301,31 @@ export function Colors({ edit }: { edit: Editing }) {
   const write = (row: Row, light: string, dark: string | undefined) => edit.change((sheet) => sheet.setVariable(row.name, dark && dark !== light ? `light-dark(${light}, ${dark})` : light))
   return (
     <>
-      <section className="mb-8">
-        {/* The list's head names its columns, light and dark, over the swatches. */}
-        <div className="mb-1 flex h-9 items-center gap-2">
-          <h3 className="m-0 min-w-0 flex-1 text-xs font-semibold text-ink">{kind.title}</h3>
+      {/* The head names the columns, light and dark, over the swatches; the + stands over the rows' menus. */}
+      <Group
+        title={kind.title}
+        action={<>
           <span className="grid w-7 place-items-center text-faint" title={t('Light')}><Icon name="sun" size={13} /></span>
           <span className="grid w-7 place-items-center text-faint" title={t('Dark')}><Icon name="moon" size={13} /></span>
-          {edit.readOnly ? <NoAction /> : (
-            <Tooltip content={kind.add}>
-              <IconButton icon="plus" label={kind.add} title={undefined} size="xs" className="shrink-0" onClick={() => void add()} />
-            </Tooltip>
-          )}
-        </div>
+          {edit.readOnly && <NoAction />}
+        </>}
+        onAdd={edit.readOnly ? undefined : () => void add()}
+        addLabel={kind.add}
+      >
         {own.map((row) => {
           const { light, dark } = lightDark(row.value)
           return (
-            <TokenRow key={row.name} name={row.key} wide menu={menu(row)}>
+            <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} wide menu={menu(row)}>
               <ColorSwatch label={t('{name} in Light Mode', { name: row.key })} value={light} disabled={edit.readOnly} onChange={(value) => value && write(row, value, dark)} />
               <ColorSwatch label={t('{name} in Dark Mode', { name: row.key })} value={dark ?? null} same={light} disabled={edit.readOnly} onChange={(value) => write(row, light, value ?? undefined)} />
             </TokenRow>
           )
         })}
-      </section>
+      </Group>
       <Schemes edit={edit} />
       {families.size > 0 && (
-        <Group title={t('Palette')}>
-          <PaletteGrid head className="py-3" families={[...families].map(([name, shades]) => ({ name, shades }))} cell={(row) => <PaletteSwatch key={row.name} edit={edit} row={row} />} />
+        <Group plain title={t('Palette')}>
+          <PaletteGrid head className="pb-3" families={[...families].map(([name, shades]) => ({ name, shades }))} cell={(row) => <PaletteSwatch key={row.name} edit={edit} row={row} />} />
         </Group>
       )}
     </>
@@ -367,6 +369,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
             <TokenRow
               key={row.name}
               name={row.key}
+              changed={changed(edit, row.name)}
               sample={<span className="block max-w-7 overflow-hidden whitespace-nowrap text-center text-lg leading-none text-ink" style={{ fontFamily: row.value }}>Aa</span>}
               menu={menu([
                 { heading: true, label: t('Fallback') },
@@ -384,7 +387,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
         edit={edit}
         kind={{ prefix: '--text-', title: t('Text Sizes'), add: t('Add Text Size'), fresh: t('New Text Size'), start: '1.25rem', placeholder: 'lead', skip: (key) => key.startsWith('shadow-') }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} below={sizeSample(row.value, display)}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} below={sizeSample(row.value, display)}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={SIZE} onChange={set} />
           </TokenRow>
         )}
@@ -393,7 +396,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
         edit={edit}
         kind={{ prefix: '--leading-', title: t('Line Heights'), add: t('Add Line Height'), fresh: t('New Line Height'), start: '1.5', placeholder: 'airy' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="flex w-4 flex-col" style={{ gap: `${Math.max(1, (Number(row.value) - 0.8) * 6)}px` }}>{[0, 1, 2].map((i) => <span key={i} className={cn('h-0.5 rounded-full bg-muted', i === 2 && 'w-2/3')} />)}</span>}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="flex w-4 flex-col" style={{ gap: `${Math.max(1, (Number(row.value) - 0.8) * 6)}px` }}>{[0, 1, 2].map((i) => <span key={i} className={cn('h-0.5 rounded-full bg-muted', i === 2 && 'w-2/3')} />)}</span>}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('', { step: 0.05, min: 0 })} onChange={set} />
           </TokenRow>
         )}
@@ -402,7 +405,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
         edit={edit}
         kind={{ prefix: '--tracking-', title: t('Letter Spacing'), add: t('Add Letter Spacing'), fresh: t('New Letter Spacing'), start: '0em', placeholder: 'loose' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="text-xs font-medium text-ink" style={{ letterSpacing: row.value }}>Aa</span>}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="text-xs font-medium text-ink" style={{ letterSpacing: row.value }}>Aa</span>}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('em', { units: ['em', 'px'], step: 0.005 })} onChange={set} />
           </TokenRow>
         )}
@@ -413,7 +416,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
 
 /** A length row of the theme: a size that may grow with the screen. */
 const sizeRow = (edit: Editing, field: Partial<FieldDef> = SIZE) => (row: Row, set: (value: string | null) => void, menu: (extra?: MenuItemDef[]) => MenuItemDef[]) => (
-  <TokenRow key={row.name} name={row.key} menu={menu()}>
+  <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()}>
     <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={field} onChange={set} />
   </TokenRow>
 )
@@ -426,27 +429,27 @@ function ControlSizes({ edit }: { edit: Editing }) {
   const cell = 'w-24 shrink-0 max-sm:min-w-0 max-sm:flex-1'
   return (
     <Group title={t('Buttons and Fields')}>
-      <div className="flex min-h-8 items-center gap-2 text-2xs text-faint">
+      <div className="flex min-h-8 items-center gap-2 px-3 text-2xs text-faint">
         <span className="min-w-0 flex-1" />
         {parts.map(([part, label]) => <span key={part} className={cell}>{label}</span>)}
         <span className="size-6 shrink-0" />
       </div>
       {sizes.map(([size, label]) => {
         const names = parts.map(([part]) => `--control-${size}-${part}`)
-        const written = names.some((name) => edit.sheet.variable(name) !== undefined)
+        const unsaved = changed(edit, ...names)
         return (
-          <div key={size} className={cn(ROW, 'flex min-h-9 items-center gap-2 py-1')}>
-            <span className="min-w-0 flex-1 truncate text-xs text-text">{label}</span>
+          <div key={size} className={cn(ROW, 'flex min-h-10 items-center gap-2 py-1.5')}>
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-text"><span className="truncate">{label}</span><Changed on={unsaved} /></span>
             {parts.map(([part, partLabel], i) => (
               <div key={part} className={cell}>
                 <Control handle={names[i]} label={`${label} ${partLabel}`} value={value(names[i])} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px'], step: 0.125, min: 0 })} onChange={(next) => next !== null && edit.change((sheet) => sheet.setVariable(names[i], next))} />
               </div>
             ))}
-            {written && !edit.readOnly ? (
-              <Tooltip content={t('Reset')}>
-                <IconButton icon="undo" size="xs" label={t('Reset')} title={undefined} className="cms-reveal shrink-0" onClick={() => edit.change((sheet) => names.reduce((next, name) => next.setVariable(name, null), sheet))} />
+            {unsaved && !edit.readOnly ? (
+              <Tooltip content={t('Revert')}>
+                <IconButton icon="undo" size="xs" label={t('Revert')} title={undefined} className="shrink-0" onClick={() => revert(edit, ...names)} />
               </Tooltip>
-            ) : <span className="size-6 shrink-0" />}
+            ) : <NoAction />}
           </div>
         )
       })}
@@ -493,7 +496,7 @@ export function Layout({ edit }: { edit: Editing }) {
   return (
     <>
       <Group title={spacing.title} onAdd={edit.readOnly ? undefined : () => void add()} addLabel={spacing.add}>
-        <TokenRow name={scale.key} copy={scale.name} menu={menu(scale)} below={<SpacingScale step={scale.value} />}>
+        <TokenRow name={scale.key} copy={scale.name} changed={changed(edit, scale.name)} menu={menu(scale)} below={<SpacingScale step={scale.value} />}>
           <Control handle="--spacing" label={scale.key} value={scale.value} disabled={edit.readOnly} field={SIZE} onChange={(value) => value !== null && edit.change((sheet) => sheet.setVariable('--spacing', value))} />
         </TokenRow>
         {rowsOf(edit, spacing.prefix).map((row) => sizeRow(edit)(row, (value) => value !== null && edit.change((sheet) => sheet.setVariable(row.name, value)), (extra) => menu(row, extra)))}
@@ -508,7 +511,7 @@ export function Layout({ edit }: { edit: Editing }) {
 /** Corners, shadows of every kind, blur and perspective. */
 export function Effects({ edit }: { edit: Editing }) {
   const shadow = (kind: string) => (row: Row, set: (value: string | null) => void, menu: (extra?: MenuItemDef[]) => MenuItemDef[]) => (
-    <TokenRow key={row.name} name={row.key} menu={menu()} sample={<ShadowSample value={row.value} kind={kind} />}>
+    <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<ShadowSample value={row.value} kind={kind} />}>
       <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'site-shadow', kind }} onChange={set} />
     </TokenRow>
   )
@@ -518,7 +521,7 @@ export function Effects({ edit }: { edit: Editing }) {
         edit={edit}
         kind={{ prefix: '--radius-', title: t('Corners'), add: t('Add Radius'), fresh: t('New Radius'), start: '0.5rem', placeholder: 'card' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="size-5 translate-x-0.5 translate-y-0.5 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: `min(${row.value}, 20px)` }} />}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="size-5 translate-x-0.5 translate-y-0.5 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: `min(${row.value}, 20px)` }} />}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px', '%'], step: 0.125, min: 0 })} onChange={set} />
           </TokenRow>
         )}
@@ -531,7 +534,7 @@ export function Effects({ edit }: { edit: Editing }) {
         edit={edit}
         kind={{ prefix: '--blur-', title: t('Blur'), add: t('Add Blur'), fresh: t('New Blur'), start: '6px', placeholder: 'soft' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<span className="size-3 rounded-full bg-muted" style={{ filter: `blur(min(${row.value}, 6px))` }} />}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="size-3 rounded-full bg-muted" style={{ filter: `blur(min(${row.value}, 6px))` }} />}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('px', { units: ['px', 'rem'], step: 1, min: 0 })} onChange={set} />
           </TokenRow>
         )}
@@ -550,17 +553,17 @@ function seconds(value: unknown, fallback: number): number {
 }
 
 /** Easing curves and animations, what a transition takes when a class says nothing else, and how one page gives way to the next. */
-export function Motion({ edit, transition, onTransition }: { edit: Editing; transition: Transition; onTransition: (transition: Transition) => void }) {
+export function Motion({ edit, transition, saved, onTransition }: { edit: Editing; transition: Transition; saved: Transition; onTransition: (transition: Transition) => void }) {
   const setting = (name: string, value: string | null) => edit.change((sheet) => sheet.setVariable(name, value))
   const fallback = (name: string) => edit.sheet.variable(name) ?? edit.defaults.get(name) ?? null
-  const reset = (name: string) => (edit.sheet.variable(name) !== undefined && !edit.readOnly ? <Tooltip content={t('Reset')}><IconButton icon="undo" size="xs" label={t('Reset')} title={undefined} onClick={() => setting(name, null)} /></Tooltip> : undefined)
+  const back = (name: string) => (changed(edit, name) && !edit.readOnly ? <Tooltip content={t('Revert')}><IconButton icon="undo" size="xs" label={t('Revert')} title={undefined} onClick={() => revert(edit, name)} /></Tooltip> : undefined)
   return (
     <>
       <Tokens
         edit={edit}
         kind={{ prefix: '--ease-', title: t('Easings'), add: t('Add Easing'), fresh: t('New Easing'), start: 'cubic-bezier(0.2, 0.8, 0.2, 1)', placeholder: 'snap' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'ease' }} onChange={set} />
           </TokenRow>
         )}
@@ -569,7 +572,7 @@ export function Motion({ edit, transition, onTransition }: { edit: Editing; tran
         edit={edit}
         kind={{ prefix: '--duration-', title: t('Durations'), add: t('Add Duration'), fresh: t('New Duration'), start: '300ms', placeholder: 'slow' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('ms', { units: ['ms', 's'], step: 50, min: 0 })} onChange={set} />
           </TokenRow>
         )}
@@ -578,29 +581,29 @@ export function Motion({ edit, transition, onTransition }: { edit: Editing; tran
         edit={edit}
         kind={{ prefix: '--animate-', title: t('Animations'), add: t('Add Animation'), fresh: t('New Animation'), start: 'spin 2s linear infinite', placeholder: 'float' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} menu={menu()} sample={<AnimationSample value={row.value} keyframes={edit.keyframes} />}>
+          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<AnimationSample value={row.value} keyframes={edit.keyframes} />}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'site-animation', keyframes: edit.keyframes }} onChange={set} />
           </TokenRow>
         )}
       />
       <Group title={t('Transitions')}>
-        <Setting label={t('Duration')} action={reset('--default-transition-duration')}>
+        <Setting label={t('Duration')} changed={changed(edit, '--default-transition-duration')} action={back('--default-transition-duration')}>
           <Control handle="--default-transition-duration" label={t('Duration')} value={fallback('--default-transition-duration')} disabled={edit.readOnly} field={number('ms', { units: ['ms', 's'], step: 10, min: 0 })} onChange={(value) => value && setting('--default-transition-duration', value)} />
         </Setting>
-        <Setting label={t('Easing')} action={reset('--default-transition-timing-function')}>
+        <Setting label={t('Easing')} changed={changed(edit, '--default-transition-timing-function')} action={back('--default-transition-timing-function')}>
           <Control handle="--default-transition-timing-function" label={t('Easing')} value={fallback('--default-transition-timing-function')} disabled={edit.readOnly} field={{ component: 'ease' }} onChange={(value) => value && setting('--default-transition-timing-function', value)} />
         </Setting>
       </Group>
       <Group title={t('Page Transition')}>
-        <Setting label={t('Effect')}>
+        <Setting label={t('Effect')} changed={transition.type !== saved.type}>
           <Control handle="type" label={t('Effect')} value={transition.type} disabled={edit.readOnly} field={{ type: 'select', mono: false, required: true, options: { none: t('None'), fade: t('Fade'), slide: t('Slide'), scale: t('Scale') } }} onChange={(value) => onTransition({ ...transition, type: (value ?? 'none') as Transition['type'] })} />
         </Setting>
         {transition.type !== 'none' && (
-          <Setting label={t('Duration')}>
+          <Setting label={t('Duration')} changed={transition.duration !== saved.duration}>
             <Control handle="duration" label={t('Duration')} value={`${Math.round(transition.duration * 1000)}ms`} disabled={edit.readOnly} field={number('ms', { units: ['ms'], step: 10, min: 50, max: 2000 })} onChange={(value) => onTransition({ ...transition, duration: seconds(value, transition.duration) })} />
           </Setting>
         )}
-        <Setting label={t('Page Loads')}>
+        <Setting label={t('Page Loads')} changed={transition.navigation !== saved.navigation}>
           <Control handle="navigation" label={t('Page Loads')} value={transition.navigation} disabled={edit.readOnly} field={{ type: 'select', mono: false, required: true, options: { document: t('Full Page'), client: t('Instant') } }} onChange={(value) => onTransition({ ...transition, navigation: value === 'client' ? 'client' : 'document' })} />
         </Setting>
       </Group>

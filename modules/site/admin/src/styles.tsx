@@ -2,7 +2,7 @@ import { setQuery, t, useLocation, type FieldDef } from '@letterncms/sdk'
 import { Button, IconButton, Menu, Tooltip, confirm, copyText, prompt, toast, type MenuItemDef } from '@letterncms/ui'
 import { ARTICLE, FIELDS, InspectorSection, PanelFields, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, styleApi, styleLabel, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
 import { useMemo, useState } from 'react'
-import { Group, OpenRow, rowAction, type Editing } from './parts'
+import { Group, OpenRow, revertItem, rowAction, type Editing } from './parts'
 
 /* The site's styles: every look it has, in one list, by what it styles. The page itself, its text, its buttons, its
    form fields, its long-form text and the looks it names (a lede, a card). What an element looks like by default and
@@ -272,7 +272,7 @@ function PropertiesEditor({ edit, samples, part }: { edit: Editing; samples: Sam
     <div className="-mx-4 -mt-2">
       <div className="sticky top-0 z-raised flex items-center gap-1 border-b border-border bg-bg py-2 pl-4 pr-3">
         <Lead />
-        <Actions menu={resetProperties(edit, part)} />
+        <Actions menu={revertProperties(edit, part)} />
       </div>
       <div className="border-b border-border p-4">
         <Specimen sheet={sheet} node={sample} page={page} mode={edit.mode} align="center" className="h-64 rounded-md border border-border" />
@@ -281,7 +281,7 @@ function PropertiesEditor({ edit, samples, part }: { edit: Editing; samples: Sam
         {part.sections.map((section) => {
           const fields = (
             <PanelFields
-              fields={section.values.map((value) => ({ handle: value.property, type: 'text', size: 'sm', label: value.label, ...value.field, status: own(value.property) !== undefined ? 'own' : undefined, reset: () => edit.change((s) => s.setProperty(part.selector, value.property, null, part.layer)) }) as FieldDef)}
+              fields={section.values.map((value) => ({ handle: value.property, type: 'text', size: 'sm', label: value.label, ...value.field, status: propertyChanged(edit, part, value.property) ? 'own' : undefined, reset: () => edit.change((s) => s.setProperty(part.selector, value.property, edit.saved.property(part.selector, value.property, part.layer) ?? null, part.layer)) }) as FieldDef)}
               values={Object.fromEntries(section.values.map((value) => [value.property, own(value.property) ?? kernel.property(part.selector, value.property, part.layer) ?? null]))}
               onChange={(property, next) => edit.change((s) => s.setProperty(part.selector, property, next === null || next === undefined || next === '' ? null : String(next), part.layer))}
             />
@@ -294,12 +294,24 @@ function PropertiesEditor({ edit, samples, part }: { edit: Editing; samples: Sam
   )
 }
 
-/** Reset for a look made of properties, when the site sets any of them. */
-function resetProperties(edit: Editing, part: Properties): MenuItemDef[] {
+/** Whether a property of a look is otherwise in the draft than the site has it. */
+const propertyChanged = (edit: Editing, part: Properties, property: string) => (edit.sheet.property(part.selector, property, part.layer) ?? null) !== (edit.saved.property(part.selector, property, part.layer) ?? null)
+
+/** A look made of properties, changed and not yet saved. */
+const propertiesChanged = (edit: Editing, part: Properties) => part.sections.some((section) => section.values.some((value) => propertyChanged(edit, part, value.property)))
+
+/** Revert for a look made of properties with a change not yet saved: every property back as the site has it. */
+function revertProperties(edit: Editing, part: Properties): MenuItemDef[] {
+  if (edit.readOnly || !propertiesChanged(edit, part)) return []
   const values = part.sections.flatMap((section) => section.values)
-  if (edit.readOnly || !values.some((value) => edit.sheet.property(part.selector, value.property, part.layer) !== undefined)) return []
-  return [{ label: t('Reset'), icon: 'undo', onSelect: () => edit.change((s) => values.reduce((next, value) => next.setProperty(part.selector, value.property, null, part.layer), s)) }]
+  return [revertItem(() => edit.change((s) => values.reduce((next, value) => next.setProperty(part.selector, value.property, edit.saved.property(part.selector, value.property, part.layer) ?? null, part.layer), s)))]
 }
+
+/** An element's classes, or a style's, as a stylesheet has them. */
+const elementIn = (sheet: Stylesheet, selector: string, layer: Layer) => sheet.elements(layer).find((rule) => rule.name === selector)?.classes ?? []
+const utilityIn = (sheet: Stylesheet, name: string) => sheet.utilities().find((rule) => rule.name === name)?.classes
+const elementChanged = (edit: Editing, selector: string, layer: Layer = 'base') => elementIn(edit.sheet, selector, layer).join(' ') !== elementIn(edit.saved, selector, layer).join(' ')
+const utilityChanged = (edit: Editing, name: string) => utilityIn(edit.sheet, name)?.join(' ') !== utilityIn(edit.saved, name)?.join(' ')
 
 /**
  * Every look of the site, in one list by what it styles: the page, text, buttons, forms and boxes. Each is drawn
@@ -352,21 +364,26 @@ export function Styles({ edit, samples }: { edit: Editing; samples: Samples }) {
     if (open === name) show(null)
   }
   const styleMenu = (name: string): MenuItemDef[] => (edit.readOnly ? [] : [
+    ...(utilityChanged(edit, name) && utilityIn(edit.saved, name) ? [revertItem(() => edit.change((s) => s.setUtility(name, utilityIn(edit.saved, name)!))), { separator: true, label: '' }] : []),
     { label: t('Rename…'), icon: 'edit', onSelect: () => void rename(name) },
     { label: t('Duplicate…'), icon: 'copy', onSelect: () => void duplicate(name) },
     { separator: true, label: '' },
     { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => void remove(name) },
   ])
-  const resetMenu = (selector: string, layer: Layer = 'base'): MenuItemDef[] => (edit.readOnly || classesOf(selector).length === 0 ? [] : [{ label: t('Reset'), icon: 'undo', onSelect: () => edit.change((s) => s.removeElement(selector, layer)) }])
+  // An element changed and not yet saved goes back to what the site has, or to nothing of its own when it had none.
+  const revertMenu = (selector: string, layer: Layer = 'base'): MenuItemDef[] => (edit.readOnly || !elementChanged(edit, selector, layer) ? [] : [revertItem(() => {
+    const saved = elementIn(edit.saved, selector, layer)
+    edit.change((s) => (saved.length > 0 ? s.setElement(selector, saved, layer) : s.removeElement(selector, layer)))
+  })])
 
   // An element of the page or of its text.
   const element = [...PAGE(), ...TEXT()].find((entry) => `element:${entry.selector}` === open)
   if (element) {
-    return <StyleEditor key={open} edit={edit} samples={samples} selector={element.selector} node={sampleOf(element)} classes={classesOf(element.selector)} groups={element.groups ?? TEXT_GROUPS} menu={resetMenu(element.selector)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes))} />
+    return <StyleEditor key={open} edit={edit} samples={samples} selector={element.selector} node={sampleOf(element)} classes={classesOf(element.selector)} groups={element.groups ?? TEXT_GROUPS} menu={revertMenu(element.selector)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes))} />
   }
   const article = ARTICLES().find((entry) => `article:${entry.key}` === open)
   if (article) {
-    return <StyleEditor key={open} edit={edit} samples={samples} selector={article.selector} node={article.node} classes={classesOf(article.selector)} groups={article.groups ?? TEXT_GROUPS} menu={resetMenu(article.selector, 'components')} write={(classes) => edit.change((s) => s.setElement(article.selector, classes, 'components'))} />
+    return <StyleEditor key={open} edit={edit} samples={samples} selector={article.selector} node={article.node} classes={classesOf(article.selector)} groups={article.groups ?? TEXT_GROUPS} menu={revertMenu(article.selector, 'components')} write={(classes) => edit.change((s) => s.setElement(article.selector, classes, 'components'))} />
   }
   const properties = [...FORM(), SPACING()].find((part) => part.key === open)
   if (properties) return <PropertiesEditor key={open} edit={edit} samples={samples} part={properties} />
@@ -389,11 +406,12 @@ export function Styles({ edit, samples }: { edit: Editing; samples: Samples }) {
   }
 
   // Every row the same: its name, then a sample of one height, scaled down to it when the look is larger.
-  const row = (key: string, label: string, node: SampleNode, menu: MenuItemDef[]) => (
+  const row = (key: string, label: string, node: SampleNode, menu: MenuItemDef[], unsaved: boolean) => (
     <OpenRow
       key={key}
       onOpen={() => show(key)}
       label={label}
+      changed={unsaved}
       sample={<Specimen sheet={sheet} node={node} page={page} mode={edit.mode} className="h-12 min-w-0 flex-1 rounded-sm shadow-edge" />}
       menu={menu.length ? <Menu trigger={<IconButton icon="more" label={t('Style Actions')} size="xs" className={rowAction} />} items={menu} /> : undefined}
     />
@@ -402,24 +420,24 @@ export function Styles({ edit, samples }: { edit: Editing; samples: Samples }) {
   return (
     <>
       <Group title={t('Page')}>
-        {PAGE().map((entry) => row(`element:${entry.selector}`, entry.label, sampleOf(entry), resetMenu(entry.selector)))}
+        {PAGE().map((entry) => row(`element:${entry.selector}`, entry.label, sampleOf(entry), revertMenu(entry.selector), elementChanged(edit, entry.selector)))}
       </Group>
       <Group title={t('Text')} onAdd={add('text')} addLabel={t('New Text Style')}>
-        {TEXT().map((entry) => row(`element:${entry.selector}`, entry.label, entry.node, resetMenu(entry.selector)))}
-        {text.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name)))}
+        {TEXT().map((entry) => row(`element:${entry.selector}`, entry.label, entry.node, revertMenu(entry.selector), elementChanged(edit, entry.selector)))}
+        {text.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name), utilityChanged(edit, entry.name)))}
       </Group>
       <Group title={t('Buttons')} onAdd={add('button')} addLabel={t('New Button')}>
-        {buttons.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name)))}
+        {buttons.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name), utilityChanged(edit, entry.name)))}
       </Group>
       <Group title={t('Forms')}>
-        {FORM().map((part) => row(part.key, part.label, part.sample, resetProperties(edit, part)))}
+        {FORM().map((part) => row(part.key, part.label, part.sample, revertProperties(edit, part), propertiesChanged(edit, part)))}
       </Group>
       <Group title={t('Articles')}>
-        {row(SPACING().key, t('Spacing'), SPACING().sample, resetProperties(edit, SPACING()))}
-        {ARTICLES().map((entry) => row(`article:${entry.key}`, entry.label, entry.node, resetMenu(entry.selector, 'components')))}
+        {row(SPACING().key, t('Spacing'), SPACING().sample, revertProperties(edit, SPACING()), propertiesChanged(edit, SPACING()))}
+        {ARTICLES().map((entry) => row(`article:${entry.key}`, entry.label, entry.node, revertMenu(entry.selector, 'components'), elementChanged(edit, entry.selector, 'components')))}
       </Group>
       <Group title={t('Boxes')} onAdd={add('box')} addLabel={t('New Style')}>
-        {boxes.map((entry) => row(entry.name, styleLabel(entry.name), { ...styleSample(entry.name), className: `${entry.name} inline-block` }, styleMenu(entry.name)))}
+        {boxes.map((entry) => row(entry.name, styleLabel(entry.name), { ...styleSample(entry.name), className: `${entry.name} inline-block` }, styleMenu(entry.name), utilityChanged(edit, entry.name)))}
       </Group>
     </>
   )
