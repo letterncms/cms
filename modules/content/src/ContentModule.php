@@ -49,7 +49,7 @@ final class ContentModule extends Plugin
         $cms->hooks()->on('collection.deleted', fn (string $handle) => $this->app->make(SavedViews::class)->forget($handle));
         $this->skills($cms);
 
-        // One sidebar item per collection, in the collection's own section (templates and components in Design).
+        // One sidebar item per collection, in the collection's own section (templates and components in Structure).
         // Built-in pages (sign in, checkout) are pages: they belong to the pages' item and are listed with them.
         $cms->hooks()->addFilter('admin.nav', function (array $items) use ($cms) {
             foreach ($cms->collections()->all() as $collection) {
@@ -63,6 +63,8 @@ final class ContentModule extends Plugin
                     'section' => $collection->section,
                     'order' => (int) $collection->get('nav_order', 10),
                     'permission' => "entries.{$collection->handle}.view",
+                    // The pages are pinned to the main sidebar from the start: the place most work begins.
+                    'pinned' => $collection->handle === 'pages',
                 ];
             }
 

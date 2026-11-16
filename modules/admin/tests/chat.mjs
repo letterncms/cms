@@ -58,8 +58,8 @@ const choose = async label => {
   await wait(() => menuItems().some(el => el.textContent === label), label + ' missing from Chat Actions')
   menuItems().find(el => el.textContent === label).click()
 }
-// A fresh thread: the + in the thread's header, which a new empty thread leaves out, or the sidebar's New Chat.
-const newChat = () => (control('New Chat') ?? document.querySelector('.cms-side-panel button[aria-label="New Chat"]')).click()
+// A fresh thread: the + in the thread's header, which a new empty thread leaves out; there, asking from elsewhere (the Dashboard's Ask) starts it.
+const newChat = () => { const plus = control('New Chat'); if (plus) plus.click(); else events.emit('chat.ask') }
 const button = label => [...dock().querySelectorAll('button')].find(el => el.textContent.trim() === label)
 const heading = () => dock().querySelector('.cms-thread-page header h2')?.textContent
 const welcome = () => !!dock().querySelector('.cms-thread-welcome')
@@ -98,9 +98,8 @@ try {
     await settle()
     await wait(() => document.querySelector('.cms-sheet').getBoundingClientRect().right <= dock().querySelector('.cms-dock-panel').getBoundingClientRect().left + 1, 'dock covers the page instead of sitting beside it')
     await wait(() => historyRows().length === 30, 'a new chat does not list the first page of chats')
-    const length = window.history.length
-    newChat(); newChat(); await sleep(100)
-    assert(location.pathname === '/admin/content/pages' && window.history.length === length, 'New Chat navigated')
+    // A fresh chat is on view: nothing offers another, and opening it went nowhere.
+    assert(!control('New Chat') && location.pathname === '/admin/content/pages', 'an empty new chat offers another')
     assert(sidebar.getBoundingClientRect().x === before.x && sidebar.getBoundingClientRect().width === before.width, 'shell jumped')
     assert((await state()).created === 0, 'empty chat saved')
   })
@@ -130,7 +129,9 @@ try {
     assert(composer().getBoundingClientRect().height === height, 'clearing the draft did not restore the initial height')
   })
   await test('New Chat preserves an unfinished draft and focuses its composer', async () => {
-    fill('Unfinished landing page idea'); await sleep(30); document.activeElement.blur()
+    fill('Unfinished landing page idea'); await sleep(30)
+    row('Refine the launch page').click(); await wait(() => heading() === 'Refine the launch page', 'saved chat did not open')
+    document.activeElement.blur()
     newChat()
     await wait(() => document.activeElement === composer(), 'New Chat did not focus the composer')
     assert(composer().value === 'Unfinished landing page idea' && welcome(), 'draft lost')

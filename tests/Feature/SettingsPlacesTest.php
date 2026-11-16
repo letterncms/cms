@@ -45,7 +45,7 @@ final class SettingsPlacesTest extends TestCase
                     // A screen that lives in settings, like Languages.
                     $this->cms()->admin()->nav('redirects', ['label' => 'Redirect Rules', 'path' => '/redirect-rules', 'section' => 'people']);
                     // A screen of its own in the sidebar, which keeps its settings as a tab.
-                    $this->cms()->admin()->nav('clicks', ['label' => 'Clicks', 'path' => '/clicks', 'section' => 'content']);
+                    $this->cms()->admin()->nav('clicks', ['label' => 'Clicks', 'path' => '/clicks']);
                     $settings->register('clicks', 'Clicks', [['handle' => 'days', 'type' => 'number', 'label' => 'Days']], home: 'clicks');
                 }
             }
@@ -101,7 +101,7 @@ final class SettingsPlacesTest extends TestCase
     {
         $sidebar = $this->cms()->adminNav()->forUser($this->admin())['sidebar'];
 
-        $this->assertContains('clicks', array_column($sidebar['sections'], 'items', 'id')['content']);
+        $this->assertContains('clicks', array_column($sidebar['sections'], 'items', 'id')['pinned']);
         $this->assertNotContains('clicks', $sidebar['hidden']);
     }
 }

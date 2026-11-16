@@ -47,7 +47,7 @@ final class MediaModule extends Plugin
         $this->mediaAsContent();
 
         $admin = $this->cms()->admin();
-        $admin->nav('media', ['path' => '/media', 'icon' => 'media', 'section' => 'content', 'order' => 70, 'pinned' => true, 'permission' => 'media.view']);
+        $admin->nav('media', ['path' => '/media', 'icon' => 'media', 'section' => 'pinned', 'order' => 22, 'permission' => 'media.view']);
         $admin->command('upload-media', ['label' => 'Upload Files', 'icon' => 'upload', 'path' => '/media?upload=1', 'permission' => 'media.upload']);
         $admin->widget('media-recent', ['label' => 'Recent Uploads', 'description' => 'The latest files in the media library.', 'icon' => 'media', 'column' => 'main', 'order' => 40, 'permission' => 'media.view']);
         $this->places();

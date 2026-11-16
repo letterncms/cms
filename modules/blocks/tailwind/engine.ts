@@ -1,4 +1,4 @@
-// Reading and writing an element's Tailwind classes, for the controls of the Design tab and the Styling page.
+// Reading and writing an element's Tailwind classes, for the controls of the Design tab and the design's styles.
 //
 // Nothing here knows Tailwind's utilities by heart: what a class does is asked of Tailwind's own design
 // system, built from the site's stylesheet. So a site's own utilities, its theme and every later Tailwind
@@ -382,7 +382,7 @@ export interface Screen {
   sizes: Record<string, number>
 }
 
-/** Every screen, seen at a desktop's width: what the Styling page and a reading without a canvas edit. */
+/** Every screen, seen at a desktop's width: what the design and a reading without a canvas edit. */
 export function everyScreen(sizes: Record<string, number>, width = 1280): Screen {
   return { variant: '', width, sizes }
 }

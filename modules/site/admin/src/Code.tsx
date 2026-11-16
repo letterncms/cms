@@ -3,10 +3,10 @@ import { Button, CodeEditor, IconButton, Menu, NotFoundState, Notice, QueryError
 import { Stylesheet, balanced } from '@letterncms/blocks'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
-/* The site's own code, for whoever writes it, as an editor of files: the CSS no section of Styling shows and the
+/* The site's own code, for whoever writes it, as an editor of files: the CSS no section of the design shows and the
    stylesheets blocks load by name, the JavaScript on every page and the scripts blocks run, and the libraries
-   scripts import. Their list is a panel beside the one open, as Styling's sections are beside the site.
-   Styling is the design; this is what a developer adds. */
+   scripts import. Their list is a panel beside the one open.
+   The design is the look; this is what a developer adds. */
 
 interface Info {
   css: string
@@ -51,9 +51,10 @@ export default function Code() {
   /** The library being fetched, or 'add' while a new one is. */
   const [fetching, setFetching] = useState<string | null>(null)
   const { query } = useLocation()
-  // What is open is in the address, so Back returns to what was open before.
+  // What is open is in the address, so Back returns to what was open before. Nothing chosen: the site's CSS, and on a phone the list.
   const open: Open = query.file ?? 'css'
-  const select = (next: Open) => setQuery({ file: next === 'css' ? null : next }, false)
+  const select = (next: Open) => setQuery({ file: next }, false)
+  const narrow = useNarrow()
   const code = can('site.code')
   const manage = can('settings.manage')
 
@@ -116,7 +117,7 @@ export default function Code() {
     if (await act(() => run('styling-code/save', { path, contents: STARTER[kind] }), t('{name} added', { name: `${name}.${EXT[kind]}` }))) select(path)
   }
   const removeFile = async (path: string, name: string) => {
-    if (!(await confirm({ title: t('Delete “{name}”?', { name }), confirm: t('Delete'), danger: true }))) return
+    if (!(await confirm({ title: t('Delete “{name}”?', { name }), confirm: t('Delete File'), danger: true }))) return
     if (!(await act(() => run('styling-code/delete', { path }), t('{name} deleted', { name })))) return
     edit(path, null)
     if (open === path) select('css')
@@ -135,7 +136,7 @@ export default function Code() {
     setFetching(null)
   }
   const removeLibrary = async (name: string) => {
-    if (!(await confirm({ title: t('Delete “{name}”?', { name }), confirm: t('Delete'), danger: true }))) return
+    if (!(await confirm({ title: t('Delete “{name}”?', { name }), confirm: t('Delete Library'), danger: true }))) return
     if ((await act(() => run('styling-vendor/delete', { import: name }), t('{name} deleted', { name }))) && open === `library:${name}`) select('css')
   }
 
@@ -192,7 +193,9 @@ export default function Code() {
     <div className="flex h-full flex-col">
       <Topbar
         divided
-        crumbs={[{ label: t('Code'), icon: 'code', to: query.file ? '/code' : undefined }, ...(title ? [{ label: title }] : [])]}
+        // On a phone a file takes the screen: its name, with the way back to the list.
+        back={narrow && query.file ? { to: '/code', label: t('Code') } : undefined}
+        crumbs={[{ label: narrow && query.file ? title : t('Code') }]}
         actions={menu.length > 0 && <Menu align="end" trigger={<IconButton icon="more" size="sm" label={t('File Actions')} />} items={menu} />}
       />
       <SaveBar dirty={dirty} saving={busy} error={failed ? (failed.refused ? t('The CSS was not saved') : failed.message) : null} onSave={() => void save()} onDiscard={() => { setDraft(EMPTY); setFailed(null) }} />
@@ -205,6 +208,18 @@ export default function Code() {
       </div>
     </div>
   )
+}
+
+/** Whether the window is a phone's: the list and the open file take turns there. */
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => window.matchMedia('(max-width: 767px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const change = () => setNarrow(media.matches)
+    media.addEventListener('change', change)
+    return () => media.removeEventListener('change', change)
+  }, [])
+  return narrow
 }
 
 const Loading = () => <div className="space-y-2 py-2 pl-2"><Skeleton className="h-3 w-32" /><Skeleton className="h-3 w-24" /></div>
@@ -225,7 +240,7 @@ function File({ path, edited, onEdit }: { path: string; edited: string | undefin
 }
 
 /**
- * The site's own CSS: what the stylesheet holds that no section of Styling shows (a variable of another kind, a rule
+ * The site's own CSS: what the stylesheet holds that no section of the design shows (a variable of another kind, a rule
  * of another selector, a variant of its own, plain CSS). What is typed is the draft once its braces close.
  */
 function SiteCss({ css, onChange, disabled }: { css: string; onChange: (css: string) => void; disabled: boolean }) {

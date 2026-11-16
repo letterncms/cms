@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Changed
+
+- **A calmer sidebar with three rooms.** It starts with the Dashboard and a row into each room: **Entries** (your pages, posts and other collections), **Design** and **Structure**. Under them, **Pinned** holds Pages, Media and Globals to begin with: pin any screen of a room from its row, unpin what you don't need, and find it again under **More**. **Customize Sidebar…** is in the menu beside your site's name.
+- **Design opens on your colors.** Its sections are in the sidebar, grouped as **Theme** (Colors, Typography, Layout, Effects, Motion, Styles) and **Site** (Navigation, Sites), each beside your site as it looks with your changes. A change you haven't saved goes along from one section to the next. Colors opens with your site's look on one sheet: its type and its main colors.
+- **Structure holds what your pages are made of:** Collections, Templates, Components, Patterns, Account Pages and Code.
+- **Styles come in groups.** Elements, Buttons, Forms and Articles, then groups you make: give a new style a group, move one with **Move to Group…**, and rename or delete a group from its menu. A group is written beside its styles in your stylesheet (`/* group: Cards */`). Opening a group or a style shows its name with the way back.
+- **Each part of a form shows itself.** Fields shows a text field at rest, pointed at, focused and wrong, a text area and a dropdown; Labels shows labels with their help; Choices shows each kind checked and not.
+- **Every row works the same.** What came with your site shows a lock, every row has the same menu (**Copy Name**, **Revert**, and **Rename** and **Delete** for your own), and only rows that open light up under the pointer.
+- **A cleaner color picker.** Tailwind's palette is a grid of square swatches with a check on the chosen one, no longer a list to edit under Colors, and a search finds a color by its name in your theme or the palette ("brand", "blue 500").
+- **Every list has the same bar**, however short: its search, its filters and **Display**. Patterns are listed like templates and components, and patterns and components are grouped by category.
+- The selected file in Code is a soft fill, and a screen's way back reads "‹ Name".
+- **Breaking.** For plugins: a screen registered without a `section` is listed under Pinned. The sidebar sections are `main`, `pinned`, and the rooms' `content`, `design`, `design-site`, `structure`, `system` and `people`; `site` is gone. `pinned: true` pins a room's screen from the start. The Design's sections are at `/design/<section>`; `/styling` and `/design` alone are gone. `PaletteGrid` is no longer exported. `SaveBar` takes `within`, and a route can `keep` its screen across the paths it matches.
+
+### Removed
+
+- **New Chat** in the sidebar: open the chat with **Chat** in the top bar or `⌘J`.
+
 ## 0.44.0 (2026-11-16)
 
 ### Changed

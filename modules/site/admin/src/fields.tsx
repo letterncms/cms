@@ -3,7 +3,7 @@ import { Button, fieldControlId, Fields, Icon, IconButton, Popover, Segmented, T
 import { PanelFields, formatShadows, parseShadows, type Shadow } from '@letterncms/blocks'
 import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
-/* Field components of the Styling page: the controls core fields can't express, a font stack and a
+/* Field components of the design: the controls core fields can't express, a font stack and a
    shadow. Compact like the canvas inspector, whose shadow editor the second one opens. */
 
 /** What a font family falls back to: the system's own fonts of its kind. */

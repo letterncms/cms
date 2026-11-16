@@ -101,6 +101,11 @@ final class EntriesView
             ]];
         }
 
+        // What a site is built from and sorts into categories (components, patterns) shows its cards by category.
+        if ($collection->system && array_filter($fields, static fn ($f) => $f['handle'] === 'category' && $f['type'] === 'text') !== []) {
+            $records['group'] = 'values.category';
+        }
+
         // Cards show the first picture.
         if ($media !== []) {
             foreach ($records['columns'] as $i => $column) {
@@ -230,11 +235,16 @@ final class EntriesView
         return array_map(static fn ($c) => array_diff_key($c['id'] === 'title' ? $c : [...$c, 'hidden' => ! in_array($c['id'], $shown, true), ...(in_array($c['id'], $cards, true) ? ['card' => true] : [])], ['id' => 0]), $columns);
     }
 
-    /** The first field of words: a card's few lines. */
+    /** The first field of words, a long one before a short one: a card's few lines. */
     private static function excerpt(array $fields): ?array
     {
         foreach ($fields as $field) {
-            if ($field['type'] === 'textarea' || ($field['type'] === 'text' && ! in_array($field['handle'], ['title', 'slug'], true))) {
+            if ($field['type'] === 'textarea') {
+                return $field;
+            }
+        }
+        foreach ($fields as $field) {
+            if ($field['type'] === 'text' && ! in_array($field['handle'], ['title', 'slug'], true)) {
                 return $field;
             }
         }

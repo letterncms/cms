@@ -43,6 +43,16 @@ use Cms\Users\User;
 
 final class SiteModule extends Plugin
 {
+    /** The design's sections, in the order a design is made: its values, then the looks made of them. */
+    private const array DESIGN = [
+        ['colors', 'Colors', 'palette'],
+        ['typography', 'Typography', 'typography'],
+        ['layout', 'Layout', 'ruler'],
+        ['effects', 'Effects', 'shadow'],
+        ['motion', 'Motion', 'speed'],
+        ['styles', 'Styles', 'symbol'],
+    ];
+
     public function register(): void
     {
         require_once __DIR__.'/helpers.php';
@@ -622,7 +632,7 @@ final class SiteModule extends Plugin
             - `@import "tailwindcss"; @import "cms";` first (Tailwind, then what blocks, buttons and fields are built from).
             - `@theme { --color-primary: #1d4ed8; --font-display: "Fraunces", serif; --container-content: 72rem; }`: every variable is a set of classes (bg-primary, text-primary, font-display, max-w-content). Namespaces are Tailwind’s: --color-*, --font-*, --text-*, --font-weight-*, --leading-*, --tracking-*, --spacing-*, --radius-*, --shadow-*, --inset-shadow-*, --drop-shadow-*, --text-shadow-*, --blur-*, --perspective-*, --aspect-*, --container-*, --breakpoint-*, --ease-*, --animate-*; Tailwind’s own values are there until a namespace is cleared (--text-*: initial). A value with a dark side is light-dark(#ffffff, #0b0b0c): a theme with one follows the visitor’s light or dark mode by itself.
             - `@layer base { h1 { @apply font-display text-5xl font-semibold tracking-tight; } }`: what elements look like before a block says otherwise.
-            - `@utility card { @apply rounded-xl border border-border bg-raised p-6; }`: a class of the site’s own, used on blocks like any Tailwind class and with every variant (hover:card, md:card). `classes` lists them. A button’s looks are the btn-<name> classes (btn-primary, btn-secondary).
+            - `@utility card { @apply rounded-xl border border-border bg-raised p-6; }`: a class of the site’s own, used on blocks like any Tailwind class and with every variant (hover:card, md:card). `classes` lists them. A button’s looks are the btn-<name> classes (btn-primary, btn-secondary). A comment right before a class puts it in a group of the design’s Styles: `/* group: Cards */`.
             Anything else in it is plain CSS. Also here: `fonts` (the self-hosted font faces) and `fontFiles`, `transition` (the page transition), `templates` (handle => title), `js` (custom.js) and `stylesheet` (the published CSS file, compiled on the server whenever the stylesheet or the content changes).
             TXT,
             'permission' => 'admin.access',
@@ -968,13 +978,15 @@ final class SiteModule extends Plugin
     private function adminUi(): void
     {
         $admin = $this->cms()->admin();
-        $admin->nav('styling', ['label' => 'Styling', 'path' => '/styling', 'icon' => 'theme', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
-        // What a developer adds beside the design: its own CSS, scripts and libraries.
-        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'design', 'order' => 60, 'permission' => 'settings.manage']);
-        // The design opens on the site itself, as visitors see it.
-        $admin->opens('design', '/design');
-        // A whole site to switch to, import or export: set up once, in settings.
-        $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'system', 'order' => 20, 'permission' => 'settings.manage']);
+        // The design's sections, each beside the site as it looks with the draft: its theme, kind by kind, then its styles.
+        // One screen draws them all (`/design/*`), so a change not yet saved goes along from one to the next.
+        foreach (self::DESIGN as $order => [$id, $label, $icon]) {
+            $admin->nav("design.{$id}", ['label' => $label, 'path' => "/design/{$id}", 'icon' => $icon, 'section' => 'design', 'order' => ($order + 1) * 10, 'permission' => 'settings.manage']);
+        }
+        // What a developer adds beside the structure: the site's own CSS, scripts and libraries.
+        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'structure', 'order' => 60, 'permission' => 'settings.manage']);
+        // A whole site to switch to, import or export: with the design, as a site is a look of its own.
+        $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'design-site', 'order' => 80, 'permission' => 'settings.manage']);
         $admin->command('sites', ['label' => 'Sites', 'icon' => 'box', 'path' => '/sites', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);
         $admin->widget('site-status', ['label' => 'Site', 'description' => 'Whether the live site is up to date, with a button to publish it.', 'icon' => 'rocket', 'column' => 'side', 'enabled' => true, 'order' => 10]);
         $admin->command('publish-site', ['label' => 'Publish Site', 'icon' => 'rocket', 'ability' => 'site/build', 'permission' => 'site.build', 'keywords' => ['build', 'deploy', 'static']]);

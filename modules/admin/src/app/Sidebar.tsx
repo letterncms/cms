@@ -3,12 +3,12 @@ import { Pressable } from '../ui/Pressable'
 import { DndContext } from '../ui/dnd'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, events, Link, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem, type Room } from '@letterncms/sdk'
+import { boot, events, Link, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type NavItem, type Room } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarGroup, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
 import { SiteSwitcher } from './SiteSwitcher'
 import { setThemePreference, useThemePreference } from '../ui/theme'
-import { isPinned, lastApp, leaveRoom, movePinned, openRoom, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
+import { isPinned, lastApp, leaveRoom, movePinned, openRoom, PINNED, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
 import { parentWay, placeAt, roomHome, SETTINGS, subscribeParent, wayBack } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
@@ -106,13 +106,16 @@ function Row({ item, active, sortable, actions, onNavigate }: { item: NavItem; a
   )
 }
 
-/** Pinned items, section by section; More after the first section, once someone has unpinned something. */
+/** Where everyone starts (the home screens, a row into each room), then what this person pinned from the rooms. */
 function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
   const layout = manifest.sidebar
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
-  const sections = layout.sections.map((s) => ({ ...s, items: s.items.filter((id) => items.has(id) && isPinned(layout, id)) }))
-  const more = layout.sections.map((s) => ({ ...s, items: s.items.filter((id) => items.has(id) && !isPinned(layout, id)) })).filter((s) => s.items.length > 0)
+  const main = layout.sections.find((s) => s.id !== PINNED)?.items.filter((id) => items.has(id)) ?? []
+  const pinned = (layout.sections.find((s) => s.id === PINNED)?.items ?? []).filter((id) => items.has(id) && isPinned(layout, id))
+  // What was unpinned and has no room to stay in waits under More; a room's screen is in its room.
+  const inRooms = new Set(manifest.rooms.flatMap((room) => room.sections.flatMap((section) => section.items)))
+  const more = layout.hidden.filter((id) => items.has(id) && !inRooms.has(id))
 
   return (
     <>
@@ -125,48 +128,48 @@ function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; o
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={t('Main')}>
-        {sections.length === 0 && <SidebarGroup><SidebarStart onNavigate={onNavigate} /></SidebarGroup>}
-        {sections.map((section, index) => (index === 0 || section.items.length > 0) && (
-          <SidebarGroup key={section.id} title={section.items.length > 0 ? section.label : undefined}>
-            {index === 0 && <SidebarStart onNavigate={onNavigate} />}
-            <Pinned section={section} items={items} active={active} onNavigate={onNavigate} />
-            {/* Only what someone unpinned: nothing is put away by default. */}
-            {index === 0 && more.length > 0 && <More groups={more} items={items} active={active} onNavigate={onNavigate} />}
+        <SidebarGroup>
+          <SidebarStart onNavigate={onNavigate} />
+          {main.map((id) => <Row key={id} item={items.get(id)!} active={active === id} onNavigate={onNavigate} />)}
+        </SidebarGroup>
+        {(pinned.length > 0 || more.length > 0) && (
+          <SidebarGroup title={t('Pinned')}>
+            <Pinned ids={pinned} items={items} active={active} onNavigate={onNavigate} />
+            {more.length > 0 && <More ids={more} items={items} active={active} onNavigate={onNavigate} />}
           </SidebarGroup>
-        ))}
+        )}
       </nav>
     </>
   )
 }
 
-/** Rows a module puts at the top of the main sidebar, above what is pinned (the workspace's New Chat): the `sidebar.start` slot. */
+/** Rows a plugin puts at the top of the main sidebar, above the dashboard: the `sidebar.start` slot. */
 function SidebarStart({ onNavigate }: { onNavigate?: () => void }) {
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const rows = panelsFor('sidebar.start', { onNavigate })
   return rows.map(({ id, component: Row }) => <Row key={id} onNavigate={onNavigate} />)
 }
 
-/** A section's pinned items: drag to reorder, right-click for the rest. */
-function Pinned({ section, items, active, onNavigate }: { section: ArrangedSection; items: Map<string, NavItem>; active?: string; onNavigate?: () => void }) {
+/** What is pinned: drag to reorder, right-click for the rest. */
+function Pinned({ ids, items, active, onNavigate }: { ids: string[]; items: Map<string, NavItem>; active?: string; onNavigate?: () => void }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   // The pointer is let go over the link it dragged: that is not a click.
   const dragged = useRef(false)
 
   const end = ({ active: moved, over }: DragEndEvent) => {
     setTimeout(() => { dragged.current = false })
-    if (over && moved.id !== over.id) movePinned(section.id, String(moved.id), section.items.indexOf(String(over.id)))
+    if (over && moved.id !== over.id) movePinned(String(moved.id), ids.indexOf(String(over.id)))
   }
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={() => { dragged.current = true }} onDragEnd={end} onDragCancel={() => { dragged.current = false }}>
-      <SortableContext items={section.items} strategy={verticalListSortingStrategy}>
-        {section.items.map((id, index) => (
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        {ids.map((id, index) => (
           <PinnedRow
             key={id}
             item={items.get(id)!}
-            section={section.id}
             index={index}
-            last={index === section.items.length - 1}
+            last={index === ids.length - 1}
             active={active === id}
             dragged={dragged}
             onNavigate={onNavigate}
@@ -178,7 +181,7 @@ function Pinned({ section, items, active, onNavigate }: { section: ArrangedSecti
 }
 
 /** A pinned row: dragged into place, its menu on a right-click. */
-function PinnedRow({ item, section, index, last, active, dragged, onNavigate }: { item: NavItem; section: string; index: number; last: boolean; active: boolean; dragged: { current: boolean }; onNavigate?: () => void }) {
+function PinnedRow({ item, index, last, active, dragged, onNavigate }: { item: NavItem; index: number; last: boolean; active: boolean; dragged: { current: boolean }; onNavigate?: () => void }) {
   const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({ id: item.id })
 
   return (
@@ -193,15 +196,14 @@ function PinnedRow({ item, section, index, last, active, dragged, onNavigate }: 
         e.stopPropagation()
       }}
     >
-      {/* Open, with its sections under it: the section on view is the place you are, not the row above it. */}
       <Row
         item={item}
         active={active}
         sortable
         onNavigate={onNavigate}
         actions={[
-          { label: t('Move Up'), icon: 'arrow-up', disabled: index === 0, onSelect: () => movePinned(section, item.id, index - 1) },
-          { label: t('Move Down'), icon: 'arrow-down', disabled: last, onSelect: () => movePinned(section, item.id, index + 1) },
+          { label: t('Move Up'), icon: 'arrow-up', disabled: index === 0, onSelect: () => movePinned(item.id, index - 1) },
+          { label: t('Move Down'), icon: 'arrow-down', disabled: last, onSelect: () => movePinned(item.id, index + 1) },
           { label: t('Unpin'), icon: 'pin-off', quick: true, onSelect: () => unpin(item.id) },
           { separator: true, label: '' },
           { label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: customize },
@@ -211,11 +213,11 @@ function PinnedRow({ item, section, index, last, active, dragged, onNavigate }: 
   )
 }
 
-/** Everything that is not pinned, one click away, each with a pin. */
-function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]; items: Map<string, NavItem>; active?: string; onNavigate?: () => void }) {
+/** What was unpinned, one click away, each with a pin. */
+function More({ ids, items, active, onNavigate }: { ids: string[]; items: Map<string, NavItem>; active?: string; onNavigate?: () => void }) {
   const [open, setOpen] = useState(false)
   // The screen on view is under More: More says so, the way a pinned row would.
-  const here = groups.some((g) => active !== undefined && g.items.includes(active))
+  const here = active !== undefined && ids.includes(active)
 
   return (
     <Popover
@@ -234,29 +236,21 @@ function More({ groups, items, active, onNavigate }: { groups: ArrangedSection[]
         </Pressable>
       }
     >
-      {groups.length === 0 && <p className="m-0 px-2 py-1.5 text-sm text-muted">{t('Everything is pinned')}</p>}
-      {groups.map((group) => (
-        <div key={group.id} role="group" aria-label={group.label || undefined} className="space-y-px">
-          {group.label && <div className="cms-label px-2 pb-1 pt-2">{group.label}</div>}
-          {group.items.map((id) => {
-            const item = items.get(id)!
-            return (
-              <Row
-                key={id}
-                item={item}
-                active={active === id}
-                onNavigate={() => { setOpen(false); onNavigate?.() }}
-                actions={[
-                  { label: t('Pin to Sidebar'), icon: 'pin', quick: true, onSelect: () => setPinned(id, true) },
-                ]}
-              />
-            )
-          })}
-        </div>
-      ))}
-      <div className="my-1 h-px bg-border" />
-      {/* A row like the others above it: the one place to arrange the sidebar. */}
-      <SidebarRow label={t('Customize Sidebar…')} icon="sidebar" onClick={() => { setOpen(false); customize() }} />
+      <div className="space-y-px">
+        {ids.map((id) => (
+          <Row
+            key={id}
+            item={items.get(id)!}
+            active={active === id}
+            onNavigate={() => { setOpen(false); onNavigate?.() }}
+            actions={[
+              { label: t('Pin to Sidebar'), icon: 'pin', quick: true, onSelect: () => setPinned(id, true) },
+              { separator: true, label: '' },
+              { label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: () => { setOpen(false); customize() } },
+            ]}
+          />
+        ))}
+      </div>
     </Popover>
   )
 }
@@ -315,9 +309,25 @@ function RoomSidebar({ room, onNavigate, active }: { room: Room; onNavigate?: ()
       <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={room.label}>
         {room.sections.map((section) => (
           <SidebarGroup key={section.id} title={section.label}>
-            {section.items.map((id) => items.get(id)).filter((item): item is NavItem => !!item).map((item) => (
-              <Row key={item.id} item={item} active={active === item.id} onNavigate={onNavigate} />
-            ))}
+            {section.items.map((id) => items.get(id)).filter((item): item is NavItem => !!item).map((item) => {
+              // A screen of a room is a click away from the main sidebar once it is pinned there; settings are set up once, and not pinned.
+              const pinned = isPinned(manifest.sidebar, item.id)
+              return (
+                <Row
+                  key={item.id}
+                  item={item}
+                  active={active === item.id}
+                  onNavigate={onNavigate}
+                  actions={room.id === SETTINGS ? undefined : [
+                    pinned
+                      ? { label: t('Unpin'), icon: 'pin-off', quick: true, onSelect: () => unpin(item.id) }
+                      : { label: t('Pin to Sidebar'), icon: 'pin', quick: true, onSelect: () => setPinned(item.id, true) },
+                    { separator: true, label: '' },
+                    { label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: customize },
+                  ]}
+                />
+              )
+            })}
           </SidebarGroup>
         ))}
       </nav>

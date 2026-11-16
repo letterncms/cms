@@ -3,9 +3,9 @@ import { confirm, toast } from '../ui'
 import { placeAt, roomAt, roomHome, SETTINGS } from '../ui/place'
 
 /**
- * The sidebar people pin: items in sections, those that are `hidden` wait
- * under More. Changes show at once (the manifest is updated in place) and are
- * saved behind them as the person's `sidebar` preference.
+ * The sidebar people pin: the main sidebar's own rows, then what is pinned (`hidden`: what could be and is
+ * not). Changes show at once (the manifest is updated in place) and are saved behind them as
+ * the person's `sidebar` preference.
  */
 
 let saving: Promise<unknown> = Promise.resolve()
@@ -73,39 +73,48 @@ export async function loadSiteDefault(): Promise<{ customized: boolean } | null>
   }
 }
 
+/** The main sidebar's group of what is pinned from the rooms. */
+export const PINNED = 'pinned'
+
+/** Whether a screen of a room is pinned to the main sidebar. */
 export function isPinned(layout: Sidebar, id: string) {
-  return !layout.hidden.includes(id)
+  return !layout.hidden.includes(id) && layout.sections.some((s) => s.id === PINNED && s.items.includes(id))
 }
 
+/** Pinned, it comes last among what is pinned; unpinned, it is in its room only. */
 export function setPinned(id: string, pinned: boolean) {
   const layout = getManifest().sidebar
-  arrange({ ...layout, hidden: pinned ? layout.hidden.filter((h) => h !== id) : [...layout.hidden.filter((h) => h !== id), id] })
+  const sections = layout.sections.some((s) => s.id === PINNED) ? layout.sections : [...layout.sections, { id: PINNED, label: t('Pinned'), items: [] }]
+  arrange({
+    ...layout,
+    sections: sections.map((s) => (s.id === PINNED ? { ...s, items: pinned ? [...s.items.filter((i) => i !== id), id] : s.items } : s)),
+    hidden: pinned ? layout.hidden.filter((h) => h !== id) : [...layout.hidden.filter((h) => h !== id), id],
+  })
 }
 
-/** Unpin, with a way back. */
+/** Unpin, with a way back: a room's screen stays in its room, any other waits under More. */
 export function unpin(id: string) {
-  const label = getManifest().nav.find((n) => n.id === id)?.label ?? id
+  const manifest = getManifest()
+  const label = manifest.nav.find((n) => n.id === id)?.label ?? id
+  const room = manifest.rooms.find((each) => each.sections.some((section) => section.items.includes(id)))
   setPinned(id, false)
-  toast(t('{label} moved to More', { label }), { duration: 6000, action: { label: t('Undo'), onClick: () => setPinned(id, true) } })
+  toast(room ? t('{label} unpinned', { label }) : t('{label} moved to More', { label }), { duration: 6000, action: { label: t('Undo'), onClick: () => setPinned(id, true) } })
 }
 
-/** Put a section's items in a new order. */
-export function reorder(section: string, items: string[]) {
+/** Put what is pinned in a new order. */
+export function reorder(items: string[]) {
   const layout = getManifest().sidebar
-  arrange({ ...layout, sections: layout.sections.map((s) => (s.id === section ? { ...s, items } : s)) })
+  arrange({ ...layout, sections: layout.sections.map((s) => (s.id === PINNED ? { ...s, items } : s)) })
 }
 
-/**
- * Move a pinned item to another place among the pinned items of its section,
- * leaving the items under More where they are.
- */
-export function movePinned(section: string, id: string, to: number) {
+/** Move a pinned item to another place among the pinned ones, leaving those not pinned where they are. */
+export function movePinned(id: string, to: number) {
   const layout = getManifest().sidebar
-  const items = layout.sections.find((s) => s.id === section)?.items ?? []
+  const items = layout.sections.find((s) => s.id === PINNED)?.items ?? []
   const pinned = items.filter((i) => isPinned(layout, i) && i !== id)
   pinned.splice(Math.max(0, Math.min(to, pinned.length)), 0, id)
   let next = 0
-  reorder(section, items.map((i) => (isPinned(layout, i) ? pinned[next++] : i)))
+  reorder(items.map((i) => (isPinned(layout, i) ? pinned[next++] : i)))
 }
 
 export async function resetToDefault() {
@@ -176,7 +185,7 @@ export function lastApp(): string {
   if (last.app) return last.app
   const manifest = getManifest()
   const screens = new Map(manifest.nav.filter((n) => !n.room).map((n) => [n.id, n.path]))
-  const first = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => screens.has(id) && !manifest.sidebar.hidden.includes(id))
+  const first = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => screens.has(id) && !roomAt(manifest, screens.get(id)!))
   return (first && screens.get(first)) ?? '/'
 }
 

@@ -10,19 +10,22 @@ use Cms\Users\User;
  * The admin sidebar, drawn from registered sections and items (one per
  * collection and one per settings page too). It has two kinds of state:
  *
- * - the main sidebar: every item, section by section, in the order people
- *   put them; what someone unpins waits under More. Everyone arranges their
- *   own (the `sidebar` user preference); until they do, they see the site's
- *   default (the `sidebar` value of the `admin` settings), and without one the
- *   registrations, where nothing is put away unless registered `pinned: false`.
- * - a room (settings, the design): its sections' items in registered order,
- *   while one of them is on view. A room is a place to visit, not something to
- *   arrange. One with a door has a row in the main sidebar that leads to its
- *   first screen. The core's modules name their section of settings; whatever a
- *   plugin puts there (its settings page, or a screen that lives in settings) is
- *   listed under Plugins, by the plugin's name, so no plugin makes a group of its
- *   own or slips into the core's. In every room, unnamed sections are one group
- *   at the top, which a group of one joins.
+ * - the main sidebar: where the work starts, the same for everyone (the home
+ *   screens and a row into each room, the `main` section), then Pinned: what
+ *   is listed there (the `pinned` section: the files, what every page shares)
+ *   and the screens of the rooms someone keeps a click away, in the order they
+ *   put them. Everyone pins their own (the `sidebar` user preference); until
+ *   they do, they see the site's default (the `sidebar` value of the `admin`
+ *   settings), and without one the `pinned` section and the rooms' screens
+ *   registered `pinned: true` (the pages). What is unpinned is a search away.
+ * - a room (the entries, the design, the structure, settings): its sections' items in registered
+ *   order, while one of them is on view; each of them but a settings page can be pinned. One with a
+ *   door has a row in the main sidebar that leads to its first screen. The
+ *   core's modules name their section of settings; whatever a plugin puts there
+ *   (its settings page, or a screen that lives in settings) is listed under
+ *   Plugins, by the plugin's name, so no plugin makes a group of its own or
+ *   slips into the core's. In every room, unnamed sections are one group at the
+ *   top, which a group of one joins.
  *
  * An item with a `home` (another item's id) belongs to that screen, like a
  * plugin's settings page to the plugin's screen (its Settings tab), and is there
@@ -39,6 +42,12 @@ final class Navigation extends Arranged
     /** The settings' section for what plugins put there. */
     public const string PLUGINS = 'plugins';
 
+    /** The main sidebar's own rows: the home screens and the rooms' doors. */
+    public const string MAIN = 'main';
+
+    /** The main sidebar's group of what is pinned. */
+    public const string PINNED = 'pinned';
+
     public function key(): string
     {
         return 'sidebar';
@@ -53,7 +62,7 @@ final class Navigation extends Arranged
      */
     public function items(): array
     {
-        $defaults = ['icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => true, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null, 'home' => null, 'room' => null];
+        $defaults = ['icon' => 'circle', 'section' => self::PINNED, 'order' => 50, 'pinned' => false, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null, 'home' => null, 'room' => null];
         $items = array_map(static fn (array $item) => [...$defaults, ...$item], (array) $this->cms->hooks()->filter('admin.nav', $this->cms->admin()->navItems()));
 
         foreach ($items as $id => $item) {
@@ -73,12 +82,25 @@ final class Navigation extends Arranged
         return $items;
     }
 
+    /**
+     * Two groups: the main sidebar's own rows, always there, and Pinned, which holds the screens listed as pinned
+     * and every screen of a room but settings, those not pinned hidden.
+     */
     public function arrangement(): Arrangement
     {
-        $sections = array_filter($this->cms->admin()->sections(), static fn ($s) => $s['room'] === null);
-        $items = array_filter($this->items(), fn ($i) => $i['home'] === null && $this->roomOf($i) === null);
+        $groups = [
+            self::MAIN => ['id' => self::MAIN, 'label' => '', 'order' => 0],
+            self::PINNED => ['id' => self::PINNED, 'label' => __('Pinned'), 'order' => 10],
+        ];
+        // Settings are set up once: a place to visit, never pinned.
+        $items = array_filter($this->items(), fn ($i) => $i['home'] === null && $this->roomOf($i) !== self::SETTINGS);
 
-        return new Arrangement($sections, array_map(static fn ($i) => [...$i, 'group' => $i['section'], 'hidden' => ! $i['pinned']], $items), fixed: true);
+        // A screen listed as pinned is pinned until someone unpins it; a room's screen once someone pins it.
+        return new Arrangement($groups, array_map(fn ($i) => match (true) {
+            $i['section'] === self::PINNED => [...$i, 'group' => self::PINNED, 'hidden' => false],
+            $this->roomOf($i) === null => [...$i, 'group' => self::MAIN, 'hidden' => false],
+            default => [...$i, 'group' => self::PINNED, 'hidden' => ! $i['pinned']],
+        }, $items), fixed: true);
     }
 
     /** The user's own sidebar, or null when they follow the site's. */
@@ -118,9 +140,13 @@ final class Navigation extends Arranged
                     $item['path'] = $homes[$item['room']] ?? null;
                 }
 
+                // The main sidebar's own rows are always there; what can be pinned only while it is, and opened from anywhere else meanwhile.
                 if ($may($item) && ($item['room'] === null || $item['path'] !== null)) {
                     $nav[$id] = $this->present($item);
-                    $ids[] = $id;
+
+                    if ($section['id'] !== self::PINNED || ! in_array($id, $layout['hidden'], true)) {
+                        $ids[] = $id;
+                    }
                 }
             }
 
@@ -153,10 +179,10 @@ final class Navigation extends Arranged
         ];
     }
 
-    /** Items of the main sidebar, for the arrangement ability. */
+    /** Items of the main sidebar and those that can be pinned to it, for the arrangement ability. */
     public function catalog(): array
     {
-        return array_map(fn ($item) => $this->present($item, badge: false), array_filter($this->items(), fn ($i) => $i['home'] === null && $this->roomOf($i) === null));
+        return array_map(fn ($item) => $this->present($item, badge: false), array_filter($this->items(), fn ($i) => $i['home'] === null && $this->roomOf($i) !== self::SETTINGS));
     }
 
     /**

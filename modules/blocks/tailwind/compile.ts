@@ -3,7 +3,7 @@
 // A site's styling is one Tailwind stylesheet (content/styling/theme.css) and the classes its
 // content uses. Tailwind's own compiler turns the two into CSS with only what is used, exactly
 // as a Tailwind build does. It needs no Node and no file system, so it runs in the admin: the
-// canvas, the Styling page and drafts. The server compiles the saved stylesheet in PHP
+// canvas, the design and drafts. The server compiles the saved stylesheet in PHP
 // (modules/site/src/Styling/Compiler.php).
 import { __unstable__loadDesignSystem, compile } from 'tailwindcss'
 import { version } from 'tailwindcss/package.json'

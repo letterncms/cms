@@ -1,41 +1,8 @@
 import { cn } from '@letterncms/ui'
-import type { ReactNode } from 'react'
 import type { Stylesheet } from '../../../tailwind/stylesheet'
 
-/* Colours as the admin shows them everywhere: Tailwind's palette as one grid, family by family, and a colour
-   scheme as a tile in its own colours. The colour picker, the Add Style list and Styling draw the same ones. */
-
-/** A family of the palette: red, its shades 50 to 950. */
-export interface PaletteFamily<T> {
-  name: string
-  shades: T[]
-}
-
-/** The shades of Tailwind's palette, as the grid's head names them. */
-const SHADES = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']
-
-/**
- * The palette as a grid: a row per family with its name, a column per shade. `cell` draws one shade (a swatch to
- * pick, or one that opens its colour). `head` names the shades above the grid.
- */
-export function PaletteGrid<T>({ families, cell, head, className }: { families: PaletteFamily<T>[]; cell: (shade: T) => ReactNode; head?: boolean; className?: string }) {
-  return (
-    <div className={cn('grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1', className)}>
-      {head && (
-        <>
-          <span />
-          <div className="grid grid-cols-11 gap-0.5 text-center text-2xs tabular-nums text-faint">{SHADES.map((shade) => <span key={shade}>{shade}</span>)}</div>
-        </>
-      )}
-      {families.map((family) => (
-        <div key={family.name} className="contents">
-          <span className="truncate text-xs text-muted">{family.name}</span>
-          <div className="grid grid-cols-11 gap-0.5">{family.shades.map(cell)}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
+/* A colour scheme of the site as the admin shows it everywhere: a tile in its own colours. The Add Style list and
+   the design's Colors draw the same one. */
 
 /** A colour scheme of the site: a class that colours a section, its background and its text. */
 export interface Scheme {

@@ -89,15 +89,16 @@ final class AdminRegistry
     }
 
     /**
-     * A screen people open from the sidebar. Every item is in everyone's
-     * sidebar until they arrange their own: More holds only what a person
-     * unpins (or `pinned: false`, for a screen nearly nobody opens). `visible` decides per user
+     * A screen people open from the sidebar. `visible` decides per user
      * beyond the permission (the assistant shows only once it can work).
      *
-     * `section` is where it is listed: `main`, `content` or `site` in the
-     * sidebar, or a section of a room: the design's (`design`) or the settings'
+     * `section` is where it is listed: `main` in the main sidebar, for what
+     * everyone starts from; `pinned` (the default) under it, for a screen people
+     * open often but may unpin (the files, a plugin's screen); or a section of a room: the entries' (`content`), the
+     * design's (`design`), the structure's (`structure`) or the settings'
      * (`system`, `people`) for a screen that is set up once (a plugin's then lands
-     * under Plugins, see Navigation).
+     * under Plugins, see Navigation). A room's screen can be pinned to the main
+     * sidebar; `pinned: true` pins it there until someone arranges their own.
      *
      * A plugin's main screen is called what the plugin is: leave out `label`
      * and the item takes the plugin's name (`extra.cms.label`). Its other
@@ -109,7 +110,7 @@ final class AdminRegistry
     {
         $package = $item['package'] ?? Scope::$current;
         $label = $item['label'] ?? PackageRepository::labelOf($package) ?? ucfirst($id);
-        $this->nav[$id] = ['id' => $id, 'icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => true, 'shortcut' => null, 'permission' => null, 'visible' => null, ...$item, 'label' => $label, 'package' => $package];
+        $this->nav[$id] = ['id' => $id, 'icon' => 'circle', 'section' => Navigation::PINNED, 'order' => 50, 'pinned' => false, 'shortcut' => null, 'permission' => null, 'visible' => null, ...$item, 'label' => $label, 'package' => $package];
     }
 
     public function module(string $id, string $url, ?string $package = null): void

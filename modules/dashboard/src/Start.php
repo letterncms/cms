@@ -48,7 +48,7 @@ final class Start
 
             if ($this->cms->isActive('letterncms/site')) {
                 $theme = content_path('styling/theme.css');
-                $steps[] = ['id' => 'styling', 'label' => __('Choose Colors and Fonts'), 'to' => '/styling', 'done' => $since !== null && is_file($theme) && filemtime($theme) > $since];
+                $steps[] = ['id' => 'styling', 'label' => __('Choose Colors and Fonts'), 'to' => '/design/colors', 'done' => $since !== null && is_file($theme) && filemtime($theme) > $since];
             }
         }
 

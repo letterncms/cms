@@ -90,7 +90,7 @@ export function DesignPanel({ node }: { node: BlockNode }) {
       {/* A stylesheet Tailwind can't read leaves nothing to ask what a class does: the classes stay, the controls wait. */}
       {!styling.engine && !styling.loading && (
         <div className="border-b border-border px-4 py-3">
-          <Notice tone="warning" title={t('The site’s stylesheet could not be read')} action={<Link to="/styling" className="shrink-0 text-xs text-text">{t('Open Styling')}</Link>} />
+          <Notice tone="warning" title={t('The site’s stylesheet could not be read')} action={<Link to="/design/colors" className="shrink-0 text-xs text-text">{t('Open Design')}</Link>} />
         </div>
       )}
       {/* Held at the top while the panels scroll under it: what the element wears and the state being styled stay in sight. */}

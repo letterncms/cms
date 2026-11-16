@@ -20,6 +20,8 @@ export interface SaveBarProps {
   error?: string | null
   onSave: () => void
   onDiscard: () => void
+  /** A path whose places share these changes (the design's sections): going between them keeps them, without asking. */
+  within?: string
 }
 
 /** Every save bar on view: a page with several forms (a settings page and its tabs) shows one bar for all of them. */
@@ -55,7 +57,7 @@ export function untilSaved(id: string | number): void {
  * shows no Save button of its own. With changes in more than one form on view (two
  * tabs of a page), one bar saves or discards them all.
  */
-export function SaveBar({ dirty, saving = false, error, onSave, onDiscard }: SaveBarProps) {
+export function SaveBar({ dirty, saving = false, error, onSave, onDiscard, within }: SaveBarProps) {
   const host = useContext(WorkspaceContext)?.host ?? null
   const theme = useTheme()
   const id = useRef(0)
@@ -82,7 +84,7 @@ export function SaveBar({ dirty, saving = false, error, onSave, onDiscard }: Sav
     return () => clearTimeout(timer)
   }, [dirty])
 
-  useEffect(() => blockNavigation(() => (dirty ? t('Discard unsaved changes?') : null)), [dirty])
+  useEffect(() => blockNavigation((to) => (dirty && !(within && to && (to === within || to.startsWith(`${within}/`))) ? t('Discard unsaved changes?') : null)), [dirty, within])
   // While the form is on view ⌘S is always its save, so the browser never offers to save the page. Each form saves its own.
   useShortcut('mod+s', () => { if (dirty && !saving) onSave() }, true, t('Save'))
 

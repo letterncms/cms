@@ -25,7 +25,7 @@ export default function WidgetDesign() {
   return (
     <Widget
       query={query}
-      action={can('settings.manage') && { label: t('Styling'), to: '/styling' }}
+      action={can('settings.manage') && { label: t('Design'), to: '/design/colors' }}
       empty={
         items.length === 0 && {
           icon: 'symbol',

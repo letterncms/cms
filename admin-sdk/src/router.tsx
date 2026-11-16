@@ -3,7 +3,7 @@ import { boot } from './api'
 
 type Listener = () => void
 const listeners = new Set<Listener>()
-let blockers: (() => string | null)[] = []
+let blockers: ((to: string | null) => string | null)[] = []
 
 /** Where the admin is. `action` says how it got there: a link (push), a redirect (replace) or back/forward (pop). */
 export interface Location {
@@ -64,7 +64,7 @@ window.addEventListener('popstate', (event) => {
     else { settle?.(); settle = null }
     return
   }
-  const message = asking ? null : blockMessage()
+  const message = asking ? null : blockMessage(currentPath())
   if (!message && !asking) return update('pop')
   // The screen with the changes is still on view: put its entry back, then ask (once).
   if (steps) {
@@ -97,8 +97,12 @@ const useSnapshot = () => useSyncExternalStore(subscribe, () => snapshot)
 /** The location screens see: the one they were drawn for, while the next screen gets ready. */
 const ScreenContext = createContext<Location | null>(null)
 
-/** Register a guard (e.g. unsaved changes). Return a message to block navigation. */
-export function blockNavigation(check: () => string | null): () => void {
+/**
+ * Register a guard (e.g. unsaved changes). Return a message to block navigation. It is told the path being
+ * gone to, when there is one (not when the tab closes), so a screen of many places can keep its changes
+ * on the way between them.
+ */
+export function blockNavigation(check: (to: string | null) => string | null): () => void {
   blockers.push(check)
   if (blockers.length === 1) window.addEventListener('beforeunload', beforeUnload)
   return () => {
@@ -107,9 +111,9 @@ export function blockNavigation(check: () => string | null): () => void {
   }
 }
 
-function blockMessage(): string | null {
+function blockMessage(to: string | null): string | null {
   for (const check of blockers) {
-    const message = check()
+    const message = check(to)
     if (message) return message
   }
   return null
@@ -117,7 +121,7 @@ function blockMessage(): string | null {
 
 /** Closing the tab, reloading or leaving the admin with changes unsaved: the browser asks, in its own words. */
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (left || !blockMessage()) return
+  if (left || !blockMessage(null)) return
   event.preventDefault()
   event.returnValue = ''
 }
@@ -144,7 +148,7 @@ async function ask(message: string): Promise<boolean> {
 /** `overlay`: to or from a route drawn over the screen on view. Nothing is being left, so nothing needs to ask. */
 export function navigate(to: string, options: { replace?: boolean; overlay?: boolean } = {}) {
   if (asking) return
-  const message = options.overlay ? null : blockMessage()
+  const message = options.overlay ? null : blockMessage(/^https?:\/\//.test(to) ? null : to.split(/[?#]/)[0] || '/')
   if (!message) return go(to, options)
   void ask(message).then((leave) => {
     if (!leave) return

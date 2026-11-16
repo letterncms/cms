@@ -6,6 +6,7 @@ import { useOverviewSource, type OverviewSource } from './overviewSource'
 import { DataCard, DataGrid } from './DataGrid'
 import { NoMatches } from './EmptyState'
 import { QueryError } from './QueryError'
+import { Section } from './Page'
 import { Fields } from './Fields'
 import { DataTable, TableToolbar, flattenTree, type DataColumn, type DataSelection, type DataTree } from './DataTable'
 import { OverviewControls, nextTableSort, type OverviewView } from './ViewControls'
@@ -44,6 +45,8 @@ interface BaseDataViewProps<T> {
   image?: (item: T) => ReactNode
   /** The column the pictures are in: cards show them only while it is shown. */
   imageColumn?: string
+  /** What the cards are grouped by, each group under it in its own section (a pattern's category); those with none last. */
+  group?: (item: T) => string
   icon?: string
   sort?: string | null
   onSort?: (key: string | null) => void
@@ -69,13 +72,10 @@ type DataViewProps<T> = BaseDataViewProps<T> & ([T] extends [RecordTimestamps]
   ? { dates?: (item: T) => RecordTimestamps }
   : { dates: (item: T) => RecordTimestamps })
 
-/** Lists up to this long are read at a glance: no search, and no display menu unless it has something to add. */
-export const FEW = 8
-
 const isDate = (iso: string | null | undefined) => !!iso && Number.isFinite(Date.parse(iso))
 
 /** Search, display preferences and selection use the same components as Content collections. */
-export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, controls: extra, header, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, manual = false, tree, calendarSource, prefs: kept }: DataViewProps<T>) {
+export function DataView<T>({ id, label, items, source, pagination, columns: ownColumns, dates = (item) => item as RecordTimestamps, dateSort, rowKey, rowHref, onRowClick, selected, selection, actions, searchText, searchPlaceholder, toolbar, controls: extra, header, defaultView = 'table', calendar: offersCalendar = false, image, imageColumn, group, icon, sort: serverSort, onSort, loading, stale, error, onRetry, empty, plain = false, manual = false, tree, calendarSource, prefs: kept }: DataViewProps<T>) {
   // A tree's records, each before the ones it holds: what is selected, searched and shown as cards.
   const every = flattenTree(items, tree?.children)
   // Date columns and the calendar only for dates the records have.
@@ -108,11 +108,10 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
   const shown = new Set(prefs.columns ?? defaults)
   const visible = columns.filter((c, i) => i === 0 || shown.has(c.id))
   const sortable = columns.filter((c) => onSort ? !!c.sort : !!c.value).map((c) => ({ ...c, sort: c.sort ?? c.id }))
-  // A short list shows everything at once: nothing to search, and a menu only for columns of its own to add (not the dates).
-  const few = (!pagination || pagination.pages <= 1) && every.length < FEW
   const changed = view !== (views.includes(defaultView) ? defaultView : 'table') || !!sort || calendarDate !== (calendarDates[0] ?? 'published') || !!locationQuery.month
     || visible.length - 1 !== defaults.length || defaults.some((c) => !shown.has(c))
-  const display = !plain && (changed || !few || columns.some((c) => c.hiddenByDefault && !(c.id in has)))
+  // Every list has the same bar, however long: its search and its Display, in the same places.
+  const display = !plain
   const query = search.trim().toLocaleLowerCase(locale())
   const filtered = searchText && query ? records.filter((item) => searchText(item).toLocaleLowerCase(locale()).includes(query)) : records
   const column = columns.find((c) => (c.sort ?? c.id) === sort?.replace(/^-/, ''))
@@ -138,7 +137,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
   const isSelected = (item: T) => selection?.ids.has(rowKey(item)) || selected?.(item)
 
 
-  const searchable = !!searchText && (!few || !!query)
+  const searchable = !!searchText
   // Nothing at all yet: its empty state alone, with nothing to search, sort or switch.
   const blank = settled && !busy && !failed && view !== 'calendar' && records.length === 0 && !query && !toolbar
   const controls = <OverviewControls isTree={manual || !!tree} view={view} views={views} display={display} all={columns.slice(1)} shown={shown} sortable={sortable} sortKey={sort} onColumns={(ids) => setPrefs({ columns: ids })} onSort={changeSort}
@@ -155,13 +154,24 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
     </TableToolbar>}
     {view === 'calendar' ? state ?? <DataCalendar label={label} items={rows} month={locationQuery.month} onMonth={(month) => setQuery({ month })}
       date={(item) => dates(item)[calendarDate === 'published' ? 'publishedAt' : 'updatedAt']} title={columns[0].render} status={columns.find((c) => c.status)?.status} rowKey={rowKey} rowHref={rowHref} onRowClick={onRowClick}
-      selection={selection} actions={actions} cursor={cursor} loading={busy} stale={loaded ? calendar.stale : stale} /> : view === 'grid' ? state ?? <DataGrid loading={loading} stale={stale} media={pictures}>
-      {rows.map((item) => <DataCard key={rowKey(item)} title={columns[0].render(item)} href={rowHref?.(item)} onClick={onRowClick ? () => onRowClick(item) : undefined} icon={icon} image={pictures ? image?.(item) : undefined} selected={isSelected(item)} active={cursor === rowKey(item)} recordId={rowKey(item)} onSelect={selection ? (on) => selection.onSelect([rowKey(item)], on, rows) : undefined} actions={actions?.(item)}>
-        {visible.slice(1).filter((c) => c.card === 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="m-0 mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{c.render(item)}</div>)}
-        <dl className="m-0 mt-3 space-y-1 text-xs text-muted">{visible.slice(1).filter((c) => c.card !== 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="flex min-w-0 gap-2"><dt className="shrink-0 text-faint">{c.label}</dt><dd className="m-0 ml-auto min-w-0 truncate">{c.render(item)}</dd></div>)}</dl>
-      </DataCard>)}
-    </DataGrid> : table}
+      selection={selection} actions={actions} cursor={cursor} loading={busy} stale={loaded ? calendar.stale : stale} /> : view === 'grid' ? state ?? (group && !loading ? <div>{grouped(rows, group).map(([name, items]) => <Section key={name} title={name || t('Other')}>{grid(items)}</Section>)}</div> : grid(rows)) : table}
 
     {view !== 'calendar' && pagination && <PagePagination {...pagination} />}
   </div>
+
+  function grid(items: T[]) {
+    return <DataGrid loading={loading} stale={stale} media={pictures}>
+      {items.map((item) => <DataCard key={rowKey(item)} title={columns[0].render(item)} href={rowHref?.(item)} onClick={onRowClick ? () => onRowClick(item) : undefined} icon={icon} image={pictures ? image?.(item) : undefined} selected={isSelected(item)} active={cursor === rowKey(item)} recordId={rowKey(item)} onSelect={selection ? (on) => selection.onSelect([rowKey(item)], on, rows) : undefined} actions={actions?.(item)}>
+        {visible.slice(1).filter((c) => c.card === 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="m-0 mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{c.render(item)}</div>)}
+        <dl className="m-0 mt-3 space-y-1 text-xs text-muted">{visible.slice(1).filter((c) => c.card !== 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="flex min-w-0 gap-2"><dt className="shrink-0 text-faint">{c.label}</dt><dd className="m-0 ml-auto min-w-0 truncate">{c.render(item)}</dd></div>)}</dl>
+      </DataCard>)}
+    </DataGrid>
+  }
+}
+
+/** Records by what they are grouped by, the groups in the order of their names, those with none last. */
+function grouped<T>(items: T[], by: (item: T) => string): [string, T[]][] {
+  const groups = new Map<string, T[]>()
+  for (const item of items) groups.set(by(item), [...(groups.get(by(item)) ?? []), item])
+  return [...groups].sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, locale(), { numeric: true })))
 }
