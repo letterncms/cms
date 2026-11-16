@@ -82,7 +82,7 @@ final class BlocksModule extends Plugin
      */
     private function collections(): void
     {
-        // The lists of templates and components say where each is used, beside its title (`usedBy`).
+        // The lists of templates and components show each as the site draws it (`preview`), and say where each is used, beside its title (`usedBy`).
         $this->cms()->hooks()->addFilter('ability.result', function (mixed $result, \Cms\Abilities\Ability $ability, array $input) {
             $collection = $input['collection'] ?? null;
 
@@ -93,7 +93,11 @@ final class BlocksModule extends Plugin
             $uses = $this->app->make(Uses::class);
             $used = $collection === Templates::COLLECTION ? $uses->templates() : $uses->components();
 
-            return [...$result, 'items' => array_map(static fn (array $row) => isset($used[$row['slug'] ?? '']) ? [...$row, 'usedBy' => $used[$row['slug']]] : $row, $result['items'] ?? [])];
+            return [...$result, 'items' => array_map(static fn (array $row) => [
+                ...$row,
+                ...(isset($row['id']) ? ['preview' => '/__preview/'.$row['id']] : []),
+                ...(isset($used[$row['slug'] ?? '']) ? ['usedBy' => $used[$row['slug']]] : []),
+            ], $result['items'] ?? [])];
         });
 
         $this->cms()->hooks()->addFilter('collections.defaults', static fn (array $defaults) => $defaults + [
@@ -103,7 +107,7 @@ final class BlocksModule extends Plugin
         $this->cms()->hooks()->addFilter('collections', static function (array $collections) {
             $collections[Templates::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Templates::COLLECTION, [
                 'title' => 'Templates', 'singular' => 'Template', 'icon' => 'layout', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'design', 'nav_order' => 20, 'system' => true, 'sort' => 'title',
+                'section' => 'blocks', 'nav_order' => 20, 'system' => true, 'sort' => 'title', 'default_view' => 'grid',
                 'description' => 'The frame around each page: header, footer and layout. Default frames every page without one of its own; Not found shows when a page is missing.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Template', 'body' => true],
@@ -113,7 +117,7 @@ final class BlocksModule extends Plugin
             ]);
             $collections[Components::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Components::COLLECTION, [
                 'title' => 'Components', 'singular' => 'Component', 'icon' => 'symbol', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'design', 'nav_order' => 30, 'system' => true, 'sort' => 'title',
+                'section' => 'blocks', 'nav_order' => 30, 'system' => true, 'sort' => 'title', 'default_view' => 'grid',
                 'description' => 'Reusable designs, like a header or a card. A change to one shows everywhere it is used, and each place can fill in its properties.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Component', 'body' => true],
@@ -124,7 +128,7 @@ final class BlocksModule extends Plugin
             ]);
             $collections[Patterns::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Patterns::COLLECTION, [
                 'title' => 'Patterns', 'singular' => 'Pattern', 'icon' => 'section-copy', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'design', 'nav_order' => 40, 'system' => true, 'sort' => 'title',
+                'section' => 'blocks', 'nav_order' => 40, 'system' => true, 'sort' => 'title',
                 'description' => 'Arrangements of blocks to start from: a hero, a gallery, a whole page. Inserting one puts a copy on the page, to change as you like.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Pattern', 'body' => true],

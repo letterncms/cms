@@ -46,7 +46,7 @@ final class PackagesModule extends Plugin
             return $manifest;
         });
 
-        $cms->admin()->nav('plugins', ['label' => 'Plugins', 'path' => '/plugins', 'icon' => 'plugin', 'section' => 'main', 'order' => 20, 'permission' => 'packages.manage']);
+        $cms->admin()->nav('plugins', ['label' => 'Plugins', 'path' => '/plugins', 'icon' => 'plugin', 'section' => 'system', 'order' => 25, 'permission' => 'packages.manage']);
         $cms->admin()->command('updates', ['label' => 'Updates', 'icon' => 'refresh', 'path' => '/plugins?tab=updates', 'permission' => 'packages.manage', 'keywords' => ['upgrade', 'version', 'security']]);
         PackagesViews::register($cms);
         $cms->admin()->widget('packages-system', ['label' => 'System', 'description' => 'Says when database updates wait or a plugin needs attention.', 'icon' => 'plugin', 'column' => 'side', 'order' => 70, 'permission' => 'packages.manage']);

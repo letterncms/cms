@@ -1,5 +1,5 @@
 import { can, loadManifest, navigate, run, queryClient, setManifest, t, useAbility, useManifest } from '@letterncms/sdk'
-import { Badge, Button, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, Pressable, QueryError, Skeleton, confirm, download, slugify, switchSite, toast, Dialog } from '@letterncms/ui'
+import { Badge, Button, DataCard, DataGrid, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, Pressable, QueryError, cn, confirm, download, slugify, switchSite, toast, Dialog } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 
 interface Site {
@@ -94,17 +94,18 @@ export default function Sites() {
       </>
     )}>
       {list.isPending ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[4/3] w-full rounded-lg" />)}</div>
+        <DataGrid loading media />
       ) : list.error ? (
         <QueryError title={t('Sites could not be loaded')} message={t('Try again in a moment.')} onRetry={() => list.refetch()} retrying={list.isFetching} />
       ) : list.data.sites.length === 0 ? (
         <EmptyState icon="box" title={t('No sites')} />
       ) : (
-        <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
+        // The cards of every list of the design: the site as it looks, its name, and a line on it.
+        <DataGrid media>
           {list.data.sites.map((site) => (
             <SiteCard key={site.handle} site={site} busy={busy} onChoose={() => void choose(site)} onStartOver={() => void startOver(site)} onEdit={() => setEditing(site)} onDelete={() => void remove(site)} />
           ))}
-        </ul>
+        </DataGrid>
       )}
       {list.data?.problems.map((p) => <Notice key={p.folder} tone="warning" title={p.folder} className="mt-4">{p.problem}</Notice>)}
       {exporting && <SiteDetails onClose={() => setExporting(false)} />}
@@ -121,35 +122,20 @@ function SiteCard({ site, busy, onChoose, onStartOver, onEdit, onDelete }: { sit
   const canDelete = !site.active
 
   return (
-    <li className="cms-reveal-row relative">
-      <Pressable
-        inset
-        onClick={onChoose}
-        disabled={!chooseable}
-        aria-current={site.active || undefined}
-        className={`flex w-full flex-col overflow-hidden rounded-lg border bg-bg p-0 text-left transition-[border-color,box-shadow] duration-base enabled:cursor-pointer ${site.active ? 'border-focus shadow-focus' : 'border-border enabled:hover:border-border-strong enabled:hover:shadow-sm'}`}
-      >
-        <span className="relative block aspect-[16/10] w-full overflow-hidden border-b border-border bg-sunken">
-          {site.previews[0]
-            ? <img src={site.previews[0]} alt="" className={`size-full object-cover object-top transition-opacity ${switching ? 'opacity-50' : ''}`} />
-            : <span className="grid size-full place-items-center text-faint"><Icon name="layout" size={28} /></span>}
-        </span>
-        <span className="flex items-center gap-2 px-3 py-2.5">
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-ink">{site.name}</span>
-            {site.description && <span className="block truncate text-xs text-muted">{site.description}</span>}
-          </span>
-          {site.active && <Badge tone="neutral">{t('Current')}</Badge>}
-          {!site.active && !needs && site.suits && <span className="cms-reveal shrink-0 text-xs font-medium text-muted">{switching ? t('Switching…') : t('Switch||site')}</span>}
-        </span>
-      </Pressable>
-      {needs && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted">
+    <DataCard
+      title={site.name}
+      onClick={chooseable ? onChoose : undefined}
+      active={site.active}
+      image={site.previews[0]
+        ? <img src={site.previews[0]} alt="" className={cn('size-full object-cover object-top transition-opacity duration-base', switching && 'opacity-50')} />
+        : <span className="grid size-full place-items-center text-faint"><Icon name="layout" size={28} /></span>}
+      footer={site.active ? <Badge tone="neutral">{t('Current')}</Badge>
+        : needs ? <>
           <span className="min-w-0 flex-1 truncate">{t('Needs {plugins}', { plugins: site.missingPlugins.join(', ') })}</span>
-          <Button size="sm" onClick={() => navigate('/plugins')}>{t('Open Store')}</Button>
-        </div>
-      )}
-      <div className="cms-reveal absolute right-2 top-2">
+          <Button size="sm" className="relative z-raised" onClick={() => navigate('/plugins')}>{t('Open Store')}</Button>
+        </>
+        : site.suits ? <span className={cn('font-medium', !switching && 'cms-reveal')}>{switching ? t('Switching…') : t('Switch||site')}</span> : undefined}
+      actions={
         <Menu
           align="end"
           trigger={<IconButton icon="dots" label={t('More')} size="sm" disabled={busy !== null} />}
@@ -159,8 +145,10 @@ function SiteCard({ site, busy, onChoose, onStartOver, onEdit, onDelete }: { sit
             canDelete && { label: t('Delete'), icon: 'trash', danger: true, onSelect: onDelete },
           ]}
         />
-      </div>
-    </li>
+      }
+    >
+      {site.description && <p className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted">{site.description}</p>}
+    </DataCard>
   )
 }
 

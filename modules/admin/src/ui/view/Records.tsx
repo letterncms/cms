@@ -15,6 +15,7 @@ import { LanguagePicker } from '../LanguagePicker'
 import { InTopbar } from '../Page'
 import { Menu } from '../Menu'
 import { Notice } from '../Notice'
+import { PagePreview } from '../PagePreview'
 import { Select } from '../Select'
 import { SelectionBar } from '../SelectionBar'
 import { Switch } from '../Switch'
@@ -500,9 +501,10 @@ function Reason({ text }: { text: string }) {
   )
 }
 
-/** A card's picture: the address in the column, or the first file of a media value, looked up. */
+/** A card's picture: the page or image at the address in the column, or the first file of a media value, looked up. */
 function CardImage({ row, column, media }: { row: Row; column: Column; media: Map<string, MediaThumb> }) {
   const raw = at(row, column.key)
+  if (column.format === 'page') return safeUrl(raw) ? <PagePreview src={safeUrl(raw)!} fill /> : <div className="grid size-full place-items-center text-faint"><Icon name="page" size={20} /></div>
   const isMedia = column.format === 'media' || column.field?.type === 'media'
   const first = isMedia ? mediaIds(raw)[0] : undefined
   const thumb = first ? media.get(first.toLowerCase()) : undefined

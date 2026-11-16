@@ -3,13 +3,13 @@ import { Pressable } from '../ui/Pressable'
 import { DndContext } from '../ui/dnd'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, events, Link, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem } from '@letterncms/sdk'
+import { boot, events, Link, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type ArrangedSection, type NavItem, type Room } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { Avatar, Icon, IconButton, Menu, Popover, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
+import { Avatar, Icon, IconButton, Menu, Popover, SidebarGroup, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
 import { SiteSwitcher } from './SiteSwitcher'
 import { setThemePreference, useThemePreference } from '../ui/theme'
-import { isPinned, lastApp, leaveSettings, movePinned, openSettings, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
-import { parentWay, placeAt, settingsHome, subscribeParent, wayBack } from '../ui/place'
+import { isPinned, lastApp, leaveRoom, movePinned, openRoom, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
+import { parentWay, placeAt, roomHome, SETTINGS, subscribeParent, wayBack } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {
@@ -31,34 +31,38 @@ interface SidebarProps {
   onSearch: () => void
   /** Called when a link is followed (the overlay sidebar on narrow screens closes). */
   onNavigate?: () => void
-  /** Whether the screen on view is a settings page: the sidebar switches with the screen, not ahead of it while the next one loads. */
-  settings: boolean
+  /** The room the screen on view is in: the sidebar switches with the screen, not ahead of it while the next one loads. */
+  room?: Room
 }
 
 
 const customize = () => events.emit('sidebar.customize')
 
 /** How far each state of the sidebar is from the main one. */
-const depth = { main: 0, settings: 1, screen: 2 } as const
+const depth = { main: 0, room: 1, screen: 2 } as const
 
 /**
- * The admin's sidebar, in one of two states that follow the screen on view:
- * the main sidebar (what each person pinned, More for the rest) and, on a settings page, the settings sidebar with a way back. Same frame,
- * same rows, same footer — only the list changes. A screen's own state (the editor's Outline) is the screen's: its list, no footer.
+ * The admin's sidebar, in one of two states that follow the screen on view: the main sidebar (what each person
+ * pinned, More for the rest) and, on a screen of a room (settings, the design), that room's sidebar with a way back.
+ * Same frame, same rows, same footer — only the list changes. A screen's own state (the editor's Outline) is the
+ * screen's: its list, no footer.
  */
-export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate, settings }: SidebarProps) {
+export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate, room }: SidebarProps) {
   const manifest = useManifest()
   const { path, search } = useLocation()
-  const state = own ? 'screen' : settings ? 'settings' : 'main'
+  const state: keyof typeof depth = own ? 'screen' : room ? 'room' : 'main'
   const active = placeAt(manifest.nav, path)?.id
+  const nest = nested ? onOwnHost : undefined
 
   useEffect(() => remember(manifest, path, search), [manifest, path, search])
-  // Switching states moves the list, in from the side it leads to (deeper: settings, then a screen's own) and back from the other; the admin opening does not.
-  const previous = useRef<keyof typeof depth>(state)
+  // Switching states moves the list, in from the side it leads to (deeper: a room, then a screen's own) and back from the other; the admin opening does not.
+  // From one room to another, it comes in like any deeper state.
+  const key = state === 'room' ? `room:${room!.id}` : state
+  const previous = useRef({ state, key })
   const direction = useRef<'in' | 'out' | undefined>(undefined)
-  if (state !== previous.current) {
-    direction.current = depth[state] > depth[previous.current] ? 'in' : 'out'
-    previous.current = state
+  if (key !== previous.current.key) {
+    direction.current = depth[state] >= depth[previous.current.state] ? 'in' : 'out'
+    previous.current = { state, key }
   }
 
   // A row of a screen's own sidebar is followed like any other: on narrow screens, the overlay goes. (Its rows come through a portal, so listen in the DOM.)
@@ -73,29 +77,30 @@ export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate, 
 
   return (
     <aside ref={aside} className={cn('flex h-full shrink-0 flex-col', drawer ? 'w-[min(320px,86vw)] bg-float shadow-dialog' : 'w-[var(--cms-sidebar-size,248px)] bg-surface pt-2')}>
-      <div key={state} data-direction={direction.current} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
+      <div key={key} data-direction={direction.current} className="cms-sidebar-mode flex min-h-0 flex-1 flex-col">
         {own ? (
           <>
             <StateTitle>{own.title}</StateTitle>
             <div ref={onOwnHost} className="min-h-0 flex-1 overflow-y-auto" />
           </>
-        ) : settings
-          ? <SettingsSidebar onNavigate={onNavigate} active={active} />
-          : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} nest={nested ? onOwnHost : undefined} />}
+        ) : room
+          ? <RoomSidebar room={room} onNavigate={onNavigate} active={active} nest={nest} />
+          : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} nest={nest} />}
       </div>
       {/* The admin's own states end with who is signed in; a screen's own (the Outline) gives the screen all the room. */}
-      {!own && <Footer settings={settings} onNavigate={onNavigate} />}
+      {!own && <Footer room={room} onNavigate={onNavigate} />}
     </aside>
   )
 }
 
-/** A nav item as a sidebar row: what it is, where it leads, what can be done with it. */
+/** A nav item as a sidebar row: what it is, where it leads (a room's door, into the room), what can be done with it. */
 function Row({ item, active, sortable, actions, onNavigate }: { item: NavItem; active: boolean; sortable?: boolean; actions?: (SidebarRowAction | false)[]; onNavigate?: () => void }) {
   return (
     <SidebarRow
       label={item.label}
       icon={item.icon}
       to={item.path}
+      opens={!!item.room}
       onClick={() => onNavigate?.()}
       active={active}
       badge={item.badge || undefined}
@@ -104,10 +109,6 @@ function Row({ item, active, sortable, actions, onNavigate }: { item: NavItem; a
       sortable={sortable}
     />
   )
-}
-
-function SectionLabel({ children }: { children: ReactNode }) {
-  return <div className="cms-label flex h-7 items-center px-2">{children}</div>
 }
 
 /** Pinned items, section by section; More after the first section, once someone has unpinned something. */
@@ -129,15 +130,14 @@ function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => v
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={t('Main')}>
-        {sections.length === 0 && <div className="space-y-px"><SidebarStart onNavigate={onNavigate} /></div>}
+        {sections.length === 0 && <SidebarGroup><SidebarStart onNavigate={onNavigate} /></SidebarGroup>}
         {sections.map((section, index) => (index === 0 || section.items.length > 0) && (
-          <div key={section.id} className={cn('space-y-px', index > 0 && 'mt-4')}>
-            {section.label && section.items.length > 0 && <SectionLabel>{section.label}</SectionLabel>}
+          <SidebarGroup key={section.id} title={section.items.length > 0 ? section.label : undefined}>
             {index === 0 && <SidebarStart onNavigate={onNavigate} />}
             <Pinned section={section} items={items} active={active} onNavigate={onNavigate} nest={nest} />
             {/* Only what someone unpinned: nothing is put away by default. */}
             {index === 0 && more.length > 0 && <More groups={more} items={items} active={active} onNavigate={onNavigate} />}
-          </div>
+          </SidebarGroup>
         ))}
       </nav>
     </>
@@ -275,19 +275,19 @@ function StateTitle({ children }: { children: ReactNode }) {
 
 /**
  * The way back from a state of the sidebar. It sits by the sidebar button, in the same place with the sidebar in or out,
- * where the main state has the site's name. It returns to where you came from: out of settings, the last screen before
- * them; from a screen's own sidebar, the screen it was opened from (else the one it names, its list).
+ * where the main state has the site's name. It returns to where you came from: out of a room, the last screen before
+ * it; from a screen's own sidebar, the screen it was opened from (else the one it names, its list).
  */
-export function StateBack({ own, onNavigate, drawer, settings }: Pick<SidebarProps, 'own' | 'onNavigate' | 'drawer' | 'settings'>) {
+export function StateBack({ own, onNavigate, drawer, room }: Pick<SidebarProps, 'own' | 'onNavigate' | 'drawer' | 'room'>) {
   const manifest = useManifest()
   // On a phone the top bar shows the screen's own crumb only: back is then one screen up, to the crumb before it.
   const parent = useSyncExternalStore(subscribeParent, parentWay)
-  if (!own && !settings) return null
+  if (!own && !room) return null
   const way = own ? wayBack(manifest, { to: own.backTo, label: own.backLabel }) : { to: lastApp(), label: placeAt(manifest.nav, lastApp().split('?')[0])?.label ?? t('Dashboard') }
   const label = way.label
   const back = () => {
     if (own) navigate(way.to)
-    else leaveSettings()
+    else leaveRoom()
     onNavigate?.()
   }
   const up = parent && !drawer ? parent : null
@@ -310,33 +310,36 @@ export function StateBack({ own, onNavigate, drawer, settings }: Pick<SidebarPro
   )
 }
 
-/** Settings pages, section by section, under a way back to where you were. */
-function SettingsSidebar({ onNavigate, active }: { onNavigate?: () => void; active?: string }) {
+/** A room's screens, section by section, under its name; the screen on view holds its own sections under its row, when it has some (`nest`). */
+function RoomSidebar({ room, onNavigate, active, nest }: { room: Room; onNavigate?: () => void; active?: string; nest?: (element: HTMLElement | null) => void }) {
   const manifest = useManifest()
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
 
   return (
     <>
-      <StateTitle>{t('Settings')}</StateTitle>
+      <StateTitle>{room.label}</StateTitle>
 
-      <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={t('Settings')}>
-        {manifest.settingsNav.map((section, index) => (
-          <div key={section.id} className={cn('space-y-px', index > 0 && 'mt-4')}>
-            {section.label && <SectionLabel>{section.label}</SectionLabel>}
+      <nav className="flex-1 overflow-y-auto px-2 pb-4" aria-label={room.label}>
+        {room.sections.map((section) => (
+          <SidebarGroup key={section.id} title={section.label}>
             {section.items.map((id) => items.get(id)).filter((item): item is NavItem => !!item).map((item) => (
-              <Row key={item.id} item={item} active={active === item.id} onNavigate={onNavigate} />
+              <div key={item.id}>
+                <Row item={item} active={active === item.id && !nest} onNavigate={onNavigate} />
+                {nest && active === item.id && <div ref={nest} className="cms-sidebar-nested" />}
+              </div>
             ))}
-          </div>
+          </SidebarGroup>
         ))}
       </nav>
     </>
   )
 }
 
-/** Who is signed in, their menu, and the way into settings — the same in both states. */
-function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () => void }) {
+/** Who is signed in, their menu, and the way into settings — the same in the main sidebar and every room. */
+function Footer({ room, onNavigate }: { room?: Room; onNavigate?: () => void }) {
   const manifest = useManifest()
   const theme = useThemePreference()
+  const settings = room?.id === SETTINGS
 
   const signOut = async () => {
     await request('POST', 'auth/logout')
@@ -347,16 +350,15 @@ function Footer({ settings, onNavigate }: { settings: boolean; onNavigate?: () =
 
   // Settings' first page is ready by the time the button is pressed, so the screen and the sidebar switch together.
   const warmSettings = () => {
-    const to = settingsHome(manifest)
+    const to = roomHome(manifest, SETTINGS)
     if (!settings && to) prefetch(to)
   }
 
   const toggleSettings = () => {
-    if (settings) leaveSettings()
-    else openSettings()
+    if (settings) leaveRoom()
+    else openRoom(SETTINGS)
     onNavigate?.()
   }
-
   return (
     <div className="flex shrink-0 items-center gap-1 p-2">
       <Menu

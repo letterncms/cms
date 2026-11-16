@@ -1,10 +1,13 @@
-import type { Manifest, NavItem } from '@letterncms/sdk'
+import type { Manifest, NavItem, Room } from '@letterncms/sdk'
 
-/** The item a path belongs to: the one with the longest matching path (`/` only for itself). Paths with a query (a screen's Settings tab) stand for no path of their own. */
+/**
+ * The item a path belongs to: the one with the longest matching path (`/` only for itself). Paths with a query
+ * (a screen's Settings tab) stand for no path of their own, and a room's door for none but its first screen's.
+ */
 export function itemAt(nav: NavItem[], path: string): NavItem | undefined {
   let found: NavItem | undefined
   for (const item of nav) {
-    if (item.path.includes('?')) continue
+    if (item.room || item.path.includes('?')) continue
     const match = item.path === '/' ? path === '/' : path === item.path || path.startsWith(`${item.path}/`)
     if (match && (!found || item.path.length > found.path.length)) found = item
   }
@@ -22,28 +25,20 @@ export function homedSettings(manifest: Manifest, id: string | undefined): strin
   return id ? manifest.settings.find((s) => s.home === id && manifest.nav.some((n) => n.id === `settings.${s.namespace}`))?.namespace : undefined
 }
 
-export function settingsIds(manifest: Manifest): Set<string> {
-  return new Set(manifest.settingsNav.flatMap((s) => s.items))
-}
-
-/** Where settings open: General, or the first page this person may see (their account). */
-export function settingsHome(manifest: Manifest): string | undefined {
-  const general = manifest.nav.find((n) => n.id === 'settings.site')
-  return general?.path ?? manifest.nav.find((n) => n.id === manifest.settingsNav[0]?.items[0])?.path
-}
-
-function settingsPlace(manifest: Manifest, path: string): boolean {
+/** The room a path is in: the one that lists its place (or the screen it belongs to). */
+export function roomAt(manifest: Manifest, path: string): Room | undefined {
   const item = placeAt(manifest.nav, path)
-  return !!item && settingsIds(manifest).has(item.id)
+  return item ? manifest.rooms.find((room) => room.sections.some((s) => s.items.includes(item.id))) : undefined
 }
 
-/**
- * Whether a path is one of the settings sidebar's places (or belongs to one). A screen's Settings tab is
- * a tab of that screen, wherever the screen is: settings have one home, so no location is in both sidebars.
- */
-export function inSettings(manifest: Manifest, path: string): boolean {
-  return settingsPlace(manifest, path)
+/** Where a room opens: its first screen this person may see (settings: General, else their account). */
+export function roomHome(manifest: Manifest, id: string): string | undefined {
+  const first = manifest.rooms.find((room) => room.id === id)?.sections[0]?.items[0]
+  return manifest.nav.find((n) => n.id === first)?.path
 }
+
+/** The room of settings, opened beside who is signed in. */
+export const SETTINGS = 'settings'
 
 /**
  * Where the screen on view was opened from: the last place before it that was

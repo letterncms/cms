@@ -7,6 +7,7 @@ namespace Cms\Modules\Packages;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Abilities\AbilityRegistry;
+use Cms\Admin\Navigation;
 use Cms\Admin\Translations;
 use Cms\Cms;
 use Cms\Packages\PackageManifest;
@@ -232,7 +233,8 @@ final class PackageAbilities
     {
         $menu = $this->cms->adminNav()->forUser($user);
         $nav = array_column($menu['nav'], null, 'id');
-        $inSettings = array_merge(...array_map(static fn (array $s) => $s['items'], $menu['settingsNav'] ?: [['items' => []]]));
+        $settings = current(array_filter($menu['rooms'], static fn (array $room) => $room['id'] === Navigation::SETTINGS)) ?: ['sections' => [['items' => []]]];
+        $inSettings = array_merge(...array_column($settings['sections'], 'items'));
 
         return static function (string $package, array $namespaces) use ($nav, $inSettings): array {
             foreach ($namespaces as $namespace) {

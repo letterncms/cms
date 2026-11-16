@@ -43,7 +43,7 @@ const manifest = {
   styles: [...modules, ...plugins].map((n) => `/_cms/assets/cms-${n}/admin.css`),
   settings: [{ namespace: 'seo', label: 'SEO', icon: 'seo', description: '', package: 'cms/seo' }], collections: [collection, treeCollection, eventsCollection], globals: [{ handle: 'footer', title: 'Footer', icon: 'globe' }, { handle: 'contact_details_with_a_very_long_handle_that_must_not_shift_columns', title: 'Contact details', icon: 'mail' }], fieldTypes: [], commands: [], widgets: [], dashboard: [], config: {}, nav,
   sidebar: { sections: [{ id: 'main', label: '', items: nav.map((n) => n.id) }], hidden: [], personal: false },
-  settingsNav: [], brand,
+  rooms: [], brand,
 }
 const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
 const map = imports({ '@letterncms/blocks': `${assets('blocks')}admin.js` })

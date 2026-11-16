@@ -24,7 +24,7 @@ const manifest = {
   config: { content: { autosave: 0, perPage: 50 } },
   nav: [{ id: 'posts', label: 'Posts', path: '/content/posts', icon: 'article', section: 'main' }, ...settingsNav],
   sidebar: { sections: [{ id: 'main', label: '', items: ['posts'] }], hidden: [], personal: false },
-  settingsNav: [{ id: 'system', label: 'System', items: settingsNav.map((item) => item.id) }],
+  rooms: [{ id: 'settings', label: 'Settings', icon: 'settings', sections: [{ id: 'system', label: '', items: settingsNav.map((item) => item.id) }] }],
   brand,
 }
 const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }

@@ -40,7 +40,7 @@ export const manifest = {
   styles: ['/_cms/assets/cms-content/admin.css', '/_cms/assets/cms-collections/admin.css'], settings: [], collections: [summary], globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [],
   config: { content: { autosave: 0, perPage: 50 } },
   nav: [{ id: 'news', label: 'News', path: '/content/news', icon: 'article', section: 'main' }],
-  sidebar: { sections: [{ id: 'main', label: '', items: ['news'] }], hidden: [], personal: false }, settingsNav: [], brand,
+  sidebar: { sections: [{ id: 'main', label: '', items: ['news'] }], hidden: [], personal: false }, rooms: [], brand,
 }
 export const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
 

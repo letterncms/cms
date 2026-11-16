@@ -6,8 +6,8 @@ import './commands'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Sidebar, StateBack, type OwnSidebar } from './Sidebar'
-import { isPinned, leaveSettings, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
-import { inSettings, itemAt, noteLocation, placeAt } from '../ui/place'
+import { isPinned, leaveRoom, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
+import { itemAt, noteLocation, placeAt, roomAt } from '../ui/place'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/WorkspaceContext'
 import { dockState, type DockState } from '../ui/Dock'
@@ -44,7 +44,7 @@ function warm(component: unknown): Promise<unknown> {
 
 onLinkIntent((path) => void screenReady(path))
 
-// Leaving unsaved changes (a link, Back, the way out of settings) asks in the admin's own dialog. A stray Enter keeps them.
+// Leaving unsaved changes (a link, Back, the way out of a room) asks in the admin's own dialog. A stray Enter keeps them.
 confirmLeaving((message) => confirm({ title: message, confirm: t('Discard'), danger: true }))
 
 /** Resolves once the screen at a path can be drawn without waiting (used at boot, so the first screen appears whole). */
@@ -163,11 +163,11 @@ export function App() {
   }, [leading])
 
   const manifest = useManifest()
-  const settings = inSettings(manifest, location.path)
+  const room = roomAt(manifest, location.path)
   const place = placeAt(manifest.nav, location.path)
-  // Sections of one screen (the design's) go under its row, where the screen was opened; the sidebar stays the one it was.
-  // Only when that row is not there (under More, or in settings) do they take the sidebar over, like any screen's own list.
-  const nested = !!claim?.nested && !settings && !!place && manifest.sidebar.sections.some((s) => s.items.includes(place.id)) && isPinned(manifest.sidebar, place.id)
+  // Sections of one screen (the styling's) go under its row, where the screen was opened; the sidebar stays the one it was.
+  // Only when that row is not there (under More) do they take the sidebar over, like any screen's own list.
+  const nested = !!claim?.nested && !!place && (room ? true : manifest.sidebar.sections.some((s) => s.items.includes(place.id)) && isPinned(manifest.sidebar, place.id))
   const own = claim && !nested ? claim : null
 
   // Every screen on view, so a way back returns to where someone came from (see `cameFrom`).
@@ -238,11 +238,11 @@ export function App() {
   const pinned = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => !manifest.sidebar.hidden.includes(id))
   const first = manifest.nav.find((n) => n.id === pinned)?.path
 
-  // Esc leaves settings, unless something on top of the screen takes it (a dialog, a menu, a field), or someone is at work in the page itself.
+  // Esc leaves a room, unless something on top of the screen takes it (a dialog, a menu, a field), or someone is at work in the page itself.
   useShortcut('escape', (e) => {
     if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable], [role="dialog"], [role="menu"], [role="listbox"], .cms-dock, [data-cms-screen]')) return
-    if (!document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) leaveSettings()
-  }, settings && !customizing && !(narrow && expanded))
+    if (!document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) leaveRoom()
+  }, !!room && !customizing && !(narrow && expanded))
   useEffect(() => {
     if (!route && location.path === '/' && first && first !== '/') navigate(first, { replace: true })
   }, [route, location.path, first])
@@ -254,7 +254,7 @@ export function App() {
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', {})
   const sidebarShown = !narrow && (own ? ownOpen : !hidden)
-  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} settings={settings} />
+  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} room={room} />
   const sidebarOut = narrow ? expanded : sidebarShown
   const toggleLabel = own
     ? sidebarOut ? t('Hide {name}', { name: own.title }) : t('Show {name}', { name: own.title })
@@ -280,7 +280,7 @@ export function App() {
             <Tooltip content={toggleLabel} shortcut="mod+\\" side="bottom">
               <IconButton icon="sidebar" label={toggleLabel} title={undefined} size="sm" onClick={toggleSidebar} />
             </Tooltip>
-            {!dock.full && <StateBack own={own} settings={settings} drawer={narrow && expanded} onNavigate={() => setExpanded(false)} />}
+            {!dock.full && <StateBack own={own} room={room} drawer={narrow && expanded} onNavigate={() => setExpanded(false)} />}
           </div>
         )}
         {narrow ? (

@@ -608,6 +608,12 @@
   .cms-sidebar-nested:empty { display: none; }
   .cms-sidebar-nested .cms-sidebar-row { padding-left: 46px; }
 
+  /* Rows under a heading (SidebarGroup), apart from the group before them; under a screen's row, closer, and set in like its rows. */
+  .cms-sidebar-group + .cms-sidebar-group { margin-top: 16px; }
+  .cms-sidebar-group-title { display: flex; height: 28px; align-items: center; gap: 4px; padding-inline: 8px 2px; }
+  .cms-sidebar-nested .cms-sidebar-group + .cms-sidebar-group { margin-top: 8px; }
+  .cms-sidebar-nested .cms-sidebar-group-title { padding-left: 46px; }
+
   /* The one way to save a form: up while there are changes, over the bottom of the sheet. */
   .cms-savebar {
     position: absolute;

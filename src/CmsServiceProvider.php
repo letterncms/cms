@@ -234,7 +234,7 @@ final class CmsServiceProvider extends ServiceProvider
             ['handle' => 'admin_language', 'type' => 'select', 'label' => 'Admin Language', 'dynamic' => 'admin-languages', 'placeholder' => 'Browser Language', 'width' => 'half'],
             // Empty: the brand's own. Publish, highlights and the chat's button take it; Account overrides it for one person.
             ['handle' => 'admin_accent', 'type' => 'select', 'component' => 'accent', 'dynamic' => 'admin-accents', 'label' => 'Theme Color'],
-        ], icon: 'globe', description: 'Name, address, language and timezone.', order: -1, section: 'account');
+        ], icon: 'globe', description: 'Name, address, language and timezone.', order: -1, section: 'system');
 
         // The defaults everyone's sidebar and home screen start from. Each is saved where it is arranged
         // (Customize Sidebar, the home screen's Customize → Save as Default), so they have no page.
@@ -319,18 +319,21 @@ final class CmsServiceProvider extends ServiceProvider
     {
         $admin = $this->app->make(AdminRegistry::class);
 
-        // Where the work is: the home screens (and the plugins), the content, and how the site is built and looks.
+        // Where the work is: the home screens, the content, and what the whole site shares.
         $admin->section('main', '', 0);
         $admin->section('content', __('Content'), 10);
-        $admin->section('design', __('Design'), 20);
-        // The settings sidebar, the same on every site: the site's General page, your own account and what
-        // runs the installation, as one group without a name; then who works on it; then each plugin's page,
+        $admin->section('site', __('Site'), 20);
+        // How the site is built and looks: a room of its own, a row of the main sidebar leads in.
+        $admin->room('design', __('Design'), 'palette', section: 'main', order: 30);
+        $admin->section('design', '', 0, room: 'design');
+        $admin->section('blocks', __('Building Blocks'), 10, room: 'design');
+        // Settings, the same on every site: the site's General page, your own account and what runs the
+        // installation, as one group without a name; then who works on it; then each plugin's page,
         // named by the plugin (see Navigation::PLUGINS).
-        $admin->section('account', '', 0, settings: true);
-        $admin->section('site', '', 10, settings: true);
-        $admin->section('system', '', 12, settings: true);
-        $admin->section('people', __('People'), 16, settings: true);
-        $admin->section(Navigation::PLUGINS, __('Plugins'), 90, settings: true);
+        $admin->room(Navigation::SETTINGS, __('Settings'), 'settings');
+        $admin->section('system', '', 0, room: Navigation::SETTINGS);
+        $admin->section('people', __('People'), 16, room: Navigation::SETTINGS);
+        $admin->section(Navigation::PLUGINS, __('Plugins'), 90, room: Navigation::SETTINGS);
         $admin->arrange('sidebar', Navigation::class);
     }
 

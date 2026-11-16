@@ -1,8 +1,7 @@
 import { can, navigate, t, useAbility } from '@letterncms/sdk'
-import { Badge, Button, EmptyState, Fields, NoMatches, Pressable, QueryError, Section, Skeleton } from '@letterncms/ui'
+import { Badge, Button, DataCard, DataGrid, EmptyState, Fields, NoMatches, PagePreview, QueryError, Section } from '@letterncms/ui'
 import { useMemo, useState } from 'react'
-import { patternMatches, type PatternDef } from './core/Inserter'
-import { PatternPreview } from './core/PatternPreview'
+import { patternMatches, patternPage, type PatternDef } from './core/Inserter'
 
 /** Patterns by category, in the order patterns/list gives them (the usual categories first). */
 export function byCategory(patterns: PatternDef[]): [string, PatternDef[]][] {
@@ -19,7 +18,7 @@ export default function PatternsScreen() {
   const groups = useMemo(() => byCategory((list.data ?? []).filter((pattern) => patternMatches(pattern, q))), [list.data, q])
 
   if (list.error) return <QueryError message={t('Patterns could not be loaded')} onRetry={() => void list.refetch()} retrying={list.isFetching} />
-  if (list.isLoading) return <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(max(16rem,calc((100%-2rem)/3)),1fr))]">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-video rounded-md" />)}</div>
+  if (list.isLoading) return <DataGrid loading media />
   if (!list.data?.length) {
     return <EmptyState icon="section-copy" title={t('No patterns yet')} action={can('entries.patterns.create') ? <Button variant="primary" icon="plus" onClick={() => navigate('/content/patterns/new')}>{t('New Pattern')}</Button> : undefined} />
   }
@@ -32,23 +31,20 @@ export default function PatternsScreen() {
       {groups.length === 0 && <NoMatches onClear={() => setQuery('')} />}
       {groups.map(([category, patterns]) => (
         <Section key={category} title={category}>
-          <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(max(16rem,calc((100%-2rem)/3)),1fr))]">
-            {patterns.map((pattern) => {
-              const card = (
-                <>
-                  <PatternPreview handle={pattern.handle} aspect="16 / 9" />
-                  <span className="mt-2 flex min-w-0 items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-text">{pattern.title}</span>
-                    {!pattern.editable && <Badge>{t('From a Plugin')}</Badge>}
-                  </span>
-                  {pattern.description && <span className="mt-0.5 line-clamp-2 block text-xs text-muted">{pattern.description}</span>}
-                </>
-              )
-              return pattern.editable && pattern.id
-                ? <Pressable key={pattern.handle} to={`/content/patterns/${pattern.id}`} className="block min-w-0 rounded-md p-1 text-left hover:bg-hover">{card}</Pressable>
-                : <div key={pattern.handle} className="min-w-0 p-1">{card}</div>
-            })}
-          </div>
+          {/* The cards of every list of the design: the site's own drawing of each, its name, and a line on it. */}
+          <DataGrid media>
+            {patterns.map((pattern) => (
+              <DataCard
+                key={pattern.handle}
+                title={pattern.title}
+                href={pattern.editable && pattern.id ? `/content/patterns/${pattern.id}` : undefined}
+                image={<PagePreview src={patternPage(pattern.handle)} fill />}
+                footer={!pattern.editable ? <Badge>{t('From a Plugin')}</Badge> : undefined}
+              >
+                {pattern.description && <p className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted">{pattern.description}</p>}
+              </DataCard>
+            ))}
+          </DataGrid>
         </Section>
       ))}
     </div>

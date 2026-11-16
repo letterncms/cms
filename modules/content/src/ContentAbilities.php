@@ -965,6 +965,8 @@ final class ContentAbilities
             'translations?' => [Shape::STRING],
             'editingBy?' => Shape::STRING,
             'usedBy?' => Shape::STRING,
+            // A template's or a component's own drawing, an address of the site (from whoever draws it).
+            'preview?' => Shape::STRING,
             'values?' => Shape::open('The data fields asked for with `fields`, by handle: a users field as a list of people ({id, name, initials, avatar}), an entries field as a list of {id, collection, title}, any other as it is stored (the collection\'s schema is in collections/get).'),
         ];
     }

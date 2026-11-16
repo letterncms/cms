@@ -16,7 +16,7 @@ const manifest = {
   modules: [{ id: 'fixture', url: '/fixture.js' }, { id: 'letterncms/content', url: '/_cms/assets/cms-content/admin.js' }, { id: 'letterncms/workspace', url: '/_cms/assets/cms-workspace/admin.js' }, { id: 'letterncms/assistant', url: '/_cms/assets/cms-assistant/admin.js' }],
   styles: ['/_cms/assets/cms-workspace/admin.css', '/_cms/assets/cms-assistant/admin.css'], settings: [], collections: [], globals: [], fieldTypes: [], commands: [], widgets: [{ id: 'fixture-widget', label: 'Live plugin widget', icon: 'grid', description: 'Shared with Home', column: 'side', enabled: true, source: 'Fixture' }], dashboard: [], config: { workspace: { agent: { name: 'assistant', label: 'Claude' } } }, nav,
   sidebar: { sections: ['main', 'content', 'design'].map((id) => ({ id, label: id === 'main' ? '' : id[0].toUpperCase() + id.slice(1), items: nav.filter((n) => n.section === id).map((n) => n.id) })), hidden: [], personal: false },
-  settingsNav: [{ id: 'system', label: 'System', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }],
+  rooms: [{ id: 'settings', label: 'Settings', icon: 'settings', sections: [{ id: 'system', label: '', items: nav.filter((n) => n.section === 'system').map((n) => n.id) }] }],
 }
 const boot = { base: '/admin', api: '/api/admin', version: 'test', site: manifest.site, locale: 'en', messages: {}, manifest }
 const titles = ['Refine the launch page', 'Draft the autumn newsletter', 'Review page descriptions', 'Update the design', 'Plan next month’s content']

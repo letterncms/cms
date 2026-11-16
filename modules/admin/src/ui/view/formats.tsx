@@ -5,6 +5,7 @@ import { cn } from '../cn'
 import { Icon } from '../Icon'
 import { DateCell } from '../recordDates'
 import { Badge, StatusDot, type Tone } from '../Badge'
+import { PagePreview } from '../PagePreview'
 import { safeUrl } from './scope'
 import { compactNumber } from '../Widget'
 
@@ -77,6 +78,8 @@ export function formatValue(value: unknown, { format = 'text', tones, labels, cu
     // An address on the site, quiet and in the type addresses are written in.
     case 'address': return <span className="block truncate font-mono text-xs text-faint">{String(value)}</span>
     case 'media': return <MediaCell value={value} media={media} />
+    // A page of the site, drawn by the site: a card's whole picture, a row's small one.
+    case 'page': return safeUrl(value) ? <span className="block h-10 w-16 overflow-hidden rounded-xs border border-border"><PagePreview src={safeUrl(value)!} fill /></span> : NONE
     case 'image': return safeUrl(value) ? <img src={safeUrl(value)!} alt="" className="size-8 rounded-xs object-cover" /> : NONE
     case 'link': return safeUrl(value) ? <a href={safeUrl(value)!} target="_blank" rel="noreferrer" className="truncate text-text underline-offset-2 hover:underline">{String(value).replace(/^https?:\/\//, '')}</a> : String(value)
     default:

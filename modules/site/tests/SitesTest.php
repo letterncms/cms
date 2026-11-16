@@ -148,11 +148,12 @@ final class SitesTest extends TestCase
         }
     }
 
-    public function test_sites_appears_in_settings(): void
+    public function test_sites_is_in_the_design(): void
     {
         $navigation = $this->cms()->adminNav()->forUser($this->admin());
+        $design = current(array_filter($navigation['rooms'], static fn (array $room) => $room['id'] === 'design'));
 
-        $this->assertContains('sites', array_merge(...array_column($navigation['settingsNav'], 'items')));
+        $this->assertContains('sites', array_merge(...array_column($design['sections'], 'items')));
         $this->assertNotContains('sites', array_merge(...array_column($navigation['sidebar']['sections'], 'items')));
     }
 

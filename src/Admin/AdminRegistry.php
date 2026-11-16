@@ -14,7 +14,8 @@ use Cms\Users\User;
  * What the core and plugins add to the admin. The admin theme renders it from the
  * manifest; nothing here knows about React or any particular admin theme.
  *
- * - sections: sidebar sections; `settings` ones make up the settings sidebar
+ * - rooms:    sidebars of their own (settings, the design) that take the main one's place on their screens
+ * - sections: sidebar sections; those of a room make up its sidebar
  * - nav:      sidebar items, each in a section; pinned ones show in the sidebar, the rest under More (people pin their own, see Navigation)
  * - modules:  ES modules executed by the admin (register routes, field components, panels…)
  * - widgets:  home-screen widgets with a default column, on or off by default (people arrange their own, see letterncms/dashboard)
@@ -25,7 +26,7 @@ final class AdminRegistry
 {
     public function __construct(private readonly Cms $cms) {}
 
-    /** @var array<string, array{id: string, label: string, order: int, settings: bool}> */
+    /** @var array<string, array{id: string, label: string, order: int, room: ?string}> */
     private array $sections = [];
 
     /** @var array<string, array> */
@@ -36,6 +37,9 @@ final class AdminRegistry
 
     /** @var list<string> */
     private array $styles = [];
+
+    /** @var array<string, array{id: string, label: string, icon: string, section: ?string, order: int}> */
+    private array $rooms = [];
 
     /** @var array<string, array> */
     private array $widgets = [];
@@ -53,13 +57,25 @@ final class AdminRegistry
     private array $arranged = [];
 
     /**
-     * A sidebar section. An empty label shows its items without a heading. A
-     * `settings` section belongs to the settings sidebar: its items are pages
-     * of settings, not something to pin. Registering it twice keeps the first.
+     * A room: a sidebar of its own that takes the main one's place while one of its
+     * screens is on view, under its name and a way back. Settings is one, opened by the
+     * button beside who is signed in; with a `section`, the main sidebar has a row that
+     * leads in (the design), at `order` among that section's items. Its screens are
+     * items of sections registered with this `room`. Registering it twice keeps the first.
      */
-    public function section(string $id, string $label, int $order = 50, bool $settings = false): void
+    public function room(string $id, string $label, string $icon = 'circle', ?string $section = null, int $order = 50): void
     {
-        $this->sections[$id] ??= ['id' => $id, 'label' => $label, 'order' => $order, 'settings' => $settings];
+        $this->rooms[$id] ??= ['id' => $id, 'label' => $label, 'icon' => $icon, 'section' => $section, 'order' => $order];
+    }
+
+    /**
+     * A sidebar section. An empty label shows its items without a heading. A section
+     * of a `room` lists that room's screens, which are not something to pin.
+     * Registering it twice keeps the first.
+     */
+    public function section(string $id, string $label, int $order = 50, ?string $room = null): void
+    {
+        $this->sections[$id] ??= ['id' => $id, 'label' => $label, 'order' => $order, 'room' => $room];
     }
 
     /**
@@ -68,9 +84,9 @@ final class AdminRegistry
      * unpins (or `pinned: false`, for a screen nearly nobody opens). `visible` decides per user
      * beyond the permission (the assistant shows only once it can work).
      *
-     * `section` is where it is listed: `main`, `content` or `design`
-     * in the sidebar, or a section of the settings sidebar for a screen that is
-     * set up once (a plugin's then lands under Plugins, see Navigation).
+     * `section` is where it is listed: `main`, `content` or `site` in the
+     * sidebar, or a section of a room: the design's (`design`) or the settings'
+     * for a screen that is set up once (a plugin's then lands under Plugins, see Navigation).
      *
      * A plugin's main screen is called what the plugin is: leave out `label`
      * and the item takes the plugin's name (`extra.cms.label`). Its other
@@ -217,7 +233,13 @@ final class AdminRegistry
         $this->commands[$id] = ['id' => $id, 'icon' => 'command', 'permission' => null, ...$command];
     }
 
-    /** @return array<string, array{id: string, label: string, order: int, settings: bool}> */
+    /** @return array<string, array{id: string, label: string, icon: string, section: ?string, order: int}> */
+    public function rooms(): array
+    {
+        return $this->rooms;
+    }
+
+    /** @return array<string, array{id: string, label: string, order: int, room: ?string}> */
     public function sections(): array
     {
         return $this->sections;

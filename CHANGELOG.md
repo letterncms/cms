@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed
+
+- **A calmer sidebar.** It holds what you work on every day: Dashboard and Analytics, then **Content** (your pages and collections, Media, Forms) and **Site** (Navigation, Globals).
+- **Design is a room of its own**, like Settings. Its row near the top opens it, with a way back: Styling, Code, Collections and Sites, then **Building Blocks** (Templates, Components, Patterns). `Esc` returns to where you were.
+- **Plugins and Sites moved.** **Plugins** is in Settings, beside General and Languages. **Sites** is in Design.
+- **Templates and Components are galleries**: each as your site draws it, with its description, where it is used and whether it is published. **Patterns** and **Sites** use the same cards, and a picture fades in once the site has drawn it.
+- **Code's files are listed under its row in the sidebar**, as Styling's sections are, and the file that is open fills the page.
+- **Breaking.** For plugins: a section of settings is registered with `room: 'settings'` instead of `settings: true`, and `$admin->room()` adds a room of your own. The manifest lists rooms (`rooms`) instead of `settingsNav`.
+
 ## 0.41.0 (2026-11-16)
 
 ### Changed
