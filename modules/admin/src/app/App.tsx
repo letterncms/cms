@@ -7,7 +7,7 @@ import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Sidebar, StateBack, useWayUp, type OwnSidebar } from './Sidebar'
 import { setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
-import { itemAt, noteLocation, roomAt } from '../ui/place'
+import { itemAt, roomAt } from '../ui/place'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/WorkspaceContext'
 import { dockState, type DockState } from '../ui/Dock'
@@ -167,12 +167,6 @@ export function App() {
   const own = claim
   const up = useWayUp({ own, room })
 
-  // Every screen on view, so a way back returns to where someone came from (see `cameFrom`).
-  const noted = useRef('')
-  if (noted.current !== location.path + location.search) {
-    noted.current = location.path + location.search
-    noteLocation(noted.current, route?.path ?? location.path, location.action)
-  }
 
   // What is on the desk above the sheet, so the sidebar button stays in the sheet's top bar under it.
   const [banner, setBanner] = useState<HTMLElement | null>(null)

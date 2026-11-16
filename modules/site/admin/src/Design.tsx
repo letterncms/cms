@@ -265,8 +265,7 @@ export default function Design({ params }: { params: Record<string, string> }) {
     <div className="flex h-full flex-col">
       <Topbar
         divided
-        back={sub?.back}
-        crumbs={[{ label: sub?.title ?? sectionLabel(section) }]}
+        crumbs={sub ?? [{ label: sectionLabel(section) }]}
         actions={
           <>
             <span className="md:hidden"><Tooltip content={t('Preview')}><IconButton icon="eye" label={t('Preview')} title={undefined} active={previewing} aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} /></Tooltip></span>

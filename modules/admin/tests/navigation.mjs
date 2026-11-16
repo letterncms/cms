@@ -11,7 +11,7 @@ const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel
 const entry = { id: 'entry-1', collection: 'posts', locale: 'en', title: 'Original title', slug: 'original', uri: null, status: 'draft', displayStatus: 'draft', data: {}, hasDraft: false, parentId: null, position: 0, originId: null, authorId: null, createdAt: null, updatedAt: null, publishedAt: null }
 const namespaces = ['site', 'email', 'admin', 'broken']
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
-const settingsNav = namespaces.map((namespace) => ({ id: `settings-${namespace}`, label: namespace.toUpperCase(), path: `/settings/${namespace}`, icon: 'settings', section: 'system' }))
+const settingsNav = [...namespaces.map((namespace) => ({ id: `settings-${namespace}`, label: namespace.toUpperCase(), path: `/settings/${namespace}`, icon: 'settings', section: 'system' })), { id: 'levels', label: 'Levels', path: '/levels', icon: 'settings', section: 'system' }]
 const manifest = {
   views: mounted,
   cms: { version: 'test', debug: false },
@@ -31,7 +31,9 @@ const boot = { brand, base: '/admin', api: '/api/admin', version: 'test', site: 
 const requests = []
 let broken = true
 const runner = `
-import { navigate, prefetch, queryClient, abilityKey, setQuery, blockNavigation, registry } from '@letterncms/sdk'
+import { navigate, prefetch, queryClient, abilityKey, setQuery, blockNavigation, registry, useLocation } from '@letterncms/sdk'
+import { Page } from '@letterncms/ui'
+import { createElement } from 'react'
 const output = document.querySelector('#results')
 const results = []
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -174,6 +176,41 @@ try {
     queryClient.setQueryData(abilityKey('entries/get', { id: 'entry-1' }), (old) => ({ ...old, title: 'Background refresh' }))
     await sleep(50)
     assert(title.isConnected && title.value === 'Original title', 'cache refresh remounted the editor')
+  })
+  await test('Back goes up one level of the trail inside one screen, never back through history', async () => {
+    // One screen drawing three levels, as Design draws Classes, a group and a class: the bar's trail names them.
+    function Levels() {
+      const [group, item] = useLocation().path.split('/').slice(2)
+      const crumbs = !group ? [{ label: 'Levels' }]
+        : !item ? [{ label: 'Levels', to: '/levels' }, { label: 'Group ' + group }]
+        : [{ label: 'Levels', to: '/levels' }, { label: 'Group ' + group, to: '/levels/' + group }, { label: 'Item ' + item }]
+      return createElement(Page, { crumbs }, 'Levels screen')
+    }
+    registry.routes.set('/levels/*', { path: '/levels/*', component: Levels, keep: true })
+    const trail = () => document.querySelector('.cms-topbar nav[aria-label="Breadcrumb"]')?.innerText.replace(/\\s+/g, ' ').trim()
+    const back = () => document.querySelector('[aria-label^="Back to"]')
+    const at = (path, crumbs, label) => wait(() => location.pathname === '/admin' + path && trail() === crumbs && back()?.getAttribute('aria-label') === label, 'Expected ' + path + ' with "' + crumbs + '" and "' + label + '", saw ' + location.pathname + ' with "' + trail() + '" and "' + back()?.getAttribute('aria-label') + '"')
+    navigate('/content/posts')
+    await wait(() => heading()?.startsWith('Posts') && !progress(), 'Posts did not open')
+    navigate('/levels')
+    await at('/levels', 'Settings / Levels', 'Back to Posts')
+    navigate('/levels/a')
+    await at('/levels/a', 'Settings / Levels / Group a', 'Back to Levels')
+    navigate('/levels/a/1')
+    await at('/levels/a/1', 'Settings / Levels / Group a / Item 1', 'Back to Group a')
+    back().click()
+    await at('/levels/a', 'Settings / Levels / Group a', 'Back to Levels')
+    back().click()
+    await at('/levels', 'Settings / Levels', 'Back to Posts')
+    navigate('/levels/a/1')
+    await at('/levels/a/1', 'Settings / Levels / Group a / Item 1', 'Back to Group a')
+    document.activeElement?.blur()
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await at('/levels/a', 'Settings / Levels / Group a', 'Back to Levels')
+    ;[...document.querySelectorAll('.cms-topbar nav a')].find((link) => link.textContent.trim() === 'Levels').click()
+    await at('/levels', 'Settings / Levels', 'Back to Posts')
+    back().click()
+    await wait(() => location.pathname === '/admin/content/posts' && heading()?.startsWith('Posts'), 'Back from the first level did not leave the room for where it was entered from')
   })
   output.textContent += '\\nAll ' + results.length + ' navigation checks passed.'
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results }) })
