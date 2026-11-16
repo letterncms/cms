@@ -118,27 +118,26 @@ final class MediaReplaceTest extends TestCase
         $ctx = AbilityContext::forUser($this->admin(), 'admin');
         $collection = array_values(array_filter($this->cms()->collections()->all(), static fn ($c) => ! $c->system))[0]->handle;
         $entry = $this->cms()->abilities()->execute('entries/create', ['collection' => $collection, 'title' => 'With a picture', 'data' => ['cover_url' => $old, 'by_id' => $item->id]], $ctx);
-        \Cms\Support\Yaml::write(content_path('globals/zz_brand.yaml'), ['title' => 'Brand', 'fields' => [], 'data' => ['logo' => $old.'?v=2', 'other' => '/media/2020/01/else-aaaa.jpg']]);
+        $brand = $this->global('zz_brand', [['handle' => 'logo', 'type' => 'text'], ['handle' => 'other', 'type' => 'text']], ['logo' => $old.'?v=2', 'other' => '/media/2020/01/else-aaaa.jpg'], 'Brand');
         app(\Cms\Modules\Media\MediaReferences::class)->forget();
 
         $input = ['id' => $item->id, 'filename' => 'other.jpg', 'data' => base64_encode($this->picture('jpeg', 800, 600))];
         $changes = $this->run_('media/replace', [...$input, 'dryRun' => true])['changes'];
-        $this->assertSame([['update', 'entry', $entry['id']], ['update', 'global', 'zz_brand']], array_map(static fn (array $c) => [$c['action'], $c['type'], $c['id']], array_slice($changes, 1)));
+        $this->assertEqualsCanonicalizing([['update', 'entry', $entry['id']], ['update', 'entry', $brand->id]], array_map(static fn (array $c) => [$c['action'], $c['type'], $c['id']], array_slice($changes, 1)));
         $this->assertSame($old, $this->cms()->entries()->find($entry['id'])->working()['data']['cover_url'], 'a dry run rewrites nothing');
 
         $new = $this->run_('media/replace', $input)['url'];
         $this->assertNotSame($old, $new);
         $stored = $this->cms()->entries()->find($entry['id']);
         $this->assertSame([$new, $item->id], [$stored->working()['data']['cover_url'], $stored->working()['data']['by_id']]);
-        $global = \Cms\Support\Yaml::read(content_path('globals/zz_brand.yaml'))['data'];
+        $global = $this->cms()->entries()->find($brand->id)->data;
         $this->assertSame([$new.'?v=2', '/media/2020/01/else-aaaa.jpg'], [$global['logo'], $global['other']]);
 
         // A crop moves the address too, and what names it follows again.
         $cut = $this->run_('media/transform', ['id' => $item->id, 'crop' => ['x' => 0, 'y' => 0, 'width' => 100, 'height' => 100]])['url'];
         $this->assertNotSame($new, $cut);
         $this->assertSame($cut, $this->cms()->entries()->find($entry['id'])->working()['data']['cover_url']);
-        $this->assertSame($cut.'?v=2', \Cms\Support\Yaml::read(content_path('globals/zz_brand.yaml'))['data']['logo']);
-        @unlink(content_path('globals/zz_brand.yaml'));
+        $this->assertSame($cut.'?v=2', $this->cms()->entries()->find($brand->id)->data['logo']);
     }
 
     public function test_another_type_gets_a_new_address_and_another_kind_is_refused(): void

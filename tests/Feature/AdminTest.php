@@ -20,41 +20,55 @@ final class AdminTest extends TestCase
         $nav = $this->cms()->adminNav()->forUser($this->admin());
         $sidebar = array_column($nav['sidebar']['sections'], null, 'id');
 
-        // The home screen and a row into each room, without a heading; then Pinned: the pages, the files and what every page shares.
+        // The home screen and a row into each room, without a heading; then Pinned: the pages and the files.
         $this->assertSame(['main', 'pinned'], array_keys($sidebar));
         $this->assertSame('', $sidebar['main']['label']);
         $this->assertSame(['dashboard', 'content', 'design', 'structure'], $sidebar['main']['items']);
         $this->assertSame('Pinned', $sidebar['pinned']['label']);
-        $this->assertSame(['collection.pages', 'media', 'globals'], $sidebar['pinned']['items']);
+        $this->assertSame(['collection.pages', 'media'], $sidebar['pinned']['items']);
         // The rest of a room is in its room, a pin away; settings have no row of their own.
         $this->assertContains('collection.posts', $nav['sidebar']['hidden']);
         $this->assertSame(['collection.notes', 'collection.pages', 'collection.posts'], $this->room($nav, 'content')['entries']['items']);
-        $this->assertContains('collections', array_merge(...array_column($this->room($nav, 'structure'), 'items')));
-        $this->assertContains('navigation', array_merge(...array_column($this->room($nav, 'structure'), 'items')));
+        $this->assertSame(['collections', 'taxonomies', 'globals', 'menus'], $this->room($nav, 'structure')['structure']['items']);
         $this->assertSame('Content', array_column($nav['rooms'], 'label', 'id')['content']);
         $this->assertSame('design', array_column($nav['nav'], 'room', 'id')['design']);
-        // The sidebar and abilities use the same name for globals.
-        $this->assertSame('Globals', array_column($nav['nav'], 'label', 'id')['globals']);
-        $this->assertSame(['List Globals', 'Update Global Values'], [$this->cms()->abilities()->get('globals/list')->label, $this->cms()->abilities()->get('globals/set')->label]);
         $this->assertFalse($nav['sidebar']['personal']);
     }
 
-    public function test_the_content_room_groups_collections_by_their_type(): void
+    public function test_the_content_room_groups_collections_by_their_kind(): void
     {
         $this->cms()->collections()->save(Collection::fromArray('topics', ['title' => 'Topics', 'type' => 'categories', 'fields' => []]));
         $this->cms()->collections()->save(Collection::fromArray('labels', ['title' => 'Labels', 'type' => 'tags', 'fields' => []]));
+        $this->global('studio', [['handle' => 'phone', 'type' => 'text']]);
+        $this->menu('main');
 
         $sections = $this->room($this->cms()->adminNav()->forUser($this->admin()), 'content');
-        $this->assertSame(['entries', 'taxonomies'], array_keys($sections));
-        $this->assertSame(['Entries', 'Taxonomies'], array_column($sections, 'label'));
+        $this->assertSame(['entries', 'taxonomies', 'globals', 'menus'], array_keys($sections));
+        $this->assertSame(['Entries', 'Taxonomies', 'Globals', 'Menus'], array_column($sections, 'label'));
         $this->assertSame(['collection.labels', 'collection.topics'], $sections['taxonomies']['items']);
+        $this->assertSame(['collection.studio'], $sections['globals']['items']);
+        $this->assertSame(['collection.main'], $sections['menus']['items']);
         $this->assertNotContains('collection.topics', $sections['entries']['items']);
 
-        // A type with one collection keeps its heading: it is not mistaken for the other.
+        // A kind with one collection keeps its heading: it is not mistaken for another.
         $this->cms()->collections()->delete('labels');
         $sections = $this->room($this->cms()->adminNav()->forUser($this->admin()), 'content');
-        $this->assertSame(['Entries', 'Taxonomies'], array_column($sections, 'label'));
+        $this->assertSame(['Entries', 'Taxonomies', 'Globals', 'Menus'], array_column($sections, 'label'));
         $this->assertSame(['collection.topics'], $sections['taxonomies']['items']);
+    }
+
+    public function test_what_is_seldom_needed_is_pinned_under_more(): void
+    {
+        $this->cms()->admin()->nav('rarely', ['label' => 'Rarely', 'path' => '/rarely', 'section' => 'pinned', 'pinned' => false]);
+        $nav = $this->cms()->adminNav()->forUser($admin = $this->admin());
+
+        // Listed with what is pinned, under More until someone shows it.
+        $this->assertContains('rarely', $nav['sidebar']['hidden']);
+        $this->assertNotContains('rarely', array_merge(...array_column($nav['sidebar']['sections'], 'items')));
+        $this->assertContains('rarely', array_column($nav['nav'], 'id'));
+
+        $this->pin($admin, ['sections' => [['id' => 'pinned', 'items' => ['rarely', 'collection.pages']]], 'hidden' => []]);
+        $this->assertSame(['rarely', 'collection.pages'], array_slice($this->section($admin, 'pinned')['items'], 0, 2));
     }
 
     public function test_a_collection_names_its_section_and_is_shown_there(): void
@@ -86,7 +100,7 @@ final class AdminTest extends TestCase
         $admin = $this->admin();
         $this->pin($admin, [
             'sections' => [
-                ['id' => 'pinned', 'label' => 'Renamed', 'items' => ['globals', 'collection.posts', 'collection.pages']],
+                ['id' => 'pinned', 'label' => 'Renamed', 'items' => ['media', 'collection.posts', 'collection.pages']],
                 ['id' => 'invented', 'label' => 'Mine', 'items' => ['collection.notes']],
             ],
             'hidden' => ['collection.pages'],
@@ -99,7 +113,7 @@ final class AdminTest extends TestCase
         // The groups are the registered ones: people pin and order items, they do not invent or rename groups.
         $this->assertSame(['main', 'pinned'], array_column($result['sidebar']['sections'], 'id'));
         $this->assertSame('Pinned', $result['sidebar']['sections'][1]['label']);
-        $this->assertSame(['globals', 'collection.posts', 'media'], $result['sidebar']['sections'][1]['items']);
+        $this->assertSame(['media', 'collection.posts'], $result['sidebar']['sections'][1]['items']);
         $this->assertContains('collection.pages', $result['sidebar']['hidden']);
         $this->assertContains('collection.products', $result['sidebar']['hidden']);
         $this->assertTrue($result['sidebar']['personal']);
@@ -115,7 +129,7 @@ final class AdminTest extends TestCase
     {
         $admin = $this->admin();
         $this->settle($admin, ['sections' => [['id' => 'pinned', 'items' => ['collection.posts', 'collection.pages', 'media']]], 'hidden' => ['media']]);
-        $this->assertSame(['collection.posts', 'collection.pages', 'globals'], $this->section($admin, 'pinned')['items']);
+        $this->assertSame(['collection.posts', 'collection.pages'], $this->section($admin, 'pinned')['items']);
         $this->assertContains('media', $this->cms()->adminNav()->forUser($admin)['sidebar']['hidden']);
 
         $this->pin($admin, ['sections' => [['id' => 'pinned', 'items' => ['collection.pages']]], 'hidden' => []]);
@@ -138,7 +152,7 @@ final class AdminTest extends TestCase
         $this->assertContains('collection.posts', $this->cms()->adminNav()->saved()['sections'][0]['items']);
 
         $this->cms()->collections()->save(Collection::fromArray('posts', ['title' => 'Posts', 'fields' => []]));
-        $this->assertSame(['collection.pages', 'collection.posts', 'media', 'globals'], $this->section($admin, 'pinned')['items']);
+        $this->assertSame(['collection.pages', 'collection.posts', 'media'], $this->section($admin, 'pinned')['items']);
     }
 
     public function test_a_hand_edited_arrangement_is_read_forgivingly(): void
@@ -375,26 +389,29 @@ final class AdminTest extends TestCase
         $this->assertSame(['type' => 'entries'], $settings['structure']['if']);
     }
 
-    public function test_structure_lists_collections_and_taxonomies_apart(): void
+    public function test_structure_lists_each_kind_apart(): void
     {
         $this->cms()->collections()->save(Collection::fromArray('topics', ['title' => 'Topics', 'type' => 'categories', 'fields' => []]));
+        $this->menu('main');
         $nav = $this->cms()->adminNav()->forUser($admin = $this->admin());
-        // Structure in named groups: content types, the layout, and what the whole site shares.
+        // Structure in named groups: content types, then the layout.
         $structure = $this->room($nav, 'structure');
-        // (The layout's group comes with Blocks: SitesTest has all three.)
-        $this->assertSame(['Content Types', 'Site'], array_column($structure, 'label'));
-        $this->assertSame(['collections', 'taxonomies'], $structure['structure']['items']);
-        $this->assertSame(['navigation'], $structure['site-wide']['items']);
+        // (The layout's group comes with Blocks: SitesTest has both.)
+        $this->assertSame(['Content Types'], array_column($structure, 'label'));
+        $this->assertSame(['collections', 'taxonomies', 'globals', 'menus'], $structure['structure']['items']);
 
         $ctx = \Cms\Abilities\AbilityContext::forUser($admin, 'admin');
-        $this->assertNotContains('topics', array_column($this->cms()->abilities()->execute('collections/editable', [], $ctx), 'handle'));
-        $this->assertSame(['topics'], array_column($this->cms()->abilities()->execute('collections/editable', ['taxonomies' => true], $ctx), 'handle'));
+        $editable = fn (array $in) => array_column($this->cms()->abilities()->execute('collections/editable', $in, $ctx), 'handle');
+        $this->assertNotContains('topics', $editable([]));
+        $this->assertSame(['topics'], $editable(['kind' => 'taxonomies']));
+        $this->assertSame(['main'], $editable(['kind' => 'menus']));
 
-        // Each is edited at its own list's address; the other's leads nowhere.
+        // Each is edited at its own list's address; another's leads nowhere.
         $views = $this->cms()->views();
-        $this->assertSame(['type' => 'collections/blueprint', 'props' => ['handle' => 'topics', 'taxonomy' => true]], $views->resolve('taxonomies-collection', $admin, ['handle' => 'topics'])['root']);
+        $this->assertSame(['type' => 'collections/blueprint', 'props' => ['handle' => 'topics', 'kind' => 'taxonomies']], $views->resolve('taxonomies-collection', $admin, ['handle' => 'topics'])['root']);
+        $this->assertSame(['type' => 'collections/blueprint', 'props' => ['handle' => 'main', 'kind' => 'menus']], $views->resolve('menus-collection', $admin, ['handle' => 'main'])['root']);
         $this->assertSame('Not Found', $views->resolve('collections-collection', $admin, ['handle' => 'topics'])['root']['props']['title']);
-        $this->assertSame(['taxonomies' => true], $views->resolve('taxonomies', $admin)['root']['children'][0]['props']['source']['input']);
+        $this->assertSame(['kind' => 'taxonomies'], $views->resolve('taxonomies', $admin)['root']['children'][0]['props']['source']['input']);
     }
 
     public function test_site_settings_are_a_settings_namespace(): void

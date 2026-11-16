@@ -91,8 +91,8 @@ final class LanguagesModule extends Plugin
             return $alternates;
         });
 
-        // Menus link one version of a page; show the visitor's language when it is live.
-        $hooks->addFilter('navigation.entry', function (?Entry $entry, ?string $locale) use ($translations) {
+        // A menu's link, a global's values: one version of an entry, read in the visitor's language when that is live.
+        $hooks->addFilter('entry.localized', function (?Entry $entry, ?string $locale) use ($translations) {
             if (! $entry || ! $locale || $entry->locale === $locale) {
                 return $entry;
             }

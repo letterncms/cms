@@ -126,13 +126,12 @@ final class SchemaFilesTest extends TestCase
         $this->ability('fieldsets/save', ['handle' => 'venue', 'title' => 'Venue', 'fields' => [['handle' => 'city', 'type' => 'text'], ['handle' => 'country', 'type' => 'text']]]);
         $this->assertSame(['city', 'country'], array_keys($this->schema('collections/events.json')['properties']));
 
-        $set = $this->ability('globals/save', ['handle' => 'company', 'title' => 'Company', 'fields' => [['handle' => 'phone', 'type' => 'text']]]);
-        $this->assertSame('Company: the values of a global', $this->schema('globals/company.json')['title']);
-        $this->assertSame(['phone'], array_keys($this->schema('globals/company.json')['properties']));
+        // A global is a collection too: its values are its entry's data.
+        $this->ability('collections/save', ['handle' => 'company', 'definition' => ['type' => 'global', 'title' => 'Company', 'fields' => [['handle' => 'phone', 'type' => 'text']]]]);
+        $this->assertSame(['phone'], array_keys($this->schema('collections/company.json')['properties']));
 
-        $this->ability('globals/delete', ['handle' => $set['handle'] ?? 'company']);
-        $this->assertSame([], glob($this->folder().'/globals/*') ?: []);
-        $this->assertDirectoryDoesNotExist($this->folder().'/globals');
+        $this->ability('collections/delete', ['handle' => 'company']);
+        $this->assertFileDoesNotExist($this->folder().'/collections/company.json');
     }
 
     public function test_migrate_picks_up_a_definition_edited_by_hand(): void

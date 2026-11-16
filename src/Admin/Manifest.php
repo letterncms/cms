@@ -42,7 +42,6 @@ final class Manifest
             'user' => [...$user->toPublic(), 'grants' => $user->super ? ['*'] : $user->grants(), 'preferences' => $user->preferences ?? (object) []],
             // Filled in by their modules; empty when those are off. The shared widget catalog comes from $admin.
             'collections' => [],
-            'globals' => [],
             'dashboard' => [],
             'fieldTypes' => array_values(array_map(static fn ($t) => $t->toArray(), $this->cms->fields()->all())),
             'settings' => $settings,

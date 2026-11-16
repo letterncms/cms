@@ -96,16 +96,16 @@ final class MediaTest extends TestCase
         // What the field already held is not judged again.
         $this->assertSame([], $type->check([$text->id, '01hzzzzzzzzzzzzzzzzzzzzzzz'], $images, [$text->id, '01hzzzzzzzzzzzzzzzzzzzzzzz']));
 
-        $this->cms()->abilities()->execute('globals/save', ['handle' => 'brand', 'title' => 'Brand', 'fields' => [['handle' => 'logo', 'type' => 'media', 'accept' => 'image/*', 'max' => 1]]], AbilityContext::system());
+        $this->global('brand', [['handle' => 'logo', 'type' => 'media', 'accept' => 'image/*', 'max' => 1]]);
 
         try {
-            $this->cms()->abilities()->execute('globals/set', ['handle' => 'brand', 'values' => ['logo' => [$text->id]]], AbilityContext::system());
+            $this->cms()->abilities()->execute('entries/create', ['collection' => 'brand', 'title' => 'Brand', 'data' => ['logo' => [$text->id]], 'status' => 'published'], AbilityContext::system());
             $this->fail('A text file went into an image field.');
         } catch (AbilityException $e) {
-            $this->assertSame(['logo.0'], array_keys($e->details));
+            $this->assertSame(['data.logo.0'], array_keys($e->details));
         }
 
-        $this->assertSame([$image->id], $this->cms()->abilities()->execute('globals/set', ['handle' => 'brand', 'values' => ['logo' => [$image->id]]], AbilityContext::system())['logo']);
+        $this->assertSame([$image->id], $this->cms()->abilities()->execute('entries/create', ['collection' => 'brand', 'title' => 'Brand', 'data' => ['logo' => [$image->id]], 'status' => 'published'], AbilityContext::system())['data']['logo']);
     }
 
     public function test_stores_images_with_dimensions_and_dedupes(): void
@@ -374,14 +374,14 @@ final class MediaTest extends TestCase
         $this->assertSame([$item->id, []], [$get()['id'], $get()['usedBy']]);
 
         // Twice in one global, once in the stylesheet, once in an entry: three things use it.
-        \Cms\Support\Yaml::write(content_path('globals/brand.yaml'), ['logo' => ['image' => $item->id], 'note' => "media:{$item->id}"]);
+        $brand = $this->global('brand', [['handle' => 'logo', 'type' => 'json'], ['handle' => 'note', 'type' => 'text']], ['logo' => ['image' => $item->id], 'note' => "media:{$item->id}"]);
         Files::put(content_path('styling/theme.css'), "@import \"tailwindcss\";\n@utility hero { background-image: url(\"/{$item->path}\"); }\n");
-        $collection = array_key_first($this->cms()->collections()->all());
+        $collection = array_key_first(array_filter($this->cms()->collections()->all(), static fn ($c) => $c->type === 'entries'));
         $entry = $this->cms()->entryService()->create($collection, ['title' => 'Uses it', 'data' => ['image' => $item->id]]);
 
         $this->assertEqualsCanonicalizing([
             ['kind' => 'entry', 'id' => $entry->id, 'title' => 'Uses it', 'collection' => $collection, 'locale' => $entry->locale],
-            ['kind' => 'global', 'id' => 'brand', 'title' => 'brand', 'collection' => null, 'locale' => null],
+            ['kind' => 'entry', 'id' => $brand->id, 'title' => 'Brand', 'collection' => 'brand', 'locale' => $brand->locale],
             ['kind' => 'styling', 'id' => 'theme', 'title' => 'Stylesheet', 'collection' => null, 'locale' => null],
         ], $get()['usedBy']);
 

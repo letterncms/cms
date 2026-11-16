@@ -14,7 +14,8 @@ use Cms\Content\Entries\EntryRepository;
 use Cms\Content\Entries\EntryService;
 use Cms\Content\Fields\FieldTypeRegistry;
 use Cms\Content\Fields\Fieldsets;
-use Cms\Content\Globals\GlobalRepository;
+use Cms\Content\Collections\Globals;
+use Cms\Content\Collections\Menus;
 use Cms\Context\ContextRegistry;
 use Cms\Context\SkillRegistry;
 use Cms\Extend\Hooks;
@@ -123,9 +124,16 @@ final class Cms
         return $this->app->make(EntryService::class);
     }
 
-    public function globals(): GlobalRepository
+    /** The links of the menus (collections of type `menu`), for templates. */
+    public function menus(): Menus
     {
-        return $this->app->make(GlobalRepository::class);
+        return $this->app->make(Menus::class);
+    }
+
+    /** What the globals (collections of type `global`) hold, for templates. */
+    public function globals(): Globals
+    {
+        return $this->app->make(Globals::class);
     }
 
     public function packages(): PackageManager

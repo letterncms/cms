@@ -20,16 +20,14 @@ final class AbilityNamesTest extends TestCase
      * collection, a fieldset, a global, a component or the user profile is made of, and a
      * script or stylesheet of the site, whose handle is its path.
      */
-    private const array SAVED = ['collections', 'fieldsets', 'components', 'globals', 'user-fields', 'styling-code'];
+    private const array SAVED = ['collections', 'fieldsets', 'components', 'user-fields', 'styling-code'];
 
     /** Acts that are none of the standard ones: each says what it does to its thing. */
     private const array DOMAIN = [
         // Entries, their revisions and pages.
         'publish', 'unpublish', 'discard-draft', 'duplicate', 'move', 'reorder', 'restore', 'customize',
         // Setting one value of a thing (`update` changes a record's fields).
-        'set', 'set-default', 'set-prefix', 'set-custom', 'set-load',
-        // One item of a menu.
-        'add-item', 'remove-item',
+        'set-default', 'set-prefix', 'set-custom', 'set-load',
         // Files and fonts brought in from elsewhere, and a copy taken out (the audit log, which records who took it, and the site as a site).
         'import', 'fonts-import', 'fonts-upload', 'upload', 'export',
         // A file's contents: another in its place, or its picture rotated and cropped.

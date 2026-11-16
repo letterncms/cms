@@ -374,8 +374,18 @@ final class EntryService
 
         $title = trim((string) ($input['title'] ?? ''));
 
+        // A menu's link to a page says what the page is called, unless it is given words of its own.
+        if ($title === '' && $collection->isMenu() && ($input['data']['link']['type'] ?? null) === 'entry') {
+            $title = (string) $this->find((string) ($input['data']['link']['value'] ?? ''))?->title;
+        }
+
         if ($title === '') {
             throw AbilityException::invalid(__('A title is required.'), ['title' => __('Is required.')]);
+        }
+
+        // A global is one entry, and what translates it.
+        if ($collection->isGlobal() && ! isset($input['originId']) && $this->among($collection, $locale) !== []) {
+            throw AbilityException::conflict(__('“:title” already has its values: change them there.', ['title' => $collection->title]));
         }
 
         $parentId = $collection->isTree() ? ($input['parentId'] ?? null) : null;
@@ -985,6 +995,23 @@ final class EntryService
 
             $cursor = $cursor->parentId ? $this->find($cursor->parentId) : null;
         }
+
+        // A menu nests only so deep: the parent's level, this one, and what is under it.
+        if (($max = $collection->maxDepth()) !== null && $depth + 1 + ($self === null ? 0 : $this->height($collection, $locale, $self)) > $max) {
+            throw AbilityException::invalid(__('Links in “:title” nest :count levels deep at most.', ['title' => $collection->title, 'count' => $max]));
+        }
+    }
+
+    /** How many levels are under an entry of a tree. */
+    private function height(Collection $collection, string $locale, string $id): int
+    {
+        $levels = 0;
+
+        foreach ($this->among($collection, $locale, true, $id) as $child) {
+            $levels = max($levels, 1 + $this->height($collection, $locale, $child->id));
+        }
+
+        return $levels;
     }
 
     private function assertVersion(Entry $entry, ?string $expected): void

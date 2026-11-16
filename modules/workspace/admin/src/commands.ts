@@ -67,7 +67,6 @@ registry.composer.set('workspace-places', {
         id: `go:${n.id}`, icon: n.icon, path: n.path,
         label: n.home && n.id.startsWith('settings.') ? t('{name} Settings', { name: manifest.nav.find((h) => h.id === n.home)?.label ?? n.label }) : n.label,
       })),
-      ...manifest.globals.map((g) => ({ id: `go:global:${g.handle}`, label: g.title, icon: g.icon, path: `/globals/${g.handle}` })),
     ].filter((place) => place.path !== on && matches(query, place.label))
     return places.slice(0, query ? 8 : 6).map(({ path, ...place }) => ({ ...place, to: path, perform: () => navigate(path) }))
   },

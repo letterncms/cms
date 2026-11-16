@@ -19,8 +19,8 @@ use Throwable;
 /**
  * Turns this site into a site: what it holds and how it looks, in the layout a site has (Site). Only content and
  * design travel: the collections and their published entries (in the file layout, whatever driver they use;
- * drafts only when asked for), the templates and components, but no other collection a plugin owns, the
- * globals, the menus, the styling folder, the media something names, what plugins keep beside the
+ * drafts only when asked for; globals and menus among them), the templates and components, but no other
+ * collection a plugin owns, the styling folder, the media something names, what plugins keep beside the
  * content (`sites.content`: a folder, or a `<name>.yaml` file), and the settings a site may carry (`sites.settings`). Never accounts, tokens,
  * secrets, submissions, analytics, the audit log, licences or the rest of config/.
  */
@@ -56,12 +56,6 @@ final class SiteExporter
 
             foreach ($this->entries($collection, $drafts) as $path => $document) {
                 $out["content/collections/{$handle}/{$path}"] = $document;
-            }
-        }
-
-        foreach (['globals', 'navigation'] as $folder) {
-            foreach (glob(content_path($folder).'/*.yaml') ?: [] as $file) {
-                Files::isHandle(basename($file, '.yaml')) && $out["content/{$folder}/".basename($file)] = Yaml::dump(array_diff_key(Yaml::read($file), self::STAMPS));
             }
         }
 

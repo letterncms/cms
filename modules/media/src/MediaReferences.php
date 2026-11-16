@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Cms\Modules\Media;
 
 use Cms\Modules\Blocks\BlockRegistry;
-use Cms\Support\Yaml;
 
 /**
- * Where media is used: entries (with their unpublished changes), templates, components,
- * globals, the site's stylesheet and settings. It answers what would break: ids and /media/ URLs
+ * Where media is used: entries (with their unpublished changes; templates, components, globals and
+ * menus among them), the site's stylesheet and settings. It answers what would break: ids and /media/ URLs
  * that point at nothing, records without a file, files without a record, and items
  * nothing uses.
  */
@@ -47,10 +46,6 @@ final class MediaReferences
             $where = ['kind' => 'entry', 'id' => (string) $entry->id, 'title' => (string) $entry->title, 'locale' => $entry->locale, 'collection' => $entry->collection];
             $this->walk($entry->data, $where, '', $found);
             $entry->hasDraft() && $this->walk($entry->working(), $where, '', $found);
-        }
-
-        foreach (Yaml::directory(content_path('globals')) as $handle => $data) {
-            $this->walk($data, ['kind' => 'global', 'id' => (string) $handle, 'title' => (string) $handle], '', $found);
         }
 
         // The stylesheet is CSS, not data: a file is named there by its address (url("/media/2026/11/paper.jpg")) or as media:<id>.
@@ -136,7 +131,7 @@ final class MediaReferences
     }
 
     /**
-     * What uses one item, each thing once: an entry with its collection (where it opens), a global, the stylesheet.
+     * What uses one item, each thing once: an entry with its collection (where it opens), the stylesheet.
      *
      * @return list<array{kind: string, id: string, title: string, collection: ?string, locale: ?string}>
      */
@@ -191,8 +186,6 @@ final class MediaReferences
                 $entry->data = $swap($entry->data);
                 $entry->draft = $entry->draft === null ? null : $swap($entry->draft);
                 cms()->entries()->save($entry);
-            } elseif ($change['type'] === 'global' && is_file($file = content_path("globals/{$change['id']}.yaml"))) {
-                Yaml::write($file, $swap(Yaml::read($file)));
             } elseif ($change['type'] === 'styling' && $change['id'] === 'theme' && is_file($file = content_path('styling/theme.css'))) {
                 file_put_contents($file, preg_replace_callback(self::ADDRESS, static fn (array $m) => $swap($m[0]), (string) file_get_contents($file)));
             } elseif ($change['type'] === 'styling' && is_file($file = content_path('styling/settings.json'))) {

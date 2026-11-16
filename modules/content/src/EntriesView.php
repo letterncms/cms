@@ -21,7 +21,7 @@ final class EntriesView
     /** How wide a field's column is, by its type; a type not listed has no column. */
     private const array WIDTHS = [
         'text' => '180px', 'textarea' => 'minmax(160px,0.8fr)', 'select' => '132px', 'toggle' => '80px', 'date' => '112px', 'number' => '96px', 'entries' => '180px', 'terms' => '180px', 'users' => '132px',
-        'list' => '180px', 'media' => '64px', 'url' => '180px', 'email' => '180px', 'slug' => '160px', 'color' => '112px',
+        'list' => '180px', 'link' => 'minmax(160px,1fr)', 'media' => '64px', 'url' => '180px', 'email' => '180px', 'slug' => '160px', 'color' => '112px',
     ];
 
     /** How many of a collection's fields its list offers as columns: with its own ten at most, within the catalog's sixty. */
@@ -94,7 +94,7 @@ final class EntriesView
             ],
             // What is done to many is done to the site's own pages: a feature's goes back to its standard version from its own menu.
             ...($builtin ? ['selectable' => '{row.group} is empty'] : []),
-            'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => __($collection->title)])],
+            'empty' => ['icon' => $collection->icon, 'title' => $collection->isMenu() ? __('No links yet') : __('No :items yet', ['items' => __($collection->title)])],
             'defaultView' => $defaultView = in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
             // The person's saved views of this list, beside Display: what narrows the list is what a view can keep.
             'controls' => ['component' => 'content/views', 'props' => ['list' => "entries.{$handle}", 'defaultView' => $defaultView, 'params' => ['search', 'status']]],
@@ -151,7 +151,8 @@ final class EntriesView
         $excerpt = self::excerpt($fields);
         $media = array_values(array_filter($fields, static fn ($f) => $f['type'] === 'media'))[0] ?? null;
         // A part of the design is used, not published on a date of its own: where it is used, its state and its last change.
-        $shown = $collection->defaultColumns ?? ($collection->system && ! $routable ? ['used', 'status', 'updated'] : [
+        // A menu's links: where each goes.
+        $shown = $collection->defaultColumns ?? ($collection->isMenu() ? ['field:link', 'status'] : null) ?? ($collection->system && ! $routable ? ['used', 'status', 'updated'] : [
             ...($routable ? ['uri'] : []), 'status', 'published', 'updated',
         ]);
         // Cards show the picture and a few lines too, unless the collection says what to show.
@@ -191,7 +192,8 @@ final class EntriesView
             }
             $columns[] = [
                 'id' => "field:{$field['handle']}", 'key' => "values.{$field['handle']}", 'label' => (string) (($field['label'] ?? '') ?: $field['handle']),
-                'format' => 'field', 'field' => ['type' => $type, ...(isset($field['options']) ? ['options' => $field['options']] : [])],
+                // A link is shown as where it goes (ContentAbilities::listItems): an address, quietly.
+                ...($type === 'link' ? ['format' => 'address'] : ['format' => 'field', 'field' => ['type' => $type, ...(isset($field['options']) ? ['options' => $field['options']] : [])]]),
                 'width' => self::WIDTHS[$type], ...(in_array($type, self::SORTABLE, true) ? ['sort' => $field['handle']] : []),
                 ...($type === 'number' ? ['align' => 'end'] : []), ...($excerpt && $excerpt['handle'] === $field['handle'] ? ['excerpt' => true] : []),
             ];

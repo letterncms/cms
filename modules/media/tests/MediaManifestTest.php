@@ -238,7 +238,7 @@ final class MediaManifestTest extends TestCase
         Files::ensureDir(public_path('media/loose'));
         file_put_contents(public_path('media/loose/a.txt'), 'x');
         Files::put(content_path('styling/theme.css'), "@import \"tailwindcss\";\n@utility hero { background-image: url('/{$used->path}'); }\n");
-        Yaml::write(content_path('globals/brand.yaml'), ['logo' => ['image' => "/{$byUrl->path}"], 'other' => "media:{$gone}", 'broken' => ['image' => '/media/nope.webp']]);
+        $this->global('brand', [['handle' => 'logo', 'type' => 'json'], ['handle' => 'other', 'type' => 'text'], ['handle' => 'broken', 'type' => 'json']], ['logo' => ['image' => "/{$byUrl->path}"], 'other' => "media:{$gone}", 'broken' => ['image' => '/media/nope.webp']]);
 
         $report = app(MediaReferences::class)->report();
 

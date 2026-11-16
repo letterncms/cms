@@ -7,6 +7,7 @@ namespace Cms\Modules\Content;
 use Cms\Admin\Views;
 use Cms\Admin\Translations;
 use Cms\Cms;
+use Cms\Content\Entries\Entry;
 use Cms\Packages\Plugin;
 use Cms\Users\User;
 
@@ -45,6 +46,9 @@ final class ContentModule extends Plugin
         });
 
         $this->app->make(ContentAbilities::class)->register($cms->abilities());
+        // A page that is gone leaves no link to it in a menu.
+        $cms->hooks()->on('entry.deleted', static fn (Entry $entry) => $cms->menus()->forget($entry, $cms->entryService()));
+        $this->addToMenu($cms);
         $this->app->make(SavedViews::class)->register($cms->abilities());
         $cms->hooks()->on('collection.deleted', fn (string $handle) => $this->app->make(SavedViews::class)->forget($handle));
         $this->skills($cms);
@@ -101,6 +105,45 @@ final class ContentModule extends Plugin
         $this->adminModule();
     }
 
+    /**
+     * In the workspace, a page just made, published or duplicated can go in a menu right from its answer: a link to
+     * it at the end of the menu, in the menu's language, its words the page's title.
+     */
+    private function addToMenu(Cms $cms): void
+    {
+        $cms->hooks()->addFilter('workspace.answer', static function (array $view, string $ability, mixed $result, array $input, User $user) use ($cms): array {
+            if (! in_array($ability, ['entries/create', 'entries/publish', 'entries/duplicate'], true) || ! is_array($result) || empty($result['uri'])) {
+                return $view;
+            }
+
+            $menus = array_filter($cms->menus()->titles(), static fn (string $title, string $handle) => $user->hasPermission("entries.{$handle}.create") && $user->hasPermission("entries.{$handle}.publish"), ARRAY_FILTER_USE_BOTH);
+
+            if ($menus === []) {
+                return $view;
+            }
+
+            $add = ['label' => __('Add to Menu'), 'icon' => 'list-tree', 'ability' => 'entries/create', 'success' => __('Added to the menu'),
+                'input' => ['collection' => '{values.menu}', 'title' => (string) ($result['title'] ?? ''), 'data' => ['link' => ['type' => 'entry', 'value' => $result['id']]], 'status' => 'published'],
+                'form' => ['title' => __('Add to Menu'), 'confirm' => __('Add'), 'values' => ['menu' => array_key_first($menus)], 'fields' => [
+                    ['handle' => 'menu', 'type' => 'select', 'label' => __('Menu'), 'required' => true, 'display' => 'dropdown', 'options' => $menus],
+                ]]];
+
+            foreach ($view['children'] ?? [] as $i => $child) {
+                if (($child['type'] ?? null) === 'ui/actions') {
+                    $items = $child['props']['items'];
+                    // Before the way back, after the ways forward.
+                    $at = array_key_last($items) !== null && ($items[array_key_last($items)]['variant'] ?? null) === 'ghost' ? array_key_last($items) : count($items);
+                    array_splice($items, $at, 0, [$add]);
+                    $view['children'][$i]['props']['items'] = array_slice($items, 0, 6);
+
+                    return $view;
+                }
+            }
+
+            return $view;
+        });
+    }
+
     /** One collection's place: its name and size, its New button, and its entries: for the site's pages, also those features bring. */
     private function view(string $handle, User $user): array
     {
@@ -110,12 +153,28 @@ final class ContentModule extends Plugin
             return Views::notFound('collection');
         }
 
+        // A global is its values: its one entry, or the way to give it them.
+        if ($collection->isGlobal()) {
+            $entry = $this->cms()->entries()->query()->collection($handle)->where('origin_id', 'null', null)->first();
+
+            return ['type' => 'ui/redirect', 'props' => ['to' => $entry ? "/content/{$handle}/{$entry->id}" : "/content/{$handle}/new"]];
+        }
+
         $view = new EntriesView($this->cms(), self::PER_PAGE);
         // How many there are in the language on view, whatever narrows the list: "0" beside a name read as "there are none", next to a filter that found nothing.
         $count = ['source' => ['ability' => 'entries/list', 'input' => ['collection' => $handle, 'locale' => '{query.locale}', 'perPage' => 1, 'fields' => [], ...($handle === 'pages' && $this->cms()->builtinPages()->all() !== [] ? ['builtin' => true] : [])]], 'at' => 'total'];
         $new = [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'to' => "/content/{$handle}/new?locale={query.locale}", 'key' => 'c', 'can' => "entries.{$handle}.create"]];
-        // Several blueprints: New asks which kind first, in one small step; the collection's own fields come first.
-        if (($blueprints = $collection->blueprints()) !== []) {
+        if ($collection->isMenu()) {
+            // A link is its words and where it goes, added in a dialog over the menu: a page's title is its words unless it is given others.
+            $link = $collection->blueprint()->field('link')?->toArray() ?? ['handle' => 'link', 'type' => 'link'];
+            $new = [['label' => __('Add Link'), 'icon' => 'plus', 'variant' => 'primary', 'key' => 'c', 'can' => "entries.{$handle}.create", 'ability' => 'entries/create', 'success' => __('Link added'),
+                'input' => ['collection' => $handle, 'title' => '{values.title}', 'data' => ['link' => '{values.link}'], 'status' => 'published'],
+                'form' => ['title' => __('Add Link'), 'confirm' => __('Add Link'), 'fields' => [
+                    [...$link, 'label' => __('Link'), 'required' => true, 'autofocus' => true, 'words' => false],
+                    ['handle' => 'title', 'type' => 'text', 'label' => __('Label'), 'placeholder' => __('The page’s title')],
+                ]]]];
+        } elseif (($blueprints = $collection->blueprints()) !== []) {
+            // Several blueprints: New asks which kind first, in one small step; the collection's own fields come first.
             $new = [['label' => self::newLabel($collection->singular), 'icon' => 'plus', 'variant' => 'primary', 'key' => 'c', 'can' => "entries.{$handle}.create", 'component' => 'content/new-entry', 'props' => [
                 'collection' => $handle, 'locale' => '{query.locale}', 'title' => self::newLabel($collection->singular),
                 'kinds' => [['handle' => '', 'title' => __($collection->singular)], ...array_map(static fn (string $name, array $blueprint) => ['handle' => $name, 'title' => __($blueprint['title'])], array_keys($blueprints), $blueprints)],

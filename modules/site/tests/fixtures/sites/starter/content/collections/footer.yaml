@@ -1,0 +1,10 @@
+type: menu
+title: Footer
+singular: Link
+driver: files
+fields:
+  -
+    handle: link
+    type: link
+    label: Link
+    required: true

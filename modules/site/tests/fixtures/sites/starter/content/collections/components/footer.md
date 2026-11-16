@@ -20,7 +20,7 @@ description: 'Site name, footer menu and tagline.'
 ::::::
 :::::
 
-::::: paragraph {"id":"ftr-tagline","bind":{"text":"globals.footer.tagline","visible":"globals.footer.tagline"}}
+::::: paragraph {"id":"ftr-tagline","bind":{"text":"globals.site.tagline","visible":"globals.site.tagline"}}
 :::::
 ::::
 :::

@@ -49,7 +49,7 @@ final class SiteFiles
      * Everything the site carries, by kind, as paths inside it.
      *
      * @return array{
-     *   collections: array<string, string>, entries: array<string, list<string>>, globals: array<string, string>, menus: array<string, string>,
+     *   collections: array<string, string>, entries: array<string, list<string>>,
      *   theme: ?string, settings: ?string, custom: array<string, string>, load: ?string, fonts: array<string, string>, scripts: array<string, string>, styles: array<string, string>,
      *   lock: ?string, vendor: array<string, string>, media: array<string, string>, mediaFiles: array<string, string>,
      *   config: array<string, string>, other: array<string, list<string>>, previews: list<string>, code: bool, bytes: int
@@ -58,7 +58,7 @@ final class SiteFiles
     public function read(Site $sitePackage): array
     {
         $out = [
-            'collections' => [], 'entries' => [], 'globals' => [], 'menus' => [], 'theme' => null, 'settings' => null, 'custom' => [], 'load' => null, 'fonts' => [],
+            'collections' => [], 'entries' => [], 'theme' => null, 'settings' => null, 'custom' => [], 'load' => null, 'fonts' => [],
             'scripts' => [], 'styles' => [], 'lock' => null, 'vendor' => [], 'media' => [], 'mediaFiles' => [], 'config' => [], 'other' => [],
             'previews' => [], 'code' => false, 'bytes' => 0,
         ];
@@ -176,16 +176,6 @@ final class SiteFiles
                 $out['entries'][$m[1]][] = $m[2];
 
                 return;
-            case preg_match('#^content/globals/([^/]+)\.yaml$#D', $path, $m) && $handle($m[1]):
-                $limit('text');
-                $out['globals'][$m[1]] = $path;
-
-                return;
-            case preg_match('#^content/navigation/([^/]+)\.yaml$#D', $path, $m) && $handle($m[1]):
-                $limit('text');
-                $out['menus'][$m[1]] = $path;
-
-                return;
             case $path === 'content/styling/theme.css':
                 $limit('code');
                 $out['theme'] = $path;
@@ -273,7 +263,7 @@ final class SiteFiles
 
                 return;
             // What a plugin keeps beside the content (forms, redirects…): plain data, taken when something here asks for it.
-            case preg_match('#^content/([a-z0-9][a-z0-9_-]{0,63})(?:/.+)?\.(yaml|json|md)$#D', $path, $m) === 1 && ! in_array($m[1], ['collections', 'globals', 'navigation', 'styling', 'media'], true):
+            case preg_match('#^content/([a-z0-9][a-z0-9_-]{0,63})(?:/.+)?\.(yaml|json|md)$#D', $path, $m) === 1 && ! in_array($m[1], ['collections', 'styling', 'media'], true):
                 $limit('text');
                 $out['other'][$m[1]][] = $path;
 

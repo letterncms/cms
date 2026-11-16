@@ -74,23 +74,30 @@ final class UsersViewsTest extends TestCase
         }
     }
 
-    public function test_globals_and_collections_are_views(): void
+    public function test_every_kind_of_collection_is_a_view(): void
     {
         $admin = $this->admin();
         $ctx = AbilityContext::forUser($admin, 'admin');
-        $set = $this->cms()->abilities()->execute('globals/save', ['title' => 'Opening Hours', 'fields' => [['handle' => 'text', 'type' => 'text', 'label' => 'Text']]], $ctx);
-        $this->assertSame('opening_hours', $set['handle']);
-        $this->assertSame(['text' => 'Mon–Fri'], array_intersect_key($this->cms()->abilities()->execute('globals/set', ['handle' => 'opening_hours', 'values' => ['text' => 'Mon–Fri']], $ctx), ['text' => true]));
+        $this->cms()->abilities()->execute('collections/save', ['handle' => 'opening_hours', 'definition' => ['type' => 'global', 'title' => 'Opening Hours', 'fields' => [['handle' => 'text', 'type' => 'text', 'label' => 'Text']]]], $ctx);
 
-        $this->assertSame('Opening Hours', $this->resolved('global', $admin, ['handle' => 'opening_hours'])['props']['title']);
-        $this->assertSame('globals/fields', $this->resolved('globals-fields', $admin, ['handle' => 'opening_hours'])['type']);
-        $this->assertContains('ui/records', self::types($this->resolved('globals', $admin)));
-        $this->assertContains('collections/new', self::types($this->resolved('collections-new', $admin)));
+        // A global is its values: with none yet, it opens where they are given; then on them.
+        $this->assertSame(['ui/redirect', '/content/opening_hours/new'], [($view = $this->resolved('content', $admin, ['collection' => 'opening_hours']))['type'], $view['props']['to']]);
+        $values = $this->cms()->abilities()->execute('entries/create', ['collection' => 'opening_hours', 'title' => 'Opening Hours', 'data' => ['text' => 'Mon–Fri'], 'status' => 'published'], $ctx);
+        $this->assertSame("/content/opening_hours/{$values['id']}", $this->resolved('content', $admin, ['collection' => 'opening_hours'])['props']['to']);
 
-        foreach ($this->cms()->collections()->all() as $handle => $collection) {
-            $this->assertSame($collection->system ? 'ui/page' : 'collections/blueprint', $this->resolved('collections-collection', $admin, ['handle' => $handle])['type']);
+        foreach (array_keys(\Cms\Content\Collections\Collection::KINDS) as $kind) {
+            $this->assertContains('ui/records', self::types($this->resolved($kind, $admin)), $kind);
+            $this->assertContains('collections/new', self::types($this->resolved("{$kind}-new", $admin)), $kind);
         }
 
+        // Each is edited where its kind is listed, and nowhere else.
+        foreach ($this->cms()->collections()->all() as $handle => $collection) {
+            foreach (array_keys(\Cms\Content\Collections\Collection::KINDS) as $kind) {
+                $this->assertSame(! $collection->system && $collection->kind() === $kind ? 'collections/blueprint' : 'ui/page', $this->resolved("{$kind}-collection", $admin, ['handle' => $handle])['type'], "{$handle} in {$kind}");
+            }
+        }
+
+        $this->assertSame(['opening_hours'], array_column($this->cms()->abilities()->execute('collections/editable', ['kind' => 'globals'], $ctx), 'handle'));
         $this->assertSame([], array_filter($this->cms()->abilities()->execute('collections/editable', [], $ctx), fn ($c) => $this->cms()->collections()->find($c['handle'])->system));
     }
 }

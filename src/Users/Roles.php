@@ -24,7 +24,7 @@ final class Roles
         'editor' => [
             'label' => 'Editor',
             'description' => 'Manage all content, media and the site build.',
-            'permissions' => ['admin.access', 'entries.*', 'globals.*', 'media.*', 'navigation.*'],
+            'permissions' => ['admin.access', 'entries.*', 'media.*'],
         ],
         'author' => [
             'label' => 'Author',

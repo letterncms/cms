@@ -47,6 +47,8 @@ export interface BlueprintKind {
   /** The crumbs to the editor, once it has loaded; `back` and the definition's title by default. */
   crumbs?: (def: BlueprintDefinition) => Crumb[]
   entries?: string
+  /** What the button to them says: "Entries" unless they are called otherwise (terms, links). */
+  entriesLabel?: string
   /**
    * Its items come in kinds, each with fields of its own beside the first (`blueprints` of the definition):
    * the Fields tab then switches between them. Answers how many items were made with one.
@@ -126,7 +128,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       await run(...kind.save(def))
       setDirty(false)
       // The places drawn from a blueprint (a collection's columns) change with it.
-      invalidate('collections/', 'globals/', 'entries/', 'users/', 'user-fields/', 'views/')
+      invalidate('collections/', 'entries/', 'users/', 'user-fields/', 'views/')
       await loadManifest()
       kind.saved?.(def)
     } catch (e) {
@@ -153,7 +155,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       if (!(await confirm({ title: t('Delete “{title}”?', { title: def?.title }), description: request[2], confirm: request[3] ?? t('Delete'), danger: true }))) return
       await run(request[0], request[1])
       setDirty(false)
-      invalidate('collections/', 'globals/', 'entries/', 'content/', 'views/')
+      invalidate('collections/', 'entries/', 'content/', 'views/')
       try { await loadManifest() } catch (e) { toast.error(e) }
       navigate(kind.back.to)
     } catch (e) {
@@ -248,7 +250,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       width={settings.length > 0 && !kind.settingsSections ? 'wide' : 'narrow'}
       title={kind.settingsSections ? def.title : undefined}
       crumbs={kind.crumbs?.(def) ?? [kind.back, { label: kind.remove ? def.title : t('Profile Fields') }]}
-      actions={kind.entries && <Button icon="arrow-up-right" onClick={() => navigate(kind.entries!)}>{t('Entries')}</Button>}
+      actions={kind.entries && <Button icon="arrow-up-right" onClick={() => navigate(kind.entries!)}>{kind.entriesLabel ?? t('Entries')}</Button>}
     >
       {removeError && <Notice tone="danger" className="mb-5" action={<Button size="xs" disabled={saving} loading={removing} onClick={remove}>{t('Try Again')}</Button>}>{removeError}</Notice>}
       <RowUsage.Provider value={kind.rows ?? null}>

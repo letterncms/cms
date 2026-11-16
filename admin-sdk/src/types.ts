@@ -177,8 +177,8 @@ export interface CollectionSummary {
   /** The create button's label in the user's language ("New Page", "Nieuw bericht"). */
   newLabel: string
   icon: string
-  /** What its entries are: the site's content, or the terms of a taxonomy (categories nest, tags are typed). */
-  type: 'entries' | 'categories' | 'tags'
+  /** What its entries are: the site's content, the terms of a taxonomy (categories nest, tags are typed), a global's values (one entry) or a menu's links. */
+  type: 'entries' | 'categories' | 'tags' | 'global' | 'menu'
   structure: 'list' | 'tree' | 'dated'
   defaultView?: 'table' | 'grid' | 'calendar'
   routable: boolean
@@ -260,7 +260,6 @@ export interface Manifest {
   site: { name: string; url: string; /** What the site says of itself. */ description?: string; /** The site's favicon, or null. */ favicon?: string | null; /** The sites this site can be, for whoever may switch (the site module). */ sites?: { handle: string; name: string; active: boolean; preview: string | null }[]; locales: string[]; defaultLocale: string; timezone: string; /** The admin's accent for everyone, `#rrggbb`, or null for the brand's own: Settings → General. */ accent?: string | null }
   user: User & { grants: string[]; preferences: Record<string, unknown> }
   collections: CollectionSummary[]
-  globals: ({ handle: string; title: string; icon: string } & RecordTimestamps)[]
   fieldTypes: FieldTypeDef[]
   /** Settings pages. One with a `home` is the Settings tab of that sidebar item's screen (its nav item's path leads there). */
   settings: { namespace: string; label: string; icon: string; description: string; package: string | null; home?: string | null }[]

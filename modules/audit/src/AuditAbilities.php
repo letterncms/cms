@@ -430,10 +430,6 @@ final class AuditAbilities
             return [$saved !== [] && count($saved) <= 2 ? implode(', ', $saved) : $settings[$namespace], null];
         }
 
-        if (str_starts_with($ability, 'globals/') && $ability !== 'globals/delete' && is_string($input['handle'] ?? null) && ($set = $this->cms->globals()->find($input['handle']))) {
-            return [$set->title, '/globals/'.$set->handle];
-        }
-
         if ($ability === 'packages/update-auto' && is_bool($input['on'] ?? null)) {
             return [$input['on'] ? __('On') : __('Off'), null];
         }

@@ -11,11 +11,9 @@ use Cms\Cms;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Content\Entries\FileDriver;
-use Cms\Content\Globals\GlobalContent;
 use Cms\Modules\Media\MediaItem;
 use Cms\Modules\Collections\CollectionAbilities;
 use Cms\Modules\Media\MediaManifest;
-use Cms\Modules\Navigation\Menus;
 use Cms\Modules\Site\Styling\Code;
 use Cms\Modules\Site\Styling\Styling;
 use Cms\Modules\Site\Styling\StylingException;
@@ -30,15 +28,15 @@ use Throwable;
 
 /**
  * Copies a site into this site, once. `design` brings what a site looks like: the stylesheet, fonts, templates,
- * components, scripts, styles and libraries. `full` adds what it holds: collections, entries, globals,
- * menus, media, languages and the settings a site may carry.
+ * components, scripts, styles and libraries. `full` adds what it holds: collections (globals and menus
+ * among them), entries, media, languages and the settings a site may carry.
  *
  * Nothing the site has is changed without being asked for. plan() names every step, and what already
  * exists under the same name is a clash: the apply refuses while there is one, unless it is told to
  * `skip` (the site's stays), `replace` (the site's takes its place, after a snapshot) or `rename` (the
  * site's entry comes in beside it under a new slug; what has no second name stays the site's).
  * Entries go through the entry service like any others, under new ids, and everything that names one
- * (a relation, a parent, a translation, a menu item, a link) follows.
+ * (a relation, a parent, a translation, a link) follows.
  */
 final class SiteApplier
 {
@@ -136,7 +134,7 @@ final class SiteApplier
     /** The site as it is, kept aside under the handle of the site it is (or `site`), unless there is nothing in it yet. */
     private function keep(?string $active): ?Site
     {
-        if (! glob(content_path('collections').'/*.yaml') && ! glob(content_path('globals').'/*.yaml')) {
+        if (! glob(content_path('collections').'/*.yaml')) {
             return null;
         }
 
@@ -201,8 +199,6 @@ final class SiteApplier
         $this->planEntries($run);
 
         if ($run['full']) {
-            $this->planGlobals($run);
-            $this->planMenus($run);
             $this->planSettings($run);
             $this->planOther($run);
         }
@@ -271,8 +267,6 @@ final class SiteApplier
                 $this->writeDesign($run);
                 $this->writeCollections($run, $context);
                 $this->writeEntries($run, $user);
-                $this->writeGlobals($run);
-                $this->writeMenus($run);
                 $this->writeOther($run);
                 $this->writeSettings($run);
             });
@@ -512,10 +506,12 @@ final class SiteApplier
                 $under = $parent['key'] ?? $entry->locale.'|';
                 $key = $under.'/'.$entry->slug;
                 $found = $parent !== null && in_array($parent['action'], ['create', 'rename'], true) ? null : ($existing[$key] ?? null);
-                $step = $this->step($run, 'entry', $name, $file, $found !== null, false, ['entry' => $entry, 'collection' => $handle, 'slug' => $entry->slug, 'title' => $entry->title !== '' ? $entry->title : $entry->slug], renamable: true);
+                // A global holds one entry in a language, whatever it is called: the site's values are that entry's, never a second one beside it.
+                $collection->isGlobal() && $found ??= array_values(array_filter($existing, static fn (Entry $e) => $e->locale === $entry->locale && ($e->originId === null) === ($entry->originId === null)))[0] ?? null;
+                $step = $this->step($run, 'entry', $name, $file, $found !== null, false, ['entry' => $entry, 'collection' => $handle, 'slug' => $entry->slug, 'title' => $entry->title !== '' ? $entry->title : $entry->slug], renamable: ! $collection->isGlobal());
 
                 if ($step['action'] === 'rename') {
-                    for ($i = 2; isset($existing[$under.'/'.$entry->slug.'-'.$i]) || isset($planned['#'.$under.'/'.$entry->slug.'-'.$i]); $i++);
+                    for ($i = 2; isset($existing[$under.'/'.$entry->slug.'-'.$i]) || isset($planned['#'.$handle.'#'.$under.'/'.$entry->slug.'-'.$i]); $i++);
                     $step['slug'] = $step['as'] = $entry->slug.'-'.$i;
                     $key = $under.'/'.$step['slug'];
                     in_array($handle, self::DESIGN, true) && $run['renamed'][$handle][$entry->slug] = $step['slug'];
@@ -528,42 +524,10 @@ final class SiteApplier
                 $late && $step['note'] = __('Its end date has passed: it comes in as a draft.');
                 $run['ids'][$entry->id] = $step['id'];
                 $planned[$entry->id] = ['action' => $step['action'], 'id' => $step['id'], 'key' => $key];
-                $planned['#'.$key] = true;
+                // Taken in this collection: another's entries may have the same slugs (a menu's link to Home beside the page).
+                $planned['#'.$handle.'#'.$key] = true;
                 $run['steps'][] = $step;
             }
-        }
-    }
-
-    private function planGlobals(array &$run): void
-    {
-        foreach ($run['contents']['globals'] as $handle => $path) {
-            $raw = $this->files->yaml($run['site'], $path);
-            $mine = $this->cms->globals()->find($handle);
-            $same = $mine !== null && [$mine->title, $mine->icon, $mine->fields, $mine->data, $mine->locales] == [(string) ($raw['title'] ?? ucfirst($handle)), (string) ($raw['icon'] ?? 'globe'), array_values((array) ($raw['fields'] ?? [])), (array) ($raw['data'] ?? []), (array) ($raw['locales'] ?? [])];
-
-            try {
-                GlobalContent::fromArray($handle, $raw)->blueprint()->schema();
-            } catch (Throwable $e) {
-                throw AbilityException::invalid(__('The site’s global “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
-            }
-
-            $run['steps'][] = $this->step($run, 'global', $handle, $path, $mine !== null, $same, ['raw' => $raw, 'title' => (string) ($raw['title'] ?? ucfirst($handle))]);
-        }
-    }
-
-    private function planMenus(array &$run): void
-    {
-        foreach ($run['contents']['menus'] as $handle => $path) {
-            $raw = $this->files->yaml($run['site'], $path);
-
-            try {
-                // What saving the menu checks, but whether its entries exist yet: they are the site's, made as it applies.
-                app(Menus::class)->check(['title' => (string) ($raw['title'] ?? ''), 'maxDepth' => (int) ($raw['max_depth'] ?? 3), 'items' => (array) ($raw['items'] ?? [])]);
-            } catch (Throwable $e) {
-                throw AbilityException::invalid(__('The site’s menu “:handle” can’t be used: :problem', ['handle' => $handle, 'problem' => $e->getMessage()]));
-            }
-
-            $run['steps'][] = $this->step($run, 'menu', $handle, $path, is_file(content_path("navigation/{$handle}.yaml")), false, ['raw' => $raw, 'title' => (string) ($raw['title'] ?? ucfirst($handle))]);
         }
     }
 
@@ -904,43 +868,6 @@ final class SiteApplier
         }
     }
 
-    private function writeGlobals(array $run): void
-    {
-        foreach ($this->doing($run, 'global') as $step) {
-            $raw = $step['raw'];
-            $raw['data'] = $this->remap((array) ($raw['data'] ?? []), $run);
-            $raw['locales'] = array_intersect_key($this->remap((array) ($raw['locales'] ?? []), $run), array_flip($run['locales']));
-            $set = GlobalContent::fromArray($step['name'], array_diff_key($raw, ['published_at' => 1, 'updated_at' => 1]));
-            $this->cms->globals()->save($set);
-            $this->cms->hooks()->dispatch('globals.saved', $set);
-        }
-    }
-
-    private function writeMenus(array $run): void
-    {
-        $menus = app(Menus::class);
-
-        foreach ($this->doing($run, 'menu') as $step) {
-            $raw = $step['raw'];
-            $items = $this->remap((array) ($raw['items'] ?? []), $run);
-            $known = array_keys($menus->entriesById($items));
-            // A link to an entry that was not brought (its language is off, its collection missing) has nowhere to go.
-            $keep = static function (array $items) use (&$keep, $known): array {
-                $out = [];
-
-                foreach ($items as $item) {
-                    if (is_array($item) && (empty($item['entry']) || in_array(strtolower((string) $item['entry']), $known, true))) {
-                        $out[] = [...$item, 'newTab' => ! empty($item['new_tab']) || ! empty($item['newTab']), 'children' => $keep((array) ($item['children'] ?? []))];
-                    }
-                }
-
-                return $out;
-            };
-
-            $menus->save($step['name'], ['title' => (string) ($raw['title'] ?? ''), 'maxDepth' => (int) ($raw['max_depth'] ?? 3), 'items' => $keep($items)]);
-        }
-    }
-
     private function writeSettings(array $run): void
     {
         $values = [];
@@ -963,7 +890,7 @@ final class SiteApplier
 
     /**
      * Data as it is on this site: every id of a site's entry, wherever it stands (a relation, a link, a block's
-     * prop, a menu item), is the id that entry has here, and a block that shows a component, or an entry that
+     * prop), is the id that entry has here, and a block that shows a component, or an entry that
      * names a template, follows one that came in under a new name.
      */
     private function remap(array $data, array $run): array
@@ -1000,12 +927,11 @@ final class SiteApplier
 
     /**
      * Whoever applies a site may do what it does: each kind of thing it writes asks for the permission the
-     * ability that writes it asks for (collections/save, entries of each collection, globals, menus, media,
-     * languages). Refused before anything is written, naming what is missing.
+     * ability that writes it asks for (collections/save, entries of each collection, media, languages). Refused before anything is written, naming what is missing.
      */
     private function mayWrite(array $steps, AbilityContext $context): void
     {
-        $abilities = ['language' => 'languages/create', 'collection' => 'collections/save', 'global' => 'globals/save', 'menu' => 'navigation/create', 'media' => 'media/import'];
+        $abilities = ['language' => 'languages/create', 'collection' => 'collections/save', 'media' => 'media/import'];
         $missing = [];
 
         foreach ($steps as $step) {

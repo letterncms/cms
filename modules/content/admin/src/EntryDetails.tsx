@@ -42,6 +42,8 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
   const parent = useAbility<EntrySummary[]>('entries/get-many', { ids: entry?.parentId ? [entry.parentId] : [] }, { enabled: builder && !!entry?.parentId })
   // A built-in page (sign in, checkout) keeps the address its feature gives it: shown, not edited.
   const builtin = !!summary?.within
+  // A global's values are one entry, called what the global is: it has no handle or author of its own.
+  const global = summary?.type === 'global'
   const builtinGroups = useAbility<BuiltinGroup[]>('pages/builtin', {}, { enabled: builtin })
   const builtinPage = builtinGroups.data?.find((group) => group.collection === collection.handle)?.pages.find((page) => page.handle === (entry?.slug ?? working.slug))
   const date = (value: string) => new Intl.DateTimeFormat(locale(), {
@@ -106,7 +108,7 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
                 : <span className="truncate px-1 text-xs text-faint">{builtinGroups.isLoading ? '…' : t('Shown inside other pages')}</span>}
             </span>
           </div>
-        ) : <PanelRow field={{ handle: 'slug', type: 'text', label: collection.route ? t('URL') : t('Handle') }} error={errors.slug}>
+        ) : !global && <PanelRow field={{ handle: 'slug', type: 'text', label: collection.route ? t('URL') : t('Handle') }} error={errors.slug}>
           <Fields
             bare
             fields={[collection.route
@@ -118,7 +120,7 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
             disabled={!editable}
           />
         </PanelRow>}
-        {!system && (
+        {!system && !global && (
           <PanelRow field={{ handle: 'authorId', type: 'person', label: t('Author') }} error={errors.authorId}>
             <PersonPicker
               id="f-authorId"
