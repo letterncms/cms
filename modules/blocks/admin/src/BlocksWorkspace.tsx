@@ -1,5 +1,5 @@
 import { events, plural, t, useScreenContext, type EntryEditorProps } from '@letterncms/sdk'
-import { Button, Dialog, IconButton, InspectorPanel, PanelHeader, Popover, QueryError, ScreenSidebar, Segmented, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
+import { Button, Dialog, IconButton, InspectorPanel, PanelHeader, Popover, QueryError, ScreenSidebar, Segmented, Spinner, UndoRedo, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorProvider, useCatalog, useEditorContext, type DocRef } from './core/context'
@@ -142,8 +142,8 @@ function Workspace({ props }: { props: EntryEditorProps }) {
       </> : <Popover open={insert} onOpenChange={setInsert} align="start" trigger={<IconButton icon="plus" label={t('Insert Block')} />} className="!p-0">
         <Inserter types={[...types.values()]} query={query} onQuery={setQuery} onChoose={choose} onClose={() => setInsert(false)} allowed={(type) => !!destination(type.name)} />
       </Popover>)}
-      <IconButton icon="undo" label={t('Undo')} disabled={!undo} onClick={store.undo} />
-      <IconButton icon="redo" label={t('Redo')} disabled={!redo} onClick={store.redo} />
+      {/* The canvas hears ⌘Z itself (LiveEditor names it); these are the same two buttons as every editor's. */}
+      <UndoRedo history={{ undo: store.undo, redo: store.redo, canUndo: undo, canRedo: redo }} keys="own" />
       <Devices />
     </>, props.toolbar)}
     <ScreenSidebar title={t('Outline||structure')} backTo={props.listPath} backLabel={props.listLabel ?? props.collection.title}><Layers /></ScreenSidebar>

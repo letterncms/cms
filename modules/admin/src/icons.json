@@ -226,5 +226,8 @@
  "scissors": "ph:scissors",
  "faders": "ph:faders",
  "animated": "ph:path",
- "interactive": "ph:cursor-click"
+ "interactive": "ph:cursor-click",
+ "folder-open": "ph:folder-open",
+ "file-js": "ph:file-js",
+ "file-css": "ph:file-css"
 }

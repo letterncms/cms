@@ -525,24 +525,29 @@ final class StylingTest extends TestCase
 
     public function test_each_save_is_a_version_to_go_back_to(): void
     {
-        Files::deleteDirectory(storage_path('styling-versions/list'));
         $before = $this->styling()->theme();
+        $admin = AbilityContext::forUser($this->userWithRole('admin'));
+        $save = fn (array $in) => $this->cms()->abilities()->execute('styling/update', $in, $admin);
 
-        $this->ability('styling/update', ['css' => self::THEME]);
-        $saved = $this->styling()->theme();
-        $this->ability('styling/update', ['transition' => ['type' => 'fade']]);
+        $save(['css' => self::THEME]);
+        $save(['transition' => ['type' => 'fade']]);
         // A save that changes nothing is no version.
-        $this->ability('styling/update', ['transition' => ['type' => 'fade']]);
+        $save(['transition' => ['type' => 'fade']]);
 
-        $versions = $this->ability('styling-versions/list');
-        // The styling as it was before the first save, then each save, newest first; the newest is what the site has.
-        $this->assertCount(3, $versions);
-        $this->assertSame([true, false, false], array_column($versions, 'current'));
-        $this->assertSame('fade', $this->ability('styling-versions/get', ['id' => $versions[0]['id']])['transition']['type']);
-        $this->assertSame($saved, $this->ability('styling-versions/get', ['id' => $versions[1]['id']])['css']);
-        $this->assertSame($before, $this->ability('styling-versions/get', ['id' => $versions[2]['id']])['css']);
+        $versions = $this->ability('revisions/list', ['kind' => 'styling', 'subject' => 'theme']);
+        // The styling as it was before the first save, then the saves, newest first: one person's saves in a row are one version.
+        $this->assertSame(['save', 'save'], array_column($versions, 'action'));
+        $now = $this->ability('revisions/get', ['id' => $versions[0]['id']])['snapshot'];
+        $this->assertSame(['fade', $this->styling()->theme()], [$now['transition']['type'], $now['css']]);
+        $this->assertSame($before, $this->ability('revisions/get', ['id' => $versions[1]['id']])['snapshot']['css']);
+
+        // Going back is a version of its own, and puts the transition back as it was: no fade.
+        $this->assertSame(['kind' => 'styling', 'subject' => 'theme'], $this->ability('revisions/restore', ['revisionId' => $versions[1]['id']]));
+        $this->assertSame($before, $this->styling()->theme());
+        $this->assertSame($this->ability('revisions/get', ['id' => $versions[1]['id']])['snapshot']['transition'], $this->styling()->settings()['transition']);
+        $this->assertSame(['restore', 'save', 'save'], array_column($this->ability('revisions/list', ['kind' => 'styling', 'subject' => 'theme']), 'action'));
 
         $this->expectException(AbilityException::class);
-        $this->ability('styling-versions/get', ['id' => '../settings']);
+        $this->ability('revisions/get', ['id' => '../settings']);
     }
 }

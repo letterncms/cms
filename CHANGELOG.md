@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- **The Code page lists its files as they lie in `content/styling`**, in a real file tree: `theme.css`, `custom.js`, and the folders `scripts`, `styles` and `vendor` with the folders inside them. Folders open and close and stay as you left them, the arrow keys move through the tree, the **+** at the top makes a script or a stylesheet or adds a library, and a folder's own menu makes one inside it.
+- **Every file on the Code page keeps its history.** Each save is a version, as for entries: **History** in the top bar lists who saved the open file and when, an older version shows line by line what bringing it back changes, and **Restore Version** puts it back in the editor as a change you can save or undo. **Undo** and **Redo** sit beside it, as in every other editor.
+
+### Changed
+
+- **One history for everything that keeps versions.** Entries, the styling and the site's code keep their versions in the same place and show them the same way, with the same Undo and Redo. **Design** calls its versions **History** now, like the entry editor and the Code page, and saves by the same person within ten minutes are one version there too. The styling's versions kept so far move into it.
+- **Breaking.** `revisions/list` takes `kind` and `subject` instead of `entryId` (`{"kind": "entry", "subject": "<entry id>"}`, `{"kind": "styling", "subject": "theme"}`, `{"kind": "code", "subject": "scripts/hero.js"}`), and `revisions/get` answers with `kind` and `subject` instead of `entryId`. `revisions/restore` restores a version of any kind.
+
+### Removed
+
+- **Breaking.** The abilities `styling-versions/list` and `styling-versions/get`: use `revisions/list` with `kind` `styling` and `subject` `theme`, and `revisions/get`. A plugin that kept entry revisions through `Cms\Content\Revisions\Revisions` uses `Cms\Revisions\Revisions`, which names what a version is of by kind and subject.
+
 ## 0.50.0 (2026-11-16)
 
 ### Changed

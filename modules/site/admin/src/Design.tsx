@@ -1,8 +1,7 @@
-import { CmsError, can, invalidate, navigate, run, t, timeAgo, useAbility } from '@letterncms/sdk'
-import { EmptyState, IconButton, Notice, Popover, Pressable, QueryError, SaveBar, Segmented, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useShortcut, useTheme } from '@letterncms/ui'
+import { CmsError, can, invalidate, navigate, run, t, useAbility } from '@letterncms/sdk'
+import { IconButton, Notice, QueryError, SaveBar, Segmented, Spinner, Tooltip, Topbar, UndoRedo, VersionsButton, cn, confirm, prompt, toast, useTheme, useUndo } from '@letterncms/ui'
 import { Stylesheet, StylingProvider, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useHistory } from './history'
 import { type Editing } from './parts'
 import { SitePreview, useDraftCompile, type Viewport } from './preview'
 import { Classes, stylePath, stylesPlace } from './classes'
@@ -116,9 +115,16 @@ export default function Design({ params }: { params: Record<string, string> }) {
   }, [place, ready])
   // Every change is a step back, as in the editor: the stylesheet and the transition together.
   const state = useMemo(() => (css !== undefined && transition ? { css, transition } : undefined), [css, transition])
-  const history = useHistory<State>(state, (next) => setDraft({ css: next.css, transition: next.transition }), sameState)
-  useShortcut('mod+z', history.undo, history.canUndo && !readOnly, t('Undo'))
-  useShortcut('mod+shift+z', history.redo, history.canRedo && !readOnly, t('Redo'))
+  const history = useUndo<State>(state, (next) => setDraft({ css: next.css, transition: next.transition }), sameState)
+  // A version from the history opens in the draft, to look at and save, or to undo.
+  const openVersion = async (id: string) => {
+    try {
+      const { snapshot } = await run<{ snapshot: State }>('revisions/get', { id })
+      setDraft({ css: snapshot.css, transition: snapshot.transition })
+    } catch (e) {
+      toast.error(e)
+    }
+  }
   const kernel = source.data?.files.cms
   const defaults = useMemo(() => {
     const out = new Map<string, string>()
@@ -162,7 +168,7 @@ export default function Design({ params }: { params: Record<string, string> }) {
   const sub = section === 'classes' ? stylesPlace(sheet, rest) : null
 
   const refresh = () => {
-    invalidate('styling/')
+    invalidate('styling/', 'revisions/')
     frame.current?.contentWindow?.location.reload()
   }
 
@@ -271,9 +277,8 @@ export default function Design({ params }: { params: Record<string, string> }) {
             <span className="md:hidden"><Tooltip content={t('Preview')}><IconButton icon="eye" label={t('Preview')} title={undefined} active={previewing} aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} /></Tooltip></span>
             {/* As the editor has them: a step back and forward, and the versions the site saved. */}
             {!readOnly && <>
-              <Tooltip content={t('Undo')} shortcut="mod+z"><IconButton icon="undo" label={t('Undo')} title={undefined} disabled={!history.canUndo} onClick={history.undo} /></Tooltip>
-              <Tooltip content={t('Redo')} shortcut="mod+shift+z"><IconButton icon="redo" label={t('Redo')} title={undefined} disabled={!history.canRedo} onClick={history.redo} /></Tooltip>
-              <span className="max-sm:hidden"><Versions onOpen={(version) => setDraft({ css: version.css, transition: version.transition })} /></span>
+              <UndoRedo history={history} />
+              <span className="max-sm:hidden"><VersionsButton of={{ kind: 'styling', subject: 'theme' }} onOpen={(version) => void openVersion(version.id)} /></span>
             </>}
             {/* A phone is its own width: the other screens are for a window with room to draw them. */}
             <span className="max-md:hidden"><Segmented size="xs" aria-label={t('Screen')} value={viewport} onChange={setViewport} options={[{ value: 'desktop', icon: 'desktop', title: t('Desktop') }, { value: 'tablet', icon: 'tablet', title: t('Tablet') }, { value: 'phone', icon: 'phone', title: t('Phone') }]} /></span>
@@ -306,46 +311,6 @@ export default function Design({ params }: { params: Record<string, string> }) {
   )
 }
 
-/** The versions the site saved, newest first: one opens in the draft, to look at and save, or to undo. */
-function Versions({ onOpen }: { onOpen: (version: State) => void }) {
-  const [open, setOpen] = useState(false)
-  const list = useAbility<{ id: string; at: string; user: string | null; current: boolean }[]>('styling-versions/list', {}, { enabled: open })
-  const pick = async (id: string) => {
-    try {
-      onOpen(await run<State>('styling-versions/get', { id }))
-      setOpen(false)
-    } catch (e) {
-      toast.error(e)
-    }
-  }
-  return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-      align="end"
-      className="w-72 !p-1"
-      trigger={<span><Tooltip content={t('Versions')}><IconButton icon="history" label={t('Versions')} title={undefined} active={open} /></Tooltip></span>}
-    >
-      <div className="cms-label px-2 pb-1 pt-1.5">{t('Versions')}</div>
-      {list.isPending ? <div className="grid h-16 place-items-center text-faint"><Spinner size={14} /></div>
-        : list.isError ? <QueryError compact onRetry={() => void list.refetch()} retrying={list.isRefetching} />
-        : list.data.length === 0 ? <EmptyState compact icon="history" title={t('No versions yet')} />
-        : (
-          <div className="max-h-80 space-y-px overflow-y-auto">
-            {list.data.map((version) => (
-              <Pressable key={version.id} compact disabled={version.current} onClick={() => void pick(version.id)} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm enabled:hover:bg-hover">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-text">{timeAgo(version.at)}</span>
-                  {version.user && <span className="block truncate text-xs text-muted">{version.user}</span>}
-                </span>
-                {version.current && <span className="shrink-0 text-xs text-muted">{t('Current')}</span>}
-              </Pressable>
-            ))}
-          </div>
-        )}
-    </Popover>
-  )
-}
 
 /** The preview, never narrower on a desktop than the site's own desktop: its `lg` screen, as the draft's theme has it. */
 function Preview(props: Omit<Parameters<typeof SitePreview>[0], 'desktop'>) {

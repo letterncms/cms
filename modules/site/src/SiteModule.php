@@ -35,7 +35,7 @@ use Cms\Modules\Site\Styling\Fonts;
 use Cms\Modules\Site\Styling\HttpVendorFetcher;
 use Cms\Modules\Site\Styling\Styling;
 use Cms\Modules\Site\Styling\StylingException;
-use Cms\Modules\Site\Styling\Versions;
+use Cms\Modules\Site\Styling\History;
 use Cms\Modules\Site\Styling\Vendor;
 use Cms\Modules\Site\Styling\VendorAbilities;
 use Cms\Modules\Site\Styling\VendorFetcher;
@@ -84,7 +84,7 @@ final class SiteModule extends Plugin
         $this->routes();
         $this->settingsSchema();
         $this->abilities();
-        CodeAbilities::register($this->cms(), fn () => $this->app->make(Code::class));
+        CodeAbilities::register($this->cms(), fn () => $this->app->make(Code::class), fn () => $this->app->make(History::class));
         VendorAbilities::register($this->cms(), fn () => $this->app->make(Vendor::class), fn () => $this->app->make(Code::class));
         $this->buildTriggers();
         $this->stylingTriggers();
@@ -601,7 +601,8 @@ final class SiteModule extends Plugin
         $abilities = $this->cms()->abilities();
         $builder = fn () => $this->app->make(SiteBuilder::class);
         $styling = fn () => $this->app->make(Styling::class);
-        $versions = fn () => $this->app->make(Versions::class);
+        $history = fn () => $this->app->make(History::class);
+        History::register($this->app->make(\Cms\Revisions\Revisions::class), $history);
 
         $abilities->register('site/build', [
             'label' => 'Publish Site',
@@ -674,7 +675,7 @@ final class SiteModule extends Plugin
             Change the site’s styling. `css` replaces the whole stylesheet (content/styling/theme.css): read it with styling/get, change it and send all of it back. It is Tailwind CSS v4 and starts `@import "tailwindcss"; @import "cms";`. Change a colour, font or size in `@theme` (--color-primary: #0f766e; a dark side as light-dark(#0f766e, #5eead4)), an element in `@layer base` (h2 { @apply text-3xl font-semibold; }), and add a class of the site’s own as `@utility name { @apply …; }`, which blocks then carry in `class` with any variant. For example, a new accent colour and a card:
             @theme { --color-accent: #e11d48; }
             @utility card { @apply rounded-xl border border-border bg-raised p-6 hover:border-accent; }
-            A stylesheet Tailwind cannot compile is refused with Tailwind’s message, and nothing is saved. `fonts` replaces the font faces (styling/fonts-import adds a family for you). `transition` is merged: name only what changes, null puts a setting back to its default. The CSS is compiled at once and the site rebuilds.
+            A stylesheet Tailwind cannot compile is refused with Tailwind’s message, and nothing is saved. `fonts` replaces the font faces (styling/fonts-import adds a family for you). `transition` is merged: name only what changes, null puts a setting back to its default. The CSS is compiled at once and the site rebuilds. Each save is kept as a version: revisions/list with kind `styling` and subject `theme`, and revisions/restore to go back to one.
             TXT,
             'permission' => 'settings.manage',
             'input' => ['type' => 'object', 'properties' => [
@@ -683,36 +684,18 @@ final class SiteModule extends Plugin
                 'transition' => ['type' => 'object', 'description' => 'Merged into the stored transition: name only what changes. null removes a setting, which then has its default (type none, duration 0.3, navigation document).', 'properties' => ['type' => ['type' => ['string', 'null'], 'enum' => ['none', 'fade', 'slide', 'scale', null]], 'duration' => ['type' => ['number', 'null']], 'navigation' => ['type' => ['string', 'null'], 'enum' => ['document', 'client', null], 'description' => 'client: links to pages of the site swap the page without a page load, inside the transition, so blocks with `persist` live on across pages. document (default): the browser loads every page.']]],
             ]],
             'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
-            'handler' => static fn (array $in, AbilityContext $ctx) => $guard(static function () use ($in, $ctx, $styling, $versions) {
-                $before = ['css' => $styling()->theme(), 'transition' => $styling()->settings()['transition']];
-                // The stylesheet first: when it is refused, nothing of the change is saved.
-                isset($in['css']) && $styling()->saveTheme((string) $in['css']);
-                $settings = array_intersect_key($in, ['fonts' => 1, 'transition' => 1]);
-                $settings !== [] && $styling()->saveSettings($settings);
-                $styling()->saved();
-                $versions()->record($ctx->user, $before);
+            'handler' => static fn (array $in, AbilityContext $ctx) => $guard(static function () use ($in, $ctx, $styling, $history) {
+                // Kept as a version of the styling (revisions/list kind styling): restore one with revisions/restore.
+                $history()->saveStyling(static function () use ($in, $styling) {
+                    // The stylesheet first: when it is refused, nothing of the change is saved.
+                    isset($in['css']) && $styling()->saveTheme((string) $in['css']);
+                    $settings = array_intersect_key($in, ['fonts' => 1, 'transition' => 1]);
+                    $settings !== [] && $styling()->saveSettings($settings);
+                    $styling()->saved();
+                }, $ctx->user);
 
                 return ['saved' => true, 'stylesheet' => $styling()->stylesheet()];
             }),
-        ]);
-
-        $abilities->register('styling-versions/list', [
-            'label' => 'Styling Versions',
-            'description' => 'The styling as it was saved, newest first: each save of the stylesheet or the page transition, who saved it and when. `current` is what the site has now. Read one with styling-versions/get; to go back to it, send its css and transition to styling/update.',
-            'permission' => 'settings.manage',
-            'annotations' => ['readOnly' => true],
-            'output' => Shape::of([['id' => Shape::STRING, 'at' => Shape::STRING, 'user' => Shape::STRING_OR_NULL, 'current' => Shape::BOOLEAN]]),
-            'handler' => static fn () => $versions()->list(),
-        ]);
-
-        $abilities->register('styling-versions/get', [
-            'label' => 'Styling Version',
-            'description' => 'One saved version of the styling (see styling-versions/list): its whole stylesheet and its page transition.',
-            'permission' => 'settings.manage',
-            'annotations' => ['readOnly' => true],
-            'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],
-            'output' => Shape::of(['css' => Shape::STRING, 'transition' => $transitionShape]),
-            'handler' => static fn (array $in) => $versions()->find((string) $in['id']) ?? throw \Cms\Abilities\AbilityException::invalid(__('No saved version of the styling has this id.')),
         ]);
 
         $abilities->register('styling/source', [
@@ -731,13 +714,15 @@ final class SiteModule extends Plugin
 
         $abilities->register('styling-code/set-custom', [
             'label' => 'Custom JavaScript',
-            'description' => 'Replace the site’s custom.js (content/styling). It loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component. CSS is not here: it goes in the stylesheet (styling/update).',
+            'description' => 'Replace the site’s custom.js (content/styling). It loads as an ES module on every page and may register Alpine components (document.addEventListener("cms:alpine", (e) => e.detail.data("name", () => ({…})))) that elements use through logic.component. CSS is not here: it goes in the stylesheet (styling/update). Each save is kept as a version: revisions/list with kind `code` and subject `custom.js`.',
             'permission' => 'site.code',
             'input' => ['type' => 'object', 'properties' => ['js' => ['type' => 'string', 'maxLength' => 200000]], 'required' => ['js']],
             'output' => Shape::of(['saved' => [Shape::enum('js')]]),
-            'handler' => static fn (array $in) => $guard(static function () use ($in, $styling) {
-                $styling()->saveJs((string) $in['js']);
-                $styling()->saved();
+            'handler' => static fn (array $in, AbilityContext $ctx) => $guard(static function () use ($in, $ctx, $styling, $history) {
+                $history()->saveCode('custom.js', static function () use ($in, $styling) {
+                    $styling()->saveJs((string) $in['js']);
+                    $styling()->saved();
+                }, $ctx->user);
 
                 return ['saved' => ['js']];
             }),

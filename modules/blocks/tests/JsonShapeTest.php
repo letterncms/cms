@@ -85,7 +85,7 @@ final class JsonShapeTest extends TestCase
             'entries/duplicate' => $this->sent('entries/duplicate', ['id' => $id]),
             'entries/move' => $this->sent('entries/move', ['id' => $id, 'parentId' => null]),
         ];
-        $revision = \Illuminate\Support\Facades\DB::table('revisions')->where('entry_id', $id)->orderBy('created_at')->value('id');
+        $revision = \Illuminate\Support\Facades\DB::table('revisions')->where('kind', 'entry')->where('subject', $id)->orderBy('created_at')->value('id');
         $revision && $answers['revisions/restore'] = $this->sent('revisions/restore', ['revisionId' => $revision]);
 
         foreach ($answers as $name => $json) {

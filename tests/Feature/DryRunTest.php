@@ -181,7 +181,7 @@ final class DryRunTest extends TestCase
         $note = $this->run_('entries/create', ['collection' => 'notes', 'title' => 'Kept', 'data' => ['body' => 'As it is.'], 'status' => 'published']);
         $under = $this->run_('entries/create', ['collection' => 'notes', 'title' => 'Under', 'parentId' => $note['id']]);
         $this->run_('entries/update', ['id' => $page['id'], 'title' => 'Parent, changed']);
-        $revision = $this->run_('revisions/list', ['entryId' => $page['id']])[0]['id'];
+        $revision = $this->run_('revisions/list', ['kind' => 'entry', 'subject' => $page['id']])[0]['id'];
 
         $fired = [];
         foreach (['ability.executing', 'ability.executed', 'entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleting', 'entry.deleted', 'entry.structure-changed', 'entry.uri-changed', 'entries.reordered', 'settings.saved'] as $hook) {
@@ -255,7 +255,7 @@ final class DryRunTest extends TestCase
         $this->assertBothRefuse('invalid_input', 'entries/publish', ['id' => $parent['id'], 'at' => '2031-01-01T00:00:00Z']);
 
         // Changed since it was read, or gone.
-        $revision = $this->run_('revisions/list', ['entryId' => $other['id']])[0]['id'];
+        $revision = $this->run_('revisions/list', ['kind' => 'entry', 'subject' => $other['id']])[0]['id'];
 
         foreach (['entries/update' => ['title' => 'x'], 'entries/publish' => [], 'entries/unpublish' => [], 'entries/discard-draft' => [], 'entries/delete' => [], 'entries/duplicate' => [], 'entries/move' => ['parentId' => null]] as $name => $more) {
             $this->assertBothRefuse('conflict', $name, ['id' => $other['id'], 'expectedVersion' => $stale, ...$more]);
@@ -307,7 +307,7 @@ final class DryRunTest extends TestCase
         $this->assertSame(['action' => 'reorder', 'type' => 'entries', 'collection' => 'pages', 'parentId' => null, 'ids' => [$copy['id'], $parent['id']]], $report['changes'][0]);
 
         $this->run_('entries/update', ['id' => $child['id'], 'title' => 'The Team']);
-        $first = last($this->run_('revisions/list', ['entryId' => $child['id']]))['id'];
+        $first = last($this->run_('revisions/list', ['kind' => 'entry', 'subject' => $child['id']]))['id'];
         [$report, $restored] = $this->assertBothPass('revisions/restore', ['revisionId' => $first]);
         $this->assertSame(['restore', ['title']], [$report['changes'][0]['action'], $report['changes'][0]['fields']]);
         $this->assertSame('Team', $restored['title']);

@@ -119,7 +119,7 @@ final class EntriesTest extends TestCase
         $content->update($entry->id, ['title' => 'Second']);
         $content->publish($entry->id);
 
-        $revisions = app(\Cms\Content\Revisions\Revisions::class)->list($entry->id);
+        $revisions = app(\Cms\Revisions\Revisions::class)->list('entry', $entry->id);
         $this->assertSame(['publish', 'save', 'create'], array_column($revisions, 'action'));
 
         $restored = $content->restore($revisions[2]['id']);

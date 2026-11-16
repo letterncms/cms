@@ -233,6 +233,41 @@ final class StylingCodeTest extends TestCase
         $this->assertSame([], $abilities->execute('styling-code/list', [], $context)['scripts']);
     }
 
+    public function test_each_save_of_a_file_is_a_version_in_the_one_history_and_goes_with_the_file(): void
+    {
+        $abilities = $this->cms()->abilities();
+        $admin = AbilityContext::forUser($this->userWithRole('admin'));
+        $other = AbilityContext::forUser($this->userWithRole('admin'));
+        // A file written before it kept versions keeps what it was first.
+        $this->file('scripts/hero.js', "console.log(1)\n");
+
+        $abilities->execute('styling-code/save', ['path' => 'scripts/hero.js', 'contents' => 'console.log(2)'], $admin);
+        $abilities->execute('styling-code/save', ['path' => 'scripts/hero.js', 'contents' => 'console.log(3)'], $admin);
+        $abilities->execute('styling-code/save', ['path' => 'scripts/hero.js', 'contents' => 'console.log(4)'], $other);
+        $abilities->execute('styling-code/set-custom', ['js' => 'console.log("site")'], $admin);
+
+        $versions = $abilities->execute('revisions/list', ['kind' => 'code', 'subject' => 'scripts/hero.js'], $admin);
+        // One person's saves in a row are one version; another's is the next.
+        $this->assertSame(['save', 'save', 'save'], array_column($versions, 'action'));
+        $contents = fn (array $version) => $abilities->execute('revisions/get', ['id' => $version['id']], $admin)['snapshot']['contents'];
+        $this->assertSame(["console.log(4)\n", "console.log(3)\n", "console.log(1)\n"], array_map($contents, $versions));
+        $this->assertSame(["console.log(\"site\")\n"], array_map($contents, $abilities->execute('revisions/list', ['kind' => 'code', 'subject' => 'custom.js'], $admin)));
+
+        $this->assertSame(['kind' => 'code', 'subject' => 'scripts/hero.js'], $abilities->execute('revisions/restore', ['revisionId' => $versions[2]['id']], $admin));
+        $this->assertSame("console.log(1)\n", file_get_contents(content_path('styling/scripts/hero.js')));
+        $this->assertSame('restore', $abilities->execute('revisions/list', ['kind' => 'code', 'subject' => 'scripts/hero.js'], $admin)[0]['action']);
+
+        // A new file starts its history as created; a deleted one takes its history with it.
+        $abilities->execute('styling-code/save', ['path' => 'styles/card.css', 'contents' => '.card{}'], $admin);
+        $this->assertSame(['create'], array_column($abilities->execute('revisions/list', ['kind' => 'code', 'subject' => 'styles/card.css'], $admin), 'action'));
+        $abilities->execute('styling-code/delete', ['path' => 'scripts/hero.js'], $admin);
+        $this->assertSame([], $abilities->execute('revisions/list', ['kind' => 'code', 'subject' => 'scripts/hero.js'], $admin));
+
+        // Someone who may not write code may not read its versions either.
+        $this->expectException(AbilityException::class);
+        $abilities->execute('revisions/list', ['kind' => 'code', 'subject' => 'styles/card.css'], AbilityContext::forUser($this->userWithRole('editor')));
+    }
+
     public function test_the_guide_for_agents_points_at_the_front_end_and_names_abilities_that_exist(): void
     {
         $guide = $this->app->make(\Cms\Abilities\AgentGuide::class)->text();

@@ -103,8 +103,10 @@ return new class extends Migration
 
         Schema::create('revisions', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->ulid('entry_id');
-            $table->string('collection', 64);
+            // What the version is of: an entry and its id, the styling, a file of code and its path.
+            $table->string('kind', 32);
+            $table->string('subject', 255);
+            $table->string('collection', 64)->nullable();
             $table->ulid('user_id')->nullable();
             $table->string('action', 32);
             $table->string('title', 512);
@@ -112,7 +114,7 @@ return new class extends Migration
             $table->string('message', 512)->nullable();
             $table->timestamp('created_at')->nullable();
 
-            $table->index(['entry_id', 'created_at']);
+            $table->index(['kind', 'subject', 'created_at']);
         });
 
         Schema::create('cache', function (Blueprint $table) {

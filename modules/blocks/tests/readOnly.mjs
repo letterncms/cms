@@ -22,8 +22,11 @@ async function editor(nodes) {
   const source = (path) => new SourceTextModule(stripTypeScriptTypes(readFileSync(new URL(path, import.meta.url), 'utf8')), { context })
   const tree = source('../admin/src/core/tree.ts')
   await tree.link(() => types)
+  // The store keeps its steps on the kit's one undo stack.
+  const undo = source('../../admin/src/ui/undo.ts')
+  await undo.link(() => react)
   const storeModule = source('../admin/src/core/store.ts')
-  await storeModule.link((name) => name === 'react' ? react : tree)
+  await storeModule.link((name) => name === 'react' ? react : name === '@letterncms/ui' ? undo : tree)
   await storeModule.evaluate()
   const uniqueIds = source('../admin/src/core/uniqueIds.ts')
   await uniqueIds.link((name) => name === './tree' ? tree : types)

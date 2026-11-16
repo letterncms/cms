@@ -87,7 +87,7 @@ final class SharedFieldsTest extends TestCase
             $rebuilt = [];
             $content->update($chair->id, ['data' => ['summary' => 'Still a chair.']], publish: true);
             $this->assertSame([], $rebuilt);
-            $this->assertSame('shared', $this->ability('revisions/list', ['entryId' => $stuhl->id])[0]['action'] ?? $this->ability('revisions/list', ['entryId' => $stuhl->id])['items'][0]['action']);
+            $this->assertSame('shared', $this->ability('revisions/list', ['kind' => 'entry', 'subject' => $stuhl->id])[0]['action'] ?? $this->ability('revisions/list', ['kind' => 'entry', 'subject' => $stuhl->id])['items'][0]['action']);
         }
     }
 

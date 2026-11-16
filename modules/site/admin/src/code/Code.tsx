@@ -1,14 +1,16 @@
+import { Stylesheet } from '@letterncms/blocks'
 import { can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
-import { Button, CodeEditor, EmptyState, Icon, IconButton, Menu, NotFoundState, Notice, Pressable, QueryError, SaveBar, SidebarGroup, SidebarRow, Skeleton, Spinner, Topbar, cn, confirm, formats, prompt, toast, useShortcut, type CodeEditorHandle, type MenuItemDef } from '@letterncms/ui'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Button, CodeEditor, EmptyState, FileTree, Icon, IconButton, Menu, NotFoundState, Notice, Pressable, QueryError, SaveBar, Skeleton, Spinner, TextDiff, Topbar, UndoRedo, VersionDialog, VersionsButton, cn, confirm, formats, prompt, textsDiffer, toast, useShortcut, useVersion, type CodeEditorHandle, type FileTreeNode, type MenuItemDef, type Version } from '@letterncms/ui'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ConsolePanel, type ConsoleCounts } from './ConsolePanel'
-import { EXT, STARTER, describe, isFile, languageName, useDocuments, type DocId, type Documents, type Files, type Info, type Kind, type Library } from './documents'
+import { EXT, STARTER, describe, isFile, languageName, useDocuments, versionsOf, type DocId, type Documents, type Files, type Info, type Kind, type Library } from './documents'
 import { EditorTabs } from './EditorTabs'
 
-/* The site's own code, for whoever writes it, as a code editor: the files on the left (the CSS no section of the
-   design shows and the stylesheets blocks load by name, the JavaScript on every page and the scripts blocks run, the
-   libraries scripts import), the open ones in tabs, and under them the console of a page of the site. Save formats
-   what changed and writes it; nothing is saved by itself.
+/* The site's own code, for whoever writes it, as a code editor: its files on the left as they lie in
+   content/styling (theme.css and custom.js, the scripts and styles blocks load by name, the libraries scripts
+   import), the open ones in tabs, and under them the console of a page of the site. Save formats what changed and
+   writes it; nothing is saved by itself. Undo and History are the admin's own: each file keeps its versions in the
+   one history, and an older one comes back as a change to save, or to undo.
    The design is the look; this is what a developer adds. */
 
 /** What stays as it was left, in this browser: the tabs open, and the console. */
@@ -30,6 +32,7 @@ function remember(key: string, value: unknown) {
 
 const TABS = 'cms:code:tabs'
 const PANEL = 'cms:code:panel'
+const TREE = 'cms:code:tree'
 
 export default function Code() {
   const info = useAbility<Info>('styling/get', {}, { refetchOnWindowFocus: false, retry: false })
@@ -67,6 +70,8 @@ export default function Code() {
   const togglePanel = () => setPanel((now) => ({ ...now, open: !now.open }))
 
   const editors = useRef(new Map<DocId, CodeEditorHandle>())
+  const [steps, setSteps] = useState<Record<DocId, { canUndo: boolean; canRedo: boolean }>>({})
+  const [version, setVersion] = useState<{ id: DocId; version: Version } | null>(null)
   const [cursor, setCursor] = useState<Record<DocId, { line: number; column: number }>>({})
   const [mistakes, setMistakes] = useState<Record<DocId, number>>({})
   /** A document opened at a line: once its editor is there (a file loads first), the cursor goes to it. */
@@ -102,7 +107,17 @@ export default function Code() {
   }
   const actions = useFileActions({ files, docs, open, close })
   const activeDoc = active ? describe(active) : null
-  const canFormat = !!activeDoc && formats(activeDoc.language) && (active === 'css' ? manage : code)
+  const writable = (id: DocId) => (id === 'css' ? manage : code)
+  const canFormat = !!activeDoc && formats(activeDoc.language) && writable(active!)
+  // Undo is the open file's own, as its editor keeps it; History is its versions, wherever they were saved from.
+  const activeSteps = active && activeDoc?.language ? steps[active] : undefined
+  const undoable = {
+    undo: () => { if (active) editors.current.get(active)?.undo() },
+    redo: () => { if (active) editors.current.get(active)?.redo() },
+    canUndo: !!activeSteps?.canUndo,
+    canRedo: !!activeSteps?.canRedo,
+  }
+  const history = active ? versionsOf(active) : null
 
   useShortcut('ctrl+`', togglePanel, true, t('Toggle Console'), t('Code'))
   useShortcut('alt+shift+f', () => { if (active && canFormat) void format(active) }, canFormat, t('Format Document'), t('Code'))
@@ -136,6 +151,8 @@ export default function Code() {
         crumbs={[{ label: narrow && activeDoc ? activeDoc.title : t('Code') }]}
         actions={
           <>
+            {activeDoc?.language && <UndoRedo history={undoable} keys="named" group={t('Code')} disabled={!writable(active!)} />}
+            {history && writable(active!) && <VersionsButton of={history} onOpen={(picked) => setVersion({ id: active!, version: picked })} />}
             <IconButton icon="terminal" size="sm" label={panel.open ? t('Hide Console') : t('Show Console')} shortcut="ctrl+`" active={panel.open} onClick={togglePanel} />
             {menu.length > 0 && <Menu align="end" trigger={<IconButton icon="more" size="sm" label={t('File Actions')} />} items={menu} />}
           </>
@@ -146,7 +163,7 @@ export default function Code() {
       {problem?.refused && <Notice tone="danger" className="mx-4 mb-2" title={t('Tailwind refused the CSS')} onDismiss={docs.clearProblem}>{problem.message}</Notice>}
       {/* The files beside the ones open; on a phone the list takes the screen until one is chosen. */}
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(220px,260px)_minmax(0,1fr)]">
-        <div className={cn('min-h-0 overflow-y-auto border-border pt-3 md:border-r', narrow && query.file && 'hidden')}>
+        <div className={cn('flex min-h-0 flex-col border-border pt-1 md:border-r', narrow && query.file && 'hidden')}>
           <Explorer files={files} libraries={libraries} docs={docs} active={active} onOpen={open} actions={actions} code={code} />
         </div>
         <div className={cn('flex min-h-0 min-w-0 flex-col', narrow && !query.file && 'hidden')}>
@@ -160,12 +177,13 @@ export default function Code() {
                   docs={docs}
                   library={libraries.data?.imports.find((entry) => `library:${entry.import}` === id)}
                   librariesLoaded={!!libraries.data}
-                  disabled={id === 'css' ? !manage : !code}
+                  disabled={!writable(id)}
                   fetching={actions.fetching}
                   onUpdateLibrary={actions.updateLibrary}
                   editorRef={(handle) => { if (handle) editors.current.set(id, handle); else editors.current.delete(id) }}
                   onCursor={(at) => setCursor((all) => ({ ...all, [id]: at }))}
                   onErrors={(count) => setMistakes((all) => ({ ...all, [id]: count }))}
+                  onHistory={(at) => setSteps((all) => ({ ...all, [id]: at }))}
                 />
               </div>
             ))}
@@ -193,7 +211,44 @@ export default function Code() {
           </div>
         </div>
       </div>
+      <CodeVersion
+        opened={version}
+        docs={docs}
+        writable={!!version && writable(version.id)}
+        onClose={() => setVersion(null)}
+        onRestore={(id, text) => {
+          setVersion(null)
+          // The version comes back as a change in the editor: one step to undo, and Save keeps it.
+          docs.edit(id, text)
+          open(id)
+          requestAnimationFrame(() => editors.current.get(id)?.focus())
+        }}
+      />
     </div>
+  )
+}
+
+/**
+ * An older version of a file, against what the editor holds now, and the way to bring it back into the editor.
+ * The site's CSS is compared as the editor shows it: what the version had beyond the design's sections.
+ */
+function CodeVersion({ opened, docs, writable, onClose, onRestore }: { opened: { id: DocId; version: Version } | null; docs: Documents; writable: boolean; onClose: () => void; onRestore: (id: DocId, text: string) => void }) {
+  const loaded = useVersion<{ contents?: string; css?: string }>(opened?.version ?? null)
+  const snapshot = loaded.data?.snapshot
+  const then = !opened || !snapshot ? '' : opened.id === 'css' ? new Stylesheet(snapshot.css ?? '').extra() : snapshot.contents ?? ''
+  const now = opened ? docs.text(opened.id) ?? '' : ''
+  return (
+    <VersionDialog
+      version={opened?.version ?? null}
+      onClose={onClose}
+      onRestore={opened && writable ? () => onRestore(opened.id, then) : undefined}
+      loading={!snapshot}
+      failed={loaded.isError}
+      onRetry={() => void loaded.refetch()}
+      unchanged={!!snapshot && !textsDiffer(now, then)}
+    >
+      <TextDiff now={now} then={then} />
+    </VersionDialog>
   )
 }
 
@@ -205,7 +260,7 @@ function useFileActions({ files, docs, open, close }: { files: { data?: Files };
   const act = async (work: () => Promise<unknown>, done: string) => {
     try {
       await work()
-      invalidate('styling-code/', 'styling-vendor/')
+      invalidate('styling-code/', 'styling-vendor/', 'revisions/')
       toast.success(done)
       return true
     } catch (error) {
@@ -213,22 +268,24 @@ function useFileActions({ files, docs, open, close }: { files: { data?: Files };
       return false
     }
   }
-  const addFile = async (kind: Kind) => {
+  /** A new file in a folder (`lib/` in scripts/lib): its name may go deeper, `lib/ease`. */
+  const addFile = async (kind: Kind, folder = '') => {
     const asked = await prompt({
       title: kind === 'scripts' ? t('New Script') : t('New Stylesheet'),
-      fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, placeholder: 'hero' }],
+      fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, placeholder: `${folder}hero` }],
+      values: folder ? { name: folder } : undefined,
       confirm: kind === 'scripts' ? t('Create Script') : t('Create Stylesheet'),
     })
-    const name = String(asked?.name ?? '').trim().toLowerCase().replace(/\.(js|css)$/, '').replace(/\s+/g, '-')
+    const name = String(asked?.name ?? '').trim().toLowerCase().replace(/\.(js|css)$/, '').replace(/\s+/g, '-').replace(/^\/+|\/+$/g, '')
     if (!name) return
     if ((files.data?.[kind] ?? []).includes(name)) return void toast.error(t('“{name}” already exists', { name }))
     const path = `${kind}/${name}.${EXT[kind]}`
     // It opens on what it starts with, ready to be written.
-    if (await act(() => run('styling-code/save', { path, contents: STARTER[kind] }), t('{name} added', { name: `${name}.${EXT[kind]}` }))) open(path)
+    if (await act(() => run('styling-code/save', { path, contents: STARTER[kind] }), t('{name} added', { name: `${name.split('/').pop()}.${EXT[kind]}` }))) open(path)
   }
   const removeFile = async (path: DocId) => {
     const name = describe(path).title
-    if (!(await confirm({ title: t('Delete “{name}”?', { name }), confirm: t('Delete File'), danger: true }))) return
+    if (!(await confirm({ title: t('Delete “{name}”?', { name }), description: t('The file and its history are deleted for good.'), confirm: t('Delete File'), danger: true }))) return
     if (!(await act(() => run('styling-code/delete', { path }), t('{name} deleted', { name })))) return
     close(path)
     docs.forget(path)
@@ -251,45 +308,98 @@ function useFileActions({ files, docs, open, close }: { files: { data?: Files };
     if (await act(() => run('styling-vendor/delete', { import: name }), t('{name} deleted', { name }))) close(`library:${name}`)
   }
   const fileMenu = (path: DocId): MenuItemDef[] => (code ? [{ label: t('Delete File'), icon: 'trash', danger: true, onSelect: () => void removeFile(path) }] : [])
+  /** What the + makes: a script, a stylesheet (in `folder` of its own kind, from a folder's menu), a library. */
+  const newMenu = (folder: string, only?: Kind | 'vendor'): MenuItemDef[] => {
+    if (!code) return []
+    const items: MenuItemDef[] = []
+    if (!only || only === 'scripts') items.push({ label: t('New Script'), icon: 'file-js', onSelect: () => void addFile('scripts', only ? folder : '') })
+    if (!only || only === 'styles') items.push({ label: t('New Stylesheet'), icon: 'file-css', onSelect: () => void addFile('styles', only ? folder : '') })
+    if (!only || only === 'vendor') items.push({ label: t('Add Library'), icon: 'box', disabled: !!fetching, onSelect: () => void addLibrary() })
+    return items
+  }
+  const folderMenu = (kind: Kind | 'vendor', folder: string) => newMenu(folder, kind)
   const libraryMenu = (name: string): MenuItemDef[] => (code ? [
     { label: t('Update'), icon: 'refresh', disabled: !!fetching, onSelect: () => void updateLibrary(name) },
     { separator: true, label: '' },
     { label: t('Delete Library'), icon: 'trash', danger: true, disabled: !!fetching, onSelect: () => void removeLibrary(name) },
   ] : [])
-  return { fetching, addFile, addLibrary, updateLibrary, fileMenu, libraryMenu }
+  return { fetching, addFile, addLibrary, updateLibrary, fileMenu, libraryMenu, newMenu, folderMenu }
 }
 
 type FileActions = ReturnType<typeof useFileActions>
 
-/** The files of the site, in their groups: what opens in a tab, with a dot on what has unsaved changes. */
+/** The folders open when the editor first opens: all three, so every file is in view. */
+const FOLDERS = ['dir:scripts', 'dir:styles', 'dir:vendor']
+
+/**
+ * The files of the site as they lie in content/styling, folders and all: what opens in a tab, with a dot on what
+ * has unsaved changes. The + makes a script or a stylesheet, or adds a library; a folder's menu does it there.
+ */
 function Explorer({ files, libraries, docs, active, onOpen, actions, code }: { files: ReturnType<typeof useAbility<Files>>; libraries: ReturnType<typeof useAbility<{ imports: Library[] }>>; docs: Documents; active: DocId | null; onOpen: (id: DocId) => void; actions: FileActions; code: boolean }) {
-  const edited = (on: boolean) => (on ? <span className="size-1.5 rounded-full bg-focus" aria-label={t('Unsaved changes')} role="img" /> : undefined)
-  const row = (id: DocId, menu: MenuItemDef[] = [], badge?: ReactNode) => {
-    const doc = describe(id)
-    return <SidebarRow key={id} label={doc.title} icon={doc.icon} active={active === id} onClick={() => onOpen(id)} status={edited(docs.isDirty(id))} badge={badge} actions={menu.map((item) => ({ ...item, quick: item.icon === 'trash' }))} />
-  }
-  const fileRows = (kind: Kind) => (files.data?.[kind] ?? []).map((name) => row(`${kind}/${name}.${EXT[kind]}`, actions.fileMenu(`${kind}/${name}.${EXT[kind]}`)))
+  const [expanded, setExpanded] = useState<string[]>(() => remembered(TREE, { open: FOLDERS }).open)
+  useEffect(() => remember(TREE, { open: expanded }), [expanded])
+  const edited = (id: DocId) => (docs.isDirty(id) ? <span className="size-1.5 rounded-full bg-focus" aria-label={t('Unsaved changes')} role="img" /> : undefined)
+
+  const nodes = useMemo(() => {
+    const file = (id: DocId, name: string): FileTreeNode => ({ id, name, icon: describe(id).icon, status: edited(id), actions: isFile(id) ? actions.fileMenu(id).map((item) => ({ ...item, quick: item.icon === 'trash' })) : [] })
+    // A kind's files by their paths, in folders as deep as their names go: scripts/lib/ease.js under scripts/lib.
+    const folder = (kind: Kind): FileTreeNode => {
+      const root: FileTreeNode = { id: `dir:${kind}`, name: kind, children: [], actions: actions.folderMenu(kind, '') }
+      for (const name of files.data?.[kind] ?? []) {
+        const parts = name.split('/')
+        let at = root
+        parts.slice(0, -1).forEach((part, depth) => {
+          const prefix = parts.slice(0, depth + 1).join('/')
+          let next = at.children!.find((child) => child.id === `dir:${kind}/${prefix}`)
+          if (!next) at.children!.push(next = { id: `dir:${kind}/${prefix}`, name: part, children: [], actions: actions.folderMenu(kind, `${prefix}/`) })
+          at = next
+        })
+        at.children!.push(file(`${kind}/${name}.${EXT[kind]}`, `${parts[parts.length - 1]}.${EXT[kind]}`))
+      }
+      // Folders first, then files, each by name: as a file manager lists them.
+      const sort = (node: FileTreeNode) => {
+        node.children?.sort((a, b) => Number(!a.children) - Number(!b.children) || a.name.localeCompare(b.name))
+        node.children?.forEach(sort)
+      }
+      sort(root)
+      return root
+    }
+    const vendor: FileTreeNode = {
+      id: 'dir:vendor',
+      name: 'vendor',
+      actions: actions.folderMenu('vendor', ''),
+      children: (libraries.data?.imports ?? []).map((library) => ({
+        id: `library:${library.import}`,
+        name: library.import,
+        icon: 'box',
+        badge: actions.fetching === library.import ? <Spinner size={12} /> : library.version,
+        actions: actions.libraryMenu(library.import),
+      })),
+    }
+    return [file('css', 'theme.css'), file('js', 'custom.js'), folder('scripts'), folder('styles'), vendor]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files.data, libraries.data, actions.fetching, docs.dirtyIds.join(), code])
+
+  const failed = files.isError || libraries.isError
   return (
-    <nav aria-label={t('Files')} className="px-2 pb-4">
-      <SidebarGroup title={t('Stylesheets')} action={code && <Add label={t('New Stylesheet')} onAdd={() => void actions.addFile('styles')} />}>
-        {row('css')}
-        {files.isError ? <QueryError compact onRetry={() => void files.refetch()} retrying={files.isRefetching} /> : !files.data ? <Loading /> : fileRows('styles')}
-      </SidebarGroup>
-      <SidebarGroup title={t('Scripts')} action={code && <Add label={t('New Script')} onAdd={() => void actions.addFile('scripts')} />}>
-        {row('js')}
-        {files.isError ? null : !files.data ? <Loading /> : fileRows('scripts')}
-      </SidebarGroup>
-      <SidebarGroup title={t('Libraries')} action={code && <Add label={t('Add Library')} onAdd={() => void actions.addLibrary()} busy={actions.fetching === 'add'} />}>
-        {libraries.isError ? <QueryError compact onRetry={() => void libraries.refetch()} retrying={libraries.isRefetching} />
-          : !libraries.data ? <Loading />
-          : libraries.data.imports.map((library) => row(`library:${library.import}`, actions.libraryMenu(library.import), actions.fetching === library.import ? <Spinner size={12} /> : library.version))}
-      </SidebarGroup>
+    <nav aria-label={t('Files')} className="flex min-h-0 flex-col">
+      <div className="flex h-9 shrink-0 items-center gap-2 pl-4 pr-2">
+        <h2 className="cms-label m-0 min-w-0 flex-1 truncate">{t('Files')}</h2>
+        {actions.fetching === 'add'
+          ? <span role="status" aria-label={t('Working…')} className="grid size-6 place-items-center text-faint"><Spinner size={14} /></span>
+          : code && <Menu align="end" trigger={<IconButton icon="plus" size="xs" label={t('New File')} />} items={actions.newMenu('')} />}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+        {failed ? <QueryError compact onRetry={() => { void files.refetch(); void libraries.refetch() }} retrying={files.isRefetching || libraries.isRefetching} />
+          : !files.data || !libraries.data ? <Loading />
+          : <FileTree label={t('Files')} nodes={nodes} active={active} onOpen={onOpen} expanded={expanded} onExpandedChange={setExpanded} />}
+      </div>
     </nav>
   )
 }
 
 /** One open document: its editor, or for a library what it is. A file's contents load when it first opens. */
-function Document({ id, docs, library, librariesLoaded, disabled, fetching, onUpdateLibrary, editorRef, onCursor, onErrors }: {
+function Document({ id, docs, library, librariesLoaded, disabled, fetching, onUpdateLibrary, editorRef, onCursor, onErrors, onHistory }: {
   id: DocId
   docs: Documents
   library?: Library
@@ -300,6 +410,7 @@ function Document({ id, docs, library, librariesLoaded, disabled, fetching, onUp
   editorRef: (handle: CodeEditorHandle | null) => void
   onCursor: (at: { line: number; column: number }) => void
   onErrors: (count: number) => void
+  onHistory: (steps: { canUndo: boolean; canRedo: boolean }) => void
 }) {
   const doc = describe(id)
   const file = isFile(id)
@@ -330,6 +441,7 @@ function Document({ id, docs, library, librariesLoaded, disabled, fetching, onUp
       onChange={(next) => docs.edit(id, next)}
       onCursor={onCursor}
       onErrors={onErrors}
+      onHistory={onHistory}
       placeholder={id === 'css' ? '.hero-title { text-wrap: balance; }' : id === 'js' ? "document.addEventListener('cms:alpine', (e) => …)" : undefined}
     />
   )
@@ -348,10 +460,3 @@ function useNarrow(): boolean {
 }
 
 const Loading = () => <div className="space-y-2 py-2 pl-2"><Skeleton className="h-3 w-32" /><Skeleton className="h-3 w-24" /></div>
-
-/** What adds a file or a library to its group, beside the group's heading; a spinner while it is fetched. */
-function Add({ label, onAdd, busy }: { label: string; onAdd: () => void; busy?: boolean }) {
-  return busy
-    ? <span role="status" aria-label={t('Working…')} className="grid size-6 place-items-center text-faint"><Spinner size={14} /></span>
-    : <IconButton icon="plus" size="xs" label={label} onClick={onAdd} />
-}

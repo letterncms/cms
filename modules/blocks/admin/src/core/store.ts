@@ -1,4 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react'
+import { UndoStack } from '@letterncms/ui'
 import * as tree from './tree'
 import type { BlockNode, FocusRequest } from './types'
 
@@ -36,10 +37,8 @@ type Listener = () => void
 export class EditorStore {
   private state: State
   private listeners = new Set<Listener>()
-  private past: BlockNode[][] = []
-  private future: BlockNode[][] = []
-  private lastCommit = 0
-  private lastGroup = ''
+  /** The admin's one undo stack: the tree before each change. */
+  private history = new UndoStack<BlockNode[]>()
   private onChange: (nodes: BlockNode[]) => void
   private readOnly: boolean
 
@@ -75,40 +74,29 @@ export class EditorStore {
    */
   commit(next: BlockNode[], group = '') {
     if (this.readOnly) return
-    const now = Date.now()
-    if (!(group && group === this.lastGroup && now - this.lastCommit < 800)) {
-      this.past.push(this.state.nodes)
-      if (this.past.length > 200) this.past.shift()
-    }
-    this.future = []
-    this.lastCommit = now
-    this.lastGroup = group
+    this.history.push(this.state.nodes, group)
     this.set({ nodes: next })
     this.onChange(next)
   }
 
   undo = () => {
     if (this.readOnly) return
-    const prev = this.past.pop()
+    const prev = this.history.undo(this.state.nodes)
     if (!prev) return
-    this.future.push(this.state.nodes)
-    this.lastGroup = ''
     this.set({ nodes: prev })
     this.onChange(prev)
   }
 
   redo = () => {
     if (this.readOnly) return
-    const next = this.future.pop()
+    const next = this.history.redo(this.state.nodes)
     if (!next) return
-    this.past.push(this.state.nodes)
-    this.lastGroup = ''
     this.set({ nodes: next })
     this.onChange(next)
   }
 
-  canUndo = () => !this.readOnly && this.past.length > 0
-  canRedo = () => !this.readOnly && this.future.length > 0
+  canUndo = () => !this.readOnly && this.history.canUndo
+  canRedo = () => !this.readOnly && this.history.canRedo
 
   select = (id: string | null, blockMode = false) => this.set({ selected: id, head: null, blockMode })
 

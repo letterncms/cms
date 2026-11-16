@@ -123,7 +123,7 @@ final class CollaborationModule extends Plugin
                     return ['others' => []];
                 }
 
-                $last = $this->app->make(\Cms\Content\Revisions\Revisions::class)->list($target->id, 1)[0] ?? null;
+                $last = $this->app->make(\Cms\Revisions\Revisions::class)->list('entry', $target->id, 1)[0] ?? null;
 
                 return [
                     'others' => $presence->beat($target->id, $ctx->user, $in['editing'] && $ctx->can("entries.{$target->collection}.edit")),

@@ -652,9 +652,12 @@ try {
   await test('Code opens files in tabs, formats what it saves and runs a page of the site in its console', async () => {
     navigate('/code?file=js')
     const tabs = () => [...document.querySelectorAll('[role="tablist"][aria-label="Open Files"] [role="tab"]')].map((tab) => tab.textContent.trim())
-    await wait(() => tabs().includes('Site JavaScript'), 'The code editor did not open the site’s JavaScript in a tab')
-    await wait(() => button('hero.js'), 'The explorer did not list the site’s script')
-    button('hero.js').click()
+    await wait(() => tabs().includes('custom.js'), 'The code editor did not open the site’s JavaScript in a tab')
+    // The files as they lie: theme.css and custom.js, then the folders, a script inside its folder.
+    const item = (name) => [...document.querySelectorAll('[role="tree"][aria-label="Files"] [role="treeitem"]')].find((row) => row.textContent.trim() === name)
+    await wait(() => item('hero.js'), 'The explorer did not list the site’s script')
+    assert(['theme.css', 'custom.js', 'scripts', 'styles', 'vendor'].every(item) && item('scripts').getAttribute('aria-expanded') === 'true' && item('hero.js').getAttribute('aria-level') === '2', 'The explorer is not the files as they lie in content/styling')
+    item('hero.js').click()
     await wait(() => tabs().includes('hero.js') && document.querySelector('[role="tab"][aria-selected="true"]')?.textContent.trim() === 'hero.js', 'A file of the explorer did not open in its own tab')
     const editor = () => [...document.querySelectorAll('.cm-content')].find((content) => content.offsetParent)
     await wait(() => editor()?.getAttribute('aria-label') === 'hero.js', 'The file’s editor did not load')
@@ -671,6 +674,17 @@ try {
     save()
     await waitAsync(async () => (await state()).requests.some((request) => request.ability === 'styling-code/save' && request.input.path === 'scripts/hero.js' && request.input.contents === 'const a = { b: 1 };\n'), 'The script was not saved as Prettier formats it')
     await wait(() => !document.querySelector('[role="tablist"] [aria-label="Unsaved changes"]') && editor().textContent.includes('const a = { b: 1 };'), 'The editor did not show the formatted, saved script')
+
+    // History is the file's versions: an older one comes back as a change in the editor, and Undo takes it back.
+    button('History').click()
+    const created = () => [...document.querySelectorAll('.cms-pop button')].find((version) => version.textContent.startsWith('Created'))
+    await wait(created, 'History did not list the file’s versions')
+    created().click()
+    await wait(() => document.querySelector('[role="dialog"] [role="table"][aria-label="Changes"]')?.textContent.includes('export const old = 1'), 'The version did not show what restoring it changes')
+    button('Restore Version').click()
+    await wait(() => editor().textContent.includes('export const old = 1') && marked(), 'The restored version did not come back as a change to save')
+    button('Undo').click()
+    await wait(() => editor().textContent.includes('const a = { b: 1 };') && !marked(), 'Undo did not take the restored version back')
 
     button('Show Console').click()
     const page = document.querySelector('input[aria-label="Page"]')
@@ -788,7 +802,8 @@ export function mount(el, props, context) {
     else if (ability === 'entries/get-many') data = input.ids.map(id => entries.get(id)).filter(Boolean)
     else if (ability === 'entries/list') data = page([...entries.values()].filter((entry) => entry.collection === input.collection && (!input.search || entry.title.includes(input.search))), input.page ?? 1, input.perPage ?? 50)
     else if (ability === 'entries/tree') data = [...entries.values()].filter((entry) => entry.collection === input.collection)
-    else if (ability === 'revisions/list') data = revisions(entries.get(input.entryId))
+    else if (ability === 'revisions/list') data = input.kind === 'code' ? [0, 1].map((index) => ({ id: `code-${index}`, action: index ? 'create' : 'save', title: input.subject, user: people[0], createdAt: new Date(Date.now() - index * 60000).toISOString(), message: null })) : revisions(entries.get(input.subject))
+    else if (ability === 'revisions/get' && input.id.startsWith('code-')) data = { id: input.id, kind: 'code', subject: 'scripts/hero.js', action: 'create', snapshot: { contents: 'export const old = 1\n' }, createdAt: new Date().toISOString() }
     else if (ability === 'people/list') data = page(people.filter((person) => (!input.ids || input.ids.includes(person.id)) && (!input.search || person.name.toLowerCase().includes(input.search.toLowerCase()))), input.page ?? 1, input.perPage ?? 25)
     else if (ability === 'entries/move' || ability === 'entries/update' || ability === 'entries/publish' || ability === 'entries/unpublish' || ability === 'entries/discard-draft' || ability === 'revisions/restore') {
       const current = entries.get(input.id ?? input.revisionId?.replace(/-revision-\d+$/, ''))
