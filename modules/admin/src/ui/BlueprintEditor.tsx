@@ -37,6 +37,8 @@ type BlueprintRemoval = [ability: string, input: Record<string, unknown>, warnin
 export interface BlueprintKind {
   get: [ability: string, input: Record<string, unknown>]
   save: (def: BlueprintDefinition) => [ability: string, input: Record<string, unknown>]
+  /** After a save: where the definition now belongs, when that changed with it (a collection that became a taxonomy). */
+  saved?: (def: BlueprintDefinition) => void
   /** Resolve fresh deletion metadata before asking for confirmation. */
   remove?: BlueprintRemoval | (() => Promise<BlueprintRemoval>)
   removeLabel?: string
@@ -126,6 +128,7 @@ export function BlueprintEditor({ kind }: { kind: BlueprintKind }) {
       // The places drawn from a blueprint (a collection's columns) change with it.
       invalidate('collections/', 'globals/', 'entries/', 'users/', 'user-fields/', 'views/')
       await loadManifest()
+      kind.saved?.(def)
     } catch (e) {
       setSaveError(e instanceof Error && e.constructor !== TypeError ? e.message : t('Couldn’t save. Check your connection.'))
       if (e instanceof CmsError && e.type === 'invalid_input') {

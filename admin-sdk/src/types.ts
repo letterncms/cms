@@ -177,6 +177,8 @@ export interface CollectionSummary {
   /** The create button's label in the user's language ("New Page", "Nieuw bericht"). */
   newLabel: string
   icon: string
+  /** What its entries are: the site's content, or the terms of a taxonomy (categories nest, tags are typed). */
+  type: 'entries' | 'categories' | 'tags'
   structure: 'list' | 'tree' | 'dated'
   defaultView?: 'table' | 'grid' | 'calendar'
   routable: boolean

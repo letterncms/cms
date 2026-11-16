@@ -149,7 +149,7 @@ final class ContentModule extends Plugin
             // Names read like the sidebar's: in the user's language when the dictionaries know them.
             $out[] = [
                 'handle' => $c->handle, 'title' => __($c->title), 'singular' => __($c->singular), 'newLabel' => self::newLabel($c->singular), 'icon' => $c->icon,
-                'structure' => $c->structure, 'routable' => $c->routable(), 'driver' => $c->driver, 'defaultView' => $c->defaultView, 'within' => $this->within($c->handle),
+                'type' => $c->type, 'structure' => $c->structure, 'routable' => $c->routable(), 'driver' => $c->driver, 'defaultView' => $c->defaultView, 'within' => $this->within($c->handle),
                 'can' => array_combine(['create', 'edit', 'publish', 'delete'], array_map(static fn ($a) => $user->hasPermission("entries.{$c->handle}.{$a}"), ['create', 'edit', 'publish', 'delete'])),
             ];
         }

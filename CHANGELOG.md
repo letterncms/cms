@@ -2,8 +2,21 @@
 
 ## Unreleased
 
+### Added
+
+- **Categories and tags.** A collection now has a type: **Entries** (pages, posts, projects), **Categories** or **Tags**. Categories and tags are taxonomies: other entries are filed under them with a **Terms** field. Categories are curated and nest; tags are flat, and a word typed into a terms field that no tag has yet becomes a new tag when the entry is saved, offered with the existing tags of the entry's language as you type; a save that is refused makes none. Who may add entries to the taxonomy may add tags, as drafts when they may not publish there. Every term is an entry: rename, translate and give it fields and a page as any other.
+- **A collection's type is in its settings** and can change there. A taxonomy that a terms field or an archive still uses stays one, and nested entries are not laid out flat; both say why.
+- **Categories and tags in entry lists**: a terms field can be a column, with the names of its terms.
+- A taxonomy that a field or an archive uses can't be deleted from under it: deleting it says where it is used.
+- **Templates read a related entry's own fields**, at any depth and in globals: `entry.topic.colour`, `entry.topic.url`, a Repeat over `entry.tags` with each tag's `item.url`. A page that shows one is rebuilt when it changes.
+- A Repeat's **Only with Tag** lists the entries filed under the tag of that name or slug.
+
 ### Changed
 
+- **Breaking.** `type: categories` or `type: tags` in a collection's definition replaces `taxonomy: true`, and a taxonomy's structure is its type's: categories are a tree, tags a list. `collections/list` says `type` where it said `taxonomy`.
+- **Breaking.** The field for a list of short values (hosts, addresses, keywords) is called **List**, `type: list`; it was `tags`. Tags that entries are filed under are a taxonomy.
+- **Breaking.** `terms/import` is gone: tags are a taxonomy from the start.
+- **The sidebar groups what things are.** The Entries room is **Content**, with your collections under **Entries** and your categories and tags under **Taxonomies**. Structure lists **Collections** and **Taxonomies** apart, under **Content Types**, then **Layout** (templates, components, patterns) and **Site** (navigation, code). **New Taxonomy** makes categories or tags.
 - **One way back, one level at a time.** **Back**, in the top-left corner beside the sidebar button, is the admin's only way back, on every screen that sits under another, and it always goes up exactly one level: from a class to its group, from the group to Classes, from Classes out of Design. `Esc` does the same. The top bar names the screen and nothing else, with no trail of links or second arrow beside it.
 - **One list of pages.** The pages features and plugins bring, like sign-in, the account pages and the store's page for each listing, are listed with your own pages instead of on tabs of their own, under the page whose address they share (the store's listing page under **Store**). They stay where their address puts them: open one to edit it as your own, and **Use Standard Version** in its ⋯ menu goes back to the one that comes with it. An address that stands for many pages, like `/store/{slug}`, shows quieter.
 - **Pickers open where your value is.** A colour's Theme and Palette lists, the fonts, a field's theme values and the icons scroll to the one you chose, so a scheme's colour shows its own row instead of the top of the list. An icon further down the set than the first page reaches is shown first.

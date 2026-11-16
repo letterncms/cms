@@ -87,7 +87,7 @@ final class BlueprintsTest extends TestCase
         $content->create('news', ['title' => 'Pictures', 'blueprint' => 'gallery', 'data' => ['about' => [$page->id]]]);
         $this->assertSame(['Pictures'], array_column($this->ability('references/list', ['id' => $page->id])['items'], 'title'));
         // One handle, a text in one blueprint and a list in another: each is asked as what it is.
-        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('news', ['title' => 'News', ...self::DEFINITION, 'blueprints' => [...self::DEFINITION['blueprints'], 'gallery' => ['fields' => [['handle' => 'about', 'type' => 'entries', 'collections' => ['pages']], ['handle' => 'summary', 'type' => 'tags']]]]]));
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('news', ['title' => 'News', ...self::DEFINITION, 'blueprints' => [...self::DEFINITION['blueprints'], 'gallery' => ['fields' => [['handle' => 'about', 'type' => 'entries', 'collections' => ['pages']], ['handle' => 'summary', 'type' => 'list']]]]]));
         $content->create('news', ['title' => 'Tagged', 'blueprint' => 'gallery', 'data' => ['summary' => ['None yet.', 'x']]]);
         $this->assertSame(['Tagged'], array_column($this->ability('entries/list', ['collection' => 'news', 'filters' => [['field' => 'summary', 'operator' => 'contains', 'value' => 'x']]])['items'], 'title'));
         $this->assertSame(['Plain', 'Tagged'], array_column($this->ability('entries/list', ['collection' => 'news', 'sort' => 'title', 'filters' => [['field' => 'summary', 'operator' => 'contains', 'value' => 'None yet.']]])['items'], 'title'));

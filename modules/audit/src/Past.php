@@ -125,7 +125,6 @@ final class Past
             'sync/start' => __('Started Sync'),
             'sync/step' => __('Continued Sync'),
             'sync/undo' => __('Undid Sync'),
-            'terms/import' => __('Imported Terms from Tags'),
             'threads/delete' => __('Deleted Chat'),
             'threads/rename' => __('Renamed Chat'),
             'tokens/create' => __('Created API Token'),

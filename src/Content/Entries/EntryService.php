@@ -33,6 +33,17 @@ final class EntryService
     /** @var array<string, ?Entry> What a dry run would have saved (null: deleted), read back in place of what is stored. */
     private array $staged = [];
 
+    /** Who writes the entry being written: null for the system. */
+    private ?User $writer = null;
+
+    /**
+     * The tags the entry being written names that are not there yet, by taxonomy, language and name: each has its id
+     * already, and is made only as that entry is saved, once every check has passed.
+     *
+     * @var array<string, array{id: string, taxonomy: string, name: string, locale: string, user: ?User}>
+     */
+    private array $pending = [];
+
     /** @var array<string, Entry> The translations the last write or dry run rewrote because their original's shared fields changed. */
     private array $shared = [];
 
@@ -124,6 +135,11 @@ final class EntryService
             $found[$entry->id] = $entry->collection;
         }
 
+        // A tag the entry being written names, made as it is saved.
+        foreach ($this->pending as $tag) {
+            in_array($tag['id'], $ids, true) && $found[$tag['id']] = $tag['taxonomy'];
+        }
+
         foreach ($ids as $id) {
             if (array_key_exists($id, $this->staged)) {
                 unset($found[$id]);
@@ -167,10 +183,59 @@ final class EntryService
         return array_values($this->shared);
     }
 
-    /** The language of the entry being written, for field types that look things up in it (a term by its name). */
-    private function writing(string $locale): void
+    /**
+     * The language and the person of the entry being written: field types look things up in that language (a term
+     * by its name), and a tag typed into a terms field is made by that person (tag()).
+     */
+    private function writing(string $locale, ?User $user): void
     {
         app(\Cms\Content\Fields\FieldTypeRegistry::class)->locale = $locale;
+        $this->writer = $user;
+    }
+
+    /**
+     * The id of the tag of this taxonomy called $name, in the language of the entry being written, when no tag has that
+     * name yet: a name typed into a terms field. The tag is made as the entry is saved (makeTags()), so a save that is
+     * refused makes none; the same name twice in one write is one tag. Null when no entry is being written or the
+     * person writing it may not make entries of the taxonomy: the field then says there is no such tag.
+     */
+    public function tag(Collection $taxonomy, string $name, string $locale): ?string
+    {
+        $user = $this->writer;
+
+        if ($this->writeDepth === 0 || ! $taxonomy->isTags() || ($user !== null && ! $user->hasPermission("entries.{$taxonomy->handle}.create"))) {
+            return null;
+        }
+
+        // Made earlier in this dry run, which keeps what it makes in memory.
+        foreach ($this->staged as $staged) {
+            if ($staged?->collection === $taxonomy->handle && $staged->locale === $locale && mb_strtolower($staged->title) === mb_strtolower($name)) {
+                return $staged->id;
+            }
+        }
+
+        return ($this->pending[$taxonomy->handle."\n".$locale."\n".mb_strtolower($name)] ??= [
+            'id' => strtolower((string) Str::ulid()), 'taxonomy' => $taxonomy->handle, 'name' => $name, 'locale' => $locale, 'user' => $user,
+        ])['id'];
+    }
+
+    /**
+     * The tags the entry about to be saved named: published, or a draft that waits for someone who may publish when
+     * whoever named it may not. They are made before it, so what it names is there.
+     */
+    private function makeTags(): void
+    {
+        [$pending, $this->pending] = [$this->pending, []];
+        $writer = $this->writer;
+        $locale = app(\Cms\Content\Fields\FieldTypeRegistry::class)->locale;
+
+        foreach ($pending as $tag) {
+            $publish = $tag['user'] === null || $tag['user']->hasPermission("entries.{$tag['taxonomy']}.publish");
+            $this->createUnlocked($tag['taxonomy'], ['title' => $tag['name'], 'locale' => $tag['locale'], 'status' => $publish ? 'published' : 'draft'], $tag['user'], id: $tag['id']);
+        }
+
+        // Back to the entry that named them.
+        $locale === null || $this->writing($locale, $writer);
     }
 
     public function isDry(): bool
@@ -191,7 +256,11 @@ final class EntryService
         } finally {
             $this->writeDepth--;
             // No entry is being written any more.
-            $this->writeDepth > 0 || app(\Cms\Content\Fields\FieldTypeRegistry::class)->locale = null;
+            if ($this->writeDepth === 0) {
+                app(\Cms\Content\Fields\FieldTypeRegistry::class)->locale = null;
+                $this->writer = null;
+                $this->pending = [];
+            }
             flock($lock, LOCK_UN);
             fclose($lock);
         }
@@ -301,7 +370,7 @@ final class EntryService
         $input = $this->hooks->filter('entry.creating', $input, $collection, $user);
         $locale = $input['locale'] ?? config('app.locale', 'en');
         $this->assertLocale($locale);
-        $this->writing($locale);
+        $this->writing($locale, $user);
 
         $title = trim((string) ($input['title'] ?? ''));
 
@@ -380,7 +449,7 @@ final class EntryService
         }
         $entry = $this->findOrFail($id);
         $this->assertVersion($entry, $input['expectedVersion'] ?? null);
-        $this->writing($entry->locale);
+        $this->writing($entry->locale, $user);
         $collection = $entry->collection();
         $working = $entry->working();
         $working['title'] = array_key_exists('title', $input) ? trim((string) $input['title']) : $working['title'];
@@ -426,7 +495,7 @@ final class EntryService
         $this->assertVersion($entry, $expectedVersion);
         $collection = $entry->collection();
         $when = $this->publicationTime($entry, $at);
-        $this->writing($entry->locale);
+        $this->writing($entry->locale, $user);
         $working = $entry->working();
         $working['data'] = $this->process($entry->blueprint(), $this->withShared($entry->blueprint(), $entry->originId, $working['data']), full: true);
         $previousUri = $entry->uri;
@@ -558,7 +627,7 @@ final class EntryService
         $this->assertVersion($entry, $expectedVersion);
         $snapshot = $revision['snapshot'];
         $source = array_replace($entry->working(), array_intersect_key($snapshot, array_flip(['title', 'slug', 'data', 'authorId'])), $snapshot['draft'] ?? []);
-        $this->writing($entry->locale);
+        $this->writing($entry->locale, $user);
         // A restore replaces the content snapshot; absent later fields do not leak into it.
         $source['data'] = $this->process($entry->blueprint(), $this->withShared($entry->blueprint(), $entry->originId, (array) $source['data']), full: false);
         $source['authorId'] = $this->authorId($source['authorId'], allowMissing: true);
@@ -618,6 +687,7 @@ final class EntryService
         }
 
         $this->assertNoArchiveClash($entry);
+        $this->makeTags();
 
         if ($this->dry) {
             $this->staged[$entry->id] = $entry;
@@ -837,6 +907,9 @@ final class EntryService
      */
     private function process(Blueprint $blueprint, array $data, bool $full, ?array $previous = null): array
     {
+        // The tags this entry names; any an earlier entry of this write named and did not save are not made.
+        $this->pending = [];
+
         try {
             $data = $blueprint->process($data, partial: ! $full);
             $previous === null || $blueprint->check($data, $previous);

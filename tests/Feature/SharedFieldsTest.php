@@ -13,7 +13,7 @@ final class SharedFieldsTest extends TestCase
 {
     private const array FIELDS = [
         ['handle' => 'price', 'type' => 'number', 'localizable' => false, 'required' => true],
-        ['handle' => 'photos', 'type' => 'tags', 'localizable' => false],
+        ['handle' => 'photos', 'type' => 'list', 'localizable' => false],
         ['handle' => 'summary', 'type' => 'textarea'],
     ];
 

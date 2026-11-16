@@ -31,7 +31,7 @@ final class ComponentBlockMigrationTest extends TestCase
             'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'template' => 'page', 'fields' => [
                 ['handle' => 'content', 'type' => 'blocks', 'body' => true, 'allowed' => ['heading', 'pattern', 'box']],
                 ['handle' => 'kind', 'type' => 'select', 'options' => ['pattern' => 'Pattern', 'plain' => 'Plain']],
-                ['handle' => 'allowed', 'type' => 'tags'],
+                ['handle' => 'allowed', 'type' => 'list'],
             ]],
             'notes' => ['title' => 'Notes', 'driver' => 'files', 'route' => '/notes/{slug}', 'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true], ['handle' => 'aside', 'type' => 'blocks']]],
         ];
@@ -189,7 +189,7 @@ final class ComponentBlockMigrationTest extends TestCase
             props:
               - { handle: body, type: blocks, label: Body, allowed: [heading, pattern, pattern] }
               - { handle: other, type: select, label: Other, dynamic: patterns }
-              - { handle: tags, type: tags, label: Tags, allowed: [pattern], dynamic: patterns-of-mine }
+              - { handle: tags, type: list, label: Tags, allowed: [pattern], dynamic: patterns-of-mine }
             ---
 
             ::: box {"props":{"tag":"header"}}
@@ -251,7 +251,7 @@ final class ComponentBlockMigrationTest extends TestCase
             $this->assertSame([
                 ['handle' => 'body', 'type' => 'blocks', 'label' => 'Body', 'allowed' => ['heading', 'component']],
                 ['handle' => 'other', 'type' => 'select', 'label' => 'Other', 'dynamic' => 'components'],
-                ['handle' => 'tags', 'type' => 'tags', 'label' => 'Tags', 'allowed' => ['pattern'], 'dynamic' => 'patterns-of-mine'],
+                ['handle' => 'tags', 'type' => 'list', 'label' => 'Tags', 'allowed' => ['pattern'], 'dynamic' => 'patterns-of-mine'],
             ], $header[0]['props']);
             $this->assertSame("::: box {\"props\":{\"tag\":\"header\"}}\n### Header\n:::", $header[1]);
 

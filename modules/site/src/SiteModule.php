@@ -305,8 +305,9 @@ final class SiteModule extends Plugin
                         $query->references($to instanceof AugmentedEntry ? $to->id : '');
                     }
 
+                    // Filed under the tag of this name, through any of the collection's terms fields of tags.
                     if (! empty($props['hasTag'])) {
-                        $query->where('tags', 'contains', (string) $props['hasTag']);
+                        $this->filedUnderTag($query, $this->cms()->collections()->find($collection), (string) $props['hasTag'], $locale);
                     }
 
                     foreach ((array) ($props['where'] ?? []) as $where) {
@@ -580,7 +581,7 @@ final class SiteModule extends Plugin
                 ['handle' => 'auto_build', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Rebuild Automatically on Publish', 'default' => true],
                 ['handle' => 'search_index', 'section' => 'Publishing', 'type' => 'toggle', 'label' => 'Publish a Search Index', 'default' => true],
                 ['handle' => 'csp', 'section' => 'Security', 'type' => 'toggle', 'label' => 'Content Security Policy', 'default' => false],
-                ['handle' => 'csp_hosts', 'section' => 'Security', 'type' => 'tags', 'label' => 'Allowed Hosts', 'placeholder' => 'player.example.com', 'if' => ['csp' => true]],
+                ['handle' => 'csp_hosts', 'section' => 'Security', 'type' => 'list', 'label' => 'Allowed Hosts', 'placeholder' => 'player.example.com', 'if' => ['csp' => true]],
                 ['handle' => 'csp_report_only', 'section' => 'Security', 'type' => 'toggle', 'label' => 'Report Only', 'default' => false, 'if' => ['csp' => true]],
             ];
         });
@@ -984,7 +985,7 @@ final class SiteModule extends Plugin
             $admin->nav("design.{$id}", ['label' => $label, 'path' => "/design/{$id}", 'icon' => $icon, 'section' => 'design', 'order' => ($order + 1) * 10, 'permission' => 'settings.manage']);
         }
         // What a developer adds beside the structure: the site's own CSS, scripts and libraries.
-        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'structure', 'order' => 60, 'permission' => 'settings.manage']);
+        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'site-wide', 'order' => 60, 'permission' => 'settings.manage']);
         // A whole site to switch to, import or export: first in the design, as a site is a look of its own.
         $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'design-site', 'order' => 10, 'permission' => 'settings.manage']);
         // The design opens on its colours, where the work on a look begins, though its sites are listed first.
@@ -1034,4 +1035,30 @@ final class SiteModule extends Plugin
         - A site is a whole site to start from, copied in once: sites/list has the ones here; sites/get with `mode` (design or full) is the plan, step by step; sites/apply takes it in (dryRun first: it refuses while the site has something of a name the site brings, until `clash` is skip, replace or rename); sites/export makes this site into one in sites/<handle>.
         TXT);
     }
+
+    /**
+     * Narrow a query to the entries filed under the tag called $name (its slug, or its title in any case) in this
+     * language: through the collection's terms fields of tags. A name that is no tag leaves nothing.
+     */
+    private function filedUnderTag(EntryQueryProxy $query, \Cms\Content\Collections\Collection $collection, string $name, string $locale): void
+    {
+        foreach ($collection->relations() as $path => $field) {
+            $taxonomy = $field->type === 'terms' ? $this->cms()->collections()->find((string) $field->get('taxonomy')) : null;
+
+            if (! $taxonomy?->isTags()) {
+                continue;
+            }
+
+            foreach ($this->cms()->entries()->query()->collection($taxonomy->handle)->locale($locale)->live()->get() as $tag) {
+                if ($tag->slug === $name || mb_strtolower($tag->title) === mb_strtolower($name)) {
+                    $query->references($tag->id, $this->app->make(\Cms\Content\Collections\Archives::class)->fields($collection, $taxonomy->handle));
+
+                    return;
+                }
+            }
+        }
+
+        $query->where('id', '=', '-');
+    }
+
 }

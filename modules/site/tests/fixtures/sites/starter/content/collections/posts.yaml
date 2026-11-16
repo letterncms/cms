@@ -12,7 +12,7 @@ fields:
     label: Content
   -
     handle: tags
-    type: tags
+    type: list
     label: Tags
     section: sidebar
   -

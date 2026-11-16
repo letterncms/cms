@@ -17,7 +17,7 @@ final class EntryListTest extends TestCase
             ['handle' => 'role', 'type' => 'select', 'options' => ['lead' => 'Lead', 'dev' => 'Developer']],
             ['handle' => 'owner', 'type' => 'users'],
             ['handle' => 'posts', 'type' => 'entries'],
-            ['handle' => 'tags', 'type' => 'tags'],
+            ['handle' => 'tags', 'type' => 'list'],
         ]]];
     }
 

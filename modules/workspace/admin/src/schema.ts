@@ -90,7 +90,7 @@ export function schemaFields(schema: Schema | undefined, chosen: Record<string, 
     else if (type === 'boolean') fields.push({ ...field, type: 'toggle' })
     else if (type === 'integer' || type === 'number') fields.push({ ...field, type: 'number', ...(property.minimum !== undefined ? { min: property.minimum } : {}), ...(property.maximum !== undefined ? { max: property.maximum } : {}), ...(type === 'integer' ? { step: 1 } : {}) })
     else if (type === 'array' && choices(property.items)) fields.push({ ...field, type: 'select', multiple: true, options: choices(property.items)! })
-    else if (type === 'array' && types(property.items ?? {})[0] === 'string') fields.push({ ...field, type: 'tags' })
+    else if (type === 'array' && types(property.items ?? {})[0] === 'string') fields.push({ ...field, type: 'list' })
     else if (type === 'object' || type === 'array') fields.push({ ...field, type: 'json' })
     else fields.push({ ...field, ...(property.format === 'email' ? { type: 'email' } : {}), ...(property.maxLength && property.maxLength > 2000 ? { type: 'textarea' } : {}), ...(/pass(word)?|secret|token|key$/i.test(handle) ? { secret: true } : {}) })
   }

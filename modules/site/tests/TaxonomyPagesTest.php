@@ -20,7 +20,7 @@ final class TaxonomyPagesTest extends TestCase
     {
         return [
             'pages' => ['title' => 'Pages', 'route' => '/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
-            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
+            'topics' => ['title' => 'Topics', 'type' => 'tags', 'route' => '/topics/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true]]],
             'posts' => ['title' => 'Posts', 'route' => '/blog/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics']]],
         ];
     }
@@ -55,5 +55,25 @@ final class TaxonomyPagesTest extends TestCase
         $this->assertSame('News 2 Sport 1', $this->text($index->id));
         $this->assertSame('News 2', $this->text($post->id));
         $this->get('/topics/news')->assertOk()->assertSee('Cup final');
+
+        // A list of the entries filed under a tag, named by its slug or its title; a name that is no tag lists none.
+        $tagged = static fn (string $tag) => ['type' => 'repeat', 'props' => ['source' => 'entries', 'collection' => 'posts', 'sort' => 'title', 'hasTag' => $tag], 'children' => [['type' => 'paragraph', 'bind' => ['text' => 'item.title']]]];
+        $lists = $content->create('pages', ['title' => 'Tagged', 'status' => 'published', 'data' => ['content' => [$tagged('sport'), $tagged('News'), $tagged('nothing')]]]);
+        $this->assertSame('Cup final Cup final Flood', $this->text($lists->id));
+
+        // A related entry is a page's entry too: its fields and its address.
+        $related = $content->create('pages', ['title' => 'Related', 'status' => 'published', 'data' => ['content' => [
+            ['type' => 'repeat', 'props' => ['source' => 'entries', 'collection' => 'posts', 'sort' => 'title'], 'children' => [
+                ['type' => 'repeat', 'props' => ['source' => 'list', 'path' => 'item.topics', 'as' => 'topic'], 'children' => [['type' => 'paragraph', 'bind' => ['text' => '{topic.title} at {topic.url}']]]],
+            ]],
+        ]]]);
+        $this->assertSame('News at /topics/news Sport at /topics/sport News at /topics/news', $this->text($related->id));
+
+        // So is one in a repeater's row.
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('pages', ['title' => 'Pages', 'route' => '/{slug}', 'fields' => [['handle' => 'content', 'type' => 'blocks', 'body' => true], ['handle' => 'rows', 'type' => 'repeater', 'fields' => [['handle' => 'topic', 'type' => 'terms', 'taxonomy' => 'topics', 'max' => 1]]]]]));
+        $rows = $content->create('pages', ['title' => 'Rows', 'status' => 'published', 'data' => ['rows' => [['topic' => [$sport->id]]], 'content' => [
+            ['type' => 'repeat', 'props' => ['source' => 'list', 'path' => 'entry.rows', 'as' => 'row'], 'children' => [['type' => 'paragraph', 'bind' => ['text' => '{row.topic.title} at {row.topic.url}']]]],
+        ]]]);
+        $this->assertSame('Sport at /topics/sport', $this->text($rows->id));
     }
 }

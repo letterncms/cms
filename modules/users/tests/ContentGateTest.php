@@ -35,7 +35,7 @@ final class ContentGateTest extends TestCase
                 ['handle' => 'blocks', 'type' => 'blocks', 'body' => true],
             ]],
             // News filed under topics, with a page per topic: the term's archive.
-            'topics' => ['title' => 'Topics', 'taxonomy' => true, 'route' => '/topics/{slug}', 'fields' => []],
+            'topics' => ['title' => 'Topics', 'type' => 'tags', 'route' => '/topics/{slug}', 'fields' => []],
             'news' => ['title' => 'News', 'structure' => 'dated', 'route' => '/news/{slug}', 'template' => 'news', 'archives' => ['topics' => '/news/topics/{slug}'], 'fields' => [
                 ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics'],
                 ['handle' => 'blocks', 'type' => 'blocks', 'body' => true],

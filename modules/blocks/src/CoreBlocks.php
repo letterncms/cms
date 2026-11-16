@@ -431,7 +431,7 @@ final class CoreBlocks
                     ['handle' => 'name', 'type' => 'text', 'label' => 'Name', 'mono' => true, 'about' => 'Sent with a form.'],
                     ['handle' => 'placeholder', 'type' => 'text', 'label' => 'Placeholder'],
                     ['handle' => 'value', 'type' => 'text', 'label' => 'Initial Value'],
-                    ['handle' => 'options', 'type' => 'tags', 'label' => 'Options', 'if' => ['type' => 'select']],
+                    ['handle' => 'options', 'type' => 'list', 'label' => 'Options', 'if' => ['type' => 'select']],
                     ['handle' => 'min', 'type' => 'number', 'label' => 'Minimum', 'if' => ['type' => ['number', 'range']]],
                     ['handle' => 'max', 'type' => 'number', 'label' => 'Maximum', 'if' => ['type' => ['number', 'range']]],
                     ['handle' => 'step', 'type' => 'number', 'label' => 'Step', 'if' => ['type' => ['number', 'range']]],

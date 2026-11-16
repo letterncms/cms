@@ -159,6 +159,11 @@ final class SitesTest extends TestCase
         $this->assertSame(['sites', 'sites-store'], $design['design-site']['items']);
         $this->assertSame(['design.colors', 'design.typography', 'design.layout', 'design.effects', 'design.motion', 'design.classes'], $design['design']['items']);
         $this->assertContains('navigation', array_merge(...array_column($rooms['structure']['sections'], 'items')));
+        // Structure in named groups: content types, the layout, and what the whole site shares.
+        $structure = array_column($rooms['structure']['sections'], null, 'id');
+        $this->assertSame(['Content Types', 'Layout', 'Site'], array_column($structure, 'label'));
+        $this->assertSame(['collection.templates', 'collection.components', 'collection.patterns'], $structure['layout']['items']);
+        $this->assertSame(['navigation', 'code'], $structure['site-wide']['items']);
         $this->assertSame('/design/colors', $rooms['design']['path']);
         $this->assertSame('/design/colors', array_column($navigation['nav'], 'path', 'id')['design']);
         $this->assertNotContains('sites', array_merge(...array_column($rooms['settings']['sections'], 'items')));
@@ -174,7 +179,7 @@ final class SitesTest extends TestCase
         $posts = $this->cms()->collections()->findOrFail('posts');
         $this->assertSame('Blog', $posts->title);
         $entries = array_column(array_column($this->cms()->adminNav()->forUser($admin)['rooms'], null, 'id')['content']['sections'], null, 'id');
-        $this->assertSame(['collection.pages', 'collection.posts'], array_slice($entries['content']['items'], 0, 2));
+        $this->assertSame(['collection.pages', 'collection.posts'], array_slice($entries['entries']['items'], 0, 2));
         $this->assertSame('blocks', $posts->blueprint()->field('content')->type);
         $entries = $this->cms()->entries()->query()->collection('posts')->get();
         $this->assertCount(3, $entries);
@@ -553,7 +558,7 @@ final class SitesTest extends TestCase
         // Notes come before topics by name, and are filed under them; the site speaks Dutch too, the site not yet.
         $this->site('field', [
             'content/collections/notes.yaml' => "title: Notes\ndriver: files\nstructure: dated\nroute: '/notes/{slug}'\nfields:\n  - { handle: topics, type: terms, label: Topics, taxonomy: topics }\n  - { handle: about, type: entries, label: About, collections: [topics], max: 1 }\n",
-            'content/collections/topics.yaml' => "title: Topics\ndriver: files\nstructure: tree\nroute: '/topics/{slug}'\ntaxonomy: true\nfields: []\n",
+            'content/collections/topics.yaml' => "title: Topics\ndriver: files\ntype: categories\nroute: '/topics/{slug}'\nfields: []\n",
             'content/collections/topics/tides.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Tides\nstatus: published\n---\n",
             'content/collections/topics/nl/getij.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab2\ntitle: Getij\nstatus: published\norigin: 01aaaaaaaaaaaaaaaaaaaaaab1\n---\n",
             'content/collections/notes/slack.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab3\ntitle: Slack\nstatus: published\npublished_at: '2025-12-01T09:00:00+00:00'\ntopics: [01aaaaaaaaaaaaaaaaaaaaaab1]\n---\n\nSlack water.\n",
@@ -576,7 +581,7 @@ final class SitesTest extends TestCase
     {
         $this->site('field', [
             'content/collections/notes.yaml' => "title: Notes\ndriver: files\nstructure: dated\nroute: '/notes/{slug}'\nfields:\n  - { handle: topics, type: terms, label: Topics, taxonomy: topics }\n",
-            'content/collections/topics.yaml' => "title: Topics\ndriver: files\nstructure: tree\nroute: '/topics/{slug}'\ntaxonomy: true\nfields: []\n",
+            'content/collections/topics.yaml' => "title: Topics\ndriver: files\ntype: categories\nroute: '/topics/{slug}'\nfields: []\n",
             'content/collections/topics/tides.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Tides\nstatus: published\n---\n",
             'content/collections/topics/nl/getij.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab2\ntitle: Getij\nstatus: published\norigin: 01aaaaaaaaaaaaaaaaaaaaaab1\n---\n",
             'content/collections/notes/slack.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab3\ntitle: Slack\nstatus: published\npublished_at: '2025-12-01T09:00:00+00:00'\ntopics: [01aaaaaaaaaaaaaaaaaaaaaab1]\n---\n\nSlack water.\n",
@@ -648,7 +653,7 @@ final class SitesTest extends TestCase
         $this->sitePage('places', '/topics/{slug}', 'tides');
         $this->site('atlas', [
             'content/collections/notes.yaml' => "title: Notes\ndriver: files\nroute: '/notes/{slug}'\narchives:\n  topics: '/topics/{slug}'\nfields:\n  - { handle: topics, type: terms, label: Topics, taxonomy: topics }\n",
-            'content/collections/topics.yaml' => "title: Topics\ndriver: files\ntaxonomy: true\nfields: []\n",
+            'content/collections/topics.yaml' => "title: Topics\ndriver: files\ntype: tags\nfields: []\n",
             'content/collections/topics/tides.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac1\ntitle: Tides\nstatus: published\n---\n",
             'content/collections/notes/slack.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac2\ntitle: Slack\nstatus: published\ntopics: [01aaaaaaaaaaaaaaaaaaaaaac1]\n---\n",
         ]);

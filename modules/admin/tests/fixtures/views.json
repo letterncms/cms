@@ -661,8 +661,10 @@
                         "icon": "plus",
                         "variant": "primary",
                         "component": "collections/new",
-                        "input": [],
-                        "props": []
+                        "props": {
+                            "taxonomy": false
+                        },
+                        "input": []
                     }
                 ]
             },
@@ -675,7 +677,9 @@
                         "key": "handle",
                         "source": {
                             "ability": "collections/editable",
-                            "input": []
+                            "input": {
+                                "taxonomies": false
+                            }
                         },
                         "columns": [
                             {
@@ -737,7 +741,17 @@
                         ],
                         "empty": {
                             "icon": "collection",
-                            "title": "No collections yet"
+                            "title": "No collections yet",
+                            "action": {
+                                "label": "New Collection",
+                                "icon": "plus",
+                                "variant": "primary",
+                                "component": "collections/new",
+                                "props": {
+                                    "taxonomy": false
+                                },
+                                "input": []
+                            }
                         }
                     }
                 }
@@ -1658,7 +1672,7 @@
                                             },
                                             {
                                                 "handle": "notify",
-                                                "type": "tags",
+                                                "type": "list",
                                                 "label": "Email Submissions To",
                                                 "placeholder": "name@example.com",
                                                 "section": "Email"
