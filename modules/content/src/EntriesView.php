@@ -13,8 +13,8 @@ use Cms\Users\User;
  * A collection's entries as the catalog's `ui/records`: search, status and language, the tree
  * (dragged into order) or a sort, table, grid or calendar, the columns its fields offer, what
  * each row and a selection can do. Drawn by the same renderer as every other list, so a
- * plugin's lists work exactly like these. The pages a feature brings get a list of their own
- * beside the site's pages, in the same columns.
+ * plugin's lists work exactly like these. The pages a feature brings (sign in, the store's
+ * listing page) are rows of the site's pages, where their address puts them.
  */
 final class EntriesView
 {
@@ -44,8 +44,14 @@ final class EntriesView
         $media = array_values(array_filter($fields, static fn ($f) => $f['type'] === 'media'));
         $dated = $collection->isDated() || $collection->defaultView === 'calendar';
         $entry = ['id' => '{row.id}', 'expectedVersion' => '{row.version}'];
-        $open = "/content/{$handle}/{row.id}";
-        $plain = ['collection' => $handle, 'locale' => '{query.locale}', 'fields' => $values];
+        $open = '/content/{row.collection}/{row.id}';
+        // With the pages features bring: a row of theirs (`group`) is in their own collection, and one the site
+        // hasn't made its own yet (no `version`) becomes so when it opens.
+        $builtin = $handle === 'pages' && $this->cms->builtinPages()->all() !== [];
+        $plain = ['collection' => $handle, 'locale' => '{query.locale}', 'fields' => $values, ...($builtin ? ['builtin' => true] : [])];
+        $standard = ['ability' => 'pages/customize', 'input' => ['group' => '{row.group}', 'handle' => '{row.slug}'], 'then' => 'open', 'to' => '/content/{result.collection}/{result.id}', 'when' => '{row.opens}', 'unless' => '{row.version}'];
+        $own = $builtin ? ['when' => '{row.version}'] : [];
+        $site = $builtin ? ['unless' => '{row.group}'] : [];
 
         $records = [
             'id' => "entries.{$handle}", 'label' => __($collection->title), 'key' => 'id', 'address' => true,
@@ -60,18 +66,22 @@ final class EntriesView
             // The collection's own order while nobody picked one: the tree, for pages.
             'sort' => ['param' => 'sort', ...($collection->isTree() ? [] : ['default' => $collection->sort !== '' ? $collection->sort : ($collection->isDated() ? '-published_at' : 'title')])],
             'dates' => ['published' => 'published_at', 'updated' => 'updated_at'],
-            'open' => ['label' => __('Open'), 'to' => $open],
+            'open' => $builtin ? [['label' => __('Open'), 'to' => $open, ...$own], ['label' => __('Open'), ...$standard]] : ['label' => __('Open'), 'to' => $open],
             'actions' => [
                 // A page someone can see is a click away.
                 ['label' => __('View on Site'), 'icon' => 'external', 'inline' => true, 'href' => '{row.uri}', 'when' => '{row.uri}', 'unless' => '{row.displayStatus} is draft, scheduled, expired'],
                 // The row itself opens it; in the menu, beside a pencil, the act has its name, for those who may do it.
-                ['label' => __('Edit'), 'icon' => 'edit', 'to' => $open, 'can' => "entries.{$handle}.edit"],
-                ['label' => __('Duplicate'), 'icon' => 'copy', 'ability' => 'entries/duplicate', 'input' => $entry, 'then' => 'open', 'to' => "/content/{$handle}/{result.id}", 'can' => "entries.{$handle}.create"],
+                ['label' => __('Edit'), 'icon' => 'edit', 'to' => $open, 'can' => "entries.{$handle}.edit", ...$own],
+                ...($builtin ? [['label' => __('Edit'), 'icon' => 'edit', ...$standard]] : []),
+                ['label' => __('Duplicate'), 'icon' => 'copy', 'ability' => 'entries/duplicate', 'input' => $entry, 'then' => 'open', 'to' => "/content/{$handle}/{result.id}", 'can' => "entries.{$handle}.create", ...$site],
                 ['label' => __('Publish'), 'icon' => 'rocket', 'ability' => 'entries/publish', 'input' => $entry, 'success' => __('Published'), 'when' => '{row.displayStatus} is draft, changed, expired', 'can' => "entries.{$handle}.publish"],
-                ['label' => __('Unpublish'), 'icon' => 'eye-off', 'ability' => 'entries/unpublish', 'input' => $entry, 'success' => __('Unpublished'), 'unless' => '{row.displayStatus} is draft', 'can' => "entries.{$handle}.publish"],
+                ['label' => __('Unpublish'), 'icon' => 'eye-off', 'ability' => 'entries/unpublish', 'input' => $entry, 'success' => __('Unpublished'), 'unless' => '{row.displayStatus} is draft', 'can' => "entries.{$handle}.publish", ...$own],
                 ['label' => __('Copy URL'), 'icon' => 'link', 'copy' => '{origin}{row.uri}', 'success' => __('URL copied'), 'when' => '{row.uri}'],
-                ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'entries/delete', 'input' => $entry, 'success' => __('Deleted'), 'can' => "entries.{$handle}.delete",
+                ['label' => __('Delete'), 'icon' => 'trash', 'variant' => 'danger', 'ability' => 'entries/delete', 'input' => $entry, 'success' => __('Deleted'), 'can' => "entries.{$handle}.delete", ...$site,
                     'confirm' => ['title' => str_replace('{title}', '{row.title}', __('Delete “{title}”?')), 'text' => __('This cannot be undone.'), 'confirm' => __('Delete'), 'danger' => true]],
+                // Back to what the feature ships: the site's own version goes, with its history.
+                ...($builtin ? [['label' => __('Use Standard Version'), 'icon' => 'undo', 'variant' => 'danger', 'ability' => 'entries/delete', 'input' => $entry, 'success' => __('Back to the standard version'), 'when' => '{row.restorable}',
+                    'confirm' => ['title' => str_replace('{title}', '{row.title}', __('Use the standard “{title}”?')), 'text' => __('Your version and its history are deleted. The page shows what comes with the feature.'), 'confirm' => __('Use Standard Version'), 'danger' => true]]] : []),
             ],
             'bulk' => [
                 ['label' => __('Publish'), 'each' => true, 'ability' => 'entries/publish', 'input' => $entry, 'some' => '{row.displayStatus} is draft, changed, expired', 'can' => "entries.{$handle}.publish",
@@ -82,6 +92,7 @@ final class EntriesView
                     'confirm' => ['title' => ['one' => __('Delete {count} entry?'), 'other' => __('Delete {count} entries?')], 'text' => __('This cannot be undone.'), 'confirm' => __('Delete'), 'danger' => true],
                     'success' => ['one' => __('Deleted {count} entry'), 'other' => __('Deleted {count} entries')]],
             ],
+            ...($builtin ? ['selectable' => '{row.version}'] : []),
             'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => __($collection->title)])],
             'defaultView' => $defaultView = in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
             // The person's saved views of this list, beside Display: what narrows the list is what a view can keep.
@@ -94,7 +105,8 @@ final class EntriesView
 
         if ($collection->isTree()) {
             // A published page moves only for those who may publish it.
-            $records['tree'] = ['source' => ['ability' => 'entries/tree', 'input' => $plain], 'version' => 'version', 'reorder' => [
+            // A feature's page stays where its address puts it.
+            $records['tree'] = ['source' => ['ability' => 'entries/tree', 'input' => $plain], 'version' => 'version', ...($builtin ? ['fixed' => '{row.group}'] : []), 'reorder' => [
                 'label' => __('Drag to Reorder'), 'ability' => 'entries/reorder', 'can' => "entries.{$handle}.edit",
                 'input' => ['collection' => $handle, 'ids' => '{ids}', 'parentId' => '{parent}', 'versions' => '{versions}'],
                 ...($can('publish') ? [] : ['when' => '{row.status} is not published']),
@@ -116,45 +128,6 @@ final class EntriesView
         }
 
         return $records;
-    }
-
-    /**
-     * The pages one feature brings (sign in, checkout), as a list beside the site's own pages: the
-     * same columns and statuses, where "Standard" is the version the feature ships. A row opens the
-     * site's own version, made from the standard one the first time.
-     */
-    public function builtin(array $group): array
-    {
-        $page = ['group' => $group['id'], 'handle' => '{row.handle}'];
-        $entry = ['id' => '{row.id}', 'expectedVersion' => '{row.version}'];
-        $open = ['label' => __('Open'), 'ability' => 'pages/customize', 'input' => $page, 'then' => 'open', 'to' => '/content/{result.collection}/{result.id}', 'when' => '{row.opens}'];
-
-        return [
-            'id' => "builtin.{$group['id']}", 'label' => __($group['label']), 'key' => 'handle', 'display' => false,
-            'source' => ['ability' => 'pages/builtin', 'input' => ['group' => $group['id']]], 'at' => '0.pages',
-            'columns' => [
-                ['key' => 'label', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)'],
-                ['key' => 'path', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'empty' => __('Shown inside other pages')],
-                // Which version the site shows is one thing, how that version stands another: the standard one is live, so it is Published. A customized
-                // version only drafted is not on the site yet: the site still shows the Standard one.
-                ['key' => 'status', 'label' => __('Version'), 'width' => '120px',
-                    'labels' => ['standard' => __('Standard'), 'conflict' => __('Standard'), 'customised' => __('Customized'), 'draft' => __('Standard')]],
-                ['key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '128px',
-                    'tones' => ['conflict' => 'warning'], 'labels' => ['conflict' => __('Address Taken')]],
-                ['key' => 'published', 'label' => __('Published')],
-                ['key' => 'updated', 'label' => __('Updated')],
-            ],
-            'open' => $open,
-            'actions' => [
-                ['label' => __('View on Site'), 'icon' => 'external', 'inline' => true, 'href' => '{row.href}', 'when' => '{row.href}'],
-                ['icon' => 'edit', ...$open, 'label' => __('Edit')],
-                ['label' => __('Copy URL'), 'icon' => 'link', 'copy' => '{origin}{row.href}', 'success' => __('URL copied'), 'when' => '{row.href}'],
-                // Back to what the feature ships: the site's own version goes, with its history.
-                ['label' => __('Use Standard Version'), 'icon' => 'undo', 'variant' => 'danger', 'ability' => 'entries/delete', 'input' => $entry, 'success' => __('Back to the standard version'), 'when' => '{row.restorable}',
-                    'confirm' => ['title' => str_replace('{title}', '{row.label}', __('Use the standard “{title}”?')), 'text' => __('Your version and its history are deleted. The page shows what comes with the feature.'), 'confirm' => __('Use Standard Version'), 'danger' => true]],
-            ],
-            'empty' => ['icon' => 'page', 'title' => __('No pages')],
-        ];
     }
 
     /** @return list<array> the collection's fields, named in the user's language */
@@ -190,7 +163,8 @@ final class EntriesView
         $columns = [['id' => 'title', 'key' => 'title', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)', 'sort' => 'title', 'empty' => __('Untitled'), 'muted' => 'editingBy', 'mutedWhole' => true]];
 
         if ($routable) {
-            $columns[] = ['id' => 'uri', 'key' => 'uri', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'sort' => 'uri'];
+            // A feature's address for many pages (`/store/{slug}`) reads quieter, as no page of its own.
+            $columns[] = ['id' => 'uri', 'key' => 'uri', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'sort' => 'uri', 'muted' => 'pattern'];
         }
         // What a site is built from (its templates, its components) is not a page of its own: its list has few columns, so the
         // title keeps to its words and the state stands beside it, and it says where each one is used (`usedBy`); its cards
@@ -201,7 +175,8 @@ final class EntriesView
             $columns[] = ['id' => 'preview', 'key' => 'preview', 'label' => __('Preview'), 'format' => 'page', 'image' => true, 'width' => '88px'];
             $columns[] = ['id' => 'used', 'key' => 'usedBy', 'label' => __('Used By'), 'width' => 'minmax(160px,1fr)', 'empty' => __('Nothing')];
         }
-        $columns[] = ['id' => 'status', 'key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '104px', 'sort' => 'status'];
+        // A feature's page whose address a page of the site has taken is not on view.
+        $columns[] = ['id' => 'status', 'key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '104px', 'sort' => 'status', 'tones' => ['conflict' => 'warning'], 'labels' => ['conflict' => __('Address Taken')]];
 
         $listed = 0;
         foreach ($fields as $field) {

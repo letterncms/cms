@@ -193,7 +193,7 @@ final class AdminTest extends TestCase
         $nav = array_column($this->cms()->adminNav()->forUser($this->admin())['nav'], null, 'id');
         $this->assertSame('collection.pages', $nav['collection.shop-pages']['home']);
         $collections = array_column($this->app->make(Manifest::class)->build($this->admin())['collections'], null, 'handle');
-        $this->assertSame(['pages', 'shop'], [$collections['shop-pages']['within'], $collections['shop-pages']['tab']]);
+        $this->assertSame('pages', $collections['shop-pages']['within']);
 
         $groups = array_column($this->cms()->abilities()->execute('pages/builtin', [], $ctx), null, 'id');
         $this->assertSame([['handle' => 'basket', 'label' => 'Basket', 'path' => '/basket', 'id' => null, 'version' => null, 'status' => 'standard', 'displayStatus' => 'published', 'publishedAt' => null, 'updatedAt' => null,

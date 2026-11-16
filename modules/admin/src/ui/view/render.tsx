@@ -39,7 +39,7 @@ export function ViewNodeView({ node, path }: { node: ViewNode; path: string }) {
 function fillShown(props: Record<string, any>, scope: Record<string, unknown>): Record<string, any> {
   // A list's literal `rows` are values as they were found, never templates. A list's calendar and tree
   // fill in with their month and their rows.
-  const kept = new Set(['source', 'rows', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'empty', 'count', 'calendar', 'tree'])
+  const kept = new Set(['source', 'rows', 'save', 'actions', 'open', 'action', 'items', 'columns', 'filters', 'bulk', 'selectable', 'empty', 'count', 'calendar', 'tree'])
   return Object.fromEntries(Object.entries(props ?? {}).map(([k, v]) => [k, kept.has(k) ? v : fill(v, scope)]))
 }
 

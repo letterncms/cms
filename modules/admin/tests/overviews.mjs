@@ -28,7 +28,7 @@ const storeItems = [
   { package: 'letterncms/starter', type: 'site', title: 'Starter', installed: '0.1.0', action: 'installed' },
   { package: 'letterncms/studio', type: 'site', title: 'Studio', installed: null, action: 'install' },
 ].map((item) => ({ summary: '', categories: [], author: { name: 'Fixture Author', url: '' }, latest: '0.1.0', ...item }))
-const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true }
+const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true, builtin: true }
 // Records that happen on a day: the one kind of overview that offers a calendar.
 const eventsCollection = { ...collection, handle: 'events', title: 'Events', singular: 'Event', newLabel: 'New Event', icon: 'calendar', structure: 'dated' }
 const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['sites', 'Sites', '/sites', 'box'], ['built-in', 'Built In', '/built-in', 'box'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
@@ -411,6 +411,19 @@ try {
       if (actions) assert(actions.querySelector('.sr-only'), path + ': visible Actions heading')
     }
   })
+  await test("A feature's page is a row of the pages, where its address puts it", async () => {
+    await open('/content/pages', 'Shop item')
+    const row = (id) => main().querySelector('[role="row"][data-entry="' + id + '"]')
+    assert(row('shop/item').textContent.includes('/parent/{slug}'), 'its address for many pages is not shown')
+    const handle = (id) => row(id).querySelector('[aria-label="Drag to Reorder"]')
+    assert(handle('child') && !handle('shop/item'), "a feature's page can be dragged, or the site's cannot")
+    const box = (id) => [...row(id).querySelectorAll('[data-row-check] [role="checkbox"]')].find((b) => !b.closest('[aria-hidden]'))
+    assert(box('child') && !box('shop/item'), "a feature's page can be picked for what is done to many")
+    assert(!text().includes('Store Pages') && !main().querySelector('[role="tab"]'), 'pages still have tabs')
+    ;[...row('shop/item').querySelectorAll('button')].find((b) => b.textContent.includes('Shop item')).click()
+    await wait(() => location.pathname === '/admin/content/shop-pages/shop-item', "opening the standard version did not make it the site's own")
+    assert((await calls()).some((r) => r.ability === 'pages/customize' && r.input.group === 'shop' && r.input.handle === 'item'), 'pages/customize was not asked')
+  })
   await test('Media uses the standard empty state with Upload', async () => {
     await fetch('/__test/media-empty', { method: 'POST' })
     await open('/forms', 'Quote Request')
@@ -467,7 +480,11 @@ serve('Overview', async (req, res, url) => {
     else if (ability === 'globals/list') data = manifest.globals
     else if (ability === 'collections/get') data = input.handle === 'pages' ? { ...treeCollection, fields: [], resolvedFields: [], schema: {} } : input.handle === 'events' ? { ...eventsCollection, sort: '-published_at', fields: [], resolvedFields: [], schema: {} } : { ...collectionDef, schema: {} }
     else if (ability === 'collections/save') { collectionDef = { ...collectionDef, ...input.definition }; collection.defaultView = collectionDef.default_view; data = collectionDef }
-    else if (ability === 'entries/tree') data = [{ ...entry('parent', 'Parent page'), uri: '/parent', displayStatus: 'published', children: [{ ...entry('child', 'Child page with a substantially longer title'), uri: '/parent/child', displayStatus: 'published', children: [] }] }]
+    // A feature's page, under the page its address is inside: the standard version, not the site's own yet.
+    else if (ability === 'entries/tree') data = [{ ...entry('parent', 'Parent page'), uri: '/parent', displayStatus: 'published', children: [{ ...entry('child', 'Child page with a substantially longer title'), uri: '/parent/child', displayStatus: 'published', children: [] },
+      { ...entry('shop/item', 'Shop item'), collection: 'shop-pages', slug: 'item', uri: null, pattern: '/parent/{slug}', status: 'published', displayStatus: 'published', version: '', group: 'shop', opens: true, restorable: false, parentId: 'parent', children: [] }] }]
+    else if (ability === 'pages/customize') data = { id: 'shop-item', collection: 'shop-pages' }
+    else if (ability === 'entries/get' && input.id === 'shop-item') data = { ...entry('shop-item', 'Shop item'), collection: 'shop-pages' }
     else if (ability === 'blocks/types') data = { blocks: [], sources: [], transforms: [] }
     else if (ability === 'forms/get') data = { handle: input.handle, title: 'Contact', fields: [], settings: {} }
     else if (ability === 'form-submissions/list') data = page([{ id: 'submission-1', data: { name: 'Ada Example', email: 'ada@example.invalid', message: 'A short message' }, files: [], meta: {}, status: 'new', createdAt: '2026-10-27T12:00:00Z' }, { id: 'submission-2', data: { name: 'A very long sender name that must not change the column alignment', email: 'very.long.email.address@example.invalid', message: 'A longer submission message that must stay in its own column.' }, files: [], meta: {}, status: 'read', createdAt: '2026-10-26T12:00:00Z' }])

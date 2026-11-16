@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **One list of pages.** The pages features and plugins bring, like sign-in, the account pages and the store's page for each listing, are listed with your own pages instead of on tabs of their own, under the page whose address they share (the store's listing page under **Store**). They stay where their address puts them: open one to edit it as your own, and **Use Standard Version** in its ⋯ menu goes back to the one that comes with it. An address that stands for many pages, like `/store/{slug}`, shows quieter.
+
 ## 0.47.0 (2026-11-16)
 
 ### Added

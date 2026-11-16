@@ -209,6 +209,8 @@ export interface DataColumn<T> {
 
 export interface DataSelection<T = unknown> {
   ids: Set<string>
+  /** Whether a record can be picked, when not all can: one that can't has no checkbox. */
+  can?: (item: T) => boolean
   onSelect: (ids: string[], on: boolean, records?: T[]) => void
 }
 
@@ -217,6 +219,8 @@ export interface DataTree<T> {
   children: (item: T) => T[]
   /** Siblings in their new order under their parent (`null`: the top level). Without it, nothing can be dragged. */
   reorder?: (siblings: T[], parent: T | null) => Promise<void>
+  /** A record that stays where it is: it has no handle, and the others move around it. */
+  fixed?: (item: T) => boolean
 }
 
 /** A row's checkbox: in the sheet's gutter, left of the row, on a wide screen, so titles line up with the search above; before the title on a phone. */
@@ -264,7 +268,7 @@ const LINK = 'min-w-0 flex-1 truncate text-left text-inherit no-underline outlin
 /** The admin's one table: every list, flat or a tree, is drawn by it, so they look and work alike. */
 export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClick, selected, selection, actions, tree, loading, stale, state, sort, sortable, onSort, cursor }: DataTableProps<T>) {
   const all = flattenTree(items, tree?.children)
-  const rowIds = all.map(rowKey)
+  const rowIds = all.filter((item) => selection?.can?.(item) ?? true).map(rowKey)
   const chosen = rowIds.filter((key) => selection?.ids.has(key)).length
   // Room for the toggles only when something in the tree holds something.
   const nested = !!tree && items.some((item) => tree.children(item)?.length > 0)
@@ -281,7 +285,10 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
     const key = rowKey(item)
     const href = rowHref?.(item)
     return <TableRow key={key} recordId={key} selected={selected?.(item) || selection?.ids.has(key)} active={cursor === key}>
-      {selection && <div role="cell" data-row-check="" className={GUTTER}><Checkbox checked={selection.ids.has(key)} disabled={loading} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([key], on, all)} /></div>}
+      {selection && <div role="cell" data-row-check="" className={GUTTER}>{(selection.can?.(item) ?? true)
+        ? <Checkbox checked={selection.ids.has(key)} disabled={loading} label={<span className="sr-only">{t('Select Item')}</span>} onChange={(on) => selection.onSelect([key], on, all)} />
+        // One that can't be picked keeps the room a checkbox takes, so the row lines up with the others.
+        : <span aria-hidden className="invisible"><Checkbox checked={false} disabled label={<span className="sr-only">{t('Select Item')}</span>} onChange={() => {}} /></span>}</div>}
       {nested && <span role="none" className="max-sm:hidden" />}
       <div role="cell" className="flex min-w-0 items-center py-2 font-medium text-ink max-sm:flex-1 max-sm:py-0" style={depth ? { paddingLeft: depth * INDENT } : undefined}>
         {extra?.expander}
@@ -299,7 +306,7 @@ export function DataTable<T>({ label, items, columns, rowKey, rowHref, onRowClic
 
   return <TableFrame template={template} label={label} busy={loading || stale}>
     <TableRow header className="relative">
-      {selection && <div role="columnheader" data-row-check="" className={GUTTER}><Checkbox checked={rowIds.length > 0 && chosen === rowIds.length} indeterminate={chosen > 0 && chosen < rowIds.length} disabled={loading || all.length === 0} label={<span className="sr-only">{t('Select All')}</span>} onChange={(on) => selection.onSelect(rowIds, on, all)} /></div>}
+      {selection && <div role="columnheader" data-row-check="" className={GUTTER}><Checkbox checked={rowIds.length > 0 && chosen === rowIds.length} indeterminate={chosen > 0 && chosen < rowIds.length} disabled={loading || rowIds.length === 0} label={<span className="sr-only">{t('Select All')}</span>} onChange={(on) => selection.onSelect(rowIds, on, all)} /></div>}
       {nested && <span role="none" />}
       {columns.map((c) => <TableHeader key={c.id} label={c.label} align={c.align} direction={sort?.replace(/^-/, '') === (c.sort ?? c.id) ? sort.startsWith('-') ? 'descending' : 'ascending' : undefined} onSort={onSort && (sortable ? sortable.has(c.id) : c.sort) ? () => onSort(c) : undefined} />)}
       {hasActions && <TableHeader label={t('Actions')} hiddenLabel />}
@@ -353,7 +360,7 @@ function TreeLevel<T>({ nodes, parent, depth, tree, rowKey, row, collapsed, setC
           className="relative z-raised -ml-5 mr-0 grid size-5 shrink-0 -translate-x-0.5 place-items-center rounded-xs text-faint transition-colors duration-base hover:bg-hover hover:text-text">
           <Icon name="chevron-right" size={12} className={cn('transition-transform duration-base', open && 'rotate-90')} />
         </Pressable>
-        return <SortableRow key={key} id={key} disabled={!tree.reorder}>
+        return <SortableRow key={key} id={key} disabled={!tree.reorder || !!tree.fixed?.(node)}>
           {(handle) => <>
             {row(node, depth, { expander, handle })}
             {children.length > 0 && open && <TreeLevel nodes={children} parent={node} depth={depth + 1} tree={tree} rowKey={rowKey} row={row} collapsed={collapsed} setCollapsed={setCollapsed} />}

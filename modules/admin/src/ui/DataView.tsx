@@ -161,7 +161,7 @@ export function DataView<T>({ id, label, items, source, pagination, columns: own
 
   function grid(items: T[]) {
     return <DataGrid loading={loading} stale={stale} media={pictures}>
-      {items.map((item) => <DataCard key={rowKey(item)} title={columns[0].render(item)} href={rowHref?.(item)} onClick={onRowClick ? () => onRowClick(item) : undefined} icon={icon} image={pictures ? image?.(item) : undefined} selected={isSelected(item)} active={cursor === rowKey(item)} recordId={rowKey(item)} onSelect={selection ? (on) => selection.onSelect([rowKey(item)], on, rows) : undefined} actions={actions?.(item)}>
+      {items.map((item) => <DataCard key={rowKey(item)} title={columns[0].render(item)} href={rowHref?.(item)} onClick={onRowClick ? () => onRowClick(item) : undefined} icon={icon} image={pictures ? image?.(item) : undefined} selected={isSelected(item)} active={cursor === rowKey(item)} recordId={rowKey(item)} onSelect={selection && (selection.can?.(item) ?? true) ? (on) => selection.onSelect([rowKey(item)], on, rows) : undefined} actions={actions?.(item)}>
         {visible.slice(1).filter((c) => c.card === 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="m-0 mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{c.render(item)}</div>)}
         <dl className="m-0 mt-3 space-y-1 text-xs text-muted">{visible.slice(1).filter((c) => c.card !== 'text' && c.id !== imageColumn).map((c) => <div key={c.id} className="flex min-w-0 gap-2"><dt className="shrink-0 text-faint">{c.label}</dt><dd className="m-0 ml-auto min-w-0 truncate">{c.render(item)}</dd></div>)}</dl>
       </DataCard>)}
