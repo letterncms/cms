@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.42.0 (2026-11-16)
+
 ### Changed
 
 - **A calmer sidebar.** It holds what you work on every day: Dashboard and Analytics, then **Content** (your pages and collections, Media, Forms) and **Site** (Navigation, Globals).
