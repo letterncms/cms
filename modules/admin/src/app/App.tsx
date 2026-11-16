@@ -6,8 +6,8 @@ import './commands'
 import { CustomizeSidebar } from './CustomizeSidebar'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Sidebar, StateBack, type OwnSidebar } from './Sidebar'
-import { isPinned, leaveRoom, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
-import { itemAt, noteLocation, placeAt, roomAt } from '../ui/place'
+import { leaveRoom, setPinned, SETTINGS_SHORTCUT, toggleSettings, unpin } from './sidebarStore'
+import { itemAt, noteLocation, roomAt, wayBack } from '../ui/place'
 import { useShortcut } from '../ui/shortcuts'
 import { WorkspaceContext } from '../ui/WorkspaceContext'
 import { dockState, type DockState } from '../ui/Dock'
@@ -139,7 +139,7 @@ export function App() {
   const setOwnOpen = useCallback((open: boolean) => setClaims((c) => ({ ...c, open })), [])
   const [ownHost, setOwnHost] = useState<HTMLElement | null>(null)
   const claimSidebar = useCallback((state: OwnSidebar) => {
-    setClaims((c) => c.list.length ? { ...c, list: [...c.list, state] } : { list: [state], open: !!state.nested || remembered(state.title), instant: true })
+    setClaims((c) => c.list.length ? { ...c, list: [...c.list, state] } : { list: [state], open: remembered(state.title), instant: true })
     return () => setClaims((c) => {
       const list = c.list.filter((claim) => claim !== state)
       return { ...c, list, instant: c.instant || list.length === 0 }
@@ -164,11 +164,9 @@ export function App() {
 
   const manifest = useManifest()
   const room = roomAt(manifest, location.path)
-  const place = placeAt(manifest.nav, location.path)
-  // Sections of one screen (the styling's) go under its row, where the screen was opened; the sidebar stays the one it was.
-  // Only when that row is not there (under More) do they take the sidebar over, like any screen's own list.
-  const nested = !!claim?.nested && !!place && (room ? true : manifest.sidebar.sections.some((s) => s.items.includes(place.id)) && isPinned(manifest.sidebar, place.id))
-  const own = claim && !nested ? claim : null
+  const own = claim
+  // A step into where you are (Styling) is out whenever the sidebar is; a screen's own state (the Outline) as it was left.
+  const ownState = !!own && !own.step
 
   // Every screen on view, so a way back returns to where someone came from (see `cameFrom`).
   const noted = useRef('')
@@ -193,7 +191,7 @@ export function App() {
   }, [])
   const toggleSidebar = () => {
     if (narrow) setExpanded((e) => !e)
-    else if (own) {
+    else if (ownState) {
       // Under the name of the screen's first claim: the one its open state was read for.
       remember(claims.list[0].title, !ownOpen)
       setOwnOpen(!ownOpen)
@@ -238,11 +236,14 @@ export function App() {
   const pinned = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => !manifest.sidebar.hidden.includes(id))
   const first = manifest.nav.find((n) => n.id === pinned)?.path
 
-  // Esc leaves a room, unless something on top of the screen takes it (a dialog, a menu, a field), or someone is at work in the page itself.
+  // Esc goes back a step (out of Styling, into the design) or out of a room, unless something on top of the screen takes it
+  // (a dialog, a menu, a field), or someone is at work in the page itself.
   useShortcut('escape', (e) => {
     if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable], [role="dialog"], [role="menu"], [role="listbox"], .cms-dock, [data-cms-screen]')) return
-    if (!document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) leaveRoom()
-  }, !!room && !customizing && !(narrow && expanded))
+    if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"], [data-popup-open]')) return
+    if (own?.step) navigate(wayBack(manifest, { to: own.backTo, label: own.backLabel }).to)
+    else leaveRoom()
+  }, (!!room || !!own?.step) && !customizing && !(narrow && expanded))
   useEffect(() => {
     if (!route && location.path === '/' && first && first !== '/') navigate(first, { replace: true })
   }, [route, location.path, first])
@@ -253,10 +254,10 @@ export function App() {
   const banners = panelsFor('shell.banner', {})
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', {})
-  const sidebarShown = !narrow && (own ? ownOpen : !hidden)
-  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} nested={nested ? claim : null} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} room={room} />
+  const sidebarShown = !narrow && (ownState ? ownOpen : !hidden)
+  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} room={room} />
   const sidebarOut = narrow ? expanded : sidebarShown
-  const toggleLabel = own
+  const toggleLabel = ownState && own
     ? sidebarOut ? t('Hide {name}', { name: own.title }) : t('Show {name}', { name: own.title })
     : sidebarOut ? t('Hide Sidebar') : t('Show Sidebar')
   // On the desk the sheet is inset from the window; the sidebar button sits in its top bar while the sidebar is away.
@@ -310,7 +311,7 @@ export function App() {
               ))}
             </div>
           )}
-          <WorkspaceContext value={{ host: workspace, content, inspector, sidebar: { host: ownHost, open: narrow ? expanded : ownOpen, setOpen: narrow ? setExpanded : setOwnOpen, claim: claimSidebar, claimed: own !== null, nested } }}>
+          <WorkspaceContext value={{ host: workspace, content, inspector, sidebar: { host: ownHost, open: narrow ? expanded : sidebarShown, setOpen: narrow ? setExpanded : ownState ? setOwnOpen : (open) => setHidden(!open), claim: claimSidebar, claimed: own !== null } }}>
             <div ref={setWorkspace} inert={dock.full || (dock.open && narrow)} className="cms-sheet relative isolate min-h-0 min-w-0 flex-1">
               {pending && <div className="cms-progress" role="progressbar" aria-label={t('Loading…')} />}
               <div

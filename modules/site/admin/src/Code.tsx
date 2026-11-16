@@ -1,12 +1,12 @@
 import { CmsError, can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
-import { Button, CodeEditor, IconButton, Menu, NotFoundState, Notice, QueryError, SaveBar, ScreenSidebar, SidebarGroup, SidebarRow, Skeleton, Spinner, Tooltip, Topbar, confirm, prompt, toast, useScreenSidebar, type MenuItemDef } from '@letterncms/ui'
+import { Button, CodeEditor, IconButton, Menu, NotFoundState, Notice, QueryError, SaveBar, ScreenSidebar, SidebarGroup, SidebarRow, Skeleton, Spinner, Tooltip, Topbar, confirm, prompt, toast, type MenuItemDef } from '@letterncms/ui'
 import { Stylesheet, balanced } from '@letterncms/blocks'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 /* The site's own code, for whoever writes it, as an editor of files: the CSS no section of Styling shows and the
    stylesheets blocks load by name, the JavaScript on every page and the scripts blocks run, and the libraries
-   scripts import. Their list is under Code's row in the sidebar, as Styling's sections are under its own; the one
-   open fills the screen. Styling is the design; this is what a developer adds. */
+   scripts import. Their list is the sidebar, a step into the design as Styling is; the one open fills the screen.
+   Styling is the design; this is what a developer adds. */
 
 interface Info {
   css: string
@@ -51,7 +51,6 @@ export default function Code() {
   /** The library being fetched, or 'add' while a new one is. */
   const [fetching, setFetching] = useState<string | null>(null)
   const { query } = useLocation()
-  const sidebar = useScreenSidebar()
   // What is open is in the address, so Back returns to what was open before.
   const open: Open = query.file ?? 'css'
   const select = (next: Open) => setQuery({ file: next === 'css' ? null : next }, false)
@@ -148,9 +147,8 @@ export default function Code() {
   ] : [])
   /** A mark for what holds unsaved changes. */
   const edited = (on: boolean) => (on ? <span className="size-1.5 rounded-full bg-focus" aria-label={t('Unsaved changes')} role="img" /> : undefined)
-  // Under Code's row the rows go without icons, as Styling's sections do; in a sidebar of their own they keep them.
   const row = (key: Open, label: string, icon: string, unsaved: boolean, menu: MenuItemDef[] = [], badge?: ReactNode) => (
-    <SidebarRow key={key} label={label} icon={sidebar.nested ? undefined : icon} active={open === key} onClick={() => select(key)} status={edited(unsaved)} badge={badge} actions={menu.map((item) => ({ ...item, quick: item.icon === 'trash' }))} />
+    <SidebarRow key={key} label={label} icon={icon} active={open === key} onClick={() => select(key)} status={edited(unsaved)} badge={badge} actions={menu.map((item) => ({ ...item, quick: item.icon === 'trash' }))} />
   )
   const fileRows = (kind: Kind) => (files.data?.[kind] ?? []).map((name) => {
     const path = `${kind}/${name}.${EXT[kind]}`
@@ -158,7 +156,7 @@ export default function Code() {
   })
 
   const list = (
-    <nav aria-label={t('Code')} className={sidebar.nested ? undefined : 'px-2 pb-4'}>
+    <nav aria-label={t('Code')} className="px-2 pb-4">
       <SidebarGroup title={t('Stylesheets')} action={code && <Add label={t('New Stylesheet')} onAdd={() => void addFile('styles')} />}>
         {row('css', t('Site CSS'), 'braces', draft.css !== undefined && draft.css !== base.css)}
         {files.isError ? <QueryError compact onRetry={() => void files.refetch()} retrying={files.isRefetching} /> : !files.data ? <Loading /> : fileRows('styles')}
@@ -196,8 +194,8 @@ export default function Code() {
         crumbs={[{ label: t('Code'), icon: 'code' }, ...(title ? [{ label: title }] : [])]}
         actions={menu.length > 0 && <Menu align="end" trigger={<IconButton icon="more" size="sm" label={t('File Actions')} />} items={menu} />}
       />
-      {/* The files are rows under Code in the sidebar: no column of their own, and the sidebar stays the one it was. */}
-      <ScreenSidebar title={t('Code')} backTo="/" backLabel={t('Dashboard')} nested>{list}</ScreenSidebar>
+      {/* A step into the design: the files are the sidebar, with the way back to the design. */}
+      <ScreenSidebar title={t('Code')} backTo="/design" backLabel={t('Design')} step>{list}</ScreenSidebar>
       <SaveBar dirty={dirty} saving={busy} error={failed ? (failed.refused ? t('The CSS was not saved') : failed.message) : null} onSave={() => void save()} onDiscard={() => { setDraft(EMPTY); setFailed(null) }} />
       {!code && <Notice tone="neutral" className="mx-4 mb-2" title={t('Editing code needs the “Edit Scripts and Stylesheets” permission.')} />}
       {failed?.refused && <Notice tone="danger" className="mx-4 mb-2" title={t('Tailwind refused the CSS')} onDismiss={() => setFailed(null)}>{failed.message}</Notice>}

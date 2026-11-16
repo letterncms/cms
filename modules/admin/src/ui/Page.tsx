@@ -28,8 +28,10 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const manifest = useManifestIfLoaded()
   const { path } = useLocation()
   // A screen of a room (settings, the design) says so first, on every one of its screens; it leads where the room opens, never through a redirect.
-  const room = manifest ? roomAt(manifest, path) : undefined
-  const home = room && manifest ? roomHome(manifest, room.id) : undefined
+  const inRoom = manifest ? roomAt(manifest, path) : undefined
+  const home = manifest && inRoom ? roomHome(manifest, inRoom.id) : undefined
+  // A screen of the room's own that it opens on (the design's: the site) is the room itself, and names itself.
+  const room = inRoom && !(home === path && manifest && !placeAt(manifest.nav, path)) ? inRoom : undefined
   const crumbs = room ? [{ label: room.label, to: home === path ? undefined : home, icon: undefined }, ...own.map((c) => ({ ...c, icon: undefined }))] : own
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
@@ -46,7 +48,7 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const upTo = before?.to
   const upLabel = firstText(before?.label)
   // Where the sidebar button has a way back beside it (a room, a state of the sidebar), that one leads there: never two chevrons.
-  const shellBack = !!claimed || !!room
+  const shellBack = !!claimed || !!inRoom
   useEffect(() => {
     if (!shellBack || !upTo || !upLabel) return
     noteParent({ to: upTo, label: upLabel })

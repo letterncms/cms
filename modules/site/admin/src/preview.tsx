@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Notice, cn, deviceWidths } from '@letterncms/ui'
+import { Notice, deviceWidths } from '@letterncms/ui'
 import { loadCompiler, loadEngine, type StylingSource } from '@letterncms/blocks'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 
@@ -95,7 +95,7 @@ function Scaled({ viewport, desktop, children }: { viewport: Viewport; desktop: 
   const width = viewport === 'desktop' ? Math.max(room.width, desktop) : parseFloat(WIDTHS[viewport])
   const scale = room.width ? Math.min(1, room.width / width) : 1
   return (
-    <div ref={box} className="relative min-h-0 flex-1 overflow-hidden">
+    <div ref={box} className="relative min-h-0 flex-1">
       {room.width > 0 && children({ position: 'absolute', top: 0, left: Math.max(0, (room.width - width * scale) / 2), width, height: room.height / scale, transform: scale < 1 ? `scale(${scale})` : undefined, transformOrigin: 'top left' })}
     </div>
   )
@@ -143,14 +143,17 @@ function apply(doc: Document | null | undefined, compile: DraftCompile, publishe
   for (const link of links) link.disabled = true
 }
 
-export function SitePreview({ frame, compile, published, viewport, desktop, mode, bordered }: { frame: RefObject<HTMLIFrameElement | null>; compile: DraftCompile; published: string; viewport: Viewport; desktop: number; mode: 'light' | 'dark' | null; bordered: boolean }) {
+/** The site in its frame on the desk, as the design's own screen shows it: a page lifted off the desk, the whole width on a phone. */
+export const SITE_FRAME = 'border-0 bg-bg md:rounded-md md:shadow-sheet'
+
+export function SitePreview({ frame, compile, published, viewport, desktop, mode }: { frame: RefObject<HTMLIFrameElement | null>; compile: DraftCompile; published: string; viewport: Viewport; desktop: number; mode: 'light' | 'dark' | null }) {
   // Counts the pages the frame has loaded: a new page gets the draft too.
   const [loaded, setLoaded] = useState(0)
   useEffect(() => apply(frame.current?.contentDocument, compile, published, mode), [frame, compile, published, mode, loaded])
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col md:p-4">
       <Scaled viewport={viewport} desktop={desktop}>
-        {(style) => <iframe ref={frame} src="/" title={t('Site Preview')} className={cn('border-0 bg-bg', bordered && 'border-x border-border')} style={style} onLoad={() => setLoaded((n) => n + 1)} />}
+        {(style) => <iframe ref={frame} src="/" title={t('Site Preview')} className={SITE_FRAME} style={style} onLoad={() => setLoaded((n) => n + 1)} />}
       </Scaled>
       {compile.problem && (
         // Quiet, over the page: the preview keeps the last CSS Tailwind could make.

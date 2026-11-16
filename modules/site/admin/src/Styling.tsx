@@ -1,9 +1,9 @@
 import { CmsError, can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
-import { Button, IconButton, Notice, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useScreenSidebar, useTheme } from '@letterncms/ui'
+import { Button, IconButton, Notice, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useTheme } from '@letterncms/ui'
 import { Stylesheet, StylingProvider, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { type Editing } from './parts'
-import { SitePreview, WIDTHS, useDraftCompile, type Viewport } from './preview'
+import { SitePreview, useDraftCompile, type Viewport } from './preview'
 import { Styles, styleTitle } from './styles'
 import { keyframesOf } from './fields'
 import { Colors, Effects, Layout, Motion, Typography, type Face, type FontTools, type Transition } from './theme'
@@ -59,9 +59,9 @@ export default function Styling() {
   const source = useAbility<StylingSource>('styling/source', {}, { refetchOnWindowFocus: false, retry: false, staleTime: 60_000 })
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const { query } = useLocation()
-  // A style named in the address opens under Styles, wherever the address says the page is.
-  const section: SectionKey = query.style ? 'styles' : SECTIONS.includes(query.tab as SectionKey) ? (query.tab as SectionKey) : SECTIONS[0]
-  const setSection = (next: SectionKey) => setQuery({ tab: next === SECTIONS[0] ? null : next, style: null })
+  // A style named in the address opens under Styles, wherever the address says the page is. Without a section, the site alone.
+  const section: SectionKey | null = query.style ? 'styles' : SECTIONS.includes(query.tab as SectionKey) ? (query.tab as SectionKey) : null
+  const setSection = (next: SectionKey) => setQuery({ tab: next, style: null })
   // The preview starts in the theme the admin is in: a dark admin opens on the site's dark colours, not on a white slab.
   const [mode, setMode] = useState<'light' | 'dark'>(useTheme() === 'dark' ? 'dark' : 'light')
   // A phone shows the list or the preview, never both: the bar's Preview button turns between them.
@@ -78,7 +78,6 @@ export default function Styling() {
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState<{ message: string; refused: boolean } | null>(null)
-  const sidebar = useScreenSidebar()
   const frame = useRef<HTMLIFrameElement>(null)
 
   const base = info.data
@@ -251,46 +250,45 @@ export default function Styling() {
     <div className="flex h-full flex-col">
       <Topbar
         crumbs={[
-          { label: t('Styling'), icon: 'palette' },
-          { label: sections().find((item) => item.value === section)?.label ?? '', to: open ? `/styling?tab=${section}` : undefined },
+          { label: t('Styling'), icon: 'theme', to: section ? '/styling' : undefined },
+          ...(section ? [{ label: sections().find((item) => item.value === section)?.label ?? '', to: open ? `/styling?tab=${section}` : undefined }] : []),
           ...(open ? [{ label: open }] : []),
         ]}
         actions={
           <>
-            <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>
+            {section && <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>}
+            {/* A phone is its own width: the other screens are for a window with room to draw them. */}
+            <span className="max-md:hidden"><Segmented size="xs" aria-label={t('Screen')} value={viewport} onChange={setViewport} options={[{ value: 'desktop', icon: 'desktop', title: t('Desktop') }, { value: 'tablet', icon: 'tablet', title: t('Tablet') }, { value: 'phone', icon: 'phone', title: t('Phone') }]} /></span>
+            {dark && <Segmented size="xs" aria-label={t('Color Mode')} value={mode} onChange={setMode} options={[{ value: 'light', icon: 'sun', title: t('Light') }, { value: 'dark', icon: 'moon', title: t('Dark') }]} />}
             <Tooltip content={t('Open Site')}>
               <IconButton icon="external" label={t('Open Site')} title={undefined} onClick={() => window.open('/', '_blank', 'noopener')} className="max-md:hidden" />
             </Tooltip>
           </>
         }
       />
-      {/* The sections are rows under Styling in the sidebar: no column of their own, and the sidebar stays the one it was. */}
-      <ScreenSidebar title={t('Styling')} backTo="/" backLabel={t('Dashboard')} nested>
-        <nav aria-label={t('Styling')} className={sidebar.nested ? 'space-y-px' : 'px-2 pb-4'}>
+      {/* A step into the design: its sections are the sidebar, with the way back to the design. */}
+      <ScreenSidebar title={t('Styling')} backTo="/design" backLabel={t('Design')} step>
+        <nav aria-label={t('Styling')} className="space-y-px px-2 pb-4">
           {sections().map((item) => (
-            <SidebarRow key={item.value} label={item.label} icon={sidebar.nested ? undefined : item.icon} active={section === item.value} onClick={() => setSection(item.value)} />
+            <SidebarRow key={item.value} label={item.label} icon={item.icon} active={section === item.value} onClick={() => setSection(item.value)} />
           ))}
         </nav>
       </ScreenSidebar>
       <SaveBar dirty={dirty} saving={busy} error={failed ? (failed.refused ? t('The stylesheet was not saved') : failed.message) : null} onSave={() => void save()} onDiscard={() => { setDraft(EMPTY); setFailed(null) }} />
       {/* Everything inside reads the draft, as Tailwind last could read it: the pickers offer its colours, the controls ask its theme what a class does. */}
       <StylingProvider source={compile.source ?? source.data}>
-      {/* On a phone the list takes the screen, and the preview does when asked for: the same draft, drawn by the site. */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:grid-cols-[minmax(380px,460px)_minmax(0,1fr)]">
-        <div ref={list} onScroll={(e) => scrolled.set(place, e.currentTarget.scrollTop)} className={cn('overflow-y-auto border-border px-4 pb-16 pt-2 md:border-r', previewing && 'max-md:hidden')}>
-          {failed?.refused && <Notice tone="danger" className="mb-3 mt-1" title={t('Tailwind refused the stylesheet')} onDismiss={() => setFailed(null)}>{failed.message}</Notice>}
-          {body}
-        </div>
-
-        <div className={cn('flex min-w-0 flex-col bg-sunken', !previewing && 'max-md:hidden')}>
-          <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-bg px-3">
-            {/* A phone is its own width: the other screens are for a window with room to draw them. */}
-            <span className="max-md:hidden"><Segmented size="xs" aria-label={t('Screen')} value={viewport} onChange={setViewport} options={[{ value: 'desktop', icon: 'desktop', title: t('Desktop') }, { value: 'tablet', icon: 'tablet', title: t('Tablet') }, { value: 'phone', icon: 'phone', title: t('Phone') }]} /></span>
-            {viewport !== 'desktop' && <span className="font-mono text-2xs text-faint max-md:hidden">{WIDTHS[viewport]}</span>}
-            <span className="flex-1" />
-            {dark && <Segmented size="xs" aria-label={t('Color Mode')} value={mode} onChange={setMode} options={[{ value: 'light', icon: 'sun', title: t('Light') }, { value: 'dark', icon: 'moon', title: t('Dark') }]} />}
+      {/* The site alone until a section is chosen; then its controls beside it. On a phone the controls take the screen,
+          and the preview does when asked for: the same draft, drawn by the site. */}
+      <div className={cn('grid min-h-0 flex-1 grid-cols-1', section && 'md:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:grid-cols-[minmax(380px,460px)_minmax(0,1fr)]')}>
+        {section && (
+          <div ref={list} onScroll={(e) => scrolled.set(place, e.currentTarget.scrollTop)} className={cn('overflow-y-auto border-border px-4 pb-16 pt-2 md:border-r', previewing && 'max-md:hidden')}>
+            {failed?.refused && <Notice tone="danger" className="mb-3 mt-1" title={t('Tailwind refused the stylesheet')} onDismiss={() => setFailed(null)}>{failed.message}</Notice>}
+            {body}
           </div>
-          <Preview frame={frame} compile={compile} published={base.stylesheet} viewport={previewing ? 'phone' : viewport} mode={dark ? mode : null} bordered={viewport !== 'desktop' && !previewing} />
+        )}
+
+        <div className={cn('flex min-w-0 flex-col bg-sunken', section && !previewing && 'max-md:hidden')}>
+          <Preview frame={frame} compile={compile} published={base.stylesheet} viewport={previewing ? 'phone' : viewport} mode={dark ? mode : null} />
         </div>
       </div>
       </StylingProvider>

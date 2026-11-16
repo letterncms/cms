@@ -19,6 +19,7 @@ registry.entryActions.set('site-preview', {
     && !(entry?.uri && entry.status === 'published' && entry.displayStatus !== 'scheduled' && !entry.hasDraft),
   perform: () => events.emit('entry.preview'),
 })
+registry.routes.set('/design', { path: '/design', component: lazy(() => import('./Design')) })
 registry.routes.set('/styling', { path: '/styling', component: lazy(() => import('./Styling')), load: () => Promise.all([prefetchAbility('styling/get'), prefetchAbility('styling/source')]) })
 registry.routes.set('/code', { path: '/code', component: lazy(() => import('./Code')), load: () => prefetchAbility('styling/get') })
 registry.routes.set('/sites', { path: '/sites', component: lazy(() => import('./Sites')), load: () => prefetchAbility('sites/list') })

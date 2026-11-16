@@ -16,15 +16,13 @@ export interface OwnSidebar {
   title: string
   backTo: string
   backLabel: string
-  /** Sections of the screen: under its row in the sidebar, not a sidebar of their own. */
-  nested?: boolean
+  /** A step into where you are (Styling): out whenever the sidebar is, with who is signed in under it. */
+  step?: boolean
 }
 
 interface SidebarProps {
   /** On a screen with a state of its own: what to call it, and where its list goes. */
   own?: OwnSidebar | null
-  /** On a screen whose sections go under its row: where they go. */
-  nested?: OwnSidebar | null
   /** Over the screen, on a phone. */
   drawer?: boolean
   onOwnHost?: (element: HTMLElement | null) => void
@@ -47,12 +45,11 @@ const depth = { main: 0, room: 1, screen: 2 } as const
  * Same frame, same rows, same footer — only the list changes. A screen's own state (the editor's Outline) is the
  * screen's: its list, no footer.
  */
-export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate, room }: SidebarProps) {
+export function Sidebar({ own, drawer, onOwnHost, onSearch, onNavigate, room }: SidebarProps) {
   const manifest = useManifest()
   const { path, search } = useLocation()
   const state: keyof typeof depth = own ? 'screen' : room ? 'room' : 'main'
   const active = placeAt(manifest.nav, path)?.id
-  const nest = nested ? onOwnHost : undefined
 
   useEffect(() => remember(manifest, path, search), [manifest, path, search])
   // Switching states moves the list, in from the side it leads to (deeper: a room, then a screen's own) and back from the other; the admin opening does not.
@@ -69,11 +66,11 @@ export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate, 
   const aside = useRef<HTMLElement>(null)
   useEffect(() => {
     const element = aside.current
-    if (!(own || nested) || !element || !onNavigate) return
+    if (!own || !element || !onNavigate) return
     const follow = (e: MouseEvent) => { if (e.target instanceof Element && e.target.closest('.cms-sidebar-row-main')) onNavigate() }
     element.addEventListener('click', follow)
     return () => element.removeEventListener('click', follow)
-  }, [own, nested, onNavigate])
+  }, [own, onNavigate])
 
   return (
     <aside ref={aside} className={cn('flex h-full shrink-0 flex-col', drawer ? 'w-[min(320px,86vw)] bg-float shadow-dialog' : 'w-[var(--cms-sidebar-size,248px)] bg-surface pt-2')}>
@@ -84,11 +81,11 @@ export function Sidebar({ own, nested, drawer, onOwnHost, onSearch, onNavigate, 
             <div ref={onOwnHost} className="min-h-0 flex-1 overflow-y-auto" />
           </>
         ) : room
-          ? <RoomSidebar room={room} onNavigate={onNavigate} active={active} nest={nest} />
-          : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} nest={nest} />}
+          ? <RoomSidebar room={room} onNavigate={onNavigate} active={active} />
+          : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} />}
       </div>
-      {/* The admin's own states end with who is signed in; a screen's own (the Outline) gives the screen all the room. */}
-      {!own && <Footer room={room} onNavigate={onNavigate} />}
+      {/* The admin's own states end with who is signed in, and so does a step into one; a screen's own (the Outline) gives the screen all the room. */}
+      {(!own || own.step) && <Footer room={room} onNavigate={onNavigate} />}
     </aside>
   )
 }
@@ -112,7 +109,7 @@ function Row({ item, active, sortable, actions, onNavigate }: { item: NavItem; a
 }
 
 /** Pinned items, section by section; More after the first section, once someone has unpinned something. */
-function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => void; onNavigate?: () => void; active?: string; nest?: (element: HTMLElement | null) => void }) {
+function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
   const layout = manifest.sidebar
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
@@ -134,7 +131,7 @@ function MainSidebar({ onSearch, onNavigate, active, nest }: { onSearch: () => v
         {sections.map((section, index) => (index === 0 || section.items.length > 0) && (
           <SidebarGroup key={section.id} title={section.items.length > 0 ? section.label : undefined}>
             {index === 0 && <SidebarStart onNavigate={onNavigate} />}
-            <Pinned section={section} items={items} active={active} onNavigate={onNavigate} nest={nest} />
+            <Pinned section={section} items={items} active={active} onNavigate={onNavigate} />
             {/* Only what someone unpinned: nothing is put away by default. */}
             {index === 0 && more.length > 0 && <More groups={more} items={items} active={active} onNavigate={onNavigate} />}
           </SidebarGroup>
@@ -152,7 +149,7 @@ function SidebarStart({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 /** A section's pinned items: drag to reorder, right-click for the rest. */
-function Pinned({ section, items, active, onNavigate, nest }: { section: ArrangedSection; items: Map<string, NavItem>; active?: string; onNavigate?: () => void; nest?: (element: HTMLElement | null) => void }) {
+function Pinned({ section, items, active, onNavigate }: { section: ArrangedSection; items: Map<string, NavItem>; active?: string; onNavigate?: () => void }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   // The pointer is let go over the link it dragged: that is not a click.
   const dragged = useRef(false)
@@ -175,7 +172,6 @@ function Pinned({ section, items, active, onNavigate, nest }: { section: Arrange
             active={active === id}
             dragged={dragged}
             onNavigate={onNavigate}
-            nest={active === id ? nest : undefined}
           />
         ))}
       </SortableContext>
@@ -183,8 +179,8 @@ function Pinned({ section, items, active, onNavigate, nest }: { section: Arrange
   )
 }
 
-/** A pinned row; the one on view holds its screen's sections under it, when it has some (`nest`). */
-function PinnedRow({ item, section, index, last, active, dragged, onNavigate, nest }: { item: NavItem; section: string; index: number; last: boolean; active: boolean; dragged: { current: boolean }; onNavigate?: () => void; nest?: (element: HTMLElement | null) => void }) {
+/** A pinned row: dragged into place, its menu on a right-click. */
+function PinnedRow({ item, section, index, last, active, dragged, onNavigate }: { item: NavItem; section: string; index: number; last: boolean; active: boolean; dragged: { current: boolean }; onNavigate?: () => void }) {
   const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({ id: item.id })
 
   return (
@@ -202,7 +198,7 @@ function PinnedRow({ item, section, index, last, active, dragged, onNavigate, ne
       {/* Open, with its sections under it: the section on view is the place you are, not the row above it. */}
       <Row
         item={item}
-        active={active && !nest}
+        active={active}
         sortable
         onNavigate={onNavigate}
         actions={[
@@ -213,7 +209,6 @@ function PinnedRow({ item, section, index, last, active, dragged, onNavigate, ne
           { label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: customize },
         ]}
       />
-      {nest && <div ref={nest} className="cms-sidebar-nested" onPointerDown={(e) => e.stopPropagation()} />}
     </div>
   )
 }
@@ -294,7 +289,7 @@ export function StateBack({ own, onNavigate, drawer, room }: Pick<SidebarProps, 
   const button = 'cms-touch flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text'
   return (
     <>
-      <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
+      <Tooltip content={t('Back to {label}', { label })} shortcut={own && !own.step ? undefined : 'esc'} side="bottom">
         <Pressable aria-label={t('Back to {label}', { label })} onClick={back} className={cn(button, up && 'max-sm:hidden')}>
           <Icon name="chevron-left" size={14} className={cn('shrink-0', !drawer && 'max-sm:size-4')} />
           <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{label}</span>
@@ -310,8 +305,8 @@ export function StateBack({ own, onNavigate, drawer, room }: Pick<SidebarProps, 
   )
 }
 
-/** A room's screens, section by section, under its name; the screen on view holds its own sections under its row, when it has some (`nest`). */
-function RoomSidebar({ room, onNavigate, active, nest }: { room: Room; onNavigate?: () => void; active?: string; nest?: (element: HTMLElement | null) => void }) {
+/** A room's screens, section by section, under its name. */
+function RoomSidebar({ room, onNavigate, active }: { room: Room; onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
 
@@ -323,10 +318,7 @@ function RoomSidebar({ room, onNavigate, active, nest }: { room: Room; onNavigat
         {room.sections.map((section) => (
           <SidebarGroup key={section.id} title={section.label}>
             {section.items.map((id) => items.get(id)).filter((item): item is NavItem => !!item).map((item) => (
-              <div key={item.id}>
-                <Row item={item} active={active === item.id && !nest} onNavigate={onNavigate} />
-                {nest && active === item.id && <div ref={nest} className="cms-sidebar-nested" />}
-              </div>
+              <Row key={item.id} item={item} active={active === item.id} onNavigate={onNavigate} />
             ))}
           </SidebarGroup>
         ))}

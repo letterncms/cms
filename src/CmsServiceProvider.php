@@ -323,10 +323,9 @@ final class CmsServiceProvider extends ServiceProvider
         $admin->section('main', '', 0);
         $admin->section('content', __('Content'), 10);
         $admin->section('site', __('Site'), 20);
-        // How the site is built and looks: a room of its own, a row of the main sidebar leads in.
+        // How the site looks: a room of its own, a row of the main sidebar leads in. The site's module opens it on the site itself.
         $admin->room('design', __('Design'), 'palette', section: 'main', order: 30);
         $admin->section('design', '', 0, room: 'design');
-        $admin->section('blocks', __('Building Blocks'), 10, room: 'design');
         // Settings, the same on every site: the site's General page, your own account and what runs the
         // installation, as one group without a name; then who works on it; then each plugin's page,
         // named by the plugin (see Navigation::PLUGINS).

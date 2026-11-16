@@ -41,6 +41,9 @@ final class AdminRegistry
     /** @var array<string, array{id: string, label: string, icon: string, section: ?string, order: int}> */
     private array $rooms = [];
 
+    /** @var array<string, string> room => the path it opens on */
+    private array $openings = [];
+
     /** @var array<string, array> */
     private array $widgets = [];
 
@@ -60,12 +63,19 @@ final class AdminRegistry
      * A room: a sidebar of its own that takes the main one's place while one of its
      * screens is on view, under its name and a way back. Settings is one, opened by the
      * button beside who is signed in; with a `section`, the main sidebar has a row that
-     * leads in (the design), at `order` among that section's items. Its screens are
-     * items of sections registered with this `room`. Registering it twice keeps the first.
+     * leads in (the design), at `order` among that section's items. Its screens are items
+     * of sections registered with this `room`; it opens on the first, or on a screen of its
+     * own (see `opens`). Registering it twice keeps the first.
      */
     public function room(string $id, string $label, string $icon = 'circle', ?string $section = null, int $order = 50): void
     {
         $this->rooms[$id] ??= ['id' => $id, 'label' => $label, 'icon' => $icon, 'section' => $section, 'order' => $order];
+    }
+
+    /** Where a room opens: a screen of its own, from the module that draws it (the design opens on the site itself). */
+    public function opens(string $room, string $path): void
+    {
+        $this->openings[$room] = $path;
     }
 
     /**
@@ -86,7 +96,8 @@ final class AdminRegistry
      *
      * `section` is where it is listed: `main`, `content` or `site` in the
      * sidebar, or a section of a room: the design's (`design`) or the settings'
-     * for a screen that is set up once (a plugin's then lands under Plugins, see Navigation).
+     * (`system`, `people`) for a screen that is set up once (a plugin's then lands
+     * under Plugins, see Navigation).
      *
      * A plugin's main screen is called what the plugin is: leave out `label`
      * and the item takes the plugin's name (`extra.cms.label`). Its other
@@ -233,10 +244,10 @@ final class AdminRegistry
         $this->commands[$id] = ['id' => $id, 'icon' => 'command', 'permission' => null, ...$command];
     }
 
-    /** @return array<string, array{id: string, label: string, icon: string, section: ?string, order: int}> */
+    /** @return array<string, array{id: string, label: string, icon: string, section: ?string, order: int, path: ?string}> */
     public function rooms(): array
     {
-        return $this->rooms;
+        return array_map(fn (array $room) => [...$room, 'path' => $this->openings[$room['id']] ?? null], $this->rooms);
     }
 
     /** @return array<string, array{id: string, label: string, order: int, room: ?string}> */
