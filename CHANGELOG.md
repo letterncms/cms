@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed
+
+- **One bar at the top of the Design tab.** The styles a block wears stand in one field there, beside the **Classes** button, which shows the block's Tailwind classes under the bar, and the state you style. It stays in sight while you scroll. Styles under **Styling → Styles** open on the same bar.
+- **Add Style lists styles by name.** Search them, see each scheme in its colors, and the one you point at is drawn below the list as your site draws it.
+- **The color picker is calmer.** **Theme** lists your colors by name, **Palette** has Tailwind's colors in one grid, and **Custom** mixes or takes any color. It keeps its size as you switch.
+- **What is set stands out.** A value set here has its label on the accent; one from a larger screen, another state or the component on gray. A section with either has a dot beside its title.
+- **Spacing offers its scale in pixels**, as the spacing box shows lengths, from 0 to 128, with your theme's named spaces apart. **Styling → Layout** draws the scale under its step.
+- **Colors under Styling are swatches**: a light and a dark one per color, a card per scheme in its colors, and the palette as one grid with its shades named.
+- **Styles** shows each look's name beside it, and the bar at the top names the one open: **Styling / Styles / Heading 1**. Back on the list, it is where you left it.
+- **Code is a list of files beside the one open**, the editor filling the page: **Site CSS** and the stylesheets, **Site JavaScript** and the scripts, and the libraries.
+- **Keep Across Pages** is a switch under **Content → Advanced**, in place of a name to type.
+- **Advanced** is folded each time you select a block.
+
+### Fixed
+
+- A number with a long unit, like *10 em* in a narrow field, shows whole: a field's theme button takes room only while you point at it.
+- **Add Attribute** and **Add State from Data** add a row each time, and an empty list leaves no gap.
+- Every size under **Typography** and **Layout** is one width, whether it grows with the screen or not.
+
 ## 0.39.1 (2026-11-16)
 
 ### Fixed

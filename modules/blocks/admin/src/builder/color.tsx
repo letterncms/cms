@@ -1,11 +1,12 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button, fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
+import { useEffect, useMemo, useState } from 'react'
 import type { ThemeToken } from '../../../tailwind/engine'
 import { useThemeTokens } from '../core/styling'
 import { Swatch, inputClass } from './controls'
 import { Control, useInvalid } from './fields/controls'
 import { TokenChip, useTokenOf } from './fields/tokens'
+import { PaletteGrid } from './palette'
 import { colorGroups, lightDark } from './styleApi'
 
 /* Colour values: a colour of the theme (`var(--color-primary)`, or mixed with an opacity as Tailwind writes
@@ -88,8 +89,9 @@ export function useColorPreview() {
   return (value: string | undefined): string => (value ? tokens.resolve(value) : 'transparent')
 }
 
+
 /**
- * `blocks-color` — a colour value with a picker (HSV, alpha) and the theme's colours.
+ * `blocks-color` — a colour value with a picker (the theme's colours, Tailwind's palette, or any colour).
  * Core color has neither the theme nor alpha. Empty, it shows `placeholder` beside a `swatch` (CSS) of what applies.
  */
 export function ColorField({ field, value: raw, onChange, disabled }: FieldProps<string | null>) {
@@ -105,7 +107,7 @@ export function ColorField({ field, value: raw, onChange, disabled }: FieldProps
         open={open}
         onOpenChange={setOpen}
         align="end"
-        className="w-64 !p-0"
+        className="!p-0"
         trigger={
           <Pressable compact id={fieldControlId(field)} disabled={disabled} className={cn(inputClass, 'flex items-center gap-1.5 pl-1 text-left')}>
             <Swatch color={value === undefined && typeof field.swatch === 'string' ? field.swatch : preview(value)} className="!size-4" />
@@ -123,31 +125,14 @@ export function ColorField({ field, value: raw, onChange, disabled }: FieldProps
   )
 }
 
-/** One colour of the theme as a swatch: a ring where the pointer is, a ring and a check where it is chosen. */
-function ThemeSwatch({ token, current, onPick, onPoint, className }: { token: ThemeToken; current: boolean; onPick: () => void; onPoint: (token: ThemeToken | null) => void; className?: string }) {
-  const { light } = lightDark(token.value)
-  return (
-    <Pressable
-      compact
-      role="option"
-      aria-selected={current}
-      aria-label={token.name}
-      onClick={onPick}
-      onPointerEnter={() => onPoint(token)}
-      onPointerLeave={() => onPoint(null)}
-      onFocus={() => onPoint(token)}
-      onBlur={() => onPoint(null)}
-      className={cn('relative grid place-items-center outline-offset-1 transition-transform duration-fast hover:z-raised hover:scale-125 hover:shadow-pop hover:ring-2 hover:ring-float focus-visible:z-raised', current && 'z-raised ring-2 ring-focus ring-offset-1 ring-offset-float', className)}
-      style={{ background: light }}
-    >
-      {current && <Icon name="check" size={10} className="text-white mix-blend-difference" />}
-    </Pressable>
-  )
-}
+type Tab = 'theme' | 'palette' | 'custom'
+
+/** A handle on a slider or the colour area: a white ring that reads on any colour. */
+const knob = 'pointer-events-none absolute size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-pop ring-1 ring-black/20'
 
 /**
- * The theme's colours (the site's own, then Tailwind's palette, shade by shade), or a custom colour
- * (HSV area, hue, alpha, hex). It opens on the theme unless the value is a custom colour.
+ * A colour: one of the site's (by name), a shade of Tailwind's palette, or any colour (area, hue, opacity, a value
+ * typed). It opens where the value is. A colour of the theme keeps its name at an opacity (bg-primary/60).
  */
 export function ColorPicker({ label, value, onChange }: { label: string; value?: string; onChange: (v: string | null) => void }) {
   const tokens = useThemeTokens()
@@ -155,15 +140,20 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
   const groups = useMemo(() => colorGroups(colors), [colors])
   const chosen = tokens.find(value)
   const current = chosen?.token.variable ?? null
+  const shade = !!current && groups.families.some((family) => family.shades.some((token) => token.variable === current))
   const themeAlpha = chosen ? (chosen.alpha === undefined ? 1 : Number(chosen.alpha) / 100) : 1
   const parsed = parseColor(chosen ? lightDark(tokens.resolve(chosen.token.ref)).light : value) ?? { r: 0, g: 0, b: 0, a: 1 }
   const [hsv, setHsv] = useState(() => ({ ...toHsv(parsed), a: chosen ? themeAlpha : parsed.a }))
   const [text, setText] = useState(value ?? '')
   const invalid = useInvalid(text, (v) => !v.trim() || validColor(v.trim()))
-  const [tab, setTab] = useState<'theme' | 'custom'>(() => (colors.length > 0 && (!value || !!chosen) ? 'theme' : 'custom'))
-  // The colour under the pointer, named under the grid: without it a grid of two hundred swatches says nothing.
+  const tabs: { value: Tab; label: string }[] = [
+    ...(groups.own.length ? [{ value: 'theme' as const, label: t('Theme') }] : []),
+    ...(groups.families.length ? [{ value: 'palette' as const, label: t('Palette') }] : []),
+    { value: 'custom', label: t('Custom') },
+  ]
+  const [tab, setTab] = useState<Tab>(() => (value && !chosen ? 'custom' : shade ? 'palette' : tabs[0].value))
+  // The shade under the pointer, named under the grid: a grid of colours says nothing by itself.
   const [pointed, setPointed] = useState<ThemeToken | null>(null)
-  const area = useRef<HTMLDivElement>(null)
 
   useEffect(() => setText(value ?? ''), [value])
 
@@ -181,7 +171,6 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
       const y = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height))
       if (kind === 'area') emit(hsv.h, x, 1 - y, hsv.a)
       else if (kind === 'hue') emit(x * 360, hsv.s, hsv.v, hsv.a)
-      // A theme colour keeps its name at an opacity: bg-primary/60.
       else if (current) onChange(withAlpha(current, x < 0.995 ? Math.round(x * 100) : 100))
       else emit(hsv.h, hsv.s, hsv.v, Math.round(x * 100) / 100)
     }
@@ -198,76 +187,88 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
   const alpha = current ? themeAlpha : hsv.a
   const solid = current ? lightDark(tokens.resolve(`var(${current})`)).light : formatColor({ ...fromHsv(hsv.h, hsv.s, hsv.v, 1) })
   const alphaBar = (
-    <div onPointerDown={(e) => drag(e, 'alpha')} className="relative h-2.5 cursor-ew-resize rounded-full cms-checkerboard">
+    <div onPointerDown={(e) => drag(e, 'alpha')} className="relative h-3 min-w-0 flex-1 cursor-ew-resize rounded-full cms-checkerboard [--checker:6px]">
       <span className="absolute inset-0 rounded-full" style={{ background: `linear-gradient(to right, transparent, ${solid})` }} />
-      <span className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-1 ring-black/30" style={{ left: `${alpha * 100}%` }} />
+      <span className={cn(knob, 'top-1/2')} style={{ left: `${alpha * 100}%` }} />
     </div>
   )
-  const clear = <Pressable compact onClick={() => onChange(null)} className="h-7 shrink-0 rounded-sm px-2 text-xs text-muted hover:bg-hover hover:text-ink">{t('Clear')}</Pressable>
+  const named = pointed ?? (shade ? chosen?.token ?? null : null)
 
   return (
-    <div>
-      <div className="flex h-9 items-center gap-2 border-b border-border pl-2.5 pr-1.5">
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-text">{label}</span>
-        {colors.length > 0 && <Segmented size="xs" value={tab} onChange={setTab} options={[{ value: 'theme', label: t('Theme') }, { value: 'custom', label: t('Custom') }]} />}
+    <div className="w-72">
+      <div className="flex h-10 items-center gap-2 border-b border-border pl-3 pr-1.5">
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-ink">{label}</span>
+        {tabs.length > 1 && <Segmented size="xs" aria-label={t('Colors')} value={tab} onChange={setTab} options={tabs} />}
       </div>
-      {tab === 'theme' ? (
-        <div>
-          <div role="listbox" aria-label={t('Theme Colors')} className="max-h-80 space-y-3 overflow-y-auto overscroll-contain p-2.5">
-            {groups.own.length > 0 && (
-              <div className="grid grid-cols-8 gap-1.5">
-                {groups.own.map((token) => <ThemeSwatch key={token.variable} token={token} current={current === token.variable} onPick={() => onChange(token.ref)} onPoint={setPointed} className="aspect-square rounded-sm shadow-edge" />)}
-              </div>
-            )}
-            {groups.families.length > 0 && (
-              <div className="grid grid-cols-11 gap-px overflow-hidden rounded-sm">
-                {groups.families.flatMap((family) => family.shades.map((token) => <ThemeSwatch key={token.variable} token={token} current={current === token.variable} onPick={() => onChange(token.ref)} onPoint={setPointed} className="h-4" />))}
-              </div>
-            )}
-          </div>
-          <div className="flex h-8 items-center gap-2 border-t border-border px-2.5 text-xs">
-            {(() => {
-              const named = pointed ?? chosen?.token ?? null
-              if (!named) return <span className="flex-1" />
-              return (
-                <>
-                  <Swatch color={lightDark(named.value).light} dark={lightDark(named.value).dark} className="!size-3.5" />
-                  <span className="min-w-0 flex-1 truncate text-ink">{named.name}</span>
-                  <span className="max-w-24 shrink-0 truncate font-mono text-2xs text-faint">{lightDark(tokens.resolve(named.ref)).light}</span>
-                </>
-              )
-            })()}
-          </div>
-          <div className="flex items-center gap-2 border-t border-border px-2.5 py-2">
-            {current ? (
-              <>
-                <span className="shrink-0 text-xs text-muted">{t('Opacity')}</span>
-                <div className="min-w-0 flex-1">{alphaBar}</div>
-                <span className="w-8 shrink-0 text-right text-2xs tabular-nums text-muted">{Math.round(alpha * 100)}%</span>
-              </>
-            ) : (
-              <span className="flex-1" />
-            )}
-            {clear}
-          </div>
+      {tab === 'theme' && (
+        <div role="listbox" aria-label={t('Theme Colors')} className="h-72 overflow-y-auto overscroll-contain p-1">
+          {groups.own.map((token) => {
+            const on = current === token.variable
+            const { light, dark } = lightDark(token.value)
+            return (
+              <Pressable compact key={token.variable} role="option" aria-selected={on} onClick={() => onChange(token.ref)} className={cn('flex h-8 w-full items-center gap-2.5 rounded-sm px-2 text-left hover:bg-hover', on && 'bg-active')}>
+                <Swatch color={light} dark={dark} className="!size-4" />
+                <span className="min-w-0 flex-1 truncate text-xs text-ink">{token.name}</span>
+                {on ? <Icon name="check" size={12} className="shrink-0 text-ink" /> : <span className="max-w-24 shrink-0 truncate font-mono text-2xs text-faint">{lightDark(tokens.resolve(token.ref)).light}</span>}
+              </Pressable>
+            )
+          })}
         </div>
-      ) : (
-        <div className="space-y-2 p-2.5">
-          <div ref={area} onPointerDown={(e) => drag(e, 'area')} className="relative h-32 cursor-crosshair rounded-sm" style={{ background: `linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(${hsv.h} 100% 50%))` }}>
-            <span className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-1 ring-black/30" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
+      )}
+      {tab === 'palette' && (
+        <>
+          <div role="listbox" aria-label={t('Palette')} className="h-64 overflow-y-auto overscroll-contain p-3" onPointerLeave={() => setPointed(null)}>
+            <PaletteGrid
+              families={groups.families}
+              cell={(token) => {
+                const on = current === token.variable
+                return (
+                  <Pressable
+                    compact
+                    key={token.variable}
+                    role="option"
+                    aria-selected={on}
+                    aria-label={token.name}
+                    onClick={() => onChange(token.ref)}
+                    onPointerEnter={() => setPointed(token)}
+                    onFocus={() => setPointed(token)}
+                    className={cn('relative h-5 rounded-xs outline-offset-1 hover:z-raised hover:ring-2 hover:ring-float', on && 'z-raised ring-2 ring-focus')}
+                    style={{ background: lightDark(token.value).light }}
+                  >
+                    <span className="cms-swatch-edge" />
+                  </Pressable>
+                )
+              }}
+            />
           </div>
-          <div onPointerDown={(e) => drag(e, 'hue')} className="relative h-2.5 cursor-ew-resize rounded-full" style={{ background: 'linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red)' }}>
-            <span className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ring-1 ring-black/30" style={{ left: `${(hsv.h / 360) * 100}%` }} />
+          <div className="flex h-8 items-center gap-2 border-t border-border px-3 text-xs">
+            {named && (
+              <>
+                <span className="min-w-0 flex-1 truncate text-ink">{named.name}</span>
+                <span className="max-w-32 shrink-0 truncate font-mono text-2xs text-faint">{lightDark(tokens.resolve(named.ref)).light}</span>
+              </>
+            )}
           </div>
-          {alphaBar}
-          <div className="flex gap-1.5">
+        </>
+      )}
+      {tab === 'custom' && (
+        <div className="h-72 space-y-3 p-3">
+          <div onPointerDown={(e) => drag(e, 'area')} className="relative h-44 cursor-crosshair overflow-hidden rounded-sm" style={{ background: `linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(${hsv.h} 100% 50%))` }}>
+            <span className={knob} style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
+          </div>
+          <div onPointerDown={(e) => drag(e, 'hue')} className="relative h-3 cursor-ew-resize rounded-full" style={{ background: 'linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red)' }}>
+            <span className={cn(knob, 'top-1/2')} style={{ left: `${(hsv.h / 360) * 100}%` }} />
+          </div>
+          <div className="flex items-center">{alphaBar}</div>
+          <div className="flex items-center gap-2">
+            <Swatch color={value ? tokens.resolve(value) : 'transparent'} className="!size-7 !rounded-sm" />
             <input
               value={text}
               spellCheck={false}
               aria-label={t('Color Value')}
               aria-invalid={invalid.shown || undefined}
               onChange={(e) => setText(e.target.value)}
-              // Only a color the browser can draw is kept; anything else goes back to the last one.
+              // Only a colour the browser can draw is kept; anything else goes back to the last one.
               onBlur={() => {
                 const next = text.trim()
                 if (next && !validColor(next)) return setText(value ?? '')
@@ -282,10 +283,21 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
               className={cn(inputClass, 'font-mono')}
               placeholder={NEW_COLOR}
             />
-            {clear}
           </div>
         </div>
       )}
+      <div className="flex h-10 items-center gap-2 border-t border-border pl-3 pr-1.5">
+        {current && tab !== 'custom' ? (
+          <>
+            <span className="shrink-0 text-xs text-muted">{t('Opacity')}</span>
+            {alphaBar}
+            <span className="w-9 shrink-0 text-right text-2xs tabular-nums text-muted">{Math.round(alpha * 100)}%</span>
+          </>
+        ) : (
+          <span className="flex-1" />
+        )}
+        <Button variant="ghost" size="xs" disabled={!value} onClick={() => onChange(null)} className="shrink-0 !font-normal !text-muted hover:!text-ink">{t('Clear')}</Button>
+      </div>
     </div>
   )
 }

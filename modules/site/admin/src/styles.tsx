@@ -1,7 +1,7 @@
 import { setQuery, t, useLocation, type FieldDef } from '@letterncms/sdk'
 import { Button, IconButton, Menu, Tooltip, confirm, copyText, prompt, toast, type MenuItemDef } from '@letterncms/ui'
-import { ARTICLE, ClassesSection, FIELDS, InspectorSection, PanelFields, Specimen, StateMenu, StylePanels, Stylesheet, parseClass, screenFor, styleApi, styleLabel, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
-import { useMemo, useState, type ReactNode } from 'react'
+import { ARTICLE, FIELDS, InspectorSection, PanelFields, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, styleApi, styleLabel, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
+import { useMemo, useState } from 'react'
 import { Group, OpenRow, rowAction, type Editing } from './parts'
 
 /* The site's styles: every look it has, in one list, by what it styles. The page itself, its text, its buttons, its
@@ -122,10 +122,11 @@ async function askName(engine: Engine | null, taken: string[], title: string, co
 }
 
 /**
- * One style, edited as a block is: a large sample, the state being styled, a control for everything a class can
- * set (for the screen the preview shows) and the classes themselves.
+ * One style, edited as a block is: the same bar on top (its classes and the state being styled), a large sample,
+ * and a control for everything a class can set (for the screen the preview shows). The bar at the top of the
+ * page names it: Styling, Styles, then the style.
  */
-function StyleEditor({ edit, samples, label, name, node, classes, groups, write, onBack, menu }: { edit: Editing; samples: Samples; label: string; name?: string; node: SampleNode; classes: string[]; groups?: readonly string[]; write: (classes: string[]) => void; onBack: () => void; menu?: MenuItemDef[] }) {
+function StyleEditor({ edit, samples, name, selector, node, classes, groups, write, menu }: { edit: Editing; samples: Samples; name?: string; selector?: string; node: SampleNode; classes: string[]; groups?: readonly string[]; write: (classes: string[]) => void; menu?: MenuItemDef[] }) {
   const styling = useStyling()
   const [state, setState] = useState<string[]>([])
   const screen = useMemo(() => screenFor(samples.device, 1280, styling.breakpoints), [samples.device, styling.breakpoints])
@@ -136,41 +137,37 @@ function StyleEditor({ edit, samples, label, name, node, classes, groups, write,
   return (
     // The inspector's sections bring their own gutter: they reach the column's edges, as they do in the builder.
     <div className="-mx-4 -mt-2">
-      <Header label={label} name={name} onBack={onBack} menu={menu}>
-        <StateMenu classes={classes} engine={styling.engine} state={state} onState={setState} />
-      </Header>
+      <div className="sticky top-0 z-raised bg-bg">
+        <StyleBar s={s} site={styling.classes} source={styling.source} disabled={edit.readOnly} state={{ classes, engine: styling.engine, state, onState: setState }} lead={<Lead name={name} selector={selector} />} actions={<Actions menu={menu} />} />
+      </div>
       <div className="border-b border-border p-4">
         <Specimen sheet={sheet} node={node} page={page} mode={edit.mode} align="center" className="h-28 rounded-md border border-border" />
       </div>
       {/* Read only, the controls show what is set and take no input. */}
       <div inert={edit.readOnly}>
         <StylePanels s={s} groups={groups} />
-        <ClassesSection s={s} site={styling.classes} disabled={edit.readOnly} />
       </div>
     </div>
   )
 }
 
-/** An editor's head: the way back, what it edits (a class's name to copy beside it), and what is done to it. */
-function Header({ label, name, onBack, menu, children }: { label: string; name?: string; onBack: () => void; menu?: MenuItemDef[]; children?: ReactNode }) {
+/** What an editor edits, at the start of its bar: a class's name to copy, or the element it styles. */
+function Lead({ name, selector }: { name?: string; selector?: string }) {
   return (
-    <div className="flex h-10 items-center gap-1 border-b border-border px-2">
-      <Button variant="ghost" size="sm" icon="arrow-left" onClick={onBack} className="min-w-0 shrink !justify-start !px-2">
-        <span className="truncate">{label}</span>
-      </Button>
-      {name && (
+    <div className="flex min-h-8 min-w-0 flex-1 items-center">
+      {name ? (
         <Tooltip content={t('Copy Name')}>
-          <Button variant="ghost" size="xs" onClick={() => void copyText(name, { copied: t('Copied {reference}', { reference: name }) })} className="min-w-0 shrink !px-1 font-mono !font-normal !text-faint hover:!text-text">
-            <span className="truncate">{name}</span>
+          <Button variant="ghost" size="xs" onClick={() => void copyText(name, { copied: t('Copied {reference}', { reference: name }) })} className="min-w-0 shrink !px-1.5 font-mono !font-normal !text-muted hover:!text-ink">
+            <span className="truncate">.{name}</span>
           </Button>
         </Tooltip>
-      )}
-      <span className="flex-1" />
-      {children}
-      {menu && menu.length > 0 && <Menu align="end" trigger={<IconButton icon="more" label={t('Style Actions')} size="xs" />} items={menu} />}
+      ) : selector && <span className="min-w-0 truncate px-1.5 font-mono text-xs text-muted">{selector}</span>}
     </div>
   )
 }
+
+/** What is done to it, at the end of its bar. */
+const Actions = ({ menu }: { menu?: MenuItemDef[] }) => (menu && menu.length > 0 ? <Menu align="end" trigger={<IconButton icon="more" label={t('Style Actions')} size="sm" />} items={menu} /> : null)
 
 /** A value as the property editors write it: one property of the site's (--field-*, --prose-*), or the kernel's default. */
 interface FieldValue {
@@ -264,7 +261,7 @@ const SPACING = (): Properties => ({
 })
 
 /** A look made of properties, value by value, beside a sample drawn with them: the editor's sample is the whole form or article. */
-function PropertiesEditor({ edit, samples, part, onBack }: { edit: Editing; samples: Samples; part: Properties; onBack: () => void }) {
+function PropertiesEditor({ edit, samples, part }: { edit: Editing; samples: Samples; part: Properties }) {
   const { source } = useStyling()
   const kernel = useMemo(() => new Stylesheet(source?.files.cms ?? ''), [source?.files.cms])
   const page = pageClasses(edit.sheet)
@@ -273,7 +270,10 @@ function PropertiesEditor({ edit, samples, part, onBack }: { edit: Editing; samp
   const sample = part.layer === 'base' ? FORM_SAMPLE() : part.sample
   return (
     <div className="-mx-4 -mt-2">
-      <Header label={part.label} onBack={onBack} menu={resetProperties(edit, part)} />
+      <div className="sticky top-0 z-raised flex items-center gap-1 border-b border-border bg-bg py-2 pl-4 pr-3">
+        <Lead />
+        <Actions menu={resetProperties(edit, part)} />
+      </div>
       <div className="border-b border-border p-4">
         <Specimen sheet={sheet} node={sample} page={page} mode={edit.mode} align="center" className="h-64 rounded-md border border-border" />
       </div>
@@ -362,14 +362,14 @@ export function Styles({ edit, samples }: { edit: Editing; samples: Samples }) {
   // An element of the page or of its text.
   const element = [...PAGE(), ...TEXT()].find((entry) => `element:${entry.selector}` === open)
   if (element) {
-    return <StyleEditor key={open} edit={edit} samples={samples} label={element.label} node={sampleOf(element)} classes={classesOf(element.selector)} groups={element.groups ?? TEXT_GROUPS} onBack={() => show(null)} menu={resetMenu(element.selector)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes))} />
+    return <StyleEditor key={open} edit={edit} samples={samples} selector={element.selector} node={sampleOf(element)} classes={classesOf(element.selector)} groups={element.groups ?? TEXT_GROUPS} menu={resetMenu(element.selector)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes))} />
   }
   const article = ARTICLES().find((entry) => `article:${entry.key}` === open)
   if (article) {
-    return <StyleEditor key={open} edit={edit} samples={samples} label={t('{name} in Articles', { name: article.label })} node={article.node} classes={classesOf(article.selector)} groups={article.groups ?? TEXT_GROUPS} onBack={() => show(null)} menu={resetMenu(article.selector, 'components')} write={(classes) => edit.change((s) => s.setElement(article.selector, classes, 'components'))} />
+    return <StyleEditor key={open} edit={edit} samples={samples} selector={article.selector} node={article.node} classes={classesOf(article.selector)} groups={article.groups ?? TEXT_GROUPS} menu={resetMenu(article.selector, 'components')} write={(classes) => edit.change((s) => s.setElement(article.selector, classes, 'components'))} />
   }
   const properties = [...FORM(), SPACING()].find((part) => part.key === open)
-  if (properties) return <PropertiesEditor key={open} edit={edit} samples={samples} part={properties} onBack={() => show(null)} />
+  if (properties) return <PropertiesEditor key={open} edit={edit} samples={samples} part={properties} />
   const rule = all.find((entry) => entry.name === open)
   if (rule) {
     return (
@@ -377,12 +377,10 @@ export function Styles({ edit, samples }: { edit: Editing; samples: Samples }) {
         key={open}
         edit={edit}
         samples={samples}
-        label={styleLabel(rule.name)}
         name={rule.name}
         node={styleSample(rule.name)}
         classes={rule.classes}
         groups={text.includes(rule) ? TEXT_GROUPS : undefined}
-        onBack={() => show(null)}
         menu={styleMenu(rule.name)}
         // With nothing left to apply the style goes, unless it holds CSS of its own.
         write={(classes) => edit.change((s) => (classes.length > 0 || s.utilities().find((entry) => entry.name === rule.name)?.custom ? s.setUtility(rule.name, classes) : s.removeUtility(rule.name)))}
@@ -390,12 +388,13 @@ export function Styles({ edit, samples }: { edit: Editing; samples: Samples }) {
     )
   }
 
-  const row = (key: string, label: string, node: SampleNode, menu: MenuItemDef[], tall = false) => (
+  // Every row the same: its name, then a sample of one height, scaled down to it when the look is larger.
+  const row = (key: string, label: string, node: SampleNode, menu: MenuItemDef[]) => (
     <OpenRow
       key={key}
       onOpen={() => show(key)}
-      sample={<Specimen sheet={sheet} node={node} page={page} mode={edit.mode} className={tall ? 'h-14 min-w-0 flex-1 rounded-sm' : 'h-11 min-w-0 flex-1 rounded-sm'} />}
-      label={<span className="sr-only">{label}</span>}
+      label={label}
+      sample={<Specimen sheet={sheet} node={node} page={page} mode={edit.mode} className="h-12 min-w-0 flex-1 rounded-sm shadow-edge" />}
       menu={menu.length ? <Menu trigger={<IconButton icon="more" label={t('Style Actions')} size="xs" className={rowAction} />} items={menu} /> : undefined}
     />
   )
@@ -406,22 +405,33 @@ export function Styles({ edit, samples }: { edit: Editing; samples: Samples }) {
         {PAGE().map((entry) => row(`element:${entry.selector}`, entry.label, sampleOf(entry), resetMenu(entry.selector)))}
       </Group>
       <Group title={t('Text')} onAdd={add('text')} addLabel={t('New Text Style')}>
-        {TEXT().map((entry) => row(`element:${entry.selector}`, entry.label, entry.node, resetMenu(entry.selector), entry.selector.startsWith('h')))}
-        {text.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name), true))}
+        {TEXT().map((entry) => row(`element:${entry.selector}`, entry.label, entry.node, resetMenu(entry.selector)))}
+        {text.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name)))}
       </Group>
       <Group title={t('Buttons')} onAdd={add('button')} addLabel={t('New Button')}>
-        {buttons.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name), true))}
+        {buttons.map((entry) => row(entry.name, styleLabel(entry.name), styleSample(entry.name), styleMenu(entry.name)))}
       </Group>
       <Group title={t('Forms')}>
-        {FORM().map((part) => row(part.key, part.label, part.sample, resetProperties(edit, part), true))}
+        {FORM().map((part) => row(part.key, part.label, part.sample, resetProperties(edit, part)))}
       </Group>
       <Group title={t('Articles')}>
-        <OpenRow onOpen={() => show('article:spacing')} label={t('Spacing')} summary="" menu={resetProperties(edit, SPACING()).length ? <Menu trigger={<IconButton icon="more" label={t('Style Actions')} size="xs" className={rowAction} />} items={resetProperties(edit, SPACING())} /> : undefined} />
-        {ARTICLES().map((entry) => row(`article:${entry.key}`, entry.label, entry.node, resetMenu(entry.selector, 'components'), ['h2', 'h3', 'blockquote'].includes(entry.key)))}
+        {row(SPACING().key, t('Spacing'), SPACING().sample, resetProperties(edit, SPACING()))}
+        {ARTICLES().map((entry) => row(`article:${entry.key}`, entry.label, entry.node, resetMenu(entry.selector, 'components')))}
       </Group>
       <Group title={t('Boxes')} onAdd={add('box')} addLabel={t('New Style')}>
-        {boxes.map((entry) => row(entry.name, styleLabel(entry.name), { ...styleSample(entry.name), className: `${entry.name} inline-block` }, styleMenu(entry.name), true))}
+        {boxes.map((entry) => row(entry.name, styleLabel(entry.name), { ...styleSample(entry.name), className: `${entry.name} inline-block` }, styleMenu(entry.name)))}
       </Group>
     </>
   )
+}
+
+/** What the open style is called, for the bar at the top of the page: an element, a part of a form or of an article, or a style of the site. */
+export function styleTitle(sheet: Stylesheet, key: string): string | null {
+  const element = [...PAGE(), ...TEXT()].find((entry) => `element:${entry.selector}` === key)
+  if (element) return element.label
+  const article = ARTICLES().find((entry) => `article:${entry.key}` === key)
+  if (article) return t('{name} in Articles', { name: article.label })
+  const part = [...FORM(), SPACING()].find((entry) => entry.key === key)
+  if (part) return part.label
+  return sheet.utilities().some((rule) => rule.name === key) ? styleLabel(key) : null
 }

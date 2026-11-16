@@ -1,7 +1,6 @@
 import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
 import { fieldControlId, Icon, Menu, cn, Pressable } from '@letterncms/ui'
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { inputClass } from '../controls'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { TokenButton, TokenChip, useTokenOf, useTypedToken } from './tokens'
 
 /* The inspector's own field components — only what core fields can't express: CSS values
@@ -125,12 +124,7 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
   const [draft, setDraft] = useState<string | null>(null)
   const [preferred, setPreferred] = useState<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
-  const end = useRef<HTMLDivElement>(null)
-  const [suffix, setSuffix] = useState(0)
-  useLayoutEffect(() => {
-    const width = end.current ? end.current.offsetWidth + 4 : 0
-    if (width !== suffix) setSuffix(width)
-  })
+  const [focused, setFocused] = useState(false)
   const value = raw === null || raw === undefined || raw === '' ? undefined : String(raw)
   const unit = (field.unit as string | undefined) ?? 'px'
   const step = (field.step as number | undefined) ?? 1
@@ -218,9 +212,18 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
           context={context}
         />
       )}
-      <div className={cn('group/value relative flex h-7 min-w-0 flex-1 items-center', slider && '!w-16 !flex-none')} title={field.title as string | undefined}>
+      {/* One box, as a field is: what stands before and after the number takes its own room, never the number's. */}
+      <div
+        className={cn('group/value cms-input flex h-7 min-w-0 flex-1 items-center rounded-sm', slider && '!w-16 !flex-none')}
+        title={field.title as string | undefined}
+        data-focus={focused || undefined}
+        data-invalid={invalid.shown || undefined}
+        data-disabled={disabled || undefined}
+        onFocus={() => setFocused(true)}
+        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocused(false)}
+      >
         {prefix !== undefined && (
-          <span onPointerDown={(e) => scrub(e, true)} className="absolute left-0 z-raised grid h-7 w-6 cursor-ew-resize select-none place-items-center text-xs text-faint hover:text-ink">
+          <span onPointerDown={(e) => scrub(e, true)} className="grid h-full w-6 shrink-0 cursor-ew-resize select-none place-items-center text-xs text-faint hover:text-ink">
             {prefix}
           </span>
         )}
@@ -230,7 +233,7 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
             value={value}
             onPick={onChange}
             trigger={
-              <Pressable compact onDoubleClick={() => setDraft(value ?? '')} className={cn(inputClass, 'flex items-center pr-1 text-left', prefix !== undefined && '!pl-6')}>
+              <Pressable compact onDoubleClick={() => setDraft(value ?? '')} className={cn('flex h-full min-w-0 flex-1 items-center pr-1 text-left', prefix === undefined && 'pl-1')}>
                 <TokenChip token={chosen.token} alpha={chosen.alpha} className="text-xs" />
               </Pressable>
             }
@@ -264,19 +267,17 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
                 nudge((e.key === 'ArrowUp' ? 1 : -1) * step * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1))
               }
             }}
-            className={cn(inputClass, 'tabular-nums', numeric && !disabled && 'cursor-ew-resize focus:cursor-text', prefix !== undefined && '!pl-6')}
-            // Room for what sits at its end (the unit, the token button), measured: "rem" is wider than "px". The unit shows on an empty field too.
-            style={{ paddingRight: suffix + 6 }}
+            className={cn('h-full min-w-0 flex-1 bg-transparent text-sm tabular-nums text-text outline-none placeholder:text-ghost disabled:text-faint', prefix === undefined && 'pl-2', numeric && !disabled && 'cursor-ew-resize focus:cursor-text')}
           />
         )}
         {(!chosen || draft !== null) && (
-          <div ref={end} className="pointer-events-none absolute inset-y-0 right-1 flex items-center">
-            {group && <TokenButton group={group} value={value} onPick={onChange} className="pointer-events-auto" />}
+          <span className="flex shrink-0 items-center gap-px pr-1">
+            {group && <TokenButton group={group} value={value} onPick={onChange} />}
             {shownUnit && units.length > 0 && (
               <Menu
                 align="end"
                 trigger={
-                  <Pressable compact disabled={disabled} className={cn('pointer-events-auto h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink data-[popup-open]:opacity-100')} aria-label={t('Unit')}>
+                  <Pressable compact disabled={disabled} className="h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
                     {shownUnit}
                   </Pressable>
                 }
@@ -290,14 +291,14 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
               <Menu
                 align="end"
                 trigger={
-                  <Pressable compact className="pointer-events-auto grid size-5 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
+                  <Pressable compact className="grid size-5 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
                     <Icon name="chevron-down" size={10} />
                   </Pressable>
                 }
                 items={[...units.map((u) => ({ label: u, onSelect: () => onChange(`0${u}`) })), { separator: true, label: '' }, ...keywords.map((k) => ({ label: k, checked: value === k, onSelect: () => onChange(k) }))]}
               />
             )}
-          </div>
+          </span>
         )}
       </div>
       {menu && (

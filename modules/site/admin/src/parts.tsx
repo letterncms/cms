@@ -74,24 +74,23 @@ export function Control({ handle, label, value, onChange, field, disabled, class
 /**
  * One value of the theme: an optional sample, its name (a click copies it, as classes are written with it),
  * its control, the same width in every group, and a menu. `below` adds a specimen line, `after` something
- * beside the control; `wide` gives the controls the row (colours, with a column for each side).
+ * beside the control; `wide` puts the controls at the row's end, after the name (a colour's two swatches).
  */
 export function TokenRow({ name, copy: copied = name, sample, after, below, wide, menu, children }: { name: string; copy?: string; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; menu?: MenuItemDef[]; children: ReactNode }) {
   const copy = () => void copyText(copied, { copied: t('Copied {reference}', { reference: copied }) })
   return (
     <div className="cms-reveal-row group border-b border-border last:border-b-0">
-      {/* A phone gives a colour its name on one line and its two values, whole, on the next. */}
-      <div className={cn('flex min-h-9 items-center gap-2 py-1', wide && 'max-sm:flex-wrap')}>
+      <div className="flex min-h-9 items-center gap-2 py-1">
         {sample !== undefined && <span className="grid w-7 shrink-0 place-items-center">{sample}</span>}
         <Tooltip content={t('Copy Name')}>
-          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference: copied })} className={cn('!justify-start !bg-transparent !px-0 text-left font-mono !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink max-sm:order-1 max-sm:basis-[calc(100%-2.5rem)]' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
+          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference: copied })} className={cn('!justify-start !bg-transparent !px-0 text-left font-mono !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
             <span className="truncate">{name}</span>
           </Button>
         </Tooltip>
         {/* On a phone the value takes the row; what stands beside it waits for a wider screen. */}
         {wide ? children : <div className="flex w-60 min-w-0 shrink gap-1 max-lg:w-52 max-sm:w-auto max-sm:flex-1">{children}</div>}
         {!wide && <span className="flex min-w-0 flex-1 items-center max-sm:hidden">{after}</span>}
-        {menu && menu.length > 0 ? <Menu trigger={<IconButton icon="more" label={t('Actions')} size="xs" className={cn(rowAction, wide && 'max-sm:order-2')} />} items={menu} /> : <span className={cn('size-6 shrink-0', wide && 'max-sm:order-2')} />}
+        {menu && menu.length > 0 ? <Menu trigger={<IconButton icon="more" label={t('Actions')} size="xs" className={rowAction} />} items={menu} /> : <NoAction />}
       </div>
       {below}
     </div>
@@ -110,31 +109,13 @@ export function Setting({ label, action, children }: { label: string; action?: R
   )
 }
 
-/** A row that opens to show its controls. */
-export function Disclosure({ open, onToggle, label, aside, menu, children }: { open: boolean; onToggle: () => void; label: ReactNode; aside?: ReactNode; menu?: ReactNode; children: ReactNode }) {
+/** A row that leads to its own editor, which takes the list's place: a style, an element. Its name, then what it looks like. */
+export function OpenRow({ onOpen, label, sample, menu }: { onOpen: () => void; label: string; sample: ReactNode; menu?: ReactNode }) {
   return (
-    <div className="cms-reveal-row group border-b border-border last:border-b-0">
-      <div className="flex min-h-10 items-center gap-2">
-        <Button variant="ghost" aria-expanded={open} onClick={onToggle} className="!h-auto min-h-10 min-w-0 flex-1 shrink !justify-start !gap-1.5 !rounded-xs !bg-transparent !px-0 text-left !text-xs !font-normal focus-visible:!-outline-offset-2 hover:text-ink">
-          <Icon name="chevron-right" size={12} className={cn('shrink-0 text-faint transition-transform duration-fast', open && 'rotate-90')} />
-          <span className="min-w-0 flex-1 truncate">{label}</span>
-          {aside}
-        </Button>
-        {menu}
-      </div>
-      {open && <div className="pb-3 pl-[18px]">{children}</div>}
-    </div>
-  )
-}
-
-/** A row that leads to its own editor, which takes the list's place: a style, an element. */
-export function OpenRow({ onOpen, label, sample, summary, menu }: { onOpen: () => void; label: ReactNode; sample?: ReactNode; summary?: string; menu?: ReactNode }) {
-  return (
-    <div className="cms-reveal-row group flex min-h-10 items-center gap-2 border-b border-border py-1.5 last:border-b-0">
-      <Button variant="ghost" onClick={onOpen} className="!h-auto min-h-10 min-w-0 flex-1 shrink !justify-start !gap-2 !rounded-xs !bg-transparent !px-0 text-left !text-xs !font-normal focus-visible:!-outline-offset-2 hover:text-ink">
+    <div className="cms-reveal-row group flex items-center gap-2 border-b border-border py-1.5 last:border-b-0">
+      <Button variant="ghost" onClick={onOpen} className="!h-auto min-w-0 flex-1 shrink !justify-start !gap-3 !rounded-xs !bg-transparent !px-0 text-left !text-xs !font-normal focus-visible:!-outline-offset-2 hover:text-ink">
+        <span className="w-28 shrink-0 truncate text-text max-sm:w-20">{label}</span>
         {sample}
-        <span className="shrink-0 text-ink">{label}</span>
-        {summary !== undefined && <span className="min-w-0 flex-1 truncate text-muted">{summary}</span>}
         <Icon name="chevron-right" size={12} className="shrink-0 text-faint" />
       </Button>
       {menu ?? <NoAction />}

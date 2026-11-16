@@ -34,19 +34,31 @@ export function TokenChip({ token, alpha, className }: { token: ThemeToken; alph
   )
 }
 
-const chip = (on: boolean) => cn('h-6 min-w-7 rounded-xs px-1.5 text-2xs tabular-nums', on ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')
+const chip = (on: boolean) => cn('h-6 min-w-0 rounded-xs px-1.5 text-2xs tabular-nums', on ? 'bg-signal text-signal-ink' : 'bg-sunken text-text hover:bg-hover')
 
-/** The spacing scale as chips: a step is picked by its number, a named space by its name. */
+/** The spacing scale as chips, in pixels as the spacing control shows them, then the theme's named spaces (and Auto). */
 export function SpacingChips({ value, onPick, auto }: { value?: string | null; onPick: (value: string) => void; auto?: boolean }) {
   const { engine } = useStyling()
   const choices = spacingChoices(engine, useThemeTokens().of('spacing'))
   const same = (a: string) => a === value || (a === '0px' && value === '0')
+  const pick = (choice: { value: string; label: string; title: string }) => <Pressable compact key={choice.value} title={choice.title} onClick={() => onPick(choice.value)} className={chip(same(choice.value))}>{choice.label}</Pressable>
   return (
-    <div className="flex flex-wrap gap-1">
-      {choices.map((choice) => (
-        <Pressable compact key={choice.value} title={choice.title} onClick={() => onPick(choice.value)} className={chip(same(choice.value))}>{choice.label}</Pressable>
-      ))}
-      {auto && <Pressable compact onClick={() => onPick('auto')} className={chip(value === 'auto')}>{t('Auto')}</Pressable>}
+    <div className="space-y-2">
+      {choices.scale.length > 0 && (
+        <div>
+          <div className="cms-label mb-1">{t('Scale||series of steps')}</div>
+          <div className="grid grid-cols-6 gap-1">{choices.scale.map(pick)}</div>
+        </div>
+      )}
+      {(choices.named.length > 0 || auto) && (
+        <div>
+          <div className="cms-label mb-1">{t('Theme')}</div>
+          <div className="flex flex-wrap gap-1">
+            {choices.named.map(pick)}
+            {auto && <Pressable compact onClick={() => onPick('auto')} className={chip(value === 'auto')}>{t('Auto')}</Pressable>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -56,7 +68,7 @@ export function TokenList({ group, value, onPick, detach }: { group: TokenGroup;
   const tokens = useThemeTokens()
   const list = tokens.of(group)
   const current = tokens.find(value)?.token.variable ?? null
-  if (group === 'spacing') return <div className="p-1"><SpacingChips value={value} onPick={onPick} /></div>
+  if (group === 'spacing') return <div className="p-2"><SpacingChips value={value} onPick={onPick} /></div>
   return (
     <div>
       <div className="max-h-60 overflow-y-auto">
@@ -84,8 +96,8 @@ export function TokenList({ group, value, onPick, detach }: { group: TokenGroup;
 }
 
 /**
- * The token button of a value: a small diamond that opens the group's token list.
- * Hidden until its row is hovered unless a token is chosen (`active`).
+ * The token button of a value: a small diamond that opens the group's token list. It takes no room until its
+ * field is pointed at or holds the focus, unless a token is chosen (`active`): the value keeps the field's width.
  */
 export function TokenButton({ group, value, onPick, active, className, trigger }: { group: string; value?: string | null; onPick: (v: string | null) => void; active?: boolean; className?: string; trigger?: ReactElement }) {
   const [open, setOpen] = useState(false)
@@ -107,7 +119,7 @@ export function TokenButton({ group, value, onPick, active, className, trigger }
       className="w-60 !p-1"
       trigger={
         trigger ?? (
-          <Pressable compact className={cn('grid size-5 shrink-0 place-items-center rounded-xs text-faint transition-opacity hover:bg-hover hover:text-ink', !active && !open && 'opacity-0 group-hover/value:opacity-100 group-focus-within/value:opacity-100', (active || open) && 'text-ink', className)}
+          <Pressable compact className={cn('size-5 shrink-0 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink', active || open ? 'grid text-ink' : 'hidden group-hover/value:grid group-focus-within/value:grid [@media(hover:none)]:grid', className)}
             aria-label={t('Theme Values')}
             title={t('Theme Values')}
           >

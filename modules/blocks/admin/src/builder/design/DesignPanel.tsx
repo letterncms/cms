@@ -10,7 +10,6 @@ import type { BlockNode } from '../../core/types'
 import { dataStates } from '../styleApi'
 import { styleApi, useStyle, type StyleApi } from '../useStyle'
 import { Border } from './Border'
-import { ClassesSection } from './Classes'
 import { Effects } from './Effects'
 import { Fill } from './Fill'
 import { InParent, Layout } from './Layout'
@@ -94,7 +93,10 @@ export function DesignPanel({ node }: { node: BlockNode }) {
           <Notice tone="warning" title={t('The site’s stylesheet could not be read')} action={<Link to="/styling" className="shrink-0 text-xs text-text">{t('Open Styling')}</Link>} />
         </div>
       )}
-      <StyleBar s={s} site={styling.classes} source={styling.source} disabled={readOnly} state={{ classes: s.classes, engine: styling.engine, state, onState: store.setStyleState, states: dataStates(node, ancestors) }} />
+      {/* Held at the top while the panels scroll under it: what the element wears and the state being styled stay in sight. */}
+      <div className="sticky top-0 z-raised bg-surface">
+        <StyleBar s={s} site={styling.classes} source={styling.source} disabled={readOnly} state={{ classes: s.classes, engine: styling.engine, state, onState: store.setStyleState, states: dataStates(node, ancestors) }} />
+      </div>
       <StylePanels
         s={s}
         groups={groups}
@@ -103,7 +105,6 @@ export function DesignPanel({ node }: { node: BlockNode }) {
         media={['image', 'video', 'embed'].includes(node.type)}
         prose={type?.fields?.some((f) => f.handle === 'prose') ? { on: !!node.props?.prose, onChange: (on) => store.updateProps(node.id, { prose: on || undefined }, `inspector:${node.id}:prose`) } : undefined}
       />
-      <ClassesSection s={s} site={styling.classes} disabled={readOnly} />
     </div>
   )
 }

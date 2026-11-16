@@ -245,7 +245,7 @@
     background-color: var(--cms-hover);
   }
   /* On the desk (an inspector), fields are white slips on the gray: no edge until they're pointed at. */
-  [data-cms-desk] .cms-input:not(:hover, :focus-visible, [data-focus], [data-popup-open], [aria-invalid="true"]) {
+  [data-cms-desk] .cms-input:not(:hover, :focus-visible, [data-focus], [data-popup-open], [aria-invalid="true"], [data-invalid]) {
     border-color: transparent;
   }
   .cms-input:is(:focus-visible, [data-focus], [data-popup-open]),
@@ -254,8 +254,8 @@
     background-color: var(--cms-bg);
     box-shadow: var(--cms-shadow-focus);
   }
-  .cms-input[aria-invalid="true"],
-  .cms-input[aria-invalid="true"]:is(:hover, :focus-visible) {
+  .cms-input:is([aria-invalid="true"], [data-invalid]),
+  .cms-input:is([aria-invalid="true"], [data-invalid]):is(:hover, :focus-visible, [data-focus]) {
     border-color: var(--cms-danger);
     box-shadow: 0 0 0 3px var(--cms-danger-soft);
   }
@@ -267,7 +267,7 @@
   }
   /* A phone zooms into any field set under 16px: on touch, text fields are 16px, at the same height. */
   @media (pointer: coarse) {
-    input.cms-input, textarea.cms-input { font-size: 16px !important; }
+    input.cms-input, textarea.cms-input, .cms-input input { font-size: 16px !important; }
   }
 
   .cms-pop {

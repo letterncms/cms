@@ -23,14 +23,17 @@ function collapsed(): Record<string, boolean> {
 /**
  * A titled group of rows. Every title works the same way: it folds and unfolds the
  * section (a folded one shows its caret), and `actions` sit at the right. Whether it
- * is open is remembered per title; `open` is the default. `empty` (nothing set) dims
- * the title; an empty section with an add action has nothing to unfold: it is its title
- * and the way to add, and adding opens it. One with `fields` of its own to fill shows them.
+ * is open is remembered per title (unless `remember` is false: it starts as `open` every
+ * time); `open` is the default. A section with something set (`empty` false) carries a dot
+ * beside its title, as a row's label carries its mark. An empty section with an add action
+ * has nothing to unfold: it is its title and the way to add, and adding opens it. One with
+ * `fields` of its own to fill shows them.
  */
-export function Section({ title, children, open: initial = true, actions, empty, fields }: { title: string; children: ReactNode; open?: boolean; actions?: ReactNode; empty?: boolean; fields?: boolean }) {
-  const [open, setOpenState] = useState(() => collapsed()[title] === undefined ? initial : !collapsed()[title])
+export function Section({ title, children, open: initial = true, actions, empty, fields, remember = true }: { title: string; children: ReactNode; open?: boolean; actions?: ReactNode; empty?: boolean; fields?: boolean; remember?: boolean }) {
+  const [open, setOpenState] = useState(() => (!remember || collapsed()[title] === undefined ? initial : !collapsed()[title]))
   const setOpen = (next: boolean) => {
     setOpenState(next)
+    if (!remember) return
     try {
       localStorage.setItem(COLLAPSED, JSON.stringify({ ...collapsed(), [title]: !next }))
     } catch {
@@ -38,14 +41,16 @@ export function Section({ title, children, open: initial = true, actions, empty,
     }
   }
   const bare = !!(empty && actions && !fields)
+  const mark = empty === false && <span className="size-1.5 shrink-0 rounded-full bg-focus" aria-hidden />
   return (
     <section data-section={title} className="min-w-0 border-b border-border last:border-b-0">
       <header className="group/section flex h-10 items-center gap-1 pl-4 pr-3">
         {bare ? (
-          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-muted">{title}</span>
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">{title}</span>
         ) : (
-          <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open} className={cn('!h-full min-w-0 flex-1 shrink !justify-start !gap-1 !rounded-none !bg-transparent !px-0 text-left !text-xs !font-semibold focus-visible:!-outline-offset-2', empty ? '!text-muted' : '!text-ink')}>
+          <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open} className="!h-full min-w-0 flex-1 shrink !justify-start !gap-1.5 !rounded-none !bg-transparent !px-0 text-left !text-xs !font-semibold !text-ink focus-visible:!-outline-offset-2">
             <span className="min-w-0 truncate">{title}</span>
+            {mark}
             {/* Open sections show their caret on hover; a folded one keeps it, so it reads as one. */}
             <Icon name="chevron-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-fast', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
           </Button>
@@ -74,30 +79,29 @@ export function SubHeading({ title, action }: { title: string; action?: ReactNod
 }
 
 /**
- * The label of a row. A value set here reads darker (click it to reset); one that comes
- * from a larger screen, another state or the component carries a small dot. Nothing else
- * changes color: the panel stays one quiet column.
+ * The label of a row. A value set here wears the accent behind its label (click it to reset); one
+ * that comes from a larger screen, another state or the component wears a quiet grey. Nothing else
+ * changes color: the panel stays one quiet column, and a section with either carries a dot.
  */
 export function RowLabel({ field, children, htmlFor, className }: { field: FieldDef; children?: ReactNode; htmlFor?: string; className?: string }) {
   const status = field.status as 'own' | 'inherited' | undefined
   const reset = field.reset as (() => void) | undefined
   const label = children ?? field.label
-  const base = cn('flex min-h-7 min-w-0 shrink-0 items-center gap-1 text-left text-xs', labelColumn, status === 'own' ? 'text-ink' : 'text-muted', className)
+  const base = cn('flex min-h-7 min-w-0 shrink-0 items-center text-left text-xs', labelColumn, status ? 'text-ink' : 'text-muted', className)
   // A name longer than the column wraps in it: every row keeps its label beside its control.
-  const text = <span className="min-w-0 py-1 leading-[1.25] [overflow-wrap:anywhere]">{label}</span>
+  const text = <span className={cn('min-w-0 py-0.5 leading-[1.25] [overflow-wrap:anywhere]', status && '-ml-1 rounded-xs px-1 box-decoration-clone', status === 'own' ? 'bg-focus-soft' : status === 'inherited' && 'bg-active')}>{label}</span>
   if (status === 'own' && reset) {
     return (
       <Tooltip content={t('Reset {label}', { label: String(field.label ?? '') })}>
-        <Button variant="ghost" onClick={reset} className={cn(base, '!h-auto !justify-start !gap-1 !whitespace-normal !rounded-xs !bg-transparent !px-0 !text-xs !font-normal !text-ink decoration-faint decoration-dotted underline-offset-[3px] hover:underline')}>{text}</Button>
+        <Button variant="ghost" onClick={reset} className={cn(base, '!h-auto !justify-start !whitespace-normal !rounded-xs !bg-transparent !px-0 !text-xs !font-normal !text-ink')}>{text}</Button>
       </Tooltip>
     )
   }
   if (status === 'inherited') {
     return (
-      <label htmlFor={htmlFor} className={base} title={t('Inherited from a larger screen, another state or the component')}>
-        {text}
-        <span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden />
-      </label>
+      <Tooltip content={t('Inherited from a larger screen, another state or the component')}>
+        <label htmlFor={htmlFor} className={base}>{text}</label>
+      </Tooltip>
     )
   }
   return <label htmlFor={htmlFor} className={base} title={field.instructions as string | undefined}>{text}</label>

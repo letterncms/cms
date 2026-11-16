@@ -1,11 +1,11 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Popover, cn, Pressable } from '@letterncms/ui'
+import { Button, Popover, cn, Pressable } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { SubField } from './controls'
 import { SpacingChips, useTokenOf } from './tokens'
 
 /* `blocks-spacing` — the box model, like Webflow: margin around padding around the content.
-   Each side shows its value in pixels (darker when set here; a named space of the theme as its name);
+   Each side shows its value in pixels (marked as a row's label is when set; a named space of the theme as its name);
    drag a side to scrub, click it to type or pick a step of the scale. Alt changes the opposite side too,
    Shift all four. */
 
@@ -120,7 +120,7 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
       open={open}
       onOpenChange={setOpen}
       align="center"
-      className="w-60 !p-2"
+      className="w-64 !p-3"
       trigger={
         <Pressable compact onPointerDown={down}
           onClick={(e) => setSides(reach(index, e))}
@@ -129,11 +129,12 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
           className={cn(
             'mx-auto flex h-full min-w-0 max-w-full items-center justify-center rounded-xs px-1 text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus',
             index % 2 ? 'cursor-ew-resize' : 'cursor-ns-resize',
-            status === 'own' ? 'font-medium text-ink' : status === 'inherited' ? 'text-text' : 'text-faint',
+            status === 'none' ? 'text-faint' : 'text-ink',
             (open || dragging) ? 'bg-active' : 'hover:bg-hover',
           )}
         >
-          <span className={cn('truncate', chosen && 'rounded-xs px-1 leading-4', chosen && 'bg-active')}>{shown}</span>
+          {/* Marked as a row's label is: the accent where it is set here, grey where it comes from elsewhere. */}
+          <span className={cn('truncate', status !== 'none' && 'rounded-xs px-1 leading-4', status === 'own' ? 'bg-focus-soft' : status === 'inherited' && 'bg-active')}>{shown}</span>
         </Pressable>
       }
     >
@@ -161,21 +162,17 @@ function SideEditor({ box, sides, value, onChange, close, context }: { box: Box;
         if (e.key === 'Enter') requestAnimationFrame(close)
       }}
     >
-      <p className="m-0 mb-1.5 flex items-center justify-between text-xs font-semibold text-ink">
-        {title(box, sides)}
-        {value !== undefined && (
-          <Pressable compact onClick={() => pick(null)} className="rounded-xs px-1 text-2xs font-normal text-muted hover:bg-hover hover:text-text">
-            {t('Reset')}
-          </Pressable>
-        )}
-      </p>
+      <div className="mb-2 flex h-6 items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-xs font-semibold text-ink">{title(box, sides)}</span>
+        {value !== undefined && <Button variant="ghost" size="xs" onClick={() => pick(null)} className="shrink-0 !px-1.5 !font-normal !text-muted hover:!text-ink">{t('Reset')}</Button>}
+      </div>
       <SubField
         field={{ handle: `${box}-${sides.join('')}`, type: 'text', component: 'blocks-value', label: title(box, sides), placeholder: '0', keywords: box === 'margin' ? ['auto'] : [], min: box === 'padding' ? 0 : undefined }}
         value={value ?? null}
         onChange={(v) => onChange(v as string | null)}
         context={context}
       />
-      <div className="mt-2">
+      <div className="mt-3">
         <SpacingChips value={value} onPick={pick} auto={box === 'margin'} />
       </div>
     </div>
