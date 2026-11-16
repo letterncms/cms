@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.44.0 (2026-11-16)
+
 ### Changed
 
 - **Styling is one panel beside your site**, as WordPress's styles are. It opens on your site's look at a glance (its type in its first font, on its background, with its main colors) and a list of Colors, Typography, Layout, Effects, Motion and Styles; each opens in the panel, with the way back. Every section opens at its top.
