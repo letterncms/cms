@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.43.0 (2026-11-16)
+
 ### Changed
 
 - **Design opens on your site.** It shows the site as visitors see it, at the width of a desktop, a tablet or a phone, with Styling, Templates, Components, Patterns and Code in the sidebar.
