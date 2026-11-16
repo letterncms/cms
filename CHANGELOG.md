@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.49.0 (2026-11-16)
+
 ### Changed
 
 - **Back follows the trail.** The top bar shows where you are again, each level a link: *Design / Classes / Elements / Heading 1*. **Back**, in the top-left corner, or `Esc`, goes to the level just before the screen's name, so from a class you reach its group and then Classes, never straight to the Dashboard. A page opened from the Dashboard goes back to its list, like any other.
