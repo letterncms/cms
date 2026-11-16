@@ -1,8 +1,7 @@
-import { Button, Fields, Icon, Segmented, cn } from '@letterncms/ui'
+import { Button, Fields, Icon, PagePreview, Segmented, cn } from '@letterncms/ui'
 import { t, useAbility } from '@letterncms/sdk'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useCatalog } from './context'
-import { PatternPreview } from './PatternPreview'
 import { menuEnter, settleEnter } from './slashKeys'
 import type { BlockNode, BlockTypeDef } from './types'
 
@@ -25,6 +24,9 @@ export interface PatternDef {
   blocks: BlockNode[]
   editable: boolean
 }
+
+/** A pattern alone in the site's design, as it would be copied in: the page its picture is drawn from. */
+export const patternPage = (handle: string) => `/__pattern/${encodeURIComponent(handle)}`
 
 export type InsertChoice = { kind: 'block'; type: BlockTypeDef } | { kind: 'component'; component: ComponentDef } | { kind: 'pattern'; pattern: PatternDef }
 
@@ -166,7 +168,7 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
               <Button variant="ghost" size="md" data-index={i} title={item.pattern.description || undefined}
                 onMouseMove={() => i !== active && setActive(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => onChoose(item)} data-active={i === active || undefined}
                 className="!h-auto w-full !flex-col !items-stretch !gap-1.5 !rounded-sm !p-1.5 text-left">
-                <PatternPreview handle={item.pattern.handle} maxHeight={160} />
+                <PagePreview src={patternPage(item.pattern.handle)} maxHeight={160} />
                 <span className="min-w-0 truncate px-0.5 text-sm">{item.pattern.title}</span>
               </Button>
             </div>

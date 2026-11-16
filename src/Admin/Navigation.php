@@ -7,32 +7,36 @@ namespace Cms\Admin;
 use Cms\Users\User;
 
 /**
- * The admin sidebar. It has two states, both drawn from registered sections
- * and items (one per collection and one per settings page too):
+ * The admin sidebar, drawn from registered sections and items (one per
+ * collection and one per settings page too). It has two kinds of state:
  *
  * - the main sidebar: every item, section by section, in the order people
  *   put them; what someone unpins waits under More. Everyone arranges their
  *   own (the `sidebar` user preference); until they do, they see the site's
  *   default (the `sidebar` value of the `admin` settings), and without one the
  *   registrations, where nothing is put away unless registered `pinned: false`.
- * - the settings sidebar: the items of `settings` sections, in registered
- *   order. Settings are a place to visit, not something to arrange. The core's
- *   modules name their section; whatever a plugin puts there (its settings
- *   page, or a screen that lives in settings) is listed under Plugins, by the
- *   plugin's name, so no plugin makes a group of its own or slips into the core's.
- *   Unnamed sections are one group at the top, which a group of one joins.
+ * - a room (settings, the design): its sections' items in registered order,
+ *   while one of them is on view. A room is a place to visit, not something to
+ *   arrange. One with a door has a row in the main sidebar that leads to its
+ *   first screen. The core's modules name their section of settings; whatever a
+ *   plugin puts there (its settings page, or a screen that lives in settings) is
+ *   listed under Plugins, by the plugin's name, so no plugin makes a group of its
+ *   own or slips into the core's. In every room, unnamed sections are one group
+ *   at the top, which a group of one joins.
  *
  * An item with a `home` (another item's id) belongs to that screen, like a
  * plugin's settings page to the plugin's screen (its Settings tab), and is there
- * when its home is. It is in neither sidebar: settings have one home, and what
- * has a screen of its own keeps them there. The settings sidebar lists what has
- * no screen.
+ * when its home is. It is in no sidebar: settings have one home, and what
+ * has a screen of its own keeps them there.
  */
 final class Navigation extends Arranged
 {
     public const string PREFERENCE = 'sidebar';
 
-    /** The settings sidebar's section for what plugins put there. */
+    /** The room of settings, opened beside who is signed in. */
+    public const string SETTINGS = 'settings';
+
+    /** The settings' section for what plugins put there. */
     public const string PLUGINS = 'plugins';
 
     public function key(): string
@@ -41,19 +45,26 @@ final class Navigation extends Arranged
     }
 
     /**
-     * Every item in default order: registered ones, and those modules add for
-     * things that come and go (`admin.nav` filter — one per collection, one per settings page).
+     * Every item in default order: registered ones, those modules add for
+     * things that come and go (`admin.nav` filter — one per collection, one per
+     * settings page), and the door of each room that has one (`room`).
      *
      * @return array<string, array>
      */
     public function items(): array
     {
-        $defaults = ['icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => true, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null, 'home' => null];
+        $defaults = ['icon' => 'circle', 'section' => 'content', 'order' => 50, 'pinned' => true, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null, 'home' => null, 'room' => null];
         $items = array_map(static fn (array $item) => [...$defaults, ...$item], (array) $this->cms->hooks()->filter('admin.nav', $this->cms->admin()->navItems()));
 
         foreach ($items as $id => $item) {
-            if ($this->inSettings($item) && $this->fromPlugin($item)) {
+            if ($this->roomOf($item) === self::SETTINGS && $this->fromPlugin($item)) {
                 $items[$id]['section'] = self::PLUGINS;
+            }
+        }
+
+        foreach ($this->cms->admin()->rooms() as $room) {
+            if ($room['section'] !== null) {
+                $items[$room['id']] = [...$defaults, 'id' => $room['id'], 'label' => $room['label'], 'path' => '', 'icon' => $room['icon'], 'section' => $room['section'], 'order' => $room['order'], 'room' => $room['id'], 'package' => null];
             }
         }
 
@@ -64,8 +75,8 @@ final class Navigation extends Arranged
 
     public function arrangement(): Arrangement
     {
-        $sections = array_filter($this->cms->admin()->sections(), static fn ($s) => ! $s['settings']);
-        $items = array_filter($this->items(), fn ($i) => $i['home'] === null && ! $this->inSettings($i));
+        $sections = array_filter($this->cms->admin()->sections(), static fn ($s) => $s['room'] === null);
+        $items = array_filter($this->items(), fn ($i) => $i['home'] === null && $this->roomOf($i) === null);
 
         return new Arrangement($sections, array_map(static fn ($i) => [...$i, 'group' => $i['section'], 'hidden' => ! $i['pinned']], $items), fixed: true);
     }
@@ -79,10 +90,11 @@ final class Navigation extends Arranged
     /**
      * The sidebar for one user. `nav` is every item they may open (the command
      * palette offers them all); `sidebar` arranges those of the main sidebar
-     * (hidden = under More) and says whether it is their own; `settingsNav`
-     * lists the settings sidebar's sections.
+     * (hidden = under More) and says whether it is their own; `rooms` lists each
+     * room they may enter, with its sections. A door leads to its room's first
+     * screen, and is there only when the room has one for them.
      *
-     * @return array{nav: list<array>, sidebar: array{sections: list<array>, hidden: list<string>, personal: bool}, settingsNav: list<array{id: string, label: string, items: list<string>}>}
+     * @return array{nav: list<array>, sidebar: array{sections: list<array>, hidden: list<string>, personal: bool}, rooms: list<array{id: string, label: string, icon: string, sections: list<array{id: string, label: string, items: list<string>}>}>}
      */
     public function forUser(User $user): array
     {
@@ -91,6 +103,8 @@ final class Navigation extends Arranged
         $items = $this->items();
         $may = static fn (array $item) => ($item['permission'] === null || $user->hasPermission($item['permission'], any: true))
             && ($item['visible'] === null || ($item['visible'])($user));
+        $rooms = $this->rooms($items, $may);
+        $homes = array_map(static fn (array $room) => $items[$room['sections'][0]['items'][0]]['path'], array_column($rooms, null, 'id'));
         $nav = [];
         $sections = [];
 
@@ -98,8 +112,14 @@ final class Navigation extends Arranged
             $ids = [];
 
             foreach ($section['items'] as $id) {
-                if ($may($items[$id])) {
-                    $nav[$id] = $this->present($items[$id]);
+                $item = $items[$id];
+
+                if ($item['room'] !== null) {
+                    $item['path'] = $homes[$item['room']] ?? null;
+                }
+
+                if ($may($item) && ($item['room'] === null || $item['path'] !== null)) {
+                    $nav[$id] = $this->present($item);
                     $ids[] = $id;
                 }
             }
@@ -107,29 +127,13 @@ final class Navigation extends Arranged
             $sections[] = [...$section, 'items' => $ids];
         }
 
-        $settings = [];
-
-        foreach ($this->settingsSections() as $section) {
-            $ids = [];
-
-            foreach ($items as $id => $item) {
-                if ($item['section'] === $section['id'] && $item['home'] === null && $may($item)) {
-                    $nav[$id] = $this->present($item);
-                    $ids[] = $id;
+        foreach ($rooms as $room) {
+            foreach ($room['sections'] as $section) {
+                foreach ($section['items'] as $id) {
+                    $nav[$id] = $this->present($items[$id]);
                 }
             }
-
-            // Plugins are found by their name.
-            if ($section['id'] === self::PLUGINS) {
-                usort($ids, static fn ($a, $b) => strnatcasecmp($items[$a]['label'], $items[$b]['label']));
-            }
-
-            if ($ids !== []) {
-                $settings[] = ['id' => $section['id'], 'label' => $section['label'], 'items' => $ids];
-            }
         }
-
-        $settings = $this->ungroupSingles($settings);
 
         // What belongs to a screen comes with it.
         foreach ($items as $id => $item) {
@@ -145,23 +149,54 @@ final class Navigation extends Arranged
                 'hidden' => array_values(array_filter($layout['hidden'], static fn ($id) => isset($nav[$id]))),
                 'personal' => $personal !== null,
             ],
-            'settingsNav' => $settings,
+            'rooms' => $rooms,
         ];
     }
 
     /** Items of the main sidebar, for the arrangement ability. */
     public function catalog(): array
     {
-        return array_map(fn ($item) => $this->present($item, badge: false), array_filter($this->items(), fn ($i) => $i['home'] === null && ! $this->inSettings($i)));
+        return array_map(fn ($item) => $this->present($item, badge: false), array_filter($this->items(), fn ($i) => $i['home'] === null && $this->roomOf($i) === null));
     }
 
-    /** @return list<array{id: string, label: string, order: int, settings: bool}> */
-    private function settingsSections(): array
+    /**
+     * The rooms with something in them for this person, each with its sections in order.
+     *
+     * @param  array<string, array>  $items
+     * @return list<array{id: string, label: string, icon: string, sections: list<array{id: string, label: string, items: list<string>}>}>
+     */
+    private function rooms(array $items, \Closure $may): array
     {
-        $sections = array_filter($this->cms->admin()->sections(), static fn ($s) => $s['settings']);
+        $sections = $this->cms->admin()->sections();
         uasort($sections, static fn ($a, $b) => [$a['order'], $a['label']] <=> [$b['order'], $b['label']]);
+        $rooms = [];
 
-        return array_values($sections);
+        foreach ($this->cms->admin()->rooms() as $room) {
+            $listed = [];
+
+            foreach ($sections as $section) {
+                if ($section['room'] !== $room['id']) {
+                    continue;
+                }
+
+                $ids = array_keys(array_filter($items, static fn (array $item) => $item['section'] === $section['id'] && $item['home'] === null && $may($item)));
+
+                // Plugins are found by their name.
+                if ($section['id'] === self::PLUGINS) {
+                    usort($ids, static fn ($a, $b) => strnatcasecmp($items[$a]['label'], $items[$b]['label']));
+                }
+
+                if ($ids !== []) {
+                    $listed[] = ['id' => $section['id'], 'label' => $section['label'], 'items' => $ids];
+                }
+            }
+
+            if ($listed !== []) {
+                $rooms[] = ['id' => $room['id'], 'label' => $room['label'], 'icon' => $room['icon'], 'sections' => $this->ungroupSingles($listed)];
+            }
+        }
+
+        return $rooms;
     }
 
     /**
@@ -189,9 +224,10 @@ final class Navigation extends Arranged
         return $top === null ? $grouped : [$top, ...$grouped];
     }
 
-    private function inSettings(array $item): bool
+    /** The room an item is listed in, if any. */
+    private function roomOf(array $item): ?string
     {
-        return $this->cms->admin()->sections()[$item['section']]['settings'] ?? false;
+        return $this->cms->admin()->sections()[$item['section']]['room'] ?? null;
     }
 
     /** Added by a plugin, not by the kernel or one of its modules. */
@@ -214,6 +250,6 @@ final class Navigation extends Arranged
             }
         }
 
-        return ['id' => $item['id'], 'label' => $item['label'], 'path' => $item['path'], 'icon' => $item['icon'], 'section' => $item['section'], 'shortcut' => $item['shortcut'], 'badge' => $value, 'home' => $item['home'], 'package' => $item['package'] ?? null];
+        return ['id' => $item['id'], 'label' => $item['label'], 'path' => $item['path'], 'icon' => $item['icon'], 'section' => $item['section'], 'shortcut' => $item['shortcut'], 'badge' => $value, 'home' => $item['home'], 'room' => $item['room'], 'package' => $item['package'] ?? null];
     }
 }

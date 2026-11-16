@@ -151,7 +151,7 @@ final class Catalog
     }
 
     /** How a value in a column or detail is written. */
-    public const array FORMATS = ['text', 'strong', 'muted', 'code', 'badge', 'badges', 'status', 'date', 'datetime', 'ago', 'number', 'money', 'bytes', 'yesno', 'person', 'count', 'image', 'link', 'switch', 'share', 'compact', 'address', 'media', 'languages', 'field'];
+    public const array FORMATS = ['text', 'strong', 'muted', 'code', 'badge', 'badges', 'status', 'date', 'datetime', 'ago', 'number', 'money', 'bytes', 'yesno', 'person', 'count', 'image', 'link', 'switch', 'share', 'compact', 'address', 'media', 'page', 'languages', 'field'];
 
     /** A button or row action: an ability to run (with `input`), a place to go (`to`), or a dialog of nodes (`dialog`). */
     public static function action(): array

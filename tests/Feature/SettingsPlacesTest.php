@@ -41,7 +41,7 @@ final class SettingsPlacesTest extends TestCase
                     // No section: it goes under Plugins.
                     $settings->register('links', fields: [['handle' => 'target', 'type' => 'text', 'label' => 'Target']]);
                     // A core group asked for: still under Plugins, a plugin never slips into the core's groups.
-                    $settings->register('shortener', 'Shortener', [['handle' => 'domain', 'type' => 'text', 'label' => 'Domain']], section: 'site');
+                    $settings->register('shortener', 'Shortener', [['handle' => 'domain', 'type' => 'text', 'label' => 'Domain']], section: 'system');
                     // A screen that lives in settings, like Languages.
                     $this->cms()->admin()->nav('redirects', ['label' => 'Redirect Rules', 'path' => '/redirect-rules', 'section' => 'people']);
                     // A screen of its own in the sidebar, which keeps its settings as a tab.
@@ -55,14 +55,14 @@ final class SettingsPlacesTest extends TestCase
     public function test_a_plugins_settings_go_under_plugins_by_its_name(): void
     {
         $result = $this->cms()->adminNav()->forUser($this->admin());
-        $settings = array_column($result['settingsNav'], null, 'id');
+        $settings = array_column(current(array_filter($result['rooms'], static fn (array $room) => $room['id'] === 'settings'))['sections'], null, 'id');
 
         // The core's groups, then Plugins: alphabetical, whatever order or group they were registered with.
         // The settings a plugin keeps on its own screen are not among them.
-        $this->assertSame(['account', 'people', 'plugins'], array_keys($settings));
+        $this->assertSame(['system', 'people', 'plugins'], array_keys($settings));
         $this->assertSame('Plugins', $settings['plugins']['label']);
         $this->assertSame(['settings.links', 'redirects', 'settings.shortener'], $settings['plugins']['items']);
-        $this->assertNotContains('settings.shortener', $settings['account']['items']);
+        $this->assertNotContains('settings.shortener', $settings['system']['items']);
         $this->assertNotContains('redirects', $settings['people']['items']);
 
         $nav = array_column($result['nav'], null, 'id');
@@ -79,7 +79,7 @@ final class SettingsPlacesTest extends TestCase
         // Its one place is the screen's Settings tab: /settings/clicks and every link to it lead there, and no sidebar lists it.
         $this->assertSame('/clicks?tab=settings', $nav['settings.clicks']['path']);
         $this->assertSame('clicks', $nav['settings.clicks']['home']);
-        $this->assertNotContains('settings.clicks', array_merge(...array_column($result['settingsNav'], 'items')));
+        $this->assertNotContains('settings.clicks', array_merge(...array_column(array_merge(...array_column($result['rooms'], 'sections')), 'items')));
         $this->assertNotContains('settings.clicks', array_merge(...array_column($result['sidebar']['sections'], 'items')));
         $this->assertSame('clicks', array_column($this->app->make(Manifest::class)->build($this->admin())['settings'], 'home', 'namespace')['clicks']);
     }

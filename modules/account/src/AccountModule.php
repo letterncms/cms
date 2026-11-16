@@ -36,7 +36,7 @@ final class AccountModule extends Plugin
             $request->hasSession() && Sessions::remember($request->session(), $request->userAgent(), $request->ip());
         });
         // First in the settings sidebar: everyone has one, whatever else they may change.
-        $this->cms()->admin()->nav('account', ['label' => 'Account', 'path' => '/account', 'icon' => 'user', 'section' => 'account', 'order' => 0]);
+        $this->cms()->admin()->nav('account', ['label' => 'Account', 'path' => '/account', 'icon' => 'user', 'section' => 'system', 'order' => 0]);
         $this->cms()->admin()->widget('account-security', ['label' => 'Security', 'description' => 'Says when two-factor authentication is off or an API token lies unused.', 'icon' => 'shield', 'column' => 'side', 'order' => 60]);
         AccountViews::register($this->cms());
         $this->settingsSchema();

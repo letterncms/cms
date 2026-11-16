@@ -10,7 +10,7 @@ export interface ViewHost {
   act: (action: ViewAction, scope: Scope, busy?: (on: boolean) => void) => Promise<void>
   /** Drawn without anything to act with (a reply the assistant has moved on from). */
   disabled: boolean
-  /** The view belongs to the settings sidebar. */
+  /** The view is a page of settings. */
   settings?: boolean
   /** An assistant reply: its buttons report the node and event, and the server runs them through approvals. */
   emit?: (node: string, name: string) => void

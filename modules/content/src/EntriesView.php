@@ -171,11 +171,15 @@ final class EntriesView
         $routable = $collection->routable();
         $excerpt = self::excerpt($fields);
         $media = array_values(array_filter($fields, static fn ($f) => $f['type'] === 'media'))[0] ?? null;
-        $shown = [...($collection->defaultColumns ?? [
+        // A part of the design is used, not published on a date of its own: where it is used, its state and its last change.
+        $shown = $collection->defaultColumns ?? ($collection->system && ! $routable ? ['used', 'status', 'updated'] : [
             ...($routable ? ['uri'] : []), 'status', 'published', 'updated',
-        ]), ...($collection->system && ! $routable ? ['used', 'updated'] : [])];
+        ]);
         // Cards show the picture and a few lines too, unless the collection says what to show.
         $cards = $collection->defaultColumns === null ? array_filter([$media ? "field:{$media['handle']}" : null, $excerpt ? "field:{$excerpt['handle']}" : null]) : [];
+        if ($collection->system && ! $routable) {
+            $cards[] = 'preview';
+        }
 
         // Beside a title, quieter: who is editing that entry right now (`editingBy`), when something that knows says so.
         $columns = [['id' => 'title', 'key' => 'title', 'label' => __('Title'), 'width' => 'minmax(200px,1fr)', 'sort' => 'title', 'empty' => __('Untitled'), 'muted' => 'editingBy', 'mutedWhole' => true]];
@@ -184,10 +188,12 @@ final class EntriesView
             $columns[] = ['id' => 'uri', 'key' => 'uri', 'label' => __('URL'), 'format' => 'address', 'fit' => true, 'sort' => 'uri'];
         }
         // What a site is built from (its templates, its components) is not a page of its own: its list has few columns, so the
-        // title keeps to its words and the state stands beside it, and it says where each one is used (`usedBy`, from whoever knows).
+        // title keeps to its words and the state stands beside it, and it says where each one is used (`usedBy`); its cards
+        // show it as the site draws it (`preview`). Both from whoever knows.
         $parts = $collection->system && ! $routable;
         if ($parts) {
             $columns[0]['width'] = 'minmax(200px,420px)';
+            $columns[] = ['id' => 'preview', 'key' => 'preview', 'label' => __('Preview'), 'format' => 'page', 'image' => true, 'width' => '88px'];
             $columns[] = ['id' => 'used', 'key' => 'usedBy', 'label' => __('Used By'), 'width' => 'minmax(160px,1fr)', 'empty' => __('Nothing')];
         }
         $columns[] = ['id' => 'status', 'key' => 'displayStatus', 'label' => __('Status'), 'format' => 'status', 'width' => '104px', 'sort' => 'status'];

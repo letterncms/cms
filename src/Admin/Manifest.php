@@ -65,11 +65,13 @@ final class Manifest
         $t = $this->cms->app()->make(Translations::class);
         $label = static fn (array $item, string ...$keys) => array_replace($item, array_map($t->label(...), array_intersect_key($item, array_flip($keys))));
 
-        foreach (['nav', 'widgets', 'components', 'commands', 'settings', 'fieldTypes', 'settingsNav', 'dashboard'] as $part) {
+        foreach (['nav', 'widgets', 'components', 'commands', 'settings', 'fieldTypes', 'dashboard'] as $part) {
             $manifest[$part] = array_map(static fn ($item) => is_array($item) ? $label($item, 'label', 'group', 'description') : $item, $manifest[$part] ?? []);
         }
 
         $manifest['widgets'] = array_map(static fn ($widget) => isset($widget['action']) ? [...$widget, 'action' => $label($widget['action'], 'label')] : $widget, $manifest['widgets'] ?? []);
+
+        $manifest['rooms'] = array_map(static fn ($room) => [...$label($room, 'label'), 'sections' => array_map(static fn ($section) => $label($section, 'label'), $room['sections'])], $manifest['rooms'] ?? []);
 
         if (isset($manifest['sidebar']['sections'])) {
             $manifest['sidebar']['sections'] = array_map(static fn ($section) => $label($section, 'label'), $manifest['sidebar']['sections']);

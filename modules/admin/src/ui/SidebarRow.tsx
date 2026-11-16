@@ -23,6 +23,8 @@ export interface SidebarRowProps {
   /** A count. */
   badge?: ReactNode
   shortcut?: string | null
+  /** Leads into a room (a sidebar of its own): a chevron says so. */
+  opens?: boolean
   status?: ReactNode
   /** Everything the row can do, in its context menu; `quick` ones are buttons on the row too. */
   actions?: (SidebarRowAction | false | null | undefined)[]
@@ -36,7 +38,7 @@ export interface SidebarRowProps {
  * (or long-press) after Open in New Tab. Navigation and actions are siblings so
  * buttons never live inside a link.
  */
-export function SidebarRow({ label, icon, to, onClick, active, title, badge, shortcut, status, actions = [], sortable }: SidebarRowProps) {
+export function SidebarRow({ label, icon, to, onClick, active, title, badge, shortcut, opens, status, actions = [], sortable }: SidebarRowProps) {
   const own = actions.filter((a): a is SidebarRowAction => !!a)
   const quick = own.filter((a) => a.quick && a.icon)
   const menu: (MenuItemDef | false)[] = [
@@ -58,7 +60,8 @@ export function SidebarRow({ label, icon, to, onClick, active, title, badge, sho
       {status && <span className="cms-sidebar-row-status">{status}</span>}
       {badge
         ? <span className="cms-sidebar-row-badge">{badge}</span>
-        : shortcut ? <Kbd keys={shortcut} className="cms-sidebar-row-shortcut" /> : null}
+        : shortcut ? <Kbd keys={shortcut} className="cms-sidebar-row-shortcut" />
+          : opens ? <Icon name="chevron-right" size={12} className="shrink-0 text-faint" /> : null}
     </>,
   }
   const link = to !== undefined ? <Link to={to} {...main} /> : <button type="button" {...main} />

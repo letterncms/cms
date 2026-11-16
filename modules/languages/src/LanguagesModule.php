@@ -127,7 +127,7 @@ final class LanguagesModule extends Plugin
 
         $this->cms()->context()->register('cms://languages', 'Languages', 'The site’s languages (default first) with URL prefixes. Translate entries with translations/create.', fn () => $languages()->all());
 
-        $this->cms()->admin()->nav('languages', ['path' => '/languages', 'icon' => 'translate', 'section' => 'site', 'permission' => 'settings.manage']);
+        $this->cms()->admin()->nav('languages', ['path' => '/languages', 'icon' => 'translate', 'section' => 'system', 'order' => 10, 'permission' => 'settings.manage']);
         $this->cms()->admin()->component('languages/add-language', ['label' => 'Add Language', 'description' => 'A searchable list of languages to add to the site, chosen with the keyboard; any other xx-YY code works too.', 'surface' => false, 'permission' => 'settings.manage',
             'props' => ['type' => 'object', 'properties' => [], 'additionalProperties' => false]]);
         $this->cms()->views()->register('languages', '/languages', fn (User $user) => $this->view($user), permission: 'settings.manage');

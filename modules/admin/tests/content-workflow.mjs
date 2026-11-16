@@ -76,7 +76,7 @@ const manifest = {
   styles: [...modules, ...plugins].map((name) => `/_cms/assets/cms-${name}/admin.css`),
   settings: [], collections, globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [], config: { content: { autosave: 0, perPage: 50 } }, nav,
   sidebar: { sections: [{ id: 'content', label: 'Content', items: nav.map((item) => item.id) }], hidden: [], personal: false },
-  settingsNav: [], brand, views: mounted,
+  rooms: [], brand, views: mounted,
 }
 const boot = { brand, base: '/admin', api: '/api/admin', version: 'fixture', site: manifest.site, locale: 'en', messages: {}, manifest }
 const map = imports({ '@letterncms/blocks': `${assets('blocks')}admin.js` })

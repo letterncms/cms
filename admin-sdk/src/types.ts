@@ -193,15 +193,26 @@ export interface NavItem {
   label: string
   path: string
   icon: string
-  /** The section it is listed in: of the sidebar, or of the settings sidebar. */
+  /** The section it is listed in: of the main sidebar, or of a room. */
   section: string
   /** A keyboard shortcut that opens it, shown with its label (e.g. `mod+j`). */
   shortcut?: string | null
   badge?: string | number | null
   /** The item of the screen this belongs to (a plugin's settings page, to the plugin's screen): it is in neither sidebar, and its home shows as the place you are. */
   home?: string | null
+  /** A room's door: the row of the main sidebar that leads to the room's first screen. */
+  room?: string | null
   /** The plugin or module that added it. */
   package?: string | null
+}
+
+/** A sidebar of its own (settings, the design) that takes the main one's place while one of its screens is on view. */
+export interface Room {
+  id: string
+  label: string
+  icon: string
+  /** Its sections, in order, with the ids of their items; the first, without a label, has no heading. */
+  sections: ArrangedSection[]
 }
 
 /** The main sidebar as arranged for this user: items in sections; hidden ones are under More. `personal` when they pinned their own. */
@@ -254,11 +265,11 @@ export interface Manifest {
   /** Places drawn from data, mounted at their paths (see ViewDocument). */
   views?: { id: string; path: string; package: string | null; private?: boolean }[]
   packages: { active: string[]; pending: Record<string, string> }
-  /** Every screen the user may open: the sidebar's in its order (those under More included), then the settings sidebar's. */
+  /** Every screen the user may open: the sidebar's in its order (those under More included), then each room's. */
   nav: NavItem[]
   sidebar: Sidebar
-  /** The settings sidebar: its sections with the ids of their items. */
-  settingsNav: ArrangedSection[]
+  /** The rooms this person may enter. */
+  rooms: Room[]
   modules: { id: string; url: string; package: string | null }[]
   styles: string[]
   /** Home-screen widgets the user may add: shown in the gallery with their description and the package they come from. */

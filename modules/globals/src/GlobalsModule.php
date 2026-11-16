@@ -34,7 +34,7 @@ final class GlobalsModule extends Plugin
                 : [],
         ]);
 
-        $cms->admin()->nav('globals', ['label' => 'Globals', 'path' => '/globals', 'icon' => 'globe', 'section' => 'content', 'order' => 80, 'permission' => 'globals.view']);
+        $cms->admin()->nav('globals', ['label' => 'Globals', 'path' => '/globals', 'icon' => 'globe', 'section' => 'site', 'order' => 20, 'permission' => 'globals.view']);
         $cms->admin()->widget('globals', ['label' => 'Globals', 'description' => 'Quick links to your globals.', 'icon' => 'globe', 'column' => 'side', 'order' => 80, 'permission' => 'globals.view']);
         GlobalsViews::register($cms);
         $this->routes();

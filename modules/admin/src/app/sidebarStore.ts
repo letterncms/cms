@@ -1,6 +1,6 @@
 import { boot, can, getManifest, loadManifest, navigate, run, setManifest, setPreference, t, type Arrangement, type Manifest, type Sidebar } from '@letterncms/sdk'
 import { confirm, toast } from '../ui'
-import { inSettings, placeAt, settingsHome } from '../ui/place'
+import { placeAt, roomAt, roomHome, SETTINGS } from '../ui/place'
 
 /**
  * The sidebar people pin: items in sections, those that are `hidden` wait
@@ -162,35 +162,36 @@ export async function resetEveryonesDefault() {
  */
 export const SETTINGS_SHORTCUT = 'mod+shift+,'
 
-/** Where the way out of settings and the settings shortcut return to: the last screen of the main sidebar, for this visit. */
+/** Where the way out of a room and the settings shortcut return to: the last screen of the main sidebar, for this visit. */
 const last = { app: '' }
 
-/** Only a place is remembered: a path on its way somewhere else (/settings opening its first page) is never a way back. */
+/** Only a place is remembered: a path on its way somewhere else (/settings opening its first page) is never a way back, nor is a room's screen. */
 export function remember(manifest: Manifest, path: string, search: string) {
   if (!placeAt(manifest.nav, path)) return
-  if (!inSettings(manifest, path)) last.app = path + search
+  if (!roomAt(manifest, path)) last.app = path + search
 }
 
 /** The last screen of the main sidebar, or its first item before there was one. */
 export function lastApp(): string {
   if (last.app) return last.app
   const manifest = getManifest()
-  const first = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => !manifest.sidebar.hidden.includes(id))
-  return manifest.nav.find((n) => n.id === first)?.path ?? '/'
+  const screens = new Map(manifest.nav.filter((n) => !n.room).map((n) => [n.id, n.path]))
+  const first = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => screens.has(id) && !manifest.sidebar.hidden.includes(id))
+  return (first && screens.get(first)) ?? '/'
 }
 
-export function openSettings() {
-  const to = settingsHome(getManifest())
+export function openRoom(id: string) {
+  const to = roomHome(getManifest(), id)
   if (to) navigate(to)
 }
 
-export function leaveSettings() {
+export function leaveRoom() {
   navigate(lastApp())
 }
 
 /** The settings shortcut: opens settings, and in settings goes back. */
 export function toggleSettings() {
   const path = window.location.pathname.slice(boot.base.length) || '/'
-  if (inSettings(getManifest(), path)) leaveSettings()
-  else openSettings()
+  if (roomAt(getManifest(), path)?.id === SETTINGS) leaveRoom()
+  else openRoom(SETTINGS)
 }

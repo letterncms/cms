@@ -69,10 +69,10 @@ final class SettingsAbilities
             'input' => ['type' => 'object', 'properties' => ['of' => ['type' => 'string', 'description' => 'sidebar, or dashboard when letterncms/dashboard is on'], 'layout' => ['type' => ['object', 'null']]], 'required' => ['of']],
             'output' => Shape::of([
                 // A widget of the home screen has a description; an item of the sidebar has where it leads and where it
-                // comes from (Navigation::present(): no badge is counted here, and an item with a home is not arranged).
+                // comes from, and the room a door leads into (Navigation::present(): no badge is counted here, and an item with a home is not arranged).
                 'items' => [[
                     'id' => Shape::STRING, 'label' => Shape::STRING, 'icon' => Shape::STRING, 'description?' => Shape::STRING, 'path?' => Shape::STRING, 'section?' => Shape::STRING,
-                    'shortcut?' => Shape::STRING_OR_NULL, 'badge?' => Shape::NULL, 'home?' => Shape::NULL, 'package?' => Shape::STRING_OR_NULL,
+                    'shortcut?' => Shape::STRING_OR_NULL, 'badge?' => Shape::NULL, 'home?' => Shape::NULL, 'room?' => Shape::STRING_OR_NULL, 'package?' => Shape::STRING_OR_NULL,
                 ]],
                 'layout' => ['sections' => [['id' => Shape::STRING, 'label' => Shape::STRING, 'items' => [Shape::STRING]]], 'hidden' => [Shape::STRING]],
                 'customized' => Shape::BOOLEAN, 'fixed' => Shape::BOOLEAN,

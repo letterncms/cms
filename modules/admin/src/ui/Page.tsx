@@ -3,7 +3,7 @@ import { Fragment, Suspense, createContext, isValidElement, useContext, useEffec
 import { createPortal } from 'react-dom'
 import { cn } from './cn'
 import { Icon } from './Icon'
-import { homedSettings, inSettings, noteParent, placeAt, settingsHome, wayBack } from './place'
+import { homedSettings, noteParent, placeAt, roomAt, roomHome, wayBack } from './place'
 import { WorkspaceContext } from './WorkspaceContext'
 import { Tabs } from './Segmented'
 import { Spinner } from './Spinner'
@@ -27,10 +27,10 @@ export interface Crumb {
 export function Topbar({ crumbs: own = [], back, title, actions, children, className, slot }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void }) {
   const manifest = useManifestIfLoaded()
   const { path } = useLocation()
-  // A place of the settings sidebar says so first, on every one of its screens; it leads where settings open, never through /settings's redirect.
-  const settings = !!manifest && inSettings(manifest, path)
-  const home = settings ? settingsHome(manifest) : undefined
-  const crumbs = settings ? [{ label: t('Settings'), to: home === path ? undefined : home, icon: undefined }, ...own.map((c) => ({ ...c, icon: undefined }))] : own
+  // A screen of a room (settings, the design) says so first, on every one of its screens; it leads where the room opens, never through a redirect.
+  const room = manifest ? roomAt(manifest, path) : undefined
+  const home = room && manifest ? roomHome(manifest, room.id) : undefined
+  const crumbs = room ? [{ label: room.label, to: home === path ? undefined : home, icon: undefined }, ...own.map((c) => ({ ...c, icon: undefined }))] : own
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
   // An editor's document (`title`) names the screen before its crumbs do: "Home", not "Pages".
@@ -41,12 +41,12 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const ends = panelsFor('topbar.end', {})
   const claimed = useContext(WorkspaceContext)?.sidebar?.claimed
   const way = back && manifest ? wayBack(manifest, back) : back
-  // A phone shows the screen's own crumb only, so the one before it is a way back there. Settings itself is no screen to go back to.
-  const before = crumbs.slice(settings ? 1 : 0, -1).reverse().find((c) => c.to)
+  // A phone shows the screen's own crumb only, so the one before it is a way back there. The room itself is no screen to go back to.
+  const before = crumbs.slice(room ? 1 : 0, -1).reverse().find((c) => c.to)
   const upTo = before?.to
   const upLabel = firstText(before?.label)
-  // Where the sidebar button has a way back beside it (settings, a state of the sidebar), that one leads there: never two chevrons.
-  const shellBack = !!claimed || settings
+  // Where the sidebar button has a way back beside it (a room, a state of the sidebar), that one leads there: never two chevrons.
+  const shellBack = !!claimed || !!room
   useEffect(() => {
     if (!shellBack || !upTo || !upLabel) return
     noteParent({ to: upTo, label: upLabel })

@@ -58,7 +58,7 @@ final class NavigationModule extends Plugin
 
         $this->cms()->context()->register('cms://navigation', 'Menus', 'Site menus and their items. Edit with navigation/update; pages show them with a Repeat block: {"source":"menu","menu":"<handle>"}.', fn () => array_values(array_map(fn ($m) => $this->describe($m), $this->app->make(Menus::class)->all())), permission: 'navigation.view');
 
-        $this->cms()->admin()->nav('navigation', ['path' => '/navigation', 'icon' => 'list-tree', 'section' => 'content', 'order' => 72, 'permission' => 'navigation.view']);
+        $this->cms()->admin()->nav('navigation', ['path' => '/navigation', 'icon' => 'list-tree', 'section' => 'site', 'order' => 10, 'permission' => 'navigation.view']);
         $this->cms()->admin()->command('navigation', ['label' => 'Edit Menus', 'icon' => 'list-tree', 'path' => '/navigation', 'keywords' => ['menu', 'navigation', 'links', 'header', 'footer'], 'permission' => 'navigation.view']);
         $this->cms()->admin()->widget('navigation-menus', ['label' => 'Menus', 'description' => 'The site’s menus and how many links each has.', 'icon' => 'list-tree', 'column' => 'side', 'order' => 60, 'permission' => 'navigation.view']);
         $this->places();

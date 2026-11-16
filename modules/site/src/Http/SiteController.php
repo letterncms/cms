@@ -82,9 +82,11 @@ final class SiteController
         abort_if(! $entry || ! $user || ! $user->hasPermission("entries.{$entry->collection}.view"), 404);
 
         $document = $request->boolean('editor') ? bin2hex(random_bytes(16)) : null;
-        $result = $this->renderer->entry($entry->withWorkingCopy(), max(1, (int) $request->query('page', 1)), preview: true, editor: $document !== null, bodyDocument: $document);
+        $working = $entry->withWorkingCopy();
+        $html = $this->part($working, $user, $document !== null, $document)
+            ?? $this->renderer->entry($working, max(1, (int) $request->query('page', 1)), preview: true, editor: $document !== null, bodyDocument: $document)['html'];
 
-        return $this->rendered($result['html'], $document);
+        return $this->rendered($html, $document);
     }
 
     /** A pattern alone in the site's design, as it would be copied in: its picture in lists and the inserter. Drafts included. */
@@ -176,16 +178,28 @@ final class SiteController
         if ($field !== null && $field !== $body) {
             $html = $this->renderer->blocks($blocks, $working, $working->title, $editor, $document);
         } else {
-            $html = match ($working->collection) {
-                Templates::COLLECTION => ($sample = $this->sample((string) $request->json('sample'), (array) ($working->data['collections'] ?? []), $user))
-                    ? $this->renderer->entry($sample->withWorkingCopy(), 1, preview: true, editor: $editor, template: Templates::shape($working), templateDocument: $document)['html']
-                    : $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
-                Components::COLLECTION, Patterns::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
-                default => $this->renderer->entry($working, 1, preview: true, editor: $editor, bodyDocument: $document)['html'],
-            };
+            $html = $this->part($working, $user, $editor, $document, (string) $request->json('sample'))
+                ?? $this->renderer->entry($working, 1, preview: true, editor: $editor, bodyDocument: $document)['html'];
         }
 
         return $this->rendered($html, $document);
+    }
+
+    /**
+     * A part of the design as it is seen on its own, null for any other entry: a template around an
+     * entry it frames (`sample`, else the newest live one it fits), a component or a pattern alone.
+     */
+    private function part(Entry $working, User $user, bool $editor, ?string $document, string $sample = ''): ?string
+    {
+        $blocks = (array) ($working->data[$working->body()?->handle ?? 'blocks'] ?? []);
+
+        return match ($working->collection) {
+            Templates::COLLECTION => ($framed = $this->sample($sample, (array) ($working->data['collections'] ?? []), $user))
+                ? $this->renderer->entry($framed->withWorkingCopy(), 1, preview: true, editor: $editor, template: Templates::shape($working), templateDocument: $document)['html']
+                : $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
+            Components::COLLECTION, Patterns::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
+            default => null,
+        };
     }
 
     /** Standalone schema fields have no synthetic entry or collection identity. */
