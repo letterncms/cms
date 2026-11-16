@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.50.0 (2026-11-16)
+
 ### Changed
 
 - **Breaking. Globals and menus are content types.** A global is a collection of the type **Global**: its values are its one entry, with drafts, history and translations like any other, and templates read them as before (`globals.<handle>.<field>`). A menu is a collection of the type **Menu**: each link is an entry, its title the words and its **Link** field where it goes, nested by dragging in the menu's list and added with **Add Link**. A link to a page says the page's title unless you give it other words, and goes when the page is deleted. Globals and menus are in the Content room, each under its own heading, and their fields and settings are in Structure beside Collections and Taxonomies. Pages show a menu with the Repeat block as before.
