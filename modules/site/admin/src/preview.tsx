@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type R
 /* The site beside the controls: a real page of it in a frame, with the draft's CSS in place of the published
    one. Tailwind compiles the draft here, in the browser, for the classes that page and the content use. */
 
-export const WIDTHS = { desktop: '100%', tablet: `${deviceWidths.tablet}px`, phone: `${deviceWidths.phone}px` } as const
+const WIDTHS = { desktop: '100%', tablet: `${deviceWidths.tablet}px`, phone: `${deviceWidths.phone}px` } as const
 export type Viewport = keyof typeof WIDTHS
 
 type Compiler = { build: (candidates: string[]) => string }
@@ -143,8 +143,8 @@ function apply(doc: Document | null | undefined, compile: DraftCompile, publishe
   for (const link of links) link.disabled = true
 }
 
-/** The site in its frame on the desk, as the design's own screen shows it: a page lifted off the desk, the whole width on a phone. */
-export const SITE_FRAME = 'border-0 bg-bg md:rounded-md md:shadow-sheet'
+/** The site in its frame on the desk: a page lifted off the desk, the whole width on a phone. */
+const SITE_FRAME = 'border-0 bg-bg md:rounded-md md:shadow-sheet'
 
 export function SitePreview({ frame, compile, published, viewport, desktop, mode }: { frame: RefObject<HTMLIFrameElement | null>; compile: DraftCompile; published: string; viewport: Viewport; desktop: number; mode: 'light' | 'dark' | null }) {
   // Counts the pages the frame has loaded: a new page gets the draft too.

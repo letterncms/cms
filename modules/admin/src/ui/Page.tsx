@@ -6,6 +6,7 @@ import { Icon } from './Icon'
 import { homedSettings, noteParent, placeAt, roomAt, roomHome, wayBack } from './place'
 import { WorkspaceContext } from './WorkspaceContext'
 import { Tabs } from './Segmented'
+import { Tooltip } from './Tooltip'
 import { Spinner } from './Spinner'
 
 export interface Crumb {
@@ -32,7 +33,8 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const inRoom = manifest ? roomAt(manifest, path) : undefined
   const home = manifest && inRoom ? roomHome(manifest, inRoom.id) : undefined
   // A screen of the room's own that it opens on (the design's: the site) is the room itself, and names itself.
-  const room = inRoom && !(home === path && manifest && !placeAt(manifest.nav, path)) ? inRoom : undefined
+  // A screen with its own way back (an editor, a style in its group) leads up by it: the room is not named after it.
+  const room = inRoom && !back && !(home === path && manifest && !placeAt(manifest.nav, path)) ? inRoom : undefined
   const crumbs = room ? [{ label: room.label, to: home === path ? undefined : home, icon: undefined }, ...own.map((c) => ({ ...c, icon: undefined }))] : own
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
@@ -46,10 +48,11 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   const way = back && manifest ? wayBack(manifest, back) : back
   // A phone shows the screen's own crumb only, so the one before it is a way back there. The room itself is no screen to go back to.
   const before = crumbs.slice(room ? 1 : 0, -1).reverse().find((c) => c.to)
-  const upTo = before?.to
-  const upLabel = firstText(before?.label)
   // Where the sidebar button has a way back beside it (a room, a state of the sidebar), that one leads there: never two chevrons.
   const shellBack = !!claimed || !!inRoom
+  // In a room, a screen's own way back is that one on a phone.
+  const upTo = before?.to ?? (inRoom && way ? way.to : undefined)
+  const upLabel = firstText(before?.label) ?? (inRoom && way ? way.label : undefined)
   useEffect(() => {
     if (!shellBack || !upTo || !upLabel) return
     noteParent({ to: upTo, label: upLabel })
@@ -60,10 +63,19 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
     <header data-divided={divided || undefined} className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-4', className)}>
       <div className="flex min-w-0 items-center gap-3 max-sm:gap-1">
         {ownBack && (
-          <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className="cms-touch flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text max-sm:px-1.5">
-            <Icon name="chevron-left" size={14} className="shrink-0 max-sm:size-4" />
-            <span className="truncate max-sm:hidden">{way.label}</span>
-          </Link>
+          // Before the screen's own name it is the arrow alone, "‹ Heading 1"; before nothing (an editor's document is named in the middle) it says where it leads.
+          own.length > 0 ? (
+            <Tooltip content={t('Back to {label}', { label: way.label })} side="bottom">
+              <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className={cn('cms-touch -mr-2 ml-1 flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline transition-colors hover:bg-hover hover:text-ink', inRoom && 'max-sm:hidden')}>
+                <Icon name="chevron-left" size={16} />
+              </Link>
+            </Tooltip>
+          ) : (
+            <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className="cms-touch flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text max-sm:px-1.5">
+              <Icon name="chevron-left" size={14} className="shrink-0 max-sm:size-4" />
+              <span className="truncate max-sm:hidden">{way.label}</span>
+            </Link>
+          )
         )}
         {!ownBack && !shellBack && upTo && upLabel && (
           <Link to={upTo} aria-label={t('Back to {label}', { label: upLabel })} className="cms-touch ml-1 flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline transition-colors hover:bg-hover hover:text-ink sm:hidden">

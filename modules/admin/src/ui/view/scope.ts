@@ -38,7 +38,7 @@ export function fill<T>(value: T, scope: Scope): T {
 }
 
 /** A filter whose resting value splits a list in parts (a language), where "All" or "Any" only narrows it. */
-export function splits(filter: { default?: unknown; all?: unknown }): boolean {
+function splits(filter: { default?: unknown; all?: unknown }): boolean {
   return filter.all === undefined && !['', 'any', 'all'].includes(String(filter.default ?? ''))
 }
 

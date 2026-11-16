@@ -95,15 +95,14 @@ const resetDisplay = async () => { await openDisplay(); const reset = [...pop().
 const test = async (name, fn) => { if (layoutOnly && !name.startsWith('Every overview table')) return; await fetch('/__test/progress', { method: 'POST', body: name }); await fn(); results.push(name); output.textContent = results.map((s) => 'PASS ' + s).join('\\n') }
 try {
   await wait(() => text().includes('Quote Request'), 'forms did not load')
-  await test('Short lists stay plain tables: no search, views, display menu or empty date columns', async () => {
-    // Users and submissions search on the server; a handful of them is still read at a glance.
-    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/navigation', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/settings/seo?tab=redirects', '301'], ['/forms/contact?tab=submissions', 'Received']]
-    for (const [path, expected, ownSearch] of routes) {
+  await test('Short lists have the same bar as long ones, and no views or empty date columns', async () => {
+    // However few rows, a list has its Display where every list has it. The redirects are a field's table, not a list.
+    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/navigation', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/settings/seo?tab=redirects', '301', true], ['/forms/contact?tab=submissions', 'Received']]
+    for (const [path, expected, field] of routes) {
       await open(path, expected)
       assert(main().querySelector('[role="table"]'), path + ': missing shared table')
       assert(!views().length, path + ': offers views without pictures or dates to fill them')
-      assert(!button('Display'), path + ': shows a display menu with nothing to add')
-      assert(ownSearch || !searchBox(), path + ': searches a list read at a glance')
+      assert(field || button('Display'), path + ': has no Display menu')
       for (const label of ['Published', 'Updated']) assert(!headerLabels().includes(label), path + ': shows ' + label + ' by default')
     }
     // Globals were cards once; today they are rows like every other short list.
@@ -157,13 +156,12 @@ try {
     await sortBy('Submissions')
     assert(header('Submissions').getAttribute('aria-sort') === 'ascending', 'missing ascending sort state')
     assert(rows()[0].textContent.includes('Contact'), 'ascending numeric sort failed')
-    assert(button('Display'), 'a sorted short list does not offer its reset')
     await sortBy('Submissions')
     assert(header('Submissions').getAttribute('aria-sort') === 'descending', 'missing descending sort state')
     assert(rows()[0].textContent.includes('Quote Request'), 'descending numeric sort failed')
     await sortBy('Submissions')
     assert(!main().querySelector('[aria-sort="ascending"], [aria-sort="descending"]'), 'sort did not reset')
-    assert(rows()[0].textContent.includes('Contact') && !button('Display'), 'default order or plain list not restored')
+    assert(rows()[0].textContent.includes('Contact'), 'default order not restored')
   })
   await test('Date columns sort newest first, keep missing dates last and reset with the display', async () => {
     const { recordDateColumns, withRecordDateColumns, standardEntryColumns } = await import('@letterncms/ui')
@@ -184,7 +182,6 @@ try {
     assert(rows()[1].textContent.includes('Contact'), 'unknown publication did not stay last ascending')
     await resetDisplay()
     assert(!headerLabels().includes('Published') && !main().querySelector('[aria-sort="ascending"], [aria-sort="descending"]'), 'reset kept the date column or sort')
-    assert(!button('Display'), 'reset short list still shows its display menu')
   })
   await test('Search no-match state uses the shared No matches and Clear Filters recovers', async () => {
     await open('/built-in', 'Bookings')

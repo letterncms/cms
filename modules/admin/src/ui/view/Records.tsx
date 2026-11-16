@@ -7,7 +7,7 @@ import { Icon } from '../Icon'
 import { Badge, statusLabel, type Tone } from '../Badge'
 import { calendarRange } from '../calendar'
 import { flattenTree, type DataColumn, type DataTree } from '../DataTable'
-import { DataView, FEW } from '../DataView'
+import { DataView } from '../DataView'
 import { confirm } from '../Dialog'
 import { EmptyState, NoMatches } from '../EmptyState'
 import { Fields } from '../Fields'
@@ -25,7 +25,7 @@ import { readViewPrefs, useViewPrefs } from '../viewPrefs'
 import { ActionButton, place, shown } from './actions'
 import { useView } from './context'
 import { formatValue, mediaIds, plainValue, type MediaThumb } from './formats'
-import { at, fill, holds, input, safeUrl, splits, type Scope } from './scope'
+import { at, fill, holds, input, safeUrl, type Scope } from './scope'
 
 interface Column {
   key: string
@@ -75,9 +75,6 @@ interface Column {
   /** With `format: languages`: every language there is. */
   locales?: string[]
 }
-
-/** A filter whose resting value shows everything ("All", "Any"): it narrows the list. Any other splits it in parts, such as a language. */
-const narrows = (f: Filter) => !splits(f)
 
 interface Filter {
   param: string
@@ -129,6 +126,8 @@ export interface RecordsProps {
   /** What the ability sorts the dates by, which makes them sortable and names the calendar's `{field}`. */
   dates?: { published?: string; updated?: string }
   defaultView?: 'table' | 'grid' | 'calendar'
+  /** A key of the row its cards are grouped by, each group under its value: a pattern's category. */
+  group?: string
   /** The list's search, filters and page are in the address (by their params), so it can be linked to and comes back on Back. */
   address?: boolean
   /** `false`: read as it is, a ranked list: no Display menu, no sorting by its headers. */
@@ -186,7 +185,7 @@ const fitTrack = (values: unknown[]) => `minmax(120px,${Math.min(360, Math.max(1
  * that opens and the actions of each row. The same component as every overview, so every
  * list looks and works alike.
  */
-export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, address, display = true, controls }: RecordsProps) {
+export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, group, address, display = true, controls }: RecordsProps) {
   const { scope, act, settings } = useView()
   const { query: location } = useLocation()
   const [ownText, setOwnText] = useState('')
@@ -249,23 +248,14 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   const fits = Object.fromEntries(columns.filter((c) => c.fit).map((c) => [c.key, fitTrack(every.map((row) => at(row, c.key)))]))
 
   const segmented = filters.filter((f) => f.display === 'segmented')
-  // A list read at a glance has nothing to search or narrow, as in `DataView`: its search and the filters that
-  // narrow it (All, Published, Drafts) stay away. A filter that splits the list in parts (a language) is never
-  // hidden: one part is always on view, and it is the only way to the others.
-  const glance = !!response && !filtered && pages <= 1 && (asTree || total === undefined ? every.length : total) < FEW
-  // Once its search is there it stays, so it never goes from under someone who empties it. Kept per list.
-  const [searching, setSearching] = useState({ id, on: false })
-  if (searching.id !== id) setSearching({ id, on: false })
-  else if (!searching.on && response && !glance) setSearching({ id, on: true })
-  const narrow = searching.id === id && searching.on
-  const offered = segmented.filter((f) => narrow || !narrows(f))
+  // Every list has the same bar, however long: its search and its filters, in the same places.
   // Nothing to search or narrow by: no toolbar, and no empty band where it would be.
   const selects = filters.filter((f) => !f.display)
-  const toolbar = ((narrow && server) || offered.length > 0 || selects.length > 0) && (
+  const toolbar = (server || segmented.length > 0 || selects.length > 0) && (
     <span className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents">
-      {((narrow && server) || offered.length > 0) && <Fields bare layout="inline" className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents" fields={[
-        ...(narrow && server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search'), className: 'w-full sm:w-60' }] : []),
-        ...offered.map((f) => ({ handle: f.param, type: 'select', label: f.label, display: 'segmented', required: true, className: 'shrink-0', options: (f.options ?? []).map((o) => ({ value: String(o.value), label: o.label, title: o.title })) })),
+      {(server || segmented.length > 0) && <Fields bare layout="inline" className="flex min-w-0 flex-wrap items-center gap-2 max-sm:contents" fields={[
+        ...(server ? [{ handle: '__search', type: 'text', label: t('Search'), icon: 'search', size: 'sm' as const, placeholder: (search && search.placeholder) || t('Search'), className: 'w-full sm:w-60' }] : []),
+        ...segmented.map((f) => ({ handle: f.param, type: 'select', label: f.label, display: 'segmented', required: true, className: 'shrink-0', options: (f.options ?? []).map((o) => ({ value: String(o.value), label: o.label, title: o.title })) })),
       ]} values={{ __search: text, ...Object.fromEntries(segmented.map((f) => [f.param, chosen[f.param] || f.default || ''])) }} onChange={(h, v) => {
         if (h === '__search') { setText(String(v ?? '')); if (!address) setPage(1); return }
         const f = segmented.find((x) => x.param === h)
@@ -423,6 +413,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       selection={selection}
       image={imageColumn ? (row) => <CardImage row={row} column={imageColumn} media={media} /> : undefined}
       imageColumn={imageColumn?.key}
+      group={group ? (row) => plainValue(at(row, group))?.toString() ?? '' : undefined}
       rowHref={href}
       onRowClick={open && !href ? (row) => { if (holds(open.when, rowScope(row))) void act(open, { row }).catch(() => {}) } : undefined}
       actions={actions?.length ? (row) => rowMenu(actions, row) : undefined}

@@ -50,7 +50,7 @@ export default function Sites() {
     const ok = await confirm({
       title: t('Delete {name}?', { name: site.name }),
       description: t('This deletes the site and its saved changes.'),
-      confirm: t('Delete'),
+      confirm: t('Delete Site'),
       danger: true,
     })
     if (!ok) return
@@ -85,12 +85,21 @@ export default function Sites() {
   }
 
   return (
-    <Page title={t('Sites')} actions={(
+    <Page title={t('Sites')} width="full" actions={(
       <>
         <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void importSite(e.target.files[0])} />
         {can('packages.manage') && <Button icon="search" onClick={() => navigate('/sites/store')}>{t('Browse Store')}</Button>}
-        <Button icon="upload" loading={importing} onClick={() => file.current?.click()}>{t('Import Site')}</Button>
-        <Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>
+        <span className="contents max-sm:hidden">
+          <Button icon="upload" loading={importing} onClick={() => file.current?.click()}>{t('Import Site')}</Button>
+          <Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>
+        </span>
+        {/* A phone has room for one button: the others are in a menu. */}
+        <span className="sm:hidden">
+          <Menu align="end" trigger={<IconButton icon="more" label={t('Actions')} loading={importing} />} items={[
+            { label: t('Import Site'), icon: 'upload', onSelect: () => file.current?.click() },
+            { label: t('Export Site'), icon: 'download', onSelect: () => setExporting(true) },
+          ]} />
+        </span>
       </>
     )}>
       {list.isPending ? (
@@ -138,7 +147,7 @@ function SiteCard({ site, busy, onChoose, onStartOver, onEdit, onDelete }: { sit
       actions={
         <Menu
           align="end"
-          trigger={<IconButton icon="dots" label={t('More')} size="sm" disabled={busy !== null} />}
+          trigger={<IconButton icon="more" label={t('Actions')} size="sm" disabled={busy !== null} />}
           items={[
             { label: t('Edit Details'), icon: 'edit', onSelect: onEdit },
             canReset && { label: t('Start Over'), icon: 'arrow-counter-clockwise', danger: true, onSelect: onStartOver },

@@ -1,11 +1,12 @@
 import { t, type FieldDef } from '@letterncms/sdk'
-import { Button, Fields, Icon, IconButton, Menu, Tooltip, cn, copyText, type MenuItemDef } from '@letterncms/ui'
+import { Button, Fields, Icon, IconButton, Menu, Pressable, Tooltip, cn, copyText, type MenuItemDef } from '@letterncms/ui'
 import type { Stylesheet } from '@letterncms/blocks'
 import type { ReactNode } from 'react'
 
-/* What every section of the Styling page is drawn with: a group of rows in a card, a row for a value of the
-   theme, a row for a setting, and a row that opens. One column, one control width, one row height. What is
-   changed and not yet saved carries a mark, and its menu takes it back to what the site has. */
+/* What every section of the design is drawn with: a group of rows in a card, a row for a value of the theme, a
+   row for a setting, and a row that opens. One column, one control width, one row height (taller only for a
+   sample). What the site was given carries a lock, what is changed and not yet saved a mark, and every row's ⋯
+   takes a change back. */
 
 /** The stylesheet being edited, and the way to change it: every section reads and writes the same draft. */
 export interface Editing {
@@ -38,20 +39,51 @@ export function revert(edit: Editing, ...names: string[]) {
   edit.change((sheet) => names.flatMap((name) => [...new Set([...family(sheet, name), ...family(edit.saved, name)])]).reduce((next, each) => next.setVariable(each, edit.saved.variable(each) ?? null), sheet))
 }
 
-/** The menu item that takes a change back, for a row that has one. */
-export const revertItem = (onSelect: () => void): MenuItemDef => ({ label: t('Revert'), icon: 'undo', onSelect })
+/**
+ * What every row's ⋯ offers, in this order: copying the name classes are written with, taking a change back to
+ * what the site has (there on every row, open only while there is one), then what the row's own does (Rename,
+ * Delete). Read only, it copies and nothing else.
+ */
+export function rowMenu(edit: Editing, { copy, revert, extra = [], own = [] }: { copy?: string; revert?: (() => void) | null; extra?: MenuItemDef[]; own?: MenuItemDef[] }): MenuItemDef[] {
+  const parts: MenuItemDef[][] = [
+    [
+      ...(copy ? [{ label: t('Copy Name'), icon: 'copy', onSelect: () => void copyText(copy, { copied: t('Copied {reference}', { reference: copy }) }) }] : []),
+      ...(!edit.readOnly && revert !== undefined ? [{ label: t('Revert'), icon: 'undo', disabled: !revert, onSelect: () => revert?.() }] : []),
+    ],
+    edit.readOnly ? [] : extra,
+    edit.readOnly ? [] : own,
+  ].filter((part) => part.length > 0)
+  return parts.flatMap((part, i) => (i === 0 ? part : [{ separator: true, label: '' }, ...part]))
+}
 
 /** A row's ⋯: the kit's reveal, there on touch and on hover or focus where a pointer hovers. */
-export const rowAction = 'cms-reveal shrink-0'
+export const RowMenu = ({ items }: { items: MenuItemDef[] }) => (items.length > 0 ? <Menu trigger={<IconButton icon="more" label={t('Actions')} size="xs" className="cms-reveal shrink-0" />} items={items} /> : <NoAction />)
 
-/** A row of a list in its card: a line under it but the last, a soft fill under the one pointed at, its controls in one line. */
-export const ROW = 'cms-reveal-row px-3 transition-colors duration-base hover:bg-hover'
+/** A row of a list in its card: a line under it but the last, its controls in one line. Only a row that opens is lit under the pointer. */
+export const ROW = 'cms-reveal-row px-3'
 
 /** The place a row's ⋯ takes, kept where a row has none, so every row's control ends at the same line. */
 export const NoAction = () => <span className="size-6 shrink-0" />
 
 /** The mark of a change not yet saved, before a row's name. */
 export const Changed = ({ on }: { on: boolean }) => (on ? <span role="img" aria-label={t('Unsaved changes')} className="size-1.5 shrink-0 rounded-full bg-focus" /> : null)
+
+/** What the site was given and can change but not rename or delete: a lock after its name. */
+export const Locked = ({ on, label }: { on: boolean; label?: string }) => (on ? (
+  <Tooltip content={label ?? t('Built In')}>
+    {/* Its hint shows under the pointer even inside a row that opens. */}
+    <span role="img" aria-label={label ?? t('Built In')} className="pointer-events-auto relative grid shrink-0 place-items-center text-faint"><Icon name="lock" size={12} /></span>
+  </Tooltip>
+) : null)
+
+/** A row's name, with what marks it: built in, changed and not saved. */
+const Name = ({ children, locked, changed: unsaved, className }: { children: ReactNode; locked?: boolean; changed?: boolean; className?: string }) => (
+  <span className={cn('flex min-w-0 items-center gap-1.5 text-sm text-text', className)}>
+    <span className="truncate">{children}</span>
+    <Locked on={!!locked} />
+    <Changed on={!!unsaved} />
+  </span>
+)
 
 /**
  * A list of rows under its title, in a card of their own with a line between them; `plain` content (a grid of
@@ -98,29 +130,20 @@ export function Control({ handle, label, value, onChange, field, disabled, class
 }
 
 /**
- * One value of the theme: an optional sample, its name (a click copies it, as classes are written with it),
- * its control, the same width in every group, and a menu. `below` adds a specimen line, `after` something
- * beside the control; `wide` puts the controls at the row's end, after the name (a colour's two swatches).
- * `changed` marks a value the site does not have yet.
+ * One value of the theme: an optional sample, its name, its control, the same width in every group, and its ⋯.
+ * `below` adds a specimen line, `after` something beside the control; `wide` puts the controls at the row's end,
+ * after the name (a colour's two swatches). `locked` marks a value the site was given, `changed` one not saved yet.
  */
-export function TokenRow({ name, copy: copied = name, sample, after, below, wide, changed: unsaved, menu, children }: { name: string; copy?: string; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; changed?: boolean; menu?: MenuItemDef[]; children: ReactNode }) {
-  const copy = () => void copyText(copied, { copied: t('Copied {reference}', { reference: copied }) })
+export function TokenRow({ name, sample, after, below, wide, locked, changed: unsaved, menu, children }: { name: string; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; locked?: boolean; changed?: boolean; menu: MenuItemDef[]; children: ReactNode }) {
   return (
-    <div className={cn(ROW, 'group')}>
+    <div className={ROW}>
       <div className="flex min-h-10 items-center gap-2 py-1.5">
         {sample !== undefined && <span className="grid w-7 shrink-0 place-items-center">{sample}</span>}
-        <span className={cn('flex min-w-0 items-center gap-1.5', wide ? 'flex-1' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
-          <Tooltip content={t('Copy Name')}>
-            <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference: copied })} className="min-w-0 shrink !justify-start !bg-transparent !px-0 text-left !text-sm !font-normal !text-text hover:!text-ink">
-              <span className="truncate">{name}</span>
-            </Button>
-          </Tooltip>
-          <Changed on={!!unsaved} />
-        </span>
+        <Name locked={locked} changed={unsaved} className={wide ? 'flex-1' : sample !== undefined ? 'w-[84px] shrink-0 max-sm:w-20' : 'w-[120px] shrink-0 max-sm:w-20'}>{name}</Name>
         {/* On a phone the value takes the row; what stands beside it waits for a wider screen. */}
         {wide ? children : <div className="flex w-56 min-w-0 shrink gap-1 max-lg:w-48 max-sm:w-auto max-sm:flex-1">{children}</div>}
         {!wide && <span className="flex min-w-0 flex-1 items-center max-sm:hidden">{after}</span>}
-        {menu && menu.length > 0 ? <Menu trigger={<IconButton icon="more" label={t('Actions')} size="xs" className={rowAction} />} items={menu} /> : <NoAction />}
+        <RowMenu items={menu} />
       </div>
       {below}
     </div>
@@ -128,27 +151,31 @@ export function TokenRow({ name, copy: copied = name, sample, after, below, wide
 }
 
 /** A row of a setting that has a label of its own instead of a name, in a value row's columns. */
-export function Setting({ label, changed: unsaved, action, children }: { label: string; changed?: boolean; action?: ReactNode; children: ReactNode }) {
+export function Setting({ label, changed: unsaved, menu, children }: { label: string; changed?: boolean; menu: MenuItemDef[]; children: ReactNode }) {
   return (
     <div className={cn(ROW, 'flex min-h-10 items-center gap-2 py-1.5')}>
-      <span className="flex w-[120px] shrink-0 items-center gap-1.5 text-sm text-text max-sm:w-20"><span className="truncate">{label}</span><Changed on={!!unsaved} /></span>
+      <Name changed={unsaved} className="w-[120px] shrink-0 max-sm:w-20">{label}</Name>
       <div className="flex w-56 min-w-0 shrink items-center max-lg:w-48 max-sm:w-auto max-sm:flex-1">{children}</div>
       <span className="min-w-0 flex-1 max-sm:hidden" />
-      {action ? <span className={rowAction}>{action}</span> : <NoAction />}
+      <RowMenu items={menu} />
     </div>
   )
 }
 
-/** A row that leads to its own editor, which takes the list's place: a style, an element. Its name, then what it looks like. */
-export function OpenRow({ onOpen, label, sample, changed: unsaved, menu }: { onOpen: () => void; label: string; sample: ReactNode; changed?: boolean; menu?: ReactNode }) {
+/**
+ * A row that leads to its own place, which takes the list's place: a group of styles, a style. Its name, what it
+ * looks like or holds, and the way in; lit under the pointer, as it opens. Its ⋯ (what the site's own can be done
+ * with) stands before the way in.
+ */
+export function OpenRow({ onOpen, label, sample, detail, locked, changed: unsaved, menu = [] }: { onOpen: () => void; label: string; sample?: ReactNode; detail?: ReactNode; locked?: boolean; changed?: boolean; menu?: MenuItemDef[] }) {
   return (
-    <div className={cn(ROW, 'group flex items-center gap-2 py-1.5')}>
-      <Button variant="ghost" onClick={onOpen} className="!h-auto min-h-9 min-w-0 flex-1 shrink !justify-start !gap-3 !rounded-xs !bg-transparent !px-0 text-left !text-sm !font-normal focus-visible:!-outline-offset-2 hover:text-ink">
-        <span className="flex w-28 shrink-0 items-center gap-1.5 text-text max-sm:w-20"><span className="truncate">{label}</span><Changed on={!!unsaved} /></span>
-        {sample}
-        <Icon name="chevron-right" size={14} className="ml-auto shrink-0 text-faint" />
-      </Button>
-      {menu ?? <NoAction />}
+    <div className={cn('cms-reveal-row relative flex items-center gap-2 px-3 py-1.5 transition-colors duration-base hover:bg-hover', sample ? 'min-h-12' : 'min-h-10')}>
+      <Pressable inset onClick={onOpen} aria-label={label} className="absolute inset-0" />
+      <Name locked={locked} changed={unsaved} className={cn('pointer-events-none', sample ? 'w-28 shrink-0 max-sm:w-20' : 'flex-1')}>{label}</Name>
+      {sample && <span className="pointer-events-none flex min-w-0 flex-1">{sample}</span>}
+      {detail !== undefined && <span className="pointer-events-none shrink-0 text-xs tabular-nums text-muted">{detail}</span>}
+      <span className="relative flex"><RowMenu items={menu} /></span>
+      <Icon name="chevron-right" size={14} className="pointer-events-none shrink-0 text-faint" />
     </div>
   )
 }

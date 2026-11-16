@@ -99,7 +99,7 @@ function pixels(value: string): number {
   return Number.isNaN(n) ? 0 : /r?em$/.test(value.trim()) ? n * 16 : n
 }
 
-/** The design system of a stylesheet that is at hand: the Styling page hands its draft, the builder the site's. */
+/** The design system of a stylesheet that is at hand: the design hands its draft, the builder the site's. */
 export function useEngine(sheet: Sheet | undefined): { engine: Engine | null; loading: boolean } {
   const id = sheet ? key(sheet) : ''
   const [, redraw] = useState(0)
@@ -126,7 +126,7 @@ const Draft = createContext<Styling | null>(null)
 
 /**
  * A stylesheet that is being edited, in place of the site's saved one, for everything inside: the controls,
- * their pickers and chips read the draft's theme and classes. The Styling page wraps its panels in it.
+ * their pickers and chips read the draft's theme and classes. The design wraps its panels in it.
  */
 export function StylingProvider({ source, children }: { source: StylingSource; children: ReactNode }) {
   const { engine, loading } = useEngine(source)

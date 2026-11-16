@@ -1,11 +1,12 @@
 // The site's stylesheet (content/styling/theme.css) as the admin edits it: theme variables, the site's
 // own classes and its element styles are found in the CSS and changed where they stand. Everything
 // else in the file, comments and hand-written CSS included, is left exactly as it was written, so
-// the Styling page, an agent and a person with an editor can all work on the same file.
+// the design, an agent and a person with an editor can all work on the same file.
 //
 //   @theme { --color-primary: #1d4ed8; }                      a theme variable
 //   @utility btn-primary { @apply bg-primary text-white; }    a class: the utilities it applies
 //   @layer base { h1 { @apply text-5xl font-semibold; } }     an element
+//   /* group: Cards */ @utility card { … }                    a class in a group of the site's own
 
 interface Block {
   /** Where the statement starts and ends in the CSS (its closing brace or semicolon included). */
@@ -67,17 +68,22 @@ export interface StyleRule {
   classes: string[]
   /** Whether it holds CSS besides one @apply, which the controls leave alone. */
   custom: boolean
+  /** A class's group, as the comment right before it names it (`/* group: Cards *\/`); none for an element. */
+  group?: string
 }
+
+/** The comment that puts a class in a group, standing right before its @utility. */
+const GROUP = /\/\*[ \t]*group:[ \t]*([^*\n]*?)[ \t]*\*\/\s*$/
 
 const indentOf = (css: string, at: number) => /[ \t]*$/.exec(css.slice(0, at))![0]
 
-/** The elements the Styling page styles, by their selectors: everything else in `@layer base` is the site's own CSS. */
+/** The elements the design styles, by their selectors: everything else in `@layer base` is the site's own CSS. */
 export const ELEMENTS = ['body', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'strong', 'small', 'blockquote', 'code', 'figcaption', 'hr', '::selection', ':focus-visible'] as const
 
 /** Where a site sets what its form fields look like: the `--field-*` properties, for the page and every section with a colour mode of its own. */
 export const FIELDS = ':root, [data-theme]'
 
-/** A layer of rules the Styling page reads: elements and fields in `base`, long-form text in `components`. */
+/** A layer of rules the design reads: elements and fields in `base`, long-form text in `components`. */
 export type Layer = 'base' | 'components'
 
 /** An element inside long-form text, and not a block of its own there (a Box or a Repeat drawn as one). */
@@ -98,13 +104,13 @@ export const ARTICLE = {
 /** The rules each layer's sections show; every other rule of the layer is the site's own CSS. */
 const MANAGED: Record<Layer, string[]> = { base: [...ELEMENTS, FIELDS], components: Object.values(ARTICLE) }
 
-/** The theme variables the Styling page shows, kind by kind: every other variable is the site's own CSS. */
+/** The theme variables the design shows, kind by kind: every other variable is the site's own CSS. */
 const KINDS = 'color|font(?!-weight-)|text(?!-shadow-)|tracking|leading|breakpoint|container|spacing|radius|shadow|inset-shadow|drop-shadow|text-shadow|blur|perspective|ease|animate|duration|control'
 const SHOWN = new RegExp(`^--(?:(?:${KINDS})-(?!.*--)[a-z0-9][\\w.-]*|spacing|default-transition-duration|default-transition-timing-function)$`)
 /** `--text-*: initial`: Tailwind's values of a kind taken away, so only the site's are listed. The sections follow it. */
 const CLEARED = new RegExp(`^--(?:(?:${KINDS})-)?\\*$`)
 
-/** Whether the Styling page shows a theme variable in one of its sections. */
+/** Whether the design shows a theme variable in one of its sections. */
 export const shownVariable = (name: string) => SHOWN.test(name)
 
 /** The variables of every @theme block of a stylesheet, the defaults among them: Tailwind's own theme, the kernel's. */
@@ -191,7 +197,35 @@ export class Stylesheet {
 
   /** The site's own classes: every @utility, with the classes it applies. */
   utilities(): StyleRule[] {
-    return blocks(this.css).filter((block) => /^@utility\s/.test(block.prelude) && block.inner).map((block) => this.rule(block.prelude.replace(/^@utility\s+/, ''), block))
+    return blocks(this.css).filter((block) => /^@utility\s/.test(block.prelude) && block.inner).map((block) => {
+      const group = this.groupComment(block)?.name
+      return { ...this.rule(block.prelude.replace(/^@utility\s+/, ''), block), ...(group ? { group } : {}) }
+    })
+  }
+
+  /** A class put in a group (its comment written or rewritten right before it), or out of every group (null). */
+  setUtilityGroup(name: string, group: string | null): Stylesheet {
+    const block = blocks(this.css).find((b) => b.prelude === `@utility ${name}`)
+    if (!block) return this
+    const label = group?.replace(/\*\/|\n/g, '').trim() || null
+    const found = this.groupComment(block)
+    if (found) return label ? this.splice(found.start, found.end, `/* group: ${label} */`) : this.splice(this.lineStart(found.start), block.start, indentOf(this.css, block.start))
+    if (!label) return this
+    return this.splice(block.start, block.start, `/* group: ${label} */\n${indentOf(this.css, block.start)}`)
+  }
+
+  /** Every class of a group in another one, or out of every group (null). */
+  renameGroup(from: string, to: string | null): Stylesheet {
+    return this.utilities().filter((rule) => rule.group === from).reduce<Stylesheet>((next, rule) => next.setUtilityGroup(rule.name, to), this)
+  }
+
+  /** Where the comment naming a class's group stands, and the group's name. */
+  private groupComment(block: Block): { start: number; end: number; name: string } | null {
+    const before = this.css.slice(Math.max(0, block.start - 200), block.start)
+    const found = GROUP.exec(before)
+    if (!found) return null
+    const start = block.start - before.length + found.index
+    return { start, end: start + found[0].trimEnd().length, name: found[1].trim() }
   }
 
   /** A class with these classes applied: changed where it stands, or added at the end. An empty list keeps the class, empty. */
@@ -201,9 +235,11 @@ export class Stylesheet {
     return this.append(`@utility ${name} {\n  @apply ${classes.join(' ')};\n}`)
   }
 
+  /** A class taken out, with the comment that put it in a group. */
   removeUtility(name: string): Stylesheet {
-    const block = blocks(this.css).find((b) => b.prelude === `@utility ${name}`)
-    return block ? this.remove(block) : this
+    const next = this.setUtilityGroup(name, null)
+    const block = blocks(next.css).find((b) => b.prelude === `@utility ${name}`)
+    return block ? next.remove(block) : this
   }
 
   renameUtility(from: string, to: string): Stylesheet {
@@ -211,12 +247,13 @@ export class Stylesheet {
     return block ? this.splice(block.start, block.start + block.prelude.length, `@utility ${to}`) : this
   }
 
-  /** A class once more under another name, after the one it was made from: all of it, its own CSS included. */
+  /** A class once more under another name, after the one it was made from: all of it, its own CSS and its group included. */
   duplicateUtility(from: string, to: string): Stylesheet {
     const block = blocks(this.css).find((b) => b.prelude === `@utility ${from}`)
     if (!block) return this
     const body = this.css.slice(block.start + block.prelude.length, block.end)
-    return this.splice(block.end, block.end, `\n\n@utility ${to}${body}`)
+    const group = this.groupComment(block)?.name ?? null
+    return this.splice(block.end, block.end, `\n\n@utility ${to}${body}`).setUtilityGroup(to, group)
   }
 
   /** What a class declares itself, besides what it applies: its custom properties (`--scheme`) and plain CSS. */
@@ -284,7 +321,7 @@ export class Stylesheet {
   }
 
   /**
-   * The site's own CSS: everything in the stylesheet the Styling page has no section for. Tailwind's imports,
+   * The site's own CSS: everything in the stylesheet the design has no section for. Tailwind's imports,
    * the theme's variables it shows, the elements it styles and the site's styles are not in it; a variable of
    * another kind, a rule of another selector, a variant of the site's own (@custom-variant) and plain CSS are.
    */

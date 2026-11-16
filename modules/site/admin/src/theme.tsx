@@ -1,11 +1,11 @@
 import { t, type FieldDef } from '@letterncms/sdk'
-import { Button, Icon, IconButton, Menu, NEW_COLOR, Popover, Pressable, Tooltip, cn, copyText, prompt, toast, type MenuItemDef } from '@letterncms/ui'
-import { ColorPicker, PaletteGrid, SCHEME, SPACING_STEPS, SchemeTile, Swatch, lightDark, parseClass, schemesOf, useStyling, withVariants, type Engine, type Scheme, type Stylesheet } from '@letterncms/blocks'
+import { Icon, NEW_COLOR, Popover, Pressable, Tooltip, cn, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { ColorPicker, SCHEME, SPACING_STEPS, SchemeTile, Swatch, lightDark, parseClass, schemesOf, useStyling, withVariants, type Engine, type Scheme, type Stylesheet } from '@letterncms/blocks'
 import { useState, type ReactNode } from 'react'
 import { AnimationSample, ShadowSample, familyOf, fallbackOf, fontStack, stackFor, type Fallback, type SiteFont } from './fields'
-import { Changed, Control, Group, NoAction, ROW, Setting, TokenRow, changed, revert, revertItem, rowAction, type Editing } from './parts'
+import { Changed, Control, Group, NoAction, ROW, RowMenu, Setting, TokenRow, changed, revert, rowMenu, type Editing } from './parts'
 
-/* The theme sections of the Styling page: every value of the theme, Tailwind's own and the site's, kind by kind.
+/* The theme sections of the design: every value of the theme, Tailwind's own and the site's, kind by kind.
    The site is the baseline: a change is marked until it is saved, and Revert takes it back to what the site has.
    A value the site added is renamed and deleted like any of its own; one Tailwind or the CMS brings stays. */
 
@@ -112,42 +112,38 @@ const unset = (sheet: Stylesheet, name: string) => sheet.variables().filter((oth
 interface Kind {
   prefix: string
   title: string
-  /** What the button says ("Add Radius") and what its dialog is called ("New Radius"). */
+  /** What the button and its dialog say: "Add Radius". */
   add: string
-  fresh: string
   /** What a new one starts as, and a name to suggest. */
   start: string
   placeholder: string
   skip?: (key: string) => boolean
 }
 
-/** What a row's menu offers: Revert for a change not yet saved, Rename and Delete for the site's own values. */
+/** What a row's ⋯ offers: its name to copy, Revert, then Rename and Delete for the site's own values. */
 function useRowMenu(edit: Editing, kind: Kind) {
   const { engine } = useStyling()
-  return (row: Row, extra: MenuItemDef[] = []): MenuItemDef[] => {
-    if (edit.readOnly) return []
-    const back = changed(edit, row.name) ? [revertItem(() => revert(edit, row.name))] : []
-    if (row.builtIn) return [...extra, ...(back.length && extra.length ? [{ separator: true, label: '' }] : []), ...back]
-    return [
-      ...back,
+  return (row: Row, extra: MenuItemDef[] = []): MenuItemDef[] => rowMenu(edit, {
+    copy: row.key,
+    revert: changed(edit, row.name) ? () => revert(edit, row.name) : null,
+    extra,
+    own: row.builtIn ? [] : [
       {
         label: t('Rename…'), icon: 'edit', onSelect: async () => {
-          const key = await askName(edit, kind.prefix, t('Rename'), t('Rename'), row.key, kind.placeholder)
+          const key = await askName(edit, kind.prefix, t('Rename “{name}”', { name: row.key }), t('Rename'), row.key, kind.placeholder)
           if (key) edit.change((sheet) => rename(sheet, engine, row, key))
         },
       },
-      ...extra,
-      { separator: true, label: '' },
       { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => edit.change((sheet) => unset(sheet, row.name)) },
-    ]
-  }
+    ],
+  })
 }
 
 /** The values of one kind as rows, with the way to add one of the site's own. */
 function Tokens({ edit, kind, row }: { edit: Editing; kind: Kind; row: (row: Row, set: (value: string | null) => void, menu: (extra?: MenuItemDef[]) => MenuItemDef[]) => ReactNode }) {
   const menu = useRowMenu(edit, kind)
   const add = async () => {
-    const key = await askName(edit, kind.prefix, kind.fresh, kind.add, '', kind.placeholder)
+    const key = await askName(edit, kind.prefix, kind.add, kind.add, '', kind.placeholder)
     if (key) edit.change((sheet) => sheet.setVariable(`${kind.prefix}${key}`, kind.start))
   }
   return (
@@ -164,14 +160,12 @@ const number = (unit: string, extra: Partial<FieldDef> = {}): Partial<FieldDef> 
 const SIZE: Partial<FieldDef> = { component: 'site-size' }
 const LENGTH = number('rem', { units: ['rem', 'px', 'em'], step: 0.125, min: 0 })
 
-/** A colour of Tailwind's palette: red-500 is the family red, shade 500. */
-const SHADE = /^(.+)-(\d{2,3})$/
-
 /**
  * One colour as a swatch that opens the picker: what it draws as, the theme's variables worked out. Empty, it
  * shows `same` (the colour it follows, the light one for dark mode) faded, and the picker's Clear goes back to it.
  */
 function ColorSwatch({ label, value, same, onChange, disabled, size = 'md' }: { label: string; value: string | null; same?: string; onChange: (value: string | null) => void; disabled?: boolean; size?: 'sm' | 'md' }) {
+  // Only a colour that follows another (the dark side, which follows the light) can be cleared.
   const { engine } = useStyling()
   const [open, setOpen] = useState(false)
   const drawn = (color: string) => lightDark(engine ? engine.resolve(color) : color).light
@@ -183,33 +177,12 @@ function ColorSwatch({ label, value, same, onChange, disabled, size = 'md' }: { 
       align="end"
       className="!p-0"
       trigger={
-        <Pressable compact aria-label={label} title={`${label} · ${value ?? t('Same')}`} disabled={disabled} className={cn('relative shrink-0 rounded-sm outline-offset-2 data-[popup-open]:ring-2 data-[popup-open]:ring-focus', size === 'md' ? 'size-7' : 'size-6')}>
+        <span className="group/swatch inline-flex"><Tooltip content={`${label} · ${value ?? t('Same')}`}><Pressable compact aria-label={label} disabled={disabled} className={cn('relative shrink-0 rounded-sm outline-offset-2 group-data-[popup-open]/swatch:ring-2 group-data-[popup-open]/swatch:ring-border-strong group-data-[popup-open]/swatch:ring-offset-2 group-data-[popup-open]/swatch:ring-offset-bg', size === 'md' ? 'size-7' : 'size-6')}>
           <Swatch color={drawn(shown)} className={cn('!size-full !rounded-sm', value === null && 'opacity-35')} />
-        </Pressable>
+        </Pressable></Tooltip></span>
       }
     >
-      <ColorPicker label={label} value={value ?? undefined} onChange={onChange} />
-    </Popover>
-  )
-}
-
-/** One shade of the palette, a swatch that opens its colour; a shade changed and not yet saved carries a dot. */
-function PaletteSwatch({ edit, row }: { edit: Editing; row: Row }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-      align="start"
-      className="!p-0"
-      trigger={
-        <Pressable compact aria-label={row.key} title={row.key} disabled={edit.readOnly} className="relative h-6 rounded-xs outline-offset-1 hover:z-raised hover:ring-2 hover:ring-float data-[popup-open]:z-raised data-[popup-open]:ring-2 data-[popup-open]:ring-focus" style={{ background: lightDark(row.value).light }}>
-          <span className="cms-swatch-edge" />
-          {changed(edit, row.name) && <span className="absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-edge" aria-hidden />}
-        </Pressable>
-      }
-    >
-      <ColorPicker label={row.key} value={row.value} onChange={(value) => (value === null ? revert(edit, row.name) : edit.change((sheet) => sheet.setVariable(row.name, value)))} />
+      <ColorPicker label={label} value={value ?? undefined} onChange={onChange} clearable={same !== undefined} />
     </Popover>
   )
 }
@@ -230,19 +203,20 @@ function Schemes({ edit }: { edit: Editing }) {
     return edit.mode === 'dark' ? sides.dark ?? sides.light : sides.light
   }
   const add = async () => {
-    const asked = await prompt({ title: t('New Scheme'), fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, required: true, placeholder: 'ocean' }], confirm: t('Add Scheme') })
+    const asked = await prompt({ title: t('Add Scheme'), fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, required: true, placeholder: 'ocean' }], confirm: t('Add Scheme') })
     const key = clean(asked?.name)
     if (!key) return
     if (schemes.some((scheme) => scheme.key === key)) return void toast.error(t('“{name}” already exists', { name: key }))
     edit.change((sheet) => writeScheme(sheet, `${SCHEME}${key}`, 'var(--color-foreground)', 'var(--color-background)'))
   }
   const rename = async (scheme: Scheme) => {
-    const asked = await prompt({ title: t('Rename'), fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, required: true }], values: { name: scheme.key }, confirm: t('Rename') })
+    const asked = await prompt({ title: t('Rename “{name}”', { name: scheme.key }), fields: [{ handle: 'name', type: 'text', label: t('Name'), mono: true, autofocus: true, required: true }], values: { name: scheme.key }, confirm: t('Rename') })
     const key = clean(asked?.name)
     if (!key || key === scheme.key) return
     if (schemes.some((other) => other.key === key)) return void toast.error(t('“{name}” already exists', { name: key }))
     edit.change((sheet) => sheet.renameUtility(scheme.name, `${SCHEME}${key}`))
   }
+  const schemeChanged = (scheme: Scheme) => edit.sheet.utilityProperties(scheme.name).map((p) => p.value).join() !== edit.saved.utilityProperties(scheme.name).map((p) => p.value).join()
   return (
     <Group plain title={t('Schemes')} onAdd={edit.readOnly ? undefined : () => void add()} addLabel={t('Add Scheme')}>
       {schemes.length > 0 && (
@@ -251,24 +225,18 @@ function Schemes({ edit }: { edit: Editing }) {
             <div key={scheme.name} className="cms-reveal-row group min-w-0">
               <SchemeTile size="card" background={drawn(scheme.background)} text={drawn(scheme.text)} />
               <div className="flex h-9 items-center gap-1.5">
-                <Tooltip content={t('Copy Name')}>
-                  <Button variant="ghost" size="xs" onClick={() => void copyText(scheme.name, { copied: t('Copied {reference}', { reference: scheme.name }) })} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !px-0 !text-sm !font-normal !text-text hover:!text-ink">
-                    <span className="truncate">{scheme.key}</span>
-                  </Button>
-                </Tooltip>
-                <Changed on={(edit.sheet.utilityProperties(scheme.name).map((p) => p.value).join() !== edit.saved.utilityProperties(scheme.name).map((p) => p.value).join())} />
+                <span className="min-w-0 flex-1 truncate text-sm text-text">{scheme.key}</span>
+                <Changed on={schemeChanged(scheme)} />
                 <ColorSwatch size="sm" label={t('{name} Background', { name: scheme.key })} value={scheme.background} disabled={edit.readOnly} onChange={(value) => value && edit.change((sheet) => writeScheme(sheet, scheme.name, value, scheme.text))} />
                 <ColorSwatch size="sm" label={t('{name} Text', { name: scheme.key })} value={scheme.text} disabled={edit.readOnly} onChange={(value) => value && edit.change((sheet) => writeScheme(sheet, scheme.name, scheme.background, value))} />
-                {edit.readOnly ? <NoAction /> : (
-                  <Menu
-                    trigger={<IconButton icon="more" label={t('Actions')} size="xs" className={rowAction} />}
-                    items={[
-                      { label: t('Rename…'), icon: 'edit', onSelect: () => void rename(scheme) },
-                      { separator: true, label: '' },
-                      { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => edit.change((sheet) => sheet.removeUtility(scheme.name)) },
-                    ]}
-                  />
-                )}
+                <RowMenu items={rowMenu(edit, {
+                  copy: scheme.name,
+                  revert: schemeChanged(scheme) ? () => edit.change((sheet) => (edit.saved.utilities().some((rule) => rule.name === scheme.name) ? sheet.writeUtility(scheme.name, edit.saved.utilityProperties(scheme.name), ['scheme']) : sheet.removeUtility(scheme.name))) : null,
+                  own: [
+                    { label: t('Rename…'), icon: 'edit', onSelect: () => void rename(scheme) },
+                    { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => edit.change((sheet) => sheet.removeUtility(scheme.name)) },
+                  ],
+                })} />
               </div>
             </div>
           ))}
@@ -280,33 +248,27 @@ function Schemes({ edit }: { edit: Editing }) {
 
 /**
  * The site's colours, each a swatch for light mode and one for dark (written light-dark(light, dark): a site with
- * one follows the visitor's light or dark mode), then its schemes, then Tailwind's palette, shade by shade.
+ * one follows the visitor's light or dark mode), then its schemes. Tailwind's palette is no list of its own: its
+ * shades are the picker's swatches, and only one the site writes otherwise stands here with its colours.
  */
 export function Colors({ edit }: { edit: Editing }) {
-  const kind: Kind = { prefix: '--color-', title: t('Site Colors'), add: t('Add Color'), fresh: t('New Color'), start: NEW_COLOR, placeholder: 'brand' }
+  const kind: Kind = { prefix: '--color-', title: t('Site Colors'), add: t('Add Color'), start: NEW_COLOR, placeholder: 'brand' }
   const menu = useRowMenu(edit, kind)
-  const all = rowsOf(edit, kind.prefix)
-  // Tailwind's palette, shade by shade: what the CMS brings and the site's own come first.
-  const palette = (row: Row) => row.builtIn && edit.palette.has(row.name)
-  const own = all.filter((row) => !palette(row))
-  const families = new Map<string, Row[]>()
-  for (const row of all.filter(palette)) {
-    const family = SHADE.exec(row.key)?.[1]
-    if (family) families.set(family, [...(families.get(family) ?? []), row])
-  }
+  const own = rowsOf(edit, kind.prefix).filter((row) => !(row.builtIn && edit.palette.has(row.name) && !row.written))
   const add = async () => {
-    const key = await askName(edit, kind.prefix, kind.fresh, kind.add, '', kind.placeholder)
+    const key = await askName(edit, kind.prefix, kind.add, kind.add, '', kind.placeholder)
     if (key) edit.change((sheet) => sheet.setVariable(`${kind.prefix}${key}`, kind.start))
   }
   const write = (row: Row, light: string, dark: string | undefined) => edit.change((sheet) => sheet.setVariable(row.name, dark && dark !== light ? `light-dark(${light}, ${dark})` : light))
   return (
     <>
+      <BrandSheet edit={edit} />
       {/* The head names the columns, light and dark, over the swatches; the + stands over the rows' menus. */}
       <Group
         title={kind.title}
         action={<>
-          <span className="grid w-7 place-items-center text-faint" title={t('Light')}><Icon name="sun" size={13} /></span>
-          <span className="grid w-7 place-items-center text-faint" title={t('Dark')}><Icon name="moon" size={13} /></span>
+          <Tooltip content={t('Light')}><span role="img" aria-label={t('Light')} className="grid w-7 place-items-center text-faint"><Icon name="sun" size={13} /></span></Tooltip>
+          <Tooltip content={t('Dark')}><span role="img" aria-label={t('Dark')} className="grid w-7 place-items-center text-faint"><Icon name="moon" size={13} /></span></Tooltip>
           {edit.readOnly && <NoAction />}
         </>}
         onAdd={edit.readOnly ? undefined : () => void add()}
@@ -315,7 +277,7 @@ export function Colors({ edit }: { edit: Editing }) {
         {own.map((row) => {
           const { light, dark } = lightDark(row.value)
           return (
-            <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} wide menu={menu(row)}>
+            <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} wide menu={menu(row)}>
               <ColorSwatch label={t('{name} in Light Mode', { name: row.key })} value={light} disabled={edit.readOnly} onChange={(value) => value && write(row, value, dark)} />
               <ColorSwatch label={t('{name} in Dark Mode', { name: row.key })} value={dark ?? null} same={light} disabled={edit.readOnly} onChange={(value) => write(row, light, value ?? undefined)} />
             </TokenRow>
@@ -323,12 +285,49 @@ export function Colors({ edit }: { edit: Editing }) {
         })}
       </Group>
       <Schemes edit={edit} />
-      {families.size > 0 && (
-        <Group plain title={t('Palette')}>
-          <PaletteGrid head className="pb-3" families={[...families].map(([name, shades]) => ({ name, shades }))} cell={(row) => <PaletteSwatch key={row.name} edit={edit} row={row} />} />
-        </Group>
-      )}
     </>
+  )
+}
+
+/**
+ * The site's look on one sheet, as a brand guide opens: a page with crop marks, the display face set large and
+ * named, and the main colours as chips with their names and values under them. Drawn in the site's own colours.
+ */
+function BrandSheet({ edit }: { edit: Editing }) {
+  const { engine } = useStyling()
+  const value = (name: string) => edit.sheet.variable(name) ?? edit.defaults.get(name)
+  const drawn = (name: string) => {
+    const raw = value(name)
+    if (!raw) return undefined
+    const sides = lightDark(engine ? engine.resolve(raw) : raw)
+    return edit.mode === 'dark' ? sides.dark ?? sides.light : sides.light
+  }
+  const face = ['--font-display', '--font-serif', '--font-sans'].find((name) => edit.sheet.variable(name) !== undefined) ?? '--font-sans'
+  const stack = value(face)
+  const chips = ['primary', 'accent', 'foreground', 'background'].map((key) => ({ key, color: drawn(`--color-${key}`) })).filter((chip): chip is { key: string; color: string } => !!chip.color)
+  return (
+    <figure aria-hidden className="relative m-0 mb-7 mt-3 p-3">
+      {/* The crop marks of a printed sheet: at each corner a tick along each edge, out in the margin. */}
+      {['left-0 top-3 h-px w-2', 'left-3 top-0 h-2 w-px', 'right-0 top-3 h-px w-2', 'right-3 top-0 h-2 w-px', 'bottom-3 left-0 h-px w-2', 'bottom-0 left-3 h-2 w-px', 'bottom-3 right-0 h-px w-2', 'bottom-0 right-3 h-2 w-px'].map((place) => (
+        <span key={place} className={cn('pointer-events-none absolute bg-border-strong', place)} />
+      ))}
+      <div className="relative overflow-hidden rounded-xs p-5" style={{ background: drawn('--color-background') ?? 'white', color: drawn('--color-foreground') }}>
+        <div className="flex items-end justify-between gap-4">
+          <span className="block truncate leading-none" style={{ fontFamily: stack, fontSize: 56 }}>Aa</span>
+          <span className="max-w-[60%] truncate pb-1 text-right font-mono text-2xs uppercase tracking-wider opacity-60">{familyOf(fontStack(stack ?? '')) || face.slice(7)}</span>
+        </div>
+        <div className="mt-5 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.max(chips.length, 1)}, minmax(0, 1fr))` }}>
+          {chips.map((chip) => (
+            <div key={chip.key} className="min-w-0">
+              <span className="relative block h-10 rounded-xs" style={{ background: chip.color }}><span className="cms-swatch-edge" /></span>
+              <span className="mt-1.5 block truncate text-2xs">{chip.key}</span>
+              <span className="block truncate font-mono text-2xs opacity-60">{chip.color}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <span className="cms-swatch-edge pointer-events-none !inset-3 rounded-xs" />
+    </figure>
   )
 }
 
@@ -359,7 +358,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
     <>
       <Tokens
         edit={edit}
-        kind={{ prefix: '--font-', title: t('Fonts'), add: t('Add Font Family'), fresh: t('New Font Family'), start: system, placeholder: 'display', skip: (key) => key.startsWith('weight-') }}
+        kind={{ prefix: '--font-', title: t('Fonts'), add: t('Add Font Family'), start: system, placeholder: 'display', skip: (key) => key.startsWith('weight-') }}
         row={(row, set, menu) => {
           const stack = fontStack(row.value)
           const family = familyOf(stack)
@@ -369,6 +368,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
             <TokenRow
               key={row.name}
               name={row.key}
+              locked={row.builtIn}
               changed={changed(edit, row.name)}
               sample={<span className="block max-w-7 overflow-hidden whitespace-nowrap text-center text-lg leading-none text-ink" style={{ fontFamily: row.value }}>Aa</span>}
               menu={menu([
@@ -385,27 +385,27 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
       />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--text-', title: t('Text Sizes'), add: t('Add Text Size'), fresh: t('New Text Size'), start: '1.25rem', placeholder: 'lead', skip: (key) => key.startsWith('shadow-') }}
+        kind={{ prefix: '--text-', title: t('Text Sizes'), add: t('Add Text Size'), start: '1.25rem', placeholder: 'lead', skip: (key) => key.startsWith('shadow-') }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} below={sizeSample(row.value, display)}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()} below={sizeSample(row.value, display)}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={SIZE} onChange={set} />
           </TokenRow>
         )}
       />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--leading-', title: t('Line Heights'), add: t('Add Line Height'), fresh: t('New Line Height'), start: '1.5', placeholder: 'airy' }}
+        kind={{ prefix: '--leading-', title: t('Line Heights'), add: t('Add Line Height'), start: '1.5', placeholder: 'airy' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="flex w-4 flex-col" style={{ gap: `${Math.max(1, (Number(row.value) - 0.8) * 6)}px` }}>{[0, 1, 2].map((i) => <span key={i} className={cn('h-0.5 rounded-full bg-muted', i === 2 && 'w-2/3')} />)}</span>}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()} sample={<span className="flex w-4 flex-col" style={{ gap: `${Math.max(1, (Number(row.value) - 0.8) * 6)}px` }}>{[0, 1, 2].map((i) => <span key={i} className={cn('h-0.5 rounded-full bg-muted', i === 2 && 'w-2/3')} />)}</span>}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('', { step: 0.05, min: 0 })} onChange={set} />
           </TokenRow>
         )}
       />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--tracking-', title: t('Letter Spacing'), add: t('Add Letter Spacing'), fresh: t('New Letter Spacing'), start: '0em', placeholder: 'loose' }}
+        kind={{ prefix: '--tracking-', title: t('Letter Spacing'), add: t('Add Letter Spacing'), start: '0em', placeholder: 'loose' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="text-xs font-medium text-ink" style={{ letterSpacing: row.value }}>Aa</span>}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()} sample={<span className="text-xs font-medium text-ink" style={{ letterSpacing: row.value }}>Aa</span>}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('em', { units: ['em', 'px'], step: 0.005 })} onChange={set} />
           </TokenRow>
         )}
@@ -416,7 +416,7 @@ export function Typography({ edit, fonts }: { edit: Editing; fonts: FontTools })
 
 /** A length row of the theme: a size that may grow with the screen. */
 const sizeRow = (edit: Editing, field: Partial<FieldDef> = SIZE) => (row: Row, set: (value: string | null) => void, menu: (extra?: MenuItemDef[]) => MenuItemDef[]) => (
-  <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()}>
+  <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()}>
     <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={field} onChange={set} />
   </TokenRow>
 )
@@ -439,17 +439,13 @@ function ControlSizes({ edit }: { edit: Editing }) {
         const unsaved = changed(edit, ...names)
         return (
           <div key={size} className={cn(ROW, 'flex min-h-10 items-center gap-2 py-1.5')}>
-            <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-text"><span className="truncate">{label}</span><Changed on={unsaved} /></span>
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-text max-sm:w-16 max-sm:flex-none"><span className="truncate">{label}</span><Changed on={unsaved} /></span>
             {parts.map(([part, partLabel], i) => (
               <div key={part} className={cell}>
                 <Control handle={names[i]} label={`${label} ${partLabel}`} value={value(names[i])} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px'], step: 0.125, min: 0 })} onChange={(next) => next !== null && edit.change((sheet) => sheet.setVariable(names[i], next))} />
               </div>
             ))}
-            {unsaved && !edit.readOnly ? (
-              <Tooltip content={t('Revert')}>
-                <IconButton icon="undo" size="xs" label={t('Revert')} title={undefined} className="shrink-0" onClick={() => revert(edit, ...names)} />
-              </Tooltip>
-            ) : <NoAction />}
+            <RowMenu items={rowMenu(edit, { revert: unsaved ? () => revert(edit, ...names) : null })} />
           </div>
         )
       })}
@@ -484,11 +480,11 @@ function SpacingScale({ step }: { step: string }) {
 
 /** Spacing (one step of Tailwind's scale, and the spaces the site names), the widths of containers, the screen sizes, and the sizes buttons and fields share. */
 export function Layout({ edit }: { edit: Editing }) {
-  const spacing: Kind = { prefix: '--spacing-', title: t('Spacing'), add: t('Add Spacing'), fresh: t('New Spacing'), start: '2rem', placeholder: 'gutter' }
+  const spacing: Kind = { prefix: '--spacing-', title: t('Spacing'), add: t('Add Spacing'), start: '2rem', placeholder: 'gutter' }
   const menu = useRowMenu(edit, spacing)
   const step = edit.sheet.variable('--spacing')
   const add = async () => {
-    const key = await askName(edit, spacing.prefix, spacing.fresh, spacing.add, '', spacing.placeholder)
+    const key = await askName(edit, spacing.prefix, spacing.add, spacing.add, '', spacing.placeholder)
     if (key) edit.change((sheet) => sheet.setVariable(`${spacing.prefix}${key}`, spacing.start))
   }
   // Tailwind's scale is counted in steps (p-4 is four of them): the step is its row "1".
@@ -496,13 +492,13 @@ export function Layout({ edit }: { edit: Editing }) {
   return (
     <>
       <Group title={spacing.title} onAdd={edit.readOnly ? undefined : () => void add()} addLabel={spacing.add}>
-        <TokenRow name={scale.key} copy={scale.name} changed={changed(edit, scale.name)} menu={menu(scale)} below={<SpacingScale step={scale.value} />}>
+        <TokenRow name={scale.key} locked changed={changed(edit, scale.name)} menu={rowMenu(edit, { revert: changed(edit, scale.name) ? () => revert(edit, scale.name) : null })} below={<SpacingScale step={scale.value} />}>
           <Control handle="--spacing" label={scale.key} value={scale.value} disabled={edit.readOnly} field={SIZE} onChange={(value) => value !== null && edit.change((sheet) => sheet.setVariable('--spacing', value))} />
         </TokenRow>
         {rowsOf(edit, spacing.prefix).map((row) => sizeRow(edit)(row, (value) => value !== null && edit.change((sheet) => sheet.setVariable(row.name, value)), (extra) => menu(row, extra)))}
       </Group>
-      <Tokens edit={edit} kind={{ prefix: '--container-', title: t('Containers'), add: t('Add Container'), fresh: t('New Container'), start: '72rem', placeholder: 'content' }} row={sizeRow(edit)} />
-      <Tokens edit={edit} kind={{ prefix: '--breakpoint-', title: t('Breakpoints'), add: t('Add Breakpoint'), fresh: t('New Breakpoint'), start: '120rem', placeholder: '3xl' }} row={sizeRow(edit, LENGTH)} />
+      <Tokens edit={edit} kind={{ prefix: '--container-', title: t('Containers'), add: t('Add Container'), start: '72rem', placeholder: 'content' }} row={sizeRow(edit)} />
+      <Tokens edit={edit} kind={{ prefix: '--breakpoint-', title: t('Breakpoints'), add: t('Add Breakpoint'), start: '120rem', placeholder: '3xl' }} row={sizeRow(edit, LENGTH)} />
       <ControlSizes edit={edit} />
     </>
   )
@@ -511,7 +507,7 @@ export function Layout({ edit }: { edit: Editing }) {
 /** Corners, shadows of every kind, blur and perspective. */
 export function Effects({ edit }: { edit: Editing }) {
   const shadow = (kind: string) => (row: Row, set: (value: string | null) => void, menu: (extra?: MenuItemDef[]) => MenuItemDef[]) => (
-    <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<ShadowSample value={row.value} kind={kind} />}>
+    <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()} sample={<ShadowSample value={row.value} kind={kind} />}>
       <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'site-shadow', kind }} onChange={set} />
     </TokenRow>
   )
@@ -519,27 +515,27 @@ export function Effects({ edit }: { edit: Editing }) {
     <>
       <Tokens
         edit={edit}
-        kind={{ prefix: '--radius-', title: t('Corners'), add: t('Add Radius'), fresh: t('New Radius'), start: '0.5rem', placeholder: 'card' }}
+        kind={{ prefix: '--radius-', title: t('Corners'), add: t('Add Radius'), start: '0.5rem', placeholder: 'card' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="size-5 translate-x-0.5 translate-y-0.5 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: `min(${row.value}, 20px)` }} />}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()} sample={<span className="size-5 translate-x-0.5 translate-y-0.5 border-l-[1.5px] border-t-[1.5px] border-muted" style={{ borderTopLeftRadius: `min(${row.value}, 20px)` }} />}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px', '%'], step: 0.125, min: 0 })} onChange={set} />
           </TokenRow>
         )}
       />
-      <Tokens edit={edit} kind={{ prefix: '--shadow-', title: t('Shadows'), add: t('Add Shadow'), fresh: t('New Shadow'), start: '0 4px 16px -4px rgb(0 0 0 / 0.12)', placeholder: 'card' }} row={shadow('box')} />
-      <Tokens edit={edit} kind={{ prefix: '--inset-shadow-', title: t('Inset Shadows'), add: t('Add Inset Shadow'), fresh: t('New Inset Shadow'), start: 'inset 0 2px 4px rgb(0 0 0 / 0.08)', placeholder: 'well' }} row={shadow('box')} />
-      <Tokens edit={edit} kind={{ prefix: '--drop-shadow-', title: t('Drop Shadows'), add: t('Add Drop Shadow'), fresh: t('New Drop Shadow'), start: '0 4px 8px rgb(0 0 0 / 0.12)', placeholder: 'lifted' }} row={shadow('drop')} />
-      <Tokens edit={edit} kind={{ prefix: '--text-shadow-', title: t('Text Shadows'), add: t('Add Text Shadow'), fresh: t('New Text Shadow'), start: '0 1px 2px rgb(0 0 0 / 0.2)', placeholder: 'glow' }} row={shadow('text')} />
+      <Tokens edit={edit} kind={{ prefix: '--shadow-', title: t('Shadows'), add: t('Add Shadow'), start: '0 4px 16px -4px rgb(0 0 0 / 0.12)', placeholder: 'card' }} row={shadow('box')} />
+      <Tokens edit={edit} kind={{ prefix: '--inset-shadow-', title: t('Inset Shadows'), add: t('Add Inset Shadow'), start: 'inset 0 2px 4px rgb(0 0 0 / 0.08)', placeholder: 'well' }} row={shadow('box')} />
+      <Tokens edit={edit} kind={{ prefix: '--drop-shadow-', title: t('Drop Shadows'), add: t('Add Drop Shadow'), start: '0 4px 8px rgb(0 0 0 / 0.12)', placeholder: 'lifted' }} row={shadow('drop')} />
+      <Tokens edit={edit} kind={{ prefix: '--text-shadow-', title: t('Text Shadows'), add: t('Add Text Shadow'), start: '0 1px 2px rgb(0 0 0 / 0.2)', placeholder: 'glow' }} row={shadow('text')} />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--blur-', title: t('Blur'), add: t('Add Blur'), fresh: t('New Blur'), start: '6px', placeholder: 'soft' }}
+        kind={{ prefix: '--blur-', title: t('Blur'), add: t('Add Blur'), start: '6px', placeholder: 'soft' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<span className="size-3 rounded-full bg-muted" style={{ filter: `blur(min(${row.value}, 6px))` }} />}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()} sample={<span className="size-3 rounded-full bg-muted" style={{ filter: `blur(min(${row.value}, 6px))` }} />}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('px', { units: ['px', 'rem'], step: 1, min: 0 })} onChange={set} />
           </TokenRow>
         )}
       />
-      <Tokens edit={edit} kind={{ prefix: '--perspective-', title: t('Perspective'), add: t('Add Perspective'), fresh: t('New Perspective'), start: '800px', placeholder: 'deep' }} row={sizeRow(edit, number('px', { units: ['px', 'rem'], step: 10, min: 0 }))} />
+      <Tokens edit={edit} kind={{ prefix: '--perspective-', title: t('Perspective'), add: t('Add Perspective'), start: '800px', placeholder: 'deep' }} row={sizeRow(edit, number('px', { units: ['px', 'rem'], step: 10, min: 0 }))} />
     </>
   )
 }
@@ -556,54 +552,55 @@ function seconds(value: unknown, fallback: number): number {
 export function Motion({ edit, transition, saved, onTransition }: { edit: Editing; transition: Transition; saved: Transition; onTransition: (transition: Transition) => void }) {
   const setting = (name: string, value: string | null) => edit.change((sheet) => sheet.setVariable(name, value))
   const fallback = (name: string) => edit.sheet.variable(name) ?? edit.defaults.get(name) ?? null
-  const back = (name: string) => (changed(edit, name) && !edit.readOnly ? <Tooltip content={t('Revert')}><IconButton icon="undo" size="xs" label={t('Revert')} title={undefined} onClick={() => revert(edit, name)} /></Tooltip> : undefined)
+  const menu = (name: string) => rowMenu(edit, { copy: name, revert: changed(edit, name) ? () => revert(edit, name) : null })
+  const back = <K extends keyof Transition>(key: K) => rowMenu(edit, { revert: transition[key] !== saved[key] ? () => onTransition({ ...transition, [key]: saved[key] }) : null })
   return (
     <>
       <Tokens
         edit={edit}
-        kind={{ prefix: '--ease-', title: t('Easings'), add: t('Add Easing'), fresh: t('New Easing'), start: 'cubic-bezier(0.2, 0.8, 0.2, 1)', placeholder: 'snap' }}
+        kind={{ prefix: '--ease-', title: t('Easings'), add: t('Add Easing'), start: 'cubic-bezier(0.2, 0.8, 0.2, 1)', placeholder: 'snap' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'ease' }} onChange={set} />
           </TokenRow>
         )}
       />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--duration-', title: t('Durations'), add: t('Add Duration'), fresh: t('New Duration'), start: '300ms', placeholder: 'slow' }}
+        kind={{ prefix: '--duration-', title: t('Durations'), add: t('Add Duration'), start: '300ms', placeholder: 'slow' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={number('ms', { units: ['ms', 's'], step: 50, min: 0 })} onChange={set} />
           </TokenRow>
         )}
       />
       <Tokens
         edit={edit}
-        kind={{ prefix: '--animate-', title: t('Animations'), add: t('Add Animation'), fresh: t('New Animation'), start: 'spin 2s linear infinite', placeholder: 'float' }}
+        kind={{ prefix: '--animate-', title: t('Animations'), add: t('Add Animation'), start: 'spin 2s linear infinite', placeholder: 'float' }}
         row={(row, set, menu) => (
-          <TokenRow key={row.name} name={row.key} changed={changed(edit, row.name)} menu={menu()} sample={<AnimationSample value={row.value} keyframes={edit.keyframes} />}>
+          <TokenRow key={row.name} name={row.key} locked={row.builtIn} changed={changed(edit, row.name)} menu={menu()} sample={<AnimationSample value={row.value} keyframes={edit.keyframes} />}>
             <Control handle={row.name} label={row.key} value={row.value} disabled={edit.readOnly} field={{ component: 'site-animation', keyframes: edit.keyframes }} onChange={set} />
           </TokenRow>
         )}
       />
       <Group title={t('Transitions')}>
-        <Setting label={t('Duration')} changed={changed(edit, '--default-transition-duration')} action={back('--default-transition-duration')}>
+        <Setting label={t('Duration')} changed={changed(edit, '--default-transition-duration')} menu={menu('--default-transition-duration')}>
           <Control handle="--default-transition-duration" label={t('Duration')} value={fallback('--default-transition-duration')} disabled={edit.readOnly} field={number('ms', { units: ['ms', 's'], step: 10, min: 0 })} onChange={(value) => value && setting('--default-transition-duration', value)} />
         </Setting>
-        <Setting label={t('Easing')} changed={changed(edit, '--default-transition-timing-function')} action={back('--default-transition-timing-function')}>
+        <Setting label={t('Easing')} changed={changed(edit, '--default-transition-timing-function')} menu={menu('--default-transition-timing-function')}>
           <Control handle="--default-transition-timing-function" label={t('Easing')} value={fallback('--default-transition-timing-function')} disabled={edit.readOnly} field={{ component: 'ease' }} onChange={(value) => value && setting('--default-transition-timing-function', value)} />
         </Setting>
       </Group>
       <Group title={t('Page Transition')}>
-        <Setting label={t('Effect')} changed={transition.type !== saved.type}>
+        <Setting label={t('Effect')} changed={transition.type !== saved.type} menu={back('type')}>
           <Control handle="type" label={t('Effect')} value={transition.type} disabled={edit.readOnly} field={{ type: 'select', mono: false, required: true, options: { none: t('None'), fade: t('Fade'), slide: t('Slide'), scale: t('Scale') } }} onChange={(value) => onTransition({ ...transition, type: (value ?? 'none') as Transition['type'] })} />
         </Setting>
         {transition.type !== 'none' && (
-          <Setting label={t('Duration')} changed={transition.duration !== saved.duration}>
+          <Setting label={t('Duration')} changed={transition.duration !== saved.duration} menu={back('duration')}>
             <Control handle="duration" label={t('Duration')} value={`${Math.round(transition.duration * 1000)}ms`} disabled={edit.readOnly} field={number('ms', { units: ['ms'], step: 10, min: 50, max: 2000 })} onChange={(value) => onTransition({ ...transition, duration: seconds(value, transition.duration) })} />
           </Setting>
         )}
-        <Setting label={t('Page Loads')} changed={transition.navigation !== saved.navigation}>
+        <Setting label={t('Page Loads')} changed={transition.navigation !== saved.navigation} menu={back('navigation')}>
           <Control handle="navigation" label={t('Page Loads')} value={transition.navigation} disabled={edit.readOnly} field={{ type: 'select', mono: false, required: true, options: { document: t('Full Page'), client: t('Instant') } }} onChange={(value) => onTransition({ ...transition, navigation: value === 'client' ? 'client' : 'document' })} />
         </Setting>
       </Group>

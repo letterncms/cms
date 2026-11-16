@@ -1,4 +1,4 @@
-import { navigate, t, useManifest } from '@letterncms/sdk'
+import { events, navigate, t, useManifest } from '@letterncms/sdk'
 import { useState } from 'react'
 import { Icon, Menu, Pressable, Spinner, Tooltip, cn, switchSite } from '../ui'
 import { BrandMark } from './Brand'
@@ -15,7 +15,7 @@ function SiteMark({ size = 22 }: { size?: number }) {
 
 /**
  * The site at the top of the sidebar: its name opens the site, the arrow beside it opens the way around: the dashboard, the
- * site's sites to switch between (each keeps what you did to it), and the screen that manages them.
+ * site's sites to switch between (each keeps what you did to it), and the arranging of the sidebar, always one menu away.
  */
 export function SiteSwitcher() {
   const { site } = useManifest()
@@ -51,8 +51,8 @@ export function SiteSwitcher() {
           sites.length > 0 && { separator: true, label: '' },
           sites.length > 0 && { label: t('Sites'), heading: true },
           ...sites.map((site) => ({ label: site.name, checked: site.active, onSelect: () => (site.active ? undefined : void choose(site)) })),
-          sites.length > 0 && { separator: true, label: '' },
-          sites.length > 0 && { label: t('Manage Sites'), icon: 'box', onSelect: () => navigate('/sites') },
+          { separator: true, label: '' },
+          { label: t('Customize Sidebar…'), icon: 'sidebar', onSelect: () => events.emit('sidebar.customize') },
         ]}
       />
     </div>

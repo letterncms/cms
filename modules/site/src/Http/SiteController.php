@@ -197,7 +197,11 @@ final class SiteController
             Templates::COLLECTION => ($framed = $this->sample($sample, (array) ($working->data['collections'] ?? []), $user))
                 ? $this->renderer->entry($framed->withWorkingCopy(), 1, preview: true, editor: $editor, template: Templates::shape($working), templateDocument: $document)['html']
                 : $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
-            Components::COLLECTION, Patterns::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
+            // Its own picture is the component as a page places it: its properties at their defaults, not its bare blocks.
+            Components::COLLECTION => $editor
+                ? $this->renderer->blocks($blocks, null, $working->title, true, $document)
+                : $this->renderer->blocks([['id' => 'preview', 'type' => 'component', 'props' => ['ref' => $working->slug]]], null, $working->title, false, null),
+            Patterns::COLLECTION => $this->renderer->blocks($blocks, null, $working->title, $editor, $document),
             default => null,
         };
     }

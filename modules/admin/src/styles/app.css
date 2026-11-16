@@ -725,8 +725,8 @@
     color: var(--cms-ink);
   }
   .cms-sidebar-row-active .cms-sidebar-row-main { font-weight: 500; }
-  /* On the drawer (a float) the slip is the desk's tone instead, so it still reads. */
-  .cms-sidebar-drawer .cms-sidebar-row-active { background: var(--cms-active); box-shadow: none; }
+  /* On the drawer (a float) and on the sheet (a screen's own list of files) the slip is the desk's tone instead, so it still reads. */
+  .cms-sidebar-drawer .cms-sidebar-row-active, .cms-sheet .cms-sidebar-row-active { background: var(--cms-active); box-shadow: none; }
   .cms-sidebar-row-main {
     display: flex;
     align-items: center;

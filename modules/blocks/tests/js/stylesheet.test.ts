@@ -114,7 +114,7 @@ test('a property of a base rule is read, set where it stands, added and taken ou
   assert.equal(new Stylesheet('@import "tailwindcss";\n').setProperty(':root', 'color-scheme', 'light dark').css, '@import "tailwindcss";\n\n@layer base {\n  :root {\n    color-scheme: light dark;\n  }\n}\n')
 })
 
-test('the site’s own CSS is what no section of the Styling page shows, and it is replaced as a whole', () => {
+test('the site’s own CSS is what no section of the design shows, and it is replaced as a whole', () => {
   const sheet = new Stylesheet(`@import "tailwindcss";
 @import "cms";
 
@@ -273,4 +273,27 @@ test('long-form text is styled in the components layer, and the rest of that lay
   assert.match(next.css, /\.cms-prose p:where\(:not\(\.cms-box, \.cms-repeat\)\) \{\n {4}@apply text-lg;\n {2}\}/)
   assert.doesNotMatch(next.css, /on-photo/)
   assert.equal(next.property('.cms-prose', '--prose-blocks', 'components'), '1.25em')
+})
+
+test('a class is put in a group by the comment right before it, which goes and moves with it', () => {
+  let sheet = new Stylesheet('@utility card {\n  @apply p-6;\n}\n\n/* A note. */\n@utility lede {\n  @apply text-xl;\n}\n')
+  assert.equal(sheet.utilities()[0].group, undefined)
+  sheet = sheet.setUtilityGroup('card', 'Cards')
+  assert.equal(sheet.css, '/* group: Cards */\n@utility card {\n  @apply p-6;\n}\n\n/* A note. */\n@utility lede {\n  @apply text-xl;\n}\n')
+  assert.equal(sheet.utilities()[0].group, 'Cards')
+  // A comment of the site's own is no group, and stays where it is.
+  assert.equal(sheet.utilities()[1].group, undefined)
+  sheet = sheet.setUtilityGroup('lede', 'Text')
+  assert.match(sheet.css, /\/\* A note\. \*\/\n\/\* group: Text \*\/\n@utility lede/)
+  // Another group rewrites the comment; none takes it away.
+  assert.equal(sheet.setUtilityGroup('card', 'Boxes').utilities()[0].group, 'Boxes')
+  assert.equal(sheet.setUtilityGroup('card', null).css.startsWith('@utility card {'), true)
+  // A duplicate is in the same group; a group renamed renames it for each of its classes.
+  const twice = sheet.duplicateUtility('card', 'card-large')
+  assert.deepEqual(twice.utilities().map((rule) => [rule.name, rule.group]), [['card', 'Cards'], ['card-large', 'Cards'], ['lede', 'Text']])
+  assert.deepEqual(twice.renameGroup('Cards', 'Panels').utilities().map((rule) => rule.group), ['Panels', 'Panels', 'Text'])
+  // Deleted, its comment goes with it: it never falls to the class after it.
+  const gone = sheet.removeUtility('card')
+  assert.doesNotMatch(gone.css, /Cards/)
+  assert.equal(gone.utilities()[0].group, 'Text')
 })

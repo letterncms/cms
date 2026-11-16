@@ -12,7 +12,7 @@ import { ClassChips } from './Classes'
 
 /* The top of the Design tab, one bar: the styles of the site the element wears, its classes as written, and the
    state being styled. A style is a look the site keeps under a name (a class of its stylesheet): the same on
-   every element that wears it, and changed in one place, under Styling. */
+   every element that wears it, and changed in one place, under Design › Styles. */
 
 /** A utility without its important mark. */
 const bare = (utility: string) => utility.replace(/^!|!$/g, '')
@@ -263,7 +263,7 @@ export interface StyleBarProps {
   source?: StylingSource
   state: StateMenuProps
   disabled?: boolean
-  /** What stands where the styles worn are: a style of the site, edited under Styling, wears none of its own. */
+  /** What stands where the styles worn are: a style of the site, edited under Design › Styles, wears none of its own. */
   lead?: ReactNode
   /** What is done to what is edited, at the bar's end (a style's Rename and Delete). */
   actions?: ReactNode
@@ -272,7 +272,7 @@ export interface StyleBarProps {
 /**
  * The bar at the top of the Design tab: the styles the element wears (a field of chips that adds one), its classes
  * as written (shown under it on demand), and the state being styled. The same bar for a block and for a style of
- * the site under Styling.
+ * the site under Design › Styles.
  */
 export function StyleBar({ s, site, source, state, disabled, lead, actions }: StyleBarProps) {
   const engine = s.engine
@@ -345,7 +345,7 @@ export function StyleBar({ s, site, source, state, disabled, lead, actions }: St
                     </Button>
                   }
                   items={[
-                    manages && { label: t('Edit Style'), icon: 'edit', onSelect: () => navigate(name.startsWith(SCHEME) ? '/styling?tab=colors' : `/styling?tab=styles&style=${encodeURIComponent(name)}`) },
+                    manages && { label: t('Edit Style'), icon: 'edit', onSelect: () => navigate(name.startsWith(SCHEME) ? '/design/colors' : `/design/styles/${name.startsWith('btn-') ? 'buttons' : 'ungrouped'}/${encodeURIComponent(name)}`) },
                     !!source && { label: t('Detach Style'), icon: 'unlink', onSelect: () => detach(raw) },
                     { label: t('Remove Style'), icon: 'trash', danger: true, onSelect: () => s.apply(s.classes.filter((other) => other !== raw), 'classes') },
                   ]}

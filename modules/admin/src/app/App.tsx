@@ -325,7 +325,7 @@ export function App() {
                 <ScreenLocation location={location}>
                   {/* Only the very first screen can show this; later ones wait in the background (see useScreenLocation). */}
                   <Suspense fallback={null}>
-                    <ErrorBoundary key={route?.path + JSON.stringify(params)}>
+                    <ErrorBoundary key={route?.keep ? route.path : route?.path + JSON.stringify(params)}>
                       <Screen params={params} />
                     </ErrorBoundary>
                   </Suspense>

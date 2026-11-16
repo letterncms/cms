@@ -1,12 +1,10 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Button, fieldControlId, Icon, Popover, Pressable, Segmented, cn, NEW_COLOR } from '@letterncms/ui'
+import { Button, Fields, fieldControlId, Icon, NoMatches, Popover, Pressable, Segmented, Tooltip, cn, NEW_COLOR } from '@letterncms/ui'
 import { useEffect, useMemo, useState } from 'react'
-import type { ThemeToken } from '../../../tailwind/engine'
 import { useThemeTokens } from '../core/styling'
 import { Swatch, inputClass } from './controls'
 import { Control, useInvalid } from './fields/controls'
 import { TokenChip, useTokenOf } from './fields/tokens'
-import { PaletteGrid } from './palette'
 import { colorGroups, lightDark } from './styleApi'
 
 /* Colour values: a colour of the theme (`var(--color-primary)`, or mixed with an opacity as Tailwind writes
@@ -127,14 +125,21 @@ export function ColorField({ field, value: raw, onChange, disabled }: FieldProps
 
 type Tab = 'theme' | 'palette' | 'custom'
 
+/** Whether a colour is light enough that a mark on it is drawn dark. */
+const light = (color: string) => {
+  const rgb = parseColor(color)
+  return !!rgb && (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255 > 0.62
+}
+
 /** A handle on a slider or the colour area: a white ring that reads on any colour. */
 const knob = 'pointer-events-none absolute size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-pop ring-1 ring-black/20'
 
 /**
  * A colour: one of the site's (by name), a shade of Tailwind's palette, or any colour (area, hue, opacity, a value
  * typed). It opens where the value is. A colour of the theme keeps its name at an opacity (bg-primary/60).
+ * `clearable: false` for a colour that must have one: no Clear.
  */
-export function ColorPicker({ label, value, onChange }: { label: string; value?: string; onChange: (v: string | null) => void }) {
+export function ColorPicker({ label, value, onChange, clearable = true }: { label: string; value?: string; onChange: (v: string | null) => void; clearable?: boolean }) {
   const tokens = useThemeTokens()
   const colors = tokens.of('color')
   const groups = useMemo(() => colorGroups(colors), [colors])
@@ -152,10 +157,13 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
     { value: 'custom', label: t('Custom') },
   ]
   const [tab, setTab] = useState<Tab>(() => (value && !chosen ? 'custom' : shade ? 'palette' : tabs[0].value))
-  // The shade under the pointer, named under the grid: a grid of colours says nothing by itself.
-  const [pointed, setPointed] = useState<ThemeToken | null>(null)
-
   useEffect(() => setText(value ?? ''), [value])
+  // What the search keeps of the theme's colours and the palette's shades: every word typed is in the name.
+  const [search, setSearch] = useState('')
+  const words = search.trim().toLowerCase().split(/[\s-]+/).filter(Boolean)
+  const matches = (name: string) => words.every((word) => name.toLowerCase().includes(word))
+  const ownShown = groups.own.filter((token) => matches(token.name))
+  const shadesShown = groups.families.flatMap((family) => family.shades).filter((token) => matches(token.name))
 
   const emit = (h: number, s: number, v: number, a: number) => {
     setHsv({ h, s, v, a })
@@ -192,17 +200,25 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
       <span className={cn(knob, 'top-1/2')} style={{ left: `${alpha * 100}%` }} />
     </div>
   )
-  const named = pointed ?? (shade ? chosen?.token ?? null : null)
-
   return (
-    <div className="w-72">
-      <div className="flex h-10 items-center gap-2 border-b border-border pl-3 pr-1.5">
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-ink">{label}</span>
-        {tabs.length > 1 && <Segmented size="xs" aria-label={t('Colors')} value={tab} onChange={setTab} options={tabs} />}
-      </div>
-      {tab === 'theme' && (
-        <div role="listbox" aria-label={t('Theme Colors')} className="h-72 overflow-y-auto overscroll-contain p-1">
-          {groups.own.map((token) => {
+    <div role="group" aria-label={label} className="w-80">
+      {tabs.length > 1 && (
+        <div className="border-b border-border p-1.5">
+          <Segmented size="xs" aria-label={t('Colors')} value={tab} onChange={setTab} options={tabs} block />
+        </div>
+      )}
+      {tab !== 'custom' && (
+        // A colour by its name, or a part of it: "brand", "red", "blue 500".
+        <div className="px-3 pt-3">
+          <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder: t('Search Colors') }]} values={{ search }} onChange={(_, next) => setSearch(String(next ?? ''))} />
+        </div>
+      )}
+      {tab !== 'custom' && (tab === 'theme' ? ownShown : shadesShown).length === 0 && (
+        <NoMatches className="h-64 justify-center" onClear={() => setSearch('')} />
+      )}
+      {tab === 'theme' && ownShown.length > 0 && (
+        <div role="listbox" aria-label={t('Theme Colors')} className="h-64 overflow-y-auto overscroll-contain p-1">
+          {ownShown.map((token) => {
             const on = current === token.variable
             const { light, dark } = lightDark(token.value)
             return (
@@ -215,41 +231,30 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
           })}
         </div>
       )}
-      {tab === 'palette' && (
-        <>
-          <div role="listbox" aria-label={t('Palette')} className="h-64 overflow-y-auto overscroll-contain p-3" onPointerLeave={() => setPointed(null)}>
-            <PaletteGrid
-              families={groups.families}
-              cell={(token) => {
-                const on = current === token.variable
-                return (
-                  <Pressable
-                    compact
-                    key={token.variable}
-                    role="option"
-                    aria-selected={on}
-                    aria-label={token.name}
-                    onClick={() => onChange(token.ref)}
-                    onPointerEnter={() => setPointed(token)}
-                    onFocus={() => setPointed(token)}
-                    className={cn('relative h-5 rounded-xs outline-offset-1 hover:z-raised hover:ring-2 hover:ring-float', on && 'z-raised ring-2 ring-focus')}
-                    style={{ background: lightDark(token.value).light }}
-                  >
-                    <span className="cms-swatch-edge" />
-                  </Pressable>
-                )
-              }}
-            />
-          </div>
-          <div className="flex h-8 items-center gap-2 border-t border-border px-3 text-xs">
-            {named && (
-              <>
-                <span className="min-w-0 flex-1 truncate text-ink">{named.name}</span>
-                <span className="max-w-32 shrink-0 truncate font-mono text-2xs text-faint">{lightDark(tokens.resolve(named.ref)).light}</span>
-              </>
-            )}
-          </div>
-        </>
+      {tab === 'palette' && shadesShown.length > 0 && (
+        // Tailwind's shades, a family to a row, lightest first: each square names itself on hover and focus, the chosen one wears a check.
+        <div role="listbox" aria-label={t('Palette')} className="grid h-64 grid-cols-11 content-start gap-1 overflow-y-auto overscroll-contain p-3">
+          {shadesShown.map((token) => {
+            const on = current === token.variable
+            const color = lightDark(token.value).light
+            return (
+              <Tooltip key={token.variable} content={token.name}>
+              <Pressable
+                compact
+                role="option"
+                aria-selected={on}
+                aria-label={token.name}
+                onClick={() => onChange(token.ref)}
+                className="relative grid aspect-square place-items-center rounded-xs transition-transform duration-fast ease-out hover:z-raised hover:scale-115"
+                style={{ background: color }}
+              >
+                <span className="cms-swatch-edge" />
+                {on && <Icon name="check" size={12} className={light(color) ? 'text-black/75' : 'text-white'} />}
+              </Pressable>
+              </Tooltip>
+            )
+          })}
+        </div>
       )}
       {tab === 'custom' && (
         <div className="h-72 space-y-3 p-3">
@@ -296,7 +301,8 @@ export function ColorPicker({ label, value, onChange }: { label: string; value?:
         ) : (
           <span className="flex-1" />
         )}
-        <Button variant="ghost" size="xs" disabled={!value} onClick={() => onChange(null)} className="shrink-0 !font-normal !text-muted hover:!text-ink">{t('Clear')}</Button>
+        {/* A colour that must have one (a site colour's light side) has nothing to clear. */}
+        {clearable && <Button variant="ghost" size="xs" disabled={!value} onClick={() => onChange(null)} className="shrink-0 !font-normal !text-muted hover:!text-ink">{t('Clear')}</Button>}
       </div>
     </div>
   )

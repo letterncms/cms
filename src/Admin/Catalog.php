@@ -120,6 +120,8 @@ final class Catalog
                 'calendar' => ['anyOf' => [['type' => 'boolean'], $this->object(['dated' => ['type' => 'object'], 'undated' => ['type' => 'object']], ['dated'])]],
                 'dates' => $this->object(['published' => $id, 'updated' => $id]),
                 'defaultView' => ['type' => 'string', 'enum' => ['table', 'grid', 'calendar']],
+                // A key of the row its cards are grouped by, each group under its value (a pattern's category).
+                'group' => $id,
                 'empty' => $empty, 'address' => ['type' => 'boolean'], 'display' => ['type' => 'boolean'],
             ], ['label', 'columns'])],
             'ui/form' => ['label' => 'A form loaded from one ability and saved with another, with the save bar', 'children' => false, 'props' => $this->object([

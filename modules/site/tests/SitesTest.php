@@ -148,14 +148,19 @@ final class SitesTest extends TestCase
         }
     }
 
-    public function test_sites_is_in_settings_and_the_design_opens_on_the_site(): void
+    public function test_the_design_opens_on_its_colors_and_lists_its_sites(): void
     {
         $navigation = $this->cms()->adminNav()->forUser($this->admin());
         $rooms = array_column($navigation['rooms'], null, 'id');
+        $design = array_column($rooms['design']['sections'], null, 'id');
 
-        $this->assertContains('sites', array_merge(...array_column($rooms['settings']['sections'], 'items')));
-        $this->assertSame('/design', $rooms['design']['path']);
-        $this->assertSame('/design', array_column($navigation['nav'], 'path', 'id')['design']);
+        // The theme and its styles, then what the whole site is: its menus and the sites to switch between.
+        $this->assertSame(['Theme', 'Site'], array_column($rooms['design']['sections'], 'label'));
+        $this->assertSame(['design.colors', 'design.typography', 'design.layout', 'design.effects', 'design.motion', 'design.styles'], $design['design']['items']);
+        $this->assertSame(['navigation', 'sites'], $design['design-site']['items']);
+        $this->assertSame('/design/colors', $rooms['design']['path']);
+        $this->assertSame('/design/colors', array_column($navigation['nav'], 'path', 'id')['design']);
+        $this->assertNotContains('sites', array_merge(...array_column($rooms['settings']['sections'], 'items')));
         $this->assertNotContains('sites', array_merge(...array_column($navigation['sidebar']['sections'], 'items')));
     }
 
@@ -167,8 +172,8 @@ final class SitesTest extends TestCase
 
         $posts = $this->cms()->collections()->findOrFail('posts');
         $this->assertSame('Blog', $posts->title);
-        $sidebar = array_column($this->cms()->adminNav()->forUser($admin)['sidebar']['sections'], null, 'id');
-        $this->assertSame(['collection.pages', 'collection.posts'], array_slice($sidebar['content']['items'], 0, 2));
+        $entries = array_column(array_column($this->cms()->adminNav()->forUser($admin)['rooms'], null, 'id')['content']['sections'], null, 'id');
+        $this->assertSame(['collection.pages', 'collection.posts'], array_slice($entries['content']['items'], 0, 2));
         $this->assertSame('blocks', $posts->blueprint()->field('content')->type);
         $entries = $this->cms()->entries()->query()->collection('posts')->get();
         $this->assertCount(3, $entries);

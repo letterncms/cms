@@ -319,13 +319,21 @@ final class CmsServiceProvider extends ServiceProvider
     {
         $admin = $this->app->make(AdminRegistry::class);
 
-        // Where the work is: the home screens, the content, and what the whole site shares.
+        // The main sidebar is where the work starts: the home screens and a row into each room, then what is pinned
+        // (the files, what every page shares, a plugin's screen, and whatever someone pins from a room). Entries are
+        // the collections' (pages, posts); Design is how the site looks (its theme and styles, drawn beside the site
+        // by the site's module, its menus and the sites to switch between); Structure is what its pages are made of
+        // (the collections' definitions, the templates, components, patterns and code).
         $admin->section('main', '', 0);
-        $admin->section('content', __('Content'), 10);
-        $admin->section('site', __('Site'), 20);
-        // How the site looks: a room of its own, a row of the main sidebar leads in. The site's module opens it on the site itself.
+        $admin->section(Navigation::PINNED, __('Pinned'), 10);
+        $admin->room('content', __('Entries'), 'file-text', section: 'main', order: 20);
+        $admin->section('content', '', 0, room: 'content');
         $admin->room('design', __('Design'), 'palette', section: 'main', order: 30);
-        $admin->section('design', '', 0, room: 'design');
+        // The theme and the looks made of it; then what the whole site is: its menus, and the sites to switch between.
+        $admin->section('design', __('Theme'), 0, room: 'design');
+        $admin->section('design-site', __('Site'), 10, room: 'design');
+        $admin->room('structure', __('Structure'), 'layers', section: 'main', order: 35);
+        $admin->section('structure', '', 0, room: 'structure');
         // Settings, the same on every site: the site's General page, your own account and what runs the
         // installation, as one group without a name; then who works on it; then each plugin's page,
         // named by the plugin (see Navigation::PLUGINS).

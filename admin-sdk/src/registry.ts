@@ -10,6 +10,8 @@ export interface RouteDef {
   load?: (params: Record<string, string>, location: Location) => Promise<unknown>
   /** Drawn over the screen it was opened from, which stays open underneath. */
   overlay?: boolean
+  /** One screen for every path it matches: going from one to another keeps it, and what it holds, on view. */
+  keep?: boolean
   /** What this screen shows stays on it: the workspace's thread gets neither its title nor its text. */
   private?: boolean
 }

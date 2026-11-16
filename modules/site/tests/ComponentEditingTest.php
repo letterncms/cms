@@ -34,6 +34,16 @@ final class ComponentEditingTest extends TestCase
         return new DOMXPath($document);
     }
 
+    public function test_a_components_picture_shows_its_properties_at_their_defaults(): void
+    {
+        $component = $this->makeComponent('card', [['handle' => 'title', 'type' => 'text', 'default' => 'House in the dunes']], [
+            ['id' => 'h', 'type' => 'heading', 'props' => ['level' => '3'], 'bind' => ['text' => 'props.title']],
+        ]);
+
+        // In the lists of the structure: the component as a page places it, not its blocks without their values.
+        $this->actingAs($this->admin())->get('/__preview/'.$component->id)->assertOk()->assertSee('House in the dunes');
+    }
+
     public function test_literal_and_default_component_properties_map_to_their_own_source_instance(): void
     {
         $component = $this->makeComponent('intro', [

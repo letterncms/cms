@@ -22,7 +22,6 @@ registry.panels.set('blocks-editor', {
   when: (props) => props.bodyField.type === 'blocks',
 })
 registry.widgets.set('blocks-design', lazy(() => import('./WidgetDesign')))
-registry.components.set('blocks/patterns', lazy(() => import('./Patterns')))
 
 // Write mode shows the media blocks as a plugin's blocks are shown: through `blockViews`.
 blockViews.set('audio', MediaCard)
@@ -37,7 +36,7 @@ export { EditorProvider, useCatalog, useEditorContext } from './core/context'
 export { WriteEditor, blockViews } from './write/WriteEditor'
 export type { BlockNode } from './core/types'
 
-// The site's styling and the controls that edit classes, for the Styling page: the same panels edit a block's
+// The site's styling and the controls that edit classes, for the design: the same panels edit a block's
 // classes, a site class's `@apply` list and an element's style. `styleApi` makes their target from any class list.
 export { StylingProvider, loadCompiler, loadEngine, loadTailwindTheme, screenFor, tokensOf, useEngine, useStyling, useThemeTokens } from './core/styling'
 export type { Breakpoint, Device, Styling, StylingSource, Tokens } from './core/styling'
@@ -48,8 +47,8 @@ export type { StylePanelsProps } from './builder/design/DesignPanel'
 export { StateMenu, StyleBar, askStyleName, stateLabel } from './builder/design/StyleBar'
 export type { StateMenuProps } from './builder/design/StyleBar'
 export { ClassChips } from './builder/design/Classes'
-export { PaletteGrid, SCHEME, SchemeTile, schemesOf } from './builder/palette'
-export type { PaletteFamily, Scheme } from './builder/palette'
+export { SCHEME, SchemeTile, schemesOf } from './builder/palette'
+export type { Scheme } from './builder/palette'
 export { Specimen, styleLabel, styleSample, useSpecimenSheet } from './builder/specimen'
 export type { SampleNode } from './builder/specimen'
 export { SpacingChips, TokenButton, TokenChip, TokenList } from './builder/fields/tokens'
