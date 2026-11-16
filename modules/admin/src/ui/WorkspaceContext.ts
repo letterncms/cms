@@ -12,7 +12,7 @@ export const WorkspaceContext = createContext<{
     open: boolean
     setOpen: (open: boolean) => void
     /** Say so while mounted; returns how to stop. */
-    claim: (state: { title: string; backTo: string; backLabel: string; step?: boolean }) => () => void
+    claim: (state: { title: string; backTo: string; backLabel: string }) => () => void
     /** A screen has said so, and has the sidebar to itself. */
     claimed: boolean
   }

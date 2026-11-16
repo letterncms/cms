@@ -1,5 +1,5 @@
 import { can, navigate, t, useAbility } from '@letterncms/sdk'
-import { Badge, Button, DataCard, DataGrid, EmptyState, Fields, NoMatches, PagePreview, QueryError, Section } from '@letterncms/ui'
+import { Button, DataCard, DataGrid, EmptyState, Fields, Icon, NoMatches, PagePreview, QueryError, Section, Tooltip } from '@letterncms/ui'
 import { useMemo, useState } from 'react'
 import { patternMatches, patternPage, type PatternDef } from './core/Inserter'
 
@@ -39,7 +39,8 @@ export default function PatternsScreen() {
                 title={pattern.title}
                 href={pattern.editable && pattern.id ? `/content/patterns/${pattern.id}` : undefined}
                 image={<PagePreview src={patternPage(pattern.handle)} fill />}
-                footer={!pattern.editable ? <Badge>{t('From a Plugin')}</Badge> : undefined}
+                // A plugin's pattern is used as it is: locked, as what can't be changed here is everywhere.
+                footer={!pattern.editable ? <Tooltip content={t('From a Plugin')}><span className="relative z-raised flex items-center gap-1 text-faint"><Icon name="lock" size={12} /><span className="sr-only">{t('From a Plugin')}</span></span></Tooltip> : undefined}
               >
                 {pattern.description && <p className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted">{pattern.description}</p>}
               </DataCard>

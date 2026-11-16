@@ -522,4 +522,27 @@ final class StylingTest extends TestCase
         $this->ability('styling/update', ['transition' => ['type' => 'fade']]);
         $this->assertTrue($builder->hasWork());
     }
+
+    public function test_each_save_is_a_version_to_go_back_to(): void
+    {
+        Files::deleteDirectory(storage_path('styling-versions/list'));
+        $before = $this->styling()->theme();
+
+        $this->ability('styling/update', ['css' => self::THEME]);
+        $saved = $this->styling()->theme();
+        $this->ability('styling/update', ['transition' => ['type' => 'fade']]);
+        // A save that changes nothing is no version.
+        $this->ability('styling/update', ['transition' => ['type' => 'fade']]);
+
+        $versions = $this->ability('styling-versions/list');
+        // The styling as it was before the first save, then each save, newest first; the newest is what the site has.
+        $this->assertCount(3, $versions);
+        $this->assertSame([true, false, false], array_column($versions, 'current'));
+        $this->assertSame('fade', $this->ability('styling-versions/get', ['id' => $versions[0]['id']])['transition']['type']);
+        $this->assertSame($saved, $this->ability('styling-versions/get', ['id' => $versions[1]['id']])['css']);
+        $this->assertSame($before, $this->ability('styling-versions/get', ['id' => $versions[2]['id']])['css']);
+
+        $this->expectException(AbilityException::class);
+        $this->ability('styling-versions/get', ['id' => '../settings']);
+    }
 }

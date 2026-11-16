@@ -48,6 +48,8 @@
   --cms-float: #ffffff;
   /* Hover and pressed states are a film of the theme's ink, so one value works on the desk, the page and a float alike. */
   --cms-film: color-mix(in oklab, #2a2a2a, var(--cms-tint) 30%);
+  /* The edge of a colour swatch: a shade of the colour itself, darker on a light admin and lighter on a dark one, so a pale colour still stands off the page. */
+  --cms-swatch-edge: rgb(0 0 0 / 0.14);
   --cms-hover: color-mix(in srgb, var(--cms-film) 4.5%, transparent);
   --cms-active: color-mix(in srgb, var(--cms-film) 7%, transparent);
   /* A control filled at rest without being a sheet of its own (the chat's button), and pointed at. */
@@ -151,6 +153,7 @@
   --cms-bg: color-mix(in oklab, #1a1a1a, var(--cms-tint) 6%);
   --cms-float: color-mix(in oklab, #222222, var(--cms-tint) 7%);
   --cms-film: color-mix(in oklab, #ffffff, var(--cms-tint) 22%);
+  --cms-swatch-edge: rgb(255 255 255 / 0.16);
   --cms-hover: color-mix(in srgb, var(--cms-film) 5.5%, transparent);
   --cms-active: color-mix(in srgb, var(--cms-film) 9%, transparent);
   --cms-tonal: color-mix(in srgb, var(--cms-film) 10%, transparent);

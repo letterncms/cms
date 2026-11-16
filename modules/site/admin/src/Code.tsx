@@ -1,11 +1,11 @@
 import { CmsError, can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
-import { Button, CodeEditor, IconButton, Menu, NotFoundState, Notice, QueryError, SaveBar, ScreenSidebar, SidebarGroup, SidebarRow, Skeleton, Spinner, Tooltip, Topbar, confirm, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { Button, CodeEditor, IconButton, Menu, NotFoundState, Notice, QueryError, SaveBar, SidebarGroup, SidebarRow, Skeleton, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, type MenuItemDef } from '@letterncms/ui'
 import { Stylesheet, balanced } from '@letterncms/blocks'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 /* The site's own code, for whoever writes it, as an editor of files: the CSS no section of Styling shows and the
    stylesheets blocks load by name, the JavaScript on every page and the scripts blocks run, and the libraries
-   scripts import. Their list is the sidebar, a step into the design as Styling is; the one open fills the screen.
+   scripts import. Their list is a panel beside the one open, as Styling's sections are beside the site.
    Styling is the design; this is what a developer adds. */
 
 interface Info {
@@ -191,15 +191,18 @@ export default function Code() {
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        crumbs={[{ label: t('Code'), icon: 'code' }, ...(title ? [{ label: title }] : [])]}
+        divided
+        crumbs={[{ label: t('Code'), icon: 'code', to: query.file ? '/code' : undefined }, ...(title ? [{ label: title }] : [])]}
         actions={menu.length > 0 && <Menu align="end" trigger={<IconButton icon="more" size="sm" label={t('File Actions')} />} items={menu} />}
       />
-      {/* A step into the design: the files are the sidebar, with the way back to the design. */}
-      <ScreenSidebar title={t('Code')} backTo="/design" backLabel={t('Design')} step>{list}</ScreenSidebar>
       <SaveBar dirty={dirty} saving={busy} error={failed ? (failed.refused ? t('The CSS was not saved') : failed.message) : null} onSave={() => void save()} onDiscard={() => { setDraft(EMPTY); setFailed(null) }} />
       {!code && <Notice tone="neutral" className="mx-4 mb-2" title={t('Editing code needs the “Edit Scripts and Stylesheets” permission.')} />}
       {failed?.refused && <Notice tone="danger" className="mx-4 mb-2" title={t('Tailwind refused the CSS')} onDismiss={() => setFailed(null)}>{failed.message}</Notice>}
-      <div className="min-h-0 flex-1 px-4 pb-4">{pane}</div>
+      {/* The files beside the one open; on a phone the list takes the screen until one is chosen. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]">
+        <div className={cn('min-h-0 overflow-y-auto border-border pt-3 md:border-r', query.file && 'max-md:hidden')}>{list}</div>
+        <div className={cn('flex min-h-0 min-w-0 flex-col p-4', !query.file && 'max-md:hidden')}>{pane}</div>
+      </div>
     </div>
   )
 }

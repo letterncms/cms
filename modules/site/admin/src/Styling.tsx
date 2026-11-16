@@ -1,7 +1,8 @@
-import { CmsError, can, invalidate, run, setQuery, t, useAbility, useLocation } from '@letterncms/sdk'
-import { Button, IconButton, Notice, QueryError, SaveBar, ScreenSidebar, Segmented, SidebarRow, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useTheme } from '@letterncms/ui'
-import { Stylesheet, StylingProvider, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
+import { CmsError, can, invalidate, run, setQuery, t, timeAgo, useAbility, useLocation } from '@letterncms/sdk'
+import { Button, Icon, IconButton, Notice, Popover, Pressable, QueryError, SaveBar, Segmented, Spinner, Tooltip, Topbar, cn, confirm, prompt, toast, useShortcut, useTheme } from '@letterncms/ui'
+import { Stylesheet, StylingProvider, lightDark, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useHistory } from './history'
 import { type Editing } from './parts'
 import { SitePreview, useDraftCompile, type Viewport } from './preview'
 import { Styles, styleTitle } from './styles'
@@ -45,8 +46,15 @@ function sections(): { value: SectionKey; label: string; icon: string }[] {
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
-/** Where each place of the page was scrolled, for this visit: it outlasts the page being drawn again. */
-const scrolled = new Map<string, number>()
+/** Where the list of styles was scrolled when a style opened: back from it, the list is where it was left. */
+const scrolled = { styles: 0 }
+
+/** What one step back or forward returns to: the stylesheet and the page transition. */
+interface State {
+  css: string
+  transition: Transition
+}
+const sameState = (a: State, b: State) => a.css === b.css && same(a.transition, b.transition)
 
 /**
  * The site's styling: its Tailwind stylesheet as its theme (every value of Tailwind's and the site's own), its
@@ -87,25 +95,31 @@ export default function Styling() {
   const readOnly = !can('settings.manage')
 
   const sheet = useMemo(() => new Stylesheet(css ?? ''), [css])
+  const savedSheet = useMemo(() => new Stylesheet(base?.css ?? ''), [base?.css])
   const compile = useDraftCompile(source.data, css)
   // A theme with a dark value follows the visitor's light or dark mode: the preview can show either.
   const dark = useMemo(() => sheet.variables().some((variable) => variable.value.startsWith('light-dark(')) || /color-scheme\s*:\s*light\s+dark\b/.test(sheet.css), [sheet])
   // Every value the theme has before the site names its own: Tailwind's, then the CMS's.
   const [tailwind, setTailwind] = useState<string | null>(null)
   useEffect(() => { void loadTailwindTheme().then(setTailwind) }, [])
-  // Each place of the page (a section, a style open in it) keeps where it was scrolled: back from a style, the list is where it was left.
+  // Every place of the panel opens at its top; only the list of styles, back from a style, is where it was left.
   const list = useRef<HTMLDivElement>(null)
   const place = `${section}:${query.style ?? ''}`
   const shown = useRef(place)
   if (shown.current !== place) {
-    // Noted while the place being left is still on screen, whether or not its last scroll was heard.
-    if (list.current) scrolled.set(shown.current, list.current.scrollTop)
+    // Noted while the list is still on screen, whether or not its last scroll was heard.
+    if (list.current && shown.current === 'styles:') scrolled.styles = list.current.scrollTop
     shown.current = place
   }
   const ready = !!info.data && !!source.data && tailwind !== null
   useLayoutEffect(() => {
-    if (ready && list.current) list.current.scrollTop = scrolled.get(place) ?? 0
+    if (ready && list.current) list.current.scrollTop = place === 'styles:' ? scrolled.styles : 0
   }, [place, ready])
+  // Every change is a step back, as in the editor: the stylesheet and the transition together.
+  const state = useMemo(() => (css !== undefined && transition ? { css, transition } : undefined), [css, transition])
+  const history = useHistory<State>(state, (next) => setDraft({ css: next.css, transition: next.transition }), sameState)
+  useShortcut('mod+z', history.undo, history.canUndo && !readOnly, t('Undo'))
+  useShortcut('mod+shift+z', history.redo, history.canRedo && !readOnly, t('Redo'))
   const kernel = source.data?.files.cms
   const defaults = useMemo(() => {
     const out = new Map<string, string>()
@@ -135,6 +149,7 @@ export default function Styling() {
 
   const edit: Editing = {
     sheet,
+    saved: savedSheet,
     // From the newest draft, not the one this render saw: two changes in one go both count.
     change: (change) => !readOnly && setDraft((d) => ({ ...d, css: change(new Stylesheet(d.css ?? base.css)).css })),
     readOnly,
@@ -241,58 +256,140 @@ export default function Styling() {
       {section === 'typography' && <Typography edit={edit} fonts={fonts} />}
       {section === 'layout' && <Layout edit={edit} />}
       {section === 'effects' && <Effects edit={edit} />}
-      {section === 'motion' && <Motion edit={edit} transition={transition} onTransition={(next) => !readOnly && setDraft((d) => ({ ...d, transition: next }))} />}
+      {section === 'motion' && <Motion edit={edit} transition={transition} saved={base.transition} onTransition={(next) => !readOnly && setDraft((d) => ({ ...d, transition: next }))} />}
       {section === 'styles' && <Styles edit={edit} samples={samples} />}
     </>
   )
 
+  const current = sections().find((item) => item.value === section)
   return (
     <div className="flex h-full flex-col">
       <Topbar
+        divided
         crumbs={[
           { label: t('Styling'), icon: 'theme', to: section ? '/styling' : undefined },
-          ...(section ? [{ label: sections().find((item) => item.value === section)?.label ?? '', to: open ? `/styling?tab=${section}` : undefined }] : []),
+          ...(current ? [{ label: current.label, to: open ? `/styling?tab=${current.value}` : undefined }] : []),
           ...(open ? [{ label: open }] : []),
         ]}
         actions={
           <>
-            {section && <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>}
+            <Button variant="ghost" icon="eye" aria-pressed={previewing} onClick={() => setPreviewing(!previewing)} className="md:hidden">{t('Preview')}</Button>
+            {/* As the editor has them: a step back and forward, and the versions the site saved. */}
+            {!readOnly && <>
+              <Tooltip content={t('Undo')} shortcut="mod+z"><IconButton icon="undo" label={t('Undo')} title={undefined} disabled={!history.canUndo} onClick={history.undo} /></Tooltip>
+              <Tooltip content={t('Redo')} shortcut="mod+shift+z"><IconButton icon="redo" label={t('Redo')} title={undefined} disabled={!history.canRedo} onClick={history.redo} /></Tooltip>
+              <span className="max-sm:hidden"><Versions onOpen={(version) => setDraft({ css: version.css, transition: version.transition })} /></span>
+            </>}
             {/* A phone is its own width: the other screens are for a window with room to draw them. */}
             <span className="max-md:hidden"><Segmented size="xs" aria-label={t('Screen')} value={viewport} onChange={setViewport} options={[{ value: 'desktop', icon: 'desktop', title: t('Desktop') }, { value: 'tablet', icon: 'tablet', title: t('Tablet') }, { value: 'phone', icon: 'phone', title: t('Phone') }]} /></span>
-            {dark && <Segmented size="xs" aria-label={t('Color Mode')} value={mode} onChange={setMode} options={[{ value: 'light', icon: 'sun', title: t('Light') }, { value: 'dark', icon: 'moon', title: t('Dark') }]} />}
+            {dark && <Segmented size="xs" className="max-sm:hidden" aria-label={t('Color Mode')} value={mode} onChange={setMode} options={[{ value: 'light', icon: 'sun', title: t('Light') }, { value: 'dark', icon: 'moon', title: t('Dark') }]} />}
             <Tooltip content={t('Open Site')}>
               <IconButton icon="external" label={t('Open Site')} title={undefined} onClick={() => window.open('/', '_blank', 'noopener')} className="max-md:hidden" />
             </Tooltip>
           </>
         }
       />
-      {/* A step into the design: its sections are the sidebar, with the way back to the design. */}
-      <ScreenSidebar title={t('Styling')} backTo="/design" backLabel={t('Design')} step>
-        <nav aria-label={t('Styling')} className="space-y-px px-2 pb-4">
-          {sections().map((item) => (
-            <SidebarRow key={item.value} label={item.label} icon={item.icon} active={section === item.value} onClick={() => setSection(item.value)} />
-          ))}
-        </nav>
-      </ScreenSidebar>
       <SaveBar dirty={dirty} saving={busy} error={failed ? (failed.refused ? t('The stylesheet was not saved') : failed.message) : null} onSave={() => void save()} onDiscard={() => { setDraft(EMPTY); setFailed(null) }} />
       {/* Everything inside reads the draft, as Tailwind last could read it: the pickers offer its colours, the controls ask its theme what a class does. */}
       <StylingProvider source={compile.source ?? source.data}>
-      {/* The site alone until a section is chosen; then its controls beside it. On a phone the controls take the screen,
-          and the preview does when asked for: the same draft, drawn by the site. */}
-      <div className={cn('grid min-h-0 flex-1 grid-cols-1', section && 'md:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:grid-cols-[minmax(380px,460px)_minmax(0,1fr)]')}>
-        {section && (
-          <div ref={list} onScroll={(e) => scrolled.set(place, e.currentTarget.scrollTop)} className={cn('overflow-y-auto border-border px-4 pb-16 pt-2 md:border-r', previewing && 'max-md:hidden')}>
+      {/* The panel beside the site, as WordPress's styles are: its sections first, each opening in its place with the way back.
+          On a phone the panel takes the screen, and the preview does when asked for: the same draft, drawn by the site. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(320px,380px)_minmax(0,1fr)] xl:grid-cols-[minmax(360px,420px)_minmax(0,1fr)]">
+        <div className={cn('flex min-h-0 flex-col border-border md:border-r', previewing && 'max-md:hidden')}>
+          {current && !open && (
+            <div className="flex h-12 shrink-0 items-center gap-1 px-2">
+              <Tooltip content={t('Back to {label}', { label: t('Styling') })}><IconButton icon="chevron-left" label={t('Back to {label}', { label: t('Styling') })} title={undefined} onClick={() => setQuery({ tab: null, style: null })} /></Tooltip>
+              <h2 className="m-0 truncate text-sm font-semibold text-ink">{current.label}</h2>
+            </div>
+          )}
+          <div ref={list} onScroll={(e) => { if (place === 'styles:') scrolled.styles = e.currentTarget.scrollTop }} className={cn('min-h-0 flex-1 overflow-y-auto px-4 pb-16', !current && 'pt-4')}>
             {failed?.refused && <Notice tone="danger" className="mb-3 mt-1" title={t('Tailwind refused the stylesheet')} onDismiss={() => setFailed(null)}>{failed.message}</Notice>}
-            {body}
+            {current ? body : <Overview edit={edit} onOpen={setSection} />}
           </div>
-        )}
+        </div>
 
-        <div className={cn('flex min-w-0 flex-col bg-sunken', section && !previewing && 'max-md:hidden')}>
+        <div className={cn('flex min-w-0 flex-col bg-sunken', !previewing && 'max-md:hidden')}>
           <Preview frame={frame} compile={compile} published={base.stylesheet} viewport={previewing ? 'phone' : viewport} mode={dark ? mode : null} />
         </div>
       </div>
       </StylingProvider>
     </div>
+  )
+}
+
+/**
+ * Where Styling opens: the site's look at a glance (its type in its first font, on its background, with its
+ * main colours), then each section, opening in the panel's place.
+ */
+function Overview({ edit, onOpen }: { edit: Editing; onOpen: (section: SectionKey) => void }) {
+  const { engine } = useStyling()
+  const value = (name: string) => edit.sheet.variable(name) ?? edit.defaults.get(name)
+  const drawn = (name: string) => {
+    const raw = value(name)
+    if (!raw) return undefined
+    const sides = lightDark(engine ? engine.resolve(raw) : raw)
+    return edit.mode === 'dark' ? sides.dark ?? sides.light : sides.light
+  }
+  const font = value('--font-display') ?? value('--font-serif') ?? value('--font-sans')
+  const dots = ['--color-primary', '--color-accent', '--color-foreground'].map(drawn).filter((color): color is string => !!color).slice(0, 2)
+  return (
+    <>
+      <div aria-hidden className="relative mb-6 flex aspect-[16/10] items-center justify-center gap-6 overflow-hidden rounded-lg" style={{ background: drawn('--color-background') ?? 'white' }}>
+        <span className="leading-none" style={{ fontFamily: font, fontSize: 88, color: drawn('--color-foreground') }}>Aa</span>
+        {dots.length > 0 && <span className="flex flex-col gap-3">{dots.map((color, i) => <span key={i} className="relative size-10 rounded-full" style={{ background: color }}><span className="cms-swatch-edge" /></span>)}</span>}
+        <span className="cms-swatch-edge" />
+      </div>
+      <nav aria-label={t('Styling')} className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+        {sections().map((item) => (
+          <Pressable key={item.value} inset onClick={() => onOpen(item.value)} className="flex h-12 w-full items-center gap-3 px-3 text-left text-sm text-text transition-colors duration-base hover:bg-hover">
+            <Icon name={item.icon} size={18} className="shrink-0 text-muted" />
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            <Icon name="chevron-right" size={14} className="shrink-0 text-faint" />
+          </Pressable>
+        ))}
+      </nav>
+    </>
+  )
+}
+
+/** The versions the site saved, newest first: one opens in the draft, to look at and save, or to undo. */
+function Versions({ onOpen }: { onOpen: (version: State) => void }) {
+  const [open, setOpen] = useState(false)
+  const list = useAbility<{ id: string; at: string; user: string | null; current: boolean }[]>('styling-versions/list', {}, { enabled: open })
+  const pick = async (id: string) => {
+    try {
+      onOpen(await run<State>('styling-versions/get', { id }))
+      setOpen(false)
+    } catch (e) {
+      toast.error(e)
+    }
+  }
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      className="w-72 !p-1"
+      trigger={<span><Tooltip content={t('Versions')}><IconButton icon="history" label={t('Versions')} title={undefined} active={open} /></Tooltip></span>}
+    >
+      <div className="cms-label px-2 pb-1 pt-1.5">{t('Versions')}</div>
+      {list.isPending ? <div className="grid h-16 place-items-center text-faint"><Spinner size={14} /></div>
+        : list.isError ? <QueryError compact onRetry={() => void list.refetch()} retrying={list.isRefetching} />
+        : list.data.length === 0 ? <p className="m-0 px-2 py-2 text-sm text-muted">{t('No versions yet')}</p>
+        : (
+          <div className="max-h-80 space-y-px overflow-y-auto">
+            {list.data.map((version) => (
+              <Pressable key={version.id} compact disabled={version.current} onClick={() => void pick(version.id)} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm enabled:hover:bg-hover">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-text">{timeAgo(version.at)}</span>
+                  {version.user && <span className="block truncate text-xs text-muted">{version.user}</span>}
+                </span>
+                {version.current && <span className="shrink-0 text-xs text-muted">{t('Current')}</span>}
+              </Pressable>
+            ))}
+          </div>
+        )}
+    </Popover>
   )
 }
 

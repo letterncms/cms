@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Changed
+
+- **Styling is one panel beside your site**, as WordPress's styles are. It opens on your site's look at a glance (its type in its first font, on its background, with its main colors) and a list of Colors, Typography, Layout, Effects, Motion and Styles; each opens in the panel, with the way back. Every section opens at its top.
+- **Calmer lists.** Colors, fonts, sizes and settings are rows in a card, with a line between them and room to breathe. A color's swatch is edged in a shade of the color itself, darker on a light admin and lighter on a dark one.
+- **Your site is the baseline.** A change you haven't saved carries a dot beside its name, and **Revert** in its menu takes it back to what your site has. Styling no longer offers to reset values to Tailwind's.
+- **Undo, redo and versions in Styling**, as in the editor: the buttons in the top bar, `⌘Z` and `⇧⌘Z`, and **Versions**, which lists every saved styling, newest first. Opening one puts it in the draft, to look at and save.
+- **Code lists its files beside the one that is open**, as Styling does its sections, and the top bars of both keep their line under them.
+- A pattern from a plugin shows a lock.
+- **Breaking.** For plugins: `ScreenSidebar` no longer takes `step`. `Topbar` takes `divided`.
+
+### Added
+
+- `styling-versions/list` and `styling-versions/get` list the saved versions of the styling and read one.
+
 ## 0.43.0 (2026-11-16)
 
 ### Changed

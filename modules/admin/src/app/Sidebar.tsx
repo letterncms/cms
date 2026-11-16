@@ -16,8 +16,6 @@ export interface OwnSidebar {
   title: string
   backTo: string
   backLabel: string
-  /** A step into where you are (Styling): out whenever the sidebar is, with who is signed in under it. */
-  step?: boolean
 }
 
 interface SidebarProps {
@@ -84,8 +82,8 @@ export function Sidebar({ own, drawer, onOwnHost, onSearch, onNavigate, room }: 
           ? <RoomSidebar room={room} onNavigate={onNavigate} active={active} />
           : <MainSidebar onSearch={onSearch} onNavigate={onNavigate} active={active} />}
       </div>
-      {/* The admin's own states end with who is signed in, and so does a step into one; a screen's own (the Outline) gives the screen all the room. */}
-      {(!own || own.step) && <Footer room={room} onNavigate={onNavigate} />}
+      {/* The admin's own states end with who is signed in; a screen's own (the Outline) gives the screen all the room. */}
+      {!own && <Footer room={room} onNavigate={onNavigate} />}
     </aside>
   )
 }
@@ -289,7 +287,7 @@ export function StateBack({ own, onNavigate, drawer, room }: Pick<SidebarProps, 
   const button = 'cms-touch flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text'
   return (
     <>
-      <Tooltip content={t('Back to {label}', { label })} shortcut={own && !own.step ? undefined : 'esc'} side="bottom">
+      <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
         <Pressable aria-label={t('Back to {label}', { label })} onClick={back} className={cn(button, up && 'max-sm:hidden')}>
           <Icon name="chevron-left" size={14} className={cn('shrink-0', !drawer && 'max-sm:size-4')} />
           <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{label}</span>

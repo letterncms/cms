@@ -120,7 +120,7 @@
   /* Under a colour that may be see-through: a checkerboard in the admin's own greys, so it shows in dark too. `--checker` is a square's size. */
   .cms-checkerboard { background: repeating-conic-gradient(var(--cms-sunken) 0 25%, var(--cms-bg) 0 50%) 0 0 / var(--checker, 8px) var(--checker, 8px); }
   /* A hairline on the inside of a swatch's edge, rounded as the swatch is. */
-  .cms-swatch-edge { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--cms-border-strong); pointer-events: none; }
+  .cms-swatch-edge { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--cms-swatch-edge); pointer-events: none; }
 
   /* Touch: a button is at least 44px to hit, whatever its size to see. */
   @media (pointer: coarse) {
@@ -518,7 +518,7 @@
     border-bottom: 1px solid transparent;
     transition: padding-left var(--cms-panel-speed) var(--ease-out), border-color var(--cms-duration-base) var(--ease-out);
   }
-  [data-cms-screen][data-scrolled] .cms-topbar { border-bottom-color: var(--cms-border); }
+  [data-cms-screen][data-scrolled] .cms-topbar, .cms-topbar[data-divided] { border-bottom-color: var(--cms-border); }
   .cms-topbar-title { left: 50%; }
 
   /* Paper on a desk: the window is the desk (sidebar, dock, banners), the screen a sheet inset into it.

@@ -22,9 +22,10 @@ export interface Crumb {
  * from in this visit when that was elsewhere; on a screen with a state of the sidebar,
  * the way back is the one by the sidebar button, so `back` shows none of its own
  * (and on a phone that one leads to the crumb before the screen).
- * `title` stands in the middle of the window (an editor's document).
+ * `title` stands in the middle of the window (an editor's document). Over panes that scroll on their own
+ * (a panel beside a preview), `divided` keeps the line under it, as a scrolled screen has.
  */
-export function Topbar({ crumbs: own = [], back, title, actions, children, className, slot }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void }) {
+export function Topbar({ crumbs: own = [], back, title, actions, children, className, slot, divided }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void; divided?: boolean }) {
   const manifest = useManifestIfLoaded()
   const { path } = useLocation()
   // A screen of a room (settings, the design) says so first, on every one of its screens; it leads where the room opens, never through a redirect.
@@ -56,7 +57,7 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   }, [shellBack, upTo, upLabel])
   const ownBack = way && !claimed
   return (
-    <header className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-4', className)}>
+    <header data-divided={divided || undefined} className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-4', className)}>
       <div className="flex min-w-0 items-center gap-3 max-sm:gap-1">
         {ownBack && (
           <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className="cms-touch flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text max-sm:px-1.5">
