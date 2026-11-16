@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.46.0 (2026-11-16)
+
 ### Added
 
 - **Right-click a block**, on the page or in the Outline, for its menu right where you clicked: **Cut**, **Copy**, **Paste**, **Duplicate**, inserting before or after, moving, selecting the block around it, **Make a Component**, **Save as Pattern** and **Delete**. The toolbar's **⋯** holds the same. In text you're typing in, right-click keeps your browser's own menu.
