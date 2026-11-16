@@ -5,6 +5,7 @@ import { Section } from '../controls'
 import { partUtility } from '../styleApi'
 import type { StyleApi } from '../useStyle'
 import { StyleFields, changed, shownStatus, statusOf } from './StyleFields'
+import { setHere } from './more'
 
 const CORNERS = ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius'] as const
 
@@ -52,7 +53,7 @@ export function Border({ s }: { s: StyleApi }) {
   const sideOption = (k: Edge, icon: string, title: string) => ({ value: k, icon, title: status(k) ? `${title} · ${status(k) === 'own' ? t('set') : t('inherited')}` : title })
 
   return (
-    <Section title={t('Border')} empty={!any}>
+    <Section title={t('Border')} empty={!any} own={setHere(s, 'border')}>
       <StyleFields
         s={s}
         fields={[

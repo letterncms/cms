@@ -4,6 +4,7 @@ import { Section } from '../controls'
 import type { SideStatus } from '../fields/spacing'
 import type { StyleApi } from '../useStyle'
 import { StyleFields } from './StyleFields'
+import { setHere } from './more'
 
 type Box = 'padding' | 'margin'
 const SIDES = ['Top', 'Right', 'Bottom', 'Left'] as const
@@ -58,7 +59,7 @@ export function Spacing({ s }: { s: StyleApi }) {
   }
 
   return (
-    <Section title={t('Spacing')} empty={!any}>
+    <Section title={t('Spacing')} empty={!any} own={setHere(s, 'spacing')}>
       <StyleFields
         s={s}
         bare

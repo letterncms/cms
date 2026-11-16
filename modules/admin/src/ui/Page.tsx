@@ -65,8 +65,9 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
         {ownBack && (
           // Before the screen's own name it is the arrow alone, "‹ Heading 1"; before nothing (an editor's document is named in the middle) it says where it leads.
           own.length > 0 ? (
+            // Its arrow stands where a page's first crumb begins, so the name sits close beside it, as it does in the sidebar's way back.
             <Tooltip content={t('Back to {label}', { label: way.label })} side="bottom">
-              <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className={cn('cms-touch -mr-2 ml-1 flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline transition-colors hover:bg-hover hover:text-ink', inRoom && 'max-sm:hidden')}>
+              <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className={cn('cms-touch -ml-0.5 -mr-3.5 flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline transition-colors hover:bg-hover hover:text-ink', inRoom && 'max-sm:hidden')}>
                 <Icon name="chevron-left" size={16} />
               </Link>
             </Tooltip>
@@ -142,13 +143,13 @@ function firstText(node: ReactNode): string | undefined {
  * No second, bigger title under it, and no line explaining the screen: it explains itself.
  * `narrow` is the one column of every form-like page: settings, an account, a blueprint, a menu, a form.
  */
-export function Page({ crumbs = [], actions, title, children, width = 'default', className }: { crumbs?: Crumb[]; actions?: ReactNode; title?: ReactNode; children: ReactNode; width?: 'narrow' | 'default' | 'wide' | 'full'; className?: string }) {
+export function Page({ crumbs = [], back, actions, title, children, width = 'default', className }: { crumbs?: Crumb[]; back?: { to: string; label: string }; actions?: ReactNode; title?: ReactNode; children: ReactNode; width?: 'narrow' | 'default' | 'wide' | 'full'; className?: string }) {
   const max = { narrow: 'max-w-[688px]', default: 'max-w-[1080px]', wide: 'max-w-[1400px]', full: 'max-w-none' }[width]
   const trail = crumbs.length > 0 ? crumbs : title ? [{ label: title }] : []
   const [slot, setSlot] = useState<HTMLElement | null>(null)
   return (
     <div className="flex min-h-full flex-col">
-      <Topbar crumbs={trail} actions={actions} slot={setSlot} />
+      <Topbar crumbs={trail} back={back} actions={actions} slot={setSlot} />
       <main className={cn('mx-auto w-full flex-1 px-4 pb-24 pt-3 md:px-6 md:pt-4', max, className)}>
         <TopbarSlot.Provider value={slot}>{children}</TopbarSlot.Provider>
       </main>

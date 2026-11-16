@@ -321,17 +321,17 @@ final class CmsServiceProvider extends ServiceProvider
 
         // The main sidebar is where the work starts: the home screens and a row into each room, then what is pinned
         // (the files, what every page shares, a plugin's screen, and whatever someone pins from a room). Entries are
-        // the collections' (pages, posts); Design is how the site looks (its theme and styles, drawn beside the site
-        // by the site's module, its menus and the sites to switch between); Structure is what its pages are made of
-        // (the collections' definitions, the templates, components, patterns and code).
+        // the collections' (pages, posts); Design is how the site looks (the sites to switch between, its theme and
+        // styles, drawn beside the site by the site's module); Structure is what its pages are made of (the
+        // collections' definitions, the templates, components, patterns, menus and code).
         $admin->section('main', '', 0);
         $admin->section(Navigation::PINNED, __('Pinned'), 10);
         $admin->room('content', __('Entries'), 'file-text', section: 'main', order: 20);
         $admin->section('content', '', 0, room: 'content');
         $admin->room('design', __('Design'), 'palette', section: 'main', order: 30);
-        // The theme and the looks made of it; then what the whole site is: its menus, and the sites to switch between.
-        $admin->section('design', __('Theme'), 0, room: 'design');
-        $admin->section('design-site', __('Site'), 10, room: 'design');
+        // The site as a whole first (the sites to switch between, and more of them in the store), then its theme and the looks made of it.
+        $admin->section('design-site', __('Site'), 0, room: 'design');
+        $admin->section('design', __('Theme'), 10, room: 'design');
         $admin->room('structure', __('Structure'), 'layers', section: 'main', order: 35);
         $admin->section('structure', '', 0, room: 'structure');
         // Settings, the same on every site: the site's General page, your own account and what runs the

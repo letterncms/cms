@@ -1,4 +1,5 @@
 import { cn } from './cn'
+import { Tooltip } from './Tooltip'
 
 /** The letters' size in a circle of `size`: the widest pair (MW) keeps a little air inside it. */
 const letterSize = (size: number) => size >= 28 ? 12.5 : size >= 24 ? 11 : size >= 20 ? 9 : Math.max(7, Math.round(size * 0.45))
@@ -14,7 +15,6 @@ export function Avatar({ name, initials, src, size = 24, single, tone = 'neutral
     <img src={src} alt={name} width={size} height={size} style={{ width: size, height: size }} className={cn('shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/6 dark:outline-white/8', className)} />
   ) : (
     <span
-      title={name}
       className={cn('inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold leading-none', tone === 'accent' ? 'bg-signal text-signal-ink' : 'bg-fill text-text', className)}
       style={{ width: size, height: size, fontSize: letterSize(size) }}
     >
@@ -26,6 +26,7 @@ export function Avatar({ name, initials, src, size = 24, single, tone = 'neutral
 export function AvatarStack({ people, max = 4, size = 22 }: { people: { name: string; initials?: string; avatar?: string | null }[]; max?: number; size?: number }) {
   const shown = people.slice(0, max)
   return (
+    <Tooltip content={people.map((p) => p.name).join(', ')}>
     <div className="flex -space-x-1">
       {/* Each circle lies 4px under the next one and its ring: one letter stays clear of that, two would be cut. */}
       {shown.map((p, i) => (
@@ -33,10 +34,11 @@ export function AvatarStack({ people, max = 4, size = 22 }: { people: { name: st
       ))}
       {people.length > max && (
         // As wide as its number: a pill once it has two digits, never a circle with the digits cut. Set like the circles' letters, so it sits on their line.
-        <span title={people.slice(max).map((p) => p.name).join(', ')} className="inline-flex shrink-0 items-center justify-center rounded-full bg-fill px-1 font-semibold leading-none tabular-nums text-muted ring-2 ring-bg" style={{ minWidth: size, height: size, fontSize: letterSize(size) }}>
+        <span className="inline-flex shrink-0 items-center justify-center rounded-full bg-fill px-1 font-semibold leading-none tabular-nums text-muted ring-2 ring-bg" style={{ minWidth: size, height: size, fontSize: letterSize(size) }}>
           +{people.length - max}
         </span>
       )}
     </div>
+    </Tooltip>
   )
 }

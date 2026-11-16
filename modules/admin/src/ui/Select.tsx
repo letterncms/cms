@@ -6,6 +6,7 @@ import { cn } from './cn'
 import { controlSizes } from './controlSize'
 import { NoMatches } from './EmptyState'
 import { Icon } from './Icon'
+import { Tooltip } from './Tooltip'
 
 export interface SelectOption {
   value: string
@@ -121,7 +122,7 @@ function TriggerValue({ current, placeholder, defaultLabel, valueHint }: { curre
   return <>
     {current?.icon && <Icon name={current.icon} size={14} className="shrink-0 text-muted" />}
     <span className={cn('min-w-0 flex-1 truncate', !current && defaultLabel === undefined && 'text-ghost')}>{current?.label ?? defaultLabel ?? placeholder ?? t('Choose')}</span>
-    {valueHint && <span title={typeof valueHint === 'string' ? valueHint : undefined} className="max-w-[45%] shrink-0 truncate text-xs font-normal text-faint">{valueHint}</span>}
+    {valueHint && <Tooltip content={typeof valueHint === 'string' ? valueHint : undefined}><span className="max-w-[45%] shrink-0 truncate text-xs font-normal text-faint">{valueHint}</span></Tooltip>}
   </>
 }
 

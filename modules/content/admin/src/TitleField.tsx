@@ -1,6 +1,6 @@
 import { t, type FieldProps } from '@letterncms/sdk'
 import { useEffect, useRef, useState } from 'react'
-import { Button, fieldControlId, Icon, Textarea } from '@letterncms/ui'
+import { Button, fieldControlId, Icon, Textarea, Tooltip } from '@letterncms/ui'
 import { slugify } from '@letterncms/ui'
 
 /**
@@ -75,9 +75,11 @@ export function UriField({ field, value, onChange, disabled }: FieldProps<string
           className="h-6 w-72 min-w-0 max-w-full rounded-xs border border-focus bg-bg px-1.5 font-mono text-xs text-text outline-none"
         />
       ) : (
-        <Button variant="ghost" size="xs" id={fieldControlId(field)} aria-describedby={field.describedBy as string | undefined} disabled={disabled || uri === '/'} onClick={() => setEditing(true)} aria-label={uri === '/' ? undefined : t('Edit URL')} className="min-w-0 max-w-full shrink !justify-start !px-1 text-left font-mono !font-normal !text-inherit hover:!text-text disabled:!opacity-100 disabled:hover:!bg-transparent" title={uri}>
+        <Tooltip content={uri}>
+        <Button variant="ghost" size="xs" id={fieldControlId(field)} aria-describedby={field.describedBy as string | undefined} disabled={disabled || uri === '/'} onClick={() => setEditing(true)} aria-label={uri === '/' ? undefined : t('Edit URL')} className="min-w-0 max-w-full shrink !justify-start !px-1 text-left font-mono !font-normal !text-inherit hover:!text-text disabled:!opacity-100 disabled:hover:!bg-transparent">
           <span className="truncate">{uri}</span>
         </Button>
+        </Tooltip>
       )}
     </div>
   )

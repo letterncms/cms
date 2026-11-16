@@ -13,6 +13,8 @@ export interface MenuItemDef {
   shortcut?: string
   /** Quiet words at the end of the row: a code, a state. */
   hint?: string
+  /** The kit's mark after the label, the dot that says something is set or changed there; the words say what, to a screen reader. */
+  mark?: string
   danger?: boolean
   disabled?: boolean
   onSelect?: () => void
@@ -53,7 +55,32 @@ export function ContextMenu({ children, items, className }: { children: ReactEle
   )
 }
 
-const popupClass = 'cms-pop max-h-[min(60vh,var(--available-height))] min-w-[200px] max-w-[var(--available-width)] overflow-y-auto overscroll-contain p-1 outline-none'
+/**
+ * The same menu at a point of the window, opened by its caller: a right-click where a ContextMenu's trigger can't be
+ * (inside a frame, as the editor's canvas is). Closed by a choice, Escape or a press elsewhere (`onClose`).
+ */
+export function MenuAt({ at, onClose, items, className }: { at: { x: number; y: number } | null; onClose: () => void; items: (MenuItemDef | false | null | undefined)[]; className?: string }) {
+  const point = at ?? { x: 0, y: 0 }
+  const anchor = { getBoundingClientRect: () => DOMRect.fromRect({ x: point.x, y: point.y, width: 0, height: 0 }) }
+  return (
+    <Base.Root open={!!at} onOpenChange={(open) => !open && onClose()}>
+      <Base.Portal>
+        {/* Beside the point, its top at the pointer: moved up when there is no room below and to the left when there is
+            none on the right, as a system's own menu is. */}
+        <Base.Positioner anchor={anchor} side="right" align="start" sideOffset={2} collisionPadding={8} collisionAvoidance={{ side: 'flip', align: 'shift' }} className="z-overlay">
+          <Base.Popup className={cn(pointClass, className)}>
+            <Items items={items} parts={Base} />
+          </Base.Popup>
+        </Base.Positioner>
+      </Base.Portal>
+    </Base.Root>
+  )
+}
+
+const popupBase = 'cms-pop min-w-[200px] max-w-[var(--available-width)] overflow-y-auto overscroll-contain p-1 outline-none'
+const popupClass = `${popupBase} max-h-[min(60vh,var(--available-height))]`
+/** A menu at a point is shown whole. */
+const pointClass = `${popupBase} max-h-[calc(100vh-16px)]`
 
 function Items({ items, parts }: { items: (MenuItemDef | false | null | undefined)[]; parts: typeof Base | typeof BaseContext }) {
   return items.filter(Boolean).map((item, i) => {
@@ -73,6 +100,11 @@ function Items({ items, parts }: { items: (MenuItemDef | false | null | undefine
           <span className="min-w-0 flex-1">
             <span className="block truncate">{it.label}</span>
             <span className="block truncate text-xs text-faint">{it.description}</span>
+          </span>
+        ) : it.mark ? (
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="min-w-0 truncate">{it.label}</span>
+            <span role="img" aria-label={it.mark} className="size-1.5 shrink-0 rounded-full bg-focus" />
           </span>
         ) : <span className="min-w-0 flex-1 truncate">{it.label}</span>}
         {it.hint && <span className="shrink-0 text-xs text-faint">{it.hint}</span>}

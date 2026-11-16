@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, IconButton, Menu, Popover, Pressable, Tooltip, cn } from '@letterncms/ui'
+import { Icon, IconButton, Menu, Popover, Pressable, Tooltip, cn, type MenuItemDef } from '@letterncms/ui'
 import { useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import type { InsertionTarget, Rect } from './core/insertionTargets'
 import type { BlockDrag } from './core/useBlockDrag'
@@ -49,7 +49,49 @@ function Picker({ open, onOpenChange, returnFocus, children, label, className, s
   </Popover>
 }
 
-interface ToolbarProps {
+/** What can be done to the blocks selected: the same in the toolbar's ⋯ and on a right-click in the canvas. */
+export interface BlockActions {
+  /** The block above the selection, to step out to. */
+  parent?: { label: string } | null
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onSelectParent: () => void
+  onMove: (direction: -1 | 1) => void
+  onInsert: (side: 'before' | 'after') => void
+  onCut: () => void
+  onCopy: () => void
+  onPaste: () => void
+  onDuplicate: () => void
+  /** Make the selection a component, where the person may and a component may stand there. */
+  onMakeComponent?: () => void
+  /** Save a copy of the selection as a pattern, where the person may. */
+  onSavePattern?: () => void
+  onDelete: () => void
+}
+
+/** The actions on the selection as menu items, grouped as an editor's are: the clipboard, adding, moving, keeping, deleting. */
+export function blockActionItems(a: BlockActions): MenuItemDef[] {
+  return [
+    { label: t('Cut'), icon: 'scissors', shortcut: 'mod+x', onSelect: a.onCut },
+    { label: t('Copy'), icon: 'copy', shortcut: 'mod+c', onSelect: a.onCopy },
+    { label: t('Paste'), icon: 'clipboard', shortcut: 'mod+v', onSelect: a.onPaste },
+    { label: t('Duplicate'), icon: 'duplicate', shortcut: 'mod+d', onSelect: a.onDuplicate },
+    { separator: true, label: '' },
+    { label: t('Insert Before'), icon: 'arrow-up', shortcut: 'alt+mod+t', onSelect: () => a.onInsert('before') },
+    { label: t('Insert After'), icon: 'arrow-down', shortcut: 'alt+mod+y', onSelect: () => a.onInsert('after') },
+    { separator: true, label: '' },
+    { label: t('Move Up'), icon: 'chevron-up', shortcut: 'alt+up', disabled: !a.canMoveUp, onSelect: () => a.onMove(-1) },
+    { label: t('Move Down'), icon: 'chevron-down', shortcut: 'alt+down', disabled: !a.canMoveDown, onSelect: () => a.onMove(1) },
+    ...(a.parent ? [{ label: t('Select {block}', { block: a.parent.label }), icon: 'arrow-elbow-left-up', onSelect: a.onSelectParent }] : []),
+    ...(a.onMakeComponent || a.onSavePattern ? [{ separator: true, label: '' }] : []),
+    ...(a.onMakeComponent ? [{ label: t('Make a Component'), icon: 'symbol', onSelect: a.onMakeComponent }] : []),
+    ...(a.onSavePattern ? [{ label: t('Save as Pattern'), icon: 'section-copy', onSelect: a.onSavePattern }] : []),
+    { separator: true, label: '' },
+    { label: t('Delete'), icon: 'trash', danger: true, shortcut: 'backspace', onSelect: a.onDelete },
+  ]
+}
+
+interface ToolbarProps extends BlockActions {
   id: string
   label: string
   icon: string
@@ -57,18 +99,7 @@ interface ToolbarProps {
   /** The selected block's frame, in workspace coordinates. */
   box: Rect
   viewport: { width: number; height: number }
-  canMoveUp: boolean
-  canMoveDown: boolean
-  onSelectParent: () => void
   onDrag: (event: PointerEvent) => void
-  onMove: (direction: -1 | 1) => void
-  onInsert: (side: 'before' | 'after') => void
-  onDuplicate: () => void
-  /** Make the selection a component, where the person may and a component may stand there. */
-  onMakeComponent?: () => void
-  /** Save a copy of the selection as a pattern, where the person may. */
-  onSavePattern?: () => void
-  onDelete: () => void
   /** Whether the toolbar would cover the page's content (text, images, controls) at this place. */
   covers?: (rect: Rect) => boolean
 }
@@ -78,7 +109,8 @@ interface ToolbarProps {
  * cover the page's content or leave the view — below it, or inside its top. A tall block keeps it at
  * the top of the view while it is partly scrolled away; it leaves with the block.
  */
-export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp, canMoveDown, onSelectParent, onDrag, onMove, onInsert, onDuplicate, onMakeComponent, onSavePattern, onDelete, covers }: ToolbarProps) {
+export function BlockToolbar(props: ToolbarProps) {
+  const { id, label, icon, parent, box, viewport, canMoveUp, canMoveDown, onSelectParent, onDrag, onMove, covers } = props
   const bar = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(240)
   useLayoutEffect(() => { if (bar.current) setWidth(bar.current.offsetWidth) })
@@ -92,22 +124,14 @@ export function BlockToolbar({ id, label, icon, parent, box, viewport, canMoveUp
   const places = [above, below, inside].flatMap((y) => [{ left: start, top: y }, { left: end, top: y }])
   const { left, top } = places.find((at) => fits(at.top) && !covers?.({ ...at, width, height: BAR })) ?? { left: start, top: fits(above) ? above : inside }
   return <div ref={bar} data-cms-block-controls={id} role="toolbar" aria-label={t('Block Actions')} className="cms-block-chrome pointer-events-auto absolute z-bar flex h-8 items-center gap-0.5 rounded-sm border border-border bg-bg pl-0.5 pr-1 shadow-pop" style={{ left, top }}>
-    <Pressable compact aria-label={t('Drag to Reorder')} title={t('Drag to Reorder')} className="cms-focus-ring grid h-6 w-4 touch-none cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-muted active:cursor-grabbing" onPointerDown={onDrag}><Icon name="drag" size={12} /></Pressable>
-    {parent && <Tooltip content={t('Select {block}', { block: parent.label })}><IconButton size="xs" icon="arrow-elbow-left-up" label={t('Select {block}', { block: parent.label })} onClick={onSelectParent} /></Tooltip>}
+    <Tooltip content={t('Drag to Reorder')}><Pressable compact aria-label={t('Drag to Reorder')} className="cms-focus-ring grid h-6 w-4 touch-none cursor-grab place-items-center rounded-xs text-faint hover:bg-hover hover:text-muted active:cursor-grabbing" onPointerDown={onDrag}><Icon name="drag" size={12} /></Pressable></Tooltip>
+    {parent && <IconButton size="xs" icon="arrow-elbow-left-up" label={t('Select {block}', { block: parent.label })} onClick={onSelectParent} />}
     <span className="mx-0.5 h-4 border-l border-border" />
     <span className="flex h-6 max-w-40 items-center gap-1.5 px-1 text-xs font-medium text-text"><Icon name={icon} size={14} className="shrink-0 text-muted" /><span className="truncate">{label}</span></span>
     <IconButton size="xs" icon="chevron-up" label={t('Move Up')} disabled={!canMoveUp} onClick={() => onMove(-1)} />
     <IconButton size="xs" icon="chevron-down" label={t('Move Down')} disabled={!canMoveDown} onClick={() => onMove(1)} />
     <span className="mx-0.5 h-4 border-l border-border" />
-    <Menu align="end" trigger={<IconButton size="xs" icon="more" label={t('More Block Actions')} />} items={[
-      { label: t('Insert Before'), icon: 'arrow-up', shortcut: 'alt+mod+t', onSelect: () => onInsert('before') },
-      { label: t('Insert After'), icon: 'arrow-down', shortcut: 'alt+mod+y', onSelect: () => onInsert('after') },
-      { label: t('Duplicate'), icon: 'duplicate', shortcut: 'mod+d', onSelect: onDuplicate },
-      onMakeComponent && { label: t('Make a Component'), icon: 'symbol', onSelect: onMakeComponent },
-      onSavePattern && { label: t('Save as Pattern'), icon: 'section-copy', onSelect: onSavePattern },
-      { separator: true, label: '' },
-      { label: t('Delete'), icon: 'trash', danger: true, shortcut: '⌫', onSelect: onDelete },
-    ]} />
+    <Menu align="end" trigger={<IconButton size="xs" icon="more" label={t('More Block Actions')} />} items={blockActionItems(props)} />
   </div>
 }
 

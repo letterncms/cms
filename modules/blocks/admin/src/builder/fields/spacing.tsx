@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Button, Popover, cn, Pressable } from '@letterncms/ui'
+import { Button, Popover, cn, Pressable, Tooltip } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 import { SubField } from './controls'
 import { SpacingChips, useTokenOf } from './tokens'
@@ -122,10 +122,10 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
       align="center"
       className="w-64 !p-3"
       trigger={
+        <Tooltip content={<span>{title(box, [index])}{chosen ? ` · ${chosen.token.variable}` : ''}<br />{t('Drag to change. Alt: opposite side too, Shift: all sides.')}</span>}>
         <Pressable compact onPointerDown={down}
           onClick={(e) => setSides(reach(index, e))}
           aria-label={title(box, [index])}
-          title={`${title(box, [index])}${chosen ? ` · ${chosen.token.variable}` : ''}\n${t('Drag to change. Alt: opposite side too, Shift: all sides.')}`}
           className={cn(
             'mx-auto flex h-full min-w-0 max-w-full items-center justify-center rounded-xs px-1 text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus',
             index % 2 ? 'cursor-ew-resize' : 'cursor-ns-resize',
@@ -136,6 +136,7 @@ function SideValue({ box, index, value, status, onChange, context }: { box: Box;
           {/* Marked as a row's label is: the accent where it is set here, grey where it comes from elsewhere. */}
           <span className={cn('truncate', status !== 'none' && 'rounded-xs px-1 leading-4', status === 'own' ? 'bg-focus-soft' : status === 'inherited' && 'bg-active')}>{shown}</span>
         </Pressable>
+        </Tooltip>
       }
     >
       <SideEditor box={box} sides={sides} value={value} onChange={(v) => onChange(sides, v)} close={() => setOpen(false)} context={context} />

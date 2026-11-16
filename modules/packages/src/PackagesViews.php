@@ -22,6 +22,8 @@ final class PackagesViews
         $admin->component('packages/updates', ['label' => 'Updates', 'description' => 'Updates of the CMS and its plugins, installed in one click.', 'surface' => false, 'permission' => 'packages.manage', 'props' => ['type' => 'object', 'properties' => (object) [], 'additionalProperties' => false]]);
 
         $cms->views()->register('plugins', '/plugins', static fn (User $user) => self::view($cms), permission: 'packages.manage');
+        // The store's sites, beside the site's own in the design.
+        $admin->nav('sites-store', ['label' => 'Browse Store', 'path' => '/sites/store', 'icon' => 'compass', 'section' => 'design-site', 'order' => 20, 'permission' => 'packages.manage']);
         // What comes with the CMS and can be switched off is set up once, with the rest of the site's settings: not among the plugins.
         $admin->nav('built-in', ['label' => 'Built In', 'path' => '/built-in', 'icon' => 'box', 'section' => 'system', 'order' => 70, 'permission' => 'packages.manage']);
         $cms->views()->register('built-in', '/built-in', static fn (User $user) => ['type' => 'ui/page', 'props' => ['title' => __('Built In'), 'icon' => 'box'], 'children' => [self::builtIn()]], permission: 'packages.manage');

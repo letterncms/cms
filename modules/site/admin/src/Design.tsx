@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useHistory } from './history'
 import { type Editing } from './parts'
 import { SitePreview, useDraftCompile, type Viewport } from './preview'
-import { Styles, stylePath, stylesPlace } from './styles'
+import { Classes, stylePath, stylesPlace } from './classes'
 import { keyframesOf } from './fields'
 import { Colors, Effects, Layout, Motion, Typography, type Face, type FontTools, type Transition } from './theme'
 
@@ -29,11 +29,11 @@ interface Draft {
 
 const EMPTY: Draft = {}
 
-const SECTIONS = ['colors', 'typography', 'layout', 'effects', 'motion', 'styles'] as const
+const SECTIONS = ['colors', 'typography', 'layout', 'effects', 'motion', 'classes'] as const
 type SectionKey = (typeof SECTIONS)[number]
 
 /** What each section is called: the sidebar names them the same (SiteModule::DESIGN). */
-const sectionLabel = (key: SectionKey) => ({ colors: t('Colors'), typography: t('Typography'), layout: t('Layout'), effects: t('Effects'), motion: t('Motion'), styles: t('Styles') })[key]
+const sectionLabel = (key: SectionKey) => ({ colors: t('Colors'), typography: t('Typography'), layout: t('Layout'), effects: t('Effects'), motion: t('Motion'), classes: t('Classes') })[key]
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
@@ -49,7 +49,7 @@ const sameState = (a: State, b: State) => a.css === b.css && same(a.transition, 
 
 /**
  * /design/<section>: the design of the site, section by section (each a row of the design's sidebar), beside the
- * site as it looks with the draft. Its theme (every value of Tailwind's and the site's own) and its styles are its
+ * site as it looks with the draft. Its theme (every value of Tailwind's and the site's own) and its classes are its
  * Tailwind stylesheet: every edit rewrites the draft and shows on the page at once (Tailwind compiles it here),
  * and Save writes it to content/styling, where the server compiles the site's CSS. One screen draws every section,
  * so a change not yet saved goes along from one section to the next.
@@ -64,8 +64,8 @@ export default function Design({ params }: { params: Record<string, string> }) {
   useEffect(() => {
     if (!section) navigate('/design/colors', { replace: true })
   }, [section])
-  // A style or a group that is no longer there (deleted, discarded, renamed elsewhere): the list of styles.
-  const gone = section === 'styles' && rest.length > 0 && !!info.data && stylesPlace(new Stylesheet(draft.css ?? info.data.css), rest) === null
+  // A class or a group that is no longer there (deleted, discarded, renamed elsewhere): the list of classes.
+  const gone = section === 'classes' && rest.length > 0 && !!info.data && stylesPlace(new Stylesheet(draft.css ?? info.data.css), rest) === null
   useEffect(() => {
     if (gone) navigate(stylePath(), { replace: true })
   }, [gone])
@@ -159,7 +159,7 @@ export default function Design({ params }: { params: Record<string, string> }) {
   }
   const samples = { compiler: compile.compiler, device: previewing ? 'phone' as const : viewport }
   // A group of styles, or a style, says its own name with the way back up: "‹ Buttons", "‹ Primary".
-  const sub = section === 'styles' ? stylesPlace(sheet, rest) : null
+  const sub = section === 'classes' ? stylesPlace(sheet, rest) : null
 
   const refresh = () => {
     invalidate('styling/')
@@ -256,7 +256,8 @@ export default function Design({ params }: { params: Record<string, string> }) {
       {section === 'layout' && <Layout edit={edit} />}
       {section === 'effects' && <Effects edit={edit} />}
       {section === 'motion' && <Motion edit={edit} transition={transition} saved={base.transition} onTransition={(next) => !readOnly && setDraft((d) => ({ ...d, transition: next }))} />}
-      {section === 'styles' && <Styles edit={edit} samples={samples} path={rest} />}
+      {/* Each group of classes opens with its own search. */}
+      {section === 'classes' && <Classes key={rest[0] ?? ''} edit={edit} samples={samples} path={rest} />}
     </>
   )
 

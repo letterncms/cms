@@ -8,6 +8,7 @@ import { Badge, StatusDot, type Tone } from '../Badge'
 import { PagePreview } from '../PagePreview'
 import { safeUrl } from './scope'
 import { compactNumber } from '../Widget'
+import { Tooltip } from '../Tooltip'
 
 /** How one value is written, by the catalog's formats (see Cms\Admin\Catalog::FORMATS). */
 export interface FormatOptions {
@@ -57,11 +58,11 @@ export function formatValue(value: unknown, { format = 'text', tones, labels, cu
     // A dot and a word: the dot's tone from `tones` (or the value, for content's own states), the word from `labels`.
     // A state the tones name is shown as its tone, in the words given; any other keeps its own (Published, Changes).
     case 'status': return <StatusDot status={tones?.[String(value)] ?? String(value)} label={labels?.[String(value)] ?? (tones?.[String(value)] !== undefined ? String(value) : undefined)} />
-    case 'date': return <span title={date(String(value), { dateStyle: 'full', timeStyle: 'short' })}>{date(String(value), { dateStyle: 'medium' })}</span>
+    case 'date': return <Tooltip content={date(String(value), { dateStyle: 'full', timeStyle: 'short' })}><span>{date(String(value), { dateStyle: 'medium' })}</span></Tooltip>
     case 'datetime': return date(String(value), { dateStyle: 'medium', timeStyle: 'short' })
-    case 'ago': return <span title={date(String(value), { dateStyle: 'medium', timeStyle: 'short' })}>{timeAgo(String(value))}</span>
+    case 'ago': return <Tooltip content={date(String(value), { dateStyle: 'medium', timeStyle: 'short' })}><span>{timeAgo(String(value))}</span></Tooltip>
     // Short, for counts at a glance: 1.2K.
-    case 'compact': return typeof value === 'number' ? <span title={value.toLocaleString(locale())}>{compactNumber(value)}</span> : String(value)
+    case 'compact': return typeof value === 'number' ? <Tooltip content={value.toLocaleString(locale())}><span>{compactNumber(value)}</span></Tooltip> : String(value)
     case 'number': return typeof value === 'number' ? value.toLocaleString(locale()) : String(value)
     // Amounts are kept in the currency's smallest unit (cents), as payments are.
     case 'money': return typeof value === 'number' ? (value / 100).toLocaleString(locale(), { style: 'currency', currency: currency || 'EUR' }) : String(value)
@@ -139,8 +140,8 @@ function MediaCell({ value, media }: { value: unknown; media?: Map<string, Media
 function Languages({ has, locales }: { has: string[]; locales: string[] }) {
   const present = new Set(has)
   return <span className="flex items-center gap-1">
-    {locales.map((code) => <span key={code} title={present.has(code) ? undefined : t('Not translated')}
-      className={cn('inline-flex h-4.5 w-[22px] items-center justify-center rounded-xs font-mono text-2xs uppercase', present.has(code) ? 'bg-sunken text-text' : 'text-faint/70')}>{code}</span>)}
+    {locales.map((code) => <Tooltip key={code} content={present.has(code) ? undefined : t('Not translated')}><span
+      className={cn('inline-flex h-4.5 w-[22px] items-center justify-center rounded-xs font-mono text-2xs uppercase', present.has(code) ? 'bg-sunken text-text' : 'text-faint/70')}>{code}</span></Tooltip>)}
   </span>
 }
 

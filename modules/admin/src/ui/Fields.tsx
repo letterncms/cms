@@ -200,10 +200,12 @@ function InlineLabel({ field, stacked, width }: { field: FieldDef; stacked?: boo
     )
   }
   return (
-    <label htmlFor={fieldControlId(field)} className={className} style={style} title={status === 'inherited' ? t('Inherited from a larger screen, another state or the component') : field.instructions}>
-      {text}
-      {status === 'inherited' && <span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden />}
-    </label>
+    <Tooltip content={status === 'inherited' ? t('Inherited from a larger screen, another state or the component') : field.instructions}>
+      <label htmlFor={fieldControlId(field)} className={className} style={style}>
+        {text}
+        {status === 'inherited' && <span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden />}
+      </label>
+    </Tooltip>
   )
 }
 

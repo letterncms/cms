@@ -132,7 +132,6 @@ function IconPanel({ value, choices, onPick }: { value: string | null; choices?:
       key={e.id}
       ref={current ? (el) => { if (el && !scrolled.current) { scrolled.current = true; el.scrollIntoView({ block: 'center' }) } } : undefined}
       data-icon={e.id}
-      title={e.label}
       aria-label={e.label}
       aria-pressed={isSelected(e)}
       onClick={() => onPick(e.id)}

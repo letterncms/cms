@@ -176,13 +176,31 @@ const byLabel = (properties: string[], more = moreStyles()) => [...properties].s
  * A Design tab panel: its own rows, then the rest of its group's properties that are set
  * (or just added), each with its control. Its + adds one; clicking a row's label clears it.
  */
+/** The properties each section of the Design tab sets, by its group: what makes one set in the state and screen being styled. */
+const SECTION_PROPERTIES: Record<string, RegExp> = {
+  layout: /^(display|flex(?!$)|flexDirection|flexWrap|grid(?!Column|Row|Area)|gap|rowGap|columnGap|justify(?!Self)|align(?!Self)|place(?!Self))/,
+  item: /^(alignSelf|justifySelf|placeSelf|flex$|flexGrow|flexShrink|flexBasis|gridColumn|gridRow|gridArea|order)/,
+  position: /^(position|top|right|bottom|left|inset|zIndex|isolation)/,
+  size: /^(width|height|minWidth|maxWidth|minHeight|maxHeight|aspectRatio|overflow)/,
+  spacing: /^(margin|padding|--tw-space)/,
+  typography: /^(font|letterSpacing|lineHeight|color$|text|whiteSpace|wordBreak|overflowWrap|hyphens|--tw-(font|leading|tracking))/,
+  fill: /^(background|--tw-gradient)/,
+  border: /^(border|outline|--tw-ring|--tw-inset-ring|--tw-border)/,
+  effects: /^(opacity|boxShadow|--tw-shadow|--tw-inset-shadow|mixBlendMode|cursor|pointerEvents|clipPath|filter|backdropFilter|--tw-(blur|brightness|contrast|grayscale|hue|invert|saturate|sepia|drop-shadow|backdrop))/,
+  transform: /^(translate|scale|rotate|skew|transform|perspective|--tw-(translate|scale|rotate|skew))/,
+  transition: /^(transition|animation|--tw-(duration|ease))/,
+}
+
+/** Whether the state and screen being styled set any property of a section themselves, rather than wear what another sets. */
+export const setHere = (s: StyleApi, group: string) => s.own().some((key) => SECTION_PROPERTIES[group]?.test(key))
+
 export function StyleSection({ s, group, title, open, empty, children }: { s: StyleApi; group: string; title: string; open?: boolean; empty?: boolean; children: ReactNode }) {
   const [adding, setAdding] = useState<string | null>(null)
   const more = moreStyles()
   const mine = Object.keys(more).filter((key) => more[key].group === group)
   const shown = mine.filter((key) => s.value(key) !== undefined || key === adding)
   return (
-    <Section title={title} open={open} empty={empty && shown.length === 0} fields actions={<AddStyle properties={byLabel(mine.filter((key) => !shown.includes(key)), more)} onPick={setAdding} />}>
+    <Section title={title} open={open} empty={empty && shown.length === 0} own={setHere(s, group)} fields actions={<AddStyle properties={byLabel(mine.filter((key) => !shown.includes(key)), more)} onPick={setAdding} />}>
       {children}
       {shown.length > 0 && <StyleFields s={s} fields={shown.map((key) => ({ ...fieldOf(key, more), set: (v: unknown) => { if (key === adding) setAdding(null); s.set(key, v as string) } }) as StyleField)} />}
     </Section>

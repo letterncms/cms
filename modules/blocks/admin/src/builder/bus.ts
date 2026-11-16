@@ -7,6 +7,8 @@ type Events = {
   'scroll-to': { node: string; top?: boolean }
   /** Select a block and open its inspector, as clicking it on the page does. */
   inspect: { node: string }
+  /** Open a block's menu at a point on the screen, as a right-click on it does (in the outline, say). */
+  'block-menu': { node: string; x: number; y: number }
 }
 
 const target = new EventTarget()

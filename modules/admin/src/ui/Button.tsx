@@ -3,6 +3,7 @@ import { cn } from './cn'
 import { controlSizes, type ControlSize } from './controlSize'
 import { Icon } from './Icon'
 import { Spinner } from './Spinner'
+import { Tooltip } from './Tooltip'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'tonal' | 'destructive' | 'danger' | 'publish'
 export type ButtonSize = ControlSize
@@ -86,21 +87,23 @@ export interface IconButtonProps extends Omit<ButtonProps, 'children'> {
   icon: string
   label: string
   active?: boolean
+  /** Shown beside the label in its tooltip. */
+  shortcut?: string
 }
 
-/** Square icon-only button. `label` is required for accessibility (and shown as tooltip). */
-export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { icon, label, size = 'sm', variant = 'ghost', active, className, loading, ...props },
-  ref,
-) {
+/**
+ * Square icon-only button. `label` is required for accessibility and shows in its tooltip. A caller that
+ * draws a tooltip of its own passes `title={undefined}`: any `title` at all leaves the button without one.
+ */
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(all, ref) {
+  const { icon, label, size = 'sm', variant = 'ghost', active, className, loading, shortcut, title: _title, ...props } = all
   const square = { xs: 'size-6', sm: 'size-7', md: 'size-8', lg: 'size-10' }[size]
-  return (
+  const button = (
     <Button
       ref={ref}
       variant={variant}
       size={size}
       aria-label={label}
-      title={label}
       loading={loading}
       data-active={active || undefined}
       className={cn(square, '!px-0', variant === 'ghost' && !active && 'text-muted hover:text-ink', className)}
@@ -109,4 +112,5 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       {!loading && <Icon name={icon} size={iconSizes[size]} />}
     </Button>
   )
+  return 'title' in all ? button : <Tooltip content={label} shortcut={shortcut}>{button}</Tooltip>
 })

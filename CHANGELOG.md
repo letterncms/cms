@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Added
+
+- **Right-click a block**, on the page or in the Outline, for its menu right where you clicked: **Cut**, **Copy**, **Paste**, **Duplicate**, inserting before or after, moving, selecting the block around it, **Make a Component**, **Save as Pattern** and **Delete**. The toolbar's **⋯** holds the same. In text you're typing in, right-click keeps your browser's own menu.
+
+### Changed
+
+- **Styles are Classes now**, as they are in your stylesheet. Design › Classes lists its groups, and each group its classes, by name only, in the same panels as your settings, with a search on top. A class is named as written everywhere, in its list, its title and the class field (`eyebrow`, `btn-primary`).
+- **One field for an element's classes** at the top of the Design tab: every class it wears, as written: your own first, as named chips, then Tailwind's, each tinted while it is set in the state and screen you're styling, as the panel's labels are. Type in it to find a class, Tailwind's first, then your own, then your schemes; press ↓ to list your own. It folds away like the sections under it, and its **⋯** has **Save as Class…** and **Copy Classes**.
+- **State is a row of its own** above it, and the state you choose shows: the selected block on the canvas, and the sample of a class, are drawn hovered, pressed or focused while you style that state. A state with styles of its own carries the dot every other change does.
+- **Design's panels look like your settings**: the same panels and headings.
+- **Design's sidebar starts with your site**: Sites and **Browse Store**, then the theme. Design still opens on Colors. Navigation is in Structure now.
+- The menu beside your site's name holds the Dashboard, Open Site and **Customize Sidebar…**; you switch sites under **Design › Sites**.
+- Leaving Settings takes you back exactly where you were, a page inside Design or Structure included.
+- A screen inside a group, such as a group of classes or a store listing, puts its name right beside its way back.
+- Every tooltip is the admin's own: an icon button shows its name in it by itself, and nothing falls back to the browser's.
+- A room's way out in the sidebar reads **Back**; its tooltip says where it leads.
+
+### Fixed
+
+- In the editor, a header that changes as the page scrolls (a background, hiding while you scroll down) does so on the canvas too.
+- **Buttons and Fields** under Layout shows each size's height, padding and text in full.
+
 ## 0.45.2 (2026-11-16)
 
 ### Fixed

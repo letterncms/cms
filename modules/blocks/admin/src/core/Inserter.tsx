@@ -1,4 +1,4 @@
-import { Button, Fields, Icon, PagePreview, Segmented, cn } from '@letterncms/ui'
+import { Button, Fields, Icon, PagePreview, Segmented, cn, Tooltip } from '@letterncms/ui'
 import { t, useAbility } from '@letterncms/sdk'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useCatalog } from './context'
@@ -165,12 +165,14 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
           return (
             <div key={itemKey(item)}>
               {heading && <div className="cms-label px-2 pb-1 pt-2">{heading}</div>}
-              <Button variant="ghost" size="md" data-index={i} title={item.pattern.description || undefined}
+              <Tooltip content={item.pattern.description} side="right">
+              <Button variant="ghost" size="md" data-index={i}
                 onMouseMove={() => i !== active && setActive(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => onChoose(item)} data-active={i === active || undefined}
                 className="!h-auto w-full !flex-col !items-stretch !gap-1.5 !rounded-sm !p-1.5 text-left">
                 <PagePreview src={patternPage(item.pattern.handle)} maxHeight={160} />
                 <span className="min-w-0 truncate px-0.5 text-sm">{item.pattern.title}</span>
               </Button>
+              </Tooltip>
             </div>
           )
         })}
@@ -183,12 +185,12 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
           return (
             <div key={itemKey(item)}>
               {heading && <div className="cms-label px-2 pb-1 pt-2">{heading}</div>}
+              {/* What a block is for is its tooltip: the list is names, so twice as many fit. */}
+              <Tooltip content={description} side="right">
               <Button
                 variant="ghost"
                 size="md"
                 data-index={i}
-                // What a block is for is its tooltip: the list is names, so twice as many fit.
-                title={description || undefined}
                 // Moving, not entering: a menu that opens under a resting pointer keeps its first item.
                 onMouseMove={() => i !== active && setActive(i)}
                 onMouseDown={(e) => e.preventDefault()}
@@ -201,6 +203,7 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
                 </span>
                 <span className="min-w-0 truncate">{title}</span>
               </Button>
+              </Tooltip>
             </div>
           )
         })}

@@ -1,4 +1,4 @@
-import { can, loadManifest, navigate, run, queryClient, setManifest, t, useAbility, useManifest } from '@letterncms/sdk'
+import { loadManifest, navigate, run, queryClient, setManifest, t, useAbility, useManifest } from '@letterncms/sdk'
 import { Badge, Button, DataCard, DataGrid, EmptyState, Field, Icon, IconButton, Input, Textarea, Menu, Notice, Page, Pressable, QueryError, cn, confirm, download, slugify, switchSite, toast, Dialog } from '@letterncms/ui'
 import { useMemo, useRef, useState } from 'react'
 
@@ -88,7 +88,6 @@ export default function Sites() {
     <Page title={t('Sites')} width="full" actions={(
       <>
         <input ref={file} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => e.target.files?.[0] && void importSite(e.target.files[0])} />
-        {can('packages.manage') && <Button icon="search" onClick={() => navigate('/sites/store')}>{t('Browse Store')}</Button>}
         <span className="contents max-sm:hidden">
           <Button icon="upload" loading={importing} onClick={() => file.current?.click()}>{t('Import Site')}</Button>
           <Button icon="download" onClick={() => setExporting(true)}>{t('Export Site')}</Button>

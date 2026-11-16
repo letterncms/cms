@@ -154,10 +154,11 @@ final class SitesTest extends TestCase
         $rooms = array_column($navigation['rooms'], null, 'id');
         $design = array_column($rooms['design']['sections'], null, 'id');
 
-        // The theme and its styles, then what the whole site is: its menus and the sites to switch between.
-        $this->assertSame(['Theme', 'Site'], array_column($rooms['design']['sections'], 'label'));
-        $this->assertSame(['design.colors', 'design.typography', 'design.layout', 'design.effects', 'design.motion', 'design.styles'], $design['design']['items']);
-        $this->assertSame(['navigation', 'sites'], $design['design-site']['items']);
+        // The site as a whole first, its sites and the store's, then its theme and its classes. It opens on its colors.
+        $this->assertSame(['Site', 'Theme'], array_column($rooms['design']['sections'], 'label'));
+        $this->assertSame(['sites', 'sites-store'], $design['design-site']['items']);
+        $this->assertSame(['design.colors', 'design.typography', 'design.layout', 'design.effects', 'design.motion', 'design.classes'], $design['design']['items']);
+        $this->assertContains('navigation', array_merge(...array_column($rooms['structure']['sections'], 'items')));
         $this->assertSame('/design/colors', $rooms['design']['path']);
         $this->assertSame('/design/colors', array_column($navigation['nav'], 'path', 'id')['design']);
         $this->assertNotContains('sites', array_merge(...array_column($rooms['settings']['sections'], 'items')));

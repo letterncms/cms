@@ -180,7 +180,7 @@ export function ActionButton({ action, variant, size, after, scope: local = {}, 
   }
   return (
     // In a screen's bar on a phone: with room (one or two actions) a button is its words without its icon; in a fuller bar it is its icon, named for whoever can't see it.
-    <Button size={size} icon={action.icon} variant={style === 'default' ? 'secondary' : style} loading={busy} disabled={disabled || busy || blocked} onClick={() => void click()} aria-label={compact === true ? action.label : undefined} title={compact === true ? action.label : undefined} className={compact === 'label' ? 'max-sm:[&>svg]:hidden' : undefined}>
+    <Button size={size} icon={action.icon} variant={style === 'default' ? 'secondary' : style} loading={busy} disabled={disabled || busy || blocked} onClick={() => void click()} aria-label={compact === true ? action.label : undefined} className={compact === 'label' ? 'max-sm:[&>svg]:hidden' : undefined}>
       {compact === true ? <span className="max-sm:sr-only">{action.label}</span> : action.label || t('Open')}
     </Button>
   )

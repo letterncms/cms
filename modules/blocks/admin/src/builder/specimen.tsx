@@ -84,8 +84,8 @@ export function Specimen({ sheet, node, page, mode, className, align = 'start' }
   return <div ref={host} aria-hidden="true" className={cn('min-w-0 overflow-hidden', className)} />
 }
 
-/** A style of the site as people call it, in words: lede is "Lede", btn-on-brand is "On Brand", scheme-tide "Tide". */
-export const styleLabel = (name: string) => name.replace(/^(btn|scheme)-/, '').split('-').filter(Boolean).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+/** What a sample of a class says, in words: lede is "Lede", btn-on-brand is "On Brand", scheme-tide "Tide". */
+const styleLabel = (name: string) => name.replace(/^(btn|scheme)-/, '').split('-').filter(Boolean).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 
 /** The sample of a style of the site: a button for a button's look, a block in its colours for a scheme, its own name in it for any other. */
 export function styleSample(name: string): SampleNode {

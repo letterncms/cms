@@ -16,7 +16,7 @@ registerHooks({
     }
   },
 })
-const { GRADIENT_MARKERS, broken, colorGroups, dataStates, lightDark, searchClasses, spacingChoices, gradientOf, gradientUtilities, inner, layerUsed, onLayer, partUtility, plain, splitSiteClasses, styleApi, usedVariants } = await import('../../admin/src/builder/styleApi.ts')
+const { GRADIENT_MARKERS, broken, colorGroups, dataStates, lightDark, searchClasses, spacingChoices, gradientOf, gradientUtilities, inner, layerUsed, onLayer, partUtility, plain, shownInState, splitSiteClasses, styleApi, usedVariants } = await import('../../admin/src/builder/styleApi.ts')
 
 const index = readFileSync(createRequire(import.meta.url).resolve('tailwindcss/index.css'), 'utf8')
 const css = `@import "tailwindcss";
@@ -167,4 +167,13 @@ test('the spacing chips are the scale in pixels and the theme\'s named spaces ap
   assert.equal(choices.scale[4].title, '4 · 16px')
   assert.deepEqual(choices.named.map((choice) => [choice.label, choice.value]), [['gutter', 'var(--spacing-gutter)']])
   assert.deepEqual(spacingChoices(null, []), { scale: [], named: [] })
+})
+
+test('a state being styled is shown by wearing its classes as if it held, made to win', () => {
+  const classes = ['bg-transparent', 'hover:bg-foreground/6', 'md:hover:underline', 'focus-visible:ring-2', 'before:content-none']
+  assert.deepEqual(shownInState(classes, ['hover']), ['bg-foreground/6!', 'md:underline!'])
+  assert.deepEqual(shownInState(classes, ['focus-visible']), ['ring-2!'])
+  // At rest nothing, and a state that can't be shown where the element stands neither.
+  assert.deepEqual(shownInState(classes, []), [])
+  assert.deepEqual(shownInState(classes, ['before']), [])
 })

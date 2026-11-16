@@ -445,8 +445,8 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
     : entry ? t('Saved') : ''
   // Always the same footprint: a dot while there is something to save, red when it couldn't be.
   const saveState = (
-    <span aria-hidden="true" title={saveText || undefined} className={cn('block size-1.5 rounded-full',
-      phase === 'error' || titleError ? 'bg-danger' : busy || dirty ? 'bg-faint' : 'bg-transparent')} />
+    <Tooltip content={saveText}><span aria-hidden="true" className={cn('block size-1.5 rounded-full',
+      phase === 'error' || titleError ? 'bg-danger' : busy || dirty ? 'bg-faint' : 'bg-transparent')} /></Tooltip>
   )
 
   const failed = phase === 'error' || titleError
@@ -716,8 +716,8 @@ interface PropertyRowProps {
 function PropertyRow({ field, value, onChange, error, disabled, context, values }: PropertyRowProps) {
   return (
     <div className="grid grid-cols-[148px_minmax(0,1fr)] items-start gap-3 py-0.5">
-      <div className="flex h-8 min-w-0 items-center gap-1.5 text-sm text-muted" title={field.instructions ?? field.label}>
-        <span className="truncate">{field.label}</span>
+      <div className="flex h-8 min-w-0 items-center gap-1.5 text-sm text-muted">
+        <Tooltip content={field.instructions ?? field.label}><span className="truncate">{field.label}</span></Tooltip>
         {typeof field.shared === 'string' && <SharedMark from={field.shared} />}
       </div>
       <div className="min-w-0">

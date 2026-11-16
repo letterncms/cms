@@ -1,5 +1,5 @@
 import { invalidate, navigate, run, t, timeAgo, useAbility, useManifest } from '@letterncms/sdk'
-import { Button, Icon, Stat, Widget, WidgetRow, compactNumber, cn, toast } from '@letterncms/ui'
+import { Button, Icon, Stat, Widget, WidgetRow, compactNumber, cn, toast, Tooltip } from '@letterncms/ui'
 import { useState } from 'react'
 
 interface EmailStatus {
@@ -76,7 +76,7 @@ export default function WidgetEmail() {
                   key={m.id}
                   leading={<Icon name={m.status === 'failed' ? 'warning' : 'mail'} size={15} className={cn('shrink-0', m.status === 'failed' ? 'text-danger' : 'text-faint')} />}
                   title={m.subject || t('No subject')}
-                  description={m.status === 'failed' ? <span title={m.error ?? undefined}>{t('Not sent to {recipient}', { recipient: m.to })}</span> : m.to}
+                  description={m.status === 'failed' ? <Tooltip content={m.error}><span>{t('Not sent to {recipient}', { recipient: m.to })}</span></Tooltip> : m.to}
                   meta={timeAgo(m.createdAt)}
                 />
               ))}
