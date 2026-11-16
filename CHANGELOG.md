@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.47.0 (2026-11-16)
+
 ### Added
 
 - **A console under the Code editor.** It runs a page of your site with your saved code, again after each save, and lists what the page logs, its errors and what it failed to load; a message from one of your files opens it at its line. Type JavaScript to run it on the page, choose another page by its address or by following a link, and show the page beside it. `⌃` `` ` `` shows or hides it.
