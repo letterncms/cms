@@ -1,0 +1,348 @@
+import { CmsError as e, can as t, invalidate as n, run as r, setQuery as i, t as a, useAbility as o, useLocation as s } from "@letterncms/sdk";
+import { useEffect as c, useMemo as l, useRef as u, useState as d } from "react";
+import { Button as f, CodeEditor as p, IconButton as ee, Menu as te, NotFoundState as ne, Notice as m, QueryError as h, SaveBar as re, SidebarGroup as g, SidebarRow as ie, Skeleton as _, Spinner as v, Tooltip as y, Topbar as b, cn as x, confirm as S, prompt as C, toast as w } from "@letterncms/ui";
+import { Stylesheet as T, balanced as E } from "@letterncms/blocks";
+import { jsx as D, jsxs as O } from "react/jsx-runtime";
+// admin/src/Code.tsx
+var k = { files: {} }, ae = {
+	scripts: "export function mount(el, props) {\n}\n",
+	styles: "\n"
+}, A = {
+	scripts: "js",
+	styles: "css"
+};
+function j() {
+	let c = o("styling/get", {}, {
+		refetchOnWindowFocus: !1,
+		retry: !1
+	}), l = o("styling-code/list"), u = o("styling-vendor/list"), [_, y] = d(k), [T, E] = d(!1), [j, P] = d(null), [F, I] = d(null), { query: L } = s(), R = L.file ?? "css", z = (e) => i({ file: e === "css" ? null : e }, !1), B = t("site.code"), ce = t("settings.manage"), V = c.data, H = !!V && (_.css !== void 0 && _.css !== V.css || _.js !== void 0 && _.js !== V.js || Object.keys(_.files).length > 0), U = (e, t) => y((n) => ({
+		...n,
+		files: t === null ? Object.fromEntries(Object.entries(n.files).filter(([t]) => t !== e)) : {
+			...n.files,
+			[e]: t
+		}
+	}));
+	if (c.isLoading) return /* @__PURE__ */ D("div", {
+		className: "grid h-full place-items-center text-faint",
+		children: /* @__PURE__ */ D(v, {})
+	});
+	if (!V) return /* @__PURE__ */ O("div", {
+		className: "flex h-full flex-col",
+		children: [/* @__PURE__ */ D(b, { crumbs: [{
+			label: a("Code"),
+			icon: "code"
+		}] }), /* @__PURE__ */ D(h, {
+			title: a("Couldn’t load the code"),
+			onRetry: () => void c.refetch(),
+			retrying: c.isRefetching
+		})]
+	});
+	let le = async () => {
+		if (H && !T) {
+			E(!0), P(null);
+			try {
+				_.css !== void 0 && _.css !== V.css && await r("styling/update", { css: _.css }), _.js !== void 0 && _.js !== V.js && await r("styling-code/set-custom", { js: _.js });
+				for (let [e, t] of Object.entries(_.files)) await r("styling-code/save", {
+					path: e,
+					contents: t
+				});
+				await c.refetch(), n("styling/", "styling-code/"), y(k);
+			} catch (t) {
+				P({
+					message: t instanceof Error ? t.message : String(t),
+					refused: t instanceof e && t.type === "invalid_input"
+				});
+			} finally {
+				E(!1);
+			}
+		}
+	}, W = async (e, t) => {
+		try {
+			return await e(), n("styling-code/", "styling-vendor/"), w.success(t), !0;
+		} catch (e) {
+			return w.error(e), !1;
+		}
+	}, G = async (e) => {
+		let t = await C({
+			title: a(e === "scripts" ? "New Script" : "New Stylesheet"),
+			fields: [{
+				handle: "name",
+				type: "text",
+				label: a("Name"),
+				mono: !0,
+				autofocus: !0,
+				placeholder: "hero"
+			}],
+			confirm: a(e === "scripts" ? "Create Script" : "Create Stylesheet")
+		}), n = String(t?.name ?? "").trim().toLowerCase().replace(/\.(js|css)$/, "").replace(/\s+/g, "-");
+		if (!n) return;
+		if ((l.data?.[e] ?? []).includes(n)) return void w.error(a("“{name}” already exists", { name: n }));
+		let i = `${e}/${n}.${A[e]}`;
+		await W(() => r("styling-code/save", {
+			path: i,
+			contents: ae[e]
+		}), a("{name} added", { name: `${n}.${A[e]}` })) && z(i);
+	}, ue = async (e, t) => {
+		await S({
+			title: a("Delete “{name}”?", { name: t }),
+			confirm: a("Delete"),
+			danger: !0
+		}) && await W(() => r("styling-code/delete", { path: e }), a("{name} deleted", { name: t })) && (U(e, null), R === e && z("css"));
+	}, de = async () => {
+		let e = await C({
+			title: a("Add Library"),
+			fields: [{
+				handle: "package",
+				type: "text",
+				label: a("Package"),
+				mono: !0,
+				autofocus: !0,
+				placeholder: "gsap@3.12.5"
+			}],
+			confirm: a("Add Library")
+		}), t = String(e?.package ?? "").trim();
+		t && (I("add"), await W(() => r("styling-vendor/create", { package: t }), a("{name} added", { name: t })), I(null));
+	}, K = async (e) => {
+		I(e), await W(() => r("styling-vendor/update", { import: e }), a("{name} updated", { name: e })), I(null);
+	}, fe = async (e) => {
+		await S({
+			title: a("Delete “{name}”?", { name: e }),
+			confirm: a("Delete"),
+			danger: !0
+		}) && await W(() => r("styling-vendor/delete", { import: e }), a("{name} deleted", { name: e })) && R === `library:${e}` && z("css");
+	}, q = (e, t) => B ? [{
+		label: a("Delete"),
+		icon: "trash",
+		danger: !0,
+		onSelect: () => void ue(e, t)
+	}] : [], J = (e) => B ? [
+		{
+			label: a("Update"),
+			icon: "refresh",
+			disabled: !!F,
+			onSelect: () => void K(e)
+		},
+		{
+			separator: !0,
+			label: ""
+		},
+		{
+			label: a("Delete"),
+			icon: "trash",
+			danger: !0,
+			disabled: !!F,
+			onSelect: () => void fe(e)
+		}
+	] : [], pe = (e) => e ? /* @__PURE__ */ D("span", {
+		className: "size-1.5 rounded-full bg-focus",
+		"aria-label": a("Unsaved changes"),
+		role: "img"
+	}) : void 0, Y = (e, t, n, r, i = [], a) => /* @__PURE__ */ D(ie, {
+		label: t,
+		icon: n,
+		active: R === e,
+		onClick: () => z(e),
+		status: pe(r),
+		badge: a,
+		actions: i.map((e) => ({
+			...e,
+			quick: e.icon === "trash"
+		}))
+	}, e), X = (e) => (l.data?.[e] ?? []).map((t) => {
+		let n = `${e}/${t}.${A[e]}`;
+		return Y(n, `${t}.${A[e]}`, "file", n in _.files, q(n, `${t}.${A[e]}`));
+	}), me = /* @__PURE__ */ O("nav", {
+		"aria-label": a("Code"),
+		className: "px-2 pb-4",
+		children: [
+			/* @__PURE__ */ O(g, {
+				title: a("Stylesheets"),
+				action: B && /* @__PURE__ */ D(N, {
+					label: a("New Stylesheet"),
+					onAdd: () => void G("styles")
+				}),
+				children: [Y("css", a("Site CSS"), "braces", _.css !== void 0 && _.css !== V.css), l.isError ? /* @__PURE__ */ D(h, {
+					compact: !0,
+					onRetry: () => void l.refetch(),
+					retrying: l.isRefetching
+				}) : l.data ? X("styles") : /* @__PURE__ */ D(M, {})]
+			}),
+			/* @__PURE__ */ O(g, {
+				title: a("Scripts"),
+				action: B && /* @__PURE__ */ D(N, {
+					label: a("New Script"),
+					onAdd: () => void G("scripts")
+				}),
+				children: [Y("js", a("Site JavaScript"), "braces", _.js !== void 0 && _.js !== V.js), l.isError ? null : l.data ? X("scripts") : /* @__PURE__ */ D(M, {})]
+			}),
+			/* @__PURE__ */ D(g, {
+				title: a("Libraries"),
+				action: B && /* @__PURE__ */ D(N, {
+					label: a("Add Library"),
+					onAdd: () => void de(),
+					busy: F === "add"
+				}),
+				children: u.isError ? /* @__PURE__ */ D(h, {
+					compact: !0,
+					onRetry: () => void u.refetch(),
+					retrying: u.isRefetching
+				}) : u.data ? u.data.imports.map((e) => Y(`library:${e.import}`, e.import, "box", !1, J(e.import), F === e.import ? /* @__PURE__ */ D(v, { size: 12 }) : e.version)) : /* @__PURE__ */ D(M, {})
+			})
+		]
+	}), Z = R.startsWith("library:") ? u.data?.imports.find((e) => `library:${e.import}` === R) : void 0, Q = /^(scripts|styles)\//.test(R) ? R : null, $ = R === "css" ? a("Site CSS") : R === "js" ? a("Site JavaScript") : Q ? Q.split("/").pop() ?? Q : Z?.import, he = Q ? q(Q, $ ?? Q) : Z ? J(Z.import) : [], ge = R === "css" ? /* @__PURE__ */ D(se, {
+		css: _.css ?? V.css,
+		disabled: !ce,
+		onChange: (e) => y((t) => ({
+			...t,
+			css: e
+		}))
+	}) : R === "js" ? /* @__PURE__ */ D(p, {
+		fill: !0,
+		label: a("Site JavaScript"),
+		language: "javascript",
+		value: _.js ?? V.js,
+		onChange: (e) => y((t) => ({
+			...t,
+			js: e
+		})),
+		disabled: !B,
+		placeholder: "document.addEventListener('cms:alpine', (e) => …)"
+	}) : Q ? B ? /* @__PURE__ */ D(oe, {
+		path: Q,
+		edited: _.files[Q],
+		onEdit: (e) => U(Q, e)
+	}) : /* @__PURE__ */ D(m, {
+		tone: "neutral",
+		title: a("Editing code needs the “Edit Scripts and Stylesheets” permission.")
+	}) : Z ? /* @__PURE__ */ O("div", {
+		className: "space-y-1 text-sm",
+		children: [
+			/* @__PURE__ */ D("p", {
+				className: "m-0 font-mono text-ink",
+				children: Z.package
+			}),
+			/* @__PURE__ */ D("p", {
+				className: "m-0 font-mono text-xs text-muted",
+				children: Z.version
+			}),
+			B && /* @__PURE__ */ D(f, {
+				icon: "refresh",
+				loading: F === Z.import,
+				disabled: !!F,
+				onClick: () => void K(Z.import),
+				className: "!mt-4",
+				children: a("Update")
+			})
+		]
+	}) : u.data && l.data ? /* @__PURE__ */ D(ne, {}) : null;
+	return /* @__PURE__ */ O("div", {
+		className: "flex h-full flex-col",
+		children: [
+			/* @__PURE__ */ D(b, {
+				divided: !0,
+				crumbs: [{
+					label: a("Code"),
+					icon: "code",
+					to: L.file ? "/code" : void 0
+				}, ...$ ? [{ label: $ }] : []],
+				actions: he.length > 0 && /* @__PURE__ */ D(te, {
+					align: "end",
+					trigger: /* @__PURE__ */ D(ee, {
+						icon: "more",
+						size: "sm",
+						label: a("File Actions")
+					}),
+					items: he
+				})
+			}),
+			/* @__PURE__ */ D(re, {
+				dirty: H,
+				saving: T,
+				error: j ? j.refused ? a("The CSS was not saved") : j.message : null,
+				onSave: () => void le(),
+				onDiscard: () => {
+					y(k), P(null);
+				}
+			}),
+			!B && /* @__PURE__ */ D(m, {
+				tone: "neutral",
+				className: "mx-4 mb-2",
+				title: a("Editing code needs the “Edit Scripts and Stylesheets” permission.")
+			}),
+			j?.refused && /* @__PURE__ */ D(m, {
+				tone: "danger",
+				className: "mx-4 mb-2",
+				title: a("Tailwind refused the CSS"),
+				onDismiss: () => P(null),
+				children: j.message
+			}),
+			/* @__PURE__ */ O("div", {
+				className: "grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]",
+				children: [/* @__PURE__ */ D("div", {
+					className: x("min-h-0 overflow-y-auto border-border pt-3 md:border-r", L.file && "max-md:hidden"),
+					children: me
+				}), /* @__PURE__ */ D("div", {
+					className: x("flex min-h-0 min-w-0 flex-col p-4", !L.file && "max-md:hidden"),
+					children: ge
+				})]
+			})
+		]
+	});
+}
+var M = () => /* @__PURE__ */ O("div", {
+	className: "space-y-2 py-2 pl-2",
+	children: [/* @__PURE__ */ D(_, { className: "h-3 w-32" }), /* @__PURE__ */ D(_, { className: "h-3 w-24" })]
+});
+function N({ label: e, onAdd: t, busy: n }) {
+	return n ? /* @__PURE__ */ D("span", {
+		role: "status",
+		"aria-label": a("Working…"),
+		className: "grid size-6 place-items-center text-faint",
+		children: /* @__PURE__ */ D(v, { size: 14 })
+	}) : /* @__PURE__ */ D(y, {
+		content: e,
+		children: /* @__PURE__ */ D(ee, {
+			icon: "plus",
+			size: "xs",
+			label: e,
+			title: void 0,
+			onClick: t
+		})
+	});
+}
+function oe({ path: e, edited: t, onEdit: n }) {
+	let r = o("styling-code/get", { path: e }, {
+		enabled: t === void 0,
+		staleTime: 0
+	});
+	return r.isError ? /* @__PURE__ */ D(h, {
+		compact: !0,
+		onRetry: () => void r.refetch(),
+		retrying: r.isRefetching
+	}) : t === void 0 && !r.data ? /* @__PURE__ */ D(_, { className: "h-full w-full rounded-md" }) : /* @__PURE__ */ D(p, {
+		fill: !0,
+		label: e,
+		language: e.endsWith(".css") ? "css" : "javascript",
+		value: t ?? r.data?.contents ?? "",
+		onChange: n
+	}, e);
+}
+function se({ css: e, onChange: t, disabled: n }) {
+	let r = l(() => new T(e), [e]), i = l(() => r.extra(), [r]), [o, s] = d(i), f = u(i);
+	return c(() => {
+		i !== f.current && (f.current = i, s(i));
+	}, [i]), /* @__PURE__ */ D(p, {
+		fill: !0,
+		label: a("Site CSS"),
+		language: "tailwind",
+		placeholder: ".hero-title { text-wrap: balance; }",
+		value: o,
+		disabled: n,
+		onChange: (e) => {
+			if (s(e), !E(e)) return;
+			let n = r.setExtra(e);
+			f.current = n.extra(), t(n.css);
+		}
+	});
+}
+export { j as default };
