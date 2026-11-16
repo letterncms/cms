@@ -1,12 +1,9 @@
-import { Link, panelsFor, registry, t, useLocation, useManifestIfLoaded, useScreenContext, useTab } from '@letterncms/sdk'
-import { Fragment, Suspense, createContext, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { panelsFor, registry, t, useLocation, useManifestIfLoaded, useScreenContext, useTab } from '@letterncms/sdk'
+import { Suspense, createContext, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from './cn'
-import { Icon } from './Icon'
-import { homedSettings, noteParent, placeAt, roomAt, roomHome, wayBack } from './place'
-import { WorkspaceContext } from './WorkspaceContext'
+import { homedSettings, noteParent, placeAt, wayBack } from './place'
 import { Tabs } from './Segmented'
-import { Tooltip } from './Tooltip'
 import { Spinner } from './Spinner'
 
 export interface Crumb {
@@ -16,26 +13,17 @@ export interface Crumb {
 }
 
 /**
- * Sticky 48px bar at the top of every screen, its one header: where you are on the left,
- * what can be done on the right. `crumbs` lead to the screen; the last one is the screen
- * itself, its name in ink. On a phone only that last one shows, behind a way back to the crumb before it.
- * A screen about one thing has `back` (its list), which returns to where it was opened
- * from in this visit when that was elsewhere; on a screen with a state of the sidebar,
- * the way back is the one by the sidebar button, so `back` shows none of its own
- * (and on a phone that one leads to the crumb before the screen).
+ * Sticky 48px bar at the top of every screen, its one header: the screen's name on the left,
+ * what can be done on the right. The admin has one way back, beside the sidebar button, and it
+ * goes up one level at a time: this bar names the screen and leads nowhere itself.
+ * `crumbs` lead to the screen: the last one is the screen itself, named here; the one before it
+ * with a `to` is the level above, where the way back goes. A screen about one thing has `back`
+ * (its list) instead, which returns to where it was opened from in this visit when that was elsewhere.
  * `title` stands in the middle of the window (an editor's document). Over panes that scroll on their own
  * (a panel beside a preview), `divided` keeps the line under it, as a scrolled screen has.
  */
-export function Topbar({ crumbs: own = [], back, title, actions, children, className, slot, divided }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void; divided?: boolean }) {
+export function Topbar({ crumbs = [], back, title, actions, children, className, slot, divided }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void; divided?: boolean }) {
   const manifest = useManifestIfLoaded()
-  const { path } = useLocation()
-  // A screen of a room (settings, the design) says so first, on every one of its screens; it leads where the room opens, never through a redirect.
-  const inRoom = manifest ? roomAt(manifest, path) : undefined
-  const home = manifest && inRoom ? roomHome(manifest, inRoom.id) : undefined
-  // A screen of the room's own that it opens on (the design's: the site) is the room itself, and names itself.
-  // A screen with its own way back (an editor, a style in its group) leads up by it: the room is not named after it.
-  const room = inRoom && !back && !(home === path && manifest && !placeAt(manifest.nav, path)) ? inRoom : undefined
-  const crumbs = room ? [{ label: room.label, to: home === path ? undefined : home, icon: undefined }, ...own.map((c) => ({ ...c, icon: undefined }))] : own
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
   // An editor's document (`title`) names the screen before its crumbs do: "Home", not "Pages".
@@ -44,69 +32,21 @@ export function Topbar({ crumbs: own = [], back, title, actions, children, class
   // What every screen's bar has, after the screen's own actions: the chat is always last, at the edge it opens from.
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const ends = panelsFor('topbar.end', {})
-  const claimed = useContext(WorkspaceContext)?.sidebar?.claimed
+  // The level above, for the one way back: the screen's own `back`, else the crumb before it.
   const way = back && manifest ? wayBack(manifest, back) : back
-  // A phone shows the screen's own crumb only, so the one before it is a way back there. The room itself is no screen to go back to.
-  const before = crumbs.slice(room ? 1 : 0, -1).reverse().find((c) => c.to)
-  // Where the sidebar button has a way back beside it (a room, a state of the sidebar), that one leads there: never two chevrons.
-  const shellBack = !!claimed || !!inRoom
-  // In a room, a screen's own way back is that one on a phone.
-  const upTo = before?.to ?? (inRoom && way ? way.to : undefined)
-  const upLabel = firstText(before?.label) ?? (inRoom && way ? way.label : undefined)
+  const before = crumbs.slice(0, -1).reverse().find((c) => c.to)
+  const upTo = way?.to ?? before?.to
+  const upLabel = way?.label ?? firstText(before?.label)
   useEffect(() => {
-    if (!shellBack || !upTo || !upLabel) return
+    if (!upTo || !upLabel) return
     noteParent({ to: upTo, label: upLabel })
     return () => noteParent(null)
-  }, [shellBack, upTo, upLabel])
-  const ownBack = way && !claimed
+  }, [upTo, upLabel])
   return (
     <header data-divided={divided || undefined} className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-4', className)}>
       <div className="flex min-w-0 items-center gap-3 max-sm:gap-1">
-        {ownBack && (
-          // Before the screen's own name it is the arrow alone, "‹ Heading 1"; before nothing (an editor's document is named in the middle) it says where it leads.
-          own.length > 0 ? (
-            // Its arrow stands where a page's first crumb begins, so the name sits close beside it, as it does in the sidebar's way back.
-            <Tooltip content={t('Back to {label}', { label: way.label })} side="bottom">
-              <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className={cn('cms-touch -ml-0.5 -mr-3.5 flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline transition-colors hover:bg-hover hover:text-ink', inRoom && 'max-sm:hidden')}>
-                <Icon name="chevron-left" size={16} />
-              </Link>
-            </Tooltip>
-          ) : (
-            <Link to={way.to} aria-label={t('Back to {label}', { label: way.label })} className="cms-touch flex h-7 min-w-0 shrink items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted no-underline transition-colors hover:bg-hover hover:text-text max-sm:px-1.5">
-              <Icon name="chevron-left" size={14} className="shrink-0 max-sm:size-4" />
-              <span className="truncate max-sm:hidden">{way.label}</span>
-            </Link>
-          )
-        )}
-        {!ownBack && !shellBack && upTo && upLabel && (
-          <Link to={upTo} aria-label={t('Back to {label}', { label: upLabel })} className="cms-touch ml-1 flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline transition-colors hover:bg-hover hover:text-ink sm:hidden">
-            {/* The weight of the sidebar button beside it. */}
-            <Icon name="chevron-left" size={16} />
-          </Link>
-        )}
-        {crumbs.length > 0 && (
-          <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1.5 text-sm">
-            {crumbs.map((c, i) => {
-              // The screen itself; on a phone the only crumb that shows, and whole: never two cut short.
-              const here = i === crumbs.length - 1
-              return (
-                <Fragment key={i}>
-                  {i > 0 && <span aria-hidden className="shrink-0 text-faint max-sm:hidden">/</span>}
-                  {c.to && !here ? (
-                    <Link to={c.to} className="flex min-w-0 items-center gap-1.5 rounded-xs px-1 py-0.5 text-muted no-underline hover:bg-hover hover:text-text max-sm:hidden">
-                      {c.icon && <Icon name={c.icon} size={14} className="shrink-0" />}
-                      <span className="truncate">{c.label}</span>
-                    </Link>
-                  ) : (
-                    <span aria-current={here ? 'page' : undefined} className={cn('flex min-w-0 items-center gap-1.5 px-1', here ? 'font-semibold text-ink' : 'text-muted max-sm:hidden')}>
-                      {c.icon && <Icon name={c.icon} size={14} className="shrink-0 text-muted" />}
-                      <span className="truncate">{c.label}</span>
-                    </span>
-                  )}
-                </Fragment>
-              )
-            })}
-          </nav>
+        {last && (
+          <h1 className="m-0 min-w-0 truncate px-1 text-sm font-semibold text-ink">{last.label}</h1>
         )}
         {children}
       </div>

@@ -3,13 +3,13 @@ import { Pressable } from '../ui/Pressable'
 import { DndContext } from '../ui/dnd'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { boot, events, Link, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type NavItem, type Room } from '@letterncms/sdk'
+import { boot, events, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type NavItem, type Room } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarGroup, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
 import { SiteMenu } from './SiteMenu'
 import { setThemePreference, useThemePreference } from '../ui/theme'
 import { isPinned, leaveRoom, movePinned, openRoom, PINNED, remember, setPinned, SETTINGS_SHORTCUT, unpin, wayOut } from './sidebarStore'
-import { parentWay, placeAt, roomHome, SETTINGS, subscribeParent, wayBack } from '../ui/place'
+import { parentWay, placeAt, roomHome, SETTINGS, subscribeParent, wayBack, type Way } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {
@@ -109,6 +109,7 @@ function Row({ item, active, sortable, actions, onNavigate }: { item: NavItem; a
 /** Where everyone starts (the home screens, a row into each room), then what this person pinned from the rooms. */
 function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; onNavigate?: () => void; active?: string }) {
   const manifest = useManifest()
+  const up = useWayUp({}) !== null
   const layout = manifest.sidebar
   const items = new Map(manifest.nav.map((n) => [n.id, n]))
   const main = layout.sections.find((s) => s.id !== PINNED)?.items.filter((id) => items.has(id)) ?? []
@@ -121,7 +122,8 @@ function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; o
     <>
       {/* The shell's sidebar button holds the first place in the row, in every state. */}
       <div className="flex h-12 shrink-0 items-center gap-1 pl-10 pr-2">
-        <SiteMenu />
+        {/* Below the top, the way back holds this place (see StateBack). */}
+        {up ? <span className="flex-1" /> : <SiteMenu />}
         <Tooltip content={t('Search')} shortcut="mod+k" side="bottom">
           <IconButton icon="search" label={t('Search')} title={undefined} size="sm" onClick={onSearch} />
         </Tooltip>
@@ -261,41 +263,39 @@ function StateTitle({ children }: { children: ReactNode }) {
 }
 
 /**
- * The way back from a state of the sidebar. It sits by the sidebar button, in the same place with the sidebar in or out,
- * where the main state has the site's name. It returns to where you came from: out of a room, the last screen before
- * it; from a screen's own sidebar, the screen it was opened from (else the one it names, its list).
+ * The level above the screen on view, where the admin's one way back leads: a screen's own sidebar returns to the
+ * screen it was opened from (else its list); a screen under another (a page's editor, a class in its group) to that
+ * one; the first screen of a room out of the room, to the last place before it. None at the top.
+ */
+export function useWayUp({ own, room }: Pick<SidebarProps, 'own' | 'room'>): Way | null {
+  const manifest = useManifest()
+  const parent = useSyncExternalStore(subscribeParent, parentWay)
+  if (own) return wayBack(manifest, { to: own.backTo, label: own.backLabel })
+  if (parent) return parent
+  if (!room) return null
+  const out = wayOut(room.id)
+  return { to: out, label: placeAt(manifest.nav, out.split('?')[0])?.label ?? t('Dashboard') }
+}
+
+/**
+ * The admin's one way back, beside the sidebar button, in the same place with the sidebar in or out, on every screen
+ * with a level above it. It always goes up one level, and always says "Back": the tooltip says where.
  */
 export function StateBack({ own, onNavigate, drawer, room }: Pick<SidebarProps, 'own' | 'onNavigate' | 'drawer' | 'room'>) {
-  const manifest = useManifest()
-  // On a phone the top bar shows the screen's own crumb only: back is then one screen up, to the crumb before it.
-  const parent = useSyncExternalStore(subscribeParent, parentWay)
-  if (!own && !room) return null
-  const out = wayOut(room?.id)
-  const way = own ? wayBack(manifest, { to: own.backTo, label: own.backLabel }) : { to: out, label: placeAt(manifest.nav, out.split('?')[0])?.label ?? t('Dashboard') }
-  const label = way.label
-  const back = () => {
-    if (own) navigate(way.to)
-    else leaveRoom()
-    onNavigate?.()
-  }
-  const up = parent && !drawer ? parent : null
-  const button = 'cms-touch flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text'
+  const way = useWayUp({ own, room })
+  if (!way) return null
+  const label = t('Back to {label}', { label: way.label })
   return (
-    <>
-      <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
-        <Pressable aria-label={t('Back to {label}', { label })} onClick={back} className={cn(button, up && 'max-sm:hidden')}>
-          <Icon name="chevron-left" size={14} className={cn('shrink-0', !drawer && 'max-sm:size-4')} />
-          {/* Always "Back", wherever it leads: the tooltip says where. */}
-          <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{t('Back')}</span>
-        </Pressable>
-      </Tooltip>
-      {up && (
-        <Link to={up.to} aria-label={t('Back to {label}', { label: up.label })} className="cms-touch flex size-7 shrink-0 items-center justify-center rounded-sm text-muted no-underline outline-offset-[-2px] transition-colors hover:bg-hover hover:text-ink sm:hidden">
-          {/* The weight of the sidebar button beside it. */}
-          <Icon name="chevron-left" size={16} />
-        </Link>
-      )}
-    </>
+    <Tooltip content={label} shortcut={own ? undefined : 'esc'} side="bottom">
+      <Pressable
+        aria-label={label}
+        onClick={() => { navigate(way.to); onNavigate?.() }}
+        className="cms-touch flex h-7 min-w-0 items-center gap-1 rounded-sm pl-1 pr-2 text-sm text-muted outline-offset-[-2px] transition-colors hover:bg-hover hover:text-text"
+      >
+        <Icon name="chevron-left" size={14} className={cn('shrink-0', !drawer && 'max-sm:size-4')} />
+        <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{t('Back')}</span>
+      </Pressable>
+    </Tooltip>
   )
 }
 
