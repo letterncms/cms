@@ -160,10 +160,11 @@ test('the colour picker lists the site\'s names before the palette', () => {
   assert.deepEqual(lightDark('#fff'), { light: '#fff' })
 })
 
-test('the spacing chips are the common steps and the theme\'s named spaces', () => {
+test('the spacing chips are the scale in pixels and the theme\'s named spaces apart', () => {
   const choices = spacingChoices(engine, engine.tokens('spacing'))
-  assert.deepEqual(choices.map((choice: { label: string }) => choice.label), ['0', '1', '2', '3', '4', '6', '8', '12', '16', '24', 'gutter'])
-  assert.equal(choices[4].value, '16px')
-  assert.equal(choices.at(-1).value, 'var(--spacing-gutter)')
-  assert.deepEqual(spacingChoices(null, []), [])
+  assert.deepEqual(choices.scale.map((choice) => choice.label), ['0', '4', '8', '12', '16', '24', '32', '48', '64', '80', '96', '128'])
+  assert.equal(choices.scale[4].value, '16px')
+  assert.equal(choices.scale[4].title, '4 · 16px')
+  assert.deepEqual(choices.named.map((choice) => [choice.label, choice.value]), [['gutter', 'var(--spacing-gutter)']])
+  assert.deepEqual(spacingChoices(null, []), { scale: [], named: [] })
 })
