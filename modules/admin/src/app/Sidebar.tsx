@@ -9,7 +9,7 @@ import { Avatar, Icon, IconButton, Menu, Popover, SidebarGroup, SidebarRow, Tool
 import { SiteMenu } from './SiteMenu'
 import { setThemePreference, useThemePreference } from '../ui/theme'
 import { isPinned, leaveRoom, movePinned, openRoom, PINNED, remember, setPinned, SETTINGS_SHORTCUT, unpin, wayOut } from './sidebarStore'
-import { parentWay, placeAt, roomHome, SETTINGS, subscribeParent, wayBack, type Way } from '../ui/place'
+import { parentWay, placeAt, roomHome, SETTINGS, subscribeParent, type Way } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
 export interface OwnSidebar {
@@ -263,14 +263,14 @@ function StateTitle({ children }: { children: ReactNode }) {
 }
 
 /**
- * The level above the screen on view, where the admin's one way back leads: a screen's own sidebar returns to the
- * screen it was opened from (else its list); a screen under another (a page's editor, a class in its group) to that
- * one; the first screen of a room out of the room, to the last place before it. None at the top.
+ * The level above the screen on view, where the admin's one way back leads: the level before it in its top bar's
+ * trail (a page's editor: its list; a class: its group), or what a screen's own sidebar names; from the first level
+ * of a room, out of the room, to the last place before it. Never by history: one level up, always. None at the top.
  */
 export function useWayUp({ own, room }: Pick<SidebarProps, 'own' | 'room'>): Way | null {
   const manifest = useManifest()
   const parent = useSyncExternalStore(subscribeParent, parentWay)
-  if (own) return wayBack(manifest, { to: own.backTo, label: own.backLabel })
+  if (own) return { to: own.backTo, label: own.backLabel }
   if (parent) return parent
   if (!room) return null
   const out = wayOut(room.id)

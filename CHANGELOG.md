@@ -4,6 +4,7 @@
 
 ### Changed
 
+- **Back follows the trail.** The top bar shows where you are again, each level a link: *Design / Classes / Elements / Heading 1*. **Back**, in the top-left corner, or `Esc`, goes to the level just before the screen's name, so from a class you reach its group and then Classes, never straight to the Dashboard. A page opened from the Dashboard goes back to its list, like any other.
 - **Patterns are components that aren't synced.** A component has a **Synced** setting, on by default: a synced one is placed as itself and changes everywhere it is used; one that isn't is inserted as a copy of its blocks, to change freely. Properties belong to synced components. Components keep a category and keywords, and are listed by category with the usual ones first.
 - **The inserter's tabs are Blocks and Components.** Components shows every one as your site draws it, by category; search finds blocks and components together.
 - **Make a Component asks whether it is synced.** On, the blocks you selected become the component; off, a copy is saved to start from and the page keeps its blocks. A new, empty page offers **Start From a Component**: the whole pages among your components that aren't synced.

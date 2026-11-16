@@ -375,16 +375,16 @@ function itemLabel(sheet: Stylesheet, group: string, key: string): string | null
 }
 
 /**
- * Where the styles are, for the bar at the top of the page: a group says its name with the way back to every group,
- * a style its own with the way back to its group. Null on the list of groups, or for a place there is no longer.
+ * Where a group or a class stands, for the bar at the top of the page: each level a crumb, Classes, its group, the
+ * class. Null on the list of groups, or for a place there is no longer.
  */
-export function stylesPlace(sheet: Stylesheet, [group, key]: string[]): { title: string; back: { to: string; label: string } } | null {
+export function stylesPlace(sheet: Stylesheet, [group, key]: string[]): { label: string; to?: string }[] | null {
   if (!group) return null
   const label = groupLabel(sheet, group)
   if (!label) return null
-  if (!key) return { title: label, back: { to: stylePath(), label: t('Classes') } }
+  if (!key) return [{ label: t('Classes'), to: stylePath() }, { label }]
   const title = itemLabel(sheet, group, key)
-  return title ? { title, back: { to: stylePath(group), label } } : null
+  return title ? [{ label: t('Classes'), to: stylePath() }, { label, to: stylePath(group) }, { label: title }] : null
 }
 
 /** A name for a group: any words, but none the site was given. */

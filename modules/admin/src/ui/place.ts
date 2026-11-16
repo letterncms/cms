@@ -40,34 +40,6 @@ export function roomHome(manifest: Manifest, id: string): string | undefined {
 export const SETTINGS = 'settings'
 
 /**
- * Where the screen on view was opened from: the last place before it that was
- * another screen (another route, not another entry in the same editor), for ways
- * back that return to where someone actually came from. Redirects (a replace)
- * leave no trace, so a way back never leads into one.
- */
-const trail = { current: null as { key: string; route: string } | null, from: null as string | null }
-
-/** For the admin: called with every location the admin shows, and the route that draws it. */
-export function noteLocation(key: string, route: string, action: 'push' | 'replace' | 'pop') {
-  const current = trail.current
-  // Another query, or another entry on the same screen, is still this screen; a redirect takes the place of what it redirects.
-  if (current && current.route !== route && action !== 'replace') trail.from = current.key
-  trail.current = { key, route }
-}
-
-/** The path (and query) the screen on view was opened from in this visit, if any. */
-export function cameFrom(): string | null {
-  return trail.from
-}
-
-/** A way back: to where the screen was opened from, when that was another place in this visit; otherwise to `fallback` (its list, say). */
-export function wayBack(manifest: Manifest, fallback: { to: string; label: string }): { to: string; label: string } {
-  const from = cameFrom()
-  const item = from ? placeAt(manifest.nav, from.split('?')[0]) : undefined
-  return from && item ? { to: from, label: item.label } : fallback
-}
-
-/**
  * The screen above the one on view (its `back`, else its parent crumb): a screen's top bar says it,
  * and the admin's one way back, by the sidebar button, leads there.
  */

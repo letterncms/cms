@@ -1,8 +1,8 @@
-import { panelsFor, registry, t, useLocation, useManifestIfLoaded, useScreenContext, useTab } from '@letterncms/sdk'
-import { Suspense, createContext, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Link, panelsFor, registry, t, useLocation, useManifestIfLoaded, useScreenContext, useTab } from '@letterncms/sdk'
+import { Fragment, Suspense, createContext, isValidElement, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from './cn'
-import { homedSettings, noteParent, placeAt, wayBack } from './place'
+import { homedSettings, noteParent, placeAt, roomAt } from './place'
 import { Tabs } from './Segmented'
 import { Spinner } from './Spinner'
 
@@ -13,17 +13,18 @@ export interface Crumb {
 }
 
 /**
- * Sticky 48px bar at the top of every screen, its one header: the screen's name on the left,
- * what can be done on the right. The admin has one way back, beside the sidebar button, and it
- * goes up one level at a time: this bar names the screen and leads nowhere itself.
- * `crumbs` lead to the screen: the last one is the screen itself, named here; the one before it
- * with a `to` is the level above, where the way back goes. A screen about one thing has `back`
- * (its list) instead, which returns to where it was opened from in this visit when that was elsewhere.
- * `title` stands in the middle of the window (an editor's document). Over panes that scroll on their own
- * (a panel beside a preview), `divided` keeps the line under it, as a scrolled screen has.
+ * Sticky 48px bar at the top of every screen, its one header: where the screen stands on the left, what can be
+ * done on the right. The trail names each level down to the screen: the room it is in, then its `crumbs`, the
+ * last one the screen itself in ink. The admin's one way back, beside the sidebar button, goes to the level just
+ * before the screen in this trail, so the trail always says where it leads; a level can also be clicked.
+ * A screen about one thing gives `back` (its list) where its crumbs don't already name it.
+ * `title` stands in the middle of the window (an editor's document): the trail then ends with the level above it.
+ * On a phone only the screen's own name shows. Over panes that scroll on their own (a panel beside a preview),
+ * `divided` keeps the line under it, as a scrolled screen has.
  */
 export function Topbar({ crumbs = [], back, title, actions, children, className, slot, divided }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; title?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; slot?: (el: HTMLElement | null) => void; divided?: boolean }) {
   const manifest = useManifestIfLoaded()
+  const { path } = useLocation()
   // The last crumb names the screen, for whatever works alongside it.
   const last = crumbs[crumbs.length - 1]
   // An editor's document (`title`) names the screen before its crumbs do: "Home", not "Pages".
@@ -32,11 +33,17 @@ export function Topbar({ crumbs = [], back, title, actions, children, className,
   // What every screen's bar has, after the screen's own actions: the chat is always last, at the edge it opens from.
   useSyncExternalStore(registry.panels.subscribe, registry.panels.version)
   const ends = panelsFor('topbar.end', {})
-  // The level above, for the one way back: the screen's own `back`, else the crumb before it.
-  const way = back && manifest ? wayBack(manifest, back) : back
-  const before = crumbs.slice(0, -1).reverse().find((c) => c.to)
-  const upTo = way?.to ?? before?.to
-  const upLabel = way?.label ?? firstText(before?.label)
+  // The levels above the screen: its crumbs before its name (all of them under a document's title), and its list when they don't name it.
+  const above = title ? crumbs : crumbs.slice(0, -1)
+  const levels: Crumb[] = back && !above.some((c) => c.to === back.to) ? [...above, back] : above
+  // A room (Design, Settings) leads the trail, as its name heads the sidebar; it is no screen of its own to open.
+  const room = manifest ? roomAt(manifest, path) : undefined
+  const trail: Crumb[] = room && firstText(crumbs[0]?.label) !== room.label ? [{ label: room.label }, ...levels] : levels
+  const here = title ? undefined : last
+  // The way back goes to the level just before the screen.
+  const up = [...levels].reverse().find((c) => c.to)
+  const upTo = up?.to
+  const upLabel = firstText(up?.label)
   useEffect(() => {
     if (!upTo || !upLabel) return
     noteParent({ to: upTo, label: upLabel })
@@ -45,8 +52,25 @@ export function Topbar({ crumbs = [], back, title, actions, children, className,
   return (
     <header data-divided={divided || undefined} className={cn('cms-topbar sticky top-0 z-sticky flex h-12 shrink-0 items-center gap-3 bg-bg pr-3 max-md:pr-4', className)}>
       <div className="flex min-w-0 items-center gap-3 max-sm:gap-1">
-        {last && (
-          <h1 className="m-0 min-w-0 truncate px-1 text-sm font-semibold text-ink">{last.label}</h1>
+        {(trail.length > 0 || here) && (
+          <nav aria-label={t('Breadcrumb')} className="flex min-w-0 items-center gap-1.5 text-sm">
+            {trail.map((c, i) => (
+              <Fragment key={i}>
+                {i > 0 && <span aria-hidden className="shrink-0 text-faint max-sm:hidden">/</span>}
+                {c.to ? (
+                  <Link to={c.to} className="min-w-0 truncate rounded-xs px-1 py-0.5 text-muted no-underline hover:bg-hover hover:text-text max-sm:hidden">{c.label}</Link>
+                ) : (
+                  <span className="min-w-0 truncate px-1 text-muted max-sm:hidden">{c.label}</span>
+                )}
+              </Fragment>
+            ))}
+            {here && (
+              <>
+                {trail.length > 0 && <span aria-hidden className="shrink-0 text-faint max-sm:hidden">/</span>}
+                <h1 aria-current="page" className="m-0 min-w-0 shrink-0 truncate px-1 text-sm font-semibold text-ink max-sm:shrink">{here.label}</h1>
+              </>
+            )}
+          </nav>
         )}
         {children}
       </div>
