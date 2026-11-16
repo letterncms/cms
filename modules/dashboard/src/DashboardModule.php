@@ -29,7 +29,7 @@ final class DashboardModule extends Plugin
         $cms = $this->cms();
 
         $cms->admin()->arrange('dashboard', Dashboard::class);
-        $cms->admin()->nav('dashboard', ['label' => 'Dashboard', 'path' => '/', 'icon' => 'grid', 'section' => 'main', 'order' => 0]);
+        $cms->admin()->nav('dashboard', ['label' => 'Dashboard', 'path' => '/', 'icon' => 'gauge', 'section' => 'main', 'order' => 0]);
         $cms->admin()->widget('shortcuts', ['label' => 'Shortcuts', 'description' => 'The keys worth knowing.', 'icon' => 'keyboard', 'order' => 90]);
         $cms->admin()->command('customize-home', ['label' => 'Customize Dashboard', 'icon' => 'layout', 'path' => '/?customize=1', 'keywords' => ['dashboard', 'widgets', 'arrange']]);
 

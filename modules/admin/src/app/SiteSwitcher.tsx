@@ -46,7 +46,7 @@ export function SiteSwitcher() {
           </Pressable>
         }
         items={[
-          { label: t('Dashboard'), icon: 'home', onSelect: () => navigate('/') },
+          { label: t('Dashboard'), icon: 'gauge', onSelect: () => navigate('/') },
           { label: t('Open Site'), icon: 'external', onSelect: () => window.open(site.url || '/', '_blank', 'noopener') },
           sites.length > 0 && { separator: true, label: '' },
           sites.length > 0 && { label: t('Sites'), heading: true },
