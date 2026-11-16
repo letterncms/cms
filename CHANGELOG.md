@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.41.0 (2026-11-16)
+
 ### Changed
 
 - **The page builder keeps up with you.** Writing, changing a style, and duplicating, deleting or undoing blocks are about three times faster on a large page: each letter shows at once, while the outline and the block's settings follow a moment later. The page is drawn again on the server when you pause, not for every letter.
