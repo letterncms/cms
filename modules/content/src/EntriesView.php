@@ -92,7 +92,8 @@ final class EntriesView
                     'confirm' => ['title' => ['one' => __('Delete {count} entry?'), 'other' => __('Delete {count} entries?')], 'text' => __('This cannot be undone.'), 'confirm' => __('Delete'), 'danger' => true],
                     'success' => ['one' => __('Deleted {count} entry'), 'other' => __('Deleted {count} entries')]],
             ],
-            ...($builtin ? ['selectable' => '{row.version}'] : []),
+            // What is done to many is done to the site's own pages: a feature's goes back to its standard version from its own menu.
+            ...($builtin ? ['selectable' => '{row.group} is empty'] : []),
             'empty' => ['icon' => $collection->icon, 'title' => __('No :items yet', ['items' => __($collection->title)])],
             'defaultView' => $defaultView = in_array($collection->defaultView, ['grid', 'calendar'], true) ? $collection->defaultView : 'table',
             // The person's saved views of this list, beside Display: what narrows the list is what a view can keep.

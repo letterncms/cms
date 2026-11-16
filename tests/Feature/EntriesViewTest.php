@@ -143,7 +143,7 @@ final class EntriesViewTest extends TestCase
         $this->assertTrue($records['source']['input']['builtin']);
         $this->assertTrue($records['tree']['source']['input']['builtin']);
         $this->assertSame('{row.group}', $records['tree']['fixed'], 'A feature\'s page stays where its address puts it');
-        $this->assertSame('{row.version}', $records['selectable'], 'Only an entry is picked for what is done to many');
+        $this->assertSame('{row.group} is empty', $records['selectable'], 'Only the site\'s own pages are picked for what is done to many, not a feature\'s, even made its own');
         // A page of the site's opens; a standard version becomes the site's own when it opens.
         $this->assertSame(['/content/{row.collection}/{row.id}', 'pages/customize'], [$records['open'][0]['to'], $records['open'][1]['ability']]);
         $this->assertSame(['View on Site', 'Edit', 'Edit', 'Duplicate', 'Publish', 'Unpublish', 'Copy URL', 'Delete', 'Use Standard Version'], array_column($records['actions'], 'label'));

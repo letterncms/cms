@@ -15,6 +15,10 @@
 - **Breaking.** The `blocks.pattern-sources` filter: `blocks.component-sources` reads `<handle>.md` (front matter and Block Markdown) as well as `<handle>.json`.
 - **Breaking.** The `/__pattern/<handle>` preview: `/__component/<handle>` draws a component alone.
 
+### Fixed
+
+- In **Pages**, a page that comes with a feature or plugin can't be selected for actions on several pages, also once you've made it your own: Delete there would quietly have put back its standard version. Going back to the standard version stays in its own ⋯ menu.
+
 ## 0.48.0 (2026-11-16)
 
 ### Added

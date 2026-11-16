@@ -154,7 +154,7 @@ function entries(summary, def, manifest) {
       ...(can.delete ? [{ label: 'Delete', icon: 'trash', variant: 'danger', ability: 'entries/delete', input: entry, success: 'Deleted', ...site, confirm: { title: 'Delete “{row.title}”?', text: 'This cannot be undone.', confirm: 'Delete', danger: true } }] : []),
       ...(builtin ? [{ label: 'Use Standard Version', icon: 'undo', variant: 'danger', ability: 'entries/delete', input: entry, success: 'Back to the standard version', when: '{row.restorable}', confirm: { title: 'Use the standard “{row.title}”?', text: 'Your version and its history are deleted. The page shows what comes with the feature.', confirm: 'Use Standard Version', danger: true } }] : []),
     ],
-    ...(builtin ? { selectable: '{row.version}' } : {}),
+    ...(builtin ? { selectable: '{row.group} is empty' } : {}),
     bulk: [
       ...(can.publish ? [
         { label: 'Publish', each: true, ability: 'entries/publish', input: entry, some: '{row.displayStatus} is draft, changed', success: { one: 'Published {count} entry', other: 'Published {count} entries' } },
