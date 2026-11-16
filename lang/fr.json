@@ -71,7 +71,6 @@
   "Basic": "Base",
   "Blue": "Bleu",
   "Browser Language": "Langue du navigateur",
-  "Building Blocks": "Blocs de construction",
   "Calendar": "Calendrier",
   "Can’t confirm this update list is current. Check for updates again.": "Impossible de confirmer que cette liste de mises à jour est à jour. Vérifiez à nouveau.",
   "Can’t write the release pointer. Edit :file by FTP and run the update from Modules.": "Impossible d’écrire le pointeur de version. Modifiez :file par FTP et lancez la mise à jour depuis Modules.",

@@ -25,18 +25,21 @@ export interface Editing {
 /** A row's ⋯: the kit's reveal, there on touch and on hover or focus where a pointer hovers. */
 export const rowAction = 'cms-reveal shrink-0'
 
+/** A row of a list: no line between rows, a soft fill under the one pointed at, its controls in one line. */
+export const ROW = 'cms-reveal-row -mx-2 rounded-sm px-2 transition-colors duration-base hover:bg-hover'
+
 /** The place a row's ⋯ takes, kept where a row has none, so every row's control ends at the same line. */
 export const NoAction = () => <span className="size-6 shrink-0" />
 
 /**
- * A list of rows on hairlines, no card. A group that is its whole section has no title (the bar already
- * says it): the way to add is then a named button under the list.
+ * A list of rows under its title, no card and no lines: space sets the groups apart. A group that is its
+ * whole section has no title (the bar already says it): the way to add is then a named button under the list.
  */
 export function Group({ title, onAdd, addLabel, action, children }: { title?: string; onAdd?: () => void; addLabel?: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="mb-6">
+    <section className="mb-8">
       {title && (
-        <div className="flex h-9 items-center justify-between border-b border-border">
+        <div className="mb-1 flex h-9 items-center justify-between">
           <h3 className="m-0 text-xs font-semibold text-ink">{title}</h3>
           {action}
           {onAdd && addLabel && (
@@ -49,7 +52,7 @@ export function Group({ title, onAdd, addLabel, action, children }: { title?: st
       {children}
       {/* Without a title there is no head to hold a lone +: the way to add is a named button under the list. */}
       {!title && (action || (onAdd && addLabel)) && (
-        <div className="flex h-9 items-center border-t border-border">
+        <div className="flex h-9 items-center">
           {action ?? <Button variant="ghost" size="xs" icon="plus" onClick={onAdd} className="-ml-1.5 !px-1.5 !font-normal !text-muted hover:!text-ink">{addLabel}</Button>}
         </div>
       )}
@@ -79,11 +82,11 @@ export function Control({ handle, label, value, onChange, field, disabled, class
 export function TokenRow({ name, copy: copied = name, sample, after, below, wide, menu, children }: { name: string; copy?: string; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; menu?: MenuItemDef[]; children: ReactNode }) {
   const copy = () => void copyText(copied, { copied: t('Copied {reference}', { reference: copied }) })
   return (
-    <div className="cms-reveal-row group border-b border-border last:border-b-0">
+    <div className={cn(ROW, 'group')}>
       <div className="flex min-h-9 items-center gap-2 py-1">
         {sample !== undefined && <span className="grid w-7 shrink-0 place-items-center">{sample}</span>}
         <Tooltip content={t('Copy Name')}>
-          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference: copied })} className={cn('!justify-start !bg-transparent !px-0 text-left font-mono !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
+          <Button variant="ghost" size="xs" onClick={copy} aria-label={t('Copy {reference}', { reference: copied })} className={cn('!justify-start !bg-transparent !px-0 text-left !font-normal hover:text-ink', wide ? 'min-w-0 flex-1 shrink' : sample !== undefined ? 'w-[84px] max-sm:w-16' : 'w-[120px] max-sm:w-20')}>
             <span className="truncate">{name}</span>
           </Button>
         </Tooltip>
@@ -100,7 +103,7 @@ export function TokenRow({ name, copy: copied = name, sample, after, below, wide
 /** A row of a setting that has a label of its own instead of a name, in a value row's columns. */
 export function Setting({ label, action, children }: { label: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <div className="cms-reveal-row flex min-h-9 items-center gap-2 border-b border-border py-1 last:border-b-0">
+    <div className={cn(ROW, 'flex min-h-9 items-center gap-2 py-1')}>
       <span className="w-[120px] shrink-0 truncate text-xs text-text max-sm:w-20">{label}</span>
       <div className="flex w-60 min-w-0 shrink items-center max-lg:w-52 max-sm:w-auto max-sm:flex-1">{children}</div>
       <span className="min-w-0 flex-1 max-sm:hidden" />
@@ -112,7 +115,7 @@ export function Setting({ label, action, children }: { label: string; action?: R
 /** A row that leads to its own editor, which takes the list's place: a style, an element. Its name, then what it looks like. */
 export function OpenRow({ onOpen, label, sample, menu }: { onOpen: () => void; label: string; sample: ReactNode; menu?: ReactNode }) {
   return (
-    <div className="cms-reveal-row group flex items-center gap-2 border-b border-border py-1.5 last:border-b-0">
+    <div className={cn(ROW, 'group flex items-center gap-2 py-1.5')}>
       <Button variant="ghost" onClick={onOpen} className="!h-auto min-w-0 flex-1 shrink !justify-start !gap-3 !rounded-xs !bg-transparent !px-0 text-left !text-xs !font-normal focus-visible:!-outline-offset-2 hover:text-ink">
         <span className="w-28 shrink-0 truncate text-text max-sm:w-20">{label}</span>
         {sample}

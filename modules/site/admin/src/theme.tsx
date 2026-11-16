@@ -3,7 +3,7 @@ import { Button, Icon, IconButton, Menu, NEW_COLOR, Popover, Pressable, Tooltip,
 import { ColorPicker, PaletteGrid, SCHEME, SPACING_STEPS, SchemeTile, Swatch, lightDark, parseClass, schemesOf, useStyling, withVariants, type Engine, type Scheme, type Stylesheet } from '@letterncms/blocks'
 import { useState, type ReactNode } from 'react'
 import { AnimationSample, ShadowSample, familyOf, fallbackOf, fontStack, stackFor, type Fallback, type SiteFont } from './fields'
-import { Control, Group, NoAction, Setting, TokenRow, rowAction, type Editing } from './parts'
+import { Control, Group, NoAction, ROW, Setting, TokenRow, rowAction, type Editing } from './parts'
 
 /* The theme sections of the Styling page: every value of the theme, Tailwind's own and the site's, kind by kind.
    A value Tailwind or the CMS brings is always there: changed, it is written to the site's stylesheet, and Reset
@@ -250,7 +250,7 @@ function Schemes({ edit }: { edit: Editing }) {
               <SchemeTile size="card" background={drawn(scheme.background)} text={drawn(scheme.text)} />
               <div className="flex h-9 items-center gap-1.5">
                 <Tooltip content={t('Copy Name')}>
-                  <Button variant="ghost" size="xs" onClick={() => void copyText(scheme.name, { copied: t('Copied {reference}', { reference: scheme.name }) })} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !px-0 font-mono !font-normal hover:text-ink">
+                  <Button variant="ghost" size="xs" onClick={() => void copyText(scheme.name, { copied: t('Copied {reference}', { reference: scheme.name }) })} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !px-0 !font-normal hover:text-ink">
                     <span className="truncate">{scheme.key}</span>
                   </Button>
                 </Tooltip>
@@ -298,9 +298,9 @@ export function Colors({ edit }: { edit: Editing }) {
   const write = (row: Row, light: string, dark: string | undefined) => edit.change((sheet) => sheet.setVariable(row.name, dark && dark !== light ? `light-dark(${light}, ${dark})` : light))
   return (
     <>
-      <section className="mb-6">
+      <section className="mb-8">
         {/* The list's head names its columns, light and dark, over the swatches. */}
-        <div className="flex h-9 items-center gap-2 border-b border-border">
+        <div className="mb-1 flex h-9 items-center gap-2">
           <h3 className="m-0 min-w-0 flex-1 text-xs font-semibold text-ink">{kind.title}</h3>
           <span className="grid w-7 place-items-center text-faint" title={t('Light')}><Icon name="sun" size={13} /></span>
           <span className="grid w-7 place-items-center text-faint" title={t('Dark')}><Icon name="moon" size={13} /></span>
@@ -426,7 +426,7 @@ function ControlSizes({ edit }: { edit: Editing }) {
   const cell = 'w-24 shrink-0 max-sm:min-w-0 max-sm:flex-1'
   return (
     <Group title={t('Buttons and Fields')}>
-      <div className="flex min-h-8 items-center gap-2 border-b border-border text-2xs text-faint">
+      <div className="flex min-h-8 items-center gap-2 text-2xs text-faint">
         <span className="min-w-0 flex-1" />
         {parts.map(([part, label]) => <span key={part} className={cell}>{label}</span>)}
         <span className="size-6 shrink-0" />
@@ -435,7 +435,7 @@ function ControlSizes({ edit }: { edit: Editing }) {
         const names = parts.map(([part]) => `--control-${size}-${part}`)
         const written = names.some((name) => edit.sheet.variable(name) !== undefined)
         return (
-          <div key={size} className="cms-reveal-row flex min-h-9 items-center gap-2 border-b border-border py-1 last:border-b-0">
+          <div key={size} className={cn(ROW, 'flex min-h-9 items-center gap-2 py-1')}>
             <span className="min-w-0 flex-1 truncate text-xs text-text">{label}</span>
             {parts.map(([part, partLabel], i) => (
               <div key={part} className={cell}>

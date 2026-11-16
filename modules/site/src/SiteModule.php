@@ -944,11 +944,13 @@ final class SiteModule extends Plugin
     private function adminUi(): void
     {
         $admin = $this->cms()->admin();
-        $admin->nav('styling', ['label' => 'Styling', 'path' => '/styling', 'icon' => 'palette', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
+        $admin->nav('styling', ['label' => 'Styling', 'path' => '/styling', 'icon' => 'theme', 'section' => 'design', 'order' => 5, 'permission' => 'settings.manage']);
         // What a developer adds beside the design: its own CSS, scripts and libraries.
-        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'design', 'order' => 10, 'permission' => 'settings.manage']);
-        // A site is mostly a design: it sits with the styling, after what it brings (templates, components).
-        $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'design', 'order' => 90, 'permission' => 'settings.manage']);
+        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'design', 'order' => 60, 'permission' => 'settings.manage']);
+        // The design opens on the site itself, as visitors see it.
+        $admin->opens('design', '/design');
+        // A whole site to switch to, import or export: set up once, in settings.
+        $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'system', 'order' => 20, 'permission' => 'settings.manage']);
         $admin->command('sites', ['label' => 'Sites', 'icon' => 'box', 'path' => '/sites', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);
         $admin->widget('site-status', ['label' => 'Site', 'description' => 'Whether the live site is up to date, with a button to publish it.', 'icon' => 'rocket', 'column' => 'side', 'enabled' => true, 'order' => 10]);
         $admin->command('publish-site', ['label' => 'Publish Site', 'icon' => 'rocket', 'ability' => 'site/build', 'permission' => 'site.build', 'keywords' => ['build', 'deploy', 'static']]);

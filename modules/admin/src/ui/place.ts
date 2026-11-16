@@ -25,16 +25,15 @@ export function homedSettings(manifest: Manifest, id: string | undefined): strin
   return id ? manifest.settings.find((s) => s.home === id && manifest.nav.some((n) => n.id === `settings.${s.namespace}`))?.namespace : undefined
 }
 
-/** The room a path is in: the one that lists its place (or the screen it belongs to). */
+/** The room a path is in: the one it opens on, or the one that lists its place (or the screen it belongs to). */
 export function roomAt(manifest: Manifest, path: string): Room | undefined {
   const item = placeAt(manifest.nav, path)
-  return item ? manifest.rooms.find((room) => room.sections.some((s) => s.items.includes(item.id))) : undefined
+  return manifest.rooms.find((room) => room.path === path || (!!item && room.sections.some((s) => s.items.includes(item.id))))
 }
 
-/** Where a room opens: its first screen this person may see (settings: General, else their account). */
+/** Where a room opens: a screen of its own, else its first screen this person may see (settings: General, else their account). */
 export function roomHome(manifest: Manifest, id: string): string | undefined {
-  const first = manifest.rooms.find((room) => room.id === id)?.sections[0]?.items[0]
-  return manifest.nav.find((n) => n.id === first)?.path
+  return manifest.rooms.find((room) => room.id === id)?.path
 }
 
 /** The room of settings, opened beside who is signed in. */

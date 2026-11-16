@@ -603,16 +603,9 @@
   .cms-skip:focus-visible { translate: 0 0; opacity: 1; pointer-events: auto; outline: 2px solid var(--cms-focus); outline-offset: 2px; }
   [data-cms-screen]:focus { outline: none; }
 
-  /* A screen's sections under its row: no icons, set in from the row's label, at the sidebar's own rhythm. */
-  .cms-sidebar-nested { margin-top: 1px; }
-  .cms-sidebar-nested:empty { display: none; }
-  .cms-sidebar-nested .cms-sidebar-row { padding-left: 46px; }
-
-  /* Rows under a heading (SidebarGroup), apart from the group before them; under a screen's row, closer, and set in like its rows. */
+  /* Rows under a heading (SidebarGroup), apart from the group before them. */
   .cms-sidebar-group + .cms-sidebar-group { margin-top: 16px; }
   .cms-sidebar-group-title { display: flex; height: 28px; align-items: center; gap: 4px; padding-inline: 8px 2px; }
-  .cms-sidebar-nested .cms-sidebar-group + .cms-sidebar-group { margin-top: 8px; }
-  .cms-sidebar-nested .cms-sidebar-group-title { padding-left: 46px; }
 
   /* The one way to save a form: up while there are changes, over the bottom of the sheet. */
   .cms-savebar {

@@ -211,6 +211,8 @@ export interface Room {
   id: string
   label: string
   icon: string
+  /** Where it opens: a screen of its own (the design's: the site itself), else its first item's. */
+  path: string
   /** Its sections, in order, with the ids of their items; the first, without a label, has no heading. */
   sections: ArrangedSection[]
 }

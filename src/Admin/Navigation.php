@@ -94,7 +94,7 @@ final class Navigation extends Arranged
      * room they may enter, with its sections. A door leads to its room's first
      * screen, and is there only when the room has one for them.
      *
-     * @return array{nav: list<array>, sidebar: array{sections: list<array>, hidden: list<string>, personal: bool}, rooms: list<array{id: string, label: string, icon: string, sections: list<array{id: string, label: string, items: list<string>}>}>}
+     * @return array{nav: list<array>, sidebar: array{sections: list<array>, hidden: list<string>, personal: bool}, rooms: list<array{id: string, label: string, icon: string, path: string, sections: list<array{id: string, label: string, items: list<string>}>}>}
      */
     public function forUser(User $user): array
     {
@@ -104,7 +104,7 @@ final class Navigation extends Arranged
         $may = static fn (array $item) => ($item['permission'] === null || $user->hasPermission($item['permission'], any: true))
             && ($item['visible'] === null || ($item['visible'])($user));
         $rooms = $this->rooms($items, $may);
-        $homes = array_map(static fn (array $room) => $items[$room['sections'][0]['items'][0]]['path'], array_column($rooms, null, 'id'));
+        $homes = array_column($rooms, 'path', 'id');
         $nav = [];
         $sections = [];
 
@@ -160,10 +160,10 @@ final class Navigation extends Arranged
     }
 
     /**
-     * The rooms with something in them for this person, each with its sections in order.
+     * The rooms with something in them for this person, each with its sections in order and where it opens.
      *
      * @param  array<string, array>  $items
-     * @return list<array{id: string, label: string, icon: string, sections: list<array{id: string, label: string, items: list<string>}>}>
+     * @return list<array{id: string, label: string, icon: string, path: string, sections: list<array{id: string, label: string, items: list<string>}>}>
      */
     private function rooms(array $items, \Closure $may): array
     {
@@ -192,7 +192,7 @@ final class Navigation extends Arranged
             }
 
             if ($listed !== []) {
-                $rooms[] = ['id' => $room['id'], 'label' => $room['label'], 'icon' => $room['icon'], 'sections' => $this->ungroupSingles($listed)];
+                $rooms[] = ['id' => $room['id'], 'label' => $room['label'], 'icon' => $room['icon'], 'path' => $room['path'] ?? $items[$listed[0]['items'][0]]['path'], 'sections' => $this->ungroupSingles($listed)];
             }
         }
 

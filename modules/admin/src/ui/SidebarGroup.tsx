@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 /**
  * Rows of the sidebar under a heading (none without a `title`), apart from the group before them, with what
- * adds one to it beside the heading (`action`). Under a screen's row, the heading is set in like its rows.
+ * adds one to it beside the heading (`action`).
  */
 export function SidebarGroup({ title, action, children }: { title?: string; action?: ReactNode; children: ReactNode }) {
   return (

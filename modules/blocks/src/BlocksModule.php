@@ -107,7 +107,7 @@ final class BlocksModule extends Plugin
         $this->cms()->hooks()->addFilter('collections', static function (array $collections) {
             $collections[Templates::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Templates::COLLECTION, [
                 'title' => 'Templates', 'singular' => 'Template', 'icon' => 'layout', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'blocks', 'nav_order' => 20, 'system' => true, 'sort' => 'title', 'default_view' => 'grid',
+                'section' => 'design', 'nav_order' => 20, 'system' => true, 'sort' => 'title', 'default_view' => 'grid',
                 'description' => 'The frame around each page: header, footer and layout. Default frames every page without one of its own; Not found shows when a page is missing.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Template', 'body' => true],
@@ -117,7 +117,7 @@ final class BlocksModule extends Plugin
             ]);
             $collections[Components::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Components::COLLECTION, [
                 'title' => 'Components', 'singular' => 'Component', 'icon' => 'symbol', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'blocks', 'nav_order' => 30, 'system' => true, 'sort' => 'title', 'default_view' => 'grid',
+                'section' => 'design', 'nav_order' => 30, 'system' => true, 'sort' => 'title', 'default_view' => 'grid',
                 'description' => 'Reusable designs, like a header or a card. A change to one shows everywhere it is used, and each place can fill in its properties.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Component', 'body' => true],
@@ -128,7 +128,7 @@ final class BlocksModule extends Plugin
             ]);
             $collections[Patterns::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Patterns::COLLECTION, [
                 'title' => 'Patterns', 'singular' => 'Pattern', 'icon' => 'section-copy', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'blocks', 'nav_order' => 40, 'system' => true, 'sort' => 'title',
+                'section' => 'design', 'nav_order' => 40, 'system' => true, 'sort' => 'title',
                 'description' => 'Arrangements of blocks to start from: a hero, a gallery, a whole page. Inserting one puts a copy on the page, to change as you like.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Pattern', 'body' => true],

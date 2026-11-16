@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- **Design opens on your site.** It shows the site as visitors see it, at the width of a desktop, a tablet or a phone, with Styling, Templates, Components, Patterns and Code in the sidebar.
+- **Styling and Code step in, as Settings does.** Their sections or files take the sidebar's place, with the way back to Design (`Esc`). Styling shows the site until you choose a section; the screen and light or dark switches are in its top bar, and the preview stands in a frame like the Design's.
+- **Calmer lists in Styling.** Colors, sizes and settings are rows without lines between them, named in plain type.
+- **Collections and Sites are in Settings**, beside Languages and Plugins: they are set up once, not part of the design.
+- **Breaking.** For plugins: `ScreenSidebar` takes `step` (a step into where you are, out whenever the sidebar is) instead of `nested`, and `$admin->opens($room, $path)` gives a room a screen of its own to open on.
+
 ## 0.42.0 (2026-11-16)
 
 ### Changed

@@ -15,6 +15,8 @@ final class AdminTest extends TestCase
 {
     public function test_the_sidebar_shows_every_item_from_the_start(): void
     {
+        // A screen of the design, as the site's module has: the design's row leads to it while the room has no screen of its own.
+        $this->cms()->admin()->nav('links', ['label' => 'Links', 'path' => '/links', 'section' => 'design']);
         $sidebar = $this->cms()->adminNav()->forUser($this->admin())['sidebar'];
 
         // Sections without items are left out; the rooms are separate.
@@ -27,11 +29,11 @@ final class AdminTest extends TestCase
         $this->assertSame(['navigation', 'globals'], $sidebar['sections'][2]['items']);
         // The sidebar and abilities use the same name for globals.
         $nav = $this->cms()->adminNav()->forUser($this->admin());
-        // The design's door leads to the room's first screen; Collections is in the room.
-        $design = $this->room($nav, 'design');
-        $this->assertContains('collections', $design['design']['items']);
-        $this->assertSame(array_column($nav['nav'], 'path', 'id')[$design['design']['items'][0]], array_column($nav['nav'], 'path', 'id')['design']);
+        // The design's row leads to where the room opens; Collections is set up once, in settings.
+        $this->assertSame('/links', array_column($nav['rooms'], 'path', 'id')['design']);
+        $this->assertSame('/links', array_column($nav['nav'], 'path', 'id')['design']);
         $this->assertSame('design', array_column($nav['nav'], 'room', 'id')['design']);
+        $this->assertContains('collections', $this->room($nav, 'settings')['system']['items']);
         $this->assertSame('Globals', array_column($nav['nav'], 'label', 'id')['globals']);
         $this->assertSame(['List Globals', 'Update Global Values'], [$this->cms()->abilities()->get('globals/list')->label, $this->cms()->abilities()->get('globals/set')->label]);
         // Nothing is put away: More holds only what someone unpins.
@@ -165,7 +167,7 @@ final class AdminTest extends TestCase
         $settings = $this->room($this->cms()->adminNav()->forUser($this->admin()), 'settings');
 
         $this->assertArrayNotHasKey('plugins', $settings);
-        $this->assertSame(['settings.site', 'account', 'plugins', 'settings.email', 'built-in', 'audit', 'sync', 'settings.shop'], $settings['system']['items']);
+        $this->assertSame(['settings.site', 'account', 'collections', 'plugins', 'settings.email', 'built-in', 'audit', 'sync', 'settings.shop'], $settings['system']['items']);
     }
 
     public function test_a_page_with_a_home_is_that_screens_settings_tab_and_in_no_sidebar(): void
@@ -219,9 +221,9 @@ final class AdminTest extends TestCase
         $result = $this->cms()->adminNav()->forUser($this->admin());
         $settings = $this->room($result, 'settings');
 
-        // General, your account, Plugins, the Audit Log and Sync without a group name; then People.
+        // General, your account, Collections, Plugins, the Audit Log and Sync without a group name; then People.
         $this->assertSame(['system', 'people'], array_keys($settings));
-        $this->assertSame(['settings.site', 'account', 'plugins', 'settings.email', 'built-in', 'audit', 'sync'], $settings['system']['items']);
+        $this->assertSame(['settings.site', 'account', 'collections', 'plugins', 'settings.email', 'built-in', 'audit', 'sync'], $settings['system']['items']);
         $this->assertSame(['users', 'settings.roles'], $settings['people']['items']);
         // Settings kept with a screen are its Settings tab, reached through the screen's row when that is in settings.
         $this->assertSame('/audit?tab=settings', array_column($result['nav'], 'path', 'id')['settings.audit']);
