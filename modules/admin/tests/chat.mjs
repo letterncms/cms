@@ -523,7 +523,7 @@ try {
     dock().querySelector('form[aria-label="Add to Menu"] button[type="submit"]').click()
     await wait(() => dock().textContent.includes('Added to footer'), 'the form did not run its ability with what it asked')
     const sent = (await state()).requests.findLast(r => r.kind === 'chat').input.command
-    assert(JSON.stringify(sent.input) === JSON.stringify({ menu: 'footer', entry: 'e1' }) && sent.detail === 'Footer', 'the form’s answers or their words did not go with it: ' + JSON.stringify(sent))
+    assert(JSON.stringify(sent.input) === JSON.stringify({ collection: 'footer', title: 'Summer Menu', data: { link: { type: 'entry', value: 'e1' } }, status: 'published' }) && sent.detail === 'Footer', 'the form’s answers or their words did not go with it: ' + JSON.stringify(sent))
     assert(dock().textContent.includes('Add to Menu') && dock().textContent.includes('Footer'), 'the turn does not say what was chosen in words')
   })
   await test('A button for something gone says so once, in the thread', async () => {
