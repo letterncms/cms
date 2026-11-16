@@ -1,6 +1,6 @@
 import { t } from '@letterncms/sdk'
 import { Icon, Menu, cn, Pressable } from '@letterncms/ui'
-import type { KeyboardEvent, ReactNode } from 'react'
+import { memo, type KeyboardEvent, type ReactNode } from 'react'
 import { atEnd, atStart, caretOffset, split, textLength } from '../core/caret'
 import { useEditorContext } from '../core/context'
 import { InlineEditable } from '../core/InlineEditable'
@@ -77,8 +77,8 @@ function Callout({ node }: { node: BlockNode }) {
   )
 }
 
-/** One text prop of a block, with the keyboard behavior of a single document. */
-export function EditableText({ node, prop, tag = 'div', className, placeholder, quiet }: { node: BlockNode; prop: string; tag?: string; className?: string; placeholder: string; quiet?: boolean }) {
+/** One text prop of a block, with the keyboard behavior of a single document. Drawn again only when its block changed. */
+export const EditableText = memo(function EditableText({ node, prop, tag = 'div', className, placeholder, quiet }: { node: BlockNode; prop: string; tag?: string; className?: string; placeholder: string; quiet?: boolean }) {
   const { store, types, allowed } = useEditorContext()
   const { stops, readOnly } = useWrite()
   const focus = useEditor(store, (s) => (s.focus?.id === node.id && (s.focus.prop ?? 'text') === prop ? s.focus : null))
@@ -253,7 +253,7 @@ export function EditableText({ node, prop, tag = 'div', className, placeholder, 
       }}
     />
   )
-}
+})
 
 /** Bulleted or numbered list: one editable line per item. */
 export function ListBlock({ node, renderItem }: { node: BlockNode; renderItem?: (index: number, editable: ReactNode) => ReactNode }) {

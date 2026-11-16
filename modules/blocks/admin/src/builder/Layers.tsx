@@ -3,7 +3,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities'
 import { t } from '@letterncms/sdk'
 import { Icon, IconButton, Tooltip, cn } from '@letterncms/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
 import { selectionOf, useEditor } from '../core/store'
 import * as tree from '../core/tree'
@@ -13,25 +13,12 @@ import { bus } from './bus'
 import { PanelFields } from './controls'
 
 /** Layer tree: select, hover, collapse, hide, rename (double-click) and drag to reorder or re-parent. */
-export function Layers() {
+export const Layers = memo(function Layers() {
   const { store, types, allowed, readOnly } = useEditorContext()
-  const nodes = useEditor(store, (s) => s.nodes)
-  const selected = useEditor(store, (s) => s.selected)
-  const range = useEditor(store, selectionOf)
-  const hovered = useEditor(store, (s) => s.hovered)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
-
-  // Reveal the selected layer.
-  useEffect(() => {
-    if (!selected) return
-    const open = tree.ancestors(store.get().nodes, selected).filter((a) => collapsed[a.id])
-    if (open.length) setCollapsed((c) => ({ ...c, ...Object.fromEntries(open.map((a) => [a.id, false])) }))
-    document.querySelector(`[data-layer="${selected}"]`)?.scrollIntoView({ block: 'nearest' })
-  }, [selected])
-
-  const held = useMemo(() => hints(nodes, (node) => !!types.get(node.type)?.children || !!node.children?.length), [nodes, types])
-  const visible = tree.flatten(nodes).filter(({ node }) => !tree.ancestors(nodes, node.id).some((a) => collapsed[a.id]))
+  const toggle = useCallback((id: string) => setCollapsed((c) => ({ ...c, [id]: !c[id] })), [])
+  const reveal = useCallback((ids: string[]) => setCollapsed((c) => ids.some((id) => c[id]) ? { ...c, ...Object.fromEntries(ids.map((id) => [id, false])) } : c), [])
 
   const onDragEnd = (e: DragEndEvent) => {
     if (readOnly || !e.over || e.active.id === e.over.id) return
@@ -54,6 +41,43 @@ export function Layers() {
     store.move(active.id, target.parentId, index)
   }
 
+  // The drag context is drawn again only when a container folds: drawn again, it would draw every row again.
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <LayerList collapsed={collapsed} onToggle={toggle} onReveal={reveal} />
+    </DndContext>
+  )
+})
+
+/** The rows, drawn again as the blocks change; each row only when its own block did. */
+function LayerList({ collapsed, onToggle, onReveal }: { collapsed: Record<string, boolean>; onToggle: (id: string) => void; onReveal: (ids: string[]) => void }) {
+  const { store, types } = useEditorContext()
+  // Drawn after the letter that changed it: the outline never holds up writing.
+  const nodes = useDeferredValue(useEditor(store, (s) => s.nodes))
+  const selected = useEditor(store, (s) => s.selected)
+  const range = useEditor(store, selectionOf)
+  const hovered = useEditor(store, (s) => s.hovered)
+
+  // Reveal the selected layer.
+  useEffect(() => {
+    if (!selected) return
+    onReveal(tree.ancestors(store.get().nodes, selected).map((a) => a.id))
+    document.querySelector(`[data-layer="${selected}"]`)?.scrollIntoView({ block: 'nearest' })
+  }, [selected])
+
+  const held = useMemo(() => hints(nodes, (node) => !!types.get(node.type)?.children || !!node.children?.length), [nodes, types])
+  const components = useComponentTitles()
+  // The rows open in the outline: a folded container's blocks are left out.
+  const visible = useMemo(() => {
+    const out: { node: BlockNode; depth: number }[] = []
+    const walk = (list: BlockNode[], depth: number) => list.forEach((node) => { out.push({ node, depth }); if (node.children && !collapsed[node.id]) walk(node.children, depth + 1) })
+    walk(nodes, 0)
+    return out
+  }, [nodes, collapsed])
+  // The same list of ids while the same rows show: writing in a block doesn't make every row sortable anew.
+  const order = visible.map((v) => v.node.id).join(' ')
+  const items = useMemo(() => order ? order.split(' ') : [], [order])
+
   if (nodes.length === 0) {
     return (
       <div className="px-4 py-3">
@@ -63,25 +87,24 @@ export function Layers() {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={visible.map((v) => v.node.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-px px-2 pb-3 pt-1" onMouseLeave={() => store.hover(null)}>
-          {visible.map(({ node, depth }) => (
-            <LayerRow
-              key={node.id}
-              node={node}
-              depth={depth}
-              selected={range.includes(node.id)}
-              hovered={hovered === node.id}
-              collapsed={!!collapsed[node.id]}
-              // What a container holds is the row under it while it is open: said on the container only when folded.
-              hint={collapsed[node.id] || !node.children?.length ? held.get(node.id) : undefined}
-              onToggle={() => setCollapsed((c) => ({ ...c, [node.id]: !c[node.id] }))}
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <SortableContext items={items} strategy={verticalListSortingStrategy}>
+      <div className="space-y-px px-2 pb-3 pt-1" onMouseLeave={() => store.hover(null)}>
+        {visible.map(({ node, depth }) => (
+          <LayerRow
+            key={node.id}
+            node={node}
+            depth={depth}
+            selected={range.includes(node.id)}
+            hovered={hovered === node.id}
+            collapsed={!!collapsed[node.id]}
+            // What a container holds is the row under it while it is open: said on the container only when folded.
+            hint={collapsed[node.id] || !node.children?.length ? held.get(node.id) : undefined}
+            components={components}
+            onToggle={onToggle}
+          />
+        ))}
+      </div>
+    </SortableContext>
   )
 }
 
@@ -128,12 +151,14 @@ function hints(nodes: BlockNode[], containers: (node: BlockNode) => boolean): Ma
   return out
 }
 
-function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }: { node: BlockNode; depth: number; selected: boolean; hovered: boolean; collapsed: boolean; hint?: string; onToggle: () => void }) {
+interface RowProps { node: BlockNode; depth: number; selected: boolean; hovered: boolean; collapsed: boolean; hint?: string; components: Map<string, string>; onToggle: (id: string) => void }
+
+/** Drawn again only when its block, its place or its state changed, not for every edit of the page. */
+const LayerRow = memo(function LayerRow({ node, depth, selected, hovered, collapsed, hint, components, onToggle }: RowProps) {
   const { store, types, readOnly } = useEditorContext()
   const type = types.get(node.type)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.id, disabled: readOnly })
   const hasChildren = (node.children?.length ?? 0) > 0
-  const components = useComponentTitles()
   const container = !!type?.children || hasChildren
   // A layer is named by what it is or says: its own name, the component, its text, or for a container, its kind and what it holds.
   const label = node.type === 'component' ? blockName(node, types, components) : node.label || (container ? kindOf(node, type?.title ?? node.type) : says(node, 48) || type?.title || node.type)
@@ -215,7 +240,7 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
         title={undefined}
         onClick={(e) => {
           e.stopPropagation()
-          onToggle()
+          onToggle(node.id)
         }}
         className={cn('-mr-1 !size-4 !bg-transparent !text-faint hover:!text-ink [&_svg]:size-2.5 [&_svg]:transition-transform [&_svg]:duration-fast', collapsed && '[&_svg]:-rotate-90', !hasChildren && 'invisible')}
       />
@@ -257,4 +282,4 @@ function LayerRow({ node, depth, selected, hovered, collapsed, hint, onToggle }:
       </span>
     </div>
   )
-}
+})

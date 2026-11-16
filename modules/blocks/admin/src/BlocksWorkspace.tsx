@@ -1,6 +1,6 @@
 import { events, plural, t, useScreenContext, type EntryEditorProps } from '@letterncms/sdk'
 import { Button, Dialog, IconButton, InspectorPanel, PanelHeader, Popover, QueryError, ScreenSidebar, Segmented, Spinner, fieldControlId, useScreenSidebar, useWideInspector } from '@letterncms/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorProvider, useCatalog, useEditorContext, type DocRef } from './core/context'
 import { Inserter, type InsertChoice } from './core/Inserter'
@@ -22,24 +22,29 @@ export function BlocksWorkspace(props: EntryEditorProps) {
   const store = useBlockSession(props.values[field], (nodes) => props.setValue(field, nodes), !props.editable)
   const values = useRef(props.values)
   values.current = props.values
-  const doc: DocRef = {
-    kind: props.collection.handle === 'templates' ? 'template' : props.collection.handle === 'components' ? 'component' : 'entry',
-    id: props.entry?.id ?? '',
-    collections: props.values.collections,
-    props: props.values.props,
-  }
+  const kind: DocRef['kind'] = props.collection.handle === 'templates' ? 'template' : props.collection.handle === 'components' ? 'component' : 'entry'
+  const entryId = props.entry?.id ?? null
+  const { collections, props: properties } = props.values
+  const allowed = (props.bodyField.allowed as string[] | undefined) ?? none
+  // The same context while only the blocks change: writing a letter doesn't draw every part of the editor again.
+  const context = useMemo(() => catalog && ({
+    store, catalog, types, entryId, fieldHandle: field, allowed, getValues: () => values.current, title: props.title,
+    doc: { kind, id: entryId ?? '', collections, props: properties }, readOnly: !props.editable,
+  }), [store, catalog, types, entryId, field, allowed, props.title, kind, collections, properties, props.editable])
   // The inspector holds its place while the catalog loads: the canvas never changes width when it arrives.
   if (isLoading) return <div className="flex h-full min-h-0">
     <div className="grid min-w-0 flex-1 place-items-center"><Spinner /></div>
     <InspectorPanel sheet className={sheet} open={props.sidebarOpen} onOpenChange={props.setSidebarOpen} title={props.collection.singular}>{props.sidebar}</InspectorPanel>
   </div>
-  if (!catalog) return <QueryError message={error?.message} onRetry={retry} />
-  return <EditorProvider value={{ store, catalog, types, entryId: props.entry?.id ?? null, fieldHandle: field, allowed: props.bodyField.allowed as string[] ?? [], getValues: () => values.current, title: props.title, doc, readOnly: !props.editable }}>
+  if (!context) return <QueryError message={error?.message} onRetry={retry} />
+  return <EditorProvider value={context}>
     {error && <QueryError message={error.message} onRetry={retry} compact />}
     <Workspace props={props} />
   </EditorProvider>
 }
 
+
+const none: string[] = []
 
 /** On a phone the panel is the kit's sheet, risen from the bottom edge with its grip: the block it is about stays in view above it, undimmed (styles.css). */
 const sheet = 'cms-block-sheet'
@@ -65,6 +70,8 @@ function Devices() {
 function Workspace({ props }: { props: EntryEditorProps }) {
   const { store, types, allowed, readOnly } = useEditorContext()
   const selected = useEditor(store, (state) => state.selected ? tree.find(state.nodes, state.selected) : null)
+  // The settings follow the block a moment after a letter is written in it: they never hold up writing.
+  const inspected = useDeferredValue(selected)
   const blockMode = useEditor(store, (state) => state.blockMode)
   const count = useEditor(store, (state) => selectionOf(state).length)
   const undo = useEditor(store, () => store.canUndo())
@@ -106,7 +113,9 @@ function Workspace({ props }: { props: EntryEditorProps }) {
   const latestInspect = useRef(inspect)
   latestInspect.current = inspect
   useEffect(() => bus.on('inspect', ({ node }) => latestInspect.current(node)), [])
-  const entryDetails = () => { store.select(null); setInspecting(false) }
+  const entryDetails = useCallback(() => { store.select(null); setInspecting(false) }, [store])
+  const { setSidebarOpen } = props
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [setSidebarOpen])
   const destination = (type: string | string[]) => {
     const current = store.get()
     const parent = current.selected ? tree.find(current.nodes, current.selected) : null
@@ -148,7 +157,7 @@ function Workspace({ props }: { props: EntryEditorProps }) {
         {inspecting && selected ? count > 1 ? <>
           <PanelHeader title={plural(count, '{count} block selected', '{count} blocks selected')} onBack={entryDetails} backLabel={props.collection.singular} onClose={() => props.setSidebarOpen(false)} />
           {!readOnly && <div className="px-2 py-3"><Button variant="destructive" size="sm" icon="trash" onClick={() => store.removeSelection()}>{t('Delete')}</Button></div>}
-        </> : <Inspector node={selected} onBack={entryDetails} backLabel={props.collection.singular} onClose={() => props.setSidebarOpen(false)} /> : props.sidebar}
+        </> : <Inspector node={inspected?.id === selected.id ? inspected : selected} onBack={entryDetails} backLabel={props.collection.singular} onClose={closeSidebar} /> : props.sidebar}
       </InspectorPanel>
     </div>
   </div>

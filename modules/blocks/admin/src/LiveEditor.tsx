@@ -61,6 +61,10 @@ iframe{pointer-events:none}
 .cms-js [data-cms-appear]{visibility:visible!important}
 `
 
+const sameRect = (a: Rect, b: Rect) => a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height
+/** The boxes drawn now when nothing moved, so the canvas's chrome isn't drawn again for nothing. */
+const same = (current: Rect[], next: Rect[]) => current.length === next.length && current.every((rect, i) => sameRect(rect, next[i])) ? current : next
+
 const MEDIA = new Set(['IMG', 'PICTURE', 'VIDEO', 'IFRAME', 'CANVAS', 'INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'])
 
 /** Whether a point of the page has content on it: text (where its lines are), an image or icon, or a control. Padding and backgrounds don't count. */
@@ -145,15 +149,28 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   const chooserEdge = useRef<{ key: string; id: string; side: 'before' | 'after' } | null>(null)
   useEffect(() => { if (!chooser) chooserEdge.current = null }, [chooser])
   const request = useRef(0)
-  const rendering = useRef({ busy: false, queued: false, timer: 0, alive: true })
+  /** `waiting`: the pending render waits for the writing to pause. */
+  const rendering = useRef({ busy: false, queued: false, timer: 0, waiting: false, alive: true })
   const runRender = useRef<() => Promise<void>>(async () => {})
+  /** Someone is writing in the canvas: the caret is in its text. */
+  const writingNow = () => document.activeElement === frame.current && !!(frame.current?.contentDocument?.activeElement as HTMLElement | null)?.isContentEditable
   const scheduleRender = () => {
     const state = rendering.current
     state.queued = true
-    if (!state.alive || state.busy || state.timer) return
-    state.timer = window.setTimeout(() => { state.timer = 0; void runRender.current() }, token.current ? 80 : 0)
+    if (!state.alive || state.busy) return
+    // The words already show where they are written: the page is drawn again once the writing pauses, not for every letter.
+    const writing = !!token.current && writingNow()
+    // Any other change (a class dragged in the inspector) is drawn at a steady pace while it goes on.
+    if (state.timer && !state.waiting) return
+    clearTimeout(state.timer)
+    state.waiting = writing
+    state.timer = window.setTimeout(() => { state.timer = 0; state.waiting = false; void runRender.current() }, !token.current ? 0 : writing ? 400 : 80)
   }
   const structure = () => indexed.current.map(({ node, parentId, index }) => `${parentId}:${index}:${node.id}:${node.type}:${node.type === 'list' ? node.props.items?.length ?? 0 : ''}`).join('|')
+  /** The blocks, their places and their classes: what the canvas draws before the server does. Text is left out, as it is written in place. */
+  const shape = () => structure() + '#' + indexed.current.map(({ node }) => node.class ?? '').join('|')
+  /** The shape the canvas was last brought up to date with, or '' once the server has drawn it anew. */
+  const shaped = useRef('')
   const abort = useRef<AbortController | null>(null)
   // Behaviours that draw in the canvas too (core/canvas.ts): undone before every render of it, mounted after.
   const drawn = useRef(canvasBehaviors())
@@ -206,8 +223,8 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     }
     return null
   }
-  const rectOf = (el: Element): DOMRect => {
-    if (el.ownerDocument.defaultView?.getComputedStyle(el).display !== 'contents') return el.getBoundingClientRect()
+  const rectOf = (el: Element, style = el.ownerDocument.defaultView?.getComputedStyle(el)): DOMRect => {
+    if (style?.display !== 'contents') return el.getBoundingClientRect()
     const range = el.ownerDocument.createRange(); range.selectNodeContents(el); return range.getBoundingClientRect()
   }
   const metrics = (): Metrics | null => {
@@ -215,12 +232,12 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     const d = frame.current?.contentDocument
     const root = d?.querySelector<HTMLElement>(`[data-cms-editor-root="${token.current}"]`)
     if (!d || !root) return null
-    const axis = (el: Element) => { const style = d.defaultView!.getComputedStyle(el); return (style.display.includes('flex') && style.flexDirection.startsWith('row')) || (style.display.includes('grid') && style.gridTemplateColumns.split(' ').length > 1) ? 'x' as const : 'y' as const }
+    const axis = (style: CSSStyleDeclaration) => (style.display.includes('flex') && style.flexDirection.startsWith('row')) || (style.display.includes('grid') && style.gridTemplateColumns.split(' ').length > 1) ? 'x' as const : 'y' as const
     const elements = new Map([...d.querySelectorAll<HTMLElement>(`[data-cms-document="${token.current}"][data-cms-node]`)].map((el) => [el.dataset.cmsNode, el]))
     const blocks = indexed.current.flatMap(({ node, parentId, index }) => {
-      const el = elements.get(node.id)
-      if (!el || d.defaultView!.getComputedStyle(el).display === 'none') return []
-      return [{ id: node.id, parentId, index, rect: rectOf(el), container: !!types.get(node.type)?.children && !['repeat', 'component'].includes(node.type), axis: axis(el) }]
+      const el = elements.get(node.id), style = el && d.defaultView!.getComputedStyle(el)
+      if (!el || !style || style.display === 'none') return []
+      return [{ id: node.id, parentId, index, rect: rectOf(el, style), container: !!types.get(node.type)?.children && !['repeat', 'component'].includes(node.type), axis: axis(style) }]
     })
     let rootRect: Rect = rectOf(root)
     if (rootRect.width === 0) rootRect = rectOf(root.parentElement ?? d.body)
@@ -232,16 +249,25 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     const parent = parentId ? tree.find(store.get().nodes, parentId) : null
     return names.every((name) => accepts(parent, name, types, parent ? [] : allowed))
   }
-  const hasChoices = (parentId: string | null) => [...types.values()].some((type) => permits(parentId, [type.name]))
+  /** Whether a block can go into a parent: what it takes depends on the parent's type alone, so that is asked once per type. */
+  const choices = useMemo(() => new Map<string, boolean>(), [types, allowed])
+  const hasChoices = (parentId: string | null) => {
+    const kind = parentId ? tree.find(store.get().nodes, parentId)?.type ?? '' : ''
+    return choices.get(kind) ?? choices.set(kind, [...types.values()].some((type) => permits(parentId, [type.name]))).get(kind)!
+  }
   /** `hasChoices` for one geometry pass: every boundary of a parent asks the same question. */
   const choicesOnce = () => { const known = new Map<string | null, boolean>(); return (parentId: string | null) => known.get(parentId) ?? known.set(parentId, hasChoices(parentId)).get(parentId)! }
   const measure = () => {
-    const d = frame.current?.contentDocument, m = metrics()
-    if (!d || !m) return
-    setBoxes(selectionOf(store.get()).flatMap((id) => { const el = source(d, id); return el ? [rectOf(el)] : [] }))
+    const d = frame.current?.contentDocument
+    if (!d) return
+    setBoxes((current) => same(current, selectionOf(store.get()).flatMap((id) => { const el = source(d, id); return el ? [rectOf(el)] : [] })))
     const hover = store.get().hovered
     const hoverElement = hover ? source(d, hover) : null
-    setHoverBox(hoverElement ? rectOf(hoverElement) : null)
+    setHoverBox((current) => { const next = hoverElement ? rectOf(hoverElement) : null; return current && next && sameRect(current, next) ? current : next })
+    // The boundaries between blocks show only while nobody writes: they are measured again when the pointer moves.
+    if (typingRef.current && !chooserRef.current) return
+    const m = metrics()
+    if (!m) return
     const fresh = insertionTargets(m.blocks, { rootRect: m.rootRect, canInsert: choicesOnce() })
     setGaps(fresh)
     // An open inserter stays on its boundary as the page scrolls, and closes when the boundary leaves view.
@@ -254,6 +280,10 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
       return y < 0 || y > latest.current.layout.height ? null : next
     })
   }
+  // One measuring per frame, however many changes asked for it: each forces the page's layout.
+  const measuring = useRef({ frame: 0, run: measure })
+  measuring.current.run = measure
+  const scheduleMeasure = () => { const next = measuring.current; if (!next.frame) next.frame = requestAnimationFrame(() => { next.frame = 0; next.run() }) }
   const showGap = (at: InsertionTarget | null) => {
     const key = at ? targetKey(at) : ''
     if (key === pendingGap.current) return
@@ -311,20 +341,33 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
       if (!element.querySelector('[data-cms-inline]')) element.replaceChildren()
       found.push({ element, id: element.dataset.cmsInstanceNode, prop: element.dataset.cmsInstanceProp!, instance: { type: element.dataset.cmsInstanceType ?? 'text', value: element.dataset.cmsInstanceValue ?? '' } })
     }
-    setSlots(found)
-    requestAnimationFrame(measure)
+    // The same slots keep the same list: the text in them isn't drawn again.
+    const alike = (a: Slot, b: Slot) => a.element === b.element && a.id === b.id && a.prop === b.prop && a.index === b.index && a.instance?.type === b.instance?.type && a.instance?.value === b.instance?.value
+    setSlots((current) => current.length === found.length && current.every((slot, i) => alike(slot, found[i])) ? current : found)
+    scheduleMeasure()
   }
   /** Use inert, server-rendered prototypes until the authoritative render arrives. */
   const optimistic = () => {
     const d = frame.current?.contentDocument
     const root = d?.querySelector<HTMLElement>('[data-cms-editor-root]')
     if (!d || !root || !token.current) return
+    // Only text changed since the canvas was last brought up to date: it is already where it was written.
+    const now = shape()
+    if (now === shaped.current) { scheduleMeasure(); return }
+    shaped.current = now
     const ids = new Set(tree.flatten(store.get().nodes).map(({ node }) => node.id))
-    for (const el of d.querySelectorAll<HTMLElement>('[data-cms-document][data-cms-node]')) if (el.dataset.cmsDocument === token.current && !ids.has(el.dataset.cmsNode!)) el.remove()
+    const drawnBlocks = new Map<string, HTMLElement>()
+    for (const el of d.querySelectorAll<HTMLElement>('[data-cms-document][data-cms-node]')) {
+      if (el.dataset.cmsDocument !== token.current) continue
+      if (!ids.has(el.dataset.cmsNode!)) el.remove()
+      else if (!drawnBlocks.has(el.dataset.cmsNode!)) drawnBlocks.set(el.dataset.cmsNode!, el)
+    }
+    // A block inside a Repeat is drawn as its prototype only: that one is looked up as `source` does.
+    const lookup = (id: string) => { const el = drawnBlocks.get(id); return el?.isConnected ? el : source(d, id) }
     const sync = (list: BlockNode[], parent: HTMLElement) => {
       for (let index = 0; index < list.length; index++) {
         const node = list[index]
-        let el = source(d, node.id)
+        let el = lookup(node.id)
         if (!el || el.dataset.cmsType !== node.type) {
           const prototype = d.querySelector<HTMLTemplateElement>(`template[data-cms-prototype="${CSS.escape(node.type)}"]`)
           const fresh = prototype?.content.firstElementChild?.cloneNode(true) as HTMLElement | undefined
@@ -332,12 +375,13 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
           fresh.dataset.cmsNode = node.id; fresh.dataset.cmsDocument = token.current
           if (el) el.replaceWith(fresh)
           else {
-            const next = list.slice(index + 1).map((n) => source(d, n.id)).find(Boolean)
-            const previous = list.slice(0, index).reverse().map((n) => source(d, n.id)).find(Boolean)
+            const next = list.slice(index + 1).map((n) => lookup(n.id)).find(Boolean)
+            const previous = list.slice(0, index).reverse().map((n) => lookup(n.id)).find(Boolean)
             if (next) next.before(fresh)
             else if (previous) previous.after(fresh)
             else parent.appendChild(fresh)
           }
+          drawnBlocks.set(node.id, fresh)
           el = fresh
         }
         if (node.type === 'list') {
@@ -380,7 +424,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     fit(); const observer = new ResizeObserver(fit); observer.observe(viewport.current)
     return () => observer.disconnect()
   }, [device, store])
-  useEffect(() => { requestAnimationFrame(measure) }, [selected, selectedIds, hovered, layout, doc])
+  useEffect(() => { scheduleMeasure() }, [selected, selectedIds, hovered, layout, doc, typing])
   runRender.current = async () => {
       const state = rendering.current
       state.queued = false; state.busy = true
@@ -400,7 +444,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
         const d = frame.current?.contentDocument
         if (d?.documentElement?.hasAttribute('data-cms-bridge-ready')) {
           drawn.current.unmount()
-          morphDocument(d, next); d.documentElement.setAttribute('data-cms-bridge-ready', '')
+          morphDocument(d, next); d.documentElement.setAttribute('data-cms-bridge-ready', ''); shaped.current = ''
           // The frame now carries the classes that were sent: whatever changed since is put on again.
           applied.current = sent; applyClasses(d); paint(d)
           collectSlots(d)
@@ -417,7 +461,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   useEffect(() => {
     rendering.current.alive = true
     if (rendering.current.queued) scheduleRender()
-    return () => { rendering.current.alive = false; clearTimeout(rendering.current.timer); rendering.current.timer = 0; abort.current?.abort(); }
+    return () => { rendering.current.alive = false; clearTimeout(rendering.current.timer); rendering.current.timer = 0; abort.current?.abort(); cancelAnimationFrame(measuring.current.frame); measuring.current.frame = 0 }
   }, [])
   const choose = (choice: InsertChoice, at: InsertionTarget) => {
     const created = choiceToNodes(choice, types)
@@ -474,7 +518,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     const d = frame.current?.contentDocument
     if (!d || !token.current) return
     if (!d.querySelector('[data-cms-editor-root]')) { setLoading(false); setError(t('This template has no content outlet. Choose a template that includes the content field.')); return }
-    d.documentElement.setAttribute('data-cms-bridge-ready', '')
+    d.documentElement.setAttribute('data-cms-bridge-ready', ''); shaped.current = ''
     const style = d.createElement('style'); style.dataset.cmsBridge = ''; style.textContent = bridgeCss; d.head.appendChild(style)
     applyClasses(d); paint(d)
     setDoc(d); collectSlots(d); setLoading(false)
@@ -575,8 +619,8 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
       // Sticky or fixed blocks do not move with the page: measure everything once scrolling settles.
       clearTimeout(settle); settle = window.setTimeout(() => { geometry.current = null; measure() }, 150)
     }, { passive: true })
-    d.defaultView?.addEventListener('resize', () => { geometry.current = null; requestAnimationFrame(measure) })
-    d.querySelectorAll('img,link[rel="stylesheet"]').forEach((el) => el.addEventListener('load', () => { geometry.current = null; requestAnimationFrame(measure) }, { once: true }))
+    d.defaultView?.addEventListener('resize', () => { geometry.current = null; scheduleMeasure() })
+    d.querySelectorAll('img,link[rel="stylesheet"]').forEach((el) => el.addEventListener('load', () => { geometry.current = null; scheduleMeasure() }, { once: true }))
     d.fonts.ready.then(() => { geometry.current = null; measure() })
   }
   // One compiler per stylesheet: it only ever adds classes. A stylesheet Tailwind can't compile leaves the canvas to the server's CSS.
@@ -588,7 +632,7 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
       if (!alive) return
       tailwind.current = { build: compiler.build, faces: source.faces }
       const d = frame.current?.contentDocument
-      if (d?.documentElement?.hasAttribute('data-cms-bridge-ready')) { paint(d); geometry.current = null; requestAnimationFrame(measure) }
+      if (d?.documentElement?.hasAttribute('data-cms-bridge-ready')) { paint(d); geometry.current = null; scheduleMeasure() }
     }).catch(() => { if (alive) tailwind.current = null })
     return () => { alive = false }
   }, [styling.source])
@@ -706,8 +750,9 @@ const LiveSlots = memo(function LiveSlots({ slots }: { slots: Slot[] }) {
   const nodes = useEditor(store, (state) => state.nodes)
   const listIds = new Set(slots.filter((slot) => !slot.instance && slot.prop === 'items').map((slot) => slot.id))
   const occurrences = new Map<string, number>()
+  const byId = useMemo(() => new Map(tree.flatten(nodes).map(({ node }) => [node.id, node])), [nodes])
   return <>{slots.filter((slot) => slot.instance || slot.prop !== 'items').map((slot) => {
-    const node = tree.find(nodes, slot.id)
+    const node = byId.get(slot.id)
     if (!node) return null
     const key = `${slot.instance ? 'instance:' : ''}${slot.id}:${slot.prop}`
     const occurrence = occurrences.get(key) ?? 0
@@ -719,11 +764,11 @@ const LiveSlots = memo(function LiveSlots({ slots }: { slots: Slot[] }) {
         : <EditableText node={node} prop={slot.prop} tag="span" placeholder={slot.element.dataset.cmsPlaceholder ?? t('Write something…')} />
       : <LiteralSlot node={node} prop={slot.prop} />, slot.element, `${key}:${occurrence}`)
   })}{[...listIds].map((id) => {
-    const node = tree.find(nodes, id)
+    const node = byId.get(id)
     return node ? <ListBlock key={id} node={node} renderItem={(index, editable) => { const slot = slots.find((item) => item.id === id && item.prop === 'items' && item.index === index); return slot ? createPortal(editable, slot.element, `${id}:items:${index}`) : null }} /> : null
   })}</>
 })
-function InstanceSlot({ node, slot }: { node: BlockNode; slot: Slot }) {
+const InstanceSlot = memo(function InstanceSlot({ node, slot }: { node: BlockNode; slot: Slot }) {
   const { store, readOnly } = useEditorContext()
   const focus = useEditor(store, (state) => state.focus?.id === node.id && state.focus.prop === `values.${slot.prop}` ? state.focus : null)
   const value = String((Object.prototype.hasOwnProperty.call(node.props.values ?? {}, slot.prop) ? node.props.values[slot.prop] : slot.instance!.value) ?? '')
@@ -731,14 +776,14 @@ function InstanceSlot({ node, slot }: { node: BlockNode; slot: Slot }) {
   return <InlineEditable tag="span" html={html} focus={focus} plainText singleLine={slot.instance!.type === 'text'} disabled={readOnly} placeholder={slot.element.dataset.cmsPlaceholder ?? t('Write something…')}
     onFocus={() => store.select(node.id)} onChange={(_, element) => store.updateProps(node.id, { values: { ...tree.find(store.get().nodes, node.id)?.props.values, [slot.prop]: element.innerText } }, `instance:${node.id}:${slot.prop}`)}
     onKeyDown={(event, element) => { if (event.key === 'Escape' || (event.key === 'Enter' && slot.instance!.type === 'text')) { event.preventDefault(); element.blur(); store.select(node.id, true) } }} />
-}
-function LiteralSlot({ node, prop }: { node: BlockNode; prop: string }) {
+})
+const LiteralSlot = memo(function LiteralSlot({ node, prop }: { node: BlockNode; prop: string }) {
   const { store, readOnly } = useEditorContext()
   const focus = useEditor(store, (state) => state.focus?.id === node.id && state.focus.prop === prop ? state.focus : null)
   const value = String(node.props[prop] ?? '')
   const html = prop === 'code' ? value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') : value
   return <InlineEditable tag="span" html={html} disabled={readOnly} focus={focus} singleLine={prop !== 'code'} onChange={(next, el) => store.updateProps(node.id, { [prop]: prop === 'code' ? el.innerText : next }, `text:${node.id}:${prop}`)} onFocus={() => store.select(node.id)} onKeyDown={(event, el) => { if (event.key === 'Escape' || (prop !== 'code' && event.key === 'Enter')) { event.preventDefault(); el.blur(); store.select(node.id, true) } }} />
-}
+})
 function LiveSlash({ doc, frame, scale }: { doc: Document; frame: HTMLIFrameElement; scale: number }) {
   const slash = useSlash()
   const { store, types, allowed } = useEditorContext()

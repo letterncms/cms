@@ -1,6 +1,9 @@
 import { newId, type BlockNode, type BlockTypeDef } from './types'
 
-/** Immutable helpers over the block tree. Every function returns a new array. */
+/**
+ * Immutable helpers over the block tree. Every function returns a new array, and keeps every block it didn't
+ * change as it was: what is drawn from a block (a layer, a slot) is drawn again only when that block changed.
+ */
 
 export interface Location {
   parentId: string | null
@@ -51,12 +54,16 @@ export function ancestors(nodes: BlockNode[], id: string): BlockNode[] {
   return out
 }
 
+/** The same container, or a copy holding `children` when they differ from its own. */
+const withChildren = (n: BlockNode, children: BlockNode[]): BlockNode =>
+  children.length === n.children!.length && children.every((child, i) => child === n.children![i]) ? n : { ...n, children }
+
 export function update(nodes: BlockNode[], id: string, fn: (n: BlockNode) => BlockNode): BlockNode[] {
-  return nodes.map((n) => (n.id === id ? fn(n) : n.children ? { ...n, children: update(n.children, id, fn) } : n))
+  return nodes.map((n) => (n.id === id ? fn(n) : n.children ? withChildren(n, update(n.children, id, fn)) : n))
 }
 
 export function remove(nodes: BlockNode[], id: string): BlockNode[] {
-  return nodes.filter((n) => n.id !== id).map((n) => (n.children ? { ...n, children: remove(n.children, id) } : n))
+  return nodes.filter((n) => n.id !== id).map((n) => (n.children ? withChildren(n, remove(n.children, id)) : n))
 }
 
 export function insert(nodes: BlockNode[], parentId: string | null, index: number, items: BlockNode[]): BlockNode[] {

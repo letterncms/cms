@@ -1,6 +1,6 @@
 import { can, t } from '@letterncms/sdk'
 import { Button, IconButton, Menu, PanelHeader, Tabs, copyText } from '@letterncms/ui'
-import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, memo, useId, useLayoutEffect, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
 import { saveComponent, savePattern } from '../core/SaveComponent'
 import type { BlockNode } from '../core/types'
@@ -43,8 +43,8 @@ function initialTab(): Tab {
   } catch { return 'content' }
 }
 
-/** Shared block inspector: content first, with design and interactions available in the same frame. */
-export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNode; onBack?: () => void; backLabel?: string; onClose?: () => void }) {
+/** Shared block inspector: content first, with design and interactions available in the same frame. Drawn again only when its block changed. */
+export const Inspector = memo(function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNode; onBack?: () => void; backLabel?: string; onClose?: () => void }) {
   const { store, types, allowed, readOnly } = useEditorContext()
   const type = types.get(node.type)
   const components = useComponentTitles()
@@ -145,4 +145,4 @@ export function Inspector({ node, onBack, backLabel, onClose }: { node: BlockNod
       </fieldset>
     </div>
   )
-}
+})
