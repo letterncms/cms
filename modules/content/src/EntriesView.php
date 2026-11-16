@@ -113,7 +113,7 @@ final class EntriesView
             ]];
         }
 
-        // What a site is built from and sorts into categories (components, patterns) shows its cards by category.
+        // What a site is built from and sorts into categories (components) shows its cards by category.
         if ($collection->system && array_filter($fields, static fn ($f) => $f['handle'] === 'category' && $f['type'] === 'text') !== []) {
             $records['group'] = 'values.category';
         }

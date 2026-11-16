@@ -1,5 +1,6 @@
 ---
 title: Hero With Text
+synced: false
 category: Heroes
 description: 'A big title, a sentence and two buttons, to open a page with.'
 keywords: [intro, headline]

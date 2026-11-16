@@ -162,7 +162,7 @@ final class SitesTest extends TestCase
         // Structure in named groups: content types, the layout, and what the whole site shares.
         $structure = array_column($rooms['structure']['sections'], null, 'id');
         $this->assertSame(['Content Types', 'Layout', 'Site'], array_column($structure, 'label'));
-        $this->assertSame(['collection.templates', 'collection.components', 'collection.patterns'], $structure['layout']['items']);
+        $this->assertSame(['collection.templates', 'collection.components'], $structure['layout']['items']);
         $this->assertSame(['navigation', 'code'], $structure['site-wide']['items']);
         $this->assertSame('/design/colors', $rooms['design']['path']);
         $this->assertSame('/design/colors', array_column($navigation['nav'], 'path', 'id')['design']);
@@ -441,7 +441,7 @@ final class SitesTest extends TestCase
         $this->assertFileExists($folder.'/content/media/'.$picture['id'].'.yaml');
         $this->assertFileDoesNotExist($folder.'/content/media/'.$unused['id'].'.yaml', 'only the media something names');
         $this->assertFileExists($folder.'/content/collections/pages/de/ueber-uns.md');
-        $this->assertFileExists($folder.'/content/collections/patterns/hero-with-text.md', 'patterns travel with the design');
+        $this->assertFileExists($folder.'/content/collections/components/hero-with-text.md', 'components travel with the design');
         $this->assertFileExists($folder.'/content/collections/posts/'.$long[1].'.md', 'a site exports every entry it can make');
         $this->assertSame(['description' => 'A calm site', 'search_index' => true], Yaml::read($folder.'/config/site.yaml'), 'never the name, the address or the rest of config/');
         $everything = implode("\n", array_map('file_get_contents', array_filter(glob($folder.'/{,*/,*/*/,*/*/*/,*/*/*/*/}*', GLOB_BRACE), 'is_file')));
@@ -539,18 +539,18 @@ final class SitesTest extends TestCase
         $types = array_values(array_unique(array_column($plan, 'type')));
         sort($types);
         $this->assertSame(['entry', 'font', 'script', 'settings', 'style', 'theme'], $types);
-        $this->assertSame([], array_filter($plan, static fn ($s) => $s['type'] === 'entry' && ! preg_match('#^(templates|components|patterns)/#', $s['name'])));
-        $this->assertContains('patterns/hero-with-text', array_column($plan, 'name'), 'patterns are part of how a site looks');
+        $this->assertSame([], array_filter($plan, static fn ($s) => $s['type'] === 'entry' && ! preg_match('#^(templates|components)/#', $s['name'])));
+        $this->assertContains('components/hero-with-text', array_column($plan, 'name'), 'components to copy in are part of how a site looks');
 
         $this->ability('sites/apply', ['handle' => 'starter', 'mode' => 'design']);
         $this->assertNull($this->cms()->collections()->find('posts'));
         $this->assertFileExists(content_path('styling/theme.css'));
         $this->assertSame(4, $this->cms()->entries()->query()->collection('templates')->count());
-        $pattern = $this->ability('patterns/list')[0];
-        $this->assertSame(['hero-with-text', 'Hero With Text', 'Heroes', ['intro', 'headline'], 'section'], [$pattern['handle'], $pattern['title'], $pattern['category'], $pattern['keywords'], $pattern['blocks'][0]['type']]);
+        $copy = $this->ability('components/list', ['synced' => false])[0];
+        $this->assertSame(['hero-with-text', 'Hero With Text', 'Heroes', ['intro', 'headline'], 'section'], [$copy['handle'], $copy['title'], $copy['category'], $copy['keywords'], $copy['blocks'][0]['type']]);
 
         // Applied again, it clashes like a template or a component would.
-        $this->assertSame('patterns/hero-with-text', array_values(array_filter($this->ability('sites/get', ['handle' => 'starter', 'mode' => 'design'])['plan']['steps'], static fn ($s) => str_starts_with($s['name'], 'patterns/')))[0]['name']);
+        $this->assertContains('components/hero-with-text', array_column($this->ability('sites/get', ['handle' => 'starter', 'mode' => 'design'])['plan']['steps'], 'name'));
     }
 
     public function test_a_site_whose_collection_files_under_its_own_taxonomy_in_its_own_languages_applies(): void

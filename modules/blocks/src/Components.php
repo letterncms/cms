@@ -4,29 +4,37 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Blocks;
 
+use Cms\Cms;
+use Cms\Content\Entries\Frontmatter;
 use Cms\Content\Fields\Blueprint;
 use Cms\Extend\Hooks;
-use Cms\Cms;
 
 /**
  * Components are entries of the `components` collection (content/collections/components/*.md), so they
  * have drafts, publishing, history and comments like any entry. Plugins can add read-only ones through
- * the `blocks.component-sources` filter (folders of <handle>.json).
+ * the `blocks.component-sources` filter: folders of <handle>.json, or <handle>.md (front matter and
+ * Block Markdown).
  *
- * A component is inserted as a reference and changes everywhere it is used; its `props` (fields) let each
- * instance set its own values, and blocks inside bind to them as `props.<handle>`. Blocks to copy and then
- * change freely are a pattern (Patterns).
+ * A synced component (the default) is inserted as a reference and changes everywhere it is used; its
+ * `props` (fields) let each instance set its own values, and blocks inside bind to them as `props.<handle>`.
+ * One that is not synced (`synced: false`) is inserted as a copy of its blocks, to change freely there.
  */
 final class Components
 {
     public const string COLLECTION = 'components';
 
+    /** The categories offered first, in this order. Any other words make a category too. */
+    public const array CATEGORIES = ['Heroes', 'Text', 'Media', 'Features', 'People', 'Lists', 'Calls to Action', 'Pages'];
+
+    /** The category whose components a new page can start from. */
+    public const string PAGES = 'Pages';
+
     /** @var array<string, array<string, array>> */
     private array $cache = [];
 
-    public function __construct(private readonly Cms $cms, private readonly Hooks $hooks) {}
+    public function __construct(private readonly Cms $cms, private readonly Hooks $hooks, private readonly MarkdownCodec $codec) {}
 
-    /** @return array<string, array{handle: string, id: ?string, title: string, description: string, category: string, props: list<array>, blocks: list<array>, source: string, editable: bool}> */
+    /** @return array<string, array{handle: string, id: ?string, title: string, description: string, category: string, keywords: list<string>, synced: bool, props: list<array>, blocks: list<array>, source: string, editable: bool}> */
     public function all(bool $working = false): array
     {
         $key = $working ? 'working' : 'live';
@@ -38,11 +46,11 @@ final class Components
         $out = [];
 
         foreach ((array) $this->hooks->filter('blocks.component-sources', []) as $source) {
-            foreach (glob(rtrim((string) $source['path'], '/').'/*.json') ?: [] as $file) {
-                $data = json_decode((string) file_get_contents($file), true);
+            foreach (glob(rtrim((string) ($source['path'] ?? ''), '/').'/*.{json,md}', GLOB_BRACE) ?: [] as $file) {
+                $data = $this->read($file);
 
-                if (is_array($data)) {
-                    $handle = basename($file, '.json');
+                if ($data !== null) {
+                    $handle = pathinfo($file, PATHINFO_FILENAME);
                     $out[$handle] = self::shape($handle, null, $data, (string) ($source['source'] ?? 'plugin'), false);
                 }
             }
@@ -57,7 +65,7 @@ final class Components
             }
         }
 
-        ksort($out);
+        uasort($out, static fn (array $a, array $b) => [self::rank($a['category']), $a['category'], $a['title']] <=> [self::rank($b['category']), $b['category'], $b['title']]);
 
         return $this->cache[$key] = $out;
     }
@@ -114,18 +122,54 @@ final class Components
         $this->cache = [];
     }
 
+    /** Where a category goes in lists: the ones offered first in their order, then the rest A–Z. */
+    public static function rank(string $category): int
+    {
+        $at = array_search($category, self::CATEGORIES, true);
+
+        return $at === false ? count(self::CATEGORIES) : (int) $at;
+    }
+
     public static function shape(string $handle, ?string $id, array $data, string $source, bool $editable): array
     {
+        $keywords = $data['keywords'] ?? [];
+        $synced = filter_var($data['synced'] ?? true, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? true;
+
         return [
             'handle' => $handle,
             'id' => $id,
             'title' => (string) ($data['title'] ?? $handle),
             'description' => (string) ($data['description'] ?? ''),
-            'category' => (string) (($data['category'] ?? '') ?: 'Components'),
-            'props' => array_values(array_filter((array) ($data['props'] ?? []), 'is_array')),
-            'blocks' => array_values((array) ($data['blocks'] ?? [])),
+            'category' => trim((string) ($data['category'] ?? '')) ?: 'Other',
+            'keywords' => array_values(array_filter(array_map('strval', is_array($keywords) ? $keywords : explode(',', (string) $keywords)), static fn (string $k) => trim($k) !== '')),
+            'synced' => $synced,
+            // Properties are what each place a reference stands fills in: a copy has none.
+            'props' => $synced ? array_values(array_filter((array) ($data['props'] ?? []), 'is_array')) : [],
+            'blocks' => array_values(array_filter((array) ($data['blocks'] ?? []), 'is_array')),
             'source' => $source,
             'editable' => $editable,
         ];
+    }
+
+    /** A plugin's component file: JSON, or front matter and Block Markdown. */
+    private function read(string $file): ?array
+    {
+        $text = (string) @file_get_contents($file);
+
+        if (str_ends_with($file, '.json')) {
+            $data = json_decode($text, true);
+
+            return is_array($data) ? $data : null;
+        }
+
+        try {
+            [$meta, $body] = Frontmatter::parse($text);
+
+            return [...(array) $meta, 'blocks' => app(Document::class)->normalize($this->codec->decode((string) $body))];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 }

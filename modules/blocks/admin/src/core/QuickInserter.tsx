@@ -19,7 +19,7 @@ function remember(choice: InsertChoice) {
 
 /**
  * Gutenberg's quick inserter: search, six suggestions for this spot, and **Browse all** for the full
- * catalogue with components and patterns. Every insertion control opens this same picker.
+ * catalogue with components. Every insertion control opens this same picker.
  */
 export function QuickInserter({ types, allowed, onChoose, onClose }: { types: BlockTypeDef[]; allowed: (type: BlockTypeDef) => boolean; onChoose: (choice: InsertChoice) => void; onClose: () => void }) {
   const [query, setQuery] = useState('')

@@ -20,7 +20,7 @@ final class AbilityNamesTest extends TestCase
      * collection, a fieldset, a global, a component or the user profile is made of, and a
      * script or stylesheet of the site, whose handle is its path.
      */
-    private const array SAVED = ['collections', 'fieldsets', 'components', 'patterns', 'globals', 'user-fields', 'styling-code'];
+    private const array SAVED = ['collections', 'fieldsets', 'components', 'globals', 'user-fields', 'styling-code'];
 
     /** Acts that are none of the standard ones: each says what it does to its thing. */
     private const array DOMAIN = [

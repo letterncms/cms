@@ -410,9 +410,8 @@ function SlashMenu() {
   const api = useWrite()
   const slash = useSlash()
   const [rect, setRect] = useState<DOMRect | null>(null)
-  // Components and patterns load with the editor, so they're there the moment someone types "/".
-  useAbility('components/list', {}, { staleTime: 60_000, enabled: allowed.length === 0 || allowed.includes('component') })
-  useAbility('patterns/list', {}, { staleTime: 60_000 })
+  // Components load with the editor, so they're there the moment someone types "/".
+  useAbility('components/list', {}, { staleTime: 60_000 })
 
   useEffect(() => {
     if (!slash) return setRect(null)

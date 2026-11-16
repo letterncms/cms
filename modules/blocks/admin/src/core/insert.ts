@@ -5,11 +5,11 @@ import { newId, type BlockNode, type BlockTypeDef } from './types'
 
 /** Where blocks may go, and what an insert choice becomes. Used by insertion, drag and the outline. */
 
-/** Turn an insert choice into nodes: a block, a reference to a component, or a copy of a pattern's blocks. */
+/** Turn an insert choice into nodes: a block, a reference to a synced component, or a copy of another's blocks. */
 export function choiceToNodes(choice: InsertChoice, types: Map<string, BlockTypeDef>): BlockNode[] {
   if (choice.kind === 'block') return [tree.create(choice.type, {}, types)]
-  if (choice.kind === 'component') return [{ id: newId(), type: 'component', props: { ref: choice.component.handle } }]
-  return choice.pattern.blocks.map((b) => tree.clone(b))
+  if (choice.component.synced) return [{ id: newId(), type: 'component', props: { ref: choice.component.handle } }]
+  return choice.component.blocks.map((b) => tree.clone(b))
 }
 
 /** Can `type` live inside `parent` (null = top level)? */

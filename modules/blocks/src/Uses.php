@@ -152,7 +152,7 @@ final class Uses
             return;
         }
 
-        if (in_array($value['type'] ?? null, ['pattern', 'component'], true) && is_string($value['props']['ref'] ?? null) && $value['props']['ref'] !== '') {
+        if (($value['type'] ?? null) === 'component' && is_string($value['props']['ref'] ?? null) && $value['props']['ref'] !== '') {
             $held[$value['props']['ref']] = true;
         }
 
