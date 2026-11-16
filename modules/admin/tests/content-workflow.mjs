@@ -395,8 +395,11 @@ try {
       const host = source('block-layout').getBoundingClientRect(), siblings = sourceChildren(source('block-layout')), index = siblings.findIndex((node) => node.dataset.cmsNode === 'block-text')
       const before = siblings[index + 1].getBoundingClientRect(), after = siblings[index + 2]?.getBoundingClientRect()
       const to = outerPoint(host.left + host.width / 2, (before.bottom + (after?.top ?? host.bottom)) / 2)
-      pointerEvent(document, 'pointermove', to.x, to.y)
-      await wait(() => document.querySelector('[data-cms-drag-overlay]') && document.querySelector('[data-cms-drag-ghost]') && document.querySelector('[data-cms-drop-indicator]'), 'Dragging has no persistent overlay, ghost, and drop indicator')
+      // A loaded machine can take the move before the drag listens for it: the pointer goes on moving to the same place, as a hand would.
+      await wait(() => {
+        pointerEvent(document, 'pointermove', to.x, to.y)
+        return document.querySelector('[data-cms-drag-overlay]') && document.querySelector('[data-cms-drag-ghost]') && document.querySelector('[data-cms-drop-indicator]')
+      }, 'Dragging has no persistent overlay, ghost, and drop indicator')
       await frameTick()
       assert(document.querySelector('[data-cms-drop-indicator]'), 'The drop indicator disappeared between pointer events')
       assert(getComputedStyle(document.querySelector('[data-cms-drag-overlay]')).pointerEvents !== 'none' && document.elementFromPoint(to.x, to.y)?.closest('[data-cms-drag-overlay]'), 'The drag overlay does not receive native pointer events above the iframe')
@@ -655,9 +658,16 @@ try {
     await wait(() => tabs().includes('hero.js') && document.querySelector('[role="tab"][aria-selected="true"]')?.textContent.trim() === 'hero.js', 'A file of the explorer did not open in its own tab')
     const editor = () => [...document.querySelectorAll('.cm-content')].find((content) => content.offsetParent)
     await wait(() => editor()?.getAttribute('aria-label') === 'hero.js', 'The file’s editor did not load')
-    editor().focus()
-    document.execCommand('insertText', false, 'const   a = {b:1}')
-    await wait(() => document.querySelector('[role="tablist"] [aria-label="Unsaved changes"]'), 'The tab did not mark its unsaved change')
+    // Typing the moment the editor appears can come before it listens: type the whole file again until the tab marks it.
+    const marked = () => document.querySelector('[role="tablist"] [aria-label="Unsaved changes"]')
+    for (let attempt = 0; attempt < 5 && !marked(); attempt++) {
+      editor().focus()
+      document.execCommand('selectAll')
+      document.execCommand('insertText', false, 'const   a = {b:1}')
+      const until = Date.now() + 1500
+      while (!marked() && Date.now() < until) await new Promise((resolve) => setTimeout(resolve, 20))
+    }
+    assert(marked(), 'The tab did not mark its unsaved change')
     save()
     await waitAsync(async () => (await state()).requests.some((request) => request.ability === 'styling-code/save' && request.input.path === 'scripts/hero.js' && request.input.contents === 'const a = { b: 1 };\n'), 'The script was not saved as Prettier formats it')
     await wait(() => !document.querySelector('[role="tablist"] [aria-label="Unsaved changes"]') && editor().textContent.includes('const a = { b: 1 };'), 'The editor did not show the formatted, saved script')
