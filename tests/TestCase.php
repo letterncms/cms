@@ -133,6 +133,32 @@ abstract class TestCase extends BaseTestCase
         return User::query()->create(['name' => 'Ada Admin', 'email' => 'ada'.bin2hex(random_bytes(3)).'@example.com', 'password' => 'secret-pass-123', 'roles' => ['admin'], 'super' => true, ...$attributes]);
     }
 
+    /** A global (a collection of type `global`) and, with values, its one entry, published. */
+    protected function global(string $handle, array $fields, ?array $values = null, ?string $title = null): ?\Cms\Content\Entries\Entry
+    {
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray($handle, ['type' => 'global', 'title' => $title ?? ucfirst($handle), 'fields' => $fields]));
+
+        return $values === null ? null : $this->cms()->entryService()->create($handle, ['title' => $title ?? ucfirst($handle), 'data' => $values, 'status' => 'published']);
+    }
+
+    /** A menu (a collection of type `menu`) of links to pages (an entry id) or addresses, published: [title, link, children?]. */
+    protected function menu(string $handle, array $links = [], int $depth = 3): array
+    {
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray($handle, ['type' => 'menu', 'title' => ucfirst($handle), 'max_depth' => $depth, 'fields' => [['handle' => 'link', 'type' => 'link', 'label' => 'Link', 'required' => true]]]));
+        $made = [];
+        $add = function (array $links, ?string $parent) use (&$add, &$made, $handle): void {
+            foreach ($links as $l) {
+                [$title, $to, $children] = [$l[0], $l[1], $l[2] ?? []];
+                $link = preg_match('/^[0-9a-z]{26}$/', $to) ? ['type' => 'entry', 'value' => $to] : ['type' => 'url', 'value' => $to];
+                $made[] = $entry = $this->cms()->entryService()->create($handle, ['title' => $title, 'data' => ['link' => $link], 'parentId' => $parent, 'status' => 'published']);
+                $add($children, $entry->id);
+            }
+        };
+        $add($links, null);
+
+        return $made;
+    }
+
     protected function userWithRole(string $role): User
     {
         return User::query()->create(['name' => ucfirst($role), 'email' => $role.bin2hex(random_bytes(3)).'@example.com', 'password' => 'secret-pass-123', 'roles' => [$role]]);

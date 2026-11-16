@@ -215,7 +215,7 @@ final class LanguagesTest extends TestCase
         $this->assertSame('/de/about', $links[1]['url']);
         $this->assertTrue($links[0]['current']);
 
-        $this->assertSame($de['id'], $this->cms()->hooks()->filter('navigation.entry', $enEntry, 'de')->id);
+        $this->assertSame($de['id'], $this->cms()->hooks()->filter('entry.localized', $enEntry, 'de')->id);
         $this->assertSame('rtl', cms_text_direction('ar'));
     }
 

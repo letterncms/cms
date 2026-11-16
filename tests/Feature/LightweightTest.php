@@ -15,19 +15,19 @@ final class LightweightTest extends TestCase
 {
     protected function prepareSite(string $site): void
     {
-        Yaml::write($site.'/config/plugins.yaml', ['enabled' => [], 'disabled' => ['letterncms/assistant', 'letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/globals', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site', 'letterncms/sync', 'letterncms/users']]);
+        Yaml::write($site.'/config/plugins.yaml', ['enabled' => [], 'disabled' => ['letterncms/assistant', 'letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/dashboard', 'letterncms/languages', 'letterncms/mcp', 'letterncms/site', 'letterncms/sync', 'letterncms/users']]);
     }
 
     public function test_only_the_required_modules_run(): void
     {
-        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/email', 'letterncms/media', 'letterncms/navigation', 'letterncms/packages', 'letterncms/settings', 'letterncms/workspace'], array_values(array_filter(array_keys($this->cms()->packages()->active()), static fn ($n) => ! in_array($n, ['cms/admin', 'cms/starter'], true))));
+        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/email', 'letterncms/media', 'letterncms/packages', 'letterncms/settings', 'letterncms/workspace'], array_values(array_filter(array_keys($this->cms()->packages()->active()), static fn ($n) => ! in_array($n, ['cms/admin', 'cms/starter'], true))));
     }
 
     public function test_what_switched_off_modules_add_is_gone(): void
     {
         $abilities = $this->cms()->abilities();
 
-        foreach (['audit/list', 'collections/save', 'globals/get', 'users/create', 'roles/list'] as $name) {
+        foreach (['audit/list', 'collections/save', 'users/create', 'roles/list'] as $name) {
             $this->assertFalse($abilities->has($name), $name);
         }
 
@@ -40,7 +40,6 @@ final class LightweightTest extends TestCase
     {
         $manifest = $this->app->make(Manifest::class)->build($this->admin());
 
-        $this->assertSame([], $manifest['globals']);
         // Widgets belong to the shared component catalog, independently of Home.
         $this->assertContains('recent', array_column($manifest['widgets'], 'id'));
         $this->assertNotContains('shortcuts', array_column($manifest['widgets'], 'id'));

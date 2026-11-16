@@ -30,13 +30,12 @@ final class FieldProblemsTest extends TestCase
         $this->assertSame([], FieldProblems::of([['handle' => 'intro', 'type' => 'text'], ['handle' => 'rows', 'type' => 'repeater', 'fields' => [['handle' => 'intro', 'type' => 'text']]]]));
     }
 
-    public function test_saving_a_collection_a_global_or_a_fieldset_hands_them_on(): void
+    public function test_saving_a_collection_or_a_fieldset_hands_them_on(): void
     {
         $fields = [['handle' => 'intro', 'type' => 'text'], ['handle' => 'shape', 'type' => 'hologram']];
 
         foreach ([
             'collections/save' => ['handle' => 'things', 'definition' => ['title' => 'Things', 'fields' => $fields]],
-            'globals/save' => ['title' => 'Things', 'fields' => $fields],
             'fieldsets/save' => ['handle' => 'things', 'title' => 'Things', 'fields' => $fields],
         ] as $ability => $input) {
             try {

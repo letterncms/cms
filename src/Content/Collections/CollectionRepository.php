@@ -60,6 +60,15 @@ final class CollectionRepository
      */
     public function settingsFields(?Collection $collection = null): array
     {
+        // A global is its name; a menu also how deep its links nest. Neither has pages, nor a type to change to.
+        if ($collection?->isSiteWide()) {
+            return Blueprint::make([
+                ['handle' => 'title', 'type' => 'text', 'label' => 'Name', 'required' => true, 'width' => 'half'],
+                ['handle' => 'icon', 'type' => 'icon', 'label' => 'Icon', 'width' => 'half'],
+                ...($collection->isMenu() ? [['handle' => 'max_depth', 'type' => 'number', 'label' => 'Levels', 'min' => 1, 'max' => 5, 'default' => Collection::MENU_DEPTH, 'required' => true]] : []),
+            ])->toArray();
+        }
+
         $fields = [
             ['handle' => 'title', 'type' => 'text', 'label' => 'Name', 'required' => true, 'width' => 'half'],
             ['handle' => 'singular', 'type' => 'text', 'label' => 'Entry Name', 'width' => 'half'],
@@ -109,10 +118,6 @@ final class CollectionRepository
             if ($collection->handle !== $taxonomy && ($names(['fields' => $collection->fields, 'blueprints' => $collection->get('blueprints', [])]) || isset($collection->archives()[$taxonomy]))) {
                 $out[] = $collection->title;
             }
-        }
-
-        foreach (app(\Cms\Content\Globals\GlobalRepository::class)->all() as $global) {
-            $names($global->toYaml()) && $out[] = $global->title;
         }
 
         foreach (app(\Cms\Content\Fields\Fieldsets::class)->all() as $handle => $fieldset) {

@@ -8,7 +8,6 @@ use Cms\Abilities\AbilityContext;
 use Cms\Forms\FormRepository;
 use Cms\Forms\Submission;
 use Cms\Modules\Languages\StringMap;
-use Cms\Modules\Navigation\MenuResolver;
 use Cms\Seo\Meta;
 use Cms\Seo\SiteFiles;
 use Cms\Tests\TestCase;
@@ -93,26 +92,6 @@ final class LocalisedSiteTest extends TestCase
         $this->translation($about, 'de', 'Über uns', ['slug' => 'ueber-uns']);
 
         $this->assertStringContainsString('href="/pricing"', $this->get('/de/ueber-uns')->getContent());
-    }
-
-    public function test_menu_items_have_their_own_wording_and_link_per_language(): void
-    {
-        $pricing = $this->page('Pricing', ['slug' => 'pricing']);
-        $this->translation($pricing, 'de', 'Preise', ['slug' => 'preise']);
-
-        $saved = $this->cms()->abilities()->execute('navigation/create', ['handle' => 'main', 'title' => 'Main', 'items' => [
-            ['entry' => $pricing->id, 'label' => 'Plans', 'locales' => ['de' => ['label' => 'Tarife', 'url' => 'https://ignored.example']]],
-            ['url' => 'https://docs.example', 'label' => 'Docs', 'locales' => ['de' => ['label' => 'Doku', 'url' => 'https://docs.example/de'], 'fr' => ['label' => 'Documentation']]],
-        ]], AbilityContext::system());
-
-        $this->assertSame(['de' => ['label' => 'Tarife']], $saved['items'][0]['locales'], 'A linked page brings its own URL.');
-
-        $resolver = $this->app->make(MenuResolver::class);
-        $resolve = fn (string $locale) => array_map(static fn ($i) => [$i['label'], $i['url']], $resolver->resolve('main', '/', $locale));
-
-        $this->assertSame([['Plans', '/pricing'], ['Docs', 'https://docs.example']], $resolve('en'));
-        $this->assertSame([['Tarife', '/de/preise'], ['Doku', 'https://docs.example/de']], $resolve('de'));
-        $this->assertSame([['Plans', '/pricing'], ['Documentation', 'https://docs.example']], $resolve('fr'));
     }
 
     public function test_forms_read_in_the_language_of_their_page_and_answer_in_it(): void
@@ -247,11 +226,8 @@ final class LocalisedSiteTest extends TestCase
             ['type' => 'paragraph', 'props' => ['text' => '', 'tag' => 'p'], 'bind' => ['text' => 'globals.ui.gone']],
             ['type' => 'repeat', 'props' => ['source' => 'languages'], 'children' => [['type' => 'link', 'bind' => ['label' => 'item.locale', 'url' => 'item.url', 'attr:hreflang' => 'item.locale']]]],
         ]]]);
-        $this->cms()->globals()->save(\Cms\Content\Globals\GlobalContent::fromArray('ui', [
-            'fields' => [['handle' => 'gone', 'type' => 'text', 'label' => 'Gone']],
-            'data' => ['gone' => 'Page not found'],
-            'locales' => ['de' => ['gone' => 'Seite nicht gefunden']],
-        ]));
+        $ui = $this->global('ui', [['handle' => 'gone', 'type' => 'text', 'label' => 'Gone']], ['gone' => 'Page not found']);
+        $this->translation($ui, 'de', 'Ui', ['data' => ['gone' => 'Seite nicht gefunden']]);
         $home = $this->page('Home', ['slug' => 'home']);
         $this->translation($home, 'de', 'Start', ['slug' => 'home']);
 

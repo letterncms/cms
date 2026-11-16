@@ -62,7 +62,7 @@ final class Navigation extends Arranged
      */
     public function items(): array
     {
-        $defaults = ['icon' => 'circle', 'section' => self::PINNED, 'order' => 50, 'pinned' => false, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null, 'home' => null, 'room' => null];
+        $defaults = ['icon' => 'circle', 'section' => self::PINNED, 'order' => 50, 'pinned' => null, 'shortcut' => null, 'permission' => null, 'visible' => null, 'badge' => null, 'home' => null, 'room' => null];
         $items = array_map(static fn (array $item) => [...$defaults, ...$item], (array) $this->cms->hooks()->filter('admin.nav', $this->cms->admin()->navItems()));
 
         foreach ($items as $id => $item) {
@@ -84,7 +84,8 @@ final class Navigation extends Arranged
 
     /**
      * Two groups: the main sidebar's own rows, always there, and Pinned, which holds the screens listed as pinned
-     * and every screen of a room but settings, those not pinned hidden.
+     * and every screen of a room but settings, those not pinned hidden. A screen listed as pinned with `pinned: false`
+     * (the site's code, the store) starts under More.
      */
     public function arrangement(): Arrangement
     {
@@ -97,9 +98,9 @@ final class Navigation extends Arranged
 
         // A screen listed as pinned is pinned until someone unpins it; a room's screen once someone pins it.
         return new Arrangement($groups, array_map(fn ($i) => match (true) {
-            $i['section'] === self::PINNED => [...$i, 'group' => self::PINNED, 'hidden' => false],
+            $i['section'] === self::PINNED => [...$i, 'group' => self::PINNED, 'hidden' => $i['pinned'] === false],
             $this->roomOf($i) === null => [...$i, 'group' => self::MAIN, 'hidden' => false],
-            default => [...$i, 'group' => self::PINNED, 'hidden' => ! $i['pinned']],
+            default => [...$i, 'group' => self::PINNED, 'hidden' => $i['pinned'] !== true],
         }, $items), fixed: true);
     }
 

@@ -49,7 +49,7 @@ export default function EntryEditor({ params }: { params: Record<string, string>
     return (
       <div className="flex h-full flex-col">
         {hold}
-        <Topbar back={{ to: list.path, label: list.label }} />
+        <Topbar back={list.back} />
         <div className="grid flex-1 place-items-center"><Spinner /></div>
       </div>
     )
@@ -107,15 +107,20 @@ export default function EntryEditor({ params }: { params: Record<string, string>
   )
 }
 
-/** Where the way back from an entry goes: its list, or the site's pages for a built-in page (they're listed there). */
+/**
+ * Where the way back from an entry goes: its list, or the site's pages for a built-in page (they're listed there). A global
+ * is its one entry, with no list to go back to (`back` is null): its bar names the content room instead.
+ */
 function listOf(manifest: ReturnType<typeof useManifest>, handle: string, locale?: string) {
   const summary = manifest.collections.find((c) => c.handle === handle)
   const within = manifest.collections.find((c) => c.handle === summary?.within)
   const shown = within ?? summary
   const other = locale && locale !== manifest.site.defaultLocale && manifest.site.locales.includes(locale)
-  // A built-in page goes back to its feature's tab; the site's pages keep their language.
+  // The site's pages keep their language.
   const query = other ? `?locale=${locale}` : ''
-  return { path: `/content/${shown?.handle ?? handle}${query}`, label: shown?.title ?? '', within }
+  const path = `/content/${shown?.handle ?? handle}${query}`
+  const label = shown?.title ?? ''
+  return { path, label, within, global: summary?.type === 'global', back: summary?.type === 'global' ? null : { to: path, label } }
 }
 
 function useEntryQuery(id: string, skip: boolean) {
@@ -146,7 +151,8 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
   // Someone else holds the entry (a panel says so through `hold`): read-only here, and nothing is saved, until that ends.
   const [held, setHeld] = useState(false)
   const control = useEntrySession(initial, {
-    title: initial?.title ?? '',
+    // A global's one entry is called what the global is.
+    title: initial?.title ?? (list.global ? manifest.collections.find((c) => c.handle === collection.handle)?.title ?? '' : ''),
     slug: initial?.slug ?? '',
     authorId: initial ? initial.authorId : manifest.user.id,
     data: initial?.data ?? Object.fromEntries(
@@ -157,7 +163,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
   const { entry, working, dirty, phase, errors, conflict, update, session } = control
   // A built-in page (listed with the site's pages) is one of a kind: it is never copied.
   const builtin = !!useManifest().collections.find((c) => c.handle === collection.handle)?.within
-  const actions = { ...entryActionAvailability(can, entry), ...(builtin ? { duplicate: false } : {}) }
+  const actions = { ...entryActionAvailability(can, entry), ...(builtin || list.global ? { duplicate: false } : {}) }
   const wide = useWideInspector()
   const [sidebarOpen, setSidebarOpen] = useState(() => wide)
   const [toolHost, setToolHost] = useState<HTMLElement | null>(null)
@@ -411,7 +417,8 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
   )
   const header = (
     <>
-      <Fields
+      {/* A global's values have no title of their own: they are the global's. */}
+      {!list.global && <Fields
         bare
         fields={[{ handle: 'title', type: 'text', label: t('Title'), component: 'title', placeholder: t('Untitled'), autofocus: !entry,
           onEnter: () => { void save(); focusBody() }, onDown: focusBody }]}
@@ -419,9 +426,9 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
         onChange={(_, title) => update({ title: title ?? '' })}
         errors={errors}
         disabled={!panelProps.editable}
-      />
+      />}
       {(properties.length > 0 || mainFields.length > 0) && (
-        <Properties collection={collection.handle} count={properties.length + mainFields.length}>
+        <Properties collection={collection.handle} count={properties.length + mainFields.length} always={list.global}>
           {properties.map((field) => <PropertyRow key={field.handle} field={field} value={working.data[field.handle]} onChange={(value) => setValue(field.handle, value)} error={errors[field.handle]} disabled={!panelProps.editable} context={fieldContext} values={working.data} />)}
           {mainFields.length > 0 && <Fields fields={mainFields} values={working.data} onChange={setValue} errors={errors} disabled={!panelProps.editable} context={fieldContext} className="mt-4 !gap-y-4" />}
         </Properties>
@@ -491,7 +498,7 @@ function Editor({ collection, blueprint, initial, can }: EditorProps) {
       <Topbar
         // A phone's bar has no room for the chat's toggle beside the tools: it is first in More Actions there.
         className="max-sm:[&_[data-workspace-toggle]]:hidden"
-        back={{ to: listPath, label: list.label }}
+        back={list.back}
         title={titled}
         children={<>
           {/* Narrow windows have no room in the middle: the title leads the bar instead (a phone has only room for where it stands). */}
@@ -671,11 +678,13 @@ function focusBody() {
 interface PropertiesProps {
   collection: string
   count: number
+  /** Shown whole, with no way to fold them: a global's, which are all there is of it. */
+  always?: boolean
   children: ReactNode
 }
 
 /** The entry's fields under the title; folded away on request (remembered per collection). */
-function Properties({ collection, count, children }: PropertiesProps) {
+function Properties({ collection, count, always, children }: PropertiesProps) {
   const key = `cms.properties.${collection}`
   const [open, setOpen] = useState(() => localStorage.getItem(key) !== 'closed')
   const toggle = () => {
@@ -687,6 +696,9 @@ function Properties({ collection, count, children }: PropertiesProps) {
     window.addEventListener('cms.fields.reveal', reveal)
     return () => window.removeEventListener('cms.fields.reveal', reveal)
   }, [])
+
+  // A global's fields are all there is of it: never folded away.
+  if (always) return <div className="mt-6" data-cms-fields=""><div className="space-y-px">{children}</div></div>
 
   return (
     <div className="mt-6" data-cms-fields={open ? '' : undefined}>

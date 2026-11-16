@@ -167,7 +167,7 @@ final class DryRunTest extends TestCase
 
         $this->assertSame([], $missing, 'An ability annotated destructive or confirm needs a `dryRun` callback that names what would be removed.');
 
-        foreach (['entries/delete', 'entries/discard-draft', 'collections/delete', 'globals/delete', 'navigation/delete', 'media/delete', 'users/delete', 'users/revoke', 'tokens/delete', 'comments/delete', 'threads/delete',
+        foreach (['entries/delete', 'entries/discard-draft', 'collections/delete', 'media/delete', 'users/delete', 'users/revoke', 'tokens/delete', 'comments/delete', 'threads/delete',
             'languages/delete', 'packages/enable', 'packages/disable', 'packages/switch', 'packages/uninstall', 'sync/start', 'sync/undo', 'sync/disconnect', 'sync/renew-key',
             'styling-code/delete', 'styling-vendor/delete'] as $name) {
             $this->assertArrayHasKey($name, $asking, "{$name} asks first");
@@ -184,7 +184,7 @@ final class DryRunTest extends TestCase
         $revision = $this->run_('revisions/list', ['entryId' => $page['id']])[0]['id'];
 
         $fired = [];
-        foreach (['ability.executing', 'ability.executed', 'entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleting', 'entry.deleted', 'entry.structure-changed', 'entry.uri-changed', 'entries.reordered', 'settings.saved', 'navigation.saved'] as $hook) {
+        foreach (['ability.executing', 'ability.executed', 'entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleting', 'entry.deleted', 'entry.structure-changed', 'entry.uri-changed', 'entries.reordered', 'settings.saved'] as $hook) {
             $this->cms()->hooks()->on($hook, static function () use (&$fired, $hook): void { $fired[] = $hook; });
         }
 
@@ -371,17 +371,6 @@ final class DryRunTest extends TestCase
         [$report] = $this->assertBothPass('users/delete', ['id' => $author->id]);
         $this->assertSame(['delete', 'user', $author->id, 1], [$report['changes'][0]['action'], $report['changes'][0]['type'], $report['changes'][0]['id'], $report['changes'][0]['removes']['tokens']]);
 
-        // Globals and menus: nothing there is nothing to remove.
-        $this->run_('globals/save', ['handle' => 'footer', 'title' => 'Footer', 'fields' => [['handle' => 'note', 'type' => 'text']]]);
-        $this->assertSame([], $this->dry('globals/delete', ['handle' => 'nothing'])['changes']);
-        [$report] = $this->assertBothPass('globals/delete', ['handle' => 'footer']);
-        $this->assertSame([['action' => 'delete', 'type' => 'global', 'handle' => 'footer', 'title' => 'Footer', 'removes' => ['fields' => 1, 'values' => true]]], $report['changes']);
-        $this->run_('navigation/create', ['handle' => 'main', 'title' => 'Main', 'items' => [['url' => '/a', 'label' => 'A'], ['url' => '/b', 'label' => 'B']]]);
-        $this->assertSame([], $this->dry('navigation/delete', ['handle' => 'nothing'])['changes']);
-        [$report, $gone] = $this->assertBothPass('navigation/delete', ['handle' => 'main']);
-        $this->assertSame(['delete', 'menu', 'main'], [$report['changes'][0]['action'], $report['changes'][0]['type'], $report['changes'][0]['handle']]);
-        $this->assertTrue($gone['deleted']);
-
         // A language: not the default, and not while it has entries.
         $this->assertBothRefuse('invalid_input', 'languages/delete', ['code' => 'en']);
         $german = $this->run_('entries/create', ['collection' => 'posts', 'title' => 'Hallo', 'locale' => 'de']);
@@ -524,8 +513,8 @@ final class DryRunTest extends TestCase
         $this->postJson('/api/v1/abilities/entries/create', $input, $headers)->assertOk()
             ->assertJsonPath('data.dryRun', true)->assertJsonPath('data.checked', 'full')->assertJsonPath('data.changes.0.action', 'create');
         $this->postJson('/api/v1/abilities/entries/create', ['collection' => 'pages', 'title' => 'Dry', 'slug' => 'x', 'locale' => 'es', 'dryRun' => true], $headers)->assertStatus(422);
-        $this->postJson('/api/v1/abilities/globals/delete', ['handle' => 'nothing', 'dryRun' => true], $headers)->assertOk()->assertExactJson(['data' => [
-            'dryRun' => true, 'ability' => 'globals/delete', 'checked' => 'full', 'input' => ['handle' => 'nothing'], 'changes' => [],
+        $this->postJson('/api/v1/abilities/styling-code/delete', ['path' => 'scripts/nothing.js', 'dryRun' => true], $headers)->assertOk()->assertExactJson(['data' => [
+            'dryRun' => true, 'ability' => 'styling-code/delete', 'checked' => 'full', 'input' => ['path' => 'scripts/nothing.js'], 'changes' => [],
         ]]);
 
         $rpc = fn (string $method, array $params = []) => $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => $method, 'params' => [...$params, '_meta' => ['io.modelcontextprotocol/protocolVersion' => '2026-07-28']]], $headers);

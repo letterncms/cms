@@ -28,7 +28,8 @@ use Cms\Content\Entries\UriBuilder;
 use Cms\Content\Fields\FieldTypeRegistry;
 use Cms\Content\Fields\Fieldsets;
 use Cms\Content\Fields\Types;
-use Cms\Content\Globals\GlobalRepository;
+use Cms\Content\Collections\Globals;
+use Cms\Content\Collections\Menus;
 use Cms\Content\Revisions\Revisions;
 use Cms\Context\ContextRegistry;
 use Cms\Context\SkillRegistry;
@@ -65,7 +66,8 @@ final class CmsServiceProvider extends ServiceProvider
         EntryService::class => EntryService::class,
         UriBuilder::class => UriBuilder::class,
         Revisions::class => Revisions::class,
-        GlobalRepository::class => GlobalRepository::class,
+        Globals::class => Globals::class,
+        Menus::class => Menus::class,
         Content\BuiltinPages::class => Content\BuiltinPages::class,
         Content\Schemas\SchemaFiles::class => Content\Schemas\SchemaFiles::class,
         Permissions::class => Permissions::class,
@@ -320,26 +322,27 @@ final class CmsServiceProvider extends ServiceProvider
         $admin = $this->app->make(AdminRegistry::class);
 
         // The main sidebar is where the work starts: the home screens and a row into each room, then what is pinned
-        // (the files, what every page shares, a plugin's screen, and whatever someone pins from a room). Content is
-        // the collections' entries, grouped by their type: the entries (pages, posts), then the taxonomies they are
-        // filed under (categories, tags); Design is how the site looks (the sites to switch between, its theme and
-        // styles, drawn beside the site by the site's module); Structure is what its pages are made of (the
-        // collections' and taxonomies' definitions, the templates, components, menus and code).
+        // (the files, a plugin's screen, and whatever someone pins from a room), with what is seldom needed (the site's
+        // code, the store) under More. Content is the collections' entries, grouped by their kind: the entries (pages,
+        // posts), the taxonomies they are filed under (categories, tags), the globals and the menus; Design is how the
+        // site looks (the sites to switch between, its theme and styles, drawn beside the site by the site's module);
+        // Structure is what its pages are made of (the definitions of each kind, the templates and components).
         $admin->section('main', '', 0);
         $admin->section(Navigation::PINNED, __('Pinned'), 10);
         $admin->room('content', __('Content'), 'file-text', section: 'main', order: 20);
         $admin->section('entries', __('Entries'), 0, room: 'content');
         $admin->section('taxonomies', __('Taxonomies'), 10, room: 'content');
+        $admin->section('globals', __('Globals'), 20, room: 'content');
+        $admin->section('menus', __('Menus'), 30, room: 'content');
         $admin->room('design', __('Design'), 'palette', section: 'main', order: 30);
         // The site as a whole first (the sites to switch between, and more of them in the store), then its theme and the looks made of it.
         $admin->section('design-site', __('Site'), 0, room: 'design');
         $admin->section('design', __('Theme'), 10, room: 'design');
         $admin->room('structure', __('Structure'), 'layers', section: 'main', order: 35);
-        // Structure in three groups: what content is made of (collections, taxonomies), the layout its pages are drawn
-        // with (templates, components), and what the whole site shares (menus, code).
+        // Structure in two groups: what content is made of (collections, taxonomies, globals, menus), and the layout its
+        // pages are drawn with (templates, components).
         $admin->section('structure', __('Content Types'), 0, room: 'structure');
         $admin->section('layout', __('Layout'), 10, room: 'structure');
-        $admin->section('site-wide', __('Site'), 20, room: 'structure');
         // Settings, the same on every site: the site's General page, your own account and what runs the
         // installation, as one group without a name; then who works on it; then each plugin's page,
         // named by the plugin (see Navigation::PLUGINS).

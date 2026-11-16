@@ -232,18 +232,6 @@ final class EntriesTest extends TestCase
         $this->cms()->entryService()->create('notes', ['title' => 'B', 'status' => 'published', 'data' => ['list' => 'Newsletter']]);
     }
 
-    public function test_global_values(): void
-    {
-        $global = new \Cms\Content\Globals\GlobalContent('footer', 'Footer', 'globe', [['handle' => 'tagline', 'type' => 'text'], ['handle' => 'year', 'type' => 'number']]);
-        $this->cms()->globals()->save($global);
-
-        $this->cms()->globals()->updateValues('footer', ['tagline' => 'Made with care', 'year' => '2026']);
-        $this->cms()->globals()->updateValues('footer', ['tagline' => 'Mit Sorgfalt gemacht'], 'de');
-
-        $this->assertSame(['tagline' => 'Made with care', 'year' => 2026], $this->cms()->globals()->find('footer')->values());
-        $this->assertSame('Mit Sorgfalt gemacht', $this->cms()->globals()->find('footer')->values('de')['tagline']);
-    }
-
     public function test_stale_saves_conflict_instead_of_overwriting(): void
     {
         $service = $this->cms()->entryService();

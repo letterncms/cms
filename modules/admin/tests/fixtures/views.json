@@ -550,50 +550,13 @@
     "globals": {
         "id": "globals",
         "path": "/globals",
-        "package": "letterncms/globals",
+        "package": "letterncms/collections",
         "root": {
             "type": "ui/page",
             "props": {
                 "title": "Globals",
                 "icon": "globe",
-                "actions": [
-                    {
-                        "label": "New Global",
-                        "icon": "plus",
-                        "variant": "primary",
-                        "ability": "globals/save",
-                        "form": {
-                            "title": "New Global",
-                            "confirm": "Create Global",
-                            "fields": [
-                                {
-                                    "handle": "title",
-                                    "type": "text",
-                                    "label": "Name",
-                                    "placeholder": "Footer",
-                                    "required": true,
-                                    "autofocus": true
-                                }
-                            ]
-                        },
-                        "input": {
-                            "title": "{values.title}",
-                            "fields": [
-                                {
-                                    "handle": "text",
-                                    "type": "text",
-                                    "label": "Text"
-                                }
-                            ]
-                        },
-                        "then": [
-                            "manifest",
-                            "open"
-                        ],
-                        "to": "/globals/{result.handle}/fields",
-                        "props": []
-                    }
-                ]
+                "actions": []
             },
             "children": [
                 {
@@ -603,8 +566,10 @@
                         "label": "Globals",
                         "key": "handle",
                         "source": {
-                            "ability": "globals/list",
-                            "input": []
+                            "ability": "collections/editable",
+                            "input": {
+                                "kind": "globals"
+                            }
                         },
                         "columns": [
                             {
@@ -614,32 +579,41 @@
                             }
                         ],
                         "open": {
-                            "label": "Edit",
+                            "label": "Open",
                             "to": "/globals/{row.handle}",
                             "input": [],
                             "props": []
                         },
                         "actions": [
                             {
-                                "label": "Edit",
-                                "icon": "edit",
+                                "label": "Edit Fields",
+                                "icon": "field",
                                 "to": "/globals/{row.handle}",
-                                "can": "globals.manage",
                                 "input": [],
                                 "props": []
                             },
                             {
-                                "label": "Edit Fields",
-                                "icon": "field",
-                                "to": "/globals/{row.handle}/fields",
-                                "can": "globals.manage",
+                                "label": "Edit Values",
+                                "icon": "arrow-up-right",
+                                "to": "/content/{row.handle}",
+                                "when": "{row.viewable}",
                                 "input": [],
                                 "props": []
                             }
                         ],
                         "empty": {
                             "icon": "globe",
-                            "title": "No globals yet"
+                            "title": "No globals yet",
+                            "action": {
+                                "label": "New Global",
+                                "icon": "plus",
+                                "variant": "primary",
+                                "component": "collections/new",
+                                "props": {
+                                    "kind": "globals"
+                                },
+                                "input": []
+                            }
                         }
                     }
                 }
@@ -662,7 +636,7 @@
                         "variant": "primary",
                         "component": "collections/new",
                         "props": {
-                            "taxonomy": false
+                            "kind": "collections"
                         },
                         "input": []
                     }
@@ -678,7 +652,7 @@
                         "source": {
                             "ability": "collections/editable",
                             "input": {
-                                "taxonomies": false
+                                "kind": "collections"
                             }
                         },
                         "columns": [
@@ -748,7 +722,7 @@
                                 "variant": "primary",
                                 "component": "collections/new",
                                 "props": {
-                                    "taxonomy": false
+                                    "kind": "collections"
                                 },
                                 "input": []
                             }
@@ -1005,54 +979,29 @@
             ]
         }
     },
-    "navigation": {
-        "id": "navigation",
-        "path": "/navigation",
-        "package": "letterncms/navigation",
+    "menus": {
+        "id": "menus",
+        "path": "/menus",
+        "package": "letterncms/collections",
         "root": {
             "type": "ui/page",
             "props": {
-                "title": "Navigation",
+                "title": "Menus",
                 "icon": "list-tree",
-                "actions": [
-                    {
-                        "label": "New Menu",
-                        "icon": "plus",
-                        "variant": "primary",
-                        "ability": "navigation/create",
-                        "input": {
-                            "title": "{values.title}"
-                        },
-                        "then": "open",
-                        "to": "/navigation/{result.handle}",
-                        "form": {
-                            "title": "New Menu",
-                            "confirm": "Create Menu",
-                            "fields": [
-                                {
-                                    "handle": "title",
-                                    "type": "text",
-                                    "label": "Name",
-                                    "placeholder": "Footer",
-                                    "required": true,
-                                    "autofocus": true
-                                }
-                            ]
-                        },
-                        "props": []
-                    }
-                ]
+                "actions": []
             },
             "children": [
                 {
                     "type": "ui/records",
                     "props": {
-                        "id": "navigation",
+                        "id": "menus",
                         "label": "Menus",
                         "key": "handle",
                         "source": {
-                            "ability": "navigation/list",
-                            "input": []
+                            "ability": "collections/editable",
+                            "input": {
+                                "kind": "menus"
+                            }
                         },
                         "columns": [
                             {
@@ -1074,57 +1023,40 @@
                         ],
                         "open": {
                             "label": "Open",
-                            "to": "/navigation/{row.handle}",
+                            "to": "/menus/{row.handle}",
                             "input": [],
                             "props": []
                         },
                         "actions": [
                             {
-                                "label": "Rename",
-                                "icon": "edit",
-                                "ability": "navigation/update",
-                                "input": {
-                                    "handle": "{row.handle}",
-                                    "title": "{values.title}"
-                                },
-                                "form": {
-                                    "title": "Rename Menu",
-                                    "confirm": "Rename",
-                                    "values": {
-                                        "title": "{row.title}"
-                                    },
-                                    "fields": [
-                                        {
-                                            "handle": "title",
-                                            "type": "text",
-                                            "label": "Name",
-                                            "required": true,
-                                            "autofocus": true
-                                        }
-                                    ]
-                                },
+                                "label": "Edit Fields",
+                                "icon": "field",
+                                "to": "/menus/{row.handle}",
+                                "input": [],
                                 "props": []
                             },
                             {
-                                "label": "Delete",
-                                "icon": "trash",
-                                "variant": "danger",
-                                "ability": "navigation/delete",
-                                "input": {
-                                    "handle": "{row.handle}"
-                                },
-                                "confirm": {
-                                    "title": "Delete “{row.title}”?",
-                                    "text": "Repeat blocks that list this menu will show nothing.",
-                                    "confirm": "Delete",
-                                    "danger": true
-                                },
+                                "label": "Open Links",
+                                "icon": "arrow-up-right",
+                                "to": "/content/{row.handle}",
+                                "when": "{row.viewable}",
+                                "input": [],
                                 "props": []
                             }
                         ],
                         "empty": {
                             "icon": "list-tree",
-                            "title": "No menus yet"
+                            "title": "No menus yet",
+                            "action": {
+                                "label": "New Menu",
+                                "icon": "plus",
+                                "variant": "primary",
+                                "component": "collections/new",
+                                "props": {
+                                    "kind": "menus"
+                                },
+                                "input": []
+                            }
                         }
                     }
                 }

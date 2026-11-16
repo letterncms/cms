@@ -150,34 +150,6 @@ final class OutputAccountsTest extends TestCase
         }
     }
 
-    public function test_globals(): void
-    {
-        $me = $this->admin();
-
-        $this->assertSame([], $this->run_('globals/list', [], $me));
-
-        $set = $this->run_('globals/save', ['title' => 'Footer', 'fields' => [['handle' => 'text', 'type' => 'text', 'label' => 'Text'], ['handle' => 'hours', 'type' => 'textarea']]], $me);
-        $this->assertSame('footer', $set['handle']);
-        $this->run_('globals/save', ['title' => 'Empty', 'icon' => 'star', 'fields' => []], $me);
-        // The values as stored, by field handle: every field of the set, also one nobody filled in.
-        $stored = (array) $this->run_('globals/set', ['handle' => 'footer', 'values' => ['text' => 'Hello']], $me);
-        $this->assertSame('Hello', $stored['text']);
-        $this->assertArrayHasKey('hours', $stored);
-        $this->assertSame('Hallo', ((array) $this->run_('globals/set', ['handle' => 'footer', 'values' => ['text' => 'Hallo'], 'locale' => 'de'], $me))['text']);
-        // A set without fields has no values: a map all the same.
-        $this->assertSame([], (array) $this->run_('globals/set', ['handle' => 'empty', 'values' => []], $me));
-
-        $list = $this->run_('globals/list', [], $me);
-        $this->assertEqualsCanonicalizing(['empty', 'footer'], array_column($list, 'handle'));
-
-        $this->assertSame('Hello', ((array) $this->run_('globals/get', ['handle' => 'footer'], $me)['data'])['text']);
-        $this->assertSame('Hallo', ((array) $this->run_('globals/get', ['handle' => 'footer', 'locale' => 'de'], $me)['data'])['text']);
-        $this->assertSame([], $this->run_('globals/get', ['handle' => 'empty'], $me)['fields']);
-
-        $this->assertSame(['deleted' => 'empty'], $this->run_('globals/delete', ['handle' => 'empty'], $me));
-        $this->assertCount(1, $this->run_('globals/list', [], $me));
-    }
-
     public function test_email_its_status_and_its_log(): void
     {
         // Kept in the log only, whatever the environment sends with: nothing leaves the tests.
@@ -228,7 +200,7 @@ final class OutputAccountsTest extends TestCase
         $this->run_('entries/update', ['id' => $entry['id'], 'data' => ['summary' => 'One']], $editor, 'admin');
         $this->run_('entries/update', ['id' => $entry['id'], 'data' => ['summary' => 'Two']], $editor, 'admin');
         $this->run_('settings/update', ['namespace' => 'site', 'values' => ['name' => 'Renamed']], $me, 'rest');
-        $this->run_('globals/save', ['title' => 'Footer', 'fields' => []], $me);
+        $this->run_('collections/save', ['handle' => 'footer', 'definition' => ['type' => 'global', 'title' => 'Footer', 'fields' => []]], $me);
         $this->cms()->abilities()->execute('users/update', ['id' => $editor->id, 'name' => 'Edith'], AbilityContext::system('cli'));
         $this->run_('users/delete', ['id' => $editor->id], $me);
 

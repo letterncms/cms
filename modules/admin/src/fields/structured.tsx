@@ -42,7 +42,8 @@ export function LinkValueField({ field, value, onChange, disabled, error, contex
         disabled={disabled}
         context={context}
       />
-      {link && (
+      {/* A link whose words are kept elsewhere (`words: false`, a menu's: its title) has no label of its own. */}
+      {link && field.words !== false && (
         <Input
           id={`${id}-label`}
           aria-label={t('Label')}

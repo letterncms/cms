@@ -134,37 +134,6 @@ final class OutputSiteTest extends TestCase
         ]];
     }
 
-    public function test_navigation_abilities_answer_as_described(): void
-    {
-        $this->assertSame([], $this->ability('navigation/list'));
-        $this->assertSame([], $this->ability('navigation/create', ['title' => 'Main'])['items']);
-        $this->assertSame('/x', $this->ability('navigation/create', ['title' => 'Footer', 'handle' => 'foot', 'maxDepth' => 1, 'items' => [['url' => '/x', 'label' => 'X']]])['items'][0]['url']);
-        $this->assertSame([], $this->ability('navigation/create', ['title' => 'Again', 'handle' => 'foot'], 'conflict'));
-        $this->assertSame([], $this->ability('navigation/update', ['handle' => 'none', 'items' => []], 'not_found'));
-        $this->assertTrue($this->ability('navigation/delete', ['handle' => 'foot'])['deleted']);
-
-        $page = $this->cms()->entryService()->create('pages', ['title' => 'About', 'slug' => 'about', 'status' => 'published']);
-        $menu = $this->ability('navigation/update', ['handle' => 'main', 'maxDepth' => 3, 'items' => [
-            ['entry' => $page->id, 'locales' => ['de' => ['label' => 'Über uns']], 'children' => [
-                ['url' => '/jobs', 'label' => 'Jobs', 'newTab' => true, 'locales' => ['de' => ['label' => 'Stellen', 'url' => '/de/jobs'], 'pt-BR' => ['url' => '/pt/jobs']], 'children' => [['url' => '#top', 'label' => 'Top']]],
-            ]],
-        ]]);
-        $this->assertSame('About', $menu['items'][0]['target']['title']);
-        $this->assertSame(['label' => 'Stellen', 'url' => '/de/jobs'], $menu['items'][0]['children'][0]['locales']['de']);
-        $this->assertSame('Top', $menu['items'][0]['children'][0]['children'][0]['label']);
-
-        $this->assertCount(2, $this->ability('navigation/add-item', ['menu' => 'main', 'url' => 'https://example.com', 'label' => 'Elsewhere'])['items']);
-        $this->assertSame(4, $this->ability('navigation/list')[0]['count']);
-
-        // A hand-written file may link to an entry that is gone.
-        \Cms\Support\Yaml::write(content_path('navigation/old.yaml'), ['title' => 'Old', 'items' => [['entry' => '01hzzzzzzzzzzzzzzzzzzzzzzz', 'label' => 'Gone']]]);
-        $this->app->forgetInstance(\Cms\Modules\Navigation\Menus::class);
-        $this->assertSame('missing', $this->ability('navigation/get', ['handle' => 'old'])['items'][0]['target']['status']);
-
-        $this->assertTrue($this->ability('navigation/delete', ['handle' => 'old'])['deleted']);
-        $this->assertFalse($this->ability('navigation/delete', ['handle' => 'old'])['deleted']);
-    }
-
     public function test_styling_abilities_answer_as_described(): void
     {
         $this->assertSame([], $this->ability('styling-code/set-custom', [], 'invalid_input'));

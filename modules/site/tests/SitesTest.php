@@ -25,7 +25,7 @@ final class SitesTest extends TestCase
 
     protected function plugins(): array
     {
-        return ['letterncms/blocks', 'letterncms/site', 'letterncms/navigation', 'letterncms/languages', 'letterncms/seo'];
+        return ['letterncms/blocks', 'letterncms/site', 'letterncms/languages', 'letterncms/seo'];
     }
 
     protected function collections(): array
@@ -158,12 +158,13 @@ final class SitesTest extends TestCase
         $this->assertSame(['Site', 'Theme'], array_column($rooms['design']['sections'], 'label'));
         $this->assertSame(['sites', 'sites-store'], $design['design-site']['items']);
         $this->assertSame(['design.colors', 'design.typography', 'design.layout', 'design.effects', 'design.motion', 'design.classes'], $design['design']['items']);
-        $this->assertContains('navigation', array_merge(...array_column($rooms['structure']['sections'], 'items')));
-        // Structure in named groups: content types, the layout, and what the whole site shares.
+        // Structure in named groups: content types, then the layout.
         $structure = array_column($rooms['structure']['sections'], null, 'id');
-        $this->assertSame(['Content Types', 'Layout', 'Site'], array_column($structure, 'label'));
+        $this->assertSame(['Content Types', 'Layout'], array_column($structure, 'label'));
         $this->assertSame(['collection.templates', 'collection.components'], $structure['layout']['items']);
-        $this->assertSame(['navigation', 'code'], $structure['site-wide']['items']);
+        // The site's code is seldom needed: pinned, under More.
+        $this->assertContains('code', $navigation['sidebar']['hidden']);
+        $this->assertSame('pinned', array_column($navigation['nav'], 'section', 'id')['code']);
         $this->assertSame('/design/colors', $rooms['design']['path']);
         $this->assertSame('/design/colors', array_column($navigation['nav'], 'path', 'id')['design']);
         $this->assertNotContains('sites', array_merge(...array_column($rooms['settings']['sections'], 'items')));
@@ -199,13 +200,14 @@ final class SitesTest extends TestCase
         $this->assertMatchesRegularExpression('#<section class="cms-section[^"]* spotlight[^"]*"[^>]* data-cms-behavior="/_cms/site/scripts/spotlight-[0-9a-f]{10}\.js"#', $pages['index.html']);
         $this->assertStringNotContainsString('data-cms-behavior', $pages['about/index.html']);
 
-        // The menus name the entries as they are here.
-        $menu = Yaml::read(content_path('navigation/main.yaml'));
-        $this->assertCount(2, $menu['items']);
+        // The menus' links name the entries as they are here.
+        $links = $this->cms()->entries()->query()->collection('main')->get();
+        $this->assertCount(2, $links);
 
-        foreach ($menu['items'] as $item) {
-            $this->assertNotNull($this->cms()->entries()->find($item['entry']));
+        foreach ($links as $link) {
+            $this->assertNotNull($this->cms()->entries()->find($link->data['link']['value']));
         }
+        $this->assertSame(['About', 'Blog'], array_column(cms_menu('main'), 'label'));
 
         // A site with collections of its own is never given a site.
         $this->cms()->hooks()->dispatch('cms.installed', $admin);
@@ -234,7 +236,7 @@ final class SitesTest extends TestCase
         $this->assertSame('studio', $this->sites()->active());
         $this->assertSame(['Studio Home'], array_map(static fn ($e) => $e->title, $this->cms()->entries()->query()->collection('pages')->get()));
         $this->assertNull($this->cms()->collections()->find('posts'), 'what the other site brought is gone');
-        $this->assertFileDoesNotExist(content_path('navigation/main.yaml'));
+        $this->assertNull($this->cms()->collections()->find('main'), 'its menus too');
 
         // Back: the site as it was left, drafts included, not the site as it came.
         $this->assertSame('studio', $this->ability('sites/switch', ['handle' => 'starter'])['saved']['handle']);
@@ -454,7 +456,7 @@ final class SitesTest extends TestCase
             $this->cms()->entryService()->delete($entry->id, $admin);
         }
 
-        foreach (['collections', 'globals', 'navigation', 'styling', 'media'] as $folderName) {
+        foreach (['collections', 'styling', 'media'] as $folderName) {
             Files::deleteDirectory(content_path($folderName));
         }
 
@@ -488,12 +490,12 @@ final class SitesTest extends TestCase
         $names = array_map(static fn ($s) => $s['type'].' '.$s['name'], $clashes);
         $this->assertContains('entry pages/home', $names);
         $this->assertContains('style styles/spotlight', $names);
-        $this->assertContains('menu main', $names);
+        $this->assertContains('entry main/about', $names, 'a menu\'s links are entries');
         $this->assertNotContains('theme theme.css', $names, 'what the site has the same of is left alone, not a clash');
         // Each is named as a person knows it: the site's title, and an entry's collection to say what kind it is.
         $homeStep = array_values(array_filter($clashes, static fn ($s) => $s['name'] === 'pages/home'))[0];
         $this->assertSame(['pages', 'Home'], [$homeStep['collection'], $homeStep['title']]);
-        $this->assertSame('Main', array_values(array_filter($clashes, static fn ($s) => $s['name'] === 'main'))[0]['title'] ?? null);
+        $this->assertSame(['main', 'About'], [($link = array_values(array_filter($clashes, static fn ($s) => $s['name'] === 'main/about'))[0] ?? [])['collection'] ?? null, $link['title'] ?? null]);
 
         try {
             $this->ability('sites/apply', ['handle' => 'starter', 'dryRun' => true]);
@@ -778,8 +780,8 @@ final class SitesTest extends TestCase
         };
         $theme = ['content/styling/theme.css' => "@import \"tailwindcss\";\n"];
 
-        $this->site('linking', [...$theme, 'content/navigation/main.yaml' => "title: Main\nitems:\n  - { url: 'javascript:alert(1)', label: Go }\n"]);
-        $refused('linking', 'menu “main”');
+        $this->site('linking', [...$theme, 'content/collections/main.yaml' => "type: menu\ntitle: Main\nfields:\n  - { handle: link, type: link }\n", 'content/collections/main/go.md' => "---\ntitle: Go\nstatus: published\nlink: { type: url, value: 'javascript:alert(1)' }\n---\n"]);
+        $refused('linking', 'main/go');
 
         $this->site('setting', [...$theme, 'config/site.yaml' => "description: [not, a, text]\n"]);
         $refused('setting', 'settings of “site”');

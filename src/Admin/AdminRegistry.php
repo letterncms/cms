@@ -110,7 +110,7 @@ final class AdminRegistry
     {
         $package = $item['package'] ?? Scope::$current;
         $label = $item['label'] ?? PackageRepository::labelOf($package) ?? ucfirst($id);
-        $this->nav[$id] = ['id' => $id, 'icon' => 'circle', 'section' => Navigation::PINNED, 'order' => 50, 'pinned' => false, 'shortcut' => null, 'permission' => null, 'visible' => null, ...$item, 'label' => $label, 'package' => $package];
+        $this->nav[$id] = ['id' => $id, 'icon' => 'circle', 'section' => Navigation::PINNED, 'order' => 50, 'pinned' => null, 'shortcut' => null, 'permission' => null, 'visible' => null, ...$item, 'label' => $label, 'package' => $package];
     }
 
     public function module(string $id, string $url, ?string $package = null): void

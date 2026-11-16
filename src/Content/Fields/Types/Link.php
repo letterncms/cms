@@ -123,6 +123,11 @@ class Link extends FieldType
             };
         }
 
+        // An address a page can lead to: anything else (javascript:, data:) is never shown, so it is not kept either.
+        if (($value['type'] ?? '') === 'url' && ! self::safe((string) $value['value'])) {
+            return ['value' => __('Use a web address or a path: https://…, /…, #… or ?….')];
+        }
+
         if (($value['type'] ?? '') === 'media' && $this->file((string) $value['value']) === null) {
             return ['value' => __('This file does not exist.')];
         }
@@ -185,6 +190,12 @@ class Link extends FieldType
                 app(\Cms\Content\Collections\CollectionRepository::class)->all()
             )],
         ];
+    }
+
+    /** An address a link may lead to: the web, a path or a place on the page. */
+    public static function safe(string $address): bool
+    {
+        return preg_match('#^(https?://|/|\#|\?)#i', trim($address)) === 1;
     }
 
     /** @return list<string> */

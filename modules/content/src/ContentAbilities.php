@@ -416,7 +416,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'collection' => self::HANDLE,
                 'blueprint' => [...self::HANDLE, 'description' => 'For a collection with several blueprints (collections/schema lists them): the one this entry is made with and keeps. Left out: the collection\'s own fields.'],
-                'title' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 500],
+                'title' => ['type' => 'string', 'maxLength' => 500, 'description' => 'Never empty, but for a link of a menu to a page: empty, it is the page\'s title.'],
                 'slug' => ['type' => 'string', 'maxLength' => 191],
                 'data' => ['type' => 'object', 'default' => []],
                 'locale' => ['type' => 'string'],
@@ -773,16 +773,19 @@ final class ContentAbilities
                     array_push($userIds, ...$ids($values[$field->handle] ?? null));
                 } elseif (in_array($field->type, ['entries', 'terms'], true)) {
                     array_push($entryIds, ...$ids($values[$field->handle] ?? null));
+                } elseif ($field->type === 'link' && ($values[$field->handle]['type'] ?? null) === 'entry') {
+                    $entryIds[] = (string) $values[$field->handle]['value'];
                 }
             }
         }
 
         $userIds = array_values(array_unique(array_filter($userIds)));
         $users = $userIds === [] ? [] : User::query()->whereIn('id', $userIds)->get()->mapWithKeys(static fn (User $u) => [$u->id => $u->toPerson()])->all();
-        $related = [];
+        $related = $uris = [];
 
         foreach ($this->cms->entries()->findMany(array_values(array_unique($entryIds))) as $entry) {
             $related[$entry->id] = ['id' => $entry->id, 'collection' => $entry->collection, 'title' => (string) ($entry->working()['title'] ?? $entry->title)];
+            $uris[$entry->id] = $entry->uri;
         }
 
         $translations = [];
@@ -799,7 +802,7 @@ final class ContentAbilities
             }
         }
 
-        return array_map(function (Entry $entry, array $values) use ($fields, $users, $related, $translations, $ids): array {
+        return array_map(function (Entry $entry, array $values) use ($fields, $users, $related, $uris, $translations, $ids): array {
             $item = [...$entry->toSummary(false), 'author' => $users[$entry->working()['authorId']] ?? null];
 
             if ($translations !== []) {
@@ -812,6 +815,8 @@ final class ContentAbilities
                     array_map(static fn ($f) => match ($f->type) {
                         'users' => array_values(array_filter(array_map(static fn ($id) => $users[$id] ?? null, $ids($values[$f->handle] ?? null)))),
                         'entries', 'terms' => array_values(array_filter(array_map(static fn ($id) => $related[strtolower($id)] ?? null, $ids($values[$f->handle] ?? null)))),
+                        // Where a link goes, in words: a page's address (its title while it has none), else what was given.
+                        'link' => self::linkTarget($values[$f->handle] ?? null, $related, $uris),
                         default => $values[$f->handle] ?? null,
                     }, $fields),
                 );
@@ -819,6 +824,22 @@ final class ContentAbilities
 
             return $item;
         }, $entries, $data);
+    }
+
+    /** Where a link value goes, as a list shows it; null for none. */
+    private static function linkTarget(mixed $link, array $related, array $uris): ?string
+    {
+        if (! is_array($link) || ! isset($link['type'], $link['value'])) {
+            return null;
+        }
+
+        if ($link['type'] === 'entry') {
+            $page = $related[strtolower((string) $link['value'])] ?? null;
+
+            return $page === null ? __('Page not found') : ($uris[$page['id']] ?? $page['title']);
+        }
+
+        return (string) $link['value'];
     }
 
     /**

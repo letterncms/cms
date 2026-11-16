@@ -28,7 +28,7 @@ final class MediaModule extends Plugin
     public function boot(): void
     {
         // Where media is used is read once per request; whatever writes what can name a file has it read again.
-        foreach (['entry.saved', 'entry.deleted', 'globals.saved', 'styling.saved'] as $written) {
+        foreach (['entry.saved', 'entry.deleted', 'styling.saved'] as $written) {
             $this->cms()->hooks()->on($written, fn () => $this->app->make(MediaReferences::class)->forget());
         }
 
@@ -224,7 +224,7 @@ final class MediaModule extends Plugin
 
         $a->register('media/get', [
             'label' => 'Get Media',
-            'description' => 'One file, with every entry, global and styling file (the stylesheet, kind `styling`) that uses it (usedBy).',
+            'description' => 'One file, with every entry and styling file (the stylesheet, kind `styling`) that uses it (usedBy).',
             'permission' => 'media.view',
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id']],

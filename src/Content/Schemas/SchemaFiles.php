@@ -89,14 +89,6 @@ final class SchemaFiles
                 }
             }
 
-            foreach ($this->cms->globals()->all() as $set) {
-                $documents["globals/{$set->handle}.json"] = self::document(
-                    "{$set->title}: the values of a global",
-                    "The values of the global `{$set->handle}`, by field handle.",
-                    $set->blueprint()->schema(partial: true),
-                );
-            }
-
             $documents = (array) $this->hooks->filter('schemas.documents', $documents);
             ksort($documents);
 

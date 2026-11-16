@@ -206,17 +206,11 @@ final class Renderer
         ];
     }
 
+    /** Each global's values in the language of the page being rendered. */
     public function globals(): array
     {
-        PageContext::depend('globals');
-        $locale = PageContext::current()?->locale();
-        $out = [];
-
-        foreach ($this->cms->globals()->all() as $handle => $set) {
-            $out[$handle] = AugmentedEntry::wrap($set->blueprint()->augment($set->values($locale)));
-        }
-
-        return $out;
+        // Templates read a related entry's own fields through it, as an entry's.
+        return AugmentedEntry::wrap($this->cms->globals()->all(PageContext::current()?->locale()));
     }
 
     /** The entry's own content: its body field (blocks, Markdown or rich text). */

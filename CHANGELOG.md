@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking. Globals and menus are content types.** A global is a collection of the type **Global**: its values are its one entry, with drafts, history and translations like any other, and templates read them as before (`globals.<handle>.<field>`). A menu is a collection of the type **Menu**: each link is an entry, its title the words and its **Link** field where it goes, nested by dragging in the menu's list and added with **Add Link**. A link to a page says the page's title unless you give it other words, and goes when the page is deleted. Globals and menus are in the Content room, each under its own heading, and their fields and settings are in Structure beside Collections and Taxonomies. Pages show a menu with the Repeat block as before.
+- **Breaking.** A site keeps its globals and menus in `content/collections/`, as collections of the type `global` and `menu`: `content/globals/` and `content/navigation/` are gone. So are the abilities `globals/*` and `navigation/*` (use `collections/*` and `entries/*`) and the permissions `globals.*` and `navigation.*` (each collection has its own `entries.<handle>.*`). The `navigation.entry` filter is `entry.localized`.
+- **Code is under More** in the main sidebar: one click away when you need it, out of sight when you don't. Pin it to keep it in view.
+- A link field keeps only a web address or a path (https://…, /…, #… or ?…). Anything else, such as `javascript:`, never reached a page and is now refused when it is saved.
+
+### Removed
+
+- **Breaking.** The modules `letterncms/globals` and `letterncms/navigation`, with the dashboard's Globals and Menus widgets: globals and menus are content types now.
+- **Breaking.** `cms migrate` no longer renames the `pattern` block of older sites to `component`.
+
+### Fixed
+
+- Applying a site with **Rename** for what clashes no longer skips a number when another collection has an entry of the same name, and never gives a global a second set of values.
+
 ## 0.49.0 (2026-11-16)
 
 ### Changed

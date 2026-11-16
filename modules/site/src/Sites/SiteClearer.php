@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Takes out of the site exactly what a site carries (SiteExporter says what that is), so that a site can take its
- * place: the collections and their entries, the templates' and components' entries, globals, menus, the
- * design, what plugins keep beside the content and the settings a site may carry. Nothing else is touched:
+ * place: the collections and their entries (globals and menus among them), the templates' and components'
+ * entries, the design, what plugins keep beside the content and the settings a site may carry. Nothing else is touched:
  * accounts, the media library, submissions, analytics, secrets and the rest of config/ stay.
  *
  * What is cleared is what SiteExporter writes, so a site that was saved first loses nothing.
@@ -43,12 +43,6 @@ final class SiteClearer
                 ! $collection->system && @unlink(content_path("collections/{$handle}.yaml"));
             }
         });
-
-        foreach (['globals', 'navigation'] as $folder) {
-            foreach (glob(content_path($folder).'/*.yaml') ?: [] as $file) {
-                Files::isHandle(basename($file, '.yaml')) && @unlink($file);
-            }
-        }
 
         foreach ($this->exporter->tree($this->styling->path()) as $relative) {
             @unlink($this->styling->path($relative));

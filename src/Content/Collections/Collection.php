@@ -12,19 +12,37 @@ use Cms\Support\RecordTimestamps;
 /**
  * A content type, defined in content/collections/<handle>.yaml.
  *
- * Its `type` says what its entries are. `entries` are the site's content: pages, posts, projects. The other
- * two are taxonomies, vocabularies that entries are filed under through a `terms` field: `categories` are
- * curated and nest (a tree), `tags` are flat and made as they are typed into the field. Both are entries
- * still, so a term can be renamed, translated and given fields and a page.
+ * Its `type` says what its entries are, and every type's entries are entries alike: drafts, history,
+ * translations, fields. `entries` are the site's content: pages, posts, projects. `categories` and `tags` are
+ * taxonomies, vocabularies that entries are filed under through a `terms` field: categories are curated and
+ * nest (a tree), tags are flat and made as they are typed into the field. A `global` is values the whole site
+ * shares (an address, a tagline): one entry, read in templates as `globals.<handle>.<field>`. A `menu` is
+ * links, nested (a tree): each entry is one, its title the words and its `link` field where it goes.
+ *
+ * The types are grouped by what they are for (KINDS): each group is listed apart, in the content room and
+ * in Structure. A collection changes type within the content types (entries, categories, tags); a global
+ * and a menu stay what they were made as.
  */
 final class Collection
 {
-    public const array TYPES = ['entries', 'categories', 'tags'];
+    public const array TYPES = ['entries', 'categories', 'tags', 'global', 'menu'];
+
+    /** The types by what they are for: each group has its section of the content room and its list in Structure. */
+    public const array KINDS = ['collections' => ['entries'], 'taxonomies' => ['categories', 'tags'], 'globals' => ['global'], 'menus' => ['menu']];
+
+    /** The types a collection can change between; a global and a menu stay what they were made as. */
+    public const array CHANGEABLE = ['entries', 'categories', 'tags'];
+
+    /** The types shown across the site rather than as pages of their own: no URL, template or reading rules. */
+    public const array SITE_WIDE = ['global', 'menu'];
+
+    /** How deep a menu's links nest unless it says (`max_depth`). */
+    public const int MENU_DEPTH = 3;
 
     public const array STRUCTURES = ['list', 'tree', 'dated'];
 
-    /** What a taxonomy's terms are laid out as: categories nest, tags do not. */
-    private const array TAXONOMY_STRUCTURES = ['categories' => 'tree', 'tags' => 'list'];
+    /** What the entries of a type other than `entries` are laid out as: categories and menus nest, tags and a global do not. */
+    private const array FIXED_STRUCTURES = ['categories' => 'tree', 'tags' => 'list', 'global' => 'list', 'menu' => 'tree'];
 
     public const array DRIVERS = ['database', 'files'];
 
@@ -67,8 +85,12 @@ final class Collection
             throw new InvalidArgumentException(__('Unknown type :type for collection :handle.', ['type' => $type, 'handle' => $handle]));
         }
 
-        if (isset(self::TAXONOMY_STRUCTURES[$type]) && $structure !== self::TAXONOMY_STRUCTURES[$type]) {
-            throw new InvalidArgumentException(__('Categories are a tree and tags a list: :handle cannot be :structure.', ['handle' => $handle, 'structure' => $structure]));
+        if (isset(self::FIXED_STRUCTURES[$type]) && $structure !== self::FIXED_STRUCTURES[$type]) {
+            throw new InvalidArgumentException(__('A collection of :type is a :structure.', ['type' => $type, 'structure' => self::FIXED_STRUCTURES[$type]]));
+        }
+
+        if ($route !== null && in_array($type, self::SITE_WIDE, true)) {
+            throw new InvalidArgumentException(__('A global or a menu has no pages: :handle cannot have a URL.', ['handle' => $handle]));
         }
 
         if (! in_array($driver, self::DRIVERS, true)) {
@@ -93,8 +115,8 @@ final class Collection
     public static function fromArray(string $handle, array $data): self
     {
         $type = (string) ($data['type'] ?? 'entries');
-        // A taxonomy's structure is its type's, whatever the definition says: one that becomes a taxonomy leaves its own.
-        $structure = self::TAXONOMY_STRUCTURES[$type] ?? (string) ($data['structure'] ?? 'list');
+        // A type other than `entries` has its own structure, whatever the definition says: one that becomes a taxonomy leaves its own.
+        $structure = self::FIXED_STRUCTURES[$type] ?? (string) ($data['structure'] ?? 'list');
         $template = (string) ($data['template'] ?? '');
         $known = ['type', 'title', 'singular', 'icon', 'description', 'driver', 'structure', 'route', 'template', 'sort', 'fields', 'home', 'revisions', 'per_page', 'section', 'system', 'default_view', 'default_columns'];
 
@@ -106,11 +128,12 @@ final class Collection
             handle: $handle,
             title: (string) ($data['title'] ?? ucfirst($handle)),
             singular: (string) ($data['singular'] ?? $data['title'] ?? ucfirst($handle)),
-            icon: (string) ($data['icon'] ?? match ($type) { 'categories' => 'folder', 'tags' => 'tag', default => 'collection' }),
+            icon: (string) ($data['icon'] ?? match ($type) { 'categories' => 'folder', 'tags' => 'tag', 'global' => 'globe', 'menu' => 'list-tree', default => 'collection' }),
             description: (string) ($data['description'] ?? ''),
             driver: (string) ($data['driver'] ?? 'database'),
             structure: $structure,
-            route: isset($data['route']) && $data['route'] !== '' ? (string) $data['route'] : null,
+            // A global and a menu have no pages: a route they were given is not theirs.
+            route: ! in_array($type, self::SITE_WIDE, true) && isset($data['route']) && $data['route'] !== '' ? (string) $data['route'] : null,
             template: $template,
             sort: (string) ($data['sort'] ?? match ($structure) { 'tree' => 'position', 'dated' => '-published_at', default => 'title' }),
             fields: array_values((array) ($data['fields'] ?? [])),
@@ -118,7 +141,7 @@ final class Collection
             revisions: (bool) ($data['revisions'] ?? true),
             perPage: (int) ($data['per_page'] ?? 10),
             extra: array_diff_key($data, array_flip($known)),
-            section: is_string($data['section'] ?? null) && Files::isHandle($data['section']) ? $data['section'] : ($type === 'entries' ? 'entries' : 'taxonomies'),
+            section: is_string($data['section'] ?? null) && Files::isHandle($data['section']) ? $data['section'] : self::sectionOf($type),
             system: (bool) ($data['system'] ?? false),
             defaultView: (string) ($data['default_view'] ?? 'table'),
             defaultColumns: isset($data['default_columns']) ? array_values(array_unique($data['default_columns'], SORT_REGULAR)) : null,
@@ -214,7 +237,54 @@ final class Collection
     /** A vocabulary other entries are filed under (categories or tags): its entries are the terms `terms` fields pick from. */
     public function isTaxonomy(): bool
     {
-        return $this->type !== 'entries';
+        return $this->kind() === 'taxonomies';
+    }
+
+    /** Values the whole site shares: one entry (and its translations), read in templates as `globals.<handle>`. */
+    public function isGlobal(): bool
+    {
+        return $this->type === 'global';
+    }
+
+    /** Links, nested: each entry one, its title the words and its `link` field where it goes. */
+    public function isMenu(): bool
+    {
+        return $this->type === 'menu';
+    }
+
+    /** Shown across the site rather than as pages of its own (SITE_WIDE): a global or a menu. */
+    public function isSiteWide(): bool
+    {
+        return in_array($this->type, self::SITE_WIDE, true);
+    }
+
+    /** What its type is for: `collections`, `taxonomies`, `globals` or `menus` (KINDS). */
+    public function kind(): string
+    {
+        return self::kindOf($this->type);
+    }
+
+    public static function kindOf(string $type): string
+    {
+        foreach (self::KINDS as $kind => $types) {
+            if (in_array($type, $types, true)) {
+                return $kind;
+            }
+        }
+
+        return 'collections';
+    }
+
+    /** The content room's section a type is listed in unless the collection names another. */
+    public static function sectionOf(string $type): string
+    {
+        return ['collections' => 'entries', 'taxonomies' => 'taxonomies', 'globals' => 'globals', 'menus' => 'menus'][self::kindOf($type)];
+    }
+
+    /** How deep a menu's links may nest (`max_depth`, 1 to 5); null for any other collection. */
+    public function maxDepth(): ?int
+    {
+        return $this->isMenu() ? max(1, min(5, (int) $this->get('max_depth', self::MENU_DEPTH))) : null;
     }
 
     /** Tags: a name typed into a terms field that no tag has yet becomes a new one. */
@@ -272,15 +342,15 @@ final class Collection
             'icon' => $this->icon,
             'description' => $this->description ?: null,
             'driver' => $this->driver,
-            // A taxonomy's structure is its type's.
-            'structure' => $this->isTaxonomy() ? null : $this->structure,
+            // A structure that is its type's goes without saying.
+            'structure' => isset(self::FIXED_STRUCTURES[$this->type]) ? null : $this->structure,
             'route' => $this->route,
             'template' => $this->template,
             'sort' => $this->sort,
             'home' => $this->home,
             'revisions' => $this->revisions ? null : false,
             'per_page' => $this->perPage !== 10 ? $this->perPage : null,
-            'section' => $this->section !== ($this->isTaxonomy() ? 'taxonomies' : 'entries') ? $this->section : null,
+            'section' => $this->section !== self::sectionOf($this->type) ? $this->section : null,
             'system' => $this->system ?: null,
             'default_view' => $this->defaultView !== 'table' ? $this->defaultView : null,
             'default_columns' => $this->defaultColumns,
@@ -300,7 +370,10 @@ final class Collection
             ...RecordTimestamps::api($this->extra),
             'default_view' => $this->defaultView,
             'default_columns' => $this->defaultColumns,
-            'resolvedFields' => $this->blueprint()->toArray(['collection' => $this]),
+            // A menu's link takes no words of its own: the entry's title is what it says.
+            'resolvedFields' => $this->isMenu()
+                ? array_map(static fn (array $f) => $f['handle'] === 'link' && $f['type'] === 'link' ? [...$f, 'words' => false] : $f, $this->blueprint()->toArray(['collection' => $this]))
+                : $this->blueprint()->toArray(['collection' => $this]),
             'schema' => $this->blueprint()->schema(),
             ...($this->blueprints() === [] ? [] : ['resolvedBlueprints' => array_map(fn (string $name, array $blueprint) => [
                 'handle' => $name, 'title' => $blueprint['title'],

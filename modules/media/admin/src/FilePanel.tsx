@@ -141,7 +141,7 @@ export function FilePanel({ item: listed, folders, onClose }: { item: MediaItem;
             <List>
               {usedBy.map((use) => (
                 <Row key={`${use.kind}:${use.id}`} to={useHref(use)}>
-                  <Icon name={use.kind === 'entry' ? 'page' : use.kind === 'global' ? 'globe' : 'palette'} size={16} className="shrink-0 text-muted" />
+                  <Icon name={use.kind === 'entry' ? 'page' : 'palette'} size={16} className="shrink-0 text-muted" />
                   <span className="truncate">{use.title}</span>
                 </Row>
               ))}

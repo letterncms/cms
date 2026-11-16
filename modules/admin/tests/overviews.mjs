@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { assets, body, imports, json, page as adminPage, root, serve, text } from './harness.mjs'
 import { mounted, viewResponse } from './views.mjs'
 
-const modules = ['content', 'collections', 'globals', 'users', 'packages', 'audit', 'settings', 'blocks', 'media', 'navigation', 'languages', 'site']
+const modules = ['content', 'collections', 'users', 'packages', 'audit', 'settings', 'blocks', 'media', 'languages', 'site']
 const plugins = ['forms', 'seo']
 const collection = { handle: 'posts', title: 'Posts', singular: 'Post', newLabel: 'New Post', icon: 'article', structure: 'list', driver: 'database', editor: 'document', defaultView: 'table', can: { create: true, edit: true, publish: true, delete: true }, routable: false }
 // A media field gives the posts pictures, so they can be shown as cards.
@@ -31,7 +31,7 @@ const storeItems = [
 const treeCollection = { ...collection, handle: 'pages', title: 'Pages', structure: 'tree', routable: true, builtin: true }
 // Records that happen on a day: the one kind of overview that offers a calendar.
 const eventsCollection = { ...collection, handle: 'events', title: 'Events', singular: 'Event', newLabel: 'New Event', icon: 'calendar', structure: 'dated' }
-const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['navigation', 'Navigation', '/navigation', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['sites', 'Sites', '/sites', 'box'], ['built-in', 'Built In', '/built-in', 'box'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
+const nav = [['posts', 'Posts', '/content/posts', 'article'], ['pages', 'Pages', '/content/pages', 'page'], ['events', 'Events', '/content/events', 'calendar'], ['media', 'Media', '/media', 'media'], ['forms', 'Forms', '/forms', 'form'], ['globals', 'Globals', '/globals', 'globe'], ['menus', 'Menus', '/menus', 'list-tree'], ['users', 'Users', '/users', 'users'], ['plugins', 'Plugins', '/plugins', 'plugin'], ['sites', 'Sites', '/sites', 'box'], ['built-in', 'Built In', '/built-in', 'box'], ['languages', 'Languages', '/languages', 'translate'], ['audit', 'Audit Log', '/audit', 'activity'], ['collections', 'Collections', '/collections', 'collection']].map(([id, label, path, icon]) => ({ id, label, path, icon, section: 'main' }))
 const brand = JSON.parse(await readFile(resolve(root, 'brand/brand.json'), 'utf8'))
 const manifest = {
   views: mounted,
@@ -41,7 +41,7 @@ const manifest = {
   packages: { active: ['cms/admin', ...modules.map((n) => `cms/${n}`), ...plugins.map((n) => `cms/${n}`)], pending: {} },
   modules: [...modules, ...plugins].map((n) => ({ id: `cms/${n}`, url: `/_cms/assets/cms-${n}/admin.js`, package: `cms/${n}` })),
   styles: [...modules, ...plugins].map((n) => `/_cms/assets/cms-${n}/admin.css`),
-  settings: [{ namespace: 'seo', label: 'SEO', icon: 'seo', description: '', package: 'cms/seo' }], collections: [collection, treeCollection, eventsCollection], globals: [{ handle: 'footer', title: 'Footer', icon: 'globe' }, { handle: 'contact_details_with_a_very_long_handle_that_must_not_shift_columns', title: 'Contact details', icon: 'mail' }], fieldTypes: [], commands: [], widgets: [], dashboard: [], config: {}, nav,
+  settings: [{ namespace: 'seo', label: 'SEO', icon: 'seo', description: '', package: 'cms/seo' }], collections: [collection, treeCollection, eventsCollection], fieldTypes: [], commands: [], widgets: [], dashboard: [], config: {}, nav,
   sidebar: { sections: [{ id: 'main', label: '', items: nav.map((n) => n.id) }], hidden: [], personal: false },
   rooms: [], brand,
 }
@@ -97,7 +97,7 @@ try {
   await wait(() => text().includes('Quote Request'), 'forms did not load')
   await test('Short lists have the same bar as long ones, and no views or empty date columns', async () => {
     // However few rows, a list has its Display where every list has it. The redirects are a field's table, not a list.
-    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/navigation', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/settings/seo?tab=redirects', '301', true], ['/forms/contact?tab=submissions', 'Received']]
+    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/menus', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/settings/seo?tab=redirects', '301', true], ['/forms/contact?tab=submissions', 'Received']]
     for (const [path, expected, field] of routes) {
       await open(path, expected)
       assert(main().querySelector('[role="table"]'), path + ': missing shared table')
@@ -378,7 +378,7 @@ try {
     return last
   }
   await test('Every overview table keeps headers, rows and action buttons aligned', async () => {
-    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/media', 'Project image'], ['/navigation', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/built-in', 'Bookings'], ['/settings/seo?tab=redirects', '301'], ['/forms/contact?tab=submissions', 'Received'], ['/content/posts', 'Beta post'], ['/content/pages', 'Parent page'], ['/content/events', 'Launch event']]
+    const routes = [['/forms', 'Quote Request'], ['/globals', 'Contact details'], ['/media', 'Project image'], ['/menus', 'Main menu'], ['/users', 'Ada Example'], ['/languages', 'English'], ['/audit', 'Publish Entry'], ['/collections', 'Posts'], ['/built-in', 'Bookings'], ['/settings/seo?tab=redirects', '301'], ['/forms/contact?tab=submissions', 'Received'], ['/content/posts', 'Beta post'], ['/content/pages', 'Parent page'], ['/content/events', 'Launch event']]
     for (const [path, expected] of routes) {
       navigate(path); await wait(() => text().includes(expected) && !document.querySelector('[role="progressbar"]'), 'table audit failed to open ' + path); await sleep(50)
       if (view('Table')) await switchView('Table')
@@ -477,8 +477,10 @@ serve('Overview', async (req, res, url) => {
     if (ability === 'forms/list' && fail) return json(res, 422, { error: { message: 'Fixture failure', type: 'invalid_input' } })
     let data
     if (ability === 'forms/list') data = forms
+    // Each kind of collection has its list in Structure: a global and a menu are collections of their own type.
+    else if (ability === 'collections/editable' && input.kind === 'globals') data = [{ handle: 'footer', title: 'Footer', icon: 'globe', type: 'global', structure: 'list', route: null, count: 1, viewable: true }, { handle: 'contact_details_with_a_very_long_handle_that_must_not_shift_columns', title: 'Contact details', icon: 'mail', type: 'global', structure: 'list', route: null, count: 1, viewable: true }]
+    else if (ability === 'collections/editable' && input.kind === 'menus') data = [{ handle: 'main', title: 'Main menu', icon: 'list-tree', type: 'menu', structure: 'tree', route: null, count: 4, viewable: true }]
     else if (ability === 'collections/list' || ability === 'collections/editable') data = [{ ...collection, route: null, system: false, count: 2 }]
-    else if (ability === 'globals/list') data = manifest.globals
     else if (ability === 'collections/get') data = input.handle === 'pages' ? { ...treeCollection, fields: [], resolvedFields: [], schema: {} } : input.handle === 'events' ? { ...eventsCollection, sort: '-published_at', fields: [], resolvedFields: [], schema: {} } : { ...collectionDef, schema: {} }
     else if (ability === 'collections/save') { collectionDef = { ...collectionDef, ...input.definition }; collection.defaultView = collectionDef.default_view; data = collectionDef }
     // A feature's page, under the page its address is inside: the standard version, not the site's own yet.
@@ -507,7 +509,6 @@ serve('Overview', async (req, res, url) => {
       const items = sorted.filter((m) => (!input.search || m.name.includes(input.search)) && (!input.kind || input.kind === 'all' || m.kind === input.kind) && (!input.folder || m.folder === input.folder)); const current = input.page ?? 1, perPage = input.perPage ?? 60
       data = { ...page(items.slice((current - 1) * perPage, current * perPage), items.length, current, perPage), folders: emptyMedia ? [] : ['Projects'] }
     } else if (ability === 'media/get-many') data = { items: media.filter((item) => input.ids.includes(item.id)) }
-    else if (ability === 'navigation/list') data = [{ handle: 'main', title: 'Main menu', count: 4, maxDepth: 2 }]
     else if (ability === 'users/list') data = page([{ id: 'ada', name: 'Ada Example', email: 'ada@example.invalid', initials: 'AE', roles: ['editor'], super: false, twoFactor: true, lastLoginAt: null }, { id: 'grace', name: 'Grace with a longer display name', email: 'a.very.long.email.address@example.invalid', initials: 'GE', roles: ['editor', 'content_manager'], super: true, twoFactor: false, lastLoginAt: null }].map((u) => ({ ...u, person: { id: u.id, name: u.name, initials: u.initials, avatar: null }, you: null, badges: [...(u.super ? ['super'] : []), ...u.roles] })))
     else if (ability === 'roles/list') data = { roles: { editor: { label: 'Editor', permissions: [] } }, permissions: {} }
     else if (ability === 'user-fields/get') data = { fields: [], resolvedFields: [] }

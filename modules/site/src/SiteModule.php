@@ -458,6 +458,15 @@ final class SiteModule extends Plugin
                 },
             ];
 
+            // A menu's links: {label, url, newTab, current, active, children}. A nested Repeat over item.children for sub-menus.
+            $sources['menu'] = [
+                'label' => 'Menu',
+                'description' => __('Links of a navigation menu. Nest a Repeat over item.children for sub-menus.'),
+                'fields' => [['handle' => 'menu', 'type' => 'select', 'label' => 'Menu', 'options' => $this->cms()->menus()->titles(), 'required' => true]],
+                'item' => ['label' => __('Label'), 'url' => __('Link'), 'newTab' => __('Opens in a new tab'), 'current' => __('Is this page'), 'active' => __('Is this page or above it'), 'children' => __('Sub-menu links')],
+                'resolve' => static fn (array $props) => cms_menu((string) ($props['menu'] ?? 'main')) ?? [],
+            ];
+
             $sources['breadcrumbs'] = [
                 'label' => 'Breadcrumbs',
                 'description' => __('The pages above this one, from the top.'),
@@ -942,7 +951,7 @@ final class SiteModule extends Plugin
             $hooks->on($event, fn ($item) => $auto() && $builder()->queueForMedia((string) $item->id));
         }
 
-        foreach (['globals.saved', 'styling.saved', 'collection.saved', 'collection.deleted', 'entries.reordered', 'navigation.saved'] as $event) {
+        foreach (['styling.saved', 'collection.saved', 'collection.deleted', 'entries.reordered'] as $event) {
             $hooks->on($event, fn () => $auto() && $builder()->queue(null, __('Site-Wide Change')));
         }
 
@@ -969,7 +978,7 @@ final class SiteModule extends Plugin
     {
         $hooks = $this->cms()->hooks();
 
-        foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted', 'globals.saved', 'global.saved', 'global.deleted', 'navigation.saved', 'collection.deleted', 'site.cleared'] as $event) {
+        foreach (['entry.saved', 'entry.published', 'entry.unpublished', 'entry.deleted', 'collection.deleted', 'site.cleared'] as $event) {
             $hooks->on($event, fn () => $this->app->make(Styling::class)->changed());
         }
 
@@ -984,8 +993,8 @@ final class SiteModule extends Plugin
         foreach (self::DESIGN as $order => [$id, $label, $icon]) {
             $admin->nav("design.{$id}", ['label' => $label, 'path' => "/design/{$id}", 'icon' => $icon, 'section' => 'design', 'order' => ($order + 1) * 10, 'permission' => 'settings.manage']);
         }
-        // What a developer adds beside the structure: the site's own CSS, scripts and libraries.
-        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'site-wide', 'order' => 60, 'permission' => 'settings.manage']);
+        // What a developer adds beside the structure: the site's own CSS, scripts and libraries. Seldom needed, so under More.
+        $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'pinned', 'order' => 90, 'pinned' => false, 'permission' => 'settings.manage']);
         // A whole site to switch to, import or export: first in the design, as a site is a look of its own.
         $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'design-site', 'order' => 10, 'permission' => 'settings.manage']);
         // The design opens on its colours, where the work on a look begins, though its sites are listed first.

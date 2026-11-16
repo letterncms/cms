@@ -1,0 +1,9 @@
+type: global
+title: Site
+icon: layout
+driver: files
+fields:
+  -
+    handle: tagline
+    type: text
+    label: Tagline

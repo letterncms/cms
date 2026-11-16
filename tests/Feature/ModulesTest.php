@@ -13,7 +13,7 @@ use RuntimeException;
 
 final class ModulesTest extends TestCase
 {
-    private const array MODULES = ['letterncms/account', 'letterncms/admin', 'letterncms/assistant', 'letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/content', 'letterncms/dashboard', 'letterncms/email', 'letterncms/globals', 'letterncms/languages', 'letterncms/mcp', 'letterncms/media', 'letterncms/navigation', 'letterncms/packages', 'letterncms/settings', 'letterncms/site', 'letterncms/sync', 'letterncms/users', 'letterncms/workspace'];
+    private const array MODULES = ['letterncms/account', 'letterncms/admin', 'letterncms/assistant', 'letterncms/audit', 'letterncms/blocks', 'letterncms/collaboration', 'letterncms/collections', 'letterncms/content', 'letterncms/dashboard', 'letterncms/email', 'letterncms/languages', 'letterncms/mcp', 'letterncms/media', 'letterncms/packages', 'letterncms/settings', 'letterncms/site', 'letterncms/sync', 'letterncms/users', 'letterncms/workspace'];
 
     /** Every module as a new site has them: the optional ones the test case keeps off are on here. */
     protected function plugins(): array
@@ -27,7 +27,7 @@ final class ModulesTest extends TestCase
 
         $this->assertSame(self::MODULES, array_keys($packages->modules()));
         $this->assertSame([], array_values(array_diff(self::MODULES, array_keys($packages->active()))));
-        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/email', 'letterncms/media', 'letterncms/navigation', 'letterncms/packages', 'letterncms/settings', 'letterncms/workspace'], array_keys(array_filter($packages->modules(), static fn ($m) => $m->required)));
+        $this->assertSame(['letterncms/account', 'letterncms/admin', 'letterncms/content', 'letterncms/email', 'letterncms/media', 'letterncms/packages', 'letterncms/settings', 'letterncms/workspace'], array_keys(array_filter($packages->modules(), static fn ($m) => $m->required)));
     }
 
     public function test_what_a_module_registers_is_its_own(): void
@@ -62,7 +62,7 @@ final class ModulesTest extends TestCase
         $this->assertSame(['letterncms/collections'], $packages->dependents('letterncms/content'));
 
         $this->expectException(RuntimeException::class);
-        $packages->uninstall('letterncms/globals');
+        $packages->uninstall('letterncms/audit');
     }
 
     public function test_the_modules_list_tells_modules_and_plugins_apart(): void

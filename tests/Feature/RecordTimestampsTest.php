@@ -9,7 +9,6 @@ use Cms\Abilities\AbilityContext;
 use Cms\Content\Collections\Collection;
 use Cms\Forms\Submission;
 use Cms\Modules\Media\MediaItem;
-use Cms\Modules\Navigation\Menus;
 use Cms\Seo\Redirects;
 use Cms\Support\RecordTimestamps;
 use Cms\Support\Yaml;
@@ -19,7 +18,7 @@ final class RecordTimestampsTest extends TestCase
 {
     protected function plugins(): array
     {
-        return ['letterncms/blocks', 'letterncms/forms', 'letterncms/media', 'letterncms/navigation', 'letterncms/seo', 'letterncms/languages'];
+        return ['letterncms/blocks', 'letterncms/forms', 'letterncms/media', 'letterncms/seo', 'letterncms/languages'];
     }
 
     protected function tearDown(): void
@@ -46,15 +45,13 @@ final class RecordTimestampsTest extends TestCase
 
     public function test_every_overview_exposes_the_same_timestamp_contract(): void
     {
-        $this->ability('navigation/create', ['handle' => 'main', 'title' => 'Main', 'items' => []]);
         $this->ability('forms/save', ['handle' => 'contact', 'title' => 'Contact', 'fields' => [], 'settings' => []]);
-        $this->ability('globals/save', ['handle' => 'footer', 'title' => 'Footer', 'fields' => []]);
         $this->app->make(Redirects::class)->save([['from' => '/old', 'to' => '/new']]);
         $user = $this->admin()->toPublic();
         $media = MediaItem::query()->create(['name' => 'File', 'filename' => 'file.txt', 'path' => 'media/file.txt', 'mime' => 'text/plain', 'size' => 3, 'hash' => hash('sha256', 'abc')]);
         $submission = Submission::query()->create(['form' => 'contact', 'data' => [], 'status' => 'new']);
 
-        foreach (['collections/list', 'navigation/list', 'forms/list', 'globals/list', 'redirects/list'] as $ability) {
+        foreach (['collections/list', 'forms/list', 'redirects/list'] as $ability) {
             $rows = $this->ability($ability);
             $this->assertNotEmpty($rows, $ability);
             foreach ($rows as $record) $this->assertDates($record);
@@ -71,24 +68,20 @@ final class RecordTimestampsTest extends TestCase
     public function test_file_records_preserve_publication_and_advance_update_dates_across_reloads(): void
     {
         CarbonImmutable::setTestNow('2026-10-01 12:00:00 UTC');
-        $first = $this->ability('navigation/create', ['handle' => 'main', 'title' => 'Main', 'items' => []]);
         $collection = Collection::fromArray('cases', ['title' => 'Cases', 'fields' => []]);
         $this->cms()->collections()->save($collection);
-        $this->ability('globals/save', ['handle' => 'footer', 'title' => 'Footer', 'fields' => []]);
+        $first = $this->ability('collections/get', ['handle' => 'cases']);
         $this->ability('forms/save', ['handle' => 'contact', 'title' => 'Contact', 'fields' => [], 'settings' => []]);
         $this->assertSame($first['publishedAt'], $first['updatedAt']);
 
         CarbonImmutable::setTestNow('2026-10-02 12:00:00 UTC');
-        $saved = $this->ability('navigation/update', ['handle' => 'main', 'title' => 'Main menu', 'items' => []]);
-        $fresh = new Menus($this->cms()->hooks());
-        $this->assertSame($saved, $this->ability('navigation/get', ['handle' => 'main']));
-        $this->assertSame($saved['updatedAt'], $fresh->find('main')['updatedAt']);
+        $this->cms()->collections()->save(Collection::fromArray('cases', ['title' => 'Cases and Studies', 'fields' => []]));
+        $this->cms()->collections()->flush();
+        $saved = $this->ability('collections/get', ['handle' => 'cases']);
         $this->assertSame($first['publishedAt'], $saved['publishedAt']);
         $this->assertNotSame($first['updatedAt'], $saved['updatedAt']);
-        $this->cms()->collections()->save($collection);
-        $this->ability('globals/set', ['handle' => 'footer', 'values' => []]);
         $this->ability('forms/save', ['handle' => 'contact', 'title' => 'Contact us', 'fields' => [], 'settings' => []]);
-        foreach ([$this->ability('collections/get', ['handle' => 'cases']), $this->ability('globals/get', ['handle' => 'footer']), $this->ability('forms/get', ['handle' => 'contact'])] as $record) {
+        foreach ([$saved, $this->ability('forms/get', ['handle' => 'contact'])] as $record) {
             $this->assertSame($first['publishedAt'], $record['publishedAt']);
             $this->assertSame($saved['updatedAt'], $record['updatedAt']);
         }
@@ -115,13 +108,14 @@ final class RecordTimestampsTest extends TestCase
 
     public function test_legacy_records_keep_unknown_publication_dates_and_reads_do_not_write(): void
     {
-        Yaml::write(content_path('navigation/legacy.yaml'), ['title' => 'Legacy', 'items' => []]);
-        $before = file_get_contents(content_path('navigation/legacy.yaml'));
-        $legacy = $this->ability('navigation/get', ['handle' => 'legacy']);
+        Yaml::write(content_path('collections/legacy.yaml'), ['title' => 'Legacy', 'fields' => []]);
+        $this->cms()->collections()->flush();
+        $before = file_get_contents(content_path('collections/legacy.yaml'));
+        $legacy = $this->ability('collections/get', ['handle' => 'legacy']);
         $this->assertNull($legacy['publishedAt']);
         $this->assertNull($legacy['updatedAt']);
-        $this->assertSame($before, file_get_contents(content_path('navigation/legacy.yaml')));
-        $saved = $this->ability('navigation/update', ['handle' => 'legacy', 'title' => 'Legacy', 'items' => []]);
+        $this->assertSame($before, file_get_contents(content_path('collections/legacy.yaml')));
+        $saved = $this->ability('collections/save', ['handle' => 'legacy', 'definition' => ['title' => 'Legacy', 'fields' => []]]);
         $this->assertNull($saved['publishedAt']);
         $this->assertNotNull($saved['updatedAt']);
         $this->assertSame(['publishedAt' => null, 'updatedAt' => null], RecordTimestamps::api(['published_at' => 'garbage', 'updated_at' => '']));
