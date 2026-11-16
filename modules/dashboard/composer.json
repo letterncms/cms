@@ -15,7 +15,7 @@
     "extra": {
         "cms": {
             "label": "Dashboard",
-            "icon": "grid",
+            "icon": "gauge",
             "provider": "Cms\\Modules\\Dashboard\\DashboardModule"
         }
     }

@@ -49,7 +49,7 @@ final class SiteModule extends Plugin
         ['typography', 'Typography', 'typography'],
         ['layout', 'Layout', 'ruler'],
         ['effects', 'Effects', 'shadow'],
-        ['motion', 'Motion', 'speed'],
+        ['motion', 'Motion', 'animated'],
         ['styles', 'Styles', 'symbol'],
     ];
 

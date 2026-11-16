@@ -189,7 +189,7 @@
  "list-tree": "ph:list-dashes",
  "dots": "ph:dots-nine",
  "accessibility": "ph:person-arms-spread",
- "speed": "ph:gauge",
+ "gauge": "ph:gauge",
  "github": "ph:git-branch",
  "check-circle": "ph:check-circle",
  "x-circle": "ph:x-circle",
