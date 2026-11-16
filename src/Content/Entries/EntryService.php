@@ -13,7 +13,7 @@ use Cms\Content\Collections\Archives;
 use Cms\Content\Collections\Collection;
 use Cms\Content\Collections\CollectionRepository;
 use Cms\Content\Fields\Blueprint;
-use Cms\Content\Revisions\Revisions;
+use Cms\Revisions\Revisions;
 use Cms\Extend\Hooks;
 use Cms\Support\Files;
 use Cms\Support\Schema\SchemaException;
@@ -580,7 +580,7 @@ final class EntryService
             $this->staged[$entry->id] = null;
         } else {
             $this->entries->delete($entry);
-            $this->revisions->deleteFor($entry->id);
+            $this->revisions->deleteFor('entry', $entry->id);
             $this->archives->flush();
         }
         $this->dispatch('entry.deleted', $entry, $user);
@@ -632,8 +632,9 @@ final class EntryService
 
     private function restoreUnlocked(string $revisionId, ?User $user = null, ?string $expectedVersion = null): Entry
     {
-        $revision = $this->revisions->find($revisionId) ?? throw AbilityException::invalid(__('Revision not found.'));
-        $entry = $this->findOrFail($revision['entryId']);
+        $revision = $this->revisions->find($revisionId);
+        $revision !== null && $revision['kind'] === 'entry' || throw AbilityException::invalid(__('Revision not found.'));
+        $entry = $this->findOrFail($revision['subject']);
         $this->assertVersion($entry, $expectedVersion);
         $snapshot = $revision['snapshot'];
         $source = array_replace($entry->working(), array_intersect_key($snapshot, array_flip(['title', 'slug', 'data', 'authorId'])), $snapshot['draft'] ?? []);
@@ -898,9 +899,21 @@ final class EntryService
 
     private function record(Entry $entry, string $action, ?User $user = null, ?string $message = null): void
     {
-        if (! $this->dry) {
-            $this->revisions->record($entry, $action, $user, $message);
+        if ($this->dry || ! $entry->collection()->revisions) {
+            return;
         }
+
+        $this->revisions->record('entry', $entry->id, $action, [
+            'title' => $entry->title,
+            'slug' => $entry->slug,
+            'status' => $entry->status,
+            'data' => $entry->data,
+            'authorId' => $entry->authorId,
+            'draft' => $entry->draft,
+            'parentId' => $entry->parentId,
+            'publishedAt' => $entry->publishedAt?->toIso8601String(),
+            'expiresAt' => $entry->expiresAt?->toIso8601String(),
+        ], (string) ($entry->draft['title'] ?? $entry->title), $user, $message, $entry->collection);
     }
 
     private function dispatch(string $action, mixed ...$args): void
@@ -1019,7 +1032,7 @@ final class EntryService
         if ($expected === null || hash_equals($entry->version(), $expected)) {
             return;
         }
-        $last = $this->revisions->list($entry->id, 1)[0] ?? null;
+        $last = $this->revisions->list('entry', $entry->id, 1)[0] ?? null;
         $who = $last['user']['name'] ?? __('Someone else');
         throw new AbilityException(__(':name changed this :type while you were editing.', ['name' => $who, 'type' => mb_strtolower($entry->collection()->singular)]), 'conflict', [
             'version' => $entry->version(), 'by' => $who,

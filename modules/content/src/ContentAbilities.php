@@ -527,7 +527,7 @@ final class ContentAbilities
                 $children = $entry && $entry->collection()->isTree() ? $this->cms->entries()->query()->collection($entry->collection)->locale($entry->locale)->parent($entry->id)->count() : 0;
                 $delete($in, $ctx);
 
-                return [$this->change('delete', $entry, ['uri' => $entry->uri, 'live' => $entry->isLive(), 'revisions' => count(app(\Cms\Content\Revisions\Revisions::class)->list($entry->id, 1000)), 'childrenMovedUp' => $children])];
+                return [$this->change('delete', $entry, ['uri' => $entry->uri, 'live' => $entry->isLive(), 'revisions' => count(app(\Cms\Revisions\Revisions::class)->list('entry', $entry->id, 1000)), 'childrenMovedUp' => $children])];
             }),
             'handler' => $delete,
         ]);
@@ -584,50 +584,20 @@ final class ContentAbilities
             'handler' => $reorder,
         ]);
 
-        $a->register('revisions/list', [
-            'label' => 'Entry History',
-            'description' => 'Revisions of an entry (entryId), newest first.',
-            'permission' => fn (?User $user, array $in) => $this->allowed($user, $this->collectionOf((string) ($in['entryId'] ?? '')), 'view'),
-            'annotations' => ['readOnly' => true],
-            'input' => ['type' => 'object', 'properties' => ['entryId' => self::ID], 'required' => ['entryId']],
-            'output' => Shape::of([[
-                'id' => Shape::STRING, 'action' => Shape::STRING, 'title' => Shape::STRING_OR_NULL, 'message' => Shape::STRING_OR_NULL,
-                'user' => Shape::nullable(['id' => Shape::STRING, 'name' => Shape::STRING, 'initials' => Shape::STRING]), 'createdAt' => Shape::STRING,
-            ]]),
-            'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->list($in['entryId']),
-        ]);
-
-        $a->register('revisions/get', [
-            'label' => 'Get Revision',
-            'description' => 'A single revision snapshot, by the revision\'s id (revisions/list has them).',
-            'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['id'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'view'),
-            'annotations' => ['readOnly' => true],
-            'input' => ['type' => 'object', 'properties' => ['id' => self::ID], 'required' => ['id']],
-            'output' => Shape::of(['id' => Shape::STRING, 'entryId' => Shape::STRING, 'action' => Shape::STRING, 'snapshot' => Shape::nullable([
-                    'title' => Shape::STRING, 'slug' => Shape::STRING, 'status' => Shape::STRING, 'data' => self::values(), 'authorId' => Shape::STRING_OR_NULL,
-                    // The working copy a published entry had beside it: what differed from the above.
-                    'draft' => Shape::nullable(['title?' => Shape::STRING, 'slug?' => Shape::STRING, 'data?' => self::values(), 'authorId?' => Shape::STRING_OR_NULL]),
-                    'parentId' => Shape::STRING_OR_NULL, 'publishedAt' => Shape::STRING_OR_NULL, 'expiresAt?' => Shape::STRING_OR_NULL,
-                ]), 'createdAt' => Shape::STRING]),
-            'handler' => fn (array $in) => app(\Cms\Content\Revisions\Revisions::class)->find($in['id']) ?? throw new AbilityException('Revision not found.', 'not_found'),
-        ]);
-
-        $a->register('revisions/restore', [
-            'label' => 'Restore Revision',
-            'description' => 'Restore an entry to a previous revision (as a draft for published entries).',
-            'permission' => fn (?User $user, array $in) => ($rev = app(\Cms\Content\Revisions\Revisions::class)->find((string) $in['revisionId'])) && $this->allowed($user, $this->collectionOf($rev['entryId']), 'edit'),
-            'input' => ['type' => 'object', 'properties' => ['revisionId' => self::ID, 'expectedVersion' => self::VERSION], 'required' => ['revisionId']],
-            'answer' => $this->answer('restored'),
-            'output' => Shapes::entry(),
-            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->dry(function () use ($in, $ctx, $restore): array {
-                $revision = app(\Cms\Content\Revisions\Revisions::class)->find($in['revisionId']);
-                $before = $revision ? ($this->cms->entries()->find($revision['entryId'])?->working() ?? []) : [];
+        // An entry keeps its versions in the one history, as the kind `entry`: revisions/list, get and restore.
+        app(\Cms\Revisions\Revisions::class)->kind(new \Cms\Revisions\Kind(
+            name: 'entry',
+            view: fn (?User $user, string $id) => $this->allowed($user, $this->collectionOf($id), 'view'),
+            edit: fn (?User $user, string $id) => $this->allowed($user, $this->collectionOf($id), 'edit'),
+            restore: fn (array $revision, array $in, AbilityContext $ctx) => $this->presented($restore($in, $ctx)),
+            dryRun: fn (array $revision, array $in, AbilityContext $ctx): array => $this->dry(function () use ($revision, $in, $ctx, $restore): array {
+                $before = $this->cms->entries()->find($revision['subject'])?->working() ?? [];
                 $entry = $restore($in, $ctx);
 
                 return $this->withTranslations([$this->change('restore', $entry, ['revisionId' => $in['revisionId'], 'fields' => self::changed($before, $entry->working())])]);
             }),
-            'handler' => fn (array $in, AbilityContext $ctx) => $this->presented($restore($in, $ctx)),
-        ]);
+            answer: $this->answer('restored'),
+        ));
 
         $a->register('entries/get-many', [
             'label' => 'Look Up Entries',

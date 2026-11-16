@@ -1,5 +1,5 @@
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete'
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap, indentWithTab, isolateHistory, redo, redoDepth, undo, undoDepth } from '@codemirror/commands'
 import { css } from '@codemirror/lang-css'
 import { html } from '@codemirror/lang-html'
 import { javascript } from '@codemirror/lang-javascript'
@@ -115,6 +115,8 @@ export interface EditorOptions {
   onErrors: (count: number) => void
   /** Where the cursor is, from 1, each time it moves. */
   onCursor?: (at: { line: number; column: number }) => void
+  /** Whether there is a step to undo and to redo, each time that changes. */
+  onHistory?: (steps: { canUndo: boolean; canRedo: boolean }) => void
 }
 
 export interface Editor {
@@ -123,6 +125,8 @@ export interface Editor {
   focus: () => void
   /** The cursor to a line (and column), from 1, scrolled into the middle. */
   goTo: (line: number, column?: number) => void
+  undo: () => void
+  redo: () => void
   destroy: () => void
 }
 
@@ -166,6 +170,8 @@ export function createEditor(options: EditorOptions): Editor {
           }
           const errors = diagnosticCount(update.state)
           if (errors !== diagnosticCount(update.startState)) options.onErrors(errors)
+          const steps = { canUndo: undoDepth(update.state) > 0, canRedo: redoDepth(update.state) > 0 }
+          if (steps.canUndo !== undoDepth(update.startState) > 0 || steps.canRedo !== redoDepth(update.startState) > 0) options.onHistory?.(steps)
         }),
       ],
     }),
@@ -173,7 +179,9 @@ export function createEditor(options: EditorOptions): Editor {
   return {
     setValue: (value) => {
       const change = difference(view.state.doc.toString(), value)
-      if (change) view.dispatch({ changes: change })
+      // A text from outside (a version restored, a format on save, Discard) is a step of its own: Undo takes back
+      // that, and never what was typed just before with it.
+      if (change) view.dispatch({ changes: change, annotations: isolateHistory.of('full') })
     },
     setDisabled: (disabled) => view.dispatch({ effects: editable.reconfigure(lock(disabled)) }),
     focus: () => view.focus(),
@@ -183,6 +191,8 @@ export function createEditor(options: EditorOptions): Editor {
       view.dispatch({ selection: { anchor: head }, effects: EditorView.scrollIntoView(head, { y: 'center' }) })
       view.focus()
     },
+    undo: () => { undo(view); view.focus() },
+    redo: () => { redo(view); view.focus() },
     destroy: () => view.destroy(),
   }
 }

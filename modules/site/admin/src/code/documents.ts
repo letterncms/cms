@@ -3,9 +3,10 @@ import { Stylesheet, balanced } from '@letterncms/blocks'
 import { formatCode } from '@letterncms/ui'
 import { useMemo, useState } from 'react'
 
-/* What the Code screen edits, as documents: the site's own CSS and JavaScript, its scripts and stylesheets by path,
-   and the libraries scripts import (read, not written). Each has what was saved and, once typed in, a draft; Save
-   formats every draft and writes them together. */
+/* What the Code screen edits, as documents: the files of content/styling as they are there. theme.css is the site's
+   stylesheet, of which this edits the CSS no section of the design shows; custom.js the JavaScript on every page;
+   scripts/ and styles/ the files blocks load by name; vendor/ the libraries scripts import (read, not written).
+   Each has what was saved and, once typed in, a draft; Save formats every draft and writes them together. */
 
 export interface Info {
   css: string
@@ -44,10 +45,21 @@ export interface DocInfo {
 export const isFile = (id: DocId) => /^(scripts|styles)\//.test(id)
 
 export function describe(id: DocId): DocInfo {
-  if (id === 'css') return { id, title: t('Site CSS'), icon: 'braces', language: 'tailwind' }
-  if (id === 'js') return { id, title: t('Site JavaScript'), icon: 'braces', language: 'javascript' }
+  if (id === 'css') return { id, title: 'theme.css', icon: 'file-css', language: 'tailwind' }
+  if (id === 'js') return { id, title: 'custom.js', icon: 'file-js', language: 'javascript' }
   if (id.startsWith('library:')) return { id, title: id.slice(8), icon: 'box', library: id.slice(8) }
-  return { id, title: id.split('/').pop() ?? id, icon: 'file', language: id.endsWith('.css') ? 'css' : 'javascript' }
+  const css = id.endsWith('.css')
+  return { id, title: id.split('/').pop() ?? id, icon: css ? 'file-css' : 'file-js', language: css ? 'css' : 'javascript' }
+}
+
+/**
+ * Where a document keeps its versions in the one history: the site's CSS is part of the styling (with what
+ * Design saves), a file of code is its own by its path. A library keeps none.
+ */
+export function versionsOf(id: DocId): { kind: string; subject: string } | null {
+  if (id === 'css') return { kind: 'styling', subject: 'theme' }
+  if (id === 'js') return { kind: 'code', subject: 'custom.js' }
+  return isFile(id) ? { kind: 'code', subject: id } : null
 }
 
 /** What a language is called where the cursor's line is told. */
@@ -124,7 +136,7 @@ export function useDocuments(info: Info | undefined, refetch: () => Promise<unkn
       if (written.js !== undefined) await run('styling-code/set-custom', { js: written.js })
       for (const [id, contents] of Object.entries(written)) if (isFile(id)) await run('styling-code/save', { path: id, contents })
       await refetch()
-      invalidate('styling/', 'styling-code/')
+      invalidate('styling/', 'styling-code/', 'revisions/')
       setSaved((all) => ({ ...all, ...Object.fromEntries(Object.entries(written).filter(([id]) => isFile(id))) }))
       setDrafts((all) => Object.fromEntries(Object.entries(all).filter(([id]) => !(id in written))))
       return mistakes

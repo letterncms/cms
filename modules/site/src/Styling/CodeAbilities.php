@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cms\Modules\Site\Styling;
 
 use Closure;
+use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
 use Cms\Cms;
 use Cms\Support\Schema\Shape;
@@ -13,8 +14,11 @@ use InvalidArgumentException;
 /** What an agent or the admin can do with the code beside the stylesheet (Code). */
 final class CodeAbilities
 {
-    /** @param Closure(): Code $code */
-    public static function register(Cms $cms, Closure $code): void
+    /**
+     * @param  Closure(): Code  $code
+     * @param  Closure(): History  $history
+     */
+    public static function register(Cms $cms, Closure $code, Closure $history): void
     {
         $abilities = $cms->abilities();
         $guard = static function (Closure $work) {
@@ -54,12 +58,14 @@ final class CodeAbilities
 
         $abilities->register('styling-code/save', [
             'label' => 'Write a Site Script or Style',
-            'description' => 'Create or replace scripts/<name>.js (an ES module; it can import another script by path, "./lib/ease.js") or styles/<name>.css. Names are lowercase letters, digits, - and _, in up to three folders. Pages that load the file are built again.',
+            'description' => 'Create or replace scripts/<name>.js (an ES module; it can import another script by path, "./lib/ease.js") or styles/<name>.css. Names are lowercase letters, digits, - and _, in up to three folders. Pages that load the file are built again. Each save is kept as a version: revisions/list with kind `code` and the path as subject.',
             'permission' => 'site.code',
             'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200], 'contents' => ['type' => 'string', 'maxLength' => 500000]], 'required' => ['path', 'contents']],
             'output' => Shape::of(['saved' => Shape::STRING]),
-            'handler' => static fn (array $in) => $guard(static function () use ($in, $code) {
-                $code()->write((string) $in['path'], (string) $in['contents']);
+            'handler' => static fn (array $in, AbilityContext $ctx) => $guard(static function () use ($in, $ctx, $code, $history) {
+                // Kept as a version (revisions/list kind code, the path as subject): Code::parse() refuses a path first.
+                Code::parse((string) $in['path']);
+                $history()->saveCode((string) $in['path'], static fn () => $code()->write((string) $in['path'], (string) $in['contents']), $ctx->user);
 
                 return ['saved' => (string) $in['path']];
             }),
@@ -67,7 +73,7 @@ final class CodeAbilities
 
         $abilities->register('styling-code/delete', [
             'label' => 'Delete a Site Script or Style',
-            'description' => 'Remove scripts/<name>.js or styles/<name>.css.',
+            'description' => 'Remove scripts/<name>.js or styles/<name>.css, and its versions.',
             'permission' => 'site.code',
             'annotations' => ['destructive' => true],
             'input' => ['type' => 'object', 'properties' => ['path' => ['type' => 'string', 'maxLength' => 200]], 'required' => ['path']],
@@ -76,8 +82,9 @@ final class CodeAbilities
             'dryRun' => static fn (array $in): array => $guard(static fn () => $code()->file((string) $in['path']) === null ? [] : [
                 ['action' => 'delete', 'type' => 'styling-code', 'path' => (string) $in['path'], 'removes' => ['file' => true, 'published' => true]],
             ]),
-            'handler' => static fn (array $in) => $guard(static function () use ($in, $code) {
+            'handler' => static fn (array $in) => $guard(static function () use ($in, $code, $history) {
                 $code()->delete((string) $in['path']);
+                $history()->forget((string) $in['path']);
 
                 return ['deleted' => (string) $in['path']];
             }),

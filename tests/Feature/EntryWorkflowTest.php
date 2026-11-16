@@ -7,7 +7,7 @@ namespace Cms\Tests\Feature;
 use Illuminate\Support\Facades\DB;
 use Cms\Abilities\AbilityContext;
 use Cms\Abilities\AbilityException;
-use Cms\Content\Revisions\Revisions;
+use Cms\Revisions\Revisions;
 use Cms\Tests\TestCase;
 use Cms\Users\User;
 
@@ -45,7 +45,7 @@ final class EntryWorkflowTest extends TestCase
             $this->assertSame($edited->version(), $this->cms()->entries()->find($created->id)->version());
             $published = $service->publish($created->id, $editor, expectedVersion: $edited->version());
             $this->assertSame($editor->id, $published->authorId);
-            $revision = array_slice(app(Revisions::class)->list($created->id), -1)[0];
+            $revision = array_slice(app(Revisions::class)->list('entry', $created->id), -1)[0];
             $restored = $service->restore($revision['id'], $editor, $published->version());
             $this->assertSame($editor->id, $restored->authorId);
             $this->assertSame($writer->id, $restored->working()['authorId']);

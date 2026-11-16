@@ -1,15 +1,6 @@
-import { locale, t, timeAgo, useAbility, type Entry, type EntryContent, type FieldDef } from '@letterncms/sdk'
-import { Button, Dialog, EmptyState, QueryError, Spinner, cn, Tooltip } from '@letterncms/ui'
+import { t, type Entry, type EntryContent, type FieldDef } from '@letterncms/sdk'
+import { EmptyState, VersionDialog, VersionList, cn, useVersion, type Version } from '@letterncms/ui'
 import { Fragment, useState } from 'react'
-
-interface Revision {
-  id: string
-  action: string
-  title: string
-  message: string | null
-  user: { name: string } | null
-  createdAt: string
-}
 
 interface Snapshot {
   title: string
@@ -36,7 +27,6 @@ interface Change {
   then: string
 }
 
-const when = (iso: string) => new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })
 const plain = (text: string) => text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim()
 const differ = (a: unknown, b: unknown) => JSON.stringify(a ?? null) !== JSON.stringify(b ?? null)
 const isObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
@@ -117,72 +107,17 @@ function changes(now: EntryContent, snapshot: Snapshot, fields: FieldDef[], auth
   ]
 }
 
+/** An entry's versions, in the one history every editor shows; an older one opens to show what restoring it changes. */
 export function EntryHistory({ entry, working, fields, editable, onRestore }: EntryHistoryProps) {
-  const revisions = useAbility<Revision[]>(
-    'revisions/list',
-    { entryId: entry?.id ?? '' },
-    { enabled: !!entry },
-  )
-  const [viewing, setViewing] = useState<Revision | null>(null)
-
+  const [viewing, setViewing] = useState<Version | null>(null)
   if (!entry) return <EmptyState compact icon="history" title={t('No history yet')} />
-  if (revisions.isLoading) {
-    return <div className="grid place-items-center p-6 text-faint"><Spinner /></div>
-  }
-  if (revisions.isError && !revisions.data) {
-    return <QueryError message={revisions.error.message} onRetry={() => void revisions.refetch()} />
-  }
-
-  const labels: Record<string, string> = {
-    create: t('Created'),
-    save: t('Edited'),
-    publish: t('Published'),
-    unpublish: t('Unpublished'),
-    restore: t('Restored'),
-    discard: t('Discarded Changes'),
-    move: t('Moved'),
-  }
-  const label = (revision: Revision) => labels[revision.action] ?? revision.action
-
   return (
     <>
-      {revisions.isError && (
-        <QueryError message={revisions.error.message} onRetry={() => void revisions.refetch()} compact />
-      )}
-      {revisions.data?.length === 0 && <EmptyState compact icon="history" title={t('No history yet')} />}
-      {/* A timeline: one line per version, newest first, publishes marked. An older one opens to show what restoring it changes. */}
-      <ol className="m-0 list-none px-2 py-2">
-        {(revisions.data ?? []).map((revision, index, all) => {
-          const line = <>
-            <span className="relative grid h-5 w-2 shrink-0 place-items-center" aria-hidden>
-              <span className={cn('size-2 rounded-full', revision.action === 'publish' ? 'bg-success' : 'bg-surface ring-1 ring-inset ring-border-strong')} />
-            </span>
-            <span className="block min-w-0 flex-1">
-              <span className="block truncate text-sm text-text">
-                {label(revision)}
-                {/* Its title then, when it was called something else. */}
-                {revision.title && revision.title !== entry.title && <span className="text-muted"> · {revision.title}</span>}
-              </span>
-              <span className="block truncate text-xs text-faint">
-                {revision.user?.name ?? t('System')}
-                {' · '}
-                <Tooltip content={when(revision.createdAt)}><time dateTime={revision.createdAt}>{timeAgo(revision.createdAt)}</time></Tooltip>
-              </span>
-            </span>
-          </>
-          return (
-            <li key={revision.id} className="relative">
-              {index < all.length - 1 && <span className="absolute bottom-[-10px] left-[11.5px] top-[22px] w-px bg-border" aria-hidden />}
-              {index > 0
-                ? <Button variant="ghost" onClick={() => setViewing(revision)} className="!h-auto min-h-12 w-full !items-start !justify-start !gap-2.5 !whitespace-normal !rounded-md !px-2 !py-2 text-left !font-normal">{line}</Button>
-                : <div className="flex min-h-12 items-start gap-2.5 px-2 py-2">{line}</div>}
-            </li>
-          )
-        })}
-      </ol>
-      <Version
-        revision={viewing}
-        title={viewing ? `${label(viewing)} · ${when(viewing.createdAt)}` : ''}
+      <div className="px-1 py-1">
+        <VersionList of={{ kind: 'entry', subject: entry.id }} title={entry.title} onOpen={setViewing} />
+      </div>
+      <EntryVersion
+        version={viewing}
         working={working}
         fields={fields}
         author={entry.author?.name ?? ''}
@@ -197,50 +132,45 @@ export function EntryHistory({ entry, working, fields, editable, onRestore }: En
 const grid = 'grid grid-cols-[minmax(96px,0.6fr)_1fr_1fr] gap-x-4 px-3 py-2'
 
 /** One older version: what restoring it changes against what is in the editor now, and the way to restore it. */
-function Version({ revision, title, working, fields, author, editable, onClose, onRestore }: { revision: Revision | null; title: string; working: EntryContent; fields: FieldDef[]; author: string; editable: boolean; onClose: () => void; onRestore: (id: string) => void }) {
-  const loaded = useAbility<{ snapshot: Snapshot }>('revisions/get', { id: revision?.id ?? '' }, { enabled: !!revision })
-  const diff = revision && loaded.data ? changes(working, loaded.data.snapshot, fields, author) : null
+function EntryVersion({ version, working, fields, author, editable, onClose, onRestore }: { version: Version | null; working: EntryContent; fields: FieldDef[]; author: string; editable: boolean; onClose: () => void; onRestore: (id: string) => void }) {
+  const loaded = useVersion<Snapshot>(version)
+  const diff = version && loaded.data ? changes(working, loaded.data.snapshot, fields, author) : null
   return (
-    <Dialog
-      open={!!revision}
-      onOpenChange={(open) => { if (!open) onClose() }}
-      title={title}
-      size="lg"
-      // On a phone it is a sheet with a handle that leaves the list it came from in view above it.
-      className="max-sm:max-h-[72dvh] max-sm:before:mx-auto max-sm:before:mt-2 max-sm:before:h-1 max-sm:before:w-9 max-sm:before:shrink-0 max-sm:before:rounded-full max-sm:before:bg-border-strong max-sm:before:content-['']"
-      {...(editable ? { onSubmit: () => revision && onRestore(revision.id), submitLabel: t('Restore Version'), submitDisabled: !diff?.length } : {})}
+    <VersionDialog
+      version={version}
+      onClose={onClose}
+      onRestore={editable && version ? () => onRestore(version.id) : undefined}
+      loading={!diff}
+      failed={loaded.isError}
+      onRetry={() => void loaded.refetch()}
+      unchanged={!!diff && diff.length === 0}
     >
-      {loaded.isError ? <QueryError compact message={t('Couldn’t load this version')} onRetry={() => void loaded.refetch()} retrying={loaded.isRefetching} />
-        : !diff ? <div className="grid place-items-center py-10 text-faint"><Spinner /></div>
-        : diff.length === 0 ? <p role="status" className="m-0 py-6 text-center text-sm text-muted">{t('Same as now')}</p>
-        : (
-          // The look of the kit's ui/diff, with its columns named for a restore and the fields' labels as they are written.
-          <div role="table" className="overflow-hidden rounded-lg border border-border">
-            <div role="row" className={cn(grid, 'sticky top-0 border-b border-border bg-sunken text-xs font-medium text-muted')}>
-              <span role="columnheader" />
-              <span role="columnheader">{t('Current')}</span>
-              <span role="columnheader">{t('This Version')}</span>
-            </div>
-            {diff.map((change, index) => (
-              <div key={index} role="row" className={cn(grid, 'text-sm', index > 0 && (change.label ? 'border-t border-border' : 'border-t border-border/50'))}>
-                <span role="rowheader" className="min-w-0 break-words text-muted">{change.label}</span>
-                {change.now && change.then ? (
-                  // Both have words: what they share reads plain, and only the words that differ are marked.
-                  <>
-                    <span role="cell" className="min-w-0 break-words text-text">{marked(change.now, change.then, 'del')}</span>
-                    <span role="cell" className="min-w-0 break-words text-text">{marked(change.now, change.then, 'add')}</span>
-                  </>
-                ) : (
-                  <>
-                    <span role="cell" className={cn('min-w-0 break-words', change.now ? 'text-danger line-through decoration-danger/40' : 'text-faint')}>{change.now || '—'}</span>
-                    <span role="cell" className={cn('min-w-0 break-words', change.then ? 'text-success' : 'text-faint')}>{change.then || '—'}</span>
-                  </>
-                )}
-              </div>
-            ))}
+      {/* The look of the kit's ui/diff, with its columns named for a restore and the fields' labels as they are written. */}
+      <div role="table" className="overflow-hidden rounded-lg border border-border">
+        <div role="row" className={cn(grid, 'sticky top-0 border-b border-border bg-sunken text-xs font-medium text-muted')}>
+          <span role="columnheader" />
+          <span role="columnheader">{t('Current')}</span>
+          <span role="columnheader">{t('This Version')}</span>
+        </div>
+        {(diff ?? []).map((change, index) => (
+          <div key={index} role="row" className={cn(grid, 'text-sm', index > 0 && (change.label ? 'border-t border-border' : 'border-t border-border/50'))}>
+            <span role="rowheader" className="min-w-0 break-words text-muted">{change.label}</span>
+            {change.now && change.then ? (
+              // Both have words: what they share reads plain, and only the words that differ are marked.
+              <>
+                <span role="cell" className="min-w-0 break-words text-text">{marked(change.now, change.then, 'del')}</span>
+                <span role="cell" className="min-w-0 break-words text-text">{marked(change.now, change.then, 'add')}</span>
+              </>
+            ) : (
+              <>
+                <span role="cell" className={cn('min-w-0 break-words', change.now ? 'text-danger line-through decoration-danger/40' : 'text-faint')}>{change.now || '—'}</span>
+                <span role="cell" className={cn('min-w-0 break-words', change.then ? 'text-success' : 'text-faint')}>{change.then || '—'}</span>
+              </>
+            )}
           </div>
-        )}
-    </Dialog>
+        ))}
+      </div>
+    </VersionDialog>
   )
 }
 

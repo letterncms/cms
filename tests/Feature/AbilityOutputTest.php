@@ -182,9 +182,9 @@ final class AbilityOutputTest extends TestCase
         $run('entries/update', ['id' => $parent['id'], 'title' => 'Parent, changed']);
         $this->assertFalse($run('entries/discard-draft', ['id' => $parent['id']])['hasDraft']);
 
-        $revisions = $run('revisions/list', ['entryId' => $parent['id']]);
+        $revisions = $run('revisions/list', ['kind' => 'entry', 'subject' => $parent['id']]);
         $this->assertNotSame([], $revisions);
-        $this->assertSame($parent['id'], $run('revisions/get', ['id' => $revisions[0]['id']])['entryId']);
+        $this->assertSame($parent['id'], $run('revisions/get', ['id' => $revisions[0]['id']])['subject']);
         $this->assertSame($parent['id'], $run('revisions/restore', ['revisionId' => $revisions[count($revisions) - 1]['id']])['id']);
 
         $this->assertSame([$child['id'], $parent['id']], array_column($run('entries/get-many', ['ids' => [$child['id'], $parent['id']]]), 'id'));
@@ -206,7 +206,7 @@ final class AbilityOutputTest extends TestCase
 
         $run('entries/update', ['id' => $parent['id'], 'title' => 'Parent, changed again', 'data' => ['summary' => 'Kept beside it']]);
         $run('entries/publish', ['id' => $parent['id']]);
-        $snapshots = array_map(fn (array $revision) => $run('revisions/get', ['id' => $revision['id']])['snapshot'], $run('revisions/list', ['entryId' => $parent['id']]));
+        $snapshots = array_map(fn (array $revision) => $run('revisions/get', ['id' => $revision['id']])['snapshot'], $run('revisions/list', ['kind' => 'entry', 'subject' => $parent['id']]));
         $this->assertNotSame([], array_filter(array_column($snapshots, 'draft')), 'A revision that kept the working copy');
         $this->assertSame('draft', $run('entries/unpublish', ['id' => $parent['id']])['status']);
         $this->assertSame('draft', $run('entries/duplicate', ['id' => $child['id']])['status']);

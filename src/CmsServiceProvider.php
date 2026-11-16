@@ -30,7 +30,7 @@ use Cms\Content\Fields\Fieldsets;
 use Cms\Content\Fields\Types;
 use Cms\Content\Collections\Globals;
 use Cms\Content\Collections\Menus;
-use Cms\Content\Revisions\Revisions;
+use Cms\Revisions\Revisions;
 use Cms\Context\ContextRegistry;
 use Cms\Context\SkillRegistry;
 use Cms\Contracts;
@@ -218,6 +218,7 @@ final class CmsServiceProvider extends ServiceProvider
         $abilities = $this->app->make(AbilityRegistry::class);
 
         $this->app->make(SystemAbilities::class)->register($abilities);
+        $this->app->make(\Cms\Revisions\RevisionAbilities::class)->register($abilities);
     }
 
     /** The core's own settings are namespaces like any plugin's: site.yaml and admin.yaml. */

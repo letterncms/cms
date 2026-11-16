@@ -59,7 +59,7 @@ final class LanguagesTest extends TestCase
         $source = $this->cms()->entryService()->create('pages', ['title' => 'Attributed source'], $writer);
         $translated = $this->cms()->abilities()->execute('translations/create', ['id' => $source->id, 'locale' => 'de'], AbilityContext::forUser($translator, 'rest'));
         $this->assertSame($writer->id, $translated['authorId']);
-        $revision = app(\Cms\Content\Revisions\Revisions::class)->list($translated['id'])[0];
+        $revision = app(\Cms\Revisions\Revisions::class)->list('entry', $translated['id'])[0];
         $this->assertSame($translator->id, $revision['user']['id']);
         $writer->delete();
         $duplicate = $this->cms()->entryService()->duplicate($translated['id'], $translator);

@@ -31,13 +31,17 @@ export interface CodeEditorProps {
   onCursor?: (at: { line: number; column: number }) => void
   /** How many mistakes the code has, each time that changes. A `bare` editor leaves saying so to its screen. */
   onErrors?: (count: number) => void
-  /** What a screen does to the editor itself: put the cursor on a line, take the focus. */
+  /** Whether there is a step to undo and to redo in its own history, each time that changes. */
+  onHistory?: (steps: { canUndo: boolean; canRedo: boolean }) => void
+  /** What a screen does to the editor itself: put the cursor on a line, take the focus, undo and redo. */
   ref?: Ref<CodeEditorHandle>
 }
 
 export interface CodeEditorHandle {
   goTo: (line: number, column?: number) => void
   focus: () => void
+  undo: () => void
+  redo: () => void
 }
 
 /** CodeMirror arrives with the first code field, not with the admin. */
@@ -52,7 +56,7 @@ const PADDING = 16
  * undo and Tab to indent (Escape, then Tab, leaves it). Mistakes are underlined and counted under it.
  * The button at its top right opens it large.
  */
-export function CodeEditor({ value, onChange, language, placeholder, disabled = false, invalid = false, rows = 8, id, label, describedBy, fixed = false, full = false, fill = false, bare = false, onCursor, onErrors, ref }: CodeEditorProps) {
+export function CodeEditor({ value, onChange, language, placeholder, disabled = false, invalid = false, rows = 8, id, label, describedBy, fixed = false, full = false, fill = false, bare = false, onCursor, onErrors, onHistory, ref }: CodeEditorProps) {
   const large = full || fill
   const host = useRef<HTMLDivElement>(null)
   const editor = useRef<Editor | null>(null)
@@ -62,7 +66,9 @@ export function CodeEditor({ value, onChange, language, placeholder, disabled = 
   cursor.current = onCursor
   const mistakes = useRef(onErrors)
   mistakes.current = onErrors
-  useImperativeHandle(ref, () => ({ goTo: (line, column) => editor.current?.goTo(line, column), focus: () => editor.current?.focus() }), [])
+  const steps = useRef(onHistory)
+  steps.current = onHistory
+  useImperativeHandle(ref, () => ({ goTo: (line, column) => editor.current?.goTo(line, column), focus: () => editor.current?.focus(), undo: () => editor.current?.undo(), redo: () => editor.current?.redo() }), [])
   const latest = useRef(value)
   latest.current = value
   const [focused, setFocused] = useState(false)
@@ -74,7 +80,7 @@ export function CodeEditor({ value, onChange, language, placeholder, disabled = 
     let gone = false
     void load().then(({ createEditor }) => {
       if (gone || !host.current) return
-      editor.current = createEditor({ parent: host.current, value: latest.current, language, placeholder, disabled, full: large, label, id, describedBy, onChange: (v) => change.current(v), onFocus: setFocused, onErrors: (count) => { setErrors(count); mistakes.current?.(count) }, onCursor: (at) => cursor.current?.(at) })
+      editor.current = createEditor({ parent: host.current, value: latest.current, language, placeholder, disabled, full: large, label, id, describedBy, onChange: (v) => change.current(v), onFocus: setFocused, onErrors: (count) => { setErrors(count); mistakes.current?.(count) }, onCursor: (at) => cursor.current?.(at), onHistory: (at) => steps.current?.(at) })
       setReady(true)
       if (full) editor.current.focus()
     })
