@@ -114,11 +114,14 @@ export interface RecordsProps {
   /** Sorted by the ability: the input it takes the sort in (a column's `sort` name, `-` first for descending), and its own order while none is chosen. */
   sort?: { param: string; default?: string }
   /** The records as a tree while nothing narrows or sorts them: where it loads from, and what reorders siblings (with `{ids}`, `{parent}`, `{versions}`). */
-  tree?: { source: Source; at?: string; children?: string; version?: string; reorder?: ViewAction }
-  open?: ViewAction
+  tree?: { source: Source; at?: string; children?: string; version?: string; reorder?: ViewAction; fixed?: string }
+  /** What a row opens: the first whose `when` holds, when rows open in different ways. */
+  open?: ViewAction | ViewAction[]
   actions?: RowAction[]
   /** What can be done with the rows selected: each gets `{ids}` (and `{rows}`), or, with `each`, runs once per row with `{row}`. Offering any makes rows selectable. */
   bulk?: BulkAction[]
+  /** With `bulk`: which rows can be picked, when not all can. */
+  selectable?: string
   /** Nothing in it yet: a title and one action, as `EmptyState` draws them (`size: 'sm'`: compact, inside a section). */
   empty?: { icon?: string; title?: string; action?: ViewAction; size?: 'sm' }
   /** Offers a calendar; with `dated` (and `undated`), it loads a month at a time, filled with `{field}`, `{start}` and `{end}`. */
@@ -185,7 +188,7 @@ const fitTrack = (values: unknown[]) => `minmax(120px,${Math.min(360, Math.max(1
  * that opens and the actions of each row. The same component as every overview, so every
  * list looks and works alike.
  */
-export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, empty, calendar, dates: dateKeys, defaultView, group, address, display = true, controls }: RecordsProps) {
+export function Records({ id, label, source, rows, at: path, rowKey: key = 'id', columns, search, filters = [], paged, sort: sorting, tree, open, actions, bulk, selectable, empty, calendar, dates: dateKeys, defaultView, group, address, display = true, controls }: RecordsProps) {
   const { scope, act, settings } = useView()
   const { query: location } = useLocation()
   const [ownText, setOwnText] = useState('')
@@ -231,7 +234,9 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [failures, setFailures] = useState<{ id: string; title: string; message: string }[]>([])
   const [bulkBusy, setBulkBusy] = useState(false)
-  const selection = bulk?.length ? { ids: picked, onSelect: (ids: string[], on: boolean) => setPicked((now) => { const next = new Set(now); ids.forEach((i) => on ? next.add(i) : next.delete(i)); return next }) } : undefined
+  const pickable = (row: Row) => selectable === undefined || holds(selectable, rowScope(row))
+  const unpickable = new Set(every.filter((row) => !pickable(row)).map((row) => String(at(row, key))))
+  const selection = bulk?.length ? { ids: picked, can: pickable, onSelect: (ids: string[], on: boolean) => setPicked((now) => { const next = new Set(now); ids.filter((i) => !unpickable.has(i)).forEach((i) => on ? next.add(i) : next.delete(i)); return next }) } : undefined
   const pickedRows = every.filter((row) => picked.has(String(at(row, key))))
   const imageColumn = columns.find((c) => c.image)
   // Another set of rows starts without a selection.
@@ -281,7 +286,10 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
     const to = fill(action.to!, rowScope(row))
     return typeof to === 'string' && to !== '' ? place(to) : undefined
   } : undefined
-  const href = hrefFor(open)
+  const opens = open === undefined ? [] : Array.isArray(open) ? open : [open]
+  const openOf = (row: Row) => opens.find((a) => holds(a.when, rowScope(row)) && !(a.unless !== undefined && holds(a.unless, rowScope(row))))
+  const href = opens.some((a) => hrefFor(a)) ? (row: Row) => { const a = openOf(row); return hrefFor(a)?.(row) } : undefined
+  const clicks = opens.some((a) => !hrefFor(a))
 
   const rowMenu = (list: ViewAction[] | undefined, row: Row) => {
     const all = shown(list, rowScope(row)) as RowAction[]
@@ -333,7 +341,10 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
   const reorder = tree?.reorder
   const dataTree: DataTree<Row> | undefined = asTree ? {
     children: (row) => (at(row, children) as Row[] | undefined) ?? [],
-    reorder: reorder && every.every((row) => holds(reorder.when, rowScope(row))) ? async (siblings, parent) => {
+    // A fixed row stays where it is: it is passed over, and what moves around it keeps its order among the rest.
+    fixed: tree?.fixed ? (row) => holds(tree.fixed, rowScope(row)) : undefined,
+    reorder: reorder && every.every((row) => (tree?.fixed !== undefined && holds(tree.fixed, rowScope(row))) || holds(reorder.when, rowScope(row))) ? async (all, parent) => {
+      const siblings = tree?.fixed ? all.filter((row) => !holds(tree.fixed, rowScope(row))) : all
       const versions = Object.fromEntries(siblings.map((row) => [String(at(row, key)), at(row, tree!.version ?? 'version')]))
       await act({ ...reorder, when: undefined }, { ids: siblings.map((row) => at(row, key)), parent: parent ? at(parent, key) : null, versions, rows: siblings })
     } : undefined,
@@ -415,7 +426,7 @@ export function Records({ id, label, source, rows, at: path, rowKey: key = 'id',
       imageColumn={imageColumn?.key}
       group={group ? (row) => plainValue(at(row, group))?.toString() ?? '' : undefined}
       rowHref={href}
-      onRowClick={open && !href ? (row) => { if (holds(open.when, rowScope(row))) void act(open, { row }).catch(() => {}) } : undefined}
+      onRowClick={clicks ? (row) => { const a = openOf(row); if (a && !hrefFor(a)) void act(a, { row }).catch(() => {}) } : undefined}
       actions={actions?.length ? (row) => rowMenu(actions, row) : undefined}
       // Among what is loaded only when that is everything: a page of many is searched by the ability, or not at all.
       searchText={server || paged || search === false ? undefined : (row) => columns.map((c) => plainValue(at(row, c.key), c.labels) ?? '').join(' ')}
@@ -455,6 +466,9 @@ function Control({ component, props = {}, slot }: { component: string; props?: R
 function Cell({ row, column: c, media, first }: { row: Row; column: Column; media: Map<string, MediaThumb>; first?: boolean }) {
   if (c.format === 'switch') return <SwitchCell row={row} column={c} />
   const raw = at(row, c.key)
+  // Nothing of its own but its quieter value (an address for many pages, `/store/{slug}`): that alone, written as the column writes it.
+  const alone = (raw === null || raw === undefined || raw === '') && !c.empty && c.muted ? at(row, c.muted) : undefined
+  if (alone !== undefined && alone !== null && alone !== '') return <span className="truncate text-faint">{formatValue(alone, { format: c.format, tones: c.tones, labels: c.labels })}</span>
   const value = c.empty && (raw === null || raw === undefined || raw === '') ? <span className="text-muted">{c.empty}</span> : formatValue(raw, { format: c.format, tones: c.tones, labels: c.labels, currency: c.currency ? String(at(row, c.currency) ?? c.currency) : undefined, field: c.field, locales: c.locales, media })
   const icon = c.icon ? at(row, c.icon) : undefined
   const problem = c.warning ? at(row, c.warning) : undefined

@@ -130,30 +130,61 @@ final class EntriesViewTest extends TestCase
         $this->assertSame('total', $root['props']['count']['at']);
     }
 
-    public function test_each_feature_that_brings_pages_has_a_tab_beside_the_sites_pages(): void
+    public function test_the_pages_features_bring_are_rows_of_the_sites_pages(): void
     {
         $this->shop();
         $root = $this->place('pages', $this->admin());
 
-        // The page names the place; what is made and counted is the tab's.
-        $this->assertArrayNotHasKey('actions', $root['props']);
-        $this->assertArrayNotHasKey('count', $root['props']);
-        $tabs = array_combine(array_map(static fn ($t) => $t['props']['id'], $root['children'][0]['children']), $root['children'][0]['children']);
-        $this->assertSame(['site', 'shop'], array_keys($tabs));
-        $this->assertSame(['Site', 'Shop'], [$tabs['site']['props']['label'], $tabs['shop']['props']['label']]);
-        $this->assertSame(['New Page'], array_column($tabs['site']['props']['actions'], 'label'));
-        $this->assertSame('entries/tree', $tabs['site']['children'][0]['props']['tree']['source']['ability']);
-
-        $shop = $tabs['shop']['children'][0]['props'];
-        $this->assertSame(['ability' => 'pages/builtin', 'input' => ['group' => 'shop']], $shop['source']);
-        $this->assertSame('0.total', $tabs['shop']['props']['count']['at']);
-        // The site's pages' columns and statuses, opened as the site's own version.
-        $this->assertSame(['label', 'path', 'status', 'displayStatus', 'published', 'updated'], array_column($shop['columns'], 'key'));
-        // The standard version is live: its status is Published, and Standard is the version, not a status.
-        $columns = array_column($shop['columns'], null, 'key');
-        $this->assertSame(['Standard', 'Customized', 'Standard'], [$columns['status']['labels']['standard'], $columns['status']['labels']['customised'], $columns['status']['labels']['draft']], 'a customized version only drafted is not on the site yet');
+        // One list: no tabs, the page counts and makes pages as any collection does.
+        $this->assertSame('ui/records', $root['children'][0]['type']);
+        $this->assertSame(['New Page'], array_column($root['props']['actions'], 'label'));
+        $this->assertTrue($root['props']['count']['source']['input']['builtin']);
+        $records = $root['children'][0]['props'];
+        $this->assertTrue($records['source']['input']['builtin']);
+        $this->assertTrue($records['tree']['source']['input']['builtin']);
+        $this->assertSame('{row.group}', $records['tree']['fixed'], 'A feature\'s page stays where its address puts it');
+        $this->assertSame('{row.version}', $records['selectable'], 'Only an entry is picked for what is done to many');
+        // A page of the site's opens; a standard version becomes the site's own when it opens.
+        $this->assertSame(['/content/{row.collection}/{row.id}', 'pages/customize'], [$records['open'][0]['to'], $records['open'][1]['ability']]);
+        $this->assertSame(['View on Site', 'Edit', 'Edit', 'Duplicate', 'Publish', 'Unpublish', 'Copy URL', 'Delete', 'Use Standard Version'], array_column($records['actions'], 'label'));
+        $columns = array_column($records['columns'], null, 'key');
+        $this->assertSame('pattern', $columns['uri']['muted']);
         $this->assertSame(['conflict' => 'Address Taken'], $columns['displayStatus']['labels']);
-        $this->assertSame('pages/customize', $shop['open']['ability']);
-        $this->assertSame(['View on Site', 'Edit', 'Copy URL', 'Use Standard Version'], array_column($shop['actions'], 'label'));
+
+        // Without a feature's pages, the list is the collection's own.
+        $this->assertArrayNotHasKey('builtin', $this->records('posts', $this->admin())['source']['input']);
+    }
+
+    public function test_the_tree_puts_a_features_page_under_the_page_its_address_is_inside(): void
+    {
+        $this->shop();
+        $ctx = AbilityContext::forUser($this->admin(), 'admin');
+        $shop = $this->cms()->entryService()->create('pages', ['title' => 'Shop', 'slug' => 'shop', 'status' => 'published'], $this->admin());
+
+        $tree = $this->cms()->abilities()->execute('entries/tree', ['collection' => 'pages', 'builtin' => true], $ctx);
+        $top = array_column($tree, null, 'title');
+        $this->assertSame(['shop/basket', '/basket', null, 'published'], [$top['Basket']['id'], $top['Basket']['uri'], $top['Basket']['pattern'], $top['Basket']['displayStatus']]);
+        $item = array_column($top['Shop']['children'], null, 'title')['Item'];
+        $this->assertSame([null, '/shop/{slug}', $shop->id, 'shop'], [$item['uri'], $item['pattern'], $item['parentId'], $item['group']]);
+        $this->assertNotContains('Basket', array_column($this->cms()->abilities()->execute('entries/tree', ['collection' => 'pages'], $ctx), 'title'), 'Only when asked');
+
+        // In a list they come after the site's own, found by name or address, and counted.
+        $list = $this->cms()->abilities()->execute('entries/list', ['collection' => 'pages', 'builtin' => true, 'perPage' => 200], $ctx);
+        $this->assertSame(['Basket', 'Item'], array_slice(array_column($list['items'], 'title'), -2));
+        $this->assertSame(count($list['items']), $list['total']);
+        $this->assertSame(['Item'], array_column($this->cms()->abilities()->execute('entries/list', ['collection' => 'pages', 'builtin' => true, 'search' => '/shop/'], $ctx)['items'], 'title'));
+        $this->assertSame([], array_column($this->cms()->abilities()->execute('entries/list', ['collection' => 'pages', 'builtin' => true, 'status' => 'draft'], $ctx)['items'], 'group'));
+
+        // Paged, they follow the last of the site's own.
+        $own = $this->cms()->abilities()->execute('entries/list', ['collection' => 'pages', 'perPage' => 1], $ctx)['total'];
+        $page = fn (int $n) => $this->cms()->abilities()->execute('entries/list', ['collection' => 'pages', 'builtin' => true, 'perPage' => $own + 1, 'page' => $n], $ctx);
+        $this->assertSame('Basket', array_column($page(1)['items'], 'title')[$own]);
+        $this->assertSame(['Item'], array_column($page(2)['items'], 'title'));
+        $this->assertSame([$own + 2, 2], [$page(2)['total'], $page(2)['pages']]);
+
+        // Made the site's own, a row is its entry.
+        $made = $this->cms()->abilities()->execute('pages/customize', ['group' => 'shop', 'handle' => 'basket'], $ctx);
+        $basket = array_column($this->cms()->abilities()->execute('entries/tree', ['collection' => 'pages', 'builtin' => true], $ctx), null, 'title')['Basket'];
+        $this->assertSame([$made['id'], 'shop-pages', 'changed', true], [$basket['id'], $basket['collection'], $basket['displayStatus'], $basket['restorable']]);
     }
 }

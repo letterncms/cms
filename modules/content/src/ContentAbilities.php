@@ -102,48 +102,7 @@ final class ContentAbilities
                     'collection' => Shape::STRING, 'customisable' => Shape::BOOLEAN, 'opens' => Shape::BOOLEAN, 'restorable' => Shape::BOOLEAN,
                 ]],
             ]]),
-            'handler' => function (array $in, AbilityContext $ctx) use ($registry, $own) {
-                $groups = [];
-
-                foreach ($registry->all() as $group) {
-                    if (! $this->allowed($ctx->user, $group['collection'], 'view') || (isset($in['group']) && $in['group'] !== $group['id'])) {
-                        continue;
-                    }
-
-                    $pages = [];
-
-                    foreach (($group['pages'])() as $handle => $page) {
-                        $entry = $own($group, (string) $handle);
-                        $status = match (true) {
-                            $group['conflict'] !== null && ($group['conflict'])((string) $handle) => 'conflict',
-                            $entry === null => 'standard',
-                            $entry->isLive() => 'customised',
-                            default => 'draft',
-                        };
-                        // Where it opens once it is the site's own, and whether this person may make it so.
-                        // Listed as the site's pages are: what is live, and when it last changed. The standard version is live until the site's own is published.
-                        // Which version the site shows is `status`; how that version stands is `displayStatus`, and the standard one is published.
-                        $display = match (true) {
-                            $status === 'conflict' => $status,
-                            $entry === null => 'published',
-                            $entry->isLive() => $entry->displayStatus(),
-                            default => 'changed',
-                        };
-                        $pages[] = ['handle' => (string) $handle, 'label' => __($page['label']), 'path' => $page['path'] ?? null, 'id' => $entry?->id, 'version' => $entry?->version(), 'status' => $status, 'displayStatus' => $display,
-                            'publishedAt' => $entry?->publishedAt?->toIso8601String(), 'updatedAt' => $entry?->updatedAt?->toIso8601String(),
-                            // A page on view at an address of its own; one with a placeholder (`/store/{slug}`) is many.
-                            'href' => isset($page['path']) && ! str_contains((string) $page['path'], '{') && $status !== 'conflict' ? $page['path'] : null,
-                            'group' => $group['id'], 'collection' => $group['collection'], 'customisable' => $status === 'standard' && $this->allowed($ctx->user, $group['collection'], 'create'),
-                            'opens' => $entry !== null || $this->allowed($ctx->user, $group['collection'], 'create'),
-                            'restorable' => $entry !== null && $this->allowed($ctx->user, $group['collection'], 'delete')];
-                    }
-
-                    // Named after what brought them: a plugin's own name, the way its screen and settings are called.
-                    $groups[] = ['id' => $group['id'], 'label' => __(\Cms\Packages\PackageRepository::labelOf($group['package']) ?? $group['label']), 'collection' => $group['collection'], 'canCustomise' => $this->allowed($ctx->user, $group['collection'], 'create'), 'total' => count($pages), 'pages' => $pages];
-                }
-
-                return $groups;
-            },
+            'handler' => fn (array $in, AbilityContext $ctx) => $this->builtinGroups($ctx->user, $in['group'] ?? null),
         ]);
 
         // The page's own entry, and whether this call made it. @return array{0: Entry, 1: bool}
@@ -296,9 +255,10 @@ final class ContentAbilities
                 'referencesField' => ['type' => 'string', 'pattern' => '^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$', 'description' => 'With `references`: only inside this field (a group\'s as group.field).'],
                 'page' => ['type' => 'integer', 'minimum' => 1, 'default' => 1],
                 'perPage' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 25],
+                'builtin' => ['type' => 'boolean', 'default' => false, 'description' => 'For `pages`: with the pages features bring (sign in, the store\'s listing page), as rows like its own (builtinRows), with `group`. One the site has not made its own yet has `group/slug` as its id; pages/customize makes it an entry.'],
             ], 'required' => ['collection']],
             'output' => Shape::page(self::listed(), ['perPage' => Shape::INTEGER]),
-            'handler' => function (array $in) {
+            'handler' => function (array $in, AbilityContext $ctx) {
                 $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
                 $query = $this->cms->entries()->query()->working()->ungated()->collection($collection->handle)->status($in['status'])->search($in['search'] ?? null);
 
@@ -327,8 +287,22 @@ final class ContentAbilities
                 }
 
                 $page = $query->paginate($in['perPage'], $in['page']);
+                $page['items'] = $this->listItems($collection, $page['items'], $in['fields'] ?? []);
 
-                return [...$page, 'items' => $this->listItems($collection, $page['items'], $in['fields'] ?? [])];
+                // A feature's pages come after the site's own, found by their name or address, and live while their standard version is.
+                $narrowed = isset($in['parentId']) || ($in['filters'] ?? []) !== [] || isset($in['references']) || ! in_array($in['status'], ['any', 'active', 'published', 'live'], true);
+                if (! empty($in['builtin']) && $collection->handle === 'pages' && ($in['locale'] ?? $this->cms->defaultLocale()) === $this->cms->defaultLocale() && ! $narrowed) {
+                    $search = mb_strtolower(trim((string) ($in['search'] ?? '')));
+                    $rows = array_values(array_filter($this->builtinRows($ctx->user), static fn (array $row) => ($search === '' || str_contains(mb_strtolower($row['title'].' '.($row['uri'] ?? $row['pattern'] ?? '')), $search))
+                        && ($in['status'] === 'any' || $row['status'] === 'published')));
+                    $first = $page['total'];
+                    $page['total'] += count($rows);
+                    $page['pages'] = (int) max(1, ceil($page['total'] / $page['perPage']));
+                    $from = ($page['page'] - 1) * $page['perPage'];
+                    $page['items'] = [...$page['items'], ...array_slice($rows, max(0, $from - $first), max(0, $from + $page['perPage'] - max($from, $first)))];
+                }
+
+                return $page;
             },
         ]);
 
@@ -337,9 +311,9 @@ final class ContentAbilities
             'description' => 'All entries of a tree collection (e.g. pages) nested by parent.',
             'permission' => $collectionPermission('view'),
             'annotations' => ['readOnly' => true],
-            'input' => ['type' => 'object', 'properties' => ['collection' => self::HANDLE, 'locale' => ['type' => 'string'], 'fields' => self::LIST_FIELDS], 'required' => ['collection']],
+            'input' => ['type' => 'object', 'properties' => ['collection' => self::HANDLE, 'locale' => ['type' => 'string'], 'fields' => self::LIST_FIELDS, 'builtin' => ['type' => 'boolean', 'default' => false, 'description' => 'For `pages`: with the pages features bring (sign in, the store\'s listing page), each after the pages under the one its address starts with (builtinRows), with `group`. One the site has not made its own yet has `group/slug` as its id; pages/customize makes it an entry.']], 'required' => ['collection']],
             'output' => Shape::of([Shape::nested(self::listedKeys(), 'children')]),
-            'handler' => function (array $in) {
+            'handler' => function (array $in, AbilityContext $ctx) {
                 $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
                 $entries = $this->cms->entries()->query()->working()->collection($collection->handle)->locale($in['locale'] ?? $this->cms->defaultLocale())->orderBy('position')->get();
                 $items = array_combine(array_map(static fn (Entry $e) => $e->id, $entries), $this->listItems($collection, $entries, $in['fields'] ?? []));
@@ -347,6 +321,24 @@ final class ContentAbilities
 
                 foreach ($entries as $entry) {
                     $byParent[$entry->parentId ?? ''][] = $entry->id;
+                }
+
+                // A feature's page goes under the deepest page its address is inside (the store's listing page under /store), or at the top.
+                $locale = $in['locale'] ?? $this->cms->defaultLocale();
+                if (! empty($in['builtin']) && $collection->handle === 'pages' && $locale === $this->cms->defaultLocale()) {
+                    foreach ($this->builtinRows($ctx->user) as $row) {
+                        $address = (string) ($row['uri'] ?? $row['pattern'] ?? '');
+                        $parent = '';
+                        foreach ($items as $id => $item) {
+                            $uri = rtrim((string) ($item['uri'] ?? ''), '/');
+                            if ($uri !== '' && str_starts_with($address, $uri.'/') && strlen($uri) > strlen((string) ($items[$parent]['uri'] ?? ''))) {
+                                $parent = $id;
+                            }
+                        }
+                        $row['parentId'] = $parent === '' ? null : $parent;
+                        $items[$row['id']] = $row;
+                        $byParent[$parent][] = $row['id'];
+                    }
                 }
 
                 $build = function (string $parent) use (&$build, $byParent, $items): array {
@@ -965,6 +957,8 @@ final class ContentAbilities
             'translations?' => [Shape::STRING],
             'editingBy?' => Shape::STRING,
             'usedBy?' => Shape::STRING,
+            // A feature's page, with `builtin`: what brought it, its address when that is many pages, whether it opens and can go back to the standard version.
+            'group?' => Shape::STRING, 'pattern?' => Shape::STRING_OR_NULL, 'opens?' => Shape::BOOLEAN, 'restorable?' => Shape::BOOLEAN,
             // A template's or a component's own drawing, an address of the site (from whoever draws it).
             'preview?' => Shape::STRING,
             'values?' => Shape::open('The data fields asked for with `fields`, by handle: a users field as a list of people ({id, name, initials, avatar}), an entries field as a list of {id, collection, title}, any other as it is stored (the collection\'s schema is in collections/get).'),
@@ -1032,6 +1026,78 @@ final class ContentAbilities
         $out['data'] = $entry->blueprint()->export((array) $out['data']);
 
         return $out;
+    }
+
+    /** The pages features bring, by group, as pages/builtin gives them: those of one group (`$only`) or all, that this person may see. */
+    private function builtinGroups(?User $user, ?string $only = null): array
+    {
+        $own = fn (array $group, string $handle) => $this->cms->entries()->query()->collection($group['collection'])->locale($this->cms->defaultLocale())->where('slug', $handle)->first();
+        $groups = [];
+
+        foreach ($this->cms->builtinPages()->all() as $group) {
+            if (! $this->allowed($user, $group['collection'], 'view') || ($only !== null && $only !== $group['id'])) {
+                continue;
+            }
+
+            $pages = [];
+
+            foreach (($group['pages'])() as $handle => $page) {
+                $entry = $own($group, (string) $handle);
+                $status = match (true) {
+                    $group['conflict'] !== null && ($group['conflict'])((string) $handle) => 'conflict',
+                    $entry === null => 'standard',
+                    $entry->isLive() => 'customised',
+                    default => 'draft',
+                };
+                // Where it opens once it is the site's own, and whether this person may make it so.
+                // Listed as the site's pages are: what is live, and when it last changed. The standard version is live until the site's own is published.
+                // Which version the site shows is `status`; how that version stands is `displayStatus`, and the standard one is published.
+                $display = match (true) {
+                    $status === 'conflict' => $status,
+                    $entry === null => 'published',
+                    $entry->isLive() => $entry->displayStatus(),
+                    default => 'changed',
+                };
+                $pages[] = ['handle' => (string) $handle, 'label' => __($page['label']), 'path' => $page['path'] ?? null, 'id' => $entry?->id, 'version' => $entry?->version(), 'status' => $status, 'displayStatus' => $display,
+                    'publishedAt' => $entry?->publishedAt?->toIso8601String(), 'updatedAt' => $entry?->updatedAt?->toIso8601String(),
+                    // A page on view at an address of its own; one with a placeholder (`/store/{slug}`) is many.
+                    'href' => isset($page['path']) && ! str_contains((string) $page['path'], '{') && $status !== 'conflict' ? $page['path'] : null,
+                    'group' => $group['id'], 'collection' => $group['collection'], 'customisable' => $status === 'standard' && $this->allowed($user, $group['collection'], 'create'),
+                    'opens' => $entry !== null || $this->allowed($user, $group['collection'], 'create'),
+                    'restorable' => $entry !== null && $this->allowed($user, $group['collection'], 'delete')];
+            }
+
+            // Named after what brought them: a plugin's own name, the way its screen and settings are called.
+            $groups[] = ['id' => $group['id'], 'label' => __(\Cms\Packages\PackageRepository::labelOf($group['package']) ?? $group['label']), 'collection' => $group['collection'], 'canCustomise' => $this->allowed($user, $group['collection'], 'create'), 'total' => count($pages), 'pages' => $pages];
+        }
+
+        return $groups;
+    }
+
+    /**
+     * The pages features bring, as rows of the site's pages (entries/list and entries/tree with `builtin`): each one's own
+     * entry, or the standard version's, whose id is `group/handle` until pages/customize makes it the site's own. An address
+     * with a placeholder (`/store/{slug}`) is many pages: it is the row's `pattern`, and it has no `uri` to open.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function builtinRows(?User $user): array
+    {
+        $rows = [];
+
+        foreach ($this->builtinGroups($user) as $group) {
+            foreach ($group['pages'] as $page) {
+                $rows[] = [
+                    'id' => $page['id'] ?? $group['id'].'/'.$page['handle'], 'collection' => $group['collection'], 'locale' => $this->cms->defaultLocale(),
+                    'title' => $page['label'], 'slug' => $page['handle'], 'uri' => $page['href'], 'pattern' => $page['href'] === null ? $page['path'] : null,
+                    'status' => $page['status'] === 'draft' ? 'draft' : 'published', 'displayStatus' => $page['displayStatus'], 'parentId' => null, 'position' => 0,
+                    'authorId' => null, 'author' => null, 'version' => $page['version'] ?? '', 'publishedAt' => $page['publishedAt'], 'expiresAt' => null, 'updatedAt' => $page['updatedAt'],
+                    'group' => $group['id'], 'opens' => $page['opens'], 'restorable' => $page['restorable'],
+                ];
+            }
+        }
+
+        return $rows;
     }
 
     private function allowed(?User $user, string $collection, string $action): bool

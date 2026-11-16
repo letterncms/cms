@@ -103,6 +103,8 @@ const SORTABLE = ['text', 'select', 'toggle', 'date', 'number', 'url', 'email', 
 /** A collection's entries, as EntriesView::records sends them (for an admin who may do everything the summary says). */
 function entries(summary, def, manifest) {
   const handle = summary.handle, can = summary.can ?? {}
+  // The site's pages, with the pages features bring (summary.builtin: as when a feature registers some).
+  const builtin = handle === 'pages' && !!summary.builtin
   const fields = def.resolvedFields ?? def.fields ?? []
   const locales = manifest.site.locales
   const tree = summary.structure === 'tree', datedList = summary.structure === 'dated'
@@ -112,8 +114,8 @@ function entries(summary, def, manifest) {
   const shown = def.default_columns ?? [...(summary.routable ? ['uri'] : []), 'status', 'published', 'updated']
   const cards = def.default_columns ? [] : [media[0], excerpt].filter(Boolean).map((f) => `field:${f.handle}`)
   const columns = [
-    ...(summary.routable ? [{ id: 'uri', key: 'uri', label: 'URL', format: 'address', fit: true, sort: 'uri' }] : []),
-    { id: 'status', key: 'displayStatus', label: 'Status', format: 'status', width: '104px', sort: 'status' },
+    ...(summary.routable ? [{ id: 'uri', key: 'uri', label: 'URL', format: 'address', fit: true, sort: 'uri', muted: 'pattern' }] : []),
+    { id: 'status', key: 'displayStatus', label: 'Status', format: 'status', width: '104px', sort: 'status', tones: { conflict: 'warning' }, labels: { conflict: 'Address Taken' } },
     ...fields.filter((f) => WIDTHS[f.type] && !['title', 'slug'].includes(f.handle) && !['title', 'uri'].includes(f.component)).map((f) => ({
       id: `field:${f.handle}`, key: `values.${f.handle}`, label: f.label || f.handle, format: 'field', field: { type: f.type, ...(f.options ? { options: f.options } : {}) }, width: WIDTHS[f.type],
       ...(SORTABLE.includes(f.type) ? { sort: f.handle } : {}), ...(f.type === 'number' ? { align: 'end' } : {}), ...(excerpt?.handle === f.handle ? { excerpt: true } : {}), ...(media[0]?.handle === f.handle ? { image: true } : {}),
@@ -123,9 +125,12 @@ function entries(summary, def, manifest) {
     { id: 'published', key: 'published', label: 'Published' }, { id: 'updated', key: 'updated', label: 'Updated' },
   ].map(({ id, ...c }) => ({ ...c, hidden: !shown.includes(id), ...(cards.includes(id) ? { card: true } : {}) }))
   const values = columns.filter((c) => c.key.startsWith('values.')).map((c) => c.key.slice(7))
-  const plain = { collection: handle, locale: '{query.locale}', fields: values }
+  const plain = { collection: handle, locale: '{query.locale}', fields: values, ...(builtin ? { builtin: true } : {}) }
   const entry = { id: '{row.id}', expectedVersion: '{row.version}' }
-  const open = `/content/${handle}/{row.id}`
+  const open = '/content/{row.collection}/{row.id}'
+  const standard = { ability: 'pages/customize', input: { group: '{row.group}', handle: '{row.slug}' }, then: 'open', to: '/content/{result.collection}/{result.id}', when: '{row.opens}', unless: '{row.version}' }
+  const own = builtin ? { when: '{row.version}' } : {}
+  const site = builtin ? { unless: '{row.group}' } : {}
   return {
     id: `entries.${handle}`, label: summary.title, key: 'id', address: true,
     source: { ability: 'entries/list', input: { ...plain, status: '{query.status}' } },
@@ -138,15 +143,18 @@ function entries(summary, def, manifest) {
     paged: { perPage: 50 },
     sort: { param: 'sort', ...(tree ? {} : { default: def.sort || (datedList ? '-published_at' : 'title') }) },
     dates: { published: 'published_at', updated: 'updated_at' },
-    open: { label: 'Open', to: open },
+    open: builtin ? [{ label: 'Open', to: open, ...own }, { label: 'Open', ...standard }] : { label: 'Open', to: open },
     actions: [
       { label: 'View on Site', icon: 'external', inline: true, href: '{row.uri}', when: '{row.uri}', unless: '{row.displayStatus} is draft, scheduled' },
-      { label: 'Edit', icon: 'edit', to: open },
-      ...(can.create ? [{ label: 'Duplicate', icon: 'copy', ability: 'entries/duplicate', input: entry, then: 'open', to: `/content/${handle}/{result.id}` }] : []),
-      ...(can.publish ? [{ label: 'Publish', icon: 'rocket', ability: 'entries/publish', input: entry, success: 'Published', when: '{row.displayStatus} is draft, changed' }, { label: 'Unpublish', icon: 'eye-off', ability: 'entries/unpublish', input: entry, success: 'Unpublished', unless: '{row.displayStatus} is draft' }] : []),
+      { label: 'Edit', icon: 'edit', to: open, ...own },
+      ...(builtin ? [{ label: 'Edit', icon: 'edit', ...standard }] : []),
+      ...(can.create ? [{ label: 'Duplicate', icon: 'copy', ability: 'entries/duplicate', input: entry, then: 'open', to: `/content/${handle}/{result.id}`, ...site }] : []),
+      ...(can.publish ? [{ label: 'Publish', icon: 'rocket', ability: 'entries/publish', input: entry, success: 'Published', when: '{row.displayStatus} is draft, changed' }, { label: 'Unpublish', icon: 'eye-off', ability: 'entries/unpublish', input: entry, success: 'Unpublished', unless: '{row.displayStatus} is draft', ...own }] : []),
       { label: 'Copy URL', icon: 'link', copy: '{origin}{row.uri}', success: 'URL copied', when: '{row.uri}' },
-      ...(can.delete ? [{ label: 'Delete', icon: 'trash', variant: 'danger', ability: 'entries/delete', input: entry, success: 'Deleted', confirm: { title: 'Delete “{row.title}”?', text: 'This cannot be undone.', confirm: 'Delete', danger: true } }] : []),
+      ...(can.delete ? [{ label: 'Delete', icon: 'trash', variant: 'danger', ability: 'entries/delete', input: entry, success: 'Deleted', ...site, confirm: { title: 'Delete “{row.title}”?', text: 'This cannot be undone.', confirm: 'Delete', danger: true } }] : []),
+      ...(builtin ? [{ label: 'Use Standard Version', icon: 'undo', variant: 'danger', ability: 'entries/delete', input: entry, success: 'Back to the standard version', when: '{row.restorable}', confirm: { title: 'Use the standard “{row.title}”?', text: 'Your version and its history are deleted. The page shows what comes with the feature.', confirm: 'Use Standard Version', danger: true } }] : []),
     ],
+    ...(builtin ? { selectable: '{row.version}' } : {}),
     bulk: [
       ...(can.publish ? [
         { label: 'Publish', each: true, ability: 'entries/publish', input: entry, some: '{row.displayStatus} is draft, changed', success: { one: 'Published {count} entry', other: 'Published {count} entries' } },
@@ -160,7 +168,7 @@ function entries(summary, def, manifest) {
       dated: { sort: '{field}', filters: [{ field: '{field}', operator: '>=', value: '{start}' }, { field: '{field}', operator: '<', value: '{end}' }] },
       undated: { sort: '-updated_at', filters: [{ field: '{field}', operator: 'null' }] },
     } } : {}),
-    ...(tree ? { tree: { source: { ability: 'entries/tree', input: plain }, version: 'version', ...(can.edit ? { reorder: { label: 'Drag to Reorder', ability: 'entries/reorder', input: { collection: handle, ids: '{ids}', parentId: '{parent}', versions: '{versions}' }, ...(can.publish ? {} : { when: '{row.status} is not published' }) } } : {}) } } : {}),
+    ...(tree ? { tree: { source: { ability: 'entries/tree', input: plain }, version: 'version', ...(builtin ? { fixed: '{row.group}' } : {}), ...(can.edit ? { reorder: { label: 'Drag to Reorder', ability: 'entries/reorder', input: { collection: handle, ids: '{ids}', parentId: '{parent}', versions: '{versions}' }, ...(can.publish ? {} : { when: '{row.status} is not published' }) } } : {}) } } : {}),
   }
 }
 

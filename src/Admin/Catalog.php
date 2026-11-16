@@ -113,9 +113,12 @@ final class Catalog
                 // A catalog component in the toolbar, before Display: a control that belongs with the list's view.
                 'controls' => $this->object(['component' => $id, 'props' => ['type' => 'object']], ['component']),
                 // A tree while nothing narrows or sorts the list: where it loads, and what puts siblings in order (`{ids}`, `{parent}`, `{versions}`).
-                'tree' => $this->object(['source' => $source, 'at' => $id, 'children' => $id, 'version' => $id, 'reorder' => $action], ['source']),
-                'open' => $action, 'actions' => ['type' => 'array', 'maxItems' => 8, 'items' => $action],
-                'bulk' => ['type' => 'array', 'maxItems' => 4, 'items' => $action],
+                // `fixed`: rows that stay where they are, passed over when the others move.
+                'tree' => $this->object(['source' => $source, 'at' => $id, 'children' => $id, 'version' => $id, 'reorder' => $action, 'fixed' => $s], ['source']),
+                // What a row opens; several, when rows open in different ways: the first whose `when` holds.
+                'open' => ['oneOf' => [$action, ['type' => 'array', 'minItems' => 1, 'maxItems' => 4, 'items' => $action]]], 'actions' => ['type' => 'array', 'maxItems' => 10, 'items' => $action],
+                // `selectable`: which rows the bulk actions can pick, when not all can.
+                'bulk' => ['type' => 'array', 'maxItems' => 4, 'items' => $action], 'selectable' => $s,
                 // A calendar; with `dated` (and `undated`), the ability's input for a month, filled with `{field}`, `{start}` and `{end}`.
                 'calendar' => ['anyOf' => [['type' => 'boolean'], $this->object(['dated' => ['type' => 'object'], 'undated' => ['type' => 'object']], ['dated'])]],
                 'dates' => $this->object(['published' => $id, 'updated' => $id]),
