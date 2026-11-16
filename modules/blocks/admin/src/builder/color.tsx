@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Button, Fields, fieldControlId, Icon, NoMatches, Popover, Pressable, Segmented, Tooltip, cn, NEW_COLOR } from '@letterncms/ui'
+import { Button, Fields, fieldControlId, Icon, NoMatches, Popover, Pressable, Segmented, Tooltip, cn, revealSelected, NEW_COLOR } from '@letterncms/ui'
 import { useEffect, useMemo, useState } from 'react'
 import { useThemeTokens } from '../core/styling'
 import { Swatch, inputClass } from './controls'
@@ -217,7 +217,7 @@ export function ColorPicker({ label, value, onChange, clearable = true }: { labe
         <NoMatches className="h-64 justify-center" onClear={() => setSearch('')} />
       )}
       {tab === 'theme' && ownShown.length > 0 && (
-        <div role="listbox" aria-label={t('Theme Colors')} className="h-64 overflow-y-auto overscroll-contain p-1">
+        <div ref={revealSelected} role="listbox" aria-label={t('Theme Colors')} className="h-64 overflow-y-auto overscroll-contain p-1">
           {ownShown.map((token) => {
             const on = current === token.variable
             const { light, dark } = lightDark(token.value)
@@ -233,7 +233,7 @@ export function ColorPicker({ label, value, onChange, clearable = true }: { labe
       )}
       {tab === 'palette' && shadesShown.length > 0 && (
         // Tailwind's shades, a family to a row, lightest first: each square names itself on hover and focus, the chosen one wears a check.
-        <div role="listbox" aria-label={t('Palette')} className="grid h-64 grid-cols-11 content-start gap-1 overflow-y-auto overscroll-contain p-3">
+        <div ref={revealSelected} role="listbox" aria-label={t('Palette')} className="grid h-64 grid-cols-11 content-start gap-1 overflow-y-auto overscroll-contain p-3">
           {shadesShown.map((token) => {
             const on = current === token.variable
             const color = lightDark(token.value).light

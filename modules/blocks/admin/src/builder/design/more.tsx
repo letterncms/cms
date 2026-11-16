@@ -1,6 +1,6 @@
 import { t, type FieldDef } from '@letterncms/sdk'
-import { Button, Icon, IconButton, Popover } from '@letterncms/ui'
-import { useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
+import { Button, Icon, IconButton, Popover, revealOption } from '@letterncms/ui'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
 import { parseClass } from '../../../../tailwind/engine'
 import { Section } from '../controls'
 import type { StyleApi } from '../useStyle'
@@ -116,6 +116,9 @@ export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Pro
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
+  const list = useRef<HTMLDivElement>(null)
+  // The arrow keys keep the option they reach in sight.
+  useEffect(() => revealOption(list.current, list.current?.querySelector('[data-active]')), [active])
   const more = moreStyles()
   const q = query.trim().toLowerCase()
   const listed = properties.map((property) => ({ property, label: labels[property] ?? String(fieldOf(property, more).label) })).filter((o) => !q || o.label.toLowerCase().includes(q) || o.property.toLowerCase().includes(q.replace(/[\s-]/g, '')))
@@ -157,7 +160,7 @@ export function AddStyle({ properties, labels = {}, onPick, label = t('Add a Pro
           className="h-full min-w-0 flex-1 bg-transparent text-sm text-text outline-none"
         />
       </div>
-      <div role="listbox" aria-label={label} className="max-h-64 overflow-y-auto overscroll-contain p-1">
+      <div ref={list} role="listbox" aria-label={label} className="max-h-64 overflow-y-auto overscroll-contain p-1">
         {options.length === 0 && <p className="m-0 px-2 py-3 text-sm text-muted">{t('No matches')}</p>}
         {options.map((o, i) => (
           <Button key={o.property} variant="ghost" role="option" aria-selected={i === active} tabIndex={-1} onMouseEnter={() => setActive(i)} onClick={() => pick(o.property)} data-active={i === active || undefined} className="w-full !justify-start !rounded-xs !px-2 text-left !font-normal">

@@ -1,5 +1,5 @@
 import { t, useAbility, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Popover, Pressable, Segmented, Spinner, cn, Tooltip } from '@letterncms/ui'
+import { fieldControlId, Icon, Popover, Pressable, Segmented, Spinner, cn, Tooltip, revealSelected } from '@letterncms/ui'
 import { useEffect, useState } from 'react'
 
 type Weight = 'regular' | 'bold' | 'fill' | 'light'
@@ -22,6 +22,8 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
   const preview = useAbility<{ name: string; svg: string }[]>('blocks/icons', { query: base, limit: 1 }, { enabled: !!base, staleTime: Infinity })
   const results = useAbility<{ name: string; svg: string }[]>('blocks/icons', { query: debounced, limit: 160 }, { enabled: open, staleTime: Infinity })
   const current = preview.data?.find((i) => i.name === base) ?? preview.data?.[0]
+  // Opens at the chosen icon: put first when the first page of icons doesn't reach it.
+  const icons = !debounced && current?.name === base && results.data && !results.data.some((i) => i.name === base) ? [current, ...results.data] : results.data
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(query.trim()), 140)
@@ -70,8 +72,9 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
             options={WEIGHTS.map((w) => ({ value: w, label: weightLabel(w) }))}
           />
         </div>
-        <div className="grid max-h-64 grid-cols-8 gap-0.5 overflow-y-auto p-1.5" role="listbox" aria-label={t('Icons')}>
-          {(results.data ?? []).map((icon) => (
+        {/* Mounted again when the icons arrive, so it opens at the chosen one. */}
+        <div key={icons ? 'icons' : 'loading'} ref={revealSelected} className="grid max-h-64 grid-cols-8 gap-0.5 overflow-y-auto p-1.5" role="listbox" aria-label={t('Icons')}>
+          {(icons ?? []).map((icon) => (
             <Tooltip key={icon.name} content={icon.name}><Pressable
               role="option"
               aria-selected={icon.name === base}

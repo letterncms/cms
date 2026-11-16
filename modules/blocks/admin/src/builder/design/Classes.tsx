@@ -1,6 +1,6 @@
 import { t } from '@letterncms/sdk'
-import { IconButton, Menu, Pressable, cn, type MenuItemDef } from '@letterncms/ui'
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { IconButton, Menu, Pressable, cn, revealOption, type MenuItemDef } from '@letterncms/ui'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { parseClass, splitClasses, type Engine } from '../../../../tailwind/engine'
 import { Swatch } from '../controls'
 import { broken, lightDark, onLayer, searchClasses, writable } from '../styleApi'
@@ -85,6 +85,8 @@ function ClassField({ engine, site, exclude, onAdd, onBackspace, onEmpty, initia
     }
   }
   const id = useMemo(() => `cms-classes-${Math.random().toString(36).slice(2)}`, [])
+  // The arrow keys keep the option they reach in sight.
+  useEffect(() => revealOption(document.getElementById(id), document.getElementById(`${id}-${active}`)), [id, active])
   return (
     // A chip being changed keeps its place and its size, its text's width; the field's own input takes the rest of the line.
     <div className={initial === undefined ? 'min-w-20 flex-1' : 'flex-none'} style={initial === undefined ? undefined : { width: `${Math.max(query.length, 4) + 2}ch` }}>
