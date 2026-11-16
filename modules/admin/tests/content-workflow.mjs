@@ -83,6 +83,7 @@ const map = imports({ '@letterncms/blocks': `${assets('blocks')}admin.js` })
 const fixtureNonce = 'fixture-preview-scripts'
 const editorToken = 'fixture-editor-document'
 const requests = []
+const codeFiles = new Map([['scripts/hero.js', '']])
 const failures = new Set()
 let delay = 0
 let sequence = 1
@@ -645,6 +646,43 @@ try {
     assert(calls.length === 2 && calls.every(call => call.input.expectedVersion), 'Bulk publication omitted row versions')
     button('Clear Selection').click()
   })
+  await test('Code opens files in tabs, formats what it saves and runs a page of the site in its console', async () => {
+    navigate('/code?file=js')
+    const tabs = () => [...document.querySelectorAll('[role="tablist"][aria-label="Open Files"] [role="tab"]')].map((tab) => tab.textContent.trim())
+    await wait(() => tabs().includes('Site JavaScript'), 'The code editor did not open the site’s JavaScript in a tab')
+    await wait(() => button('hero.js'), 'The explorer did not list the site’s script')
+    button('hero.js').click()
+    await wait(() => tabs().includes('hero.js') && document.querySelector('[role="tab"][aria-selected="true"]')?.textContent.trim() === 'hero.js', 'A file of the explorer did not open in its own tab')
+    const editor = () => [...document.querySelectorAll('.cm-content')].find((content) => content.offsetParent)
+    await wait(() => editor()?.getAttribute('aria-label') === 'hero.js', 'The file’s editor did not load')
+    editor().focus()
+    document.execCommand('insertText', false, 'const   a = {b:1}')
+    await wait(() => document.querySelector('[role="tablist"] [aria-label="Unsaved changes"]'), 'The tab did not mark its unsaved change')
+    save()
+    await waitAsync(async () => (await state()).requests.some((request) => request.ability === 'styling-code/save' && request.input.path === 'scripts/hero.js' && request.input.contents === 'const a = { b: 1 };\n'), 'The script was not saved as Prettier formats it')
+    await wait(() => !document.querySelector('[role="tablist"] [aria-label="Unsaved changes"]') && editor().textContent.includes('const a = { b: 1 };'), 'The editor did not show the formatted, saved script')
+
+    button('Show Console').click()
+    const page = document.querySelector('input[aria-label="Page"]')
+    await wait(() => page && page.offsetParent, 'The console did not open')
+    setInput(page, '/console-fixture')
+    page.form.requestSubmit()
+    const log = () => document.querySelector('[role="log"][aria-label="Console Messages"]')?.textContent ?? ''
+    await wait(() => log().includes('inline {a: 1}') && log().includes('from hero [1, 2]') && log().includes('Uncaught Error: hero broke'), () => 'The page’s logs and errors did not reach the console: ' + log().slice(0, 300))
+    const where = [...document.querySelectorAll('[role="log"] button')].find((link) => link.textContent.trim() === 'hero.js:2')
+    assert(where, 'The error did not say the file and line it came from')
+    where.click()
+    await wait(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent.trim() === 'hero.js' && document.body.textContent.includes('Ln 2, Col 1'), 'The error’s line did not open in the editor')
+
+    const prompt = document.querySelector('textarea[aria-label="Run on the Page"]')
+    setInput(prompt, '1 + 1')
+    prompt.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await wait(() => [...document.querySelector('[role="log"]').children].some((row) => row.textContent.trim() === '2'), 'What was typed did not run on the page')
+    setInput(prompt, 'document.getElementById(\'next\').click()')
+    prompt.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await wait(() => page.value === '/console-next' && log().includes('next page'), 'Following a link did not run the next page')
+    button('Hide Console').click()
+  })
   output.textContent += '\nAll ' + results.length + ' workflow checks passed.'
   await fetch('/__test/results', { method: 'POST', body: JSON.stringify({ passed: results, viewport: innerWidth }) })
 } catch (error) {
@@ -706,6 +744,12 @@ export function mount(el, props, context) {
   return () => { count.unmounts++; delete el.dataset.drawn }
 }`)
   if (url.pathname === '/_cms/site/scripts/plain.js') return script(`export function mount(el) { el.dataset.drawn = 'plain' }`)
+  // A page of the site for the Code screen's console: an inline script, a script of the site that warns and then
+  // throws on its second line, and a link to a second page.
+  const sitePage = (markup) => { res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end(markup) }
+  if (url.pathname === '/console-fixture') return sitePage('<!doctype html><html><head><title>Console</title></head><body><a id="next" href="/console-next">Next</a><script>console.log("inline", { a: 1 })</script><script type="module" src="/_cms/site/scripts/hero-0123456789.js"></script></body></html>')
+  if (url.pathname === '/console-next') return sitePage('<!doctype html><html><head></head><body><script>console.info("next page")</script></body></html>')
+  if (url.pathname === '/_cms/site/scripts/hero-0123456789.js') return script('console.warn("from hero", [1, 2])\nthrow new Error("hero broke")\n')
   if (url.pathname === '/api/admin/manifest') return json(res, 200, { data: manifest })
   if (url.pathname === '/api/admin/batch') {
     const input = await body(req)
@@ -751,6 +795,11 @@ export function mount(el, props, context) {
     // compiled (`current`), so the admin has nothing to compile for the server here.
     else if (ability === 'styling/get') data = { ...(realSources[0]?.styling ?? { css: fixtureStylesheet, classes: [], fonts: [], fontFiles: [], transition: { type: 'none', duration: 0.3, navigation: 'document' }, templates: {}, stylesheet: '', js: '' }), current: true }
     else if (ability === 'styling/source') data = realSources[0]?.source ?? { signature: '0'.repeat(32), css: fixtureStylesheet, files: {}, candidates: [], faces: '' }
+    // The site's own files, for the Code screen: one script, kept in memory.
+    else if (ability === 'styling-code/list') data = { scripts: ['hero'], styles: [], load: { scripts: [], styles: [], templates: {}, components: {} } }
+    else if (ability === 'styling-code/get') data = { contents: codeFiles.get(input.path) ?? '' }
+    else if (ability === 'styling-code/save') { codeFiles.set(input.path, input.contents); data = { path: input.path } }
+    else if (ability === 'styling-vendor/list') data = { imports: [] }
     else if (ability === 'seo/analyze') data = { score: 100, checks: [{ id: 'title', status: 'pass', label: 'Title', message: 'Search title is available.' }], meta: { title: entries.get(input.id)?.title, description: 'A fixture description', canonical: '', image: null } }
     else if (ability === 'seo/markdown') data = { markdown: '# Fixture Markdown' }
     else if (ability === 'account/update') { Object.assign(manifest.user.preferences, input.preferences); data = manifest.user }
@@ -766,7 +815,7 @@ export function mount(el, props, context) {
     return
   }
   if (!url.pathname.startsWith('/admin')) return json(res, 404, {})
-  if (!realSite && !url.searchParams.has('preview')) { entries = initialEntries(); failures.clear(); requests.length = 0; sequence = 1; delay = 0 }
+  if (!realSite && !url.searchParams.has('preview')) { entries = initialEntries(); codeFiles.set('scripts/hero.js', ''); failures.clear(); requests.length = 0; sequence = 1; delay = 0 }
   const html = adminPage({
     title: 'Content workflow verification', boot, map, nonce: fixtureNonce,
     setup: `localStorage.setItem('cms.sidebar','collapsed');localStorage.setItem('cms.entry.panel.posts','details');localStorage.setItem('cms.entry.panel.pages','details');localStorage.setItem('cms.entry.panel.viewer','details');localStorage.setItem('cms.theme',${JSON.stringify(url.searchParams.has('dark') ? 'dark' : 'light')})`,

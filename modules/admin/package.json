@@ -29,6 +29,7 @@
     "@letterncms/sdk": "workspace:*",
     "@lezer/highlight": "1.2.5",
     "@tanstack/react-query": "5.105.0",
+    "prettier": "3.9.10",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "sonner": "2.0.8"

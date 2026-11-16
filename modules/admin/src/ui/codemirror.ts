@@ -11,6 +11,7 @@ import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars, keymap, lineNumbers, placeholder as placeholderText } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { t } from '@letterncms/sdk'
+import { difference } from './textChange'
 
 /**
  * The code editor CodeEditor loads on first use, so the admin's first paint never carries it.
@@ -112,12 +113,16 @@ export interface EditorOptions {
   onFocus: (focused: boolean) => void
   /** How many mistakes the code has now. */
   onErrors: (count: number) => void
+  /** Where the cursor is, from 1, each time it moves. */
+  onCursor?: (at: { line: number; column: number }) => void
 }
 
 export interface Editor {
   setValue: (value: string) => void
   setDisabled: (disabled: boolean) => void
   focus: () => void
+  /** The cursor to a line (and column), from 1, scrolled into the middle. */
+  goTo: (line: number, column?: number) => void
   destroy: () => void
 }
 
@@ -155,6 +160,10 @@ export function createEditor(options: EditorOptions): Editor {
         EditorView.updateListener.of((update) => {
           if (update.docChanged) options.onChange(update.state.doc.toString())
           if (update.focusChanged) options.onFocus(update.view.hasFocus)
+          if (options.onCursor && (update.selectionSet || update.docChanged)) {
+            const line = update.state.doc.lineAt(update.state.selection.main.head)
+            options.onCursor({ line: line.number, column: update.state.selection.main.head - line.from + 1 })
+          }
           const errors = diagnosticCount(update.state)
           if (errors !== diagnosticCount(update.startState)) options.onErrors(errors)
         }),
@@ -163,11 +172,17 @@ export function createEditor(options: EditorOptions): Editor {
   })
   return {
     setValue: (value) => {
-      const current = view.state.doc.toString()
-      if (value !== current) view.dispatch({ changes: { from: 0, to: current.length, insert: value } })
+      const change = difference(view.state.doc.toString(), value)
+      if (change) view.dispatch({ changes: change })
     },
     setDisabled: (disabled) => view.dispatch({ effects: editable.reconfigure(lock(disabled)) }),
     focus: () => view.focus(),
+    goTo: (line, column = 1) => {
+      const at = view.state.doc.line(Math.max(1, Math.min(line, view.state.doc.lines)))
+      const head = at.from + Math.max(0, Math.min(column - 1, at.length))
+      view.dispatch({ selection: { anchor: head }, effects: EditorView.scrollIntoView(head, { y: 'center' }) })
+      view.focus()
+    },
     destroy: () => view.destroy(),
   }
 }
