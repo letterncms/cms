@@ -290,7 +290,7 @@ final class DeliveryController
             $definition === null => 'other',
             in_array($definition->type, ['number', 'range'], true) => 'number',
             $definition->type === 'toggle' => 'switch',
-            in_array($definition->type, ['tags', 'entries', 'terms', 'users', 'media', 'file'], true), $definition->type === 'select' && $definition->get('multiple') => 'list',
+            in_array($definition->type, ['list', 'entries', 'terms', 'users', 'media', 'file'], true), $definition->type === 'select' && $definition->get('multiple') => 'list',
             in_array($definition->type, ['text', 'textarea', 'markdown', 'richtext', 'slug', 'url', 'email', 'code', 'select', 'color', 'date', 'time', 'icon'], true) => 'text',
             default => 'other',
         };

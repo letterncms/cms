@@ -37,7 +37,7 @@ abstract class TestCase extends BaseTestCase
             'posts' => ['title' => 'Posts', 'singular' => 'Post', 'structure' => 'dated', 'route' => '/blog/{slug}', 'fields' => [
                 ['handle' => 'excerpt', 'type' => 'textarea', 'required' => true],
                 ['handle' => 'body', 'type' => 'markdown'],
-                ['handle' => 'tags', 'type' => 'tags'],
+                ['handle' => 'tags', 'type' => 'list'],
             ]],
             'notes' => ['title' => 'Notes', 'singular' => 'Note', 'driver' => 'files', 'structure' => 'tree', 'route' => '/notes/{parent_uri}/{slug}', 'fields' => [['handle' => 'body', 'type' => 'markdown', 'body' => true]]],
         ];

@@ -100,9 +100,23 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
         $field = $blueprint->field($handle);
         $value = $this->entry->data[$handle] ?? null;
 
-        return $this->cache[$handle] = $field
+        return $this->cache[$handle] = self::wrap($field
             ? cms()->fields()->resolve($field->type)->augment($value, $field)
-            : $value;
+            : $value);
+    }
+
+    /**
+     * The entries a relation names, as entries a page shows: with their fields and address (`entry.topic.colour`,
+     * `item.tags` linked to each tag's page), at any depth (a repeater's rows, a group, a global), and a page that
+     * shows one changes when it does.
+     */
+    public static function wrap(mixed $value): mixed
+    {
+        return match (true) {
+            $value instanceof Entry => new self($value),
+            is_array($value) => array_map(self::wrap(...), $value),
+            default => $value,
+        };
     }
 
     /** Children in a tree collection (live only), ordered. */

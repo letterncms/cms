@@ -3,8 +3,8 @@ import { recordDateColumnIds } from './recordDates'
 
 /** Shared by collection settings and entry displays so the choices stay in sync. */
 const widths: Record<string, number | string> = {
-  text: 180, textarea: 'minmax(160px,0.8fr)', select: 132, toggle: 80, date: 112, number: 96, entries: 180, users: 132,
-  tags: 180, media: 64, url: 180, email: 180, slug: 160, color: 112,
+  text: 180, textarea: 'minmax(160px,0.8fr)', select: 132, toggle: 80, date: 112, number: 96, entries: 180, terms: 180, users: 132,
+  list: 180, media: 64, url: 180, email: 180, slug: 160, color: 112,
 }
 const sortable = new Set(['text', 'select', 'toggle', 'date', 'number', 'url', 'email', 'slug', 'color'])
 const fieldColumnId = (handle: string) => `field:${handle}`

@@ -144,7 +144,7 @@ final class BlocksField extends FieldType
     public function configFields(): array
     {
         return [
-            ['handle' => 'allowed', 'type' => 'tags', 'label' => 'Allowed Blocks', 'placeholder' => 'Every Block', 'about' => 'Leave empty to allow every block.'],
+            ['handle' => 'allowed', 'type' => 'list', 'label' => 'Allowed Blocks', 'placeholder' => 'Every Block', 'about' => 'Leave empty to allow every block.'],
         ];
     }
 }

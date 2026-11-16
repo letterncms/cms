@@ -8,7 +8,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Button, Fields, Icon, IconButton, Input, Menu, Popover, PersonPicker, fieldControlId, Spinner, StatusDot, cn } from '../ui'
 import { TableFrame, TableHeader, TableRow } from '../ui/DataTable'
 
-export function TagsField({ field, value, onChange, disabled }: FieldProps<string[]>) {
+export function ListField({ field, value, onChange, disabled }: FieldProps<string[]>) {
   const tags = Array.isArray(value) ? value : []
   const [draft, setDraft] = useState('')
   const add = (raw: string) => {
@@ -81,15 +81,15 @@ function SortableList<T>({ items, getId, onReorder, render, disabled }: { disabl
   )
 }
 
-export function EntriesField({ field, value, onChange, disabled, context }: FieldProps<string[]>) {
+export function EntriesField({ field, value, onChange, disabled, context, addLabel, locale }: FieldProps<string[]> & { addLabel?: string; locale?: string }) {
   const ids = Array.isArray(value) ? value : []
   const max = (field.max as number) || Infinity
   const collections = (field.collections as string[] | undefined) ?? []
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const selected = useAbility<EntrySummary[]>('entries/get-many', { ids }, { enabled: ids.length > 0 })
-  const results = useAbility<EntrySummary[]>('content/search', { query: query || ' ', collections: collections.length ? collections : undefined, limit: 12 }, { enabled: open && query.trim().length > 0 })
-  const recent = useAbility<{ items: EntrySummary[] }>('entries/list', { collection: collections[0] ?? '', sort: '-updated_at', perPage: 12 }, { enabled: open && !query && collections.length > 0 })
+  const results = useAbility<EntrySummary[]>('content/search', { query: query || ' ', collections: collections.length ? collections : undefined, locale, limit: 12 }, { enabled: open && query.trim().length > 0 })
+  const recent = useAbility<{ items: EntrySummary[] }>('entries/list', { collection: collections[0] ?? '', locale, sort: '-updated_at', perPage: 12 }, { enabled: open && !query && collections.length > 0 })
 
   const known = new Map<string, EntrySummary>()
   for (const e of [...(selected.data ?? []), ...(results.data ?? []), ...(recent.data?.items ?? [])]) known.set(e.id, e)
@@ -125,7 +125,7 @@ export function EntriesField({ field, value, onChange, disabled, context }: Fiel
           className="w-80"
           trigger={
             <Pressable disabled={disabled} className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-sm text-muted hover:bg-hover hover:text-text">
-              <Icon name="plus" size={14} /> {t('Link Entry')}
+              <Icon name="plus" size={14} /> {addLabel ?? t('Link Entry')}
             </Pressable>
           }
         >

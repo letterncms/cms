@@ -7,15 +7,19 @@ namespace Cms\Content\Fields\Types;
 use Cms\Content\Fields\Field;
 use Cms\Content\Fields\FieldType;
 
-class Tags extends FieldType
+/**
+ * A list of short values typed one after another: addresses, hosts, keywords. Tags that entries are filed under
+ * are a taxonomy, picked with a `terms` field.
+ */
+class ValueList extends FieldType
 {
-    public function key(): string { return 'tags'; }
+    public function key(): string { return 'list'; }
 
-    public function label(): string { return __('Tags'); }
+    public function label(): string { return __('List'); }
 
-    public function description(): string { return __('Free-form labels, separated by Enter or a comma.'); }
+    public function description(): string { return __('Short values typed one after another, each ended by Enter or a comma.'); }
 
-    public function icon(): string { return 'tag'; }
+    public function icon(): string { return 'list'; }
 
     public function schema(Field $field): array
     {

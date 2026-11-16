@@ -11,10 +11,20 @@ use Cms\Support\RecordTimestamps;
 
 /**
  * A content type, defined in content/collections/<handle>.yaml.
+ *
+ * Its `type` says what its entries are. `entries` are the site's content: pages, posts, projects. The other
+ * two are taxonomies, vocabularies that entries are filed under through a `terms` field: `categories` are
+ * curated and nest (a tree), `tags` are flat and made as they are typed into the field. Both are entries
+ * still, so a term can be renamed, translated and given fields and a page.
  */
 final class Collection
 {
+    public const array TYPES = ['entries', 'categories', 'tags'];
+
     public const array STRUCTURES = ['list', 'tree', 'dated'];
+
+    /** What a taxonomy's terms are laid out as: categories nest, tags do not. */
+    private const array TAXONOMY_STRUCTURES = ['categories' => 'tree', 'tags' => 'list'];
 
     public const array DRIVERS = ['database', 'files'];
 
@@ -41,15 +51,24 @@ final class Collection
         public readonly bool $revisions,
         public readonly int $perPage,
         public readonly array $extra = [],
-        /** The sidebar section it is listed in; pinned there unless it is a system collection. */
-        public readonly string $section = 'content',
+        /** The sidebar section it is listed in: by default its type's group in the content room. */
+        public readonly string $section = 'entries',
         public readonly bool $system = false,
         public readonly string $defaultView = 'table',
         /** Visible overview column IDs; null keeps the standard columns. */
         public readonly ?array $defaultColumns = null,
+        public readonly string $type = 'entries',
     ) {
         if (! Files::isHandle($handle)) {
             throw new InvalidArgumentException(__('Invalid collection handle :handle.', ['handle' => $handle]));
+        }
+
+        if (! in_array($type, self::TYPES, true)) {
+            throw new InvalidArgumentException(__('Unknown type :type for collection :handle.', ['type' => $type, 'handle' => $handle]));
+        }
+
+        if (isset(self::TAXONOMY_STRUCTURES[$type]) && $structure !== self::TAXONOMY_STRUCTURES[$type]) {
+            throw new InvalidArgumentException(__('Categories are a tree and tags a list: :handle cannot be :structure.', ['handle' => $handle, 'structure' => $structure]));
         }
 
         if (! in_array($driver, self::DRIVERS, true)) {
@@ -73,9 +92,11 @@ final class Collection
 
     public static function fromArray(string $handle, array $data): self
     {
-        $structure = (string) ($data['structure'] ?? 'list');
+        $type = (string) ($data['type'] ?? 'entries');
+        // A taxonomy's structure is its type's, whatever the definition says: one that becomes a taxonomy leaves its own.
+        $structure = self::TAXONOMY_STRUCTURES[$type] ?? (string) ($data['structure'] ?? 'list');
         $template = (string) ($data['template'] ?? '');
-        $known = ['title', 'singular', 'icon', 'description', 'driver', 'structure', 'route', 'template', 'sort', 'fields', 'home', 'revisions', 'per_page', 'section', 'system', 'default_view', 'default_columns'];
+        $known = ['type', 'title', 'singular', 'icon', 'description', 'driver', 'structure', 'route', 'template', 'sort', 'fields', 'home', 'revisions', 'per_page', 'section', 'system', 'default_view', 'default_columns'];
 
         if (isset($data['default_columns']) && (! is_array($data['default_columns']) || ! array_is_list($data['default_columns']))) {
             throw new InvalidArgumentException(__('Default display fields must be a list of column IDs.'));
@@ -85,7 +106,7 @@ final class Collection
             handle: $handle,
             title: (string) ($data['title'] ?? ucfirst($handle)),
             singular: (string) ($data['singular'] ?? $data['title'] ?? ucfirst($handle)),
-            icon: (string) ($data['icon'] ?? 'collection'),
+            icon: (string) ($data['icon'] ?? match ($type) { 'categories' => 'folder', 'tags' => 'tag', default => 'collection' }),
             description: (string) ($data['description'] ?? ''),
             driver: (string) ($data['driver'] ?? 'database'),
             structure: $structure,
@@ -97,10 +118,11 @@ final class Collection
             revisions: (bool) ($data['revisions'] ?? true),
             perPage: (int) ($data['per_page'] ?? 10),
             extra: array_diff_key($data, array_flip($known)),
-            section: is_string($data['section'] ?? null) && Files::isHandle($data['section']) ? $data['section'] : 'content',
+            section: is_string($data['section'] ?? null) && Files::isHandle($data['section']) ? $data['section'] : ($type === 'entries' ? 'entries' : 'taxonomies'),
             system: (bool) ($data['system'] ?? false),
             defaultView: (string) ($data['default_view'] ?? 'table'),
             defaultColumns: isset($data['default_columns']) ? array_values(array_unique($data['default_columns'], SORT_REGULAR)) : null,
+            type: $type,
         );
     }
 
@@ -189,13 +211,16 @@ final class Collection
         return $this->structure === 'tree';
     }
 
-    /**
-     * A vocabulary other entries are filed under (`taxonomy: true`): its entries are the terms, which `terms`
-     * fields pick from. Everything else about it is a collection: a tree for nested terms, a route for term pages.
-     */
+    /** A vocabulary other entries are filed under (categories or tags): its entries are the terms `terms` fields pick from. */
     public function isTaxonomy(): bool
     {
-        return (bool) $this->get('taxonomy', false);
+        return $this->type !== 'entries';
+    }
+
+    /** Tags: a name typed into a terms field that no tag has yet becomes a new one. */
+    public function isTags(): bool
+    {
+        return $this->type === 'tags';
     }
 
     /**
@@ -241,19 +266,21 @@ final class Collection
     public function toYaml(): array
     {
         return array_filter([
+            'type' => $this->type !== 'entries' ? $this->type : null,
             'title' => $this->title,
             'singular' => $this->singular,
             'icon' => $this->icon,
             'description' => $this->description ?: null,
             'driver' => $this->driver,
-            'structure' => $this->structure,
+            // A taxonomy's structure is its type's.
+            'structure' => $this->isTaxonomy() ? null : $this->structure,
             'route' => $this->route,
             'template' => $this->template,
             'sort' => $this->sort,
             'home' => $this->home,
             'revisions' => $this->revisions ? null : false,
             'per_page' => $this->perPage !== 10 ? $this->perPage : null,
-            'section' => $this->section !== 'content' ? $this->section : null,
+            'section' => $this->section !== ($this->isTaxonomy() ? 'taxonomies' : 'entries') ? $this->section : null,
             'system' => $this->system ?: null,
             'default_view' => $this->defaultView !== 'table' ? $this->defaultView : null,
             'default_columns' => $this->defaultColumns,
@@ -268,6 +295,8 @@ final class Collection
         return [
             'handle' => $this->handle,
             ...$this->toYaml(),
+            'type' => $this->type,
+            'structure' => $this->structure,
             ...RecordTimestamps::api($this->extra),
             'default_view' => $this->defaultView,
             'default_columns' => $this->defaultColumns,

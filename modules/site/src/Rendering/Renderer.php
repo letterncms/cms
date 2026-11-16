@@ -213,7 +213,7 @@ final class Renderer
         $out = [];
 
         foreach ($this->cms->globals()->all() as $handle => $set) {
-            $out[$handle] = $set->blueprint()->augment($set->values($locale));
+            $out[$handle] = AugmentedEntry::wrap($set->blueprint()->augment($set->values($locale)));
         }
 
         return $out;

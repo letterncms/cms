@@ -94,8 +94,8 @@ final class AdminRegistry
      *
      * `section` is where it is listed: `main` in the main sidebar, for what
      * everyone starts from; `pinned` (the default) under it, for a screen people
-     * open often but may unpin (the files, a plugin's screen); or a section of a room: the entries' (`content`), the
-     * design's (`design`), the structure's (`structure`) or the settings'
+     * open often but may unpin (the files, a plugin's screen); or a section of a room: the content's (`entries`, `taxonomies`), the
+     * design's (`design`), the structure's (`structure`, `layout`, `site-wide`) or the settings'
      * (`system`, `people`) for a screen that is set up once (a plugin's then lands
      * under Plugins, see Navigation). A room's screen can be pinned to the main
      * sidebar; `pinned: true` pins it there until someone arranges their own.

@@ -77,31 +77,32 @@ final class CollectionAbilities
 
         $a->register('collections/editable', [
             'label' => 'List Editable Collections',
-            'description' => 'The site\'s own collections, whose fields and settings are edited in the admin (not the system ones the CMS and its plugins bring), with how many entries each has.',
+            'description' => 'The site\'s own collections, whose fields and settings are edited in the admin (not the system ones the CMS and its plugins bring), with how many entries each has: those of entries, or with `taxonomies` the categories and tags.',
             'permission' => 'collections.manage',
             'annotations' => ['readOnly' => true],
             'expose' => ['mcp' => false, 'assistant' => false],
+            'input' => ['type' => 'object', 'properties' => ['taxonomies' => ['type' => 'boolean', 'default' => false]]],
             'output' => Shape::of([[
                 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'handle' => Shape::STRING, 'title' => Shape::STRING, 'icon' => Shape::STRING,
-                'structure' => Shape::STRING, 'route' => Shape::STRING_OR_NULL, 'count' => Shape::INTEGER, 'viewable' => Shape::BOOLEAN,
+                'type' => Shape::enum(...Collection::TYPES), 'structure' => Shape::STRING, 'route' => Shape::STRING_OR_NULL, 'count' => Shape::INTEGER, 'viewable' => Shape::BOOLEAN,
             ]]),
             'handler' => fn (array $in, AbilityContext $ctx) => array_values(array_map(fn ($c) => [
                 ...\Cms\Support\RecordTimestamps::api($c->extra),
-                'handle' => $c->handle, 'title' => $c->title, 'icon' => $c->icon, 'structure' => $c->structure, 'route' => $c->route,
+                'handle' => $c->handle, 'title' => $c->title, 'icon' => $c->icon, 'type' => $c->type, 'structure' => $c->structure, 'route' => $c->route,
                 'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
                 // Whether the person asking may see its entries: managing collections does not give that.
                 'viewable' => $ctx->can("entries.{$c->handle}.view"),
-            ], array_filter($this->cms->collections()->all(), static fn ($c) => ! $c->system))),
+            ], array_filter($this->cms->collections()->all(), static fn ($c) => ! $c->system && $c->isTaxonomy() === (bool) ($in['taxonomies'] ?? false)))),
         ]);
 
         $a->register('collections/save', [
             'label' => 'Save Collection',
-            'description' => 'Create or update a collection definition (fields, route, structure). Written to content/collections/<handle>.yaml.',
+            'description' => 'Create or update a collection definition (fields, route, structure). Written to content/collections/<handle>.yaml. Its type can change: a taxonomy that a terms field or an archive uses stays one, and a tree whose entries nest stays a tree.',
             'permission' => 'collections.manage',
             'input' => ['type' => 'object', 'properties' => [
                 'handle' => self::HANDLE,
                 'createOnly' => ['type' => 'boolean', 'default' => false, 'description' => 'Reject an existing handle when creating a collection.'],
-                'definition' => ['type' => 'object', 'description' => 'title, singular, icon, driver (database|files), structure (list|tree|dated), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, section (default sidebar group), nav_order (default sidebar priority, lower first), fields[] (`body: true` on one blocks, markdown or richtext field makes it the main content, which the editor gives the room and the site renders as the page; without one, entries are a form of fields), archives (optional: {<taxonomy handle>: "/blog/topics/{slug}"} or {<taxonomy>: {route, routes: {<locale>: pattern}}}: every term of that taxonomy gets a page listing the entries of this collection filed under it, at an address no page has), blueprints (optional: {<handle>: {title, fields[]}}, each with its own body field, for a collection whose entries come in several kinds with fields of their own; an entry is made with one and keeps it)'],
+                'definition' => ['type' => 'object', 'description' => 'type (entries|categories|tags: entries are the site\'s content; categories and tags are taxonomies whose entries are terms that `terms` fields file other entries under, categories nested and curated, tags flat and made by typing a new name into a terms field; a taxonomy\'s structure is its type\'s), title, singular, icon, driver (database|files), structure (list|tree|dated, for entries), default_view (table|grid|calendar), default_columns (null for automatic, [] for title only, or column IDs: uri, status, translations, author, published, updated, field:<handle>), route (e.g. /blog/{slug}), template, sort, section (default sidebar group), nav_order (default sidebar priority, lower first), fields[] (`body: true` on one blocks, markdown or richtext field makes it the main content, which the editor gives the room and the site renders as the page; without one, entries are a form of fields), archives (optional: {<taxonomy handle>: "/blog/topics/{slug}"} or {<taxonomy>: {route, routes: {<locale>: pattern}}}: every term of that taxonomy gets a page listing the entries of this collection filed under it, at an address no page has), blueprints (optional: {<handle>: {title, fields[]}}, each with its own body field, for a collection whose entries come in several kinds with fields of their own; an entry is made with one and keeps it)'],
             ], 'required' => ['handle', 'definition']],
             'output' => self::collection(),
             'handler' => function (array $in) {
@@ -121,6 +122,11 @@ final class CollectionAbilities
 
             if (! $collection->deletable()) {
                 throw AbilityException::invalid(__('“:title” comes with a plugin and cannot be deleted.', ['title' => $collection->title]));
+            }
+
+            // A taxonomy that fields pick from, or that archives are made of, would leave them naming nothing.
+            if ($collection->isTaxonomy() && ($uses = $this->cms->collections()->usesOf($collection->handle)) !== []) {
+                throw AbilityException::invalid(__('“:title” is used by :uses. Remove its terms fields and archives there first.', ['title' => $collection->title, 'uses' => implode(', ', $uses)]));
             }
 
             $count = $this->cms->entries()->query()->collection($collection->handle)->count();
@@ -190,7 +196,26 @@ final class CollectionAbilities
         $reserved = ['id', 'title', 'slug', 'status', 'locale', 'uri', 'parent', 'position', 'author', 'origin', 'published_at', 'created_at', 'updated_at', 'blueprint'];
         // What is wrong with a field is said by its path (`fields.2.handle`), for the editor to show beside it.
         FieldProblems::refuse((array) ($definition['fields'] ?? []), $reserved);
-        $collection = Collection::fromArray($handle, $definition);
+        try {
+            $collection = Collection::fromArray($handle, $definition);
+        } catch (\InvalidArgumentException $e) {
+            throw AbilityException::invalid($e->getMessage());
+        }
+
+        $repository = app(\Cms\Content\Collections\CollectionRepository::class);
+        // As the site keeps it: while a site is applied, the repository already answers with the definition it brings.
+        $file = content_path("collections/{$handle}.yaml");
+        $existing = is_file($file) ? Collection::fromArray($handle, \Cms\Support\Yaml::read($file)) : $repository->find($handle);
+
+        // A taxonomy that fields pick from, or that archives are made of, stays one: they would name entries that are no terms.
+        if ($existing?->isTaxonomy() && ! $collection->isTaxonomy() && ($uses = $repository->usesOf($handle)) !== []) {
+            throw AbilityException::invalid(__('“:title” is used by :uses. Remove its terms fields and archives there first.', ['title' => $existing->title, 'uses' => implode(', ', $uses)]), ['definition.type' => __('Still in use.')]);
+        }
+
+        // Entries that nest cannot be laid out flat: they would lose their parents.
+        if ($existing?->isTree() && ! $collection->isTree() && cms()->entries()->query()->collection($handle)->where('parent_id', 'not null', null)->count() > 0) {
+            throw AbilityException::invalid(__('Some of its entries are nested. Move them to the top level first.'), [$collection->type === $existing->type ? 'definition.structure' : 'definition.type' => __('Its entries are nested.')]);
+        }
 
         Blueprint::validate((array) ($definition['fields'] ?? []));
         $named = $definition['blueprints'] ?? [];

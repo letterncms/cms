@@ -91,9 +91,9 @@ final class UsersModule extends Plugin
     {
         return [
             ['handle' => 'mode', 'type' => 'select', 'label' => 'Access', 'default' => 'inherit', 'options' => ['inherit' => 'Same as Above', 'public' => 'Everyone', 'teaser' => 'Everyone Reads the Start', 'locked' => 'Only People with Access']],
-            ['handle' => 'access', 'type' => 'tags', 'label' => 'Who Has Access', 'placeholder' => 'Any Account'],
+            ['handle' => 'access', 'type' => 'list', 'label' => 'Who Has Access', 'placeholder' => 'Any Account'],
             ['handle' => 'teaser_words', 'type' => 'number', 'label' => 'Words in the Teaser', 'min' => 0, 'placeholder' => '120'],
-            ['handle' => 'teaser_fields', 'type' => 'tags', 'label' => 'Fields in the Teaser', 'placeholder' => 'excerpt'],
+            ['handle' => 'teaser_fields', 'type' => 'list', 'label' => 'Fields in the Teaser', 'placeholder' => 'excerpt'],
         ];
     }
 }

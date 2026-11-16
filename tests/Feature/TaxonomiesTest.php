@@ -9,21 +9,24 @@ use Cms\Abilities\AbilityException;
 use Cms\Content\Fields\Blueprint;
 use Cms\Tests\TestCase;
 
-/** A taxonomy is a collection whose entries are terms; a terms field files entries under them. */
+/** A taxonomy is a collection of categories or tags whose entries are terms; a terms field files entries under them. */
 final class TaxonomiesTest extends TestCase
 {
     protected function collections(): array
     {
         return [
             ...parent::collections(),
-            'topics' => ['title' => 'Topics', 'singular' => 'Topic', 'taxonomy' => true, 'structure' => 'tree', 'route' => '/topics/{parent_uri}/{slug}', 'fields' => [['handle' => 'description', 'type' => 'textarea']]],
+            'topics' => ['title' => 'Topics', 'singular' => 'Topic', 'type' => 'categories', 'route' => '/topics/{parent_uri}/{slug}', 'fields' => [['handle' => 'description', 'type' => 'textarea']]],
+            'labels' => ['title' => 'Labels', 'singular' => 'Label', 'type' => 'tags', 'route' => '/labels/{slug}', 'fields' => []],
             'articles' => ['title' => 'Articles', 'route' => '/articles/{slug}', 'fields' => [
                 ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics'],
-                ['handle' => 'tags', 'type' => 'tags'],
+                ['handle' => 'labels', 'type' => 'terms', 'taxonomy' => 'labels', 'max' => 3],
+                ['handle' => 'rows', 'type' => 'repeater', 'fields' => [['handle' => 'labels', 'type' => 'terms', 'taxonomy' => 'labels']]],
+                ['handle' => 'tags', 'type' => 'list'],
             ]],
             'memos' => ['title' => 'Memos', 'driver' => 'files', 'route' => '/memos/{slug}', 'fields' => [
                 ['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics', 'max' => 2],
-                ['handle' => 'tags', 'type' => 'tags'],
+                ['handle' => 'tags', 'type' => 'list'],
             ]],
         ];
     }
@@ -42,7 +45,7 @@ final class TaxonomiesTest extends TestCase
 
         $this->assertTrue($this->cms()->collections()->find('topics')->isTaxonomy());
         $this->assertSame('/topics/news/local-news', $local->uri);
-        $this->assertSame(['topics' => true], array_filter(array_column($this->ability('collections/list'), 'taxonomy', 'handle')));
+        $this->assertEquals(['topics' => 'categories', 'labels' => 'tags'], array_filter(array_column($this->ability('collections/list'), 'type', 'handle'), static fn ($type) => $type !== 'entries'));
 
         foreach (['articles', 'memos'] as $collection) {
             $entry = $content->create($collection, ['title' => 'Flood', 'status' => 'published', 'data' => ['topics' => ['news', 'Local News']]]);
@@ -64,7 +67,8 @@ final class TaxonomiesTest extends TestCase
         $this->assertSame(['topics'], $field['collections']);
         $schema = $this->ability('collections/schema', ['handle' => 'memos'])['data']['properties']['topics'];
         $this->assertSame(['array', 'string', 2], [$schema['type'], $schema['items']['type'], $schema['maxItems']]);
-        $this->assertSame('entries', array_column($this->ability('fields/types'), null, 'key')['terms']['component']);
+        $this->assertSame('terms', array_column($this->ability('fields/types'), null, 'key')['terms']['component']);
+        $this->assertFalse($field['tags']);
 
         // A terms field names a taxonomy.
         Blueprint::validate([['handle' => 'topics', 'type' => 'terms', 'taxonomy' => 'topics']]);
@@ -111,79 +115,130 @@ final class TaxonomiesTest extends TestCase
         $this->getJson('/api/v1/content/articles?references='.$news->id)->assertOk()->assertJsonCount(2, 'data');
     }
 
-    public function test_free_tags_become_terms(): void
+    public function test_a_collections_type_decides_what_its_entries_are(): void
     {
-        $content = $this->cms()->entryService();
-        $existing = $content->create('topics', ['title' => 'Local news', 'slug' => 'local-news', 'status' => 'published']);
-        $live = $content->create('articles', ['title' => 'Live', 'status' => 'published', 'data' => ['tags' => ['Local News', 'Weather']]]);
-        $draft = $content->create('articles', ['title' => 'Draft', 'data' => ['tags' => ['Weather'], 'topics' => [$existing->id]]]);
-        $changed = $content->create('articles', ['title' => 'Changed', 'status' => 'published', 'data' => ['tags' => ['Weather']]]);
-        $content->update($changed->id, ['title' => 'Changed again']);
-        $content->create('articles', ['title' => 'Plain']);
+        $topics = $this->cms()->collections()->find('topics');
+        $labels = $this->cms()->collections()->find('labels');
+        $this->assertSame(['categories', 'tree', 'position', 'taxonomies', 'folder'], [$topics->type, $topics->structure, $topics->sort, $topics->section, $topics->icon]);
+        $this->assertSame(['tags', 'list', 'title', 'taxonomies', 'tag'], [$labels->type, $labels->structure, $labels->sort, $labels->section, $labels->icon]);
+        $this->assertSame(['entries', 'entries'], [$this->cms()->collections()->find('articles')->type, $this->cms()->collections()->find('articles')->section]);
+        // A taxonomy's structure is its type's: it is not written down.
+        $this->assertArrayNotHasKey('structure', $topics->toYaml());
+        $this->assertSame('categories', $topics->toYaml()['type']);
+        $this->assertArrayNotHasKey('type', $this->cms()->collections()->find('articles')->toYaml());
 
-        $dry = $this->ability('terms/import', ['collection' => 'articles', 'from' => 'tags', 'into' => 'topics', 'dryRun' => true]);
-        $this->assertSame('full', $dry['checked']);
-        $this->assertSame(['create-published', 'update', 'update', 'update'], array_column($dry['changes'], 'action'));
-        $this->assertSame(1, $this->cms()->entries()->query()->collection('topics')->count(), 'A dry run makes nothing.');
-
-        $this->assertSame(['terms' => 1, 'entries' => 3, 'collisions' => []], $this->ability('terms/import', ['collection' => 'articles', 'from' => 'tags', 'into' => 'topics']));
-        $weather = $this->cms()->entries()->query()->collection('topics')->where('slug', 'weather')->first();
-        $this->assertTrue($weather->isLive());
-
-        $entries = $this->cms()->entries();
-        $this->assertSame([$existing->id, $weather->id], $entries->find($live->id)->data['topics']);
-        $this->assertFalse($entries->find($live->id)->hasDraft());
-        $this->assertSame([$existing->id, $weather->id], $entries->find($draft->id)->data['topics']);
-        $this->assertSame([], $entries->find($changed->id)->data['topics'] ?? [], 'What is live keeps waiting for its changes.');
-        $this->assertSame([$weather->id], $entries->find($changed->id)->working()['data']['topics']);
-        $this->assertSame(['Local News', 'Weather'], $entries->find($live->id)->data['tags']);
-
-        // Again changes nothing; clearing empties the tags.
-        $this->assertSame(['terms' => 0, 'entries' => 0, 'collisions' => []], $this->ability('terms/import', ['collection' => 'articles', 'from' => 'tags', 'into' => 'topics']));
-        $this->assertSame(['terms' => 0, 'entries' => 3, 'collisions' => []], $this->ability('terms/import', ['collection' => 'articles', 'from' => 'tags', 'into' => 'topics', 'clear' => true]));
-        $this->assertSame([], $entries->find($live->id)->data['tags']);
+        // A taxonomy's structure is its type's, whatever the definition says.
+        $this->ability('collections/save', ['handle' => 'odd', 'definition' => ['title' => 'Odd', 'type' => 'tags', 'structure' => 'tree']]);
+        $this->assertSame('list', $this->cms()->collections()->find('odd')->structure);
 
         try {
-            $this->ability('terms/import', ['collection' => 'articles', 'from' => 'topics', 'into' => 'tags']);
-            $this->fail('Took a terms field for tags.');
+            $this->ability('collections/save', ['handle' => 'odd', 'definition' => ['title' => 'Odd', 'type' => 'folders']]);
+            $this->fail('Took an unknown type.');
         } catch (AbilityException $e) {
             $this->assertSame('invalid_input', $e->type);
         }
+
+        // The type can change: entries become tags, and tags categories.
+        $this->ability('collections/save', ['handle' => 'notes', 'definition' => ['title' => 'Notes']]);
+        $this->ability('collections/save', ['handle' => 'notes', 'definition' => ['title' => 'Notes', 'type' => 'tags']]);
+        $this->assertSame(['tags', 'list', 'taxonomies'], [$this->cms()->collections()->find('notes')->type, $this->cms()->collections()->find('notes')->structure, $this->cms()->collections()->find('notes')->section]);
+        $this->ability('collections/save', ['handle' => 'notes', 'definition' => ['title' => 'Notes', 'type' => 'categories']]);
+        $this->assertSame('tree', $this->cms()->collections()->find('notes')->structure);
+
+        // Nested terms cannot be laid out flat, and a taxonomy in use stays one.
+        $content = $this->cms()->entryService();
+        $content->create('notes', ['title' => 'Child', 'parentId' => $content->create('notes', ['title' => 'Parent'])->id]);
+        foreach ([['handle' => 'notes', 'type' => 'tags', 'says' => 'nested'], ['handle' => 'topics', 'type' => 'entries', 'says' => 'Articles']] as $case) {
+            try {
+                $this->ability('collections/save', ['handle' => $case['handle'], 'definition' => ['title' => 'Changed', 'type' => $case['type'], 'fields' => []]]);
+                $this->fail('Changed '.$case['handle']);
+            } catch (AbilityException $e) {
+                $this->assertStringContainsString($case['says'], $e->getMessage());
+                $this->assertArrayHasKey('definition.type', $e->details);
+            }
+        }
+        $this->assertSame(['categories', 'categories'], [$this->cms()->collections()->find('notes')->type, $this->cms()->collections()->find('topics')->type]);
+
+        // A nested one can become entries of a tree.
+        $this->ability('collections/save', ['handle' => 'notes', 'definition' => ['title' => 'Notes', 'structure' => 'tree']]);
+        $this->assertSame(['entries', 'tree'], [$this->cms()->collections()->find('notes')->type, $this->cms()->collections()->find('notes')->structure]);
+
+        // A taxonomy that fields pick from cannot be deleted from under them.
+        try {
+            $this->ability('collections/delete', ['handle' => 'labels']);
+            $this->fail('Deleted a taxonomy in use.');
+        } catch (AbilityException $e) {
+            $this->assertStringContainsString('Articles', $e->getMessage());
+        }
+        $this->ability('collections/save', ['handle' => 'unused', 'definition' => ['title' => 'Unused', 'type' => 'tags']]);
+        $this->assertSame('unused', $this->ability('collections/delete', ['handle' => 'unused'])['deleted']);
     }
 
-    public function test_tags_a_slug_cannot_keep_become_terms_once_and_a_scheduled_entry_stays_scheduled(): void
+    public function test_a_tag_typed_into_an_entry_is_made_once(): void
     {
         $content = $this->cms()->entryService();
-        $import = ['collection' => 'articles', 'from' => 'tags', 'into' => 'topics'];
-        $one = $content->create('articles', ['title' => 'One', 'status' => 'published', 'data' => ['tags' => ['日本', 'C++', 'C#', 'c++']]]);
-        $later = $content->create('articles', ['title' => 'Later', 'status' => 'published', 'at' => '2031-01-01T10:00:00+00:00', 'data' => ['tags' => ['日本']]]);
-        $this->assertTrue($later->isScheduled());
+        $coast = $content->create('labels', ['title' => 'Coast', 'status' => 'published']);
 
-        $dry = $this->ability('terms/import', [...$import, 'dryRun' => true]);
-        $this->assertSame(['create-published', 'create-published', 'create-published', 'collision', 'update', 'update'], array_column($dry['changes'], 'action'));
-        $this->assertSame(['C#', 'C++'], [$dry['changes'][3]['tag'], $dry['changes'][3]['existing']]);
+        // An existing tag by its name in any case, a new one by its name; the same name twice is one tag.
+        $entry = $content->create('articles', ['title' => 'Walk', 'data' => ['labels' => ['coast', 'Sea', 'sea '], 'rows' => [['labels' => ['Sea', 'Sand']]]]]);
+        $tags = $this->cms()->entries()->query()->collection('labels')->orderBy('title')->get();
+        $this->assertSame(['Coast', 'Sand', 'Sea'], array_map(static fn ($t) => $t->title, $tags));
+        $this->assertTrue($tags[2]->isLive(), 'A tag is published as it is made.');
+        $this->assertSame([$coast->id, $tags[2]->id], $entry->data['labels']);
+        $this->assertSame([$tags[2]->id, $tags[1]->id], $entry->data['rows'][0]['labels'], 'A tag in a repeater row is made like any other.');
 
-        $result = $this->ability('terms/import', $import);
-        $this->assertSame([3, 2], [$result['terms'], $result['entries']]);
-        $this->assertSame([['tag' => 'C#', 'existing' => 'C++', 'locale' => 'en']], array_map(static fn (array $c) => array_diff_key($c, ['slug' => 1]), $result['collisions']));
+        // Saving the name again finds the tag it made.
+        $this->assertSame([$tags[2]->id], $content->update($entry->id, ['data' => ['labels' => ['Sea']]])->working()['data']['labels']);
+        $this->assertSame(3, $this->cms()->entries()->query()->collection('labels')->count());
 
-        $terms = $this->cms()->entries()->query()->collection('topics')->orderBy('title')->get();
-        $this->assertSame(['C#', 'C++', '日本'], array_map(static fn ($t) => $t->title, $terms));
-        $this->assertCount(3, array_unique(array_map(static fn ($t) => $t->slug, $terms)));
-        $this->assertSame('c', $terms[1]->slug);
-        $this->assertStringStartsWith('term-', $terms[2]->slug);
-        // "c++" is "C++": three terms on the entry, not four.
-        $this->assertCount(3, $this->cms()->entries()->find($one->id)->data['topics']);
+        // A save that is refused makes no tag, not even those it could hold.
+        try {
+            $content->update($entry->id, ['data' => ['labels' => ['One', 'Two', 'Three', 'Four']]]);
+            $this->fail('Took four tags in a field of three.');
+        } catch (AbilityException $e) {
+            $this->assertArrayHasKey('data.labels', $e->details);
+        }
+        $this->assertSame(3, $this->cms()->entries()->query()->collection('labels')->count());
 
-        $scheduled = $this->cms()->entries()->find($later->id);
-        $this->assertTrue($scheduled->isScheduled(), 'An import does not publish what waits for its date.');
-        $this->assertSame('2031-01-01T10:00:00+00:00', $scheduled->publishedAt->toIso8601String());
-        $this->assertSame([$terms[2]->id], $scheduled->data['topics']);
+        // Categories are picked, never made by a name.
+        try {
+            $content->create('articles', ['title' => 'Bad', 'data' => ['topics' => ['Weather']]]);
+            $this->fail('Made a category.');
+        } catch (AbilityException $e) {
+            $this->assertStringContainsString('no term', $e->details['data.topics.0']);
+        }
+    }
 
-        // Again: nothing to make, nothing to change.
-        $this->assertSame(['terms' => 0, 'entries' => 0, 'collisions' => []], $this->ability('terms/import', $import));
-        $this->assertSame([], $this->ability('terms/import', [...$import, 'dryRun' => true])['changes']);
-        $this->assertSame(3, $this->cms()->entries()->query()->collection('topics')->count());
+    public function test_a_tag_is_made_in_a_dry_run_only_as_the_entry_is_and_by_who_may(): void
+    {
+        $dry = $this->cms()->abilities()->execute('entries/create', ['collection' => 'articles', 'title' => 'Walk', 'data' => ['labels' => ['Sea', 'sea']], 'dryRun' => true], AbilityContext::system());
+        $this->assertSame('full', $dry['checked']);
+        $this->assertSame(0, $this->cms()->entries()->query()->collection('labels')->count(), 'A dry run makes nothing.');
+
+        // Who may make entries of the taxonomy may make a tag: a draft until someone publishes it when they may not
+        // publish; who may not make them is told the tag is not there.
+        $author = $this->userWithRole('author');
+        $made = $this->cms()->entryService()->create('articles', ['title' => 'By an author', 'data' => ['labels' => ['Sea']]], $author);
+        $this->assertSame('draft', $this->cms()->entries()->find($made->data['labels'][0])->status);
+        $this->assertSame($made->data['labels'], $this->cms()->entryService()->create('articles', ['title' => 'Again', 'data' => ['labels' => ['sea']]], $author)->data['labels'], 'The draft is the tag of that name.');
+        $edited = $this->cms()->entryService()->create('articles', ['title' => 'By an editor', 'data' => ['labels' => ['Sand']]], $this->userWithRole('editor'));
+        $this->assertTrue($this->cms()->entries()->find($edited->data['labels'][0])->isLive());
+
+        $this->ability('settings/update', ['namespace' => 'roles', 'values' => ['roles' => [...$this->cms()->roles()->all(), 'writer' => ['label' => 'Writer', 'description' => '', 'permissions' => ['admin.access', 'entries.articles.*', 'entries.labels.view']]]]]);
+        try {
+            $this->cms()->entryService()->create('articles', ['title' => 'By a writer', 'data' => ['labels' => ['Shell']]], $this->userWithRole('writer'));
+            $this->fail('Made a tag without the right to.');
+        } catch (AbilityException $e) {
+            $this->assertStringContainsString('may not add tags', $e->details['data.labels.0']);
+        }
+        $this->assertNull($this->cms()->entries()->query()->collection('labels')->where('slug', 'shell')->first());
+    }
+
+    public function test_a_list_field_holds_short_values_that_file_nothing(): void
+    {
+        $entry = $this->cms()->entryService()->create('articles', ['title' => 'Listed', 'data' => ['tags' => [' sea ', 'sea', '<b>sand</b>', '']]]);
+        $this->assertSame(['sea', 'sand'], $entry->data['tags']);
+        $this->assertSame(0, $this->cms()->entries()->query()->collection('labels')->count());
     }
 
     public function test_a_term_is_named_in_the_entrys_language_and_an_ambiguous_name_is_refused(): void

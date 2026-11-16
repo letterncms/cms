@@ -163,8 +163,8 @@ function FieldValue({ type, options, value, media }: { type: string; options?: u
     case 'number': return <span className="block truncate text-right text-xs tabular-nums text-text">{Number(value).toLocaleString(locale())}</span>
     case 'date': return <DateCell iso={String(value)} />
     case 'select': return <span className="block truncate text-xs text-text">{(Array.isArray(value) ? value : [value]).map((v) => optionLabel(options, v)).join(', ')}</span>
-    case 'tags': return <Chips labels={(Array.isArray(value) ? value : [value]).map(String)} />
-    case 'entries': return <Chips labels={(value as { title: string }[]).map((e) => e.title)} />
+    case 'list': return <Chips labels={(Array.isArray(value) ? value : [value]).map(String)} />
+    case 'entries': case 'terms': return <Chips labels={(value as { title: string }[]).map((e) => e.title)} />
     case 'users': {
       const people = value as PersonSummary[]
       return people.length === 1

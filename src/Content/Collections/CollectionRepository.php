@@ -65,9 +65,10 @@ final class CollectionRepository
             ['handle' => 'singular', 'type' => 'text', 'label' => 'Entry Name', 'width' => 'half'],
             ['handle' => 'icon', 'type' => 'icon', 'label' => 'Icon'],
             ['handle' => 'route', 'type' => 'text', 'label' => 'URL Pattern', 'width' => 'half', 'placeholder' => '/blog/{slug}'],
-            ['handle' => 'structure', 'type' => 'select', 'label' => 'Structure', 'width' => 'half', 'display' => 'segmented', 'required' => true, 'options' => ['list' => 'List', 'tree' => 'Tree', 'dated' => 'Dated']],
+            // What its entries are; a taxonomy's structure is its type's.
+            ['handle' => 'type', 'type' => 'select', 'label' => 'Type', 'display' => 'segmented', 'required' => true, 'default' => 'entries', 'options' => ['entries' => 'Entries', 'categories' => 'Categories', 'tags' => 'Tags']],
+            ['handle' => 'structure', 'type' => 'select', 'label' => 'Structure', 'width' => 'half', 'display' => 'segmented', 'required' => true, 'options' => ['list' => 'List', 'tree' => 'Tree', 'dated' => 'Dated'], 'if' => ['type' => 'entries']],
             ['handle' => 'default_view', 'type' => 'select', 'label' => 'Default View', 'display' => 'segmented', 'required' => true, 'default' => 'table', 'options' => ['table' => 'Table', 'grid' => 'Grid', 'calendar' => 'Calendar']],
-            ['handle' => 'taxonomy', 'type' => 'toggle', 'label' => 'Taxonomy', 'about' => 'Its entries are terms that other entries are filed under.'],
             ['handle' => 'default_columns', 'type' => 'json', 'component' => 'collection-display-fields', 'label' => 'Default Display Fields'],
         ];
 
@@ -79,6 +80,46 @@ final class CollectionRepository
         }
 
         return Blueprint::make($this->hooks->filter('collections.settings', $fields, $collection))->toArray();
+    }
+
+    /**
+     * Where a taxonomy is used: the collections, globals and fieldsets with a terms field that picks from it, at any
+     * depth, and the collections with an archive of it, by their names. What is used cannot be deleted.
+     *
+     * @return list<string>
+     */
+    public function usesOf(string $taxonomy): array
+    {
+        $names = static function (array $node) use (&$names, $taxonomy): bool {
+            if (($node['type'] ?? null) === 'terms' && ($node['taxonomy'] ?? null) === $taxonomy) {
+                return true;
+            }
+
+            foreach ($node as $child) {
+                if (is_array($child) && $names($child)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+        $out = [];
+
+        foreach ($this->all() as $collection) {
+            if ($collection->handle !== $taxonomy && ($names(['fields' => $collection->fields, 'blueprints' => $collection->get('blueprints', [])]) || isset($collection->archives()[$taxonomy]))) {
+                $out[] = $collection->title;
+            }
+        }
+
+        foreach (app(\Cms\Content\Globals\GlobalRepository::class)->all() as $global) {
+            $names($global->toYaml()) && $out[] = $global->title;
+        }
+
+        foreach (app(\Cms\Content\Fields\Fieldsets::class)->all() as $handle => $fieldset) {
+            $names((array) ($fieldset['fields'] ?? [])) && $out[] = (string) ($fieldset['title'] ?? $handle);
+        }
+
+        return $out;
     }
 
     public function find(string $handle): ?Collection

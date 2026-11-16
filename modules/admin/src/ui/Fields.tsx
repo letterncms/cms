@@ -25,7 +25,7 @@ export interface FieldsProps {
 
 /** Conditional fields: `if: { otherField: value | [values] }`. */
 /** Field types that need a panel's full width: in a row of label and control, their label goes above them. */
-export const wideFieldTypes = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'file', 'repeater', 'matrix', 'table', 'geo', 'link', 'date-range', 'tags', 'entries', 'terms', 'group', 'properties', 'fields', 'blocks']
+export const wideFieldTypes = ['richtext', 'markdown', 'code', 'json', 'textarea', 'media', 'file', 'repeater', 'matrix', 'table', 'geo', 'link', 'date-range', 'list', 'entries', 'terms', 'group', 'properties', 'fields', 'blocks']
 
 export function visible(field: FieldDef, values: Record<string, any>): boolean {
   return holds(field.if, values)
@@ -38,7 +38,7 @@ function holds(rule: unknown, values: Record<string, any>): boolean {
 }
 
 const widths: Record<string, string> = { full: 'col-span-6', half: 'col-span-6 md:col-span-3', third: 'col-span-6 md:col-span-2', 'two-thirds': 'col-span-6 md:col-span-4' }
-const compactSettings = new Set(['text', 'url', 'email', 'slug', 'number', 'select', 'icon', 'tags'])
+const compactSettings = new Set(['text', 'url', 'email', 'slug', 'number', 'select', 'icon', 'list'])
 const standaloneSettings = new Set(['group', 'repeater', 'matrix', 'table', 'properties', 'fields', 'blocks'])
 
 /** Renders a blueprint: each field with the component registered for its type. */

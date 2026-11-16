@@ -18,14 +18,14 @@ use Cms\Users\User;
  *   they do, they see the site's default (the `sidebar` value of the `admin`
  *   settings), and without one the `pinned` section and the rooms' screens
  *   registered `pinned: true` (the pages). What is unpinned is a search away.
- * - a room (the entries, the design, the structure, settings): its sections' items in registered
+ * - a room (the content, the design, the structure, settings): its sections' items in registered
  *   order, while one of them is on view; each of them but a settings page can be pinned. One with a
  *   door has a row in the main sidebar that leads to its first screen. The
  *   core's modules name their section of settings; whatever a plugin puts there
  *   (its settings page, or a screen that lives in settings) is listed under
  *   Plugins, by the plugin's name, so no plugin makes a group of its own or
  *   slips into the core's. In every room, unnamed sections are one group at the
- *   top, which a group of one joins.
+ *   top, which a group of one joins; the content's are its types, each named.
  *
  * An item with a `home` (another item's id) belongs to that screen, like a
  * plugin's settings page to the plugin's screen (its Settings tab), and is there
@@ -226,8 +226,8 @@ final class Navigation extends Arranged
     }
 
     /**
-     * The sections without a name come first, as one group, and a group of one is no group:
-     * its row joins them.
+     * The sections without a name come first, as one group, and a group of one is no group beside them:
+     * its row joins them. In a room whose sections all have a name (the content's types), each keeps it.
      *
      * @param  list<array{id: string, label: string, items: list<string>}>  $sections
      * @return list<array{id: string, label: string, items: list<string>}>
@@ -236,9 +236,10 @@ final class Navigation extends Arranged
     {
         $grouped = [];
         $top = null;
+        $unnamed = in_array('', array_column($sections, 'label'), true);
 
         foreach ($sections as $section) {
-            if ($section['label'] !== '' && count($section['items']) > 1) {
+            if ($section['label'] !== '' && (count($section['items']) > 1 || ! $unnamed)) {
                 $grouped[] = $section;
             } elseif ($top === null) {
                 $top = [...$section, 'label' => ''];

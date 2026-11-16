@@ -145,19 +145,19 @@ final class ContentAbilities
     {
         $a->register('collections/list', [
             'label' => 'List Collections',
-            'description' => 'All content collections (content types) with their routes and structure. `taxonomy` marks a vocabulary: its entries are the terms that `terms` fields pick from (terms/list has them with their counts). `system` marks the ones the CMS and its plugins bring (templates, components, account and checkout pages): their entries are edited like any other, their schema comes with the code.',
+            'description' => 'All content collections (content types) with their routes and structure. `type` is what their entries are: `entries` (pages, posts…), or a taxonomy whose entries are the terms that `terms` fields pick from: `categories` (curated, nested) or `tags` (flat, made by typing a new name into a terms field). terms/list has a taxonomy\'s terms with their counts. `system` marks the ones the CMS and its plugins bring (templates, components, account and checkout pages): their entries are edited like any other, their schema comes with the code.',
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
             'output' => Shape::of([[
                 'publishedAt' => Shape::STRING_OR_NULL, 'updatedAt' => Shape::STRING_OR_NULL, 'handle' => Shape::STRING, 'title' => Shape::STRING, 'singular' => Shape::STRING,
                 'icon' => Shape::STRING, 'description' => Shape::STRING, 'driver' => Shape::enum(...Collection::DRIVERS), 'structure' => Shape::enum(...Collection::STRUCTURES), 'route' => Shape::STRING_OR_NULL,
-                'defaultView' => Shape::enum(...Collection::VIEWS), 'system' => Shape::BOOLEAN, 'taxonomy' => Shape::BOOLEAN, 'count' => Shape::INTEGER,
+                'defaultView' => Shape::enum(...Collection::VIEWS), 'system' => Shape::BOOLEAN, 'type' => Shape::enum(...Collection::TYPES), 'count' => Shape::INTEGER,
             ]]),
             'handler' => fn () => array_values(array_map(fn (Collection $c) => [
                 ...RecordTimestamps::api($c->extra),
                 'handle' => $c->handle, 'title' => $c->title, 'singular' => $c->singular, 'icon' => $c->icon,
                 'description' => $c->description, 'driver' => $c->driver, 'structure' => $c->structure, 'route' => $c->route, 'defaultView' => $c->defaultView,
-                'system' => $c->system, 'taxonomy' => $c->isTaxonomy(), 'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
+                'system' => $c->system, 'type' => $c->type, 'count' => $this->cms->entries()->query()->collection($c->handle)->count(),
             ], $this->cms->collections()->all())),
         ]);
 
@@ -676,7 +676,7 @@ final class ContentAbilities
 
         $a->register('terms/list', [
             'label' => 'List Terms',
-            'description' => 'The terms of a taxonomy (a collection marked `taxonomy: true`) with how many entries are filed under each: `count` counts the entries of any collection that name the term in a relation field, drafts included, and `archives` the archive pages of the term: one per collection that has them for this taxonomy (`archives` in its definition), each listing the entries of that collection filed under the term. Terms are entries: create, rename, translate, nest and delete them with the entries abilities, in the taxonomy\'s collection.',
+            'description' => 'The terms of a taxonomy (a collection of type `categories` or `tags`) with how many entries are filed under each: `count` counts the entries of any collection that name the term in a relation field, drafts included, and `archives` the archive pages of the term: one per collection that has them for this taxonomy (`archives` in its definition), each listing the entries of that collection filed under the term. Terms are entries: create, rename, translate, nest (categories) and delete them with the entries abilities, in the taxonomy\'s collection. A tag is also made by naming it in a terms field of an entry.',
             'permission' => fn (?User $user, array $in) => $this->allowed($user, (string) ($in['taxonomy'] ?? ''), 'view'),
             'annotations' => ['readOnly' => true],
             'input' => ['type' => 'object', 'properties' => [
@@ -704,96 +704,6 @@ final class ContentAbilities
             },
         ]);
 
-        // From free tags to terms, written once: the handler runs it, a dry run runs the same in the entry service's dry mode.
-        $import = function (array $in, AbilityContext $ctx) use ($taxonomy, $content): array {
-            $collection = $this->cms->collections()->find($in['collection']) ?? throw new AbilityException('Collection not found.', 'not_found');
-            $from = $collection->field($in['from']);
-            $into = $collection->field($in['into']);
-
-            if ($from?->type !== 'tags' || $into?->type !== 'terms') {
-                throw AbilityException::invalid(__('`from` must be a tags field and `into` a terms field of this collection.'));
-            }
-
-            $terms = $taxonomy((string) $into->get('taxonomy'));
-            // The terms there are, by language: found by their title first, since a title is what a tag is; then by slug.
-            $byTitle = [];
-            $bySlug = [];
-
-            foreach ($this->cms->entries()->query()->working()->ungated()->collection($terms->handle)->get() as $term) {
-                $byTitle[$term->locale][mb_strtolower(trim((string) $term->working()['title']))] ??= $term->id;
-                $bySlug[$term->locale][(string) $term->working()['slug']] = (string) $term->working()['title'];
-            }
-
-            $created = [];
-            $collisions = [];
-            $updated = [];
-
-            foreach ($this->cms->entries()->query()->working()->ungated()->collection($collection->handle)->get() as $entry) {
-                $data = $entry->working()['data'];
-                $ids = [];
-
-                foreach (array_filter((array) ($data[$from->handle] ?? []), static fn ($tag) => is_string($tag) && trim($tag) !== '') as $tag) {
-                    $tag = trim($tag);
-                    $key = mb_strtolower($tag);
-
-                    if (! isset($byTitle[$entry->locale][$key])) {
-                        // A slug of the tag's own letters; one made of its bytes when it has none a slug can keep ("日本").
-                        $slug = \Illuminate\Support\Str::slug($tag) ?: 'term-'.substr(hash('sha256', $key), 0, 8);
-
-                        // Another word already has this slug ("C#" beside "C++"): this one gets a slug of its own, and it is said.
-                        if (isset($bySlug[$entry->locale][$slug])) {
-                            $taken = $slug;
-                            $slug .= '-'.substr(hash('sha256', $key), 0, 6);
-                            $collisions[] = ['action' => 'collision', 'type' => 'term', 'tag' => $tag, 'slug' => $slug, 'existing' => $bySlug[$entry->locale][$taken], 'locale' => $entry->locale];
-                        }
-
-                        $term = $content()->create($terms->handle, ['title' => $tag, 'slug' => $slug, 'locale' => $entry->locale, 'status' => 'published'], $ctx->user);
-                        $created[] = ['action' => 'create-published', 'type' => 'entry', 'collection' => $terms->handle, 'title' => $term->title, 'slug' => $term->slug, 'locale' => $term->locale];
-                        $byTitle[$entry->locale][$key] = $term->id;
-                        $bySlug[$entry->locale][$term->slug] = $tag;
-                    }
-
-                    $ids[] = $byTitle[$entry->locale][$key];
-                }
-
-                $merged = array_values(array_unique([...array_filter((array) ($data[$into->handle] ?? []), 'is_string'), ...$ids]));
-                $change = [$into->handle => $merged, ...($in['clear'] ? [$from->handle => []] : [])];
-
-                if ($ids === [] || ($merged === ($data[$into->handle] ?? []) && ! $in['clear'])) {
-                    continue;
-                }
-
-                // What is published stays as it is published, on its own date (a scheduled entry stays scheduled); an entry with changes waiting keeps them waiting.
-                $republish = $entry->isPublished() && ! $entry->hasDraft();
-                $content()->update($entry->id, ['data' => $change, ...($republish && $entry->publishedAt ? ['at' => $entry->publishedAt->toIso8601String()] : [])], $ctx->user, publish: $republish);
-                $updated[] = ['action' => 'update', 'type' => 'entry', 'id' => $entry->id, 'collection' => $entry->collection, 'title' => $entry->working()['title'], 'fields' => array_keys($change)];
-            }
-
-            return [...$created, ...$collisions, ...$updated];
-        };
-
-        $a->register('terms/import', [
-            'label' => 'Import Terms from Tags',
-            'description' => 'Turn the free tags of a collection into terms of a taxonomy: every tag of the tags field `from` becomes a published term of the taxonomy the terms field `into` picks from (found by its title, whatever its case, and created when it is not there, in the entry\'s language; a tag whose slug another term already has gets a slug of its own and is listed under `collisions`, in a dry run as a change with action `collision`), and each entry gets its terms in `into`, added to those it has. `clear: true` empties the tags afterwards. Published entries without waiting changes stay published with their terms, on the date they had (a scheduled one stays scheduled); others get them in their draft. Running it again changes nothing.',
-            'permission' => fn (?User $user, array $in) => $this->allowed($user, (string) ($in['collection'] ?? ''), 'edit') && $this->allowed($user, (string) ($in['collection'] ?? ''), 'publish')
-                && $this->allowed($user, (string) ($this->cms->collections()->find((string) ($in['collection'] ?? ''))?->field((string) ($in['into'] ?? ''))?->get('taxonomy') ?? ''), 'publish'),
-            'input' => ['type' => 'object', 'properties' => [
-                'collection' => self::HANDLE,
-                'from' => ['type' => 'string', 'format' => 'handle', 'description' => 'The tags field to read.'],
-                'into' => ['type' => 'string', 'format' => 'handle', 'description' => 'The terms field to fill.'],
-                'clear' => ['type' => 'boolean', 'default' => false, 'description' => 'Empty the tags field of each entry afterwards.'],
-            ], 'required' => ['collection', 'from', 'into']],
-            'output' => Shape::of(['terms' => Shape::INTEGER, 'entries' => Shape::INTEGER, 'collisions' => [Shape::of(['tag' => Shape::STRING, 'slug' => Shape::STRING, 'existing' => Shape::STRING, 'locale' => Shape::STRING])]]),
-            'dryRun' => fn (array $in, AbilityContext $ctx): array => $this->dry(fn () => $import($in, $ctx)),
-            'handler' => function (array $in, AbilityContext $ctx) use ($import, $content): array {
-                $changes = $content()->write(fn () => $import($in, $ctx));
-
-                $of = static fn (string $action) => array_values(array_filter($changes, static fn (array $c) => $c['action'] === $action));
-
-                return ['terms' => count($of('create-published')), 'entries' => count($of('update')), 'collisions' => array_map(static fn (array $c) => array_diff_key($c, ['action' => 1, 'type' => 1]), $of('collision'))];
-            },
-        ]);
-
         $a->register('content/recent', [
             'label' => 'Recently Edited',
             'description' => 'The most recently changed entries across collections you can view (ones never changed here, like files that came with the site, are not listed).',
@@ -816,6 +726,7 @@ final class ContentAbilities
             'input' => ['type' => 'object', 'properties' => [
                 'query' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 200],
                 'collections' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'locale' => ['type' => 'string', 'description' => 'Only entries in this language.'],
                 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10],
             ], 'required' => ['query']],
             'output' => Shape::of([Shapes::entrySummary()]),
@@ -829,7 +740,10 @@ final class ContentAbilities
                     return [];
                 }
 
-                return array_map(static fn (Entry $e) => $e->toSummary(), $this->cms->entries()->query()->working()->collection(...$handles)->search($in['query'])->orderByRelevance()->orderBy('-updated_at')->orderBy('title')->limit($in['limit'])->get());
+                $query = $this->cms->entries()->query()->working()->collection(...$handles);
+                isset($in['locale']) && $query->locale($in['locale']);
+
+                return array_map(static fn (Entry $e) => $e->toSummary(), $query->search($in['query'])->orderByRelevance()->orderBy('-updated_at')->orderBy('title')->limit($in['limit'])->get());
             },
         ]);
     }
@@ -857,7 +771,7 @@ final class ContentAbilities
             foreach ($data as $values) {
                 if ($field->type === 'users') {
                     array_push($userIds, ...$ids($values[$field->handle] ?? null));
-                } elseif ($field->type === 'entries') {
+                } elseif (in_array($field->type, ['entries', 'terms'], true)) {
                     array_push($entryIds, ...$ids($values[$field->handle] ?? null));
                 }
             }
@@ -897,7 +811,7 @@ final class ContentAbilities
                     array_map(static fn ($f) => $f->handle, $fields),
                     array_map(static fn ($f) => match ($f->type) {
                         'users' => array_values(array_filter(array_map(static fn ($id) => $users[$id] ?? null, $ids($values[$f->handle] ?? null)))),
-                        'entries' => array_values(array_filter(array_map(static fn ($id) => $related[strtolower($id)] ?? null, $ids($values[$f->handle] ?? null)))),
+                        'entries', 'terms' => array_values(array_filter(array_map(static fn ($id) => $related[strtolower($id)] ?? null, $ids($values[$f->handle] ?? null)))),
                         default => $values[$f->handle] ?? null,
                     }, $fields),
                 );

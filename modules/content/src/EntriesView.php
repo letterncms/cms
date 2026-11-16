@@ -20,8 +20,8 @@ final class EntriesView
 {
     /** How wide a field's column is, by its type; a type not listed has no column. */
     private const array WIDTHS = [
-        'text' => '180px', 'textarea' => 'minmax(160px,0.8fr)', 'select' => '132px', 'toggle' => '80px', 'date' => '112px', 'number' => '96px', 'entries' => '180px', 'users' => '132px',
-        'tags' => '180px', 'media' => '64px', 'url' => '180px', 'email' => '180px', 'slug' => '160px', 'color' => '112px',
+        'text' => '180px', 'textarea' => 'minmax(160px,0.8fr)', 'select' => '132px', 'toggle' => '80px', 'date' => '112px', 'number' => '96px', 'entries' => '180px', 'terms' => '180px', 'users' => '132px',
+        'list' => '180px', 'media' => '64px', 'url' => '180px', 'email' => '180px', 'slug' => '160px', 'color' => '112px',
     ];
 
     /** How many of a collection's fields its list offers as columns: with its own ten at most, within the catalog's sixty. */
