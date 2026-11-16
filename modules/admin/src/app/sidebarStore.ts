@@ -171,18 +171,28 @@ export async function resetEveryonesDefault() {
  */
 export const SETTINGS_SHORTCUT = 'mod+shift+,'
 
-/** Where the way out of a room and the settings shortcut return to: the last screen of the main sidebar, for this visit. */
-const last = { app: '' }
+/** The places of this visit, newest last, each with the room it is in: where a way out of a room returns to. */
+const visits: { path: string; room?: string }[] = []
 
-/** Only a place is remembered: a path on its way somewhere else (/settings opening its first page) is never a way back, nor is a room's screen. */
+/** Only a place is remembered: a path on its way somewhere else (/settings opening its first page) is never a way back. */
 export function remember(manifest: Manifest, path: string, search: string) {
   if (!placeAt(manifest.nav, path)) return
-  if (!roomAt(manifest, path)) last.app = path + search
+  const visit = { path: path + search, room: roomAt(manifest, path)?.id }
+  if (visits[visits.length - 1]?.path === visit.path) return
+  visits.push(visit)
+  if (visits.length > 50) visits.shift()
 }
 
-/** The last screen of the main sidebar, or its first item before there was one. */
-export function lastApp(): string {
-  if (last.app) return last.app
+/**
+ * Where the way out of a room leads: the last place before it, exactly as it was left (a style in Design, a page in
+ * Entries). Settings, opened beside who is signed in, return to wherever they were opened from; any other room to
+ * the last place outside it and outside settings. Before there was one, the first screen of the main sidebar.
+ */
+export function wayOut(room: string | undefined): string {
+  for (let i = visits.length - 1; i >= 0; i--) {
+    const visit = visits[i]
+    if (visit.room !== room && (room === SETTINGS || visit.room !== SETTINGS)) return visit.path
+  }
   const manifest = getManifest()
   const screens = new Map(manifest.nav.filter((n) => !n.room).map((n) => [n.id, n.path]))
   const first = manifest.sidebar.sections.flatMap((s) => s.items).find((id) => screens.has(id) && !roomAt(manifest, screens.get(id)!))
@@ -194,13 +204,15 @@ export function openRoom(id: string) {
   if (to) navigate(to)
 }
 
+/** Out of the room the screen on view is in, back where it was entered from. */
 export function leaveRoom() {
-  navigate(lastApp())
+  navigate(wayOut(roomAt(getManifest(), currentPath())?.id))
 }
+
+const currentPath = () => window.location.pathname.slice(boot.base.length) || '/'
 
 /** The settings shortcut: opens settings, and in settings goes back. */
 export function toggleSettings() {
-  const path = window.location.pathname.slice(boot.base.length) || '/'
-  if (roomAt(getManifest(), path)?.id === SETTINGS) leaveRoom()
+  if (roomAt(getManifest(), currentPath())?.id === SETTINGS) leaveRoom()
   else openRoom(SETTINGS)
 }

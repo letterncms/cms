@@ -1,8 +1,9 @@
 import { can, getManifest, plural, requestText, t, type EntryContent } from '@letterncms/sdk'
-import { QueryError, Spinner, deviceWidths, useShortcutLabel } from '@letterncms/ui'
+import { MenuAt, QueryError, Spinner, deviceWidths, useShortcutLabel } from '@letterncms/ui'
 import { createPortal, flushSync } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { splitClasses } from '../../tailwind/engine'
+import { shownInState } from './builder/styleApi'
 import { blockName, useComponentTitles, useEditorContext } from './core/context'
 import { loadCompiler, useStyling } from './core/styling'
 import { caretRect } from './core/caret'
@@ -17,7 +18,7 @@ import { QuickInserter } from './core/QuickInserter'
 import { canvasBehaviors } from './core/canvas'
 import { morphDocument } from './core/morph'
 import { useBlockDrag } from './core/useBlockDrag'
-import { BlockToolbar, BoundaryInserter, ContainerAppender, DocumentAppender, LiveDragPreview } from './LiveBlockControls'
+import { BlockToolbar, BoundaryInserter, ContainerAppender, DocumentAppender, LiveDragPreview, blockActionItems } from './LiveBlockControls'
 import { selectionOf, useEditor } from './core/store'
 import * as tree from './core/tree'
 import type { BlockNode } from './core/types'
@@ -85,6 +86,9 @@ function contentAt(d: Document, x: number, y: number): boolean {
 const DESKTOP = 1024
 
 /** The site's renderer is the editor. React owns only explicit inline text slots. */
+/** How blocks on the clipboard are marked, before their JSON. */
+const BLOCKS = 'cms-blocks:'
+
 export function LiveEditor({ collection, blueprint, entryId, content, onInspect, standalone, onTitleChange }: Props) {
   const { store, types, allowed, fieldHandle, readOnly = false } = useEditorContext()
   const components = useComponentTitles()
@@ -209,6 +213,46 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   }
   const latest = useRef({ content, onInspect, readOnly, layout, onTitleChange })
   latest.current = { content, onInspect, readOnly, layout, onTitleChange }
+  // Blocks on the clipboard are marked text, so a paste anywhere else is plain words; the last ones copied are kept
+  // here too, for Paste in the menu where the browser won't let the clipboard be read.
+  const held = useRef<string | null>(null)
+  const blocksText = () => {
+    const picked = selectionOf(store.get()).map((id) => tree.find(store.get().nodes, id)).filter(Boolean)
+    return picked.length ? BLOCKS + JSON.stringify(picked) : null
+  }
+  const copyBlocks = (cut: boolean) => {
+    const text = blocksText()
+    if (!text) return
+    held.current = text
+    void navigator.clipboard?.writeText(text).catch(() => {})
+    if (cut && !latest.current.readOnly) store.removeSelection()
+  }
+  /** Copies of the blocks in a text, after the selection, or where they fit around it; then selected. */
+  const pasteBlocks = (text: string) => {
+    let pasted: BlockNode[]
+    try { pasted = (JSON.parse(text.slice(BLOCKS.length)) as BlockNode[]).map(tree.clone) } catch { return }
+    const nodes = store.get().nodes, at = insertionPoint(nodes, selectionOf(store.get()).at(-1)!, pasted.map((node) => node.type), types, allowed)
+    if (!at || !pasted.length) return
+    store.insert(at.parentId, at.index, pasted)
+    store.select(pasted[0].id, true)
+    if (pasted.length > 1) store.extendTo(pasted.at(-1)!.id)
+  }
+  const pasteFromClipboard = async () => {
+    let text = held.current
+    try {
+      const read = await navigator.clipboard.readText()
+      if (read.startsWith(BLOCKS)) text = read
+    } catch { /* Reading the clipboard refused: the blocks copied here. */ }
+    if (text && !latest.current.readOnly) pasteBlocks(text)
+  }
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
+  /** The block's menu at a point, for the block and the rest of the selection when it is part of one. */
+  const openMenu = (id: string, at: { x: number; y: number }) => {
+    if (selectionOf(store.get()).includes(id)) return setMenuAt(at)
+    // Selecting may open the inspector over the canvas: the menu opens a frame later, so it lands above it.
+    store.select(id, true)
+    requestAnimationFrame(() => setMenuAt(at))
+  }
   // A block inside a Repeat is drawn once per item, marked as a prototype: its first item stands for it.
   const source = (d: Document, id: string) => d.querySelector<HTMLElement>(`[data-cms-document="${token.current}"][data-cms-node="${CSS.escape(id)}"]`)
     ?? d.querySelector<HTMLElement>(`[data-cms-proto-document="${token.current}"][data-cms-proto="${CSS.escape(id)}"]`)
@@ -585,25 +629,36 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     // Whole blocks on the clipboard while blocks (not text) are selected.
     const blocksSelected = (event: Event) => store.get().blockMode && !!store.get().selected && !(event.target as HTMLElement).isContentEditable
     const copy = (event: ClipboardEvent, cut: boolean) => {
-      if (!blocksSelected(event) || !event.clipboardData) return
-      const picked = selectionOf(store.get()).map((id) => tree.find(store.get().nodes, id)).filter(Boolean)
-      if (!picked.length) return
-      event.preventDefault(); event.clipboardData.setData('text/plain', 'cms-blocks:' + JSON.stringify(picked))
+      const text = blocksText()
+      if (!blocksSelected(event) || !event.clipboardData || !text) return
+      event.preventDefault(); event.clipboardData.setData('text/plain', text)
+      held.current = text
       if (cut && !latest.current.readOnly) store.removeSelection()
     }
     d.addEventListener('copy', (event) => copy(event, false))
     d.addEventListener('cut', (event) => copy(event, true))
     d.addEventListener('paste', (event) => {
       const text = event.clipboardData?.getData('text/plain') ?? ''
-      if (!blocksSelected(event) || latest.current.readOnly || !text.startsWith('cms-blocks:')) return
+      if (!blocksSelected(event) || latest.current.readOnly || !text.startsWith(BLOCKS)) return
       event.preventDefault()
-      let pasted: BlockNode[]
-      try { pasted = (JSON.parse(text.slice(12)) as BlockNode[]).map(tree.clone) } catch { return }
-      const nodes = store.get().nodes, at = insertionPoint(nodes, selectionOf(store.get()).at(-1)!, pasted.map((node) => node.type), types, allowed)
-      if (!at || !pasted.length) return
-      store.insert(at.parentId, at.index, pasted)
-      store.select(pasted[0].id, true)
-      if (pasted.length > 1) store.extendTo(pasted.at(-1)!.id)
+      pasteBlocks(text)
+    })
+    // A right-click on a block selects it and opens what can be done to it, where the pointer is; in text being
+    // written, the browser's own menu (spelling, copying words) stays.
+    // Text being typed in keeps the browser's own menu (spelling, paste as text); anywhere else, the block's.
+    let typing = false
+    d.addEventListener('pointerdown', (event) => {
+      const host = (event.target as Element | null)?.closest?.('[contenteditable="true"]')
+      typing = !!host && host === d.activeElement
+    }, true)
+    d.addEventListener('contextmenu', (event) => {
+      if (latest.current.readOnly || typing) return
+      const id = ownerOf(event.target)
+      const box = frame.current?.getBoundingClientRect()
+      if (!id || !box) return
+      event.preventDefault()
+      const { scale } = latest.current.layout
+      openMenu(id, { x: box.left + event.clientX * scale, y: box.top + event.clientY * scale })
     })
     // Scroll-linked chrome commits inside the scroll event, before the frame paints: a rAF + async render lands a frame late.
     // Scrolling moves every block by the same delta, so the cached geometry shifts instead of being re-measured.
@@ -636,6 +691,8 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
     }).catch(() => { if (alive) tailwind.current = null })
     return () => { alive = false }
   }, [styling.source])
+  // A right-click on a block outside the canvas (its row in the outline) opens the same menu.
+  useEffect(() => bus.on('block-menu', ({ node, x, y }) => { if (!latest.current.readOnly) openMenu(node, { x, y }) }), [])
   useEffect(() => bus.on('scroll-to', ({ node, top }) => {
     const d = frame.current?.contentDocument, target = d && source(d, node)
     if (target && top) d.defaultView?.scrollTo({ top: Math.max(0, target.getBoundingClientRect().top + d.defaultView.scrollY - 72), behavior: 'smooth' })
@@ -650,6 +707,53 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
       while (el) { if (el.dataset.cmsConditional === 'hidden') el.dataset.cmsReveal = ''; el = el.parentElement }
     }
   }, [selectedIds])
+  const scrolled = useRef<() => void>(() => {})
+  // The canvas runs no scripts of the site's, so what its scroll behavior does (behaviors.ts: data-scrolled past a
+  // threshold, data-hidden while scrolling down) is done from here: a header looks in the canvas as it does on the site.
+  useEffect(() => {
+    const win = doc?.defaultView
+    if (!doc || !win) return
+    let last = win.scrollY
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const y = win.scrollY
+      for (const el of doc.querySelectorAll<HTMLElement>('[x-cms-scroll]')) {
+        let options: { threshold?: number; hide?: boolean } = {}
+        try { options = JSON.parse(el.getAttribute('x-cms-scroll') || '{}') } catch { /* No options: the defaults. */ }
+        const threshold = options.threshold ?? 20
+        el.toggleAttribute('data-scrolled', y > threshold)
+        if (options.hide) el.toggleAttribute('data-hidden', y > last && y > threshold + el.offsetHeight && !el.hasAttribute('data-open'))
+      }
+      last = y
+    }
+    const onScroll = () => { frame ||= win.requestAnimationFrame(update) }
+    scrolled.current = update
+    update()
+    win.addEventListener('scroll', onScroll, { passive: true })
+    return () => { win.removeEventListener('scroll', onScroll); if (frame) win.cancelAnimationFrame(frame) }
+  }, [doc])
+  // A canvas drawn anew (an edit) has its markup back as the server wrote it: the states are set again.
+  useEffect(() => { scrolled.current() }, [nodes])
+  // The state being styled (Hover, Pressed, Focus) shows on what is selected while it is chosen: the classes for it
+  // worn as if the state held, compiled with the rest. Taken off again as soon as another state or block is chosen.
+  const styleState = useEditor(store, (state) => state.state)
+  useEffect(() => {
+    const d = frame.current?.contentDocument
+    if (!d) return
+    for (const el of d.querySelectorAll<HTMLElement>('[data-cms-shown-state]')) {
+      el.classList.remove(...(el.dataset.cmsShownState ?? '').split(' ').filter(Boolean))
+      delete el.dataset.cmsShownState
+    }
+    for (const id of selectedIds) {
+      const node = tree.find(store.get().nodes, id), el = source(d, id)
+      const names = node && el ? shownInState(splitClasses(node.class ?? ''), styleState) : []
+      if (!el || names.length === 0) continue
+      el.classList.add(...names)
+      el.dataset.cmsShownState = names.join(' ')
+    }
+    paint(d)
+  }, [styleState, selectedIds, nodes, doc])
   const blockDrag = useBlockDrag({
     disabled: readOnly,
     frame, scale: layout.scale,
@@ -677,6 +781,30 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
   }
   const frameOffset = useCallback(() => { const rect = frame.current!.getBoundingClientRect(); return { x: rect.left, y: rect.top, scale: layout.scale } }, [layout.scale])
   const boxStyle = (rect: Rect) => ({ left: layout.left + rect.left * layout.scale, top: rect.top * layout.scale, width: rect.width * layout.scale, height: rect.height * layout.scale })
+  /** The selection as both its menus see it (the toolbar's ⋯, a right-click): what it is called, and what can be done to it. */
+  const selectionActions = () => {
+    const ids = selectionOf(store.get()), all = store.get().nodes, id = store.get().selected
+    const first = ids.length ? tree.locate(all, ids[0]) : null, last = ids.length ? tree.locate(all, ids.at(-1)!) : null
+    const node = id ? tree.find(all, id) : null
+    if (!first || !last || !node || !id) return null
+    const siblings = tree.siblings(all, first.parentId)
+    const describe = (block: BlockNode) => ({ label: blockName(block, types, components), icon: block.type === 'component' ? 'symbol' : types.get(block.type)?.icon ?? 'square' })
+    const parent = first.parentId ? tree.find(all, first.parentId) : null
+    const { label, icon } = describe(node)
+    return {
+      label: ids.length > 1 ? plural(ids.length, '{count} block', '{count} blocks') : label, icon, parent: parent ? describe(parent) : null,
+      canMoveUp: first.index > 0, canMoveDown: last.index < siblings.length - 1,
+      onSelectParent: () => { if (parent) onInspect(parent.id) },
+      onMove: (direction: -1 | 1) => store.nudgeSelection(direction),
+      onInsert: (side: 'before' | 'after') => { requestAnimationFrame(() => openInserter(side)) },
+      onCut: () => copyBlocks(true), onCopy: () => copyBlocks(false), onPaste: () => void pasteFromClipboard(),
+      onDuplicate: () => store.duplicateSelection(), onDelete: () => store.removeSelection(),
+      onMakeComponent: node.type !== 'component' && can('entries.components.create') && componentFits(store, types, allowed) ? () => saveComponent(store) : undefined,
+      onSavePattern: can('entries.patterns.create') ? () => savePattern(store) : undefined,
+    }
+  }
+  const menuActions = menuAt ? selectionActions() : null
+
   return <WriteContext.Provider value={api}>
     {starting && <StartFromPattern open onOpenChange={setStarting} patterns={pagePatterns} onChoose={(pattern) => {
       const copies = pattern.blocks.map((block) => tree.clone(block))
@@ -691,28 +819,17 @@ export function LiveEditor({ collection, blueprint, entryId, content, onInspect,
         onPointerMove={(event) => { if (!(event.target as Element).closest('[data-cms-inserter]')) { showGap(null); store.hover(null) } }}
         className="relative min-h-0 flex-1 overflow-hidden bg-sunken">
         {loading && <div className="absolute inset-0 z-drag grid place-items-center bg-bg"><Spinner /></div>}
+        <MenuAt at={menuActions ? menuAt : null} onClose={() => setMenuAt(null)} items={menuActions ? blockActionItems(menuActions) : []} />
         <iframe ref={frame} title={t('Live editor')} sandbox="allow-same-origin" onLoad={onLoad} className="absolute top-0 border-0 bg-white" style={{ width: layout.width, height: layout.height, left: layout.left, transformOrigin: 'top left', transform: `scale(${layout.scale})` }} />
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           {!readOnly && !blockDrag.drag && !writing && !typing && !chooser && hovered && hoverBox && !selectedIds.includes(hovered) && <div data-cms-hover={hovered} className="absolute z-raised border border-focus/50" style={boxStyle(hoverBox)} />}
           {/* The selection shows while writing too; its toolbar waits for block selection (Esc). */}
           {!blockDrag.drag && boxes.map((rect, index) => <div data-cms-selection key={index} className="absolute z-raised border-solid border-focus" style={{ ...boxStyle(rect), borderWidth: 1.5 }} />)}
           {!readOnly && !blockDrag.drag && blockMode && selected && boxes[0] && (() => {
-            const first = tree.locate(nodes, selectedIds[0]), last = tree.locate(nodes, selectedIds.at(-1)!)
-            const node = tree.find(nodes, selected)
-            if (!first || !last || !node) return null
-            const siblings = tree.siblings(nodes, first.parentId)
-            const describe = (block: BlockNode) => ({ label: blockName(block, types, components), icon: block.type === 'component' ? 'symbol' : types.get(block.type)?.icon ?? 'square' })
-            const parent = first.parentId ? tree.find(nodes, first.parentId) : null
-            const { label, icon } = describe(node)
-            return <BlockToolbar id={selected} label={selectedIds.length > 1 ? plural(selectedIds.length, '{count} block', '{count} blocks') : label} icon={icon} parent={parent ? describe(parent) : null}
-              box={boxStyle(boxes[0])} viewport={{ width: layout.width * layout.scale + layout.left * 2, height: layout.height * layout.scale }}
-              canMoveUp={first.index > 0} canMoveDown={last.index < siblings.length - 1}
-              onSelectParent={() => parent && onInspect(parent.id)} onDrag={(event) => { setChooser(null); blockDrag.start(event, selectionOf(store.get()), label) }}
-              onMove={(direction) => store.nudgeSelection(direction)} onInsert={(side) => requestAnimationFrame(() => openInserter(side))}
-              onDuplicate={() => store.duplicateSelection()} onDelete={() => store.removeSelection()}
-              onMakeComponent={node.type !== 'component' && can('entries.components.create') && componentFits(store, types, allowed) ? () => saveComponent(store) : undefined}
-              onSavePattern={can('entries.patterns.create') ? () => savePattern(store) : undefined}
-              covers={covers} />
+            const about = selectionActions()
+            if (!about) return null
+            return <BlockToolbar {...about} id={selected} box={boxStyle(boxes[0])} viewport={{ width: layout.width * layout.scale + layout.left * 2, height: layout.height * layout.scale }}
+              onDrag={(event) => { setChooser(null); blockDrag.start(event, selectionOf(store.get()), about.label) }} covers={covers} />
           })()}
           {!readOnly && !blockDrag.drag && gaps.filter((at) => at.inside).map((at) => {
             const picker = { open: !!chooser && targetKey(chooser) === targetKey(at), onOpenChange: (open: boolean) => setChooser(open ? at : null), returnFocus,

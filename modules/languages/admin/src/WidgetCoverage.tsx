@@ -1,5 +1,5 @@
 import { can, locale, navigate, t, useAbility } from '@letterncms/sdk'
-import { Button, Meter, Widget } from '@letterncms/ui'
+import { Button, Meter, Widget, Tooltip } from '@letterncms/ui'
 
 interface Coverage {
   total: number
@@ -28,7 +28,7 @@ export default function WidgetCoverage() {
         {languages.map((l) => (
           <div key={l.code} className="py-2">
             <div className="flex items-baseline gap-2 text-sm">
-              <span className="min-w-0 truncate text-text" title={l.englishName}>{l.name}</span>
+              <Tooltip content={l.englishName}><span className="min-w-0 truncate text-text">{l.name}</span></Tooltip>
               {l.default && <span className="text-xs text-faint">{t('Default')}</span>}
               <span className="ml-auto shrink-0 text-xs tabular-nums text-muted">{percent.format(l.share)}</span>
             </div>

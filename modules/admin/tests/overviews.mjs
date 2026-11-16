@@ -66,7 +66,7 @@ const buttons = () => [...main().querySelectorAll('button')]
 const button = (name) => buttons().find((b) => b.textContent.trim() === name || b.getAttribute('aria-label') === name)
 const anyButton = (name) => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === name || b.getAttribute('aria-label') === name)
 const viewNames = ['Table', 'Grid', 'Calendar']
-const view = (name) => main().querySelector('[role="radio"][title="' + name + '"]')
+const view = (name) => main().querySelector('[role="radio"][aria-label="' + name + '"]')
 const views = () => viewNames.filter((name) => view(name))
 const switchView = async (name) => { const target = view(name); assert(target, 'missing ' + name + ' switch'); target.click(); await wait(() => target.getAttribute('aria-checked') === 'true', 'view did not switch'); await sleep(50) }
 const open = async (path, expected) => { navigate(path); await wait(() => location.pathname === '/admin' + path.split('?')[0] && text().includes(expected) && !document.querySelector('[role="progressbar"]'), 'failed to open ' + path); await sleep(50) }
@@ -109,15 +109,15 @@ try {
     await open('/globals', 'Contact details')
     assert(rows().length === 2 && !cards().length, 'globals are not a plain table')
   })
-  await test('Plugins list only plugins and Sites opens the site store', async () => {
+  await test('Plugins list only plugins and the site store only sites', async () => {
     const listing = () => [...(main()?.querySelectorAll('[role="listitem"] a') ?? [])].map((link) => link.textContent.trim())
     await open('/plugins', 'Forms')
     assert(listing().includes('Forms') && !listing().includes('Starter') && !listing().includes('Studio'), 'Plugins includes a site')
     await open('/plugins?show=installed', 'Forms')
     assert(listing().length === 10, 'Installed includes a site or misses a plugin')
     await open('/sites', 'Starter')
-    await wait(() => anyButton('Browse Store'), 'Sites is missing Browse Store')
-    anyButton('Browse Store').click()
+    // The store is a row of Design's sidebar, under Sites (a room this fixture has none of): its own address.
+    navigate('/sites/store')
     await wait(() => listing().includes('Studio'), 'site store did not open')
     assert(listing().join() === 'Starter,Studio', 'site store includes a plugin or misses a site')
     main().querySelector('a[href="/admin/sites/store/letterncms/studio"]').click()
@@ -306,7 +306,7 @@ try {
     assert(!button('Reset Columns') && checked().join() === 'Status,Published,Updated', 'automatic reset did not restore the fields')
     for (const box of group.querySelectorAll('[role="checkbox"][aria-checked="true"]')) { box.click(); await sleep(30) }
     category().click(); await sleep(30)
-    const grid = [...main().querySelectorAll('[role="radio"]')].find((radio) => radio.getAttribute('title') === 'Grid' || radio.textContent === 'Grid')
+    const grid = [...main().querySelectorAll('[role="radio"]')].find((radio) => radio.getAttribute('aria-label') === 'Grid' || radio.textContent === 'Grid')
     grid.click(); await sleep(30)
     // Saving is the save bar's, as on every form.
     await wait(() => document.querySelector('.cms-savebar[data-state="open"] [data-variant="primary"]'), 'changes did not bring up the save bar')
@@ -345,7 +345,7 @@ try {
     assert(dialog.querySelector('input[placeholder="Search Files"]'), 'picker lacks search')
     // A picker is thumbnails and names to choose from: the shared cards, without a view switch, display choices, checkboxes or row menus.
     assert(dialog.querySelectorAll('article').length === 60, 'picker lacks shared cards')
-    assert(!dialog.querySelector('[role="radio"][title="Table"]') && !dialog.querySelector('article [role="checkbox"]') && !dialog.querySelector('article [aria-haspopup="menu"]'), 'picker has more than thumbnails and names')
+    assert(!dialog.querySelector('[role="radio"][aria-label="Table"]') && !dialog.querySelector('article [role="checkbox"]') && !dialog.querySelector('article [aria-haspopup="menu"]'), 'picker has more than thumbnails and names')
     const card = dialog.querySelector('article'); (card.querySelector('button, a') ?? card).click(); await wait(() => !document.querySelector('[role="dialog"]'), 'single selection did not commit')
     await wait(() => main().querySelector('img'), 'selected file missing from the field')
     assert((await calls()).some((r) => r.ability === 'media/get-many' && r.input.ids?.length === 1), 'field did not look up the chosen file')

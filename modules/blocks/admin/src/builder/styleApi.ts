@@ -387,3 +387,21 @@ export function spacingChoices(engine: Engine | null, named: ThemeToken[]): { sc
     named: named.map((token) => ({ label: token.name, value: token.ref, title: `${token.variable} · ${token.value}` })),
   }
 }
+
+
+/** The states an element can be shown in where it stands, as if the pointer were on it, it were pressed or it held the focus. */
+const SHOWABLE = new Set(['hover', 'active', 'focus', 'focus-visible', 'focus-within'])
+
+/**
+ * What an element wears to be seen in a state while it is the one being styled: each of its classes for that state
+ * without the state, made to win (hover:bg-ink is bg-ink!). Nothing for a state that can't be shown where it stands
+ * (a pseudo-element, a place in a list, the dark mode).
+ */
+export function shownInState(classes: string[], state: string[]): string[] {
+  if (state.length === 0 || !state.every((variant) => SHOWABLE.has(variant))) return []
+  return classes.flatMap((raw) => {
+    const { variants, utility } = parseClass(raw)
+    if (!state.every((variant) => variants.includes(variant))) return []
+    return [withVariants(variants.filter((variant) => !state.includes(variant)), utility.endsWith('!') || utility.startsWith('!') ? utility : `${utility}!`)]
+  })
+}

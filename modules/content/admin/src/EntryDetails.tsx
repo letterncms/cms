@@ -1,5 +1,5 @@
 import { can, locale, t, useAbility, useManifest, type Entry, type EntryContent, type EntryPanelProps, type EntrySummary, type FieldDef } from '@letterncms/sdk'
-import { Button, Dialog, Fields, nativeName, PersonPicker, QueryError, SharedMark, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes } from '@letterncms/ui'
+import { Button, Dialog, Fields, nativeName, PersonPicker, QueryError, SharedMark, StatusDot, cn, fieldControlId, slugify, statusLabel, wideFieldTypes, Tooltip } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 
 /** The pages features bring (sign in, checkout), as `pages/builtin` gives them, by what brought them. */
@@ -61,9 +61,9 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
   const context = { entry: entry ?? undefined, collection: collection.handle, locale: entry?.locale ?? manifest.site.defaultLocale }
   const info: [string, ReactNode][] = [
     ...((!system || collection.route || summary?.within) ? [[t('Status'), <StatusDot key="status" status={status} label={statusLabel(status)} className="text-text" />] as [string, ReactNode]] : []),
-    ...(entry?.publishedAt && status !== 'draft' ? [[status === 'scheduled' ? t('Goes Live') : t('Published'), <time key="published" dateTime={entry.publishedAt} title={manifest.site.timezone}>{date(entry.publishedAt)}</time>] as [string, ReactNode]] : []),
+    ...(entry?.publishedAt && status !== 'draft' ? [[status === 'scheduled' ? t('Goes Live') : t('Published'), <Tooltip key="published" content={manifest.site.timezone}><time dateTime={entry.publishedAt}>{date(entry.publishedAt)}</time></Tooltip>] as [string, ReactNode]] : []),
     // When it comes off the site again, while that is still ahead or just passed.
-    ...(entry?.expiresAt && status !== 'draft' ? [[status === 'expired' ? t('Ended') : t('Ends'), <time key="ends" dateTime={entry.expiresAt} title={manifest.site.timezone}>{date(entry.expiresAt)}</time>] as [string, ReactNode]] : []),
+    ...(entry?.expiresAt && status !== 'draft' ? [[status === 'expired' ? t('Ended') : t('Ends'), <Tooltip key="ends" content={manifest.site.timezone}><time dateTime={entry.expiresAt}>{date(entry.expiresAt)}</time></Tooltip>] as [string, ReactNode]] : []),
     ...(builder ? [
       ...(entry && collection.structure === 'tree' ? [[t('Parent'), entry.parentId ? parent.data?.[0]?.title ?? (parent.isLoading ? t('Loading…') : '') : t('None')] as [string, ReactNode]] : []),
       ...(summary?.within ? [] : [[t('Collection'), collection.title] as [string, ReactNode]]),
@@ -99,7 +99,7 @@ export function EntryDetails({ props, working, fields, titleInDetails, update }:
             <span className="flex h-7 w-[88px] shrink-0 items-center text-xs text-muted">{t('URL')}</span>
             <span className="flex h-7 min-w-0 flex-1 items-center">
               {builtinPage?.path
-                ? <span className="truncate px-1 font-mono text-xs text-faint" title={builtinPage.path}>{builtinPage.path}</span>
+                ? <Tooltip content={builtinPage.path}><span className="truncate px-1 font-mono text-xs text-faint">{builtinPage.path}</span></Tooltip>
                 : <span className="truncate px-1 text-xs text-faint">{builtinGroups.isLoading ? '…' : t('Shown inside other pages')}</span>}
             </span>
           </div>

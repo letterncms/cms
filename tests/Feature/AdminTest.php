@@ -30,7 +30,7 @@ final class AdminTest extends TestCase
         $this->assertContains('collection.posts', $nav['sidebar']['hidden']);
         $this->assertSame(['collection.notes', 'collection.pages', 'collection.posts'], $this->room($nav, 'content')['content']['items']);
         $this->assertContains('collections', array_merge(...array_column($this->room($nav, 'structure'), 'items')));
-        $this->assertContains('navigation', array_merge(...array_column($this->room($nav, 'design'), 'items')));
+        $this->assertContains('navigation', array_merge(...array_column($this->room($nav, 'structure'), 'items')));
         $this->assertSame('Entries', array_column($nav['rooms'], 'label', 'id')['content']);
         $this->assertSame('design', array_column($nav['nav'], 'room', 'id')['design']);
         // The sidebar and abilities use the same name for globals.
@@ -145,7 +145,7 @@ final class AdminTest extends TestCase
         $result = $this->cms()->adminNav()->forUser($this->admin());
 
         // A screen in the design's section is in the design's room, not the main sidebar.
-        $this->assertContains('links', $this->room($result, 'design')['design']['items']);
+        $this->assertContains('links', array_merge(...array_column($this->room($result, 'design'), 'items')));
         $this->assertNotContains('links', array_merge(...array_column($result['sidebar']['sections'], 'items')));
         // The unnamed group, People, then a settings page without a section of its own: a plugin's, under Plugins by name.
         $settings = $this->room($result, 'settings');

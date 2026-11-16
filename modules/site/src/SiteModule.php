@@ -50,7 +50,7 @@ final class SiteModule extends Plugin
         ['layout', 'Layout', 'ruler'],
         ['effects', 'Effects', 'shadow'],
         ['motion', 'Motion', 'animated'],
-        ['styles', 'Styles', 'symbol'],
+        ['classes', 'Classes', 'symbol'],
     ];
 
     public function register(): void
@@ -985,8 +985,10 @@ final class SiteModule extends Plugin
         }
         // What a developer adds beside the structure: the site's own CSS, scripts and libraries.
         $admin->nav('code', ['label' => 'Code', 'path' => '/code', 'icon' => 'code', 'section' => 'structure', 'order' => 60, 'permission' => 'settings.manage']);
-        // A whole site to switch to, import or export: with the design, as a site is a look of its own.
-        $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'design-site', 'order' => 80, 'permission' => 'settings.manage']);
+        // A whole site to switch to, import or export: first in the design, as a site is a look of its own.
+        $admin->nav('sites', ['label' => 'Sites', 'path' => '/sites', 'icon' => 'box', 'section' => 'design-site', 'order' => 10, 'permission' => 'settings.manage']);
+        // The design opens on its colours, where the work on a look begins, though its sites are listed first.
+        $admin->opens('design', '/design/colors');
         $admin->command('sites', ['label' => 'Sites', 'icon' => 'box', 'path' => '/sites', 'permission' => 'settings.manage', 'keywords' => ['starter', 'template', 'export', 'import']]);
         $admin->widget('site-status', ['label' => 'Site', 'description' => 'Whether the live site is up to date, with a button to publish it.', 'icon' => 'rocket', 'column' => 'side', 'enabled' => true, 'order' => 10]);
         $admin->command('publish-site', ['label' => 'Publish Site', 'icon' => 'rocket', 'ability' => 'site/build', 'permission' => 'site.build', 'keywords' => ['build', 'deploy', 'static']]);

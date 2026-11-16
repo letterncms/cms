@@ -1,5 +1,5 @@
 import { navigate, t, useAbility, type FieldDef } from '@letterncms/sdk'
-import { Button, Fields, Icon, IconButton, Popover, cn, Pressable } from '@letterncms/ui'
+import { Button, Fields, Icon, IconButton, Popover, cn, Pressable, Tooltip } from '@letterncms/ui'
 import { useState } from 'react'
 import { useEditorContext } from '../core/context'
 import { InlineEditable } from '../core/InlineEditable'
@@ -93,7 +93,7 @@ function Action({ node }: { node: BlockNode }) {
           }}
         />
       </span>
-      {!url && <span className="pointer-events-none absolute -right-0.5 -top-0.5 size-2 rounded-full bg-warning ring-2 ring-bg" title={t('No link yet')} />}
+      {!url && <span className="pointer-events-none absolute -right-0.5 -top-0.5 size-2 rounded-full bg-warning ring-2 ring-bg" aria-hidden />}
       {!readOnly && (
         <Popover
           open={open}
@@ -101,12 +101,13 @@ function Action({ node }: { node: BlockNode }) {
           align="start"
           className="w-80 !p-3"
           trigger={
+            <Tooltip content={url || t('Add a Link')}>
             <Pressable aria-label={t('Edit Link')}
-              title={url || t('Add a Link')}
               className={cn('absolute -right-2.5 -top-2.5 grid size-6 place-items-center rounded-full border border-border bg-bg text-muted shadow-pop transition-opacity hover:text-text', open ? 'opacity-100' : 'opacity-0 group-hover/action:opacity-100 focus-visible:opacity-100')}
             >
               <Icon name="link" size={12} />
             </Pressable>
+            </Tooltip>
           }
         >
           <div className="space-y-3" onKeyDown={(e) => e.key === 'Enter' && !e.defaultPrevented && (e.target as HTMLElement).tagName === 'INPUT' && setOpen(false)}>
@@ -369,7 +370,7 @@ export function ComponentBlock({ node }: { node: BlockNode }) {
             const bound = bind[`values.${f.handle}`]
             return (
               <div key={f.handle} className="grid grid-cols-[120px_minmax(0,1fr)] items-start gap-3">
-                <span className="truncate pt-[3px] text-xs text-faint" title={f.instructions}>{f.label}</span>
+                <Tooltip content={f.instructions}><span className="truncate pt-[3px] text-xs text-faint">{f.label}</span></Tooltip>
                 {bound ? (
                   <span className="pt-[3px] font-mono text-xs text-faint">{bound}</span>
                 ) : ['text', 'textarea', 'richtext'].includes(f.type) ? (

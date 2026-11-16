@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Button, fieldControlId, Icon, IconButton, Popover, cn } from '@letterncms/ui'
+import { Button, fieldControlId, Icon, IconButton, Popover, cn, Tooltip } from '@letterncms/ui'
 import { useState } from 'react'
 import type { DataPath } from './scope'
 import { inputClass } from '../controls'
@@ -21,6 +21,7 @@ export function BindField({ field, value: raw, onChange, disabled }: FieldProps<
     <Control>
       <div className="relative flex min-w-0 flex-1 items-center">
         <Icon name="database" size={13} className="pointer-events-none absolute left-2 text-ink" />
+        <Tooltip content={label}>
         <input
           id={fieldControlId(field)}
           value={draft ?? value ?? ''}
@@ -33,10 +34,10 @@ export function BindField({ field, value: raw, onChange, disabled }: FieldProps<
             setDraft(null)
           }}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-          title={label}
           aria-label={field.label}
           className={cn(inputClass, '!pl-7 font-mono text-ink placeholder:font-sans')}
         />
+        </Tooltip>
       </div>
       <Popover
         open={open}
@@ -70,9 +71,11 @@ export function BindField({ field, value: raw, onChange, disabled }: FieldProps<
             </div>
           ))}
         </div>
-        <p className="m-0 border-t border-border px-2 py-1.5 font-mono text-2xs leading-relaxed text-faint" title={t('Filters, and text mixed with data')}>
-          |date:M j, Y · |excerpt:120 · |upper · |default:Text · By {'{entry.author}'}
-        </p>
+        <Tooltip content={t('Filters, and text mixed with data')}>
+          <p className="m-0 border-t border-border px-2 py-1.5 font-mono text-2xs leading-relaxed text-faint">
+            |date:M j, Y · |excerpt:120 · |upper · |default:Text · By {'{entry.author}'}
+          </p>
+        </Tooltip>
       </Popover>
     </Control>
   )

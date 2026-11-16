@@ -1,5 +1,5 @@
 import { locale, t, timeAgo, useAbility, type Entry, type EntryContent, type FieldDef } from '@letterncms/sdk'
-import { Button, Dialog, EmptyState, QueryError, Spinner, cn } from '@letterncms/ui'
+import { Button, Dialog, EmptyState, QueryError, Spinner, cn, Tooltip } from '@letterncms/ui'
 import { Fragment, useState } from 'react'
 
 interface Revision {
@@ -166,7 +166,7 @@ export function EntryHistory({ entry, working, fields, editable, onRestore }: En
               <span className="block truncate text-xs text-faint">
                 {revision.user?.name ?? t('System')}
                 {' · '}
-                <time dateTime={revision.createdAt} title={when(revision.createdAt)}>{timeAgo(revision.createdAt)}</time>
+                <Tooltip content={when(revision.createdAt)}><time dateTime={revision.createdAt}>{timeAgo(revision.createdAt)}</time></Tooltip>
               </span>
             </span>
           </>

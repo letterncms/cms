@@ -10,6 +10,7 @@ import { Icon } from './Icon'
 import { Skeleton } from './Spinner'
 import { Checkbox } from './Switch'
 import { toast } from './toast'
+import { Tooltip } from './Tooltip'
 
 /** A grid template's tracks, split where it has spaces outside parentheses. */
 function tracksOf(template: string): string[] {
@@ -158,10 +159,10 @@ export function TableHeader({ label, align, direction, onSort, hiddenLabel }: { 
   return <div role="columnheader" data-align={align} aria-sort={onSort ? direction ?? 'none' : undefined} className={cn('flex min-w-0 items-center', align === 'end' && 'justify-end')}>
     {/* A sortable header shows its caret on hover, and keeps it while it sorts the list. Right-aligned, the caret goes before
         the label, so the label lines up with the numbers under it. */}
-    {onSort ? <Pressable compact onClick={onSort} title={t('Sort by {column}', { column: label })} className={cn('group/sort -mx-1.5 flex h-6 min-w-0 items-center gap-1 rounded-xs px-1.5 transition-colors duration-base hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-focus', align === 'end' && 'flex-row-reverse', direction && 'text-text')}>
+    {onSort ? <Tooltip content={t('Sort by {column}', { column: label })}><Pressable compact onClick={onSort} className={cn('group/sort -mx-1.5 flex h-6 min-w-0 items-center gap-1 rounded-xs px-1.5 transition-colors duration-base hover:bg-hover hover:text-text focus-visible:outline-2 focus-visible:outline-focus', align === 'end' && 'flex-row-reverse', direction && 'text-text')}>
       <span className="truncate">{label}</span>
       <Icon name={direction === 'ascending' ? 'chevron-up' : 'chevron-down'} size={12} className={cn('shrink-0 transition-opacity duration-base', direction ? 'opacity-100' : 'opacity-0 group-hover/sort:opacity-100 group-focus-visible/sort:opacity-100')} />
-    </Pressable> : <span className={hiddenLabel ? 'sr-only' : 'truncate'}>{label}</span>}
+    </Pressable></Tooltip> : <span className={hiddenLabel ? 'sr-only' : 'truncate'}>{label}</span>}
   </div>
 }
 

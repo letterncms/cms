@@ -29,7 +29,7 @@ function collapsed(): Record<string, boolean> {
  * has nothing to unfold: it is its title and the way to add, and adding opens it. One with
  * `fields` of its own to fill shows them.
  */
-export function Section({ title, children, open: initial = true, actions, empty, fields, remember = true }: { title: string; children: ReactNode; open?: boolean; actions?: ReactNode; empty?: boolean; fields?: boolean; remember?: boolean }) {
+export function Section({ title, detail, children, open: initial = true, actions, actionsOpen = true, empty, own = true, fields, remember = true }: { title: string; detail?: ReactNode; children: ReactNode; open?: boolean; actions?: ReactNode; actionsOpen?: boolean; empty?: boolean; own?: boolean; fields?: boolean; remember?: boolean }) {
   const [open, setOpenState] = useState(() => (!remember || collapsed()[title] === undefined ? initial : !collapsed()[title]))
   const setOpen = (next: boolean) => {
     setOpenState(next)
@@ -41,7 +41,8 @@ export function Section({ title, children, open: initial = true, actions, empty,
     }
   }
   const bare = !!(empty && actions && !fields)
-  const mark = empty === false && <span className="size-1.5 shrink-0 rounded-full bg-focus" aria-hidden />
+  // Set here, the dot of a change; only coming from elsewhere (the default state, a larger screen), the quiet one, as its labels are.
+  const mark = empty === false && <span className={cn('size-1.5 shrink-0 rounded-full', own ? 'bg-focus' : 'bg-border-strong')} aria-hidden />
   return (
     <section data-section={title} className="min-w-0 border-b border-border last:border-b-0">
       <header className="group/section flex h-10 items-center gap-1 pl-4 pr-3">
@@ -50,13 +51,15 @@ export function Section({ title, children, open: initial = true, actions, empty,
         ) : (
           <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open} className="!h-full min-w-0 flex-1 shrink !justify-start !gap-1.5 !rounded-none !bg-transparent !px-0 text-left !text-xs !font-semibold !text-ink focus-visible:!-outline-offset-2">
             <span className="min-w-0 truncate">{title}</span>
+            {/* What it holds, quieter (how many classes). */}
+            {detail !== undefined && <span className="shrink-0 font-normal tabular-nums text-muted">{detail}</span>}
             {mark}
             {/* Open sections show their caret on hover; a folded one keeps it, so it reads as one. */}
             <Icon name="chevron-down" size={10} className={cn('shrink-0 text-faint transition-[rotate,opacity] duration-fast', open ? 'opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100' : '-rotate-90')} />
           </Button>
         )}
-        {/* Adding something shows it: the section opens. */}
-        {actions && <span className="contents" onClickCapture={() => !open && setOpen(true)}>{actions}</span>}
+        {/* Adding something shows it: the section opens. Actions that add nothing (`actionsOpen: false`, a ⋯) leave it as it is. */}
+        {actions && <span className="contents" onClickCapture={() => actionsOpen && !open && setOpen(true)}>{actions}</span>}
       </header>
       {open && !bare && <div className="space-y-1 px-4 pb-3">{children}</div>}
     </section>
@@ -104,7 +107,7 @@ export function RowLabel({ field, children, htmlFor, className }: { field: Field
       </Tooltip>
     )
   }
-  return <label htmlFor={htmlFor} className={base} title={field.instructions as string | undefined}>{text}</label>
+  return <Tooltip content={field.instructions as string | undefined}><label htmlFor={htmlFor} className={base}>{text}</label></Tooltip>
 }
 
 /**

@@ -80,9 +80,11 @@ function Prop({ field: given, value, bound, paths, onValue, onBind, extra }: { f
   const label = (
     <span className={cn('flex min-h-7 min-w-0 shrink-0 items-center gap-0.5', !wide && labelColumn)}>
       {/* A name longer than the column wraps in it, as the Design tab's do. */}
-      <label htmlFor={fieldControlId(field)} className={cn('min-w-0 flex-1 py-0.5 text-xs leading-[1.25] [overflow-wrap:anywhere]', bound ? 'text-ink' : 'text-muted')} title={field.instructions}>
-        {field.label}
-      </label>
+      <Tooltip content={field.instructions}>
+        <label htmlFor={fieldControlId(field)} className={cn('min-w-0 flex-1 py-0.5 text-xs leading-[1.25] [overflow-wrap:anywhere]', bound ? 'text-ink' : 'text-muted')}>
+          {field.label}
+        </label>
+      </Tooltip>
       {connect}
     </span>
   )

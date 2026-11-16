@@ -3,6 +3,7 @@ import { Button } from './Button'
 import { Icon } from './Icon'
 import { nativeName } from './language'
 import { Menu, type MenuItemDef } from './Menu'
+import { Tooltip } from './Tooltip'
 
 export interface LanguageChoice {
   code: string
@@ -20,11 +21,13 @@ export function LanguagePicker({ value, languages, onChange, more = [], loading 
   return (
     <Menu
       trigger={(
-        <Button variant="ghost" size="sm" icon="translate" className="max-sm:px-1.5" loading={loading} title={t('Language')}>
+        <Tooltip content={t('Language')}>
+        <Button variant="ghost" size="sm" icon="translate" className="max-sm:px-1.5" loading={loading}>
           {/* A phone's bar keeps its room for the screen's name: the icon alone, the language in its menu. */}
           <span className="max-sm:sr-only">{nativeName(value)}</span>
           <Icon name="chevron-down" size={12} className="-mr-0.5 shrink-0 text-faint max-sm:hidden" />
         </Button>
+        </Tooltip>
       )}
       items={[
         { label: t('Languages'), heading: true },

@@ -38,7 +38,7 @@ export function Store() {
 
 export function SiteStore() {
   return (
-    <Page crumbs={[{ label: t('Sites'), to: '/sites', icon: 'box' }, { label: t('Browse Store') }]}>
+    <Page title={t('Browse Store')}>
       <StoreList sites />
     </Page>
   )

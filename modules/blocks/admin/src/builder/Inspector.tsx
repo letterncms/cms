@@ -1,5 +1,5 @@
 import { can, t } from '@letterncms/sdk'
-import { Button, IconButton, Menu, PanelHeader, Tabs, copyText } from '@letterncms/ui'
+import { Button, IconButton, Menu, PanelHeader, Tabs, copyText, Tooltip } from '@letterncms/ui'
 import { Fragment, memo, useId, useLayoutEffect, useRef, useState } from 'react'
 import { blockName, useComponentTitles, useEditorContext } from '../core/context'
 import { saveComponent, savePattern } from '../core/SaveComponent'
@@ -114,9 +114,11 @@ export const Inspector = memo(function Inspector({ node, onBack, backLabel, onCl
             />
           </div>
         ) : (
-          <Button variant="ghost" onDoubleClick={() => !readOnly && setRenaming(true)} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !pl-1 !pr-0 text-left !font-medium !text-ink" title={readOnly ? undefined : t('Double-Click to Rename')}>
-            <span className="truncate">{blockName(node, types, components)}</span>
-          </Button>
+          <Tooltip content={readOnly ? undefined : t('Double-Click to Rename')}>
+            <Button variant="ghost" onDoubleClick={() => !readOnly && setRenaming(true)} className="min-w-0 flex-1 shrink !justify-start !bg-transparent !pl-1 !pr-0 text-left !font-medium !text-ink">
+              <span className="truncate">{blockName(node, types, components)}</span>
+            </Button>
+          </Tooltip>
         )}
       </PanelHeader>
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border pl-4 pr-3">

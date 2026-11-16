@@ -1,5 +1,5 @@
 import { registry, t, type FieldDef, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Menu, cn, Pressable } from '@letterncms/ui'
+import { fieldControlId, Icon, Menu, cn, Pressable, Tooltip } from '@letterncms/ui'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { TokenButton, TokenChip, useTokenOf, useTypedToken } from './tokens'
 
@@ -213,94 +213,95 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
         />
       )}
       {/* One box, as a field is: what stands before and after the number takes its own room, never the number's. */}
-      <div
-        className={cn('group/value cms-input flex h-7 min-w-0 flex-1 items-center rounded-sm', slider && '!w-16 !flex-none')}
-        title={field.title as string | undefined}
-        data-focus={focused || undefined}
-        data-invalid={invalid.shown || undefined}
-        data-disabled={disabled || undefined}
-        onFocus={() => setFocused(true)}
-        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocused(false)}
-      >
-        {prefix !== undefined && (
-          <span onPointerDown={(e) => scrub(e, true)} className="grid h-full w-6 shrink-0 cursor-ew-resize select-none place-items-center text-xs text-faint hover:text-ink">
-            {prefix}
-          </span>
-        )}
-        {chosen && draft === null ? (
-          <TokenButton
-            group={group ?? chosen.token.group}
-            value={value}
-            onPick={onChange}
-            trigger={
-              <Pressable compact onDoubleClick={() => setDraft(value ?? '')} className={cn('flex h-full min-w-0 flex-1 items-center pr-1 text-left', prefix === undefined && 'pl-1')}>
-                <TokenChip token={chosen.token} alpha={chosen.alpha} className="text-xs" />
-              </Pressable>
-            }
-          />
-        ) : (
-          <input
-            ref={input}
-            id={fieldControlId(field)}
-            value={draft ?? (parts ? parts[1] : value ?? '')}
-            placeholder={field.placeholder}
-            disabled={disabled}
-            autoComplete="off"
-            spellCheck={false}
-            onPointerDown={(e) => scrub(e, true)}
-            onChange={(e) => setDraft(e.target.value)}
-            onFocus={(e) => e.target.select()}
-            onBlur={commit}
-            aria-invalid={invalid.shown || undefined}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (draft !== null && resolve(draft.trim()) === undefined) invalid.show()
-                else (e.target as HTMLInputElement).blur()
+      <Tooltip content={field.title as string | undefined}>
+        <div
+          className={cn('group/value cms-input flex h-7 min-w-0 flex-1 items-center rounded-sm', slider && '!w-16 !flex-none')}
+          data-focus={focused || undefined}
+          data-invalid={invalid.shown || undefined}
+          data-disabled={disabled || undefined}
+          onFocus={() => setFocused(true)}
+          onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocused(false)}
+        >
+          {prefix !== undefined && (
+            <span onPointerDown={(e) => scrub(e, true)} className="grid h-full w-6 shrink-0 cursor-ew-resize select-none place-items-center text-xs text-faint hover:text-ink">
+              {prefix}
+            </span>
+          )}
+          {chosen && draft === null ? (
+            <TokenButton
+              group={group ?? chosen.token.group}
+              value={value}
+              onPick={onChange}
+              trigger={
+                <Pressable compact onDoubleClick={() => setDraft(value ?? '')} className={cn('flex h-full min-w-0 flex-1 items-center pr-1 text-left', prefix === undefined && 'pl-1')}>
+                  <TokenChip token={chosen.token} alpha={chosen.alpha} className="text-xs" />
+                </Pressable>
               }
-              if (e.key === 'Escape') {
-                setDraft(null)
-                requestAnimationFrame(() => input.current?.blur())
-              }
-              if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && numeric) {
-                e.preventDefault()
-                setDraft(null)
-                nudge((e.key === 'ArrowUp' ? 1 : -1) * step * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1))
-              }
-            }}
-            className={cn('h-full min-w-0 flex-1 bg-transparent text-sm tabular-nums text-text outline-none placeholder:text-ghost disabled:text-faint', prefix === undefined && 'pl-2', numeric && !disabled && 'cursor-ew-resize focus:cursor-text')}
-          />
-        )}
-        {(!chosen || draft !== null) && (
-          <span className="flex shrink-0 items-center gap-px pr-1">
-            {group && <TokenButton group={group} value={value} onPick={onChange} />}
-            {shownUnit && units.length > 0 && (
-              <Menu
-                align="end"
-                trigger={
-                  <Pressable compact disabled={disabled} className="h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
-                    {shownUnit}
-                  </Pressable>
+            />
+          ) : (
+            <input
+              ref={input}
+              id={fieldControlId(field)}
+              value={draft ?? (parts ? parts[1] : value ?? '')}
+              placeholder={field.placeholder}
+              disabled={disabled}
+              autoComplete="off"
+              spellCheck={false}
+              onPointerDown={(e) => scrub(e, true)}
+              onChange={(e) => setDraft(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              onBlur={commit}
+              aria-invalid={invalid.shown || undefined}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (draft !== null && resolve(draft.trim()) === undefined) invalid.show()
+                  else (e.target as HTMLInputElement).blur()
                 }
-                items={[
-                  ...units.map((u) => ({ label: u, checked: u === shownUnit, onSelect: () => setUnit(u) })),
-                  ...(keywords.length ? [{ separator: true, label: '' }, ...keywords.map((k) => ({ label: k, checked: value === k, onSelect: () => onChange(k) }))] : []),
-                ]}
-              />
-            )}
-            {!shownUnit && unit && keywords.length > 0 && value && keywords.includes(value) && (
-              <Menu
-                align="end"
-                trigger={
-                  <Pressable compact className="grid size-5 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
-                    <Icon name="chevron-down" size={10} />
-                  </Pressable>
+                if (e.key === 'Escape') {
+                  setDraft(null)
+                  requestAnimationFrame(() => input.current?.blur())
                 }
-                items={[...units.map((u) => ({ label: u, onSelect: () => onChange(`0${u}`) })), { separator: true, label: '' }, ...keywords.map((k) => ({ label: k, checked: value === k, onSelect: () => onChange(k) }))]}
-              />
-            )}
-          </span>
-        )}
-      </div>
+                if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && numeric) {
+                  e.preventDefault()
+                  setDraft(null)
+                  nudge((e.key === 'ArrowUp' ? 1 : -1) * step * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1))
+                }
+              }}
+              className={cn('h-full min-w-0 flex-1 bg-transparent text-sm tabular-nums text-text outline-none placeholder:text-ghost disabled:text-faint', prefix === undefined && 'pl-2', numeric && !disabled && 'cursor-ew-resize focus:cursor-text')}
+            />
+          )}
+          {(!chosen || draft !== null) && (
+            <span className="flex shrink-0 items-center gap-px pr-1">
+              {group && <TokenButton group={group} value={value} onPick={onChange} />}
+              {shownUnit && units.length > 0 && (
+                <Menu
+                  align="end"
+                  trigger={
+                    <Pressable compact disabled={disabled} className="h-5 min-w-5 rounded-xs px-1 text-2xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
+                      {shownUnit}
+                    </Pressable>
+                  }
+                  items={[
+                    ...units.map((u) => ({ label: u, checked: u === shownUnit, onSelect: () => setUnit(u) })),
+                    ...(keywords.length ? [{ separator: true, label: '' }, ...keywords.map((k) => ({ label: k, checked: value === k, onSelect: () => onChange(k) }))] : []),
+                  ]}
+                />
+              )}
+              {!shownUnit && unit && keywords.length > 0 && value && keywords.includes(value) && (
+                <Menu
+                  align="end"
+                  trigger={
+                    <Pressable compact className="grid size-5 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink" aria-label={t('Unit')}>
+                      <Icon name="chevron-down" size={10} />
+                    </Pressable>
+                  }
+                  items={[...units.map((u) => ({ label: u, onSelect: () => onChange(`0${u}`) })), { separator: true, label: '' }, ...keywords.map((k) => ({ label: k, checked: value === k, onSelect: () => onChange(k) }))]}
+                />
+              )}
+            </span>
+          )}
+        </div>
+      </Tooltip>
       {menu && (
         <Menu
           align="end"
@@ -314,9 +315,11 @@ function Value({ field, value: raw, onChange, disabled, context }: FieldProps<st
         />
       )}
       {action && (
-        <Pressable compact onClick={() => onChange(action.value)} className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" title={action.label} aria-label={action.label}>
-          <Icon name={action.icon} size={14} />
-        </Pressable>
+        <Tooltip content={action.label}>
+          <Pressable compact onClick={() => onChange(action.value)} className="grid size-7 shrink-0 place-items-center rounded-sm text-muted hover:bg-hover hover:text-ink" aria-label={action.label}>
+            <Icon name={action.icon} size={14} />
+          </Pressable>
+        </Tooltip>
       )}
     </Control>
   )

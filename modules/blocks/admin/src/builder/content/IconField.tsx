@@ -1,5 +1,5 @@
 import { t, useAbility, type FieldProps } from '@letterncms/sdk'
-import { fieldControlId, Icon, Popover, Pressable, Segmented, Spinner, cn } from '@letterncms/ui'
+import { fieldControlId, Icon, Popover, Pressable, Segmented, Spinner, cn, Tooltip } from '@letterncms/ui'
 import { useEffect, useState } from 'react'
 
 type Weight = 'regular' | 'bold' | 'fill' | 'light'
@@ -72,17 +72,17 @@ export function IconField({ field, value, onChange, disabled }: FieldProps<strin
         </div>
         <div className="grid max-h-64 grid-cols-8 gap-0.5 overflow-y-auto p-1.5" role="listbox" aria-label={t('Icons')}>
           {(results.data ?? []).map((icon) => (
-            <Pressable key={icon.name}
+            <Tooltip key={icon.name} content={icon.name}><Pressable
               role="option"
               aria-selected={icon.name === base}
-              title={icon.name}
+              aria-label={icon.name}
               onClick={() => {
                 pick(icon.name)
                 setOpen(false)
               }}
               className={cn('grid aspect-square place-items-center rounded-xs text-text hover:bg-hover [&_svg]:size-4', icon.name === base && 'bg-focus-soft text-focus')}
               dangerouslySetInnerHTML={{ __html: icon.svg }}
-            />
+            /></Tooltip>
           ))}
           {!results.isFetching && results.data?.length === 0 && <p className="col-span-8 m-0 py-6 text-center text-xs text-faint">{t('No matches')}</p>}
         </div>

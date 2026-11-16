@@ -98,7 +98,7 @@ export function SaveBar({ dirty, saving = false, error, onSave, onDiscard, withi
       {failed ? (
         <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
           <Icon name="warning" size={16} className="shrink-0 text-danger" />
-          <span className="min-w-0 truncate" title={failed}>{failed}</span>
+          <Tooltip content={failed}><span className="min-w-0 truncate">{failed}</span></Tooltip>
         </span>
       ) : (
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{t('Unsaved changes')}</span>

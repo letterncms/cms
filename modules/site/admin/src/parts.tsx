@@ -1,11 +1,11 @@
 import { t, type FieldDef } from '@letterncms/sdk'
-import { Button, Fields, Icon, IconButton, Menu, Pressable, Tooltip, cn, copyText, type MenuItemDef } from '@letterncms/ui'
+import { Button, Fields, Icon, IconButton, Menu, Pressable, Section, SettingsPanel, Tooltip, cn, copyText, type MenuItemDef } from '@letterncms/ui'
 import type { Stylesheet } from '@letterncms/blocks'
 import type { ReactNode } from 'react'
 
 /* What every section of the design is drawn with: a group of rows in a card, a row for a value of the theme, a
-   row for a setting, and a row that opens. One column, one control width, one row height (taller only for a
-   sample). What the site was given carries a lock, what is changed and not yet saved a mark, and every row's ⋯
+   row for a setting, and a row that opens, drawn as a page of settings draws its groups. One column, one control
+   width, one row height. What the site was given carries a lock, what is changed and not yet saved a mark, and every row's ⋯
    takes a change back. */
 
 /** The stylesheet being edited, and the way to change it: every section reads and writes the same draft. */
@@ -59,8 +59,8 @@ export function rowMenu(edit: Editing, { copy, revert, extra = [], own = [] }: {
 /** A row's ⋯: the kit's reveal, there on touch and on hover or focus where a pointer hovers. */
 export const RowMenu = ({ items }: { items: MenuItemDef[] }) => (items.length > 0 ? <Menu trigger={<IconButton icon="more" label={t('Actions')} size="xs" className="cms-reveal shrink-0" />} items={items} /> : <NoAction />)
 
-/** A row of a list in its card: a line under it but the last, its controls in one line. Only a row that opens is lit under the pointer. */
-export const ROW = 'cms-reveal-row px-3'
+/** A row of a list in its panel: a line under it but the last, its controls in one line, as a setting's row. Only a row that opens is lit under the pointer. */
+const ROW = 'cms-reveal-row'
 
 /** The place a row's ⋯ takes, kept where a row has none, so every row's control ends at the same line. */
 export const NoAction = () => <span className="size-6 shrink-0" />
@@ -86,32 +86,31 @@ const Name = ({ children, locked, changed: unsaved, className }: { children: Rea
 )
 
 /**
- * A list of rows under its title, in a card of their own with a line between them; `plain` content (a grid of
- * tiles) without the card. A group that is its whole section has no title (the bar already says it): the way
- * to add is then a named button under the list.
+ * A list of rows under its title, as a page of settings draws its groups: the title over a panel with a line
+ * between its rows, what adds one beside the title. `plain` content (a grid of tiles) has no panel. A group that
+ * is its whole section has no title (the bar already says it): the way to add is then a named button under it.
  */
 export function Group({ title, onAdd, addLabel, action, plain, children }: { title?: string; onAdd?: () => void; addLabel?: string; action?: ReactNode; plain?: boolean; children: ReactNode }) {
+  const add = onAdd && addLabel && (
+    <Tooltip content={addLabel}>
+      <IconButton icon="plus" label={addLabel} title={undefined} size="xs" onClick={onAdd} />
+    </Tooltip>
+  )
   return (
-    <section className="mb-7">
-      {title && (
-        <div className="flex h-9 items-center gap-2 pl-0.5 pr-3">
-          <h3 className="cms-label m-0 min-w-0 flex-1 truncate">{title}</h3>
-          {action}
-          {onAdd && addLabel && (
-            <Tooltip content={addLabel}>
-              <IconButton icon="plus" label={addLabel} title={undefined} size="xs" onClick={onAdd} />
-            </Tooltip>
-          )}
-        </div>
-      )}
-      {plain ? children : <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-bg">{children}</div>}
+    <Section
+      className="mb-7"
+      title={title}
+      // Over the panel's rows: what stands over their columns ends where their controls do.
+      actions={title && (action || add) ? <span className="flex items-center gap-2 pr-4 sm:pr-5">{action}{add}</span> : undefined}
+    >
+      {plain ? children : <SettingsPanel className="overflow-hidden">{children}</SettingsPanel>}
       {/* Without a title there is no head to hold a lone +: the way to add is a named button under the list. */}
-      {!title && (action || (onAdd && addLabel)) && (
+      {!title && (action || add) && (
         <div className="flex h-9 items-center">
           {action ?? <Button variant="ghost" size="xs" icon="plus" onClick={onAdd} className="-ml-1.5 !px-1.5 !font-normal !text-muted hover:!text-ink">{addLabel}</Button>}
         </div>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -137,7 +136,7 @@ export function Control({ handle, label, value, onChange, field, disabled, class
 export function TokenRow({ name, sample, after, below, wide, locked, changed: unsaved, menu, children }: { name: string; sample?: ReactNode; after?: ReactNode; below?: ReactNode; wide?: boolean; locked?: boolean; changed?: boolean; menu: MenuItemDef[]; children: ReactNode }) {
   return (
     <div className={ROW}>
-      <div className="flex min-h-10 items-center gap-2 py-1.5">
+      <div className="flex min-h-12 items-center gap-2 py-2">
         {sample !== undefined && <span className="grid w-7 shrink-0 place-items-center">{sample}</span>}
         <Name locked={locked} changed={unsaved} className={wide ? 'flex-1' : sample !== undefined ? 'w-[84px] shrink-0 max-sm:w-20' : 'w-[120px] shrink-0 max-sm:w-20'}>{name}</Name>
         {/* On a phone the value takes the row; what stands beside it waits for a wider screen. */}
@@ -153,7 +152,7 @@ export function TokenRow({ name, sample, after, below, wide, locked, changed: un
 /** A row of a setting that has a label of its own instead of a name, in a value row's columns. */
 export function Setting({ label, changed: unsaved, menu, children }: { label: string; changed?: boolean; menu: MenuItemDef[]; children: ReactNode }) {
   return (
-    <div className={cn(ROW, 'flex min-h-10 items-center gap-2 py-1.5')}>
+    <div className={cn(ROW, 'flex min-h-12 items-center gap-2 py-2')}>
       <Name changed={unsaved} className="w-[120px] shrink-0 max-sm:w-20">{label}</Name>
       <div className="flex w-56 min-w-0 shrink items-center max-lg:w-48 max-sm:w-auto max-sm:flex-1">{children}</div>
       <span className="min-w-0 flex-1 max-sm:hidden" />
@@ -169,7 +168,8 @@ export function Setting({ label, changed: unsaved, menu, children }: { label: st
  */
 export function OpenRow({ onOpen, label, sample, detail, locked, changed: unsaved, menu = [] }: { onOpen: () => void; label: string; sample?: ReactNode; detail?: ReactNode; locked?: boolean; changed?: boolean; menu?: MenuItemDef[] }) {
   return (
-    <div className={cn('cms-reveal-row relative flex items-center gap-2 px-3 py-1.5 transition-colors duration-base hover:bg-hover', sample ? 'min-h-12' : 'min-h-10')}>
+    // Lit to the panel's edges, as the row opens.
+    <div className="cms-reveal-row relative -mx-4 flex min-h-12 items-center gap-2 px-4 py-2 transition-colors duration-base hover:bg-hover sm:-mx-5 sm:px-5">
       <Pressable inset onClick={onOpen} aria-label={label} className="absolute inset-0" />
       <Name locked={locked} changed={unsaved} className={cn('pointer-events-none', sample ? 'w-28 shrink-0 max-sm:w-20' : 'flex-1')}>{label}</Name>
       {sample && <span className="pointer-events-none flex min-w-0 flex-1">{sample}</span>}

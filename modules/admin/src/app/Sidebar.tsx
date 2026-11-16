@@ -6,9 +6,9 @@ import { CSS } from '@dnd-kit/utilities'
 import { boot, events, Link, navigate, panelsFor, prefetch, registry, request, t, useLocation, useManifest, type NavItem, type Room } from '@letterncms/sdk'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Avatar, Icon, IconButton, Menu, Popover, SidebarGroup, SidebarRow, Tooltip, cn, labelled, type SidebarRowAction } from '../ui'
-import { SiteSwitcher } from './SiteSwitcher'
+import { SiteMenu } from './SiteMenu'
 import { setThemePreference, useThemePreference } from '../ui/theme'
-import { isPinned, lastApp, leaveRoom, movePinned, openRoom, PINNED, remember, setPinned, SETTINGS_SHORTCUT, unpin } from './sidebarStore'
+import { isPinned, leaveRoom, movePinned, openRoom, PINNED, remember, setPinned, SETTINGS_SHORTCUT, unpin, wayOut } from './sidebarStore'
 import { parentWay, placeAt, roomHome, SETTINGS, subscribeParent, wayBack } from '../ui/place'
 
 /** A screen's own state of the sidebar (see `ScreenSidebar`). */
@@ -121,7 +121,7 @@ function MainSidebar({ onSearch, onNavigate, active }: { onSearch: () => void; o
     <>
       {/* The shell's sidebar button holds the first place in the row, in every state. */}
       <div className="flex h-12 shrink-0 items-center gap-1 pl-10 pr-2">
-        <SiteSwitcher />
+        <SiteMenu />
         <Tooltip content={t('Search')} shortcut="mod+k" side="bottom">
           <IconButton icon="search" label={t('Search')} title={undefined} size="sm" onClick={onSearch} />
         </Tooltip>
@@ -270,7 +270,8 @@ export function StateBack({ own, onNavigate, drawer, room }: Pick<SidebarProps, 
   // On a phone the top bar shows the screen's own crumb only: back is then one screen up, to the crumb before it.
   const parent = useSyncExternalStore(subscribeParent, parentWay)
   if (!own && !room) return null
-  const way = own ? wayBack(manifest, { to: own.backTo, label: own.backLabel }) : { to: lastApp(), label: placeAt(manifest.nav, lastApp().split('?')[0])?.label ?? t('Dashboard') }
+  const out = wayOut(room?.id)
+  const way = own ? wayBack(manifest, { to: own.backTo, label: own.backLabel }) : { to: out, label: placeAt(manifest.nav, out.split('?')[0])?.label ?? t('Dashboard') }
   const label = way.label
   const back = () => {
     if (own) navigate(way.to)
@@ -284,7 +285,8 @@ export function StateBack({ own, onNavigate, drawer, room }: Pick<SidebarProps, 
       <Tooltip content={t('Back to {label}', { label })} shortcut={own ? undefined : 'esc'} side="bottom">
         <Pressable aria-label={t('Back to {label}', { label })} onClick={back} className={cn(button, up && 'max-sm:hidden')}>
           <Icon name="chevron-left" size={14} className={cn('shrink-0', !drawer && 'max-sm:size-4')} />
-          <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{label}</span>
+          {/* Always "Back", wherever it leads: the tooltip says where. */}
+          <span className={cn('truncate', !drawer && 'max-sm:hidden')}>{t('Back')}</span>
         </Pressable>
       </Tooltip>
       {up && (

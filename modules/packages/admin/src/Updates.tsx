@@ -1,5 +1,5 @@
 import { invalidate, run, t, timeAgo, useAbility } from '@letterncms/sdk'
-import { Badge, Button, confirm, EmptyState, Icon, List, Row, Section, Skeleton, Switch, longDate, toast } from '@letterncms/ui'
+import { Badge, Button, confirm, EmptyState, Icon, List, Row, Section, Skeleton, Switch, longDate, toast, Tooltip } from '@letterncms/ui'
 import { useState, type ReactNode } from 'react'
 import { driveJob, driveTick, type Job } from './installing'
 
@@ -139,7 +139,7 @@ export function UpdatesPanel() {
         title={t('{brand} {version}', { version: core.current })}
         actions={<>
           {/* When it last looked, beside the way to look again. */}
-          <span className="text-xs text-faint">{core.check.checked_at ? <time dateTime={new Date(core.check.checked_at * 1000).toISOString()} title={longDate(new Date(core.check.checked_at * 1000).toISOString())}>{t('Checked {date}', { date: timeAgo(new Date(core.check.checked_at * 1000).toISOString()) })}</time> : t('Not checked yet')}</span>
+          <span className="text-xs text-faint">{core.check.checked_at ? <Tooltip content={longDate(new Date(core.check.checked_at * 1000).toISOString())}><time dateTime={new Date(core.check.checked_at * 1000).toISOString()}>{t('Checked {date}', { date: timeAgo(new Date(core.check.checked_at * 1000).toISOString()) })}</time></Tooltip> : t('Not checked yet')}</span>
           <Button size="sm" loading={busy === 'check'} disabled={busy !== null} onClick={() => void check()}>{t('Check Now')}</Button>
         </>}
       >

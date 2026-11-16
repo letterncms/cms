@@ -1,5 +1,5 @@
 import { plural, t, useAbility, type FieldProps } from '@letterncms/sdk'
-import { Button, Dialog, Icon, IconButton, cn, drawing } from '@letterncms/ui'
+import { Button, Dialog, Icon, IconButton, cn, drawing, Tooltip } from '@letterncms/ui'
 import { useState } from 'react'
 import { DocumentPreview, hasDocumentPreview } from './documents'
 import { FileTile } from './kinds'
@@ -29,7 +29,7 @@ export function MediaField({ field, value, onChange, disabled }: FieldProps<stri
               {!disabled && (
                 <IconButton icon="close" label={t('Remove')} size="xs" variant="secondary" className="cms-reveal absolute right-1 top-1" onClick={() => onChange(ids.filter((x) => x !== id))} />
               )}
-              {m && m.kind === 'image' && !m.alt && <span className="absolute bottom-1 left-1 rounded-xs bg-warning px-1 text-2xs font-medium text-white" title={t('No alt text')}>ALT</span>}
+              {m && m.kind === 'image' && !m.alt && <Tooltip content={t('No alt text')}><span className="absolute bottom-1 left-1 rounded-xs bg-warning px-1 text-2xs font-medium text-white">ALT</span></Tooltip>}
             </div>
           )
         })}

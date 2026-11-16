@@ -178,7 +178,6 @@ const LayerRow = memo(function LayerRow({ node, depth, selected, hovered, collap
         e.stopPropagation()
         if (!readOnly) setRenaming(true)
       }}
-      title={readOnly || badges.length ? undefined : t('Double-Click to Rename')}
       className={cn('min-w-0 flex-1 truncate', node.hidden ? 'text-faint line-through decoration-faint/60' : plain && 'text-muted')}
     >
       {label}
@@ -201,7 +200,7 @@ const LayerRow = memo(function LayerRow({ node, depth, selected, hovered, collap
     >
       {name}
     </Tooltip>
-  ) : name
+  ) : <Tooltip content={readOnly ? undefined : t('Double-Click to Rename')}>{name}</Tooltip>
 
   return (
     <div
@@ -214,6 +213,14 @@ const LayerRow = memo(function LayerRow({ node, depth, selected, hovered, collap
         if (e.shiftKey) store.extendTo(node.id)
         else bus.emit('inspect', { node: node.id })
         bus.emit('scroll-to', { node: node.id })
+      }}
+      onContextMenu={(e) => {
+        if (readOnly || renaming) return
+        e.preventDefault()
+        // From the keyboard (the menu key, ⇧F10) there is no pointer: the menu opens under the row.
+        const row = e.currentTarget.getBoundingClientRect()
+        const keyed = e.clientX === 0 && e.clientY === 0
+        bus.emit('block-menu', { node: node.id, x: keyed ? row.left + 24 : e.clientX, y: keyed ? row.bottom : e.clientY })
       }}
       onMouseEnter={() => store.hover(node.id)}
       onKeyDown={(e) => {

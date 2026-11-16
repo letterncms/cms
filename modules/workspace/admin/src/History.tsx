@@ -1,4 +1,4 @@
-import { run, t, timeAgo, useAction } from '@letterncms/sdk'
+import { run, t, useAction } from '@letterncms/sdk'
 import { IconButton, QueryError, SidebarRow, Spinner, Tooltip, confirm, toast } from '@letterncms/ui'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
@@ -42,7 +42,6 @@ function ChatRow({ chat, remove, renaming, onRename }: { chat: Summary; remove: 
     <div data-chat-row={chat.id}><SidebarRow
       label={chat.title || t('New Chat')}
       icon="comment"
-      title={`${chat.title} · ${timeAgo(chat.updatedAt)}`}
       onClick={() => panel.select(chat.id)}
       active={thread === chat.id}
       status={busy || draft ? <>

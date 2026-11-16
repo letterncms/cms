@@ -1,6 +1,6 @@
 import { navigate, t, type FieldDef } from '@letterncms/sdk'
-import { Button, IconButton, Menu, Tooltip, copyText, prompt, toast, type MenuItemDef } from '@letterncms/ui'
-import { ARTICLE, FIELDS, InspectorSection, PanelFields, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, styleApi, styleLabel, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
+import { Fields, IconButton, Menu, NoMatches, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { ARTICLE, FIELDS, InspectorSection, PanelFields, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, shownInState, styleApi, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
 import { useEffect, useMemo, useState } from 'react'
 import { Group, OpenRow, rowMenu, type Editing } from './parts'
 
@@ -106,7 +106,7 @@ async function askName(engine: Engine | null, taken: string[], title: string, co
       { handle: 'name', type: 'text', label: t('Name'), placeholder: prefix ? 'outline' : 'lead', required: true, autofocus: true },
       ...(groups ? [{ handle: 'group', type: 'text', label: t('Group'), placeholder: t('Cards'), suggestions: groups }] : []),
     ],
-    values: { name: current ? styleLabel(current) : '' },
+    values: { name: current ? current.slice(prefix.length) : '' },
     confirm: confirmLabel,
   })
   const key = className(asked?.name)
@@ -119,7 +119,7 @@ async function askName(engine: Engine | null, taken: string[], title: string, co
   }
   // A name Tailwind has (flex, display) would be two classes under one name.
   if (taken.includes(name) || engine?.valid(name)) {
-    toast.error(t('There is already a style “{name}”.', { name: styleLabel(name) }))
+    toast.error(t('There is already a class “{name}”.', { name }))
     return null
   }
   const group = String(asked?.group ?? '').trim()
@@ -128,26 +128,28 @@ async function askName(engine: Engine | null, taken: string[], title: string, co
 }
 
 /**
- * One style, edited as a block is: the same bar on top (its classes and the state being styled), a large sample,
- * and a control for everything a class can set (for the screen the preview shows). The bar at the top of the
- * page names it, with the way back to its group.
+ * One class or element, edited as a block is: the same bar on top (the classes it applies, in the same field, the
+ * state being styled and its ⋯), a large sample, and a control for everything a class can set (for the screen the
+ * preview shows). The bar at the top of the page names it, with the way back to its group. Nothing in it sticks:
+ * it scrolls as one page.
  */
-function StyleEditor({ edit, samples, name, selector, node, classes, groups, write, menu }: { edit: Editing; samples: Samples; name?: string; selector?: string; node: SampleNode; classes: string[]; groups?: readonly string[]; write: (classes: string[]) => void; menu?: MenuItemDef[] }) {
+function StyleEditor({ edit, samples, node, classes, groups, write, menu }: { edit: Editing; samples: Samples; node: SampleNode; classes: string[]; groups?: readonly string[]; write: (classes: string[]) => void; menu?: MenuItemDef[] }) {
   const styling = useStyling()
   const [state, setState] = useState<string[]>([])
   const screen = useMemo(() => screenFor(samples.device, 1280, styling.breakpoints), [samples.device, styling.breakpoints])
   // Without the right to change the styling the controls show what is set and write nothing.
   const s = styleApi(styling.engine, classes, screen, state, edit.readOnly ? () => {} : write)
   const page = pageClasses(edit.sheet)
-  const sheet = useSpecimenSheet(samples.compiler, [...words(page), ...classes.map((raw) => bare(parseClass(raw).utility)), ...classes, ...words(node.className ?? '')])
+  // The sample in the state being styled (Hover, Pressed, Focus), as the canvas shows a block in it.
+  const shown = shownInState(classes, state)
+  const sample = shown.length ? { ...node, className: [node.className, ...shown].filter(Boolean).join(' ') } : node
+  const sheet = useSpecimenSheet(samples.compiler, [...words(page), ...classes.map((raw) => bare(parseClass(raw).utility)), ...classes, ...shown, ...words(node.className ?? '')])
   return (
     // The inspector's sections bring their own gutter: they reach the column's edges, as they do in the builder.
     <div className="-mx-4 -mt-2">
-      <div className="sticky top-0 z-raised bg-bg">
-        <StyleBar s={s} site={styling.classes} source={styling.source} disabled={edit.readOnly} state={{ classes, engine: styling.engine, state, onState: setState }} lead={<Lead name={name} selector={selector} />} actions={<Actions menu={menu} />} />
-      </div>
+      <StyleBar s={s} site={styling.classes} source={styling.source} disabled={edit.readOnly} state={{ classes, engine: styling.engine, state, onState: setState }} menu={menu} saveAs={false} />
       <div className="border-b border-border p-4">
-        <Specimen sheet={sheet} node={node} page={page} mode={edit.mode} align="center" className="h-28 rounded-md border border-border" />
+        <Specimen sheet={sheet} node={sample} page={page} mode={edit.mode} align="center" className="h-28 rounded-md border border-border" />
       </div>
       {/* Read only, the controls show what is set and take no input. */}
       <div inert={edit.readOnly}>
@@ -157,23 +159,8 @@ function StyleEditor({ edit, samples, name, selector, node, classes, groups, wri
   )
 }
 
-/** What an editor edits, at the start of its bar: a class's name to copy, or the element it styles. */
-function Lead({ name, selector }: { name?: string; selector?: string }) {
-  return (
-    <div className="flex min-h-8 min-w-0 flex-1 items-center">
-      {name ? (
-        <Tooltip content={t('Copy Name')}>
-          <Button variant="ghost" size="xs" onClick={() => void copyText(name, { copied: t('Copied {reference}', { reference: name }) })} className="min-w-0 shrink !px-1.5 font-mono !font-normal !text-muted hover:!text-ink">
-            <span className="truncate">.{name}</span>
-          </Button>
-        </Tooltip>
-      ) : selector && <span className="min-w-0 truncate px-1.5 font-mono text-xs text-muted">{selector}</span>}
-    </div>
-  )
-}
-
 /** What is done to it, at the end of its bar. */
-const Actions = ({ menu }: { menu?: MenuItemDef[] }) => (menu && menu.length > 0 ? <Menu align="end" trigger={<IconButton icon="more" label={t('Style Actions')} size="sm" />} items={menu} /> : null)
+const Actions = ({ menu }: { menu?: MenuItemDef[] }) => (menu && menu.length > 0 ? <Menu align="end" trigger={<IconButton icon="more" label={t('Class Actions')} size="sm" />} items={menu} /> : null)
 
 /** A value as the property editors write it: one property of the site's (--field-*, --prose-*), or the kernel's default. */
 interface FieldValue {
@@ -290,8 +277,8 @@ function PropertiesEditor({ edit, samples, part }: { edit: Editing; samples: Sam
   const own = (property: string) => edit.sheet.property(part.selector, property, part.layer)
   return (
     <div className="-mx-4 -mt-2">
-      {/* Its bar where a style's is, with what is done to it at the end. */}
-      <div className="sticky top-0 z-raised flex h-11 items-center justify-end border-b border-border bg-bg px-3">
+      {/* Its bar where a class's is, with what is done to it at the end. */}
+      <div className="flex h-11 items-center justify-end border-b border-border px-3">
         <Actions menu={revertProperties(edit, part)} />
       </div>
       <div className="border-b border-border p-4">
@@ -370,7 +357,7 @@ function groupOf(sheet: Stylesheet, name: string): string {
 }
 
 /** The address of a group of styles, or of a style in it. */
-export const stylePath = (group?: string, key?: string) => ['/design/styles', group, key].filter(Boolean).map((part, i) => (i === 0 ? part : encodeURIComponent(part!))).join('/')
+export const stylePath = (group?: string, key?: string) => ['/design/classes', group, key].filter(Boolean).map((part, i) => (i === 0 ? part : encodeURIComponent(part!))).join('/')
 
 /** What a group is called. */
 function groupLabel(sheet: Stylesheet, id: string): string | null {
@@ -383,7 +370,8 @@ function itemLabel(sheet: Stylesheet, group: string, key: string): string | null
   if (group === 'elements') return ELEMENT_LIST().find((element) => element.id === key)?.label ?? null
   if (group === 'forms') return FORM().find((part) => part.key === key)?.label ?? null
   if (group === 'articles') return key === 'spacing' ? SPACING().label : ARTICLES().find((element) => element.id === key)?.label ?? null
-  return ownStyles(sheet).some((rule) => rule.name === key) ? styleLabel(key) : null
+  // A class is named as written, as it is worn.
+  return ownStyles(sheet).some((rule) => rule.name === key) ? key : null
 }
 
 /**
@@ -394,7 +382,7 @@ export function stylesPlace(sheet: Stylesheet, [group, key]: string[]): { title:
   if (!group) return null
   const label = groupLabel(sheet, group)
   if (!label) return null
-  if (!key) return { title: label, back: { to: stylePath(), label: t('Styles') } }
+  if (!key) return { title: label, back: { to: stylePath(), label: t('Classes') } }
   const title = itemLabel(sheet, group, key)
   return title ? { title, back: { to: stylePath(group), label } } : null
 }
@@ -419,18 +407,17 @@ function reserved(name: string): boolean {
  * is drawn as the site draws it and opens on its editor in place of the list, so a block's Edit Style leads
  * straight to it.
  */
-export function Styles({ edit, samples, path }: { edit: Editing; samples: Samples; path: string[] }) {
+export function Classes({ edit, samples, path }: { edit: Editing; samples: Samples; path: string[] }) {
   const { engine } = useStyling()
+  const [search, setSearch] = useState('')
   const [group, key] = path
   const elements = [...edit.sheet.elements(), ...edit.sheet.elements('components')]
   const classesOf = (selector: string) => elements.find((rule) => rule.name === selector)?.classes ?? []
   const own = ownStyles(edit.sheet)
   const groups = siteGroups(edit.sheet)
-  const page = pageClasses(edit.sheet)
-  const sheet = useSpecimenSheet(samples.compiler, [...words(page), ...classesOf('::selection'), ...classesOf(':focus-visible'), ...ELEMENT_LIST().flatMap((entry) => words(entry.node.className ?? '')), ...own.map((rule) => rule.name)])
   const taken = edit.sheet.utilities().map((rule) => rule.name)
   const open = (to: string) => navigate(to)
-  // A style reached by another group's address (a block's Edit Style knows the name, not the group): the address its group gives it.
+  // A class reached by another group's address (a block's Edit Class knows the name, not the group): the address its group gives it.
   const misplaced = !!group && !!key && !['elements', 'forms', 'articles'].includes(group) && own.some((rule) => rule.name === key) && groupOf(edit.sheet, key) !== group
   useEffect(() => {
     if (misplaced) navigate(stylePath(groupOf(edit.sheet, key), key), { replace: true })
@@ -442,7 +429,7 @@ export function Styles({ edit, samples, path }: { edit: Editing; samples: Sample
   /** A new button, or a new style in a group (null: in none; `choose`: the one asked for): it opens at once, on its first look. */
   const create = async (into: string | null, choose = false) => {
     const button = into === 'buttons'
-    const asked = await askName(engine, taken, button ? t('New Button') : t('New Style'), button ? t('Create Button') : t('Create Style'), button ? 'btn-' : '', '', choose ? groups.map((each) => each.name) : undefined)
+    const asked = await askName(engine, taken, button ? t('New Button') : t('New Class'), button ? t('Create Button') : t('Create Class'), button ? 'btn-' : '', '', choose ? groups.map((each) => each.name) : undefined)
     if (!asked) return
     const { name } = asked
     const group = choose ? asked.group : groups.find((each) => each.id === into)?.name ?? null
@@ -453,18 +440,18 @@ export function Styles({ edit, samples, path }: { edit: Editing; samples: Sample
     open(stylePath(button ? 'buttons' : UNGROUPED, name))
   }
   const rename = async (from: string) => {
-    const name = (await askName(engine, taken, t('Rename “{name}”', { name: styleLabel(from) }), t('Rename'), isButton(from) ? 'btn-' : '', from))?.name
+    const name = (await askName(engine, taken, t('Rename “{name}”', { name: from }), t('Rename'), isButton(from) ? 'btn-' : '', from))?.name
     if (!name) return
     edit.change((s) => renameStyle(s, from, name))
     if (key === from) navigate(stylePath(group, name), { replace: true })
   }
   const duplicate = async (from: string) => {
-    const name = (await askName(engine, taken, t('Duplicate “{name}”', { name: styleLabel(from) }), isButton(from) ? t('Duplicate Button') : t('Duplicate Style'), isButton(from) ? 'btn-' : ''))?.name
+    const name = (await askName(engine, taken, t('Duplicate “{name}”', { name: from }), isButton(from) ? t('Duplicate Button') : t('Duplicate Class'), isButton(from) ? 'btn-' : ''))?.name
     if (name) edit.change((s) => s.duplicateUtility(from, name))
   }
   const move = async (name: string) => {
     const current = own.find((rule) => rule.name === name)?.group ?? ''
-    const next = await askGroup(edit.sheet, t('Move “{name}” to a Group', { name: styleLabel(name) }), t('Move Style'), current)
+    const next = await askGroup(edit.sheet, t('Move “{name}” to a Group', { name }), t('Move Class'), current)
     if (next === undefined || (next ?? '') === current) return
     edit.change((s) => s.setUtilityGroup(name, next))
   }
@@ -493,9 +480,9 @@ export function Styles({ edit, samples, path }: { edit: Editing; samples: Sample
   // One style open, in place of its group.
   if (group && key) {
     const element = group === 'elements' ? ELEMENT_LIST().find((entry) => entry.id === key) : undefined
-    if (element) return <StyleEditor key={key} edit={edit} samples={samples} selector={element.selector} node={sampleOf(element)} classes={classesOf(element.selector)} groups={element.groups ?? TEXT_GROUPS} menu={elementMenu(element.selector)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes))} />
+    if (element) return <StyleEditor key={key} edit={edit} samples={samples} node={sampleOf(element)} classes={classesOf(element.selector)} groups={element.groups ?? TEXT_GROUPS} menu={elementMenu(element.selector)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes))} />
     const article = group === 'articles' ? ARTICLES().find((entry) => entry.id === key) : undefined
-    if (article) return <StyleEditor key={key} edit={edit} samples={samples} selector={article.selector} node={article.node} classes={classesOf(article.selector)} groups={article.groups ?? TEXT_GROUPS} menu={elementMenu(article.selector, 'components')} write={(classes) => edit.change((s) => s.setElement(article.selector, classes, 'components'))} />
+    if (article) return <StyleEditor key={key} edit={edit} samples={samples} node={article.node} classes={classesOf(article.selector)} groups={article.groups ?? TEXT_GROUPS} menu={elementMenu(article.selector, 'components')} write={(classes) => edit.change((s) => s.setElement(article.selector, classes, 'components'))} />
     const properties = group === 'forms' ? FORM().find((part) => part.key === key) : group === 'articles' && key === 'spacing' ? SPACING() : undefined
     if (properties) return <PropertiesEditor key={key} edit={edit} samples={samples} part={properties} />
     const rule = own.find((entry) => entry.name === key)
@@ -505,7 +492,6 @@ export function Styles({ edit, samples, path }: { edit: Editing; samples: Sample
           key={key}
           edit={edit}
           samples={samples}
-          name={rule.name}
           node={styleSample(rule.name)}
           classes={rule.classes}
           menu={styleMenu(rule.name)}
@@ -517,33 +503,49 @@ export function Styles({ edit, samples, path }: { edit: Editing; samples: Sample
     return null
   }
 
-  // Every row of a group the same: its name, then a sample of one height, scaled down to it when the look is larger.
-  const row = (to: string, label: string, node: SampleNode, menu: MenuItemDef[], unsaved: boolean) => (
-    <OpenRow key={to} onOpen={() => open(to)} label={label} changed={unsaved} menu={menu} sample={<Specimen sheet={sheet} node={node} page={page} mode={edit.mode} className="h-12 min-w-0 flex-1 rounded-sm shadow-edge" />} />
-  )
-  const styleRows = (rules: typeof own, at: string) => rules.map((rule) => row(stylePath(at, rule.name), styleLabel(rule.name), isButton(rule.name) ? styleSample(rule.name) : { ...styleSample(rule.name), className: `${rule.name} inline-block` }, styleMenu(rule.name), utilityChanged(edit, rule.name)))
+  // A class is its name: what it looks like is shown where it is edited.
+  type Item = { to: string; label: string; group: string; menu: MenuItemDef[]; changed: boolean }
+  const item = (at: string, key: string, label: string, menu: MenuItemDef[], unsaved: boolean): Item => ({ to: stylePath(at, key), label, group: groupLabel(edit.sheet, at) ?? '', menu, changed: unsaved })
+  const classItem = (rule: (typeof own)[number], at: string) => item(at, rule.name, rule.name, styleMenu(rule.name), utilityChanged(edit, rule.name))
+  const ungrouped = own.filter((rule) => !isButton(rule.name) && groupOf(edit.sheet, rule.name) === UNGROUPED)
+  const itemsOf = (at: string): Item[] => {
+    if (at === 'elements') return ELEMENT_LIST().map((entry) => item('elements', entry.id, entry.label, elementMenu(entry.selector), elementChanged(edit, entry.selector)))
+    if (at === 'buttons') return own.filter((rule) => isButton(rule.name)).map((rule) => classItem(rule, 'buttons'))
+    if (at === 'forms') return FORM().map((part) => item('forms', part.key, part.label, revertProperties(edit, part), propertiesChanged(edit, part)))
+    if (at === 'articles') return [item('articles', 'spacing', SPACING().label, revertProperties(edit, SPACING()), propertiesChanged(edit, SPACING())), ...ARTICLES().map((entry) => item('articles', entry.id, entry.label, elementMenu(entry.selector, 'components'), elementChanged(edit, entry.selector, 'components')))]
+    if (at === UNGROUPED) return ungrouped.map((rule) => classItem(rule, UNGROUPED))
+    const mine = groups.find((each) => each.id === at)
+    return mine ? own.filter((rule) => rule.group === mine.name && !isButton(rule.name)).map((rule) => classItem(rule, at)) : []
+  }
+  const ids = [...BUILT_IN, ...groups.map((each) => each.id), ...(ungrouped.length ? [UNGROUPED] : [])]
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const found = (entry: Item) => terms.every((word) => `${entry.label} ${entry.to.split('/').pop()}`.toLowerCase().includes(word))
+  const rows = (items: Item[], detail?: (entry: Item) => string) => items.map((entry) => <OpenRow key={entry.to} onOpen={() => open(entry.to)} label={entry.label} changed={entry.changed} menu={entry.menu} detail={detail?.(entry)} />)
   const add = (into: string | null, choose = false) => (edit.readOnly ? undefined : () => void create(into, choose))
+  const searchField = (placeholder: string) => (
+    <div className="mb-4">
+      <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder }]} values={{ search }} onChange={(_, next) => setSearch(String(next ?? ''))} />
+    </div>
+  )
+  const matches = (items: Item[], detail?: (entry: Item) => string) => {
+    const shown = items.filter(found)
+    return shown.length ? <Group>{rows(shown, detail)}</Group> : <NoMatches onClear={() => setSearch('')} />
+  }
 
-  if (group === 'elements') return <Group>{ELEMENT_LIST().map((entry) => row(stylePath('elements', entry.id), entry.label, sampleOf(entry), elementMenu(entry.selector), elementChanged(edit, entry.selector)))}</Group>
-  if (group === 'buttons') return <Group onAdd={add('buttons')} addLabel={t('New Button')}>{styleRows(own.filter((rule) => isButton(rule.name)), 'buttons')}</Group>
-  if (group === 'forms') return <Group>{FORM().map((part) => row(stylePath('forms', part.key), part.label, part.sample, revertProperties(edit, part), propertiesChanged(edit, part)))}</Group>
-  if (group === 'articles') {
+  // A group: its classes, found by name.
+  if (group) {
+    const items = itemsOf(group)
+    const adds = group === 'buttons' ? add('buttons') : group === UNGROUPED || groups.some((each) => each.id === group) ? add(group === UNGROUPED ? null : group) : undefined
     return (
-      <Group>
-        {row(stylePath('articles', 'spacing'), SPACING().label, SPACING().sample, revertProperties(edit, SPACING()), propertiesChanged(edit, SPACING()))}
-        {ARTICLES().map((entry) => row(stylePath('articles', entry.id), entry.label, entry.node, elementMenu(entry.selector, 'components'), elementChanged(edit, entry.selector, 'components')))}
-      </Group>
+      <>
+        {items.length > 7 && searchField(t('Search {items}', { items: groupLabel(edit.sheet, group) ?? t('Classes') }))}
+        {terms.length ? matches(items) : <Group onAdd={adds} addLabel={group === 'buttons' ? t('New Button') : t('New Class')}>{rows(items)}</Group>}
+      </>
     )
   }
-  const mine = groups.find((each) => each.id === group)
-  if (mine || group === UNGROUPED) {
-    const rules = own.filter((rule) => !isButton(rule.name) && groupOf(edit.sheet, rule.name) === group)
-    return <Group onAdd={add(mine ? mine.id : null)} addLabel={t('New Style')}>{styleRows(rules, group)}</Group>
-  }
 
-  // Every group: those the site was given, its own, then the styles in none.
-  const ungrouped = own.filter((rule) => !isButton(rule.name) && groupOf(edit.sheet, rule.name) === UNGROUPED)
-  const changedIn = (rules: typeof own) => rules.some((rule) => utilityChanged(edit, rule.name))
+  // Every group: those the site was given, its own, then the classes in none. A search finds a class in any of them.
+  const changedIn = (items: Item[]) => items.some((entry) => entry.changed)
   const groupMenu = (name: string): MenuItemDef[] => rowMenu(edit, {
     own: [
       {
@@ -552,21 +554,22 @@ export function Styles({ edit, samples, path }: { edit: Editing; samples: Sample
           if (next) edit.change((s) => s.renameGroup(name, next))
         },
       },
-      // Its styles stay, in no group.
+      // Its classes stay, in no group.
       { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => edit.change((s) => s.renameGroup(name, null)) },
     ],
   })
   return (
-    <Group onAdd={add(null, true)} addLabel={t('New Style')}>
-      <OpenRow onOpen={() => open(stylePath('elements'))} label={t('Elements')} locked detail={ELEMENT_LIST().length} changed={ELEMENT_LIST().some((entry) => elementChanged(edit, entry.selector))} />
-      <OpenRow onOpen={() => open(stylePath('buttons'))} label={t('Buttons')} locked detail={own.filter((rule) => isButton(rule.name)).length} changed={changedIn(own.filter((rule) => isButton(rule.name)))} />
-      <OpenRow onOpen={() => open(stylePath('forms'))} label={t('Forms')} locked detail={FORM().length} changed={FORM().some((part) => propertiesChanged(edit, part))} />
-      <OpenRow onOpen={() => open(stylePath('articles'))} label={t('Articles')} locked detail={ARTICLES().length + 1} changed={propertiesChanged(edit, SPACING()) || ARTICLES().some((entry) => elementChanged(edit, entry.selector, 'components'))} />
-      {groups.map((each) => {
-        const rules = own.filter((rule) => rule.group === each.name && !isButton(rule.name))
-        return <OpenRow key={each.id} onOpen={() => open(stylePath(each.id))} label={each.name} detail={rules.length} changed={changedIn(rules)} menu={groupMenu(each.name)} />
-      })}
-      {ungrouped.length > 0 && <OpenRow onOpen={() => open(stylePath(UNGROUPED))} label={t('Ungrouped')} detail={ungrouped.length} changed={changedIn(ungrouped)} />}
-    </Group>
+    <>
+      {searchField(t('Search Classes'))}
+      {terms.length ? matches(ids.flatMap(itemsOf), (entry) => entry.group) : (
+        <Group onAdd={add(null, true)} addLabel={t('New Class')}>
+          {ids.map((id) => {
+            const items = itemsOf(id)
+            const mine = groups.find((each) => each.id === id)
+            return <OpenRow key={id} onOpen={() => open(stylePath(id))} label={groupLabel(edit.sheet, id) ?? id} locked={!mine && id !== UNGROUPED} detail={items.length} changed={changedIn(items)} menu={mine ? groupMenu(mine.name) : []} />
+          })}
+        </Group>
+      )}
+    </>
   )
 }

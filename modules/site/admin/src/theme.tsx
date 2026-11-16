@@ -3,7 +3,7 @@ import { Icon, NEW_COLOR, Popover, Pressable, Tooltip, cn, prompt, toast, type M
 import { ColorPicker, SCHEME, SPACING_STEPS, SchemeTile, Swatch, lightDark, parseClass, schemesOf, useStyling, withVariants, type Engine, type Scheme, type Stylesheet } from '@letterncms/blocks'
 import { useState, type ReactNode } from 'react'
 import { AnimationSample, ShadowSample, familyOf, fallbackOf, fontStack, stackFor, type Fallback, type SiteFont } from './fields'
-import { Changed, Control, Group, NoAction, ROW, RowMenu, Setting, TokenRow, changed, revert, rowMenu, type Editing } from './parts'
+import { Changed, Control, Group, NoAction, RowMenu, Setting, TokenRow, changed, revert, rowMenu, type Editing } from './parts'
 
 /* The theme sections of the design: every value of the theme, Tailwind's own and the site's, kind by kind.
    The site is the baseline: a change is marked until it is saved, and Revert takes it back to what the site has.
@@ -426,29 +426,20 @@ function ControlSizes({ edit }: { edit: Editing }) {
   const sizes: [string, string][] = [['sm', t('Small')], ['md', t('Medium')], ['lg', t('Large')]]
   const parts: [string, string][] = [['height', t('Height')], ['padding', t('Padding')], ['text', t('Text')]]
   const value = (name: string) => edit.sheet.variable(name) ?? edit.defaults.get(name) ?? null
-  const cell = 'w-24 shrink-0 max-sm:min-w-0 max-sm:flex-1'
+  // Each size by name, then its height, padding and text as rows of their own, so every value shows whole.
   return (
     <Group title={t('Buttons and Fields')}>
-      <div className="flex min-h-8 items-center gap-2 px-3 text-2xs text-faint">
-        <span className="min-w-0 flex-1" />
-        {parts.map(([part, label]) => <span key={part} className={cell}>{label}</span>)}
-        <span className="size-6 shrink-0" />
-      </div>
-      {sizes.map(([size, label]) => {
-        const names = parts.map(([part]) => `--control-${size}-${part}`)
-        const unsaved = changed(edit, ...names)
-        return (
-          <div key={size} className={cn(ROW, 'flex min-h-10 items-center gap-2 py-1.5')}>
-            <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-text max-sm:w-16 max-sm:flex-none"><span className="truncate">{label}</span><Changed on={unsaved} /></span>
-            {parts.map(([part, partLabel], i) => (
-              <div key={part} className={cell}>
-                <Control handle={names[i]} label={`${label} ${partLabel}`} value={value(names[i])} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px'], step: 0.125, min: 0 })} onChange={(next) => next !== null && edit.change((sheet) => sheet.setVariable(names[i], next))} />
-              </div>
-            ))}
-            <RowMenu items={rowMenu(edit, { revert: unsaved ? () => revert(edit, ...names) : null })} />
-          </div>
-        )
-      })}
+      {sizes.flatMap(([size, label]) => [
+        <div key={size} className="flex h-9 items-end pb-1.5 text-xs font-medium text-muted">{label}</div>,
+        ...parts.map(([part, partLabel]) => {
+          const name = `--control-${size}-${part}`
+          return (
+            <Setting key={name} label={partLabel} changed={changed(edit, name)} menu={rowMenu(edit, { copy: name, revert: changed(edit, name) ? () => revert(edit, name) : null })}>
+              <Control handle={name} label={`${label} ${partLabel}`} value={value(name)} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px'], step: 0.125, min: 0 })} onChange={(next) => next !== null && edit.change((sheet) => sheet.setVariable(name, next))} />
+            </Setting>
+          )
+        }),
+      ])}
     </Group>
   )
 }
@@ -468,7 +459,7 @@ function SpacingScale({ step }: { step: string }) {
       {SPACING_STEPS.filter((n) => n > 0).map((n) => {
         const px = +(base * n).toFixed(2)
         return (
-          <span key={n} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${n} · ${px}px`}>
+          <span key={n} className="flex min-w-0 flex-1 flex-col items-center gap-1">
             <span className="w-full rounded-xs bg-active" style={{ height: Math.max(2, Math.min(px, 128) / 2) }} />
             <span className="text-2xs tabular-nums text-faint">{px}</span>
           </span>

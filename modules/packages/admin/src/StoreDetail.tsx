@@ -29,7 +29,7 @@ const atLeast = (constraint: string) => {
 const PLUGINS = '/plugins'
 
 /**
- * A listing's pictures, changelog and details, with crumbs back to its catalog.
+ * A listing's pictures, changelog and details, with the way back to its catalog.
  */
 export default function StoreItem({ params }: { params: Record<string, string> }) {
   const { path } = useLocation()
@@ -38,17 +38,16 @@ export default function StoreItem({ params }: { params: Record<string, string> }
   const catalog = useAbility<{ items: Item[] }>('packages/catalog')
   const local = useAbility<{ items: Installed[] }>('packages/list', { type: 'plugin' }, { enabled: !sites })
   const item = catalog.data?.items.find((i) => i.package === name && (i.type === 'site') === sites)
-  const crumbs = sites
-    ? [{ label: t('Sites'), to: '/sites', icon: 'box' }, { label: t('Browse Store'), to: '/sites/store' }]
-    : [{ label: t('Plugins'), to: PLUGINS, icon: 'plugin' }]
+  // A page under its catalog: its name, with the way back there.
+  const back = sites ? { to: '/sites/store', label: t('Browse Store') } : { to: PLUGINS, label: t('Plugins') }
   if (!item) {
     return (
-      <Page crumbs={[...crumbs, { label: catalog.isLoading ? name : t('Not Found') }]}>
+      <Page back={back} title={catalog.isLoading ? name : t('Not Found')}>
         {catalog.isLoading ? <Skeleton className="h-14 w-72" /> : <NotFoundState icon={sites ? 'box' : 'plugin'} action={<Button onClick={() => navigate(sites ? '/sites/store' : PLUGINS)}>{t('Back to {label}', { label: sites ? t('Browse Store') : t('Plugins') })}</Button>} />}
       </Page>
     )
   }
-  return <Page width="wide" crumbs={[...crumbs, { label: item.title }]}><ItemPage key={item.package} item={item} plugin={local.data?.items.find((p) => p.name === item.package)} refetch={() => { void catalog.refetch(); if (!sites) void local.refetch() }} /></Page>
+  return <Page width="wide" back={back} title={item.title}><ItemPage key={item.package} item={item} plugin={local.data?.items.find((p) => p.name === item.package)} refetch={() => { void catalog.refetch(); if (!sites) void local.refetch() }} /></Page>
 }
 
 function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; refetch: () => void }) {
@@ -103,7 +102,8 @@ function ItemPage({ item, plugin, refetch }: { item: Item; plugin?: Installed; r
                 return plugin.locked && plugin.keptOn ? <Tooltip content={plugin.keptOn}>{toggle}</Tooltip> : toggle
               })()}
               {item.action === 'update' && <Action item={item} busy={busy} locked={locked} onInstall={() => void install()} size="md" />}
-              <Button size="md" icon="trash" variant="ghost" disabled={locked || plugin.dependents.length > 0} title={plugin.dependents.length ? plugin.keptOn ?? undefined : undefined} onClick={() => void uninstallPlugin(plugin).then((gone) => gone && refetch())}>{t('Uninstall')}</Button>
+              {/* A button that is off takes no pointer: the tooltip saying why sits on a wrapper. */}
+              <Tooltip content={plugin.dependents.length ? plugin.keptOn : undefined}><span className="inline-flex"><Button size="md" icon="trash" variant="ghost" disabled={locked || plugin.dependents.length > 0} onClick={() => void uninstallPlugin(plugin).then((gone) => gone && refetch())}>{t('Uninstall')}</Button></span></Tooltip>
             </> : <Action item={item} busy={busy} locked={locked} onInstall={() => void install()} size="md" />}
           </div>
         </header>

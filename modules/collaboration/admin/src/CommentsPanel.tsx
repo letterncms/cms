@@ -1,5 +1,5 @@
 import { can, invalidate, locale, run, t, timeAgo, useAbility, type Entry, type PersonSummary } from '@letterncms/sdk'
-import { Avatar, Button, EmptyState, Fields, Icon, IconButton, Menu, Spinner, confirm, toast, cn } from '@letterncms/ui'
+import { Avatar, Button, EmptyState, Fields, Icon, IconButton, Menu, Spinner, confirm, toast, cn, Tooltip } from '@letterncms/ui'
 import { Fragment, useState, type ReactNode } from 'react'
 
 export interface CommentData {
@@ -121,9 +121,11 @@ function CommentView({ comment, onChange, actions }: { comment: CommentData; onC
       <div className="flex items-center gap-2">
         {comment.author && <Avatar name={comment.author.name} initials={comment.author.initials} src={comment.author.avatar} size={20} />}
         <span className="min-w-0 truncate text-xs font-medium text-text">{comment.author?.name ?? t('Deleted user')}</span>
-        <time className="shrink-0 text-xs text-faint" dateTime={comment.createdAt} title={new Date(comment.createdAt).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })}>
-          {comment.editedAt ? t('{time} · edited', { time: timeAgo(comment.createdAt) }) : timeAgo(comment.createdAt)}
-        </time>
+        <Tooltip content={new Date(comment.createdAt).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })}>
+          <time className="shrink-0 text-xs text-faint" dateTime={comment.createdAt}>
+            {comment.editedAt ? t('{time} · edited', { time: timeAgo(comment.createdAt) }) : timeAgo(comment.createdAt)}
+          </time>
+        </Tooltip>
         <div className="cms-reveal ml-auto flex items-center">
           {actions}
           {(comment.mine || moderator) && (

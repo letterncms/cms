@@ -197,7 +197,7 @@ function ToggleLabel({ field }: { field: FieldProps['field'] }) {
       </Tooltip>
     )
   }
-  if (status === 'inherited') return <div className={cn(className, 'flex items-center gap-1')} title={t('Inherited from a larger screen, another state or the component')}>{field.label}<span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden /></div>
+  if (status === 'inherited') return <Tooltip content={t('Inherited from a larger screen, another state or the component')}><div className={cn(className, 'flex items-center gap-1')}>{field.label}<span className="size-1 shrink-0 rounded-full bg-warning" aria-hidden /></div></Tooltip>
   return <div className={className}>{field.label}</div>
 }
 

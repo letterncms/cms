@@ -19,7 +19,6 @@ export interface SidebarRowProps {
   to?: string
   onClick?: () => void
   active?: boolean
-  title?: string
   /** A count. */
   badge?: ReactNode
   shortcut?: string | null
@@ -38,7 +37,7 @@ export interface SidebarRowProps {
  * (or long-press) after Open in New Tab. Navigation and actions are siblings so
  * buttons never live inside a link.
  */
-export function SidebarRow({ label, icon, to, onClick, active, title, badge, shortcut, opens, status, actions = [], sortable }: SidebarRowProps) {
+export function SidebarRow({ label, icon, to, onClick, active, badge, shortcut, opens, status, actions = [], sortable }: SidebarRowProps) {
   const own = actions.filter((a): a is SidebarRowAction => !!a)
   const quick = own.filter((a) => a.quick && a.icon)
   const menu: (MenuItemDef | false)[] = [
@@ -51,7 +50,6 @@ export function SidebarRow({ label, icon, to, onClick, active, title, badge, sho
     className: 'cms-sidebar-row-main',
     onClick,
     draggable: sortable ? false : undefined,
-    title: title ?? label,
     'aria-label': label,
     'aria-current': active ? 'page' as const : undefined,
     children: <>

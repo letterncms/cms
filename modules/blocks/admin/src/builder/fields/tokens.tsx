@@ -1,5 +1,5 @@
 import { t } from '@letterncms/sdk'
-import { Icon, Popover, cn, Pressable } from '@letterncms/ui'
+import { Icon, Popover, cn, Pressable, Tooltip } from '@letterncms/ui'
 import { useState, type ReactElement } from 'react'
 import type { ThemeToken, TokenGroup } from '../../../../tailwind/engine'
 import { useStyling, useThemeTokens } from '../../core/styling'
@@ -27,10 +27,12 @@ export function useTypedToken(group?: string) {
 /** The chip a theme value shows as: the token's name, as its class ends ("primary", "lg"), and an opacity. */
 export function TokenChip({ token, alpha, className }: { token: ThemeToken; alpha?: string; className?: string }) {
   return (
-    <span className={cn('inline-flex min-w-0 items-center gap-1 truncate rounded-xs bg-active px-1.5 leading-5 text-ink', className)} title={`${token.variable} · ${token.value}`}>
-      <span className="truncate">{token.name}</span>
-      {alpha && <span className="text-muted">/{alpha}</span>}
-    </span>
+    <Tooltip content={`${token.variable} · ${token.value}`}>
+      <span className={cn('inline-flex min-w-0 items-center gap-1 truncate rounded-xs bg-active px-1.5 leading-5 text-ink', className)}>
+        <span className="truncate">{token.name}</span>
+        {alpha && <span className="text-muted">/{alpha}</span>}
+      </span>
+    </Tooltip>
   )
 }
 
@@ -41,7 +43,7 @@ export function SpacingChips({ value, onPick, auto }: { value?: string | null; o
   const { engine } = useStyling()
   const choices = spacingChoices(engine, useThemeTokens().of('spacing'))
   const same = (a: string) => a === value || (a === '0px' && value === '0')
-  const pick = (choice: { value: string; label: string; title: string }) => <Pressable compact key={choice.value} title={choice.title} onClick={() => onPick(choice.value)} className={chip(same(choice.value))}>{choice.label}</Pressable>
+  const pick = (choice: { value: string; label: string; title: string }) => <Tooltip key={choice.value} content={choice.title}><Pressable compact onClick={() => onPick(choice.value)} className={chip(same(choice.value))}>{choice.label}</Pressable></Tooltip>
   return (
     <div className="space-y-2">
       {choices.scale.length > 0 && (
@@ -119,12 +121,13 @@ export function TokenButton({ group, value, onPick, active, className, trigger }
       className="w-60 !p-1"
       trigger={
         trigger ?? (
+          <Tooltip content={t('Theme Values')}>
           <Pressable compact className={cn('size-5 shrink-0 place-items-center rounded-xs text-faint hover:bg-hover hover:text-ink', active || open ? 'grid text-ink' : 'hidden group-hover/value:grid group-focus-within/value:grid [@media(hover:none)]:grid', className)}
             aria-label={t('Theme Values')}
-            title={t('Theme Values')}
           >
             <Icon name="symbol" size={10} />
           </Pressable>
+          </Tooltip>
         )
       }
     >

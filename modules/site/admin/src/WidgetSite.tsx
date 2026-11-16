@@ -1,5 +1,5 @@
 import { can, plural, run, t, timeAgo, useAbility, useManifest } from '@letterncms/sdk'
-import { Button, Icon, Meter, Skeleton, Stat, Widget, compactNumber, cn, toast } from '@letterncms/ui'
+import { Button, Icon, Meter, Skeleton, Stat, Widget, compactNumber, cn, toast, Tooltip } from '@letterncms/ui'
 import { useEffect, useRef, useState } from 'react'
 
 interface Status {
@@ -102,7 +102,7 @@ export default function WidgetSite() {
                 {plural(s.errors.length, '{count} page failed', '{count} pages failed')}
               </p>
               {s.errors.slice(0, 2).map((e) => (
-                <p key={e} title={e} className="m-0 truncate font-mono text-2xs text-muted">{e.replace(/^uri:/, '').replace(/#[\w-]+:/, ':')}</p>
+                <Tooltip key={e} content={e}><p className="m-0 truncate font-mono text-2xs text-muted">{e.replace(/^uri:/, '').replace(/#[\w-]+:/, ':')}</p></Tooltip>
               ))}
             </div>
           )}

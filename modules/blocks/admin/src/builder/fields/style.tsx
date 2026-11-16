@@ -1,5 +1,5 @@
 import { t, type FieldProps } from '@letterncms/sdk'
-import { Icon, cn, Pressable } from '@letterncms/ui'
+import { Icon, cn, Pressable, Tooltip } from '@letterncms/ui'
 import { useColorPreview } from '../color'
 import { RemoveButton, PanelFields } from '../controls'
 import { splitList, splitValue } from '../css'
@@ -119,9 +119,11 @@ export function AlignField({ field, value, onChange, context }: FieldProps<{ jus
             const cross = MAIN[row ? y : x]
             const on = (justify ?? 'flex-start') === main && (align ?? 'stretch').replace('stretch', 'flex-start') === cross
             return (
-              <Pressable compact key={`${x}${y}`} onClick={() => onChange({ justifyContent: main, alignItems: cross })} className="grid place-items-center rounded-xs hover:bg-hover" title={`${main.replace('flex-', '')} · ${cross.replace('flex-', '')}`}>
-                <span className={cn('rounded-full', on ? 'size-2 bg-ink' : 'size-1 bg-faint')} />
-              </Pressable>
+              <Tooltip key={`${x}${y}`} content={`${main.replace('flex-', '')} · ${cross.replace('flex-', '')}`}>
+                <Pressable compact onClick={() => onChange({ justifyContent: main, alignItems: cross })} className="grid place-items-center rounded-xs hover:bg-hover" aria-label={`${main.replace('flex-', '')} · ${cross.replace('flex-', '')}`}>
+                  <span className={cn('rounded-full', on ? 'size-2 bg-ink' : 'size-1 bg-faint')} />
+                </Pressable>
+              </Tooltip>
             )
           }),
         )}
@@ -184,9 +186,11 @@ export function OriginField({ field, value, onChange, context, disabled }: Field
         {SPOTS.flat().map((spot) => {
           const on = current === spotKey(spot)
           return (
-            <Pressable compact key={spot} role="radio" aria-checked={on} disabled={disabled} onClick={() => onChange(spot === 'center' && !field.required ? null : spot)} className="grid place-items-center rounded-xs hover:bg-hover" title={spot}>
-              <span className={cn('rounded-full', on ? 'size-2 bg-ink' : 'size-1 bg-faint')} />
-            </Pressable>
+            <Tooltip key={spot} content={spot}>
+              <Pressable compact role="radio" aria-checked={on} aria-label={spot} disabled={disabled} onClick={() => onChange(spot === 'center' && !field.required ? null : spot)} className="grid place-items-center rounded-xs hover:bg-hover">
+                <span className={cn('rounded-full', on ? 'size-2 bg-ink' : 'size-1 bg-faint')} />
+              </Pressable>
+            </Tooltip>
           )
         })}
       </div>
