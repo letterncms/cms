@@ -129,8 +129,18 @@ final class InteractiveBlocksTest extends TestCase
         $this->assertSame(['A', 'C', 'L'], $m[1]);
         $this->assertSame(3, substr_count($html, '<div data-cms-fg style="display:contents">'), 'each letter is a group the runtime can hide');
         $this->assertStringContainsString('value="fruit"><span>Fruit</span> <span class="cms-filter__count cms-chip__count">2</span>', $html, 'the choices count the items, not the letters');
-        $this->assertStringContainsString('<li data-cms-fi data-cms-f-category="dessert" data-cms-f-tags="sweet french" data-cms-q="creme brulee" style="display:contents">', $html, 'each item inside a letter carries what the filter compares');
+        $this->assertStringContainsString('<li data-cms-fi data-cms-f-category="dessert" data-cms-f-tags="sweet french" data-cms-q="creme brulee" class="cms-paragraph">Crème Brûlée</li>', $html, 'each item inside a letter carries what the filter compares');
         $this->assertSame(3, substr_count($html, 'data-cms-fi '), 'the letters themselves are not items');
+    }
+
+    public function test_an_item_that_is_a_list_item_carries_the_marks_itself(): void
+    {
+        $filter = $this->catalog();
+        $filter['children'][3]['children'] = [['type' => 'box', 'props' => ['tag' => 'li'], 'class' => 'card', 'children' => [['type' => 'paragraph', 'bind' => ['text' => 'item.title']]]]];
+        $html = $this->render([$filter]);
+
+        $this->assertStringContainsString('<li data-cms-fi data-cms-f-category="dessert" data-cms-f-tags="sweet french" data-cms-q="creme brulee" class="cms-box card">', $html);
+        $this->assertStringNotContainsString('display:contents"><li', $html, 'no list item inside another');
     }
 
     public function test_a_sort_offers_its_orders_and_each_item_carries_what_it_compares(): void
