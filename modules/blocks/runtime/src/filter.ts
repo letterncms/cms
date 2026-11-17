@@ -1,10 +1,12 @@
 // Filters the items of a Repeat inside a List Filter: all terms for search, one value per Choice, and
-// reorders them by a Sort. Without this script the controls are hidden and every item is there in its
-// own order. ?category=seo&q=image&sort=name links to a result.
+// reorders them by a Sort. A list grouped A to Z hides the letters none of whose items is left, and sorts
+// within each letter. Without this script the controls are hidden and every item is there in its own
+// order. ?category=seo&q=image&sort=name links to a result.
 const fold = (text: string) => text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
 
 function setup(root: HTMLElement) {
   const items = [...root.querySelectorAll<HTMLElement>('[data-cms-fi]')]
+  const groups = [...root.querySelectorAll<HTMLElement>('[data-cms-fg]')]
   const empty = root.querySelector<HTMLElement>('[data-cms-filter-empty]')
   const status = root.querySelector<HTMLElement>('[data-cms-filter-status]')
   const search = root.querySelector<HTMLInputElement>('[data-cms-filter-control] input[type=search]')
@@ -21,13 +23,16 @@ function setup(root: HTMLElement) {
     const { field, direction } = sort.selectedOptions[0]?.dataset ?? {}
     const sign = direction === 'desc' ? -1 : 1
     const value = (item: HTMLElement) => item.getAttribute(`data-cms-s-${field}`) ?? ''
-    const ordered = field ? [...items].sort((a, b) => sign * collator.compare(value(a), value(b))) : items
-    const parent = items[0].parentElement!
-    const after = items[items.length - 1].nextSibling
-    const end = document.createComment('')
-    parent.insertBefore(end, after)
-    for (const item of ordered) parent.insertBefore(item, end)
-    end.remove()
+    // Each run of items in one parent (one letter of a grouped list) is ordered on its own.
+    const parents = new Map<Element, HTMLElement[]>()
+    for (const item of items) parents.set(item.parentElement!, [...(parents.get(item.parentElement!) ?? []), item])
+    for (const [parent, own] of parents) {
+      const ordered = field ? [...own].sort((a, b) => sign * collator.compare(value(a), value(b))) : own
+      const end = document.createComment('')
+      parent.insertBefore(end, own[own.length - 1].nextSibling)
+      for (const item of ordered) parent.insertBefore(item, end)
+      end.remove()
+    }
   }
 
   const apply = (write: boolean) => {
@@ -42,6 +47,7 @@ function setup(root: HTMLElement) {
       item.hidden = !show
       if (show) count++
     }
+    for (const group of groups) group.hidden = !group.querySelector('[data-cms-fi]:not([hidden])')
     reorder()
     if (empty) empty.hidden = count > 0
     clearTimeout(timer)

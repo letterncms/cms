@@ -8,6 +8,7 @@
 - **The site's search index (`/search.json`) says more of each page:** its `kind` (its collection's name for one entry), its `date` for a dated collection, and the words of a field named `keywords` when its collection has one, so a page on waste collection can also be found as "bin".
 - **Upcoming and past lists.** `site.today` is the day a page is built on: a Repeat of events whose *starts* is more than `{site.today}` lists only what is still to come, and its page is built again when the day turns.
 - **A to Z lists.** The filter `initial` gives the letter a value is filed under (`item.title|initial`: capital, without accents, # for a digit). Group a Repeat by it, and the letters run from A to Z.
+- **Filter a list grouped from A to Z.** In a **List Filter**, a Repeat grouped by letter filters the items inside its letters: a letter with nothing left hides, the choices count items, not letters, and a sort orders each letter on its own.
 
 ### Changed
 
@@ -16,6 +17,7 @@
 
 ### Fixed
 
+- **A filter's counts are easier to read**: the number beside each choice had too little contrast for WCAG AA.
 - A site that names its own favicon in its settings is applied: the picture is brought before the setting is checked.
 
 ## 0.52.0 (2026-11-17)

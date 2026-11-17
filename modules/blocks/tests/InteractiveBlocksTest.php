@@ -116,6 +116,23 @@ final class InteractiveBlocksTest extends TestCase
         $this->assertTrue(app(BlockRenderer::class)->features['filter']);
     }
 
+    public function test_a_list_grouped_from_a_to_z_filters_the_items_in_its_letters(): void
+    {
+        $filter = $this->catalog(['group_by' => 'item.title|initial', 'tag' => 'div']);
+        $filter['children'][3]['children'] = [
+            ['type' => 'heading', 'props' => ['level' => '2'], 'bind' => ['text' => 'item.label']],
+            ['type' => 'repeat', 'props' => ['source' => 'list', 'path' => 'item.items', 'tag' => 'ul'], 'children' => [['type' => 'paragraph', 'props' => ['tag' => 'li'], 'bind' => ['text' => 'item.title']]]],
+        ];
+        $html = $this->render([$filter]);
+
+        preg_match_all('#<h2[^>]*>([^<]+)</h2>#', $html, $m);
+        $this->assertSame(['A', 'C', 'L'], $m[1]);
+        $this->assertSame(3, substr_count($html, '<div data-cms-fg style="display:contents">'), 'each letter is a group the runtime can hide');
+        $this->assertStringContainsString('value="fruit"><span>Fruit</span> <span class="cms-filter__count cms-chip__count">2</span>', $html, 'the choices count the items, not the letters');
+        $this->assertStringContainsString('<li data-cms-fi data-cms-f-category="dessert" data-cms-f-tags="sweet french" data-cms-q="creme brulee" style="display:contents">', $html, 'each item inside a letter carries what the filter compares');
+        $this->assertSame(3, substr_count($html, 'data-cms-fi '), 'the letters themselves are not items');
+    }
+
     public function test_a_sort_offers_its_orders_and_each_item_carries_what_it_compares(): void
     {
         $filter = $this->catalog(['sort_by' => 'item.title']);
