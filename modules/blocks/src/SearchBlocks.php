@@ -89,8 +89,9 @@ final class SearchBlocks
             .(! empty($b['icon_only']) ? ' data-icon-only aria-label="'.e($buttonLabel).'">'.Icons::svg('magnifying-glass', 'cms-button__icon') : '>'.e($buttonLabel))
             .'</button>';
 
-        return '<form '.$d['attrs'].' role="search" method="get" action="'.e(self::action($b['results_page'] ?? null)).'" data-size="'.$size.'" data-cms-search-field>'
-            .'<label class="cms-label cms-search-field__label" for="'.$id.'"'.(empty($b['show_label']) ? ' data-hidden' : '').'>'.e($label).'</label>'
+        // The landmark takes its label's name, so two searches on a page (the header's and the page's) are told apart.
+        return '<form '.$d['attrs'].' role="search" aria-labelledby="'.$id.'-label" method="get" action="'.e(self::action($b['results_page'] ?? null)).'" data-size="'.$size.'" data-cms-search-field>'
+            .'<label class="cms-label cms-search-field__label" id="'.$id.'-label" for="'.$id.'"'.(empty($b['show_label']) ? ' data-hidden' : '').'>'.e($label).'</label>'
             .'<div class="cms-search-field__row">'
             .'<input class="cms-input cms-search-field__input" type="search" id="'.$id.'" name="q" placeholder="'.e(trim((string) ($b['placeholder'] ?? ''))).'" autocomplete="off" enterkeyhint="search">'
             .$button
