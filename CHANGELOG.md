@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- **The colour picker no longer ends in an empty bar.** The bar at its foot only appears when it holds the opacity of a theme colour or **Clear**.
+
 ## 0.51.0 (2026-11-16)
 
 ### Added
