@@ -193,6 +193,7 @@ export function ColorPicker({ label, value, onChange, clearable = true }: { labe
   }
 
   const alpha = current ? themeAlpha : hsv.a
+  const opacity = !!current && tab !== 'custom'
   const solid = current ? lightDark(tokens.resolve(`var(${current})`)).light : formatColor({ ...fromHsv(hsv.h, hsv.s, hsv.v, 1) })
   const alphaBar = (
     <div onPointerDown={(e) => drag(e, 'alpha')} className="relative h-3 min-w-0 flex-1 cursor-ew-resize rounded-full cms-checkerboard [--checker:6px]">
@@ -291,19 +292,22 @@ export function ColorPicker({ label, value, onChange, clearable = true }: { labe
           </div>
         </div>
       )}
-      <div className="flex h-10 items-center gap-2 border-t border-border pl-3 pr-1.5">
-        {current && tab !== 'custom' ? (
-          <>
-            <span className="shrink-0 text-xs text-muted">{t('Opacity')}</span>
-            {alphaBar}
-            <span className="w-9 shrink-0 text-right text-2xs tabular-nums text-muted">{Math.round(alpha * 100)}%</span>
-          </>
-        ) : (
-          <span className="flex-1" />
-        )}
-        {/* A colour that must have one (a site colour's light side) has nothing to clear. */}
-        {clearable && <Button variant="ghost" size="xs" disabled={!value} onClick={() => onChange(null)} className="shrink-0 !font-normal !text-muted hover:!text-ink">{t('Clear')}</Button>}
-      </div>
+      {/* The opacity of a theme colour, and Clear: no bar when it would hold neither. */}
+      {(opacity || clearable) && (
+        <div className="flex h-10 items-center gap-2 border-t border-border pl-3 pr-1.5">
+          {opacity ? (
+            <>
+              <span className="shrink-0 text-xs text-muted">{t('Opacity')}</span>
+              {alphaBar}
+              <span className="w-9 shrink-0 text-right text-2xs tabular-nums text-muted">{Math.round(alpha * 100)}%</span>
+            </>
+          ) : (
+            <span className="flex-1" />
+          )}
+          {/* A colour that must have one (a site colour's light side) has nothing to clear. */}
+          {clearable && <Button variant="ghost" size="xs" disabled={!value} onClick={() => onChange(null)} className="shrink-0 !font-normal !text-muted hover:!text-ink">{t('Clear')}</Button>}
+        </div>
+      )}
     </div>
   )
 }
