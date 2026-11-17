@@ -62,8 +62,8 @@ final class SearchBlocksTest extends TestCase
     {
         $html = $this->field();
 
-        $this->assertMatchesRegularExpression('#^<form class="cms-search-field"[^>]* role="search" method="get" action="/search" data-size="md" data-cms-search-field>#', $html, 'a landmark, a plain GET to /search');
-        $this->assertStringContainsString('<label class="cms-label cms-search-field__label" for="cms-search-field-1" data-hidden>Search</label>', $html, 'labelled, and hidden by default');
+        $this->assertMatchesRegularExpression('#^<form class="cms-search-field"[^>]* role="search" aria-labelledby="([\w-]+)-label" method="get" action="/search" data-size="md" data-cms-search-field><label class="cms-label cms-search-field__label" id="\1-label" for="\1"#', $html, 'a landmark, a plain GET to /search');
+        $this->assertStringContainsString('<label class="cms-label cms-search-field__label" id="cms-search-field-1-label" for="cms-search-field-1" data-hidden>Search</label>', $html, 'labelled, and hidden by default');
         $this->assertStringContainsString('<input class="cms-input cms-search-field__input" type="search" id="cms-search-field-1" name="q" placeholder="" autocomplete="off" enterkeyhint="search">', $html, 'the site\'s field, sending q');
         $this->assertStringContainsString('<button type="submit" class="cms-button btn-primary cms-search-field__button">Search</button>', $html, 'the site\'s button');
         $this->assertStringEndsWith('</div></form>', $html);
@@ -75,7 +75,7 @@ final class SearchBlocksTest extends TestCase
         $html = $this->field(['label' => 'Search the council', 'show_label' => true, 'placeholder' => 'Bins, parking…', 'button_label' => 'Find', 'button_style' => 'ghost', 'size' => 'lg', 'results_page' => '/find']);
 
         $this->assertStringContainsString('action="/find" data-size="lg"', $html);
-        $this->assertStringContainsString('<label class="cms-label cms-search-field__label" for="cms-search-field-1">Search the council</label>', $html, 'shown when asked');
+        $this->assertStringContainsString('<label class="cms-label cms-search-field__label" id="cms-search-field-1-label" for="cms-search-field-1">Search the council</label>', $html, 'shown when asked');
         $this->assertStringContainsString('placeholder="Bins, parking…"', $html);
         $this->assertStringContainsString('<button type="submit" class="cms-button btn-ghost cms-search-field__button">Find</button>', $html);
 
