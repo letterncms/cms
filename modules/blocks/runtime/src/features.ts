@@ -9,6 +9,7 @@ const loaders: Record<string, () => Promise<{ start: () => void }>> = {
   ajax: () => import('./alpine'),
   code: () => import('./code'),
   search: () => import('./search'),
+  'search-results': () => import('./searchResults'),
   tabs: () => import('./tabs'),
   filter: () => import('./filter'),
   fields: () => import('./fields'),

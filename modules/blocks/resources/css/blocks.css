@@ -298,4 +298,42 @@
   .cms-search-dialog li span { display: block; margin-top: 0.15rem; font-size: var(--text-sm); color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cms-search-dialog mark { background: color-mix(in srgb, var(--color-primary) 22%, transparent); color: inherit; border-radius: 2px; }
   .cms-search-dialog p { margin: 0; padding: 1.5rem 1.25rem; color: var(--color-muted); font-size: var(--text-sm); }
+
+  /* Search Field: the label above (a field label of the site's, cms-label), its field and button in one row; the label hidden from sight only, unless shown. */
+  .cms-search-field { display: grid; gap: 0.375rem; width: 100%; max-width: 40rem; }
+  .cms-search-field__label[data-hidden] { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .cms-search-field__row { display: flex; gap: 0.5rem; align-items: stretch; }
+  .cms-search-field__input { flex: 1 1 auto; min-width: 0; }
+
+  /* Search Results: a status line that keeps its place, filters by kind, a list of results with their titles as headings. */
+  .cms-search-results { display: grid; gap: 1.25rem; align-content: start; }
+  .cms-search-results__status { min-height: 1lh; margin: 0; color: var(--color-muted); }
+  .cms-search-results__filters ul { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+  .cms-search-results__filters a { display: inline-flex; align-items: center; box-sizing: border-box; min-height: 2.25rem; padding: 0 0.875rem; font-size: var(--text-sm); color: inherit; text-decoration: none; border: 1px solid var(--color-border); border-radius: 999px; transition: border-color 150ms ease, background-color 150ms ease; }
+  .cms-search-results__filters a:hover { border-color: color-mix(in srgb, var(--color-border) 40%, currentColor); background: var(--color-surface); }
+  .cms-search-results__filters a[aria-current="true"] { border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 10%, transparent); font-weight: var(--font-weight-medium); }
+  .cms-search-results__list { display: grid; margin: 0; padding: 0; list-style: none; }
+  .cms-search-results__item { padding-block: 1.25rem; border-top: 1px solid var(--color-border); }
+  .cms-search-results__item:last-child { border-bottom: 1px solid var(--color-border); }
+  /* The title comes first for screen readers; its kind reads above it. */
+  .cms-search-results__result { display: flex; flex-direction: column; gap: 0.25rem; }
+  .cms-search-results__kind { order: -1; margin: 0; font-size: var(--text-xs); font-weight: var(--font-weight-medium); letter-spacing: 0.02em; color: var(--color-muted); }
+  .cms-search-results__title { margin: 0; font-size: var(--text-lg); line-height: 1.35; }
+  .cms-search-results__title a { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 0.2em; }
+  .cms-search-results__title a:hover { text-decoration-color: currentColor; }
+  .cms-search-results__date { font-size: var(--text-sm); color: var(--color-muted); }
+  .cms-search-results__snippet { max-width: 70ch; margin: 0.25rem 0 0; }
+  .cms-search-results mark { padding: 0 0.1em; color: inherit; background: color-mix(in srgb, var(--color-primary) 16%, transparent); border-radius: 0.2em; }
+  .cms-search-results__more { justify-self: start; }
+  .cms-search-results a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 0.2em; }
+  /* Results that come with Show More Results fade in, where motion is welcome. */
+  @media (prefers-reduced-motion: no-preference) { .cms-search-results__item { animation: cms-search-results-in 200ms ease-out both; } }
+  @media (prefers-reduced-motion: reduce) { .cms-search-results__filters a { transition: none; } }
 }
+
+/* Hidden is hidden in the results, whatever a button's look (a btn-* utility) says of its display. */
+@layer utilities {
+  .cms-search-results [hidden] { display: none; }
+}
+
+@keyframes cms-search-results-in { from { opacity: 0; } }

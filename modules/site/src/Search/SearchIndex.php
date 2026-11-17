@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Site\Search;
 
+use Cms\Content\Collections\Collection;
 use Cms\Content\Entries\Entry;
 use Cms\Extend\Hooks;
 use Cms\Cms;
@@ -11,13 +12,19 @@ use Cms\Modules\Site\Rendering\AugmentedEntry;
 
 /**
  * /search.json — every live page as a small record (title, URL, description,
- * headings, plain text) so static sites get instant client-side search.
+ * headings, plain text) so static sites get instant client-side search. A
+ * record also says what kind of page it is (its collection's name for one
+ * entry), the day it was published when its collection is dated, and the
+ * words of a `keywords` field, which find it too (the Search Results block).
  * Plugins and themes adjust records with the `site.search.record` filter
  * (return null to leave a page out).
  */
 final class SearchIndex
 {
     private const int TEXT_LIMIT = 3000;
+
+    /** A page's keywords are synonyms people search by, not a second text. */
+    private const int KEYWORDS_LIMIT = 300;
 
     public function __construct(private readonly Cms $cms, private readonly Hooks $hooks) {}
 
@@ -41,7 +48,7 @@ final class SearchIndex
             }
 
             foreach ($this->cms->entries()->query()->collection($collection->handle)->live()->get() as $entry) {
-                if ($entry->uri !== null && ($record = $this->hooks->filter('site.search.record', $this->record($entry), $entry)) !== null) {
+                if ($entry->uri !== null && ($record = $this->hooks->filter('site.search.record', $this->record($entry, $collection), $entry)) !== null) {
                     $records[] = $record;
                 }
             }
@@ -51,7 +58,7 @@ final class SearchIndex
         return array_values((array) $this->hooks->filter('site.search.records', $records));
     }
 
-    private function record(Entry $entry): array
+    private function record(Entry $entry, Collection $collection): array
     {
         $augmented = new AugmentedEntry($entry);
         $headings = [];
@@ -76,6 +83,9 @@ final class SearchIndex
             }
         }
 
+        $kind = trim($collection->singular) !== '' ? trim($collection->singular) : trim($collection->title);
+        $keywords = self::keywords($entry->data['keywords'] ?? null);
+
         return [
             'id' => $entry->id,
             'title' => $entry->title,
@@ -86,6 +96,20 @@ final class SearchIndex
             'description' => $description,
             'headings' => array_map(static fn ($h) => ['text' => $h['text'], 'id' => $h['id'], 'level' => $h['level']], $headings),
             'text' => mb_substr(trim((string) preg_replace('/\s+/', ' ', implode(' ', $text))), 0, self::TEXT_LIMIT),
+            // Only when they say something: records stay small.
+            ...($kind !== '' ? ['kind' => $kind] : []),
+            ...($collection->structure === 'dated' && $entry->publishedAt !== null ? ['date' => $entry->publishedAt->setTimezone((string) config('app.timezone', 'UTC'))->format('Y-m-d')] : []),
+            ...($keywords !== '' ? ['keywords' => $keywords] : []),
         ];
+    }
+
+    /** A `keywords` field's words as one line: a text as it is, a list joined by commas. */
+    private static function keywords(mixed $value): string
+    {
+        if (is_array($value)) {
+            $value = implode(', ', array_filter(array_map(static fn ($item) => is_scalar($item) ? trim((string) $item) : '', $value), static fn (string $item) => $item !== ''));
+        }
+
+        return is_string($value) ? mb_substr(trim((string) preg_replace('/\s+/', ' ', strip_tags($value))), 0, self::KEYWORDS_LIMIT) : '';
     }
 }

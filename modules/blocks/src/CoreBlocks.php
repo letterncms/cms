@@ -451,6 +451,8 @@ final class CoreBlocks
                 ],
                 'render' => Elements::search(...),
             ],
+            // A search field on the page and a page of results, for sites people mostly search (SearchBlocks).
+            ...SearchBlocks::all(),
 
             // ── Data ───────────────────────────────────────────────
             [
