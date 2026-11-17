@@ -175,7 +175,11 @@ final class BlockRenderer
         $out = [];
         $items = [];
 
-        foreach (array_slice($this->sources->resolve((string) ($props['source'] ?? 'list'), $props, $scope), 0, 1000) as $item) {
+        $resolved = $this->sources->resolve((string) ($props['source'] ?? 'list'), $props, $scope);
+        // Grouped (A to Z), what is filtered are the groups' items.
+        trim((string) ($props['group_by'] ?? '')) !== '' && $resolved = array_merge(...array_map(static fn ($group) => (array) ($group['items'] ?? []), $resolved ?: [[]]));
+
+        foreach (array_slice($resolved, 0, 1000) as $item) {
             $inner = $scope->with([$as => $item]);
 
             foreach (Interactive::paths($props['filter_by'] ?? '') as $path) {
@@ -211,6 +215,14 @@ final class BlockRenderer
         return array_values(array_filter(array_map(static fn ($v) => trim(Scope::text($v)), $list), static fn (string $v) => $v !== ''));
     }
 
+    /** A group of a filtered list grouped A to Z: hidden by the runtime while none of its items is shown. */
+    private function filterGroup(string $html, array $props): string
+    {
+        $tag = in_array($props['tag'] ?? 'div', ['ul', 'ol'], true) ? 'li' : 'div';
+
+        return "<{$tag} data-cms-fg style=\"display:contents\">{$html}</{$tag}>";
+    }
+
     /** A filtered Repeat's item: what the runtime compares, around the item's own markup. */
     private function filterable(string $html, array $props, Scope $scope): string
     {
@@ -230,6 +242,9 @@ final class BlockRenderer
 
         return "<{$tag} data-cms-fi{$attrs} data-cms-q=\"".e($text)."\" style=\"display:contents\">{$html}</{$tag}>";
     }
+
+    /** @var list<array> the settings of the filtered, grouped Repeats being rendered, for the Repeat over each group's items */
+    private array $groupFilters = [];
 
     /** @var array<string, true> scroll timelines of this page, which share one `timeline-scope` */
     private array $timelines = [];
@@ -538,6 +553,14 @@ final class BlockRenderer
         $sample = $items === [] && $this->editor && $children !== [];
         $sample && $items = [[], [], []];
         $count = min(count($items), $limit);
+        $filtered = ! $this->editor && (! empty($props['filter_by']) || ! empty($props['search_in']) || ! empty($props['sort_by']));
+        // A filtered list grouped (A to Z): each group stands apart, and the Repeat over its items is what the filter reads.
+        $grouped = $filtered && trim((string) ($props['group_by'] ?? '')) !== '';
+        // The Repeat over a filtered group's items takes that list's filter settings.
+        $inherited = ! $filtered && ! $this->editor && $this->groupFilters !== [] && $source === 'list' ? end($this->groupFilters) : null;
+        $groupFilters = $this->groupFilters;
+        $inherited !== null && $this->groupFilters = [];
+        $grouped && $this->groupFilters[] = $props;
 
         foreach (array_slice($items, 0, $limit) as $i => $item) {
             $ghost = $this->ghost;
@@ -557,7 +580,12 @@ final class BlockRenderer
                 ]);
                 $item = $this->withInstanceProperties([], fn () => $this->withPrototypes($this->editorDocument ?? $this->prototypeDocument, fn () => $this->withEditorDocument(null, fn () => $this->children($children, $inner))));
                 $item = $this->fill($item, $this->domIds, false);
-                $html[] = ! $this->editor && (! empty($props['filter_by']) || ! empty($props['search_in']) || ! empty($props['sort_by'])) ? $this->filterable($item, $props, $inner) : $item;
+                $html[] = match (true) {
+                    $grouped => $this->filterGroup($item, $props),
+                    $filtered => $this->filterable($item, $props, $inner),
+                    $inherited !== null => $this->filterable($item, ['tag' => $props['tag'] ?? 'div'] + $inherited, $inner),
+                    default => $item,
+                };
             } finally {
                 $this->ghost = $ghost;
                 // From outside, a block in a list is the one in its first item.
@@ -565,6 +593,8 @@ final class BlockRenderer
                 $this->iteration = $iteration;
             }
         }
+
+        $this->groupFilters = $groupFilters;
 
         return $html;
     }

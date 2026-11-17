@@ -100,7 +100,7 @@
   }
   [data-cms-editor] .cms-tabs__label { display: block; opacity: .6; font-size: .8em; }
 
-  [data-cms-fi][hidden] { display: none !important; }
+  [data-cms-fi][hidden], [data-cms-fg][hidden] { display: none !important; }
   [data-cms-filter-empty][hidden] { display: none; }
   .cms-filter__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   fieldset.cms-filter-choice { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; min-inline-size: 0; }
@@ -109,7 +109,7 @@
   /* Chips are the design's (.cms-chip); the list look is the filter's own. */
   .cms-filter__option { position: relative; cursor: pointer; }
   .cms-filter__option input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-  .cms-filter__count { opacity: .65; font-size: .85em; font-variant-numeric: tabular-nums; }
+  .cms-filter__count { opacity: .85; font-size: .85em; font-variant-numeric: tabular-nums; }
   [data-carousel-to] { opacity: .6; transition: opacity 160ms ease; }
   [data-carousel-to]:hover, [data-carousel-to][data-current] { opacity: 1; }
   fieldset.cms-filter-choice[data-look="list"] { flex-direction: column; flex-wrap: nowrap; gap: .125rem; }
