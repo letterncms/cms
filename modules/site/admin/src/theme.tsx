@@ -1,5 +1,5 @@
 import { t, type FieldDef } from '@letterncms/sdk'
-import { Icon, NEW_COLOR, Popover, Pressable, Tooltip, cn, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { Icon, NEW_COLOR, Popover, Pressable, Segmented, Tooltip, cn, prompt, toast, type MenuItemDef } from '@letterncms/ui'
 import { ColorPicker, SCHEME, SPACING_STEPS, SchemeTile, Swatch, lightDark, parseClass, schemesOf, useStyling, withVariants, type Engine, type Scheme, type Stylesheet } from '@letterncms/blocks'
 import { useState, type ReactNode } from 'react'
 import { AnimationSample, ShadowSample, familyOf, fallbackOf, fontStack, stackFor, type Fallback, type SiteFont } from './fields'
@@ -421,25 +421,23 @@ const sizeRow = (edit: Editing, field: Partial<FieldDef> = SIZE) => (row: Row, s
   </TokenRow>
 )
 
-/** The three sizes buttons and fields share, each a height, the room inside it and the size of its text. */
+/** The three sizes buttons and fields share: one at a time, its height, the room inside it and the size of its text. */
 function ControlSizes({ edit }: { edit: Editing }) {
-  const sizes: [string, string][] = [['sm', t('Small')], ['md', t('Medium')], ['lg', t('Large')]]
+  const [size, setSize] = useState<'sm' | 'md' | 'lg'>('md')
+  const sizes = [{ value: 'sm' as const, label: t('Small') }, { value: 'md' as const, label: t('Medium') }, { value: 'lg' as const, label: t('Large') }]
   const parts: [string, string][] = [['height', t('Height')], ['padding', t('Padding')], ['text', t('Text')]]
+  const label = sizes.find((each) => each.value === size)!.label
   const value = (name: string) => edit.sheet.variable(name) ?? edit.defaults.get(name) ?? null
-  // Each size by name, then its height, padding and text as rows of their own, so every value shows whole.
   return (
-    <Group title={t('Buttons and Fields')}>
-      {sizes.flatMap(([size, label]) => [
-        <div key={size} className="flex h-9 items-end pb-1.5 text-xs font-medium text-muted">{label}</div>,
-        ...parts.map(([part, partLabel]) => {
-          const name = `--control-${size}-${part}`
-          return (
-            <Setting key={name} label={partLabel} changed={changed(edit, name)} menu={rowMenu(edit, { copy: name, revert: changed(edit, name) ? () => revert(edit, name) : null })}>
-              <Control handle={name} label={`${label} ${partLabel}`} value={value(name)} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px'], step: 0.125, min: 0 })} onChange={(next) => next !== null && edit.change((sheet) => sheet.setVariable(name, next))} />
-            </Setting>
-          )
-        }),
-      ])}
+    <Group title={t('Buttons and Fields')} action={<Segmented size="xs" aria-label={t('Size')} value={size} onChange={setSize} options={sizes} />}>
+      {parts.map(([part, partLabel]) => {
+        const name = `--control-${size}-${part}`
+        return (
+          <Setting key={name} label={partLabel} changed={changed(edit, name)} menu={rowMenu(edit, { copy: name, revert: changed(edit, name) ? () => revert(edit, name) : null })}>
+            <Control handle={name} label={`${label} ${partLabel}`} value={value(name)} disabled={edit.readOnly} field={number('rem', { units: ['rem', 'px'], step: 0.125, min: 0 })} onChange={(next) => next !== null && edit.change((sheet) => sheet.setVariable(name, next))} />
+          </Setting>
+        )
+      })}
     </Group>
   )
 }

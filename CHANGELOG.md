@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **Buttons and Fields under Layout shows one size at a time.** Pick **Small**, **Medium** or **Large** beside the title, and that size's **Height**, **Padding** and **Text** sit in three rows like every other group, instead of nine rows under three headings.
+
 ### Fixed
 
 - **The colour picker no longer ends in an empty bar.** The bar at its foot only appears when it holds the opacity of a theme colour or **Clear**.
