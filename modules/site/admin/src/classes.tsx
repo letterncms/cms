@@ -1,5 +1,5 @@
 import { navigate, t, type FieldDef } from '@letterncms/sdk'
-import { Fields, IconButton, Menu, NoMatches, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { Button, EmptyState, Fields, IconButton, Menu, NoMatches, prompt, toast, type MenuItemDef } from '@letterncms/ui'
 import { ARTICLE, FIELDS, InspectorSection, PanelFields, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, shownInState, styleApi, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
 import { useEffect, useMemo, useState } from 'react'
 import { Group, OpenRow, rowMenu, type Editing } from './parts'
@@ -95,18 +95,21 @@ function renameStyle(sheet: Stylesheet, from: string, to: string): Stylesheet {
 /** A name as a class takes it, from words: "Big Quote" is big-quote. */
 const className = (name: unknown) => String(name ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '')
 
+/** Which of the site's groups a class goes in, as a list to pick from: none, or one of them. */
+const groupField = (groups: string[]): FieldDef => ({ handle: 'group', type: 'select', label: t('Group'), placeholder: t('No Group'), options: groups.map((name) => ({ value: name, label: name })) } as FieldDef)
+
 /**
  * A name for a style, asked for: a class's name from the words typed, under `prefix` (btn-), not one the stylesheet
- * or Tailwind has. With `groups` (the site's, as suggestions) it also asks which group the style goes in.
+ * or Tailwind has. With `groups` (the site's) it also asks which of them the style goes in, `group` chosen at first.
  */
-async function askName(engine: Engine | null, taken: string[], title: string, confirmLabel: string, prefix = '', current = '', groups?: string[]): Promise<{ name: string; group: string | null } | null> {
+async function askName(engine: Engine | null, taken: string[], title: string, confirmLabel: string, prefix = '', current = '', groups?: { names: string[]; group: string | null }): Promise<{ name: string; group: string | null } | null> {
   const asked = await prompt({
     title,
     fields: [
       { handle: 'name', type: 'text', label: t('Name'), placeholder: prefix ? 'outline' : 'lead', required: true, autofocus: true },
-      ...(groups ? [{ handle: 'group', type: 'text', label: t('Group'), placeholder: t('Cards'), suggestions: groups }] : []),
+      ...(groups?.names.length ? [groupField(groups.names)] : []),
     ],
-    values: { name: current ? current.slice(prefix.length) : '' },
+    values: { name: current ? current.slice(prefix.length) : '', group: groups?.group ?? null },
     confirm: confirmLabel,
   })
   const key = className(asked?.name)
@@ -122,9 +125,7 @@ async function askName(engine: Engine | null, taken: string[], title: string, co
     toast.error(t('There is already a class “{name}”.', { name }))
     return null
   }
-  const group = String(asked?.group ?? '').trim()
-  if (group && reserved(group)) return null
-  return { name, group: group || null }
+  return { name, group: groups?.names.length ? String(asked?.group ?? '') || null : groups?.group ?? null }
 }
 
 /**
@@ -336,18 +337,23 @@ const builtInLabel = (id: string) => ({ elements: t('Elements'), buttons: t('But
 const ownStyles = (sheet: Stylesheet) => sheet.utilities().filter((rule) => /^[a-z][\w-]*$/.test(rule.name) && !rule.name.startsWith('scheme-'))
 const isButton = (name: string) => name.startsWith('btn-')
 
-/** The site's groups, in the order its stylesheet first names them, each with its place in the address (never one the site was given). */
+/**
+ * The site's groups, in the order its stylesheet first names them, those with no class yet included, each with its
+ * place in the address (never one the site was given).
+ */
 function siteGroups(sheet: Stylesheet): { id: string; name: string }[] {
   const out: { id: string; name: string }[] = []
-  for (const rule of ownStyles(sheet)) {
-    if (!rule.group || isButton(rule.name) || out.some((group) => group.name === rule.group)) continue
-    const base = className(rule.group) || 'group'
+  for (const name of sheet.groups()) {
+    const base = className(name) || 'group'
     let id = base
     for (let n = 2; RESERVED.includes(id) || out.some((group) => group.id === id); n++) id = `${base}-${n}`
-    out.push({ id, name: rule.group })
+    out.push({ id, name })
   }
   return out
 }
+
+/** A group a class has left stays, with no class in it, until it is deleted. */
+const keepGroup = (sheet: Stylesheet, group: string | null | undefined) => (group && !sheet.groups().includes(group) ? sheet.addGroup(group) : sheet)
 
 /** Where a style of the site's is: its buttons, a group of its own, or none. */
 function groupOf(sheet: Stylesheet, name: string): string {
@@ -387,12 +393,16 @@ export function stylesPlace(sheet: Stylesheet, [group, key]: string[]): { label:
   return title ? [{ label: t('Classes'), to: stylePath() }, { label, to: stylePath(group) }, { label: title }] : null
 }
 
-/** A name for a group: any words, but none the site was given. */
-async function askGroup(sheet: Stylesheet, title: string, confirmLabel: string, current = ''): Promise<string | null | undefined> {
-  const asked = await prompt({ title, fields: [{ handle: 'group', type: 'text', label: t('Group'), placeholder: t('Cards'), autofocus: true, suggestions: siteGroups(sheet).map((group) => group.name) }], values: { group: current }, confirm: confirmLabel })
-  if (!asked) return undefined
-  const name = String(asked.group ?? '').trim()
-  return name && reserved(name) ? undefined : name || null
+/** A name for a group: any words, but none the site was given or has already. */
+async function askGroup(sheet: Stylesheet, title: string, confirmLabel: string, current = ''): Promise<string | null> {
+  const asked = await prompt({ title, fields: [{ handle: 'group', type: 'text', label: t('Name'), placeholder: t('Cards'), required: true, autofocus: true }], values: { group: current }, confirm: confirmLabel })
+  const name = String(asked?.group ?? '').replace(/\*\/|\n/g, '').trim()
+  if (!name || name === current || reserved(name)) return null
+  if (sheet.groups().includes(name)) {
+    toast.error(t('There is already a group “{name}”.', { name }))
+    return null
+  }
+  return name
 }
 
 /** A group's name the site was given (Buttons, Ungrouped): said so, and not taken. */
@@ -426,13 +436,12 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
   // The sample of an element: the selection and the focus ring can't be shown by selecting or focusing, so they wear their classes.
   const sampleOf = (element: Element): SampleNode => (['::selection', ':focus-visible'].includes(element.selector) ? { ...element.node, className: [element.node.className, ...classesOf(element.selector)].filter(Boolean).join(' ') } : element.node)
 
-  /** A new button, or a new style in a group (null: in none; `choose`: the one asked for): it opens at once, on its first look. */
-  const create = async (into: string | null, choose = false) => {
+  /** A new button, or a new style, in the group it was made in (null: none) unless another is picked: it opens at once, on its first look. */
+  const create = async (into: string | null) => {
     const button = into === 'buttons'
-    const asked = await askName(engine, taken, button ? t('New Button') : t('New Class'), button ? t('Create Button') : t('Create Class'), button ? 'btn-' : '', '', choose ? groups.map((each) => each.name) : undefined)
+    const asked = await askName(engine, taken, button ? t('New Button') : t('New Class'), button ? t('Create Button') : t('Create Class'), button ? 'btn-' : '', '', button ? undefined : { names: groups.map((each) => each.name), group: groups.find((each) => each.id === into)?.name ?? null })
     if (!asked) return
-    const { name } = asked
-    const group = choose ? asked.group : groups.find((each) => each.id === into)?.name ?? null
+    const { name, group } = asked
     // A new button starts as a copy of the first one; a style as text of the page's size, which Tailwind can build.
     const first = own.find((rule) => isButton(rule.name))
     edit.change((s) => (button && first ? s.duplicateUtility(first.name, name).setUtilityGroup(name, null) : s.setUtility(name, ['text-base']).setUtilityGroup(name, group)))
@@ -450,13 +459,16 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
     if (name) edit.change((s) => s.duplicateUtility(from, name))
   }
   const move = async (name: string) => {
-    const current = own.find((rule) => rule.name === name)?.group ?? ''
-    const next = await askGroup(edit.sheet, t('Move “{name}” to a Group', { name }), t('Move Class'), current)
-    if (next === undefined || (next ?? '') === current) return
-    edit.change((s) => s.setUtilityGroup(name, next))
+    const current = own.find((rule) => rule.name === name)?.group ?? null
+    const asked = await prompt({ title: t('Move “{name}” to a Group', { name }), fields: [groupField(groups.map((each) => each.name))], values: { group: current }, confirm: t('Move Class') })
+    if (!asked) return
+    const next = String(asked.group ?? '') || null
+    if (next === current) return
+    edit.change((s) => keepGroup(s.setUtilityGroup(name, next), current))
   }
   const remove = (name: string) => {
-    edit.change((s) => s.removeUtility(name))
+    const left = own.find((rule) => rule.name === name)?.group
+    edit.change((s) => keepGroup(s.removeUtility(name), left))
     if (key === name) navigate(stylePath(group))
   }
   const styleMenu = (name: string): MenuItemDef[] => rowMenu(edit, {
@@ -465,7 +477,7 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
     own: [
       { label: t('Rename…'), icon: 'edit', onSelect: () => void rename(name) },
       { label: t('Duplicate…'), icon: 'copy', onSelect: () => void duplicate(name) },
-      ...(isButton(name) ? [] : [{ label: t('Move to Group…'), icon: 'folder', onSelect: () => void move(name) }]),
+      ...(isButton(name) || groups.length === 0 ? [] : [{ label: t('Move to Group…'), icon: 'folder', onSelect: () => void move(name) }]),
       { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => remove(name) },
     ],
   })
@@ -521,7 +533,7 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
   const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
   const found = (entry: Item) => terms.every((word) => `${entry.label} ${entry.to.split('/').pop()}`.toLowerCase().includes(word))
   const rows = (items: Item[], detail?: (entry: Item) => string) => items.map((entry) => <OpenRow key={entry.to} onOpen={() => open(entry.to)} label={entry.label} changed={entry.changed} menu={entry.menu} detail={detail?.(entry)} />)
-  const add = (into: string | null, choose = false) => (edit.readOnly ? undefined : () => void create(into, choose))
+  const add = (into: string | null) => (edit.readOnly ? undefined : () => void create(into))
   const searchField = (placeholder: string) => (
     <div className="mb-4">
       <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder }]} values={{ search }} onChange={(_, next) => setSearch(String(next ?? ''))} />
@@ -536,6 +548,8 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
   if (group) {
     const items = itemsOf(group)
     const adds = group === 'buttons' ? add('buttons') : group === UNGROUPED || groups.some((each) => each.id === group) ? add(group === UNGROUPED ? null : group) : undefined
+    // A group of the site's with no class in it yet: the way to make its first.
+    if (items.length === 0) return <EmptyState compact icon="folder" title={t('No classes yet')} action={adds && <Button icon="plus" onClick={adds}>{t('New Class')}</Button>} />
     return (
       <>
         {items.length > 7 && searchField(t('Search {items}', { items: groupLabel(edit.sheet, group) ?? t('Classes') }))}
@@ -558,15 +572,28 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
       { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => edit.change((s) => s.renameGroup(name, null)) },
     ],
   })
+  const newGroup = async () => {
+    const name = await askGroup(edit.sheet, t('New Group'), t('Create Group'))
+    if (name) edit.change((s) => s.addGroup(name))
+  }
+  const adding = 'ml-0 !px-1.5 !font-normal !text-muted first:-ml-1.5 hover:!text-ink'
   return (
     <>
       {searchField(t('Search Classes'))}
       {terms.length ? matches(ids.flatMap(itemsOf), (entry) => entry.group) : (
-        <Group onAdd={add(null, true)} addLabel={t('New Class')}>
+        <Group
+          action={edit.readOnly ? undefined : (
+            <span className="flex items-center gap-3">
+              <Button variant="ghost" size="xs" icon="plus" onClick={() => void create(null)} className={adding}>{t('New Class')}</Button>
+              <Button variant="ghost" size="xs" icon="folder" onClick={() => void newGroup()} className={adding}>{t('New Group')}</Button>
+            </span>
+          )}
+        >
           {ids.map((id) => {
             const items = itemsOf(id)
             const mine = groups.find((each) => each.id === id)
-            return <OpenRow key={id} onOpen={() => open(stylePath(id))} label={groupLabel(edit.sheet, id) ?? id} locked={!mine && id !== UNGROUPED} detail={items.length} changed={changedIn(items)} menu={mine ? groupMenu(mine.name) : []} />
+            // A group made or renamed and not saved yet is marked like a class.
+            return <OpenRow key={id} onOpen={() => open(stylePath(id))} label={groupLabel(edit.sheet, id) ?? id} locked={!mine && id !== UNGROUPED} detail={items.length} changed={changedIn(items) || (!!mine && !edit.saved.groups().includes(mine.name))} menu={mine ? groupMenu(mine.name) : []} />
           })}
         </Group>
       )}

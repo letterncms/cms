@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- **New Group under Classes.** Make a group of classes on its own, before any class is in it. A group now stays, empty or not, until you delete it.
+
 ### Changed
 
+- **New Class and Move to Group pick the group from a list** of the site's groups, or **No Group**, instead of typing its name. Inside a group, **New Class** starts in that group.
 - **Buttons and Fields under Layout shows one size at a time.** Pick **Small**, **Medium** or **Large** beside the title, and that size's **Height**, **Padding** and **Text** sit in three rows like every other group, instead of nine rows under three headings.
 
 ### Fixed
