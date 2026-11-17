@@ -91,7 +91,7 @@ final class DataSources
 
     /**
      * A list as its groups, in the order they first appear: [{label, items}, …]. Items
-     * without a value share one group with an empty label.
+     * without a value share one group with an empty label. Grouped by first letter, the groups run A to Z.
      *
      * @param  list<mixed>  $items
      * @return list<array{label: string, items: list<mixed>}>
@@ -101,10 +101,13 @@ final class DataSources
         $groups = [];
 
         foreach ($items as $item) {
-            $label = trim(Scope::text((new Scope(['item' => $item]))->get('item.'.$path)));
+            $label = trim(Scope::text((new Scope(['item' => $item]))->get('item.'.preg_replace('/^item\./', '', $path))));
             $groups[$label] ??= ['label' => $label, 'items' => []];
             $groups[$label]['items'][] = $item;
         }
+
+        // Filed by letter (`item.title|initial`), the letters run A to Z whatever order the items have: # first.
+        str_ends_with($path, '|initial') && uksort($groups, static fn ($a, $b) => strcmp((string) $a, (string) $b));
 
         return array_values($groups);
     }

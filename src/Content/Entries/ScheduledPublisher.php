@@ -13,7 +13,8 @@ use Cms\Extend\Hooks;
  * other listeners catch up. Entries whose end date has passed are no longer
  * live either way; this unpublishes them, so they become drafts and their
  * static pages are removed. Runs from cron (`cms publish:scheduled`) or, on
- * hosts without cron, after web requests at most once a minute.
+ * hosts without cron, after web requests at most once a minute. The first run of a day says so
+ * (`day.started`), so pages that list by today's date are built again.
  */
 final class ScheduledPublisher
 {
@@ -46,6 +47,9 @@ final class ScheduledPublisher
                 report($e);
             }
         }
+
+        // A new day: pages that compare dates with today (what is still to come) are built again.
+        $since->toDateString() !== $now->toDateString() && $this->hooks->dispatch('day.started', $now);
 
         @file_put_contents($marker, $now->toIso8601String());
 

@@ -100,6 +100,10 @@ final class AugmentedEntry implements ArrayAccess, JsonSerializable
         $field = $blueprint->field($handle);
         $value = $this->entry->data[$handle] ?? null;
 
+        if ($field?->type === 'select') {
+            return $this->cache[$handle] = \Cms\Content\Fields\Choice::of($value, $field);
+        }
+
         return $this->cache[$handle] = self::wrap($field
             ? cms()->fields()->resolve($field->type)->augment($value, $field)
             : $value);

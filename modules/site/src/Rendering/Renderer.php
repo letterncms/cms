@@ -203,6 +203,7 @@ final class Renderer
             'locales' => $this->cms->locales(),
             'description' => $this->cms->site('description'),
             'year' => date('Y'),
+            'today' => new Today,
         ];
     }
 

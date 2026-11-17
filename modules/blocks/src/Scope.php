@@ -6,6 +6,7 @@ namespace Cms\Modules\Blocks;
 
 use ArrayAccess;
 use Carbon\CarbonImmutable;
+use Cms\Content\Fields\Choice;
 use DateTimeInterface;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
@@ -145,6 +146,7 @@ final class Scope
         $date = match (true) {
             $value instanceof DateTimeInterface => CarbonImmutable::instance($value),
             is_string($value) && strtotime($value) => CarbonImmutable::createFromTimestamp((int) strtotime($value), date_default_timezone_get()),
+            $value instanceof Stringable && ! $value instanceof Choice && strtotime((string) $value) => CarbonImmutable::parse((string) $value),
             default => null,
         };
 
@@ -181,6 +183,33 @@ final class Scope
         return null;
     }
 
+    /**
+     * The letter a value is filed under in an A–Z list: its first letter, capital and without accents ("Élan" is
+     * under E), or # for one that starts with a digit or a sign. Nothing for no value.
+     */
+    private static function initial(mixed $value): string
+    {
+        $text = trim(self::text($value));
+
+        if ($text === '') {
+            return '';
+        }
+
+        $first = mb_strtoupper(mb_substr((string) preg_replace('/\p{M}/u', '', (string) \Normalizer::normalize($text, \Normalizer::FORM_D)), 0, 1));
+
+        return preg_match('/^\p{L}$/u', $first) ? $first : '#';
+    }
+
+    /** Does the value name this? An option by its value or its label, a list when one of it does, else its text. */
+    private static function is(mixed $value, string $name): bool
+    {
+        return match (true) {
+            $value instanceof Choice => $value->is($name),
+            is_array($value) && $value !== [] && array_filter($value, static fn ($v) => ! $v instanceof Choice) === [] => array_filter($value, static fn (Choice $v) => $v->is($name)) !== [],
+            default => self::text($value) === $name,
+        };
+    }
+
     private function filter(mixed $value, string $name, ?string $arg): mixed
     {
         return match (strtolower($name)) {
@@ -192,7 +221,8 @@ final class Scope
             'count' => is_countable($value) ? count($value) : 0,
             'first' => is_array($value) ? (array_values($value)[0] ?? null) : $value,
             'not' => ! self::truthy($value),
-            'is' => self::text($value) === (string) $arg,
+            'is' => self::is($value, (string) $arg),
+            'initial' => self::initial($value),
             'raw' => $value,
             default => $value,
         };

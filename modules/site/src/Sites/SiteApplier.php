@@ -461,6 +461,7 @@ final class SiteApplier
         $sitePackage = $run['site'];
         $languages = $sitePackage->languages();
         $shift = $sitePackage->exported() !== null ? (int) $sitePackage->exported()->diffInSeconds(CarbonImmutable::now(), false) : 0;
+        $run['shift'] = $shift;
         $planned = [];
 
         foreach ($run['contents']['entries'] as $handle => $paths) {
@@ -559,7 +560,12 @@ final class SiteApplier
             $step['type'] === 'setting' && in_array($step['action'], ['create', 'replace'], true) && $values[$step['namespace']][$step['key']] = $step['value'];
         }
 
+        // A setting may name a file the site brings, like its favicon: that file is there by the time settings are written.
+        $bringing = array_column(array_filter($run['steps'], static fn (array $step) => $step['type'] === 'media'), 'id');
+
         foreach ($values as $namespace => $set) {
+            $set = array_map(static fn ($value) => is_array($value) && array_is_list($value) ? array_values(array_diff($value, $bringing)) : $value, $set);
+
             try {
                 $this->cms->settingsRegistry()->prepare($namespace, $set);
             } catch (Throwable $e) {
@@ -650,6 +656,48 @@ final class SiteApplier
         }
 
         return ['published', $at?->toIso8601String(), $expires?->toIso8601String(), false];
+    }
+
+    /**
+     * The entry's own dates, as its publication date: one after the site was exported, like an event's, is as
+     * far ahead now. Date and date range fields of its blueprint, each kept as a day or a moment as it was.
+     */
+    private function ahead(array $data, Entry $entry, int $shift): array
+    {
+        if ($shift === 0) {
+            return $data;
+        }
+
+        $exported = CarbonImmutable::now()->subSeconds($shift);
+        $move = static function (mixed $value) use ($exported, $shift): mixed {
+            if (! is_string($value) || $value === '' || strtotime($value) === false) {
+                return $value;
+            }
+
+            $date = CarbonImmutable::parse($value);
+
+            if (! $date->greaterThan($exported)) {
+                return $value;
+            }
+
+            $moved = $date->addSeconds($shift);
+
+            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) ? $moved->toDateString() : $moved->toIso8601String();
+        };
+
+        foreach ($entry->blueprint()->fields() as $field) {
+            if (! array_key_exists($field->handle, $data)) {
+                continue;
+            }
+
+            if ($field->type === 'date') {
+                $data[$field->handle] = $move($data[$field->handle]);
+            } elseif ($field->type === 'date-range' && is_array($data[$field->handle])) {
+                $data[$field->handle] = array_map($move, $data[$field->handle]);
+            }
+        }
+
+        return $data;
     }
 
     /** @return list<string> ids of the site's media that its design names, by id or by path */
@@ -830,7 +878,7 @@ final class SiteApplier
         foreach ($order as $step) {
             /** @var Entry $entry */
             $entry = $step['entry'];
-            $data = $this->remap($entry->data, $run);
+            $data = $this->ahead($this->remap($entry->data, $run), $entry, (int) ($run['shift'] ?? 0));
 
             // A template or component offered for collections names only those the site has once this is done.
             if (in_array($step['collection'], self::DESIGN, true) && is_array($data['collections'] ?? null)) {
