@@ -17,6 +17,7 @@
 
 ### Fixed
 
+- **A filtered list stays one list item deep.** An item that is a list item itself now carries the filter's marks, instead of being wrapped in a second list item.
 - **A filter's counts are easier to read**: the number beside each choice had too little contrast for WCAG AA.
 - A site that names its own favicon in its settings is applied: the picture is brought before the setting is checked.
 

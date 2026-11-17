@@ -224,7 +224,7 @@ final class BlockRenderer
     }
 
     /** A filtered Repeat's item: what the runtime compares, around the item's own markup. */
-    private function filterable(string $html, array $props, Scope $scope): string
+    private function filterable(string $html, array $props, Scope $scope, bool $alone = false): string
     {
         $attrs = '';
 
@@ -239,8 +239,14 @@ final class BlockRenderer
         $text = implode(' ', array_map(fn (string $path) => implode(' ', $this->values($scope, $path)), Interactive::paths($props['search_in'] ?? '')));
         $text = mb_substr(mb_strtolower((string) preg_replace('/\p{M}/u', '', (string) \Normalizer::normalize(strip_tags($text), \Normalizer::FORM_D))), 0, 200);
         $tag = in_array($props['tag'] ?? 'div', ['ul', 'ol'], true) ? 'li' : 'div';
+        $marks = " data-cms-fi{$attrs} data-cms-q=\"".e($text).'"';
 
-        return "<{$tag} data-cms-fi{$attrs} data-cms-q=\"".e($text)."\" style=\"display:contents\">{$html}</{$tag}>";
+        // An item that is a list item itself carries the marks: a list item inside another one is not one.
+        if ($alone && $tag === 'li' && preg_match('/^<li(?=[\s>])/', $html)) {
+            return '<li'.$marks.substr($html, 3);
+        }
+
+        return "<{$tag}{$marks} style=\"display:contents\">{$html}</{$tag}>";
     }
 
     /** @var list<array> the settings of the filtered, grouped Repeats being rendered, for the Repeat over each group's items */
@@ -582,8 +588,8 @@ final class BlockRenderer
                 $item = $this->fill($item, $this->domIds, false);
                 $html[] = match (true) {
                     $grouped => $this->filterGroup($item, $props),
-                    $filtered => $this->filterable($item, $props, $inner),
-                    $inherited !== null => $this->filterable($item, ['tag' => $props['tag'] ?? 'div'] + $inherited, $inner),
+                    $filtered => $this->filterable($item, $props, $inner, count($children) === 1),
+                    $inherited !== null => $this->filterable($item, ['tag' => $props['tag'] ?? 'div'] + $inherited, $inner, count($children) === 1),
                     default => $item,
                 };
             } finally {
