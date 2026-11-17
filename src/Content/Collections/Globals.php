@@ -56,6 +56,13 @@ final class Globals
     {
         $blueprint = $global->blueprint();
 
-        return $blueprint->augment(array_replace($blueprint->defaults(), $this->entry($global, $locale)?->data ?? []));
+        $values = $blueprint->augment(array_replace($blueprint->defaults(), $this->entry($global, $locale)?->data ?? []));
+
+        // An option reads as its label on a page, and still equals its value.
+        foreach ($blueprint->fields() as $field) {
+            $field->type === 'select' && $values[$field->handle] = \Cms\Content\Fields\Choice::of($values[$field->handle] ?? null, $field);
+        }
+
+        return $values;
     }
 }

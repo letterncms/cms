@@ -6,6 +6,17 @@
 
 - **Search Field and Search Results blocks**, for sites people mostly search. The field goes on any page, looks like the site's other fields and buttons, and sends what was typed to the results page (`/search` unless you pick another), also without JavaScript. The results page finds every word typed, the start of a word as well ("recycl" finds "recycling"), with or without accents, puts title matches first, and shows each result's kind, date and a snippet with the words marked. Filters by kind of page ("Service", "News") show when the results have more than one, **Show More Results** adds the next ones, and screen readers hear how many were found. On a site in several languages it finds pages in the page's own language. The **Search** block's ⌘K dialog stays as it was.
 - **The site's search index (`/search.json`) says more of each page:** its `kind` (its collection's name for one entry), its `date` for a dated collection, and the words of a field named `keywords` when its collection has one, so a page on waste collection can also be found as "bin".
+- **Upcoming and past lists.** `site.today` is the day a page is built on: a Repeat of events whose *starts* is more than `{site.today}` lists only what is still to come, and its page is built again when the day turns.
+- **A to Z lists.** The filter `initial` gives the letter a value is filed under (`item.title|initial`: capital, without accents, # for a digit). Group a Repeat by it, and the letters run from A to Z.
+
+### Changed
+
+- **A select field shows its option's label** on a page and in a list's filter, search and sort: *Test or scan*, not `test`. It still equals its stored value, so `entry.kind|is:test` and classes that follow it keep working, and `entry.kind.value` gives the value itself.
+- **A site's own dates move with it.** When a site is applied, its entries' date and date range fields that were ahead of its making are as far ahead now, as their publication dates already were: an event in a site made a month ago is still to come.
+
+### Fixed
+
+- A site that names its own favicon in its settings is applied: the picture is brought before the setting is checked.
 
 ## 0.52.0 (2026-11-17)
 

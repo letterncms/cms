@@ -932,6 +932,9 @@ final class SiteModule extends Plugin
             });
         }
 
+        // A list of what is still to come changes when the day does.
+        $hooks->on('day.started', fn () => $auto() && $builder()->queueForDependency('day'));
+
         foreach (['media.updated', 'media.deleted'] as $event) {
             $hooks->on($event, fn ($item) => $auto() && $builder()->queueForMedia((string) $item->id));
         }

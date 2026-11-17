@@ -464,7 +464,7 @@ final class CoreBlocks
                     ['handle' => 'source', 'type' => 'select', 'label' => 'List', 'options' => [], 'dynamic' => 'sources', 'default' => 'entries', 'required' => true],
                     $tags(Elements::BOX_TAGS, 'div'),
                     ['handle' => 'as', 'type' => 'text', 'label' => 'Item Name', 'default' => 'item', 'about' => 'Name the item for nested lists (e.g. post, link).'],
-                    ['handle' => 'group_by', 'type' => 'text', 'label' => 'Group By', 'placeholder' => 'item.category', 'about' => 'A field of the items. Repeats once per group, with item.label and item.items.'],
+                    ['handle' => 'group_by', 'type' => 'text', 'label' => 'Group By', 'placeholder' => 'item.category', 'about' => 'A field of the items, or item.title|initial for A to Z. Repeats once per group, with item.label and item.items.'],
                     ['handle' => 'filter_by', 'type' => 'text', 'label' => 'Filter By', 'placeholder' => 'item.category, item.tags', 'about' => 'In a List Filter: the fields its choices filter on.'],
                     ['handle' => 'search_in', 'type' => 'text', 'label' => 'Search In', 'placeholder' => 'item.title, item.summary', 'about' => 'In a List Filter: the fields its search looks through.'],
                     ['handle' => 'sort_by', 'type' => 'text', 'label' => 'Sort By', 'placeholder' => 'item.title, item.price_minor', 'about' => 'In a List Filter: the fields its Filter Sort can order by.'],

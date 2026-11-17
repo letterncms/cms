@@ -710,6 +710,24 @@ final class SitesTest extends TestCase
         $this->assertContains('Its end date has passed: it comes in as a draft.', array_column($steps, 'note'));
     }
 
+    public function test_an_entrys_own_dates_ahead_of_the_export_move_with_it(): void
+    {
+        $events = "title: Events\nroute: '/events/{slug}'\nfields:\n  - {handle: starts, type: date, time: true}\n  - {handle: day, type: date}\n  - {handle: span, type: date-range}\n";
+        $this->site('agenda', [
+            'content/collections/events.yaml' => $events,
+            'content/collections/events/class.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaaa4\ntitle: Class\nstatus: published\nexpires_at: '2026-01-21T00:00:00+00:00'\nstarts: '2026-01-20T19:00:00+00:00'\nday: '2026-01-20'\nspan:\n  start: '2025-12-20'\n  end: '2026-01-22'\n---\n",
+        ], ['exported' => '2026-01-01T00:00:00+00:00']);
+        \Carbon\CarbonImmutable::setTestNow('2026-06-01 00:00:00');
+        \Carbon\Carbon::setTestNow('2026-06-01 00:00:00');
+        $this->apply('agenda');
+        $class = $this->cms()->entries()->query()->collection('events')->ungated()->where('slug', 'class')->first();
+
+        $this->assertSame('published', $class->status, 'its end date moved too');
+        $this->assertSame('2026-06-20T19:00:00+00:00', $class->data['starts'], 'nineteen days ahead of the export is nineteen days ahead now');
+        $this->assertSame('2026-06-20', $class->data['day'], 'a day stays a day');
+        $this->assertSame(['start' => '2025-12-20', 'end' => '2026-06-22'], $class->data['span'], 'a date before the export keeps its day');
+    }
+
     public function test_design_mode_offers_a_template_only_for_collections_the_site_has_and_a_refusal_copies_nothing(): void
     {
         $template = "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Survey\nstatus: published\ncollections:\n  - surveys\n  - pages\n---\n\n::: section\n:::\n";
@@ -729,6 +747,23 @@ final class SitesTest extends TestCase
         }
 
         $this->assertFileDoesNotExist(content_path('styling/styles/new.css'), 'nothing was copied before the refusal');
+    }
+
+    public function test_a_site_carries_its_own_favicon(): void
+    {
+        ob_start();
+        imagepng(imagecreatetruecolor(32, 32));
+        $png = (string) ob_get_clean();
+        $this->site('marked', [
+            'content/media/01bbbbbbbbbbbbbbbbbbbbbbbc.yaml' => "id: 01bbbbbbbbbbbbbbbbbbbbbbbc\npath: media/marked/icon.png\nalt: The mark\n",
+            'public/media/marked/icon.png' => $png,
+            'config/site.yaml' => "description: A marked site\nfavicon:\n  - 01bbbbbbbbbbbbbbbbbbbbbbbc\n",
+        ]);
+
+        $this->apply('marked');
+
+        $this->assertSame(['01bbbbbbbbbbbbbbbbbbbbbbbc'], $this->cms()->setting('site', 'favicon'), 'the file it names comes first');
+        $this->assertSame('A marked site', $this->cms()->setting('site', 'description'));
     }
 
     public function test_a_site_that_fails_on_the_way_leaves_the_site_as_it_was(): void
