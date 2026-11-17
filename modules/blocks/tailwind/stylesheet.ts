@@ -7,6 +7,7 @@
 //   @utility btn-primary { @apply bg-primary text-white; }    a class: the utilities it applies
 //   @layer base { h1 { @apply text-5xl font-semibold; } }     an element
 //   /* group: Cards */ @utility card { … }                    a class in a group of the site's own
+//   /* group: Heroes */                                       a group with no class in it yet, on a line of its own
 
 interface Block {
   /** Where the statement starts and ends in the CSS (its closing brace or semicolon included). */
@@ -72,8 +73,10 @@ export interface StyleRule {
   group?: string
 }
 
-/** The comment that puts a class in a group, standing right before its @utility. */
-const GROUP = /\/\*[ \t]*group:[ \t]*([^*\n]*?)[ \t]*\*\/\s*$/
+/** The comment that puts a class in a group, on the line right before its @utility (a blank line between, and it stands alone). */
+const GROUP = /\/\*[ \t]*group:[ \t]*([^*\n]*?)[ \t]*\*\/[ \t]*\n?[ \t]*$/
+/** Every comment that names a group, a class's or one standing alone. */
+const GROUPS = /\/\*[ \t]*group:[ \t]*([^*\n]*?)[ \t]*\*\//g
 
 const indentOf = (css: string, at: number) => /[ \t]*$/.exec(css.slice(0, at))![0]
 
@@ -214,9 +217,38 @@ export class Stylesheet {
     return this.splice(block.start, block.start, `/* group: ${label} */\n${indentOf(this.css, block.start)}`)
   }
 
-  /** Every class of a group in another one, or out of every group (null). */
+  /** The site's groups, in the order the stylesheet first names them: those of its classes and those with none yet. */
+  groups(): string[] {
+    return [...new Set([...this.css.matchAll(GROUPS)].map((found) => found[1].trim()).filter(Boolean))]
+  }
+
+  /** A group with no class in it yet: its comment on a line of its own, at the end. One the stylesheet names already stays as it is. */
+  addGroup(name: string): Stylesheet {
+    const label = name.replace(/\*\/|\n/g, '').trim()
+    return !label || this.groups().includes(label) ? this : this.append(`/* group: ${label} */`)
+  }
+
+  /**
+   * A group under another name, its classes and its comment of its own (if it has one) with it; or, with null, no
+   * group: its classes stay, in none. Into a group the stylesheet names already, its classes join that one.
+   */
   renameGroup(from: string, to: string | null): Stylesheet {
-    return this.utilities().filter((rule) => rule.group === from).reduce<Stylesheet>((next, rule) => next.setUtilityGroup(rule.name, to), this)
+    const moved = this.utilities().filter((rule) => rule.group === from).reduce<Stylesheet>((next, rule) => next.setUtilityGroup(rule.name, to), this)
+    const label = to?.replace(/\*\/|\n/g, '').trim() || null
+    const merged = !!label && label !== from && moved.groups().includes(label)
+    // Its comments of their own, last first so the places found stay true.
+    const alone = [...moved.css.matchAll(GROUPS)].filter((found) => found[1].trim() === from).reverse()
+    return alone.reduce<Stylesheet>((next, found) => {
+      const start = found.index!
+      const end = start + found[0].length
+      if (label && !merged) return next.splice(start, end, `/* group: ${label} */`)
+      const lineStart = next.lineStart(start)
+      const lineEnd = next.lineEnd(end)
+      // The blank line that set it apart goes with it: the one after it, or before it when it was the last.
+      const after = /^[ \t]*\n/.exec(next.css.slice(lineEnd))?.[0].length ?? 0
+      if (after || next.css.slice(lineEnd).trim()) return next.splice(lineStart, lineEnd + after, '')
+      return new Stylesheet(`${next.css.slice(0, lineStart).replace(/\s+$/, '')}\n`.replace(/^\n$/, ''))
+    }, moved)
   }
 
   /** Where the comment naming a class's group stands, and the group's name. */

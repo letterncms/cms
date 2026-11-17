@@ -297,3 +297,28 @@ test('a class is put in a group by the comment right before it, which goes and m
   assert.doesNotMatch(gone.css, /Cards/)
   assert.equal(gone.utilities()[0].group, 'Text')
 })
+
+test('a group can stand with no class in it, on a line of its own, until a class joins it or it is deleted', () => {
+  let sheet = new Stylesheet('/* group: Cards */\n@utility card {\n  @apply p-6;\n}\n')
+  sheet = sheet.addGroup('Heroes')
+  assert.equal(sheet.css, '/* group: Cards */\n@utility card {\n  @apply p-6;\n}\n\n/* group: Heroes */\n')
+  assert.deepEqual(sheet.groups(), ['Cards', 'Heroes'])
+  // A group the stylesheet names already is not added twice.
+  assert.equal(sheet.addGroup('Cards').css, sheet.css)
+  // A class added after it is in no group: the blank line sets the group's comment apart.
+  sheet = sheet.setUtility('lede', ['text-xl'])
+  assert.deepEqual(sheet.utilities().map((rule) => [rule.name, rule.group]), [['card', 'Cards'], ['lede', undefined]])
+  sheet = sheet.setUtilityGroup('lede', 'Heroes')
+  assert.equal(sheet.utilities()[1].group, 'Heroes')
+  // Renamed, its comment and its classes follow; deleted, its comment goes and its classes stay, in none.
+  const renamed = sheet.renameGroup('Heroes', 'Banners')
+  assert.deepEqual(renamed.groups(), ['Cards', 'Banners'])
+  assert.equal(renamed.utilities()[1].group, 'Banners')
+  const deleted = sheet.renameGroup('Heroes', null)
+  assert.deepEqual(deleted.groups(), ['Cards'])
+  assert.equal(deleted.utilities()[1].group, undefined)
+  assert.equal(new Stylesheet('@utility a {\n  @apply p-1;\n}\n').addGroup('Empty').renameGroup('Empty', null).css, '@utility a {\n  @apply p-1;\n}\n')
+  // Into a group there is already, it joins it, with no second comment of its own.
+  assert.deepEqual(sheet.addGroup('Spare').renameGroup('Spare', 'Cards').groups(), ['Cards', 'Heroes'])
+  assert.equal(sheet.addGroup('Spare').renameGroup('Spare', 'Cards').css.match(/group: Cards/g)?.length, 1)
+})
