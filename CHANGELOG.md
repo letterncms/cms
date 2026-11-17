@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.51.0 (2026-11-16)
+
 ### Added
 
 - **The Code page lists its files as they lie in `content/styling`**, in a real file tree: `theme.css`, `custom.js`, and the folders `scripts`, `styles` and `vendor` with the folders inside them. Folders open and close and stay as you left them, the arrow keys move through the tree, the **+** at the top makes a script or a stylesheet or adds a library, and a folder's own menu makes one inside it.
