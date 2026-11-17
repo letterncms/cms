@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- **Search Field and Search Results blocks**, for sites people mostly search. The field goes on any page, looks like the site's other fields and buttons, and sends what was typed to the results page (`/search` unless you pick another), also without JavaScript. The results page finds every word typed, the start of a word as well ("recycl" finds "recycling"), with or without accents, puts title matches first, and shows each result's kind, date and a snippet with the words marked. Filters by kind of page ("Service", "News") show when the results have more than one, **Show More Results** adds the next ones, and screen readers hear how many were found. On a site in several languages it finds pages in the page's own language. The **Search** block's ⌘K dialog stays as it was.
+- **The site's search index (`/search.json`) says more of each page:** its `kind` (its collection's name for one entry), its `date` for a dated collection, and the words of a field named `keywords` when its collection has one, so a page on waste collection can also be found as "bin".
+
 ## 0.52.0 (2026-11-17)
 
 ### Added
