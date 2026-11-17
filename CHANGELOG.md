@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.52.0 (2026-11-17)
+
 ### Added
 
 - **New Group under Classes.** Make a group of classes on its own, before any class is in it. A group now stays, empty or not, until you delete it.
