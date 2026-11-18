@@ -278,6 +278,28 @@ final class StylingTest extends TestCase
         $this->assertStringContainsString('.plugin-thing{display:block}', $styling->css());
     }
 
+    public function test_a_form_is_styled_part_by_part_and_its_labels_stand_where_the_site_says(): void
+    {
+        $styling = $this->styling();
+        $styling->saveTheme("@import \"tailwindcss\";\n@import \"cms\";\n\n@layer components {\n  .cms-input {\n    @apply rounded-none aria-invalid:border-4;\n  }\n  input.cms-check {\n    @apply checked:bg-black;\n    --field-checkbox-mark-color: red;\n  }\n  .cms-field {\n    @apply label-inside;\n  }\n}\n");
+        $css = $styling->css();
+
+        // The kernel's look weighs nothing, so what the site sets for a part wins over it in any state.
+        $this->assertStringContainsString(':where(.cms-input:not([type=checkbox],[type=radio],[type=range],[type=hidden])){', str_replace(', ', ',', $css));
+        $this->assertStringContainsString('.cms-input{border-radius:0}', $css);
+        $this->assertStringContainsString('.cms-input[aria-invalid="true"]{border-style:var(--tw-border-style);border-width:4px}', $css);
+        $this->assertStringContainsString('input.cms-check:checked{background-color:var(--color-black)}', $css);
+        $this->assertStringContainsString('--field-checkbox-mark-color:red', $css);
+        // Inside: the label rests in an empty field, and moves above it once it is focused or filled.
+        $this->assertStringContainsString('.cms-field>.cms-label:has( + :is(input, textarea).cms-input:placeholder-shown:not(:focus)){', $css);
+        $this->assertStringContainsString('.cms-field>.cms-label+.cms-input:not(:focus)::placeholder{color:transparent}', $css);
+
+        $styling->saveTheme("@import \"tailwindcss\";\n@import \"cms\";\n\n@layer components {\n  .cms-field {\n    @apply label-beside;\n    --field-label-width: 12rem;\n  }\n}\n");
+        $css = $styling->css();
+        $this->assertStringContainsString('.cms-field{--field-label-width:12rem}', $css);
+        $this->assertStringContainsString('.cms-field{grid-template-columns:var(--field-label-width) minmax(0, 1fr);column-gap:1.25rem}', $css);
+    }
+
     public function test_content_that_brings_a_class_compiles_the_css_again_and_saving_never_fails_for_it(): void
     {
         $styling = $this->styling();

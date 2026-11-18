@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Every part of a form is a class of its own** under **Design → Classes → Forms**, styled with the same controls, states and live sample as every other class: **Fields** (what all fields share), **Text Field**, **Text Area**, **Dropdown**, **Choices** (what all checkboxes, radio buttons and switches share), **Checkbox**, **Radio Button**, **Switch**, **Option Text**, **Label**, **Help Text** and **Error Message**. A field's **State** menu has **Invalid**, **Disabled** and **Placeholder**, a choice's **Checked**, and the sample shows each. A dropdown's **Arrow**, a checkbox's **Check Mark**, a radio button's **Dot** and a switch's **Track** and **Knob** have controls of their own.
+- **Labels inside or beside their fields.** **Classes → Forms → Label → Position**: **Above** (as before), **Beside** (in a column of a width you set, above again on a phone) or **Inside**, where the placeholder is until the field is clicked into or filled in, when the label moves above it. In a stylesheet: `.cms-field { @apply label-inside; }`.
+- **Every group of Classes takes classes of its own**, Elements, Forms and Articles too: **New Class** under any list. **Elements** and **Articles** also have **Add Element**, for tables, images, lists, code blocks, highlights and more.
 - **Search Field and Search Results blocks**, for sites people mostly search. The field goes on any page, looks like the site's other fields and buttons, is a search landmark named by its label (so the header's and the page's are told apart), and sends what was typed to the results page (`/search` unless you pick another), also without JavaScript. The results page finds every word typed, the start of a word as well ("recycl" finds "recycling"), with or without accents, puts title matches first, and shows each result's kind, date and a snippet with the words marked. Filters by kind of page ("Service", "News") show when the results have more than one, **Show More Results** adds the next ones, and screen readers hear how many were found. On a site in several languages it finds pages in the page's own language. The **Search** block's ⌘K dialog stays as it was.
 - **The site's search index (`/search.json`) says more of each page:** its `kind` (its collection's name for one entry), its `date` for a dated collection, and the words of a field named `keywords` when its collection has one, so a page on waste collection can also be found as "bin".
 - **Upcoming and past lists.** `site.today` is the day a page is built on: a Repeat of events whose *starts* is more than `{site.today}` lists only what is still to come, and its page is built again when the day turns.
@@ -13,6 +16,9 @@
 
 ### Changed
 
+- **Breaking.** **Form fields are styled with classes**, part by part, in `@layer components` (`.cms-input`, `select.cms-input`, `input.cms-check`, `.cms-label`…). The kernel's own look of a field weighs nothing now, so any rule of the site wins over it. The `--field-*` properties still work as the defaults, and a site's own on `:root` show under **Code**.
+- **Classes → Articles → Article** styles long-form text as a whole, with its spacing under **Text Spacing**.
+- A sample under **Classes** fills its column from edge to edge, on the page's own background, instead of sitting in a box.
 - **Plugins is in the main sidebar**, below Analytics, instead of under Settings.
 - **Breaking.** **The Embed block no longer shows Google Maps:** a map is a **Map** block now. An Embed with a Google Maps address shows nothing until it is replaced by one.
 - **A select field shows its option's label** on a page and in a list's filter, search and sort: *Test or scan*, not `test`. It still equals its stored value, so `entry.kind|is:test` and classes that follow it keep working, and `entry.kind.value` gives the value itself.
