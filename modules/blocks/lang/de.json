@@ -1203,5 +1203,11 @@
   "Zoom Image Inside": "Bild im Inneren zoomen",
   "Zoom In": "Vergrößern",
   "Zoom Out": "Verkleinern",
-  "Zoom While Scrolling": "Beim Scrollen zoomen"
+  "Zoom While Scrolling": "Beim Scrollen zoomen",
+  "Menu Button": "Menü-Button",
+  "Opens and closes a menu: its lines turn into a cross.": "Öffnet und schließt ein Menü: seine Linien werden zu einem Kreuz.",
+  "Off: only screen readers read it.": "Aus: Nur Screenreader lesen es.",
+  "How the lines turn into a cross while the menu is open.": "Wie die Linien zu einem Kreuz werden, solange das Menü offen ist.",
+  "Cross": "Kreuz",
+  "Squeeze": "Zusammenziehen"
 }

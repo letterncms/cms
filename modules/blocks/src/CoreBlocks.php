@@ -399,6 +399,20 @@ final class CoreBlocks
                 'render' => Interactive::filterEmpty(...),
             ],
             [
+                'name' => 'menu-button', 'title' => 'Menu Button', 'icon' => 'list', 'category' => 'interactive',
+                'description' => 'Opens and closes a menu: its lines turn into a cross.', 'keywords' => ['menu', 'hamburger', 'burger', 'navigation', 'toggle', 'open', 'close', 'mobile menu'],
+                'html' => 'button',
+                'fields' => [
+                    ['handle' => 'label', 'type' => 'text', 'label' => 'Label', 'default' => 'Menu'],
+                    ['handle' => 'show_label', 'type' => 'toggle', 'label' => 'Show Label', 'default' => true, 'about' => 'Off: only screen readers read it.'],
+                    ['handle' => 'animation', 'type' => 'select', 'label' => 'Animation', 'options' => Elements::MENU_ANIMATIONS, 'default' => 'cross', 'about' => 'How the lines turn into a cross while the menu is open.'],
+                    ['handle' => 'lines', 'type' => 'select', 'label' => 'Lines', 'options' => ['2' => '2', '3' => '3'], 'default' => '3', 'display' => 'segmented'],
+                ],
+                'defaults' => ['label' => 'Menu', 'show_label' => true, 'animation' => 'cross', 'lines' => '3'],
+                'render' => Elements::menuButton(...),
+                'example' => ['label' => 'Menu', 'animation' => 'cross'],
+            ],
+            [
                 'name' => 'motion-toggle', 'title' => 'Motion Toggle', 'icon' => 'pause', 'category' => 'interactive',
                 'description' => 'Lets visitors pause animations.', 'keywords' => ['pause', 'animation', 'accessibility', 'reduced motion'],
                 'html' => 'button',

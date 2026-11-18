@@ -29,6 +29,20 @@ final class InteractiveBlocksTest extends TestCase
         return ['type' => 'tab-panel', 'props' => ['label' => $label], 'children' => [['type' => 'paragraph', 'props' => ['text' => $text]]]];
     }
 
+    public function test_a_menu_button_is_a_button_whose_lines_follow_aria_expanded(): void
+    {
+        $html = $this->render([['type' => 'menu-button', 'props' => ['label' => 'Menu', 'animation' => 'squeeze', 'lines' => '2']]]);
+        $this->assertMatchesRegularExpression('/<button type="button" class="cms-menu-button"[^>]* aria-expanded="false" data-animation="squeeze" data-lines="2">/', $html);
+        $this->assertStringContainsString('<span class="cms-menu-button__icon" aria-hidden="true"><span></span><span></span></span><span class="cms-menu-button__label">Menu</span></button>', $html);
+
+        // What opens the menu keeps aria-expanded true or false; the page starts closed. Left alone, the look is the cross.
+        $bound = $this->render([['type' => 'menu-button', 'props' => ['show_label' => false], 'logic' => ['on' => [['event' => 'click', 'actions' => [['do' => 'toggle', 'var' => 'open']]]], 'attrs' => ['aria-expanded' => 'open']]]]);
+        $this->assertSame(1, substr_count($bound, ' aria-expanded="false"'));
+        $this->assertStringContainsString('x-bind:aria-expanded="open"', $bound);
+        $this->assertStringContainsString('data-animation="cross" data-lines="3"', $bound);
+        $this->assertStringContainsString('<span class="cms-menu-button__label" data-hidden>Menu</span>', $bound);
+    }
+
     public function test_tabs_are_the_aria_pattern_with_every_panel_in_the_html(): void
     {
         $html = $this->render([['type' => 'tabs', 'props' => ['label' => 'Install', 'default' => 2], 'children' => [$this->panel('Local', 'On your laptop'), $this->panel('Hosted', 'On a server')]]]);

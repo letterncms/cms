@@ -300,6 +300,29 @@ final class Elements
         return '<figure '.$d['attrs'].'><video src="'.e($embed['src']).'"'.$flags.' preload="metadata"'.($poster ? ' poster="'.e($poster).'"' : '').' style="'.$style.'"></video>'.$caption.'</figure>';
     }
 
+    /** How a Menu Button's lines turn into a cross: the stylesheet draws each from aria-expanded alone. */
+    public const array MENU_ANIMATIONS = ['cross' => 'Cross', 'squeeze' => 'Squeeze', 'spin' => 'Spin', 'none' => 'None'];
+
+    /**
+     * A button with lines that turn into a cross while its menu is open. It holds no state of its own: what opens
+     * the menu (an interaction that toggles a variable, with aria-expanded bound to it) sets aria-expanded, and the
+     * lines follow it, so the label stays where it is and nothing but the icon moves.
+     */
+    public static function menuButton(array $d): string
+    {
+        $b = $d['block'];
+        $label = trim((string) ($b['label'] ?? '')) !== '' ? (string) $b['label'] : 'Menu';
+        $animation = array_key_exists((string) ($b['animation'] ?? ''), self::MENU_ANIMATIONS) ? (string) $b['animation'] : 'cross';
+        $lines = (string) ($b['lines'] ?? '3') === '2' ? 2 : 3;
+        $expanded = preg_match('/(^|\s)aria-expanded=/', (string) $d['attrs']) ? '' : ' aria-expanded="false"';
+        $shown = ($b['show_label'] ?? true) !== false;
+
+        return '<button type="button" '.$d['attrs'].$expanded.' data-animation="'.$animation.'" data-lines="'.$lines.'">'
+            .'<span class="cms-menu-button__icon" aria-hidden="true">'.str_repeat('<span></span>', $lines).'</span>'
+            .'<span class="cms-menu-button__label"'.($shown ? '' : ' data-hidden').'>'.e($label).'</span>'
+            .'</button>';
+    }
+
     /** Hidden until the motion runtime shows it: without scripts nothing runs forever, so there's nothing to pause. */
     public static function motionToggle(array $d): string
     {
