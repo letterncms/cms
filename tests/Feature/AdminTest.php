@@ -23,7 +23,7 @@ final class AdminTest extends TestCase
         // The home screen and a row into each room, without a heading; then Pinned: the pages and the files.
         $this->assertSame(['main', 'pinned'], array_keys($sidebar));
         $this->assertSame('', $sidebar['main']['label']);
-        $this->assertSame(['dashboard', 'content', 'design', 'structure'], $sidebar['main']['items']);
+        $this->assertSame(['dashboard', 'plugins', 'content', 'design', 'structure'], $sidebar['main']['items']);
         $this->assertSame('Pinned', $sidebar['pinned']['label']);
         $this->assertSame(['collection.pages', 'media'], $sidebar['pinned']['items']);
         // The rest of a room is in its room, a pin away; settings have no row of their own.
@@ -193,7 +193,7 @@ final class AdminTest extends TestCase
         $settings = $this->room($this->cms()->adminNav()->forUser($this->admin()), 'settings');
 
         $this->assertArrayNotHasKey('plugins', $settings);
-        $this->assertSame(['settings.site', 'account', 'plugins', 'settings.email', 'built-in', 'audit', 'sync', 'settings.shop'], $settings['system']['items']);
+        $this->assertSame(['settings.site', 'account', 'settings.email', 'built-in', 'audit', 'sync', 'settings.shop'], $settings['system']['items']);
     }
 
     public function test_a_page_with_a_home_is_that_screens_settings_tab_and_in_no_sidebar(): void
@@ -247,9 +247,9 @@ final class AdminTest extends TestCase
         $result = $this->cms()->adminNav()->forUser($this->admin());
         $settings = $this->room($result, 'settings');
 
-        // General, your account, Plugins, the Audit Log and Sync without a group name; then People.
+        // General, your account, the Audit Log and Sync without a group name; then People.
         $this->assertSame(['system', 'people'], array_keys($settings));
-        $this->assertSame(['settings.site', 'account', 'plugins', 'settings.email', 'built-in', 'audit', 'sync'], $settings['system']['items']);
+        $this->assertSame(['settings.site', 'account', 'settings.email', 'built-in', 'audit', 'sync'], $settings['system']['items']);
         $this->assertSame(['users', 'settings.roles'], $settings['people']['items']);
         // Settings kept with a screen are its Settings tab, reached through the screen's row when that is in settings.
         $this->assertSame('/audit?tab=settings', array_column($result['nav'], 'path', 'id')['settings.audit']);
