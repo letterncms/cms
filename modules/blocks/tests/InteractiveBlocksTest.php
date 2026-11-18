@@ -133,6 +133,17 @@ final class InteractiveBlocksTest extends TestCase
         $this->assertSame(3, substr_count($html, 'data-cms-fi '), 'the letters themselves are not items');
     }
 
+    public function test_a_row_of_letters_before_the_list_leaves_the_choices_to_the_list(): void
+    {
+        $filter = $this->catalog(['group_by' => 'item.title|initial', 'tag' => 'div']);
+        $filter['children'][3]['children'] = [['type' => 'repeat', 'props' => ['source' => 'list', 'path' => 'item.items', 'tag' => 'ul'], 'children' => [['type' => 'paragraph', 'props' => ['tag' => 'li'], 'bind' => ['text' => 'item.title']]]]];
+        array_splice($filter['children'], 3, 0, [['type' => 'repeat', 'props' => ['source' => 'fruit', 'group_by' => 'item.title|initial', 'tag' => 'ul'], 'children' => [['type' => 'link', 'bind' => ['label' => 'item.label', 'url' => '#letter-{item.label|lower}']]]]]);
+        $html = $this->render([$filter]);
+
+        $this->assertStringContainsString('value="fruit"><span>Fruit</span> <span class="cms-filter__count cms-chip__count">2</span>', $html, 'the choices come from the list that filters');
+        $this->assertSame(3, substr_count($html, 'data-cms-fi '), 'the letters are not items');
+    }
+
     public function test_an_item_that_is_a_list_item_carries_the_marks_itself(): void
     {
         $filter = $this->catalog();
