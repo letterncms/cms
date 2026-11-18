@@ -460,7 +460,8 @@ final class SiteApplier
     {
         $sitePackage = $run['site'];
         $languages = $sitePackage->languages();
-        $shift = $sitePackage->exported() !== null ? (int) $sitePackage->exported()->diffInSeconds(CarbonImmutable::now(), false) : 0;
+        // Whole days, so an evening class at seven is still at seven: the hour the site was exported at doesn't move it.
+        $shift = $sitePackage->exported() !== null ? (int) round(CarbonImmutable::parse($sitePackage->exported()->toDateString())->diffInDays(CarbonImmutable::today(), false)) * 86400 : 0;
         $run['shift'] = $shift;
         $planned = [];
 

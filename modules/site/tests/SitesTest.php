@@ -728,6 +728,21 @@ final class SitesTest extends TestCase
         $this->assertSame(['start' => '2025-12-20', 'end' => '2026-06-22'], $class->data['span'], 'a date before the export keeps its day');
     }
 
+    public function test_dates_move_by_whole_days_whatever_the_hour_of_the_export(): void
+    {
+        $events = "title: Events\nroute: '/events/{slug}'\nfields:\n  - {handle: starts, type: date, time: true}\n";
+        $this->site('evening', [
+            'content/collections/events.yaml' => $events,
+            'content/collections/events/talk.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaaa5\ntitle: Talk\nstatus: published\nstarts: '2026-01-20T19:30:00+00:00'\n---\n",
+        ], ['exported' => '2026-01-01T09:00:00+00:00']);
+        \Carbon\CarbonImmutable::setTestNow('2026-06-01 00:38:00');
+        \Carbon\Carbon::setTestNow('2026-06-01 00:38:00');
+        $this->apply('evening');
+        $talk = $this->cms()->entries()->query()->collection('events')->ungated()->where('slug', 'talk')->first();
+
+        $this->assertSame('2026-06-20T19:30:00+00:00', $talk->data['starts'], 'a talk at half past seven is still at half past seven');
+    }
+
     public function test_design_mode_offers_a_template_only_for_collections_the_site_has_and_a_refusal_copies_nothing(): void
     {
         $template = "---\nid: 01aaaaaaaaaaaaaaaaaaaaaab1\ntitle: Survey\nstatus: published\ncollections:\n  - surveys\n  - pages\n---\n\n::: section\n:::\n";
