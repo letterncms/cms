@@ -118,7 +118,7 @@ HTML;
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob: https:",
             "font-src 'self' data:",
-            "connect-src 'self'",
+            'connect-src '.implode(' ', $this->connect()),
             'frame-src '.implode(' ', $this->frames()),
             "frame-ancestors 'self'",
             "base-uri 'self'",
@@ -144,6 +144,19 @@ HTML;
         $frames = (array) $this->cms->hooks()->filter('admin.frames', ["'self'", 'https://www.youtube-nocookie.com', 'https://player.vimeo.com']);
 
         return array_values(array_unique(array_filter($frames, static fn ($source) => is_string($source) && preg_match('#^[A-Za-z0-9\'*:/.+=_-]+$#D', $source))));
+    }
+
+    /**
+     * What the admin may fetch from: itself, and what the canvas's scripts draw from elsewhere, such as a map's
+     * tiles (`admin.connect`).
+     *
+     * @return list<string>
+     */
+    private function connect(): array
+    {
+        $hosts = (array) $this->cms->hooks()->filter('admin.connect', ["'self'"]);
+
+        return array_values(array_unique(array_filter($hosts, static fn ($source) => is_string($source) && preg_match('#^[A-Za-z0-9\'*:/.+=_-]+$#D', $source))));
     }
 
     private function admin(): PackageManifest

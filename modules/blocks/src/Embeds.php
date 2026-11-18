@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Cms\Modules\Blocks;
 
-/** Turns share URLs from trusted providers into embed URLs. Unknown hosts are refused. */
+/** Turns share URLs from trusted providers into embed URLs. Unknown hosts are refused, and so are maps: those are the Map block's. */
 final class Embeds
 {
     /** The hosts an embed's frame comes from: every address video() and iframe() can answer. A page's security policy allows these frames. */
-    public const array HOSTS = ['www.youtube-nocookie.com', 'player.vimeo.com', 'www.google.com', 'open.spotify.com', 'www.loom.com', 'codepen.io', 'www.figma.com', 'calendly.com'];
+    public const array HOSTS = ['www.youtube-nocookie.com', 'player.vimeo.com', 'open.spotify.com', 'www.loom.com', 'codepen.io', 'www.figma.com', 'calendly.com'];
 
     /** @return array{kind: string, src: string}|null */
     public static function video(string $url, bool $autoplay = false): ?array
@@ -42,7 +42,6 @@ final class Embeds
         }
 
         $patterns = [
-            '#^https://www\.google\.com/maps/embed\?[^\s"\'<>]+$#' => static fn ($m) => $m[0],
             '#^https://open\.spotify\.com/(track|album|playlist|episode|show)/(\w+)#' => static fn ($m) => "https://open.spotify.com/embed/{$m[1]}/{$m[2]}",
             '#^https://(?:www\.)?loom\.com/share/(\w+)#' => static fn ($m) => "https://www.loom.com/embed/{$m[1]}",
             '#^https://codepen\.io/([\w-]+)/pen/(\w+)#' => static fn ($m) => "https://codepen.io/{$m[1]}/embed/{$m[2]}?default-tab=result",

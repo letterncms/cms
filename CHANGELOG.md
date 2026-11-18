@@ -9,9 +9,11 @@
 - **Upcoming and past lists.** `site.today` is the day a page is built on: a Repeat of events whose *starts* is more than `{site.today}` lists only what is still to come, and its page is built again when the day turns.
 - **A to Z lists.** The filter `initial` gives the letter a value is filed under (`item.title|initial`: capital, without accents, # for a digit). Group a Repeat by it, and the letters run from A to Z.
 - **Filter a list grouped from A to Z.** In a **List Filter**, a Repeat grouped by letter filters the items inside its letters: a letter with nothing left hides, the choices count items, not letters, and a sort orders each letter on its own.
+- **Map block.** An open map with pins, drawn from vector tiles in the browser: no account, no key and no cookies (OpenFreeMap's tiles of OpenStreetMap). Pick a style from nine presets — **Site Colors** (the default, painted in your design's colors and following its color schemes and dark mode), Light, Dark, Streets, Bright, Night, Gray, Pastel and Blueprint — and set its land, water, park, road, label and pin colors yourself. Each **Place** in it is a pin with a name, details, a link and a directions link, and a Repeat inside a Map makes one per item, so a map of every campus or office follows its collection. People who don't see the map get its places as text, a still map is one switch away, scrolling the page never zooms it, and the map loads only when it scrolls near. The builder shows it as the site will.
 
 ### Changed
 
+- **Breaking.** **The Embed block no longer shows Google Maps:** a map is a **Map** block now. An Embed with a Google Maps address shows nothing until it is replaced by one.
 - **A select field shows its option's label** on a page and in a list's filter, search and sort: *Test or scan*, not `test`. It still equals its stored value, so `entry.kind|is:test` and classes that follow it keep working, and `entry.kind.value` gives the value itself.
 - **A site's own dates move with it.** When a site is applied, its entries' date and date range fields that were ahead of its making are as far ahead now, as their publication dates already were, counted in whole days so an evening class keeps its hour: an event in a site made a month ago is still to come.
 

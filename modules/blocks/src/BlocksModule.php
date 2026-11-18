@@ -39,9 +39,13 @@ final class BlocksModule extends Plugin
         }
 
         // Added as a plugin adds blocks: the registry, and features whose files come from this module's dist/ folder.
-        MediaBlocks::register($registry, fn (string $file) => is_file($path = $this->path('dist/media/'.$file))
+        $media = fn (string $file) => is_file($path = $this->path('dist/media/'.$file))
             ? $this->asset('media/'.$file).'?v='.substr((string) hash_file('xxh3', $path), 0, 10)
-            : null);
+            : null;
+        MediaBlocks::register($registry, $media);
+        MapBlocks::register($registry, $media);
+        // The canvas draws maps with the admin's own scripts, which fetch the map's tiles and styles from there.
+        $this->cms()->hooks()->addFilter('admin.connect', fn (array $hosts) => [...$hosts, MapBlocks::TILES]);
 
         $permissions = $this->cms()->permissions();
         $permissions->register('blocks.html', 'Add Custom HTML Blocks', 'Content', trusted: true);

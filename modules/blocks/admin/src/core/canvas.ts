@@ -111,14 +111,17 @@ function picture(el: HTMLElement, win: Window & typeof globalThis): () => void {
   }
 }
 
-/** Where the site's scripts and libraries are published: the only files a canvas behaviour is loaded from. */
-const PUBLISHED = '/_cms/site/'
+/**
+ * Where the site's scripts and libraries are published, and the built files of the CMS and its packages (a block's
+ * own script, such as the Map's): the only files a canvas behaviour is loaded from.
+ */
+const PUBLISHED = ['/_cms/site/', '/_cms/assets/']
 
-/** A same-origin path under the site's published files, or null: never another host (`//host/x.js`) or scheme. */
+/** A same-origin path under the published files, or null: never another host (`//host/x.js`) or scheme. */
 function published(path: string, base = location.href): string | null {
   try {
     const url = new URL(path, base)
-    return url.origin === location.origin && url.pathname.startsWith(PUBLISHED) ? url.pathname : null
+    return url.origin === location.origin && PUBLISHED.some((root) => url.pathname.startsWith(root)) ? url.pathname : null
   } catch {
     return null
   }

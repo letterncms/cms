@@ -287,9 +287,9 @@ final class CoreBlocks
             ],
             [
                 'name' => 'embed', 'title' => 'Embed', 'icon' => 'embed', 'category' => 'media',
-                'description' => 'Maps, playlists and other embeds.', 'keywords' => ['iframe', 'map', 'spotify', 'figma'],
+                'description' => 'Playlists, designs and other embeds.', 'keywords' => ['iframe', 'spotify', 'figma', 'loom', 'codepen', 'calendly'],
                 'fields' => [
-                    ['handle' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => true, 'placeholder' => 'YouTube, Maps, Spotify, Figma…'],
+                    ['handle' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => true, 'placeholder' => 'YouTube, Spotify, Figma, Loom…'],
                     ['handle' => 'title', 'type' => 'text', 'label' => 'Title', 'placeholder' => 'Embedded content', 'about' => 'Describes the embed for screen readers.'],
                     ['handle' => 'aspect', 'type' => 'select', 'label' => 'Aspect Ratio', 'options' => ['16/9' => '16:9', '4/3' => '4:3', '1/1' => 'Square', '21/9' => 'Wide'], 'default' => '16/9'],
                 ],

@@ -18,7 +18,8 @@ use Cms\Support\Files;
  *               map, the saved theme, a plugin's snippet), the hosts of the scripts they load, listed hosts
  *   style-src   'self' 'unsafe-inline' (a page carries its blocks' styles; a style runs nothing)
  *   img-src, media-src, font-src, connect-src, frame-src: this site (the media library is part of it), data
- *               a page carries, the providers the Embed and Video blocks know, listed hosts
+ *               a page carries, the providers the Embed and Video blocks know, the Map block's tiles,
+ *               listed hosts
  *
  * Static pages get it from a block the CMS keeps in public/.htaccess, one policy for the whole site: the
  * hashes of every page built. Pages PHP answers get it as a header. The admin, the builder's canvas and
@@ -118,12 +119,13 @@ final class ContentPolicy
     }
 
     /**
-     * An address a page loads from that code made, not content: an image's (`img`) or a video file's (`media`),
-     * from outside the site or through a CDN (the `site.policy.source` hook, which Images and Embeds call).
+     * An address a page loads from that code made, not content: an image's (`img`), a video file's (`media`) or
+     * what a block's script fetches (`connect`, a map's tiles), from outside the site or through a CDN (the
+     * `site.policy.source` hook, which Images, Embeds and the Map block call).
      */
     public function source(string $kind, mixed $url): void
     {
-        if (in_array($kind, ['img', 'media'], true) && is_string($url) && preg_match('#^https://[^/"\'\s>]+#i', $url, $m) && ($host = self::host($m[0])) !== null) {
+        if (in_array($kind, ['img', 'media', 'connect'], true) && is_string($url) && preg_match('#^https://[^/"\'\s>]+#i', $url, $m) && ($host = self::host($m[0])) !== null) {
             $this->seen['hosts'][$kind][$host] = true;
         }
     }
@@ -275,7 +277,7 @@ final class ContentPolicy
             'img-src' => ["'self'", 'data:', 'blob:', ...$of('img'), ...$listed],
             'media-src' => ["'self'", 'blob:', ...$of('media'), ...$listed],
             'font-src' => ["'self'", ...$listed],
-            'connect-src' => ["'self'", 'data:', 'blob:', ...$listed],
+            'connect-src' => ["'self'", 'data:', 'blob:', ...$of('connect'), ...$listed],
             'frame-src' => ["'self'", ...$frames, ...$listed],
             'worker-src' => ["'self'", 'blob:'],
             'object-src' => ["'none'"],

@@ -814,7 +814,7 @@ final class BlockRenderer
             return is_object($value) && isset($value->url) ? (string) $value->url : Scope::text($value);
         }
 
-        if (in_array($fieldType, ['toggle', 'number', 'select', 'json', 'repeater', 'tags', 'entries'], true)) {
+        if (in_array($fieldType, ['toggle', 'number', 'select', 'json', 'repeater', 'tags', 'entries', 'geo'], true)) {
             return is_object($value) && method_exists($value, 'jsonSerialize') ? $value->jsonSerialize() : $value;
         }
 

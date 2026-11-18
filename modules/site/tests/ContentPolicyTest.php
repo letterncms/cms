@@ -139,7 +139,9 @@ final class ContentPolicyTest extends TestCase
         $this->cms()->hooks()->addFilter('site.policy', static fn (array $policy) => [...$policy, 'frame-src' => [...$policy['frame-src'], 'player.plugin.example']]);
         $admin = (string) $this->get('/admin')->headers->get('Content-Security-Policy');
         $this->assertMatchesRegularExpression("/frame-src 'self' [^;]*open\\.spotify\\.com[^;]*player\\.plugin\\.example/", $admin);
-        $this->assertStringContainsString('www.google.com', $admin);
+        // Maps are the Map block's, never a frame; the canvas draws them with the admin's scripts, which fetch the tiles.
+        $this->assertStringNotContainsString('www.google.com', $admin);
+        $this->assertMatchesRegularExpression("/connect-src 'self' [^;]*https:\\/\\/tiles\\.openfreemap\\.org/", $admin);
         $this->assertFalse($this->get('/__preview/'.strtolower($entry->id))->assertOk()->headers->has('Content-Security-Policy'));
 
         // A script no page carries any more leaves the policy with the next full build.
