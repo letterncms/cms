@@ -17,7 +17,7 @@ final class Today implements JsonSerializable, Stringable
     {
         PageContext::depend('day');
 
-        return date('Y-m-d');
+        return now()->toDateString();
     }
 
     public function jsonSerialize(): string
