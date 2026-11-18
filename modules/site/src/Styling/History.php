@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 /**
  * The styling and the site's code keep their versions in the one history (Revisions), like entries:
  *
- *   styling  theme        the stylesheet (theme.css), the page transition and how Classes lists the styles, as Design and the Code screen save them
+ *   styling  theme        the stylesheet (theme.css), the page transition and how Styles lists the styles, as Design and the Code screen save them
  *   code     custom.js    the JavaScript on every page
  *   code     scripts/…    a script or a stylesheet beside the site's stylesheet, by its path
  *

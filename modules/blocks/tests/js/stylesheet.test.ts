@@ -335,3 +335,21 @@ test('a form is styled part by part in the components layer; the --field-* prope
   assert.equal(next.property('select.cms-input', '--field-select-arrow-color', 'components'), 'red')
   assert.deepEqual(next.elements('components').find((rule) => rule.name === 'select.cms-input')?.classes, ['bg-white'])
 })
+
+test('a style of an element or an id is made, grouped, renamed, copied and taken out as a class is', () => {
+  let sheet = new Stylesheet('@import "tailwindcss";\n\n@layer base {\n  h1 {\n    @apply text-5xl;\n  }\n}\n')
+  sheet = sheet.addElement('table', 'base', 'Data').addElement('#hero', 'components', null)
+  assert.deepEqual(sheet.elements('base').map((rule) => [rule.name, rule.classes, rule.group]), [['h1', ['text-5xl'], undefined], ['table', [], 'Data']])
+  assert.deepEqual(sheet.groups(), ['Data'])
+  // An element the site adds and a style for an id are the design's, not its own CSS.
+  assert.equal(sheet.extra(), '')
+  sheet = sheet.setElement('#hero', ['bg-primary'], 'components').setElementGroup('#hero', 'Heroes', 'components')
+  assert.equal(sheet.elements('components')[0].group, 'Heroes')
+  sheet = sheet.renameElement('#hero', '#banner', 'components').duplicateElement('#banner', '#banner-2', 'components')
+  assert.deepEqual(sheet.elements('components').map((rule) => [rule.name, rule.classes, rule.group]), [['#banner', ['bg-primary'], 'Heroes'], ['#banner-2', ['bg-primary'], 'Heroes']])
+  // A group renamed takes its elements along; one taken out takes its comment.
+  sheet = sheet.renameGroup('Heroes', 'Banners').removeElement('#banner-2', 'components').setElement('table', [], 'base')
+  assert.deepEqual(sheet.elements('components').map((rule) => [rule.name, rule.group]), [['#banner', 'Banners']])
+  assert.deepEqual(sheet.elements('base').map((rule) => rule.name), ['h1'])
+  assert.deepEqual(sheet.groups(), ['Banners'])
+})

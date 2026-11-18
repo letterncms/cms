@@ -157,7 +157,7 @@ final class SitesTest extends TestCase
         // The site as a whole first, its sites and the store's, then its theme and its classes. It opens on its colors.
         $this->assertSame(['Site', 'Theme'], array_column($rooms['design']['sections'], 'label'));
         $this->assertSame(['sites', 'sites-store'], $design['design-site']['items']);
-        $this->assertSame(['design.colors', 'design.typography', 'design.layout', 'design.effects', 'design.motion', 'design.classes'], $design['design']['items']);
+        $this->assertSame(['design.colors', 'design.typography', 'design.layout', 'design.effects', 'design.motion', 'design.styles'], $design['design']['items']);
         // Structure in named groups: content types, then the layout.
         $structure = array_column($rooms['structure']['sections'], null, 'id');
         $this->assertSame(['Content Types', 'Layout'], array_column($structure, 'label'));

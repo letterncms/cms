@@ -50,7 +50,7 @@ final class SiteModule extends Plugin
         ['layout', 'Layout', 'ruler'],
         ['effects', 'Effects', 'shadow'],
         ['motion', 'Motion', 'animated'],
-        ['classes', 'Classes', 'symbol'],
+        ['styles', 'Styles', 'symbol'],
     ];
 
     public function register(): void
@@ -648,8 +648,8 @@ final class SiteModule extends Plugin
             - `@theme { --color-primary: #1d4ed8; --font-display: "Fraunces", serif; --container-content: 72rem; }`: every variable is a set of classes (bg-primary, text-primary, font-display, max-w-content). Namespaces are Tailwind’s: --color-*, --font-*, --text-*, --font-weight-*, --leading-*, --tracking-*, --spacing-*, --radius-*, --shadow-*, --inset-shadow-*, --drop-shadow-*, --text-shadow-*, --blur-*, --perspective-*, --aspect-*, --container-*, --breakpoint-*, --ease-*, --animate-*; Tailwind’s own values are there until a namespace is cleared (--text-*: initial). A value with a dark side is light-dark(#ffffff, #0b0b0c): a theme with one follows the visitor’s light or dark mode by itself.
             - `@layer base { h1 { @apply font-display text-5xl font-semibold tracking-tight; } }`: what elements look like before a block says otherwise.
             - `@layer components { .cms-input { @apply rounded-lg aria-invalid:border-danger; } }`: what every form and long-form text looks like. A form’s parts: .cms-input (every boxed field), input.cms-input, textarea.cms-input and select.cms-input (each kind), :is(.cms-check, .cms-radio, .cms-switch) (every choice), input.cms-check, input.cms-radio, input.cms-switch, .cms-choice (an option’s text), .cms-label, .cms-help and .cms-msg (an error); a kind wins over what the kinds share. Their states are variants: hover:, focus-visible:, aria-invalid:, disabled:, checked:, placeholder:. What no class reaches is a property in the part’s rule: select.cms-input { --field-select-arrow-color: …; --field-select-arrow-size: … }, the checkbox’s --field-checkbox-size, --field-checkbox-mark-color, the radio’s --field-radio-on-dot, the switch’s --field-switch-width, --field-switch-knob. Where a label stands: `.cms-field { @apply label-inside; }` (in the field until it is focused or filled) or `label-beside` (with --field-label-width); above it without either. Long-form text is .cms-prose (its spacing: --prose-blocks, --prose-headings) and `.cms-prose h2:where(:not(.cms-box, .cms-repeat))` for its elements.
-            - `@utility card { @apply rounded-xl border border-border bg-raised p-6; }`: a class of the site’s own, used on blocks like any Tailwind class and with every variant (hover:card, md:card). `classes` lists them. A button’s looks are the btn-<name> classes (btn-primary, btn-secondary). A comment right before a class puts it in a group of the design’s Classes: `/* group: Cards */`, or one the site was given, `/* group: forms */`.
-            Anything else in it is plain CSS. Also here: `fonts` (the self-hosted font faces) and `fontFiles`, `transition` (the page transition), `arrangement` (how Design › Classes lists the styles: the order of its groups and of the rows in each, and groups inside them), `templates` (handle => title), `js` (custom.js) and `stylesheet` (the published CSS file, compiled on the server whenever the stylesheet or the content changes).
+            - `@utility card { @apply rounded-xl border border-border bg-raised p-6; }`: a class of the site’s own, used on blocks like any Tailwind class and with every variant (hover:card, md:card). `classes` lists them. A button’s looks are the btn-<name> classes (btn-primary, btn-secondary). A comment right before a class, an element’s rule or an id’s rule (`#hero { @apply …; }` in @layer components) puts it in a group of Design › Styles: `/* group: Cards */`, or one the site was given, `/* group: forms */`.
+            Anything else in it is plain CSS. Also here: `fonts` (the self-hosted font faces) and `fontFiles`, `transition` (the page transition), `arrangement` (how Design › Styles lists the styles: the order of its groups and of the rows in each, and groups inside them), `templates` (handle => title), `js` (custom.js) and `stylesheet` (the published CSS file, compiled on the server whenever the stylesheet or the content changes).
             TXT,
             'permission' => 'admin.access',
             'annotations' => ['readOnly' => true],
@@ -659,7 +659,7 @@ final class SiteModule extends Plugin
                 'fonts' => [$fontShape],
                 'fontFiles' => [Shape::STRING],
                 'transition' => $transitionShape,
-                'arrangement' => Shape::open('How Design › Classes lists the styles: {order: [group…], groups: {group: [item or {name, items}]}}.'),
+                'arrangement' => Shape::open('How Design › Styles lists the styles: {order: [group…], groups: {group: [item or {name, items}]}}.'),
                 'templates' => Shape::map(Shape::STRING),
                 'stylesheet' => Shape::STRING, 'js' => Shape::STRING,
             ]),
@@ -689,7 +689,7 @@ final class SiteModule extends Plugin
                 'css' => ['type' => 'string', 'maxLength' => 500000, 'description' => 'The whole stylesheet.'],
                 'fonts' => ['type' => 'array', 'items' => ['type' => 'object'], 'description' => 'Every font face: {family, src: "fonts/<file>.woff2", weight: "400" or "100 900", style: normal|italic, preload?, display?, fallback?, sizeAdjust?, ascentOverride?, descentOverride?, lineGapOverride?}. Name the family in the theme: --font-sans: "Hanken Grotesk", "Hanken Grotesk Fallback", sans-serif.'],
                 'transition' => ['type' => 'object', 'description' => 'Merged into the stored transition: name only what changes. null removes a setting, which then has its default (type none, duration 0.3, navigation document).', 'properties' => ['type' => ['type' => ['string', 'null'], 'enum' => ['none', 'fade', 'slide', 'scale', null]], 'duration' => ['type' => ['number', 'null']], 'navigation' => ['type' => ['string', 'null'], 'enum' => ['document', 'client', null], 'description' => 'client: links to pages of the site swap the page without a page load, inside the transition, so blocks with `persist` live on across pages. document (default): the browser loads every page.']]],
-                'arrangement' => ['type' => 'object', 'description' => 'How Design › Classes lists the styles, replaced whole: {"order": ["elements", "buttons", "forms", "articles", "Cards"], "groups": {"elements": ["body", {"name": "Headings", "items": ["h1", "h2"]}, "p"], "Cards": ["card"]}}. A group the site was given by its id, one of its own by its name; rows are an element\'s id or a class\'s name, or a group inside it. What it leaves out comes after, as before.'],
+                'arrangement' => ['type' => 'object', 'description' => 'How Design › Styles lists the styles, replaced whole: {"order": ["elements", "buttons", "forms", "articles", "Cards"], "groups": {"elements": ["body", {"name": "Headings", "items": ["h1", "h2"]}, "p"], "Cards": ["card"]}}. A group the site was given by its id, one of its own by its name; rows are an element\'s id or a class\'s name, or a group inside it. What it leaves out comes after, as before.'],
             ]],
             'output' => Shape::of(['saved' => Shape::BOOLEAN, 'stylesheet' => Shape::STRING]),
             'handler' => static fn (array $in, AbilityContext $ctx) => $guard(static function () use ($in, $ctx, $styling, $history) {

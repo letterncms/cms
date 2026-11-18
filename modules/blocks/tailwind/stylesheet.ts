@@ -69,7 +69,7 @@ export interface StyleRule {
   classes: string[]
   /** Whether it holds CSS besides one @apply, which the controls leave alone. */
   custom: boolean
-  /** A class's group, as the comment right before it names it (`/* group: Cards *\/`); none for an element. */
+  /** Its group, as the comment right before it names it (`/* group: Cards *\/`), a class's or an element's alike. */
   group?: string
 }
 
@@ -104,25 +104,6 @@ export const ARTICLE = {
   a: inProse('a'),
 } as const
 
-/** Elements of long-form text a site adds to those it styles, by the names the design gives them. */
-export const MORE_ARTICLE = {
-  h4: inProse('h4'),
-  h5: inProse('h5'),
-  h6: inProse('h6'),
-  ul: inProse('ul'),
-  ol: inProse('ol'),
-  strong: inProse('strong'),
-  em: inProse('em'),
-  code: '.cms-prose :not(pre) > code',
-  pre: inProse('pre'),
-  img: inProse('img'),
-  figcaption: inProse('figcaption'),
-  hr: inProse('hr'),
-  table: inProse('table'),
-  th: inProse('th'),
-  td: inProse('td'),
-} as const
-
 /**
  * The parts of every form on the site, each a rule of `@layer components` that applies classes: what all boxed
  * fields share and each kind of field, what checkboxes, radio buttons and switches share and each of them, and the
@@ -146,8 +127,12 @@ export const FORM = {
   form: '.cms-form',
 } as const
 
+/** A style of one element by its id, `#hero`: in `@layer components`, like the parts of forms. */
+export const ID_STYLE = /^#[a-z][\w-]*$/
+
 /** The rules each layer's sections show; every other rule of the layer is the site's own CSS. */
-const MANAGED: Record<Layer, string[]> = { base: [...ELEMENTS, ...MORE_ELEMENTS], components: [...Object.values(ARTICLE), ...Object.values(MORE_ARTICLE), ...Object.values(FORM)] }
+const MANAGED: Record<Layer, string[]> = { base: [...ELEMENTS, ...MORE_ELEMENTS], components: [...Object.values(ARTICLE), ...Object.values(FORM)] }
+const managed = (layer: Layer, selector: string) => MANAGED[layer].includes(selector) || (layer === 'components' && ID_STYLE.test(selector))
 
 /** The theme variables the design shows, kind by kind: every other variable is the site's own CSS. */
 const KINDS = 'color|font(?!-weight-)|text(?!-shadow-)|tracking|leading|breakpoint|container|spacing|radius|shadow|inset-shadow|drop-shadow|text-shadow|blur|perspective|ease|animate|duration|control'
@@ -251,7 +236,11 @@ export class Stylesheet {
   /** A class put in a group (its comment written or rewritten right before it), or out of every group (null). */
   setUtilityGroup(name: string, group: string | null): Stylesheet {
     const block = blocks(this.css).find((b) => b.prelude === `@utility ${name}`)
-    if (!block) return this
+    return block ? this.setGroupOf(block, group) : this
+  }
+
+  /** A rule's group comment written, rewritten or taken away. */
+  private setGroupOf(block: Block, group: string | null): Stylesheet {
     const label = group?.replace(/\*\/|\n/g, '').trim() || null
     const found = this.groupComment(block)
     if (found) return label ? this.splice(found.start, found.end, `/* group: ${label} */`) : this.splice(this.lineStart(found.start), block.start, indentOf(this.css, block.start))
@@ -275,7 +264,8 @@ export class Stylesheet {
    * group: its classes stay, in none. Into a group the stylesheet names already, its classes join that one.
    */
   renameGroup(from: string, to: string | null): Stylesheet {
-    const moved = this.utilities().filter((rule) => rule.group === from).reduce<Stylesheet>((next, rule) => next.setUtilityGroup(rule.name, to), this)
+    const classes = this.utilities().filter((rule) => rule.group === from).reduce<Stylesheet>((next, rule) => next.setUtilityGroup(rule.name, to), this)
+    const moved = (['base', 'components'] as const).reduce<Stylesheet>((sheet, layer) => sheet.elements(layer).filter((rule) => rule.group === from).reduce<Stylesheet>((next, rule) => next.setElementGroup(rule.name, to, layer), sheet), classes)
     const label = to?.replace(/\*\/|\n/g, '').trim() || null
     const merged = !!label && label !== from && moved.groups().includes(label)
     // Its comments of their own, last first so the places found stay true.
@@ -368,7 +358,16 @@ export class Stylesheet {
 
   /** Element styles: the rules of `@layer base` (or of another layer), with the classes each applies. */
   elements(layer: Layer = 'base'): StyleRule[] {
-    return this.bases(layer).flatMap((base) => blocks(this.css, ...base.inner!).filter((block) => block.inner && !block.prelude.startsWith('@')).map((block) => this.rule(block.prelude.replace(/\s+/g, ' '), block)))
+    return this.bases(layer).flatMap((base) => blocks(this.css, ...base.inner!).filter((block) => block.inner && !block.prelude.startsWith('@')).map((block) => {
+      const group = this.groupComment(block)?.name
+      return { ...this.rule(block.prelude.replace(/\s+/g, ' '), block), ...(group ? { group } : {}) }
+    }))
+  }
+
+  /** An element's rule put in a group, or out of every group (null), as a class is. */
+  setElementGroup(selector: string, group: string | null, layer: Layer = 'base'): Stylesheet {
+    const block = this.bases(layer).flatMap((base) => blocks(this.css, ...base.inner!)).find((b) => b.inner && b.prelude.replace(/\s+/g, ' ') === selector)
+    return block ? this.setGroupOf(block, group) : this
   }
 
   /** An element with these classes applied; with none, a rule that held nothing else goes. */
@@ -376,7 +375,7 @@ export class Stylesheet {
     for (const base of this.bases(layer)) {
       const block = blocks(this.css, ...base.inner!).find((b) => b.prelude.replace(/\s+/g, ' ') === selector)
       if (!block) continue
-      return classes.length === 0 && !this.rule(selector, block).custom ? this.remove(block) : this.setApply(block, classes)
+      return classes.length === 0 && !this.rule(selector, block).custom ? this.removeElement(selector, layer) : this.setApply(block, classes)
     }
     if (classes.length === 0) return this
     const rule = `  ${selector} {\n    @apply ${classes.join(' ')};\n  }`
@@ -385,13 +384,42 @@ export class Stylesheet {
     return this.insertLast(base, rule)
   }
 
+  /** A rule of a layer made, empty, in a group (or none), last in its layer: a style that has nothing set yet. One that is there stays. */
+  addElement(selector: string, layer: Layer = 'base', group: string | null = null): Stylesheet {
+    if (this.elements(layer).some((rule) => rule.name === selector)) return this
+    const label = group?.replace(/\*\/|\n/g, '').trim() || null
+    const rule = `  ${label ? `/* group: ${label} */\n  ` : ''}${selector} {\n  }`
+    const base = this.bases(layer)[0]
+    return base ? this.insertLast(base, rule) : this.append(`@layer ${layer} {\n${rule}\n}`)
+  }
+
+  /** A rule of a layer under another selector (an ID style renamed, #hero to #banner), where it stands. */
+  renameElement(from: string, to: string, layer: Layer = 'base'): Stylesheet {
+    const block = this.bases(layer).flatMap((base) => blocks(this.css, ...base.inner!)).find((b) => b.inner && b.prelude.replace(/\s+/g, ' ') === from)
+    const at = block ? this.css.indexOf(block.prelude, block.start) : -1
+    return block && at !== -1 ? this.splice(at, at + block.prelude.length, to) : this
+  }
+
+  /** A copy of a rule of a layer under another selector, right after it, in the same group. */
+  duplicateElement(from: string, to: string, layer: Layer = 'base'): Stylesheet {
+    const block = this.bases(layer).flatMap((base) => blocks(this.css, ...base.inner!)).find((b) => b.inner && b.prelude.replace(/\s+/g, ' ') === from)
+    if (!block) return this
+    const indent = indentOf(this.css, block.start)
+    const group = this.groupComment(block)
+    const copy = `${group ? `/* group: ${group.name} */\n${indent}` : ''}${to}${this.css.slice(this.css.indexOf(block.prelude, block.start) + block.prelude.length, block.end)}`
+    const end = this.lineEnd(block.end)
+    return this.splice(end, end, `${indent}${copy}\n`)
+  }
+
   /** An element's rule taken out, whatever it holds. */
   removeElement(selector: string, layer: Layer = 'base'): Stylesheet {
-    for (const base of this.bases(layer)) {
-      const block = blocks(this.css, ...base.inner!).find((b) => b.inner && b.prelude.replace(/\s+/g, ' ') === selector)
-      if (block) return this.remove(block)
+    // With the comment that put it in a group, as a class goes.
+    const next = this.setElementGroup(selector, null, layer)
+    for (const base of next.bases(layer)) {
+      const block = blocks(next.css, ...base.inner!).find((b) => b.inner && b.prelude.replace(/\s+/g, ' ') === selector)
+      if (block) return next.remove(block)
     }
-    return this
+    return next
   }
 
   /**
@@ -485,7 +513,7 @@ export class Stylesheet {
       if (block.inner && (block.prelude === '@layer base' || block.prelude === '@layer components')) {
         const layer = block.prelude.slice(7) as Layer
         for (const rule of blocks(this.css, ...block.inner)) {
-          if (rule.inner && MANAGED[layer].includes(rule.prelude.replace(/\s+/g, ' '))) continue
+          if (rule.inner && managed(layer, rule.prelude.replace(/\s+/g, ' '))) continue
           if (!rest.includes(layer)) rest.push(layer)
           layers[layer].push([this.leading(rule.start), rule.end])
         }

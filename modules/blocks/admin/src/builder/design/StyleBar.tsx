@@ -199,7 +199,7 @@ export function StyleBar({ s, site, source, state, disabled, menu = [], saveAs =
     return [
       // What it is, said where it is chosen from: the chip's look alone needn't tell.
       { label: t('Class of the Site'), heading: true },
-      ...(manages ? [{ label: t('Edit Class'), icon: 'edit', onSelect: () => navigate(name.startsWith(SCHEME) ? '/design/colors' : `/design/classes/${name.startsWith('btn-') ? 'buttons' : 'ungrouped'}/${encodeURIComponent(name)}`) }] : []),
+      ...(manages ? [{ label: t('Edit Class'), icon: 'edit', onSelect: () => navigate(name.startsWith(SCHEME) ? '/design/colors' : `/design/styles/${name.startsWith('btn-') ? 'buttons' : 'ungrouped'}/${encodeURIComponent(name)}`) }] : []),
       ...(source ? [{ label: t('Detach Class'), icon: 'unlink', onSelect: () => detach(raw) }] : []),
       { label: t('Remove Class'), icon: 'trash', danger: true, onSelect: () => s.apply(s.classes.filter((other) => other !== raw), 'classes') },
     ]

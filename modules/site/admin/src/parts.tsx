@@ -8,11 +8,11 @@ import type { ReactNode } from 'react'
    width, one row height. What the site was given carries a lock, what is changed and not yet saved a mark, and every row's ⋯
    takes a change back. */
 
-/** A row of Classes in its place: a style by its key (an element's id, a class's name), or a group inside a group. */
+/** A row of Styles in its place: a style by its id (an element's tag, a class's name, #hero), or a group inside a group. */
 export type Entry = string | { name: string; items: Entry[] }
 
 /**
- * How Classes lists the styles (settings.json `arrangement`): the groups in `order`, by id or name, and each
+ * How Styles lists the styles (settings.json `arrangement`): the groups in `order`, by id or name, and each
  * one's rows in order, groups inside them included. What it doesn't name comes after, as it always stood.
  */
 export interface Arrangement {
@@ -32,7 +32,7 @@ export interface Editing {
   /** The stylesheet as the site has it: what every change is made on, and what Revert returns to. */
   saved: Stylesheet
   change: (edit: (sheet: Stylesheet) => Stylesheet) => void
-  /** How Classes lists the styles, as drafted and as the site has it, and the way to change it. */
+  /** How Styles lists the styles, as drafted and as the site has it, and the way to change it. */
   arrangement: Arrangement
   savedArrangement: Arrangement
   arrange: (edit: (arrangement: Arrangement) => Arrangement) => void
