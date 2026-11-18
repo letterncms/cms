@@ -663,6 +663,7 @@
   "Medium 500": "Medium 500",
   "Members-only content starts here.": "Hier begint de inhoud voor leden.",
   "Menu": "Menu",
+  "Menu Button": "Menuknop",
   "Message||shape": "Tekstballon",
   "Middle": "Midden",
   "Min": "Min",
@@ -753,6 +754,7 @@
   "Open Large on Click": "Groot openen bij klikken",
   "Open with ⌘K": "Openen met ⌘K",
   "Opening hours, a floor, a phone number": "Openingsuren, een verdieping, een telefoonnummer",
+  "Opens and closes a menu: its lines turn into a cross.": "Opent en sluit een menu: de lijnen worden een kruis.",
   "Options": "Opties",
   "Options as table rows": "Opties als tabelrijen",
   "Origin": "Oorsprong",
@@ -1203,11 +1205,5 @@
   "Zoom Image Inside": "Afbeelding binnenin zoomen",
   "Zoom In": "Inzoomen",
   "Zoom Out": "Uitzoomen",
-  "Zoom While Scrolling": "Zoomen tijdens scrollen",
-  "Menu Button": "Menuknop",
-  "Opens and closes a menu: its lines turn into a cross.": "Opent en sluit een menu: de lijnen worden een kruis.",
-  "Off: only screen readers read it.": "Uit: alleen schermlezers lezen het.",
-  "How the lines turn into a cross while the menu is open.": "Hoe de lijnen een kruis worden zolang het menu open is.",
-  "Cross": "Kruis",
-  "Squeeze": "Samenknijpen"
+  "Zoom While Scrolling": "Zoomen tijdens scrollen"
 }

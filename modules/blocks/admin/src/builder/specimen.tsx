@@ -39,7 +39,7 @@ export interface SampleNode {
  * One sample, drawn at its own size and scaled down to fit the box when it is larger (a display heading). On the
  * page's colours and in its type, light or dark as the preview is.
  */
-export function Specimen({ sheet, node, page, mode, className, align = 'start' }: { sheet: CSSStyleSheet | null; node: SampleNode; page: string; mode: 'light' | 'dark'; className?: string; align?: 'start' | 'center' }) {
+export function Specimen({ sheet, node, page, mode, className, align = 'start', auto = false }: { sheet: CSSStyleSheet | null; node: SampleNode; page: string; mode: 'light' | 'dark'; className?: string; align?: 'start' | 'center'; auto?: boolean }) {
   const host = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const el = host.current
@@ -51,9 +51,10 @@ export function Specimen({ sheet, node, page, mode, className, align = 'start' }
     frame.setAttribute('data-size', 'md')
     // A section of the page in the preview's mode: what the site sets for every section (its form fields) reaches here too.
     frame.setAttribute('data-theme', mode)
-    frame.style.cssText = `color-scheme:${mode};background:var(--color-background);color:var(--color-foreground);padding:0 10px;box-sizing:border-box;display:flex;align-items:center;justify-content:${align === 'center' ? 'center' : 'flex-start'};height:100%;overflow:hidden;min-height:0;margin:0`
+    // `auto`: as tall as what it shows, with room around it, at least as tall as the box asks (min-height inherits through the shadow root).
+    frame.style.cssText = `color-scheme:${mode};background:var(--color-background);color:var(--color-foreground);box-sizing:border-box;display:flex;align-items:center;justify-content:${align === 'center' ? 'center' : 'flex-start'};overflow:hidden;margin:0;${auto ? 'padding:28px 24px;min-height:inherit' : 'padding:0 10px;height:100%;min-height:0'}`
     const inner = document.createElement('div')
-    inner.style.cssText = `transform-origin:${align === 'center' ? 'center' : 'left'} center;flex:none;max-width:none;${node.markup ? 'width:min(100%,22rem)' : 'white-space:nowrap'}`
+    inner.style.cssText = `transform-origin:${align === 'center' ? 'center' : 'left'} center;flex:none;max-width:none;${node.markup ? `width:min(100%,${auto ? '20rem' : '22rem'})` : 'white-space:nowrap'}`
     if (node.markup) inner.innerHTML = node.markup
     else {
       const sample = document.createElement(node.tag)
@@ -67,6 +68,14 @@ export function Specimen({ sheet, node, page, mode, className, align = 'start' }
     frame.appendChild(inner)
     root.replaceChildren(frame)
     const fit = () => {
+      // As tall as it is: only what is wider than the box is made smaller, and its height with it.
+      if (auto) {
+        inner.style.zoom = ''
+        const room = el.getBoundingClientRect().width - 48
+        const wide = Math.max(1, inner.getBoundingClientRect().width, inner.scrollWidth)
+        if (wide > room) inner.style.zoom = String(Math.max(0.1, room / wide))
+        return
+      }
       inner.style.transform = ''
       const box = el.getBoundingClientRect()
       const drawn = inner.getBoundingClientRect()
@@ -80,7 +89,7 @@ export function Specimen({ sheet, node, page, mode, className, align = 'start' }
     // A font that arrives later draws the text at another size.
     void document.fonts?.ready.then(fit)
     return () => observer.disconnect()
-  }, [sheet, node.tag, node.text, node.className, node.markup, JSON.stringify(node.attributes), page, mode, align])
+  }, [sheet, node.tag, node.text, node.className, node.markup, JSON.stringify(node.attributes), page, mode, align, auto])
   return <div ref={host} aria-hidden="true" className={cn('min-w-0 overflow-hidden', className)} />
 }
 

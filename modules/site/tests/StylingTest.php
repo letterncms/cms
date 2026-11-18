@@ -205,7 +205,7 @@ final class StylingTest extends TestCase
     public function test_settings_keep_the_fonts_and_the_page_transition(): void
     {
         $styling = $this->styling();
-        $this->assertSame(['fonts' => [], 'transition' => ['type' => 'none', 'duration' => 0.3, 'navigation' => 'document']], $styling->settings());
+        $this->assertSame(['fonts' => [], 'transition' => ['type' => 'none', 'duration' => 0.3, 'navigation' => 'document'], 'arrangement' => ['order' => [], 'groups' => []]], $styling->settings());
         $this->assertSame('', $styling->faces());
 
         $styling->saveSettings(['fonts' => [['family' => 'Inter', 'src' => '/fonts/inter.woff2', 'weight' => '100 900', 'preload' => true], 'not a face'], 'transition' => ['type' => 'slide', 'duration' => 9]]);
@@ -414,7 +414,7 @@ final class StylingTest extends TestCase
     public function test_abilities_read_change_and_store_the_styling(): void
     {
         $got = $this->ability('styling/get');
-        $this->assertSame(['css', 'classes', 'fonts', 'fontFiles', 'transition', 'templates', 'stylesheet', 'js'], array_keys($got));
+        $this->assertSame(['css', 'classes', 'fonts', 'fontFiles', 'transition', 'arrangement', 'templates', 'stylesheet', 'js'], array_keys($got));
         $this->assertSame($this->styling()->theme(), $got['css']);
         $this->assertSame(['btn-primary', 'btn-secondary', 'btn-ghost', 'btn-link'], $got['classes']);
 
@@ -571,5 +571,31 @@ final class StylingTest extends TestCase
 
         $this->expectException(AbilityException::class);
         $this->ability('revisions/get', ['id' => '../settings']);
+    }
+
+    public function test_classes_are_listed_in_the_order_and_groups_the_site_arranges(): void
+    {
+        $styling = $this->styling();
+        $file = $styling->path('settings.json');
+        $this->assertSame(['order' => [], 'groups' => []], $styling->settings()['arrangement']);
+
+        // Kept as it is meant: names trimmed, what is no group or row left out, a group inside a group kept.
+        $this->ability('styling/update', ['arrangement' => [
+            'order' => [' forms ', 'Cards', 7, ''],
+            'groups' => [
+                'forms' => [['name' => 'Shared', 'items' => ['fields', 'choices', ['name' => 'Inner', 'items' => ['option']]]], 'text', 3, ['items' => ['orphan']]],
+                '' => ['lost'],
+            ],
+        ]]);
+        $this->assertSame(['order' => ['forms', 'Cards'], 'groups' => ['forms' => [['name' => 'Shared', 'items' => ['fields', 'choices', ['name' => 'Inner', 'items' => ['option']]]], 'text']]], $styling->settings()['arrangement']);
+        $this->assertSame($styling->settings()['arrangement'], $this->ability('styling/get')['arrangement']);
+
+        // It is part of the styling's versions, and goes back with them.
+        $versions = $this->ability('revisions/list', ['kind' => 'styling', 'subject' => 'theme']);
+        $this->assertSame(['forms', 'Cards'], $this->ability('revisions/get', ['id' => $versions[0]['id']])['snapshot']['arrangement']['order']);
+        $this->ability('revisions/restore', ['revisionId' => $versions[count($versions) - 1]['id']]);
+        $this->assertSame(['order' => [], 'groups' => []], $styling->settings()['arrangement']);
+        // Nothing arranged is nothing written.
+        $this->assertArrayNotHasKey('arrangement', json_decode((string) file_get_contents($file), true));
     }
 }

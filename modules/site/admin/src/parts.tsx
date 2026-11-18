@@ -8,12 +8,34 @@ import type { ReactNode } from 'react'
    width, one row height. What the site was given carries a lock, what is changed and not yet saved a mark, and every row's ⋯
    takes a change back. */
 
+/** A row of Classes in its place: a style by its key (an element's id, a class's name), or a group inside a group. */
+export type Entry = string | { name: string; items: Entry[] }
+
+/**
+ * How Classes lists the styles (settings.json `arrangement`): the groups in `order`, by id or name, and each
+ * one's rows in order, groups inside them included. What it doesn't name comes after, as it always stood.
+ */
+export interface Arrangement {
+  order: string[]
+  groups: Record<string, Entry[]>
+}
+
+/** An arrangement as the server sends it (an empty map comes as a list), or none. */
+export const arrangementOf = (value: unknown): Arrangement => {
+  const data = (value && typeof value === 'object' ? value : {}) as Partial<Arrangement>
+  return { order: Array.isArray(data.order) ? data.order : [], groups: data.groups && !Array.isArray(data.groups) ? data.groups : {} }
+}
+
 /** The stylesheet being edited, and the way to change it: every section reads and writes the same draft. */
 export interface Editing {
   sheet: Stylesheet
   /** The stylesheet as the site has it: what every change is made on, and what Revert returns to. */
   saved: Stylesheet
   change: (edit: (sheet: Stylesheet) => Stylesheet) => void
+  /** How Classes lists the styles, as drafted and as the site has it, and the way to change it. */
+  arrangement: Arrangement
+  savedArrangement: Arrangement
+  arrange: (edit: (arrangement: Arrangement) => Arrangement) => void
   /** Without `settings.manage` the page is read: nothing is added, changed or removed. */
   readOnly: boolean
   /** Every value the theme has before the site names its own: Tailwind's, then the CMS's, by variable. */
@@ -90,7 +112,7 @@ const Name = ({ children, locked, changed: unsaved, className }: { children: Rea
  * between its rows, what adds one beside the title. `plain` content (a grid of tiles) has no panel. A group that
  * is its whole section has no title (the bar already says it): the way to add is then a named button under it.
  */
-export function Group({ title, onAdd, addLabel, action, plain, children }: { title?: string; onAdd?: () => void; addLabel?: string; action?: ReactNode; plain?: boolean; children: ReactNode }) {
+export function Group({ title, onAdd, addLabel, action, below, plain, children }: { title?: string; onAdd?: () => void; addLabel?: string; action?: ReactNode; below?: ReactNode; plain?: boolean; children: ReactNode }) {
   const add = onAdd && addLabel && (
     <Tooltip content={addLabel}>
       <IconButton icon="plus" label={addLabel} title={undefined} size="xs" onClick={onAdd} />
@@ -110,6 +132,8 @@ export function Group({ title, onAdd, addLabel, action, plain, children }: { tit
           {action ?? <Button variant="ghost" size="xs" icon="plus" onClick={onAdd} className="-ml-1.5 !px-1.5 !font-normal !text-muted hover:!text-ink">{addLabel}</Button>}
         </div>
       )}
+      {/* The last of several groups under headings: what adds to all of them, under it, as a group without a title has it. */}
+      {below && <div className="flex h-9 items-center">{below}</div>}
     </Section>
   )
 }
@@ -176,6 +200,24 @@ export function OpenRow({ onOpen, label, sample, detail, locked, changed: unsave
       {detail !== undefined && <span className="pointer-events-none shrink-0 text-xs tabular-nums text-muted">{detail}</span>}
       <span className="relative flex"><RowMenu items={menu} /></span>
       <Icon name="chevron-right" size={14} className="pointer-events-none shrink-0 text-faint" />
+    </div>
+  )
+}
+
+/**
+ * A row of a list that can be put in another order and into groups of its own: its grip (pointed at, focused or on a
+ * touch screen), then what an OpenRow shows. A `heading` is a group inside the list: its name, how many rows it holds
+ * and its ⋯, opening nothing.
+ */
+export function TreeRow({ handle, label, onOpen, detail, locked, changed: unsaved, menu = [], heading }: { handle: ReactNode; label: string; onOpen?: () => void; detail?: ReactNode; locked?: boolean; changed?: boolean; menu?: MenuItemDef[]; heading?: boolean }) {
+  return (
+    <div className={cn(ROW, 'relative flex min-h-12 items-center gap-2 py-2 pr-4 sm:pr-5', handle ? 'pl-1' : 'pl-4 sm:pl-5', onOpen && 'transition-colors duration-base hover:bg-hover')}>
+      {onOpen && <Pressable inset onClick={onOpen} aria-label={label} className="absolute inset-0" />}
+      {handle && <span className="cms-reveal relative flex">{handle}</span>}
+      <Name locked={locked} changed={unsaved} className={cn('pointer-events-none flex-1', heading && 'font-semibold text-ink')}>{label}</Name>
+      {detail !== undefined && <span className="pointer-events-none shrink-0 text-xs tabular-nums text-muted">{detail}</span>}
+      <span className="relative flex"><RowMenu items={menu} /></span>
+      {onOpen ? <Icon name="chevron-right" size={14} className="pointer-events-none shrink-0 text-faint" /> : <span className="size-3.5 shrink-0" />}
     </div>
   )
 }

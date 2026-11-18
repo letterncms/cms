@@ -15,7 +15,7 @@ use InvalidArgumentException;
  *
  *   content/styling/theme.css      the stylesheet: `@import "tailwindcss"`, the theme (@theme), the site's
  *                                  own classes (@utility), element styles (@layer base) and any other CSS
- *   content/styling/settings.json  fonts and the page transition
+ *   content/styling/settings.json  fonts, the page transition and how Design › Classes lists the styles
  *   content/styling/custom.js      extra JavaScript (an ES module; people with site.code only)
  *   content/styling/fonts/         self-hosted .woff2 files
  *
@@ -123,7 +123,7 @@ final class Styling
         return $this->read ??= new Theme($this->theme());
     }
 
-    /** @return array{fonts: list<array<string, mixed>>, transition: array{type: string, duration: float, navigation: string}} */
+    /** @return array{fonts: list<array<string, mixed>>, transition: array{type: string, duration: float, navigation: string}, arrangement: array{order: list<string>, groups: array<string, list<string|array>>}} */
     public function settings(): array
     {
         if ($this->settings !== null) {
@@ -140,7 +140,41 @@ final class Styling
                 'duration' => max(0.05, min(2.0, (float) ($transition['duration'] ?? 0.3))),
                 'navigation' => ($transition['navigation'] ?? null) === 'client' ? 'client' : 'document',
             ],
+            'arrangement' => self::arrangement($data['arrangement'] ?? null),
         ];
+    }
+
+    /**
+     * How Design › Classes lists the site's styles: the groups in `order` (a group the site was given by its id,
+     * elements; one of its own by its name), and in `groups` each one's rows in order, an element's id or a class's
+     * name, or a group of its own inside it, {name, items}. What it doesn't name comes after, as it always stood.
+     *
+     * @return array{order: list<string>, groups: array<string, list<string|array>>}
+     */
+    public static function arrangement(mixed $value): array
+    {
+        $value = is_array($value) ? $value : [];
+        $names = static fn (mixed $list) => array_values(array_unique(array_filter(array_map(static fn ($name) => is_string($name) ? trim($name) : '', is_array($list) ? $list : []), static fn ($name) => $name !== '')));
+        $entries = static function (mixed $list, int $depth) use (&$entries): array {
+            $out = [];
+            foreach (is_array($list) ? $list : [] as $entry) {
+                if (is_string($entry) && trim($entry) !== '') {
+                    $out[] = trim($entry);
+                } elseif (is_array($entry) && is_string($entry['name'] ?? null) && trim($entry['name']) !== '' && $depth < 4) {
+                    $out[] = ['name' => trim($entry['name']), 'items' => $entries($entry['items'] ?? [], $depth + 1)];
+                }
+            }
+
+            return $out;
+        };
+        $groups = [];
+        foreach (is_array($value['groups'] ?? null) ? $value['groups'] : [] as $group => $list) {
+            if (is_string($group) && trim($group) !== '') {
+                $groups[trim($group)] = $entries($list, 0);
+            }
+        }
+
+        return ['order' => $names($value['order'] ?? []), 'groups' => $groups];
     }
 
     /** Change fonts or the page transition; what is not named stays. */
@@ -154,6 +188,17 @@ final class Styling
 
         if (isset($changes['transition'])) {
             $settings['transition'] = array_filter([...$settings['transition'], ...(array) $changes['transition']], static fn ($value) => $value !== null);
+        }
+
+        if (array_key_exists('arrangement', $changes)) {
+            $settings['arrangement'] = self::arrangement($changes['arrangement']);
+        }
+
+        // Nothing arranged is nothing written: the file says only what a site set.
+        if ($settings['arrangement']['order'] === [] && $settings['arrangement']['groups'] === []) {
+            unset($settings['arrangement']);
+        } elseif ($settings['arrangement']['groups'] === []) {
+            $settings['arrangement']['groups'] = new \stdClass;
         }
 
         Files::putJson($this->path('settings.json'), $settings);
