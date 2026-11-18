@@ -222,6 +222,14 @@ final class InteractiveBlocksTest extends TestCase
         $this->assertStringContainsString('<td>$10</td>', $marked);
     }
 
+    public function test_a_wide_table_can_be_scrolled_from_the_keyboard(): void
+    {
+        $rows = [['Wijk', 'Restafval'], ['Centrum', 'Maandag']];
+
+        $this->assertMatchesRegularExpression('#<figure [^>]*role="region" tabindex="0" aria-label="Table"><table>#', $this->render([['type' => 'table', 'props' => ['rows' => $rows]]]));
+        $this->assertStringContainsString('role="region" tabindex="0" aria-label="Ophaaldagen"><table><caption>Ophaaldagen</caption>', $this->render([['type' => 'table', 'props' => ['rows' => $rows, 'caption' => 'Ophaaldagen']]]));
+    }
+
     public function test_tabs_can_look_segmented(): void
     {
         $panels = [['type' => 'tab-panel', 'props' => ['label' => 'One']], ['type' => 'tab-panel', 'props' => ['label' => 'Two']]];
