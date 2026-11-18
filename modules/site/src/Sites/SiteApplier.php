@@ -891,8 +891,10 @@ final class SiteApplier
                 if ($step['action'] === 'replace') {
                     /** @var Entry $mine */
                     $mine = $step['existing'];
-                    // What the site's entry holds and the site's doesn't goes: the site's takes its place whole.
-                    $data = [...array_fill_keys(array_keys($mine->working()['data']), null), ...$data];
+                    // What the site's entry holds and the site's doesn't goes: the site's takes its place whole, and a
+                    // field the site leaves out gets its default, as when it is created (a component stays synced).
+                    $defaults = $this->cms->collections()->find($step['collection'])?->blueprint($entry->blueprint)->defaults() ?? [];
+                    $data = [...array_fill_keys(array_keys($mine->working()['data']), null), ...array_filter($defaults, static fn ($v) => $v !== null), ...$data];
                     $service->update($mine->id, ['title' => $entry->title, 'data' => $data, ...($published && $step['expiresAt'] !== null ? ['expiresAt' => $step['expiresAt']] : [])], $user, publish: $published);
 
                     continue;
