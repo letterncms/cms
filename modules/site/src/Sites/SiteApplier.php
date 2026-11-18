@@ -465,6 +465,8 @@ final class SiteApplier
         $days = $sitePackage->exported() !== null ? (int) round(CarbonImmutable::parse($sitePackage->exported()->toDateString())->diffInDays(CarbonImmutable::today(), false)) : 0;
         $shift = (int) (ceil($days / 7) * 7) * 86400;
         $run['shift'] = $shift;
+        // What counts as ahead is measured from the export itself (as many whole days back as have passed), not from the move.
+        $run['exported'] = $exported = $shift !== 0 ? CarbonImmutable::now()->subDays($days) : null;
         $planned = [];
 
         foreach ($run['contents']['entries'] as $handle => $paths) {
@@ -524,7 +526,7 @@ final class SiteApplier
                 // What the site keeps stands in for the site's wherever the site's is named.
                 $step['id'] = in_array($step['action'], ['create', 'rename'], true) ? strtolower((string) Str::ulid()) : $found?->id;
                 $step['existing'] = $found;
-                [$step['status'], $step['at'], $step['expiresAt'], $late] = $this->dates($entry, $shift);
+                [$step['status'], $step['at'], $step['expiresAt'], $late] = $this->dates($entry, $shift, $exported);
                 $late && $step['note'] = __('Its end date has passed: it comes in as a draft.');
                 $run['ids'][$entry->id] = $step['id'];
                 $planned[$entry->id] = ['action' => $step['action'], 'id' => $step['id'], 'key' => $key];
@@ -643,13 +645,12 @@ final class SiteApplier
      *
      * @return array{0: string, 1: ?string, 2: ?string, 3: bool} status, publication date, end date, whether it ran out
      */
-    private function dates(Entry $entry, int $shift): array
+    private function dates(Entry $entry, int $shift, ?CarbonImmutable $exported): array
     {
         if ($entry->status !== 'published') {
             return ['draft', null, null, false];
         }
 
-        $exported = $run = $shift !== 0 ? CarbonImmutable::now()->subSeconds($shift) : null;
         $move = static fn (?CarbonImmutable $date) => $date !== null && $exported !== null && $date->greaterThan($exported) ? $date->addSeconds($shift) : $date;
         $at = $move($entry->publishedAt);
         $expires = $move($entry->expiresAt);
@@ -665,13 +666,12 @@ final class SiteApplier
      * The entry's own dates, as its publication date: one after the site was exported, like an event's, is still
      * ahead now, on the same day of the week. Date and date range fields of its blueprint, each kept as a day or a moment as it was.
      */
-    private function ahead(array $data, Entry $entry, int $shift): array
+    private function ahead(array $data, Entry $entry, int $shift, ?CarbonImmutable $exported): array
     {
-        if ($shift === 0) {
+        if ($shift === 0 || $exported === null) {
             return $data;
         }
 
-        $exported = CarbonImmutable::now()->subSeconds($shift);
         $move = static function (mixed $value) use ($exported, $shift): mixed {
             if (! is_string($value) || $value === '' || strtotime($value) === false) {
                 return $value;
@@ -881,7 +881,7 @@ final class SiteApplier
         foreach ($order as $step) {
             /** @var Entry $entry */
             $entry = $step['entry'];
-            $data = $this->ahead($this->remap($entry->data, $run), $entry, (int) ($run['shift'] ?? 0));
+            $data = $this->ahead($this->remap($entry->data, $run), $entry, (int) ($run['shift'] ?? 0), $run['exported'] ?? null);
 
             // A template or component offered for collections names only those the site has once this is done.
             if (in_array($step['collection'], self::DESIGN, true) && is_array($data['collections'] ?? null)) {

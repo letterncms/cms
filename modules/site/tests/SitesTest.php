@@ -744,6 +744,22 @@ final class SitesTest extends TestCase
         $this->assertContains('Its end date has passed: it comes in as a draft.', array_column($steps, 'note'));
     }
 
+    public function test_dates_from_before_the_export_stay_put_when_the_week_has_not_passed(): void
+    {
+        $posts = (string) file_get_contents(__DIR__.'/fixtures/sites/starter/content/collections/posts.yaml');
+        $this->site('fresh', [
+            'content/collections/posts.yaml' => $posts,
+            'content/collections/posts/recent.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaaa6\ntitle: Recent\nstatus: published\npublished_at: '2025-12-29T09:00:00+00:00'\n---\n\nWritten three days before.\n",
+        ], ['exported' => '2026-01-01T00:00:00+00:00']);
+        \Carbon\CarbonImmutable::setTestNow('2026-01-02 12:00:00');
+        \Carbon\Carbon::setTestNow('2026-01-02 12:00:00');
+        $this->apply('fresh');
+        $recent = $this->cms()->entries()->query()->collection('posts')->ungated()->where('slug', 'recent')->first();
+
+        $this->assertSame('2025-12-29', $recent->publishedAt->format('Y-m-d'), 'written before the export, it keeps its date though dates move by a week');
+        $this->assertSame('published', $recent->status);
+    }
+
     public function test_an_entrys_own_dates_ahead_of_the_export_move_with_it(): void
     {
         $events = "title: Events\nroute: '/events/{slug}'\nfields:\n  - {handle: starts, type: date, time: true}\n  - {handle: day, type: date}\n  - {handle: span, type: date-range}\n";
