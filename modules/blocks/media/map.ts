@@ -169,7 +169,9 @@ async function draw(view: HTMLElement, options: Options, win: Window, canvas: bo
   if (list.length > 1) {
     const bounds = new ml.LngLatBounds()
     list.forEach((p) => bounds.extend([p.lng, p.lat]))
-    map.fitBounds(bounds, { padding: Math.min(64, view.clientWidth / 8), maxZoom: options.zoom, animate: false })
+    // Room for a pin's height above its place, and for the zoom buttons in the top right corner.
+    const edge = Math.min(32, view.clientWidth / 12)
+    map.fitBounds(bounds, { padding: { top: edge + 40, right: edge + (interactive ? 48 : 16), bottom: edge, left: edge + 16 }, maxZoom: options.zoom, animate: false })
   }
 
   const markers: MapLibre.Marker[] = []
