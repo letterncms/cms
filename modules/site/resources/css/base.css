@@ -9,8 +9,9 @@
   button { cursor: pointer; }
   :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
   [x-cloak] { display: none !important; }
-  .cms-skip { position: absolute; left: 1rem; top: -4rem; z-index: 100; padding: .6rem 1rem; border-radius: .5rem; background: var(--color-background); color: var(--color-foreground); box-shadow: 0 4px 16px rgb(0 0 0 / .15); }
-  .cms-skip:focus { top: 1rem; }
+  /* Out of sight until focused, its shadow too: only the focused link casts one. */
+  .cms-skip { position: absolute; left: 1rem; top: -4rem; z-index: 100; padding: .6rem 1rem; border-radius: .5rem; background: var(--color-background); color: var(--color-foreground); }
+  .cms-skip:focus { top: 1rem; box-shadow: 0 4px 16px rgb(0 0 0 / .15); }
 
   /* The size in effect for buttons and fields, by data-size (M by default). */
   :root, [data-size="md"] { --control-height: var(--control-md-height); --control-padding: var(--control-md-padding); --control-text: var(--control-md-text); }

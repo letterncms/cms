@@ -31,6 +31,7 @@
 
 ### Fixed
 
+- **The hidden “Skip to content” link no longer shows a faint shadow** along the top of every page: it casts one only once it is focused.
 - **Applying a site’s design again keeps its components synced.** A component the site brought in a newer version came in as a copy, so the pages that use it showed it without its text. A field the site leaves out now gets its default, as when the site was first applied.
 - **A menu's panels no longer flash over the page as it loads.** Each panel of a Menu behavior used to fade out once when the page started; it is hidden from the start now, and still fades in and out when it opens.
 - A table wider than the screen can be scrolled from the keyboard too: its frame takes the focus, and a screen reader names it by its caption, without adding a landmark for every table.
