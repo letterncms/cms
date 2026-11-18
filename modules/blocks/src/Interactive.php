@@ -159,22 +159,39 @@ final class Interactive
         return Str::slug($value) ?: 'v-'.substr(hash('xxh128', $value), 0, 8);
     }
 
+    /** The Repeat the filter works on: the one that filters, searches or sorts, so a row of letters above it is passed by. */
     private static function findRepeat(array $nodes): ?array
     {
+        $repeats = self::repeats($nodes);
+
+        foreach ($repeats as $repeat) {
+            $props = (array) ($repeat['props'] ?? []);
+
+            if (! empty($props['filter_by']) || ! empty($props['search_in']) || ! empty($props['sort_by'])) {
+                return $repeat;
+            }
+        }
+
+        return $repeats[0] ?? null;
+    }
+
+    /** @return list<array> the Repeats among these blocks, in order, without the Repeats inside a Repeat */
+    private static function repeats(array $nodes): array
+    {
+        $found = [];
+
         foreach ($nodes as $node) {
             if (! is_array($node)) {
                 continue;
             }
 
             if (($node['type'] ?? '') === 'repeat') {
-                return $node;
-            }
-
-            if (($found = self::findRepeat((array) ($node['children'] ?? []))) !== null) {
-                return $found;
+                $found[] = $node;
+            } else {
+                array_push($found, ...self::repeats((array) ($node['children'] ?? [])));
             }
         }
 
-        return null;
+        return $found;
     }
 }
