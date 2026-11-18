@@ -13,7 +13,7 @@
 ### Changed
 
 - **A select field shows its option's label** on a page and in a list's filter, search and sort: *Test or scan*, not `test`. It still equals its stored value, so `entry.kind|is:test` and classes that follow it keep working, and `entry.kind.value` gives the value itself.
-- **A site's own dates move with it.** When a site is applied, its entries' date and date range fields that were ahead of its making are as far ahead now, as their publication dates already were: an event in a site made a month ago is still to come.
+- **A site's own dates move with it.** When a site is applied, its entries' date and date range fields that were ahead of its making are as far ahead now, as their publication dates already were, counted in whole days so an evening class keeps its hour: an event in a site made a month ago is still to come.
 
 ### Fixed
 
