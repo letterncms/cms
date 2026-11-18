@@ -4,7 +4,7 @@ import { Stylesheet, StylingProvider, loadTailwindTheme, themeDefaults, useStyli
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { arrangementOf, type Arrangement, type Editing } from './parts'
 import { SitePreview, useDraftCompile, type Viewport } from './preview'
-import { Classes, stylePath, stylesPlace } from './classes'
+import { Styles, stylePath, stylesPlace } from './styles/Styles'
 import { keyframesOf } from './fields'
 import { Colors, Effects, Layout, Motion, Typography, type Face, type FontTools, type Transition } from './theme'
 
@@ -20,7 +20,7 @@ interface Info {
 
 /**
  * What Save writes. One draft: the stylesheet's text, which every control rewrites where the value stands
- * (so comments and hand-written CSS stay), the page transition and how Classes lists the styles. A part that was
+ * (so comments and hand-written CSS stay), the page transition and how Styles lists the styles. A part that was
  * not changed is not in it.
  */
 interface Draft {
@@ -31,18 +31,18 @@ interface Draft {
 
 const EMPTY: Draft = {}
 
-const SECTIONS = ['colors', 'typography', 'layout', 'effects', 'motion', 'classes'] as const
+const SECTIONS = ['colors', 'typography', 'layout', 'effects', 'motion', 'styles'] as const
 type SectionKey = (typeof SECTIONS)[number]
 
 /** What each section is called: the sidebar names them the same (SiteModule::DESIGN). */
-const sectionLabel = (key: SectionKey) => ({ colors: t('Colors'), typography: t('Typography'), layout: t('Layout'), effects: t('Effects'), motion: t('Motion'), classes: t('Classes') })[key]
+const sectionLabel = (key: SectionKey) => ({ colors: t('Colors'), typography: t('Typography'), layout: t('Layout'), effects: t('Effects'), motion: t('Motion'), styles: t('Styles') })[key]
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
 /** Where each place of the panel was scrolled when it was left: back there, it is where it was left. */
 const scrolled = new Map<string, number>()
 
-/** What one step back or forward returns to: the stylesheet, the page transition and how Classes lists the styles. */
+/** What one step back or forward returns to: the stylesheet, the page transition and how Styles lists the styles. */
 interface State {
   css: string
   transition: Transition
@@ -65,10 +65,11 @@ export default function Design({ params }: { params: Record<string, string> }) {
   const section = SECTIONS.includes(first as SectionKey) ? (first as SectionKey) : null
   // The design opens on its first section.
   useEffect(() => {
-    if (!section) navigate('/design/colors', { replace: true })
+    // Styles were once Classes: an old address leads to the same place.
+    if (!section) navigate(first === 'classes' ? `/design/styles${params['*']!.slice(first.length)}` : '/design/colors', { replace: true })
   }, [section])
   // A class or a group that is no longer there (deleted, discarded, renamed elsewhere): the list of classes.
-  const gone = section === 'classes' && rest.length > 0 && !!info.data && stylesPlace(new Stylesheet(draft.css ?? info.data.css), rest) === null
+  const gone = section === 'styles' && rest.length > 0 && !!info.data && stylesPlace(new Stylesheet(draft.css ?? info.data.css), rest) === null
   useEffect(() => {
     if (gone) navigate(stylePath(), { replace: true })
   }, [gone])
@@ -174,7 +175,7 @@ export default function Design({ params }: { params: Record<string, string> }) {
   }
   const samples = { compiler: compile.compiler, device: previewing ? 'phone' as const : viewport }
   // A group of styles, or a style, says its own name with the way back up: "‹ Buttons", "‹ Primary".
-  const sub = section === 'classes' ? stylesPlace(sheet, rest) : null
+  const sub = section === 'styles' ? stylesPlace(sheet, rest) : null
 
   const refresh = () => {
     invalidate('styling/', 'revisions/')
@@ -273,7 +274,7 @@ export default function Design({ params }: { params: Record<string, string> }) {
       {section === 'effects' && <Effects edit={edit} />}
       {section === 'motion' && <Motion edit={edit} transition={transition} saved={base.transition} onTransition={(next) => !readOnly && setDraft((d) => ({ ...d, transition: next }))} />}
       {/* Each group of classes opens with its own search. */}
-      {section === 'classes' && <Classes key={rest[0] ?? ''} edit={edit} samples={samples} path={rest} />}
+      {section === 'styles' && <Styles key={rest[0] ?? ''} edit={edit} samples={samples} path={rest} />}
     </>
   )
 

@@ -15,7 +15,7 @@ use InvalidArgumentException;
  *
  *   content/styling/theme.css      the stylesheet: `@import "tailwindcss"`, the theme (@theme), the site's
  *                                  own classes (@utility), element styles (@layer base) and any other CSS
- *   content/styling/settings.json  fonts, the page transition and how Design › Classes lists the styles
+ *   content/styling/settings.json  fonts, the page transition and how Design › Styles lists the styles
  *   content/styling/custom.js      extra JavaScript (an ES module; people with site.code only)
  *   content/styling/fonts/         self-hosted .woff2 files
  *
@@ -145,7 +145,7 @@ final class Styling
     }
 
     /**
-     * How Design › Classes lists the site's styles: the groups in `order` (a group the site was given by its id,
+     * How Design › Styles lists the site's styles: the groups in `order` (a group the site was given by its id,
      * elements; one of its own by its name), and in `groups` each one's rows in order, an element's id or a class's
      * name, or a group of its own inside it, {name, items}. What it doesn't name comes after, as it always stood.
      *
