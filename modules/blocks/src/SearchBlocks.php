@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Cms\Modules\Blocks;
 
 /**
- * Search Field and Search Results: search as part of the page, for sites people mostly search, beside the Search
- * block's ⌘K dialog. The field is a plain GET form to the results page (`?q=`), so it works without scripts. The
- * results page holds a status line that says search needs scripts, an empty list of filters and an empty list; the
- * `search-results` runtime feature reads `q` and `kind` from the address, searches /search.json (SearchIndex) and
- * fills them in. On the canvas the results show a sample, so designers see every part they style.
+ * Search Field and Search Results: search as part of the page, a field anywhere and a page of results. The field
+ * is a plain GET form to the results page (`?q=`), so it works without scripts. The results page holds a status
+ * line that says search needs scripts, an empty list of filters and an empty list; the `search-results` runtime
+ * feature reads `q` and `kind` from the address, searches /search.json (SearchIndex) and fills them in. On the
+ * canvas the results show a sample, so designers see every part they style.
  */
 final class SearchBlocks
 {

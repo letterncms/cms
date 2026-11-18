@@ -27,7 +27,7 @@ const types = new Map([
   type('button', { category: 'interactive' }), type('link', { category: 'text', children: true }),
   type('columns', { category: 'layout', children: ['column'] }), type('column', { category: 'layout', parent: 'columns', children: true }),
   type('wrong-parent', { children: ['column'] }),
-  ...['icon', 'spacer', 'input', 'search', 'html', 'outlet', 'component', 'vendor/custom'].map((name) => type(name, { category: 'design' })),
+  ...['icon', 'spacer', 'input', 'search-field', 'html', 'outlet', 'component', 'vendor/custom'].map((name) => type(name, { category: 'design' })),
 ].map((definition) => [definition.name, definition]))
 const node = (id, name, children) => ({ id, type: name, props: {}, ...(children ? { children } : {}) })
 const normalize = (value) => JSON.parse(JSON.stringify(value))
