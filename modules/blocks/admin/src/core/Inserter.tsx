@@ -162,7 +162,7 @@ export function Inserter({ types, query, onQuery, onChoose, onClose, allowed, sh
               <Button variant="ghost" size="md" data-index={i}
                 onMouseMove={() => i !== active && setActive(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => onChoose(item)} data-active={i === active || undefined}
                 className="!h-auto w-full !flex-col !items-stretch !gap-1.5 !rounded-sm !p-1.5 text-left">
-                <PagePreview src={componentPage(item.component.handle)} maxHeight={160} />
+                <PagePreview src={componentPage(item.component.handle)} maxHeight={160} whole />
                 <span className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm">
                   <Icon name={itemIcon(item)} size={13} className="shrink-0 text-faint" />
                   <span className="min-w-0 truncate">{item.component.title}</span>

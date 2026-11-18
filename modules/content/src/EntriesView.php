@@ -174,7 +174,8 @@ final class EntriesView
         $parts = $collection->system && ! $routable;
         if ($parts) {
             $columns[0]['width'] = 'minmax(200px,420px)';
-            $columns[] = ['id' => 'preview', 'key' => 'preview', 'label' => __('Preview'), 'format' => 'page', 'image' => true, 'width' => '88px'];
+            // A collection of parts drawn alone (components: a card, a row) says so (`pictures: whole`): its pictures show all of each.
+            $columns[] = ['id' => 'preview', 'key' => 'preview', 'label' => __('Preview'), 'format' => 'page', 'image' => true, 'width' => '88px', ...($collection->get('pictures') === 'whole' ? ['whole' => true] : [])];
             $columns[] = ['id' => 'used', 'key' => 'usedBy', 'label' => __('Used By'), 'width' => 'minmax(160px,1fr)', 'empty' => __('Nothing')];
         }
         // A feature's page whose address a page of the site has taken is not on view.

@@ -22,6 +22,8 @@ export interface FormatOptions {
   locales?: string[]
   /** Media looked up for what is on view, by id: thumbnails for `media` (and `field` of type media). */
   media?: Map<string, MediaThumb>
+  /** With `format: page`: a part rather than a page (a component), shown whole (PagePreview's `whole`). */
+  whole?: boolean
 }
 
 /** A file as `media/get-many` gives it. */
@@ -43,7 +45,7 @@ const date = (iso: string, style: Intl.DateTimeFormatOptions) => {
   return Number.isNaN(parsed.getTime()) ? iso : parsed.toLocaleString(locale(), style)
 }
 
-export function formatValue(value: unknown, { format = 'text', tones, labels, currency, field, locales, media }: FormatOptions = {}): ReactNode {
+export function formatValue(value: unknown, { format = 'text', tones, labels, currency, field, locales, media, whole }: FormatOptions = {}): ReactNode {
   if (format === 'languages') return <Languages has={Array.isArray(value) ? value.map(String) : []} locales={locales ?? []} />
   if (format === 'field') return field ? <FieldValue type={field.type} options={field.options} value={value} media={media} /> : formatValue(value)
   if (format === 'yesno') return value ? t('Yes') : NONE
@@ -80,7 +82,7 @@ export function formatValue(value: unknown, { format = 'text', tones, labels, cu
     case 'address': return <span className="block truncate font-mono text-xs text-faint">{String(value)}</span>
     case 'media': return <MediaCell value={value} media={media} />
     // A page of the site, drawn by the site: a card's whole picture, a row's small one.
-    case 'page': return safeUrl(value) ? <span className="block h-10 w-16 overflow-hidden rounded-xs border border-border"><PagePreview src={safeUrl(value)!} fill /></span> : NONE
+    case 'page': return safeUrl(value) ? <span className="block h-10 w-16 overflow-hidden rounded-xs border border-border"><PagePreview src={safeUrl(value)!} fill whole={whole} /></span> : NONE
     case 'image': return safeUrl(value) ? <img src={safeUrl(value)!} alt="" className="size-8 rounded-xs object-cover" /> : NONE
     case 'link': return safeUrl(value) ? <a href={safeUrl(value)!} target="_blank" rel="noreferrer" className="truncate text-text underline-offset-2 hover:underline">{String(value).replace(/^https?:\/\//, '')}</a> : String(value)
     default:

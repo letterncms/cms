@@ -38,7 +38,7 @@ final class Catalog
             // A word to mark the row with, as a badge (a key of the row); what a number counts, said with it on a phone: {one, other} with {count}.
             'badge' => $id, 'unit' => $this->object(['one' => $s, 'other' => $s], ['one', 'other']),
             // `muted`: a quieter second value beside it, cut short before the value is; `mutedWhole` keeps it whole and cuts the value first (who is editing, beside a title).
-            'muted' => $id, 'mutedWhole' => ['type' => 'boolean'], 'sort' => ['type' => ['boolean', 'string'], 'maxLength' => 120], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
+            'muted' => $id, 'mutedWhole' => ['type' => 'boolean'], 'whole' => ['type' => 'boolean', 'description' => 'With format page: it draws a part, not a page (a component), and its picture shows all of it.'], 'sort' => ['type' => ['boolean', 'string'], 'maxLength' => 120], 'currency' => $id, 'action' => $action, 'image' => ['type' => 'boolean'],
             // A row's own icon, what an empty value reads as, a row's problem in words (drawn as a warning), and a switch's per-row label, lock and why it is locked.
             'icon' => $id, 'empty' => $s, 'warning' => $id, 'ariaLabel' => $s, 'disabled' => $id, 'reason' => $id,
             // As wide as its longest value (an address); a few lines on a card instead of a labeled value; on cards from the start; the field a `field` value belongs to; every language there is, for `languages`.
