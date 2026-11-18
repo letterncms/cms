@@ -21,7 +21,7 @@ if (! function_exists('cms_global')) {
 
 if (! function_exists('cms_menu')) {
     /**
-     * A menu's links for templates: [{label, url, newTab, current, active, children}]. Only live links show;
+     * A menu's links for templates: [{label, url, newTab, current, active, children}, and each link’s own fields]. Only live links show;
      * `current` marks the page being rendered and `active` the links above it. Null when there is no such menu,
      * so a theme can fall back: `cms_menu('main') ?? [...]`.
      */

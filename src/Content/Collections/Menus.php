@@ -105,7 +105,12 @@ final class Menus
             $local = str_starts_with($url, '/');
             $isCurrent = $current !== null && $local && self::normal($url) === $current;
 
+            // A link's own fields beside its address, an icon or a few words to say what is behind it, in its language:
+            // what the menu's own keys name stays theirs.
+            $fields = array_diff_key([...$item->data, ...$words->data], ['link' => true]);
+
             $out[] = [
+                ...$fields,
                 'label' => $words->title,
                 'url' => $url,
                 'newTab' => ! empty($link['new_tab']),
