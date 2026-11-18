@@ -5,6 +5,12 @@ import { Skeleton } from './Spinner'
 /** The width a page is drawn at before it is scaled down: a desktop window. */
 const PAGE = 1280
 
+/** Where each element ends on the page. A wrapper that draws no box of its own (`display: contents`, as a component's) ends where its children do. */
+function bottoms(elements: HTMLCollection, win: Window): number[] {
+  return [...elements].filter((el) => el.tagName !== 'SCRIPT').flatMap((el) =>
+    win.getComputedStyle(el).display === 'contents' ? bottoms(el.children, win) : [el.getBoundingClientRect().bottom + win.scrollY])
+}
+
 /**
  * A page of the site as a picture, scaled to the width it is given: the site's own drawing of it (`src`, an
  * address of the site such as a pattern's or a template's preview), in its design, loaded once it is near
@@ -35,7 +41,7 @@ export function PagePreview({ src, fill, maxHeight = 360, className }: { src: st
     try {
       const body = frame.contentDocument?.body
       if (!body) return
-      const drawn = Math.max(0, ...[...body.children].filter((el) => el.tagName !== 'SCRIPT').map((el) => el.getBoundingClientRect().bottom + frame.contentWindow!.scrollY))
+      const drawn = Math.max(0, ...bottoms(body.children, frame.contentWindow!))
       setHeight(Math.max(80, Math.min(6000, Math.ceil(drawn))))
     } catch {
       // Another origin: the frame keeps the height it had.

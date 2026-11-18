@@ -192,6 +192,18 @@ final class RenderingTest extends TestCase
         $this->assertStringNotContainsString('data-cms-node', $html, 'a picture, not the canvas');
         $this->assertStringContainsString('A default title', (string) $this->get('/__component/card')->assertOk()->getContent(), 'a synced one as a page places it, its properties at their defaults');
 
+        // A property with nothing in it shows what goes there, not a blank card.
+        $event = $this->cms()->abilities()->execute('components/save', ['handle' => 'event', 'title' => 'Event', 'props' => [['handle' => 'venue', 'type' => 'text', 'label' => 'Venue'], ['handle' => 'photo', 'type' => 'media', 'label' => 'Photo', 'max' => 1]], 'blocks' => [['type' => 'image', 'bind' => ['image' => 'props.photo']], ['type' => 'paragraph', 'bind' => ['text' => 'props.venue']]]], $system);
+        $empty = (string) $this->get('/__component/event')->assertOk()->getContent();
+        $this->assertStringContainsString('data-cms-placeholder="Venue"', $empty, 'empty text says which property it is');
+        $this->assertStringContainsString('cms-media-placeholder', $empty, 'an empty image is a neutral picture');
+        $this->assertStringNotContainsString('data-cms-node', $empty, 'still a picture, not the canvas');
+        $card = (string) $this->get('/__preview/'.$event['id'])->assertOk()->getContent();
+        $this->assertStringContainsString('data-cms-placeholder="Venue"', $card, 'the same in the list of components');
+        $this->assertStringNotContainsString('data-cms-node', $card);
+        $played = (string) $this->postJson('/__preview/'.$event['id'], ['play' => true])->assertOk()->getContent();
+        $this->assertStringNotContainsString('data-cms-placeholder', $played, 'playing it shows it as the site will');
+
         // Edited in the canvas alone, with no template around it.
         $canvas = (string) $this->postJson('/__preview/'.$saved['id'])->assertOk()->getContent();
         $this->assertStringContainsString('data-cms-node', $canvas);

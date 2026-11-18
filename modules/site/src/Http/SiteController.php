@@ -82,7 +82,7 @@ final class SiteController
 
         $document = $request->boolean('editor') ? bin2hex(random_bytes(16)) : null;
         $working = $entry->withWorkingCopy();
-        $html = $this->part($working, $user, $document !== null, $document)
+        $html = $this->part($working, $user, $document !== null, $document, picture: true)
             ?? $this->renderer->entry($working, max(1, (int) $request->query('page', 1)), preview: true, editor: $document !== null, bodyDocument: $document)['html'];
 
         return $this->rendered($html, $document);
@@ -90,14 +90,16 @@ final class SiteController
 
     /**
      * A component alone in the site's design, as a page places it (its properties at their defaults; one that is not
-     * synced as the copy it would put there): its picture in the inserter, plugins' ones too. Drafts included.
+     * synced as the copy it would put there): its picture in the inserter and the components list, plugins' ones too.
+     * Drafts included. Drawn as the canvas draws it, without what makes the canvas editable: a property with no value
+     * shows its name and an empty image a neutral picture, so a card made to be filled in doesn't look blank.
      */
     public function component(Request $request, string $handle): Response
     {
         $component = app(Components::class)->find($handle, working: true);
         abort_if($component === null || ! $request->user()?->hasPermission('admin.access'), 404);
 
-        return $this->rendered($this->renderer->blocks([['id' => 'preview', 'type' => 'component', 'props' => ['ref' => $handle]]], null, $component['title'], false, null), null);
+        return $this->rendered($this->renderer->blocks([['id' => 'preview', 'type' => 'component', 'props' => ['ref' => $handle]]], null, $component['title'], true, null), null);
     }
 
     /**
@@ -191,7 +193,8 @@ final class SiteController
      * A part of the design as it is seen on its own, null for any other entry: a template around an
      * entry it frames (`sample`, else the newest live one it fits), or a component alone.
      */
-    private function part(Entry $working, User $user, bool $editor, ?string $document, string $sample = ''): ?string
+    /** $picture: a component is drawn to be looked at (a list's card), with the canvas's placeholders for what is empty. */
+    private function part(Entry $working, User $user, bool $editor, ?string $document, string $sample = '', bool $picture = false): ?string
     {
         $blocks = (array) ($working->data[$working->body()?->handle ?? 'blocks'] ?? []);
 
@@ -202,7 +205,7 @@ final class SiteController
             // Its own picture is the component as a page places it: its properties at their defaults, not its bare blocks.
             Components::COLLECTION => $editor
                 ? $this->renderer->blocks($blocks, null, $working->title, true, $document)
-                : $this->renderer->blocks([['id' => 'preview', 'type' => 'component', 'props' => ['ref' => $working->slug]]], null, $working->title, false, null),
+                : $this->renderer->blocks([['id' => 'preview', 'type' => 'component', 'props' => ['ref' => $working->slug]]], null, $working->title, $picture, null),
             default => null,
         };
     }
