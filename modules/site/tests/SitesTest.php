@@ -652,6 +652,21 @@ final class SitesTest extends TestCase
         $this->assertNull($this->cms()->collections()->find('notes'));
     }
 
+    public function test_a_design_applied_again_over_the_site_keeps_its_components_synced(): void
+    {
+        $card = static fn (string $about) => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac1\ntitle: Card\nstatus: published\ndescription: '{$about}'\nprops:\n  - { handle: title, type: text, label: Title }\n---\n\n::: heading {\"id\":\"c1\",\"props\":{\"level\":\"3\"},\"bind\":{\"text\":\"props.title\"}}\n:::\n";
+        $this->site('cards', ['content/collections/components/card.md' => $card('A card.')]);
+        $this->apply('cards');
+        $synced = fn () => $this->cms()->entries()->query()->collection('components')->ungated()->where('slug', 'card')->first()->data['synced'] ?? null;
+        $this->assertTrue($synced(), 'a component whose file says nothing of it is synced');
+
+        // A newer version of the site's component, applied over it: it leaves out what is its default, and gets that
+        // default again, as when it came in, instead of nothing.
+        $this->site('cards', ['content/collections/components/card.md' => $card('A better card.')]);
+        $this->ability('sites/apply', ['handle' => 'cards', 'mode' => 'design', 'clash' => 'replace']);
+        $this->assertTrue($synced());
+    }
+
     public function test_a_site_applied_twice_is_left_alone_or_comes_in_beside_itself(): void
     {
         $this->fieldSite();
