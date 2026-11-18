@@ -23,7 +23,8 @@ const manifest = {
   collections: [collection], globals: [], fieldTypes: [], commands: [], widgets: [], dashboard: [],
   config: { content: { autosave: 0, perPage: 50 } },
   nav: [{ id: 'posts', label: 'Posts', path: '/content/posts', icon: 'article', section: 'main' }, ...settingsNav],
-  sidebar: { sections: [{ id: 'main', label: '', items: ['posts'] }], hidden: [], personal: false },
+  // Email, a screen of the settings room, is pinned to the main sidebar.
+  sidebar: { sections: [{ id: 'main', label: '', items: ['posts'] }, { id: 'pinned', label: 'Pinned', items: ['settings-email'] }], hidden: [], personal: false },
   rooms: [{ id: 'settings', label: 'Settings', icon: 'settings', sections: [{ id: 'system', label: '', items: settingsNav.map((item) => item.id) }] }],
   brand,
 }
@@ -176,6 +177,23 @@ try {
     queryClient.setQueryData(abilityKey('entries/get', { id: 'entry-1' }), (old) => ({ ...old, title: 'Background refresh' }))
     await sleep(50)
     assert(title.isConnected && title.value === 'Original title', 'cache refresh remounted the editor')
+  })
+  await test('The sidebar marks the screen on view, not the one still loading', async () => {
+    navigate('/content/posts')
+    await wait(() => heading()?.startsWith('Posts') && !progress(), 'Posts did not open')
+    const row = (label) => [...document.querySelectorAll('aside .cms-sidebar-row')].find((r) => r.textContent.trim() === label)
+    const marked = (label) => row(label)?.classList.contains('cms-sidebar-row-active')
+    assert(marked('Posts') && row('EMAIL') && !marked('EMAIL'), 'the main sidebar did not mark Posts alone')
+    const original = registry.routes.get('/settings/:namespace')
+    let release
+    registry.routes.set('/settings/:namespace', { ...original, load: () => new Promise((r) => { release = r }) })
+    navigate('/settings/email')
+    await wait(() => !!release && progress(), 'navigation did not wait for preparation')
+    await sleep(50)
+    assert(marked('Posts') && !marked('EMAIL'), 'the pinned row lit up before its screen was on view')
+    release()
+    await wait(() => heading() === 'EMAIL' && !progress(), 'email settings never opened')
+    registry.routes.set('/settings/:namespace', original)
   })
   await test('Back goes up one level of the trail inside one screen, never back through history', async () => {
     // One screen drawing three levels, as Design draws Classes, a group and a class: the bar's trail names them.

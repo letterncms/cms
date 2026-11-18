@@ -245,7 +245,12 @@ export function App() {
   // A column of its own at the right edge; `Dock` from the UI kit draws it and reports its state.
   const docks = panelsFor('shell.dock', {})
   const sidebarShown = !narrow && (own ? ownOpen : !hidden)
-  const sidebar = (onNavigate?: () => void) => <Sidebar own={own} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} room={room} />
+  // The sidebar follows the screen on view, as the room does: while the next screen loads, nothing in it is marked ahead of it.
+  const sidebar = (onNavigate?: () => void) => (
+    <ScreenLocation location={location}>
+      <Sidebar own={own} drawer={!!onNavigate} onOwnHost={setOwnHost} onSearch={(e?: { currentTarget: EventTarget | null }) => { setExpanded(false); events.emit('search.open', { from: e?.currentTarget }) }} onNavigate={onNavigate} room={room} />
+    </ScreenLocation>
+  )
   const sidebarOut = narrow ? expanded : sidebarShown
   const toggleLabel = own
     ? sidebarOut ? t('Hide {name}', { name: own.title }) : t('Show {name}', { name: own.title })
