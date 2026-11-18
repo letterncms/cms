@@ -322,3 +322,16 @@ test('a group can stand with no class in it, on a line of its own, until a class
   assert.deepEqual(sheet.addGroup('Spare').renameGroup('Spare', 'Cards').groups(), ['Cards', 'Heroes'])
   assert.equal(sheet.addGroup('Spare').renameGroup('Spare', 'Cards').css.match(/group: Cards/g)?.length, 1)
 })
+
+test('a form is styled part by part in the components layer; the --field-* properties of :root are the site’s own CSS', () => {
+  const sheet = new Stylesheet('@import "tailwindcss";\n\n@layer base {\n  :root, [data-theme] {\n    --field-radius: 0;\n  }\n  ul {\n    @apply list-disc;\n  }\n}\n\n@layer components {\n  .cms-input {\n    @apply rounded-lg aria-invalid:border-danger;\n  }\n  select.cms-input {\n    --field-select-arrow-color: red;\n  }\n  .cms-field {\n    @apply label-inside;\n  }\n}\n')
+  // The parts of a form and an element the site added are the design’s; what the kernel's properties once were is CSS of the site's own.
+  assert.equal(sheet.extra(), '@layer base {\n  :root, [data-theme] {\n    --field-radius: 0;\n  }\n}')
+  assert.deepEqual(sheet.elements('components').map((rule) => [rule.name, rule.classes]), [['.cms-input', ['rounded-lg', 'aria-invalid:border-danger']], ['select.cms-input', []], ['.cms-field', ['label-inside']]])
+  assert.equal(sheet.property('select.cms-input', '--field-select-arrow-color', 'components'), 'red')
+  // A value no class reaches lives beside the part's classes: setting one keeps them, and its rule.
+  const next = sheet.setProperty('.cms-input', '--field-select-arrow-size', '0.5rem', 'components').setElement('select.cms-input', ['bg-white'], 'components')
+  assert.deepEqual(next.elements('components').find((rule) => rule.name === '.cms-input')?.classes, ['rounded-lg', 'aria-invalid:border-danger'])
+  assert.equal(next.property('select.cms-input', '--field-select-arrow-color', 'components'), 'red')
+  assert.deepEqual(next.elements('components').find((rule) => rule.name === 'select.cms-input')?.classes, ['bg-white'])
+})

@@ -1,20 +1,22 @@
 import { navigate, t, type FieldDef } from '@letterncms/sdk'
-import { Button, EmptyState, Fields, IconButton, Menu, NoMatches, prompt, toast, type MenuItemDef } from '@letterncms/ui'
-import { ARTICLE, FIELDS, InspectorSection, PanelFields, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, shownInState, styleApi, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
+import { Button, EmptyState, Fields, NoMatches, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { ARTICLE, ELEMENTS, FORM, InspectorSection, MORE_ARTICLE, MORE_ELEMENTS, PanelFields, STYLE_GROUPS, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, shownInState, styleApi, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
 import { useEffect, useMemo, useState } from 'react'
 import { Group, OpenRow, rowMenu, type Editing } from './parts'
 
 /* The site's styles, in groups, each a place of its own: the elements the site styles (its page, headings, text,
-   divider, selection and focus), its buttons, its form fields and its long-form text, which it was given, then the
-   groups it makes for the looks it names (a lede, a card), and those in none. What an element looks like by default
-   and a look with a name are the same thing to change: classes behind an @apply, edited with the controls of a
-   block's Design tab beside a sample drawn by the site's own CSS. Form fields and the spacing of long-form text are
-   the kernel's: their look is properties (--field-*, --prose-*) the site sets. A style's group is written in the
-   stylesheet, beside it, so it goes along with undo, versions and a site made from this one. */
+   divider, selection and focus, and any it adds), its buttons, the parts of its forms and of its long-form text,
+   which it was given, then the groups it makes for the looks it names (a lede, a card), and those in none. Every
+   one is edited the same way: classes behind an @apply, with the controls of a block's Design tab, beside a sample
+   drawn by the site's own CSS, in the state being styled. What a part draws that no class reaches (a dropdown's
+   arrow, a checkbox's mark, where a label stands) is a section of its own below the sample. Any group holds the
+   site's own classes too; a class's group is written in the stylesheet, beside it, so it goes along with undo,
+   versions and a site made from this one. */
 
 /** A utility without its important mark. */
 const bare = (utility: string) => utility.replace(/^!|!$/g, '')
 const words = (text: string) => text.split(/\s+/).filter(Boolean)
+const join = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ')
 
 /** What a sample of the site is drawn with: the draft's compiler, and the screen the page is seen at. */
 export interface Samples {
@@ -25,116 +27,310 @@ export interface Samples {
 /** The classes of the page's text, for a sample's frame: what `body` applies does not reach into a shadow root by itself. */
 const pageClasses = (sheet: Stylesheet) => sheet.elements().find((rule) => rule.name === 'body')?.classes.join(' ') ?? ''
 
-/** An element the site styles by default, in the words people use for it, and its place in the address. */
+/** What a sample is drawn in: the state being styled, the classes that draw it so (hover:x worn as x!), and the classes being edited. */
+interface Look {
+  state: string[]
+  shown: string[]
+  classes: string[]
+}
+
+/** One value of a style that no class sets: a property of its rule (or of another's, `selector`), or a value read and written its own way. */
+interface PartValue {
+  handle: string
+  label: string
+  field: Partial<FieldDef>
+  /** A property, `--field-select-arrow-color`, of the style's rule or of `selector`'s. */
+  property?: string
+  selector?: string
+  /** A value of its own (where a label stands): read from the draft, and written into it. */
+  read?: (sheet: Stylesheet) => unknown
+  write?: (sheet: Stylesheet, value: unknown) => Stylesheet
+}
+
+/** A section of such values under its title (Arrow, Check Mark, Layout). */
+interface Part {
+  title: string
+  values: PartValue[]
+}
+
+/** A style the site was given, an element, a part of long-form text or of a form, edited as a class is. */
 interface Element {
   id: string
   selector: string
+  layer: Layer
   label: string
-  node: SampleNode
-  /** What it is styled with: text is type, colour and the space around it, a line is its border. */
+  /** Its sample, in the state being styled. */
+  sample: (look: Look) => SampleNode
+  /** The control groups it is styled with; text's when left out. */
   groups?: readonly string[]
+  /** States offered beside Hover, Pressed and Focus: a field's Invalid, a checkbox's Checked. */
+  states?: string[]
+  /** What it draws that no class reaches, section by section. */
+  parts?: Part[]
+  /** The sample's height: a form's parts need more room than a line of text. */
+  tall?: boolean
 }
 
 const TEXT_GROUPS = ['typography', 'spacing', 'fill', 'border', 'effects', 'transition'] as const
+const FIELD_GROUPS = ['size', 'spacing', 'typography', 'fill', 'border', 'effects', 'transition'] as const
+const BOX_GROUPS = ['fill', 'border', 'effects', 'transition'] as const
+
+/** One element as its sample: the tag with its words, wearing what draws the state being styled. */
+const plain = (node: SampleNode) => (look: Look): SampleNode => ({ ...node, className: join(node.className, ...look.shown) || undefined })
+
+/** Words a sample shows, made safe to stand in markup. */
+const text = (said: string) => said.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+
+/** Markup of our own: what a sample holds that is more than one element. */
+const markup = (html: string): SampleNode => ({ tag: 'div', text: '', markup: html })
 
 /** Every element the site styles, the page first, then its text, then the details of a page. */
-const ELEMENT_LIST = (): Element[] => [
-  { id: 'body', selector: 'body', label: t('Page'), node: { tag: 'p', text: t('Page') }, groups: ['typography', 'fill'] },
-  { id: 'h1', selector: 'h1', label: t('Heading 1'), node: { tag: 'h1', text: t('Heading 1') } },
-  { id: 'h2', selector: 'h2', label: t('Heading 2'), node: { tag: 'h2', text: t('Heading 2') } },
-  { id: 'h3', selector: 'h3', label: t('Heading 3'), node: { tag: 'h3', text: t('Heading 3') } },
-  { id: 'h4', selector: 'h4', label: t('Heading 4'), node: { tag: 'h4', text: t('Heading 4') } },
-  { id: 'h5', selector: 'h5', label: t('Heading 5'), node: { tag: 'h5', text: t('Heading 5') } },
-  { id: 'h6', selector: 'h6', label: t('Heading 6'), node: { tag: 'h6', text: t('Heading 6') } },
-  { id: 'p', selector: 'p', label: t('Paragraph'), node: { tag: 'p', text: t('Paragraph') } },
-  { id: 'a', selector: 'a', label: t('Link'), node: { tag: 'a', text: t('Link'), attributes: { href: '#' } } },
-  { id: 'strong', selector: 'strong', label: t('Bold'), node: { tag: 'strong', text: t('Bold') } },
-  { id: 'small', selector: 'small', label: t('Small'), node: { tag: 'small', text: t('Small') } },
-  { id: 'blockquote', selector: 'blockquote', label: t('Quote'), node: { tag: 'blockquote', text: t('Quote') } },
-  { id: 'code', selector: 'code', label: t('Code'), node: { tag: 'code', text: t('Code') } },
-  { id: 'figcaption', selector: 'figcaption', label: t('Caption'), node: { tag: 'figcaption', text: t('Caption') } },
-  { id: 'hr', selector: 'hr', label: t('Divider'), node: { tag: 'hr', text: '', className: 'w-40' }, groups: ['border', 'spacing', 'size'] },
-  { id: 'selection', selector: '::selection', label: t('Selection'), node: { tag: 'span', text: t('Selection') }, groups: ['typography', 'fill'] },
-  { id: 'focus', selector: ':focus-visible', label: t('Focus Ring'), node: { tag: 'span', text: t('Focus Ring'), className: 'inline-block rounded-sm px-2' }, groups: ['border', 'effects'] },
-]
+const ELEMENT_LIST = (): Element[] => {
+  const element = (id: string, label: string, node: SampleNode, groups?: readonly string[]): Element => ({ id, selector: id, layer: 'base', label, sample: plain(node), groups })
+  const tag = (id: string, label: string, groups?: readonly string[]) => element(id, label, { tag: id, text: label }, groups)
+  return [
+    element('body', t('Page'), { tag: 'p', text: t('Page') }, ['typography', 'fill']),
+    tag('h1', t('Heading 1')),
+    tag('h2', t('Heading 2')),
+    tag('h3', t('Heading 3')),
+    tag('h4', t('Heading 4')),
+    tag('h5', t('Heading 5')),
+    tag('h6', t('Heading 6')),
+    tag('p', t('Paragraph')),
+    element('a', t('Link'), { tag: 'a', text: t('Link'), attributes: { href: '#' } }),
+    tag('strong', t('Bold')),
+    tag('small', t('Small')),
+    tag('blockquote', t('Quote')),
+    tag('code', t('Code')),
+    tag('figcaption', t('Caption')),
+    element('hr', t('Divider'), { tag: 'hr', text: '', className: 'w-40' }, ['border', 'spacing', 'size']),
+    // The selection and the focus ring can't be shown by selecting or focusing: their sample wears their classes.
+    { id: 'selection', selector: '::selection', layer: 'base', label: t('Selection'), groups: ['typography', 'fill'], sample: (look) => ({ tag: 'span', text: t('Selection'), className: join(...look.classes, ...look.shown) }) },
+    { id: 'focus', selector: ':focus-visible', layer: 'base', label: t('Focus Ring'), groups: ['border', 'effects'], sample: (look) => ({ tag: 'span', text: t('Focus Ring'), className: join('inline-block rounded-sm px-2', ...look.classes, ...look.shown) }) },
+  ]
+}
 
-/** Long-form text: an element drawn inside it. Alone, an element's margins are no part of its look. */
-const prose = (markup: string): SampleNode => ({ tag: 'div', text: '', markup: `<div class="cms-prose">${markup}</div>` })
+/** A picture's stand-in, the same in every sample. */
+const PICTURE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 160 100%22%3E%3Crect width=%22160%22 height=%22100%22 fill=%22%23a3a3a3%22/%3E%3Cpath d=%22M0 100 55 45l35 35 22-22 48 42z%22 fill=%22%23737373%22/%3E%3C/svg%3E'
 
-/** The elements of long-form text a site styles apart from the page's, keyed as `ARTICLE` names their rules. */
-const ARTICLES = (): (Element & { key: keyof typeof ARTICLE })[] => [
-  { id: 'h2', key: 'h2', selector: ARTICLE.h2, label: t('Heading 2'), node: prose(`<h2 style="margin:0">${t('Heading 2')}</h2>`) },
-  { id: 'h3', key: 'h3', selector: ARTICLE.h3, label: t('Heading 3'), node: prose(`<h3 style="margin:0">${t('Heading 3')}</h3>`) },
-  { id: 'p', key: 'p', selector: ARTICLE.p, label: t('Paragraph'), node: prose(`<p style="margin:0">${t('Paragraph')}</p>`) },
-  { id: 'li', key: 'li', selector: ARTICLE.li, label: t('List Item'), node: prose(`<ul><li>${t('List Item')}</li></ul>`) },
-  { id: 'blockquote', key: 'blockquote', selector: ARTICLE.blockquote, label: t('Quote'), node: prose(`<blockquote style="margin:0">${t('Quote')}</blockquote>`) },
-  { id: 'figure', key: 'figure', selector: ARTICLE.figure, label: t('Figure'), node: prose(`<figure style="margin:0">${t('Figure')}</figure>`), groups: ['spacing', 'border', 'effects'] },
-  { id: 'a', key: 'a', selector: ARTICLE.a, label: t('Link'), node: prose(`<p><a href="#">${t('Link')}</a></p>`) },
-]
-
-/** A style under another name, and under that name wherever the stylesheet itself applies it. */
-function renameStyle(sheet: Stylesheet, from: string, to: string): Stylesheet {
-  const swap = (raw: string) => {
-    const { variants, utility } = parseClass(raw)
-    return bare(utility) === from ? withVariants(variants, utility.replace(from, to)) : raw
-  }
-  let next = sheet.renameUtility(from, to)
-  for (const rule of next.utilities()) {
-    const classes = rule.classes.map(swap)
-    if (classes.some((name, i) => name !== rule.classes[i])) next = next.setUtility(rule.name, classes)
-  }
-  for (const layer of ['base', 'components'] as const) {
-    for (const rule of next.elements(layer)) {
-      const classes = rule.classes.map(swap)
-      if (classes.some((name, i) => name !== rule.classes[i])) next = next.setElement(rule.name, classes, layer)
+/** The elements a site may add to those it styles, by their tag. */
+const MORE_ELEMENT_LIST = (): Element[] => {
+  const node = (id: (typeof MORE_ELEMENTS)[number]): { label: string; node: SampleNode; groups?: readonly string[] } => {
+    const words = (label: string, groups?: readonly string[]) => ({ label, node: { tag: id, text: label } as SampleNode, groups })
+    switch (id) {
+      case 'em': return words(t('Emphasis'))
+      case 'mark': return words(t('Highlight'))
+      case 'del': return words(t('Deleted Text'))
+      case 'sup': return words(t('Superscript'))
+      case 'sub': return words(t('Subscript'))
+      case 'abbr': return words(t('Abbreviation'))
+      case 'cite': return words(t('Citation'))
+      case 'kbd': return words(t('Keyboard Key'))
+      case 'pre': return words(t('Code Block'))
+      case 'address': return words(t('Address'))
+      case 'summary': return words(t('Summary'))
+      case 'details': return { label: t('Details'), node: markup(`<details open><summary>${text(t('Summary'))}</summary>${text(t('Details'))}</details>`) }
+      case 'ul': return { label: t('Bulleted List'), node: markup(`<ul><li>${text(t('List Item'))}</li><li>${text(t('List Item'))}</li></ul>`) }
+      case 'ol': return { label: t('Numbered List'), node: markup(`<ol><li>${text(t('List Item'))}</li><li>${text(t('List Item'))}</li></ol>`) }
+      case 'li': return { label: t('List Item'), node: markup(`<ul><li>${text(t('List Item'))}</li></ul>`) }
+      case 'dl': return { label: t('Description List'), node: markup(`<dl><dt>${text(t('Term'))}</dt><dd>${text(t('Description'))}</dd></dl>`) }
+      case 'dt': return { label: t('Term'), node: markup(`<dl><dt>${text(t('Term'))}</dt></dl>`) }
+      case 'dd': return { label: t('Description'), node: markup(`<dl><dd>${text(t('Description'))}</dd></dl>`) }
+      case 'table': return { label: t('Table'), node: markup(TABLE()), groups: ['spacing', 'typography', 'fill', 'border', 'effects'] }
+      case 'caption': return { label: t('Table Caption'), node: markup(TABLE()) }
+      case 'th': return { label: t('Table Header'), node: markup(TABLE()) }
+      case 'td': return { label: t('Table Cell'), node: markup(TABLE()) }
+      case 'img': return { label: t('Image'), node: { tag: 'img', text: '', attributes: { src: PICTURE, alt: '', width: '160', height: '100' } }, groups: ['size', 'border', 'effects'] }
+      case 'figure': return { label: t('Figure'), node: markup(`<figure><img src="${PICTURE}" alt="" width="160" height="100" style="display:block"><figcaption>${text(t('Caption'))}</figcaption></figure>`), groups: ['spacing', 'fill', 'border', 'effects'] }
     }
   }
-  return next
-}
-
-/** A name as a class takes it, from words: "Big Quote" is big-quote. */
-const className = (name: unknown) => String(name ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '')
-
-/** Which of the site's groups a class goes in, as a list to pick from: none, or one of them. */
-const groupField = (groups: string[]): FieldDef => ({ handle: 'group', type: 'select', label: t('Group'), placeholder: t('No Group'), options: groups.map((name) => ({ value: name, label: name })) } as FieldDef)
-
-/**
- * A name for a style, asked for: a class's name from the words typed, under `prefix` (btn-), not one the stylesheet
- * or Tailwind has. With `groups` (the site's) it also asks which of them the style goes in, `group` chosen at first.
- */
-async function askName(engine: Engine | null, taken: string[], title: string, confirmLabel: string, prefix = '', current = '', groups?: { names: string[]; group: string | null }): Promise<{ name: string; group: string | null } | null> {
-  const asked = await prompt({
-    title,
-    fields: [
-      { handle: 'name', type: 'text', label: t('Name'), placeholder: prefix ? 'outline' : 'lead', required: true, autofocus: true },
-      ...(groups?.names.length ? [groupField(groups.names)] : []),
-    ],
-    values: { name: current ? current.slice(prefix.length) : '', group: groups?.group ?? null },
-    confirm: confirmLabel,
+  return MORE_ELEMENTS.map((id) => {
+    const { label, node: sample, groups } = node(id)
+    // Markup wears no state: what it shows is the element among others.
+    return { id, selector: id, layer: 'base' as const, label, groups, sample: sample.markup ? () => sample : plain(sample), tall: !!sample.markup }
   })
-  const key = className(asked?.name)
-  if (!key) return null
-  const name = `${prefix}${key}`
-  if (name === current) return null
-  if (!/^[a-z][a-z0-9-]*$/.test(name)) {
-    toast.error(t('A name is lowercase letters, numbers and hyphens, and starts with a letter.'))
-    return null
+}
+
+/** A small table: its caption, a row of headers and one of cells. */
+const TABLE = () => `<table><caption>${text(t('Table Caption'))}</caption><thead><tr><th>${text(t('Table Header'))}</th><th>${text(t('Table Header'))}</th></tr></thead><tbody><tr><td>${text(t('Table Cell'))}</td><td>${text(t('Table Cell'))}</td></tr></tbody></table>`
+
+/** Long-form text: an element drawn inside it. Alone, an element's margins are no part of its look. */
+const prose = (html: string) => () => markup(`<div class="cms-prose">${html}</div>`)
+
+/** A length of long-form text, in em first: it grows with the text. */
+const proseLength = (property: string, label: string): PartValue => ({ handle: property, property, label, field: { component: 'blocks-value', unit: 'em', units: ['em', 'rem', 'px'], min: 0, step: 0.125 } })
+
+/** The parts of long-form text a site styles apart from the page's: the text as a whole, then its elements. */
+const ARTICLES = (): Element[] => [
+  {
+    id: 'article',
+    selector: ARTICLE.spacing,
+    layer: 'components',
+    label: t('Article'),
+    sample: prose(`<h2 style="margin:0">${text(t('Heading 2'))}</h2><p>${text(t('Paragraph'))}</p><ul><li>${text(t('List Item'))}</li><li>${text(t('List Item'))}</li></ul>`),
+    tall: true,
+    // The space in long-form text: between its blocks, around its headings and between the items of a list.
+    parts: [{ title: t('Text Spacing'), values: [proseLength('--prose-blocks', t('Blocks')), proseLength('--prose-headings', t('Above Headings')), proseLength('--prose-after-headings', t('Below Headings')), proseLength('--prose-items', t('List Items'))] }],
+  },
+  { id: 'h2', selector: ARTICLE.h2, layer: 'components', label: t('Heading 2'), sample: prose(`<h2 style="margin:0">${text(t('Heading 2'))}</h2>`) },
+  { id: 'h3', selector: ARTICLE.h3, layer: 'components', label: t('Heading 3'), sample: prose(`<h3 style="margin:0">${text(t('Heading 3'))}</h3>`) },
+  { id: 'p', selector: ARTICLE.p, layer: 'components', label: t('Paragraph'), sample: prose(`<p style="margin:0">${text(t('Paragraph'))}</p>`) },
+  { id: 'li', selector: ARTICLE.li, layer: 'components', label: t('List Item'), sample: prose(`<ul><li>${text(t('List Item'))}</li></ul>`) },
+  { id: 'blockquote', selector: ARTICLE.blockquote, layer: 'components', label: t('Quote'), sample: prose(`<blockquote style="margin:0">${text(t('Quote'))}</blockquote>`) },
+  { id: 'figure', selector: ARTICLE.figure, layer: 'components', label: t('Figure'), sample: prose(`<figure style="margin:0">${text(t('Figure'))}</figure>`), groups: ['spacing', 'border', 'effects'] },
+  { id: 'a', selector: ARTICLE.a, layer: 'components', label: t('Link'), sample: prose(`<p><a href="#">${text(t('Link'))}</a></p>`) },
+]
+
+/** The elements of long-form text a site may add to those it styles. */
+const MORE_ARTICLE_LIST = (): Element[] => {
+  const entry = (id: keyof typeof MORE_ARTICLE, label: string, html: string, groups?: readonly string[]): Element => ({ id, selector: MORE_ARTICLE[id], layer: 'components', label, sample: prose(html), groups })
+  return [
+    entry('h4', t('Heading 4'), `<h4 style="margin:0">${text(t('Heading 4'))}</h4>`),
+    entry('h5', t('Heading 5'), `<h5 style="margin:0">${text(t('Heading 5'))}</h5>`),
+    entry('h6', t('Heading 6'), `<h6 style="margin:0">${text(t('Heading 6'))}</h6>`),
+    entry('ul', t('Bulleted List'), `<ul><li>${text(t('List Item'))}</li><li>${text(t('List Item'))}</li></ul>`),
+    entry('ol', t('Numbered List'), `<ol><li>${text(t('List Item'))}</li><li>${text(t('List Item'))}</li></ol>`),
+    entry('strong', t('Bold'), `<p><strong>${text(t('Bold'))}</strong></p>`),
+    entry('em', t('Emphasis'), `<p><em>${text(t('Emphasis'))}</em></p>`),
+    entry('code', t('Code'), `<p><code>${text(t('Code'))}</code></p>`),
+    entry('pre', t('Code Block'), `<pre>${text(t('Code Block'))}</pre>`),
+    entry('img', t('Image'), `<img src="${PICTURE}" alt="" width="160" height="100">`, ['size', 'spacing', 'border', 'effects']),
+    entry('figcaption', t('Caption'), `<figure style="margin:0"><figcaption>${text(t('Caption'))}</figcaption></figure>`),
+    entry('hr', t('Divider'), '<hr style="width:10rem">', ['border', 'spacing', 'size']),
+    entry('table', t('Table'), TABLE(), ['spacing', 'typography', 'fill', 'border', 'effects']),
+    entry('th', t('Table Header'), TABLE()),
+    entry('td', t('Table Cell'), TABLE()),
+  ].map((element) => ({ ...element, tall: true }))
+}
+
+/* Forms. Each part is drawn as a form draws it, in the state being styled: an attribute where the browser knows the
+   state (aria-invalid, disabled, checked) and the kernel's data-cms-state where it can't be made (hover, focus), the
+   site's classes for that state worn by the part being edited. */
+
+/** The attributes a control carries in the state being styled. */
+function stateAttributes(state: string[], checked = false): string {
+  const shown = state.flatMap((variant) => (variant === 'hover' ? ['hover'] : variant === 'focus-visible' || variant === 'focus' ? ['focus'] : variant === 'active' ? ['hover'] : []))
+  return join(shown.length > 0 && `data-cms-state="${shown.join(' ')}"`, state.includes('aria-invalid') && 'aria-invalid="true"', state.includes('disabled') && 'disabled', (checked || state.includes('checked')) && 'checked', 'tabindex="-1"')
+}
+
+/** A form's sample: its markup in a form's grid, in the size of a sample's column. */
+const form = (html: string) => markup(`<div class="cms-form" style="width:min(20rem,100%);white-space:normal">${html}</div>`)
+
+/** What `edits` names wears the state's classes: the part being edited is the one that shows them. */
+const wear = (look: Look, edits: boolean) => (edits ? look.shown.join(' ') : '')
+
+/** A field with its label over it, as a form draws one: an empty one and one filled in. */
+const labelled = (look: Look, part: 'label' | 'help' | 'error') => {
+  const field = (label: string, value: string, placeholder: string, after: string, invalid = false) => {
+    return `<div class="cms-field"><label class="cms-label ${part === 'label' ? wear(look, true) : ''}">${text(label)}</label><input class="cms-input" placeholder="${text(placeholder)}" value="${text(value)}" ${invalid ? 'aria-invalid="true"' : ''} tabindex="-1">${after}</div>`
   }
-  // A name Tailwind has (flex, display) would be two classes under one name.
-  if (taken.includes(name) || engine?.valid(name)) {
-    toast.error(t('There is already a class “{name}”.', { name }))
-    return null
-  }
-  return { name, group: groups?.names.length ? String(asked?.group ?? '') || null : groups?.group ?? null }
+  const help = (said: string) => (part === 'help' ? `<p class="cms-help ${wear(look, true)}">${text(said)}</p>` : '')
+  const error = part === 'error' ? `<p class="cms-msg ${wear(look, true)}">${text(t('Enter an email address.'))}</p>` : ''
+  return form(field(t('Name'), '', t('Your name'), help(t('As it appears on your order.'))) + field(t('Email'), part === 'error' ? '' : 'ada@example.com', 'ada@example.com', help(t('We never share it.')) + error, part === 'error'))
+}
+
+/** A length in rem first, as a form's sizes are. */
+const remLength = (property: string, label: string, units = ['rem', 'px']): PartValue => ({ handle: property, property, label, field: { component: 'blocks-value', unit: units[0], units, min: 0, step: units[0] === 'px' ? 1 : 0.125 } })
+const color = (property: string, label: string): PartValue => ({ handle: property, property, label, field: { type: 'color', component: 'blocks-color' } })
+
+/** Where a label stands: a class of the field around it (none: above it). */
+const POSITIONS = ['label-beside', 'label-inside'] as const
+const positionOf = (sheet: Stylesheet) => sheet.elements('components').find((rule) => rule.name === FORM.field)?.classes.find((name) => (POSITIONS as readonly string[]).includes(name)) ?? 'above'
+const setPosition = (sheet: Stylesheet, value: unknown) => {
+  const others = sheet.elements('components').find((rule) => rule.name === FORM.field)?.classes.filter((name) => !(POSITIONS as readonly string[]).includes(name)) ?? []
+  return sheet.setElement(FORM.field, value && value !== 'above' ? [...others, String(value)] : others, 'components')
+}
+
+/** Every part of a form: what boxed fields share and each kind, what choices share and each kind, then the words around them. */
+const FORM_PARTS = (): Element[] => {
+  const field = (id: string, selector: string, label: string, sample: (look: Look) => SampleNode, parts?: Part[]): Element => ({ id, selector, layer: 'components', label, sample, groups: FIELD_GROUPS, states: ['aria-invalid', 'disabled', 'placeholder'], parts, tall: true })
+  const choice = (id: string, selector: string, label: string, kinds: ('check' | 'radio' | 'switch')[], parts?: Part[]): Element => ({
+    id, selector, layer: 'components', label, groups: BOX_GROUPS, states: ['checked', 'aria-invalid', 'disabled'], parts, tall: true,
+    sample: (look) => markup(`<div style="display:grid;grid-template-columns:repeat(${kinds.length},auto);gap:.75rem 1.5rem;justify-content:center;white-space:nowrap">${[false, true].map((on) => kinds.map((kind) => {
+      const input = kind === 'radio' ? `<input type="radio" class="cms-radio ${wear(look, true)}" ${stateAttributes(look.state, on)}>` : `<input type="checkbox"${kind === 'switch' ? ' role="switch"' : ''} class="cms-${kind} ${wear(look, true)}" ${stateAttributes(look.state, on)}>`
+      return `<label class="cms-choice">${input} ${text(on || look.state.includes('checked') ? t('On') : t('Off'))}</label>`
+    }).join('')).join('')}</div>`),
+  })
+  const input = (look: Look, edits: boolean, placeholder: string, value = '') => `<input class="cms-input ${wear(look, edits)}" placeholder="${text(placeholder)}" value="${text(value)}" ${stateAttributes(look.state)}>`
+  const textarea = (look: Look, edits: boolean) => `<textarea class="cms-input ${wear(look, edits)}" rows="3" placeholder="${text(t('Text Area'))}" ${stateAttributes(look.state)}></textarea>`
+  const select = (look: Look, edits: boolean) => `<select class="cms-input ${wear(look, edits)}" ${stateAttributes(look.state)}><option>${text(t('Dropdown'))}</option></select>`
+  return [
+    field('fields', FORM.fields, t('Fields'), (look) => form(input(look, true, t('Text Field')) + select(look, true) + textarea(look, true))),
+    field('text', FORM.text, t('Text Field'), (look) => form(input(look, true, t('Text Field')) + input(look, true, t('Text Field'), 'ada@example.com'))),
+    field('textarea', FORM.textarea, t('Text Area'), (look) => form(textarea(look, true))),
+    field('select', FORM.select, t('Dropdown'), (look) => form(select(look, true)), [{ title: t('Arrow'), values: [color('--field-select-arrow-color', t('Color')), remLength('--field-select-arrow-size', t('Size'))] }]),
+    choice('choices', FORM.choices, t('Choices'), ['check', 'radio', 'switch']),
+    choice('checkbox', FORM.checkbox, t('Checkbox'), ['check'], [{ title: t('Box'), values: [remLength('--field-checkbox-size', t('Size'))] }, { title: t('Check Mark'), values: [color('--field-checkbox-mark-color', t('Color')), { handle: '--field-checkbox-mark-size', property: '--field-checkbox-mark-size', label: t('Size'), field: { component: 'blocks-value', unit: '%', units: ['%'], min: 0, max: 100, step: 5 } }] }]),
+    choice('radio', FORM.radio, t('Radio Button'), ['radio'], [{ title: t('Circle'), values: [remLength('--field-radio-size', t('Size'))] }, { title: t('Dot'), values: [color('--field-radio-on-dot', t('Color')), { handle: '--field-radio-dot-size', property: '--field-radio-dot-size', label: t('Size'), field: { component: 'blocks-value', unit: '%', units: ['%'], min: 0, max: 100, step: 5 } }] }]),
+    choice('switch', FORM.switch, t('Switch'), ['switch'], [{ title: t('Track'), values: [remLength('--field-switch-width', t('Width')), remLength('--field-switch-height', t('Height'))] }, { title: t('Knob'), values: [color('--field-switch-knob', t('Color')), remLength('--field-switch-inset', t('Inset'), ['px', 'rem']), { handle: '--field-switch-knob-shadow', property: '--field-switch-knob-shadow', label: t('Shadow'), field: { component: 'site-shadow' } }] }]),
+    {
+      id: 'option', selector: FORM.option, layer: 'components', label: t('Option Text'), groups: TEXT_GROUPS, tall: true,
+      sample: (look) => markup(`<div style="display:grid;gap:.75rem;white-space:nowrap"><label class="cms-choice ${wear(look, true)}"><input type="checkbox" class="cms-check" checked tabindex="-1"> ${text(t('Send me the newsletter'))}</label><label class="cms-choice ${wear(look, true)}"><input type="radio" class="cms-radio" tabindex="-1"> ${text(t('Not now'))}</label></div>`),
+    },
+    {
+      id: 'label', selector: FORM.label, layer: 'components', label: t('Label'), groups: TEXT_GROUPS, tall: true,
+      sample: (look) => labelled(look, 'label'),
+      parts: [{
+        title: t('Layout'),
+        values: [
+          {
+            handle: 'position', label: t('Position'),
+            field: { type: 'select', display: 'segmented', block: true, options: [{ value: 'above', label: t('Above') }, { value: 'label-beside', label: t('Beside') }, { value: 'label-inside', label: t('Inside') }] },
+            read: positionOf, write: setPosition,
+          },
+          { ...remLength('--field-label-width', t('Label Width')), selector: FORM.field, field: { ...remLength('--field-label-width', '').field, if: { position: 'label-beside' } } },
+          { ...remLength('--field-spacing-label', t('Under Label')), selector: FORM.field },
+          { ...remLength('--field-spacing-fields', t('Between Fields')), selector: FORM.form },
+        ],
+      }],
+    },
+    { id: 'help', selector: FORM.help, layer: 'components', label: t('Help Text'), groups: TEXT_GROUPS, tall: true, sample: (look) => labelled(look, 'help') },
+    { id: 'error', selector: FORM.error, layer: 'components', label: t('Error Message'), groups: TEXT_GROUPS, tall: true, sample: (look) => labelled(look, 'error') },
+  ]
+}
+
+/** The rule a part's value is written in: its own, or the one it names. */
+const ruleOf = (element: Element, value: PartValue) => value.selector ?? element.selector
+
+/** A part's value as the draft has it. */
+function partValue(sheet: Stylesheet, element: Element, value: PartValue): unknown {
+  if (value.read) return value.read(sheet)
+  return sheet.property(ruleOf(element, value), value.property!, element.layer) ?? null
+}
+
+/** A part's value written into the draft: nothing, and it goes. */
+function setPart(sheet: Stylesheet, element: Element, value: PartValue, next: unknown): Stylesheet {
+  if (value.write) return value.write(sheet, next)
+  return sheet.setProperty(ruleOf(element, value), value.property!, next === null || next === undefined || next === '' ? null : String(next), element.layer)
+}
+
+/** A style's classes, as a stylesheet has them. */
+const classesIn = (sheet: Stylesheet, selector: string, layer: Layer) => sheet.elements(layer).find((rule) => rule.name === selector)?.classes ?? []
+
+/** Whether a style is otherwise in the draft than the site has it: its classes, or a value of a part. */
+function elementChanged(edit: Editing, element: Element): boolean {
+  if (classesIn(edit.sheet, element.selector, element.layer).join(' ') !== classesIn(edit.saved, element.selector, element.layer).join(' ')) return true
+  return (element.parts ?? []).some((part) => part.values.some((value) => JSON.stringify(partValue(edit.sheet, element, value)) !== JSON.stringify(partValue(edit.saved, element, value))))
+}
+
+/** A style back as the site has it: its classes, or nothing of its own when it had none, and every value of its parts. */
+function revertElement(edit: Editing, element: Element) {
+  edit.change((sheet) => {
+    // A rule the site doesn't have goes whole; one it has gets its classes back, then its values.
+    if (!edit.saved.elements(element.layer).some((rule) => rule.name === element.selector)) return [...(element.parts ?? []).flatMap((part) => part.values)].reduce((next, value) => (value.selector || value.write ? setPart(next, element, value, partValue(edit.saved, element, value)) : next), sheet.removeElement(element.selector, element.layer))
+    let next = sheet.setElement(element.selector, classesIn(edit.saved, element.selector, element.layer), element.layer)
+    for (const part of element.parts ?? []) for (const value of part.values) next = setPart(next, element, value, partValue(edit.saved, element, value))
+    return next
+  })
 }
 
 /**
- * One class or element, edited as a block is: the same bar on top (the classes it applies, in the same field, the
- * state being styled and its ⋯), a large sample, and a control for everything a class can set (for the screen the
- * preview shows). The bar at the top of the page names it, with the way back to its group. Nothing in it sticks:
- * it scrolls as one page.
+ * One style, edited as a block is: the same bar on top (the state being styled and its classes, with its ⋯), the
+ * sample in that state, the sections of what it draws that no class reaches, and a control for everything a class
+ * can set (for the screen the preview shows). The bar at the top of the page names it, with the way back to its
+ * group. Nothing in it sticks: it scrolls as one page.
  */
-function StyleEditor({ edit, samples, node, classes, groups, write, menu }: { edit: Editing; samples: Samples; node: SampleNode; classes: string[]; groups?: readonly string[]; write: (classes: string[]) => void; menu?: MenuItemDef[] }) {
+function StyleEditor({ edit, samples, element, classes, write, menu }: { edit: Editing; samples: Samples; element: Element; classes: string[]; write: (classes: string[]) => void; menu?: MenuItemDef[] }) {
   const styling = useStyling()
   const [state, setState] = useState<string[]>([])
   const screen = useMemo(() => screenFor(samples.device, 1280, styling.breakpoints), [samples.device, styling.breakpoints])
@@ -143,162 +339,48 @@ function StyleEditor({ edit, samples, node, classes, groups, write, menu }: { ed
   const page = pageClasses(edit.sheet)
   // The sample in the state being styled (Hover, Pressed, Focus), as the canvas shows a block in it.
   const shown = shownInState(classes, state)
-  const sample = shown.length ? { ...node, className: [node.className, ...shown].filter(Boolean).join(' ') } : node
-  const sheet = useSpecimenSheet(samples.compiler, [...words(page), ...classes.map((raw) => bare(parseClass(raw).utility)), ...classes, ...shown, ...words(node.className ?? '')])
+  const sample = element.sample({ state, shown, classes })
+  const sheet = useSpecimenSheet(samples.compiler, [...words(page), ...classes.map((raw) => bare(parseClass(raw).utility)), ...classes, ...shown, ...words(sample.className ?? '')])
   return (
     // The inspector's sections bring their own gutter: they reach the column's edges, as they do in the builder.
     <div className="-mx-4 -mt-2">
-      <StyleBar s={s} site={styling.classes} source={styling.source} disabled={edit.readOnly} state={{ classes, engine: styling.engine, state, onState: setState }} menu={menu} saveAs={false} />
-      <div className="border-b border-border p-4">
-        <Specimen sheet={sheet} node={sample} page={page} mode={edit.mode} align="center" className="h-28 rounded-md border border-border" />
+      <StyleBar s={s} site={styling.classes} source={styling.source} disabled={edit.readOnly} state={{ classes, engine: styling.engine, state, onState: setState, primary: element.states }} menu={menu} saveAs={false} />
+      {/* The sample on the page's own background, from edge to edge: the page, not a card on it. */}
+      <div className="border-b border-border">
+        <Specimen sheet={sheet} node={sample} page={page} mode={edit.mode} align="center" className={element.tall ? 'h-64' : 'h-32'} />
       </div>
       {/* Read only, the controls show what is set and take no input. */}
       <div inert={edit.readOnly}>
-        <StylePanels s={s} groups={groups} />
+        {(element.parts ?? []).map((part) => <PartSection key={part.title} edit={edit} element={element} part={part} />)}
+        <StylePanels s={s} groups={element.groups ?? TEXT_GROUPS} />
       </div>
     </div>
   )
 }
 
-/** What is done to it, at the end of its bar. */
-const Actions = ({ menu }: { menu?: MenuItemDef[] }) => (menu && menu.length > 0 ? <Menu align="end" trigger={<IconButton icon="more" label={t('Class Actions')} size="sm" />} items={menu} /> : null)
+/** Where the --field-* and --prose-* properties are set for every form and section: the kernel's defaults, and a site's own. */
+const ROOT = ':root, [data-theme]'
 
-/** A value as the property editors write it: one property of the site's (--field-*, --prose-*), or the kernel's default. */
-interface FieldValue {
-  property: string
-  label: string
-  field: Partial<FieldDef>
-}
-
-const color = (property: string, label: string): FieldValue => ({ property, label, field: { type: 'color', component: 'blocks-color' } })
-const length = (property: string, label: string, unit = 'px', units = ['px', 'rem']): FieldValue => ({ property, label, field: { component: 'blocks-value', unit, units, min: 0, step: unit === 'px' ? 1 : 0.125 } })
-const WEIGHTS = (): Record<string, string> => ({ 'var(--font-weight-normal)': t('Regular'), 'var(--font-weight-medium)': t('Medium'), 'var(--font-weight-semibold)': t('Semibold'), 'var(--font-weight-bold)': t('Bold') })
-
-/** A look made of properties: where the site sets them, a sample drawn with them, and the values by section. */
-interface Properties {
-  key: string
-  label: string
-  selector: string
-  layer: Layer
-  sample: SampleNode
-  sections: { title: string; values: FieldValue[] }[]
-}
-
-/** What each part of a form is made of: the look of its fields, its labels and help, and its choices. Each draws what it styles. */
-const FORM = (): Properties[] => [
-  {
-    key: 'fields',
-    label: t('Fields'),
-    selector: FIELDS,
-    layer: 'base',
-    sample: { tag: 'div', text: '', markup: FIELDS_SAMPLE() },
-    sections: [
-      { title: t('Field'), values: [color('--field-background', t('Fill')), color('--field-color', t('Text')), color('--field-placeholder', t('Placeholder')), length('--field-border-width', t('Border')), color('--field-border-color', t('Border Color')), length('--field-radius', t('Radius'), 'rem', ['rem', 'px']), { property: '--field-shadow', label: t('Shadow'), field: { component: 'site-shadow' } }] },
-      { title: t('Pointed At'), values: [color('--field-hover-background', t('Fill')), color('--field-hover-border-color', t('Border Color'))] },
-      { title: t('Focus'), values: [color('--field-focus-background', t('Fill')), color('--field-focus-border-color', t('Border Color')), color('--field-focus-ring-color', t('Ring')), length('--field-focus-ring-width', t('Ring Width'))] },
-      { title: t('Error'), values: [color('--field-invalid-color', t('Color'))] },
-    ],
-  },
-  {
-    key: 'labels',
-    label: t('Labels'),
-    selector: FIELDS,
-    layer: 'base',
-    sample: { tag: 'div', text: '', markup: LABELS_SAMPLE() },
-    sections: [
-      { title: t('Label'), values: [{ property: '--field-label-font-size', label: t('Size'), field: { component: 'site-size' } }, { property: '--field-label-font-weight', label: t('Weight'), field: { type: 'select', options: WEIGHTS() } }, color('--field-label-color', t('Color'))] },
-      { title: t('Help'), values: [{ property: '--field-help-font-size', label: t('Size'), field: { component: 'site-size' } }, color('--field-help-color', t('Color'))] },
-      { title: t('Spacing'), values: [length('--field-spacing-fields', t('Between Fields'), 'rem', ['rem', 'px']), length('--field-spacing-label', t('Under Label'), 'rem', ['rem', 'px'])] },
-    ],
-  },
-  {
-    key: 'choices',
-    label: t('Choices'),
-    selector: FIELDS,
-    layer: 'base',
-    sample: { tag: 'div', text: '', markup: CHOICES_SAMPLE() },
-    sections: [
-      { title: t('Checkbox'), values: [length('--field-checkbox-size', t('Size'), 'rem', ['rem', 'px']), length('--field-checkbox-radius', t('Radius')), color('--field-checkbox-checked', t('Checked')), color('--field-checkbox-mark-color', t('Mark'))] },
-      { title: t('Radio Button'), values: [color('--field-radio-checked', t('Checked'))] },
-      { title: t('Switch'), values: [color('--field-switch-off', t('Off')), color('--field-switch-on', t('On'))] },
-    ],
-  },
-]
-
-/** Words a sample shows, made safe to stand in markup. */
-const text = (words: string) => words.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
-
-/** Every kind of field, at rest and in each state the Fields style sets: pointed at, focused, wrong. Markup of our own. */
-const FIELDS_SAMPLE = () => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;width:min(22rem,100%);white-space:normal">
-<input class="cms-input" placeholder="${text(t('Text Field'))}" tabindex="-1">
-<input class="cms-input" data-cms-state="hover" placeholder="${text(t('Pointed At'))}" tabindex="-1">
-<input class="cms-input" data-cms-state="focus" placeholder="${text(t('Focused'))}" tabindex="-1">
-<input class="cms-input" aria-invalid="true" value="${text(t('Invalid'))}" tabindex="-1">
-<textarea class="cms-input" rows="2" placeholder="${text(t('Text Area'))}" tabindex="-1" style="grid-column:1/-1"></textarea>
-<select class="cms-input" tabindex="-1" style="grid-column:1/-1"><option>${text(t('Dropdown'))}</option></select>
-</div>`
-
-/** Two fields as a form lays them out: each with its label over it and its help under it. */
-const LABELS_SAMPLE = () => `<div class="cms-form" style="width:min(18rem,100%);white-space:normal">
-<div class="cms-field"><label class="cms-label">${text(t('Name'))}</label><input class="cms-input" tabindex="-1"><p class="cms-help">${text(t('As it appears on your order.'))}</p></div>
-<div class="cms-field"><label class="cms-label">${text(t('Email'))}</label><input class="cms-input" tabindex="-1"><p class="cms-help">${text(t('We never share it.'))}</p></div>
-</div>`
-
-/** Each kind of choice, on and off. */
-const CHOICES_SAMPLE = () => `<div style="display:grid;grid-template-columns:repeat(3,auto);gap:.75rem 1.5rem;white-space:nowrap">
-<label class="cms-choice"><input type="checkbox" class="cms-check" checked tabindex="-1"> ${text(t('Checked'))}</label>
-<label class="cms-choice"><input type="radio" class="cms-radio" checked tabindex="-1"> ${text(t('Chosen'))}</label>
-<label class="cms-choice"><input type="checkbox" role="switch" class="cms-switch" checked tabindex="-1"> ${text(t('On'))}</label>
-<label class="cms-choice"><input type="checkbox" class="cms-check" tabindex="-1"> ${text(t('Unchecked'))}</label>
-<label class="cms-choice"><input type="radio" class="cms-radio" tabindex="-1"> ${text(t('Not Chosen'))}</label>
-<label class="cms-choice"><input type="checkbox" role="switch" class="cms-switch" tabindex="-1"> ${text(t('Off'))}</label>
-</div>`
-
-/** The space in long-form text: between its blocks, around its headings and between the items of a list. */
-const SPACING = (): Properties => ({
-  key: 'spacing',
-  label: t('Spacing'),
-  selector: ARTICLE.spacing,
-  layer: 'components',
-  sample: prose(`<h2 style="margin:0">${t('Heading 2')}</h2><p>${t('Paragraph')}</p><p>${t('Paragraph')}</p><ul><li>${t('List Item')}</li><li>${t('List Item')}</li></ul>`),
-  sections: [
-    {
-      title: 'spacing',
-      values: [length('--prose-blocks', t('Blocks'), 'em', ['em', 'rem', 'px']), length('--prose-headings', t('Above Headings'), 'em', ['em', 'rem', 'px']), length('--prose-after-headings', t('Below Headings'), 'em', ['em', 'rem', 'px']), length('--prose-items', t('List Items'), 'em', ['em', 'rem', 'px'])],
-    },
-  ],
-})
-
-/** A look made of properties, value by value, beside a sample drawn with them: the editor's sample is the whole form or article. */
-function PropertiesEditor({ edit, samples, part }: { edit: Editing; samples: Samples; part: Properties }) {
+/** A section of what a style draws that no class reaches, value by value, each with the way back to the site's. */
+function PartSection({ edit, element, part }: { edit: Editing; element: Element; part: Part }) {
   const { source } = useStyling()
   const kernel = useMemo(() => new Stylesheet(source?.files.cms ?? ''), [source?.files.cms])
-  const page = pageClasses(edit.sheet)
-  const sheet = useSpecimenSheet(samples.compiler, words(page))
-  const own = (property: string) => edit.sheet.property(part.selector, property, part.layer)
+  // What holds where the style sets nothing: the site's own on every :root (its --field-* properties), else the kernel's.
+  const fallback = (value: PartValue) => (value.property ? plainValue(edit.sheet.property(ROOT, value.property, 'base') ?? kernel.property(ruleOf(element, value), value.property, element.layer) ?? kernel.property(ROOT, value.property, 'base')) : null)
+  const values = Object.fromEntries(part.values.map((value) => [value.handle, partValue(edit.sheet, element, value) ?? fallback(value)]))
+  const changed = (value: PartValue) => JSON.stringify(partValue(edit.sheet, element, value)) !== JSON.stringify(partValue(edit.saved, element, value))
+  const own = part.values.some((value) => (value.read ? value.read(edit.sheet) !== 'above' : partValue(edit.sheet, element, value) !== null))
   return (
-    <div className="-mx-4 -mt-2">
-      {/* Its bar where a class's is, with what is done to it at the end. */}
-      <div className="flex h-11 items-center justify-end border-b border-border px-3">
-        <Actions menu={revertProperties(edit, part)} />
-      </div>
-      <div className="border-b border-border p-4">
-        <Specimen sheet={sheet} node={part.sample} page={page} mode={edit.mode} align="center" className="h-72 rounded-md border border-border" />
-      </div>
-      <div inert={edit.readOnly}>
-        {part.sections.map((section) => {
-          const fields = (
-            <PanelFields
-              fields={section.values.map((value) => ({ handle: value.property, type: 'text', size: 'sm', label: value.label, placeholder: t('Default'), ...value.field, status: propertyChanged(edit, part, value.property) ? 'own' : undefined, reset: () => edit.change((s) => s.setProperty(part.selector, value.property, edit.saved.property(part.selector, value.property, part.layer) ?? null, part.layer)) }) as FieldDef)}
-              values={Object.fromEntries(section.values.map((value) => [value.property, own(value.property) ?? plain(kernel.property(part.selector, value.property, part.layer))]))}
-              onChange={(property, next) => edit.change((s) => s.setProperty(part.selector, property, next === null || next === undefined || next === '' ? null : String(next), part.layer))}
-            />
-          )
-          // One section is the editor's whole content: no heading to fold it under.
-          return part.sections.length === 1 ? <div key={section.title} className="space-y-1 px-4 py-3">{fields}</div> : <InspectorSection key={section.title} title={section.title}>{fields}</InspectorSection>
-        })}
-      </div>
-    </div>
+    <InspectorSection title={part.title} empty={!own}>
+      <PanelFields
+        fields={part.values.map((value) => ({ type: 'text', size: 'sm', placeholder: t('Default'), ...value.field, handle: value.handle, label: value.label, status: changed(value) ? 'own' : undefined, reset: () => edit.change((sheet) => setPart(sheet, element, value, partValue(edit.saved, element, value))) }) as FieldDef)}
+        values={values}
+        onChange={(handle, next) => {
+          const value = part.values.find((each) => each.handle === handle)
+          if (value) edit.change((sheet) => setPart(sheet, element, value, next))
+        }}
+      />
+    </InspectorSection>
   )
 }
 
@@ -306,36 +388,44 @@ function PropertiesEditor({ edit, samples, part }: { edit: Editing; samples: Sam
  * What the kernel sets, as a field shows it: one value (a colour or size of the theme, a length, a word). One made of
  * other properties (`var(--field-background)`, a `color-mix()`) is no value to read: the field says Default.
  */
-const plain = (value: string | undefined) => (value && /^(var\(--(?!field-)[\w-]+\)|-?[\d.]+[a-z%]*|#[0-9a-f]{3,8}|[a-z-]+)$/i.test(value.trim()) ? value : null)
-
-/** Whether a property of a look is otherwise in the draft than the site has it. */
-const propertyChanged = (edit: Editing, part: Properties, property: string) => (edit.sheet.property(part.selector, property, part.layer) ?? null) !== (edit.saved.property(part.selector, property, part.layer) ?? null)
-
-/** A look made of properties, changed and not yet saved. */
-const propertiesChanged = (edit: Editing, part: Properties) => part.sections.some((section) => section.values.some((value) => propertyChanged(edit, part, value.property)))
-
-/** A look made of properties: every property back as the site has it, while one is changed. */
-function revertProperties(edit: Editing, part: Properties): MenuItemDef[] {
-  const values = part.sections.flatMap((section) => section.values)
-  return rowMenu(edit, { revert: propertiesChanged(edit, part) ? () => edit.change((s) => values.reduce((next, value) => next.setProperty(part.selector, value.property, edit.saved.property(part.selector, value.property, part.layer) ?? null, part.layer), s)) : null })
-}
-
-/** An element's classes, or a style's, as a stylesheet has them. */
-const elementIn = (sheet: Stylesheet, selector: string, layer: Layer) => sheet.elements(layer).find((rule) => rule.name === selector)?.classes ?? []
-const utilityIn = (sheet: Stylesheet, name: string) => sheet.utilities().find((rule) => rule.name === name)?.classes
-const elementChanged = (edit: Editing, selector: string, layer: Layer = 'base') => elementIn(edit.sheet, selector, layer).join(' ') !== elementIn(edit.saved, selector, layer).join(' ')
-const utilityChanged = (edit: Editing, name: string) => utilityIn(edit.sheet, name)?.join(' ') !== utilityIn(edit.saved, name)?.join(' ')
+const plainValue = (value: string | undefined) => (value && /^(var\(--(?!field-)[\w-]+\)|-?[\d.]+[a-z%]*|#[0-9a-f]{3,8}|[a-z-]+)$/i.test(value.trim()) ? value : null)
 
 /** The groups the site was given, by their place in the address; the site's own come after them. */
 const BUILT_IN = ['elements', 'buttons', 'forms', 'articles'] as const
+type BuiltIn = (typeof BUILT_IN)[number]
+/** Those of them a class of the site's goes in: a button is a button by its name. */
+const HOLDS_CLASSES = ['elements', 'forms', 'articles'] as const
 /** The place of the styles in no group of the site's. */
 const UNGROUPED = 'ungrouped'
 const RESERVED: string[] = [...BUILT_IN, UNGROUPED]
-const builtInLabel = (id: string) => ({ elements: t('Elements'), buttons: t('Buttons'), forms: t('Forms'), articles: t('Articles') })[id as (typeof BUILT_IN)[number]]
+const builtInLabel = (id: string) => ({ elements: t('Elements'), buttons: t('Buttons'), forms: t('Forms'), articles: t('Articles') })[id as BuiltIn]
 
-/** The site's own styles: every class of its stylesheet but its buttons and its colour schemes. */
+/** What a group the site was given holds, the site's own additions among them, in order. */
+function elementsOf(sheet: Stylesheet, group: string): Element[] {
+  if (group === 'elements') return [...ELEMENT_LIST(), ...MORE_ELEMENT_LIST().filter((element) => sheet.elements('base').some((rule) => rule.name === element.selector))]
+  if (group === 'articles') return [...ARTICLES(), ...MORE_ARTICLE_LIST().filter((element) => sheet.elements('components').some((rule) => rule.name === element.selector))]
+  if (group === 'forms') return FORM_PARTS()
+  return []
+}
+
+/** What a group can be given: the elements it can add, those it has not yet. */
+function addable(sheet: Stylesheet, group: string): Element[] {
+  const shown = new Set(elementsOf(sheet, group).map((element) => element.id))
+  return (group === 'elements' ? MORE_ELEMENT_LIST() : group === 'articles' ? MORE_ARTICLE_LIST() : []).filter((element) => !shown.has(element.id))
+}
+
+/** A style of the group by its place in the address, also one being added. */
+const elementAt = (sheet: Stylesheet, group: string, key: string) => elementsOf(sheet, group).find((element) => element.id === key) ?? (group === 'elements' ? MORE_ELEMENT_LIST() : group === 'articles' ? MORE_ARTICLE_LIST() : []).find((element) => element.id === key)
+
+/** The site's own styles: every class of its stylesheet but its colour schemes. */
 const ownStyles = (sheet: Stylesheet) => sheet.utilities().filter((rule) => /^[a-z][\w-]*$/.test(rule.name) && !rule.name.startsWith('scheme-'))
 const isButton = (name: string) => name.startsWith('btn-')
+
+/** A group a class names that is one the site was given: it is written by its id, `/* group: forms *\/`. */
+const builtInGroup = (name: string | null | undefined): string | null => (name && (HOLDS_CLASSES as readonly string[]).includes(name.toLowerCase()) ? name.toLowerCase() : null)
+
+/** A name as a class takes it, from words: "Big Quote" is big-quote. */
+const className = (name: unknown) => String(name ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '')
 
 /**
  * The site's groups, in the order its stylesheet first names them, those with no class yet included, each with its
@@ -344,6 +434,7 @@ const isButton = (name: string) => name.startsWith('btn-')
 function siteGroups(sheet: Stylesheet): { id: string; name: string }[] {
   const out: { id: string; name: string }[] = []
   for (const name of sheet.groups()) {
+    if (builtInGroup(name)) continue
     const base = className(name) || 'group'
     let id = base
     for (let n = 2; RESERVED.includes(id) || out.some((group) => group.id === id); n++) id = `${base}-${n}`
@@ -352,14 +443,23 @@ function siteGroups(sheet: Stylesheet): { id: string; name: string }[] {
   return out
 }
 
-/** A group a class has left stays, with no class in it, until it is deleted. */
-const keepGroup = (sheet: Stylesheet, group: string | null | undefined) => (group && !sheet.groups().includes(group) ? sheet.addGroup(group) : sheet)
+/** Which group a class goes in, as a list to pick from: none, one the site was given, or one of its own. */
+const groupField = (groups: { id: string; name: string }[]): FieldDef => ({
+  handle: 'group',
+  type: 'select',
+  label: t('Group'),
+  placeholder: t('No Group'),
+  options: [...HOLDS_CLASSES.map((id) => ({ value: id, label: builtInLabel(id)! })), ...groups.map((group) => ({ value: group.name, label: group.name }))],
+} as FieldDef)
 
-/** Where a style of the site's is: its buttons, a group of its own, or none. */
+/** A group a class has left stays, with no class in it, until it is deleted. One the site was given is always there. */
+const keepGroup = (sheet: Stylesheet, group: string | null | undefined) => (group && !builtInGroup(group) && !sheet.groups().includes(group) ? sheet.addGroup(group) : sheet)
+
+/** Where a style of the site's is: its buttons, a group it was given, a group of its own, or none. */
 function groupOf(sheet: Stylesheet, name: string): string {
   if (isButton(name)) return 'buttons'
   const group = ownStyles(sheet).find((rule) => rule.name === name)?.group
-  return siteGroups(sheet).find((each) => each.name === group)?.id ?? UNGROUPED
+  return builtInGroup(group) ?? siteGroups(sheet).find((each) => each.name === group)?.id ?? UNGROUPED
 }
 
 /** The address of a group of styles, or of a style in it. */
@@ -373,9 +473,8 @@ function groupLabel(sheet: Stylesheet, id: string): string | null {
 
 /** What a style is called, in its group. */
 function itemLabel(sheet: Stylesheet, group: string, key: string): string | null {
-  if (group === 'elements') return ELEMENT_LIST().find((element) => element.id === key)?.label ?? null
-  if (group === 'forms') return FORM().find((part) => part.key === key)?.label ?? null
-  if (group === 'articles') return key === 'spacing' ? SPACING().label : ARTICLES().find((element) => element.id === key)?.label ?? null
+  const element = elementAt(sheet, group, key)
+  if (element) return element.label
   // A class is named as written, as it is worn.
   return ownStyles(sheet).some((rule) => rule.name === key) ? key : null
 }
@@ -391,6 +490,39 @@ export function stylesPlace(sheet: Stylesheet, [group, key]: string[]): { label:
   if (!key) return [{ label: t('Classes'), to: stylePath() }, { label }]
   const title = itemLabel(sheet, group, key)
   return title ? [{ label: t('Classes'), to: stylePath() }, { label, to: stylePath(group) }, { label: title }] : null
+}
+
+/** Names a class can't take: the place of a style the site was given in its group's address. */
+const TAKEN_BY_STYLES = () => new Set([...ELEMENTS, ...MORE_ELEMENTS, ...ELEMENT_LIST().map((each) => each.id), ...ARTICLES().map((each) => each.id), ...Object.keys(MORE_ARTICLE), ...FORM_PARTS().map((each) => each.id)])
+
+/**
+ * A name for a style, asked for: a class's name from the words typed, under `prefix` (btn-), not one the stylesheet
+ * or Tailwind has. With `groups` (the site's) it also asks which group the style goes in, `group` chosen at first.
+ */
+async function askName(engine: Engine | null, taken: string[], title: string, confirmLabel: string, prefix = '', current = '', groups?: { list: { id: string; name: string }[]; group: string | null }): Promise<{ name: string; group: string | null } | null> {
+  const asked = await prompt({
+    title,
+    fields: [
+      { handle: 'name', type: 'text', label: t('Name'), placeholder: prefix ? 'outline' : 'lead', required: true, autofocus: true },
+      ...(groups ? [groupField(groups.list)] : []),
+    ],
+    values: { name: current ? current.slice(prefix.length) : '', group: groups?.group ?? null },
+    confirm: confirmLabel,
+  })
+  const key = className(asked?.name)
+  if (!key) return null
+  const name = `${prefix}${key}`
+  if (name === current) return null
+  if (!/^[a-z][a-z0-9-]*$/.test(name)) {
+    toast.error(t('A name is lowercase letters, numbers and hyphens, and starts with a letter.'))
+    return null
+  }
+  // A name Tailwind has (flex, display) would be two classes under one name; one of an element would share its address.
+  if (taken.includes(name) || engine?.valid(name) || TAKEN_BY_STYLES().has(name)) {
+    toast.error(t('There is already a class “{name}”.', { name }))
+    return null
+  }
+  return { name, group: groups ? String(asked?.group ?? '') || null : null }
 }
 
 /** A name for a group: any words, but none the site was given or has already. */
@@ -412,41 +544,65 @@ function reserved(name: string): boolean {
   return taken
 }
 
+/** A style of the site's renamed, and under its new name wherever the stylesheet itself applies it. */
+function renameStyle(sheet: Stylesheet, from: string, to: string): Stylesheet {
+  const swap = (raw: string) => {
+    const { variants, utility } = parseClass(raw)
+    return bare(utility) === from ? withVariants(variants, utility.replace(from, to)) : raw
+  }
+  let next = sheet.renameUtility(from, to)
+  for (const rule of next.utilities()) {
+    const classes = rule.classes.map(swap)
+    if (classes.some((name, i) => name !== rule.classes[i])) next = next.setUtility(rule.name, classes)
+  }
+  for (const layer of ['base', 'components'] as const) {
+    for (const rule of next.elements(layer)) {
+      const classes = rule.classes.map(swap)
+      if (classes.some((name, i) => name !== rule.classes[i])) next = next.setElement(rule.name, classes, layer)
+    }
+  }
+  return next
+}
+
 /**
- * The site's styles at `path` (after /design/styles): its groups, a group's styles, or one style's editor. Each style
- * is drawn as the site draws it and opens on its editor in place of the list, so a block's Edit Style leads
- * straight to it.
+ * The site's styles at `path` (after /design/classes): its groups, a group's styles, or one style's editor. Each
+ * style opens on its editor in place of the list, so a block's Edit Class leads straight to it.
  */
 export function Classes({ edit, samples, path }: { edit: Editing; samples: Samples; path: string[] }) {
   const { engine } = useStyling()
   const [search, setSearch] = useState('')
   const [group, key] = path
-  const elements = [...edit.sheet.elements(), ...edit.sheet.elements('components')]
-  const classesOf = (selector: string) => elements.find((rule) => rule.name === selector)?.classes ?? []
   const own = ownStyles(edit.sheet)
   const groups = siteGroups(edit.sheet)
   const taken = edit.sheet.utilities().map((rule) => rule.name)
   const open = (to: string) => navigate(to)
   // A class reached by another group's address (a block's Edit Class knows the name, not the group): the address its group gives it.
-  const misplaced = !!group && !!key && !['elements', 'forms', 'articles'].includes(group) && own.some((rule) => rule.name === key) && groupOf(edit.sheet, key) !== group
+  const misplaced = !!group && !!key && !elementAt(edit.sheet, group, key) && own.some((rule) => rule.name === key) && groupOf(edit.sheet, key) !== group
   useEffect(() => {
     if (misplaced) navigate(stylePath(groupOf(edit.sheet, key), key), { replace: true })
   }, [misplaced, edit.sheet, key])
 
-  // The sample of an element: the selection and the focus ring can't be shown by selecting or focusing, so they wear their classes.
-  const sampleOf = (element: Element): SampleNode => (['::selection', ':focus-visible'].includes(element.selector) ? { ...element.node, className: [element.node.className, ...classesOf(element.selector)].filter(Boolean).join(' ') } : element.node)
+  /** The group a class made in `into` is written in: one the site was given by its id, one of its own by its name. */
+  const groupName = (into: string | null) => (into && (HOLDS_CLASSES as readonly string[]).includes(into) ? into : groups.find((each) => each.id === into)?.name ?? null)
 
   /** A new button, or a new style, in the group it was made in (null: none) unless another is picked: it opens at once, on its first look. */
   const create = async (into: string | null) => {
     const button = into === 'buttons'
-    const asked = await askName(engine, taken, button ? t('New Button') : t('New Class'), button ? t('Create Button') : t('Create Class'), button ? 'btn-' : '', '', button ? undefined : { names: groups.map((each) => each.name), group: groups.find((each) => each.id === into)?.name ?? null })
+    const asked = await askName(engine, taken, button ? t('New Button') : t('New Class'), button ? t('Create Button') : t('Create Class'), button ? 'btn-' : '', '', button ? undefined : { list: groups, group: groupName(into) })
     if (!asked) return
-    const { name, group } = asked
+    const { name, group: chosen } = asked
     // A new button starts as a copy of the first one; a style as text of the page's size, which Tailwind can build.
     const first = own.find((rule) => isButton(rule.name))
-    edit.change((s) => (button && first ? s.duplicateUtility(first.name, name).setUtilityGroup(name, null) : s.setUtility(name, ['text-base']).setUtilityGroup(name, group)))
+    edit.change((s) => (button && first ? s.duplicateUtility(first.name, name).setUtilityGroup(name, null) : s.setUtility(name, ['text-base']).setUtilityGroup(name, chosen)))
     // Its group's address follows once the draft has it: the screen corrects a group it can't know yet.
     open(stylePath(button ? 'buttons' : UNGROUPED, name))
+  }
+  /** An element more for the group to style: it opens at once, and stays in the list once it is styled. */
+  const addElement = async (into: string) => {
+    const choices = addable(edit.sheet, into)
+    const asked = await prompt({ title: t('Add Element'), fields: [{ handle: 'element', type: 'select', label: t('Element'), required: true, options: choices.map((element) => ({ value: element.id, label: element.label })) } as FieldDef], values: { element: choices[0]?.id ?? null }, confirm: t('Add Element') })
+    const id = String(asked?.element ?? '')
+    if (id) open(stylePath(into, id))
   }
   const rename = async (from: string) => {
     const name = (await askName(engine, taken, t('Rename “{name}”', { name: from }), t('Rename'), isButton(from) ? 'btn-' : '', from))?.name
@@ -460,7 +616,7 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
   }
   const move = async (name: string) => {
     const current = own.find((rule) => rule.name === name)?.group ?? null
-    const asked = await prompt({ title: t('Move “{name}” to a Group', { name }), fields: [groupField(groups.map((each) => each.name))], values: { group: current }, confirm: t('Move Class') })
+    const asked = await prompt({ title: t('Move “{name}” to a Group', { name }), fields: [groupField(groups)], values: { group: current }, confirm: t('Move Class') })
     if (!asked) return
     const next = String(asked.group ?? '') || null
     if (next === current) return
@@ -473,38 +629,43 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
   }
   const styleMenu = (name: string): MenuItemDef[] => rowMenu(edit, {
     copy: name,
-    revert: utilityChanged(edit, name) && utilityIn(edit.saved, name) ? () => edit.change((s) => s.setUtility(name, utilityIn(edit.saved, name)!)) : null,
+    revert: edit.sheet.utilities().find((rule) => rule.name === name)?.classes.join(' ') !== edit.saved.utilities().find((rule) => rule.name === name)?.classes.join(' ') && edit.saved.utilities().some((rule) => rule.name === name)
+      ? () => edit.change((s) => s.setUtility(name, edit.saved.utilities().find((rule) => rule.name === name)!.classes))
+      : null,
     own: [
       { label: t('Rename…'), icon: 'edit', onSelect: () => void rename(name) },
       { label: t('Duplicate…'), icon: 'copy', onSelect: () => void duplicate(name) },
-      ...(isButton(name) || groups.length === 0 ? [] : [{ label: t('Move to Group…'), icon: 'folder', onSelect: () => void move(name) }]),
+      ...(isButton(name) ? [] : [{ label: t('Move to Group…'), icon: 'folder', onSelect: () => void move(name) }]),
       { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => remove(name) },
     ],
   })
-  // An element changed and not yet saved goes back to what the site has, or to nothing of its own when it had none.
-  const elementMenu = (selector: string, layer: Layer = 'base'): MenuItemDef[] => rowMenu(edit, {
-    revert: elementChanged(edit, selector, layer) ? () => {
-      const saved = elementIn(edit.saved, selector, layer)
-      edit.change((s) => (saved.length > 0 ? s.setElement(selector, saved, layer) : s.removeElement(selector, layer)))
-    } : null,
-  })
+  /** A style the site was given: changed and not yet saved, back to what the site has; one it added, taken out again. */
+  const elementMenu = (element: Element, at: string): MenuItemDef[] => {
+    const added = [...MORE_ELEMENT_LIST(), ...MORE_ARTICLE_LIST()].some((each) => each.selector === element.selector && each.layer === element.layer)
+    return rowMenu(edit, {
+      revert: elementChanged(edit, element) ? () => revertElement(edit, element) : null,
+      own: added ? [{
+        label: t('Remove'), icon: 'trash', danger: true, onSelect: () => {
+          edit.change((s) => s.removeElement(element.selector, element.layer))
+          if (key === element.id) navigate(stylePath(at))
+        },
+      }] : [],
+    })
+  }
 
   // One style open, in place of its group.
   if (group && key) {
-    const element = group === 'elements' ? ELEMENT_LIST().find((entry) => entry.id === key) : undefined
-    if (element) return <StyleEditor key={key} edit={edit} samples={samples} node={sampleOf(element)} classes={classesOf(element.selector)} groups={element.groups ?? TEXT_GROUPS} menu={elementMenu(element.selector)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes))} />
-    const article = group === 'articles' ? ARTICLES().find((entry) => entry.id === key) : undefined
-    if (article) return <StyleEditor key={key} edit={edit} samples={samples} node={article.node} classes={classesOf(article.selector)} groups={article.groups ?? TEXT_GROUPS} menu={elementMenu(article.selector, 'components')} write={(classes) => edit.change((s) => s.setElement(article.selector, classes, 'components'))} />
-    const properties = group === 'forms' ? FORM().find((part) => part.key === key) : group === 'articles' && key === 'spacing' ? SPACING() : undefined
-    if (properties) return <PropertiesEditor key={key} edit={edit} samples={samples} part={properties} />
+    const element = elementAt(edit.sheet, group, key)
+    if (element) return <StyleEditor key={key} edit={edit} samples={samples} element={element} classes={classesIn(edit.sheet, element.selector, element.layer)} menu={elementMenu(element, group)} write={(classes) => edit.change((s) => s.setElement(element.selector, classes, element.layer))} />
     const rule = own.find((entry) => entry.name === key)
     if (rule) {
+      const node = styleSample(rule.name)
       return (
         <StyleEditor
           key={key}
           edit={edit}
           samples={samples}
-          node={styleSample(rule.name)}
+          element={{ id: rule.name, selector: rule.name, layer: 'base', label: rule.name, sample: plain(node), groups: STYLE_GROUPS }}
           classes={rule.classes}
           menu={styleMenu(rule.name)}
           // With nothing left to apply the style goes, unless it holds CSS of its own.
@@ -517,23 +678,19 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
 
   // A class is its name: what it looks like is shown where it is edited.
   type Item = { to: string; label: string; group: string; menu: MenuItemDef[]; changed: boolean }
-  const item = (at: string, key: string, label: string, menu: MenuItemDef[], unsaved: boolean): Item => ({ to: stylePath(at, key), label, group: groupLabel(edit.sheet, at) ?? '', menu, changed: unsaved })
-  const classItem = (rule: (typeof own)[number], at: string) => item(at, rule.name, rule.name, styleMenu(rule.name), utilityChanged(edit, rule.name))
+  const item = (at: string, id: string, label: string, menu: MenuItemDef[], unsaved: boolean): Item => ({ to: stylePath(at, id), label, group: groupLabel(edit.sheet, at) ?? '', menu, changed: unsaved })
+  const classItem = (rule: (typeof own)[number], at: string) => item(at, rule.name, rule.name, styleMenu(rule.name), rule.classes.join(' ') !== edit.saved.utilities().find((each) => each.name === rule.name)?.classes.join(' '))
   const ungrouped = own.filter((rule) => !isButton(rule.name) && groupOf(edit.sheet, rule.name) === UNGROUPED)
   const itemsOf = (at: string): Item[] => {
-    if (at === 'elements') return ELEMENT_LIST().map((entry) => item('elements', entry.id, entry.label, elementMenu(entry.selector), elementChanged(edit, entry.selector)))
+    const elements = elementsOf(edit.sheet, at).map((element) => item(at, element.id, element.label, elementMenu(element, at), elementChanged(edit, element)))
     if (at === 'buttons') return own.filter((rule) => isButton(rule.name)).map((rule) => classItem(rule, 'buttons'))
-    if (at === 'forms') return FORM().map((part) => item('forms', part.key, part.label, revertProperties(edit, part), propertiesChanged(edit, part)))
-    if (at === 'articles') return [item('articles', 'spacing', SPACING().label, revertProperties(edit, SPACING()), propertiesChanged(edit, SPACING())), ...ARTICLES().map((entry) => item('articles', entry.id, entry.label, elementMenu(entry.selector, 'components'), elementChanged(edit, entry.selector, 'components')))]
     if (at === UNGROUPED) return ungrouped.map((rule) => classItem(rule, UNGROUPED))
-    const mine = groups.find((each) => each.id === at)
-    return mine ? own.filter((rule) => rule.group === mine.name && !isButton(rule.name)).map((rule) => classItem(rule, at)) : []
+    return [...elements, ...own.filter((rule) => !isButton(rule.name) && groupOf(edit.sheet, rule.name) === at).map((rule) => classItem(rule, at))]
   }
   const ids = [...BUILT_IN, ...groups.map((each) => each.id), ...(ungrouped.length ? [UNGROUPED] : [])]
   const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
   const found = (entry: Item) => terms.every((word) => `${entry.label} ${entry.to.split('/').pop()}`.toLowerCase().includes(word))
   const rows = (items: Item[], detail?: (entry: Item) => string) => items.map((entry) => <OpenRow key={entry.to} onOpen={() => open(entry.to)} label={entry.label} changed={entry.changed} menu={entry.menu} detail={detail?.(entry)} />)
-  const add = (into: string | null) => (edit.readOnly ? undefined : () => void create(into))
   const searchField = (placeholder: string) => (
     <div className="mb-4">
       <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder }]} values={{ search }} onChange={(_, next) => setSearch(String(next ?? ''))} />
@@ -543,17 +700,30 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
     const shown = items.filter(found)
     return shown.length ? <Group>{rows(shown, detail)}</Group> : <NoMatches onClear={() => setSearch('')} />
   }
+  // What is added under a list, in the same quiet buttons on every list.
+  const adding = 'ml-0 !px-1.5 !font-normal !text-muted first:-ml-1.5 hover:!text-ink'
+  const actions = (buttons: { label: string; icon: string; onClick: () => void }[]) => (edit.readOnly || buttons.length === 0 ? undefined : (
+    <span className="flex items-center gap-3">
+      {buttons.map((button) => <Button key={button.label} variant="ghost" size="xs" icon={button.icon} onClick={button.onClick} className={adding}>{button.label}</Button>)}
+    </span>
+  ))
 
-  // A group: its classes, found by name.
+  // A group: its styles, and the site's classes in it, found by name.
   if (group) {
     const items = itemsOf(group)
-    const adds = group === 'buttons' ? add('buttons') : group === UNGROUPED || groups.some((each) => each.id === group) ? add(group === UNGROUPED ? null : group) : undefined
+    const button = group === 'buttons'
+    const known = group === UNGROUPED || (BUILT_IN as readonly string[]).includes(group) || groups.some((each) => each.id === group)
+    const more = addable(edit.sheet, group)
+    const buttons = known ? [
+      { label: button ? t('New Button') : t('New Class'), icon: 'plus', onClick: () => void create(group === UNGROUPED ? null : group) },
+      ...(more.length ? [{ label: t('Add Element'), icon: 'plus', onClick: () => void addElement(group) }] : []),
+    ] : []
     // A group of the site's with no class in it yet: the way to make its first.
-    if (items.length === 0) return <EmptyState compact icon="folder" title={t('No classes yet')} action={adds && <Button icon="plus" onClick={adds}>{t('New Class')}</Button>} />
+    if (items.length === 0) return <EmptyState compact icon="folder" title={t('No classes yet')} action={!edit.readOnly && known && <Button icon="plus" onClick={() => void create(group === UNGROUPED ? null : group)}>{button ? t('New Button') : t('New Class')}</Button>} />
     return (
       <>
         {items.length > 7 && searchField(t('Search {items}', { items: groupLabel(edit.sheet, group) ?? t('Classes') }))}
-        {terms.length ? matches(items) : <Group onAdd={adds} addLabel={group === 'buttons' ? t('New Button') : t('New Class')}>{rows(items)}</Group>}
+        {terms.length ? matches(items) : <Group action={actions(buttons)}>{rows(items)}</Group>}
       </>
     )
   }
@@ -576,19 +746,11 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
     const name = await askGroup(edit.sheet, t('New Group'), t('Create Group'))
     if (name) edit.change((s) => s.addGroup(name))
   }
-  const adding = 'ml-0 !px-1.5 !font-normal !text-muted first:-ml-1.5 hover:!text-ink'
   return (
     <>
       {searchField(t('Search Classes'))}
       {terms.length ? matches(ids.flatMap(itemsOf), (entry) => entry.group) : (
-        <Group
-          action={edit.readOnly ? undefined : (
-            <span className="flex items-center gap-3">
-              <Button variant="ghost" size="xs" icon="plus" onClick={() => void create(null)} className={adding}>{t('New Class')}</Button>
-              <Button variant="ghost" size="xs" icon="folder" onClick={() => void newGroup()} className={adding}>{t('New Group')}</Button>
-            </span>
-          )}
-        >
+        <Group action={actions([{ label: t('New Class'), icon: 'plus', onClick: () => void create(null) }, { label: t('New Group'), icon: 'folder', onClick: () => void newGroup() }])}>
           {ids.map((id) => {
             const items = itemsOf(id)
             const mine = groups.find((each) => each.id === id)

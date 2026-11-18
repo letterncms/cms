@@ -23,6 +23,13 @@ const BASE_STATES = () => [
   { value: 'focus-visible', label: t('Focus') },
 ]
 
+/** The states of a form's parts: a field told it is wrong, one that can't be used, a box that is ticked. */
+const FORM_STATES = () => [
+  { value: 'aria-invalid', label: t('Invalid') },
+  { value: 'disabled', label: t('Disabled') },
+  { value: 'checked', label: t('Checked') },
+]
+
 const MORE_STATES = () => [
   { value: 'before', label: t('Before') },
   { value: 'after', label: t('After') },
@@ -40,7 +47,7 @@ const MORE_STATES = () => [
 /** What a state is called: its own name, "open" for data-open, "in open" for a state of a block around it. */
 export function stateLabel(value: string): string {
   if (value === '') return t('Default')
-  const known = [...BASE_STATES(), ...MORE_STATES()].find((item) => item.value === value)
+  const known = [...BASE_STATES(), ...FORM_STATES(), ...MORE_STATES()].find((item) => item.value === value)
   if (known) return known.label
   if (value.startsWith('in-data-')) return t('in {state}', { state: value.slice(8) })
   if (value.startsWith('data-')) return value.slice(5)
@@ -54,13 +61,15 @@ export interface StateMenuProps {
   onState: (state: string[]) => void
   /** The element's data states and those of the elements around it, by name. */
   states?: { own: string[]; inherited: string[] }
+  /** States of what is styled offered beside Hover, Pressed and Focus, as variants: a form field's `aria-invalid`, `disabled`, a checkbox's `checked`. */
+  primary?: string[]
 }
 
 /**
  * The state being styled, one button: Default, or the state the controls write for (hover, pressed…), which
  * then stands out so nobody styles a hover thinking it is the element. A state with styles of its own is marked.
  */
-export function StateMenu({ classes, engine, state, onState, states, className }: StateMenuProps & { className?: string }) {
+export function StateMenu({ classes, engine, state, onState, states, primary = [], className }: StateMenuProps & { className?: string }) {
   const used = usedVariants(classes)
   const current = state.join(':')
   const set = (value: string) => onState(value ? parseClass(`${value}:x`).variants : [])
@@ -80,7 +89,8 @@ export function StateMenu({ classes, engine, state, onState, states, className }
   }
   // A state that has styles of its own carries the mark a section with styles does.
   const item = (value: string, label = stateLabel(value)): MenuItemDef => ({ label, checked: current === value, mark: value && used.has(value) ? t('Has Styles') : undefined, onSelect: () => set(value) })
-  const more = MORE_STATES().map((entry) => entry.value).filter(valid)
+  const first = [...BASE_STATES().map((entry) => entry.value), ...primary.filter(valid)]
+  const more = MORE_STATES().map((entry) => entry.value).filter((value) => valid(value) && !first.includes(value))
   const own = data.filter(valid)
   const styling = current !== ''
 
@@ -97,12 +107,12 @@ export function StateMenu({ classes, engine, state, onState, states, className }
         </Pressable>
       }
       items={[
-        ...BASE_STATES().map((entry) => item(entry.value, entry.label)),
+        ...first.map((value) => item(value)),
         { separator: true, label: '' },
         ...more.map((value) => item(value)),
         ...(own.length ? [{ separator: true, label: '' }, { label: t('States of This Element'), heading: true }, ...own.map((value) => item(value))] : []),
         // A state chosen by its variant, shown as long as it is the one being styled.
-        ...(current && !BASE_STATES().some((entry) => entry.value === current) && !more.includes(current) && !own.includes(current) ? [item(current)] : []),
+        ...(current && !first.includes(current) && !more.includes(current) && !own.includes(current) ? [item(current)] : []),
         { separator: true, label: '' },
         { label: t('Custom Variant…'), onSelect: () => void custom() },
       ]}

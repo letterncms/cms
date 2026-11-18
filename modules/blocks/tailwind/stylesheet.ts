@@ -83,16 +83,16 @@ const indentOf = (css: string, at: number) => /[ \t]*$/.exec(css.slice(0, at))![
 /** The elements the design styles, by their selectors: everything else in `@layer base` is the site's own CSS. */
 export const ELEMENTS = ['body', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'strong', 'small', 'blockquote', 'code', 'figcaption', 'hr', '::selection', ':focus-visible'] as const
 
-/** Where a site sets what its form fields look like: the `--field-*` properties, for the page and every section with a colour mode of its own. */
-export const FIELDS = ':root, [data-theme]'
+/** Elements a site adds to those it styles, one by one: once added they are managed as the others are. */
+export const MORE_ELEMENTS = ['em', 'mark', 'del', 'sup', 'sub', 'abbr', 'cite', 'kbd', 'pre', 'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'caption', 'th', 'td', 'img', 'figure', 'address', 'details', 'summary'] as const
 
-/** A layer of rules the design reads: elements and fields in `base`, long-form text in `components`. */
+/** A layer of rules the design reads: elements in `base`, long-form text and forms in `components`. */
 export type Layer = 'base' | 'components'
 
 /** An element inside long-form text, and not a block of its own there (a Box or a Repeat drawn as one). */
 const inProse = (element: string) => `.cms-prose ${element}:where(:not(.cms-box, .cms-repeat))`
 
-/** Long-form text (any block with Prose on): its spacing, and its elements where they differ from the page's. In `@layer components`. */
+/** Long-form text (any block with Prose on): the text as a whole, and its elements where they differ from the page's. In `@layer components`. */
 export const ARTICLE = {
   spacing: '.cms-prose',
   h2: inProse('h2'),
@@ -104,8 +104,50 @@ export const ARTICLE = {
   a: inProse('a'),
 } as const
 
+/** Elements of long-form text a site adds to those it styles, by the names the design gives them. */
+export const MORE_ARTICLE = {
+  h4: inProse('h4'),
+  h5: inProse('h5'),
+  h6: inProse('h6'),
+  ul: inProse('ul'),
+  ol: inProse('ol'),
+  strong: inProse('strong'),
+  em: inProse('em'),
+  code: '.cms-prose :not(pre) > code',
+  pre: inProse('pre'),
+  img: inProse('img'),
+  figcaption: inProse('figcaption'),
+  hr: inProse('hr'),
+  table: inProse('table'),
+  th: inProse('th'),
+  td: inProse('td'),
+} as const
+
+/**
+ * The parts of every form on the site, each a rule of `@layer components` that applies classes: what all boxed
+ * fields share and each kind of field, what checkboxes, radio buttons and switches share and each of them, and the
+ * words around them. A kind's selector weighs more than what the kinds share, so it wins whatever the order; the
+ * kernel's own look (fields.css) weighs nothing, so any of them wins over it.
+ */
+export const FORM = {
+  fields: '.cms-input',
+  text: 'input.cms-input',
+  textarea: 'textarea.cms-input',
+  select: 'select.cms-input',
+  choices: ':is(.cms-check, .cms-radio, .cms-switch)',
+  checkbox: 'input.cms-check',
+  radio: 'input.cms-radio',
+  switch: 'input.cms-switch',
+  option: '.cms-choice',
+  label: '.cms-label',
+  help: '.cms-help',
+  error: '.cms-msg',
+  field: '.cms-field',
+  form: '.cms-form',
+} as const
+
 /** The rules each layer's sections show; every other rule of the layer is the site's own CSS. */
-const MANAGED: Record<Layer, string[]> = { base: [...ELEMENTS, FIELDS], components: Object.values(ARTICLE) }
+const MANAGED: Record<Layer, string[]> = { base: [...ELEMENTS, ...MORE_ELEMENTS], components: [...Object.values(ARTICLE), ...Object.values(MORE_ARTICLE), ...Object.values(FORM)] }
 
 /** The theme variables the design shows, kind by kind: every other variable is the site's own CSS. */
 const KINDS = 'color|font(?!-weight-)|text(?!-shadow-)|tracking|leading|breakpoint|container|spacing|radius|shadow|inset-shadow|drop-shadow|text-shadow|blur|perspective|ease|animate|duration|control'
