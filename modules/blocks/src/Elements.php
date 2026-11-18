@@ -507,9 +507,10 @@ final class Elements
         $columns = max([0, ...array_map('count', $rows)]);
         $look = ($b['look'] ?? 'lines') === 'soft' ? ' data-look="soft" data-columns="'.$columns.'"' : '';
         // A table wider than the screen scrolls sideways in its frame: the frame takes the focus and names itself, so a
-        // keyboard can scroll it too (WCAG 2.1.1) and a screen reader says which table it is.
+        // keyboard can scroll it too (WCAG 2.1.1) and a screen reader says which table it is. A figure, not a region:
+        // a page with several tables has no row of landmarks of the same name.
         $name = ! empty($b['caption']) ? strip_tags((string) $b['caption']) : __('Table');
-        $html = '<figure '.$d['attrs'].$look.' role="region" tabindex="0" aria-label="'.e($name).'"><table>';
+        $html = '<figure '.$d['attrs'].$look.' tabindex="0" aria-label="'.e($name).'"><table>';
         $html .= ! empty($b['caption']) ? '<caption>'.e((string) $b['caption']).'</caption>' : '';
         $body = '';
         // Empty cells show what goes there on the canvas, so a new table is visible.
