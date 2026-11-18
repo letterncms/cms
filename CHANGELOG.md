@@ -18,6 +18,7 @@
 
 ### Changed
 
+- **Long-form text has a calmer rhythm by default.** Its spacing is measured in the size of its text, not in the size of each heading, so a large heading no longer pushes itself apart. The gap under a heading is now at least the gap between paragraphs (it used to be smaller, so headings stuck to their text), with about twice that above it; new defaults are `--prose-blocks: 1.25em`, `--prose-headings: 2.25em`, `--prose-after-headings: 1em` and `--prose-items: 0.5em`. A site that sets its own keeps them, now measured the same way. Tables read at a line height of 1.5.
 - **Breaking.** **Form fields are styled with classes**, part by part, in `@layer components` (`.cms-input`, `select.cms-input`, `input.cms-check`, `.cms-label`…). The kernel's own look of a field weighs nothing now, so any rule of the site wins over it. The `--field-*` properties still work as the defaults, and a site's own on `:root` show under **Code**.
 - **Classes → Articles → Article** styles long-form text as a whole, with its spacing under **Text Spacing**.
 - **A new preview under Classes.** It stands at the top of the editor, above **State** and **Classes** as the canvas stands over a block's **Design** tab, from edge to edge on the page's own background, as tall as what it shows with even room around it, instead of a fixed box that shrank it.

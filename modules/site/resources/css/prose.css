@@ -1,7 +1,16 @@
 /* Long-form text: any block with Prose on. A site styles its elements in theme.css (.cms-prose h2 { … }). */
+
+/* The spaces are lengths, worked out where .cms-prose sets them: 1em is the size of the text, whatever the size of
+   the heading or the list that uses it. So a larger h2 doesn't push its own spacing apart. */
+@property --prose-blocks { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --prose-headings { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --prose-after-headings { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --prose-items { syntax: "<length>"; inherits: true; initial-value: 0px; }
+
 @layer components {
-  /* The space between its blocks: the site's .cms-prose sets its own. */
-  .cms-prose { --prose-blocks: 1.1em; --prose-headings: 1.8em; --prose-after-headings: .6em; --prose-items: .35em; }
+  /* The space between its blocks: the site's .cms-prose sets its own. A heading sits closer to its text than to what
+     came before it, and never closer to its text than a line: the gap under it is the gap between paragraphs or more. */
+  .cms-prose { --prose-blocks: 1.25em; --prose-headings: 2.25em; --prose-after-headings: 1em; --prose-items: .5em; }
   /* Prose is a flow of blocks, whatever they are, spaced by the design's Prose spacing. An element that only
      holds blocks (data-cms-contents: Page Content without a box of its own) is looked through. A block inside keeps
      its own layout: a Box or Repeat is not text (as a list or a link), and one with text of its own is Prose too. */

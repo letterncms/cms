@@ -226,7 +226,7 @@
   .cms-callout[data-tone="danger"] { background: color-mix(in srgb, #dc2626 8%, transparent); border-color: color-mix(in srgb, #dc2626 25%, transparent); }
 
   .cms-table { margin: 0; overflow-x: auto; }
-  .cms-table table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+  .cms-table table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); line-height: 1.5; }
   .cms-table th, .cms-table td { padding: 0.65em 0.8em; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
   .cms-table th { font-weight: var(--font-weight-semibold); }
   .cms-table [data-highlight] { background: color-mix(in srgb, var(--color-primary) 22%, transparent); }
