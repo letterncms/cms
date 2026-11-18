@@ -17,7 +17,8 @@
     "@alpinejs/collapse": "3.17.4",
     "@alpinejs/focus": "3.17.4",
     "@imacrayon/alpine-ajax": "0.12.7",
-    "highlight.js": "11.11.1"
+    "highlight.js": "11.11.1",
+    "maplibre-gl": "6.16.0"
   },
   "devDependencies": {
     "@dnd-kit/core": "6.3.1",

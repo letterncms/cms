@@ -17,7 +17,8 @@ export function accepts(parent: BlockNode | null, child: string, types: Map<stri
   const def = types.get(child)
   if (parent === null) return (allowed.length === 0 || allowed.includes(child)) && !def?.parent
   const p = types.get(parent.type)
-  if (!p?.children || (def?.parent && def.parent !== parent.type)) return false
+  // A block made for one parent also goes in a Repeat, which makes one of it per item there (a Map's places).
+  if (!p?.children || (def?.parent && def.parent !== parent.type && parent.type !== 'repeat')) return false
   return Array.isArray(p.children) ? p.children.includes(child) : true
 }
 
