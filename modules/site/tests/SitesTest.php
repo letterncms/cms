@@ -377,6 +377,24 @@ final class SitesTest extends TestCase
         $this->assertNull(Installer::site(), 'and no site’s: it is not claimed to be one that is not there');
     }
 
+    public function test_a_new_site_speaks_the_language_the_site_it_starts_from_speaks_first(): void
+    {
+        $this->site('dorp', [
+            'content/collections/pages.yaml' => "title: Pagina’s\ndriver: files\nroute: '/{slug}'\nfields: []\n",
+            'content/collections/pages/welkom.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac1\ntitle: Welkom\nstatus: published\n---\n\nGoeiedag.\n",
+        ], ['languages' => ['nl']]);
+        $this->assertSame('en', $this->cms()->defaultLocale());
+
+        Files::putJson(storage_path('installed.json'), ['version' => '1', 'site' => 'dorp']);
+        $this->cms()->hooks()->dispatch('cms.installed', $this->admin());
+
+        $this->assertSame('nl', $this->cms()->defaultLocale());
+        $this->assertSame(['nl'], $this->cms()->locales());
+        $welkom = $this->cms()->entries()->query()->collection('pages')->ungated()->where('slug', 'welkom')->first();
+        $this->assertSame('nl', $welkom?->locale);
+        $this->assertSame('/welkom', $welkom->uri, 'at the root, not under /nl');
+    }
+
     public function test_the_site_a_new_site_starts_from_is_deleted_like_any_other_once_the_site_is_another(): void
     {
         $this->cms()->hooks()->dispatch('cms.installed', $this->admin());

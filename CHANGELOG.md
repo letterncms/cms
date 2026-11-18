@@ -22,6 +22,7 @@
 - **A filtered list stays one list item deep.** An item that is a list item itself now carries the filter's marks, instead of being wrapped in a second list item.
 - **A filter's counts are easier to read**: the number beside each choice had too little contrast for WCAG AA.
 - A site that names its own favicon in its settings is applied: the picture is brought before the setting is checked.
+- **A new site speaks the language of the site it starts from.** A site in Dutch alone now installs with Dutch as its main language, its pages at the root, instead of English with the Dutch pages under `/nl`.
 
 ## 0.52.0 (2026-11-17)
 
