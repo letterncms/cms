@@ -276,6 +276,30 @@
   .cms-accordion[data-look="cards"] { display: grid; gap: --spacing(2); }
   .cms-accordion[data-look="cards"] details { border: 0; border-radius: var(--radius-lg); background: var(--color-surface); padding-inline: 1.25rem; }
 
+  /* Menu Button: lines that become a cross while aria-expanded is true. They move on translate and rotate alone,
+     from where they rest (--y) to the middle, so nothing around them reflows, and the label never changes. */
+  .cms-menu-button { display: inline-flex; align-items: center; gap: 0.625em; cursor: pointer; }
+  .cms-menu-button__icon { position: relative; flex: none; width: 1.25em; height: 0.875em; }
+  .cms-menu-button__icon > span { position: absolute; inset-inline: 0; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: currentColor; translate: 0 var(--y, 0); rotate: 0deg; transition: translate 320ms cubic-bezier(0.22, 1, 0.36, 1), rotate 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease; }
+  .cms-menu-button[data-lines="3"] .cms-menu-button__icon > span:nth-child(1) { --y: calc(-0.4375em + 1px); }
+  .cms-menu-button[data-lines="3"] .cms-menu-button__icon > span:nth-child(3) { --y: calc(0.4375em - 1px); }
+  .cms-menu-button[data-lines="2"] .cms-menu-button__icon > span:nth-child(1) { --y: -0.21875em; }
+  .cms-menu-button[data-lines="2"] .cms-menu-button__icon > span:nth-child(2) { --y: 0.21875em; }
+  .cms-menu-button__label[data-hidden] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .cms-menu-button[aria-expanded="true"] .cms-menu-button__icon > span { translate: 0 0; }
+  .cms-menu-button[aria-expanded="true"] .cms-menu-button__icon > span:first-child { rotate: 45deg; }
+  .cms-menu-button[aria-expanded="true"] .cms-menu-button__icon > span:last-child { rotate: -45deg; }
+  .cms-menu-button[aria-expanded="true"][data-lines="3"] .cms-menu-button__icon > span:nth-child(2) { opacity: 0; }
+  /* Squeeze: opening, the lines meet in the middle and then turn; closing, they turn back and then part. */
+  .cms-menu-button[data-animation="squeeze"] .cms-menu-button__icon > span { transition: translate 180ms cubic-bezier(0.22, 1, 0.36, 1) 160ms, rotate 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 0ms linear 160ms; }
+  .cms-menu-button[data-animation="squeeze"][aria-expanded="true"] .cms-menu-button__icon > span { transition: translate 180ms cubic-bezier(0.22, 1, 0.36, 1), rotate 180ms cubic-bezier(0.22, 1, 0.36, 1) 160ms, opacity 0ms linear 160ms; }
+  /* Spin: the whole icon turns half a circle as the cross forms. */
+  .cms-menu-button[data-animation="spin"] .cms-menu-button__icon { transition: rotate 420ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .cms-menu-button[data-animation="spin"][aria-expanded="true"] .cms-menu-button__icon { rotate: 180deg; }
+  .cms-menu-button[data-animation="none"] .cms-menu-button__icon > span { transition: none; }
+  @media (prefers-reduced-motion: reduce) { .cms-menu-button .cms-menu-button__icon, .cms-menu-button .cms-menu-button__icon > span { transition: none; } }
+  [data-cms-motion="paused"] .cms-menu-button .cms-menu-button__icon, [data-cms-motion="paused"] .cms-menu-button .cms-menu-button__icon > span { transition: none; }
+
   .cms-search { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.45rem 0.4rem 0.7rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-muted); font: inherit; font-size: var(--text-sm); cursor: pointer; transition: border-color 150ms ease, color 150ms ease; }
   .cms-search:hover { color: var(--color-foreground); border-color: color-mix(in srgb, currentColor 30%, transparent); }
   .cms-search__icon { width: 1em; height: 1em; flex: none; }
