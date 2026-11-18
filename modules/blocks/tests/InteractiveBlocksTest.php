@@ -224,10 +224,11 @@ final class InteractiveBlocksTest extends TestCase
 
     public function test_a_wide_table_can_be_scrolled_from_the_keyboard(): void
     {
+        // Not a landmark: two tables on a page would be two regions of one name.
         $rows = [['Wijk', 'Restafval'], ['Centrum', 'Maandag']];
 
-        $this->assertMatchesRegularExpression('#<figure [^>]*role="region" tabindex="0" aria-label="Table"><table>#', $this->render([['type' => 'table', 'props' => ['rows' => $rows]]]));
-        $this->assertStringContainsString('role="region" tabindex="0" aria-label="Ophaaldagen"><table><caption>Ophaaldagen</caption>', $this->render([['type' => 'table', 'props' => ['rows' => $rows, 'caption' => 'Ophaaldagen']]]));
+        $this->assertMatchesRegularExpression('#<figure [^>]*tabindex="0" aria-label="Table"><table>#', $this->render([['type' => 'table', 'props' => ['rows' => $rows]]]));
+        $this->assertStringContainsString('tabindex="0" aria-label="Ophaaldagen"><table><caption>Ophaaldagen</caption>', $this->render([['type' => 'table', 'props' => ['rows' => $rows, 'caption' => 'Ophaaldagen']]]));
     }
 
     public function test_tabs_can_look_segmented(): void
