@@ -27,6 +27,8 @@ export interface SortableTreeProps<T extends TreeItem> {
   /** Row content. `handle` is the drag grip; place it where it fits. */
   renderItem: (item: T, ctx: { depth: number; handle: ReactNode; indent: () => void; outdent: () => void; canIndent: boolean; canOutdent: boolean }) => ReactNode
   maxDepth?: number
+  /** Whether an item can hold others: one that can't (a row in a list of groups) only stands beside them. All can when left out. */
+  canNest?: (item: T) => boolean
   /** Pixels per level; also the horizontal drag distance that changes the level. */
   indent?: number
   className?: string
@@ -37,7 +39,7 @@ export interface SortableTreeProps<T extends TreeItem> {
  * sideways to nest; children travel with their parent. Keyboard: focus the
  * grip, space to lift, arrows to move, space to drop.
  */
-export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, maxDepth = 5, indent = 24, className }: SortableTreeProps<T>) {
+export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, maxDepth = 5, canNest = () => true, indent = 24, className }: SortableTreeProps<T>) {
   const [active, setActive] = useState<string | null>(null)
   const [offset, setOffset] = useState(0)
   const [over, setOver] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, 
     return flat.filter((f) => !hidden.has(f.item.id))
   }, [flat, active])
 
-  const projection = active && over ? project(visible, active, over, offset, indent, maxDepth) : null
+  const projection = active && over ? project(visible, active, over, offset, indent, maxDepth, canNest) : null
 
   const commit = (next: Flat<T>[]) => onChange(build(next))
 
@@ -59,7 +61,7 @@ export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, 
     const index = flat.findIndex((f) => f.item.id === id)
     const target = flat[index].depth + delta
     const prev = flat[index - 1]
-    if (target < 0 || target > maxDepth || (delta > 0 && (!prev || target > prev.depth + 1))) return
+    if (target < 0 || target > maxDepth || (delta > 0 && (!prev || target > prev.depth + 1 || !nests(flat, index, target, canNest)))) return
     const moving = new Set([id, ...descendants(flat, id)])
     commit(flat.map((f) => (moving.has(f.item.id) ? { ...f, depth: f.depth + delta } : f)))
   }
@@ -80,7 +82,7 @@ export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, 
   }
   const onDragEnd = ({ active: a, over: o }: DragEndEvent) => {
     const id = String(a.id)
-    const p = o ? project(visible, id, String(o.id), offset, indent, maxDepth) : null
+    const p = o ? project(visible, id, String(o.id), offset, indent, maxDepth, canNest) : null
     reset()
     if (!o || !p) return
 
@@ -110,7 +112,7 @@ export function SortableTree<T extends TreeItem>({ items, onChange, renderItem, 
                     handle,
                     indent: () => shift(f.item.id, 1),
                     outdent: () => shift(f.item.id, -1),
-                    canIndent: !!prev && f.depth <= prev.depth && f.depth < maxDepth,
+                    canIndent: !!prev && f.depth <= prev.depth && f.depth < maxDepth && nests(visible, i, f.depth + 1, canNest),
                     canOutdent: f.depth > 0,
                   })
                 }
@@ -170,8 +172,15 @@ function descendants<T extends TreeItem>(flat: Flat<T>[], id: string): string[] 
   return out
 }
 
+/** Whether the item at `index`, at `depth`, would have a parent that can hold it: the nearest one before it a level up. */
+function nests<T extends TreeItem>(flat: Flat<T>[], index: number, depth: number, canNest: (item: T) => boolean): boolean {
+  if (depth === 0) return true
+  for (let i = index - 1; i >= 0; i--) if (flat[i].depth === depth - 1) return canNest(flat[i].item)
+  return false
+}
+
 /** Depth the dragged item would land at, from its new neighbors and the sideways drag. */
-function project<T extends TreeItem>(visible: Flat<T>[], activeId: string, overId: string, offset: number, indent: number, maxDepth: number) {
+function project<T extends TreeItem>(visible: Flat<T>[], activeId: string, overId: string, offset: number, indent: number, maxDepth: number, canNest: (item: T) => boolean = () => true) {
   const from = visible.findIndex((f) => f.item.id === activeId)
   const to = visible.findIndex((f) => f.item.id === overId)
   if (from < 0 || to < 0) return null
@@ -179,9 +188,13 @@ function project<T extends TreeItem>(visible: Flat<T>[], activeId: string, overI
   const prev = moved[to - 1]
   const next = moved[to + 1]
   const wanted = visible[from].depth + Math.round(offset / indent)
-  const max = Math.min(maxDepth, prev ? prev.depth + 1 : 0)
+  // One level under the item before it only when that one holds others; else beside it at most.
+  const max = Math.min(maxDepth, prev ? prev.depth + (canNest(prev.item) ? 1 : 0) : 0)
   const min = next ? next.depth : 0
-  return { depth: Math.max(Math.min(wanted, max), Math.min(min, max)) }
+  let depth = Math.max(Math.min(wanted, max), Math.min(min, max))
+  // Never inside an item that holds nothing: a level up until its parent can hold it.
+  while (depth > 0 && !nests(moved, to, depth, canNest)) depth--
+  return { depth }
 }
 
 /** Flat list (with depths) back to a nested tree. */

@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 /**
  * The styling and the site's code keep their versions in the one history (Revisions), like entries:
  *
- *   styling  theme        the stylesheet (theme.css) and the page transition, as Design and the Code screen save them
+ *   styling  theme        the stylesheet (theme.css), the page transition and how Classes lists the styles, as Design and the Code screen save them
  *   code     custom.js    the JavaScript on every page
  *   code     scripts/…    a script or a stylesheet beside the site's stylesheet, by its path
  *
@@ -46,7 +46,7 @@ final class History
                     $self->saveStyling(static function () use ($self, $snapshot) {
                         $self->styling->saveTheme((string) ($snapshot['css'] ?? ''));
                         // The whole transition as it was: what it did not set goes back to its default.
-                        $self->styling->saveSettings(['transition' => [...array_fill_keys(self::TRANSITION, null), ...(array) ($snapshot['transition'] ?? [])]]);
+                        $self->styling->saveSettings(['transition' => [...array_fill_keys(self::TRANSITION, null), ...(array) ($snapshot['transition'] ?? [])], 'arrangement' => $snapshot['arrangement'] ?? null]);
                         $self->styling->saved();
                     }, $ctx->user, 'restore');
                 } catch (\InvalidArgumentException|StylingException $e) {
@@ -85,10 +85,12 @@ final class History
         ));
     }
 
-    /** @return array{css: string, transition: array} the styling as it stands */
+    /** @return array{css: string, transition: array, arrangement: array} the styling as it stands */
     public function stylingNow(): array
     {
-        return ['css' => $this->styling->theme(), 'transition' => $this->styling->settings()['transition']];
+        $settings = $this->styling->settings();
+
+        return ['css' => $this->styling->theme(), 'transition' => $settings['transition'], 'arrangement' => $settings['arrangement']];
     }
 
     /**
@@ -104,7 +106,7 @@ final class History
         $now = $this->stylingNow();
 
         $this->first('styling', 'theme', $before, $changed);
-        if ($action !== 'save' || $now['css'] !== $before['css'] || $now['transition'] != $before['transition']) {
+        if ($action !== 'save' || $now['css'] !== $before['css'] || $now['transition'] != $before['transition'] || $now['arrangement'] != $before['arrangement']) {
             $this->revisions->record('styling', 'theme', $action, $now, '', $user);
         }
 

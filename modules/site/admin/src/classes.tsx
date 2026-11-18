@@ -1,8 +1,8 @@
 import { navigate, t, type FieldDef } from '@letterncms/sdk'
-import { Button, EmptyState, Fields, NoMatches, prompt, toast, type MenuItemDef } from '@letterncms/ui'
+import { Button, EmptyState, Fields, NoMatches, SettingsPanel, SortableTree, prompt, toast, type MenuItemDef, type TreeItem } from '@letterncms/ui'
 import { ARTICLE, ELEMENTS, FORM, InspectorSection, MORE_ARTICLE, MORE_ELEMENTS, PanelFields, STYLE_GROUPS, Specimen, StyleBar, StylePanels, Stylesheet, parseClass, screenFor, shownInState, styleApi, styleSample, useSpecimenSheet, useStyling, withVariants, type Device, type Engine, type SampleNode, type StyleLayer as Layer } from '@letterncms/blocks'
 import { useEffect, useMemo, useState } from 'react'
-import { Group, OpenRow, rowMenu, type Editing } from './parts'
+import { Group, TreeRow, rowMenu, type Arrangement, type Editing, type Entry } from './parts'
 
 /* The site's styles, in groups, each a place of its own: the elements the site styles (its page, headings, text,
    divider, selection and focus, and any it adds), its buttons, the parts of its forms and of its long-form text,
@@ -67,8 +67,6 @@ interface Element {
   states?: string[]
   /** What it draws that no class reaches, section by section. */
   parts?: Part[]
-  /** The sample's height: a form's parts need more room than a line of text. */
-  tall?: boolean
 }
 
 const TEXT_GROUPS = ['typography', 'spacing', 'fill', 'border', 'effects', 'transition'] as const
@@ -147,7 +145,7 @@ const MORE_ELEMENT_LIST = (): Element[] => {
   return MORE_ELEMENTS.map((id) => {
     const { label, node: sample, groups } = node(id)
     // Markup wears no state: what it shows is the element among others.
-    return { id, selector: id, layer: 'base' as const, label, groups, sample: sample.markup ? () => sample : plain(sample), tall: !!sample.markup }
+    return { id, selector: id, layer: 'base' as const, label, groups, sample: sample.markup ? () => sample : plain(sample) }
   })
 }
 
@@ -168,7 +166,7 @@ const ARTICLES = (): Element[] => [
     layer: 'components',
     label: t('Article'),
     sample: prose(`<h2 style="margin:0">${text(t('Heading 2'))}</h2><p>${text(t('Paragraph'))}</p><ul><li>${text(t('List Item'))}</li><li>${text(t('List Item'))}</li></ul>`),
-    tall: true,
+   
     // The space in long-form text: between its blocks, around its headings and between the items of a list.
     parts: [{ title: t('Text Spacing'), values: [proseLength('--prose-blocks', t('Blocks')), proseLength('--prose-headings', t('Above Headings')), proseLength('--prose-after-headings', t('Below Headings')), proseLength('--prose-items', t('List Items'))] }],
   },
@@ -200,7 +198,7 @@ const MORE_ARTICLE_LIST = (): Element[] => {
     entry('table', t('Table'), TABLE(), ['spacing', 'typography', 'fill', 'border', 'effects']),
     entry('th', t('Table Header'), TABLE()),
     entry('td', t('Table Cell'), TABLE()),
-  ].map((element) => ({ ...element, tall: true }))
+  ].map((element) => ({ ...element }))
 }
 
 /* Forms. Each part is drawn as a form draws it, in the state being styled: an attribute where the browser knows the
@@ -214,7 +212,10 @@ function stateAttributes(state: string[], checked = false): string {
 }
 
 /** A form's sample: its markup in a form's grid, in the size of a sample's column. */
-const form = (html: string) => markup(`<div class="cms-form" style="width:min(20rem,100%);white-space:normal">${html}</div>`)
+const form = (html: string) => markup(`<div class="cms-form" style="white-space:normal">${html}</div>`)
+
+/** Controls one under the other, a sample's own distance apart: what a form spaces them by is the Label's to show. */
+const stack = (html: string) => markup(`<div style="display:grid;gap:.75rem;white-space:normal">${html}</div>`)
 
 /** What `edits` names wears the state's classes: the part being edited is the one that shows them. */
 const wear = (look: Look, edits: boolean) => (edits ? look.shown.join(' ') : '')
@@ -243,9 +244,9 @@ const setPosition = (sheet: Stylesheet, value: unknown) => {
 
 /** Every part of a form: what boxed fields share and each kind, what choices share and each kind, then the words around them. */
 const FORM_PARTS = (): Element[] => {
-  const field = (id: string, selector: string, label: string, sample: (look: Look) => SampleNode, parts?: Part[]): Element => ({ id, selector, layer: 'components', label, sample, groups: FIELD_GROUPS, states: ['aria-invalid', 'disabled', 'placeholder'], parts, tall: true })
+  const field = (id: string, selector: string, label: string, sample: (look: Look) => SampleNode, parts?: Part[]): Element => ({ id, selector, layer: 'components', label, sample, groups: FIELD_GROUPS, states: ['aria-invalid', 'disabled', 'placeholder'], parts })
   const choice = (id: string, selector: string, label: string, kinds: ('check' | 'radio' | 'switch')[], parts?: Part[]): Element => ({
-    id, selector, layer: 'components', label, groups: BOX_GROUPS, states: ['checked', 'aria-invalid', 'disabled'], parts, tall: true,
+    id, selector, layer: 'components', label, groups: BOX_GROUPS, states: ['checked', 'aria-invalid', 'disabled'], parts,
     sample: (look) => markup(`<div style="display:grid;grid-template-columns:repeat(${kinds.length},auto);gap:.75rem 1.5rem;justify-content:center;white-space:nowrap">${[false, true].map((on) => kinds.map((kind) => {
       const input = kind === 'radio' ? `<input type="radio" class="cms-radio ${wear(look, true)}" ${stateAttributes(look.state, on)}>` : `<input type="checkbox"${kind === 'switch' ? ' role="switch"' : ''} class="cms-${kind} ${wear(look, true)}" ${stateAttributes(look.state, on)}>`
       return `<label class="cms-choice">${input} ${text(on || look.state.includes('checked') ? t('On') : t('Off'))}</label>`
@@ -255,20 +256,20 @@ const FORM_PARTS = (): Element[] => {
   const textarea = (look: Look, edits: boolean) => `<textarea class="cms-input ${wear(look, edits)}" rows="3" placeholder="${text(t('Text Area'))}" ${stateAttributes(look.state)}></textarea>`
   const select = (look: Look, edits: boolean) => `<select class="cms-input ${wear(look, edits)}" ${stateAttributes(look.state)}><option>${text(t('Dropdown'))}</option></select>`
   return [
-    field('fields', FORM.fields, t('Fields'), (look) => form(input(look, true, t('Text Field')) + select(look, true) + textarea(look, true))),
-    field('text', FORM.text, t('Text Field'), (look) => form(input(look, true, t('Text Field')) + input(look, true, t('Text Field'), 'ada@example.com'))),
-    field('textarea', FORM.textarea, t('Text Area'), (look) => form(textarea(look, true))),
-    field('select', FORM.select, t('Dropdown'), (look) => form(select(look, true)), [{ title: t('Arrow'), values: [color('--field-select-arrow-color', t('Color')), remLength('--field-select-arrow-size', t('Size'))] }]),
-    choice('choices', FORM.choices, t('Choices'), ['check', 'radio', 'switch']),
+    field('fields', FORM.fields, t('All Fields'), (look) => stack(input(look, true, t('Text Field')) + select(look, true) + textarea(look, true))),
+    field('text', FORM.text, t('Text Field'), (look) => stack(input(look, true, t('Text Field')) + input(look, true, t('Text Field'), 'ada@example.com'))),
+    field('textarea', FORM.textarea, t('Text Area'), (look) => stack(textarea(look, true))),
+    field('select', FORM.select, t('Dropdown'), (look) => stack(select(look, true)), [{ title: t('Arrow'), values: [color('--field-select-arrow-color', t('Color')), remLength('--field-select-arrow-size', t('Size'))] }]),
+    choice('choices', FORM.choices, t('All Choices'), ['check', 'radio', 'switch']),
     choice('checkbox', FORM.checkbox, t('Checkbox'), ['check'], [{ title: t('Box'), values: [remLength('--field-checkbox-size', t('Size'))] }, { title: t('Check Mark'), values: [color('--field-checkbox-mark-color', t('Color')), { handle: '--field-checkbox-mark-size', property: '--field-checkbox-mark-size', label: t('Size'), field: { component: 'blocks-value', unit: '%', units: ['%'], min: 0, max: 100, step: 5 } }] }]),
     choice('radio', FORM.radio, t('Radio Button'), ['radio'], [{ title: t('Circle'), values: [remLength('--field-radio-size', t('Size'))] }, { title: t('Dot'), values: [color('--field-radio-on-dot', t('Color')), { handle: '--field-radio-dot-size', property: '--field-radio-dot-size', label: t('Size'), field: { component: 'blocks-value', unit: '%', units: ['%'], min: 0, max: 100, step: 5 } }] }]),
     choice('switch', FORM.switch, t('Switch'), ['switch'], [{ title: t('Track'), values: [remLength('--field-switch-width', t('Width')), remLength('--field-switch-height', t('Height'))] }, { title: t('Knob'), values: [color('--field-switch-knob', t('Color')), remLength('--field-switch-inset', t('Inset'), ['px', 'rem']), { handle: '--field-switch-knob-shadow', property: '--field-switch-knob-shadow', label: t('Shadow'), field: { component: 'site-shadow' } }] }]),
     {
-      id: 'option', selector: FORM.option, layer: 'components', label: t('Option Text'), groups: TEXT_GROUPS, tall: true,
+      id: 'option', selector: FORM.option, layer: 'components', label: t('Option Text'), groups: TEXT_GROUPS,
       sample: (look) => markup(`<div style="display:grid;gap:.75rem;white-space:nowrap"><label class="cms-choice ${wear(look, true)}"><input type="checkbox" class="cms-check" checked tabindex="-1"> ${text(t('Send me the newsletter'))}</label><label class="cms-choice ${wear(look, true)}"><input type="radio" class="cms-radio" tabindex="-1"> ${text(t('Not now'))}</label></div>`),
     },
     {
-      id: 'label', selector: FORM.label, layer: 'components', label: t('Label'), groups: TEXT_GROUPS, tall: true,
+      id: 'label', selector: FORM.label, layer: 'components', label: t('Label'), groups: TEXT_GROUPS,
       sample: (look) => labelled(look, 'label'),
       parts: [{
         title: t('Layout'),
@@ -284,8 +285,8 @@ const FORM_PARTS = (): Element[] => {
         ],
       }],
     },
-    { id: 'help', selector: FORM.help, layer: 'components', label: t('Help Text'), groups: TEXT_GROUPS, tall: true, sample: (look) => labelled(look, 'help') },
-    { id: 'error', selector: FORM.error, layer: 'components', label: t('Error Message'), groups: TEXT_GROUPS, tall: true, sample: (look) => labelled(look, 'error') },
+    { id: 'help', selector: FORM.help, layer: 'components', label: t('Help Text'), groups: TEXT_GROUPS, sample: (look) => labelled(look, 'help') },
+    { id: 'error', selector: FORM.error, layer: 'components', label: t('Error Message'), groups: TEXT_GROUPS, sample: (look) => labelled(look, 'error') },
   ]
 }
 
@@ -344,10 +345,12 @@ function StyleEditor({ edit, samples, element, classes, write, menu }: { edit: E
   return (
     // The inspector's sections bring their own gutter: they reach the column's edges, as they do in the builder.
     <div className="-mx-4 -mt-2">
-      <StyleBar s={s} site={styling.classes} source={styling.source} disabled={edit.readOnly} state={{ classes, engine: styling.engine, state, onState: setState, primary: element.states }} menu={menu} saveAs={false} />
-      {/* The sample on the page's own background, from edge to edge: the page, not a card on it. */}
+      {/* The sample first, as the canvas stands over a block's Design tab: on the page's own background, from edge to edge, as tall as it is. */}
       <div className="border-b border-border">
-        <Specimen sheet={sheet} node={sample} page={page} mode={edit.mode} align="center" className={element.tall ? 'h-64' : 'h-32'} />
+        <Specimen sheet={sheet} node={sample} page={page} mode={edit.mode} align="center" auto className="min-h-32" />
+      </div>
+      <div className="border-b border-border">
+        <StyleBar s={s} site={styling.classes} source={styling.source} disabled={edit.readOnly} state={{ classes, engine: styling.engine, state, onState: setState, primary: element.states }} menu={menu} saveAs={false} />
       </div>
       {/* Read only, the controls show what is set and take no input. */}
       <div inert={edit.readOnly}>
@@ -544,6 +547,92 @@ function reserved(name: string): boolean {
   return taken
 }
 
+/** A row of a list in the tree it is dragged in: a style that opens, or a group of the site's inside the list. */
+type Node = TreeItem & { kind: 'item' | 'group'; label: string; to?: string; menu: MenuItemDef[]; changed?: boolean; locked?: boolean; detail?: number }
+
+/** Keys in the order the site put them, those it didn't name after them as they stand. */
+const ordered = (keys: string[], order: string[]) => [...order.filter((key) => keys.includes(key)), ...keys.filter((key) => !order.includes(key))]
+
+/** A group's rows as arranged, among the styles it has: what is gone is left out, what is new comes last. Its own groups stay, empty or not. */
+function arranged(entries: Entry[], keys: string[]): Entry[] {
+  const placed = new Set<string>()
+  const keep = (list: Entry[]): Entry[] => list.flatMap((entry): Entry[] => {
+    if (typeof entry !== 'string') return [{ name: entry.name, items: keep(entry.items) }]
+    if (!keys.includes(entry) || placed.has(entry)) return []
+    placed.add(entry)
+    return [entry]
+  })
+  const kept = keep(entries)
+  return [...kept, ...keys.filter((key) => !placed.has(key))]
+}
+
+/** A style taken out of a list, wherever it stands in it. */
+const removeEntry = (entries: Entry[], key: string): Entry[] => entries.flatMap((entry): Entry[] => (typeof entry === 'string' ? (entry === key ? [] : [entry]) : [{ name: entry.name, items: removeEntry(entry.items, key) }]))
+
+/** The group of a list a style stands in, if any. */
+const groupHolding = (entries: Entry[], key: string, within: string | null = null): string | null => {
+  for (const entry of entries) {
+    if (entry === key) return within
+    if (typeof entry !== 'string') {
+      const found = groupHolding(entry.items, key, entry.name)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/** The names of a list's own groups, at every depth. */
+const groupNames = (entries: Entry[]): string[] => entries.flatMap((entry) => (typeof entry === 'string' ? [] : [entry.name, ...groupNames(entry.items)]))
+
+/** How many styles a group holds, in its groups too. */
+const countIn = (node: Node): number => ((node.children ?? []) as Node[]).reduce((sum, child) => sum + (child.kind === 'group' ? countIn(child) : 1), 0)
+
+/** Rows as the tree draws them. */
+function toNodes(entries: Entry[], itemOf: (key: string) => Node | undefined, menuOf: (name: string) => MenuItemDef[]): Node[] {
+  return entries.flatMap((entry): Node[] => {
+    if (typeof entry !== 'string') return [{ id: `group:${entry.name}`, kind: 'group', label: entry.name, menu: menuOf(entry.name), children: toNodes(entry.items, itemOf, menuOf) }]
+    const node = itemOf(entry)
+    return node ? [node] : []
+  })
+}
+
+/** What the tree holds after a drag, as the arrangement writes it. */
+const fromNodes = (nodes: Node[]): Entry[] => nodes.map((node) => (node.kind === 'group' ? { name: node.label, items: fromNodes((node.children ?? []) as Node[]) } : node.id.slice(5)))
+
+/** A group of a list changed where it stands, or taken out (null), its rows staying where it stood. */
+function mapGroup(entries: Entry[], name: string, change: ((group: { name: string; items: Entry[] }) => Entry) | null): Entry[] {
+  return entries.flatMap((entry): Entry[] => {
+    if (typeof entry === 'string') return [entry]
+    if (entry.name === name) return change ? [change(entry)] : entry.items
+    return [{ name: entry.name, items: mapGroup(entry.items, name, change) }]
+  })
+}
+
+/** A style renamed wherever the arrangement names it. */
+function renameEntry(arrangement: Arrangement, from: string, to: string): Arrangement {
+  const swap = (entries: Entry[]): Entry[] => entries.map((entry) => (typeof entry === 'string' ? (entry === from ? to : entry) : { name: entry.name, items: swap(entry.items) }))
+  return { ...arrangement, groups: Object.fromEntries(Object.entries(arrangement.groups).map(([at, entries]) => [at, swap(entries)])) }
+}
+
+/** A group of the site's renamed in the arrangement, or gone from it (null). */
+function renameGroupKey(arrangement: Arrangement, from: string, to: string | null): Arrangement {
+  const groups = Object.fromEntries(Object.entries(arrangement.groups).flatMap(([at, entries]) => (at !== from ? [[at, entries]] : to ? [[to, entries]] : [])))
+  const order = arrangement.order.flatMap((name) => (name !== from ? [name] : to ? [to] : []))
+  return { order, groups }
+}
+
+/** A name for a group inside a list: any words, but not one the list has already. */
+async function askInnerGroup(taken: string[], title: string, confirmLabel: string, current = ''): Promise<string | null> {
+  const asked = await prompt({ title, fields: [{ handle: 'name', type: 'text', label: t('Name'), placeholder: t('Headings'), required: true, autofocus: true }], values: { name: current }, confirm: confirmLabel })
+  const name = String(asked?.name ?? '').trim()
+  if (!name || name === current) return null
+  if (taken.includes(name)) {
+    toast.error(t('There is already a group “{name}”.', { name }))
+    return null
+  }
+  return name
+}
+
 /** A style of the site's renamed, and under its new name wherever the stylesheet itself applies it. */
 function renameStyle(sheet: Stylesheet, from: string, to: string): Stylesheet {
   const swap = (raw: string) => {
@@ -608,6 +697,7 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
     const name = (await askName(engine, taken, t('Rename “{name}”', { name: from }), t('Rename'), isButton(from) ? 'btn-' : '', from))?.name
     if (!name) return
     edit.change((s) => renameStyle(s, from, name))
+    edit.arrange((a) => renameEntry(a, from, name))
     if (key === from) navigate(stylePath(group, name), { replace: true })
   }
   const duplicate = async (from: string) => {
@@ -677,28 +767,39 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
   }
 
   // A class is its name: what it looks like is shown where it is edited.
-  type Item = { to: string; label: string; group: string; menu: MenuItemDef[]; changed: boolean }
-  const item = (at: string, id: string, label: string, menu: MenuItemDef[], unsaved: boolean): Item => ({ to: stylePath(at, id), label, group: groupLabel(edit.sheet, at) ?? '', menu, changed: unsaved })
+  type Item = { key: string; to: string; label: string; group: string; menu: MenuItemDef[]; changed: boolean }
+  const item = (at: string, id: string, label: string, menu: MenuItemDef[], unsaved: boolean): Item => ({ key: id, to: stylePath(at, id), label, group: groupLabel(edit.sheet, at) ?? '', menu, changed: unsaved })
   const classItem = (rule: (typeof own)[number], at: string) => item(at, rule.name, rule.name, styleMenu(rule.name), rule.classes.join(' ') !== edit.saved.utilities().find((each) => each.name === rule.name)?.classes.join(' '))
   const ungrouped = own.filter((rule) => !isButton(rule.name) && groupOf(edit.sheet, rule.name) === UNGROUPED)
+  /** A group's styles in the order they stand by default: what it was given, then its classes. */
   const itemsOf = (at: string): Item[] => {
     const elements = elementsOf(edit.sheet, at).map((element) => item(at, element.id, element.label, elementMenu(element, at), elementChanged(edit, element)))
     if (at === 'buttons') return own.filter((rule) => isButton(rule.name)).map((rule) => classItem(rule, 'buttons'))
     if (at === UNGROUPED) return ungrouped.map((rule) => classItem(rule, UNGROUPED))
     return [...elements, ...own.filter((rule) => !isButton(rule.name) && groupOf(edit.sheet, rule.name) === at).map((rule) => classItem(rule, at))]
   }
-  const ids = [...BUILT_IN, ...groups.map((each) => each.id), ...(ungrouped.length ? [UNGROUPED] : [])]
+  /** Where a group's rows are arranged: one the site was given by its id, one of its own by its name. */
+  const arrangedAs = (at: string) => groups.find((each) => each.id === at)?.name ?? at
+  const ids = ordered([...BUILT_IN, ...groups.map((each) => each.id), ...(ungrouped.length ? [UNGROUPED] : [])], edit.arrangement.order.map((name) => groups.find((each) => each.name === name)?.id ?? name))
   const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
-  const found = (entry: Item) => terms.every((word) => `${entry.label} ${entry.to.split('/').pop()}`.toLowerCase().includes(word))
-  const rows = (items: Item[], detail?: (entry: Item) => string) => items.map((entry) => <OpenRow key={entry.to} onOpen={() => open(entry.to)} label={entry.label} changed={entry.changed} menu={entry.menu} detail={detail?.(entry)} />)
+  const found = (entry: Item) => terms.every((word) => `${entry.label} ${entry.key}`.toLowerCase().includes(word))
   const searchField = (placeholder: string) => (
     <div className="mb-4">
       <Fields bare fields={[{ handle: 'search', type: 'text', label: t('Search'), icon: 'search', size: 'sm', placeholder }]} values={{ search }} onChange={(_, next) => setSearch(String(next ?? ''))} />
     </div>
   )
+  /** What a search finds, wherever it stands, with the group it is in. */
   const matches = (items: Item[], detail?: (entry: Item) => string) => {
     const shown = items.filter(found)
-    return shown.length ? <Group>{rows(shown, detail)}</Group> : <NoMatches onClear={() => setSearch('')} />
+    return shown.length ? (
+      <Group plain>
+        <SettingsPanel className="overflow-hidden">
+          <div className="-mx-4 divide-y divide-border sm:-mx-5">
+            {shown.map((entry) => <TreeRow key={entry.to} handle={null} onOpen={() => open(entry.to)} label={entry.label} changed={entry.changed} menu={entry.menu} detail={detail?.(entry)} />)}
+          </div>
+        </SettingsPanel>
+      </Group>
+    ) : <NoMatches onClear={() => setSearch('')} />
   }
   // What is added under a list, in the same quiet buttons on every list.
   const adding = 'ml-0 !px-1.5 !font-normal !text-muted first:-ml-1.5 hover:!text-ink'
@@ -707,23 +808,94 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
       {buttons.map((button) => <Button key={button.label} variant="ghost" size="xs" icon={button.icon} onClick={button.onClick} className={adding}>{button.label}</Button>)}
     </span>
   ))
+  /** A list that can be put in another order by dragging, and into groups of its own: the same in every group. */
+  const tree = (nodes: Node[], onChange: (nodes: Node[]) => void, depth: number) => (
+    <SettingsPanel className="overflow-hidden">
+      <SortableTree<Node>
+        items={nodes}
+        onChange={onChange}
+        maxDepth={depth}
+        canNest={(node) => node.kind === 'group'}
+        indent={20}
+        className="-mx-4 !space-y-0 divide-y divide-border sm:-mx-5"
+        renderItem={(node, { handle }) => node.kind === 'group'
+          ? <TreeRow heading handle={edit.readOnly ? null : handle} label={node.label} detail={countIn(node)} menu={node.menu} />
+          : <TreeRow handle={edit.readOnly ? null : handle} onOpen={() => open(node.to ?? stylePath())} label={node.label} locked={node.locked} detail={node.detail} changed={node.changed} menu={node.menu} />}
+      />
+    </SettingsPanel>
+  )
 
-  // A group: its styles, and the site's classes in it, found by name.
+  // A group: its styles and the site's classes in it, in the order the site put them and in groups of its own.
   if (group) {
     const items = itemsOf(group)
     const button = group === 'buttons'
     const known = group === UNGROUPED || (BUILT_IN as readonly string[]).includes(group) || groups.some((each) => each.id === group)
     const more = addable(edit.sheet, group)
+    const at = arrangedAs(group)
+    const entries = edit.arrangement.groups[at] ?? []
+    const write = (next: Entry[]) => edit.arrange((a) => ({ ...a, groups: { ...a.groups, [at]: next } }))
+    const names = groupNames(entries)
+    const newGroup = async () => {
+      const name = await askInnerGroup(names, t('New Group'), t('Create Group'))
+      // First in the list: what goes in it is dragged under it.
+      if (name) write([{ name, items: [] }, ...arranged(entries, items.map((each) => each.key))])
+    }
+    /** A row into one of the list's groups, or out of them all (null), last in it: what dragging does, from a menu. */
+    // A class of the site's can also go to another group of Classes; what the site was given stays in its own.
+    const isClass = (key: string) => own.some((rule) => rule.name === key) && !isButton(key)
+    const moveInto = async (key: string) => {
+      const list = arranged(entries, items.map((each) => each.key))
+      const here = groupLabel(edit.sheet, group) ?? group
+      const elsewhere = isClass(key) ? [...HOLDS_CLASSES.map((id) => ({ value: `to:${id}`, label: builtInLabel(id)! })), ...groups.map((each) => ({ value: `to:${each.name}`, label: each.name }))].filter((option) => option.value !== `to:${arrangedAs(group)}`).concat(group === UNGROUPED ? [] : [{ value: 'to:', label: t('No Group') }]) : []
+      const options = [{ value: 'here', label: here }, ...names.map((name) => ({ value: `in:${name}`, label: `${here} › ${name}` })), ...elsewhere]
+      const holding = groupHolding(list, key)
+      const asked = await prompt({ title: t('Move “{name}” to a Group', { name: items.find((each) => each.key === key)?.label ?? key }), fields: [{ handle: 'group', type: 'select', label: t('Group'), required: true, options } as FieldDef], values: { group: holding ? `in:${holding}` : 'here' }, confirm: t('Move to Group') })
+      if (!asked) return
+      const target = String(asked.group ?? '')
+      if (target.startsWith('to:')) {
+        const name = target.slice(3) || null
+        const current = own.find((rule) => rule.name === key)?.group ?? null
+        edit.change((sheet) => keepGroup(sheet.setUtilityGroup(key, name), current))
+        write(removeEntry(list, key))
+        return
+      }
+      const without = removeEntry(list, key)
+      write(target.startsWith('in:') ? mapGroup(without, target.slice(3), (inner) => ({ ...inner, items: [...inner.items, key] })) : [...without, key])
+    }
+    const nodes = toNodes(arranged(entries, items.map((each) => each.key)), (key) => {
+      const entry = items.find((each) => each.key === key)
+      // One Move to Group… on every row: into a group of this list, or for a class to another group of Classes.
+      const movable = !edit.readOnly && (names.length > 0 || isClass(key))
+      const base = (entry?.menu ?? []).filter((each) => each.label !== t('Move to Group…'))
+      const menu = movable ? [...base, ...(base.length ? [{ separator: true, label: '' }] : []), { label: t('Move to Group…'), icon: 'folder', onSelect: () => void moveInto(key) }] : base
+      return entry && { id: `item:${key}`, kind: 'item' as const, label: entry.label, to: entry.to, menu, changed: entry.changed }
+    }, (name) => rowMenu(edit, {
+      own: [
+        {
+          label: t('Rename…'), icon: 'edit', onSelect: async () => {
+            const next = await askInnerGroup(names, t('Rename Group'), t('Rename'), name)
+            if (next) write(mapGroup(arranged(entries, items.map((each) => each.key)), name, (inner) => ({ ...inner, name: next })))
+          },
+        },
+        // Its rows stay where it stood.
+        { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => write(mapGroup(arranged(entries, items.map((each) => each.key)), name, null)) },
+      ],
+    }))
     const buttons = known ? [
       { label: button ? t('New Button') : t('New Class'), icon: 'plus', onClick: () => void create(group === UNGROUPED ? null : group) },
       ...(more.length ? [{ label: t('Add Element'), icon: 'plus', onClick: () => void addElement(group) }] : []),
+      { label: t('New Group'), icon: 'folder', onClick: () => void newGroup() },
     ] : []
     // A group of the site's with no class in it yet: the way to make its first.
-    if (items.length === 0) return <EmptyState compact icon="folder" title={t('No classes yet')} action={!edit.readOnly && known && <Button icon="plus" onClick={() => void create(group === UNGROUPED ? null : group)}>{button ? t('New Button') : t('New Class')}</Button>} />
+    if (items.length === 0 && names.length === 0) return <EmptyState compact icon="folder" title={t('No classes yet')} action={!edit.readOnly && known && <Button icon="plus" onClick={() => void create(group === UNGROUPED ? null : group)}>{button ? t('New Button') : t('New Class')}</Button>} />
     return (
       <>
         {items.length > 7 && searchField(t('Search {items}', { items: groupLabel(edit.sheet, group) ?? t('Classes') }))}
-        {terms.length ? matches(items) : <Group action={actions(buttons)}>{rows(items)}</Group>}
+        {terms.length ? matches(items) : (
+          <Group plain action={actions(buttons)}>
+            {tree(nodes, (next) => write(fromNodes(next)), 3)}
+          </Group>
+        )}
       </>
     )
   }
@@ -735,11 +907,19 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
       {
         label: t('Rename…'), icon: 'edit', onSelect: async () => {
           const next = await askGroup(edit.sheet, t('Rename Group'), t('Rename'), name)
-          if (next) edit.change((s) => s.renameGroup(name, next))
+          if (next) {
+            edit.change((s) => s.renameGroup(name, next))
+            edit.arrange((a) => renameGroupKey(a, name, next))
+          }
         },
       },
       // Its classes stay, in no group.
-      { label: t('Delete'), icon: 'trash', danger: true, onSelect: () => edit.change((s) => s.renameGroup(name, null)) },
+      {
+        label: t('Delete'), icon: 'trash', danger: true, onSelect: () => {
+          edit.change((s) => s.renameGroup(name, null))
+          edit.arrange((a) => renameGroupKey(a, name, null))
+        },
+      },
     ],
   })
   const newGroup = async () => {
@@ -750,13 +930,13 @@ export function Classes({ edit, samples, path }: { edit: Editing; samples: Sampl
     <>
       {searchField(t('Search Classes'))}
       {terms.length ? matches(ids.flatMap(itemsOf), (entry) => entry.group) : (
-        <Group action={actions([{ label: t('New Class'), icon: 'plus', onClick: () => void create(null) }, { label: t('New Group'), icon: 'folder', onClick: () => void newGroup() }])}>
-          {ids.map((id) => {
+        <Group plain action={actions([{ label: t('New Class'), icon: 'plus', onClick: () => void create(null) }, { label: t('New Group'), icon: 'folder', onClick: () => void newGroup() }])}>
+          {tree(ids.map((id) => {
             const items = itemsOf(id)
             const mine = groups.find((each) => each.id === id)
             // A group made or renamed and not saved yet is marked like a class.
-            return <OpenRow key={id} onOpen={() => open(stylePath(id))} label={groupLabel(edit.sheet, id) ?? id} locked={!mine && id !== UNGROUPED} detail={items.length} changed={changedIn(items) || (!!mine && !edit.saved.groups().includes(mine.name))} menu={mine ? groupMenu(mine.name) : []} />
-          })}
+            return { id: `item:${id}`, kind: 'item' as const, label: groupLabel(edit.sheet, id) ?? id, to: stylePath(id), locked: !mine && id !== UNGROUPED, detail: items.length, changed: changedIn(items) || (!!mine && !edit.saved.groups().includes(mine.name)), menu: mine ? groupMenu(mine.name) : [] }
+          }), (next) => edit.arrange((a) => ({ ...a, order: next.map((node) => arrangedAs(node.id.slice(5))) })), 0)}
         </Group>
       )}
     </>

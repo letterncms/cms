@@ -2,7 +2,7 @@ import { CmsError, can, invalidate, navigate, run, t, useAbility } from '@letter
 import { IconButton, Notice, QueryError, SaveBar, Segmented, Spinner, Tooltip, Topbar, UndoRedo, VersionsButton, cn, confirm, prompt, toast, useTheme, useUndo } from '@letterncms/ui'
 import { Stylesheet, StylingProvider, loadTailwindTheme, themeDefaults, useStyling, type StylingSource } from '@letterncms/blocks'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { type Editing } from './parts'
+import { arrangementOf, type Arrangement, type Editing } from './parts'
 import { SitePreview, useDraftCompile, type Viewport } from './preview'
 import { Classes, stylePath, stylesPlace } from './classes'
 import { keyframesOf } from './fields'
@@ -13,17 +13,20 @@ interface Info {
   css: string
   fonts: Face[]
   transition: Transition
+  arrangement: Arrangement
   js: string
   stylesheet: string
 }
 
 /**
  * What Save writes. One draft: the stylesheet's text, which every control rewrites where the value stands
- * (so comments and hand-written CSS stay), and the page transition. A part that was not changed is not in it.
+ * (so comments and hand-written CSS stay), the page transition and how Classes lists the styles. A part that was
+ * not changed is not in it.
  */
 interface Draft {
   css?: string
   transition?: Transition
+  arrangement?: Arrangement
 }
 
 const EMPTY: Draft = {}
@@ -39,12 +42,13 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 /** Where each place of the panel was scrolled when it was left: back there, it is where it was left. */
 const scrolled = new Map<string, number>()
 
-/** What one step back or forward returns to: the stylesheet and the page transition. */
+/** What one step back or forward returns to: the stylesheet, the page transition and how Classes lists the styles. */
 interface State {
   css: string
   transition: Transition
+  arrangement: Arrangement
 }
-const sameState = (a: State, b: State) => a.css === b.css && same(a.transition, b.transition)
+const sameState = (a: State, b: State) => a.css === b.css && same(a.transition, b.transition) && same(a.arrangement, b.arrangement)
 
 /**
  * /design/<section>: the design of the site, section by section (each a row of the design's sidebar), beside the
@@ -89,7 +93,9 @@ export default function Design({ params }: { params: Record<string, string> }) {
   const base = info.data
   const css = draft.css ?? base?.css
   const transition = draft.transition ?? base?.transition
-  const dirty = !!base && ((draft.css !== undefined && draft.css !== base.css) || (draft.transition !== undefined && !same(draft.transition, base.transition)))
+  const savedArrangement = useMemo(() => arrangementOf(base?.arrangement), [base?.arrangement])
+  const arrangement = draft.arrangement ?? savedArrangement
+  const dirty = !!base && ((draft.css !== undefined && draft.css !== base.css) || (draft.transition !== undefined && !same(draft.transition, base.transition)) || (draft.arrangement !== undefined && !same(draft.arrangement, savedArrangement)))
   const readOnly = !can('settings.manage')
 
   const sheet = useMemo(() => new Stylesheet(css ?? ''), [css])
@@ -113,14 +119,14 @@ export default function Design({ params }: { params: Record<string, string> }) {
   useLayoutEffect(() => {
     if (ready && list.current) list.current.scrollTop = scrolled.get(place) ?? 0
   }, [place, ready])
-  // Every change is a step back, as in the editor: the stylesheet and the transition together.
-  const state = useMemo(() => (css !== undefined && transition ? { css, transition } : undefined), [css, transition])
-  const history = useUndo<State>(state, (next) => setDraft({ css: next.css, transition: next.transition }), sameState)
+  // Every change is a step back, as in the editor: the stylesheet, the transition and the arrangement together.
+  const state = useMemo(() => (css !== undefined && transition ? { css, transition, arrangement } : undefined), [css, transition, arrangement])
+  const history = useUndo<State>(state, (next) => setDraft({ css: next.css, transition: next.transition, arrangement: next.arrangement }), sameState)
   // A version from the history opens in the draft, to look at and save, or to undo.
   const openVersion = async (id: string) => {
     try {
       const { snapshot } = await run<{ snapshot: State }>('revisions/get', { id })
-      setDraft({ css: snapshot.css, transition: snapshot.transition })
+      setDraft({ css: snapshot.css, transition: snapshot.transition, arrangement: arrangementOf(snapshot.arrangement) })
     } catch (e) {
       toast.error(e)
     }
@@ -157,6 +163,9 @@ export default function Design({ params }: { params: Record<string, string> }) {
     saved: savedSheet,
     // From the newest draft, not the one this render saw: two changes in one go both count.
     change: (change) => !readOnly && setDraft((d) => ({ ...d, css: change(new Stylesheet(d.css ?? base.css)).css })),
+    arrangement,
+    savedArrangement,
+    arrange: (change) => !readOnly && setDraft((d) => ({ ...d, arrangement: change(d.arrangement ?? savedArrangement) })),
     readOnly,
     defaults,
     palette,
@@ -180,6 +189,7 @@ export default function Design({ params }: { params: Record<string, string> }) {
       const input: Record<string, unknown> = {}
       if (draft.css !== undefined && draft.css !== base.css) input.css = draft.css
       if (draft.transition !== undefined && !same(draft.transition, base.transition)) input.transition = draft.transition
+      if (draft.arrangement !== undefined && !same(draft.arrangement, savedArrangement)) input.arrangement = draft.arrangement
       if (Object.keys(input).length > 0) await run('styling/update', input)
       // The stylesheet on screen is the saved one before the draft lets go of it, so nothing jumps back.
       await Promise.all([info.refetch(), source.refetch()])

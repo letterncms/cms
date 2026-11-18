@@ -663,6 +663,7 @@
   "Medium 500": "Moyen 500",
   "Members-only content starts here.": "Ici commence le contenu réservé aux membres.",
   "Menu": "Menu",
+  "Menu Button": "Bouton de menu",
   "Message||shape": "Bulle",
   "Middle": "Milieu",
   "Min": "Min.",
@@ -753,6 +754,7 @@
   "Open Large on Click": "Agrandir au clic",
   "Open with ⌘K": "Ouvrir avec ⌘K",
   "Opening hours, a floor, a phone number": "Horaires, un étage, un numéro de téléphone",
+  "Opens and closes a menu: its lines turn into a cross.": "Ouvre et ferme un menu : ses lignes se changent en croix.",
   "Options": "Options",
   "Options as table rows": "Options sous forme de lignes de tableau",
   "Origin": "Origine",
@@ -1203,11 +1205,5 @@
   "Zoom Image Inside": "Zoomer l’image à l’intérieur",
   "Zoom In": "Zoomer",
   "Zoom Out": "Dézoomer",
-  "Zoom While Scrolling": "Zoom au défilement",
-  "Menu Button": "Bouton de menu",
-  "Opens and closes a menu: its lines turn into a cross.": "Ouvre et ferme un menu : ses lignes se changent en croix.",
-  "Off: only screen readers read it.": "Désactivé : seuls les lecteurs d’écran le lisent.",
-  "How the lines turn into a cross while the menu is open.": "Comment les lignes se changent en croix tant que le menu est ouvert.",
-  "Cross": "Croix",
-  "Squeeze": "Resserrer"
+  "Zoom While Scrolling": "Zoom au défilement"
 }
