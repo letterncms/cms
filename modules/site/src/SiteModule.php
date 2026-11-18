@@ -462,7 +462,7 @@ final class SiteModule extends Plugin
                 },
             ];
 
-            // A menu's links: {label, url, newTab, current, active, children}. A nested Repeat over item.children for sub-menus.
+            // A menu's links: {label, url, newTab, current, active, children}, and each link’s own fields (an icon, a description). A nested Repeat over item.children for sub-menus.
             $sources['menu'] = [
                 'label' => 'Menu',
                 'description' => __('Links of a navigation menu. Nest a Repeat over item.children for sub-menus.'),

@@ -74,6 +74,20 @@ final class GlobalsAndMenusTest extends TestCase
         $this->assertSame('+31 20 123', $this->cms()->globals()->find('studio')['phone']);
     }
 
+    public function test_a_menu_link_brings_its_own_fields_but_never_over_the_menus_own(): void
+    {
+        $this->cms()->collections()->save(\Cms\Content\Collections\Collection::fromArray('quick', ['type' => 'menu', 'title' => 'Quick', 'max_depth' => 1, 'fields' => [
+            ['handle' => 'link', 'type' => 'link', 'label' => 'Link', 'required' => true],
+            ['handle' => 'icon', 'type' => 'icon', 'label' => 'Icon'],
+            ['handle' => 'url', 'type' => 'text', 'label' => 'A field named like the address'],
+        ]]));
+        $this->cms()->entryService()->create('quick', ['title' => 'Report', 'data' => ['link' => ['type' => 'url', 'value' => '/report'], 'icon' => 'megaphone', 'url' => '/elsewhere'], 'status' => 'published']);
+
+        $link = $this->cms()->menus()->resolve('quick', null, null)[0];
+        $this->assertSame(['Report', '/report', 'megaphone'], [$link['label'], $link['url'], $link['icon']]);
+        $this->assertArrayNotHasKey('link', $link);
+    }
+
     public function test_a_page_shows_a_global_and_a_menu_and_is_rebuilt_when_either_changes(): void
     {
         $this->global('studio', [['handle' => 'phone', 'type' => 'text']], ['phone' => '+31 20 123']);
