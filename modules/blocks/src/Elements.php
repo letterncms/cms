@@ -454,18 +454,6 @@ final class Elements
         return $max > $min ? rtrim(rtrim(number_format(max(0, min(1, ($value - $min) / ($max - $min))), 4, '.', ''), '0'), '.') ?: '0' : '0';
     }
 
-    public static function search(array $d): string
-    {
-        $b = $d['block'];
-        $d['renderer']->uses('search');
-        $config = json_encode(['placeholder' => (string) ($b['placeholder'] ?? 'Search…'), 'empty' => (string) ($b['empty'] ?? 'No results'), 'shortcut' => (bool) ($b['shortcut'] ?? true)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $label = (string) ($b['label'] ?? 'Search');
-        $kbd = ($b['shortcut'] ?? true) ? '<span class="cms-search__kbd" aria-hidden="true"><kbd>⌘</kbd><kbd>K</kbd></span>' : '';
-        $compact = in_array($b['compact'] ?? 'never', ['mobile', 'always'], true) ? ' data-compact="'.$b['compact'].'"' : '';
-
-        return '<button type="button" '.$d['attrs'].$compact.' data-cms-search="'.e((string) $config).'" aria-haspopup="dialog">'.Icons::svg('magnifying-glass', 'cms-search__icon').'<span class="cms-search__label">'.e($label).'</span>'.$kbd.'</button>';
-    }
-
     public static function section(array $d): string
     {
         $b = $d['block'];

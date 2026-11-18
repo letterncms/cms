@@ -9,7 +9,7 @@ use Cms\Modules\Blocks\BlockRenderer;
 use Cms\Modules\Blocks\Scope;
 use Cms\Tests\TestCase;
 
-/** Search Field and Search Results as the site and the canvas show them; the ⌘K Search block stays as it is. */
+/** Search Field and Search Results as the site and the canvas show them: the site's only search, with no dialog over the page. */
 final class SearchBlocksTest extends TestCase
 {
     protected function plugins(): array
@@ -45,17 +45,18 @@ final class SearchBlocksTest extends TestCase
         return json_decode(html_entity_decode($m[1] ?? '', ENT_QUOTES | ENT_HTML5), true) ?? [];
     }
 
-    public function test_the_blocks_sit_beside_the_search_block(): void
+    public function test_the_blocks_are_the_sites_search_and_nothing_opens_a_dialog(): void
     {
         $registry = app(BlockRegistry::class);
         $names = array_keys($registry->all());
 
-        $this->assertSame(['search', 'search-field', 'search-results'], array_values(array_slice($names, array_search('search', $names, true), 3)));
+        $this->assertSame(['search-field', 'search-results'], array_values(array_slice($names, array_search('search-field', $names, true), 2)));
         $this->assertSame('Search Field', $registry->get('search-field')->title);
         $this->assertSame('Search Results', $registry->get('search-results')->title);
         $this->assertSame(['search-results'], $registry->get('search-results')->uses);
         $this->assertContains('search-results', BlockRegistry::RUNTIME, 'a feature of the runtime, not a plugin\'s name');
-        $this->assertStringContainsString('aria-haspopup="dialog"', $this->render([['search', []]]), 'the ⌘K Search block as it was');
+        $this->assertNull($registry->get('search'), 'no Search block with a dialog over the page');
+        $this->assertNotContains('search', BlockRegistry::RUNTIME);
     }
 
     public function test_the_field_is_a_search_form_that_works_without_scripts(): void

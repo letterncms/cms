@@ -452,19 +452,6 @@ final class CoreBlocks
                 ],
                 'render' => Elements::input(...),
             ],
-            [
-                'name' => 'search', 'title' => 'Search', 'icon' => 'search', 'category' => 'interactive',
-                'description' => 'Search across the whole site.', 'keywords' => ['find', 'command', 'cmdk'],
-                'html' => 'button',
-                'fields' => [
-                    ['handle' => 'label', 'type' => 'text', 'label' => 'Label', 'default' => 'Search'],
-                    ['handle' => 'placeholder', 'type' => 'text', 'label' => 'Placeholder', 'default' => 'Search…'],
-                    ['handle' => 'empty', 'type' => 'text', 'label' => 'No results text', 'default' => 'No results'],
-                    ['handle' => 'shortcut', 'type' => 'toggle', 'label' => 'Open with ⌘K', 'default' => true],
-                    ['handle' => 'compact', 'type' => 'select', 'label' => 'Icon Only', 'options' => ['never' => 'Never', 'mobile' => 'On Phone', 'always' => 'Always'], 'default' => 'never'],
-                ],
-                'render' => Elements::search(...),
-            ],
             // A search field on the page and a page of results, for sites people mostly search (SearchBlocks).
             ...SearchBlocks::all(),
 

@@ -27,7 +27,7 @@ final class BlockRegistry
     private array $features = [];
 
     /** What the site runtime brings itself (runtime/src/features.ts) and the renderer marks: a package's feature takes another name. */
-    public const array RUNTIME = ['motion', 'lines', 'logic', 'ajax', 'code', 'search', 'search-results', 'tabs', 'filter', 'fields', 'behavior', 'navigate', 'scroll', 'forever', 'motion-toggle', 'account'];
+    public const array RUNTIME = ['motion', 'lines', 'logic', 'ajax', 'code', 'search-results', 'tabs', 'filter', 'fields', 'behavior', 'navigate', 'scroll', 'forever', 'motion-toggle', 'account'];
 
     public function __construct(private readonly Hooks $hooks) {}
 

@@ -7,7 +7,7 @@ const type = (name: string, children?: boolean | string[]): BlockTypeDef => ({ n
 const types = new Map([
   type('section', true), type('box', true), type('columns', ['column']), type('column', true), type('repeat', true),
   type('paragraph'), type('heading'), type('quote'), type('callout'), type('list'), type('button'), type('link', true),
-  type('icon'), type('spacer'), type('outlet'), type('html'), type('input'), type('search'), type('plugin-container', true),
+  type('icon'), type('spacer'), type('outlet'), type('html'), type('input'), type('search-field'), type('plugin-container', true),
 ].map((item) => [item.name, item]))
 const node = (id: string, name: string, children?: BlockNode[], extra: Partial<BlockNode> = {}): BlockNode => ({ id, type: name, props: {}, ...(children ? { children } : {}), ...extra })
 const noCustom = () => false
@@ -55,10 +55,10 @@ test('repeated source children and bound values remain available without mislead
     node('bound-list', 'list', undefined, { bind: { items: 'item.features' } }),
     node('literal', 'paragraph'),
   ], { props: { source: 'entries', collection: 'posts' } })
-  const sections = outline([repeat, ...['outlet', 'html', 'input', 'search'].map((name) => node(name, name))], types, noCustom)
+  const sections = outline([repeat, ...['outlet', 'html', 'input', 'search-field'].map((name) => node(name, name))], types, noCustom)
   assert.deepEqual(allRows(sections).map((row) => [rowId(row), row.kind]), [
     ['repeat', 'container'], ['bound-title', 'block'], ['bound-list', 'block'], ['literal', 'text'],
-    ['outlet', 'block'], ['html', 'block'], ['input', 'block'], ['search', 'block'],
+    ['outlet', 'block'], ['html', 'block'], ['input', 'block'], ['search-field', 'block'],
   ])
   assert.deepEqual(stops(sections), [{ id: 'literal', prop: 'text', parent: 'repeat' }])
 })
