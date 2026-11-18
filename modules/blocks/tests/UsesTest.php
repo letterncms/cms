@@ -76,6 +76,10 @@ final class UsesTest extends TestCase
         $this->assertSame('minmax(200px,420px)', $columns['title']['width']);
         $this->assertSame(['Used By', 'Nothing', false], [$columns['usedBy']['label'], $columns['usedBy']['empty'], $columns['usedBy']['hidden']]);
         $this->assertFalse($columns['updated']['hidden']);
+        $this->assertArrayNotHasKey('whole', $columns['preview'], 'a template is a page: its picture shows its top');
+
+        $components = $this->cms()->abilities()->execute('views/get', ['id' => 'content', 'params' => ['collection' => 'components']], AbilityContext::forUser($this->admin(), 'admin'));
+        $this->assertTrue(array_column($components['root']['children'][0]['props']['columns'], null, 'key')['preview']['whole'], 'a component is a part: its picture shows all of it');
 
         $pages = $this->cms()->abilities()->execute('views/get', ['id' => 'content', 'params' => ['collection' => 'pages']], AbilityContext::forUser($this->admin(), 'admin'));
         $this->assertArrayNotHasKey('usedBy', array_column($pages['root']['children'][0]['props']['columns'], null, 'key'));

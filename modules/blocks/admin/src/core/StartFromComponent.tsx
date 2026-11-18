@@ -18,7 +18,7 @@ export function StartFromComponent({ open, onOpenChange, components, onChoose }:
       <div className="grid gap-4 sm:grid-cols-2">
         {components.map((component) => (
           <Pressable key={component.handle} onClick={() => onChoose(component)} className="block min-w-0 rounded-md p-1 text-left hover:bg-hover">
-            <PagePreview src={componentPage(component.handle)} maxHeight={280} />
+            <PagePreview src={componentPage(component.handle)} maxHeight={280} whole />
             <span className="mt-2 block truncate text-sm font-medium text-text">{component.title}</span>
             {component.description && <span className="mt-0.5 line-clamp-2 block text-xs text-muted">{component.description}</span>}
           </Pressable>

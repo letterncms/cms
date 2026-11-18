@@ -44,6 +44,8 @@ interface Column {
   muted?: string
   /** The muted value is read whole, and the value is cut short first (who is editing, beside a title). */
   mutedWhole?: boolean
+  /** With `format: page`: what it draws is a part rather than a page (a component), so its picture shows all of it. */
+  whole?: boolean
   /** A key of the row holding a word to mark it with, as a badge after the value: "Default". */
   badge?: string
   /** What a number counts, said with it where the column's header is not on view (a phone's row): `{ one: '{count} Link', other: '{count} Links' }`. */
@@ -469,7 +471,7 @@ function Cell({ row, column: c, media, first }: { row: Row; column: Column; medi
   // Nothing of its own but its quieter value (an address for many pages, `/store/{slug}`): that alone, written as the column writes it.
   const alone = (raw === null || raw === undefined || raw === '') && !c.empty && c.muted ? at(row, c.muted) : undefined
   if (alone !== undefined && alone !== null && alone !== '') return <span className="truncate text-faint">{formatValue(alone, { format: c.format, tones: c.tones, labels: c.labels })}</span>
-  const value = c.empty && (raw === null || raw === undefined || raw === '') ? <span className="text-muted">{c.empty}</span> : formatValue(raw, { format: c.format, tones: c.tones, labels: c.labels, currency: c.currency ? String(at(row, c.currency) ?? c.currency) : undefined, field: c.field, locales: c.locales, media })
+  const value = c.empty && (raw === null || raw === undefined || raw === '') ? <span className="text-muted">{c.empty}</span> : formatValue(raw, { format: c.format, tones: c.tones, labels: c.labels, currency: c.currency ? String(at(row, c.currency) ?? c.currency) : undefined, field: c.field, locales: c.locales, media, whole: c.whole })
   const icon = c.icon ? at(row, c.icon) : undefined
   const problem = c.warning ? at(row, c.warning) : undefined
   const second = problem || (c.muted ? at(row, c.muted) : undefined)
@@ -509,7 +511,7 @@ function Reason({ text }: { text: string }) {
 /** A card's picture: the page or image at the address in the column, or the first file of a media value, looked up. */
 function CardImage({ row, column, media }: { row: Row; column: Column; media: Map<string, MediaThumb> }) {
   const raw = at(row, column.key)
-  if (column.format === 'page') return safeUrl(raw) ? <PagePreview src={safeUrl(raw)!} fill /> : <div className="grid size-full place-items-center text-faint"><Icon name="page" size={20} /></div>
+  if (column.format === 'page') return safeUrl(raw) ? <PagePreview src={safeUrl(raw)!} fill whole={column.whole} /> : <div className="grid size-full place-items-center text-faint"><Icon name="page" size={20} /></div>
   const isMedia = column.format === 'media' || column.field?.type === 'media'
   const first = isMedia ? mediaIds(raw)[0] : undefined
   const thumb = first ? media.get(first.toLowerCase()) : undefined

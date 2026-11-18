@@ -113,7 +113,7 @@ final class BlocksModule extends Plugin
             ]);
             $collections[Components::COLLECTION] ??= \Cms\Content\Collections\Collection::fromArray(Components::COLLECTION, [
                 'title' => 'Components', 'singular' => 'Component', 'icon' => 'symbol', 'driver' => 'files', 'structure' => 'list',
-                'section' => 'layout', 'nav_order' => 30, 'system' => true, 'sort' => 'title', 'default_view' => 'grid',
+                'section' => 'layout', 'nav_order' => 30, 'system' => true, 'sort' => 'title', 'default_view' => 'grid', 'pictures' => 'whole',
                 'description' => 'Reusable designs, like a header, a card or a whole page. A synced one changes everywhere it is used, and each place can fill in its properties; one that is not synced is placed as a copy, to change as you like.',
                 'fields' => [
                     ['handle' => 'blocks', 'type' => 'blocks', 'label' => 'Component', 'body' => true],
