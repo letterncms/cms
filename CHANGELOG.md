@@ -19,6 +19,7 @@
 
 ### Fixed
 
+- **A menu's panels no longer flash over the page as it loads.** Each panel of a Menu behavior used to fade out once when the page started; it is hidden from the start now, and still fades in and out when it opens.
 - A table wider than the screen can be scrolled from the keyboard too: its frame takes the focus, and a screen reader names it by its caption, without adding a landmark for every table.
 - **A List Filter takes its choices from the list it filters**, also when another Repeat comes first inside it, such as a row of letters to jump to: the choices were missing.
 - **A filtered list stays one list item deep.** An item that is a list item itself now carries the filter's marks, instead of being wrapped in a second list item.

@@ -133,6 +133,8 @@ export const menu: DirectiveCallback = (el, _, { cleanup }) => {
     items.push({ item, trigger, panel })
     if (panel) {
       panel.id ||= `cms-menu-${Math.random().toString(36).slice(2, 8)}`
+      // Hidden from the start: without this a panel fades out once as the menu starts, over the page.
+      panel.style.transition = 'none'
       panel.classList.add('cms-menu__content')
       trigger.setAttribute('aria-expanded', 'false')
       trigger.setAttribute('aria-controls', panel.id)
@@ -146,6 +148,9 @@ export const menu: DirectiveCallback = (el, _, { cleanup }) => {
   sheet.setAttribute('aria-hidden', 'true')
   el.prepend(pill, sheet)
   el.classList.add('cms-menu')
+  // The panels take their hidden state now, then move again as they should.
+  void el.offsetWidth
+  for (const { panel } of items) panel?.style.removeProperty('transition')
 
   let open: Item | null = null
   let closing = 0
