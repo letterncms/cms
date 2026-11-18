@@ -460,8 +460,10 @@ final class SiteApplier
     {
         $sitePackage = $run['site'];
         $languages = $sitePackage->languages();
-        // Whole days, so an evening class at seven is still at seven: the hour the site was exported at doesn't move it.
-        $shift = $sitePackage->exported() !== null ? (int) round(CarbonImmutable::parse($sitePackage->exported()->toDateString())->diffInDays(CarbonImmutable::today(), false)) * 86400 : 0;
+        // Whole weeks, so a Saturday market is still on a Saturday and an evening class at seven still at seven (the
+        // hour the site was exported at doesn't move it), and at least as many days as have passed, so what was ahead is.
+        $days = $sitePackage->exported() !== null ? (int) round(CarbonImmutable::parse($sitePackage->exported()->toDateString())->diffInDays(CarbonImmutable::today(), false)) : 0;
+        $shift = (int) (ceil($days / 7) * 7) * 86400;
         $run['shift'] = $shift;
         $planned = [];
 
@@ -637,7 +639,7 @@ final class SiteApplier
 
     /**
      * When an entry is published and until when, here and now. A date after the site was exported was in the
-     * future then, and is as far in the future now; an end date that had passed makes a draft.
+     * future then, and is still in the future now, on the same day of the week; an end date that had passed makes a draft.
      *
      * @return array{0: string, 1: ?string, 2: ?string, 3: bool} status, publication date, end date, whether it ran out
      */
@@ -660,8 +662,8 @@ final class SiteApplier
     }
 
     /**
-     * The entry's own dates, as its publication date: one after the site was exported, like an event's, is as
-     * far ahead now. Date and date range fields of its blueprint, each kept as a day or a moment as it was.
+     * The entry's own dates, as its publication date: one after the site was exported, like an event's, is still
+     * ahead now, on the same day of the week. Date and date range fields of its blueprint, each kept as a day or a moment as it was.
      */
     private function ahead(array $data, Entry $entry, int $shift): array
     {

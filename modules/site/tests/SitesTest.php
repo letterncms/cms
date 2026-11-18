@@ -723,7 +723,7 @@ final class SitesTest extends TestCase
         $this->assertNull($this->cms()->collections()->find('notes'));
     }
 
-    public function test_dates_ahead_of_the_export_stay_as_far_ahead(): void
+    public function test_dates_ahead_of_the_export_stay_ahead_on_the_same_weekday(): void
     {
         $posts = (string) file_get_contents(__DIR__.'/fixtures/sites/starter/content/collections/posts.yaml');
         $this->site('dated', [
@@ -738,7 +738,8 @@ final class SitesTest extends TestCase
         $find = fn (string $slug) => $this->cms()->entries()->query()->collection('posts')->ungated()->where('slug', $slug)->first();
 
         $this->assertSame('2025-12-01', $find('past')->publishedAt->format('Y-m-d'), 'what was published then keeps its date');
-        $this->assertSame('2026-06-11', $find('soon')->publishedAt->format('Y-m-d'), 'ten days ahead of the export is ten days ahead now');
+        $this->assertSame('2026-06-14', $find('soon')->publishedAt->format('Y-m-d'), 'ten days ahead of the export is at least ten days ahead now, on the same weekday');
+        $this->assertSame('Sunday', $find('soon')->publishedAt->format('l'));
         $this->assertSame('draft', $find('over')->status);
         $this->assertContains('Its end date has passed: it comes in as a draft.', array_column($steps, 'note'));
     }
@@ -756,12 +757,12 @@ final class SitesTest extends TestCase
         $class = $this->cms()->entries()->query()->collection('events')->ungated()->where('slug', 'class')->first();
 
         $this->assertSame('published', $class->status, 'its end date moved too');
-        $this->assertSame('2026-06-20T19:00:00+00:00', $class->data['starts'], 'nineteen days ahead of the export is nineteen days ahead now');
-        $this->assertSame('2026-06-20', $class->data['day'], 'a day stays a day');
-        $this->assertSame(['start' => '2025-12-20', 'end' => '2026-06-22'], $class->data['span'], 'a date before the export keeps its day');
+        $this->assertSame('2026-06-23T19:00:00+00:00', $class->data['starts'], 'a Tuesday class is still on a Tuesday, still ahead');
+        $this->assertSame('2026-06-23', $class->data['day'], 'a day stays a day');
+        $this->assertSame(['start' => '2025-12-20', 'end' => '2026-06-25'], $class->data['span'], 'a date before the export keeps its day');
     }
 
-    public function test_dates_move_by_whole_days_whatever_the_hour_of_the_export(): void
+    public function test_dates_move_by_whole_weeks_whatever_the_hour_of_the_export(): void
     {
         $events = "title: Events\nroute: '/events/{slug}'\nfields:\n  - {handle: starts, type: date, time: true}\n";
         $this->site('evening', [
@@ -773,7 +774,7 @@ final class SitesTest extends TestCase
         $this->apply('evening');
         $talk = $this->cms()->entries()->query()->collection('events')->ungated()->where('slug', 'talk')->first();
 
-        $this->assertSame('2026-06-20T19:30:00+00:00', $talk->data['starts'], 'a talk at half past seven is still at half past seven');
+        $this->assertSame('2026-06-23T19:30:00+00:00', $talk->data['starts'], 'a talk at half past seven is still at half past seven');
     }
 
     public function test_design_mode_offers_a_template_only_for_collections_the_site_has_and_a_refusal_copies_nothing(): void
