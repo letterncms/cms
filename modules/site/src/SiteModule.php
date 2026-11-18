@@ -152,6 +152,10 @@ final class SiteModule extends Plugin
                     return;
                 }
 
+                // A new site has no entries yet: it speaks the languages of the site it starts from, the main one first, so a site in Dutch alone is at the root in Dutch.
+                $languages = $sitePackage->languages();
+                $this->cms()->saveSite(['locale' => $languages[0], 'locales' => $languages]);
+
                 $this->app->make(Sites\SiteApplier::class)->apply($sitePackage, 'full', 'skip', $user, withoutPlugins: true, check: false);
             }
         });
