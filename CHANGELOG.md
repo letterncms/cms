@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.53.1 (2026-11-19)
+
 ### Fixed
 
 - **A site whose pages use templates of its own applies over a site that has templates.** Applying AZ Lindenhof or Wilgendaal to a new site (which starts from Starter) stopped at the first such page, saying its template must be one the site already had.
