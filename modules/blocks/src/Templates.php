@@ -34,8 +34,10 @@ final class Templates
     public function all(bool $working = false): array
     {
         $key = $working ? 'working' : 'live';
+        // A dry run (a site checked before it is applied) counts the templates it has made so far, and is not kept.
+        $dry = $this->cms->entryService()->isDry();
 
-        if (isset($this->cache[$key])) {
+        if (! $dry && isset($this->cache[$key])) {
             return $this->cache[$key];
         }
 
@@ -45,14 +47,15 @@ final class Templates
 
         $query = $this->cms->entries()->query()->collection(self::COLLECTION);
         $out = [];
+        $entries = $dry ? array_filter($this->cms->entryService()->inCollection(self::COLLECTION), static fn ($entry) => $working || $entry->isLive()) : ($working ? $query : $query->live())->get();
 
-        foreach (($working ? $query : $query->live())->get() as $entry) {
+        foreach ($entries as $entry) {
             $out[$entry->slug] = self::shape($working ? $entry->withWorkingCopy() : $entry);
         }
 
         ksort($out);
 
-        return $this->cache[$key] = $out;
+        return $dry ? $out : $this->cache[$key] = $out;
     }
 
     public function find(string $handle, bool $working = false): ?array

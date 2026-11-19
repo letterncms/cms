@@ -814,6 +814,21 @@ final class SitesTest extends TestCase
         $this->assertFileDoesNotExist(content_path('styling/styles/new.css'), 'nothing was copied before the refusal');
     }
 
+    public function test_a_page_on_a_template_the_site_brings_applies_over_a_site_with_templates_of_its_own(): void
+    {
+        $this->apply('starter');
+        $this->site('civic', [
+            'content/collections/templates/sectie.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac1\ntitle: Sectie\nstatus: published\n---\n\n::: section\n:::\n",
+            'content/collections/pages/themas.md' => "---\nid: 01aaaaaaaaaaaaaaaaaaaaaac2\ntitle: Themas\nstatus: published\ntemplate: sectie\n---\n\nAlle themas.\n",
+        ]);
+
+        $this->assertNotSame([], $this->app->make(SiteApplier::class)->apply($this->sites()->findOrFail('civic'), 'full', 'replace', $this->admin(), dry: true)['steps']);
+        $this->apply('civic', 'full', 'replace');
+
+        $page = $this->cms()->entries()->query()->collection('pages')->where('slug', 'themas')->first();
+        $this->assertSame('sectie', $page->data['template']);
+    }
+
     public function test_a_site_carries_its_own_favicon(): void
     {
         ob_start();

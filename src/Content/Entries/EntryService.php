@@ -243,6 +243,29 @@ final class EntryService
         return $this->dry;
     }
 
+    /**
+     * A collection's entries in every language: as stored, and in a dry run as they would be after what it has
+     * done so far, so what a run made (a template a page of the same run names) is there for what comes after.
+     *
+     * @return list<Entry>
+     */
+    public function inCollection(string $collection): array
+    {
+        $found = $this->entries->query()->collection($collection)->get();
+        if ($this->staged === []) {
+            return $found;
+        }
+        $entries = [];
+        foreach ($found as $entry) {
+            array_key_exists($entry->id, $this->staged) || $entries[$entry->id] = $entry;
+        }
+        foreach ($this->staged as $id => $entry) {
+            $entry && $entry->collection === $collection && $entries[$id] = $entry;
+        }
+
+        return array_values($entries);
+    }
+
     private function locked(callable $callback): mixed
     {
         Files::ensureDir(storage_path('framework'));

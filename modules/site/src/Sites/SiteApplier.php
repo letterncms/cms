@@ -866,10 +866,20 @@ final class SiteApplier
         return $ordered;
     }
 
-    /** Entries the site lacks are created first, originals before their translations; then the ones that take another's place. */
+    /**
+     * Templates and components go before the entries that name them; within each, entries the site lacks are
+     * created first, originals before their translations, then the ones that take another's place.
+     */
     private function writeEntries(array $run, ?User $user): void
     {
         $steps = $this->doing($run, 'entry');
+        $design = static fn (array $step) => in_array($step['collection'], self::DESIGN, true);
+        $this->writeEntrySteps(array_filter($steps, $design), $run, $user);
+        $this->writeEntrySteps(array_filter($steps, static fn (array $step) => ! $design($step)), $run, $user);
+    }
+
+    private function writeEntrySteps(array $steps, array $run, ?User $user): void
+    {
         $service = $this->cms->entryService();
         $translation = static fn (array $step) => $step['entry']->originId !== null;
         $order = [
