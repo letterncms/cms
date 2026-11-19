@@ -68,6 +68,11 @@
     --field-switch-off: color-mix(in srgb, currentColor 20%, transparent);
     --field-switch-on: var(--field-checkbox-checked);
     --field-switch-knob: #ffffff;
+    /* The knob's colour once it is on; a track with a line around it often wants a dark knob off and a light one on. */
+    --field-switch-knob-on: var(--field-switch-knob);
+    /* A line around the track, in the field's line colour (none by default). The knob stays centred inside it. */
+    --field-switch-border-width: 0px;
+    --field-switch-border-color: var(--field-border-color);
     --field-switch-inset: 0.1875rem;
     --field-switch-knob-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
     --field-slider-track-height: 0.375rem;
@@ -89,6 +94,8 @@
     --field-file-background: color-mix(in srgb, currentColor 8%, transparent);
     --field-file-color: currentColor;
     --field-file-radius: var(--radius-sm);
+    /* How far the Choose File button stands from the field's line, on every side. */
+    --field-file-inset: 0.25rem;
   }
 }
 @layer components {
@@ -143,10 +150,12 @@
   :where(.cms-input)::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
   :where(.cms-input)::-webkit-datetime-edit { padding: 0; }
   :where(.cms-input[type=search])::-webkit-search-cancel-button { cursor: pointer; }
-  :where(.cms-input[type=file]) { padding-block: max(0px, calc(0.375rem - var(--field-border-width))); padding-inline-start: max(0px, calc(0.375rem - var(--field-border-width))); line-height: calc(var(--control-height) - 0.75rem); cursor: pointer; }
+  /* The button fills the box less its inset on every side: measured from the box itself, so a border the browser
+     rounds to a whole pixel leaves as much room above it as below. */
+  :where(.cms-input[type=file]) { padding-block: 0; padding-inline-start: var(--field-file-inset); line-height: calc(var(--control-height) - 2 * var(--field-border-width)); cursor: pointer; }
   :where(.cms-input[type=file])::file-selector-button {
-    height: calc(var(--control-height) - 0.75rem); margin: 0 0.75rem 0 0; padding: 0 0.75rem; vertical-align: middle;
-    font: inherit; font-size: 0.875em; font-weight: 500; color: var(--field-file-color);
+    height: calc(100% - 2 * var(--field-file-inset)); margin: var(--field-file-inset) 0.75rem var(--field-file-inset) 0; padding: 0 0.75rem; vertical-align: top;
+    font: inherit; font-size: 0.875em; font-weight: 500; line-height: 1; color: var(--field-file-color);
     background: var(--field-file-background); border: 0; border-radius: var(--field-file-radius); cursor: pointer;
   }
 
@@ -188,26 +197,28 @@
   :where(.cms-switch) {
     appearance: none; position: relative; flex: none; box-sizing: border-box;
     width: var(--field-switch-width); height: var(--field-switch-height); margin: max(0px, calc((1.45em - var(--field-switch-height)) / 2)) 0 0;
-    font: inherit; background: var(--field-switch-off); border: 0; border-radius: var(--field-switch-radius); outline: 2px solid transparent; outline-offset: 2px; cursor: pointer;
-    transition: background-color 160ms ease, box-shadow 140ms ease;
+    font: inherit; background: var(--field-switch-off); border: var(--field-switch-border-width) solid var(--field-switch-border-color); border-radius: var(--field-switch-radius); outline: 2px solid transparent; outline-offset: 2px; cursor: pointer;
+    transition: background-color 160ms ease, border-color 140ms ease, box-shadow 140ms ease;
   }
   :where(.cms-switch)::before {
     content: ""; position: absolute; top: var(--field-switch-inset); left: var(--field-switch-inset);
-    width: calc(var(--field-switch-height) - 2 * var(--field-switch-inset)); aspect-ratio: 1;
+    /* As tall as the track inside its line, less the inset: a line the browser rounds to a whole pixel keeps it centred. */
+    height: calc(100% - 2 * var(--field-switch-inset)); aspect-ratio: 1;
     background: var(--field-switch-knob); border-radius: max(0px, calc(var(--field-switch-radius) - var(--field-switch-inset))); box-shadow: var(--field-switch-knob-shadow);
-    transition: transform 200ms cubic-bezier(.3, .7, .4, 1);
+    transition: transform 200ms cubic-bezier(.3, .7, .4, 1), background-color 160ms ease;
   }
-  :where(.cms-switch:is(:checked, [data-cms-state~=checked])) { background: var(--field-switch-on); }
-  :where(.cms-switch:is(:checked, [data-cms-state~=checked]))::before { transform: translateX(calc(var(--field-switch-width) - var(--field-switch-height))); }
+  :where(.cms-switch:is(:checked, [data-cms-state~=checked])) { background: var(--field-switch-on); border-color: var(--field-switch-on); }
+  :where(.cms-switch:is(:checked, [data-cms-state~=checked]))::before { background: var(--field-switch-knob-on); transform: translateX(calc(var(--field-switch-width) - var(--field-switch-height))); }
 
   @media (hover: hover) {
     :where(.cms-check, .cms-radio):where(:hover:not(:checked, :indeterminate, :disabled)) { border-color: var(--field-hover-border-color); }
   }
   :where(.cms-check, .cms-radio):where([data-cms-state~=hover]:not(:checked)) { border-color: var(--field-hover-border-color); }
   @media (hover: hover) {
-    :where(.cms-switch:hover:not(:checked, :disabled)) { background: color-mix(in srgb, var(--field-switch-off), currentColor 8%); }
+    :where(.cms-switch:hover:not(:checked, :disabled)) { background: color-mix(in srgb, var(--field-switch-off), currentColor 8%); border-color: var(--field-hover-border-color); }
   }
-  :where(.cms-switch[data-cms-state~=hover]:not(:checked)) { background: color-mix(in srgb, var(--field-switch-off), currentColor 8%); }
+  :where(.cms-switch[data-cms-state~=hover]:not(:checked)) { background: color-mix(in srgb, var(--field-switch-off), currentColor 8%); border-color: var(--field-hover-border-color); }
+  :where(.cms-switch):where(:is([aria-invalid=true], .is-invalid *, [data-cms-state~=invalid]):not(:checked)) { border-color: var(--field-invalid-color); }
   :where(.cms-check, .cms-radio):where(:is([aria-invalid=true], .is-invalid *, [data-cms-state~=invalid]):not(:checked)) { border-color: var(--field-invalid-color); }
   :where(.cms-check, .cms-radio, .cms-switch):where(:focus-visible, [data-cms-state~=focus]) { box-shadow: 0 0 0 var(--field-focus-ring-width) var(--field-focus-ring-color); }
   :where(.cms-check, .cms-radio, .cms-switch):where(:disabled, [data-cms-state~=disabled]) { opacity: var(--field-disabled-opacity); cursor: not-allowed; }
