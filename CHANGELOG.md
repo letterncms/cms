@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.53.0 (2026-11-19)
+
 ### Added
 
 - **A menu link brings its own fields.** Give a menu an icon or a description field, and a Repeat over the menu reads them on each link (`item.icon`, `item.description`), beside its label and address: quick links with an icon, a mega menu with a line under each link.
